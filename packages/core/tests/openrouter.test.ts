@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { OpenRouterClient, OpenRouterAuthError, pickRecommendedModel } from '../src/ai/openrouter.js';
+import {
+  OpenRouterClient,
+  OpenRouterAuthError,
+  keepOrPickModels,
+  pickRecommendedModel,
+  pickVisionModel,
+} from '../src/ai/openrouter.js';
 
 const GOOD_KEY = 'sk-or-v1-good';
 
@@ -83,9 +89,39 @@ describe('OpenRouterClient.listFreeModels', () => {
     expect(pickRecommendedModel(models)).toBe('vendor/big-json');
   });
 
-  it("prefers OpenRouter's free router when it is offered", async () => {
-    const { client } = fakeOpenRouter([model('vendor/big-json', { context_length: 900000 }), model('openrouter/free')]);
-    expect(pickRecommendedModel(await client.listFreeModels(GOOD_KEY))).toBe('openrouter/free');
+  it('never picks a router, whose model changes from call to call', async () => {
+    const { client } = fakeOpenRouter([model('openrouter/free'), model('openrouter/auto'), model('vendor/big-json')]);
+    const models = await client.listFreeModels(GOOD_KEY);
+    expect(models.map((m) => m.id)).toEqual(['vendor/big-json']);
+  });
+
+  it('leaves out models that write anything but text, such as music', async () => {
+    const { client } = fakeOpenRouter([
+      model('google/lyria-3-pro-preview', { architecture: { input_modalities: ['text'], output_modalities: ['audio', 'text'] } }),
+      model('vendor/text'),
+    ]);
+    expect((await client.listFreeModels(GOOD_KEY)).map((m) => m.id)).toEqual(['vendor/text']);
+  });
+
+  it('picks a separate model that can read screenshots for the visual review', async () => {
+    const { client } = fakeOpenRouter([
+      model('vendor/text-only', { context_length: 900000 }),
+      model('vendor/vision', { architecture: { input_modalities: ['text', 'image'], output_modalities: ['text'] } }),
+    ]);
+    const models = await client.listFreeModels(GOOD_KEY);
+    expect(pickRecommendedModel(models)).toBe('vendor/text-only');
+    expect(pickVisionModel(models)).toBe('vendor/vision');
+    expect(pickVisionModel(models.filter((m) => !m.supportsImages))).toBeNull();
+  });
+
+  it('keeps the chosen models while they stay free, and replaces only one that has gone', () => {
+    const models = [
+      { id: 'a', name: 'a', contextLength: 1, supportsJsonOutput: true, supportsImages: false },
+      { id: 'b', name: 'b', contextLength: 1, supportsJsonOutput: true, supportsImages: true },
+    ];
+    expect(keepOrPickModels(models, { text: 'b', vision: 'b' })).toEqual({ text: 'b', vision: 'b' });
+    expect(keepOrPickModels(models, { text: 'gone', vision: 'a' })).toEqual({ text: 'a', vision: 'b' });
+    expect(keepOrPickModels([], { text: 'a' })).toEqual({ text: null, vision: null });
   });
 
   it('returns an empty list, and no recommendation, when nothing is free', async () => {

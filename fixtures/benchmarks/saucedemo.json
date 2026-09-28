@@ -1,0 +1,32 @@
+{
+  "name": "Swag Labs (demo shop with a published test login)",
+  "url": "https://www.saucedemo.com/",
+  "mode": "product",
+  "roles": [{ "role": "shopper", "username": "standard_user", "password": "secret_sauce", "loginPath": "/" }],
+  "issues": [
+    {
+      "id": "small-tap-targets",
+      "what": "On a phone, product names, the menu, cart and social icons and the 32–34 px buttons are under 44 px tall",
+      "match": [{ "titleIncludes": "Touch target too small" }]
+    },
+    {
+      "id": "broken-error-reporting",
+      "what": "The site's error reporting (backtrace.io) still has placeholder settings (universe=UNIVERSE), so every report it sends is refused with 401",
+      "match": [{ "checker": "bug-detection", "titleIncludes": "events.backtrace.io" }]
+    }
+  ],
+  "notProblems": [
+    {
+      "why": "The site shows its own error (“Epic sadface: Username is required”); wording the AI made up is not a defect",
+      "match": [{ "titleIncludes": "Field is empty" }, { "titleIncludes": "Password is empty" }]
+    },
+    {
+      "why": "GitHub Pages hosting: a page opened by its address first answers 404, then its script reloads it and it shows normally",
+      "match": [{ "checker": "bug-detection", "titleIncludes": "HTTP 404 on GET https://www.saucedemo.com/" }]
+    },
+    {
+      "why": "The sign-in form has no method or address; the page's own script signs in, and the password never appears in the address",
+      "match": [{ "checker": "security", "titleIncludes": "passwords in the page address" }]
+    }
+  ]
+}

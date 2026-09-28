@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "qa-test": "node packages/cli/dist/index.js",
     "lint": "eslint .",
-    "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
+    "benchmark": "tsx scripts/benchmark.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

@@ -49,10 +49,15 @@ export async function getStatus(): Promise<RunnerStatus | null> {
   }
 }
 
-export async function isKeySaved(): Promise<boolean> {
+/**
+ * Whether the QA Tool already has a working AI key, and the free model it chose. Both live on the
+ * QA Tool, not in this browser, so any browser or device skips the setup screen once it's done.
+ */
+export async function getAiSetup(): Promise<{ configured: boolean; model: string | null }> {
   const res = await call('/api/ai/openrouter/key');
   if (!res.ok) throw new RunnerError(NOT_RESPONDING);
-  return (await json<{ configured: boolean }>(res)).configured;
+  const body = await json<{ configured: boolean; model?: string | null }>(res);
+  return { configured: body.configured, model: body.model ?? null };
 }
 
 export type KeyCheck = { valid: true } | { valid: false; reason: string };
@@ -63,19 +68,15 @@ export async function validateKey(apiKey: string): Promise<KeyCheck> {
   return json<KeyCheck>(res);
 }
 
-export async function saveKey(apiKey: string): Promise<void> {
-  const res = await call('/api/ai/openrouter/key', { method: 'POST', body: JSON.stringify({ apiKey }) }, 12000);
-  if (res.ok) return;
+/**
+ * Saves the key on the QA Tool, which then chooses the free model every run uses. The model is
+ * null when OpenRouter has no free model right now.
+ */
+export async function saveKey(apiKey: string): Promise<{ model: string | null }> {
+  const res = await call('/api/ai/openrouter/key', { method: 'POST', body: JSON.stringify({ apiKey }) }, 25000);
+  if (res.ok) return { model: (await json<{ model?: string | null }>(res)).model ?? null };
   const body = await json<{ reason?: string }>(res).catch(() => ({ reason: undefined }));
   throw new RunnerError(body.reason || 'The key couldn’t be saved. Try again.');
-}
-
-/** The free model to use for every run, or null when OpenRouter has none right now. */
-export async function getRecommendedFreeModel(): Promise<string | null> {
-  const res = await call('/api/ai/openrouter/free-models', {}, 20000);
-  if (res.status === 401) throw new RunnerError('OpenRouter didn’t accept your AI key. Paste it again below.');
-  if (!res.ok) throw new RunnerError('Couldn’t get the list of free AI models from OpenRouter. Try again in a minute.');
-  return (await json<{ recommendedModel: string | null }>(res)).recommendedModel;
 }
 
 export type Reachability = { ok: true } | { ok: false; reason: string };
@@ -146,23 +147,5 @@ export async function downloadReportFiles(): Promise<void> {
     link.click();
     link.remove();
     URL.revokeObjectURL(href);
-  }
-}
-
-const MODEL_STORAGE_KEY = 'qa-wizard.ai-model';
-
-export function loadSavedModel(): string | null {
-  try {
-    return localStorage.getItem(MODEL_STORAGE_KEY);
-  } catch {
-    return null;
-  }
-}
-
-export function saveModel(model: string): void {
-  try {
-    localStorage.setItem(MODEL_STORAGE_KEY, model);
-  } catch {
-    // Private windows can refuse storage; the key setup screen will simply show again next time.
   }
 }

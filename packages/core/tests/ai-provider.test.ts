@@ -71,6 +71,32 @@ describe('AIProvider and KeyResolver', () => {
     expect(parsed.flows[0].name).toBe('Create Invoice');
   });
 
+  it('asks OpenRouter models to answer without thinking first, and says when an answer was cut off', async () => {
+    const realFetch = globalThis.fetch;
+    const bodies: any[] = [];
+    let finish = 'stop';
+    globalThis.fetch = (async (_url: string, init: RequestInit) => {
+      bodies.push(JSON.parse(String(init.body)));
+      return new Response(JSON.stringify({ choices: [{ finish_reason: finish, message: { content: '{"flows":[' } }] }), {
+        status: 200,
+      });
+    }) as typeof fetch;
+    try {
+      const openRouter = createAIProvider('openrouter', 'test-key', undefined, 'some/model:free');
+      await openRouter.generateText([{ role: 'user', content: 'plan' }], { responseFormat: 'json' });
+      // Thinking counts against the answer's length limit and can use all of it on a free model.
+      expect(bodies[0].reasoning).toEqual({ enabled: false });
+
+      finish = 'length';
+      await expect(openRouter.generateText([{ role: 'user', content: 'plan' }])).rejects.toThrow(/cut off/);
+
+      await createAIProvider('openai', 'test-key').generateText([{ role: 'user', content: 'plan' }]).catch(() => {});
+      expect(bodies[2].reasoning).toBeUndefined();
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
   it('createAIProvider should instantiate corresponding providers', () => {
     const mock = createAIProvider('mock', 'none');
     expect(mock.providerType).toBe('mock');

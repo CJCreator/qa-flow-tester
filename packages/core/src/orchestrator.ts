@@ -14,18 +14,23 @@ import { EvidenceCollector } from './evidence.js';
 import { PreFlightChecker } from './preflight.js';
 import { SourceLocator } from './source-locator.js';
 import { ReproScriptGenerator } from './repro-generator.js';
-import { ReportGenerator } from './reporter.js';
+import { ReportGenerator, withPortablePaths } from './reporter.js';
 import { expandValidationTestCases } from './validator-expander.js';
 import { SuppressionsManager } from './suppressions.js';
+import { Redactor } from './redact.js';
+import { mergeDuplicateFindings } from './finding-groups.js';
+import { resolveCredentialPlaceholders } from './credentials.js';
 import {
   BugDetectionChecker,
   SpecConformanceChecker,
   UXQualityChecker,
   PermissionMatrixChecker,
   DesignStandardsChecker,
+  SecurityChecker,
   type DesignTokens,
 } from '@qa/checkers';
 import { promises as fs } from 'fs';
+import type { BrowserContext, Page } from 'playwright';
 
 export type OrchestratorEvent =
   | {
@@ -71,6 +76,10 @@ export interface RunOptions {
   onEvent?: (event: OrchestratorEvent) => void;
   /** Override the generated runId (e.g. so a caller can respond with an id before the run starts and have RUN_STARTED/RUN_COMPLETED carry the same id). Defaults to an internally generated `run-<timestamp>`. */
   runId?: string;
+  /** Sentences to show in the report about coverage, e.g. from discovery ("pages behind the sign-in were not reached"). */
+  reportNotes?: string[];
+  /** The AI models that planned this run, named in the report. */
+  aiModels?: { text?: string; vision?: string };
 }
 
 export class FlowTestOrchestrator {
@@ -80,11 +89,15 @@ export class FlowTestOrchestrator {
   private specChecker = new SpecConformanceChecker();
   private uxChecker = new UXQualityChecker();
   private designChecker = new DesignStandardsChecker();
+  private securityChecker = new SecurityChecker();
 
   async run(options: RunOptions): Promise<ReleaseReport> {
     const startTime = Date.now();
     const runId = options.runId || `run-${Date.now()}`;
-    const onEvent = options.onEvent || (() => {});
+    // Nothing the run streams or writes may carry a sign-in detail.
+    const redactor = new Redactor(options.profile?.roles || []);
+    const emitEvent = options.onEvent || (() => {});
+    const onEvent = (event: OrchestratorEvent) => emitEvent(redactor.deep(event));
     const outputDir = options.outputDir || path.join(process.cwd(), '.qa-report');
     const evidenceDir = path.join(outputDir, 'evidence');
     const authDir = path.join(outputDir, 'auth');
@@ -125,6 +138,11 @@ export class FlowTestOrchestrator {
     console.log(`[QA Orchestrator] Pre-flight check PASSED.`);
 
     const roleStorageStates = preflight.roleStorageStates || {};
+    const notes = [...(options.reportNotes || [])];
+    for (const [role, ok] of Object.entries(preflight.roleAuthResults)) {
+      const note = `Signing in as "${role}" didn't work, so tests for that role ran signed out.`;
+      if (!ok && !notes.includes(note)) notes.push(note);
+    }
 
     // Initialize Permission Matrix Checker if available in profile
     let permChecker: PermissionMatrixChecker | undefined;
@@ -179,23 +197,24 @@ export class FlowTestOrchestrator {
 
         const storageState = roleStorageStates[testCase.role];
 
-        const context = await this.browserManager.createContext({
-          headless: options.headless ?? true,
-          viewport: BREAKPOINT_VIEWPORTS[bp],
-          tunnelAuth: options.tunnelAuth,
-          baseUrl: options.targetUrl,
-          storageState,
-          recordVideoDir: recordVideo ? testCaseEvidenceDir : undefined,
-        });
-
-        const page = await context.newPage();
-        evidenceCollector.attach(page);
-
+        let context: BrowserContext | undefined;
+        let page: Page | undefined;
         let testPointPassed = true;
         let stepError: string | undefined;
         let pointResult: TestPointResult | undefined;
 
         try {
+          // Inside the try: a browser that can't open a page costs this test point, not the run.
+          ({ context, page } = await this.browserManager.openPage({
+            headless: options.headless ?? true,
+            viewport: BREAKPOINT_VIEWPORTS[bp],
+            tunnelAuth: options.tunnelAuth,
+            baseUrl: options.targetUrl,
+            storageState,
+            recordVideoDir: recordVideo ? testCaseEvidenceDir : undefined,
+          }));
+          evidenceCollector.attach(page);
+
           const startUrl = new URL(testCase.startPage, options.targetUrl).toString();
           await page.goto(startUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
 
@@ -217,17 +236,19 @@ export class FlowTestOrchestrator {
               testCaseId: testCase.id,
             });
 
-            const MAX_RETRIES = 2;
+            // An optional step gets one quick try: if the control isn't there at this width, it isn't.
+            const MAX_RETRIES = step.optional ? 0 : 2;
             for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
               try {
                 if (step.action === 'click') {
                   const locator = await locateElement(page, step.selector || '');
-                  await locator.waitFor({ state: 'visible', timeout: 4000 });
-                  await locator.click({ timeout: 4000 });
+                  await locator.waitFor({ state: 'visible', timeout: step.optional ? 1500 : 4000 });
+                  await locator.click({ timeout: step.optional ? 1500 : 4000 });
                 } else if (step.action === 'fill') {
                   const locator = await locateElement(page, step.selector || '');
                   await locator.waitFor({ state: 'visible', timeout: 4000 });
-                  await locator.fill(step.value || '', { timeout: 4000 });
+                  const value = resolveCredentialPlaceholders(step.value || '', testCase.role, options.profile?.roles || []);
+                  await locator.fill(value, { timeout: 4000 });
                 } else if (step.action === 'select') {
                   const locator = await locateElement(page, step.selector || '');
                   await locator.waitFor({ state: 'visible', timeout: 4000 });
@@ -246,14 +267,19 @@ export class FlowTestOrchestrator {
                 currentStepError = undefined;
                 break;
               } catch (err: unknown) {
-                currentStepError = err instanceof Error ? err.message : String(err);
+                // Playwright colours its messages for terminals; reports want plain text.
+                currentStepError = (err instanceof Error ? err.message : String(err)).replace(/\x1b\[[0-9;]*m/g, '');
                 if (attempt < MAX_RETRIES) {
                   await page.waitForTimeout(500);
                 }
               }
             }
 
-            if (!stepSuccess) {
+            // An optional step that couldn't be done (a control that only shows at some widths)
+            // is skipped, not failed, and the rest of the flow carries on.
+            const skipped = !stepSuccess && !!step.optional;
+            if (skipped) currentStepError = `Skipped: ${currentStepError}`;
+            if (!stepSuccess && !skipped) {
               testPointPassed = false;
               stepError = currentStepError;
             }
@@ -280,7 +306,7 @@ export class FlowTestOrchestrator {
             });
 
             // If a step fails after retries, cascade remaining steps as Blocked
-            if (!stepSuccess) {
+            if (!stepSuccess && !skipped) {
               for (let j = i + 1; j < testCase.steps.length; j++) {
                 const blockedStep = testCase.steps[j];
                 const blockedStepIndex = globalStepIndex++;
@@ -323,13 +349,16 @@ export class FlowTestOrchestrator {
             role: testCase.role,
             breakpoint: bp,
             urlPath: page.url(),
+            planIsGuess: testCase.expectations.origin === 'ai-guess',
           });
 
           // 2. Spec Conformance
+          const observations: string[] = [];
           const specFindings = await this.specChecker.check(page, testCase, stepEvidenceList, {
             role: testCase.role,
             breakpoint: bp,
             baseUrl: options.targetUrl,
+            onObservation: (o) => observations.push(o),
           });
 
           // 3. UX Quality
@@ -339,7 +368,25 @@ export class FlowTestOrchestrator {
             breakpoint: bp,
             urlPath: new URL(page.url(), options.targetUrl).pathname,
             enableAxe: options.enableA11y ?? true,
+            entryPath: new URL(options.targetUrl).pathname,
           });
+
+          // 3b. Security (passive): passwords in page addresses
+          const securityFindings = [
+            ...this.securityChecker.checkEvidence(stepEvidenceList, {
+              testCaseId: testCase.id,
+              flowId: testCase.flowId,
+              role: testCase.role,
+              breakpoint: bp,
+            }),
+            ...(await this.securityChecker.checkPage(page, {
+              testCaseId: testCase.id,
+              flowId: testCase.flowId,
+              role: testCase.role,
+              breakpoint: bp,
+              urlPath: new URL(page.url(), options.targetUrl).pathname,
+            })),
+          ];
 
           // 4. Permission Matrix Check
           const permFindings: Finding[] = [];
@@ -399,7 +446,7 @@ export class FlowTestOrchestrator {
             }
           }
 
-          const pointFindings = [...bugFindings, ...specFindings, ...uxFindings, ...permFindings, ...designFindings];
+          const pointFindings = [...bugFindings, ...specFindings, ...uxFindings, ...securityFindings, ...permFindings, ...designFindings];
 
           // Enrich findings with Source Code Locator and Repro Script
           for (const f of pointFindings) {
@@ -415,12 +462,16 @@ export class FlowTestOrchestrator {
             allFindings.push(f);
           }
 
-          const hasStepFailure = !testPointPassed;
-          const status = hasStepFailure
+          // Unconfirmed AI guesses never fail a test point on their own, and that includes a step of
+          // an AI plan that couldn't find its control. Every failed step has a finding saying why.
+          const hasRealFinding = pointFindings.some((f) => !f.needsConfirmation);
+          const status: TestPointResult['status'] = hasRealFinding
             ? 'Failed'
             : pointFindings.length > 0
-            ? 'Failed'
-            : 'Passed';
+              ? 'Could not verify'
+              : testPointPassed
+                ? 'Passed'
+                : 'Failed';
 
           pointResult = {
             testCaseId: testCase.id,
@@ -431,24 +482,44 @@ export class FlowTestOrchestrator {
             findings: pointFindings,
             stepEvidence: stepEvidenceList,
             error: stepError,
+            observations: observations.length > 0 ? observations : undefined,
           };
         } catch (fatalErr: unknown) {
           testPointPassed = false;
-          const msg = fatalErr instanceof Error ? fatalErr.message : String(fatalErr);
+          const msg = (fatalErr instanceof Error ? fatalErr.message : String(fatalErr)).replace(/\x1b\[[0-9;]*m/g, '');
+          // A test that couldn't run at all still says why: a failure with no finding explains nothing.
+          const couldNotRun: Finding = {
+            id: `F-RUN-${testCase.id}-${bp}`,
+            testCaseId: testCase.id,
+            flowId: testCase.flowId,
+            severity: 'Major',
+            checker: 'bug-detection',
+            title: `Couldn’t run “${testCase.name || testCase.flowId}”`,
+            where: { urlPath: testCase.startPage, role: testCase.role, breakpoint: bp },
+            expectedVsActual: {
+              expected: `${testCase.startPage} opens and the test can run`,
+              actual: msg.split('\n')[0].substring(0, 300),
+            },
+            stepsToReproduce: [`Open ${testCase.startPage} as ${testCase.role} at ${bp}`],
+            evidence: {},
+            resolution: 'Check the page loads at this address for this role; a timeout usually means the page is slow or the server stopped.',
+            verifyCommand: `qa-test verify F-RUN-${testCase.id}-${bp}`,
+          };
+          allFindings.push(couldNotRun);
           pointResult = {
             testCaseId: testCase.id,
             flowId: testCase.flowId,
             role: testCase.role,
             status: 'Failed',
             durationMs: Date.now() - pointStartTime,
-            findings: [],
+            findings: [couldNotRun],
             stepEvidence: evidenceCollector.getStepEvidenceList(),
             error: msg,
           };
         } finally {
           // The video file is only finalized once its context closes.
-          const video = page.video();
-          await context.close().catch(() => {});
+          const video = page?.video();
+          await context?.close().catch(() => {});
           if (video) {
             const videoPath = await video.path().catch(() => undefined);
             if (videoPath && pointResult?.status === 'Failed') {
@@ -485,8 +556,10 @@ export class FlowTestOrchestrator {
     };
 
     // Apply Suppressions & Compute Delta
-    await suppressionsManager.applySuppressions(allFindings);
-    const delta = await suppressionsManager.computeDelta(allFindings);
+    // One problem, one finding, however many test points, widths or roles ran into it.
+    const uniqueFindings = mergeDuplicateFindings(allFindings);
+    await suppressionsManager.applySuppressions(uniqueFindings);
+    const delta = await suppressionsManager.computeDelta(uniqueFindings);
     const activeSuppressions = await suppressionsManager.loadSuppressions();
 
     // Build Traceability Matrix
@@ -509,7 +582,7 @@ export class FlowTestOrchestrator {
       });
     }
 
-    const report: ReleaseReport = {
+    const fullReport: ReleaseReport = {
       runId,
       productId: options.productId,
       targetUrl: options.targetUrl,
@@ -517,11 +590,17 @@ export class FlowTestOrchestrator {
       durationMs: Date.now() - startTime,
       coverage,
       results,
-      findings: allFindings,
+      findings: uniqueFindings,
       traceability,
       suppressions: activeSuppressions,
       delta,
+      notes: notes.length > 0 ? notes : undefined,
+      aiModels: options.aiModels,
     };
+
+    // Hide sign-in details (and secret-looking URL parameters) everywhere before anything is kept.
+    await redactor.files(evidenceDir);
+    const report = withPortablePaths(redactor.deep(fullReport), outputDir);
 
     // Emit reports to .qa-report
     console.log(`[QA Orchestrator] Generating release readiness report in ${outputDir}...`);

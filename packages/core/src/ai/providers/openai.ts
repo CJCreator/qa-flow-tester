@@ -40,6 +40,12 @@ export class OpenAIProvider implements AIProvider {
     if (options.responseFormat === 'json') {
       body.response_format = { type: 'json_object' };
     }
+    // Many free models think before answering, and the thinking counts against max_tokens: on a
+    // long plan it can use all of it and leave the answer cut off. Where a model lets us, it
+    // answers straight away.
+    if (this.providerType === 'openrouter') {
+      body.reasoning = { enabled: false };
+    }
 
     const res = await fetch(`${this.baseUrl}/chat/completions`, {
       method: 'POST',
@@ -56,6 +62,10 @@ export class OpenAIProvider implements AIProvider {
     }
 
     const data = (await res.json()) as any;
-    return data.choices?.[0]?.message?.content || '';
+    const choice = data.choices?.[0];
+    if (choice?.finish_reason === 'length') {
+      throw new Error(`The AI's answer was cut off at its length limit (${body.max_tokens} tokens) before it finished.`);
+    }
+    return choice?.message?.content || '';
   }
 }

@@ -8,6 +8,9 @@ export class EvidenceCollector {
   private networkLogs: NetworkEntry[] = [];
   private stepEvidenceList: StepEvidence[] = [];
   private evidenceDir: string;
+  /** How much of each log earlier steps already reported, so each step reports only its own. */
+  private consoleReported = 0;
+  private networkReported = 0;
 
   constructor(evidenceDir: string) {
     this.evidenceDir = evidenceDir;
@@ -16,6 +19,8 @@ export class EvidenceCollector {
   attach(page: Page): void {
     this.consoleLogs = [];
     this.networkLogs = [];
+    this.consoleReported = 0;
+    this.networkReported = 0;
 
     page.on('console', (msg) => {
       const type = msg.type();
@@ -25,6 +30,8 @@ export class EvidenceCollector {
           ? (type as ConsoleEntry['type'])
           : 'info',
         text: msg.text(),
+        // For "Failed to load resource", this is the file that failed.
+        url: msg.location()?.url || undefined,
         timestamp: Date.now(),
       });
     });
@@ -89,10 +96,12 @@ export class EvidenceCollector {
       // Ignore content failure
     }
 
-    const consoleErrors = this.consoleLogs.filter((l) => l.type === 'error');
-    const failedRequests = this.networkLogs.filter(
-      (n) => n.status >= 400 || n.status === 0
-    );
+    // Only what happened since the previous step: otherwise one console error is reported again
+    // at every later step of the flow.
+    const consoleErrors = this.consoleLogs.slice(this.consoleReported).filter((l) => l.type === 'error');
+    const failedRequests = this.networkLogs.slice(this.networkReported).filter((n) => n.status >= 400 || n.status === 0);
+    this.consoleReported = this.consoleLogs.length;
+    this.networkReported = this.networkLogs.length;
 
     const stepEvidence: StepEvidence = {
       stepIndex,
@@ -128,5 +137,7 @@ export class EvidenceCollector {
   clearLogs(): void {
     this.consoleLogs = [];
     this.networkLogs = [];
+    this.consoleReported = 0;
+    this.networkReported = 0;
   }
 }

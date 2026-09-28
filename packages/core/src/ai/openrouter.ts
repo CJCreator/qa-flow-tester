@@ -11,6 +11,8 @@ export interface OpenRouterModel {
   name: string;
   contextLength: number;
   supportsJsonOutput: boolean;
+  /** Takes screenshots as input, so it can do the visual review. */
+  supportsImages: boolean;
 }
 
 export type KeyValidation = { valid: true } | { valid: false; reason: string };
@@ -27,11 +29,14 @@ interface RawModel {
   reasoning?: { mandatory?: boolean };
 }
 
-/** OpenRouter's own router across whatever free models are currently up; most resilient default. */
-const PREFERRED_MODELS = ['openrouter/free'];
-
 /** Classifier / moderation models are priced at zero but cannot write test plans. */
 const NON_CHAT_PATTERN = /content-safety|guard|moderation|embed/i;
+
+/**
+ * Routers (openrouter/free, openrouter/auto) send each call to whichever model is up, so the same
+ * site could get a different plan on every run. Runs use one fixed model instead.
+ */
+const ROUTER_PATTERN = /^openrouter\//i;
 
 export class OpenRouterClient {
   constructor(private fetchImpl: typeof fetch = fetch) {}
@@ -85,6 +90,7 @@ export class OpenRouterClient {
         name: m.name || m.id,
         contextLength: m.context_length ?? 0,
         supportsJsonOutput: (m.supported_parameters ?? []).includes('response_format'),
+        supportsImages: (m.architecture?.input_modalities ?? []).includes('image'),
         reasoningMandatory: !!m.reasoning?.mandatory,
       }))
       .sort((a, b) => rank(b) - rank(a) || b.contextLength - a.contextLength)
@@ -96,19 +102,46 @@ function isFree(m: RawModel): boolean {
   return (m.pricing?.prompt === '0' && m.pricing?.completion === '0') || m.id.endsWith(':free');
 }
 
+/** Reads text and writes only text: no music, image or speech models, and no routers. */
 function isChatModel(m: RawModel): boolean {
   const input = m.architecture?.input_modalities ?? ['text'];
   const output = m.architecture?.output_modalities ?? ['text'];
-  return input.includes('text') && output.includes('text') && !NON_CHAT_PATTERN.test(`${m.id} ${m.name ?? ''}`);
+  return (
+    input.includes('text') &&
+    output.length > 0 &&
+    output.every((o) => o === 'text') &&
+    !ROUTER_PATTERN.test(m.id) &&
+    !NON_CHAT_PATTERN.test(`${m.id} ${m.name ?? ''}`)
+  );
 }
 
-/** Higher is better: a known-good router first, then JSON-mode support (discovery asks for JSON), then no forced reasoning (faster). */
-function rank(m: { id: string; supportsJsonOutput: boolean; reasoningMandatory: boolean }): number {
-  if (PREFERRED_MODELS.includes(m.id)) return 100;
+/** Higher is better: JSON-mode support (discovery asks for JSON), then no forced reasoning (faster). */
+function rank(m: { supportsJsonOutput: boolean; reasoningMandatory: boolean }): number {
   return (m.supportsJsonOutput ? 2 : 0) + (m.reasoningMandatory ? 0 : 1);
 }
 
-/** The list is already sorted best-first. */
+/** The model that writes the test plan. The list is already sorted best-first. */
 export function pickRecommendedModel(models: OpenRouterModel[]): string | null {
   return models[0]?.id ?? null;
+}
+
+/** The model that reviews screenshots: the best one that takes images, or null when none is free. */
+export function pickVisionModel(models: OpenRouterModel[]): string | null {
+  return models.find((m) => m.supportsImages)?.id ?? null;
+}
+
+/**
+ * Keeps the models already chosen while they are still free, so runs stay comparable; replaces
+ * only a model that has gone away.
+ */
+export function keepOrPickModels(
+  models: OpenRouterModel[],
+  current: { text?: string | null; vision?: string | null } = {}
+): { text: string | null; vision: string | null } {
+  const stillFree = (id: string | null | undefined, needsImages: boolean) =>
+    !!id && models.some((m) => m.id === id && (!needsImages || m.supportsImages));
+  return {
+    text: stillFree(current.text, false) ? current.text! : pickRecommendedModel(models),
+    vision: stillFree(current.vision, true) ? current.vision! : pickVisionModel(models),
+  };
 }

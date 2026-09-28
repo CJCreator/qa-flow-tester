@@ -16,6 +16,8 @@ export class UXQualityChecker {
       breakpoint: Breakpoint;
       urlPath: string;
       enableAxe?: boolean;
+      /** The page the review started on. It needs no way back, like a one-screen app. */
+      entryPath?: string;
     }
   ): Promise<Finding[]> {
     const findings: Finding[] = [];
@@ -25,7 +27,7 @@ export class UXQualityChecker {
     if (context.enableAxe !== false) {
       try {
         const axeResults = await new (AxeBuilder as any)({ page })
-          .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+          .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
           .analyze();
 
         for (const violation of axeResults.violations) {
@@ -88,7 +90,10 @@ export class UXQualityChecker {
             .filter((item) => item.visible && (item.width < 44 || item.height < 44));
         });
 
-        for (const target of smallTargets.slice(0, 3)) {
+        // Smallest first, so a tiny button isn't crowded out by ordinary text links; the same
+        // element on several pages is merged later, so reporting more doesn't mean more noise.
+        const smallestFirst = [...smallTargets].sort((a, b) => a.width * a.height - b.width * b.height);
+        for (const target of smallestFirst.slice(0, 10)) {
           const label = target.text || target.ariaLabel || target.testId || `unlabeled <${target.tagName}>`;
           findings.push({
             id: `F-UX-TARGET-${context.testCaseId || 'GEN'}-${counter++}`,
@@ -101,6 +106,8 @@ export class UXQualityChecker {
               role: context.role,
               breakpoint: context.breakpoint,
               dataTestId: target.testId || undefined,
+              // Which element, so the same header link on every page is reported once.
+              cssSelector: target.testId ? undefined : `${target.tagName}:has-text("${label}")`,
             },
             expectedVsActual: {
               expected: 'Interactive touch targets should be at least 44x44px on mobile screens',
@@ -122,9 +129,9 @@ export class UXQualityChecker {
 
     // 3. Rule: Dead End Page Detection
     try {
-      const hasNavigation = await page.evaluate(() => {
+      const { hasNavigation, hasControls } = await page.evaluate(() => {
         const links = Array.from(document.querySelectorAll('a[href], button'));
-        return links.some((el) => {
+        const hasNavigation = links.some((el) => {
           const text = (el.textContent || '').toLowerCase();
           const aria = (el.getAttribute('aria-label') || '').toLowerCase();
           return (
@@ -135,9 +142,19 @@ export class UXQualityChecker {
             el.closest('nav, header') !== null
           );
         });
+        const hasControls = Array.from(
+          document.querySelectorAll('button, input:not([type="hidden"]), select, textarea, [role="button"]')
+        ).some((el) => {
+          const rect = el.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        });
+        return { hasNavigation, hasControls };
       });
 
-      if (!hasNavigation && context.urlPath !== '/') {
+      // A one-screen app (a to-do list opened at its start page) has things to do and needs no
+      // way out. A page with no way out and nothing to do is a dead end wherever it is.
+      const isOneScreenApp = context.urlPath === context.entryPath && hasControls;
+      if (!hasNavigation && context.urlPath !== '/' && !isOneScreenApp) {
         findings.push({
           id: `F-UX-DEADEND-${context.testCaseId || 'GEN'}-${counter++}`,
           testCaseId: context.testCaseId,

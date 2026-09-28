@@ -22,8 +22,9 @@ export class TestPlanner {
     const testCases: TestCase[] = [];
 
     for (const flow of draft.flows) {
-      // 1. Skip flows marked out of scope or whose startPage is out of scope
-      if (flow.outOfScope || outOfScopePages.has(flow.startPage)) {
+      // 1. Skip flows marked out of scope or whose startPage is out of scope, and flows that
+      // can't run as planned until someone fixes them
+      if (flow.outOfScope || outOfScopePages.has(flow.startPage) || (flow.needsHelp?.length ?? 0) > 0) {
         continue;
       }
 

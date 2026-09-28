@@ -40,7 +40,7 @@ const flowMissingValue = JSON.stringify({
       description: 'Log in with credentials',
       startPage: '/login',
       steps: [
-        { action: 'fill', selector: '[data-testid="email-field"]', name: 'Fill Email' },
+        { action: 'fill', selector: '[data-testid="email-input"]', name: 'Fill Email' },
         { action: 'click', selector: '[data-testid="submit-btn"]', name: 'Submit' },
       ],
     },
@@ -58,7 +58,7 @@ const flowWithValue = JSON.stringify({
       steps: [
         {
           action: 'fill',
-          selector: '[data-testid="email-field"]',
+          selector: '[data-testid="email-input"]',
           value: 'repaired@example.com',
           name: 'Fill Email',
         },

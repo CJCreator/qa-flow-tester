@@ -46,50 +46,66 @@ export class PreFlightChecker {
     credential: RoleCredential,
     saveStorageStatePath?: string
   ): Promise<boolean> {
+    return (await this.signIn(context, baseUrl, credential, saveStorageStatePath)).ok;
+  }
+
+  /**
+   * Signs in on the role's sign-in page. Succeeds only when the sign-in form is gone afterwards
+   * (a wrong password leaves it on screen), and reports the page the role landed on.
+   */
+  async signIn(
+    context: BrowserContext,
+    baseUrl: string,
+    credential: RoleCredential,
+    saveStorageStatePath?: string
+  ): Promise<{ ok: boolean; landingPath?: string }> {
     try {
       const page = await context.newPage();
       const loginUrl = new URL(credential.loginPath || '/login', baseUrl).toString();
 
       await page.goto(loginUrl, { waitUntil: 'domcontentloaded', timeout: 8000 });
 
-      // Check if username/email input exists
-      const usernameInput = page.locator(
-        'input[type="email"], input[type="text"], [data-testid="username-input"], [data-testid="email-input"]'
-      ).first();
-      
-      const passwordInput = page.locator(
-        'input[type="password"], [data-testid="password-input"]'
-      ).first();
+      // Fill the form that holds the password field, not a search box elsewhere on the page.
+      const passwordInput = page.locator('input[type="password"], [data-testid="password-input"]').first();
+      const signInForm = page.locator('form:has(input[type="password"])').first();
+      const scope = (await signInForm.count()) > 0 ? signInForm : page.locator('body');
+      const hadPasswordField = (await passwordInput.count()) > 0;
+
+      const usernameInput = scope
+        .locator('input[type="email"], input[type="text"], input:not([type]), [data-testid="username-input"], [data-testid="email-input"]')
+        .first();
 
       if ((await usernameInput.count()) > 0 && credential.username) {
         await usernameInput.fill(credential.username);
       }
 
-      if ((await passwordInput.count()) > 0 && credential.password) {
+      if (hadPasswordField && credential.password) {
         await passwordInput.fill(credential.password);
       }
 
-      const submitBtn = page.locator(
-        'button[type="submit"], input[type="submit"], [data-testid="login-btn"], [data-testid="submit-btn"]'
-      ).first();
+      const submitBtn = scope
+        .locator('button[type="submit"], input[type="submit"], [data-testid="login-btn"], [data-testid="submit-btn"], button:not([type])')
+        .first();
 
       if ((await submitBtn.count()) > 0) {
         await Promise.all([
-          page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 6000 }).catch(() => {}),
+          page.waitForURL((url) => url.toString() !== loginUrl, { timeout: 6000 }).catch(() => {}),
           submitBtn.click().catch(() => {}),
         ]);
       }
 
       await page.waitForTimeout(400);
+      const stillOnSignInForm = hadPasswordField && (await passwordInput.isVisible().catch(() => false));
+      const landed = new URL(page.url());
 
-      if (saveStorageStatePath) {
+      if (!stillOnSignInForm && saveStorageStatePath) {
         await context.storageState({ path: saveStorageStatePath });
       }
 
       await page.close();
-      return true;
+      return { ok: !stillOnSignInForm, landingPath: stillOnSignInForm ? undefined : landed.pathname + landed.search };
     } catch {
-      return false;
+      return { ok: false };
     }
   }
 
@@ -116,6 +132,7 @@ export class PreFlightChecker {
 
     const roleResults: Record<string, boolean> = {};
     const roleStorageStates: Record<string, string> = {};
+    const roleLandingPaths: Record<string, string> = {};
 
     if (profile?.roles && profile.roles.length > 0) {
       if (options?.authDir) {
@@ -130,10 +147,11 @@ export class PreFlightChecker {
               baseUrl: targetUrl,
               tunnelAuth,
             });
-            const loginOk = await this.verifyRoleLogin(context, targetUrl, role, statePath);
-            roleResults[role.role] = loginOk;
-            if (loginOk) {
+            const signedIn = await this.signIn(context, targetUrl, role, statePath);
+            roleResults[role.role] = signedIn.ok;
+            if (signedIn.ok) {
               roleStorageStates[role.role] = statePath;
+              if (signedIn.landingPath) roleLandingPaths[role.role] = signedIn.landingPath;
             }
             await context.close();
           } catch {
@@ -152,6 +170,7 @@ export class PreFlightChecker {
       loginReachable: true,
       roleAuthResults: roleResults,
       roleStorageStates,
+      roleLandingPaths,
     };
   }
 }

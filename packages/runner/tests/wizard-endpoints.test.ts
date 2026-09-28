@@ -56,7 +56,8 @@ function startSite(port: number) {
       <button><svg></svg></button>
       <form method="post" action="/order"><input aria-label="Qty" name="q"><button>Features</button></form>
       <details><summary>Shipping</summary>Free</details></main></body></html>`,
-    '/clean/': `<!doctype html><html lang="en"><head><title>Clean</title></head><body><nav><a href="/">Home</a></nav><main><h1>Hello</h1><p>Nothing to see.</p></main></body></html>`,
+    // Links only to itself: website scans follow links, and this page must stay the only one visited.
+    '/clean/': `<!doctype html><html lang="en"><head><title>Clean</title></head><body><nav><a href="/clean/">Home</a></nav><main><h1>Hello</h1><p>Nothing to see.</p></main></body></html>`,
   };
   const server = http.createServer((req, res) => {
     requests.push(`${req.method} ${req.url}`);
@@ -94,6 +95,7 @@ describe('Runner endpoints for the wizard', () => {
     runner = new RunnerServer({
       port: RUNNER_PORT,
       outputDir,
+      dataDir: `${outputDir}-data`,
       keyResolver: new KeyResolver(outputDir, store),
       openRouter: openRouter.client,
       createAIProvider: () => new MockAIProvider(),
@@ -105,6 +107,7 @@ describe('Runner endpoints for the wizard', () => {
     await runner.stop();
     await new Promise<void>((resolve) => site.server.close(() => resolve()));
     await fs.rm(outputDir, { recursive: true, force: true });
+    await fs.rm(`${outputDir}-data`, { recursive: true, force: true }).catch(() => {});
   });
 
   afterEach(() => {
@@ -207,27 +210,46 @@ describe('Runner endpoints for the wizard', () => {
         headers: { Authorization: `Bearer ${GOOD_KEY}` },
       });
       expect(res.status).toBe(200);
-      expect(await res.json()).toEqual({ models: [], recommendedModel: null });
+      expect(await res.json()).toEqual({ models: [], recommendedModel: null, recommendedVisionModel: null });
     });
 
     it('saves a valid key once, then serves free models from the saved key', async () => {
-      expect(await (await fetch(`${runnerUrl}/api/ai/openrouter/key`)).json()).toEqual({ configured: false });
+      expect(await (await fetch(`${runnerUrl}/api/ai/openrouter/key`)).json()).toEqual({
+        configured: false,
+        model: null,
+        visionModel: null,
+      });
 
       const rejected = await post('/api/ai/openrouter/key', { apiKey: 'sk-or-v1-revoked' });
       expect(rejected.status).toBe(400);
       expect(store.secrets.size).toBe(0);
 
+      // Nothing is free at this moment: the key is kept, with no model yet.
       const saved = await post('/api/ai/openrouter/key', { apiKey: GOOD_KEY });
-      expect(await saved.json()).toEqual({ saved: true });
+      expect(await saved.json()).toEqual({ saved: true, model: null, visionModel: null });
       expect(store.secrets.get('openrouter')).toBe(GOOD_KEY);
 
       const status = await (await fetch(`${runnerUrl}/api/ai/openrouter/key`)).text();
-      expect(JSON.parse(status)).toEqual({ configured: true });
+      expect(JSON.parse(status)).toEqual({ configured: true, model: null, visionModel: null });
       expect(status).not.toContain(GOOD_KEY);
 
       openRouter.state.models = [freeModel('vendor/a:free')];
       const models = await fetch(`${runnerUrl}/api/ai/openrouter/free-models`);
       expect((await models.json()).recommendedModel).toBe('vendor/a:free');
+    });
+
+    it('chooses one fixed model and keeps it while it stays free', async () => {
+      openRouter.state.models = [freeModel('vendor/a:free')];
+      expect(await (await post('/api/ai/openrouter/key', { apiKey: GOOD_KEY })).json()).toMatchObject({ model: 'vendor/a:free' });
+
+      // A newer free model appears first in the list; runs stay on the chosen one.
+      openRouter.state.models = [freeModel('vendor/newer:free'), freeModel('vendor/a:free')];
+      expect(await (await post('/api/ai/openrouter/key', { apiKey: GOOD_KEY })).json()).toMatchObject({ model: 'vendor/a:free' });
+      expect(await (await fetch(`${runnerUrl}/api/ai/openrouter/key`)).json()).toMatchObject({ model: 'vendor/a:free' });
+
+      // It stops being free: the next best one takes over.
+      openRouter.state.models = [freeModel('vendor/newer:free')];
+      expect(await (await post('/api/ai/openrouter/key', { apiKey: GOOD_KEY })).json()).toMatchObject({ model: 'vendor/newer:free' });
     });
   });
 
@@ -244,7 +266,7 @@ describe('Runner endpoints for the wizard', () => {
     });
 
     it('rewrites localhost targets when running in a container', async () => {
-      const containerRunner = new RunnerServer({ port: 3289, outputDir, localhostAlias: 'host-alias.invalid' });
+      const containerRunner = new RunnerServer({ port: 3289, outputDir, dataDir: `${outputDir}-data`, localhostAlias: 'host-alias.invalid' });
       await containerRunner.start();
       try {
         const res = await fetch('http://localhost:3289/api/runner/preflight', {

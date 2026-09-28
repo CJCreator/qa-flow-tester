@@ -21,6 +21,11 @@ export class BrowserManager {
   private browser: Browser | null = null;
 
   async launch(headless = true): Promise<Browser> {
+    // A browser that crashed (low memory, a renderer fault) is replaced, not reused.
+    if (this.browser && !this.browser.isConnected()) {
+      await this.browser.close().catch(() => {});
+      this.browser = null;
+    }
     if (!this.browser) {
       this.browser = await chromium.launch({
         headless,
@@ -62,9 +67,29 @@ export class BrowserManager {
     return browser.newContext(contextOptions);
   }
 
+  /**
+   * A new context with one page. If the browser has crashed, it is restarted once, so one crash
+   * costs one test point rather than the whole run.
+   */
+  async openPage(options: BrowserOptions = {}): Promise<{ context: BrowserContext; page: Page }> {
+    for (let attempt = 0; ; attempt++) {
+      let context: BrowserContext | undefined;
+      try {
+        context = await this.createContext(options);
+        return { context, page: await context.newPage() };
+      } catch (err) {
+        await context?.close().catch(() => {});
+        if (attempt > 0) throw err;
+        console.warn(`[Browser] Restarting the browser: ${err instanceof Error ? err.message.split('\n')[0] : err}`);
+        await this.browser?.close().catch(() => {});
+        this.browser = null;
+      }
+    }
+  }
+
   async close(): Promise<void> {
     if (this.browser) {
-      await this.browser.close();
+      await this.browser.close().catch(() => {});
       this.browser = null;
     }
   }

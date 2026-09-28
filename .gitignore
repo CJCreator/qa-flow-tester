@@ -4,6 +4,7 @@ dist/
 # Secrets
 .env
 .qa-keys.json
+.qa-ai-models.json
 
 # Run output (approved .qa-baselines/ are committed)
 .qa-report/
@@ -18,3 +19,6 @@ dist/
 .playwright-mcp/
 .claude/
 .scratch/
+
+# Benchmark runs (scripts/benchmark.ts)
+.benchmark/

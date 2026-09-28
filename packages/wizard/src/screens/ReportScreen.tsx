@@ -64,6 +64,16 @@ export function ReportScreen({
         </p>
       )}
 
+      {summary.toConfirm > 0 && (
+        <p className="mb-8 max-w-prose rounded-md border-l-4 border-stamp bg-stamp-tint px-4 py-3">
+          <strong>
+            {summary.toConfirm} {summary.toConfirm === 1 ? 'check needs' : 'checks need'} your confirmation.
+          </strong>{' '}
+          The AI guessed how {summary.toConfirm === 1 ? 'it' : 'they'} should work and the site did something else. These
+          aren’t counted as issues. The full report says what to confirm.
+        </p>
+      )}
+
       {summary.total > 0 && (
         <div className="grid max-w-4xl gap-10 md:grid-cols-[14rem_1fr]">
           <div>

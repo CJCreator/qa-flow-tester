@@ -16,14 +16,13 @@ export function expandValidationTestCases(testCases: TestCase[]): TestCase[] {
 
     for (const rule of tc.validationRules) {
       const targetSelector = rule.selector || `[data-testid="${rule.field}-field"]`;
+      const isTargetStep = (step: TestCaseStep) =>
+        step.selector === targetSelector || (!!step.selector && step.selector.includes(rule.field));
 
       // Helper to clone steps and replace target field value
       const createStepsWithFieldValue = (val: string): TestCaseStep[] => {
         return tc.steps.map((step) => {
-          const isTarget =
-            step.selector === targetSelector ||
-            (step.selector && step.selector.includes(rule.field));
-          if (step.action === 'fill' && isTarget) {
+          if (step.action === 'fill' && isTargetStep(step)) {
             return {
               ...step,
               value: val,
@@ -33,6 +32,29 @@ export function expandValidationTestCases(testCases: TestCase[]): TestCase[] {
           return { ...step };
         });
       };
+
+      // A guessed rule has no trustworthy limits or wording: only check that leaving the field
+      // empty shows some error, and only when the flow actually fills that field.
+      if (rule.origin === 'ai-guess') {
+        if (!tc.steps.some((step) => step.action === 'fill' && isTargetStep(step))) continue;
+        expanded.push({
+          id: `${tc.id}-val-${rule.field}-empty`,
+          flowId: tc.flowId,
+          name: `${tc.name || tc.id} [Validation: ${rule.field} empty]`,
+          role: tc.role,
+          startPage: tc.startPage,
+          steps: createStepsWithFieldValue(''),
+          expectations: {
+            origin: 'ai-guess',
+            validationError: {
+              field: rule.field,
+              selector: targetSelector,
+              description: `An error appears when "${rule.field}" is left empty`,
+            },
+          },
+        });
+        continue;
+      }
 
       // 1. Min boundary (min - 1)
       if (typeof rule.min === 'number') {

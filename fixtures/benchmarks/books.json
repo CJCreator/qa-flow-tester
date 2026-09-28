@@ -1,0 +1,22 @@
+{
+  "name": "Books to Scrape (shop built as a scraping sandbox)",
+  "url": "https://books.toscrape.com/",
+  "mode": "safe-public",
+  "issues": [
+    {
+      "id": "insecure-jquery",
+      "what": "Every page loads jQuery over http:// on an https:// site, and the browser blocks it",
+      "match": [{ "checker": "bug-detection", "titleIncludes": "jquery" }]
+    },
+    {
+      "id": "low-contrast",
+      "what": "Grey text (#777) on white falls below the WCAG AA contrast ratio",
+      "match": [{ "titleIncludes": "(color-contrast)" }]
+    },
+    {
+      "id": "small-category-links",
+      "what": "The sidebar's category links are about 38 × 16 px and 17 px apart, under the WCAG 2.2 minimum target size of 24 px",
+      "match": [{ "titleIncludes": "(target-size)" }]
+    }
+  ]
+}

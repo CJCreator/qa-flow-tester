@@ -98,6 +98,7 @@ describe('Wizard end to end', () => {
     runner = new RunnerServer({
       port: RUNNER_PORT,
       outputDir,
+      dataDir: `${outputDir}-data`,
       keyResolver: new KeyResolver(outputDir, new MemoryStore()),
       openRouter: new OpenRouterClient(fakeOpenRouterFetch),
       createAIProvider: () => new MockAIProvider(),
@@ -124,6 +125,7 @@ describe('Wizard end to end', () => {
     await runner?.stop();
     await new Promise<void>((resolve) => fixtureServer.close(() => resolve()));
     await fs.rm(outputDir, { recursive: true, force: true });
+    await fs.rm(`${outputDir}-data`, { recursive: true, force: true }).catch(() => {});
   });
 
   afterEach(() => {
@@ -177,10 +179,18 @@ describe('Wizard end to end', () => {
     openRouterModels.list = [FREE_MODEL];
     await save.click();
     await expect.poll(() => heading().innerText()).toBe('What would you like to check?');
-    expect(await page.evaluate(() => localStorage.getItem('qa-wizard.ai-model'))).toBe(FREE_MODEL.id);
+    // The QA Tool, not this browser, remembers the key and the model it chose.
+    expect(await (await fetch(`${runnerUrl}/api/ai/openrouter/key`)).json()).toMatchObject({ configured: true, model: FREE_MODEL.id });
 
     await page.reload();
     await expect.poll(() => heading().innerText()).toBe('What would you like to check?');
+
+    // A different browser (nothing stored in it) skips the key screen too.
+    const otherBrowser = await browser.newContext();
+    const otherPage = await otherBrowser.newPage();
+    await otherPage.goto(wizardUrl);
+    await expect.poll(() => otherPage.locator('h1').first().innerText(), { timeout: 10000 }).toBe('What would you like to check?');
+    await otherBrowser.close();
 
     await page.getByRole('button', { name: 'Change AI key' }).click();
     await expect.poll(() => heading().innerText()).toBe('Connect an AI helper');
@@ -239,7 +249,8 @@ describe('Wizard end to end', () => {
     await expect.poll(() => heading().innerText()).toBe('Checking your site');
     await expect.poll(() => page.locator('main').innerText(), { timeout: 30000 }).toMatch(/Exploring your site|Getting ready|Testing/);
     await screenshot('progress');
-    await expect.poll(() => heading().innerText(), { timeout: 150000, interval: 1000 }).toMatch(/issues? found|No issues found/);
+    // Every page found is visited at three widths after the journeys: allow for a busy machine.
+    await expect.poll(() => heading().innerText(), { timeout: 270000, interval: 1000 }).toMatch(/issues? found|No issues found/);
     stopWatching();
     await screenshot('report-product');
 
@@ -285,7 +296,7 @@ describe('Wizard end to end', () => {
       const downloaded = downloads.find((d) => d.name === name);
       expect(downloaded?.bytes.equals(await fs.readFile(path.join(outputDir, name)))).toBe(true);
     }
-  }, 200000);
+  }, 330000);
 
   it('Phase 5: website path is read-only, says so up front, and handles a busy runner', async () => {
     await page.getByRole('button', { name: 'Check something else' }).click();

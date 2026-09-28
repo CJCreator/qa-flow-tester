@@ -2,6 +2,26 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import type { Finding, ReleaseReport, RunCoverage } from '@qa/types';
 
+/**
+ * A copy of the report whose file paths inside the report folder are relative to it
+ * (evidence/TC-1-1440px/step-1.png rather than C:\Users\…), so the report still works when the
+ * folder is shared, moved or opened on another machine.
+ */
+export function withPortablePaths<T>(value: T, reportDir: string): T {
+  const root = path.resolve(reportDir);
+  const portable = (v: unknown): unknown => {
+    if (typeof v === 'string') {
+      if (!path.isAbsolute(v)) return v;
+      const rel = path.relative(root, v);
+      return rel && !rel.startsWith('..') && !path.isAbsolute(rel) ? rel.replace(/\\/g, '/') : v;
+    }
+    if (Array.isArray(v)) return v.map(portable);
+    if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, portable(x)]));
+    return v;
+  };
+  return portable(value) as T;
+}
+
 export class ReportGenerator {
   private outputDir: string;
 
@@ -9,8 +29,9 @@ export class ReportGenerator {
     this.outputDir = outputDir;
   }
 
-  async generate(report: ReleaseReport): Promise<{ jsonPath: string; mdPath: string }> {
+  async generate(fullReport: ReleaseReport): Promise<{ jsonPath: string; mdPath: string }> {
     await fs.mkdir(this.outputDir, { recursive: true });
+    const report = withPortablePaths(fullReport, this.outputDir);
 
     const jsonPath = path.join(this.outputDir, 'findings.json');
     const mdPath = path.join(this.outputDir, 'report.md');
@@ -32,12 +53,18 @@ export class ReportGenerator {
     const blockers = findings.filter((f) => f.severity === 'Blocker');
     const majors = findings.filter((f) => f.severity === 'Major');
     const minors = findings.filter((f) => f.severity === 'Minor');
-    const suggestions = findings.filter((f) => f.severity === 'Suggestion');
+    const suggestions = findings.filter((f) => f.severity === 'Suggestion' && !f.needsConfirmation);
+    const unconfirmed = findings.filter((f) => f.needsConfirmation);
 
     const lines: string[] = [];
 
     lines.push(`# Pre-Release Readiness Report`);
     lines.push(`**Product:** \`${productId}\` | **Target:** \`${targetUrl}\` | **Date:** ${timestamp}`);
+    if (report.aiModels?.text) {
+      lines.push(
+        `**AI model:** \`${report.aiModels.text}\`${report.aiModels.vision ? ` (screenshots: \`${report.aiModels.vision}\`)` : ''}`
+      );
+    }
     lines.push(``);
 
     // Summary banner
@@ -58,6 +85,13 @@ export class ReportGenerator {
       lines.push(
         `> **Read-only website scan.** The site was only looked at: no sign-in, no form submissions and no data changes. Flows behind a login or a form were not tested, so this is not full product coverage.`
       );
+      lines.push(``);
+    }
+
+    if (report.notes && report.notes.length > 0) {
+      lines.push(`> [!NOTE]`);
+      lines.push(`> **What this run couldn't cover**`);
+      for (const note of report.notes) lines.push(`> - ${note}`);
       lines.push(``);
     }
 
@@ -82,10 +116,10 @@ export class ReportGenerator {
     // Coverage statistics
     lines.push(`## 📊 Test Coverage & Execution Summary`);
     lines.push(``);
-    lines.push(`| Total Test Points | Passed | Failed | Blocked | Skipped | Completion Rate |`);
-    lines.push(`| :---: | :---: | :---: | :---: | :---: | :---: |`);
+    lines.push(`| Total Test Points | Passed | Failed | Blocked | Skipped | Could not verify | Completion Rate |`);
+    lines.push(`| :---: | :---: | :---: | :---: | :---: | :---: | :---: |`);
     lines.push(
-      `| **${coverage.totalTestPoints}** | ✅ ${coverage.passed} | ❌ ${coverage.failed} | ⛔ ${coverage.blocked} | ⏭️ ${coverage.skipped} | **${coverage.completionRate.toFixed(1)}%** |`
+      `| **${coverage.totalTestPoints}** | ✅ ${coverage.passed} | ❌ ${coverage.failed} | ⛔ ${coverage.blocked} | ⏭️ ${coverage.skipped} | ❓ ${coverage.couldNotVerify} | **${coverage.completionRate.toFixed(1)}%** |`
     );
     lines.push(``);
 
@@ -125,7 +159,9 @@ export class ReportGenerator {
     );
 
     lines.push(`## 🚨 Findings Overview`);
-    lines.push(`Active Findings: **${activeFindings.length}** (🔴 ${blockers.length} Blockers, 🟠 ${majors.length} Majors, 🟡 ${minors.length} Minors, 💡 ${suggestions.length} Suggestions)`);
+    lines.push(
+      `Active Findings: **${activeFindings.length}** (🔴 ${blockers.length} Blockers, 🟠 ${majors.length} Majors, 🟡 ${minors.length} Minors, 💡 ${suggestions.length} Suggestions, ❓ ${unconfirmed.length} Could not verify)`
+    );
     if (suppressedFindings.length > 0) {
       lines.push(`*(${suppressedFindings.length} findings suppressed via triage)*`);
     }
@@ -145,6 +181,12 @@ export class ReportGenerator {
             lines.push(`  \`\`\`tsx\n  ${f.sourceLocation.matchSnippet}\n  \`\`\``);
           }
         }
+        if (f.occurrences && f.seenAt) {
+          const pages = f.seenAt.pages.length > 1 ? `${f.seenAt.pages.length} pages; ` : '';
+          lines.push(
+            `- **Seen:** ${f.occurrences} times (${pages}widths ${f.seenAt.breakpoints.join(', ')}; roles ${f.seenAt.roles.join(', ')})`
+          );
+        }
         lines.push(`- **Expected:** ${f.expectedVsActual.expected}`);
         lines.push(`- **Actual:** ${f.expectedVsActual.actual}`);
         lines.push(`- **Recommended Resolution:** ${f.resolution}`);
@@ -153,7 +195,7 @@ export class ReportGenerator {
           lines.push(`- **Repro Script:** \`${f.reproScriptPath}\``);
         }
         if (f.evidence.videoPath) {
-          lines.push(`- **Video:** \`${path.relative(this.outputDir, f.evidence.videoPath).replace(/\\/g, '/')}\``);
+          lines.push(`- **Video:** \`${f.evidence.videoPath.replace(/\\/g, '/')}\``);
         }
         lines.push(``);
       }
@@ -163,6 +205,7 @@ export class ReportGenerator {
     renderFindingGroup('🟠 Major Findings', majors);
     renderFindingGroup('🟡 Minor Findings', minors);
     renderFindingGroup('💡 Suggestions', suggestions);
+    renderFindingGroup('❓ Could not verify (AI guesses that need your confirmation)', unconfirmed);
 
     // Suppressed findings section
     if (suppressedFindings.length > 0) {

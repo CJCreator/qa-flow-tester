@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { getRecommendedFreeModel, RunnerError, saveKey, saveModel, validateKey } from '../api';
+import { RunnerError, saveKey, validateKey } from '../api';
 import { ErrorMessage, Lead, Question, Spinner } from '../components/Shell';
 
 type KeyStatus =
@@ -50,13 +50,12 @@ export function KeySetupScreen({ onDone, onCancel }: { onDone: (model: string) =
     setSaving(true);
     setError(null);
     try {
-      await saveKey(key.trim());
-      const model = await getRecommendedFreeModel();
+      // The QA Tool keeps the key and chooses the free model, so every browser gets the same setup.
+      const { model } = await saveKey(key.trim());
       if (!model) {
         setError(NO_FREE_MODELS_MESSAGE);
         return;
       }
-      saveModel(model);
       onDone(model);
     } catch (err) {
       setError(err instanceof RunnerError ? err.message : 'The key couldn’t be saved. Try again.');

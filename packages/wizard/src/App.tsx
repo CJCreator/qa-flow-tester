@@ -3,8 +3,7 @@ import type { ReleaseReport } from '@qa/types';
 import {
   getReport,
   getStatus,
-  isKeySaved,
-  loadSavedModel,
+  getAiSetup,
   RunnerError,
   startRun,
   STREAM_URL,
@@ -40,7 +39,7 @@ const RUN_SAFETY_POLL_MS = 10000;
 export default function App() {
   const { reachable, checks } = useRunnerConnection();
   const [step, setStep] = useState<Step>('connect');
-  const [model, setModel] = useState<string | null>(loadSavedModel);
+  const [model, setModel] = useState<string | null>(null);
   const [keyReturnStep, setKeyReturnStep] = useState<Step | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -64,10 +63,13 @@ export default function App() {
   useEffect(() => {
     if (!reachable || step !== 'connect') return;
     setStep('loading');
-    isKeySaved()
-      .then((saved) => setStep(saved && model ? 'target' : 'key'))
+    getAiSetup()
+      .then((setup) => {
+        setModel(setup.model);
+        setStep(setup.configured && setup.model ? 'target' : 'key');
+      })
       .catch((err) => setLoadError(err instanceof RunnerError ? err.message : 'The QA Tool didn’t answer. Reload the page.'));
-  }, [reachable, step, model]);
+  }, [reachable, step]);
 
   const finishRun = useCallback(async () => {
     const active = runRef.current;

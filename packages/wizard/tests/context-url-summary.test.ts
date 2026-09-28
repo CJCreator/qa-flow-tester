@@ -119,4 +119,12 @@ describe('summarizeReport', () => {
     expect(summarizeReport(report([], { scanMode: 'safe-public' })).readOnly).toBe(true);
     expect(summarizeReport(report([])).readOnly).toBe(false);
   });
+
+  it('keeps unconfirmed AI guesses out of the issues, and counts them separately', () => {
+    const guess = { ...finding('F-SPEC-1', 'Suggestion', 'Could not verify: expected the page to say "Saved".'), needsConfirmation: true };
+    const s = summarizeReport(report([guess, finding('F-BUG-1', 'Minor', 'Console Error in step "Save"')]));
+    expect(s.total).toBe(1);
+    expect(s.toConfirm).toBe(1);
+    expect(s.top.map((t) => t.title)).not.toContain(guess.title);
+  });
 });

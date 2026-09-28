@@ -22,6 +22,8 @@ export interface ReportSummary {
   counts: SeverityCount[];
   top: TopIssue[];
   readOnly: boolean;
+  /** Checks based on an AI guess the site didn't match: not issues until someone confirms them. */
+  toConfirm: number;
 }
 
 const SEVERITY_ORDER: FindingSeverity[] = ['Blocker', 'Major', 'Minor', 'Suggestion'];
@@ -43,6 +45,8 @@ function category(f: Finding): string {
       return 'Looks different from the design';
     case 'permission-matrix':
       return 'Who can see what';
+    case 'security':
+      return 'Keeping people’s data safe';
     case 'ux-quality':
       return f.id.includes('A11Y') ? 'Hard for some people to use' : 'Awkward to use';
     default:
@@ -69,7 +73,8 @@ export function plainTitle(f: Finding): string {
 }
 
 export function summarizeReport(report: ReleaseReport): ReportSummary {
-  const active = report.findings.filter((f) => f.triageStatus !== 'Intended' && f.triageStatus !== 'False Positive');
+  const untriaged = report.findings.filter((f) => f.triageStatus !== 'Intended' && f.triageStatus !== 'False Positive');
+  const active = untriaged.filter((f) => !f.needsConfirmation);
   const bySeverity = (s: FindingSeverity) => active.filter((f) => f.severity === s).length;
   const blockers = bySeverity('Blocker');
   const majors = bySeverity('Major');
@@ -99,5 +104,6 @@ export function summarizeReport(report: ReleaseReport): ReportSummary {
     counts,
     top,
     readOnly: report.scanMode === 'safe-public',
+    toConfirm: untriaged.length - active.length,
   };
 }

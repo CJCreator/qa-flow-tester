@@ -11,6 +11,7 @@
 .qa-cache
 .qa-hub-storage
 .qa-keys.json
+.qa-ai-models.json
 .tmp-*
 .env
 npm-debug.log

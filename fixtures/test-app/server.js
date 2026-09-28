@@ -18,6 +18,98 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // A real signed-in area: POST sign-in sets a session cookie; /account pages need it.
+  const session = (req.headers.cookie || '').match(/fixture_session=(manager|viewer)/)?.[1];
+  const html = (title, body, status = 200) => {
+    res.writeHead(status, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>${title}</title></head><body>
+      <header><nav><a href="/">Home</a> <a href="/account">My account</a> <a href="/about">About</a></nav></header>
+      <main>${body}</main></body></html>`);
+  };
+  const SIGN_IN_FORM = `<form method="post" action="/signin">
+      <label for="signin-email">Email</label><input id="signin-email" name="email" type="email">
+      <label for="signin-password">Password</label><input id="signin-password" name="password" type="password">
+      <button type="submit" data-testid="signin-btn">Sign in</button>
+    </form>`;
+  const ACCOUNTS = { 'manager@example.com': ['manager-password', 'manager'], 'viewer@example.com': ['viewer-password', 'viewer'] };
+
+  if (url.pathname === '/signin' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (chunk) => (body += chunk));
+    req.on('end', () => {
+      const form = new URLSearchParams(body);
+      const account = ACCOUNTS[form.get('email') || ''];
+      if (account && account[0] === form.get('password')) {
+        res.writeHead(302, { 'Set-Cookie': `fixture_session=${account[1]}; Path=/; HttpOnly`, Location: '/account' });
+        res.end();
+      } else {
+        html('Sign in', `<h1>Sign in</h1><p role="alert">Wrong email or password</p>${SIGN_IN_FORM}`);
+      }
+    });
+    return;
+  }
+  if (url.pathname === '/signin') return html('Sign in', `<h1>Sign in</h1>${SIGN_IN_FORM}`);
+  if (url.pathname === '/signout') {
+    res.writeHead(302, { 'Set-Cookie': 'fixture_session=; Path=/; Max-Age=0', Location: '/' });
+    res.end();
+    return;
+  }
+  if (url.pathname.startsWith('/account')) {
+    if (!session) {
+      res.writeHead(302, { Location: '/signin' });
+      res.end();
+      return;
+    }
+    if (url.pathname === '/account') {
+      return html(
+        'My account',
+        `<h1>My account</h1><p>Signed in as ${session}.</p>
+         <a href="/account/orders">Orders</a> <a href="/account/profile">Profile</a> <a href="/account/team">Team</a>
+         <a href="/signout">Sign out</a>`
+      );
+    }
+    if (url.pathname === '/account/orders') return html('Orders', '<h1>Orders</h1><p>No orders yet.</p>');
+    // Planted: a form that shows its own error message when the name is left empty.
+    if (url.pathname === '/account/profile') {
+      return html(
+        'Profile',
+        `<h1>Profile</h1>
+         <form id="profile-form" novalidate>
+           <label for="display-name">Display name</label><input id="display-name" data-testid="display-name" value="Sam">
+           <p id="name-error" class="field-error" role="alert"></p>
+           <button type="submit" data-testid="save-profile">Save profile</button>
+         </form>
+         <p id="saved" hidden>Profile saved</p>
+         <script>
+           document.getElementById('profile-form').addEventListener('submit', (e) => {
+             e.preventDefault();
+             const name = document.getElementById('display-name').value.trim();
+             document.getElementById('name-error').textContent = name ? '' : 'Please enter your name';
+             document.getElementById('saved').hidden = !name;
+           });
+         </script>`
+      );
+    }
+    // Only managers may see the team page.
+    if (url.pathname === '/account/team') {
+      return session === 'manager'
+        ? html('Team', '<h1>Team</h1><p>2 people</p>')
+        : html('No access', '<h1>You don’t have access to this page</h1>', 403);
+    }
+  }
+  // Planted: a page with no title (and no description) for search engines to show.
+  if (url.pathname === '/about') {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"></head><body>
+      <header><nav><a href="/">Home</a></nav></header><main><h1>About Fixture</h1><p>We make invoices.</p></main></body></html>`);
+    return;
+  }
+  // Planted: a slow page (answers after 2 seconds).
+  if (url.pathname === '/reports') {
+    setTimeout(() => html('Reports', '<h1>Reports</h1><p>Monthly totals.</p>'), 2000);
+    return;
+  }
+
   // Default for the HTML pages below; the 404 fallback overrides it (writeHead would throw if sent twice).
   res.statusCode = 200;
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -36,6 +128,9 @@ const server = http.createServer((req, res) => {
             <a href="/" data-testid="nav-home">Home</a>
             <a href="/login" data-testid="nav-login">Sign In</a>
             <a href="/invoices/new" data-testid="nav-new-invoice">New Invoice</a>
+            <a href="/account" data-testid="nav-account">My account</a>
+            <a href="/about" data-testid="nav-about">About</a>
+            <a href="/reports" data-testid="nav-reports">Reports</a>
           </nav>
         </header>
         <main>

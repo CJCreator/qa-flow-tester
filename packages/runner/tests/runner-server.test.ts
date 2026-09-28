@@ -17,7 +17,7 @@ describe('RunnerServer', () => {
     await new Promise<void>((resolve) => {
       fixtureServer.listen(FIXTURE_PORT, () => resolve());
     });
-    runner = new RunnerServer({ port: RUNNER_PORT, outputDir });
+    runner = new RunnerServer({ port: RUNNER_PORT, outputDir, dataDir: `${outputDir}-data` });
     await runner.start();
   });
 
@@ -27,6 +27,7 @@ describe('RunnerServer', () => {
       fixtureServer.close(() => resolve());
     });
     await fs.rm(outputDir, { recursive: true, force: true }).catch(() => {});
+    await fs.rm(`${outputDir}-data`, { recursive: true, force: true }).catch(() => {});
   });
 
   it('rejects a missing targetUrl with 400', async () => {
@@ -121,4 +122,14 @@ describe('RunnerServer', () => {
     expect(events.some((e) => e.type === 'STEP_COMPLETED')).toBe(true);
     expect(events.some((e) => e.type === 'RUN_COMPLETED')).toBe(true);
   }, 45000);
+
+  it('never serves saved sign-in sessions, which hold live session cookies', async () => {
+    await fs.mkdir(path.join(outputDir, 'auth'), { recursive: true });
+    await fs.writeFile(path.join(outputDir, 'auth', 'manager.json'), '{"cookies":[{"name":"session","value":"secret"}]}');
+    await fs.writeFile(path.join(outputDir, 'visible.json'), '{}');
+
+    expect((await fetch(`${runnerBaseUrl}/api/evidence/auth/manager.json`)).status).toBe(403);
+    expect((await fetch(`${runnerBaseUrl}/api/evidence/auth%2Fmanager.json`)).status).toBe(403);
+    expect((await fetch(`${runnerBaseUrl}/api/evidence/visible.json`)).status).toBe(200);
+  });
 });

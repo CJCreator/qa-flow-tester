@@ -1,7 +1,7 @@
 import { chromium, type Page } from 'playwright';
 import path from 'path';
 import { promises as fs } from 'fs';
-import type { Finding, ReferenceFlow, ReferenceFlowStep, StepEvidence } from '@qa/types';
+import type { Finding, ReferenceFlow, ReferenceFlowStep, StepEvidence, VisitedPage } from '@qa/types';
 import { BugDetectionChecker, UXQualityChecker } from '@qa/checkers';
 import { EvidenceCollector } from '../evidence.js';
 import { RobotsPolicy } from './robots.js';
@@ -19,6 +19,12 @@ export interface SafeCrawlerOptions {
   onStepStarted?: (stepIndex: number, action: string) => void;
   /** Called after each step, with the findings collected so far (only when checks run). */
   onStepCompleted?: (stepIndex: number, findingsSoFar: number) => void;
+  /** scan() only: pages to visit by following same-site links. Default 25, at most 60. */
+  maxPages?: number;
+  /** Minimum pause between page loads, to go easy on the site. Default 2000 ms. */
+  pageDelayMs?: number;
+  /** Called after each page is visited. */
+  onPageVisited?: (page: VisitedPage, pagesSoFar: number) => void;
 }
 
 export interface SafeScanResult {
@@ -27,12 +33,88 @@ export interface SafeScanResult {
   stepEvidence: StepEvidence[];
   /** Mutating requests or off-site navigations the interceptor refused, as "METHOD url". */
   blockedRequests: string[];
+  /** Every page visited, in order, with its layout group. */
+  pages: VisitedPage[];
+  /** Same-site pages robots.txt asked crawlers to leave alone. */
+  skippedByRobots: string[];
 }
 
 const USER_AGENT_TOKEN = 'QA-Benchmarking-Bot';
-/** Hard ceiling on interaction hops for external sites. */
+/** Hard ceiling on in-page interaction hops for external sites. */
 const MAX_CRAWL_STEPS = 5;
+const DEFAULT_SCAN_PAGES = 25;
+const MAX_SCAN_PAGES = 60;
+const DEFAULT_PAGE_DELAY_MS = 2000;
 const MUTATING_METHODS = ['POST', 'PUT', 'DELETE', 'PATCH'];
+/** Links to files rather than pages. */
+const NOT_A_PAGE = /\.(pdf|zip|gz|rar|7z|jpe?g|png|gif|webp|svg|ico|mp4|webm|mp3|wav|docx?|xlsx?|pptx?|csv|exe|dmg|apk)$/i;
+/** Links that would end a session, never followed. */
+const SESSION_ENDING = /log-?out|sign-?out|logoff/i;
+
+/** The folder a scan stays in: the start page's folder ("/" when it starts at the root). */
+export function scanScope(entryUrl: string): string {
+  const pathname = new URL(entryUrl).pathname;
+  return pathname.slice(0, pathname.lastIndexOf('/') + 1) || '/';
+}
+
+/** This machine, a private network address, or Docker's name for the host. */
+export function isPrivateHost(hostname: string): boolean {
+  const h = hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  return (
+    h === 'localhost' ||
+    h.endsWith('.localhost') ||
+    h === 'host.docker.internal' ||
+    h === '::1' ||
+    /^127\./.test(h) ||
+    /^10\./.test(h) ||
+    /^192\.168\./.test(h) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(h)
+  );
+}
+
+/**
+ * The shape of a path, with its variable parts replaced: /catalogue/a-light-in-the-attic_1000/index.html
+ * and /catalogue/soumission_998/index.html share the shape /catalogue/*\/index.html.
+ */
+function pathShape(pathname: string): string {
+  const segments = pathname.split('/');
+  const last = segments.map((s) => s !== '').lastIndexOf(true);
+  return segments
+    .map((seg, i) =>
+      // The last part names the item (/category/books, /category/games); numbers, long
+      // strings and slugs vary too.
+      i === last || /\d/.test(seg) || seg.length > 24 || /^[a-z0-9]+(?:[-_][a-z0-9]+){2,}$/i.test(seg) ? '*' : seg
+    )
+    .join('/');
+}
+
+/**
+ * A fingerprint of the page's structure, ignoring text and class names, with repeated siblings
+ * collapsed, so pages built from one template (every product page) share it.
+ */
+async function readLayoutFingerprint(page: Page): Promise<string> {
+  const outline = await page
+    .evaluate(() => {
+      const IGNORED = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'LINK', 'META']);
+      const walk = (el: Element, depth: number): string => {
+        if (depth > 4) return '';
+        const parts: string[] = [];
+        for (const child of Array.from(el.children)) {
+          if (IGNORED.has(child.tagName)) continue;
+          const role = child.getAttribute('role');
+          const part = `${child.tagName.toLowerCase()}${role ? `[${role}]` : ''}(${walk(child, depth + 1)})`;
+          if (parts[parts.length - 1] !== part) parts.push(part);
+        }
+        return parts.join(',');
+      };
+      return walk(document.body, 0);
+    })
+    .catch(() => '');
+  // djb2: short and stable, enough to tell templates apart.
+  let hash = 5381;
+  for (let i = 0; i < outline.length; i++) hash = ((hash << 5) + hash + outline.charCodeAt(i)) >>> 0;
+  return hash.toString(36);
+}
 
 /**
  * Runs in every document before site scripts: swallows submit events and turns the
@@ -65,6 +147,8 @@ export class SafePublicCrawler {
   private async explore(options: SafeCrawlerOptions, runChecks: boolean): Promise<SafeScanResult> {
     const entryUrl = options.entryUrl;
     const maxSteps = Math.min(Math.max(options.maxSteps ?? MAX_CRAWL_STEPS, 1), MAX_CRAWL_STEPS);
+    // The reference flow (competitor comparison) stays on one page; a scan follows links.
+    const maxPages = runChecks ? Math.min(Math.max(options.maxPages ?? DEFAULT_SCAN_PAGES, 1), MAX_SCAN_PAGES) : 1;
     const actionDelayMs = options.actionDelayMs ?? 400;
     const outputDir = path.resolve(options.outputDir || path.join(process.cwd(), '.qa-compare'));
     const evidenceDir = path.join(outputDir, 'evidence');
@@ -72,6 +156,8 @@ export class SafePublicCrawler {
 
     const targetUrlObj = new URL(entryUrl);
     const targetHost = targetUrlObj.hostname;
+    // The pause between pages is courtesy to sites we don't own; a local build doesn't need it.
+    const pageDelayMs = options.pageDelayMs ?? (isPrivateHost(targetHost) ? 0 : DEFAULT_PAGE_DELAY_MS);
 
     const robots =
       options.respectRobots === false
@@ -132,68 +218,141 @@ export class SafePublicCrawler {
 
     const steps: ReferenceFlowStep[] = [];
     const stepEvidence: StepEvidence[] = [];
+    const pages: VisitedPage[] = [];
+    const skippedByRobots: string[] = [];
+    const layoutIds = new Map<string, string>();
     let findings: Finding[] = [];
-    let lastAction = 'Navigate to entry page';
+    let stepIndex = 0;
+
+    /** Records the page as it is now: screenshot, reference-flow step, and (when scanning) checks. */
+    const recordStep = async (action: string, stepStartedAt: number): Promise<string> => {
+      const currentUrl = page.url();
+      const pageTitle = await page.title();
+      const pageMetrics = await readPageMetrics(page);
+
+      const screenshotFilePath = path.join(evidenceDir, `step-${stepIndex}-${Date.now()}.png`);
+      try {
+        await page.screenshot({ path: screenshotFilePath, fullPage: false });
+      } catch {
+        // If screenshot fails, continue
+      }
+
+      steps.push({
+        stepIndex,
+        action,
+        url: currentUrl,
+        title: pageTitle,
+        screenshotPath: screenshotFilePath,
+        interactiveControlsFound: pageMetrics.interactiveControls,
+        fieldsCount: pageMetrics.fieldsCount,
+        requiredFieldsCount: pageMetrics.requiredFieldsCount,
+      });
+
+      if (runChecks) {
+        findings.push(
+          ...(await this.checkStep(page, collector, bugChecker, uxChecker, blockedRequests, {
+            stepIndex,
+            action,
+            urlBefore: steps[steps.length - 2]?.url ?? entryUrl,
+            screenshotPath: screenshotFilePath,
+            startedAt: stepStartedAt,
+            stepEvidence,
+            entryPath: targetUrlObj.pathname,
+          }))
+        );
+        findings = uxChecker.deduplicateFindings(findings);
+      }
+      options.onStepCompleted?.(stepIndex, findings.length);
+      return screenshotFilePath;
+    };
+
+    // A review started below the site root stays in that part of the site: a demo at
+    // /WAI/demos/bad/before/home.html is reviewed, not the rest of w3.org.
+    const scopePrefix = scanScope(entryUrl);
+
+    // Pages to visit, told apart by path. Addresses of a shape not seen yet go first, so 25 pages
+    // cover a shop's categories, products and pagination rather than 25 categories.
+    const seenPaths = new Set<string>([targetUrlObj.pathname]);
+    const seenShapes = new Set<string>([pathShape(targetUrlObj.pathname)]);
+    const newShapes: string[] = [];
+    const others: string[] = [];
+    const enqueueLinks = (hrefs: string[]) => {
+      for (const href of hrefs) {
+        let u: URL;
+        try {
+          u = new URL(href, page.url());
+        } catch {
+          continue;
+        }
+        u.hash = '';
+        if (u.hostname !== targetHost || !/^https?:$/.test(u.protocol)) continue;
+        if (!u.pathname.startsWith(scopePrefix)) continue;
+        if (NOT_A_PAGE.test(u.pathname) || SESSION_ENDING.test(u.pathname) || seenPaths.has(u.pathname)) continue;
+        seenPaths.add(u.pathname);
+        if (!robots.isAllowed(u.pathname + u.search)) {
+          skippedByRobots.push(u.pathname);
+          continue;
+        }
+        const shape = pathShape(u.pathname);
+        if (seenShapes.has(shape)) others.push(u.toString());
+        else {
+          seenShapes.add(shape);
+          newShapes.push(u.toString());
+        }
+      }
+    };
 
     try {
-      options.onStepStarted?.(1, lastAction);
-      await page.goto(entryUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-      await page.waitForTimeout(actionDelayMs);
+      let nextUrl: string | undefined = entryUrl;
+      let lastLoadAt = 0;
+      while (nextUrl && pages.length < maxPages) {
+        const isEntry = pages.length === 0;
+        const action = isEntry ? 'Navigate to entry page' : `Opened ${new URL(nextUrl).pathname}`;
+        // Go easy on sites we don't own: a pause between page loads.
+        if (!isEntry) await page.waitForTimeout(Math.max(0, lastLoadAt + pageDelayMs - Date.now()));
 
-      for (let stepIndex = 1; stepIndex <= maxSteps; stepIndex++) {
+        stepIndex++;
         const stepStartedAt = Date.now();
-        const currentUrl = page.url();
-        const pageTitle = await page.title();
-        const pageMetrics = await readPageMetrics(page);
-
-        // Capture step screenshot
-        const screenshotFileName = `step-${stepIndex}-${Date.now()}.png`;
-        const screenshotFilePath = path.join(evidenceDir, screenshotFileName);
+        options.onStepStarted?.(stepIndex, action);
         try {
-          await page.screenshot({ path: screenshotFilePath, fullPage: false });
-        } catch {
-          // If screenshot fails, continue
+          await page.goto(nextUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        } catch (err) {
+          if (isEntry) throw err;
+          nextUrl = newShapes.shift() ?? others.shift();
+          continue;
         }
-
-        steps.push({
-          stepIndex,
-          action: lastAction,
-          url: currentUrl,
-          title: pageTitle,
-          screenshotPath: screenshotFilePath,
-          interactiveControlsFound: pageMetrics.interactiveControls,
-          fieldsCount: pageMetrics.fieldsCount,
-          requiredFieldsCount: pageMetrics.requiredFieldsCount,
-        });
-
-        if (runChecks) {
-          findings.push(
-            ...(await this.checkStep(page, collector, bugChecker, uxChecker, blockedRequests, {
-              stepIndex,
-              action: lastAction,
-              urlBefore: steps[stepIndex - 2]?.url ?? entryUrl,
-              screenshotPath: screenshotFilePath,
-              startedAt: stepStartedAt,
-              stepEvidence,
-            }))
-          );
-          findings = uxChecker.deduplicateFindings(findings);
-        }
-        options.onStepCompleted?.(stepIndex, findings.length);
-
-        if (stepIndex >= maxSteps) {
-          break;
-        }
-
-        const clickedSafeElement = await clickNextSafeControl(page);
-        if (!clickedSafeElement) {
-          // No more safe interactive controls found on page
-          break;
-        }
-        lastAction = clickedSafeElement;
-        options.onStepStarted?.(stepIndex + 1, lastAction);
-
+        lastLoadAt = Date.now();
         await page.waitForTimeout(actionDelayMs);
+
+        const screenshotPath = await recordStep(action, stepStartedAt);
+        const landed = new URL(page.url());
+        const fingerprint = await readLayoutFingerprint(page);
+        if (!layoutIds.has(fingerprint)) layoutIds.set(fingerprint, `layout-${layoutIds.size + 1}`);
+        pages.push({
+          urlPath: landed.pathname,
+          title: await page.title(),
+          layoutGroup: layoutIds.get(fingerprint)!,
+          screenshotPath,
+        });
+        options.onPageVisited?.(pages[pages.length - 1], pages.length);
+
+        if (pages.length < maxPages) {
+          enqueueLinks(await page.$$eval('a[href]', (as) => as.map((a) => a.getAttribute('href') || '')));
+        }
+
+        // Safe in-page exploration: tabs, pricing toggles, accordions. The entry page gets the
+        // most attention (as the reference flow always did); later pages get one control each.
+        const controlBudget = isEntry ? maxSteps - 1 : Math.min(1, maxSteps - 1);
+        for (let c = 0; c < controlBudget; c++) {
+          const clicked = await clickNextSafeControl(page);
+          if (!clicked) break;
+          stepIndex++;
+          options.onStepStarted?.(stepIndex, clicked);
+          await page.waitForTimeout(actionDelayMs);
+          await recordStep(clicked, Date.now());
+        }
+
+        nextUrl = newShapes.shift() ?? others.shift();
       }
     } finally {
       await browser.close();
@@ -211,6 +370,8 @@ export class SafePublicCrawler {
       findings,
       stepEvidence,
       blockedRequests,
+      pages,
+      skippedByRobots: [...new Set(skippedByRobots)],
     };
   }
 
@@ -227,6 +388,7 @@ export class SafePublicCrawler {
       screenshotPath: string;
       startedAt: number;
       stepEvidence: StepEvidence[];
+      entryPath: string;
     }
   ): Promise<Finding[]> {
     // Requests our own interceptor aborted are not site defects.
@@ -257,7 +419,7 @@ export class SafePublicCrawler {
       urlPath: new URL(page.url()).pathname,
     };
     const bugFindings = bugChecker.check([evidence], context);
-    const uxFindings = await uxChecker.check(page, { ...context, enableAxe: true });
+    const uxFindings = await uxChecker.check(page, { ...context, enableAxe: true, entryPath: step.entryPath });
     for (const f of [...bugFindings, ...uxFindings]) {
       f.flowId = context.flowId;
       f.evidence.screenshotPath ??= step.screenshotPath;

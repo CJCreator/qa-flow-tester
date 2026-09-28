@@ -1,0 +1,25 @@
+{
+  "name": "W3C BAD demo (inaccessible version)",
+  "url": "https://www.w3.org/WAI/demos/bad/before/home.html",
+  "mode": "safe-public",
+  "issues": [
+    {
+      "id": "accessibility",
+      "what": "The W3C built these pages to fail accessibility rules, so every WCAG violation on them is real",
+      "match": [{ "checker": "ux-quality", "titleIncludes": "WCAG Violation" }]
+    },
+    {
+      "id": "analytics-404",
+      "what": "The demo loads an analytics script that no longer exists",
+      "match": [{ "checker": "bug-detection", "titleIncludes": "piwik" }]
+    },
+    {
+      "id": "broken-links",
+      "what": "Links to pages that don't exist: every story on the annotated home page links to ../news/annotations, and “Read more...” on the template pages links to info (both 404)",
+      "match": [
+        { "checker": "bug-detection", "titleIncludes": "HTTP 404", "urlIncludes": "/annotations" },
+        { "checker": "bug-detection", "titleIncludes": "HTTP 404", "urlIncludes": "/info" }
+      ]
+    }
+  ]
+}

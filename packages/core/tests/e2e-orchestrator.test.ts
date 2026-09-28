@@ -112,7 +112,9 @@ describe('FlowTestOrchestrator E2E', () => {
     // Video is retained only for the failed test point, and linked from its findings
     expect(invoiceResult?.videoPath).toBeUndefined();
     expect(telemetryResult?.videoPath).toMatch(/\.webm$/);
-    expect((await fs.stat(telemetryResult!.videoPath!)).size).toBeGreaterThan(0);
+    // Report paths are relative to the report folder, so the report still works when moved.
+    expect(path.isAbsolute(telemetryResult!.videoPath!)).toBe(false);
+    expect((await fs.stat(path.join(outputDir, telemetryResult!.videoPath!))).size).toBeGreaterThan(0);
     expect(apiFinding?.evidence.videoPath).toBe(telemetryResult?.videoPath);
     const passedPointFiles = await fs.readdir(path.join(outputDir, 'evidence', 'TC-E2E-001-1440px'));
     expect(passedPointFiles.some((f) => f.endsWith('.webm'))).toBe(false);

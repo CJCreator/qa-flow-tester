@@ -1,0 +1,18 @@
+{
+  "name": "TodoMVC (one-screen app)",
+  "url": "https://demo.playwright.dev/todomvc/",
+  "mode": "safe-public",
+  "issues": [
+    {
+      "id": "low-contrast-heading",
+      "what": "The large “todos” heading is pale pink on light grey (contrast 1.26)",
+      "match": [{ "titleIncludes": "(color-contrast)" }]
+    }
+  ],
+  "notProblems": [
+    {
+      "why": "A one-screen app needs no navigation: the dead-end rule must not fire here",
+      "match": [{ "titleIncludes": "Dead End Page" }]
+    }
+  ]
+}

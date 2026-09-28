@@ -1,0 +1,63 @@
+{
+  "name": "Fixture invoicing app",
+  "url": "fixture",
+  "mode": "product",
+  "roles": [{ "role": "manager", "username": "manager@example.com", "password": "manager-password", "loginPath": "/signin" }],
+  "issues": [
+    {
+      "id": "console-error",
+      "what": "The dashboard's “Trigger Console Error” button logs an error",
+      "planted": true,
+      "match": [{ "checker": "bug-detection", "actualIncludes": "Simulated Unhandled Runtime Bug" }]
+    },
+    {
+      "id": "api-500",
+      "what": "The dashboard's “Trigger 500 API Failure” button calls an API that fails",
+      "planted": true,
+      "match": [{ "checker": "bug-detection", "titleIncludes": "/api/failing-endpoint" }]
+    },
+    {
+      "id": "tiny-target",
+      "what": "A 20 × 20 px button on the dashboard",
+      "planted": true,
+      "match": [{ "titleIncludes": "Touch target too small: X " }, { "titleIncludes": "(target-size)", "urlIncludes": "/dashboard" }]
+    },
+    {
+      "id": "small-text-links",
+      "what": "Plain text links (the header menu, a Save button) are under 44 px tall on a phone",
+      "match": [{ "titleIncludes": "Touch target too small" }]
+    },
+    {
+      "id": "dead-end",
+      "what": "/deadend has no way back",
+      "planted": true,
+      "match": [{ "titleIncludes": "Dead End Page", "urlIncludes": "/deadend" }]
+    },
+    {
+      "id": "password-in-address",
+      "what": "The /login form uses GET, so the password goes into the page address",
+      "planted": true,
+      "match": [{ "checker": "security", "titleIncludes": "passwords in the page address" }]
+    },
+    {
+      "id": "about-no-title",
+      "what": "/about has no title",
+      "planted": true,
+      "match": [{ "titleIncludes": "(document-title)" }]
+    },
+    {
+      "id": "slow-reports",
+      "what": "/reports takes 2 seconds to answer",
+      "planted": true,
+      "expectedBy": "phase-2",
+      "match": [{ "checker": "performance", "urlIncludes": "/reports" }]
+    },
+    {
+      "id": "no-security-headers",
+      "what": "No page sends security headers such as Content-Security-Policy",
+      "planted": true,
+      "expectedBy": "phase-2",
+      "match": [{ "checker": "security", "titleIncludes": "header" }]
+    }
+  ]
+}

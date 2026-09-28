@@ -6,6 +6,7 @@ import {
   FlowTestOrchestrator,
   DiscoveryAgent,
   TestPlanner,
+  buildPageSweep,
   createAIProvider,
   pushRunToHub,
   runSafeWebsiteScan,
@@ -13,6 +14,8 @@ import {
   OpenRouterClient,
   OpenRouterAuthError,
   pickRecommendedModel,
+  pickVisionModel,
+  keepOrPickModels,
   PreFlightChecker,
   type AIProvider,
   type OrchestratorEvent,
@@ -101,13 +104,17 @@ export class RunnerServer {
   private isRunning = false;
   private lastReport: ReleaseReport | null = null;
   private lastRunError: string | null = null;
+  /** The chosen free models (not secret), kept beside the key so every browser gets the same setup. */
+  private aiModelsFile: string;
 
   constructor(options: RunnerServerOptions = {}) {
     this.port = options.port || 3001;
     this.host = options.host || 'localhost';
     this.outputDir = path.resolve(options.outputDir || path.join(process.cwd(), '.qa-runner-report'));
     this.localhostAlias = options.localhostAlias;
-    this.keyResolver = options.keyResolver || new KeyResolver(path.resolve(options.dataDir || process.cwd()));
+    const dataDir = path.resolve(options.dataDir || process.cwd());
+    this.aiModelsFile = path.join(dataDir, '.qa-ai-models.json');
+    this.keyResolver = options.keyResolver || new KeyResolver(dataDir);
     this.openRouter = options.openRouter || new OpenRouterClient();
     this.makeAIProvider =
       options.createAIProvider || ((provider, apiKey, model) => createAIProvider(provider, apiKey, undefined, model));
@@ -224,7 +231,9 @@ export class RunnerServer {
           if (pathname.startsWith('/api/evidence/') && req.method === 'GET') {
             const relPath = decodeURIComponent(pathname.replace('/api/evidence/', ''));
             const targetFile = path.resolve(this.outputDir, relPath);
-            if (!isInside(this.outputDir, targetFile)) {
+            // Saved sign-in sessions (auth/<role>.json) hold live session cookies: never served.
+            const isSavedSession = path.relative(this.outputDir, targetFile).split(path.sep)[0] === 'auth';
+            if (!isInside(this.outputDir, targetFile) || isSavedSession) {
               res.writeHead(403, { 'Content-Type': 'text/plain' });
               res.end('Forbidden');
               return;
@@ -360,6 +369,22 @@ export class RunnerServer {
     return resolved?.provider === 'openrouter' ? resolved.apiKey : undefined;
   }
 
+  private async readAiModels(): Promise<{ text?: string | null; vision?: string | null }> {
+    try {
+      return JSON.parse(await fs.readFile(this.aiModelsFile, 'utf8'));
+    } catch {
+      return {};
+    }
+  }
+
+  /** Keeps the chosen free models while they are still free, replacing any that has gone. */
+  private async refreshAiModels(apiKey: string): Promise<{ text: string | null; vision: string | null }> {
+    const models = keepOrPickModels(await this.openRouter.listFreeModels(apiKey), await this.readAiModels());
+    await fs.mkdir(path.dirname(this.aiModelsFile), { recursive: true });
+    await fs.writeFile(this.aiModelsFile, JSON.stringify({ ...models, chosenAt: new Date().toISOString() }, null, 2), 'utf8');
+    return models;
+  }
+
   private async handleOpenRouter(route: string, req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
     // POST validate: check a key without keeping it anywhere.
     if (route === 'validate' && req.method === 'POST') {
@@ -373,9 +398,12 @@ export class RunnerServer {
       return;
     }
 
-    // GET key: whether a key is saved on this machine (the key itself is never sent back).
+    // GET key: whether a key is saved on this machine (the key itself is never sent back), and the
+    // free models chosen for it, so any browser can skip the setup screen.
     if (route === 'key' && req.method === 'GET') {
-      this.sendJson(res, 200, { configured: !!(await this.storedOpenRouterKey()) });
+      const configured = !!(await this.storedOpenRouterKey());
+      const models = configured ? await this.readAiModels() : {};
+      this.sendJson(res, 200, { configured, model: models.text ?? null, visionModel: models.vision ?? null });
       return;
     }
 
@@ -393,7 +421,9 @@ export class RunnerServer {
         return;
       }
       await this.keyResolver.saveByokKey('openrouter', apiKey!.trim());
-      this.sendJson(res, 200, { saved: true });
+      // Choose the free models now; a null model means none is free right now.
+      const models = await this.refreshAiModels(apiKey!.trim()).catch(() => ({ text: null, vision: null }));
+      this.sendJson(res, 200, { saved: true, model: models.text, visionModel: models.vision });
       return;
     }
 
@@ -403,7 +433,11 @@ export class RunnerServer {
       const apiKey = header?.startsWith('Bearer ') ? header.slice(7) : await this.storedOpenRouterKey();
       try {
         const models = await this.openRouter.listFreeModels(apiKey);
-        this.sendJson(res, 200, { models, recommendedModel: pickRecommendedModel(models) });
+        this.sendJson(res, 200, {
+          models,
+          recommendedModel: pickRecommendedModel(models),
+          recommendedVisionModel: pickVisionModel(models),
+        });
       } catch (err) {
         if (err instanceof OpenRouterAuthError) {
           this.sendJson(res, 401, { error: err.message });
@@ -487,6 +521,8 @@ export class RunnerServer {
           ? { name: productId, productId, roles: body.roles }
           : undefined;
       let specTestCases: TestCase[];
+      let reportNotes: string[] | undefined;
+      let aiModels: { text?: string; vision?: string } | undefined;
 
       if (body.specTestCases && body.specTestCases.length > 0) {
         // Caller supplied an explicit spec — takes priority over AI discovery.
@@ -498,7 +534,18 @@ export class RunnerServer {
           apiKey = await this.storedOpenRouterKey();
           if (!apiKey) throw new Error('No OpenRouter key is saved. Add one before starting an AI run.');
         }
-        const aiProvider = this.makeAIProvider(providerType, apiKey || 'mock-key', body.aiModel);
+        // One fixed free model per role (text, vision) chosen by the runner, so every run of a
+        // site is planned by the same model and the report can say which.
+        let model = body.aiModel;
+        let visionModel: string | null | undefined;
+        if (providerType === 'openrouter') {
+          const chosen = await this.refreshAiModels(apiKey!).catch(async () => this.readAiModels());
+          model ??= chosen.text ?? undefined;
+          visionModel = chosen.vision;
+          if (!model) throw new Error('No free AI models are available right now — please try again later.');
+        }
+        aiModels = model ? { text: model, vision: visionModel ?? undefined } : undefined;
+        const aiProvider = this.makeAIProvider(providerType, apiKey || 'mock-key', model);
 
         let contextFilePath: string | undefined;
         if (body.productContext?.trim()) {
@@ -518,8 +565,11 @@ export class RunnerServer {
           aiProvider,
         });
         this.broadcastRunnerEvent({ type: 'DISCOVERY_COMPLETED', runId, flowsFound: draft.flows.length, timestamp: Date.now() });
+        reportNotes = draft.exploration?.notes;
         const planner = new TestPlanner();
-        specTestCases = planner.plan(draft).testCases;
+        // The planned journeys, then a visit to every page found, so problems no journey passes
+        // through (a broken button, a page with no way out) are still found.
+        specTestCases = [...planner.plan(draft).testCases, ...buildPageSweep(draft)];
         if (specTestCases.length === 0) {
           // Nothing discovered/plannable — fall back to a trivial sanity check rather
           // than running zero test cases (which would look like a silent success).
@@ -529,7 +579,8 @@ export class RunnerServer {
         specTestCases = [this.defaultTestCase()];
       }
 
-      const breakpoints = (body.breakpoints as any) || ['1440px'];
+      // Phone, tablet and desktop by default: some problems only show at one width.
+      const breakpoints = (body.breakpoints as any) || ['375px', '768px', '1440px'];
       const orchestrator = new FlowTestOrchestrator();
       const report = await orchestrator.run({
         targetUrl,
@@ -541,6 +592,8 @@ export class RunnerServer {
         breakpoints,
         repoRoot: process.cwd(),
         runId,
+        reportNotes,
+        aiModels,
         onEvent: (event) => this.forwardRunEvent(event),
       });
 
