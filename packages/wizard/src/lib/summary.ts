@@ -1,4 +1,6 @@
-import type { Finding, FindingSeverity, ReleaseReport } from '@qa/types';
+import type { AspectType, CheckerType, Finding, FindingSeverity, ReleaseReport } from '@qa/types';
+// From its source: @qa/types' index pulls in node:crypto, which has no place in a browser bundle.
+import { releaseVerdict } from '@qa/types/src/verdict.js';
 
 export interface SeverityCount {
   severity: FindingSeverity;
@@ -17,6 +19,8 @@ export interface ReportSummary {
   ready: boolean;
   /** The words on the stamp. */
   stamp: string;
+  /** Why, in one sentence: "2 problems must be fixed first." */
+  reason: string;
   headline: string;
   total: number;
   counts: SeverityCount[];
@@ -35,7 +39,7 @@ const SEVERITY_WORDS: Record<FindingSeverity, (n: number) => string> = {
   Suggestion: (n) => `${n} ${n === 1 ? 'suggestion' : 'suggestions'}`,
 };
 
-function category(f: Finding): string {
+export function category(f: Pick<Finding, 'checker' | 'id'>): string {
   switch (f.checker) {
     case 'bug-detection':
       return 'Something broke';
@@ -47,16 +51,37 @@ function category(f: Finding): string {
       return 'Who can see what';
     case 'security':
       return 'Keeping people’s data safe';
+    case 'performance':
+      return 'Speed and phones';
+    case 'seo':
+      return 'Being found in search';
+    case 'ai-review':
+      return 'How it looks and reads';
     case 'ux-quality':
       return f.id.includes('A11Y') ? 'Hard for some people to use' : 'Awkward to use';
     default:
-      return 'Issue';
+      return 'Problem';
   }
 }
 
-/** Rewrites the report's technical finding titles as sentences; unknown shapes are only tidied. */
-export function plainTitle(f: Finding): string {
-  const t = f.title;
+/** The report's six areas, and the checks behind each (the same mapping as the grades). */
+export const ASPECT_CHECKERS: Record<AspectType, CheckerType[]> = {
+  Works: ['bug-detection', 'spec-conformance'],
+  Accessible: ['ux-quality'],
+  'Fast and mobile': ['performance'],
+  Findable: ['seo'],
+  Secure: ['security', 'permission-matrix'],
+  'Looks and reads well': ['design-standards', 'ai-review'],
+};
+
+export const ASPECTS: AspectType[] = ['Works', 'Accessible', 'Fast and mobile', 'Findable', 'Secure', 'Looks and reads well'];
+
+export function aspectOf(checker: CheckerType): AspectType {
+  return ASPECTS.find((a) => ASPECT_CHECKERS[a].includes(checker)) ?? 'Works';
+}
+
+/** Rewrites a technical finding title as a sentence; unknown shapes are only tidied. */
+export function plainTitleText(t: string): string {
   let m: RegExpMatchArray | null;
   if ((m = t.match(/^Third-party request failed/))) return 'A service your site relies on didn’t respond';
   if ((m = t.match(/^HTTP (\d{3})/))) return `A request to your site failed (error ${m[1]})`;
@@ -106,18 +131,19 @@ export function plainTitle(f: Finding): string {
   return t.replace(/^WCAG Violation:\s*/i, '').replace(/\s*\([a-z0-9-]+\)$/i, '');
 }
 
+/** Rewrites the report's technical finding titles as sentences; unknown shapes are only tidied. */
+export function plainTitle(f: Pick<Finding, 'title'>): string {
+  return plainTitleText(f.title);
+}
 
 export function summarizeReport(report: ReleaseReport): ReportSummary {
-  const untriaged = report.findings.filter((f) => f.triageStatus !== 'Intended' && f.triageStatus !== 'False Positive');
-  const active = untriaged.filter((f) => !f.needsConfirmation);
-  const bySeverity = (s: FindingSeverity) => active.filter((f) => f.severity === s).length;
-  const blockers = bySeverity('Blocker');
-  const majors = bySeverity('Major');
-  // Same rule as report.md: ready means nothing that blocks release and nothing serious.
-  const ready = blockers === 0 && majors === 0;
-  const total = active.length;
+  const verdict = releaseVerdict(report.findings);
+  const active = report.findings.filter(
+    (f) => f.triageStatus !== 'Intended' && f.triageStatus !== 'False Positive' && !f.needsConfirmation
+  );
+  const total = verdict.total;
 
-  const counts = SEVERITY_ORDER.map((severity) => ({ severity, count: bySeverity(severity) }))
+  const counts = SEVERITY_ORDER.map((severity) => ({ severity, count: verdict.counts[severity] }))
     .filter((c) => c.count > 0)
     .map((c) => ({ ...c, sentence: SEVERITY_WORDS[c.severity](c.count) }));
 
@@ -127,18 +153,124 @@ export function summarizeReport(report: ReleaseReport): ReportSummary {
     .map((f) => ({ title: plainTitle(f), category: category(f), severity: f.severity }));
 
   return {
-    ready,
-    stamp: ready ? 'Ready to release' : 'Not ready yet',
+    ready: verdict.ready,
+    stamp: verdict.stamp,
+    reason: verdict.reason,
     headline:
       total === 0
-        ? 'No issues found — looks ready!'
-        : ready
-          ? `${total} small ${total === 1 ? 'issue' : 'issues'} found`
-          : `${total} ${total === 1 ? 'issue' : 'issues'} found`,
+        ? 'No problems found — looks ready!'
+        : verdict.ready
+          ? `${total} small ${total === 1 ? 'problem' : 'problems'} found`
+          : `${total} ${total === 1 ? 'problem' : 'problems'} found`,
     total,
     counts,
     top,
-    readOnly: report.scanMode === 'safe-public',
-    toConfirm: untriaged.length - active.length,
+    readOnly: report.scanMode === 'safe-public' || report.scanMode === 'read-only',
+    toConfirm: verdict.toConfirm,
   };
+}
+
+/** Where a problem goes in the report: what to fix first. */
+export type Bucket = 'must-fix' | 'should-fix' | 'suggestion' | 'to-confirm';
+
+export const BUCKETS: Array<{ id: Bucket; title: string; intro: string }> = [
+  { id: 'must-fix', title: 'Must fix before release', intro: 'These stop the site working for people, or put them at risk.' },
+  { id: 'should-fix', title: 'Should fix', intro: 'Smaller problems people will notice.' },
+  { id: 'suggestion', title: 'Suggestions', intro: 'Worth doing when you can.' },
+  {
+    id: 'to-confirm',
+    title: 'To confirm',
+    intro: 'The AI expected something the site didn’t do. They aren’t counted as problems until someone confirms them.',
+  },
+];
+
+export function bucketOf(f: Pick<Finding, 'severity' | 'needsConfirmation'>): Bucket {
+  if (f.needsConfirmation) return 'to-confirm';
+  if (f.severity === 'Blocker' || f.severity === 'Major') return 'must-fix';
+  return f.severity === 'Minor' ? 'should-fix' : 'suggestion';
+}
+
+/** One problem, and every place it was found. */
+export interface ProblemGroup {
+  key: string;
+  title: string;
+  category: string;
+  aspect: AspectType;
+  bucket: Bucket;
+  severity: FindingSeverity;
+  findings: Finding[];
+  /** The pages it was found on, in the order first seen. */
+  pages: string[];
+}
+
+/**
+ * The report's problems, grouped by what to fix first, then by problem: the same problem on
+ * several pages is one entry that lists the pages. Findings marked as intended or false positives
+ * are left out.
+ */
+export function groupProblems(findings: Finding[]): Record<Bucket, ProblemGroup[]> {
+  const groups = new Map<string, ProblemGroup>();
+  for (const f of findings) {
+    if (f.triageStatus === 'Intended' || f.triageStatus === 'False Positive') continue;
+    const bucket = bucketOf(f);
+    const title = plainTitle(f);
+    const key = `${bucket}|${f.checker}|${title}`;
+    let group = groups.get(key);
+    if (!group) {
+      group = { key, title, category: category(f), aspect: aspectOf(f.checker), bucket, severity: f.severity, findings: [], pages: [] };
+      groups.set(key, group);
+    }
+    group.findings.push(f);
+    if (SEVERITY_ORDER.indexOf(f.severity) < SEVERITY_ORDER.indexOf(group.severity)) group.severity = f.severity;
+    for (const page of [f.where.urlPath, ...(f.seenAt?.pages || [])]) if (page && !group.pages.includes(page)) group.pages.push(page);
+  }
+  const result: Record<Bucket, ProblemGroup[]> = { 'must-fix': [], 'should-fix': [], suggestion: [], 'to-confirm': [] };
+  for (const group of groups.values()) result[group.bucket].push(group);
+  for (const list of Object.values(result)) {
+    list.sort((a, b) => SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity) || b.pages.length - a.pages.length);
+  }
+  return result;
+}
+
+/**
+ * A finding as a Markdown bug report, for pasting into a tracker: what happened, where, how to
+ * see it again, and what the console said.
+ */
+export function bugReportMarkdown(f: Finding, targetUrl: string): string {
+  const lines = [
+    `### ${plainTitle(f)}`,
+    ``,
+    `- **Site:** ${targetUrl}`,
+    `- **Page:** \`${f.where.urlPath}\` at ${f.where.breakpoint}, as ${f.where.role}`,
+    `- **How serious:** ${f.severity}`,
+    f.where.cssSelector || f.where.dataTestId ? `- **Element:** \`${f.where.cssSelector || f.where.dataTestId}\`` : '',
+    `- **Check:** ${f.checker} (${f.id})`,
+    ``,
+    `**Expected:** ${f.expectedVsActual.expected}`,
+    ``,
+    `**Actual:** ${f.expectedVsActual.actual}`,
+  ];
+  if (f.stepsToReproduce?.length) {
+    lines.push('', '**Steps to reproduce**', '', ...f.stepsToReproduce.map((s, i) => `${i + 1}. ${s}`));
+  }
+  const consoleLines = (f.evidence.consoleLogs || []).map((c) => c.text).filter(Boolean);
+  if (consoleLines.length) lines.push('', '**Console errors**', '', '```', ...consoleLines, '```');
+  if (f.resolution) lines.push('', `**Suggested fix:** ${f.resolution}`);
+  if (f.verifyCommand) lines.push('', `Check the fix with \`${f.verifyCommand}\`.`);
+  return lines.filter((l, i, all) => !(l === '' && all[i - 1] === '')).join('\n');
+}
+
+/** A Playwright test that walks the finding's steps, for when the core wrote no repro script. */
+export function playwrightFromSteps(f: Finding, targetUrl: string): string {
+  const steps = (f.stepsToReproduce || []).map((s) => `  // ${s.replace(/\*\//g, '* /')}`).join('\n');
+  const escaped = plainTitle(f).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  return `import { test, expect } from '@playwright/test';
+
+test('${f.id}: ${escaped}', async ({ page }) => {
+  await page.goto(new URL('${f.where.urlPath.replace(/'/g, "\\'")}', '${targetUrl.replace(/'/g, "\\'")}').toString());
+${steps || '  // Open the page and look for the problem.'}
+  // Expected: ${f.expectedVsActual.expected.replace(/\n/g, ' ')}
+  // Actual:   ${f.expectedVsActual.actual.replace(/\n/g, ' ')}
+});
+`;
 }

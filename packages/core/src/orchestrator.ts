@@ -38,6 +38,7 @@ import { calculateSiteAspectGrades } from './scoring.js';
 import { generateRankedRecommendations } from './recommendations.js';
 import { SiteHistoryManager } from './site-history.js';
 import { generateSingleFileHtmlReport } from './html-report.js';
+import { abortError, isAbortError } from './abort.js';
 import { promises as fs } from 'fs';
 
 export type OrchestratorEvent =
@@ -182,6 +183,18 @@ export interface RunOptions {
   notRun?: Array<{ id: string; flowId: string; name: string; role: string; reason: string }>;
   /** The site as the plan saw it, kept in the report so it can be drawn as a map. */
   siteMap?: SiteMapSummary;
+  /** Stops the run between steps and test points: the browser closes and run() throws an AbortError. */
+  signal?: AbortSignal;
+  /** Where sign-in sessions are saved. Default `<outputDir>/auth`. Keep it out of any folder that's served. */
+  authDir?: string;
+  /** Where suppressions and the previous run's findings (for the delta) live. Default outputDir. */
+  stateDir?: string;
+  /** How screenshots are addressed in STEP_COMPLETED: this prefix plus the path inside outputDir. Default `/api/evidence/`. */
+  evidenceUrlPrefix?: string;
+  /** The data folder that holds each site's grade history (`<dataDir>/sites`). Default `.qa-data` in the working folder. */
+  dataDir?: string;
+  /** Recorded in the report when "Test again" skipped the review: when the plan it used was approved. */
+  testedWithApprovedPlan?: string;
 }
 
 export class FlowTestOrchestrator {
@@ -204,13 +217,14 @@ export class FlowTestOrchestrator {
     const onEvent = (event: OrchestratorEvent) => emitEvent(redactor.deep(event));
     const outputDir = options.outputDir || path.join(process.cwd(), '.qa-report');
     const evidenceDir = path.join(outputDir, 'evidence');
-    const authDir = path.join(outputDir, 'auth');
+    const authDir = options.authDir || path.join(outputDir, 'auth');
     const repoRoot = options.repoRoot || process.cwd();
+    const evidenceUrlPrefix = options.evidenceUrlPrefix ?? '/api/evidence/';
 
     const sourceLocator = new SourceLocator(repoRoot);
     const reproGenerator = new ReproScriptGenerator(evidenceDir);
     const reportGenerator = new ReportGenerator(outputDir);
-    const suppressionsManager = new SuppressionsManager(outputDir);
+    const suppressionsManager = new SuppressionsManager(options.stateDir || outputDir);
 
     // Expand validation rules into synthetic test cases up front so RUN_STARTED can report
     // an accurate test case count and subscribers know a run has begun before pre-flight
@@ -240,6 +254,14 @@ export class FlowTestOrchestrator {
       throw new Error(`Pre-flight check failed: ${preflight.error}`);
     }
     console.log(`[QA Orchestrator] Pre-flight check PASSED.`);
+
+    // Asked to stop: the browser closes and the run ends here, with no report.
+    const stopHere = async () => {
+      if (!options.signal?.aborted) return;
+      await this.browserManager.close().catch(() => {});
+      throw abortError();
+    };
+    await stopHere();
 
     const roleStorageStates = preflight.roleStorageStates || {};
     const notes = [...(options.reportNotes || [])];
@@ -291,6 +313,7 @@ export class FlowTestOrchestrator {
       const lightChecks = kind === 'navigation' || kind === 'link';
       const pageLevelChecks = !kind || kind === 'page' || kind === 'journey';
       for (const bp of sizesFor(testCase)) {
+        await stopHere();
         onEvent({
           type: 'TEST_POINT_STARTED',
           testCaseId: testCase.id,
@@ -333,6 +356,7 @@ export class FlowTestOrchestrator {
 
           // Execute each step with up to 2 retries
           for (let i = 0; i < testCase.steps.length; i++) {
+            await stopHere();
             const step = testCase.steps[i];
             // A step for other screen sizes, such as opening a phone menu, isn't done at this one.
             if (step.onlyAt && !step.onlyAt.includes(bp)) continue;
@@ -419,7 +443,7 @@ export class FlowTestOrchestrator {
               durationMs: Date.now() - stepStartedAt,
               error: currentStepError,
               screenshotUrl: stepEvidence.screenshotPath
-                ? `/api/evidence/${path.relative(outputDir, stepEvidence.screenshotPath).replace(/\\/g, '/')}`
+                ? `${evidenceUrlPrefix}${path.relative(outputDir, stepEvidence.screenshotPath).replace(/\\/g, '/')}`
                 : undefined,
               urlPath: pathOf(page.url()),
               testCaseId: testCase.id,
@@ -636,6 +660,14 @@ export class FlowTestOrchestrator {
 
           // Enrich findings with Source Code Locator and Repro Script
           for (const f of keptFindings) {
+            // Every finding shows the screen it was found on: one whose checker took no screenshot of
+            // its own gets this test's last screenshot of that page (or its last one at all).
+            if (!f.evidence.screenshotPath) {
+              const shots = stepEvidenceList.filter((s) => s.screenshotPath).reverse();
+              const shot = shots.find((s) => s.urlAfter && pathOf(s.urlAfter) === f.where.urlPath) ?? shots[0];
+              if (shot) f.evidence = { ...f.evidence, screenshotPath: shot.screenshotPath };
+            }
+
             if (f.where.dataTestId) {
               const srcLoc = await sourceLocator.findByTestId(f.where.dataTestId);
               if (srcLoc) {
@@ -680,6 +712,8 @@ export class FlowTestOrchestrator {
             }),
           };
         } catch (fatalErr: unknown) {
+          // Stopping isn't a failure of the site: nothing is recorded, and the run ends.
+          if (isAbortError(fatalErr)) throw fatalErr;
           testPointPassed = false;
           const msg = (fatalErr instanceof Error ? fatalErr.message : String(fatalErr)).replace(/\x1b\[[0-9;]*m/g, '');
           // A test that couldn't run at all still says why: a failure with no finding explains nothing.
@@ -812,12 +846,15 @@ export class FlowTestOrchestrator {
       });
     }
 
-    // Calculate A–F grades and prioritized recommendations
-    const grades = calculateSiteAspectGrades(uniqueFindings);
+    // Calculate A–F grades and prioritized recommendations. An aspect none of whose checks ran is
+    // "Not checked", not an A.
+    const grades = calculateSiteAspectGrades(uniqueFindings, {
+      checkersRun: results.flatMap((r) => (r.checks || []).map((c) => c.checker)),
+    });
     const recommendations = generateRankedRecommendations(uniqueFindings);
 
-    // Site history tracking
-    const historyManager = new SiteHistoryManager();
+    // Site history tracking, in the data folder beside the site's memory
+    const historyManager = new SiteHistoryManager(options.dataDir ? path.join(options.dataDir, 'sites') : undefined);
     let historyDiff;
     try {
       const host = new URL(options.targetUrl).host;
@@ -845,6 +882,7 @@ export class FlowTestOrchestrator {
       aiModels: options.aiModels,
       scanMode: options.readOnly ? 'read-only' : undefined,
       siteMap: options.siteMap,
+      testedWithApprovedPlan: options.testedWithApprovedPlan,
     };
 
     // Hide sign-in details (and secret-looking URL parameters) everywhere before anything is kept.

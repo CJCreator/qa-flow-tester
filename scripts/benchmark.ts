@@ -123,10 +123,13 @@ async function runSite(site: string, key: AnswerKey, noAi: boolean): Promise<Sit
     targetUrl = `http://localhost:${FIXTURE_PORT}`;
   }
 
+  // Where the app keeps the OpenRouter key and chosen models: .qa-data, or the repo folder itself
+  // until the app has been started once and moved them there.
+  const dataDir = (await fs.stat(path.join(root, '.qa-data')).then(() => true, () => false)) ? path.join(root, '.qa-data') : root;
   const runner = new RunnerServer({
     port: RUNNER_PORT,
     outputDir: path.join(root, '.benchmark', site),
-    dataDir: root, // where the wizard's runner keeps the OpenRouter key and chosen models
+    dataDir,
     ...(noAi ? { createAIProvider: () => new NoPlanAI() } : {}),
   });
   await runner.start();

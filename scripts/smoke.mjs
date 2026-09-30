@@ -1,5 +1,5 @@
 // pnpm smoke: starts the QA Tool the way people do (pnpm start), on a spare port, and checks that the
-// one address serves the Wizard, QA Flow Studio and the API. Exits non-zero on the first problem.
+// one address serves the Wizard and the API, and QA Flow Studio's old address redirects. Exits non-zero on the first problem.
 import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import os from 'node:os';
@@ -22,7 +22,8 @@ const tool = spawn(process.execPath, [path.join(root, 'scripts/start.mjs'), '--n
 
 const checks = [
   ['the Wizard at /', '/', (res, body) => res.status === 200 && body.includes('id="root"')],
-  ['QA Flow Studio at /studio/', '/studio/', (res, body) => res.status === 200 && body.includes('/studio/assets/')],
+  ['/studio/ redirects to Past check-ups', '/studio/', (res) => res.status === 308 && res.headers.get('location') === '/reports'],
+  ['Past check-ups at /reports', '/reports', (res, body) => res.status === 200 && body.includes('id="root"')],
   ['the API at /api/runner/status', '/api/runner/status', (res, body) => res.status === 200 && 'phase' in JSON.parse(body)],
   ['"Hub not connected" at /api/v1/', '/api/v1/health', (res, body) => res.status === 503 && JSON.parse(body).hubConnected === false],
 ];
@@ -37,7 +38,7 @@ try {
   }
   if (!up) throw new Error('the QA Tool never answered');
   for (const [what, address, ok] of checks) {
-    const res = await fetch(`${base}${address}`);
+    const res = await fetch(`${base}${address}`, { redirect: 'manual' });
     const body = await res.text();
     let passed = false;
     try {

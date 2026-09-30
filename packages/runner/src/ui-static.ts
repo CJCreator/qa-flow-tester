@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import type http from 'http';
 
-/** A built single-page app served beside the API: the Wizard at "/", QA Flow Studio at "/studio/". */
+/** A built single-page app served beside the API: the Wizard at "/". */
 export interface UiApp {
   /** The address the app lives under, ending in "/". */
   base: string;
@@ -37,13 +37,13 @@ const CONTENT_TYPES: Record<string, string> = {
 /** Vite fingerprints every file under assets/, so those never change and can be kept for good. */
 const FOREVER = 'public, max-age=31536000, immutable';
 
-/** The Wizard and Studio builds in this checkout, found from where this file sits (src/ or dist/). */
+/**
+ * The Wizard build in this checkout, found from where this file sits (src/ or dist/). It's the only
+ * app: QA Flow Studio was retired (ADR 0010), and the runner redirects its old addresses.
+ */
 export function defaultUiApps(): UiApp[] {
   const packagesDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-  return [
-    { base: '/', dir: path.join(packagesDir, 'wizard', 'dist'), name: 'Wizard' },
-    { base: '/studio/', dir: path.join(packagesDir, 'web', 'dist'), name: 'QA Flow Studio' },
-  ];
+  return [{ base: '/', dir: path.join(packagesDir, 'wizard', 'dist'), name: 'Wizard' }];
 }
 
 function isInside(dir: string, file: string): boolean {
@@ -86,7 +86,7 @@ export async function serveUi(
 ): Promise<boolean> {
   if (req.method !== 'GET' && req.method !== 'HEAD') return false;
 
-  // "/studio" becomes "/studio/", so the app's own addresses resolve inside it.
+  // An app's bare base ("/docs") becomes "/docs/", so its own addresses resolve inside it.
   const bare = apps.find((a) => a.base !== '/' && pathname === a.base.slice(0, -1));
   if (bare) {
     res.writeHead(308, { Location: bare.base });
@@ -123,7 +123,7 @@ export async function serveUi(
       503,
       'text/html; charset=utf-8',
       `<!doctype html><meta charset="utf-8"><title>${app.name} not built</title>` +
-        `<p>The ${app.name} hasn’t been built yet. Stop the QA Tool and start it with <code>pnpm start</code>, which builds what’s missing.</p>`
+        `<p>The ${app.name} hasn’t been built yet. Stop Release check-up and start it with <code>pnpm start</code>, which builds what’s missing.</p>`
     );
     return true;
   }

@@ -22,7 +22,8 @@ export interface SiteHistoryData {
 }
 
 export class SiteHistoryManager {
-  constructor(private readonly dataDir: string = path.join(process.cwd(), 'sites')) {}
+  /** `dataDir` is the folder of history files: the runner passes `<its data folder>/sites`. */
+  constructor(private readonly dataDir: string = path.join(process.cwd(), '.qa-data', 'sites')) {}
 
   private historyFilePath(host: string): string {
     const safeHost = host.replace(/[:\/\\?%*|"<>]/g, '_');
@@ -100,18 +101,14 @@ export class SiteHistoryManager {
       openFindingFingerprints: openFindings,
     };
 
-    // Append current run to history
+    // Append current run to history. Every run is kept: the reports themselves are pruned, the
+    // grade history (a few kilobytes a run) isn't.
     history.runs.push({
       runId,
       timestamp: new Date().toISOString(),
       grades,
       findingFingerprints: currentFpList,
     });
-
-    // Retain up to the latest 50 runs
-    if (history.runs.length > 50) {
-      history.runs = history.runs.slice(history.runs.length - 50);
-    }
 
     await fs.mkdir(this.dataDir, { recursive: true });
     await fs.writeFile(this.historyFilePath(host), JSON.stringify(history, null, 2), 'utf8');

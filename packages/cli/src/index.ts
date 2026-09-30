@@ -616,7 +616,6 @@ program
       const server = new RunnerServer({ port, host, outputDir: options.output, hubUrl, ui: defaultUiApps() });
       const url = (await server.start()).replace('://0.0.0.0', '://localhost');
       console.log(pc.green(`✔ Open in your browser:`), pc.bold(pc.underline(`${url}/`)));
-      console.log(pc.gray(`QA Flow Studio: ${url}/studio/`));
       console.log(pc.gray(`Report Hub:     ${hubUrl ?? 'not connected'}`));
       console.log(pc.gray(`Press Ctrl+C to terminate.\n`));
     } catch (err: unknown) {

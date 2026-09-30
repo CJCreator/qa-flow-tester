@@ -314,7 +314,8 @@ describe('Runner endpoints for the wizard', () => {
         expect(res.status).toBe(200);
         expect(res.headers.get('content-disposition')).toContain(file);
         const served = Buffer.from(await res.arrayBuffer());
-        expect(served.equals(await fs.readFile(path.join(outputDir, file)))).toBe(true);
+        // Each check-up's files live in its own folder.
+        expect(served.equals(await fs.readFile(path.join(outputDir, 'runs', report.runId, file)))).toBe(true);
       }
 
       expect((await fetch(`${runnerUrl}/api/report/download/..%2F..%2Fpackage.json`)).status).toBe(404);

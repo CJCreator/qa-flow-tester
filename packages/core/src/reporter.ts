@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import type { Finding, ReleaseReport, RunCoverage } from '@qa/types';
+import { releaseVerdict } from '@qa/types';
 
 /**
  * A copy of the report whose file paths inside the report folder are relative to it
@@ -67,18 +68,20 @@ export class ReportGenerator {
     }
     lines.push(``);
 
-    // Summary banner
-    if (blockers.length > 0) {
-      lines.push(`> [!CAUTION]`);
-      lines.push(`> **RELEASE BLOCKED**: Found **${blockers.length} Blocker(s)** and **${majors.length} Major issue(s)** that must be resolved prior to shipping.`);
-    } else if (majors.length > 0) {
-      lines.push(`> [!WARNING]`);
-      lines.push(`> **ATTENTION REQUIRED**: Found **${majors.length} Major issue(s)**. Review workarounds or schedule hotfixes.`);
-    } else {
-      lines.push(`> [!TIP]`);
-      lines.push(`> **READY FOR RELEASE**: Zero blockers and zero major defects detected.`);
-    }
+    // Summary banner: the same verdict as the screen and report.html.
+    const verdict = releaseVerdict(findings);
+    lines.push(verdict.ready ? `> [!TIP]` : verdict.counts.Blocker > 0 ? `> [!CAUTION]` : `> [!WARNING]`);
+    lines.push(
+      `> **${verdict.stamp}**: ${verdict.reason}${
+        verdict.ready ? '' : ` (${verdict.counts.Blocker} blocking, ${verdict.counts.Major} major)`
+      }`
+    );
     lines.push(``);
+    if (report.testedWithApprovedPlan) {
+      lines.push(`> [!NOTE]`);
+      lines.push(`> Nothing on the site had changed, so this run used the plan approved on ${report.testedWithApprovedPlan.slice(0, 10)} without a new review.`);
+      lines.push(``);
+    }
 
     if (report.scanMode === 'read-only') {
       lines.push(`> [!NOTE]`);

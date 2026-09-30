@@ -22,6 +22,7 @@ import { RobotsPolicy } from '../competitive/robots.js';
 import { isPrivateHost } from '../competitive/safe-crawler.js';
 import { blockChanges, markJourneysNeedingTestCopy } from '../live-site.js';
 import type { AIProvider } from '../ai/ai-provider.js';
+import { stopIfAborted } from '../abort.js';
 
 
 export interface DiscoveryOptions {
@@ -51,6 +52,10 @@ export interface DiscoveryOptions {
    * or changed pages and links go to the AI. Leave it out to plan everything afresh.
    */
   remembered?: RememberedPlan;
+  /** Stops the scan: no more pages or AI requests, the browser closes, and discover() throws an AbortError. */
+  signal?: AbortSignal;
+  /** Where sign-in sessions are saved. Default `<outputDir>/auth`. Keep it out of any folder that's served. */
+  authDir?: string;
 }
 
 /** How a scan is going. */
@@ -157,8 +162,19 @@ export class DiscoveryAgent {
   private contextParser = new ContextParser();
 
   async discover(options: DiscoveryOptions): Promise<DiscoveryDraft> {
+    try {
+      return await this.discoverSite(options);
+    } finally {
+      // Also when the scan is stopped or fails part-way: no browser is left running.
+      await this.browserManager.close().catch(() => {});
+    }
+  }
+
+  private async discoverSite(options: DiscoveryOptions): Promise<DiscoveryDraft> {
     const outputDir = options.outputDir || path.join(process.cwd(), '.qa-report');
     await fs.mkdir(outputDir, { recursive: true });
+    const signal = options.signal;
+    stopIfAborted(signal);
 
     // 1. Ingest Product Context
     const parsedContext = await this.contextParser.parseFile(options.contextFilePath);
@@ -172,9 +188,10 @@ export class DiscoveryAgent {
       roles.length > 0
         ? await new PreFlightChecker().runPreFlight(options.targetUrl, options.profile, undefined, {
             browserManager: this.browserManager,
-            authDir: path.join(outputDir, 'auth'),
+            authDir: options.authDir || path.join(outputDir, 'auth'),
           })
         : undefined;
+    stopIfAborted(signal);
 
     // A site we don't own: honour its robots.txt and pause between pages. A live site: send nothing.
     const targetOrigin = new URL(options.targetUrl);
@@ -183,6 +200,7 @@ export class DiscoveryAgent {
       robots: ownMachine ? undefined : await RobotsPolicy.fetch(targetOrigin.origin, CRAWLER_TOKEN),
       pageDelayMs: ownMachine ? 0 : PUBLIC_SITE_PAGE_DELAY_MS,
       screenshotDir: path.join(outputDir, 'plan-pages'),
+      signal,
     };
     const newContext = async (storageState?: string) => {
       const context = await this.browserManager.createContext({ baseUrl: options.targetUrl, storageState });
@@ -211,6 +229,7 @@ export class DiscoveryAgent {
       }),
     });
     await visitorContext.close();
+    stopIfAborted(signal);
 
     const signInFailed: string[] = [];
     for (const role of roles) {
@@ -232,6 +251,7 @@ export class DiscoveryAgent {
         }),
       });
       await roleContext.close();
+      stopIfAborted(signal);
     }
 
     const spiderResult = mergeCrawls(crawls);
@@ -253,12 +273,15 @@ export class DiscoveryAgent {
         return context;
       },
       pause: async () => {
+        // Stopped: every remaining page is passed over at once.
+        stopIfAborted(signal);
         const wait = lastNarrowLoad + (crawlOptions.pageDelayMs ?? 0) - Date.now();
         if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
         lastNarrowLoad = Date.now();
       },
     });
     await this.browserManager.close();
+    stopIfAborted(signal);
 
     console.log(
       `[DiscoveryAgent] Spider found ${spiderResult.pages.length} pages, ${spiderResult.forms.length} forms, ${spiderResult.sensitiveActions.length} sensitive actions.`
@@ -299,7 +322,7 @@ export class DiscoveryAgent {
     const requestsNeeded =
       estimatePageRequests({ pages: spiderResult.pages, coverage, graph, remembered: options.remembered }) + (reuseJourneys ? 0 : 1);
     const requestsLeft = options.aiBudget?.left;
-    const paced = options.aiProvider ? new PacedAI(options.aiProvider, requestsLeft ?? Infinity) : undefined;
+    const paced = options.aiProvider ? new PacedAI(options.aiProvider, requestsLeft ?? Infinity, { signal }) : undefined;
     const planningProgress = (done: number, what: string) =>
       options.onProgress?.({
         stage: 'planning',
@@ -330,6 +353,7 @@ export class DiscoveryAgent {
       paced,
       (p) => planningProgress(p.done, p.what)
     );
+    stopIfAborted(signal);
     exploration.notes.push(...pagePlan.notes);
     for (const page of pagePlan.pages) if (options.remembered?.pages[page.urlPath]?.added) page.added = true;
 
@@ -355,6 +379,7 @@ export class DiscoveryAgent {
           },
           paced
         );
+    stopIfAborted(signal);
     siteType = journeyPlan.siteType;
     const synthesizedFlows = journeyPlan.flows;
     const usedFallbackSynthesis = journeyPlan.usedFallback;

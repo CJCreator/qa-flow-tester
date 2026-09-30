@@ -1,5 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { initialFeed, looksTechnical, plainFailure, reduceFeed, translateReviewPlan, type FeedState, type RunnerEvent } from '../src/lib/translate';
+import {
+  initialFeed,
+  looksTechnical,
+  plainFailure,
+  reduceFeed,
+  secondsLeft,
+  timeLeft,
+  translateReviewPlan,
+  type FeedState,
+  type RunnerEvent,
+} from '../src/lib/translate';
 import { plainTitle } from '../src/lib/summary';
 
 const run = (events: RunnerEvent[], mode: 'product' | 'website' = 'product'): FeedState =>
@@ -77,10 +87,92 @@ describe('reduceFeed', () => {
   });
 });
 
+describe('live testing state (Task 1.6)', () => {
+  const started = (index: number, startPage: string): RunnerEvent => ({
+    type: 'TEST_POINT_STARTED',
+    testCaseId: `TC-${index}`,
+    testCaseName: 'Open the cart',
+    role: 'visitor',
+    breakpoint: '375px',
+    startPage,
+    index,
+    total: 412,
+  });
+
+  it('TEST_POINT_STARTED: which test of how many, the page under test, and the screen size', () => {
+    const state = run([started(36, 'http://shop.example.com/cart?x=1')]);
+    expect(state.test).toEqual({ name: 'Open the cart', role: 'visitor', size: '375px', index: 36, total: 412 });
+    expect(state.progress).toEqual({ done: 36, total: 412 });
+    expect(state.currentPage).toBe('/cart');
+    expect(state.pages['/cart']).toEqual({ status: 'pass', issues: 0 });
+    expect(state.testingStartedAt).toBeTypeOf('number');
+  });
+
+  it('STEP_COMPLETED: the newest screenshot, and the page the browser is on now', () => {
+    const state = run([
+      started(0, '/'),
+      { type: 'STEP_COMPLETED', stepIndex: 0, passed: true, screenshotUrl: '/api/evidence/runs/run-1/evidence/TC-0/step-1.png', urlPath: '/checkout' },
+    ]);
+    expect(state.screenshot).toEqual({ url: '/api/evidence/runs/run-1/evidence/TC-0/step-1.png', page: '/checkout' });
+    expect(state.currentPage).toBe('/checkout');
+    // A step without a screenshot keeps the last one.
+    expect(reduceFeed(state, { type: 'STEP_COMPLETED', stepIndex: 1, passed: true, urlPath: '/done' }, 'product').screenshot).toEqual(state.screenshot);
+  });
+
+  it('FINDINGS_UPDATED: pins each new problem to its page, and colours the page by the worst one', () => {
+    const state = run([
+      started(0, '/cart'),
+      {
+        type: 'FINDINGS_UPDATED',
+        totalFindings: 2,
+        latest: [
+          { id: 'F-1', title: 'Touch target too small', severity: 'Minor', checker: 'ux-quality', urlPath: '/cart', breakpoint: '375px' },
+          { id: 'F-2', title: 'HTTP 500', severity: 'Major', checker: 'bug-detection', urlPath: 'http://shop.example.com/api', breakpoint: '375px' },
+        ],
+      },
+      {
+        type: 'FINDINGS_UPDATED',
+        totalFindings: 3,
+        latest: [{ id: 'F-3', title: 'Uncaught Exception', severity: 'Blocker', checker: 'bug-detection', urlPath: '/cart', breakpoint: '375px' }],
+      },
+    ]);
+    expect(state.findings).toBe(3);
+    expect(state.pages['/cart']).toEqual({ status: 'fail', issues: 2 });
+    expect(state.pages['/api']).toEqual({ status: 'fail', issues: 1 });
+    // Newest first.
+    expect(state.found.map((f) => [f.id, f.urlPath])).toEqual([
+      ['F-3', '/cart'],
+      ['F-2', '/api'],
+      ['F-1', '/cart'],
+    ]);
+    // One FINDINGS_UPDATED closes each test point.
+    expect(state.progress).toEqual({ done: 2, total: 412 });
+  });
+
+  it('estimates the time left from how long each test has taken so far', () => {
+    const state: FeedState = { ...run([started(10, '/')]), testingStartedAt: 1_000, progress: { done: 10, total: 70 } };
+    // 10 tests in 100 seconds: 60 more take about 10 minutes.
+    expect(secondsLeft(state, 101_000)).toBe(600);
+    expect(timeLeft(secondsLeft(state, 101_000))).toBe('about 10 minutes left');
+    expect(timeLeft(30)).toBe('under a minute left');
+    expect(timeLeft(90)).toBe('about 2 minutes left');
+    expect(timeLeft(undefined)).toBeNull();
+    // Nothing done yet: no guess.
+    expect(secondsLeft({ ...state, progress: { done: 0, total: 70 } })).toBeUndefined();
+  });
+
+  it('RUN_FAILED and RUN_ABORTED say whether the plan was kept', () => {
+    const failed = run([started(0, '/'), { type: 'RUN_FAILED', error: 'net::ERR_CONNECTION_REFUSED', planKept: true }]);
+    expect(failed).toMatchObject({ status: 'failed', planKept: true });
+    expect(failed.failure).toMatch(/couldn’t be reached/);
+    expect(run([{ type: 'RUN_ABORTED', planKept: false }])).toMatchObject({ status: 'failed', planKept: false });
+  });
+});
+
 describe('plainFailure', () => {
   it.each([
     ['robots.txt on https://x disallows crawling /', /asks automated tools not to look around/],
-    ['No OpenRouter key is saved. Add one before starting an AI run.', /AI key is missing/],
+    ['No OpenRouter key is saved. Add one before starting an AI run.', /AI key is missing\. Add it again in Settings/],
     ['OpenAI/OpenRouter API error (401): {"error":"bad"}', /turned the request down/],
     ['page.goto: Timeout 30000ms exceeded', /took too long/],
     ['TypeError: Cannot read properties of undefined', /Something went wrong/],

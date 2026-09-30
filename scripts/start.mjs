@@ -63,7 +63,7 @@ function open(url) {
 
 if (!built('node_modules')) fail('Nothing is installed yet. Run pnpm bootstrap first.');
 
-// 1. Build whatever is missing: the libraries the QA Tool runs on, then the two UIs it serves.
+// 1. Build whatever is missing: the libraries the QA Tool runs on, then the Wizard it serves.
 const libraries = ['types/dist/index.js', 'checkers/dist/index.js', 'core/dist/index.js', 'runner/dist/cli.js'];
 if (!libraries.every((file) => built(`packages/${file}`))) {
   console.log('[QA Tool] Building the QA Tool (first start only)…');
@@ -72,10 +72,6 @@ if (!libraries.every((file) => built(`packages/${file}`))) {
 if (!built('packages/wizard/dist/index.html')) {
   console.log('[QA Tool] Building the Wizard…');
   pnpm(['--filter', '@qa/wizard', 'run', 'build']);
-}
-if (!built('packages/web/dist/index.html')) {
-  console.log('[QA Tool] Building QA Flow Studio…');
-  pnpm(['--filter', '@qa/web', 'run', 'build']);
 }
 
 // 2. The browser the QA Tool drives.

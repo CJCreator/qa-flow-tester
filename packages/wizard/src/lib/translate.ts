@@ -13,6 +13,18 @@ export interface RunnerEvent {
 
 export type FeedStatus = 'starting' | 'running' | 'completed' | 'failed';
 
+/** How a page did so far, from the problems found on it. */
+export type PageResult = { status: 'pass' | 'warn' | 'fail'; issues: number };
+
+/** A problem found during the run, as the live screen lists it. */
+export interface FoundProblem {
+  id: string;
+  title: string;
+  severity: string;
+  urlPath: string;
+  breakpoint?: string;
+}
+
 export interface FeedState {
   status: FeedStatus;
   /** What is happening right now. */
@@ -23,6 +35,20 @@ export interface FeedState {
   /** Known only once test points start; null means "we don't know how long yet". */
   progress: { done: number; total: number } | null;
   failure?: string;
+  /** Testing stopped or failed and the plan is waiting for review again. */
+  planKept?: boolean;
+  /** The test being run now. */
+  test?: { name?: string; role?: string; size?: string; index: number; total: number };
+  /** The page the browser is on. */
+  currentPage?: string;
+  /** When the first test started, for the time estimate. */
+  testingStartedAt?: number;
+  /** The newest screenshot, from the step just done. */
+  screenshot?: { url: string; page?: string };
+  /** Pages visited so far, and what was found on each. */
+  pages: Record<string, PageResult>;
+  /** Problems found so far, newest first. */
+  found: FoundProblem[];
 }
 
 export function initialFeed(mode: RunMode): FeedState {
@@ -32,10 +58,13 @@ export function initialFeed(mode: RunMode): FeedState {
     history: [],
     findings: 0,
     progress: null,
+    pages: {},
+    found: [],
   };
 }
 
 const GENERIC = 'Working on it…';
+const FOUND_KEPT = 50;
 
 /**
  * True when a label from the site or the AI looks like code rather than words: selectors,
@@ -59,6 +88,16 @@ function plainLabel(text: unknown): string | null {
   const trimmed = text.trim();
   if (!trimmed || trimmed.length > 60 || looksTechnical(trimmed)) return null;
   return trimmed;
+}
+
+/** The path part of an address ("/cart"), or the value itself when it isn't one. */
+function pathOnly(value: unknown): string | undefined {
+  if (typeof value !== 'string' || !value) return undefined;
+  try {
+    return new URL(value, 'http://placeholder').pathname;
+  } catch {
+    return value;
+  }
 }
 
 function listOf(items: string[]): string {
@@ -103,19 +142,39 @@ export function plainFailure(error: unknown, mode: RunMode): string {
       : 'Your site couldn’t be reached. Make sure it’s running and the address is right, then try again.';
   }
   if (/No OpenRouter key/i.test(text)) {
-    return 'Your AI key is missing. Add it again with the “AI key” button at the top, then try again.';
+    return 'Your AI key is missing. Add it again in Settings, then try again.';
   }
   if (/API error \((401|402|403)\)/i.test(text)) {
-    return 'The AI service turned the request down. Check your AI key still works with the “AI key” button, then try again.';
+    return 'The AI service turned the request down. Check your AI key still works in Settings, then try again.';
+  }
+  if (/No free AI models/i.test(text)) {
+    return 'No free AI models are available right now. Try again later.';
   }
   if (/timeout|timed out/i.test(text)) {
     return 'Your site took too long to respond, so the check stopped. Try again when it’s less busy.';
   }
-  if (/abort|stopped by user/i.test(text)) {
+  if (/abort|stopped by user|was stopped/i.test(text)) {
     return 'The run was stopped.';
   }
-  return 'Something went wrong and the check stopped before it finished. Try again. If it happens again, ask whoever set up this tool to look at the runner’s log.';
+  return 'Something went wrong and the check stopped before it finished. Try again. If it happens again, ask whoever set up this tool to look at its terminal for details.';
 }
+
+/** Seconds left in the testing, estimated from how long each test has taken so far. */
+export function secondsLeft(state: FeedState, now = Date.now()): number | undefined {
+  if (!state.progress || !state.testingStartedAt || state.progress.done === 0) return undefined;
+  const perTest = (now - state.testingStartedAt) / 1000 / state.progress.done;
+  return Math.max(0, perTest * (state.progress.total - state.progress.done));
+}
+
+/** "about 6 minutes left", or null when there's nothing to go on yet. */
+export function timeLeft(seconds?: number): string | null {
+  if (seconds === undefined || !Number.isFinite(seconds)) return null;
+  if (seconds < 60) return 'under a minute left';
+  const minutes = Math.round(seconds / 60);
+  return `about ${minutes} ${minutes === 1 ? 'minute' : 'minutes'} left`;
+}
+
+const SERIOUS = new Set(['Blocker', 'Major']);
 
 /** Applies one event to the feed. Events the wizard doesn't know get a generic line, never a blank or a crash. */
 export function reduceFeed(state: FeedState, event: RunnerEvent, mode: RunMode): FeedState {
@@ -130,8 +189,19 @@ export function reduceFeed(state: FeedState, event: RunnerEvent, mode: RunMode):
   switch (event.type) {
     case 'connected':
     case 'HUB_PUSH_RESULT':
-    case 'STEP_COMPLETED':
       return state;
+
+    case 'STEP_COMPLETED': {
+      // The newest screenshot, and the page the browser is on now.
+      const page = pathOnly(event.urlPath);
+      const url = typeof event.screenshotUrl === 'string' ? event.screenshotUrl : undefined;
+      if (!page && !url) return state;
+      return {
+        ...state,
+        currentPage: page ?? state.currentPage,
+        screenshot: url ? { url, page: page ?? state.currentPage } : state.screenshot,
+      };
+    }
 
     case 'DISCOVERY_STARTED':
       return milestone('Exploring your site to learn what people can do on it…');
@@ -165,20 +235,51 @@ export function reduceFeed(state: FeedState, event: RunnerEvent, mode: RunMode):
       const role = plainLabel(event.role);
       const who = role && role !== 'anonymous' ? ` as ${role}` : '';
       const what = name ? `Testing “${name}”${who}` : `Testing part ${index + 1}${who}`;
+      const page = pathOnly(event.startPage);
       return milestone(total > 0 ? `${what} (${index + 1} of ${total})…` : `${what}…`, {
         progress: total > 0 ? { done: index, total } : state.progress,
+        test: {
+          name: name ?? undefined,
+          role: role && role !== 'anonymous' ? role : undefined,
+          size: typeof event.breakpoint === 'string' ? event.breakpoint : undefined,
+          index,
+          total,
+        },
+        currentPage: page ?? state.currentPage,
+        testingStartedAt: state.testingStartedAt ?? Date.now(),
+        // A page is marked visited as soon as a test opens it; problems found there colour it.
+        pages: page && !state.pages[page] ? { ...state.pages, [page]: { status: 'pass', issues: 0 } } : state.pages,
       });
     }
 
     case 'STEP_STARTED':
       return { ...state, status: 'running', current: stepSentence(event, mode) };
 
-    case 'FINDINGS_UPDATED':
+    case 'FINDINGS_UPDATED': {
+      const latest = Array.isArray(event.latest) ? (event.latest as Array<Record<string, unknown>>) : [];
+      const pages = { ...state.pages };
+      const found: FoundProblem[] = [];
+      for (const f of latest) {
+        const urlPath = pathOnly(f.urlPath) || '/';
+        const before = pages[urlPath] || { status: 'pass', issues: 0 };
+        const serious = SERIOUS.has(String(f.severity));
+        pages[urlPath] = { status: serious || before.status === 'fail' ? 'fail' : 'warn', issues: before.issues + 1 };
+        found.push({
+          id: String(f.id ?? `${urlPath}-${found.length}`),
+          title: String(f.title ?? ''),
+          severity: String(f.severity ?? 'Minor'),
+          urlPath,
+          breakpoint: typeof f.breakpoint === 'string' ? f.breakpoint : undefined,
+        });
+      }
       return {
         ...state,
         findings: typeof event.totalFindings === 'number' ? event.totalFindings : state.findings,
         progress: state.progress ? { ...state.progress, done: Math.min(state.progress.done + 1, state.progress.total) } : null,
+        pages,
+        found: found.length > 0 ? [...found.reverse(), ...state.found].slice(0, FOUND_KEPT) : state.found,
       };
+    }
 
     case 'RUN_COMPLETED':
       return {
@@ -193,10 +294,11 @@ export function reduceFeed(state: FeedState, event: RunnerEvent, mode: RunMode):
         status: 'failed',
         current: 'Run was stopped by user.',
         failure: 'Run was stopped by user.',
+        planKept: !!event.planKept,
       };
 
     case 'RUN_FAILED':
-      return { ...state, status: 'failed', failure: plainFailure(event.error, mode) };
+      return { ...state, status: 'failed', failure: plainFailure(event.error, mode), planKept: !!event.planKept };
 
     default:
       return { ...state, current: GENERIC };
@@ -204,4 +306,3 @@ export function reduceFeed(state: FeedState, event: RunnerEvent, mode: RunMode):
 }
 
 export * from './plan-translate.js';
-

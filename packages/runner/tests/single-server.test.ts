@@ -1,6 +1,7 @@
 /**
- * The runner as the one server: the built Wizard at /, Studio at /studio/, the API beside them,
- * /api/v1/* passed on to the Report Hub, and only this computer's own names answered.
+ * The runner as the one server: the built Wizard at /, the API beside it, QA Flow Studio's old
+ * addresses redirected to Past check-ups, /hub and /api/v1/* passed on to the Report Hub, and only
+ * this computer's own names answered.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import http from 'http';
@@ -17,7 +18,6 @@ const LONE_PORT = 3555;
 const base = `http://localhost:${RUNNER_PORT}`;
 const scratch = path.join(process.cwd(), '.tmp-single-server');
 const wizardDir = path.join(scratch, 'wizard');
-const studioDir = path.join(scratch, 'studio');
 
 interface Answer {
   status: number;
@@ -53,7 +53,10 @@ describe('The runner as the one server', () => {
     let body = '';
     for await (const chunk of req) body += chunk;
     hubRequests.push({ method: req.method || '', url: req.url || '', host: req.headers.host || '', body });
-    if (req.url === '/api/v1/health') {
+    if (req.url === '/hub' || req.url === '/hub/?view=triage') {
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end('<!doctype html><title>Team Hub</title>');
+    } else if (req.url === '/api/v1/health') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: true }));
     } else if (req.url === '/api/v1/echo' && req.method === 'POST') {
@@ -71,12 +74,9 @@ describe('The runner as the one server', () => {
 
   beforeAll(async () => {
     await fs.mkdir(path.join(wizardDir, 'assets'), { recursive: true });
-    await fs.mkdir(path.join(studioDir, 'assets'), { recursive: true });
     await fs.writeFile(path.join(wizardDir, 'index.html'), '<!doctype html><title>Wizard</title><div id="root"></div>');
     await fs.writeFile(path.join(wizardDir, 'assets', 'app-abc123.js'), 'console.log("wizard")');
     await fs.writeFile(path.join(wizardDir, 'favicon.svg'), '<svg xmlns="http://www.w3.org/2000/svg"/>');
-    await fs.writeFile(path.join(studioDir, 'index.html'), '<!doctype html><title>Studio</title>');
-    await fs.writeFile(path.join(studioDir, 'assets', 'studio-def456.css'), 'body{}');
     await fs.writeFile(path.join(scratch, 'secret.txt'), 'do not serve');
 
     await listen(hub, HUB_PORT);
@@ -86,10 +86,7 @@ describe('The runner as the one server', () => {
       outputDir: path.join(scratch, 'report'),
       dataDir: path.join(scratch, 'data'),
       hubUrl: `http://localhost:${HUB_PORT}/`,
-      ui: [
-        { base: '/', dir: wizardDir, name: 'Wizard' },
-        { base: '/studio/', dir: studioDir, name: 'QA Flow Studio' },
-      ],
+      ui: [{ base: '/', dir: wizardDir, name: 'Wizard' }],
     });
     await runner.start();
   });
@@ -118,22 +115,23 @@ describe('The runner as the one server', () => {
     expect(icon.headers['cache-control']).toBe('no-cache');
   });
 
-  it('gives any other page address to the app, but a missing file is a 404', async () => {
-    expect((await get(RUNNER_PORT, '/plan/review')).body).toContain('<title>Wizard</title>');
+  it('gives every screen address to the app, but a missing file is a 404', async () => {
+    for (const address of ['/check/scan', '/check/plan', '/check/testing', '/reports', '/reports/run-1', '/settings', '/no/such/page']) {
+      expect((await get(RUNNER_PORT, address)).body, address).toContain('<title>Wizard</title>');
+    }
     expect((await get(RUNNER_PORT, '/assets/missing.js')).status).toBe(404);
   });
 
-  it('serves Studio under /studio/', async () => {
-    const bare = await get(RUNNER_PORT, '/studio');
-    expect(bare.status).toBe(308);
-    expect(bare.headers.location).toBe('/studio/');
-    expect((await get(RUNNER_PORT, '/studio/')).body).toContain('<title>Studio</title>');
-    expect((await get(RUNNER_PORT, '/studio/runs/42')).body).toContain('<title>Studio</title>');
-    expect((await get(RUNNER_PORT, '/studio/assets/studio-def456.css')).headers['content-type']).toContain('text/css');
+  it('sends QA Flow Studio\'s old addresses, and everything under them, to Past check-ups', async () => {
+    for (const address of ['/studio', '/studio/', '/studio/runs/42', '/studio/assets/studio-def456.css']) {
+      const answer = await get(RUNNER_PORT, address);
+      expect(answer.status, address).toBe(308);
+      expect(answer.headers.location, address).toBe('/reports');
+    }
   });
 
   it('never reads a file outside a build folder', async () => {
-    for (const attempt of ['/..%2fsecret.txt', '/..%5csecret.txt', '/studio/..%2f..%2fsecret.txt', '/../secret.txt', '/%2e%2e/secret.txt']) {
+    for (const attempt of ['/..%2fsecret.txt', '/..%5csecret.txt', '/reports/..%2f..%2fsecret.txt', '/../secret.txt', '/%2e%2e/secret.txt']) {
       const answer = await get(RUNNER_PORT, attempt);
       expect(answer.status, attempt).toBe(404);
       expect(answer.body, attempt).not.toContain('do not serve');
@@ -154,6 +152,16 @@ describe('The runner as the one server', () => {
     expect((await get(RUNNER_PORT, '/', `127.0.0.1:${RUNNER_PORT}`)).status).toBe(200);
   });
 
+  it('says a Hub is connected, and passes its dashboard at /hub on to it', async () => {
+    expect(JSON.parse((await get(RUNNER_PORT, '/api/runner/status')).body)).toMatchObject({ hubConnected: true });
+    hubRequests.length = 0;
+    const dashboard = await get(RUNNER_PORT, '/hub');
+    expect(dashboard.status).toBe(200);
+    expect(dashboard.body).toContain('<title>Team Hub</title>');
+    expect((await get(RUNNER_PORT, '/hub/?view=triage')).body).toContain('<title>Team Hub</title>');
+    expect(hubRequests.map((r) => r.url)).toEqual(['/hub', '/hub/?view=triage']);
+  });
+
   it('passes /api/v1/* on to the Report Hub, body and all', async () => {
     hubRequests.length = 0;
     const health = await fetch(`${base}/api/v1/health`);
@@ -170,7 +178,7 @@ describe('The runner as the one server', () => {
     expect(await echo.json()).toEqual({ method: 'POST', received: { status: 'ACCEPTED_RISK' } });
   });
 
-  it('without a Hub, answers /api/v1/* with "Hub not connected", and a missing UI build explains itself', async () => {
+  it('without a Hub, answers /hub and /api/v1/* with "Hub not connected", and a missing UI build explains itself', async () => {
     const bare = new RunnerServer({
       port: BARE_PORT,
       outputDir: path.join(scratch, 'bare-report'),
@@ -182,6 +190,8 @@ describe('The runner as the one server', () => {
       const hubless = await get(BARE_PORT, '/api/v1/health');
       expect(hubless.status).toBe(503);
       expect(JSON.parse(hubless.body)).toMatchObject({ error: 'Hub not connected', hubConnected: false });
+      expect((await get(BARE_PORT, '/hub')).status).toBe(503);
+      expect(JSON.parse((await get(BARE_PORT, '/api/runner/status')).body)).toMatchObject({ hubConnected: false });
 
       const unbuilt = await get(BARE_PORT, '/');
       expect(unbuilt.status).toBe(503);
@@ -227,7 +237,7 @@ describe('The runner as the one server', () => {
         steps: [{ action: 'wait', name: 'Look at the page' }],
         expectations: {},
       };
-      // Studio sends its own address as the Hub: "the Hub behind /api/v1".
+      // A caller that sends this server's own address as the Hub means "the Hub behind /api/v1".
       const started = await fetch(`http://localhost:${LONE_PORT}/api/runner/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

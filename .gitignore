@@ -8,6 +8,11 @@ dist/
 # A plan paused for review (sign-in details are left out of it, but it names the site and its pages)
 .qa-plan.json
 
+# Site data: each site's memory and grade history, the AI model setup, a waiting plan. Older versions
+# kept site data in sites/ in the working folder; the QA Tool moves it into .qa-data/ on start.
+.qa-data/
+/sites/
+
 # Run output (approved .qa-baselines/ are committed)
 .qa-report/
 .qa-runner-report/

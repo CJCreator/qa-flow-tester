@@ -137,7 +137,8 @@ describe('URL-first runs', () => {
     // Every page has a thumbnail the map can show.
     const thumb = reviewed.pages.find((p) => p.urlPath === '/dashboard')?.screenshotPath;
     expect(thumb).toMatch(/^plan-pages\/.+\.jpg$/);
-    expect((await fetch(`${runnerUrl}/api/evidence/${thumb}`)).status).toBe(200);
+    // Addressed inside the check-up's own folder.
+    expect((await fetch(`${runnerUrl}/api/evidence/runs/${reviewed.runId}/${thumb}`)).status).toBe(200);
 
     expect((await post('/api/runner/plan/approve')).status).toBe(200);
     await waitForPhase(['done']);
@@ -214,14 +215,17 @@ describe('URL-first runs', () => {
   }, 120000);
 
   it('turns a sentence into a test after the owner confirms it, and remembers the site next time', async () => {
-    await post('/api/runner/run', {
+    // The last test left its plan waiting for review: this check-up replaces it.
+    const started = await post('/api/runner/run', {
       targetUrl: `http://localhost:${FIXTURE_PORT}/`,
       owner: true,
       useAI: true,
       aiProvider: 'mock',
       skipReview: false,
       breakpoints: ['1440px'],
+      replacePlan: true,
     });
+    expect(started.status).toBe(202);
     await waitForPhase(['awaiting-review']);
     const first = await plan();
 

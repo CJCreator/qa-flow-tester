@@ -58,7 +58,7 @@ export function ItemToggle({ label, on, disabled, onChange }: { label: string; o
       checked={on}
       disabled={disabled}
       onChange={(e) => onChange(e.target.checked)}
-      className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-[#6C9BF2]"
+      className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-stamp"
     />
   );
 }

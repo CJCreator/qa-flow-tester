@@ -1,5 +1,6 @@
 import type { AIMessage, AICompletionOptions, AIProviderType } from '@qa/types';
 import type { AIProvider } from '../ai/ai-provider.js';
+import { stopIfAborted } from '../abort.js';
 
 /** The AI Request Budget is spent: the Plan Item is planned by fixed rules instead. */
 export class BudgetSpentError extends Error {
@@ -27,15 +28,19 @@ export class PacedAI implements AIProvider {
   private lastStart = 0;
   private gapMs: number;
 
+  private signal?: AbortSignal;
+
   constructor(
     private inner: AIProvider,
     /** Requests allowed in all; Infinity when the service doesn't say how many are left. */
     private allowance = Infinity,
-    options: { gapMs?: number; sleep?: (ms: number) => Promise<void> } = {}
+    /** `signal`: once aborted, no more requests are made (each throws an AbortError). */
+    options: { gapMs?: number; sleep?: (ms: number) => Promise<void>; signal?: AbortSignal } = {}
   ) {
     this.providerType = inner.providerType;
     this.gapMs = options.gapMs ?? (inner.providerType === 'openrouter' ? FREE_TIER_REQUEST_GAP_MS : 0);
     if (options.sleep) this.sleep = options.sleep;
+    this.signal = options.signal;
   }
 
   private sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -47,9 +52,11 @@ export class PacedAI implements AIProvider {
 
   async generateText(messages: AIMessage[], options?: AICompletionOptions): Promise<string> {
     for (let attempt = 0; ; attempt++) {
+      stopIfAborted(this.signal);
       if (this.used >= this.allowance) throw new BudgetSpentError();
       const wait = this.lastStart + this.gapMs - Date.now();
       if (wait > 0) await this.sleep(wait);
+      stopIfAborted(this.signal);
       this.lastStart = Date.now();
       this.used++;
       try {

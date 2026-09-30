@@ -1,5 +1,7 @@
 # 0008: One Local Server for the Runner, Wizard and Studio
 
+**Partly superseded by [0010](0010-one-app-with-details-on-demand.md) on 2026-09-30:** Studio is retired, and `/studio` redirects to Past check-ups. The single server, port and loopback rules stand.
+
 ## Context and Decision
 Running the tool took three processes on three ports:
 - the runner on 3001

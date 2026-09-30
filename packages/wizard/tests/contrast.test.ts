@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { palette } from '../tailwind.config.js';
+import { gradeTone } from '../src/screens/ReportScreen';
 
 /** WCAG relative luminance and contrast ratio. */
 function luminance(hex: string): number {
@@ -25,6 +26,10 @@ const TEXT_PAIRS: Array<[Token, Token]> = [
   ['stamp', 'stamp-tint'],
   ['paper', 'stamp'], // text on a primary button
   ['paper', 'stamp-dark'], // …while hovered
+  ['surface', 'stamp'], // the primary button's text is the surface colour
+  ['surface', 'stamp-dark'],
+  ['surface', 'fail'], // a confirm button that throws something away
+  ['ink', 'pass-tint'], // a notice's text on its tint
   ['pass', 'pass-tint'],
   ['fail', 'fail-tint'],
   ['warn', 'warn-tint'],
@@ -50,7 +55,20 @@ const NON_TEXT_PAIRS: Array<[Token, Token]> = [
   ['warn', 'canvas'],
 ];
 
+/** Every grade is written in its status colour on a card, and the stamp in its colour on its tint. */
+const GRADE_PAIRS: Array<[string, Token, Token]> = (['A', 'B', 'C', 'D', 'F'] as const).flatMap((grade): Array<[string, Token, Token]> => {
+  const tone = gradeTone(grade);
+  return [
+    [grade, tone, 'surface'],
+    [grade, tone, `${tone}-tint` as Token],
+  ];
+});
+
 describe('wizard palette meets WCAG 2.2 AA', () => {
+  it.each(GRADE_PAIRS)('grade %s: %s on %s is at least 4.5:1', (_grade, fg, bg) => {
+    expect(contrast(palette[fg], palette[bg])).toBeGreaterThanOrEqual(4.5);
+  });
+
   it.each(TEXT_PAIRS)('text %s on %s is at least 4.5:1', (fg, bg) => {
     expect(contrast(palette[fg], palette[bg])).toBeGreaterThanOrEqual(4.5);
   });

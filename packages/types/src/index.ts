@@ -349,6 +349,29 @@ export interface ReleaseReport {
   singleFileHtmlReportPath?: string;
   /** The site as the plan saw it, so the report can be drawn as a map. Absent for runs without a scan. */
   siteMap?: SiteMapSummary;
+  /**
+   * "Test again" found nothing new on the site, so this run skipped the review and used the plan
+   * approved at this time (ISO-8601).
+   */
+  testedWithApprovedPlan?: string;
+}
+
+/** One finished check-up, as Past check-ups lists it. Written beside each run's report. */
+export interface RunSummary {
+  runId: string;
+  targetUrl: string;
+  /** The site as typed, e.g. "localhost:3050": check-ups are grouped by it. */
+  host: string;
+  /** When the run finished (ISO-8601). */
+  timestamp: string;
+  durationMs: number;
+  ready: boolean;
+  stamp: 'Ready to release' | 'Not ready yet';
+  reason: string;
+  counts: Record<FindingSeverity, number>;
+  /** Nothing that could change data was sent. */
+  readOnly?: boolean;
+  testedWithApprovedPlan?: string;
 }
 
 export type AspectType =
@@ -365,6 +388,11 @@ export interface AspectScore {
   grade: AspectGrade;
   score: number;
   findings: string[];
+  /**
+   * False when none of the aspect's checks ran: it's shown as "Not checked" and left out of the
+   * overall score. Absent on reports made before this was recorded.
+   */
+  checked?: boolean;
 }
 
 export interface SiteAspectGrades {
@@ -602,6 +630,7 @@ export interface DiscoveryDraft {
 export * from './fingerprint.js';
 export * from './site-map.js';
 export * from './plan.js';
+export * from './verdict.js';
 import type {
   AIRequestBudget,
   DraftPlan,

@@ -1,13 +1,12 @@
-import React, { useId, useMemo, useRef, useState, useEffect } from 'react';
-import type { PageInventoryItem, DiscoveredFlow } from '@qa/types';
+import React, { useMemo, useState, useEffect } from 'react';
+import type { DiscoveredFlow } from '@qa/types';
 import { journeyPages } from '@qa/types/src/site-map.js';
 
 export interface PageNode {
   ref: string; // e.g. "pg-01"
   urlPath: string;
   title: string;
-  screenshotUrl?: string;
-  journeys: Array<{ id: string; colorClass: string; index: number }>;
+  journeys: Array<{ id: string; index: number }>;
   status?: 'pending' | 'running' | 'pass' | 'warn' | 'fail';
   issuesCount?: number;
 }
@@ -16,201 +15,165 @@ export interface PageGroup {
   id: string;
   label: string;
   count: number;
-  layout?: string;
   pages: string[];
 }
 
+/** A page on the map: the plan's pages, or a report's. */
+export interface MapPage {
+  urlPath: string;
+  title?: string;
+}
+
+/** A journey on the map: a planned one (its pages come from its steps), or a report's (pages listed). */
+export type MapJourney = { id: string; name?: string; pages: string[] };
+
+export type PageStatus = { status: 'pass' | 'warn' | 'fail'; issuesCount?: number };
+
 export interface SiteMapProps {
-  pages: PageInventoryItem[];
-  flows: DiscoveredFlow[];
+  pages: MapPage[];
+  /** The plan's journeys. */
+  flows?: DiscoveredFlow[];
+  /** A report's journeys, with their pages already listed. Used instead of `flows` when given. */
+  journeys?: MapJourney[];
   mode: 'plan' | 'live' | 'report';
-  activeJourneyId?: string | null;
   selectedPagePath?: string | null;
   runningPagePath?: string | null;
-  pageStatuses?: Record<string, { status: 'pass' | 'warn' | 'fail'; issuesCount?: number }>;
+  pageStatuses?: Record<string, PageStatus>;
   onSelectPage?: (urlPath: string) => void;
-  onSelectGroup?: (group: PageGroup) => void;
   /** The site's real links between pages (the App Flow), drawn beneath the journeys. */
   links?: Array<{ from: string; to: string }>;
   /** Pages drawn as cards before the rest are grouped. Default 6. */
   maxCards?: number;
 }
 
-const JOURNEY_COLORS = [
-  'var(--j1, #B69CFB)',
-  'var(--j2, #6FB0FA)',
-  'var(--j3, #4ADE9A)',
-  'var(--j4, #F59AC6)',
-  'var(--j5, #FBA35C)',
-];
+const JOURNEY_COLORS = ['#B69CFB', '#6FB0FA', '#4ADE9A', '#F59AC6', '#FBA35C'];
 
-const JOURNEY_CLASSES = ['j1', 'j2', 'j3', 'j4', 'j5'];
+/** Phones get the list: the drawing is wider than their screen. */
+function startsAsList(): boolean {
+  return typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 767px)').matches;
+}
+
+const STATUS_WORDS: Record<NonNullable<PageNode['status']>, string> = {
+  pending: 'Not tested on its own',
+  running: 'Being tested now',
+  pass: 'No problems',
+  warn: 'Minor problems',
+  fail: 'Serious problems',
+};
+
+function statusText(node: PageNode): string {
+  if (node.status === 'warn' || node.status === 'fail') {
+    return `${node.issuesCount ?? 0} ${node.issuesCount === 1 ? 'problem' : 'problems'}`;
+  }
+  return STATUS_WORDS[node.status ?? 'pending'];
+}
 
 export function SiteMap({
   pages,
-  flows,
+  flows = [],
+  journeys: givenJourneys,
   mode,
-  activeJourneyId,
   selectedPagePath,
   runningPagePath,
   pageStatuses,
   onSelectPage,
-  onSelectGroup,
   links,
   maxCards = 6,
 }: SiteMapProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [viewMode, setViewMode] = useState<'blueprint' | 'list'>('blueprint');
-  const [connectorPaths, setConnectorPaths] = useState<Array<{ id: string; d: string; color: string; active: boolean }>>([]);
+  const [viewMode, setViewMode] = useState<'map' | 'list'>(() => (startsAsList() ? 'list' : 'map'));
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const [connectorPaths, setConnectorPaths] = useState<Array<{ id: string; d: string; color: string }>>([]);
   const [linkPaths, setLinkPaths] = useState<Array<{ id: string; d: string }>>([]);
 
-  // Map flows to assigned journey colors
-  const flowColorMap = useMemo(() => {
-    const map = new Map<string, { color: string; colorClass: string; index: number }>();
-    flows.forEach((flow, i) => {
-      const idx = i % JOURNEY_COLORS.length;
-      map.set(flow.id, {
-        color: JOURNEY_COLORS[idx],
-        colorClass: JOURNEY_CLASSES[idx],
-        index: i + 1,
-      });
-    });
-    return map;
-  }, [flows]);
+  // One shape for both kinds of journey: an id and its pages in order.
+  const journeys: MapJourney[] = useMemo(
+    () => givenJourneys ?? flows.map((f) => ({ id: f.id, name: f.name, pages: journeyPages(f) })),
+    [givenJourneys, flows]
+  );
+  const colorOf = (index: number) => JOURNEY_COLORS[index % JOURNEY_COLORS.length];
 
-  // Identify journey pages vs other pages
   const { nodes, groups } = useMemo(() => {
-    const journeyPageSet = new Set<string>();
-    const pageJourneyMap = new Map<string, Array<{ id: string; colorClass: string; index: number }>>();
-
-    flows.forEach((flow) => {
-      const pList = journeyPages(flow);
-      pList.forEach((p) => {
-        journeyPageSet.add(p);
-        const current = pageJourneyMap.get(p) || [];
-        const colorInfo = flowColorMap.get(flow.id) || { colorClass: 'j1', index: 1 };
-        if (!current.some((c) => c.id === flow.id)) {
-          current.push({ id: flow.id, colorClass: colorInfo.colorClass, index: colorInfo.index });
-        }
-        pageJourneyMap.set(p, current);
-      });
+    const onJourney = new Map<string, Array<{ id: string; index: number }>>();
+    journeys.forEach((journey, i) => {
+      for (const page of journey.pages) {
+        const list = onJourney.get(page) || [];
+        if (!list.some((j) => j.id === journey.id)) list.push({ id: journey.id, index: i });
+        onJourney.set(page, list);
+      }
     });
 
     const nodeList: PageNode[] = [];
-    const otherPages: PageInventoryItem[] = [];
-
-    pages.forEach((p, idx) => {
-      if (journeyPageSet.has(p.urlPath) || p.urlPath === '/' || nodeList.length < maxCards) {
-        let nodeStatus: PageNode['status'] = 'pending';
-        let issuesCount = 0;
-
-        if (runningPagePath === p.urlPath) {
-          nodeStatus = 'running';
-        } else if (pageStatuses && pageStatuses[p.urlPath]) {
-          nodeStatus = pageStatuses[p.urlPath].status;
-          issuesCount = pageStatuses[p.urlPath].issuesCount || 0;
-        }
-
+    const otherPages: MapPage[] = [];
+    for (const p of pages) {
+      if (onJourney.has(p.urlPath) || p.urlPath === '/' || nodeList.length < maxCards) {
+        const known = pageStatuses?.[p.urlPath];
         nodeList.push({
           ref: `pg-${String(nodeList.length + 1).padStart(2, '0')}`,
           urlPath: p.urlPath,
           title: p.title || p.urlPath,
-          screenshotUrl: p.screenshotPath,
-          journeys: pageJourneyMap.get(p.urlPath) || [],
-          status: nodeStatus,
-          issuesCount,
+          journeys: onJourney.get(p.urlPath) || [],
+          status: runningPagePath === p.urlPath ? 'running' : known?.status ?? 'pending',
+          issuesCount: known?.issuesCount ?? 0,
         });
       } else {
         otherPages.push(p);
       }
-    });
+    }
 
-    // Group other pages by root directory prefix or layout group
-    const groupMap = new Map<string, string[]>();
-    otherPages.forEach((p) => {
-      const segments = p.urlPath.split('/').filter(Boolean);
-      const prefix = segments.length > 0 ? `/${segments[0]}` : '/other';
-      const list = groupMap.get(prefix) || [];
-      list.push(p.urlPath);
-      groupMap.set(prefix, list);
-    });
-
-    const groupList: PageGroup[] = [];
-    groupMap.forEach((pList, prefix) => {
-      groupList.push({
-        id: prefix,
-        label: prefix.replace(/^\//, '').charAt(0).toUpperCase() + prefix.slice(2) || 'Other',
-        count: pList.length,
-        pages: pList,
-      });
-    });
-
+    // The rest, grouped by the first part of their address.
+    const byPrefix = new Map<string, string[]>();
+    for (const p of otherPages) {
+      const first = p.urlPath.split('/').filter(Boolean)[0];
+      const prefix = first ? `/${first}` : '/other';
+      byPrefix.set(prefix, [...(byPrefix.get(prefix) || []), p.urlPath]);
+    }
+    const groupList: PageGroup[] = [...byPrefix.entries()].map(([prefix, list]) => ({
+      id: prefix,
+      label: prefix === '/other' ? 'Other pages' : `Pages under ${prefix}`,
+      count: list.length,
+      pages: list,
+    }));
     return { nodes: nodeList, groups: groupList };
-  }, [pages, flows, flowColorMap, runningPagePath, pageStatuses, maxCards]);
+  }, [pages, journeys, runningPagePath, pageStatuses, maxCards]);
 
-  // Compute card positions in a responsive canvas grid
+  // Where each card sits on the drawing.
   const nodePositions = useMemo(() => {
     const pos = new Map<string, { x: number; y: number; width: number; height: number }>();
     const cardWidth = 160;
     const cardHeight = 110;
-    const colGap = 80;
-    const rowGap = 50;
-    const startX = 60;
-    const startY = 80;
-
-    // Distribute nodes across tiers based on flow progression or index
     nodes.forEach((node, i) => {
       const col = i % 4;
       const row = Math.floor(i / 4);
-      // Slight vertical staggering like architectural blueprint drawings
-      const stagger = col % 2 === 1 ? 30 : 0;
       pos.set(node.urlPath, {
-        x: startX + col * (cardWidth + colGap),
-        y: startY + row * (cardHeight + rowGap) + stagger,
+        x: 60 + col * (cardWidth + 80),
+        y: 80 + row * (cardHeight + 50) + (col % 2 === 1 ? 30 : 0),
         width: cardWidth,
         height: cardHeight,
       });
     });
-
     return pos;
   }, [nodes]);
+  const groupsTop = 80 + Math.ceil(nodes.length / 4) * 160 + 40;
 
-  // Calculate SVG curve paths between connected journey nodes
   useEffect(() => {
-    if (viewMode !== 'blueprint') return;
-
-    const paths: Array<{ id: string; d: string; color: string; active: boolean }> = [];
-
-    flows.forEach((flow) => {
-      const pList = journeyPages(flow);
-      const colorInfo = flowColorMap.get(flow.id) || { color: '#6FB0FA' };
-      const isFlowActive = !activeJourneyId || activeJourneyId === flow.id;
-
-      for (let i = 0; i < pList.length - 1; i++) {
-        const from = nodePositions.get(pList[i]);
-        const to = nodePositions.get(pList[i + 1]);
-
-        if (from && to) {
-          const x1 = from.x + from.width;
-          const y1 = from.y + from.height / 2;
-          const x2 = to.x;
-          const y2 = to.y + to.height / 2;
-          const dx = Math.max(Math.abs(x2 - x1) * 0.5, 30);
-          const d = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
-
-          paths.push({
-            id: `${flow.id}-${i}`,
-            d,
-            color: colorInfo.color,
-            active: isFlowActive,
-          });
-        }
+    if (viewMode !== 'map') return;
+    const paths: Array<{ id: string; d: string; color: string }> = [];
+    journeys.forEach((journey, index) => {
+      for (let i = 0; i < journey.pages.length - 1; i++) {
+        const from = nodePositions.get(journey.pages[i]);
+        const to = nodePositions.get(journey.pages[i + 1]);
+        if (!from || !to) continue;
+        const x1 = from.x + from.width;
+        const y1 = from.y + from.height / 2;
+        const x2 = to.x;
+        const y2 = to.y + to.height / 2;
+        const dx = Math.max(Math.abs(x2 - x1) * 0.5, 30);
+        paths.push({ id: `${journey.id}-${i}`, d: `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`, color: colorOf(index) });
       }
     });
-
     setConnectorPaths(paths);
 
-    // The site's own links between the pages on the canvas, once per pair.
+    // The site's own links between the pages on the drawing, once per pair.
     const seen = new Set<string>();
     const drawn: Array<{ id: string; d: string }> = [];
     for (const link of links || []) {
@@ -226,94 +189,101 @@ export function SiteMap({
       drawn.push({ id: key, d: `M ${x1} ${y1} C ${x1} ${y1 + 40}, ${x2} ${y2 - 40}, ${x2} ${y2}` });
     }
     setLinkPaths(drawn);
-  }, [flows, nodePositions, flowColorMap, activeJourneyId, viewMode, links]);
+  }, [journeys, nodePositions, viewMode, links]);
+
+  const showStatus = mode !== 'plan';
+  const pageCount = pages.length;
 
   return (
     <div className="relative flex flex-1 flex-col overflow-hidden bg-canvas">
-      {/* Blueprint Grid Canvas Header Controls */}
-      <div className="flex items-center justify-between border-b border-rule bg-panel/80 px-4 py-2 text-xs">
-        <div className="flex items-center gap-2 font-mono text-ink-soft">
-          <span className="inline-block h-2 w-2 rounded-full bg-stamp animate-pulse" />
-          BLUEPRINT ARCHITECTURE VIEW · {nodes.length} PAGES · {flows.length} JOURNEYS
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setViewMode('blueprint')}
-            className={`rounded px-2.5 py-1 font-mono text-xs transition-colors ${
-              viewMode === 'blueprint' ? 'bg-stamp text-surface font-bold' : 'text-ink-soft hover:bg-surface hover:text-ink'
-            }`}
-            aria-pressed={viewMode === 'blueprint'}
-          >
-            Blueprint Map
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('list')}
-            className={`rounded px-2.5 py-1 font-mono text-xs transition-colors ${
-              viewMode === 'list' ? 'bg-stamp text-surface font-bold' : 'text-ink-soft hover:bg-surface hover:text-ink'
-            }`}
-            aria-pressed={viewMode === 'list'}
-          >
-            Accessible List
-          </button>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rule bg-panel/80 px-4 py-2 text-xs">
+        <p className="text-ink-soft">
+          {pageCount} {pageCount === 1 ? 'page' : 'pages'} · {journeys.length} {journeys.length === 1 ? 'journey' : 'journeys'}
+        </p>
+        <div className="flex items-center gap-1" role="group" aria-label="How to show the map">
+          {(
+            [
+              ['map', 'Map'],
+              ['list', 'List'],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setViewMode(id)}
+              aria-pressed={viewMode === id}
+              className={`min-h-[32px] rounded px-3 font-bold transition-colors ${
+                viewMode === id ? 'bg-stamp text-surface' : 'text-ink-soft hover:bg-surface hover:text-ink'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 
+      {showStatus && (
+        <ul aria-label="What the colours mean" className="flex flex-wrap gap-x-4 gap-y-1 border-b border-rule bg-panel/60 px-4 py-1.5 text-xs text-ink-soft">
+          <li className="flex items-center gap-1.5">
+            <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-pass" /> Tested, no problems
+          </li>
+          <li className="flex items-center gap-1.5">
+            <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-warn" /> Minor problems
+          </li>
+          <li className="flex items-center gap-1.5">
+            <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-fail" /> Serious problems
+          </li>
+          <li className="flex items-center gap-1.5">
+            <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-rule" /> {mode === 'live' ? 'Not reached yet' : 'Not tested on its own'}
+          </li>
+        </ul>
+      )}
+
       {viewMode === 'list' ? (
-        /* Accessible List Fallback (Passes WCAG 2.1 AA) */
-        <div className="flex-1 overflow-y-auto p-6 max-w-4xl mx-auto w-full">
-          <h2 className="text-xl font-bold mb-4 text-ink">Pages and Interaction Map</h2>
-          <div className="space-y-3">
-            {nodes.map((node) => {
-              const isSelected = selectedPagePath === node.urlPath;
-              return (
-                <div
-                  key={node.urlPath}
-                  tabIndex={0}
-                  role="button"
+        <div className="w-full flex-1 overflow-y-auto p-4 sm:p-6">
+          <ul className="mx-auto max-w-4xl space-y-2">
+            {nodes.map((node) => (
+              <li key={node.urlPath}>
+                <button
+                  type="button"
                   onClick={() => onSelectPage?.(node.urlPath)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      onSelectPage?.(node.urlPath);
-                    }
-                  }}
-                  className={`flex items-center justify-between p-4 rounded-md border-2 transition-all cursor-pointer ${
-                    isSelected ? 'border-stamp bg-surface' : 'border-rule bg-surface/50 hover:border-edge'
+                  aria-pressed={selectedPagePath === node.urlPath}
+                  className={`flex w-full items-center justify-between gap-3 rounded-md border-2 p-3 text-left transition-colors ${
+                    selectedPagePath === node.urlPath ? 'border-stamp bg-surface' : 'border-rule bg-surface/50 hover:border-edge'
                   }`}
                 >
-                  <div>
-                    <span className="font-mono text-xs text-ink-soft mr-3">{node.ref}</span>
-                    <strong className="text-ink">{node.title}</strong>
-                    <span className="block font-mono text-xs text-ink-soft mt-0.5">{node.urlPath}</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {node.status === 'running' && (
-                      <span className="flex items-center gap-1.5 font-mono text-xs text-stamp animate-pulse">
-                        <span className="h-2 w-2 rounded-full bg-stamp" /> Checking...
-                      </span>
-                    )}
-                    {node.status === 'pass' && (
-                      <span className="font-mono text-xs text-pass font-bold">✓ Pass</span>
-                    )}
-                    {node.status === 'warn' && (
-                      <span className="font-mono text-xs text-warn font-bold">⚠ {node.issuesCount} issue(s)</span>
-                    )}
-                    {node.status === 'fail' && (
-                      <span className="font-mono text-xs text-fail font-bold">✕ {node.issuesCount} issue(s)</span>
-                    )}
-                    <span className="text-xs text-ink-soft">Inspect →</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                  <span className="min-w-0">
+                    <strong className="block truncate text-ink">{node.title}</strong>
+                    <span className="block truncate font-mono text-xs text-ink-soft">{node.urlPath}</span>
+                  </span>
+                  {showStatus && <PageStatusLabel node={node} />}
+                </button>
+              </li>
+            ))}
+          </ul>
+          {groups.map((group) => (
+            <details key={group.id} className="mx-auto mt-3 max-w-4xl rounded-md border border-rule">
+              <summary className="cursor-pointer px-3 py-2 text-sm font-bold text-ink">
+                {group.label} · {group.count} {group.count === 1 ? 'page' : 'pages'}
+              </summary>
+              <ul className="space-y-1 p-3">
+                {group.pages.map((page) => (
+                  <li key={page}>
+                    <button
+                      type="button"
+                      onClick={() => onSelectPage?.(page)}
+                      className="min-h-[36px] w-full rounded px-2 text-left font-mono text-xs text-ink-soft hover:bg-surface hover:text-ink"
+                    >
+                      {page}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ))}
         </div>
       ) : (
-        /* Blueprint Canvas View */
         <div
-          ref={containerRef}
           className="relative flex-1 overflow-auto bg-canvas p-8"
           style={{
             backgroundImage: `
@@ -321,134 +291,111 @@ export function SiteMap({
               linear-gradient(to right, rgba(91,141,239,0.08) 1px, transparent 1px)
             `,
             backgroundSize: '40px 40px',
-            minHeight: '620px',
+            minHeight: `${Math.max(620, groupsTop + Math.ceil(groups.length / 3) * 110)}px`,
             minWidth: '960px',
           }}
         >
-          {/* SVG Connector Layer */}
-          <svg className="pointer-events-none absolute inset-0 h-full w-full" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <filter id="line-glow" x="-20%" y="-20%" width="140%" height="140%">
-                <feDropShadow dx="0" dy="0" stdDeviation="2" floodColor="#5B8DEF" floodOpacity="0.4" />
-              </filter>
-            </defs>
+          <svg aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full" xmlns="http://www.w3.org/2000/svg">
             {linkPaths.map((p) => (
               <path key={p.id} d={p.d} fill="none" stroke="currentColor" strokeWidth={1} className="text-rule" strokeOpacity={0.9} />
             ))}
             {connectorPaths.map((p) => (
-              <path
-                key={p.id}
-                d={p.d}
-                fill="none"
-                stroke={p.color}
-                strokeWidth={p.active ? 2 : 1}
-                strokeOpacity={p.active ? 0.9 : 0.25}
-                strokeDasharray={p.active ? undefined : '4 4'}
-                filter={p.active ? 'url(#line-glow)' : undefined}
-                className="transition-all duration-300"
-              />
+              <path key={p.id} d={p.d} fill="none" stroke={p.color} strokeWidth={2} strokeOpacity={0.9} />
             ))}
           </svg>
 
-          {/* Blueprint Cards */}
           {nodes.map((node) => {
             const pos = nodePositions.get(node.urlPath) || { x: 40, y: 40, width: 160, height: 110 };
             const isSelected = selectedPagePath === node.urlPath;
-            const isRunning = node.status === 'running';
-
-            let statusBorder = 'border-rule hover:border-stamp';
-            let statusBadge = null;
-
-            if (node.status === 'pass') {
-              statusBorder = 'border-l-4 border-l-pass border-rule';
-              statusBadge = <span className="font-mono text-[10px] text-pass font-bold">✓ Pass</span>;
-            } else if (node.status === 'warn') {
-              statusBorder = 'border-l-4 border-l-warn border-rule';
-              statusBadge = <span className="font-mono text-[10px] text-warn font-bold">⚠ {node.issuesCount} issue</span>;
-            } else if (node.status === 'fail') {
-              statusBorder = 'border-l-4 border-l-fail border-rule';
-              statusBadge = <span className="font-mono text-[10px] text-fail font-bold">✕ {node.issuesCount} issues</span>;
-            }
-
+            const border =
+              node.status === 'pass'
+                ? 'border-l-4 border-l-pass'
+                : node.status === 'warn'
+                  ? 'border-l-4 border-l-warn'
+                  : node.status === 'fail'
+                    ? 'border-l-4 border-l-fail'
+                    : '';
             return (
-              <div
+              <button
                 key={node.urlPath}
+                type="button"
                 onClick={() => onSelectPage?.(node.urlPath)}
-                tabIndex={0}
-                role="button"
-                aria-label={`Page ${node.title} at ${node.urlPath}`}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    onSelectPage?.(node.urlPath);
-                  }
-                }}
-                style={{
-                  position: 'absolute',
-                  left: `${pos.x}px`,
-                  top: `${pos.y}px`,
-                  width: `${pos.width}px`,
-                }}
-                className={`group cursor-pointer rounded-md border bg-surface/95 shadow-md backdrop-blur-sm transition-all duration-150 ${statusBorder} ${
-                  isSelected ? 'ring-2 ring-stamp border-stamp shadow-stamp/20' : ''
-                } ${isRunning ? 'animate-pulse ring-2 ring-stamp' : ''}`}
+                aria-pressed={isSelected}
+                aria-label={`${node.title}, ${node.urlPath}${showStatus ? `: ${statusText(node)}` : ''}`}
+                style={{ position: 'absolute', left: `${pos.x}px`, top: `${pos.y}px`, width: `${pos.width}px` }}
+                className={`rounded-md border border-rule bg-surface/95 text-left shadow-md transition-colors hover:border-stamp ${border} ${
+                  isSelected ? 'ring-2 ring-stamp' : ''
+                } ${node.status === 'running' ? 'animate-pulse ring-2 ring-stamp motion-reduce:animate-none' : ''}`}
               >
-                {/* Reference Tag & URL */}
-                <div className="flex items-center justify-between border-b border-rule/50 px-2.5 py-1.5 font-mono text-[10px] text-ink-soft">
-                  <span>{node.ref}</span>
-                  <span className="truncate max-w-[80px]">{node.urlPath}</span>
-                </div>
-
-                {/* Thumbnail sketch representation */}
-                <div className="relative mx-2 my-1.5 aspect-video overflow-hidden rounded bg-canvas/70 border border-rule/30 p-1.5">
-                  <div className="h-1 w-2/3 rounded-sm bg-rule mb-1" />
-                  <div className="h-3 w-full rounded bg-stamp/10 mb-1" />
-                  <div className="h-1 w-1/2 rounded-sm bg-rule/70" />
-                </div>
-
-                {/* Card Title & Tags */}
-                <div className="flex items-center justify-between px-2.5 pb-2 pt-0.5">
-                  <span className="truncate text-xs font-bold text-ink" title={node.title}>
-                    {node.title}
-                  </span>
-                  <div className="flex items-center gap-1">
-                    {statusBadge ||
+                <span className="flex items-center justify-between border-b border-rule/50 px-2.5 py-1.5 font-mono text-[10px] text-ink-soft">
+                  <span aria-hidden="true">{node.ref}</span>
+                  <span className="max-w-[100px] truncate">{node.urlPath}</span>
+                </span>
+                <span aria-hidden="true" className="relative mx-2 my-1.5 block aspect-video overflow-hidden rounded border border-rule/30 bg-canvas/70 p-1.5">
+                  <span className="mb-1 block h-1 w-2/3 rounded-sm bg-rule" />
+                  <span className="mb-1 block h-3 w-full rounded bg-stamp/10" />
+                  <span className="block h-1 w-1/2 rounded-sm bg-rule/70" />
+                </span>
+                <span className="flex items-center justify-between gap-1 px-2.5 pb-2 pt-0.5">
+                  <span className="truncate text-xs font-bold text-ink">{node.title}</span>
+                  <span className="flex shrink-0 items-center gap-1">
+                    {showStatus && node.status !== 'pending' && node.status !== 'running' ? (
+                      <PageStatusLabel node={node} compact />
+                    ) : (
                       node.journeys.map((j) => (
-                        <span
-                          key={j.id}
-                          className="inline-block h-2 w-2 rounded-full"
-                          style={{
-                            backgroundColor: JOURNEY_COLORS[(j.index - 1) % JOURNEY_COLORS.length],
-                          }}
-                          title={`Journey ${j.index}`}
-                        />
-                      ))}
-                  </div>
-                </div>
-              </div>
+                        <span key={j.id} aria-hidden="true" className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: colorOf(j.index) }} />
+                      ))
+                    )}
+                  </span>
+                </span>
+              </button>
             );
           })}
 
-          {/* Group Nodes */}
           {groups.map((group, idx) => (
-            <div
-              key={group.id}
-              onClick={() => onSelectGroup?.(group)}
-              style={{
-                position: 'absolute',
-                left: `${60 + (idx % 2) * 240}px`,
-                top: `${420 + Math.floor(idx / 2) * 100}px`,
-                width: '150px',
-              }}
-              className="cursor-pointer rounded-md border border-dashed border-rule bg-surface/40 p-3 text-center transition-all hover:border-stamp hover:bg-surface/70"
-            >
-              <div className="text-lg">📁</div>
-              <div className="text-xs font-bold text-ink">{group.label}</div>
-              <div className="font-mono text-[10px] text-ink-soft">{group.count} pages</div>
+            <div key={group.id} style={{ position: 'absolute', left: `${60 + (idx % 3) * 240}px`, top: `${groupsTop + Math.floor(idx / 3) * 110}px`, width: '200px' }}>
+              <button
+                type="button"
+                aria-expanded={openGroup === group.id}
+                onClick={() => setOpenGroup(openGroup === group.id ? null : group.id)}
+                className="w-full rounded-md border border-dashed border-rule bg-surface/40 p-3 text-center transition-colors hover:border-stamp hover:bg-surface/70"
+              >
+                <span className="block text-xs font-bold text-ink">{group.label}</span>
+                <span className="block font-mono text-[10px] text-ink-soft">
+                  {group.count} {group.count === 1 ? 'page' : 'pages'}
+                </span>
+              </button>
+              {openGroup === group.id && (
+                <ul className="relative z-10 mt-1 max-h-48 overflow-y-auto rounded-md border border-rule bg-surface p-1 shadow-lg">
+                  {group.pages.map((page) => (
+                    <li key={page}>
+                      <button
+                        type="button"
+                        onClick={() => onSelectPage?.(page)}
+                        className="min-h-[32px] w-full truncate rounded px-2 text-left font-mono text-[11px] text-ink-soft hover:bg-canvas hover:text-ink"
+                      >
+                        {page}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           ))}
         </div>
       )}
     </div>
+  );
+}
+
+function PageStatusLabel({ node, compact = false }: { node: PageNode; compact?: boolean }) {
+  const tone =
+    node.status === 'fail' ? 'text-fail' : node.status === 'warn' ? 'text-warn' : node.status === 'pass' ? 'text-pass' : node.status === 'running' ? 'text-stamp' : 'text-ink-soft';
+  const mark = node.status === 'fail' ? '✕' : node.status === 'warn' ? '!' : node.status === 'pass' ? '✓' : node.status === 'running' ? '●' : '–';
+  return (
+    <span className={`shrink-0 font-mono ${compact ? 'text-[10px]' : 'text-xs'} font-bold ${tone}`}>
+      <span aria-hidden="true">{mark} </span>
+      {compact && (node.status === 'warn' || node.status === 'fail') ? node.issuesCount : statusText(node)}
+    </span>
   );
 }

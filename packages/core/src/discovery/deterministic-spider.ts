@@ -55,6 +55,8 @@ export interface CrawlOptions {
   screenshotPrefix?: string;
   /** Told about each page as it's recorded, for progress. */
   onPage?: (page: PageInventoryItem, pagesSoFar: number) => void;
+  /** Once aborted, no more pages are opened: the crawl returns what it found so far. */
+  signal?: AbortSignal;
 }
 
 /** Links and buttons that would end a signed-in session. */
@@ -159,7 +161,7 @@ export class DeterministicSpider {
 
     const page = await context.newPage();
 
-    while (queue.length > 0 && visited.size < this.maxPages) {
+    while (queue.length > 0 && visited.size < this.maxPages && !options.signal?.aborted) {
       const requested = queue.shift()!;
       const requestedPath = new URL(requested, targetUrl).pathname;
       if (visited.has(requestedPath)) continue;

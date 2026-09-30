@@ -23,7 +23,7 @@
   - [Step 1: Start the Built-in Test Application](#step-1-start-the-built-in-test-application)
   - [Step 2: Run Automated Checks with CLI](#step-2-run-automated-checks-with-cli)
   - [Step 3: Run AI Discovery & Test Planning](#step-3-run-ai-discovery--test-planning)
-  - [Step 4: Use the Non-Technical Wizard UI](#step-4-use-the-non-technical-wizard-ui)
+  - [Step 4: Use Release check-up](#step-4-use-release-check-up)
   - [Step 5: Inspect Reports and Verify Fixes](#step-5-inspect-reports-and-verify-fixes)
 - [CLI Command Reference (`qa-test`)](#cli-command-reference-qa-test)
 - [Competitive Benchmarking (`qa-test compare`)](#competitive-benchmarking-qa-test-compare)
@@ -41,14 +41,13 @@ The platform operates across four primary operational layers:
 ```mermaid
 flowchart TD
     subgraph UI ["User Interfaces (served by the QA Tool on port 3001)"]
-        Wizard["Wizard UI (@qa/wizard)\n/ · Non-technical"]
-        Studio["QA Flow Studio (@qa/web)\n/studio/ · Technical QA"]
+        Wizard["Release check-up (@qa/wizard)\n/ · for everyone, with Details for developers"]
         LocalDash["Review Dashboard (@qa/dashboard)\nPort 3000 / CLI runs only"]
     end
 
     subgraph CoreEngine ["Execution & Discovery Core"]
         CLI["CLI: qa-test (@qa/cli)"]
-        Runner["QA Tool server (@qa/runner)\nPort 3001: API (HTTP + SSE) and both UIs"]
+        Runner["QA Tool server (@qa/runner)\nPort 3001: API (HTTP + SSE) and the Wizard"]
         Orchestrator["Flow Test Orchestrator (@qa/core)"]
         AI["AI Discovery Agent\n(Claude / OpenAI / Gemini / OpenRouter / Mock)"]
         Checkers["Audit Checkers (@qa/checkers)\n(Axe WCAG, Design Tokens, Visual Diff, Console/Network)"]
@@ -65,9 +64,7 @@ flowchart TD
     end
 
     Wizard -->|POST /api/runner/run| Runner
-    Studio -->|POST /api/runner/run| Runner
-    Studio -->|/api/v1/* passed on when HUB_API_URL is set| Runner
-    Runner -.->|/api/v1/*| Hub
+    Runner -.->|/hub and /api/v1/*, when HUB_API_URL is set| Hub
     Runner --> Orchestrator
     CLI --> Orchestrator
     Orchestrator --> AI
@@ -101,11 +98,10 @@ flowchart TD
 | [`packages/core`](packages/core) | Core test orchestration, AI discovery agent, test planner, crawler, benchmarking engine, and AI providers |
 | [`packages/checkers`](packages/checkers) | Automated checkers (A11y/WCAG, design tokens, visual diffs, console errors, network failures) |
 | [`packages/cli`](packages/cli) | Command line interface providing the `qa-test` executable |
-| [`packages/runner`](packages/runner) | The QA Tool server: runs checks over HTTP with Server-Sent Events (SSE) streaming, and serves the Wizard and QA Flow Studio on the same port |
+| [`packages/runner`](packages/runner) | The QA Tool server: runs check-ups over HTTP with Server-Sent Events (SSE) streaming, keeps past check-ups, and serves the Wizard on the same port |
 | [`packages/hub`](packages/hub) | Central report aggregation service, PostgreSQL database driver, and S3 evidence store |
 | [`packages/dashboard`](packages/dashboard) | Local review server for confirmation of AI discovery drafts and reports |
-| [`packages/web`](packages/web) | "QA Flow Studio" — React + Vite advanced developer & QA dashboard |
-| [`packages/wizard`](packages/wizard) | Non-technical, jargon-free step-by-step wizard UI |
+| [`packages/wizard`](packages/wizard) | Release check-up, the one app: plain language on top, Details for developers under each finding ([ADR 0010](docs/adr/0010-one-app-with-details-on-demand.md)) |
 | [`packages/types`](packages/types) | Shared TypeScript type definitions, schemas, and interfaces |
 | [`fixtures/test-app`](fixtures/test-app) | Built-in target test application (Invoicing app with simulated errors) |
 | [`scripts/benchmark.ts`](scripts/benchmark.ts) | Automated benchmark harness measuring check accuracy and planted defect detection |
@@ -143,10 +139,7 @@ Run `pnpm bootstrap` again after every `git pull`. (It isn't called `pnpm setup`
 pnpm start
 ```
 
-This builds anything that's missing and opens **`http://localhost:3001/`** in your browser:
-
-- **Wizard** (step-by-step checks): `http://localhost:3001/`
-- **QA Flow Studio** (the detailed view for engineers): `http://localhost:3001/studio/`
+This builds anything that's missing and opens **Release check-up** at **`http://localhost:3001/`** in your browser. It's the one app, for everyone: engineers find screenshots, steps to reproduce, selectors, console errors and a Playwright test under **Details for developers** on each finding. QA Flow Studio's old address, `/studio/`, now leads to Past check-ups.
 
 Leave the terminal open while you use it. `pnpm start --no-open` starts without opening a browser. To use another port, set `RUNNER_PORT` first (PowerShell: `$env:RUNNER_PORT=3055; pnpm start`). The QA Tool only answers on this computer (`localhost`).
 
@@ -177,7 +170,7 @@ S3_SECRET_ACCESS_KEY=minioadmin
 
 # The QA Tool (pnpm start)
 RUNNER_PORT=3001
-# Optional: the Report Hub behind Studio's release history and triage (/api/v1/*)
+# Optional: a Report Hub, passed on at /hub (its dashboard) and /api/v1/*
 HUB_API_URL=http://localhost:4000
 ```
 
@@ -187,13 +180,15 @@ HUB_API_URL=http://localhost:4000
 
 ### Option A: One Command (`pnpm start`)
 
-`pnpm start` runs the whole tool as one process on one port: the API that runs checks, the Wizard at `/` and QA Flow Studio at `/studio/`. `qa-test runner` starts the same server from the CLI:
+`pnpm start` runs the whole tool as one process on one port: the API that runs check-ups and the Wizard at `/`. `qa-test runner` starts the same server from the CLI:
 
 ```bash
 node packages/cli/dist/index.js runner -p 3001 [--hub http://localhost:4000]
 ```
 
-The Report Hub (below) stays a separate, optional service. Without `HUB_API_URL`, Studio's Hub views show an empty state.
+The Report Hub (below) stays a separate, optional service. With `HUB_API_URL` set, the top bar links to its dashboard at `/hub`, where findings are accepted across runs.
+
+Site data (each site's approved plan and answers, its grade history, the AI model setup and a plan waiting for review) lives in `.qa-data/`, which git ignores; set `RUNNER_DATA_DIR` to put it elsewhere. Each check-up's report and evidence get their own folder, `.qa-runner-report/runs/<runId>/`, and the last 10 per site are kept. A `sites/` folder left in the working folder by an older version is moved into `.qa-data/` on the first start.
 
 ---
 
@@ -207,7 +202,7 @@ docker compose up -d
 ```
 
 Service endpoints:
-- **QA Tool** (Wizard, QA Flow Studio at `/studio/`, and the API): `http://localhost:3001`
+- **Release check-up** (the Wizard and the API): `http://localhost:3001`
 - **Report Hub API**: `http://localhost:4000`
 - **MinIO Console**: `http://localhost:9001` (User: `minioadmin` / Pass: `minioadmin`)
 - **Postgres Database**: `localhost:5432` (User: `qahub` / Pass: `qahub_secret`)
@@ -221,11 +216,10 @@ docker compose down
 
 ### Working on the UIs (Hot Reload)
 
-Only needed when you change the Wizard or Studio code. Keep the QA Tool running (`pnpm start`), then:
+Only needed when you change the Wizard's code. Keep the QA Tool running (`pnpm start`), then:
 
 ```bash
-pnpm dev:wizard   # http://localhost:3002, API calls passed on to the QA Tool on 3001
-pnpm dev:web      # http://localhost:3000
+pnpm dev   # http://localhost:3002, API calls passed on to the QA Tool on 3001
 ```
 
 ---
@@ -302,18 +296,24 @@ node packages/cli/dist/index.js plan --draft .qa-report/discovery-draft.json --o
 
 ---
 
-### Step 4: Use the Non-Technical Wizard UI
+### Step 4: Use Release check-up
 
 1. Start the QA Tool, if it isn't running:
    ```bash
    pnpm start
    ```
-2. Use the Wizard it opens at `http://localhost:3001/`.
-3. Enter the site's address. Tick **I own this site or it’s a test copy** for full testing; without it the check is read-only. Optionally add specs, design notes or flow docs, or adjust **Explore up to N pages** under Advanced (default 200).
-4. Set up an OpenRouter key under **Settings & AI Key** (the free tier works).
-5. Click **Scan Site & Build Plan**. The scan shows live progress with numbers: pages found, layouts, AI requests used and how many are left today, and about how long is left.
-6. Review the plan, change it if you like, and approve it. Nothing is tested before you approve (see [The plan review](#the-plan-review) below).
-7. Watch the live run, then read the report and download it.
+2. Use Release check-up at `http://localhost:3001/`. Every screen has its own address, so Back, Forward, refresh and bookmarks work. The top bar leads to **New check-up**, **Past check-ups** and **Settings** (and **Team Hub** when a Report Hub is connected).
+3. The first time, paste an OpenRouter key where the screen asks for it (the free tier works). It's checked as you paste it and kept on this computer; change it later in **Settings**.
+4. Type the site's address. A bare address on this computer or a private network gets `http://`, anything else `https://`; the address actually used shows under the box, with what the check-up will do:
+   - **Test copy**: forms can be filled in and sent. Needs **I own this site**, and an address on this computer, a private network or a tunnel, or one you mark as **This is a test copy**.
+   - **Live site**: only looked at, nothing is sent or changed.
+
+   Both choices are remembered for the site. Optionally add **Specs**, **Design notes** and **Journeys to test**, or change **Explore up to N pages** (default 200).
+5. Click **Scan the site**. The scan shows pages found, layouts, AI requests used and left today, and about how long is left. **Stop scanning** asks first, and returns to the address with everything still filled in.
+6. Review the plan, change it if you like, and approve it. Nothing is tested before you approve (see [The plan review](#the-plan-review) below). Leaving the plan keeps it waiting: the new check-up screen offers to resume it.
+7. Watch the testing: the page under test, "Test 37 of 412 · about 6 minutes left", the latest screen, and problems as they're found. **Stop testing** keeps the plan, so it can be changed and approved again.
+8. Read the report. The stamp (**Ready to release** or **Not ready yet**) is the verdict, with its reason; the six areas are graded under it, and an area nothing checked says **Not checked**. Problems are grouped **Must fix before release**, **Should fix** and **Suggestions**, with **Details for developers** under each. **Download the report** saves it as one HTML file.
+9. **Test again** scans the site again and, when nothing changed, tests with the plan you approved without a new review. **Go deeper** scans again signed in. Every report stays in **Past check-ups**.
 
 #### The plan review
 
@@ -327,7 +327,7 @@ The AI writes the whole plan from what the crawler found. The **Full plan** tab 
 
 Every item can be switched on or off, or re-planned with the AI (optionally saying what should change). **Download the plan** saves the whole plan as Markdown for sign-off. The **Map** tab draws the pages and the links between them.
 
-The plan needs an AI key: set one up under **Settings & AI Key** (OpenRouter's free tier works). Free models allow 20 requests a minute, and 50 a day until the account has bought 10 credits (then 1,000). The plan asks for about one request per three pages, plus one for the shared menus and one for the journeys. Anything past the day's budget is planned by fixed rules, labelled as such, and can be re-planned later. Free models may occasionally produce malformed JSON or hit output token limits; trailing commas are tolerated, while comments, single quotes or unquoted keys safely trigger the Fixed-Rule Fallback. Any fallback item can be re-planned with one click via **Re-plan**. The next run of the same site reuses the approved plan and only asks the AI about pages and links that changed.
+The plan needs an AI key: add one on the new check-up screen or in **Settings** (OpenRouter's free tier works). Free models allow 20 requests a minute, and 50 a day until the account has bought 10 credits (then 1,000). The plan asks for about one request per three pages, plus one for the shared menus and one for the journeys. Anything past the day's budget is planned by fixed rules, labelled as such, and can be re-planned later. Free models may occasionally produce malformed JSON or hit output token limits; trailing commas are tolerated, while comments, single quotes or unquoted keys safely trigger the Fixed-Rule Fallback. Any fallback item can be re-planned with one click via **Re-plan**. The next run of the same site reuses the approved plan and only asks the AI about pages and links that changed.
 
 ---
 
@@ -400,7 +400,7 @@ qa-test verify <findingId> -o .qa-report
 ```
 
 ### `qa-test runner`
-Starts the QA Tool server: the API (HTTP + SSE) plus the Wizard at `/` and QA Flow Studio at `/studio/`, all on one port. `--hub` (or `HUB_API_URL`) passes `/api/v1/*` on to a Report Hub.
+Starts the QA Tool server: the API (HTTP + SSE) plus the Wizard at `/`, on one port. `--hub` (or `HUB_API_URL`) passes `/hub` and `/api/v1/*` on to a Report Hub.
 ```bash
 qa-test runner -p 3001 [--hub http://localhost:4000]
 ```
@@ -512,7 +512,10 @@ This occurs if the local Google Cloud telemetry plugin on Windows has invalid pa
   ```
 - Or use another port: `$env:RUNNER_PORT=3055; pnpm start` (or `qa-test runner -p 3055`).
 
-### 4. Playwright Browser Launch Errors
+### 4. The page says "Start Release check-up first"
+The page is served by the QA Tool, so this only shows when the QA Tool stopped, or the page was opened from somewhere else. Run `pnpm start` again and leave its terminal open; the page carries on by itself.
+
+### 5. Playwright Browser Launch Errors
 - `pnpm start` stops with a message when the browser is missing. `pnpm bootstrap` installs it. On Linux, system libraries may also be needed:
   ```bash
   pnpm --filter @qa/core exec playwright install chromium --with-deps

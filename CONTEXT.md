@@ -48,6 +48,10 @@ _Avoid_: Tested flow (until executed)
 A flow discovered on the live application that was not documented or anticipated in the Product Context.
 _Avoid_: Orphan flow, rogue flow, undocumented feature
 
+**Check-up**:
+One pass of the tool over a site, as the person sees it: the scan, the Plan Review, testing and the report. Each finished check-up keeps its report under Past check-ups.
+_Avoid_: Run, scan or check (in UI text; "check" means a Navigation Check or a graded check)
+
 **Plan**:
 The complete list of everything a run does: every page visit, Navigation Check, journey and check, at each screen size and for each role, plus what won't run and why. Nothing runs that isn't in the Plan.
 _Avoid_: Test case matrix, test suite, spec
@@ -107,6 +111,10 @@ _Avoid_: Risky button, danger action
 **Safety Filter**:
 A deterministic barrier intercepting and pausing actions matching forbidden keywords or profile restrictions before the browser executes them.
 _Avoid_: Guardrail, sandbox
+
+**Test Copy**:
+A copy of the site that is safe to fill in and send forms on: an address on this computer or a private network, a dev tunnel, or an address the person marked as a test copy. Full testing needs a Test Copy and the owner's say-so; any other site is only looked at.
+_Avoid_: Staging, test host (in UI text), sandbox
 
 **Domain Allowlist**:
 The hosts the crawler may follow links into: the host the start address lands on after redirects, its `www` twin, and any other host the person ticks in the Plan Review. Links to any other host are listed as leaving the site and only checked for being broken.

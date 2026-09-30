@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import type { ReleaseReport, AspectType, FindingSeverity, RankedRecommendation } from '@qa/types';
+import { releaseVerdict } from '@qa/types';
 
 export interface HtmlReportOptions {
   outputDir?: string;
@@ -34,9 +35,10 @@ export async function generateSingleFileHtmlReport(
   const outputDir = options?.outputDir || path.join(process.cwd(), '.qa-report');
   const targetFile = path.join(outputDir, 'report.html');
 
-  const overallGrade = report.grades?.overallGrade || 'A';
-  const overallScore = report.grades?.overallScore ?? 100;
-  const gradeStyle = GRADE_COLORS[overallGrade] || GRADE_COLORS.A;
+  // One verdict, the same as on screen: the stamp and its reason. There is no overall grade to
+  // contradict it; the aspects are graded below.
+  const verdict = releaseVerdict(report.findings);
+  const gradeStyle = verdict.ready ? GRADE_COLORS.A : GRADE_COLORS.F;
 
   const aspects: AspectType[] = [
     'Works',
@@ -50,7 +52,18 @@ export async function generateSingleFileHtmlReport(
   // Aspect Cards HTML
   const aspectCardsHtml = aspects
     .map((aspect) => {
-      const data = report.grades?.aspects[aspect] || { grade: 'A', score: 100, findings: [] };
+      const data = report.grades?.aspects[aspect];
+      if (!data || data.checked === false) {
+        return `
+        <div class="aspect-card" style="border-top: 4px solid #94A3B8;">
+          <div class="aspect-header">
+            <span class="aspect-title">${escapeHtml(aspect)}</span>
+            <span class="aspect-grade" style="background: #F1F5F9; color: #475569; border: 1px solid #94A3B8;">Not checked</span>
+          </div>
+          <div class="aspect-footer"><span>Nothing in this run checked it, so it isn’t graded.</span></div>
+        </div>
+      `;
+      }
       const style = GRADE_COLORS[data.grade] || GRADE_COLORS.A;
       return `
         <div class="aspect-card" style="border-top: 4px solid ${style.border};">
@@ -78,7 +91,7 @@ export async function generateSingleFileHtmlReport(
     const { newFindingFingerprints, fixedFindingFingerprints, openFindingFingerprints } = report.history;
     historyBannerHtml = `
       <section class="section card history-banner">
-        <h3>Changes Since Last Run</h3>
+        <h3>Since the last check-up</h3>
         <div class="history-grid">
           <div class="history-stat fixed">
             <span class="history-num">${fixedFindingFingerprints.length}</span>
@@ -129,7 +142,7 @@ export async function generateSingleFileHtmlReport(
 
     recommendationsHtml = `
       <section class="section card">
-        <h3 class="section-title">Prioritized Improvement Recommendations</h3>
+        <h3 class="section-title">What to improve first</h3>
         <p class="section-desc">Sorted deterministically by impact, severity, and implementation return on investment.</p>
         
         ${
@@ -214,7 +227,7 @@ export async function generateSingleFileHtmlReport(
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QA Readiness Report — ${escapeHtml(report.productId)}</title>
+  <title>Release check-up — ${escapeHtml(verdict.stamp)} — ${escapeHtml(report.targetUrl)}</title>
   <style>
     :root {
       --bg: #0D1322;
@@ -269,18 +282,19 @@ export async function generateSingleFileHtmlReport(
       border: 2px solid ${gradeStyle.border};
     }
     .overall-grade {
-      font-size: 2.5rem;
+      font-size: 1.6rem;
       font-weight: 800;
-      color: ${gradeStyle.text};
-      line-height: 1;
-    }
-    .overall-label {
-      font-size: 0.8rem;
-      font-weight: 600;
       text-transform: uppercase;
       color: ${gradeStyle.text};
-      letter-spacing: 0.05em;
-      margin-top: 0.25rem;
+      line-height: 1.1;
+      transform: rotate(-3deg);
+    }
+    .overall-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: ${gradeStyle.text};
+      margin-top: 0.4rem;
+      max-width: 16rem;
     }
     .card {
       background: var(--card-bg);
@@ -452,13 +466,13 @@ export async function generateSingleFileHtmlReport(
   <div class="container">
     <header class="header-banner">
       <div class="header-left">
-        <h1>QA Readiness Report</h1>
-        <p>Target: <strong>${escapeHtml(report.targetUrl)}</strong> | Tested on: ${escapeHtml(new Date(report.timestamp).toLocaleString())}</p>
-        <p style="margin-top: 0.25rem; font-size: 0.85rem;">Run ID: <code>${escapeHtml(report.runId)}</code> | Total Findings: ${report.findings.length}</p>
+        <h1>Release check-up</h1>
+        <p>Site: <strong>${escapeHtml(report.targetUrl)}</strong> | Checked on: ${escapeHtml(new Date(report.timestamp).toLocaleString())}</p>
+        <p style="margin-top: 0.25rem; font-size: 0.85rem;">Run ID: <code>${escapeHtml(report.runId)}</code> | Problems found: ${verdict.total}</p>
       </div>
       <div class="overall-badge">
-        <div class="overall-grade">${overallGrade}</div>
-        <div class="overall-label">Overall Readiness (${overallScore}/100)</div>
+        <div class="overall-grade">${escapeHtml(verdict.stamp)}</div>
+        <div class="overall-label">${escapeHtml(verdict.reason)}</div>
       </div>
     </header>
 
@@ -470,15 +484,15 @@ export async function generateSingleFileHtmlReport(
     ${recommendationsHtml}
 
     <section class="section card">
-      <h3 class="section-title">All Defect Findings (${report.findings.length})</h3>
-      <p class="section-desc">Click any finding to inspect expected vs actual behavior, steps to reproduce, and recommended fix.</p>
+      <h3 class="section-title">Problems found (${report.findings.length})</h3>
+      <p class="section-desc">Open any problem to see what was expected and what happened, the steps to see it again, and how to fix it.</p>
       <div class="findings-list">
-        ${findingsHtml || '<p style="color: #059669; font-weight: 500;">No defects identified! All checked criteria passed.</p>'}
+        ${findingsHtml || '<p style="color: #059669; font-weight: 500;">No problems found. Every check that ran passed.</p>'}
       </div>
     </section>
 
     <div class="footer-note">
-      Generated by QA Readiness Checker (Direction B: Blueprint) &bull; Completely self-contained offline document
+      Made by Release check-up &bull; One file that works offline
     </div>
   </div>
 </body>

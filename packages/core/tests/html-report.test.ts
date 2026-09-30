@@ -75,6 +75,35 @@ describe('Single-File Offline HTML Report (html-report.ts)', () => {
     ],
   };
 
+  it('leads with the one verdict, the stamp and its reason, and shows no overall grade', async () => {
+    const reportPath = await generateSingleFileHtmlReport(mockReport, { outputDir: tempDir });
+    const content = await fs.readFile(reportPath, 'utf8');
+    // One Major finding: not ready, whatever the grades say.
+    expect(content).toContain('Not ready yet');
+    expect(content).toContain('1 problem must be fixed first.');
+    expect(content).not.toContain('Ready to release');
+    expect(content).not.toContain('92/100');
+    expect(content).not.toMatch(/Overall Readiness/i);
+    expect(content).not.toContain('Direction B');
+  });
+
+  it('says "Not checked" for an area nothing looked at, instead of grading it', async () => {
+    const report: ReleaseReport = {
+      ...mockReport,
+      findings: [],
+      grades: {
+        ...mockReport.grades!,
+        aspects: { ...mockReport.grades!.aspects, Findable: { grade: 'A', score: 100, findings: [], checked: false } },
+      },
+    };
+    const content = await fs.readFile(await generateSingleFileHtmlReport(report, { outputDir: tempDir }), 'utf8');
+    expect(content).toContain('Ready to release');
+    expect(content).toContain('No problems found.');
+    const findable = content.slice(content.indexOf('>Findable<'), content.indexOf('>Findable<') + 400);
+    expect(findable).toContain('Not checked');
+    expect(findable).not.toContain('Grade A');
+  });
+
   it('generates a single self-contained HTML file without external asset links', async () => {
     const reportPath = await generateSingleFileHtmlReport(mockReport, { outputDir: tempDir });
     expect(reportPath).toBeDefined();
@@ -83,9 +112,8 @@ describe('Single-File Offline HTML Report (html-report.ts)', () => {
 
     // Basic structure checks
     expect(content).toContain('<!DOCTYPE html>');
-    expect(content).toContain('QA Readiness Report');
+    expect(content).toContain('Release check-up');
     expect(content).toContain('run-test-123');
-    expect(content).toContain('Overall Readiness (92/100)');
 
     // Aspect cards present
     expect(content).toContain('Works');
@@ -96,14 +124,14 @@ describe('Single-File Offline HTML Report (html-report.ts)', () => {
     expect(content).toContain('Looks and reads well');
 
     // Recommendations present
-    expect(content).toContain('Prioritized Improvement Recommendations');
+    expect(content).toContain('What to improve first');
     expect(content).toContain('Configure Content-Security-Policy header');
 
     // Findings collapsible details present
     expect(content).toContain('Missing Content-Security-Policy header');
     expect(content).toContain('qa-test verify F-001');
 
-    // Direction B theme color present
+    // The dark palette's drawing board
     expect(content).toContain('#0D1322');
 
     // No external scripts or CDNs (works 100% offline)

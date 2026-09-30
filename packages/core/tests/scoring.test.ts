@@ -103,6 +103,38 @@ describe('A–F Aspect Grading (scoring.ts)', () => {
     expect(grades1.aspects.Accessible.findings).toHaveLength(3);
   });
 
+  it('marks an aspect none of whose checks ran as "Not checked", and leaves it out of the overall', () => {
+    const crash: Finding = {
+      id: 'F-BUG-1',
+      title: 'Uncaught Exception',
+      severity: 'Major',
+      checker: 'bug-detection',
+      where: { urlPath: '/', role: 'visitor', breakpoint: '1440px' },
+      expectedVsActual: { expected: '', actual: '' },
+      stepsToReproduce: [],
+      evidence: {},
+      resolution: '',
+      verifyCommand: '',
+    };
+    // Only the bug and accessibility checks ran.
+    const grades = calculateSiteAspectGrades([crash], { checkersRun: ['bug-detection', 'ux-quality'] });
+    expect(grades.aspects.Works.checked).toBe(true);
+    expect(grades.aspects.Accessible.checked).toBe(true);
+    for (const aspect of ['Fast and mobile', 'Findable', 'Secure', 'Looks and reads well'] as const) {
+      expect(grades.aspects[aspect].checked, aspect).toBe(false);
+    }
+    // The overall is the average of the two that ran, not lifted by four untouched As.
+    expect(grades.overallScore).toBe(Math.round((grades.aspects.Works.score + 100) / 2));
+    expect(grades.overallScore).toBeLessThan(calculateSiteAspectGrades([crash]).overallScore);
+
+    // A checker that found something counts as having run, even when it wasn't listed.
+    const seo: Finding = { ...crash, id: 'F-SEO-1', checker: 'seo', severity: 'Minor', title: 'Missing meta description' };
+    expect(calculateSiteAspectGrades([seo], { checkersRun: [] }).aspects.Findable.checked).toBe(true);
+
+    // Without the list (reports made before it existed), every aspect is graded as before.
+    expect(calculateSiteAspectGrades([crash]).aspects.Findable.checked).toBeUndefined();
+  });
+
   it('fails an aspect (Grade F) when multiple major/blocker defects occur', () => {
     const criticalFindings: Finding[] = [
       {

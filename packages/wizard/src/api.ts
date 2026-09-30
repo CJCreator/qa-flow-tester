@@ -1,4 +1,4 @@
-import type { ReleaseReport, RoleCredential, ReviewPlan, DiscoveredFlow, TestCase } from '@qa/types';
+import type { ReleaseReport, RoleCredential, ReviewPlan, DiscoveredFlow, TestCase, RunSummary } from '@qa/types';
 
 /**
  * Every call to the runner lives here, and every failure becomes a RunnerError whose message is a
@@ -19,7 +19,7 @@ export class RunnerError extends Error {
   }
 }
 
-const NOT_RESPONDING = 'The QA Tool isn’t responding. Make sure it’s still running, then try again.';
+const NOT_RESPONDING = 'Release check-up isn’t responding. Make sure it’s still running, then try again.';
 
 async function call(path: string, init: RequestInit = {}, timeoutMs = 15000): Promise<Response> {
   try {
@@ -29,7 +29,7 @@ async function call(path: string, init: RequestInit = {}, timeoutMs = 15000): Pr
       signal: AbortSignal.timeout(timeoutMs),
     });
   } catch {
-    throw new RunnerError(NOT_RESPONDING, 'ERR_SERVER_UNRESPONSIVE', 'Check that the QA Tool is still running in its terminal (start it with pnpm start).');
+    throw new RunnerError(NOT_RESPONDING, 'ERR_SERVER_UNRESPONSIVE', 'Check that it’s still running in its terminal (start it with pnpm start).');
   }
 }
 
@@ -37,18 +37,25 @@ async function json<T>(res: Response): Promise<T> {
   try {
     return (await res.json()) as T;
   } catch {
-    throw new RunnerError(NOT_RESPONDING, 'ERR_INVALID_RESPONSE', 'The server returned an invalid or empty response.');
+    throw new RunnerError(NOT_RESPONDING, 'ERR_INVALID_RESPONSE');
   }
 }
+
+export type RunnerPhase = 'idle' | 'scanning' | 'awaiting-review' | 'testing' | 'done' | 'failed';
 
 export interface RunnerStatus {
   isRunning: boolean;
   hasReport: boolean;
   lastRunError: string | null;
   lastErrorCode?: string | null;
-  phase?: 'idle' | 'scanning' | 'awaiting-review' | 'testing' | 'done' | 'failed';
+  phase?: RunnerPhase;
   hasPlan?: boolean;
-  runId?: string;
+  runId?: string | null;
+  /** The site the check-up in progress is for, as typed. */
+  targetUrl?: string | null;
+  /** The run the latest report belongs to. */
+  reportRunId?: string | null;
+  hubConnected?: boolean;
 }
 
 /** null means the runner can't be reached (not started yet, or stopped). */
@@ -61,15 +68,24 @@ export async function getStatus(): Promise<RunnerStatus | null> {
   }
 }
 
+export interface AiSetup {
+  configured: boolean;
+  model: string | null;
+  /** Free requests the key has left today, when asked for and OpenRouter says. */
+  requestsLeft?: number;
+  requestsLimit?: number;
+}
+
 /**
  * Whether the QA Tool already has a working AI key, and the free model it chose. Both live on the
- * QA Tool, not in this browser, so any browser or device skips the setup screen once it's done.
+ * QA Tool, not in this browser, so any browser or device skips the setup once it's done. `usage`
+ * also asks OpenRouter how many free requests are left today (slower: for Settings).
  */
-export async function getAiSetup(): Promise<{ configured: boolean; model: string | null }> {
-  const res = await call('/api/ai/openrouter/key');
+export async function getAiSetup(usage = false): Promise<AiSetup> {
+  const res = await call(`/api/ai/openrouter/key${usage ? '?usage=1' : ''}`);
   if (!res.ok) throw new RunnerError(NOT_RESPONDING);
-  const body = await json<{ configured: boolean; model?: string | null }>(res);
-  return { configured: body.configured, model: body.model ?? null };
+  const body = await json<{ configured: boolean; model?: string | null; requestsLeft?: number; requestsLimit?: number }>(res);
+  return { configured: body.configured, model: body.model ?? null, requestsLeft: body.requestsLeft, requestsLimit: body.requestsLimit };
 }
 
 export type KeyCheck = { valid: true } | { valid: false; reason: string };
@@ -91,21 +107,35 @@ export async function saveKey(apiKey: string): Promise<{ model: string | null }>
   throw new RunnerError(body.reason || 'The key couldn’t be saved. Try again.');
 }
 
+/** What the address check says about the site before anything starts. */
+export interface SiteFacts {
+  /** The site as typed, e.g. "localhost:3050". */
+  host?: string;
+  /** The address can be tested fully: this computer, a private network, a tunnel, or marked as a test copy. */
+  testCopy?: boolean;
+  /** What was chosen for the site last time. */
+  remembered?: { owner?: boolean; markedTestCopy?: boolean };
+}
+
 export type Reachability =
-  | { ok: true; statusCode?: number }
-  | { ok: false; reason: string; code: string; suggestion: string; statusCode?: number };
+  | ({ ok: true; statusCode?: number } & SiteFacts)
+  | ({ ok: false; reason: string; code: string; suggestion: string; statusCode?: number } & SiteFacts);
 
 export async function checkReachable(targetUrl: string): Promise<Reachability> {
   const res = await call('/api/runner/preflight', { method: 'POST', body: JSON.stringify({ targetUrl }) }, 15000);
-  const body = await json<{ reachable: boolean; reason?: string; code?: string; suggestion?: string; statusCode?: number }>(res);
-  if (body.reachable) return { ok: true, statusCode: body.statusCode };
+  const body = await json<
+    { reachable: boolean; reason?: string; code?: string; suggestion?: string; statusCode?: number } & SiteFacts
+  >(res);
+  const facts: SiteFacts = { host: body.host, testCopy: body.testCopy, remembered: body.remembered };
+  if (body.reachable) return { ok: true, statusCode: body.statusCode, ...facts };
   if (body.reason === 'server-error' || body.code === 'ERR_SERVER_ERROR') {
     return {
       ok: false,
       reason: 'That site answered with an error page. It may be down right now.',
       code: body.code || 'ERR_SERVER_ERROR',
-      suggestion: body.suggestion || 'Target responded with a server error. Check your server logs or restart the service.',
+      suggestion: 'Check the site is working, then try again.',
       statusCode: body.statusCode,
+      ...facts,
     };
   }
   if (body.reason === 'invalid-url' || body.code === 'ERR_INVALID_URL') {
@@ -113,62 +143,62 @@ export async function checkReachable(targetUrl: string): Promise<Reachability> {
       ok: false,
       reason: 'That doesn’t look like a valid web address.',
       code: body.code || 'ERR_INVALID_URL',
-      suggestion: body.suggestion || 'Ensure the address starts with http:// or https:// and has a valid domain/port.',
+      suggestion: 'Check the address, for example shop.example.com or localhost:3050.',
       statusCode: body.statusCode,
+      ...facts,
     };
   }
   return {
     ok: false,
-    reason: 'Couldn’t reach that site — check the URL and try again.',
+    reason: 'Couldn’t reach that site.',
     code: body.code || 'ERR_TARGET_UNREACHABLE',
-    suggestion: body.suggestion || 'Could not connect to target host. Ensure your server is running, the port is open, and there are no network firewalls.',
+    suggestion: 'Make sure it’s running and the address is right, then try again.',
     statusCode: body.statusCode,
+    ...facts,
   };
 }
 
-export type StartRunRequest =
-  | {
-      mode?: 'product';
-      targetUrl: string;
-      owner?: boolean;
-      skipReview?: boolean;
-      aiModel?: string;
-      roles?: RoleCredential[];
-      productContext?: string;
-      designNotes?: string;
-      /** Pages the crawl explores at most (default 200). */
-      maxPages?: number;
-    }
-  | { mode: 'safe-public'; targetUrl: string; owner?: boolean; skipReview?: boolean };
+export interface StartRunRequest {
+  targetUrl: string;
+  owner: boolean;
+  /** The person says this live-looking address is a test copy of their site. */
+  stagingHost?: boolean;
+  roles?: RoleCredential[];
+  productContext?: string;
+  designNotes?: string;
+  /** Pages the crawl explores at most (default 200). */
+  maxPages?: number;
+  /** Throw away a plan that's waiting for review. */
+  replacePlan?: boolean;
+  /** Test with the approved plan when nothing on the site is new. */
+  testAgain?: boolean;
+}
 
+/** Starts a check-up: the scan, then the plan waits for review. Returns the run id. */
 export async function startRun(request: StartRunRequest): Promise<string> {
-  let hostname = 'default-product';
+  let productId = 'default-product';
   try {
-    hostname = new URL(request.targetUrl).hostname;
+    productId = new URL(request.targetUrl).hostname;
   } catch {
-    // handled by runner preflight
+    // handled by the runner
   }
-  const productId = hostname;
 
   const body: Record<string, unknown> = {
     targetUrl: request.targetUrl,
     productId,
-    owner: request.owner ?? true,
-    skipReview: request.skipReview ?? false,
+    owner: request.owner,
+    skipReview: false,
+    mode: 'product',
+    useAI: true,
+    aiProvider: 'openrouter',
   };
-
-  if (request.mode === 'safe-public') {
-    body.mode = 'safe-public';
-  } else {
-    body.mode = 'product';
-    body.useAI = true;
-    body.aiProvider = 'openrouter';
-    if (request.aiModel) body.aiModel = request.aiModel;
-    if (request.roles) body.roles = request.roles;
-    if (request.productContext) body.productContext = request.productContext;
-    if (request.designNotes) body.designNotes = request.designNotes;
-    if (request.maxPages) body.maxPages = request.maxPages;
-  }
+  if (request.stagingHost !== undefined) body.stagingHost = request.stagingHost;
+  if (request.roles?.length) body.roles = request.roles;
+  if (request.productContext) body.productContext = request.productContext;
+  if (request.designNotes) body.designNotes = request.designNotes;
+  if (request.maxPages) body.maxPages = request.maxPages;
+  if (request.replacePlan) body.replacePlan = true;
+  if (request.testAgain) body.testAgain = true;
 
   interface ApiErrorPayload {
     error?: string;
@@ -177,31 +207,22 @@ export async function startRun(request: StartRunRequest): Promise<string> {
   }
 
   const res = await call('/api/runner/run', { method: 'POST', body: JSON.stringify(body) });
-  if (res.status === 409) {
-    const err: ApiErrorPayload = await json<ApiErrorPayload>(res).catch((): ApiErrorPayload => ({}));
-    throw new RunnerError(
-      err.error || 'Another check is already running. Wait for it to finish, then start this one.',
-      err.code || 'ERR_RUN_IN_PROGRESS',
-      err.suggestion || 'Wait for the current scan or run to finish, or click Stop to abort it.'
-    );
-  }
   if (!res.ok) {
     const err: ApiErrorPayload = await json<ApiErrorPayload>(res).catch((): ApiErrorPayload => ({}));
     throw new RunnerError(
-      err.error || 'The check couldn’t be started. Try again.',
-      err.code || 'ERR_START_FAILED',
-      err.suggestion || 'Verify the target address and runner configuration.'
+      err.error || 'The check-up couldn’t be started. Try again.',
+      err.code || (res.status === 409 ? 'ERR_RUN_IN_PROGRESS' : 'ERR_START_FAILED'),
+      err.suggestion
     );
   }
   return (await json<{ runId: string }>(res)).runId;
 }
 
-export async function abortRun(): Promise<{ aborted: boolean; code?: string; message?: string }> {
+/** Stops the scan or test run. `planKept` when testing stopped: the plan waits for review again. */
+export async function abortRun(): Promise<{ aborted: boolean; planKept?: boolean }> {
   try {
     const res = await call('/api/runner/abort', { method: 'POST' });
-    if (res.ok) {
-      return await json<{ aborted: boolean; code?: string; message?: string }>(res);
-    }
+    if (res.ok) return await json<{ aborted: boolean; planKept?: boolean }>(res);
   } catch {
     // runner might be busy or unreachable
   }
@@ -210,7 +231,7 @@ export async function abortRun(): Promise<{ aborted: boolean; code?: string; mes
 
 export async function getPlan(): Promise<ReviewPlan> {
   const res = await call('/api/runner/plan');
-  if (res.status === 404) throw new RunnerError('No plan awaiting review right now.');
+  if (res.status === 404) throw new RunnerError('No plan is waiting for review right now.', 'ERR_NO_PLAN');
   if (!res.ok) throw new RunnerError('Couldn’t fetch the plan. Try again.');
   return json<ReviewPlan>(res);
 }
@@ -249,11 +270,9 @@ export const addPageToPlan = (address: string) => startPlanUpdate('/api/runner/p
 /** Explores another host the site links to, and plans its pages. */
 export const includeHostInPlan = (host: string) => startPlanUpdate('/api/runner/plan/include-host', { host });
 
-/** Saves the whole plan as a Markdown file, for reading, sharing and signing off. */
-export async function downloadPlanMarkdown(): Promise<void> {
-  const res = await call('/api/runner/plan/markdown');
-  if (!res.ok) throw new RunnerError('The plan couldn’t be downloaded. Try again.');
-  const name = res.headers.get('Content-Disposition')?.match(/filename="([^"]+)"/)?.[1] || 'test-plan.md';
+/** Saves a response as a file, with the name the QA Tool gave it. */
+async function saveResponse(res: Response, fallbackName: string): Promise<void> {
+  const name = res.headers.get('Content-Disposition')?.match(/filename="([^"]+)"/)?.[1] || fallbackName;
   const href = URL.createObjectURL(await res.blob());
   const link = document.createElement('a');
   link.href = href;
@@ -262,6 +281,13 @@ export async function downloadPlanMarkdown(): Promise<void> {
   link.click();
   link.remove();
   URL.revokeObjectURL(href);
+}
+
+/** Saves the whole plan as a Markdown file, for reading, sharing and signing off. */
+export async function downloadPlanMarkdown(): Promise<void> {
+  const res = await call('/api/runner/plan/markdown');
+  if (!res.ok) throw new RunnerError('The plan couldn’t be downloaded. Try again.');
+  await saveResponse(res, 'test-plan.md');
 }
 
 export async function patchPlan(body: PatchPlanBody): Promise<ReviewPlan> {
@@ -280,6 +306,7 @@ export async function approvePlan(options?: { roles?: RoleCredential[]; breakpoi
     const err = await json<{ error: string; code?: string; needsSignIn?: string[] }>(res);
     throw new RunnerError(err.error, err.code);
   }
+  if (res.status === 404) throw new RunnerError('This plan isn’t waiting for review any more. Start a new check-up.', 'ERR_NO_PLAN');
   if (!res.ok) throw new RunnerError('Couldn’t start testing the plan. Try again.');
 }
 
@@ -297,51 +324,51 @@ export async function interpretSentence(options: {
   flowId?: string;
 }): Promise<InterpretResult> {
   const res = await call('/api/runner/plan/interpret', { method: 'POST', body: JSON.stringify(options) });
-  if (!res.ok) throw new RunnerError('Couldn’t interpret that test description.');
+  if (!res.ok) throw new RunnerError('Couldn’t turn that into a test. Try saying it another way.');
   return json<InterpretResult>(res);
 }
 
-export async function getReport(): Promise<ReleaseReport> {
-  const res = await call('/api/report');
-  if (!res.ok) throw new RunnerError('The report isn’t available. Run the check again.');
+/** Every finished check-up kept on this computer, newest first. */
+export async function listRuns(): Promise<RunSummary[]> {
+  const res = await call('/api/runs');
+  if (!res.ok) throw new RunnerError('Couldn’t list your past check-ups. Try again.');
+  return (await json<{ runs: RunSummary[] }>(res)).runs;
+}
+
+/** One check-up's report. */
+export async function getRun(runId: string): Promise<ReleaseReport> {
+  const res = await call(`/api/runs/${encodeURIComponent(runId)}`);
+  if (res.status === 404) throw new RunnerError('That check-up’s report isn’t on this computer any more.', 'ERR_NO_REPORT');
+  if (!res.ok) throw new RunnerError('The report couldn’t be opened. Try again.');
   return json<ReleaseReport>(res);
 }
 
-/** Downloads the single-file offline HTML report. */
-export async function downloadHtmlReport(): Promise<void> {
-  const res = await call('/api/report/download/report.html');
-  if (!res.ok) throw new RunnerError('The HTML report couldn’t be downloaded. Try again.');
-  const blob = await res.blob();
-  const href = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = href;
-  link.download = 'report.html';
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(href);
+export async function deleteRun(runId: string): Promise<void> {
+  const res = await call(`/api/runs/${encodeURIComponent(runId)}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const err = await json<{ error?: string }>(res).catch((): { error?: string } => ({}));
+    throw new RunnerError(err.error || 'The check-up couldn’t be deleted. Try again.');
+  }
 }
 
-/** Saves report.html (first), plus report.md and findings.json. */
-export async function downloadReportFiles(onlyHtml = false): Promise<void> {
-  const files = onlyHtml ? ['report.html'] : ['report.html', 'report.md', 'findings.json'];
-  for (const file of files) {
-    try {
-      const res = await call(`/api/report/download/${file}`);
-      if (!res.ok) continue;
-      const blob = await res.blob();
-      const href = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = href;
-      link.download = file;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(href);
-    } catch {
-      // Continue with remaining files
-    }
-  }
+/** Saves one of a check-up's files: report.html, report.md or findings.json. */
+export async function downloadRunFile(runId: string, file: 'report.html' | 'report.md' | 'findings.json'): Promise<void> {
+  const res = await call(`/api/runs/${encodeURIComponent(runId)}/download/${file}`);
+  if (!res.ok) throw new RunnerError('That file couldn’t be downloaded. Try again.');
+  await saveResponse(res, file);
+}
+
+/** The address of a file inside a check-up's folder: a screenshot, a thumbnail, a repro script. */
+export function runFileUrl(runId: string, relativePath: string): string {
+  const clean = relativePath.replace(/\\/g, '/').replace(/^\/+/, '');
+  return `/api/evidence/runs/${encodeURIComponent(runId)}/${clean.split('/').map(encodeURIComponent).join('/')}`;
+}
+
+/** A text file inside a check-up's folder, e.g. a repro script. */
+export async function readRunText(runId: string, relativePath: string): Promise<string> {
+  const res = await call(runFileUrl(runId, relativePath));
+  if (!res.ok) throw new RunnerError('That file isn’t there any more.');
+  return res.text();
 }
 
 /** Finishes AI visual and copy review for screens remaining after a partial run. */
@@ -350,10 +377,10 @@ export async function finishAiReview(): Promise<{
   reviewedCount: number;
   remainingCount: number;
   addedFindingsCount: number;
-  grades?: any;
+  grades?: ReleaseReport['grades'];
   note?: string;
 }> {
   const res = await call('/api/runner/ai/finish', { method: 'POST' });
-  if (!res.ok) throw new RunnerError('Couldn’t finish AI review. Try again.');
+  if (!res.ok) throw new RunnerError('Couldn’t finish the AI review. Try again.');
   return json(res);
 }

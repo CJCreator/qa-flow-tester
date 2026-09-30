@@ -3,7 +3,7 @@ import type { Finding, ReleaseReport } from '@qa/types';
 import { ContextParser } from '../../core/src/discovery/context-parser';
 import { buildProductContext, rejectReason } from '../src/lib/context';
 import { normalizeUrl } from '../src/lib/url';
-import { summarizeReport } from '../src/lib/summary';
+import { bucketOf, bugReportMarkdown, groupProblems, playwrightFromSteps, summarizeReport } from '../src/lib/summary';
 
 describe('reference materials', () => {
   it('rejects non-text files with a message saying what to do instead', () => {
@@ -47,11 +47,18 @@ describe('reference materials', () => {
 });
 
 describe('normalizeUrl', () => {
+  // A bare address on this computer or a private network gets http://, anything else https://, and
+  // an address typed with its scheme keeps it (Task 1.5).
   it.each([
     ['shop.example.com', 'https://shop.example.com/'],
     ['  https://shop.example.com/cart ', 'https://shop.example.com/cart'],
+    ['http://shop.example.com', 'http://shop.example.com/'],
+    ['localhost:3050', 'http://localhost:3050/'],
     ['localhost:5173', 'http://localhost:5173/'],
     ['127.0.0.1:8080/app', 'http://127.0.0.1:8080/app'],
+    ['192.168.1.5', 'http://192.168.1.5/'],
+    ['10.0.0.7:3000', 'http://10.0.0.7:3000/'],
+    ['printer.local', 'http://printer.local/'],
   ])('%s -> %s', (input, expected) => {
     expect(normalizeUrl(input)).toEqual({ ok: true, url: expected });
   });
@@ -89,7 +96,14 @@ describe('summarizeReport', () => {
 
   it('gives a clearly positive verdict when nothing was found', () => {
     const s = summarizeReport(report([]));
-    expect(s).toMatchObject({ ready: true, stamp: 'Ready to release', headline: 'No issues found — looks ready!', total: 0, top: [] });
+    expect(s).toMatchObject({
+      ready: true,
+      stamp: 'Ready to release',
+      reason: 'No problems found.',
+      headline: 'No problems found — looks ready!',
+      total: 0,
+      top: [],
+    });
   });
 
   it('derives verdict, plain severity words and the top three from the real findings', () => {
@@ -104,7 +118,8 @@ describe('summarizeReport', () => {
     );
     expect(s.ready).toBe(false);
     expect(s.stamp).toBe('Not ready yet');
-    expect(s.headline).toBe('4 issues found');
+    expect(s.reason).toBe('2 problems must be fixed first.');
+    expect(s.headline).toBe('4 problems found');
     expect(s.counts.map((c) => c.sentence)).toEqual(['1 blocks release', '1 should be fixed before release', '1 minor', '1 suggestion']);
     expect(s.top).toEqual([
       { title: 'A request to your site failed (error 500)', category: 'Something broke', severity: 'Blocker' },
@@ -114,6 +129,12 @@ describe('summarizeReport', () => {
     ]);
     // No raw severity enum words reach the summary text
     expect(JSON.stringify(s.counts.map((c) => c.sentence))).not.toMatch(/Blocker|Major|Minor|Suggestion/);
+  });
+
+  it('says small problems don’t block release', () => {
+    const s = summarizeReport(report([finding('F-UX-1', 'Minor', 'Touch target too small', 'ux-quality')]));
+    expect(s).toMatchObject({ ready: true, stamp: 'Ready to release', headline: '1 small problem found' });
+    expect(s.reason).toBe('Nothing blocks release. 1 smaller problem is worth fixing.');
   });
 
   it('flags a read-only scan', () => {
@@ -127,5 +148,59 @@ describe('summarizeReport', () => {
     expect(s.total).toBe(1);
     expect(s.toConfirm).toBe(1);
     expect(s.top.map((t) => t.title)).not.toContain(guess.title);
+  });
+});
+
+describe('the report’s problems', () => {
+  const finding = (id: string, severity: Finding['severity'], title: string, urlPath = '/', checker: Finding['checker'] = 'bug-detection'): Finding => ({
+    id,
+    severity,
+    checker,
+    title,
+    where: { urlPath, role: 'visitor', breakpoint: '1440px', cssSelector: 'form > button.save' },
+    expectedVsActual: { expected: 'The invoice is saved', actual: 'The page showed an error' },
+    stepsToReproduce: ['Open /invoices/new', 'Click “Save”'],
+    evidence: { consoleLogs: [{ type: 'error', text: 'TypeError: amount is undefined', timestamp: '' } as never] },
+    resolution: 'Check the amount before saving.',
+    verifyCommand: `qa-test verify ${id}`,
+  });
+
+  it('puts Blockers and Majors under Must fix, Minors under Should fix, the rest under Suggestions', () => {
+    expect(bucketOf({ severity: 'Blocker' })).toBe('must-fix');
+    expect(bucketOf({ severity: 'Major' })).toBe('must-fix');
+    expect(bucketOf({ severity: 'Minor' })).toBe('should-fix');
+    expect(bucketOf({ severity: 'Suggestion' })).toBe('suggestion');
+    expect(bucketOf({ severity: 'Blocker', needsConfirmation: true })).toBe('to-confirm');
+  });
+
+  it('groups the same problem on several pages into one entry, with a plain title, leaving out what was marked intended', () => {
+    const groups = groupProblems([
+      finding('F-1', 'Major', 'Uncaught Exception: boom', '/cart'),
+      finding('F-2', 'Major', 'Uncaught Exception: boom', '/checkout'),
+      finding('F-3', 'Minor', 'Touch target too small', '/', 'ux-quality'),
+      { ...finding('F-4', 'Blocker', 'HTTP 500'), triageStatus: 'Intended' },
+    ]);
+    expect(groups['must-fix']).toHaveLength(1);
+    expect(groups['must-fix'][0]).toMatchObject({ title: 'The page crashed while it was running', pages: ['/cart', '/checkout'], aspect: 'Works' });
+    expect(groups['must-fix'][0].findings.map((f) => f.id)).toEqual(['F-1', 'F-2']);
+    expect(groups['should-fix'].map((g) => g.title)).toEqual(['A button is too small to tap easily on a phone']);
+    expect(groups.suggestion).toEqual([]);
+  });
+
+  it('writes a bug report and a Playwright test a developer can paste', () => {
+    const f = finding('F-9', 'Major', 'Step failed: "Save"', '/invoices/new');
+    const markdown = bugReportMarkdown(f, 'http://localhost:3050');
+    expect(markdown).toContain('### Couldn’t complete “Save”');
+    expect(markdown).toContain('`/invoices/new`');
+    expect(markdown).toContain('**Expected:** The invoice is saved');
+    expect(markdown).toContain('1. Open /invoices/new');
+    expect(markdown).toContain('TypeError: amount is undefined');
+    expect(markdown).toContain('`qa-test verify F-9`');
+    expect(markdown).not.toMatch(/\n\n\n/);
+
+    const test = playwrightFromSteps(f, 'http://localhost:3050');
+    expect(test).toContain("import { test, expect } from '@playwright/test';");
+    expect(test).toContain("new URL('/invoices/new', 'http://localhost:3050')");
+    expect(test).toContain('// Click “Save”');
   });
 });

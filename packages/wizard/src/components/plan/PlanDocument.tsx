@@ -85,7 +85,7 @@ function SummarySection({ plan, actions }: { plan: ReviewPlan; actions: PlanActi
               <label key={size} className="flex items-center gap-2 text-sm text-ink">
                 <input
                   type="checkbox"
-                  className="h-4 w-4 accent-[#6C9BF2]"
+                  className="h-4 w-4 accent-stamp"
                   checked={on}
                   disabled={actions.busy || (on && sizes.length === 1)}
                   onChange={(e) => actions.setScreenSizes(e.target.checked ? SIZES.filter((s) => s === size || sizes.includes(s)) : sizes.filter((s) => s !== size))}
@@ -590,7 +590,7 @@ function DocsSection({ plan, actions }: { plan: ReviewPlan; actions: PlanActions
   return (
     <Section id="plan-docs" title="Specs and design notes" intro="The AI plans with these. Change them, then re-plan so the plan uses them.">
       <label className="label" htmlFor="plan-product-context">
-        Specs, requirements or user stories
+        Specs
       </label>
       <textarea id="plan-product-context" rows={5} className="field mb-3 w-full font-mono text-xs" value={productContext} onChange={(e) => setProductContext(e.target.value)} />
       <label className="label" htmlFor="plan-design-notes">
@@ -614,7 +614,7 @@ export function PlanDocument({ plan, actions }: { plan: ReviewPlan; actions: Pla
     ['plan-journeys', 'Journeys'],
     ['plan-checks', 'Checks'],
     ['plan-wontrun', 'Won’t run'],
-    ['plan-docs', 'Specs'],
+    ['plan-docs', 'Specs and design notes'],
   ];
   return (
     <div className="mx-auto w-full max-w-4xl space-y-5 px-4 py-6 sm:px-6">

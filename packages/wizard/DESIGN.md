@@ -1,8 +1,13 @@
 # Wizard design rationale
 
-The wizard is for people who don't test software for a living: product managers, founders,
-marketers. `packages/web` (QA Flow Studio) is a dark, dense dashboard for engineers; this is its
-opposite on purpose, so nobody mistakes one for the other.
+The Wizard is the app, for everyone ([ADR 0010](../../docs/adr/0010-one-app-with-details-on-demand.md)). It's
+written for people who don't test software for a living: product managers, founders, marketers. Engineers
+get their detail in the same app, under each finding, in a collapsed "Details for developers". QA Flow
+Studio, the separate dashboard for engineers, was retired on 2026-09-30, and its old address leads to Past
+check-ups ([UX_IMPLEMENTATION_PLAN.md](../../UX_IMPLEMENTATION_PLAN.md)).
+
+On screen the product is called **Release check-up**, and one pass over a site is a **check-up** (see
+[CONTEXT.md](../../CONTEXT.md)).
 
 ## Phase 1 direction: Blueprint (Direction B)
 
@@ -25,27 +30,53 @@ reading systematic. Findings appear as red/amber left-border annotations on the 
 **What stays the same:** Atkinson Hyperlegible Next for body text. The same pass/warn/fail colour
 meanings. The stamp animation on the report. Writing rules (plain verbs, no jargon).
 
-## Concept: a check-up slip
+The direction names are for this document only. None of them ("Direction B", "Blueprint",
+"Architectural") appear on screen.
 
-The journey is a real sequence, so it's shown as one: a slip on the left lists the steps and fills
-in with each answer ("Website address: shop.example.com", "Signing in: Not needed"), like a form
-being completed at a counter. On phones it collapses to "Step 2 of 5". The report ends with the
-one bold element: an inspector's rubber stamp, *Ready to release* or *Not ready yet*.
+## Concept: a check-up
+
+A check-up is a real sequence, so it's shown as one:
+
+- **The top bar** is on every screen. It holds the places you can go: New check-up, Past check-ups and
+  Settings, plus Team Hub when a Report Hub is connected.
+- **The step bar** sits under the top bar during a check-up and on its report: Address · Plan · Testing ·
+  Report.
+  - Finished steps are links, the current step is highlighted, and later steps are greyed out.
+  - On phones it reads "Step 2 of 4: Plan".
+  - It only shows where you are. Stopping and deleting are always separate buttons, and they ask first.
+- **Every screen has its own address,** so Back, Forward, refresh and bookmarks work.
+- **The report's one bold element** is an inspector's rubber stamp: *Ready to release* or *Not ready yet*.
+  It is the verdict. The A–F grades per aspect sit under it; there is no overall grade to contradict it.
+
+This replaces the check-up slip: a list of steps down the left that filled in with each answer. That suited
+the old five-question wizard, not the one-box, URL-first flow.
 
 ## Colour
 
+The dark Blueprint palette, defined in [tailwind.config.js](tailwind.config.js):
+
 | Token | Hex | Use |
 |---|---|---|
-| paper | `#F3F6FB` | Page background. Cool and light, like a fresh form; avoids the cream/terracotta default |
-| surface | `#FFFFFF` | Fields and choice panels |
-| ink | `#1B2440` | Text (14.1:1 on paper) |
-| ink-soft | `#4B5675` | Secondary text (6.7:1 on paper) |
-| stamp | `#5132C4` | Stamp-pad violet: actions, focus ring, progress. White text on it is 8.1:1 |
-| pass / fail / warn | `#1D6B45` / `#B42318` / `#8A5300` | Verdict and status, each ≥ 5.6:1 on its tint |
-| edge | `#6E7A96` | Field borders, ≥ 3:1 against paper and surface (WCAG 1.4.11) |
+| paper | `#111827` | Page background |
+| canvas | `#0D1322` | The map's drawing board |
+| surface | `#1E2A3B` | Cards and fields |
+| panel | `#1A2438` | Sidebars and side panels |
+| ink | `#E8EDF5` | Text |
+| ink-soft | `#A7B3C7` | Secondary text |
+| rule | `#2A3A52` | Decorative dividers only, never the only cue |
+| edge | `#74859F` | Control borders, ≥ 3:1 against paper, panel and surface (WCAG 1.4.11) |
+| stamp | `#6C9BF2` | Accent: actions, focus ring, progress |
+| pass / fail / warn | `#4ADE9A` / `#FA9191` / `#FBC54A` | Verdict and status, on their tints `#12302A` / `#3A1C20` / `#3A2F14` |
+| j1–j5 | `#B69CFB` `#6FB0FA` `#4ADE9A` `#F59AC6` `#FBA35C` | One colour per journey on the map |
 
 Every text pairing is checked by `tests/contrast.test.ts`, which fails the build if a palette change
 drops below WCAG 2.1 AA.
+
+Colour rules:
+- Grades, statuses and verdicts use these tokens only, never Tailwind's built-in colours, so the contrast
+  test covers them.
+- The page declares `color-scheme: dark`, so the browser's own checkboxes, number fields and selects match
+  the board.
 
 ## Type
 
@@ -58,11 +89,20 @@ drops below WCAG 2.1 AA.
 
 ## Motion
 
-One moment only: the stamp lands when the report appears. Everything else is still, and the stamp
-and progress animations switch off under `prefers-reduced-motion`.
+One moment only: the stamp lands when the report appears. The rest is still, apart from what shows
+progress: the progress bar, and the pulse on the page being tested. Everything, the stamp included, stops
+under `prefers-reduced-motion`.
 
 ## Writing
 
 Plain verbs, sentence case, and no testing vocabulary: "Clicking “Save invoice”…", not selectors
 or event names. Errors say what happened and what to do next. The event-to-sentence rules live in
 `src/lib/translate.ts`; finding titles are rewritten in `src/lib/summary.ts`.
+
+- **One name:** Release check-up.
+- **"Check" is reserved.** A whole pass is a check-up. "Check" means a Navigation Check or one of the
+  graded checks.
+- **Nothing technical on the plain-language layer:** no prototype labels, error codes, selectors, checker
+  ids, event names or command lines. They go under "Details for developers". A test reads every screen for
+  them ([UX_IMPLEMENTATION_PLAN.md](../../UX_IMPLEMENTATION_PLAN.md), Wording).
+- **One word per thing:** the settings are "Settings" everywhere.

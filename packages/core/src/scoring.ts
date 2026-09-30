@@ -43,8 +43,12 @@ export function scoreToGrade(score: number, blockerCount: number = 0): AspectGra
 /**
  * Deterministically computes A–F grades for all six aspects based on findings.
  * Same findings will always produce the exact same grades.
+ *
+ * With `checkersRun`, an aspect none of whose checkers ran is marked `checked: false` and left out
+ * of the overall score: an aspect that was never looked at isn't an A. A checker that found
+ * something always counts as having run.
  */
-export function calculateSiteAspectGrades(findings: Finding[]): SiteAspectGrades {
+export function calculateSiteAspectGrades(findings: Finding[], options: { checkersRun?: Iterable<CheckerType> } = {}): SiteAspectGrades {
   const aspects: Record<AspectType, AspectScore> = {
     Works: { grade: 'A', score: 100, findings: [] },
     Accessible: { grade: 'A', score: 100, findings: [] },
@@ -62,6 +66,7 @@ export function calculateSiteAspectGrades(findings: Finding[]): SiteAspectGrades
     'Secure',
     'Looks and reads well',
   ];
+  const ran = options.checkersRun ? new Set(options.checkersRun) : undefined;
 
   for (const aspect of aspectList) {
     const relevantCheckers = new Set(ASPECT_CHECKERS[aspect]);
@@ -109,13 +114,15 @@ export function calculateSiteAspectGrades(findings: Finding[]): SiteAspectGrades
       grade,
       score: finalScore,
       findings: findingIds,
+      ...(ran ? { checked: [...relevantCheckers].some((c) => ran.has(c)) || findingIds.length > 0 } : {}),
     };
   }
 
-  // Calculate overall score & grade
-  const totalScore = Object.values(aspects).reduce((sum, a) => sum + a.score, 0);
-  const overallScore = Math.round(totalScore / aspectList.length);
-  const hasF = Object.values(aspects).some((a) => a.grade === 'F');
+  // Calculate overall score & grade, over the aspects that were checked
+  const counted = Object.values(aspects).filter((a) => a.checked !== false);
+  const totalScore = counted.reduce((sum, a) => sum + a.score, 0);
+  const overallScore = counted.length > 0 ? Math.round(totalScore / counted.length) : 100;
+  const hasF = counted.some((a) => a.grade === 'F');
   let overallGrade = scoreToGrade(overallScore);
   if (hasF && (overallGrade === 'A' || overallGrade === 'B')) {
     overallGrade = 'C'; // Failing an aspect caps overall grade at C
