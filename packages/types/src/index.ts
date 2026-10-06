@@ -617,6 +617,8 @@ export interface ElementInventoryItem {
   landmark?: 'header' | 'nav' | 'footer';
   /** It opens or closes something (aria-expanded, aria-haspopup or aria-controls), like a menu button. */
   toggles?: boolean;
+  /** True when the element is marked transient or sits inside a data-transient container. */
+  transient?: boolean;
 }
 
 export interface PageInventoryItem {

@@ -130,6 +130,11 @@ export function LandingScreen() {
               Find out whether your site is ready to release before your users do. Paste its address and get a plain-words verdict, with the problems in priority order.
             </p>
             <AddressForm />
+            <div className="mt-3 flex flex-wrap items-center gap-4">
+              <a href={SAMPLE_REPORT_URL} className="btn-link text-sm">
+                See a sample report
+              </a>
+            </div>
             <p className="mt-3 text-sm text-ink-soft">No sign-up. On a live site it only looks: nothing is filled in, sent or changed.</p>
             <WakeNote state={wake} />
           </div>
@@ -141,6 +146,9 @@ export function LandingScreen() {
         <h2 id="promise-title" className="sr-only">
           What it will and won’t do to your site
         </h2>
+        <p className="sr-only">
+          Release check-up only reads and inspects live sites safely without changing, submitting, or modifying any data, strictly adhering to robots.txt and privacy rules.
+        </p>
         <ul className="grid gap-4 sm:grid-cols-3">
           {PROMISES.map((p) => (
             <li key={p.title} className="rounded-card border border-rule bg-surface px-5 py-4">
@@ -242,6 +250,12 @@ export function LandingScreen() {
             </a>
             <a href={`${REPO_URL}/blob/main/LICENSE`} className="btn-link text-sm" rel="noreferrer">
               License
+            </a>
+            <a href={`${REPO_URL}/issues`} className="btn-link text-sm" rel="noreferrer">
+              Contact & Support
+            </a>
+            <a href={`${REPO_URL}/blob/main/PRIVACY.md`} className="btn-link text-sm" rel="noreferrer">
+              Privacy & Terms
             </a>
           </span>
         </div>

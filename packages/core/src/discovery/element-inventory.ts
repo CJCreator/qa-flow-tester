@@ -168,6 +168,7 @@ export async function collectElementInventory(page: Page): Promise<ElementInvent
           enabled,
           landmark: landmarkOf(el),
           toggles: el.hasAttribute('aria-expanded') || el.hasAttribute('aria-haspopup') || el.hasAttribute('aria-controls') || undefined,
+          transient: !!el.closest('[data-transient="true"]') || undefined,
         });
       }
       return items;

@@ -172,7 +172,7 @@ export function VisualBaselinesScreen() {
       ) : filteredBaselines.length === 0 ? (
         <div className="rounded-card border border-edge/60 bg-surface/40 p-12 text-center">
           <div className="mx-auto mb-3 text-3xl">📸</div>
-          <h3 className="text-lg font-bold text-ink">No visual baselines found</h3>
+          <h2 className="text-lg font-bold text-ink">No visual baselines found</h2>
           <p className="mx-auto mt-1 max-w-md text-sm text-ink-soft">
             {baselines && baselines.length > 0
               ? 'No baselines match the current breakpoint or search filter.'

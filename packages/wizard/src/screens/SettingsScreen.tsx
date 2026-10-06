@@ -277,11 +277,11 @@ function ModelChoice({ setup, onSaved }: { setup: AiSetup; onSaved: () => void }
   const [test, setTest] = useState<{ running: boolean; result?: { ok: boolean; ms: number; reason?: string; model?: string }; error?: string }>({ running: false });
 
   useEffect(() => {
-    if (!openRouter) return;
+    if (!openRouter || !setup.configured) return;
     listFreeModels()
       .then(setModels)
       .catch((err) => setListError(err instanceof RunnerError ? err.message : 'The model list couldn’t be read.'));
-  }, [openRouter]);
+  }, [openRouter, setup.configured]);
 
   const save = async () => {
     setSaving(true);
@@ -527,7 +527,7 @@ function ReleaseGates() {
             >
               <div className="flex items-center justify-between">
                 <span className="font-bold text-sm text-ink">{meta.name}</span>
-                {isSelected && <span className="font-bold text-xs text-stamp">Active</span>}
+                {isSelected && <span className="font-bold text-xs text-stamp-dark">Active</span>}
               </div>
               <p className="text-xs text-ink-soft mt-1">{meta.description}</p>
               <div className="mt-2 text-[11px] font-mono text-ink-soft space-y-0.5">

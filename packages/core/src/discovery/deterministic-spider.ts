@@ -82,7 +82,7 @@ export function pageLinks(elements: ElementInventoryItem[], pageUrl: string, onS
   const links: PageLink[] = [];
   const seen = new Set<string>();
   for (const el of elements) {
-    if (el.role !== 'link' || !el.href || !el.visible) continue;
+    if (el.role !== 'link' || !el.href || !el.visible || el.transient) continue;
     if (el.href.startsWith('#') || /^(javascript|mailto|tel|sms):/i.test(el.href)) continue;
     if (SESSION_ENDING.test(el.name) || SESSION_ENDING.test(el.href)) continue;
     let target: URL;
@@ -209,9 +209,11 @@ export class DeterministicSpider {
         const currentPath = redactUrl(landed.pathname + landed.search);
         const title = await page.title().catch(() => currentPath);
 
-        // 1. Discover links (never the ones that would end a signed-in session)
+        // 1. Discover links (never the ones that would end a signed-in session or are transient)
         const hrefs = await page.$$eval('a[href]', (anchors) =>
-          anchors.map((a) => ({ href: a.getAttribute('href') || '', text: (a.textContent || '').trim() }))
+          anchors
+            .filter((a) => !a.closest('[data-transient="true"]'))
+            .map((a) => ({ href: a.getAttribute('href') || '', text: (a.textContent || '').trim() }))
         );
 
         for (const { href, text } of hrefs) {
@@ -256,7 +258,19 @@ export class DeterministicSpider {
               const name = inp.getAttribute('name') || '';
               const type = inp.getAttribute('type') || inp.tagName.toLowerCase();
               const id = inp.getAttribute('id');
-              const selector = testIdSelector(inp) || (id ? `#${id}` : `[name="${name}"]`);
+              const ariaLabel = clean(inp.getAttribute('aria-label'));
+              const placeholder = clean(inp.getAttribute('placeholder'));
+              const selector =
+                testIdSelector(inp) ||
+                (id
+                  ? `#${id}`
+                  : name
+                  ? `[name="${name}"]`
+                  : ariaLabel
+                  ? `[aria-label="${ariaLabel}"]`
+                  : placeholder
+                  ? `[placeholder="${placeholder}"]`
+                  : `${inp.tagName.toLowerCase()}[type="${type}"]`);
               const required = inp.hasAttribute('required');
               const forLabel = id ? document.querySelector(`label[for="${id}"]`) : null;
               const wrapping = inp.closest('label')?.cloneNode(true) as Element | undefined;

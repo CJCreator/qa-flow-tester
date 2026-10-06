@@ -7,6 +7,7 @@ import { rejectReason } from '../lib/context';
 import { clampMaxPages, EMPTY_SIGN_IN, MAX_PAGES_LIMIT, type CheckupForm } from '../lib/form';
 import { formatWhen } from '../lib/format';
 import { Link, PATHS } from '../lib/router';
+import { useDocumentTitle } from '../lib/title';
 import { hostOf, normalizeUrl } from '../lib/url';
 
 /** What the address check found, for the address as it is now. */
@@ -71,6 +72,7 @@ export function NewCheckupScreen({
   /** Someone else's check-up is running on the shared copy, so a new one has to wait. */
   busy?: boolean;
 }) {
+  useDocumentTitle('New check-up');
   const [check, setCheck] = useState<AddressCheck>({ state: 'empty' });
   const [recheck, setRecheck] = useState(0);
   const latest = useRef(0);
@@ -507,7 +509,7 @@ export function NewCheckupScreen({
         {startError && <ErrorMessage>{startError}</ErrorMessage>}
 
         <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2">
-          <button type="submit" className="btn-primary px-8" disabled={!canStart} aria-describedby="start-hint">
+          <button type="submit" className="btn-primary px-8" disabled={starting} aria-describedby="start-hint">
             {starting ? <Spinner label="Starting…" /> : 'Scan the site'}
           </button>
           <p id="start-hint" className="text-sm text-ink-soft">
@@ -559,7 +561,7 @@ function ResumeCard({ status }: { status: RunnerStatus }) {
           : null;
   if (!card) return null;
   return (
-    <aside aria-label="Check-up in progress" className="mb-10 flex flex-wrap items-center justify-between gap-3 rounded-lg border-2 border-stamp bg-stamp-tint px-5 py-4">
+    <aside data-transient="true" aria-label="Check-up in progress" className="mb-10 flex flex-wrap items-center justify-between gap-3 rounded-lg border-2 border-stamp bg-stamp-tint px-5 py-4">
       <p className="font-bold text-ink">{card.text}</p>
       <Link to={card.to} className="btn-primary">
         {card.action} <span aria-hidden="true">→</span>
@@ -596,7 +598,7 @@ function MaterialField({
           <input
             type="file"
             accept=".md,.markdown,.txt"
-            className="sr-only"
+            className="hidden"
             aria-label={`Add a file to ${label}`}
             onChange={async (e) => {
               const input = e.currentTarget;

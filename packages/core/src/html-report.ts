@@ -93,7 +93,7 @@ export async function generateSingleFileHtmlReport(
     const { newFindingFingerprints, fixedFindingFingerprints, openFindingFingerprints } = report.history;
     historyBannerHtml = `
       <section class="section card history-banner">
-        <h3>Changes Since Last Run</h3>
+        <h2>Changes Since Last Run</h2>
         <div class="history-grid">
           <div class="history-stat fixed">
             <span class="history-num">${fixedFindingFingerprints.length}</span>
@@ -116,7 +116,7 @@ export async function generateSingleFileHtmlReport(
   const marketingHtml = report.marketing
     ? `
       <section class="section card">
-        <h3 class="section-title">Marketing basics</h3>
+        <h2 class="section-title">Marketing basics</h2>
         <p class="section-desc">Read from ${report.marketing.readPages.map((pg) => `<code>${escapeHtml(pg)}</code>`).join(', ')}. A suggestion depends on what the site is for.</p>
         ${report.marketing.checks
           .map((c) => {
@@ -158,7 +158,7 @@ export async function generateSingleFileHtmlReport(
 
     recommendationsHtml = `
       <section class="section card">
-        <h3 class="section-title">Prioritized Improvement Recommendations</h3>
+        <h2 class="section-title">Prioritized Improvement Recommendations</h2>
         <p class="section-desc">Sorted deterministically by impact, severity, and implementation return on investment.</p>
         
         ${
@@ -419,7 +419,7 @@ export async function generateSingleFileHtmlReport(
     .rec-summary { font-size: 0.9rem; color: #475569; margin-bottom: 0.5rem; }
     .rec-fix { font-size: 0.85rem; background: #EFF6FF; border-left: 3px solid #2563EB; padding: 0.5rem 0.75rem; border-radius: 0 4px 4px 0; margin-bottom: 0.5rem; }
     .rec-meta { font-size: 0.8rem; color: var(--text-muted); }
-    .rec-meta code { background: #E2E8F0; padding: 0.1rem 0.3rem; border-radius: 3px; }
+    .rec-meta code { color: #0F172A; background: #E2E8F0; padding: 0.1rem 0.3rem; border-radius: 3px; }
     .badge {
       font-size: 0.75rem;
       font-weight: 700;
@@ -478,7 +478,7 @@ export async function generateSingleFileHtmlReport(
   </style>
 </head>
 <body>
-  <div class="container">
+  <main class="container">
     <header class="header-banner">
       <div class="header-left">
         <h1>Release check-up</h1>
@@ -500,7 +500,7 @@ export async function generateSingleFileHtmlReport(
     ${recommendationsHtml}
 
     <section class="section card">
-      <h3 class="section-title">Every finding behind the ${verdict.total} ${verdict.total === 1 ? 'problem' : 'problems'} (${report.findings.length})</h3>
+      <h2 class="section-title">Every finding behind the ${verdict.total} ${verdict.total === 1 ? 'problem' : 'problems'} (${report.findings.length})</h2>
       <p class="section-desc">Click any finding to inspect expected vs actual behavior, steps to reproduce, and recommended fix.</p>
       <div class="findings-list">
         ${findingsHtml || '<p style="color: #059669; font-weight: 500;">No defects identified! All checked criteria passed.</p>'}
@@ -510,7 +510,7 @@ export async function generateSingleFileHtmlReport(
     <div class="footer-note">
       Made by Release check-up &bull; One file that works offline
     </div>
-  </div>
+  </main>
 </body>
 </html>`;
 

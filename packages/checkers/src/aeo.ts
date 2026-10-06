@@ -198,11 +198,10 @@ export class AeoChecker {
         // Check question headings
         const headings = document.querySelectorAll('h2, h3, h4');
         const questionHeadings: Array<{ text: string; nextParagraphWordCount: number; hasAnswerParagraph: boolean }> = [];
-        const questionRegex = /^(what|how|why|when|where|who|which|can|is|does|do|should)\b.*\??$/i;
-
         headings.forEach((h) => {
           const text = (h.textContent || '').trim();
-          if (questionRegex.test(text) && text.length > 8) {
+          const isQuestion = text.endsWith('?') || /^(what|how|why|when|where|who)\b/i.test(text);
+          if (isQuestion && text.length > 8) {
             let nextEl = h.nextElementSibling;
             // Skip over empty whitespace elements
             while (nextEl && nextEl.tagName !== 'P' && nextEl.tagName !== 'DIV' && nextEl.tagName !== 'UL') {

@@ -78,6 +78,37 @@ export function TopBar({ route, checkupInProgress }: { route: Route; checkupInPr
           </ul>
         </nav>
       </div>
+      {route.name !== 'landing' && (
+        <div className="border-t border-rule/50 bg-surface/50">
+          <nav aria-label="Breadcrumb" className="mx-auto flex max-w-6xl items-center gap-1.5 px-4 py-1 text-xs text-ink-soft sm:px-6">
+            <Link to={PATHS.landing} className="hover:text-ink">
+              Home
+            </Link>
+            <span aria-hidden="true" className="text-edge">/</span>
+            <span aria-current="page" className="font-medium text-ink">
+              {route.name === 'new'
+                ? 'New check-up'
+                : route.name === 'reports'
+                ? 'Past check-ups'
+                : route.name === 'report'
+                ? 'Report'
+                : route.name === 'baselines'
+                ? 'Baselines'
+                : route.name === 'benchmark'
+                ? 'Compare sites'
+                : route.name === 'settings'
+                ? 'Settings'
+                : route.name === 'scan'
+                ? 'Scanning'
+                : route.name === 'testing'
+                ? 'Testing'
+                : route.name === 'plan'
+                ? 'Plan review'
+                : 'Page'}
+            </span>
+          </nav>
+        </div>
+      )}
     </header>
   );
 }

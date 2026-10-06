@@ -225,7 +225,7 @@ function Report({ report, actions, onReportChanged }: { report: ReleaseReport; a
         <section aria-labelledby="gate-verdict-title" className="rounded-panel border border-edge bg-surface/60 p-4 shadow-level-1">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-ink-soft">Quality Gate:</span>
+              <span id="gate-verdict-title" className="text-xs font-bold uppercase tracking-wider text-ink-soft">Quality Gate:</span>
               <span className="font-bold text-ink">
                 {evaluatedGate.gate.strictAccessibility ? 'Strict' : evaluatedGate.gate.maxBlockers === 0 ? 'Standard' : 'Lenient'}
               </span>
@@ -911,7 +911,7 @@ function ProblemItem({
       <button
         type="button"
         aria-expanded={open}
-        aria-controls={open ? id : undefined}
+        aria-controls={open ? `${id}-details` : undefined}
         onClick={() => setOpen((o) => !o)}
         className="interactive flex w-full items-start justify-between gap-3 rounded-card p-4 text-left hover:bg-panel/80 hover:shadow-level-2"
       >
@@ -939,7 +939,7 @@ function ProblemItem({
         </span>
       </button>
       {open && (
-        <div id={id} className="space-y-3 border-t border-rule px-4 pb-4 pt-3">
+        <div id={`${id}-details`} className="space-y-3 border-t border-rule px-4 pb-4 pt-3">
           <p className="text-sm text-ink">
             <strong>Why it matters: </strong>
             {whyItMatters(group)}

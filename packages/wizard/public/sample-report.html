@@ -6,6 +6,34 @@
   <title>Example report · Release check-up</title>
   <meta name="description" content="A real Release check-up report on a small demo site with a few known problems: the verdict, the problems in priority order and the evidence.">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="canonical" href="http://localhost:3001/sample-report.html">
+  <meta property="og:title" content="Example report · Release check-up">
+  <meta property="og:description" content="A real Release check-up report on a small demo site with a few known problems: the verdict, the problems in priority order and the evidence.">
+  <meta property="og:image" content="/favicon.svg">
+  <meta property="og:url" content="http://localhost:3001/sample-report.html">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Example report · Release check-up">
+  <meta name="twitter:description" content="A real Release check-up report on a small demo site with a few known problems: the verdict, the problems in priority order and the evidence.">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "http://localhost:3001/"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Sample report",
+        "item": "http://localhost:3001/sample-report.html"
+      }
+    ]
+  }
+  </script>
   <style>
     :root {
       --bg: #0D1322;
@@ -187,7 +215,7 @@
     .rec-summary { font-size: 0.9rem; color: #475569; margin-bottom: 0.5rem; }
     .rec-fix { font-size: 0.85rem; background: #EFF6FF; border-left: 3px solid #2563EB; padding: 0.5rem 0.75rem; border-radius: 0 4px 4px 0; margin-bottom: 0.5rem; }
     .rec-meta { font-size: 0.8rem; color: var(--text-muted); }
-    .rec-meta code { background: #E2E8F0; padding: 0.1rem 0.3rem; border-radius: 3px; }
+    .rec-meta code { color: #0F172A; background: #E2E8F0; padding: 0.1rem 0.3rem; border-radius: 3px; }
     .badge {
       font-size: 0.75rem;
       font-weight: 700;
@@ -247,11 +275,17 @@
 </head>
 <body>
   <div style="max-width:1100px;margin:0 auto 1rem;padding:.9rem 1.25rem;border-radius:8px;background:#1E2A3B;color:#E8EDF5;font:16px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;display:flex;flex-wrap:wrap;gap:.5rem 1.5rem;align-items:center;justify-content:space-between" role="note"><span><strong>Example report.</strong> A real check-up of a small demo site we built with a few known problems. It is not your site.</span><span><a href="/" style="color:#9DBDF7;font-weight:700">About Release check-up</a> &nbsp; <a href="/check" style="color:#9DBDF7;font-weight:700">Run a free check-up</a></span></div>
-<div class="container">
+  <nav aria-label="Breadcrumb" style="max-width:1100px;margin:0 auto 1rem;font-size:0.875rem;color:#94A3B8;">
+    <a href="/" style="color:#60A5FA;text-decoration:none;font-weight:600;">Home</a> <span aria-hidden="true">&gt;</span> <span style="color:#F1F5F9;">Sample report</span>
+  </nav>
+  <main class="container">
     <header class="header-banner">
       <div class="header-left">
         <h1>Release check-up</h1>
         <p>Site: <strong>http://localhost:3050/</strong> | Checked on: 6/10/2026, 9:48:12 am</p>
+        <div style="margin-top: 0.35rem; font-size: 0.85rem; color: #475569;">
+          Report compiled by <span rel="author" style="font-weight:600;">QA Release Inspector</span> &middot; Published on <time datetime="2026-10-06T09:48:12Z">October 6, 2026</time>
+        </div>
         <p style="margin-top: 0.25rem; font-size: 0.85rem;">Run ID: <code>run-1791260049798</code> | Problems found: 23</p>
       </div>
       <div class="overall-badge">
@@ -346,7 +380,7 @@
 
     
       <section class="section card history-banner">
-        <h3>Changes Since Last Run</h3>
+        <h2>Changes Since Last Run</h2>
         <div class="history-grid">
           <div class="history-stat fixed">
             <span class="history-num">0</span>
@@ -365,8 +399,8 @@
     
     
       <section class="section card">
-        <h3 class="section-title">Prioritized Improvement Recommendations</h3>
-        <p class="section-desc">Sorted deterministically by impact, severity, and implementation return on investment.</p>
+        <h2 class="section-title">Prioritized Improvement Recommendations</h2>
+        <p class="section-desc">Sorted deterministically by impact, severity, and implementation return on investment. Evaluated according to <a href="https://www.w3.org/WAI/standards-guidelines/wcag/" target="_blank" rel="noopener noreferrer" style="color: #2563EB;">W3C WCAG 2.2 accessibility</a> standards.</p>
         
         
           <h4 class="group-heading">⚡ Quick Wins (High Return, Low Effort)</h4>
@@ -1683,6 +1717,6 @@ Console: Failed to load resource: the server responded with a status of 500 (Int
     <div class="footer-note">
       Made by Release check-up &bull; One file that works offline
     </div>
-  </div>
+  </main>
 </body>
 </html>

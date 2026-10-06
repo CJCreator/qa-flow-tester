@@ -142,16 +142,16 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
             <label htmlFor="target-url" className="label">
               Your site
             </label>
-            <input id="target-url" type="text" required placeholder="https://yourapp.com/signup" value={ourUrl} onChange={(e) => setOurUrl(e.target.value)} className="field" />
-            <input type="text" aria-label="Name for your site (optional)" placeholder="Name (optional)" value={ourName} onChange={(e) => setOurName(e.target.value)} className="field mt-2 text-xs" />
+            <input id="target-url" name="target-url" type="url" required placeholder="https://yourapp.com/signup" value={ourUrl} onChange={(e) => setOurUrl(e.target.value)} className="field" />
+            <input id="target-name" name="target-name" type="text" aria-label="Name for your site (optional)" placeholder="Name (optional)" value={ourName} onChange={(e) => setOurName(e.target.value)} className="field mt-2 text-xs" />
           </div>
 
           <div>
             <label htmlFor="competitor-url" className="label">
               The site to compare with
             </label>
-            <input id="competitor-url" type="text" required placeholder="https://competitor.com/signup" value={refUrl} onChange={(e) => setRefUrl(e.target.value)} className="field" />
-            <input type="text" aria-label="Name for the other site (optional)" placeholder="Name (optional)" value={refName} onChange={(e) => setRefName(e.target.value)} className="field mt-2 text-xs" />
+            <input id="competitor-url" name="competitor-url" type="url" required placeholder="https://competitor.com/signup" value={refUrl} onChange={(e) => setRefUrl(e.target.value)} className="field" />
+            <input id="competitor-name" name="competitor-name" type="text" aria-label="Name for the other site (optional)" placeholder="Name (optional)" value={refName} onChange={(e) => setRefName(e.target.value)} className="field mt-2 text-xs" />
           </div>
         </div>
 

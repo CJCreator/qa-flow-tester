@@ -169,7 +169,17 @@ export function generateFallbackJourneys(
         ...fillableInputs.map((inp) => ({
           action: 'fill' as const,
           selector: inp.selector,
-          value: inp.type === 'number' ? '100' : inp.type === 'email' ? 'test.user@example.com' : 'Test Value',
+          value: (() => {
+            const hint = `${inp.selector || ''} ${inp.label || ''} ${inp.name || ''}`.toLowerCase();
+            if (inp.type === 'number') return '100';
+            if (inp.type === 'email' || hint.includes('email')) return 'test.user@example.com';
+            if (inp.type === 'url' || hint.includes('url') || hint.includes('address') || hint.includes('site') || hint.includes('host') || hint.includes('domain')) {
+              return 'https://example.com';
+            }
+            if (inp.type === 'tel' || hint.includes('phone') || hint.includes('tel')) return '5555550123';
+            if (hint.includes('password') || hint.includes('pass')) return 'TestPassword123!';
+            return 'Test Value';
+          })(),
           name: `Fill ${inp.label || 'field'}`,
         })),
         { action: 'click' as const, selector: form.submitButtonSelector, name: 'Send the form' },

@@ -254,8 +254,9 @@ export class SeoChecker {
       }
     }
 
-    // 6. Meta Robots Noindex Warning
-    if (details.metaRobots && details.metaRobots.toLowerCase().includes('noindex')) {
+    // 6. Meta Robots Noindex Warning (only on public routes, not intentionally private/app screens)
+    const isPrivateOrAppRoute = /^\/(settings|check\/scan|check\/testing|reports\/run-)/i.test(context.urlPath);
+    if (!isPrivateOrAppRoute && details.metaRobots && details.metaRobots.toLowerCase().includes('noindex')) {
       findings.push({
         id: `F-SEO-${tcId}-NOINDEX-${findings.length + 1}`,
         testCaseId: context.testCaseId,

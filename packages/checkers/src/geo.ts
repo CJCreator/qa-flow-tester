@@ -31,7 +31,8 @@ export class GeoChecker {
       context.urlPath === '/login' ||
       context.urlPath.includes('/auth') ||
       context.urlPath.includes('/signup') ||
-      context.urlPath.includes('/cart');
+      context.urlPath.includes('/cart') ||
+      /^\/(settings|reports\/run-|check\/scan|check\/testing|baselines)/i.test(context.urlPath);
 
     // 1. Machine Readability: Presence of <main> or <article> for unambiguous LLM extraction
     if (!details.hasMainOrArticle && !isSpecialPath && details.wordCount > 100) {

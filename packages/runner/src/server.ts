@@ -2045,7 +2045,17 @@ export class RunnerServer {
         });
       } catch (err) {
         if (err instanceof OpenRouterAuthError) {
-          this.sendJson(res, 401, { error: err.message });
+          if (header?.startsWith('Bearer ') || !apiKey) {
+            this.sendJson(res, 401, { error: err.message });
+          } else {
+            this.sendJson(res, 200, {
+              models: [],
+              authError: true,
+              error: err.message,
+              recommendedModel: null,
+              recommendedVisionModel: null,
+            });
+          }
         } else {
           this.sendJson(res, 502, { error: 'Couldn’t get the model list from OpenRouter. Try again in a minute.' });
         }
