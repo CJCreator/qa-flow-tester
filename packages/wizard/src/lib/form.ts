@@ -104,3 +104,9 @@ export function productContextOf(form: Pick<CheckupForm, 'specs' | 'designNotes'
   if (form.journeys.trim()) sections.push(`# Journeys to test\n\n${form.journeys.trim()}`);
   return sections.length > 0 ? sections.join('\n\n---\n\n') : undefined;
 }
+
+/** The address a visitor typed on the landing page (/check?url=...), or '' when there isn't one. Only the address is read. */
+export function addressFromSearch(search: string): string {
+  const typed = new URLSearchParams(search).get('url')?.trim() ?? '';
+  return typed.length > 0 && typed.length <= 2048 ? typed : '';
+}

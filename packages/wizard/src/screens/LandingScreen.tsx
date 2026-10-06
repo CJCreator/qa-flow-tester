@@ -13,7 +13,7 @@ const AREAS: Array<{ name: string; text: string }> = [
   { name: 'It works', text: 'Sign-ups, forms and the journeys people take across pages.' },
   { name: 'Everyone can use it', text: 'Contrast, labels, keyboard use and structure.' },
   { name: 'It’s fast enough', text: 'Load timing and heavy pages.' },
-  { name: 'It’s safe to look at', text: 'Exposed secrets, missing protections and risky patterns.' },
+  { name: 'Risky patterns', text: 'Exposed secrets, missing protections and risky patterns we can spot.' },
   { name: 'People can find it', text: 'Titles, descriptions, sitemaps and structured data.' },
   { name: 'AI assistants can read it', text: 'Question-style headings, llms.txt and crawler access.' },
 ];
@@ -37,27 +37,41 @@ function StartButton({ className, children }: { className: string; children: Rea
   );
 }
 
-/** The product's one bold element, shown with the kind of findings it sits on: a picture, not a real report. */
-function VerdictPreview() {
-  const findings: Array<{ tone: 'border-fail' | 'border-warn'; label: string; text: string }> = [
-    { tone: 'border-fail', label: 'Must fix', text: 'The “Save invoice” button does nothing when the form is empty.' },
-    { tone: 'border-warn', label: 'Should fix', text: 'Text on the pricing page is too faint to read.' },
-    { tone: 'border-warn', label: 'Should fix', text: 'No page description, so search results show a guess.' },
-  ];
+/** The real sample report in a browser-style frame. Not a mock-up: the report shows its own verdict stamp. */
+function SampleReportFrame() {
   return (
-    <figure aria-label="An example of a verdict" className="rounded-panel border border-rule bg-canvas p-5 shadow-level-3 sm:p-6">
-      <p className="mb-4 font-mono text-xs text-ink-soft">pg-01 · /invoices/new</p>
-      <p className="stamp mb-5 inline-block rounded-card border-4 border-fail px-4 py-2 font-stamp text-3xl uppercase leading-none tracking-wide text-fail sm:text-4xl">Not ready yet</p>
-      <ul className="space-y-2">
-        {findings.map((f) => (
-          <li key={f.text} className={`rounded-card border-l-4 ${f.tone} bg-surface px-4 py-3`}>
-            <span className="block text-xs font-bold uppercase tracking-wide text-ink-soft">{f.label}</span>
-            <span className="block text-ink">{f.text}</span>
-          </li>
-        ))}
-      </ul>
-      <figcaption className="mt-4 text-sm text-ink-soft">An illustration. See a real report below.</figcaption>
+    <figure>
+      <div className="overflow-hidden rounded-panel border border-rule bg-canvas shadow-level-3">
+        <div className="flex items-center gap-2 border-b border-rule bg-panel px-4 py-2 font-mono text-xs text-ink-soft">
+          <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-edge" />
+          <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-edge" />
+          <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-edge" />
+          <span className="ml-2">Example report</span>
+        </div>
+        <iframe src={SAMPLE_REPORT_URL} title="A real sample report" loading="lazy" className="block h-[24rem] w-full bg-canvas sm:h-[28rem] lg:h-[34rem]" />
+      </div>
+      <figcaption className="mt-3 text-sm text-ink-soft">
+        A real check-up of a small demo site with a few known problems.{' '}
+        <a href={SAMPLE_REPORT_URL} className="btn-link min-h-0 text-sm">
+          Open it full size
+        </a>
+      </figcaption>
     </figure>
+  );
+}
+
+/** The one action: a real form that navigates to the new check-up screen with the address, so it needs no script and loads no app code. */
+function AddressForm() {
+  return (
+    <form action={startAddress()} method="get" className="flex flex-col gap-3 sm:flex-row">
+      <label htmlFor="hero-url" className="sr-only">
+        Your site’s address
+      </label>
+      <input id="hero-url" name="url" type="text" inputMode="url" autoComplete="url" placeholder="https://your-site.com" className="field min-h-[48px] flex-1" />
+      <button type="submit" className="btn-primary whitespace-nowrap px-8">
+        Run a free check-up
+      </button>
+    </form>
   );
 }
 
@@ -106,25 +120,20 @@ export function LandingScreen() {
       </header>
 
       <section aria-labelledby="hero-title" className="border-b border-rule bg-canvas">
-        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14">
+        <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14">
           <div>
             <p className="mb-4 font-mono text-sm text-stamp">Release check-up · free during the beta</p>
             <h1 id="hero-title" className="text-[clamp(2.5rem,1.6rem+4vw,4.25rem)] font-bold leading-[1.05] tracking-tight">
               QA without a QA team.
             </h1>
-            <p className="mt-5 max-w-prose text-xl text-ink-soft">
-              Paste your site’s address. Release check-up scans it, tests it in a real browser, and tells you in plain words whether it’s ready to release.
+            <p className="mb-8 mt-5 max-w-prose text-xl text-ink-soft">
+              Find out whether your site is ready to release before your users do. Paste its address and get a plain-words verdict, with the problems in priority order.
             </p>
-            <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3">
-              <StartButton className="btn-primary px-8">Run a free check-up</StartButton>
-              <a href={SAMPLE_REPORT_URL} className="btn-link">
-                See a sample report
-              </a>
-            </div>
-            <p className="mt-4 text-sm text-ink-soft">No sign-up. On a live site it only looks: nothing is filled in, sent or changed.</p>
+            <AddressForm />
+            <p className="mt-3 text-sm text-ink-soft">No sign-up. On a live site it only looks: nothing is filled in, sent or changed.</p>
             <WakeNote state={wake} />
           </div>
-          <VerdictPreview />
+          <SampleReportFrame />
         </div>
       </section>
 

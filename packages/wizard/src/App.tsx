@@ -28,7 +28,7 @@ import { TopBar } from './components/TopBar';
 import { CommandPalette } from './components/CommandPalette';
 import { useRunnerConnection } from './hooks/useRunnerConnection';
 import { useRunnerStream } from './hooks/useRunnerStream';
-import { DEFAULT_MAX_PAGES, EMPTY_FORM, productContextOf, rolesOf, type CheckupForm } from './lib/form';
+import { DEFAULT_MAX_PAGES, EMPTY_FORM, addressFromSearch, productContextOf, rolesOf, type CheckupForm } from './lib/form';
 import { isCheckRoute, matchRoute, navigate, PATHS, usePathname, type Route } from './lib/router';
 import { useDocumentTitle } from './lib/title';
 import { initialFeed, plainFailure, reduceFeed, type FeedState, type RunnerEvent } from './lib/translate';
@@ -111,7 +111,7 @@ export default function App() {
   const [status, setStatus] = useState<RunnerStatus | null>(null);
   const [ai, setAi] = useState<AiSetup | null>(null);
   // The new check-up form lives here, so changing screens or adding the key never loses it.
-  const [form, setForm] = useState<CheckupForm>(EMPTY_FORM);
+  const [form, setForm] = useState<CheckupForm>(() => ({ ...EMPTY_FORM, address: addressFromSearch(window.location.search) }));
   const [plan, setPlan] = useState<ReviewPlan | null>(null);
   const [planNotice, setPlanNotice] = useState<PlanNotice | null>(null);
   const [planUpdate, setPlanUpdate] = useState<PlanUpdateState>({ running: false });
