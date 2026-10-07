@@ -1,4 +1,4 @@
-import { ONLINE_APP_URL } from './workflow';
+import { ONLINE_APP_URL } from './onlineUrl';
 import { PATHS } from './router';
 
 /**

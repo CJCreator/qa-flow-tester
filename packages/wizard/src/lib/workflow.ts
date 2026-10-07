@@ -5,11 +5,7 @@ import template from '../../../../templates/qa-check.yml?raw';
 /** The branch or tag of the QA Tool the workflow gets. Pinned releases can replace this later. */
 export const TOOL_REF = 'main';
 
-/**
- * The shared online copy (the full app on a free host), when one is published. Set VITE_ONLINE_APP_URL
- * when building; without it the page doesn't offer it.
- */
-export const ONLINE_APP_URL: string | null = (import.meta.env.VITE_ONLINE_APP_URL as string | undefined)?.trim() || null;
+export { ONLINE_APP_URL } from './onlineUrl';
 
 export const WORKFLOW_PATH = '.github/workflows/qa-check.yml';
 

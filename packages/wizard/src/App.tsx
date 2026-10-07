@@ -111,7 +111,7 @@ export default function App() {
   const [status, setStatus] = useState<RunnerStatus | null>(null);
   const [ai, setAi] = useState<AiSetup | null>(null);
   // The new check-up form lives here, so changing screens or adding the key never loses it.
-  const [form, setForm] = useState<CheckupForm>(() => ({ ...EMPTY_FORM, address: addressFromSearch(window.location.search) }));
+  const [form, setForm] = useState<CheckupForm>(() => ({ ...EMPTY_FORM, address: isCheckRoute(matchRoute(window.location.pathname)) ? addressFromSearch(window.location.search) : '' }));
   const [plan, setPlan] = useState<ReviewPlan | null>(null);
   const [planNotice, setPlanNotice] = useState<PlanNotice | null>(null);
   const [planUpdate, setPlanUpdate] = useState<PlanUpdateState>({ running: false });

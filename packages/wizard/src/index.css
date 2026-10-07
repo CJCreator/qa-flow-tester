@@ -41,7 +41,7 @@
     @apply inline-flex min-h-[44px] items-center font-bold text-stamp underline decoration-2 underline-offset-4 hover:text-stamp-dark;
   }
   .field {
-    @apply block w-full rounded-control border-2 border-edge bg-surface px-4 py-3 text-base text-ink placeholder:text-ink-soft transition-colors duration-150 focus:border-stamp focus:outline-none;
+    @apply block w-full rounded-control border-2 border-edge bg-surface px-4 py-3 text-base text-ink placeholder:text-ink-soft transition-colors duration-150 focus:border-stamp focus:outline-none focus-visible:ring-2 focus-visible:ring-stamp focus-visible:ring-offset-2 focus-visible:ring-offset-canvas;
   }
   .label {
     @apply mb-2 block font-bold;
