@@ -11,15 +11,18 @@ This file has two parts. **Section 2 is the plan**: phases in order, each with a
 
 ## Implementation status
 
-*Last updated 2026-10-05.*
+_Last updated 2026-10-07._
 
-| Phase | Status |
-|---|---|
-| **0: Stop misleading people** | **Code complete. Final full test run still to do** (see below) |
-| **1: Free hosting, first version** | **Code complete. Not yet run on GitHub** (see below) |
-| 2 to 7 | Not started |
+The CLI, Report Hub and Dashboard were retired. Mentions of them in the history below describe what was done at the time.
+
+| Phase                              | Status                                                                                                                                       |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| **0: Stop misleading people**      | **Code complete. Final full test run still to do** (see below)                                                                               |
+| **1: Free hosting, first version** | **Code complete, wired to automatic deploys (Vercel front end, Render beta app). First live end-to-end result not yet recorded** (see below) |
+| 2 to 7                             | Not started                                                                                                                                  |
 
 ### Phase 0: what was done
+
 - **0.2 Axe accuracy (done).** A failed scan is now a visible `F-A11Y-SCAN-FAILED` finding. (While testing, this showed the old empty `catch` hid a real failure: axe rejects pages not made from a browser context.) Every violating element is listed in `evidence.allTargets`. "Incomplete" results appear as "Needs human review" suggestions. Findings cite WCAG criteria. Tap targets under 24 px are the WCAG 2.5.8 failure, and 24 to 44 px is a suggestion labelled as recommended ergonomics. WCAG 2.2 AA wording fixed in `CONTEXT.md`, `README.md` and `PRODUCT_GUIDE.md`.
 - **0.4 Security (done).** SameSite is checked independently of Secure (None on a Secure cookie is flagged; None without Secure is Major). Mixed content now also reads what the page actually loaded (CSS `url()`, fonts, fetch/XHR) through Resource Timing.
 - **0.3 Clean retry and flaky (done).** The orchestrator runs each test point's open-page-and-steps phase through `RetryRunner.runWithCleanRetry`: a fresh context on the second attempt, no retry on a stop request or on link checks. A flow that fails once and then passes is `FLAKY_PASSED`. It is recorded on the test point (`retry`), counted in `coverage.flakyFlows`, shown in `report.md`, sent to Hub as `retryTelemetry`, stored per run, and summed into the Hub's `flakyFlowsCount` (new "Flaky Flows" card, new `flaky_flows_count` column).
@@ -28,12 +31,14 @@ This file has two parts. **Section 2 is the plan**: phases in order, each with a
 - **Lab LCP noise** measured before finishing 0.1: [research/lab-lcp-noise.md](research/lab-lcp-noise.md). Single loads vary about 15%, a median of 3 about 20% across batches, so 3 loads plus 2 when slow was kept.
 
 ### Phase 0 exit gate
-- [ ] `pnpm test` is green, with tests for each fix. *Tests were written for every fix. The full suite has not been re-run since the last changes, by choice, and is the next step.*
+
+- [ ] `pnpm test` is green, with tests for each fix. _Tests were written for every fix. The full suite has not been re-run since the last changes, by choice, and is the next step._ _Pending /verify-all, 2026-10-07: CI now runs `pnpm exec vitest run --exclude "**/wizard-e2e.test.ts"` and `pnpm build`; result is recorded here when it has run._
 - [x] No finding is titled with a metric it did not measure.
 - [x] A failed axe scan produces a visible finding, never a clean pass.
-- [x] Benchmark precision is the same or better than the baseline. *W3C 24 of 24 real, Books 6 of 6, fixture planted defects 6 of 6. The answer keys in `fixtures/benchmarks/` were updated to the new finding titles. Swag Labs and TodoMVC were not re-run, and the original baseline run was cut short, so those two are unverified.*
+- [x] Benchmark precision is the same or better than the baseline. _W3C 24 of 24 real, Books 6 of 6, fixture planted defects 6 of 6. The answer keys in `fixtures/benchmarks/` were updated to the new finding titles. Swag Labs and TodoMVC were not re-run, and the original baseline run was cut short, so those two are unverified._
 
 ### Phase 1: what was done
+
 - **Spike answers.** (1) The wizard builds to static files (`VITE_BASE` sets the Pages path). (3) GitHub's billing page, checked 2026-10-05: standard runners are free for public repos, private repos on the Free plan get 2,000 minutes a month, artifact storage is 500 MB. Still open: (2) minutes, CPU and memory of a full check-up on an Actions runner, and (4) free container hosts against the Dockerfile. Both need a real run, so they decide nothing yet. Option A was built because it needs neither.
 - **ADR 0012** written: [adr/0012-hosted-runner-github-actions.md](adr/0012-hosted-runner-github-actions.md). It replaces 0008's "one server on each person's machine" as the only way to run.
 - **One-shot check-up command** `packages/runner/src/checkup.ts` (`node packages/runner/dist/checkup.js <url>`): starts the runner in-process, tests one address, writes the report, writes the verdict to the Actions job summary, and exits with `--fail-on blocker|major|none`. A preview or staging address (`--staging`) is a test copy; anything else is read-only. Its data folder is outside the report folder so a held key is never uploaded.
@@ -44,25 +49,30 @@ This file has two parts. **Section 2 is the plan**: phases in order, each with a
 - **`pnpm tunnel`** documented as local-only sharing, not hosting (README, ADR 0012).
 
 ### Phase 1 exit gate
-- [ ] A new user on a clean repo gets a verdict in under 15 minutes with no local install, using only Pages plus Actions. *Not tried: needs the workflow pushed, Pages enabled in the repo settings, and a run.*
-- [ ] Hosting cost is $0, with no card on file. *By design; confirm when Pages is enabled.*
-- [ ] A run on a private preview URL works. *Not tried.*
+
+- [ ] A new user on a clean repo gets a verdict in under 15 minutes with no local install, using only the Vercel site plus Actions. _Not tried: needs the workflow pushed and a run._
+- [ ] Hosting cost is $0, with no card on file. _By design (Vercel and Render free plans); confirm in the Vercel and Render accounts._
+- [ ] A run on a private preview URL works. _Not tried._
 
 ### Phase 1: the online copy (added after the first Pages review)
+
 The published wizard showed setup instructions instead of the app. The full app is now also set up to run online (Option B, beta), alongside the Actions route:
+
 - `render.yaml` (Render free plan, beta mode), a `/healthz` check for the host, `PORT` and `RENDER_EXTERNAL_URL` support in the runner, and lighter Chromium flags for small hosts.
-- The Pages landing screen shows **Open the online app** when `ONLINE_APP_URL` is set as a repo variable.
+- The landing screen on the Vercel site shows **Open the online app** when `VITE_ONLINE_APP_URL` is set in the Vercel project (see README).
 - Free-host research is in ADR 0012: only Render's free plan fits (512 MB, sleeps when idle). Hugging Face Docker Spaces, Fly.io and Koyeb no longer have a free option without paying or a card.
-- **Not done:** the Render service has not been created, and nothing has run on it. Whether Chromium fits in 512 MB is unknown and must be tried with a real site.
+- The Render service `qa-check-up` is defined in `render.yaml` (free plan, `RUNNER_BETA=1`, `autoDeploy`) and checked by `.github/workflows/deploy.yml` at its default URL. Still unknown: whether Chromium fits in 512 MB on a real site.
 
 ### Phase 1: open items
-- **To do by hand:** push this branch, enable Pages (Settings, Pages, Source: GitHub Actions), set a repo secret, and run the workflow once on a real site. Record the minutes and memory it uses here, and in ADR 0012.
+
+- **To do by hand:** set the repo secrets (`VERCEL_REPO_TOKEN`, and `QA_AI_API_KEY` in the repo that runs the check-up), and run the workflow once on a real site. Record the minutes and memory it uses here, and in ADR 0012.
 - **The repo must be public** (or the workflow given a token) for another user's job to download the tool. Decide this before sharing the template.
 - **The tool is fetched from `main`.** Pin a release tag once one exists.
-- **The workflow and the Pages build have not been run.** The command and wizard were only built, not run end to end.
+- **The check-up workflow has not been run end to end.** The command and wizard were only built, not run on a real site.
 - **Dispatch from the browser** was left out (a token on a static page is a risk); the person uses GitHub's Run workflow button.
 
 ### Known gaps and notes
+
 - **Missing elements are slow.** A step whose element is absent waits about 35 s per try, because of `locateElement`'s fallback chain, so a failing flow plus its clean retry is slow. Not changed here.
 - **A retry repeats a flow's actions.** On a Test Copy, a retried flow that sends a form could create a duplicate record. Live sites send nothing, so they are unaffected. Namespaced test data (item 3.3) is the fix.
 - **The "slower than last time" rule** is decided (at least 20% and at least 300 ms) but not built.
@@ -72,6 +82,7 @@ The published wizard showed setup instructions instead of the app. The full app 
 ---
 
 ## Table of Contents
+
 1. [Core Principles & ADRs](#1-core-principles--architectural-decision-records-adrs)
 2. [The Phase Plan](#2-the-phase-plan)
 3. [Specs A: Fix what misleads (items 0.1-0.4)](#specs-a-fix-what-misleads-phase-0)
@@ -95,15 +106,16 @@ To prevent breaking existing functionality or violating safety and legal boundar
 5. **$0 until revenue:** no feature may need a paid service to work for the free tier. Real devices and heavy use run on the user's own accounts.
 
 ### ADRs, and when each is needed
-| ADR | Subject | Replaces / amends | Write before |
-|---|---|---|---|
-| 0012 | Hosted runner: where check-ups run, daily limits, what `pnpm tunnel` becomes | Replaces [0008](adr/0008-single-local-server.md) | Phase 1 |
-| 0013 | Opt-in AI explorer and AI-proposed selector fixes (saved as Plans) | Amends [0009](adr/0009-ai-plans-every-plan-item.md) | Phase 6 |
-| 0014 | Verified Domains and safe host classification | New | Any shared runner, and Phase 6 Probes |
-| 0015 | Live-site request rules: GraphQL `query` POSTs, GET/HEAD replay, pacing | Amends [0003](adr/0003-deterministic-safety-filters-for-ai-discovery.md) | Phase 3 |
-| 0016 | Evidence and redaction: store shapes not bodies, strip secrets, no raw HAR | New | Phase 3 (and Phase 1 if reports are stored) |
-| 0017 | Findings schema and Playwright export contract | New | Phase 2 |
-| 0018 | Claim wording ("never compliant, never secure", list what was not checked) | New | Phase 0 (one page). **Written.** |
+
+| ADR  | Subject                                                                      | Replaces / amends                                                        | Write before                                |
+| ---- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------- |
+| 0012 | Hosted runner: where check-ups run, daily limits, what `pnpm tunnel` becomes | Replaces [0008](adr/0008-single-local-server.md)                         | Phase 1                                     |
+| 0013 | Opt-in AI explorer and AI-proposed selector fixes (saved as Plans)           | Amends [0009](adr/0009-ai-plans-every-plan-item.md)                      | Phase 6                                     |
+| 0014 | Verified Domains and safe host classification                                | New                                                                      | Any shared runner, and Phase 6 Probes       |
+| 0015 | Live-site request rules: GraphQL `query` POSTs, GET/HEAD replay, pacing      | Amends [0003](adr/0003-deterministic-safety-filters-for-ai-discovery.md) | Phase 3                                     |
+| 0016 | Evidence and redaction: store shapes not bodies, strip secrets, no raw HAR   | New                                                                      | Phase 3 (and Phase 1 if reports are stored) |
+| 0017 | Findings schema and Playwright export contract                               | New                                                                      | Phase 2                                     |
+| 0018 | Claim wording ("never compliant, never secure", list what was not checked)   | New                                                                      | Phase 0 (one page). **Written.**            |
 
 ---
 
@@ -128,12 +140,14 @@ graph LR
 ```
 
 ### Phase 0: Stop misleading people
+
 **Why first:** every later feature, and every new user from hosting, sees these numbers. A false INP, or a failed axe scan that reads as a pass, costs trust that is hard to win back.
 **Goal:** every number and every "pass" the tool shows is true.
 **Ships:** items **0.2** (axe), **0.4** (SameSite, mixed content), **0.3** (retry, flaky passed), **0.1** (performance), the WCAG 2.2 wording fix in `CONTEXT.md` and `PRODUCT_GUIDE.md`, and ADR 0018.
 **Order inside the phase:** 0.2 (S), 0.4 (S), 0.3 (S to M), then 0.1 (M). Before 0.1, run one page about 30 times on the machine that will host check-ups, to see how noisy lab LCP is. That result sets the repeat-run count and any "slower than last time" rule.
 **Effort:** about 3 weeks.
 **Exit gate:**
+
 - `pnpm test` is green, with tests for each fix.
 - No finding is titled with a metric it did not measure.
 - A failed axe scan produces a visible finding, never a clean pass.
@@ -143,18 +157,20 @@ graph LR
 **Risk:** repeat runs make a check-up slower. Run the extra loads only on Sample Pages.
 
 ### Phase 1: Free hosting, first version
+
 **Why second:** it is your stated goal now, and "nothing to install" is the promise of the product. It is also the biggest unknown, so it gets a short spike before any build.
 **The constraint:** GitHub Pages and similar static hosts cannot launch Chromium. A check-up needs a machine with a browser. So the free design has two parts:
 
-| Part | Where it can live free | Notes |
-|---|---|---|
-| Front end: landing page, setup wizard, report viewer | **GitHub Pages**, Cloudflare Pages or Netlify | The wizard is a Vite app ([packages/wizard](../packages/wizard)), so it can be built to static files. It must be able to talk to a runner at a chosen address, which it may not do today. |
-| Runner: crawls, tests, reports | **Option A:** the user's own GitHub Actions run (no server of ours). **Option B:** a free container host running the existing [Dockerfile](../packages/runner/Dockerfile). | A fits "heavy use runs on the user's accounts" and needs no tenant isolation. B gives true zero setup but brings a shared machine, quotas, abuse limits and ADR 0014. |
+| Part                                                 | Where it can live free                                                                                                                                                     | Notes                                                                                                                                                                                     |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Front end: landing page, setup wizard, report viewer | **GitHub Pages**, Cloudflare Pages or Netlify                                                                                                                              | The wizard is a Vite app ([packages/wizard](../packages/wizard)), so it can be built to static files. It must be able to talk to a runner at a chosen address, which it may not do today. |
+| Runner: crawls, tests, reports                       | **Option A:** the user's own GitHub Actions run (no server of ours). **Option B:** a free container host running the existing [Dockerfile](../packages/runner/Dockerfile). | A fits "heavy use runs on the user's accounts" and needs no tenant isolation. B gives true zero setup but brings a shared machine, quotas, abuse limits and ADR 0014.                     |
 
 **Recommended first version: Option A.** Pages hosts the wizard and report viewer. The wizard produces a ready-made `.github/workflows/qa-check.yml` and config for the user's repo (or triggers `workflow_dispatch` with a token the user pastes and the browser keeps locally). The run happens on the user's Actions minutes against their preview or staging URL. The report is published as a Pages or Actions artifact and opened in the viewer. This keeps the $0 rule, avoids a shared machine, and removes the need for Verified Domains in this phase. Private test copies work naturally because the user's CI can already reach their preview URL.
 **Option B stays a later step**, only if users say Option A is too much setup.
 
 **Spike first (S, 2 to 3 days). The answers decide Option A vs B, so do not skip it:**
+
 1. Build the wizard to static files and open it from Pages.
 2. Run `pnpm bootstrap` and a full check-up inside a GitHub Actions job. Record minutes, CPU and memory.
 3. Check GitHub's current pricing page for how many free Actions minutes a public repo and a free-plan private repo get. The research did not verify this.
@@ -163,6 +179,7 @@ graph LR
 **Ships (after the spike):** ADR 0012, static wizard on Pages, workflow template generated by the wizard, a report viewer that opens the JSON/HTML report, free-key privacy warning and AI Request Budget display (item **1.7**, part 4), and `pnpm tunnel` documented as local-only.
 **Effort:** spike S, build M to L.
 **Exit gate:**
+
 - A new user on a clean repo gets a verdict in under 15 minutes with no local install, using only Pages plus Actions.
 - Hosting cost is $0, with no card on file.
 - A run on a private preview URL works.
@@ -171,8 +188,10 @@ graph LR
 **Risk:** a user token pasted into a static page must stay in their browser only. If that cannot be done safely, drop the dispatch button.
 
 ### Gate G1: user conversations (calendar time, starts now)
+
 **Goal:** replace guesses with answers before Phase 4, and check Phase 1's assumptions.
 **Do:** 3 to 5 conversations with current users. Use the 8 "signed-in" questions in [roadmap section 7](research/e2e-platform-roadmap.md) and ask for a real example of each, not an opinion. Add these:
+
 - Would they run a check-up in their own GitHub Actions? Do they use GitHub at all?
 - Staging or preview URLs, or production only?
 - Do they already have Playwright suites?
@@ -182,10 +201,12 @@ graph LR
 **Rule:** do not build beyond sign-in detection and wording until two or more users give the same real example.
 
 ### Phase 2: Adoption kit
+
 **Goal:** a user can keep what the tool gives them, and use it in the tools they already have.
 **Ships:** a `LICENSE` file (the public repo has none; FSL as decided) (S), items **1.1** (findings contract, release record, CI exit code, workflow template) and **1.2** (Playwright export of the approved Plan), ADR 0017. The API tests in the export (`api-traffic.spec.ts`) wait for Phase 3.
 **Effort:** 1.1 M, 1.2 M, licence S.
 **Exit gate:**
+
 - `findings.json` validates against the published JSON Schema.
 - The Playwright export runs unchanged with `npx playwright test` on the benchmark fixture.
 - `--fail-on blocker` exits non-zero on a known-bad fixture.
@@ -195,8 +216,10 @@ graph LR
 **Risk:** an export that does not run as is destroys the "no lock-in" story. Treat "runs as is" as a release blocker.
 
 ### Phase 3: Web depth, the differentiators
+
 **Goal:** the checks no free point tool gives a small team.
 **Ships, in this order:**
+
 1. ADRs 0015 and 0016, then item **1.3** (API traffic capture, redaction, shapes, passive checks, diffs, GET/HEAD replay) (L). Redaction ships in the same commit as capture.
 2. Item **1.4** (visual baselines: approve button, page stabilising, masking) (M).
 3. Item **1.5** (keyboard and focus checks, 320 px reflow, CrUX panel, page weight, read-only security) (M). Each part is independent, so ship them one at a time.
@@ -204,6 +227,7 @@ graph LR
 
 **Effort:** about 8 to 10 weeks.
 **Exit gate:**
+
 - Benchmark shows the planted API defects found and no new false findings.
 - A search of stored reports for planted fake tokens and cookies finds none.
 - A visual baseline can be approved from the report.
@@ -213,6 +237,7 @@ graph LR
 **Risk:** the live-site GraphQL decision (ADR 0015). If undecided, GraphQL sites silently fail, so decide it first.
 
 ### Phase 4: Signed-in work (gated by G1)
+
 **Goal:** signed-in checks that match what users actually mean.
 **Always ships:** item **1.6** (test sign-in button, two-step and modal sign-in, clear "why it failed" wording). This is the cheap "hard to set up" fix.
 **Ships only if G1 shows it:** deeper journeys and namespaced test data on Test Copies (the "too shallow" case, item **3.3**), or blocked-sign-in handling (roadmap row 25, never CAPTCHA solving).
@@ -220,6 +245,7 @@ graph LR
 **Exit gate:** each sign-in failure on the benchmark fixtures gets one of four named reasons: form not found, wrong credentials, blocked by a challenge, session not kept.
 
 ### Phase 5: Mobile web
+
 **Goal:** a second real engine without a device grid.
 **Ships:** item **2.1** (WebKit and Firefox on Sample Pages, labelled "WebKit (Playwright build)", never "Safari"), then item **2.2** (Android Chrome in the user's CI).
 **Effort:** 2.1 M, 2.2 M.
@@ -227,6 +253,7 @@ graph LR
 **Note:** this fits Phase 1's Option A well, because the runs already happen in the user's CI.
 
 ### Phase 6: Second wave, then Probes
+
 **Goal:** depth for users who are already happy.
 **Ships, in any order, one at a time:** **3.2** re-run only what failed or changed, **3.4** accessibility checklist and draft statement, **3.5** consent and Global Privacy Control, **3.6** TLS and mail DNS checks, **3.7** OpenAPI check, **3.8** SARIF, **3.1** AI-proposed selector fixes with ADR 0013.
 **Last, and only after legal review:** **3.9** Security Probes, which need ADR 0014 and Verified Domains (the rest of item **1.7**) first.
@@ -234,24 +261,29 @@ graph LR
 **Cut line:** 3.9 can be cut entirely. Users can connect ZAP or Nuclei themselves.
 
 ### Phase 7: Beyond the website
+
 **Ships:** store phone apps through Maestro (items **4.1** to **4.4**), then the public API as its own App (**5.1**), then desktop via Electron (**5.2**) only when a user asks.
 **Entry gate:** at least two users who ship a phone app say they would use it, and it is clear whether they have a Mac or use EAS (Expo's build service).
 **Cut line:** real iPhone runs and device farms are never built. Connect to the farm the user already pays for.
 
 ### What is deliberately not in any phase
+
 CAPTCHA solving, a visual-AI engine, test management, SSO and audit logs, a GitHub App, load testing, gRPC, an automatic VPAT, overlays. Reasons are in the roadmap's gap table (rows 26, 31, 36, 44, 46, 47, 50, 51).
 
 ### Risks that cut across phases
-| Risk | Effect | Mitigation |
-|---|---|---|
-| Free hosting terms change | Hosting breaks | Option A needs no server of ours; keep the Dockerfile working as the fallback |
-| Scope creep from the gap table | One builder never finishes a phase | Each phase has a cut line; add nothing mid-phase |
-| Free AI key limits and training use | Surprise privacy or quota problems | Show the warning and AI Request Budget (Phase 1) |
-| Legal exposure from Probes | Liability | Phase 6 only, behind Verified Domains and counsel's review |
-| Roadmap facts going stale | Wrong decisions | The roadmap lists claims to verify; check the relevant ones at the start of each phase |
+
+| Risk                                | Effect                             | Mitigation                                                                             |
+| ----------------------------------- | ---------------------------------- | -------------------------------------------------------------------------------------- |
+| Free hosting terms change           | Hosting breaks                     | Option A needs no server of ours; keep the Dockerfile working as the fallback          |
+| Scope creep from the gap table      | One builder never finishes a phase | Each phase has a cut line; add nothing mid-phase                                       |
+| Free AI key limits and training use | Surprise privacy or quota problems | Show the warning and AI Request Budget (Phase 1)                                       |
+| Legal exposure from Probes          | Liability                          | Phase 6 only, behind Verified Domains and counsel's review                             |
+| Roadmap facts going stale           | Wrong decisions                    | The roadmap lists claims to verify; check the relevant ones at the start of each phase |
 
 ### Not yet checked
+
 Check these at the start of the phase that depends on them. The research did not settle them:
+
 - GitHub Actions free minutes for public and private repos (Phase 1)
 - Free container host limits (Phase 1)
 - Memory and CPU one real check-up uses (Phase 1)
@@ -267,7 +299,8 @@ Check these at the start of the phase that depends on them. The research did not
 > **Goal:** Eliminate incorrect metrics, false passes, and uncalibrated findings that mislead users.
 
 ### Item 0.1: Performance Metric Accuracy
-*Reference: Roadmap Gap Table Row 1, Cluster 04 ([04-performance-cwv.md](./research/e2e-platform/04-performance-cwv.md))*
+
+_Reference: Roadmap Gap Table Row 1, Cluster 04 ([04-performance-cwv.md](./research/e2e-platform/04-performance-cwv.md))_
 
 - **Problem in Codebase:**
   - In [`packages/checkers/src/performance.ts`](../packages/checkers/src/performance.ts):
@@ -308,7 +341,8 @@ Check these at the start of the phase that depends on them. The research did not
 ---
 
 ### Item 0.2: Axe Accessibility Checker Accuracy
-*Reference: Roadmap Gap Table Row 2, Cluster 03 ([03-accessibility-compliance.md](./research/e2e-platform/03-accessibility-compliance.md))*
+
+_Reference: Roadmap Gap Table Row 2, Cluster 03 ([03-accessibility-compliance.md](./research/e2e-platform/03-accessibility-compliance.md))_
 
 - **Problem in Codebase:**
   - In [`packages/checkers/src/ux-quality.ts`](../packages/checkers/src/ux-quality.ts):
@@ -345,7 +379,8 @@ Check these at the start of the phase that depends on them. The research did not
 ---
 
 ### Item 0.3: Wire Clean Flow Retry & Flaky Passed
-*Reference: Roadmap Gap Table Row 3, Cluster 01 ([01-web-e2e-ai-testing.md](./research/e2e-platform/01-web-e2e-ai-testing.md))*
+
+_Reference: Roadmap Gap Table Row 3, Cluster 01 ([01-web-e2e-ai-testing.md](./research/e2e-platform/01-web-e2e-ai-testing.md))_
 
 - **Problem in Codebase:**
   - [`packages/core/src/retry-runner.ts`](../packages/core/src/retry-runner.ts) implements `runWithCleanRetry`, but it is never called by [`orchestrator.ts`](../packages/core/src/orchestrator.ts).
@@ -369,7 +404,8 @@ Check these at the start of the phase that depends on them. The research did not
 ---
 
 ### Item 0.4: Security Cookie & Mixed Content Fixes
-*Reference: Roadmap Gap Table Row 4, Cluster 05 ([05-security.md](./research/e2e-platform/05-security.md))*
+
+_Reference: Roadmap Gap Table Row 4, Cluster 05 ([05-security.md](./research/e2e-platform/05-security.md))_
 
 - **Problem in Codebase:**
   - In [`packages/checkers/src/security.ts`](../packages/checkers/src/security.ts) line 203: The `SameSite` check is nested inside `if (!cookie.secure)`, completely missing `SameSite=None` on a cookie that has `Secure: true`.
@@ -379,7 +415,7 @@ Check these at the start of the phase that depends on them. The research did not
      - Separate the `SameSite` evaluation from the `!cookie.secure` branch.
      - Flag `SameSite=None` on any cookie as `Minor` (or `Major` if sensitive/session-related).
      - Flag missing `SameSite` attribute as `Minor`.
-     - Flag `SameSite=None` *without* `Secure` as `Major` (violates modern browser cookie security).
+     - Flag `SameSite=None` _without_ `Secure` as `Major` (violates modern browser cookie security).
   2. **Comprehensive Mixed Content:**
      - Inspect all network responses recorded in `stepEvidenceList` / network entries.
      - If the page URL is HTTPS, flag any loaded resource with `http://` scheme (covering CSS `@import`, `url()`, fonts, WebSockets, and `fetch`/XHR calls).
@@ -398,7 +434,8 @@ Check these at the start of the phase that depends on them. The research did not
 > **Goal:** Solidify the "Plan -> Run -> Verify -> Export" core loop, deliver API traffic intelligence from crawls, visual approvals, and CI defect handoff without external service dependencies.
 
 ### Item 1.1: Findings Contract, CI Integration & Trend Reporting
-*Reference: Roadmap Gap Table Rows 18, 19, 20, Cluster 02 ([02-visual-crossbrowser-reporting.md](./research/e2e-platform/02-visual-crossbrowser-reporting.md))*
+
+_Reference: Roadmap Gap Table Rows 18, 19, 20, Cluster 02 ([02-visual-crossbrowser-reporting.md](./research/e2e-platform/02-visual-crossbrowser-reporting.md))_
 
 - **Implementation Spec:**
   1. **Findings Contract (`findings.schema.json` & `schemaVersion`):**
@@ -438,7 +475,8 @@ Check these at the start of the phase that depends on them. The research did not
 ---
 
 ### Item 1.2: Standalone Playwright Test Suite Export
-*Reference: Roadmap Gap Table Row 5, Cluster 01 ([01-web-e2e-ai-testing.md](./research/e2e-platform/01-web-e2e-ai-testing.md))*
+
+_Reference: Roadmap Gap Table Row 5, Cluster 01 ([01-web-e2e-ai-testing.md](./research/e2e-platform/01-web-e2e-ai-testing.md))_
 
 - **Implementation Spec:**
   1. **Playwright Exporter Module (`packages/core/src/export/playwright-export.ts`):**
@@ -474,7 +512,8 @@ Check these at the start of the phase that depends on them. The research did not
 ---
 
 ### Item 1.3: Recorded API Traffic Intelligence & Zero-Request Checks
-*Reference: Roadmap Gap Table Rows 7-11, Cluster 06 ([06-api-testing.md](./research/e2e-platform/06-api-testing.md))*
+
+_Reference: Roadmap Gap Table Rows 7-11, Cluster 06 ([06-api-testing.md](./research/e2e-platform/06-api-testing.md))_
 
 - **Implementation Spec:**
   1. **Expanded Traffic Capture:**
@@ -513,7 +552,8 @@ Check these at the start of the phase that depends on them. The research did not
 ---
 
 ### Item 1.4: In-Browser Visual Baseline Approval & Noise Masking
-*Reference: Roadmap Gap Table Row 15, Cluster 02 ([02-visual-crossbrowser-reporting.md](./research/e2e-platform/02-visual-crossbrowser-reporting.md))*
+
+_Reference: Roadmap Gap Table Row 15, Cluster 02 ([02-visual-crossbrowser-reporting.md](./research/e2e-platform/02-visual-crossbrowser-reporting.md))_
 
 - **Implementation Spec:**
   1. **In-Report Baseline Review:**
@@ -539,7 +579,8 @@ Check these at the start of the phase that depends on them. The research did not
 ---
 
 ### Item 1.5: Accessibility Traversal, CrUX Panel & Read-Only Security
-*Reference: Roadmap Gap Table Rows 12, 13, 14, 17, Clusters 03, 04, 05*
+
+_Reference: Roadmap Gap Table Rows 12, 13, 14, 17, Clusters 03, 04, 05_
 
 - **Implementation Spec:**
   1. **Keyboard Traversal & Focus Checks (WCAG 2.1.1, 2.1.2, 2.4.11):**
@@ -573,7 +614,8 @@ Check these at the start of the phase that depends on them. The research did not
 ---
 
 ### Item 1.6: Signed-In Journey Detection & Diagnosis
-*Reference: Roadmap Gap Table Row 24, Cluster 01 ([01-web-e2e-ai-testing.md](./research/e2e-platform/01-web-e2e-ai-testing.md))*
+
+_Reference: Roadmap Gap Table Row 24, Cluster 01 ([01-web-e2e-ai-testing.md](./research/e2e-platform/01-web-e2e-ai-testing.md))_
 
 - **Implementation Spec:**
   1. **Wizard Validation ("Test Sign-In"):**
@@ -597,7 +639,8 @@ Check these at the start of the phase that depends on them. The research did not
 ---
 
 ### Item 1.7: Verified Domains, Safe Host Classification & Runner Limits
-*Reference: Roadmap Gap Table Rows 21-23, Cluster 05, 07 (ADRs 0012, 0014)*
+
+_Reference: Roadmap Gap Table Rows 21-23, Cluster 05, 07 (ADRs 0012, 0014)_
 
 - **Implementation Spec:**
   1. **Domain Verification Workflow (ADR 0014):**
@@ -632,7 +675,8 @@ Check these at the start of the phase that depends on them. The research did not
 > **Goal:** Run the proven test plan across real WebKit and Firefox engines on Linux, delivering true browser engine diversity without expensive device grids.
 
 ### Item 2.1: WebKit and Firefox Multi-Engine Sample Page Pass
-*Reference: Roadmap Gap Table Row 16, Cluster 02, 07*
+
+_Reference: Roadmap Gap Table Row 16, Cluster 02, 07_
 
 - **Implementation Spec:**
   1. **Engine Selection in Browser Manager:**
@@ -656,7 +700,8 @@ Check these at the start of the phase that depends on them. The research did not
 ---
 
 ### Item 2.2: Android Chrome Mobile Web via User CI
-*Reference: Roadmap Gap Table Row 52, Cluster 07*
+
+_Reference: Roadmap Gap Table Row 52, Cluster 07_
 
 - **Implementation Spec:**
   1. **GitHub Actions Workflow Template:**
@@ -675,47 +720,65 @@ Check these at the start of the phase that depends on them. The research did not
 > **Goal:** Introduce advanced capabilities (self-healing, content-hash regression, namespaced data, manual a11y checklist, and controlled probes) once the foundation is hardened.
 
 ### Item 3.1: Self-Healing Selectors with Human-in-the-Loop Approval
-*Reference: Roadmap Gap Table Row 27, Cluster 01 (ADR 0013)*
+
+_Reference: Roadmap Gap Table Row 27, Cluster 01 (ADR 0013)_
+
 - When a locator fails during a re-run of a saved Plan, extract current accessibility snapshot / DOM slice.
 - Call AI provider to locate matching target and propose an updated selector.
 - Present proposal in Plan Review interface. Once approved by user, update the Plan file so execution remains deterministic.
 
 ### Item 3.2: Content-Hash & Failure-Based Regression Selection
-*Reference: Roadmap Gap Table Row 30, Cluster 01*
+
+_Reference: Roadmap Gap Table Row 30, Cluster 01_
+
 - Check Site Memory content hashes from [`site-history.ts`](../packages/core/src/site-history.ts).
 - Add `--changed-only` flag to re-run only: (1) Plan items that failed in the last run, and (2) pages whose HTML/DOM content hash changed.
 
 ### Item 3.3: Namespaced Test Data Seeding & Teardown
-*Reference: Roadmap Gap Table Row 33, Cluster 01*
+
+_Reference: Roadmap Gap Table Row 33, Cluster 01_
+
 - Wire [`packages/core/src/entity-namespacing.ts`](../packages/core/src/entity-namespacing.ts) and [`account-pool.ts`](../packages/core/src/account-pool.ts) into orchestrator for runs on Test Copies.
 - Automatically prefix created records (`test_qa_<runId>_...`) and trigger registered teardown hooks post-run.
 
 ### Item 3.4: Manual Accessibility Checklist & Statement Exporter
-*Reference: Roadmap Gap Table Row 35, Cluster 03*
+
+_Reference: Roadmap Gap Table Row 35, Cluster 03_
+
 - Append an interactive "Human Judgment Checklist" to the accessibility report covering: alt-text descriptive quality, video captions, logical heading structure, and color-only state cues.
 - Export draft Accessibility Statement (`accessibility-statement.md`) documenting tested scope, automated pass rate, known defects, and contact information.
 
 ### Item 3.5: Privacy, Consent & GPC Verification
-*Reference: Roadmap Gap Table Row 37, Cluster 03*
+
+_Reference: Roadmap Gap Table Row 37, Cluster 03_
+
 - Monitor network requests prior to cookie banner interaction. Flag any analytics/tracking cookies or pixels that fire before consent.
 - Emulate Global Privacy Control header (`Sec-GPC: 1`) and verify if third-party tracking scripts are suppressed.
 
 ### Item 3.6: In-Process TLS Certificate & Mail DNS Checks
-*Reference: Roadmap Gap Table Row 38, Cluster 05*
+
+_Reference: Roadmap Gap Table Row 38, Cluster 05_
+
 - Use Node.js `tls.connect` to inspect certificate validity, remaining lifetime, issuer, and protocol version without third-party services.
 - Query DNS TXT records for SPF (`v=spf1`) and DMARC (`_dmarc.<domain>`).
 
 ### Item 3.7: OpenAPI Spec Validation & Draft Spec Export
-*Reference: Roadmap Gap Table Row 42, Cluster 06*
+
+_Reference: Roadmap Gap Table Row 42, Cluster 06_
+
 - Crawl discovery checks for `/openapi.json` or `/swagger.json`. If present, validate observed traffic schemas against the official spec.
 - Provide export command to generate an OpenAPI 3.1 YAML specification from inferred traffic shapes.
 
 ### Item 3.8: SARIF Security Export
-*Reference: Roadmap Gap Table Row 43, Cluster 02*
+
+_Reference: Roadmap Gap Table Row 43, Cluster 02_
+
 - Emit `results.sarif` mapping security and accessibility findings into the OASIS SARIF 2.1.0 standard for GitHub Security tab integration.
 
 ### Item 3.9: Controlled Security Probes on Verified Test Copies
-*Reference: Roadmap Gap Table Row 40, Cluster 05 (ADR 0014)*
+
+_Reference: Roadmap Gap Table Row 40, Cluster 05 (ADR 0014)_
+
 - **Strictly on Verified Domains + Test Copies only:**
   1. Write-method authorization probes (replaying PUT/PATCH/DELETE across roles).
   2. Sign-in brute force & rate limiting check (capped at 5 attempts on a designated test account).
@@ -731,22 +794,30 @@ Check these at the start of the phase that depends on them. The research did not
 > **Goal:** Provide black-box testing across React Native, Expo, Flutter, and native mobile apps using Maestro without running costly cloud device farms.
 
 ### Item 4.1: Maestro YAML Flow Exporter & Driver Integration
-*Reference: Roadmap Gap Table Row 53, Cluster 07*
+
+_Reference: Roadmap Gap Table Row 53, Cluster 07_
+
 - Generate Maestro YAML test flows (`.maestro/flow.yaml`) from approved Plans.
 - Execute flows using local Maestro CLI (`maestro test`) against connected Android emulators and iOS simulators.
 
 ### Item 4.2: APK Upload & CI Pipeline Integration
-*Reference: Roadmap Gap Table Row 53, Cluster 07*
+
+_Reference: Roadmap Gap Table Row 53, Cluster 07_
+
 - Support uploading Android `.apk` builds directly in the web dashboard or CLI.
 - Provide bundletool conversion recipe for `.aab` packages.
 
 ### Item 4.3: App View-Tree Fingerprinting & Screen Layout Groups
-*Reference: Roadmap Gap Table Row 55, Cluster 07*
+
+_Reference: Roadmap Gap Table Row 55, Cluster 07_
+
 - Query UI view hierarchy via Maestro/accessibility driver.
 - Generate structural hierarchy fingerprints (ignoring dynamic text/item counts) to group screens into App Layout Groups and sample representative screens.
 
 ### Item 4.4: App Device Farm Connectivity & Network HAR Ingestion
-*Reference: Roadmap Gap Table Rows 45, 59, Cluster 06, 07*
+
+_Reference: Roadmap Gap Table Rows 45, 59, Cluster 06, 07_
+
 - Integrate with AWS Device Farm (pay-per-minute with free first 1,000 mins) and BrowserStack App Automate using the user's API credentials.
 - Ingest device farm HAR recordings into the API Traffic Analyzer (Item 1.3).
 
@@ -758,14 +829,18 @@ Check these at the start of the phase that depends on them. The research did not
 > **Goal:** Support Standalone APIs and Electron Desktop apps as first-class App types.
 
 ### Item 5.1: Standalone Public API App Mode
-*Reference: Roadmap Gap Table Row 58, Cluster 06*
+
+_Reference: Roadmap Gap Table Row 58, Cluster 06_
+
 - Add an "API" App target in the setup wizard.
 - Takes base URL, optional OpenAPI specification, and authentication tokens per role.
 - Executes schema conformance and BOLA authorization replays.
 - Supports running Schemathesis property-based testing on Test Copies.
 
 ### Item 5.2: Desktop Testing via Electron
-*Reference: Roadmap Gap Table Row 60, Cluster 07*
+
+_Reference: Roadmap Gap Table Row 60, Cluster 07_
+
 - Launch Electron apps using Playwright's `_electron.launch()`.
 - Reuse existing Chromium web checkers (console errors, axe accessibility, visual diffs, network traffic) directly on Electron renderer windows.
 
@@ -775,11 +850,11 @@ Check these at the start of the phase that depends on them. The research did not
 
 The M-numbers below are the old milestone names. They map to the phases in section 2: M0 = Phase 0, M1 and M2 = Phases 2 to 4, M3 = Phase 5, M4 = Phase 6, M5 = Phase 7. Phase 1 (hosting) has no command; its gate is the 15-minute clean-repo test.
 
-| Milestone | Deliverables | Verification Command | Success Target |
-|---|---|---|---|
-| **M0: Honest Checkers** | Items 0.1, 0.2, 0.3, 0.4 | `pnpm --filter @qa/checkers test` | 100% tests pass. Real INP, no fake LCP, session CLS, unswallowed axe errors, SameSite fixed, flaky flows counted. |
-| **M1: Core Web Depth** | Items 1.1, 1.2, 1.3, 1.4 | `pnpm --filter @qa/core test && pnpm --filter @qa/cli test` | Playwright export runs `npx playwright test`. API traffic analyzed and redacted. Baselines approvable in report. |
-| **M2: A11y & Passive Sec**| Items 1.5, 1.6, 1.7 | `pnpm test` | Focus traversal flags traps; CrUX panel works; Domain verification active; `isTestHost` validates IP. |
-| **M3: Cross-Engine Web** | Items 2.1, 2.2 | `qa-test run --engines chromium,webkit,firefox` | Sample Pages pass on WebKit and Firefox with engine-tagged baselines. |
-| **M4: Second Wave Web** | Items 3.1 - 3.9 | `qa-test run --probes --test-copy` | Self-healing suggests repairs; probes run only on verified domains; SARIF emitted. |
-| **M5: Mobile via Maestro**| Items 4.1 - 4.4 | `qa-test export maestro && maestro test .maestro/flow.yaml` | Valid YAML flows execute against Android emulator. |
+| Milestone                  | Deliverables             | Verification Command                                        | Success Target                                                                                                    |
+| -------------------------- | ------------------------ | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **M0: Honest Checkers**    | Items 0.1, 0.2, 0.3, 0.4 | `pnpm --filter @qa/checkers test`                           | 100% tests pass. Real INP, no fake LCP, session CLS, unswallowed axe errors, SameSite fixed, flaky flows counted. |
+| **M1: Core Web Depth**     | Items 1.1, 1.2, 1.3, 1.4 | `pnpm --filter @qa/core test && pnpm --filter @qa/cli test` | Playwright export runs `npx playwright test`. API traffic analyzed and redacted. Baselines approvable in report.  |
+| **M2: A11y & Passive Sec** | Items 1.5, 1.6, 1.7      | `pnpm test`                                                 | Focus traversal flags traps; CrUX panel works; Domain verification active; `isTestHost` validates IP.             |
+| **M3: Cross-Engine Web**   | Items 2.1, 2.2           | `qa-test run --engines chromium,webkit,firefox`             | Sample Pages pass on WebKit and Firefox with engine-tagged baselines.                                             |
+| **M4: Second Wave Web**    | Items 3.1 - 3.9          | `qa-test run --probes --test-copy`                          | Self-healing suggests repairs; probes run only on verified domains; SARIF emitted.                                |
+| **M5: Mobile via Maestro** | Items 4.1 - 4.4          | `qa-test export maestro && maestro test .maestro/flow.yaml` | Valid YAML flows execute against Android emulator.                                                                |

@@ -9,10 +9,7 @@ import { hostOf } from '../lib/url';
 
 type LensTab = 'search' | 'answers' | 'aiSearch' | 'marketing';
 
-const LENS_METADATA: Record<
-  LensTab,
-  { label: string; tag: string; description: string; hint: string }
-> = {
+const LENS_METADATA: Record<LensTab, { label: string; tag: string; description: string; hint: string }> = {
   search: {
     label: 'Search (SEO)',
     tag: 'SEO',
@@ -56,20 +53,17 @@ export function VisibilityScreen({ runId }: { runId: string }) {
     let cancelled = false;
     getRun(runId)
       .then((r) => !cancelled && setReport(r))
-      .catch((err) =>
-        !cancelled &&
-        setError(err instanceof RunnerError ? err.message : 'The report could not be opened. Try again.')
+      .catch(
+        (err) =>
+          !cancelled &&
+          setError(err instanceof RunnerError ? err.message : 'The report could not be opened. Try again.')
       );
     return () => {
       cancelled = true;
     };
   }, [runId]);
 
-  useDocumentTitle(
-    report
-      ? `Search and AI visibility · ${hostOf(report.targetUrl)}`
-      : 'Search and AI visibility'
-  );
+  useDocumentTitle(report ? `Search and AI visibility · ${hostOf(report.targetUrl)}` : 'Search and AI visibility');
 
   if (error) {
     return (
@@ -148,9 +142,7 @@ export function VisibilityScreen({ runId }: { runId: string }) {
       {/* Screen Title */}
       <div className="mb-6 flex flex-wrap items-baseline justify-between gap-4 border-b border-rule pb-4">
         <div>
-          <FocusHeading className="text-2xl font-bold text-ink sm:text-3xl">
-            Search & AI Visibility
-          </FocusHeading>
+          <FocusHeading className="text-2xl font-bold text-ink sm:text-3xl">Search & AI Visibility</FocusHeading>
           <p className="mt-1 text-sm text-ink-soft">
             Audit of SEO, structured data, AI crawler accessibility, and conversion readiness for{' '}
             <span className="font-semibold text-ink">{hostOf(report.targetUrl)}</span>.
@@ -162,7 +154,11 @@ export function VisibilityScreen({ runId }: { runId: string }) {
       </div>
 
       {/* Tabs */}
-      <div role="tablist" aria-label="Visibility audit dimensions" className="mb-6 flex flex-wrap gap-2 border-b border-rule pb-2">
+      <div
+        role="tablist"
+        aria-label="Visibility audit dimensions"
+        className="mb-6 flex flex-wrap gap-2 border-b border-rule pb-2"
+      >
         {(['search', 'answers', 'aiSearch', 'marketing'] as const).map((tab) => {
           const meta = LENS_METADATA[tab];
           const part = getTabScore(tab);
@@ -186,9 +182,7 @@ export function VisibilityScreen({ runId }: { runId: string }) {
             >
               <span>{meta.label}</span>
               <span
-                className={`rounded px-1.5 py-0.5 text-xs ${
-                  grade ? gradeClasses(grade) : 'bg-surface text-ink-soft'
-                }`}
+                className={`rounded px-1.5 py-0.5 text-xs ${grade ? gradeClasses(grade) : 'bg-surface text-ink-soft'}`}
               >
                 {scoreDisplay}
               </span>
@@ -198,20 +192,13 @@ export function VisibilityScreen({ runId }: { runId: string }) {
       </div>
 
       {/* Tab Panel */}
-      <section
-        id={`panel-${activeTab}`}
-        role="tabpanel"
-        aria-labelledby={`tab-${activeTab}`}
-        className="space-y-6"
-      >
+      <section id={`panel-${activeTab}`} role="tabpanel" aria-labelledby={`tab-${activeTab}`} className="space-y-6">
         {/* Dimension Header Banner */}
         <div className="rounded-card border border-edge bg-surface p-5 shadow-level-1">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h2 className="text-xl font-bold text-ink">{LENS_METADATA[activeTab].label}</h2>
-              <p className="mt-1 max-w-2xl text-sm text-ink-soft">
-                {LENS_METADATA[activeTab].description}
-              </p>
+              <p className="mt-1 max-w-2xl text-sm text-ink-soft">{LENS_METADATA[activeTab].description}</p>
               <p className="mt-1 text-xs text-ink-soft">
                 <span className="font-semibold text-ink">Checked: </span>
                 {LENS_METADATA[activeTab].hint}
@@ -220,9 +207,7 @@ export function VisibilityScreen({ runId }: { runId: string }) {
             {currentSub && currentSub.checked !== false && (
               <div className="text-right">
                 <div className="text-3xl font-extrabold text-ink">{currentSub.score}%</div>
-                <div className="text-xs font-semibold uppercase tracking-wider text-ink-soft">
-                  Health Score
-                </div>
+                <div className="text-xs font-semibold uppercase tracking-wider text-ink-soft">Health Score</div>
               </div>
             )}
           </div>
@@ -258,9 +243,7 @@ export function VisibilityScreen({ runId }: { runId: string }) {
                         </span>
                       )}
                     </div>
-                    {check.detail && (
-                      <p className="mt-1 pl-7 text-xs text-ink-soft">{check.detail}</p>
-                    )}
+                    {check.detail && <p className="mt-1 pl-7 text-xs text-ink-soft">{check.detail}</p>}
                   </div>
                   <span
                     className={`shrink-0 rounded px-2 py-0.5 text-xs font-bold uppercase tracking-wider ${
@@ -282,9 +265,7 @@ export function VisibilityScreen({ runId }: { runId: string }) {
         {/* Missing / Needs Attention Items */}
         <div className="rounded-card border border-edge bg-surface p-5 shadow-level-1">
           <div className="flex items-center justify-between border-b border-rule pb-3">
-            <h3 className="text-base font-bold text-ink">
-              Needs Attention ({currentFindings.length})
-            </h3>
+            <h3 className="text-base font-bold text-ink">Needs Attention ({currentFindings.length})</h3>
             <span className="text-xs text-ink-soft">
               {currentFindings.length === 0 ? 'All checked items passed' : 'Actionable findings to resolve'}
             </span>
@@ -293,7 +274,9 @@ export function VisibilityScreen({ runId }: { runId: string }) {
           {currentFindings.length === 0 ? (
             <div className="py-8 text-center text-ink-soft">
               <span className="inline-block text-2xl text-pass">✓</span>
-              <p className="mt-2 text-sm font-semibold text-ink">No defects found for {LENS_METADATA[activeTab].label}!</p>
+              <p className="mt-2 text-sm font-semibold text-ink">
+                No defects found for {LENS_METADATA[activeTab].label}!
+              </p>
               <p className="text-xs">Your inspected pages conform to the expected best practices for this category.</p>
             </div>
           ) : (
@@ -314,7 +297,11 @@ export function VisibilityScreen({ runId }: { runId: string }) {
                             : 'bg-canvas text-ink-soft border border-edge'
                       }`}
                     >
-                      {finding.severity === 'Major' ? 'Must fix' : finding.severity === 'Minor' ? 'Should fix' : 'Suggestion'}
+                      {finding.severity === 'Major'
+                        ? 'Must fix'
+                        : finding.severity === 'Minor'
+                          ? 'Should fix'
+                          : 'Suggestion'}
                     </span>
                   </div>
 

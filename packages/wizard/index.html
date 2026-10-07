@@ -5,7 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#111827" />
     <title>Release check-up | QA without a QA team: know if your site is ready to ship</title>
-    <meta name="description" content="QA without a QA team. Paste your site address and Release check-up scans it, tests it in a real browser and tells you in plain words whether it is ready to release. Free during the beta." />
+    <meta
+      name="description"
+      content="QA without a QA team. Paste your site address and Release check-up scans it, tests it in a real browser and tells you in plain words whether it is ready to release. Free during the beta."
+    />
     <meta name="application-name" content="Release check-up" />
     <meta name="author" content="Release check-up" />
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
@@ -18,78 +21,153 @@
     <meta property="og:type" content="website" />
     <meta property="og:url" content="%ORIGIN%/" />
     <meta property="og:title" content="Release check-up: QA without a QA team" />
-    <meta property="og:description" content="Real-browser testing with a plain-language report on quality, accessibility, performance, security, SEO, AEO and GEO." />
+    <meta
+      property="og:description"
+      content="Real-browser testing with a plain-language report on quality, accessibility, performance, security, SEO, AEO and GEO."
+    />
     <meta property="og:image" content="%ORIGIN%/og-image.svg" />
     <meta property="og:image:alt" content="Release check-up: pre-release testing for web apps" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Release check-up: QA without a QA team" />
-    <meta name="twitter:description" content="Real-browser testing with a plain-language report on quality, accessibility, performance, security, SEO, AEO and GEO." />
+    <meta
+      name="twitter:description"
+      content="Real-browser testing with a plain-language report on quality, accessibility, performance, security, SEO, AEO and GEO."
+    />
     <meta name="twitter:image" content="%ORIGIN%/og-image.svg" />
     <script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "Organization",
-      "@id": "%ORIGIN%/#organization",
-      "name": "Release check-up",
-      "url": "%ORIGIN%/",
-      "logo": "%ORIGIN%/favicon.svg"
-    },
-    {
-      "@type": "WebSite",
-      "@id": "%ORIGIN%/#website",
-      "url": "%ORIGIN%/",
-      "name": "Release check-up",
-      "inLanguage": "en",
-      "publisher": { "@id": "%ORIGIN%/#organization" }
-    },
-    {
-      "@type": "SoftwareApplication",
-      "@id": "%ORIGIN%/#app",
-      "name": "Release check-up",
-      "alternateName": "QA Flow Tester",
-      "applicationCategory": "DeveloperApplication",
-      "applicationSubCategory": "Website quality assurance and pre-release testing",
-      "operatingSystem": "Web browser",
-      "url": "%ORIGIN%/",
-      "description": "QA without a QA team: Release check-up scans a web app, drafts a test plan, runs real-browser tests and says in plain words whether it is ready to release.",
-      "featureList": [
-        "AI-assisted site discovery and test plan",
-        "Real-browser end-to-end flow testing with Playwright",
-        "Accessibility, performance and security checks",
-        "SEO, AEO and GEO readiness checks",
-        "Visual baselines and competitive flow benchmarks",
-        "Plain-language release report with a ship / don't-ship verdict"
-      ],
-      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-      "publisher": { "@id": "%ORIGIN%/#organization" },
-      "isPartOf": { "@id": "%ORIGIN%/#website" }
-    },
-    {
-      "@type": "HowTo",
-      "name": "How to check a web app before release with Release check-up",
-      "step": [
-        { "@type": "HowToStep", "position": 1, "name": "Paste your address", "text": "The site or test copy you want checked. You choose how much the tool may touch it." },
-        { "@type": "HowToStep", "position": 2, "name": "Review the plan", "text": "It maps your pages and drafts the journeys that matter. Edit the plan, then approve it." },
-        { "@type": "HowToStep", "position": 3, "name": "Watch it test", "text": "Real-browser tests run the approved plan and watch for problems as they go." },
-        { "@type": "HowToStep", "position": 4, "name": "Read the verdict", "text": "A plain-language answer, the fixes in priority order, and evidence such as screenshots." }
-      ]
-    },
-    {
-      "@type": "FAQPage",
-      "mainEntity": [
-        { "@type": "Question", "name": "What is Release check-up?", "acceptedAnswer": { "@type": "Answer", "text": "Release check-up is QA for teams without a QA person. It scans a web app, drafts a test plan, runs real-browser tests and tells you in plain words whether the app is ready to release, covering functionality, accessibility, performance, security and search readiness." } },
-        { "@type": "Question", "name": "Will it change or break my site?", "acceptedAnswer": { "@type": "Answer", "text": "Not unless you allow it. On a live site it only looks: nothing is filled in, sent or changed. Filling in and sending forms is only for a test copy of your site, and you choose that yourself." } },
-        { "@type": "Question", "name": "Where does my check-up run, and who can see it?", "acceptedAnswer": { "@type": "Answer", "text": "On the free online copy, the check-up runs on our server, one at a time, and only public sites can be checked. Your AI key and any sign-in details are kept in memory for your visit only (up to 24 hours) and never written to disk. It is a shared beta copy: each visitor sees only their own check-ups and reports, but everyone shares one server, so don't check anything you would not want on shared hardware. To check a site on your own computer or network, run Release check-up yourself, and nothing leaves your machine." } },
-        { "@type": "Question", "name": "Do I need to write tests?", "acceptedAnswer": { "@type": "Answer", "text": "No. The tool discovers your pages and proposes the tests; you only review and approve the plan." } },
-        { "@type": "Question", "name": "How is it different from Lighthouse or my own Playwright tests?", "acceptedAnswer": { "@type": "Answer", "text": "Lighthouse and accessibility extensions look at one page at a time, and your own scripts only cover what you have written. Release check-up maps the whole site, plans the journeys that matter, tests them in a real browser and combines the results into one verdict. You can still keep both." } },
-        { "@type": "Question", "name": "Does it check SEO, AEO and GEO?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. It checks classic SEO (titles, descriptions, canonicals, structured data), answer-engine optimization (AEO: question-style headings, FAQ and HowTo markup, concise answers) and generative-engine optimization (GEO: entity clarity, llms.txt, AI-crawler access and citable facts)." } },
-        { "@type": "Question", "name": "What does it cost?", "acceptedAnswer": { "@type": "Answer", "text": "It is free during the beta and nothing is charged today. Paid plans are planned for heavier use. The AI that writes your plan uses your own key (OpenRouter’s free models work), or you can skip AI and let fixed rules write the plan." } }
-      ]
-    }
-  ]
-}
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "%ORIGIN%/#organization",
+            "name": "Release check-up",
+            "url": "%ORIGIN%/",
+            "logo": "%ORIGIN%/favicon.svg"
+          },
+          {
+            "@type": "WebSite",
+            "@id": "%ORIGIN%/#website",
+            "url": "%ORIGIN%/",
+            "name": "Release check-up",
+            "inLanguage": "en",
+            "publisher": { "@id": "%ORIGIN%/#organization" }
+          },
+          {
+            "@type": "SoftwareApplication",
+            "@id": "%ORIGIN%/#app",
+            "name": "Release check-up",
+            "alternateName": "QA Flow Tester",
+            "applicationCategory": "DeveloperApplication",
+            "applicationSubCategory": "Website quality assurance and pre-release testing",
+            "operatingSystem": "Web browser",
+            "url": "%ORIGIN%/",
+            "description": "QA without a QA team: Release check-up scans a web app, drafts a test plan, runs real-browser tests and says in plain words whether it is ready to release.",
+            "featureList": [
+              "AI-assisted site discovery and test plan",
+              "Real-browser end-to-end flow testing with Playwright",
+              "Accessibility, performance and security checks",
+              "SEO, AEO and GEO readiness checks",
+              "Visual baselines and competitive flow benchmarks",
+              "Plain-language release report with a ship / don't-ship verdict"
+            ],
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+            "publisher": { "@id": "%ORIGIN%/#organization" },
+            "isPartOf": { "@id": "%ORIGIN%/#website" }
+          },
+          {
+            "@type": "HowTo",
+            "name": "How to check a web app before release with Release check-up",
+            "step": [
+              {
+                "@type": "HowToStep",
+                "position": 1,
+                "name": "Paste your address",
+                "text": "The site or test copy you want checked. You choose how much the tool may touch it."
+              },
+              {
+                "@type": "HowToStep",
+                "position": 2,
+                "name": "Review the plan",
+                "text": "It maps your pages and drafts the journeys that matter. Edit the plan, then approve it."
+              },
+              {
+                "@type": "HowToStep",
+                "position": 3,
+                "name": "Watch it test",
+                "text": "Real-browser tests run the approved plan and watch for problems as they go."
+              },
+              {
+                "@type": "HowToStep",
+                "position": 4,
+                "name": "Read the verdict",
+                "text": "A plain-language answer, the fixes in priority order, and evidence such as screenshots."
+              }
+            ]
+          },
+          {
+            "@type": "FAQPage",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "What is Release check-up?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Release check-up is QA for teams without a QA person. It scans a web app, drafts a test plan, runs real-browser tests and tells you in plain words whether the app is ready to release, covering functionality, accessibility, performance, security and search readiness."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Will it change or break my site?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Not unless you allow it. On a live site it only looks: nothing is filled in, sent or changed. Filling in and sending forms is only for a test copy of your site, and you choose that yourself."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Where does my check-up run, and who can see it?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "On the free online copy, the check-up runs on our server, one at a time, and only public sites can be checked. Your AI key and any sign-in details are kept in memory for your visit only (up to 24 hours) and never written to disk. It is a shared beta copy: each visitor sees only their own check-ups and reports, but everyone shares one server, so don't check anything you would not want on shared hardware. To check a site on your own computer or network, run Release check-up yourself, and nothing leaves your machine."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Do I need to write tests?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "No. The tool discovers your pages and proposes the tests; you only review and approve the plan."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "How is it different from Lighthouse or my own Playwright tests?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Lighthouse and accessibility extensions look at one page at a time, and your own scripts only cover what you have written. Release check-up maps the whole site, plans the journeys that matter, tests them in a real browser and combines the results into one verdict. You can still keep both."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Does it check SEO, AEO and GEO?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes. It checks classic SEO (titles, descriptions, canonicals, structured data), answer-engine optimization (AEO: question-style headings, FAQ and HowTo markup, concise answers) and generative-engine optimization (GEO: entity clarity, llms.txt, AI-crawler access and citable facts)."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "What does it cost?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "It is free during the beta and nothing is charged today. Paid plans are planned for heavier use. The AI that writes your plan uses your own key (OpenRouter’s free models work), or you can skip AI and let fixed rules write the plan."
+                }
+              }
+            ]
+          }
+        ]
+      }
     </script>
   </head>
   <body>
@@ -97,7 +175,10 @@
       <noscript>
         <main>
           <h1>Release check-up: QA without a QA team</h1>
-          <p>Paste your site address. Release check-up scans it, tests it in a real browser and tells you in plain words whether it is ready to release. Free during the beta.</p>
+          <p>
+            Paste your site address. Release check-up scans it, tests it in a real browser and tells you in plain words
+            whether it is ready to release. Free during the beta.
+          </p>
           <p>This app needs JavaScript. See <a href="/llms.txt">the plain-text summary</a>.</p>
         </main>
       </noscript>

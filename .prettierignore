@@ -1,0 +1,17 @@
+node_modules
+dist
+/public
+/sites
+.qa-*
+.tmp-*
+.benchmark
+.kilo
+.playwright-mcp
+.claude
+.scratch
+.review-shots
+.vscode
+pnpm-lock.yaml
+docs/adr/
+docs/research/
+docs/tickets/

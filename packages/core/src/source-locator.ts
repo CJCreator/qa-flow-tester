@@ -21,11 +21,7 @@ export class SourceLocator {
     return result;
   }
 
-  private async scanDirectory(
-    dir: string,
-    testId: string,
-    depth = 0
-  ): Promise<SourceLocation | undefined> {
+  private async scanDirectory(dir: string, testId: string, depth = 0): Promise<SourceLocation | undefined> {
     if (depth > 8) return undefined;
 
     let entries: string[];
@@ -58,9 +54,7 @@ export class SourceLocator {
       if (stat.isDirectory()) {
         const found = await this.scanDirectory(fullPath, testId, depth + 1);
         if (found) return found;
-      } else if (
-        /\.(tsx|jsx|ts|js|vue|svelte|html)$/.test(entry)
-      ) {
+      } else if (/\.(tsx|jsx|ts|js|vue|svelte|html)$/.test(entry)) {
         try {
           const content = await fs.readFile(fullPath, 'utf8');
           const regex = new RegExp(`data-testid=["']${testId}["']`, 'g');

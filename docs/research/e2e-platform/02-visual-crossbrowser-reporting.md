@@ -123,7 +123,7 @@ The comparison is a founder or developer who would otherwise use their own Playw
 - **QA Tool today:**
   - [`reporter.ts`](../../../packages/core/src/reporter.ts) writes `findings.json` and `report.md`. The Markdown opens with a plain verdict (using GitHub alert blocks), then a coverage table, delta since last release, a traceability table and findings by severity.
   - [`html-report.ts`](../../../packages/core/src/html-report.ts) writes the HTML version.
-  - Report Hub (optional) merges findings, tracks Finding Lifecycle State and marks Flaky Passed ([hub-push.ts](../../../packages/core/src/hub-push.ts)).
+  - Report Hub (optional) merges findings, tracks Finding Lifecycle State and marks Flaky Passed (code since removed).
 - **Gap:**
   - A shareable link without the Hub. A single self-contained HTML file can be mailed or attached but can't be linked to without hosting.
   - Trend across check-ups for one App on a free tier (the Hub needs Postgres and S3).
@@ -235,7 +235,7 @@ The brief says target teams track work in docs or nowhere, so there is no Jira o
 
 ## 7. Sources
 
-- Repo code: [design-standards.ts](../../../packages/checkers/src/design-standards.ts), [reporter.ts](../../../packages/core/src/reporter.ts), [html-report.ts](../../../packages/core/src/html-report.ts), [hub-push.ts](../../../packages/core/src/hub-push.ts), [browser.ts](../../../packages/core/src/browser.ts), [types](../../../packages/types/src/index.ts), [cli](../../../packages/cli/src/index.ts), [CONTEXT.md](../../../CONTEXT.md)
+- Repo code: [design-standards.ts](../../../packages/checkers/src/design-standards.ts), [reporter.ts](../../../packages/core/src/reporter.ts), [html-report.ts](../../../packages/core/src/html-report.ts), [browser.ts](../../../packages/core/src/browser.ts), [types](../../../packages/types/src/index.ts), [CONTEXT.md](../../../CONTEXT.md)
 - Playwright: https://playwright.dev/docs/test-snapshots · https://playwright.dev/docs/browsers · https://playwright.dev/docs/api/class-android · https://playwright.dev/docs/test-sharding
 - Visual tools: https://github.com/mapbox/pixelmatch · https://argos-ci.com/pricing · https://github.com/argos-ci/argos · https://argos-ci.com/blog/visual-testing-pricing · https://www.chromatic.com/pricing · https://www.browserstack.com/docs/percy/overview/plans-and-billing · https://www.browserstack.com/docs/browserstack-mcp-server/tools/percy · https://percy.io/blog/ai-visual-testing-tools · https://applitools.com/platform-pricing/ · https://github.com/lost-pixel/lost-pixel · https://www.lost-pixel.com/blog/lost-pixel-team-is-joining-figma · https://github.com/garris/BackstopJS
 - Grids: https://www.browserstack.com/pricing · https://www.testmuai.com/pricing/ · https://www.testmuai.com/blog/lambdatest-rebrands-to-testmu-ai/ · https://saucelabs.com/pricing · https://appleinsider.com/articles/24/01/25/browsers-like-chrome-and-firefox-can-abandon-webkit-in-eu-with-ios-174

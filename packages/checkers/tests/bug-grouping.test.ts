@@ -25,7 +25,12 @@ describe('One problem, one finding', () => {
       [
         step({
           consoleErrors: [
-            { type: 'error', text: 'Failed to load resource: the server responded with a status of 404 ()', url: piwik, timestamp: 1 },
+            {
+              type: 'error',
+              text: 'Failed to load resource: the server responded with a status of 404 ()',
+              url: piwik,
+              timestamp: 1,
+            },
           ],
           failedRequests: [
             { url: piwik, method: 'GET', status: 404, timestamp: 1 },
@@ -72,7 +77,9 @@ describe('One problem, one finding', () => {
     const findings = checker.check(
       [
         step({
-          consoleErrors: [{ type: 'error', text: 'Widget init failed', url: 'https://widgets.example.net/chat.js', timestamp: 1 }],
+          consoleErrors: [
+            { type: 'error', text: 'Widget init failed', url: 'https://widgets.example.net/chat.js', timestamp: 1 },
+          ],
         }),
       ],
       context
@@ -85,7 +92,12 @@ describe('One problem, one finding', () => {
     const findings = checker.check(
       [
         step({ stepIndex: 1, stepName: 'Open menu', passed: false, error: 'locator.waitFor: Timeout 4000ms exceeded' }),
-        step({ stepIndex: 2, stepName: 'Choose settings', passed: false, error: 'Blocked: Previous step "Open menu" failed' }),
+        step({
+          stepIndex: 2,
+          stepName: 'Choose settings',
+          passed: false,
+          error: 'Blocked: Previous step "Open menu" failed',
+        }),
       ],
       context
     );
@@ -101,7 +113,8 @@ describe('Steps of an unconfirmed AI plan', () => {
     urlBefore: 'https://www.saucedemo.com/cart.html',
     urlAfter: 'https://www.saucedemo.com/cart.html',
     passed: false,
-    error: 'locator.waitFor: Timeout 4000ms exceeded.\nCall log:\n  - waiting for locator(\'[data-test="remove-sauce-labs-backpack"]\') to be visible\n',
+    error:
+      'locator.waitFor: Timeout 4000ms exceeded.\nCall log:\n  - waiting for locator(\'[data-test="remove-sauce-labs-backpack"]\') to be visible\n',
   });
 
   it('turn a control that never showed up into "Could not verify", not a failure of the site', () => {
@@ -115,6 +128,9 @@ describe('Steps of an unconfirmed AI plan', () => {
   it('still fail the site when a control was there but broke, or when someone confirmed the plan', () => {
     const brokeWhenClicked = { ...missingRemove, error: 'locator.click: Target closed' };
     expect(checker.check([brokeWhenClicked], { ...context, planIsGuess: true })[0].severity).toBe('Blocker');
-    expect(checker.check([missingRemove], context)[0]).toMatchObject({ severity: 'Blocker', title: 'Step failed: "Click remove button"' });
+    expect(checker.check([missingRemove], context)[0]).toMatchObject({
+      severity: 'Blocker',
+      title: 'Step failed: "Click remove button"',
+    });
   });
 });

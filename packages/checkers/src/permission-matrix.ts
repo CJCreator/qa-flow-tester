@@ -28,7 +28,10 @@ export class PermissionMatrixChecker {
     }
 
     // Parse CSV: header is "target,role1,role2,role3"
-    const lines = trimmed.split('\n').map((l) => l.trim()).filter(Boolean);
+    const lines = trimmed
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
     if (lines.length < 2) return [];
 
     const header = lines[0].split(',').map((h) => h.trim());

@@ -10,7 +10,7 @@ export const HOME_FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: 'Will it change or break my site?',
-    a: "Not unless you allow it. On a live site it only looks: nothing is filled in, sent or changed. Filling in and sending forms is only for a test copy of your site, and you choose that yourself.",
+    a: 'Not unless you allow it. On a live site it only looks: nothing is filled in, sent or changed. Filling in and sending forms is only for a test copy of your site, and you choose that yourself.',
   },
   {
     q: 'Where does my check-up run, and who can see it?',
@@ -36,8 +36,17 @@ export const HOME_FAQ: Array<{ q: string; a: string }> = [
 
 /** The four steps, as the landing page shows them. They mirror the HowTo structured data in index.html. */
 export const HOME_STEPS: Array<{ name: string; text: string }> = [
-  { name: 'Paste your address', text: 'The site or test copy you want checked. You choose how much the tool may touch it.' },
-  { name: 'Review the plan', text: 'It maps your pages and drafts the journeys that matter. Edit the plan, then approve it.' },
+  {
+    name: 'Paste your address',
+    text: 'The site or test copy you want checked. You choose how much the tool may touch it.',
+  },
+  {
+    name: 'Review the plan',
+    text: 'It maps your pages and drafts the journeys that matter. Edit the plan, then approve it.',
+  },
   { name: 'Watch it test', text: 'Real-browser tests run the approved plan and watch for problems as they go.' },
-  { name: 'Read the verdict', text: 'A plain-language answer, the fixes in priority order, and evidence such as screenshots.' },
+  {
+    name: 'Read the verdict',
+    text: 'A plain-language answer, the fixes in priority order, and evidence such as screenshots.',
+  },
 ];

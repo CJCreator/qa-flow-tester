@@ -16,9 +16,6 @@ export * from './discovery/context-parser.js';
 export * from './discovery/discovery-agent.js';
 export * from './discovery/test-planner.js';
 export * from './discovery/site-type.js';
-export * from './outbox-queue.js';
-export * from './hub-client.js';
-export * from './hub-push.js';
 export * from './account-pool.js';
 export * from './entity-namespacing.js';
 export * from './retry-runner.js';
@@ -29,7 +26,6 @@ export * from './safe-scan.js';
 export * from './ai/openrouter.js';
 export * from './competitive/benchmarking-engine.js';
 export * from './competitive/ux-gap-synthesizer.js';
-
 
 export * from './discovery/element-inventory.js';
 export * from './discovery/plan-validator.js';

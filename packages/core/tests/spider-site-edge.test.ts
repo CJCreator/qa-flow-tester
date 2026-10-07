@@ -40,7 +40,10 @@ const LANDING_REDIRECTS: Record<string, string> = {
 };
 /** Pages on the other host (127.0.0.1). */
 const OTHER_PAGES: Record<string, string> = {
-  '/sso/login': html('Sign in', '<form><input name="user"><input type="password" name="pw"><button>Sign in</button></form><a href="/sso/help">Help</a>'),
+  '/sso/login': html(
+    'Sign in',
+    '<form><input name="user"><input type="password" name="pw"><button>Sign in</button></form><a href="/sso/help">Help</a>'
+  ),
   '/sso/help': html('Sign-in help', '<p>Help</p>'),
 };
 

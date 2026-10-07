@@ -12,7 +12,9 @@ export const SAMPLES_PER_GROUP = 3;
 export function itemShape(pathname: string): string {
   return pathname
     .split('/')
-    .map((seg) => (seg && (/\d/.test(seg) || seg.length > 24 || /^[a-z0-9]+(?:[-_][a-z0-9]+){2,}$/i.test(seg)) ? '*' : seg))
+    .map((seg) =>
+      seg && (/\d/.test(seg) || seg.length > 24 || /^[a-z0-9]+(?:[-_][a-z0-9]+){2,}$/i.test(seg)) ? '*' : seg
+    )
     .join('/');
 }
 
@@ -27,7 +29,10 @@ export interface PageCoverageInfo {
  * picks Sample Pages for groups of more than three. Pages with a fixed address are always tested:
  * sharing a layout doesn't make /about and /pricing the same page.
  */
-export function sampleLayoutGroups(pages: PageInventoryItem[]): { groups: PlanLayoutGroup[]; coverage: Map<string, PageCoverageInfo> } {
+export function sampleLayoutGroups(pages: PageInventoryItem[]): {
+  groups: PlanLayoutGroup[];
+  coverage: Map<string, PageCoverageInfo>;
+} {
   const byKey = new Map<string, PageInventoryItem[]>();
   for (const page of pages) {
     const shape = itemShape(pathOf(page.urlPath));

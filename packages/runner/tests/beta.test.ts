@@ -112,7 +112,14 @@ describe('A runner shared as a beta', () => {
 
   it('refuses addresses that are not on the public internet', async () => {
     const cookie = await newSession();
-    for (const targetUrl of ['http://localhost:3001', 'http://127.0.0.1/', 'http://169.254.169.254/latest/meta-data', 'http://[::1]/', 'http://192.168.1.1', 'ftp://example.com']) {
+    for (const targetUrl of [
+      'http://localhost:3001',
+      'http://127.0.0.1/',
+      'http://169.254.169.254/latest/meta-data',
+      'http://[::1]/',
+      'http://192.168.1.1',
+      'ftp://example.com',
+    ]) {
       const answer = await call('POST', '/api/runner/preflight', cookie, { targetUrl });
       expect(answer.status, targetUrl).toBe(400);
     }
@@ -123,7 +130,11 @@ describe('A runner shared as a beta', () => {
 
   it('never gives a tester the made-up journeys of the test AI', async () => {
     const cookie = await newSession();
-    const run = await call('POST', '/api/runner/run', cookie, { targetUrl: 'https://example.com/', useAI: true, aiProvider: 'mock' });
+    const run = await call('POST', '/api/runner/run', cookie, {
+      targetUrl: 'https://example.com/',
+      useAI: true,
+      aiProvider: 'mock',
+    });
     expect(run.status).toBe(400);
     expect(JSON.parse(run.body).code).toBe('ERR_NO_AI_KEY');
   });
@@ -147,12 +158,16 @@ describe('A runner shared as a beta', () => {
   it('shuts the routes that change what other testers see', async () => {
     const cookie = await newSession();
     expect((await call('DELETE', '/api/runs/run-1', cookie)).status).toBe(403);
-    expect((await call('POST', '/api/runner/schedules', cookie, { targetUrl: 'https://example.com' })).status).toBe(403);
+    expect((await call('POST', '/api/runner/schedules', cookie, { targetUrl: 'https://example.com' })).status).toBe(
+      403
+    );
   });
 
   it('turns away a request body that is far too large', async () => {
     const cookie = await newSession();
-    const answer = await call('POST', '/api/runner/preflight', cookie, { targetUrl: 'https://example.com/' + 'a'.repeat(5_100_000) });
+    const answer = await call('POST', '/api/runner/preflight', cookie, {
+      targetUrl: 'https://example.com/' + 'a'.repeat(5_100_000),
+    });
     expect(answer.status).toBe(400);
   });
 });

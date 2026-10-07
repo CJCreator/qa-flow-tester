@@ -58,7 +58,10 @@ export function sessionFor(req: http.IncomingMessage, res: http.ServerResponse, 
     const flags = `Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_HOURS * 3600}${secure ? '; Secure' : ''}`;
     const existing = res.getHeader('Set-Cookie');
     const cookie = `${SESSION_COOKIE}=${id}; ${flags}`;
-    res.setHeader('Set-Cookie', existing ? [...(Array.isArray(existing) ? existing : [String(existing)]), cookie] : cookie);
+    res.setHeader(
+      'Set-Cookie',
+      existing ? [...(Array.isArray(existing) ? existing : [String(existing)]), cookie] : cookie
+    );
   }
   sessions.get(id)!.lastSeen = Date.now();
   return id;
@@ -162,7 +165,8 @@ export async function refusedTarget(address: string): Promise<string | null> {
   }
   if (!/^https?:$/.test(url.protocol)) return 'Only http and https addresses can be checked.';
   const host = url.hostname.replace(/^\[|\]$/g, '');
-  const why = 'This shared copy can only check sites on the public internet, not addresses on the computer running it. Run the QA Tool on your own computer to check a local site.';
+  const why =
+    'This shared copy can only check sites on the public internet, not addresses on the computer running it. Run the QA Tool on your own computer to check a local site.';
   if (isPrivateHost(host) || isPrivateAddress(host)) return why;
   if (net.isIP(host)) return null;
   try {

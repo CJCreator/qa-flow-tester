@@ -1,8 +1,4 @@
-import type {
-  DiscoveredFlow,
-  PageInventoryItem,
-  RoleCredential,
-} from '@qa/types';
+import type { DiscoveredFlow, PageInventoryItem, RoleCredential } from '@qa/types';
 import type { SpiderResult } from './deterministic-spider.js';
 
 export type SiteType = 'shop' | 'SaaS' | 'content' | 'booking' | 'app' | 'other';
@@ -36,10 +32,16 @@ export function detectSiteType(pages: PageInventoryItem[], targetUrl: string): S
     const pPath = page.urlPath.toLowerCase();
     const pTitle = (page.title || '').toLowerCase();
 
-    if (/cart|basket|checkout|product|catalogue|catalog|\/item|order/.test(pPath) || /\b(cart|basket|shop|store|products?)\b/.test(pTitle)) {
+    if (
+      /cart|basket|checkout|product|catalogue|catalog|\/item|order/.test(pPath) ||
+      /\b(cart|basket|shop|store|products?)\b/.test(pTitle)
+    ) {
       shopSignals += 3;
     }
-    if (/invoice|billing|pricing|\/plans?\b|dashboard|team|organi[sz]ation|workspace/.test(pPath) || /dashboard|pricing|workspace/.test(pTitle)) {
+    if (
+      /invoice|billing|pricing|\/plans?\b|dashboard|team|organi[sz]ation|workspace/.test(pPath) ||
+      /dashboard|pricing|workspace/.test(pTitle)
+    ) {
       saasSignals += 3;
     }
     if (/reservation|appointment|hotel|room|flight|\/book(ing)?s?\//.test(pPath) && !/catalogue/.test(pPath)) {
@@ -73,7 +75,9 @@ export function detectSiteType(pages: PageInventoryItem[], targetUrl: string): S
   // One or two screens you work in, rather than pages you read: an app.
   const oneScreenApp =
     pages.length <= 2 &&
-    pages.some((p) => (p.elements || []).some((el) => el.role === 'textbox' && !el.insideForm && el.inputType !== 'search'));
+    pages.some((p) =>
+      (p.elements || []).some((el) => el.role === 'textbox' && !el.insideForm && el.inputType !== 'search')
+    );
   if (oneScreenApp) appSignals += 2;
 
   const scores: Array<{ type: SiteType; score: number }> = [
@@ -111,7 +115,10 @@ export function generateFallbackJourneys(
   // 1. Site-type specific primary journey
   if (siteType === 'shop' && homePage) {
     const productLink = homePage.elements?.find(
-      (el) => el.role === 'link' && el.visible && (/catalogue|product|book|item/i.test(el.selector) || /catalogue|product|book|item/i.test(el.href || ''))
+      (el) =>
+        el.role === 'link' &&
+        el.visible &&
+        (/catalogue|product|book|item/i.test(el.selector) || /catalogue|product|book|item/i.test(el.href || ''))
     );
 
     if (productLink) {
@@ -173,7 +180,14 @@ export function generateFallbackJourneys(
             const hint = `${inp.selector || ''} ${inp.label || ''} ${inp.name || ''}`.toLowerCase();
             if (inp.type === 'number') return '100';
             if (inp.type === 'email' || hint.includes('email')) return 'test.user@example.com';
-            if (inp.type === 'url' || hint.includes('url') || hint.includes('address') || hint.includes('site') || hint.includes('host') || hint.includes('domain')) {
+            if (
+              inp.type === 'url' ||
+              hint.includes('url') ||
+              hint.includes('address') ||
+              hint.includes('site') ||
+              hint.includes('host') ||
+              hint.includes('domain')
+            ) {
               return 'https://example.com';
             }
             if (inp.type === 'tel' || hint.includes('phone') || hint.includes('tel')) return '5555550123';
@@ -197,7 +211,11 @@ export function generateFallbackJourneys(
       role: defaultRole,
       description: 'Opens each main page in turn, so every check runs on them.',
       startPage: mainPages[0].urlPath,
-      steps: mainPages.map((p) => ({ action: 'navigate' as const, value: p.urlPath, name: `Open ${p.title || p.urlPath}` })),
+      steps: mainPages.map((p) => ({
+        action: 'navigate' as const,
+        value: p.urlPath,
+        name: `Open ${p.title || p.urlPath}`,
+      })),
       source: 'fallback',
     });
   } else {

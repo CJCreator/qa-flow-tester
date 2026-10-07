@@ -26,7 +26,11 @@ describe('mergeDuplicateFindings', () => {
   it('merges the same problem on the same page, recording where else it was seen', () => {
     const merged = mergeDuplicateFindings([
       finding({ urlPath: '/', testCaseId: 'TC-1' }),
-      finding({ urlPath: 'http://localhost:3000/', testCaseId: 'TC-2', where: { urlPath: '/', role: 'admin', breakpoint: '375px' } }),
+      finding({
+        urlPath: 'http://localhost:3000/',
+        testCaseId: 'TC-2',
+        where: { urlPath: '/', role: 'admin', breakpoint: '375px' },
+      }),
       finding({ urlPath: '/about', testCaseId: 'TC-3' }),
     ]);
     expect(merged).toHaveLength(2);
@@ -45,9 +49,15 @@ describe('mergeDuplicateFindings', () => {
         title: 'Touch target too small: Home (37x18px)',
         where: { urlPath: page, role: 'visitor', breakpoint: '375px', cssSelector: 'a:has-text("Home")' },
       });
-    const deadEnd = (page: string, id: string) => finding({ urlPath: page, testCaseId: id, title: 'Dead End Page: No back button' });
+    const deadEnd = (page: string, id: string) =>
+      finding({ urlPath: page, testCaseId: id, title: 'Dead End Page: No back button' });
 
-    const merged = mergeDuplicateFindings([smallLink('/', 'P1'), smallLink('/about', 'P2'), deadEnd('/a', 'P3'), deadEnd('/b', 'P4')]);
+    const merged = mergeDuplicateFindings([
+      smallLink('/', 'P1'),
+      smallLink('/about', 'P2'),
+      deadEnd('/a', 'P3'),
+      deadEnd('/b', 'P4'),
+    ]);
     expect(merged).toHaveLength(3);
     expect(merged[0].seenAt?.pages).toEqual(['/', '/about']);
   });
@@ -61,7 +71,9 @@ describe('mergeDuplicateFindings', () => {
         title: 'Third-party request failed: HTTP 404 on GET https://cdn.example.net/a.js',
         evidence: { networkLogs: [{ url: 'https://cdn.example.net/a.js', method: 'GET', status: 404, timestamp: 1 }] },
       });
-    expect(mergeDuplicateFindings([failing('/', 'P1'), failing('/about', 'P2'), failing('/shop', 'P3')])).toHaveLength(1);
+    expect(mergeDuplicateFindings([failing('/', 'P1'), failing('/about', 'P2'), failing('/shop', 'P3')])).toHaveLength(
+      1
+    );
   });
 
   it('assigns canonical issueKey and deduplicates findings with query strings or unnormalized paths', () => {

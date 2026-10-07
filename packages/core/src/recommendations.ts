@@ -1,9 +1,4 @@
-import type {
-  AspectType,
-  Finding,
-  FindingSeverity,
-  RankedRecommendation,
-} from '@qa/types';
+import type { AspectType, Finding, FindingSeverity, RankedRecommendation } from '@qa/types';
 import { aspectOfFinding, problemKey, SEVERITY_ORDER } from '@qa/types';
 
 interface EffortImpactMapping {

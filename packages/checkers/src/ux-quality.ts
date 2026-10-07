@@ -3,7 +3,8 @@ import axePlaywright from '@axe-core/playwright';
 import type { Finding, Breakpoint } from '@qa/types';
 
 // Support both ESM default and CJS named export
-const AxeBuilder = (axePlaywright as unknown as { default?: typeof axePlaywright; AxeBuilder?: typeof axePlaywright }).default ||
+const AxeBuilder =
+  (axePlaywright as unknown as { default?: typeof axePlaywright; AxeBuilder?: typeof axePlaywright }).default ||
   (axePlaywright as unknown as { AxeBuilder?: typeof axePlaywright }).AxeBuilder ||
   axePlaywright;
 
@@ -94,7 +95,12 @@ export class UXQualityChecker {
               expected: `Meets WCAG 2.2 AA${criteriaLabel}: ${violation.description}`,
               actual:
                 targets.length > 1
-                  ? `Violated by ${targets.length} elements on this page: ${targets.slice(0, 5).map((t) => `\`${t}\``).join(', ')}${targets.length > 5 ? `, and ${targets.length - 5} more` : ''}. First: ${firstNode?.failureSummary || violation.help}`
+                  ? `Violated by ${targets.length} elements on this page: ${targets
+                      .slice(0, 5)
+                      .map((t) => `\`${t}\``)
+                      .join(
+                        ', '
+                      )}${targets.length > 5 ? `, and ${targets.length - 5} more` : ''}. First: ${firstNode?.failureSummary || violation.help}`
                   : firstNode?.failureSummary || violation.help,
             },
             stepsToReproduce: [
@@ -172,7 +178,11 @@ export class UXQualityChecker {
               if (el.closest('details:not([open])')) return false;
               const style = window.getComputedStyle(el);
               if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
-              if (typeof el.checkVisibility === 'function' && !el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) return false;
+              if (
+                typeof el.checkVisibility === 'function' &&
+                !el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })
+              )
+                return false;
               return true;
             })
             .map((el) => {
@@ -280,10 +290,7 @@ export class UXQualityChecker {
             expected: 'Every page should provide a clear path back or breadcrumbs/navigation',
             actual: 'Page lacks back link, header, or primary navigation',
           },
-          stepsToReproduce: [
-            `Navigate directly to ${context.urlPath}`,
-            `Observe lack of navigation options`,
-          ],
+          stepsToReproduce: [`Navigate directly to ${context.urlPath}`, `Observe lack of navigation options`],
           evidence: {},
           resolution: 'Add a persistent top navigation bar or back-button link to the page layout.',
         });
@@ -297,7 +304,6 @@ export class UXQualityChecker {
       const hasOverflow = await page.evaluate(() => {
         return document.documentElement.scrollWidth > window.innerWidth + 2;
       });
-
 
       if (hasOverflow) {
         findings.push({
@@ -345,4 +351,3 @@ export class UXQualityChecker {
     });
   }
 }
-

@@ -34,15 +34,18 @@ export function ConnectionScreen({ checks }: { checks: number }) {
     <section className="mx-auto max-w-prose px-4 py-12 sm:px-6">
       <Question>How do you want to run the check-up?</Question>
       <Lead>
-        Release check-up tests a site in a real browser and tells you whether it is ready to release. Pick where it runs.
+        Release check-up tests a site in a real browser and tells you whether it is ready to release. Pick where it
+        runs.
       </Lead>
 
       {ONLINE_APP_URL && (
         <>
           <h2 className="mb-2 text-lg font-bold">Online: nothing to install</h2>
           <p className="mb-4 max-w-prose text-ink-soft">
-            Open the full app, add your own AI key in Settings, and check a public site. Your key is kept in memory for your visit only. It is a free shared copy: it sleeps when nobody is using it, so
-            the first page can take about a minute, and only one check-up runs at a time. Sites on your own computer or network can&rsquo;t be reached from here: use one of the options below for those.
+            Open the full app, add your own AI key in Settings, and check a public site. Your key is kept in memory for
+            your visit only. It is a free shared copy: it sleeps when nobody is using it, so the first page can take
+            about a minute, and only one check-up runs at a time. Sites on your own computer or network can&rsquo;t be
+            reached from here: use one of the options below for those.
           </p>
           <p className="mb-10">
             <a className="btn-primary inline-block" href={ONLINE_APP_URL} rel="noreferrer">
@@ -55,8 +58,9 @@ export function ConnectionScreen({ checks }: { checks: number }) {
 
       <h2 className="mb-2 text-lg font-bold">In your GitHub repo: nothing to install</h2>
       <p className="mb-4 max-w-prose text-ink-soft">
-        The check-up runs on your own GitHub Actions minutes (free for public repos, 2,000 minutes a month for private ones on the free plan). Your site, your AI key and the
-        report stay with you. A site that is only reachable from your build, such as a private preview, works too.
+        The check-up runs on your own GitHub Actions minutes (free for public repos, 2,000 minutes a month for private
+        ones on the free plan). Your site, your AI key and the report stay with you. A site that is only reachable from
+        your build, such as a private preview, works too.
       </p>
 
       <ol className="mb-6 list-decimal space-y-4 pl-6">
@@ -75,7 +79,8 @@ export function ConnectionScreen({ checks }: { checks: number }) {
           />
         </li>
         <li>
-          Copy this file into your repo as <code className="rounded bg-surface px-1.5 py-0.5 font-bold">{WORKFLOW_PATH}</code>:
+          Copy this file into your repo as{' '}
+          <code className="rounded bg-surface px-1.5 py-0.5 font-bold">{WORKFLOW_PATH}</code>:
           <pre
             className="mt-2 max-h-72 overflow-auto rounded-md border-2 border-edge bg-surface px-4 py-3 text-sm"
             tabIndex={0}
@@ -89,7 +94,8 @@ export function ConnectionScreen({ checks }: { checks: number }) {
         </li>
         <li>
           In your repo, open <strong>Settings, Secrets and variables, Actions</strong> and add a secret named{' '}
-          <code className="rounded bg-surface px-1.5 py-0.5 font-bold">QA_AI_API_KEY</code> with your AI key. Without a key the plan is written by fixed rules and no AI is used.
+          <code className="rounded bg-surface px-1.5 py-0.5 font-bold">QA_AI_API_KEY</code> with your AI key. Without a
+          key the plan is written by fixed rules and no AI is used.
         </li>
         <li>
           <label htmlFor="gh-repo" className="block font-bold">
@@ -113,8 +119,10 @@ export function ConnectionScreen({ checks }: { checks: number }) {
         </li>
       </ol>
       <p className="mb-10 max-w-prose text-ink-soft">
-        When the run ends, its summary page shows the verdict. The full report is in the run&rsquo;s <strong>qa-report</strong> download: open{' '}
-        <code className="rounded bg-surface px-1.5 py-0.5 font-bold">report.html</code> with a double-click. It also runs by itself when a preview or staging deployment succeeds.
+        When the run ends, its summary page shows the verdict. The full report is in the run&rsquo;s{' '}
+        <strong>qa-report</strong> download: open{' '}
+        <code className="rounded bg-surface px-1.5 py-0.5 font-bold">report.html</code> with a double-click. It also
+        runs by itself when a preview or staging deployment succeeds.
       </p>
 
       <h2 className="mb-2 text-lg font-bold">On your computer</h2>
@@ -132,7 +140,8 @@ export function ConnectionScreen({ checks }: { checks: number }) {
       <details className="mb-8">
         <summary className="btn-link cursor-pointer">Using Docker?</summary>
         <p className="mt-2">
-          Run <code className="rounded bg-surface px-1.5 py-0.5 font-bold">docker compose up</code> in the same folder instead.
+          Run <code className="rounded bg-surface px-1.5 py-0.5 font-bold">docker compose up</code> in the same folder
+          instead.
         </p>
       </details>
 
@@ -141,7 +150,9 @@ export function ConnectionScreen({ checks }: { checks: number }) {
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-stamp opacity-60 motion-reduce:animate-none" />
           <span className="relative inline-flex h-3 w-3 rounded-full bg-stamp" />
         </span>
-        {checks === 0 ? 'Looking for Release check-up on this computer…' : 'Not running on this computer yet. Checking again every 3 seconds.'}
+        {checks === 0
+          ? 'Looking for Release check-up on this computer…'
+          : 'Not running on this computer yet. Checking again every 3 seconds.'}
       </p>
     </section>
   );

@@ -46,7 +46,9 @@ describe('Ranked Recommendations (recommendations.ts)', () => {
     const quickWins = recs.filter((r) => r.category === 'quick-win');
     const biggerChanges = recs.filter((r) => r.category === 'bigger-change');
 
-    expect(quickWins.some((r) => r.title.includes('lang attribute') || r.title.includes('Content-Security-Policy'))).toBe(true);
+    expect(
+      quickWins.some((r) => r.title.includes('lang attribute') || r.title.includes('Content-Security-Policy'))
+    ).toBe(true);
     expect(biggerChanges.some((r) => r.title.includes('overflows the screen'))).toBe(true);
   });
 

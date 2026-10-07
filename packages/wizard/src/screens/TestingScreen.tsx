@@ -47,7 +47,13 @@ export function TestingScreen({
     return list;
   }, [plannedPages, feed.pages]);
   const statuses = useMemo(
-    () => Object.fromEntries(Object.entries(feed.pages).map(([path, r]) => [path, { status: r.status, issuesCount: r.issues } satisfies PageStatus])),
+    () =>
+      Object.fromEntries(
+        Object.entries(feed.pages).map(([path, r]) => [
+          path,
+          { status: r.status, issuesCount: r.issues } satisfies PageStatus,
+        ])
+      ),
     [feed.pages]
   );
 
@@ -58,7 +64,10 @@ export function TestingScreen({
   const found = selected ? feed.found.filter((f) => f.urlPath === selected) : feed.found;
   // The same problem seen on several pages or at several sizes is one line, with where it was seen.
   const problems = useMemo(() => {
-    const byTitle = new Map<string, { key: string; title: string; serious: boolean; pages: string[]; sizes: string[]; count: number }>();
+    const byTitle = new Map<
+      string,
+      { key: string; title: string; serious: boolean; pages: string[]; sizes: string[]; count: number }
+    >();
     for (const f of found) {
       const title = plainTitleText(f.title) || 'A problem';
       const key = title.toLowerCase();
@@ -108,14 +117,23 @@ export function TestingScreen({
             )}
           </div>
           {running && (
-            <button type="button" className="btn-quiet border-fail text-fail hover:border-fail hover:bg-fail-tint" onClick={onStop}>
+            <button
+              type="button"
+              className="btn-quiet border-fail text-fail hover:border-fail hover:bg-fail-tint"
+              onClick={onStop}
+            >
               Stop testing
             </button>
           )}
         </div>
         {feed.status === 'failed' && feed.failure && (
           <div className="mx-auto mt-4 max-w-6xl">
-            <RunFailure title="Testing stopped" message={feed.failure} planKept={feed.planKept} onBackToPlan={onBackToPlan} />
+            <RunFailure
+              title="Testing stopped"
+              message={feed.failure}
+              planKept={feed.planKept}
+              onBackToPlan={onBackToPlan}
+            />
           </div>
         )}
       </div>
@@ -164,7 +182,11 @@ export function TestingScreen({
                   alt={`The latest screen${feed.screenshot.page ? `, on ${feed.screenshot.page}` : ''}`}
                   className="w-full rounded border border-rule bg-canvas"
                 />
-                {feed.screenshot.page && <figcaption className="mt-1 break-all font-mono text-sm text-ink-soft">{feed.screenshot.page}</figcaption>}
+                {feed.screenshot.page && (
+                  <figcaption className="mt-1 break-all font-mono text-sm text-ink-soft">
+                    {feed.screenshot.page}
+                  </figcaption>
+                )}
               </figure>
             ) : (
               <p className="text-sm text-ink-soft">The latest screen shows here once a test has taken one.</p>
@@ -184,17 +206,26 @@ export function TestingScreen({
               </p>
             )}
             {problems.length === 0 ? (
-              <p className="text-sm text-ink-soft">{selected ? 'Nothing found on this page so far.' : 'Nothing yet.'}</p>
+              <p className="text-sm text-ink-soft">
+                {selected ? 'Nothing found on this page so far.' : 'Nothing yet.'}
+              </p>
             ) : (
               <ul className="max-h-[28rem] space-y-2 overflow-y-auto lg:max-h-none">
                 {problems.slice(0, 20).map((problem) => (
-                  <li key={problem.key} className={`rounded border-l-4 bg-surface px-3 py-2 text-sm ${problem.serious ? 'border-l-fail' : 'border-l-warn'}`}>
+                  <li
+                    key={problem.key}
+                    className={`rounded border-l-4 bg-surface px-3 py-2 text-sm ${problem.serious ? 'border-l-fail' : 'border-l-warn'}`}
+                  >
                     <span className="block text-ink">
                       {problem.title}
                       {problem.count > 1 && <span className="text-ink-soft"> ×{problem.count}</span>}
                     </span>
                     <span className="block break-all text-sm text-ink-soft">
-                      {problem.pages.length === 1 ? <span className="font-mono">{problem.pages[0]}</span> : `${problem.pages.length} pages`}
+                      {problem.pages.length === 1 ? (
+                        <span className="font-mono">{problem.pages[0]}</span>
+                      ) : (
+                        `${problem.pages.length} pages`
+                      )}
                       {problem.sizes.length > 0 ? ` · at ${problem.sizes.join(', ')}` : ''}
                     </span>
                   </li>

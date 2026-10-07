@@ -112,9 +112,12 @@ describe('A–F Aspect Grading (scoring.ts)', () => {
       resolution: '',
     };
     // Only the bug and accessibility checks ran; the security one still found something.
-    const grades = calculateSiteAspectGrades([minorOnHome, { ...minorOnHome, id: 'F-SEC-1', checker: 'security', title: 'No HSTS' }], {
-      checkersRun: ['bug-detection', 'ux-quality'],
-    });
+    const grades = calculateSiteAspectGrades(
+      [minorOnHome, { ...minorOnHome, id: 'F-SEC-1', checker: 'security', title: 'No HSTS' }],
+      {
+        checkersRun: ['bug-detection', 'ux-quality'],
+      }
+    );
     expect(grades.aspects.Works).toMatchObject({ grade: 'A', checked: true });
     expect(grades.aspects.Accessible).toMatchObject({ score: 95, checked: true });
     // A checker that found something ran, whatever the list says.

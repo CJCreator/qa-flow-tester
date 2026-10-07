@@ -1,4 +1,12 @@
-import type { AICompletion, AIMessage, AICompletionOptions, AIModelOutcome, AIProviderType, AIStage, AIStageUsage } from '@qa/types';
+import type {
+  AICompletion,
+  AIMessage,
+  AICompletionOptions,
+  AIModelOutcome,
+  AIProviderType,
+  AIStage,
+  AIStageUsage,
+} from '@qa/types';
 import { completeWith, type AIProvider } from '../ai/ai-provider.js';
 import { stopIfAborted } from '../abort.js';
 
@@ -124,7 +132,10 @@ export class PacedAI implements AIProvider {
           throw new BudgetSpentError('The AI service’s free requests for today are used up.');
         }
         // This model's shared free pool is busy: another model answers sooner than waiting would.
-        const next = !options.model && /upstream|temporarily rate.?limited/i.test(message) ? this.fallbackModels.shift() : undefined;
+        const next =
+          !options.model && /upstream|temporarily rate.?limited/i.test(message)
+            ? this.fallbackModels.shift()
+            : undefined;
         if (next) {
           this.outcome(model, 'failed');
           this.model = next;
@@ -152,7 +163,13 @@ export class PacedAI implements AIProvider {
   }
 
   private tally(stage: AIStage, result: AICompletion): void {
-    const s = (this.tokens[stage] ??= { requests: 0, promptTokens: 0, completionTokens: 0, reasoningTokens: 0, truncated: 0 });
+    const s = (this.tokens[stage] ??= {
+      requests: 0,
+      promptTokens: 0,
+      completionTokens: 0,
+      reasoningTokens: 0,
+      truncated: 0,
+    });
     s.requests++;
     s.promptTokens += result.usage?.promptTokens ?? 0;
     s.completionTokens += result.usage?.completionTokens ?? 0;
@@ -175,7 +192,11 @@ const PAGES_PER_REQUEST_ESTIMATE = 3;
  * typical site. `low` is every answer usable first time; `high` has every answer repaired once.
  * The visual review after the run comes on top.
  */
-export function estimateScanRequests(options: { maxPages: number; pagesSeenBefore?: number; visualReviewCalls: number }): {
+export function estimateScanRequests(options: {
+  maxPages: number;
+  pagesSeenBefore?: number;
+  visualReviewCalls: number;
+}): {
   low: number;
   high: number;
   visualReview: number;
@@ -185,5 +206,9 @@ export function estimateScanRequests(options: { maxPages: number; pagesSeenBefor
   // Pages, the journeys, and the shared menus when their destinations weren't all seen.
   const low = batches + 1;
   const high = 2 * (batches + 2);
-  return { low, high, visualReview: Math.min(options.visualReviewCalls, Math.max(1, Math.ceil(pages / PAGES_PER_REQUEST_ESTIMATE))) };
+  return {
+    low,
+    high,
+    visualReview: Math.min(options.visualReviewCalls, Math.max(1, Math.ceil(pages / PAGES_PER_REQUEST_ESTIMATE))),
+  };
 }

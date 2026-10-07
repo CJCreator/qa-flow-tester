@@ -4,21 +4,21 @@ Status: landing page built (2026-10-06). Decisions come from the 2026-10-06 gril
 
 ## 1. Decisions this rests on
 
-| Question | Decision |
-|---|---|
-| Page split | Landing is a separate public page at `/`. A "Run a free check-up" button leads to the app's address screen at `/check`. The home screen (the check-up form) stays where it was, now at `/check`. |
-| One goal | Run a free check-up, no sign-up. |
-| Look | The Blueprint look: same tokens, Atkinson Hyperlegible Next, the stencil stamp as the hero image. |
-| Headline | "QA without a QA team." |
-| Trust | A real sample report, a source-available badge, safety promises up front. No invented logos, quotes or counts. |
-| Sample report | A real check-up of the demo site in `fixtures/test-app`, saved as a static page and labelled as an example. |
-| Pricing | "Free while we're in beta", no prices, paid plans "planned". |
-| Cold start | The landing page wakes the free online copy on load (see 6.3). |
-| Data claim | Written from the code: see 6.4. |
+| Question      | Decision                                                                                                                                                                                         |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Page split    | Landing is a separate public page at `/`. A "Run a free check-up" button leads to the app's address screen at `/check`. The home screen (the check-up form) stays where it was, now at `/check`. |
+| One goal      | Run a free check-up, no sign-up.                                                                                                                                                                 |
+| Look          | The Blueprint look: same tokens, Atkinson Hyperlegible Next, the stencil stamp as the hero image.                                                                                                |
+| Headline      | "QA without a QA team."                                                                                                                                                                          |
+| Trust         | A real sample report, a source-available badge, safety promises up front. No invented logos, quotes or counts.                                                                                   |
+| Sample report | A real check-up of the demo site in `fixtures/test-app`, saved as a static page and labelled as an example.                                                                                      |
+| Pricing       | "Free while we're in beta", no prices, paid plans "planned".                                                                                                                                     |
+| Cold start    | The landing page wakes the free online copy on load (see 6.3).                                                                                                                                   |
+| Data claim    | Written from the code: see 6.4.                                                                                                                                                                  |
 
 ## 2. Audience and message
 
-Founders and developers with no QA person ([ADR 0010](../adr/0010-one-app-with-details-on-demand.md)). They compare us with their own Playwright scripts and with Lighthouse or the axe extension. The page answers three questions in order: *what is it* (hero), *is it safe to point at my site* (promise strip), *what will I get* (verdict preview, sample report).
+Founders and developers with no QA person ([ADR 0010](../adr/0010-one-app-with-details-on-demand.md)). They compare us with their own Playwright scripts and with Lighthouse or the axe extension. The page answers three questions in order: _what is it_ (hero), _is it safe to point at my site_ (promise strip), _what will I get_ (verdict preview, sample report).
 
 Writing rules are the app's ([DESIGN.md](../../packages/wizard/DESIGN.md#writing)): plain verbs, sentence case, "check-up" for a whole pass, no testing vocabulary. Nothing claims what is not true today (no "daily limit", no "your report is private").
 
@@ -82,57 +82,61 @@ A first-time visitor no longer has to connect an AI key before scanning (audit P
 
 Tokens come from [tailwind.config.js](../../packages/wizard/tailwind.config.js); the contrast test covers every pairing used here.
 
-| Role | Token | Used for |
-|---|---|---|
-| Page | `paper` `#111827` | body background, sections A, C, D, F, H |
-| Hero and closing band | `canvas` `#0D1322` | B, I |
-| Alternate band | `panel` `#1A2438` | E, G |
-| Cards | `surface` `#1E2A3B` + `rule` border | C, D, verdict preview, FAQ |
-| Text | `ink` `#E8EDF5`, `ink-soft` `#A7B3C7` | primary, secondary |
-| Accent | `stamp` `#6C9BF2` | primary button, step numbers, area rules, focus ring |
-| Verdict | `fail` `#FA9191`, `warn` `#FBC54A`, `pass` `#4ADE9A` | stamp and finding borders, "✓" in the wake note |
+| Role                  | Token                                                | Used for                                             |
+| --------------------- | ---------------------------------------------------- | ---------------------------------------------------- |
+| Page                  | `paper` `#111827`                                    | body background, sections A, C, D, F, H              |
+| Hero and closing band | `canvas` `#0D1322`                                   | B, I                                                 |
+| Alternate band        | `panel` `#1A2438`                                    | E, G                                                 |
+| Cards                 | `surface` `#1E2A3B` + `rule` border                  | C, D, verdict preview, FAQ                           |
+| Text                  | `ink` `#E8EDF5`, `ink-soft` `#A7B3C7`                | primary, secondary                                   |
+| Accent                | `stamp` `#6C9BF2`                                    | primary button, step numbers, area rules, focus ring |
+| Verdict               | `fail` `#FA9191`, `warn` `#FBC54A`, `pass` `#4ADE9A` | stamp and finding borders, "✓" in the wake note      |
 
 Type (all Atkinson Hyperlegible Next, stamp in Big Shoulders Stencil Display):
 
-| Use | Size | Weight |
-|---|---|---|
-| h1 | `clamp(2.5rem, 1.6rem + 4vw, 4.25rem)`, line 1.05 | 700 |
-| h2 | 30 px, 36 px from 640 px | 700 |
-| Hero lead | 20 px | 400, `ink-soft` |
-| Body | 18 px (base) | 400 |
-| Small | 14 px | 400 |
-| Mono labels | system mono 12–14 px | 700 for step numbers |
-| Stamp | 30 px, 36 px from 640 px, uppercase | stencil |
+| Use         | Size                                              | Weight               |
+| ----------- | ------------------------------------------------- | -------------------- |
+| h1          | `clamp(2.5rem, 1.6rem + 4vw, 4.25rem)`, line 1.05 | 700                  |
+| h2          | 30 px, 36 px from 640 px                          | 700                  |
+| Hero lead   | 20 px                                             | 400, `ink-soft`      |
+| Body        | 18 px (base)                                      | 400                  |
+| Small       | 14 px                                             | 400                  |
+| Mono labels | system mono 12–14 px                              | 700 for step numbers |
+| Stamp       | 30 px, 36 px from 640 px, uppercase               | stencil              |
 
 Spacing: sections are 56 px top and bottom (80 px from 640 px). Cards use 16 px × 20 px padding and a 16 px gap. Radii are `card` 8 px and `panel` 12 px.
 
 ## 6. Components
 
-| Component | File | Notes |
-|---|---|---|
-| `LandingScreen` | [screens/LandingScreen.tsx](../../packages/wizard/src/screens/LandingScreen.tsx) | The whole page. Sections are plain markup; there is no shared "section" component beyond `SectionTitle`. |
-| `StartButton` | same | A plain `<a>` to `startAddress()`: `/check` here, or the online copy's `/check` from a static host. A page load, so the app's code is only fetched on click. |
-| `WakeNote` | same | `role="status"`; text for `waking`, `ready`, `failed`; renders nothing when there is nothing to wake. |
-| `VerdictPreview` | same | `<figure>` with a caption; the stamp uses the app's `.stamp` class. |
-| `LandingRoot` | [LandingRoot.tsx](../../packages/wizard/src/LandingRoot.tsx) | Skip link, `<main id="main">` and the page, without the app. |
-| `useWakeOnline` | [hooks/useWakeOnline.ts](../../packages/wizard/src/hooks/useWakeOnline.ts) | One no-cors `GET /healthz` on load; states `none`, `waking`, `ready`, `failed`; 90 s timeout. |
-| `startAddress`, `wakeAddress` | [lib/online.ts](../../packages/wizard/src/lib/online.ts) | Pure; tested in `tests/online.test.ts`. |
-| FAQ and steps | [lib/faq.ts](../../packages/wizard/src/lib/faq.ts) | The text the page shows. Mirrored in the `FAQPage` and `HowTo` data in `index.html`: keep the two in step. |
+| Component                     | File                                                                             | Notes                                                                                                                                                        |
+| ----------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `LandingScreen`               | [screens/LandingScreen.tsx](../../packages/wizard/src/screens/LandingScreen.tsx) | The whole page. Sections are plain markup; there is no shared "section" component beyond `SectionTitle`.                                                     |
+| `StartButton`                 | same                                                                             | A plain `<a>` to `startAddress()`: `/check` here, or the online copy's `/check` from a static host. A page load, so the app's code is only fetched on click. |
+| `WakeNote`                    | same                                                                             | `role="status"`; text for `waking`, `ready`, `failed`; renders nothing when there is nothing to wake.                                                        |
+| `VerdictPreview`              | same                                                                             | `<figure>` with a caption; the stamp uses the app's `.stamp` class.                                                                                          |
+| `LandingRoot`                 | [LandingRoot.tsx](../../packages/wizard/src/LandingRoot.tsx)                     | Skip link, `<main id="main">` and the page, without the app.                                                                                                 |
+| `useWakeOnline`               | [hooks/useWakeOnline.ts](../../packages/wizard/src/hooks/useWakeOnline.ts)       | One no-cors `GET /healthz` on load; states `none`, `waking`, `ready`, `failed`; 90 s timeout.                                                                |
+| `startAddress`, `wakeAddress` | [lib/online.ts](../../packages/wizard/src/lib/online.ts)                         | Pure; tested in `tests/online.test.ts`.                                                                                                                      |
+| FAQ and steps                 | [lib/faq.ts](../../packages/wizard/src/lib/faq.ts)                               | The text the page shows. Mirrored in the `FAQPage` and `HowTo` data in `index.html`: keep the two in step.                                                   |
 
 Interaction states: buttons use the app's `.btn-primary` / `.btn-quiet` / `.btn-link` (hover, `focus-visible` ring, 48 px min height; the header button 44 px). FAQ items are native `<details>`, so they work without scripts and by keyboard.
 
 ## 7. Behaviour
 
 ### 7.1 Routes
+
 `/` is the landing page and is public (indexed, in the sitemap). `/check` and every other screen are private (`noindex`). `/sample-report.html` is public. The runner's static server marks pages `noindex` except `/`, `/index.html` and `/sample-report.html`.
 
 ### 7.2 Where the button leads
+
 Served by the app itself (Render, local): `/check`. Served from Vercel with `VITE_ONLINE_APP_URL` set: that origin's `/check`.
 
 ### 7.3 Cold start
+
 The free Render copy sleeps after 15 minutes and takes about a minute to wake. From Vercel the landing page calls its `/healthz` the moment it opens and shows "Getting the free online copy ready", then a tick. If the call fails or takes over 90 seconds, it says the copy is slow to wake. Served by the app itself there is nothing to wake and nothing is shown.
 
 ### 7.4 What the page says about data
+
 From [beta.ts](../../packages/runner/src/beta.ts), [server.ts](../../packages/runner/src/server.ts) and [render.yaml](../../render.yaml): on the online copy, AI keys and sign-ins are held in memory for a session of up to 24 hours and never written to disk; only public sites can be checked; one check-up runs at a time for everyone; and each visitor sees only their own check-ups.
 
 How that last part works (`betaScope` in the runner): the runner holds one run at a time, so "the current run" belongs to whoever started it. For everyone else it doesn't exist. Their status reads idle (plus `busy` while someone else's run is going), and the plan, plan edits, progress stream, report, report downloads, evidence files, past check-ups, waiting plans and remembered sites are all scoped to the visitor's session. A plan left waiting by one visitor is kept aside for them when another starts. Visual baselines are closed. Covered by `tests/beta-privacy.test.ts`.
@@ -163,16 +167,16 @@ Title, description, canonical, JSON-LD (`Organization`, `WebSite`, `SoftwareAppl
 
 There is no Figma file (decided). The handoff is the code and this document.
 
-| Change | Files |
-|---|---|
-| New routes | `src/lib/router.ts` (`landing` at `/`, `new` at `/check`), `tests/router.test.ts` |
-| Landing | `src/screens/LandingScreen.tsx`, `src/LandingRoot.tsx`, `src/main.tsx` (splits the bundle) |
-| Wake and links | `src/lib/online.ts`, `src/hooks/useWakeOnline.ts`, `tests/online.test.ts` |
-| App wiring | `src/App.tsx` (no top bar or runner polling on the landing page), `src/hooks/useRunnerConnection.ts` (`enabled`) |
-| Copy | `src/lib/faq.ts` (was `components/HomeInfo.tsx`), `index.html`, `public/llms.txt`, `public/sitemap.xml`, `public/robots.txt`, `src/lib/title.ts` |
-| Public paths | `packages/runner/src/ui-static.ts` |
-| Sample report | `packages/wizard/public/sample-report.html` |
-| End-to-end test | `tests/wizard-e2e.test.ts` (opens on the landing page, follows the button to `/check`) |
+| Change          | Files                                                                                                                                            |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| New routes      | `src/lib/router.ts` (`landing` at `/`, `new` at `/check`), `tests/router.test.ts`                                                                |
+| Landing         | `src/screens/LandingScreen.tsx`, `src/LandingRoot.tsx`, `src/main.tsx` (splits the bundle)                                                       |
+| Wake and links  | `src/lib/online.ts`, `src/hooks/useWakeOnline.ts`, `tests/online.test.ts`                                                                        |
+| App wiring      | `src/App.tsx` (no top bar or runner polling on the landing page), `src/hooks/useRunnerConnection.ts` (`enabled`)                                 |
+| Copy            | `src/lib/faq.ts` (was `components/HomeInfo.tsx`), `index.html`, `public/llms.txt`, `public/sitemap.xml`, `public/robots.txt`, `src/lib/title.ts` |
+| Public paths    | `packages/runner/src/ui-static.ts`                                                                                                               |
+| Sample report   | `packages/wizard/public/sample-report.html`                                                                                                      |
+| End-to-end test | `tests/wizard-e2e.test.ts` (opens on the landing page, follows the button to `/check`)                                                           |
 
 ## 12. Audit: must-fix list
 
@@ -180,7 +184,7 @@ Rated against the decisions above. P0 blocks the goal (a visitor completing a fr
 
 ### P0
 
-1. ~~**A first-time visitor can't scan without an AI key.**~~ Fixed 2026-10-06. `canStart` in [NewCheckupScreen.tsx](../../packages/wizard/src/screens/NewCheckupScreen.tsx) no longer needs a saved key; without one the request sends `useAI: false`, so no AI is used and fixed rules write the plan (`tests/start-run.test.ts`), and the key panel reads "Connect the AI for a smarter plan", marked optional. The end-to-end test now expects the Scan button enabled before a key is saved. Checked by hand against a keyless runner (beta mode, so no saved key): a scan of example.com reached the plan. A correction to the first audit: the runner does *not* accept `planWithoutAI` without a key, which is why the request uses `useAI: false` instead.
+1. ~~**A first-time visitor can't scan without an AI key.**~~ Fixed 2026-10-06. `canStart` in [NewCheckupScreen.tsx](../../packages/wizard/src/screens/NewCheckupScreen.tsx) no longer needs a saved key; without one the request sends `useAI: false`, so no AI is used and fixed rules write the plan (`tests/start-run.test.ts`), and the key panel reads "Connect the AI for a smarter plan", marked optional. The end-to-end test now expects the Scan button enabled before a key is saved. Checked by hand against a keyless runner (beta mode, so no saved key): a scan of example.com reached the plan. A correction to the first audit: the runner does _not_ accept `planWithoutAI` without a key, which is why the request uses `useAI: false` instead.
 2. ~~**The source-available badge has no licence behind it.**~~ Fixed 2026-10-06. [LICENSE](../../LICENSE) is the Functional Source License 1.1 with an MIT future license (FSL-1.1-MIT), copyright 2026 CJCreator, copied from the official template at fsl.software. The README had wrongly said MIT; it now describes FSL-1.1-MIT, `package.json` points to the file, and the landing footer links to it.
 3. ~~**Privacy claims were wrong, and the address screen didn't warn.**~~ Fixed 2026-10-06. The FAQ, `llms.txt` and JSON-LD now tell the truth. The runner's status says `beta: true` on the shared copy, and the check-up screen shows a "This is a shared copy" notice. Later the same day the copy was changed so each visitor sees only their own check-ups (section 7.4), and the notice says so. Covered by a runner test (`beta.test.ts`) and by the end-to-end test, which checks the notice is absent on a normal copy.
 4. ~~**Sleeping server with no feedback.**~~ Fixed as far as our code can reach, 2026-10-06. The connection screen (what the Vercel site shows on `/check`) now wakes the online copy as it opens and shows the same "getting the online copy ready" note beside the "Open the online app" button. Not fixable here: someone who opens the Render address directly sees Render's own waiting page before any of our code loads. Only an always-on server removes that, which the $0 budget rules out for now.

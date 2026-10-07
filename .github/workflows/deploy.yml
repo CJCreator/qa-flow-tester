@@ -33,12 +33,10 @@ jobs:
     if: github.repository == 'CJCreator/qa-flow-tester'
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    env:
-      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
 
       - uses: actions/setup-node@v4
         with:
@@ -56,9 +54,13 @@ jobs:
       - name: Build the runner
         run: pnpm --filter "@qa/runner..." run build
 
-      # The browser-driven end-to-end test takes minutes and needs Chromium: run it before a release, not on every push.
+      - name: Install Chromium (the browser tests drive it)
+        run: pnpm --filter @qa/core exec playwright install --with-deps chromium
+
+      # Every package test except wizard-e2e (takes minutes, run it before a release). Same command as the CI workflow.
+      # Chromium is installed above for the browser-driven checker and core tests.
       - name: Tests
-        run: pnpm exec vitest run packages/wizard packages/runner/tests/beta.test.ts packages/runner/tests/beta-privacy.test.ts --exclude "**/wizard-e2e.test.ts"
+        run: pnpm exec vitest run --exclude "**/wizard-e2e.test.ts"
 
   publish:
     needs: test

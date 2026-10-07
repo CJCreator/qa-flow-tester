@@ -21,8 +21,20 @@ const response: FigmaVariablesResponse = {
         variableCollectionId: 'c1',
         valuesByMode: { light: { type: 'VARIABLE_ALIAS', id: 'v5' } },
       },
-      v3: { id: 'v3', name: 'Radius/md', resolvedType: 'FLOAT', variableCollectionId: 'c1', valuesByMode: { light: 8 } },
-      v4: { id: 'v4', name: 'Font Size/Base', resolvedType: 'FLOAT', variableCollectionId: 'c1', valuesByMode: { light: 16 } },
+      v3: {
+        id: 'v3',
+        name: 'Radius/md',
+        resolvedType: 'FLOAT',
+        variableCollectionId: 'c1',
+        valuesByMode: { light: 8 },
+      },
+      v4: {
+        id: 'v4',
+        name: 'Font Size/Base',
+        resolvedType: 'FLOAT',
+        variableCollectionId: 'c1',
+        valuesByMode: { light: 16 },
+      },
       v5: {
         id: 'v5',
         name: 'Palette/Red 500',
@@ -30,7 +42,13 @@ const response: FigmaVariablesResponse = {
         variableCollectionId: 'c1',
         valuesByMode: { light: { r: 239 / 255, g: 68 / 255, b: 68 / 255, a: 0.5 } },
       },
-      v6: { id: 'v6', name: 'Spacing/4', resolvedType: 'FLOAT', variableCollectionId: 'c1', valuesByMode: { light: 16 } },
+      v6: {
+        id: 'v6',
+        name: 'Spacing/4',
+        resolvedType: 'FLOAT',
+        variableCollectionId: 'c1',
+        valuesByMode: { light: 16 },
+      },
     },
   },
 };
@@ -57,7 +75,8 @@ describe('syncFigma', () => {
     const fakeFetch = (async (url: string) => {
       calls.push(url);
       if (url.includes('/variables/local')) return new Response(JSON.stringify(response));
-      if (url.includes('/images/')) return new Response(JSON.stringify({ images: { '1:2': 'https://cdn.test/frame.png' } }));
+      if (url.includes('/images/'))
+        return new Response(JSON.stringify({ images: { '1:2': 'https://cdn.test/frame.png' } }));
       return new Response(new Uint8Array([137, 80, 78, 71]));
     }) as typeof fetch;
 

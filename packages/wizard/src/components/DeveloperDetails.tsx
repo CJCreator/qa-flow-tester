@@ -31,8 +31,16 @@ function CopyButton({ label, getText }: { label: string; getText: () => Promise<
       </span>
       {typeof state === 'object' && (
         <div className="mt-2">
-          <p className="text-sm text-ink-soft">Your browser wouldn’t copy it. Select the text below and copy it yourself.</p>
-          <textarea readOnly rows={8} className="field mt-1 font-mono text-sm" value={state.manual} aria-label={`${label}: text to copy`} />
+          <p className="text-sm text-ink-soft">
+            Your browser wouldn’t copy it. Select the text below and copy it yourself.
+          </p>
+          <textarea
+            readOnly
+            rows={8}
+            className="field mt-1 font-mono text-sm"
+            value={state.manual}
+            aria-label={`${label}: text to copy`}
+          />
         </div>
       )}
     </div>
@@ -43,15 +51,28 @@ function CopyButton({ label, getText }: { label: string; getText: () => Promise<
  * The technical layer under a finding, collapsed until opened: what a developer needs to see the
  * problem again and fix it. Selectors, check names and commands appear only here.
  */
-export function DeveloperDetails({ finding: f, runId, targetUrl }: { finding: Finding; runId: string; targetUrl: string }) {
+export function DeveloperDetails({
+  finding: f,
+  runId,
+  targetUrl,
+}: {
+  finding: Finding;
+  runId: string;
+  targetUrl: string;
+}) {
   const screenshot = f.evidence.screenshotPath;
   const element = f.where.cssSelector || f.where.dataTestId;
-  const consoleLines = (f.evidence.consoleLogs || []).map((c) => c.text).filter(Boolean).slice(0, 10);
+  const consoleLines = (f.evidence.consoleLogs || [])
+    .map((c) => c.text)
+    .filter(Boolean)
+    .slice(0, 10);
   const failedRequests = (f.evidence.networkLogs || []).filter((n) => !n.status || n.status >= 400).slice(0, 5);
 
   return (
     <details className="mt-3 rounded-md border border-rule bg-canvas/60">
-      <summary className="min-h-[40px] cursor-pointer px-3 py-2 text-sm font-bold text-ink">Details for developers</summary>
+      <summary className="min-h-[40px] cursor-pointer px-3 py-2 text-sm font-bold text-ink">
+        Details for developers
+      </summary>
       <div className="space-y-4 border-t border-rule p-3 text-sm">
         {screenshot && (
           <figure>
@@ -119,7 +140,9 @@ export function DeveloperDetails({ finding: f, runId, targetUrl }: { finding: Fi
         {consoleLines.length > 0 && (
           <div>
             <p className="font-bold text-ink">Console errors</p>
-            <pre className="mt-1 max-h-48 overflow-auto rounded border border-rule bg-canvas p-2 font-mono text-sm text-ink">{consoleLines.join('\n')}</pre>
+            <pre className="mt-1 max-h-48 overflow-auto rounded border border-rule bg-canvas p-2 font-mono text-sm text-ink">
+              {consoleLines.join('\n')}
+            </pre>
           </div>
         )}
 
@@ -141,11 +164,17 @@ export function DeveloperDetails({ finding: f, runId, targetUrl }: { finding: Fi
           <CopyButton label="Copy bug report" getText={async () => bugReportMarkdown(f, targetUrl)} />
           <CopyButton
             label="Copy Playwright test"
-            getText={async () => (f.reproScriptPath ? readRunText(runId, f.reproScriptPath).catch(() => playwrightFromSteps(f, targetUrl)) : playwrightFromSteps(f, targetUrl))}
+            getText={async () =>
+              f.reproScriptPath
+                ? readRunText(runId, f.reproScriptPath).catch(() => playwrightFromSteps(f, targetUrl))
+                : playwrightFromSteps(f, targetUrl)
+            }
           />
         </div>
 
-        <p className="text-ink-soft">After you fix it, run the check-up again on the same address. This finding should no longer appear.</p>
+        <p className="text-ink-soft">
+          After you fix it, run the check-up again on the same address. This finding should no longer appear.
+        </p>
       </div>
     </details>
   );

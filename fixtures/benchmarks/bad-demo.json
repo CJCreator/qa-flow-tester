@@ -16,7 +16,10 @@
     {
       "id": "broken-annotation-links",
       "what": "The demo's annotation sidebar links (/annotations) and the /info page return 404 — these are dead links on the W3C demo site itself",
-      "match": [{ "checker": "bug-detection", "titleIncludes": "HTTP 404", "urlIncludes": "annotations" }, { "checker": "bug-detection", "titleIncludes": "HTTP 404", "urlIncludes": "/info" }]
+      "match": [
+        { "checker": "bug-detection", "titleIncludes": "HTTP 404", "urlIncludes": "annotations" },
+        { "checker": "bug-detection", "titleIncludes": "HTTP 404", "urlIncludes": "/info" }
+      ]
     }
   ]
 }

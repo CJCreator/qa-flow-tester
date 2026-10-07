@@ -26,7 +26,10 @@ describe('reference materials', () => {
   it('joins several files so the context parser still finds requirements from each one', () => {
     const context = buildProductContext(
       [
-        { name: 'prd.md', content: '# Checkout\n- Coupon codes are case-insensitive\n\n## Refunds\n- Refunds take 5 days' },
+        {
+          name: 'prd.md',
+          content: '# Checkout\n- Coupon codes are case-insensitive\n\n## Refunds\n- Refunds take 5 days',
+        },
         { name: 'flows.txt', content: 'Users sign in with email\n- Password must be 8+ characters' },
       ],
       'Admins can export invoices'
@@ -38,9 +41,19 @@ describe('reference materials', () => {
 
     const parsed = new ContextParser().parseContent(context);
     const names = parsed.requirements.map((r) => r.name);
-    expect(names).toEqual(['Reference file: prd.md', 'Checkout', 'Refunds', 'Reference file: flows.txt', 'Pasted notes']);
+    expect(names).toEqual([
+      'Reference file: prd.md',
+      'Checkout',
+      'Refunds',
+      'Reference file: flows.txt',
+      'Pasted notes',
+    ]);
     const rules = parsed.requirements.flatMap((r) => r.rules);
-    expect(rules).toEqual(['Coupon codes are case-insensitive', 'Refunds take 5 days', 'Password must be 8+ characters']);
+    expect(rules).toEqual([
+      'Coupon codes are case-insensitive',
+      'Refunds take 5 days',
+      'Password must be 8+ characters',
+    ]);
     // Prose outside bullet lists isn't a parsed rule, but the discovery prompt includes the raw text in full
     expect(parsed.rawContent).toContain('Users sign in with email');
     expect(parsed.rawContent).toContain('Admins can export invoices');
@@ -74,7 +87,12 @@ describe('normalizeUrl', () => {
 });
 
 describe('summarizeReport', () => {
-  const finding = (id: string, severity: Finding['severity'], title: string, checker: Finding['checker'] = 'bug-detection'): Finding => ({
+  const finding = (
+    id: string,
+    severity: Finding['severity'],
+    title: string,
+    checker: Finding['checker'] = 'bug-detection'
+  ): Finding => ({
     id,
     severity,
     checker,
@@ -91,7 +109,15 @@ describe('summarizeReport', () => {
     targetUrl: 'https://shop.example.com',
     timestamp: '',
     durationMs: 0,
-    coverage: { totalTestPoints: 1, passed: 1, failed: 0, blocked: 0, skipped: 0, couldNotVerify: 0, completionRate: 100 },
+    coverage: {
+      totalTestPoints: 1,
+      passed: 1,
+      failed: 0,
+      blocked: 0,
+      skipped: 0,
+      couldNotVerify: 0,
+      completionRate: 100,
+    },
     results: [],
     findings,
     ...extra,
@@ -123,12 +149,20 @@ describe('summarizeReport', () => {
     expect(s.stamp).toBe('Not ready yet');
     expect(s.headline).toBe('4 problems found');
     expect(s.reason).toBe('2 problems must be fixed first.');
-    expect(s.counts.map((c) => c.sentence)).toEqual(['1 blocks release', '1 should be fixed before release', '1 minor', '1 suggestion']);
+    expect(s.counts.map((c) => c.sentence)).toEqual([
+      '1 blocks release',
+      '1 should be fixed before release',
+      '1 minor',
+      '1 suggestion',
+    ]);
     expect(s.top).toEqual([
       { title: 'A request to your site failed (error 500)', category: 'Something broke', severity: 'Blocker' },
       { title: 'The page reported an error behind the scenes', category: 'Something broke', severity: 'Major' },
-      { title: 'A button is missing a visible or spoken label', category: 'Hard for some people to use', severity: 'Minor' },
-
+      {
+        title: 'A button is missing a visible or spoken label',
+        category: 'Hard for some people to use',
+        severity: 'Minor',
+      },
     ]);
     // No raw severity enum words reach the summary text
     expect(JSON.stringify(s.counts.map((c) => c.sentence))).not.toMatch(/Blocker|Major|Minor|Suggestion/);
@@ -140,7 +174,10 @@ describe('summarizeReport', () => {
   });
 
   it('keeps unconfirmed AI guesses out of the issues, and counts them separately', () => {
-    const guess = { ...finding('F-SPEC-1', 'Suggestion', 'Could not verify: expected the page to say "Saved".'), needsConfirmation: true };
+    const guess = {
+      ...finding('F-SPEC-1', 'Suggestion', 'Could not verify: expected the page to say "Saved".'),
+      needsConfirmation: true,
+    };
     const s = summarizeReport(report([guess, finding('F-BUG-1', 'Minor', 'Console Error in step "Save"')]));
     expect(s.total).toBe(1);
     expect(s.toConfirm).toBe(1);
@@ -149,7 +186,13 @@ describe('summarizeReport', () => {
 });
 
 describe("the report's problems and map", () => {
-  const finding = (id: string, severity: Finding['severity'], title: string, urlPath: string, checker: Finding['checker'] = 'bug-detection'): Finding => ({
+  const finding = (
+    id: string,
+    severity: Finding['severity'],
+    title: string,
+    urlPath: string,
+    checker: Finding['checker'] = 'bug-detection'
+  ): Finding => ({
     id,
     severity,
     checker,
@@ -213,7 +256,13 @@ describe("the report's problems and map", () => {
         finding('F-2', 'Major', 'HTTP 500', '/cart'),
         { ...finding('F-3', 'Blocker', 'HTTP 500', '/'), triageStatus: 'False Positive' },
       ],
-      siteMap: { pages: [{ urlPath: '/', title: 'Home' }, { urlPath: '/admin', title: 'Admin' }], journeys: [] },
+      siteMap: {
+        pages: [
+          { urlPath: '/', title: 'Home' },
+          { urlPath: '/admin', title: 'Admin' },
+        ],
+        journeys: [],
+      },
     });
     expect(statuses).toEqual({
       '/': { status: 'pass', issuesCount: 0 },
@@ -230,8 +279,14 @@ describe('the new check-up form', () => {
   it('sends the specs, design notes and journeys to the AI under their own headings', () => {
     expect(productContextOf(EMPTY_FORM)).toBeUndefined();
     expect(productContextOf({ ...EMPTY_FORM, specs: '  ' })).toBeUndefined();
-    const context = productContextOf({ ...EMPTY_FORM, specs: '- Amount must be positive', journeys: 'Sign in, then open Reports' })!;
-    expect(context).toBe('# Specs\n\n- Amount must be positive\n\n---\n\n# Journeys to test\n\nSign in, then open Reports');
+    const context = productContextOf({
+      ...EMPTY_FORM,
+      specs: '- Amount must be positive',
+      journeys: 'Sign in, then open Reports',
+    })!;
+    expect(context).toBe(
+      '# Specs\n\n- Amount must be positive\n\n---\n\n# Journeys to test\n\nSign in, then open Reports'
+    );
     const parsed = new ContextParser().parseContent(context);
     expect(parsed.requirements.map((r) => r.name)).toEqual(['Specs', 'Journeys to test']);
   });

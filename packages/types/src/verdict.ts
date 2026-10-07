@@ -51,7 +51,10 @@ export function releaseVerdict(
   gate?: ReleaseGateCriteria
 ): ReleaseVerdict {
   const problems = groupIntoProblems(
-    findings.map((f) => ({ checker: 'bug-detection', id: '', where: { urlPath: '', role: '', breakpoint: '1440px' }, ...f }) as Finding)
+    findings.map(
+      (f) =>
+        ({ checker: 'bug-detection', id: '', where: { urlPath: '', role: '', breakpoint: '1440px' }, ...f }) as Finding
+    )
   );
   const active = problems.filter((p) => !p.toConfirm);
   const counts: Record<FindingSeverity, number> = { Blocker: 0, Major: 0, Minor: 0, Suggestion: 0 };
@@ -66,9 +69,14 @@ export function releaseVerdict(
   const minorsBreached = maxMinors !== undefined && counts.Minor > maxMinors;
 
   const breaches: string[] = [];
-  if (blockersBreached) breaches.push(`${counts.Blocker} blocker ${counts.Blocker === 1 ? 'problem' : 'problems'} (${maxBlockers} allowed)`);
-  if (majorsBreached) breaches.push(`${counts.Major} major ${counts.Major === 1 ? 'problem' : 'problems'} (${maxMajors} allowed)`);
-  if (minorsBreached) breaches.push(`${counts.Minor} minor ${counts.Minor === 1 ? 'problem' : 'problems'} (${maxMinors} allowed)`);
+  if (blockersBreached)
+    breaches.push(
+      `${counts.Blocker} blocker ${counts.Blocker === 1 ? 'problem' : 'problems'} (${maxBlockers} allowed)`
+    );
+  if (majorsBreached)
+    breaches.push(`${counts.Major} major ${counts.Major === 1 ? 'problem' : 'problems'} (${maxMajors} allowed)`);
+  if (minorsBreached)
+    breaches.push(`${counts.Minor} minor ${counts.Minor === 1 ? 'problem' : 'problems'} (${maxMinors} allowed)`);
 
   const ready = !blockersBreached && !majorsBreached && !minorsBreached;
   const mustFix = counts.Blocker + counts.Major;
@@ -76,9 +84,10 @@ export function releaseVerdict(
 
   let reason = '';
   if (ready) {
-    reason = others === 0
-      ? 'No problems found.'
-      : `Nothing blocks release under active quality gates. ${others} smaller ${others === 1 ? 'problem is' : 'problems are'} worth fixing.`;
+    reason =
+      others === 0
+        ? 'No problems found.'
+        : `Nothing blocks release under active quality gates. ${others} smaller ${others === 1 ? 'problem is' : 'problems are'} worth fixing.`;
   } else {
     reason = gate
       ? `Quality gate breached: ${breaches.join(' and ')} must be fixed first.`

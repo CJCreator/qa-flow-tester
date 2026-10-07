@@ -49,7 +49,10 @@ describe('DiscoveryAgent E2E Pipeline', () => {
 
     // Verify draft file was written
     const draftFilePath = path.join(outputDir, 'discovery-draft.json');
-    const draftFileExists = await fs.stat(draftFilePath).then(() => true).catch(() => false);
+    const draftFileExists = await fs
+      .stat(draftFilePath)
+      .then(() => true)
+      .catch(() => false);
     expect(draftFileExists).toBe(true);
 
     // 2. Plan Spec

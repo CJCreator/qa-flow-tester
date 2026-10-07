@@ -19,12 +19,7 @@ export type TriageStatus = 'Pending' | 'Confirmed' | 'Intended' | 'False Positiv
 
 export type Breakpoint = '375px' | '768px' | '1440px';
 
-export type TestPointStatus =
-  | 'Passed'
-  | 'Failed'
-  | 'Blocked'
-  | 'Skipped'
-  | 'Could not verify';
+export type TestPointStatus = 'Passed' | 'Failed' | 'Blocked' | 'Skipped' | 'Could not verify';
 
 export interface TestCaseStep {
   /** 'check-link' fetches `value` (a link's address) once and fails only if the link is broken; nothing is clicked. */
@@ -402,13 +397,7 @@ export interface RunSummary {
   testedWithApprovedPlan?: string;
 }
 
-export type AspectType =
-  | 'Works'
-  | 'Accessible'
-  | 'Fast and mobile'
-  | 'Findable'
-  | 'Secure'
-  | 'Looks and reads well';
+export type AspectType = 'Works' | 'Accessible' | 'Fast and mobile' | 'Findable' | 'Secure' | 'Looks and reads well';
 
 export type AspectGrade = 'A' | 'B' | 'C' | 'D' | 'F';
 
@@ -499,7 +488,14 @@ export interface SiteHistoryDiff {
 /** Pages and journeys of a planned run, for drawing the site map in a report. */
 export interface SiteMapSummary {
   siteType?: string;
-  pages: Array<{ urlPath: string; title: string; layoutGroup?: string; screenshotPath?: string; isNew?: boolean; reachedBy?: string[] }>;
+  pages: Array<{
+    urlPath: string;
+    title: string;
+    layoutGroup?: string;
+    screenshotPath?: string;
+    isNew?: boolean;
+    reachedBy?: string[];
+  }>;
   journeys: Array<{
     id: string;
     name: string;
@@ -720,7 +716,6 @@ export interface DiscoveryDraft {
   plan?: DraftPlan;
 }
 
-
 // --- Phase 3: Hub, Consolidation, Design & UX Types ---
 
 export * from './fingerprint.js';
@@ -744,30 +739,6 @@ import type {
   PlanWontRun,
 } from './plan.js';
 
-export type FindingLifecycleStatus = 'OPEN' | 'VERIFIED_FIXED' | 'REGRESSED' | 'ACCEPTED_RISK';
-
-export interface EvidenceItemManifest {
-  clientKey: string;
-  fileType: 'screenshot' | 'video' | 'trace' | 'dom' | 'har' | 'log';
-  mimeType: string;
-  fileSize: number;
-}
-
-export interface RunManifestInitInput {
-  productId: string;
-  releaseTarget: string;
-  commitHash?: string;
-  developerId?: string;
-  machineId?: string;
-  branch?: string;
-  evidenceItems: EvidenceItemManifest[];
-}
-
-export interface RunManifestInitResponse {
-  runId: string;
-  uploadUrls: Record<string, { uploadUrl: string; storageKey: string }>;
-}
-
 export interface RetryTelemetryEntry {
   flowId: string;
   testCaseId: string;
@@ -775,59 +746,6 @@ export interface RetryTelemetryEntry {
   retryCount: number;
   status: 'FLAKY_PASSED' | 'FAILED';
   errorMessage?: string;
-}
-
-export interface RunFinalizeInput {
-  runId: string;
-  durationMs: number;
-  coverage: RunCoverage;
-  testPoints: TestPointResult[];
-  findings: Finding[];
-  evidenceUploaded: string[];
-  retryTelemetry?: RetryTelemetryEntry[];
-}
-
-export interface CanonicalFinding {
-  id: string;
-  fingerprint: string;
-  productId: string;
-  releaseTarget: string;
-  checker: CheckerType;
-  ruleCode: string;
-  title: string;
-  severity: FindingSeverity;
-  route: string;
-  selector?: string;
-  status: FindingLifecycleStatus;
-  firstSeenRunId: string;
-  lastSeenRunId: string;
-  firstSeenAt: string;
-  lastSeenAt: string;
-  occurrenceCount: number;
-  runFindings: Array<{
-    runId: string;
-    testCaseId?: string;
-    flowId?: string;
-    stepIndex?: number;
-    evidenceUrls?: string[];
-    timestamp: string;
-  }>;
-}
-
-export interface ConsolidatedReleaseReport {
-  productId: string;
-  releaseTarget: string;
-  lastConsolidatedAt: string;
-  totalRuns: number;
-  summary: {
-    totalFindings: number;
-    open: number;
-    verifiedFixed: number;
-    regressed: number;
-    acceptedRisk: number;
-    flakyFlowsCount: number;
-  };
-  canonicalFindings: CanonicalFinding[];
 }
 
 export interface DesignTokens {
@@ -851,18 +769,6 @@ export interface AccountPoolConfig {
     password?: string;
     token?: string;
   }>;
-}
-
-export interface OutboxQueueEntry {
-  id: string;
-  runId: string;
-  initPayload: RunManifestInitInput;
-  finalizePayload: RunFinalizeInput;
-  evidenceFiles: Array<{ localFilePath: string; clientKey: string }>;
-  createdAt: string;
-  retryAttempts: number;
-  lastAttemptAt?: string;
-  error?: string;
 }
 
 // --- Phase 4: Competitive & Reference Public Flow Analysis Types ---
@@ -1071,4 +977,3 @@ export interface ReviewPlan {
   /** Other hosts the site links to. */
   otherHosts?: PlanOtherHost[];
 }
-

@@ -15,6 +15,6 @@ services:
     autoDeploy: true
     envVars:
       - key: RUNNER_BETA
-        value: "1"
+        value: '1'
       - key: RUNNER_HOST
         value: 0.0.0.0

@@ -77,7 +77,11 @@ export function calculateSiteAspectGrades(
     // Group findings by finding title/category to evaluate spread across pages
     // A finding counts toward its own area when it names one (a missing viewport tag is about phones).
     const aspectFindings = findings.filter(
-      (f) => aspectOfFinding(f) === aspect && !f.needsConfirmation && f.triageStatus !== 'False Positive' && f.triageStatus !== 'Intended'
+      (f) =>
+        aspectOfFinding(f) === aspect &&
+        !f.needsConfirmation &&
+        f.triageStatus !== 'False Positive' &&
+        f.triageStatus !== 'Intended'
     );
 
     let totalDeduction = 0;
@@ -85,7 +89,10 @@ export function calculateSiteAspectGrades(
     const findingIds: string[] = [];
 
     // Group duplicate findings by title/code to avoid double penalizing the same recurring bug
-    const grouped = new Map<string, { severity: FindingSeverity; pages: Set<string>; ids: string[]; opinion: boolean }>();
+    const grouped = new Map<
+      string,
+      { severity: FindingSeverity; pages: Set<string>; ids: string[]; opinion: boolean }
+    >();
     for (const f of aspectFindings) {
       findingIds.push(f.id);
       const key = problemKey(f);
@@ -127,7 +134,9 @@ export function calculateSiteAspectGrades(
     };
 
     if (aspect === 'Findable') {
-      const seoFindings = aspectFindings.filter((f) => f.categoryTag === 'SEO' || (!f.categoryTag && f.checker === 'seo'));
+      const seoFindings = aspectFindings.filter(
+        (f) => f.categoryTag === 'SEO' || (!f.categoryTag && f.checker === 'seo')
+      );
       const aeoFindings = aspectFindings.filter((f) => f.categoryTag === 'AEO');
       const geoFindings = aspectFindings.filter((f) => f.categoryTag === 'GEO');
       const marketingFindings = aspectFindings.filter((f) => f.categoryTag === 'MKT');

@@ -3,7 +3,12 @@ import type { ElementInventoryItem, PageInventoryItem } from '@qa/types';
 import { detectSiteType, generateFallbackJourneys } from '../src/discovery/site-type.js';
 import type { SpiderResult } from '../src/discovery/deterministic-spider.js';
 
-const el = (role: string, name: string, selector: string, extra: Partial<ElementInventoryItem> = {}): ElementInventoryItem => ({
+const el = (
+  role: string,
+  name: string,
+  selector: string,
+  extra: Partial<ElementInventoryItem> = {}
+): ElementInventoryItem => ({
   role,
   name,
   selector,
@@ -13,7 +18,12 @@ const el = (role: string, name: string, selector: string, extra: Partial<Element
   ...extra,
 });
 
-const page = (urlPath: string, title: string, elements: ElementInventoryItem[] = [], extra: Partial<PageInventoryItem> = {}): PageInventoryItem => ({
+const page = (
+  urlPath: string,
+  title: string,
+  elements: ElementInventoryItem[] = [],
+  extra: Partial<PageInventoryItem> = {}
+): PageInventoryItem => ({
   urlPath,
   title,
   interactiveElementsCount: elements.length,
@@ -33,7 +43,9 @@ const spider = (pages: PageInventoryItem[], forms: SpiderResult['forms'] = []): 
 // What the scan of books.toscrape.com records (its address says nothing about shopping).
 const books = [
   page('/', 'All products | Books to Scrape - Sandbox', [
-    el('link', 'A Light in the Attic', 'role=link[name="A Light in the Attic"]', { href: 'catalogue/a-light-in-the-attic_1000/index.html' }),
+    el('link', 'A Light in the Attic', 'role=link[name="A Light in the Attic"]', {
+      href: 'catalogue/a-light-in-the-attic_1000/index.html',
+    }),
     el('button', 'Add to basket', 'role=button[name="Add to basket"]', { insideForm: true }),
   ]),
   page('/catalogue/a-light-in-the-attic_1000/index.html', 'A Light in the Attic | Books to Scrape - Sandbox', [
@@ -42,7 +54,9 @@ const books = [
 ];
 
 // TodoMVC: one screen, one field outside any form.
-const todo = [page('/todomvc/', 'React • TodoMVC', [el('textbox', 'What needs to be done?', '.new-todo', { inputType: 'text' })])];
+const todo = [
+  page('/todomvc/', 'React • TodoMVC', [el('textbox', 'What needs to be done?', '.new-todo', { inputType: 'text' })]),
+];
 
 describe('Site type (Task 1.4 / D4)', () => {
   it('names a shop from its pages and buttons, not its address', () => {
@@ -62,7 +76,10 @@ describe('Site type (Task 1.4 / D4)', () => {
     const saas = [page('/dashboard', 'Team Dashboard', [el('button', 'Upgrade Plan', 'button.upgrade')])];
     expect(detectSiteType(saas, 'https://cloud-app.io/dashboard')).toBe('SaaS');
 
-    const content = [page('/blog/first-post', 'Company Blog Articles & News'), page('/guides/getting-started', 'Documentation Guide')];
+    const content = [
+      page('/blog/first-post', 'Company Blog Articles & News'),
+      page('/guides/getting-started', 'Documentation Guide'),
+    ];
     expect(detectSiteType(content, 'https://news-docs.org')).toBe('content');
   });
 
@@ -76,7 +93,9 @@ describe('Journeys without AI', () => {
   it('plans browse → book for a shop, plus a visit to the main pages', () => {
     const journeys = generateFallbackJourneys('shop', spider(books));
     const browse = journeys.find((j) => j.name === 'Browse and view product');
-    expect(browse?.steps.some((s) => s.action === 'click' && s.selector === 'role=link[name="A Light in the Attic"]')).toBe(true);
+    expect(
+      browse?.steps.some((s) => s.action === 'click' && s.selector === 'role=link[name="A Light in the Attic"]')
+    ).toBe(true);
     expect(journeys.at(-1)?.name).toBe('Visit the main pages');
     for (const j of journeys) {
       expect(j.description.length, j.name).toBeGreaterThan(10);
@@ -90,7 +109,11 @@ describe('Journeys without AI', () => {
   });
 
   it('sends each ordinary form, never the sign-in form', () => {
-    const pages = [page('/', 'Home'), page('/contact', 'Contact Us'), page('/login', 'Sign in', [], { hasSignInForm: true })];
+    const pages = [
+      page('/', 'Home'),
+      page('/contact', 'Contact Us'),
+      page('/login', 'Sign in', [], { hasSignInForm: true }),
+    ];
     const forms: SpiderResult['forms'] = [
       {
         action: '/contact',

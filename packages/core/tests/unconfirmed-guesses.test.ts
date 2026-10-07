@@ -30,8 +30,10 @@ const INVOICE = `<!doctype html><html lang="en"><head><title>Create Invoice</tit
 const PAGES: Record<string, string> = {
   '/login': LOGIN,
   '/invoices/new': INVOICE,
-  '/saved': '<!doctype html><html lang="en"><head><title>Saved</title></head><body><nav><a href="/login">Home</a></nav><main><h1>Invoice saved</h1></main></body></html>',
-  '/inventory': '<!doctype html><html lang="en"><head><title>Inventory</title></head><body><nav><a href="/login">Home</a></nav><main><h1>Products</h1></main></body></html>',
+  '/saved':
+    '<!doctype html><html lang="en"><head><title>Saved</title></head><body><nav><a href="/login">Home</a></nav><main><h1>Invoice saved</h1></main></body></html>',
+  '/inventory':
+    '<!doctype html><html lang="en"><head><title>Inventory</title></head><body><nav><a href="/login">Home</a></nav><main><h1>Products</h1></main></body></html>',
 };
 
 const loginCase: TestCase = {
@@ -45,7 +47,16 @@ const loginCase: TestCase = {
     { action: 'click', selector: '#login-button', name: 'Log in' },
   ],
   expectations: { origin: 'ai-guess', url: { pattern: '/inventory' } },
-  validationRules: [{ field: 'user-name', selector: '#user-name', min: 0, max: 50, expectedError: 'Field is empty', origin: 'ai-guess' }],
+  validationRules: [
+    {
+      field: 'user-name',
+      selector: '#user-name',
+      min: 0,
+      max: 50,
+      expectedError: 'Field is empty',
+      origin: 'ai-guess',
+    },
+  ],
 };
 
 const invoiceCase: TestCase = {
@@ -59,7 +70,15 @@ const invoiceCase: TestCase = {
   ],
   // The AI guessed the wrong page and wording.
   expectations: { origin: 'ai-guess', url: { pattern: '^/invoices/new$' }, text: { contains: 'Invoice created' } },
-  validationRules: [{ field: 'amount', selector: '#amount', min: 1, expectedError: 'Amount must be greater than zero', origin: 'ai-guess' }],
+  validationRules: [
+    {
+      field: 'amount',
+      selector: '#amount',
+      min: 1,
+      expectedError: 'Amount must be greater than zero',
+      origin: 'ai-guess',
+    },
+  ],
 };
 
 describe('Validation expander with guessed rules', () => {
@@ -70,13 +89,22 @@ describe('Validation expander with guessed rules', () => {
     expect(empty.steps[0].value).toBe('');
     expect(empty.expectations).toEqual({
       origin: 'ai-guess',
-      validationError: { field: 'user-name', selector: '#user-name', description: 'An error appears when "user-name" is left empty' },
+      validationError: {
+        field: 'user-name',
+        selector: '#user-name',
+        description: 'An error appears when "user-name" is left empty',
+      },
     });
   });
 
   it('skips a guessed rule for a field the flow never fills', () => {
     const expanded = expandValidationTestCases([
-      { ...loginCase, validationRules: [{ field: 'coupon', selector: '#coupon', expectedError: 'Invalid coupon', origin: 'ai-guess' }] },
+      {
+        ...loginCase,
+        validationRules: [
+          { field: 'coupon', selector: '#coupon', expectedError: 'Invalid coupon', origin: 'ai-guess' },
+        ],
+      },
     ]);
     expect(expanded).toHaveLength(1);
   });
@@ -157,7 +185,9 @@ describe('Unconfirmed guesses never fail a site', () => {
     const report = await new FlowTestOrchestrator().run({
       targetUrl: baseUrl,
       productId: 'guesses',
-      specTestCases: [{ ...invoiceCase, validationRules: undefined, expectations: { text: { contains: 'Invoice created' } } }],
+      specTestCases: [
+        { ...invoiceCase, validationRules: undefined, expectations: { text: { contains: 'Invoice created' } } },
+      ],
       outputDir: path.join(outputDir, 'confirmed'),
       breakpoints: ['1440px'],
       enableA11y: false,
@@ -165,7 +195,10 @@ describe('Unconfirmed guesses never fail a site', () => {
     });
 
     expect(report.results[0].status).toBe('Failed');
-    expect(report.findings[0]).toMatchObject({ severity: 'Major', title: 'Expected text not found: "Invoice created"' });
+    expect(report.findings[0]).toMatchObject({
+      severity: 'Major',
+      title: 'Expected text not found: "Invoice created"',
+    });
     expect(report.findings[0].needsConfirmation).toBeUndefined();
   }, 60000);
 });

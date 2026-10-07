@@ -21,7 +21,10 @@ const AREAS: Array<{ name: string; text: string }> = [
 const PROMISES: Array<{ title: string; text: string }> = [
   { title: 'Looks, never touches', text: 'On a live site nothing is filled in, sent or changed.' },
   { title: 'You approve every test', text: 'Nothing is tested until you have read and approved the plan.' },
-  { title: 'Test copies only for forms', text: 'Filling in and sending forms is for a test copy of your site, and only if you choose it.' },
+  {
+    title: 'Test copies only for forms',
+    text: 'Filling in and sending forms is for a test copy of your site, and only if you choose it.',
+  },
 ];
 
 /**
@@ -48,7 +51,12 @@ function SampleReportFrame() {
           <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-edge" />
           <span className="ml-2">Example report</span>
         </div>
-        <iframe src={SAMPLE_REPORT_URL} title="A real sample report" loading="lazy" className="block h-[24rem] w-full bg-canvas sm:h-[28rem] lg:h-[34rem]" />
+        <iframe
+          src={SAMPLE_REPORT_URL}
+          title="A real sample report"
+          loading="lazy"
+          className="block h-[24rem] w-full bg-canvas sm:h-[28rem] lg:h-[34rem]"
+        />
       </div>
       <figcaption className="mt-3 text-sm text-ink-soft">
         A real check-up of a small demo site with a few known problems.{' '}
@@ -67,7 +75,15 @@ function AddressForm() {
       <label htmlFor="hero-url" className="sr-only">
         Your site’s address
       </label>
-      <input id="hero-url" name="url" type="text" inputMode="url" autoComplete="url" placeholder="https://your-site.com" className="field min-h-[48px] flex-1" />
+      <input
+        id="hero-url"
+        name="url"
+        type="text"
+        inputMode="url"
+        autoComplete="url"
+        placeholder="https://your-site.com"
+        className="field min-h-[48px] flex-1"
+      />
       <button type="submit" className="btn-primary whitespace-nowrap px-8">
         Run a free check-up
       </button>
@@ -91,7 +107,8 @@ const SECTION = 'mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20';
 export function LandingScreen() {
   useDocumentTitle(LANDING_TITLE);
   const wake = useWakeOnline();
-  const link = 'inline-flex min-h-[44px] items-center rounded px-2 text-sm font-bold text-ink-soft transition-colors hover:text-ink';
+  const link =
+    'inline-flex min-h-[44px] items-center rounded px-2 text-sm font-bold text-ink-soft transition-colors hover:text-ink';
 
   return (
     <>
@@ -123,11 +140,15 @@ export function LandingScreen() {
         <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14">
           <div>
             <p className="mb-4 font-mono text-sm text-stamp">Release check-up · free during the beta</p>
-            <h1 id="hero-title" className="text-[clamp(2.5rem,1.6rem+4vw,4.25rem)] font-bold leading-[1.05] tracking-tight">
+            <h1
+              id="hero-title"
+              className="text-[clamp(2.5rem,1.6rem+4vw,4.25rem)] font-bold leading-[1.05] tracking-tight"
+            >
               QA without a QA team.
             </h1>
             <p className="mb-8 mt-5 max-w-prose text-xl text-ink-soft">
-              Find out whether your site is ready to release before your users do. Paste its address and get a plain-words verdict, with the problems in priority order.
+              Find out whether your site is ready to release before your users do. Paste its address and get a
+              plain-words verdict, with the problems in priority order.
             </p>
             <AddressForm />
             <div className="mt-3 flex flex-wrap items-center gap-4">
@@ -135,7 +156,9 @@ export function LandingScreen() {
                 See a sample report
               </a>
             </div>
-            <p className="mt-3 text-sm text-ink-soft">No sign-up. On a live site it only looks: nothing is filled in, sent or changed.</p>
+            <p className="mt-3 text-sm text-ink-soft">
+              No sign-up. On a live site it only looks: nothing is filled in, sent or changed.
+            </p>
             <WakeNote state={wake} />
           </div>
           <SampleReportFrame />
@@ -147,7 +170,8 @@ export function LandingScreen() {
           What it will and won’t do to your site
         </h2>
         <p className="sr-only">
-          Release check-up only reads and inspects live sites safely without changing, submitting, or modifying any data, strictly adhering to robots.txt and privacy rules.
+          Release check-up only reads and inspects live sites safely without changing, submitting, or modifying any
+          data, strictly adhering to robots.txt and privacy rules.
         </p>
         <ul className="grid gap-4 sm:grid-cols-3">
           {PROMISES.map((p) => (
@@ -176,7 +200,10 @@ export function LandingScreen() {
 
       <section aria-labelledby="areas-title" className="border-y border-rule bg-panel">
         <div className={SECTION}>
-          <SectionTitle id="areas-title" lead="One verdict across the things a release can get wrong, with a grade for each.">
+          <SectionTitle
+            id="areas-title"
+            lead="One verdict across the things a release can get wrong, with a grade for each."
+          >
             What it looks at
           </SectionTitle>
           <ul className="mt-8 grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -191,7 +218,10 @@ export function LandingScreen() {
       </section>
 
       <section aria-labelledby="sample-title" className={SECTION}>
-        <SectionTitle id="sample-title" lead="A real check-up of a small demo site we built with a few known problems. Nothing here is mocked up.">
+        <SectionTitle
+          id="sample-title"
+          lead="A real check-up of a small demo site we built with a few known problems. Nothing here is mocked up."
+        >
           See a real report before you run anything
         </SectionTitle>
         <p className="mt-6">
@@ -205,10 +235,14 @@ export function LandingScreen() {
         <div className={SECTION}>
           <SectionTitle id="pricing-title">Free while we’re in beta</SectionTitle>
           <p className="mt-3 max-w-prose text-ink-soft">
-            Free check-ups, nothing to pay today. Paid plans are planned for heavier use, and we’ll say so well before anything is charged. The AI that writes your plan uses your own key (OpenRouter’s free models work), or you can skip AI and let fixed rules write the plan.
+            Free check-ups, nothing to pay today. Paid plans are planned for heavier use, and we’ll say so well before
+            anything is charged. The AI that writes your plan uses your own key (OpenRouter’s free models work), or you
+            can skip AI and let fixed rules write the plan.
           </p>
           <p className="mt-4 max-w-prose text-ink-soft">
-            The online copy is shared and runs one check-up at a time on public sites. It sleeps when idle, so the first visit can take about a minute. For private sites, or to keep everything on your own machine, run it yourself from the source.
+            The online copy is shared and runs one check-up at a time on public sites. It sleeps when idle, so the first
+            visit can take about a minute. For private sites, or to keep everything on your own machine, run it yourself
+            from the source.
           </p>
         </div>
       </section>
@@ -227,7 +261,10 @@ export function LandingScreen() {
 
       <section aria-labelledby="final-title" className="border-t border-rule bg-canvas">
         <div className={`${SECTION} text-center`}>
-          <h2 id="final-title" className="mx-auto max-w-prose text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
+          <h2
+            id="final-title"
+            className="mx-auto max-w-prose text-3xl font-bold leading-tight tracking-tight sm:text-4xl"
+          >
             Find out if you’re ready to ship
           </h2>
           <p className="mx-auto mt-3 max-w-prose text-ink-soft">It takes an address and a few minutes of reading.</p>

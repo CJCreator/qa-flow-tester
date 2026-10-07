@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  computeStructuralFingerprint,
-  normalizeRoute,
-  normalizeSelector,
-} from '../src/fingerprint.js';
+import { computeStructuralFingerprint, normalizeRoute, normalizeSelector } from '../src/fingerprint.js';
 
 describe('Structural Fingerprinting & Normalization', () => {
   describe('normalizeRoute', () => {

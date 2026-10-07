@@ -77,12 +77,20 @@ export function publicOrigin(req: http.IncomingMessage): string {
   if (configured && /^https?:\/\/[\w.-]+(:\d+)?$/.test(configured)) return configured;
   const host = String(req.headers['x-forwarded-host'] || req.headers.host || 'localhost');
   const safeHost = /^[\w.-]+(:\d+)?$/.test(host) ? host : 'localhost';
-  const proto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim() === 'https' ? 'https' : 'http';
+  const proto =
+    String(req.headers['x-forwarded-proto'] || '')
+      .split(',')[0]
+      .trim() === 'https'
+      ? 'https'
+      : 'http';
   return `${proto}://${safeHost}`;
 }
 
 function seoHeaders(pathname: string, ext: string): Record<string, string> {
-  const headers: Record<string, string> = { 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'strict-origin-when-cross-origin' };
+  const headers: Record<string, string> = {
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+  };
   // Pages (no file extension) other than the home page are private app screens.
   if ((ext === '' || ext === '.html') && !PUBLIC_PATHS.has(pathname.replace(/\/+$/, '') || '/')) {
     headers['X-Robots-Tag'] = 'noindex, nofollow';
@@ -100,7 +108,12 @@ function send(
   extra: Record<string, string> = {}
 ): void {
   const content = typeof body === 'string' ? Buffer.from(body) : body;
-  res.writeHead(status, { 'Content-Type': type, 'Content-Length': content.length, 'Cache-Control': cacheControl, ...extra });
+  res.writeHead(status, {
+    'Content-Type': type,
+    'Content-Length': content.length,
+    'Cache-Control': cacheControl,
+    ...extra,
+  });
   res.end(req.method === 'HEAD' ? undefined : content);
 }
 
@@ -140,7 +153,9 @@ export async function serveUi(
     if (content) {
       const type = CONTENT_TYPES[path.extname(file).toLowerCase()] || 'application/octet-stream';
       const ext = path.extname(file).toLowerCase();
-      const body = TEMPLATED.has(ext) ? Buffer.from(content.toString('utf8').replaceAll('%ORIGIN%', publicOrigin(req))) : content;
+      const body = TEMPLATED.has(ext)
+        ? Buffer.from(content.toString('utf8').replaceAll('%ORIGIN%', publicOrigin(req)))
+        : content;
       send(req, res, 200, type, body, relative.startsWith('assets/') ? FOREVER : 'no-cache', seoHeaders(pathname, ext));
       return true;
     }

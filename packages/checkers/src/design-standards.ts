@@ -104,7 +104,10 @@ export class DesignStandardsChecker {
           }
 
           // 3. Border radius
-          if (toks.borderRadius?.md && (testId.includes('card') || testId.includes('btn') || testId.includes('button'))) {
+          if (
+            toks.borderRadius?.md &&
+            (testId.includes('card') || testId.includes('btn') || testId.includes('button'))
+          ) {
             const br = computed.borderRadius;
             if (br && br !== '0px') {
               results.push({

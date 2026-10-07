@@ -27,9 +27,7 @@ describe('AI Visual and Copy Review (visual-review.ts)', () => {
     {
       layoutGroup: 'layout-blog',
       urlPath: '/blog',
-      screenshots: [
-        { breakpoint: '375px', base64Data: 'data:image/png;base64,stu' },
-      ],
+      screenshots: [{ breakpoint: '375px', base64Data: 'data:image/png;base64,stu' }],
     },
   ];
 
@@ -108,7 +106,14 @@ describe('AI Visual and Copy Review (visual-review.ts)', () => {
       },
     };
     const result = await reviewer.reviewScreens(
-      [{ layoutGroup: 'gone', urlPath: '/gone', screenshots: [{ breakpoint: '1440px', imagePath: 'no/such/screenshot.png' }] }, mockScreens[0]],
+      [
+        {
+          layoutGroup: 'gone',
+          urlPath: '/gone',
+          screenshots: [{ breakpoint: '1440px', imagePath: 'no/such/screenshot.png' }],
+        },
+        mockScreens[0],
+      ],
       provider,
       { maxCalls: 5 }
     );

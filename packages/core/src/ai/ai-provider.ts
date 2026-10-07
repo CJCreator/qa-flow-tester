@@ -8,7 +8,11 @@ export interface AIProvider {
 }
 
 /** Asks the AI and returns its answer with whatever the provider can say about it. */
-export async function completeWith(ai: AIProvider, messages: AIMessage[], options?: AICompletionOptions): Promise<AICompletion> {
+export async function completeWith(
+  ai: AIProvider,
+  messages: AIMessage[],
+  options?: AICompletionOptions
+): Promise<AICompletion> {
   if (ai.complete) return ai.complete(messages, options);
   return { text: await ai.generateText(messages, options) };
 }
@@ -44,11 +48,7 @@ export function createAIProvider(
       return new AnthropicProvider(apiKey, undefined, defaultModel);
     case 'openai':
     case 'openrouter':
-      return new OpenAIProvider(
-        apiKey,
-        type === 'openrouter' ? 'https://openrouter.ai/api/v1' : baseUrl,
-        defaultModel
-      );
+      return new OpenAIProvider(apiKey, type === 'openrouter' ? 'https://openrouter.ai/api/v1' : baseUrl, defaultModel);
     case 'gemini':
       return new GeminiProvider(apiKey, defaultModel);
     case 'mock':

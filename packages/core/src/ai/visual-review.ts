@@ -46,7 +46,7 @@ export class VisualReviewer {
     const totalCount = screens.length;
 
     // Graceful skip if no AI provider / key available
-    if (!aiProvider || aiProvider.providerType === 'mock' && !process.env.TEST_MOCK_AI) {
+    if (!aiProvider || (aiProvider.providerType === 'mock' && !process.env.TEST_MOCK_AI)) {
       // In production without real key, or mock when not testing mock
       if (!aiProvider) {
         return {
@@ -175,7 +175,12 @@ Respond ONLY with a JSON object:
     );
 
     try {
-      const parsed = JSON.parse(response.replace(/```json/gi, '').replace(/```/g, '').trim());
+      const parsed = JSON.parse(
+        response
+          .replace(/```json/gi, '')
+          .replace(/```/g, '')
+          .trim()
+      );
       return Array.isArray(parsed?.issues) ? parsed.issues : [];
     } catch {
       return [];

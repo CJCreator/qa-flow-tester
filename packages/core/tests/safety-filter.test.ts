@@ -42,7 +42,9 @@ describe('SafetyFilter', () => {
     const question = filter.createAmbiguityQuestion(sensitive, 1);
     expect(question.id).toBe('Q-SENSITIVE-1');
     expect(question.category).toBe('sensitive_action');
-    expect(question.question).toBe('“Delete Account” on /settings looks like it deletes something. Should the tests press it?');
+    expect(question.question).toBe(
+      '“Delete Account” on /settings looks like it deletes something. Should the tests press it?'
+    );
     // The safe answer is never to press it, and the key stays the same from run to run.
     expect(question.safeAnswer).toBe('Don’t press it');
     expect(question.options).toContain(question.safeAnswer);

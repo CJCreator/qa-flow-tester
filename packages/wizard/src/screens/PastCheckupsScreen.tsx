@@ -16,7 +16,9 @@ const COUNT_WORDS: Array<[FindingSeverity, string, string]> = [
 
 /** "2 block release · 3 minor", or "No problems". */
 function countsLine(counts: RunSummary['counts']): string {
-  const parts = COUNT_WORDS.filter(([s]) => counts[s] > 0).map(([s, one, many]) => `${counts[s]} ${counts[s] === 1 ? one : many}`);
+  const parts = COUNT_WORDS.filter(([s]) => counts[s] > 0).map(
+    ([s, one, many]) => `${counts[s]} ${counts[s] === 1 ? one : many}`
+  );
   return parts.length ? parts.join(' · ') : 'No problems';
 }
 
@@ -45,7 +47,9 @@ export function PastCheckupsScreen({
         setRuns(list);
         setError(null);
       })
-      .catch((err) => setError(err instanceof RunnerError ? err.message : 'Couldn’t list your past check-ups. Try again.'));
+      .catch((err) =>
+        setError(err instanceof RunnerError ? err.message : 'Couldn’t list your past check-ups. Try again.')
+      );
   }, []);
   useEffect(load, [load]);
 
@@ -54,8 +58,8 @@ export function PastCheckupsScreen({
       title: 'Delete this check-up?',
       body: (
         <p>
-          The report of {run.host} from {formatWhen(run.timestamp)}, with its screenshots, is deleted from this computer. This can’t be
-          undone. The site’s grade history is kept.
+          The report of {run.host} from {formatWhen(run.timestamp)}, with its screenshots, is deleted from this
+          computer. This can’t be undone. The site’s grade history is kept.
         </p>
       ),
       confirmLabel: 'Delete the check-up',
@@ -75,7 +79,9 @@ export function PastCheckupsScreen({
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
       <Question>Past check-ups</Question>
-      <p className="mb-8 max-w-prose text-ink-soft">The last ten check-ups of each site are kept on this computer. Older ones are deleted by themselves.</p>
+      <p className="mb-8 max-w-prose text-ink-soft">
+        The last ten check-ups of each site are kept on this computer. Older ones are deleted by themselves.
+      </p>
 
       {error && <ErrorMessage>{error}</ErrorMessage>}
       {actionError && <ErrorMessage>{actionError}</ErrorMessage>}
@@ -97,7 +103,10 @@ export function PastCheckupsScreen({
           return (
             <section key={site} aria-labelledby={`site-${site}`}>
               <h2 id={`site-${site}`} className="mb-3 break-all text-xl font-bold">
-                {site} <span className="text-base font-normal text-ink-soft">({count(ofSite.length, 'check-up', 'check-ups')})</span>
+                {site}{' '}
+                <span className="text-base font-normal text-ink-soft">
+                  ({count(ofSite.length, 'check-up', 'check-ups')})
+                </span>
               </h2>
               <ul className="space-y-3">
                 {ofSite.map((run) => (
@@ -111,11 +120,17 @@ export function PastCheckupsScreen({
                           {run.readOnly ? ' · only looked at' : ''}
                         </p>
                         {run.testedWithApprovedPlan && (
-                          <p className="text-sm text-ink-soft">Tested with the plan you approved on {formatDay(run.testedWithApprovedPlan)}.</p>
+                          <p className="text-sm text-ink-soft">
+                            Tested with the plan you approved on {formatDay(run.testedWithApprovedPlan)}.
+                          </p>
                         )}
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <Link to={PATHS.report(run.runId)} className="btn-primary min-h-[44px] px-4 text-sm" aria-label={`Open the check-up of ${run.host} from ${formatWhen(run.timestamp)}`}>
+                        <Link
+                          to={PATHS.report(run.runId)}
+                          className="btn-primary min-h-[44px] px-4 text-sm"
+                          aria-label={`Open the check-up of ${run.host} from ${formatWhen(run.timestamp)}`}
+                        >
                           Open
                         </Link>
                         <button

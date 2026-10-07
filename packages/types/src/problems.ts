@@ -18,7 +18,14 @@ export const ASPECT_CHECKERS: Record<AspectType, CheckerType[]> = {
   'Looks and reads well': ['design-standards', 'ai-review'],
 };
 
-export const ASPECTS: AspectType[] = ['Works', 'Accessible', 'Fast and mobile', 'Findable', 'Secure', 'Looks and reads well'];
+export const ASPECTS: AspectType[] = [
+  'Works',
+  'Accessible',
+  'Fast and mobile',
+  'Findable',
+  'Secure',
+  'Looks and reads well',
+];
 
 export function aspectOfChecker(checker: CheckerType): AspectType {
   return ASPECTS.find((a) => ASPECT_CHECKERS[a].includes(checker)) ?? 'Works';
@@ -38,7 +45,8 @@ export function plainTitleText(t: string): string {
   if (/^Uncaught Exception/.test(t)) return 'The page crashed while it was running';
   if (/^Console Error/.test(t)) return 'The page reported an error behind the scenes';
   if ((m = t.match(/^Step failed: "(.+)"$/))) return `Couldn’t complete “${m[1]}”`;
-  if ((m = t.match(/^Touch target too small: (.+?) \(\d+x\d+px\)$/))) return `“${m[1].replace(/^["“]|["”]$/g, '')}” is too small to tap easily on a phone`;
+  if ((m = t.match(/^Touch target too small: (.+?) \(\d+x\d+px\)$/)))
+    return `“${m[1].replace(/^["“]|["”]$/g, '')}” is too small to tap easily on a phone`;
   if (/^Touch target too small/.test(t)) return 'A button is too small to tap easily on a phone';
   if (/^Dead End Page/.test(t)) return 'A page has no way back or menu to leave it';
   if (/^Horizontal page overflow/.test(t)) return 'The page is wider than the screen and scrolls sideways';
@@ -46,7 +54,11 @@ export function plainTitleText(t: string): string {
   if (/^Design Token Mismatch/.test(t)) return 'A colour or shape doesn’t match the design';
   if ((m = t.match(/^\[AI Review\]\s*(.+)$/))) return m[1];
   if ((m = t.match(/^URL did not match expected pattern:?\s*["']?(?:\^)?(.*?)(?:\$)?["']?$/i))) {
-    const raw = m[1].replace(/\\\//g, '/').replace(/\/\.\*$/, '').replace(/\\[a-zA-Z0-9+*.]+/g, '').replace(/\/+$/, '');
+    const raw = m[1]
+      .replace(/\\\//g, '/')
+      .replace(/\/\.\*$/, '')
+      .replace(/\\[a-zA-Z0-9+*.]+/g, '')
+      .replace(/\/+$/, '');
     const target = raw || 'the expected page';
     return `Didn’t reach “${target}” as expected`;
   }
@@ -87,27 +99,43 @@ export function plainTitleText(t: string): string {
   if (/Page has multiple <h1> headings/i.test(t)) return 'The page has more than one main heading';
   if (/Heading levels skipped/i.test(t)) return 'Headings skip a level';
   if (/<html> element is missing a lang attribute/i.test(t)) return 'The page doesn’t say what language it’s in';
-  if (/Page is missing a canonical URL tag/i.test(t)) return 'The page doesn’t name its main address for search engines';
-  if (/Page contains multiple canonical URL tags/i.test(t)) return 'The page names more than one main address for search engines';
-  if (/Page has a noindex directive preventing search engine indexing/i.test(t)) return 'Search engines are told not to list this page';
+  if (/Page is missing a canonical URL tag/i.test(t))
+    return 'The page doesn’t name its main address for search engines';
+  if (/Page contains multiple canonical URL tags/i.test(t))
+    return 'The page names more than one main address for search engines';
+  if (/Page has a noindex directive preventing search engine indexing/i.test(t))
+    return 'Search engines are told not to list this page';
   if (/Page is missing a mobile viewport meta tag/i.test(t)) return 'The site isn’t set up to fit phone screens';
   if (/Page is missing a favicon link tag/i.test(t)) return 'The site has no icon for browser tabs and search results';
-  if (/Images missing alt text descriptions/i.test(t)) return 'An image is missing a text description for screen readers';
-  if (/Page is missing OpenGraph social preview tags/i.test(t)) return 'Links to the site don’t show a preview when shared';
-  if (/Site is missing a robots\.txt file/i.test(t)) return 'The site has no guide for search engine crawlers (robots.txt)';
-  if (/Site is missing a sitemap\.xml file/i.test(t)) return 'The site has no list of its pages for search engines (sitemap)';
-  if (/AI search crawlers are disallowed in robots\.txt/i.test(t)) return 'AI search tools are blocked from reading the site';
+  if (/Images missing alt text descriptions/i.test(t))
+    return 'An image is missing a text description for screen readers';
+  if (/Page is missing OpenGraph social preview tags/i.test(t))
+    return 'Links to the site don’t show a preview when shared';
+  if (/Site is missing a robots\.txt file/i.test(t))
+    return 'The site has no guide for search engine crawlers (robots.txt)';
+  if (/Site is missing a sitemap\.xml file/i.test(t))
+    return 'The site has no list of its pages for search engines (sitemap)';
+  if (/AI search crawlers are disallowed in robots\.txt/i.test(t))
+    return 'AI search tools are blocked from reading the site';
   if (/Site is missing an \/llms\.txt file/i.test(t)) return 'The site has no guide for AI assistants (llms.txt)';
-  if (/\/llms\.txt file is missing standard/i.test(t)) return 'The site’s guide for AI assistants isn’t in the usual format';
-  if (/Page contains malformed JSON-LD structured data/i.test(t)) return 'The page’s description for search engines has a mistake in it';
-  if (/Homepage is missing Organization or WebSite structured data/i.test(t)) return 'Search engines aren’t told who runs the site';
+  if (/\/llms\.txt file is missing standard/i.test(t))
+    return 'The site’s guide for AI assistants isn’t in the usual format';
+  if (/Page contains malformed JSON-LD structured data/i.test(t))
+    return 'The page’s description for search engines has a mistake in it';
+  if (/Homepage is missing Organization or WebSite structured data/i.test(t))
+    return 'Search engines aren’t told who runs the site';
   if (/Inner page is missing breadcrumb navigation/i.test(t)) return 'The page doesn’t show where it sits in the site';
-  if (/Question heading .* lacks a concise direct answer/i.test(t)) return 'A question on the page has no short answer under it';
-  if (/Substantial content page lacks structured lists or comparison tables/i.test(t)) return 'Long text has no lists or tables to pick answers from';
-  if (/Page lacks a semantic <main> or <article> container/i.test(t)) return 'The page’s main content isn’t marked as such';
+  if (/Question heading .* lacks a concise direct answer/i.test(t))
+    return 'A question on the page has no short answer under it';
+  if (/Substantial content page lacks structured lists or comparison tables/i.test(t))
+    return 'Long text has no lists or tables to pick answers from';
+  if (/Page lacks a semantic <main> or <article> container/i.test(t))
+    return 'The page’s main content isn’t marked as such';
   if (/Low text-to-code ratio/i.test(t)) return 'The page has very little readable text';
-  if (/Long-form content page lacks outbound source citations/i.test(t)) return 'The article doesn’t link to its sources';
-  if (/Content page lacks author byline and publication timestamp/i.test(t)) return 'The article doesn’t say who wrote it or when';
+  if (/Long-form content page lacks outbound source citations/i.test(t))
+    return 'The article doesn’t link to its sources';
+  if (/Content page lacks author byline and publication timestamp/i.test(t))
+    return 'The article doesn’t say who wrote it or when';
 
   return t.replace(/^WCAG Violation:\s*/i, '').replace(/\s*\([a-z0-9-]+\)$/i, '');
 }
@@ -154,14 +182,23 @@ export function groupIntoProblems(findings: Finding[]): Problem[] {
     const key = `${toConfirm ? 'confirm|' : ''}${problemKey(f)}`;
     let problem = problems.get(key);
     if (!problem) {
-      problem = { key, title: plainTitleText(f.title), severity: f.severity, aspects: [], findings: [], pages: [], toConfirm };
+      problem = {
+        key,
+        title: plainTitleText(f.title),
+        severity: f.severity,
+        aspects: [],
+        findings: [],
+        pages: [],
+        toConfirm,
+      };
       problems.set(key, problem);
     }
     problem.findings.push(f);
     if (SEVERITY_ORDER.indexOf(f.severity) < SEVERITY_ORDER.indexOf(problem.severity)) problem.severity = f.severity;
     const aspect = aspectOfFinding(f);
     if (!problem.aspects.includes(aspect)) problem.aspects.push(aspect);
-    for (const page of [f.where.urlPath, ...(f.seenAt?.pages || [])]) if (page && !problem.pages.includes(page)) problem.pages.push(page);
+    for (const page of [f.where.urlPath, ...(f.seenAt?.pages || [])])
+      if (page && !problem.pages.includes(page)) problem.pages.push(page);
   }
   return [...problems.values()];
 }

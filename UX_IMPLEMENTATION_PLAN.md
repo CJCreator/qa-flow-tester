@@ -17,11 +17,11 @@ look and the writing rules are in [DESIGN.md](packages/wizard/DESIGN.md).
 
 ## Status (as of 2026-09-30)
 
-| Phase | What it delivers | Status |
-|---|---|---|
-| 1. Dead ends and misleading screens | Stopping keeps the plan, failures show, the AI key comes first, the live screen and the verdict tell the truth, plain words | Built. Task 1.12 skipped (see Deviations) |
-| 2. Navigation and history | An address for every screen, the top bar, the Resume card, Past check-ups, Test again, site data out of git | Built. `sites/` is staged for removal from git, not yet committed |
-| 3. One app | Details for developers, filters, the Team Hub link, Studio retired, every screen works on a phone | Built. The Docker image wasn't rebuilt |
+| Phase                               | What it delivers                                                                                                            | Status                                                            |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| 1. Dead ends and misleading screens | Stopping keeps the plan, failures show, the AI key comes first, the live screen and the verdict tell the truth, plain words | Built. Task 1.12 skipped (see Deviations)                         |
+| 2. Navigation and history           | An address for every screen, the top bar, the Resume card, Past check-ups, Test again, site data out of git                 | Built. `sites/` is staged for removal from git, not yet committed |
+| 3. One app                          | Details for developers, filters, the Team Hub link, Studio retired, every screen works on a phone                           | Built. The Docker image wasn't rebuilt                            |
 
 Everything was built in one pass, uncommitted, on 2026-09-30. See "Deviations found while building" at the end for where it
 differs from the tasks below, and the test run for what's covered.
@@ -238,25 +238,26 @@ These weren't discussed. Change any of them before the phase that uses them star
 
 Every visible string follows the writing rules in DESIGN.md. The most visible changes:
 
-| Where | Today | New |
-|---|---|---|
-| Top bar | "Direction B — Blueprint", "Dark · Architectural" | "Release check-up" |
-| Top bar | "Engineer view", "⚙ AI Settings" | New check-up · Past check-ups · Settings |
-| Step bar | "1 · Enter URL & Docs", "2 · Review & Approve Plan", "3 · Live testing", "4 · Report" | Address · Plan · Testing · Report |
-| Address screen | "QA Tool · Site check", "+DOC", "DOCS ATTACHED", "📋 1. Specs & PRD", "🎨 2. Design System", "🔀 3. Flow Scenarios" | "Specs", "Design notes", "Journeys to test", "Added" |
-| Address screen | "Scan Site & Build Plan →", "🔒 Mandatory gate: Plan must be reviewed and approved before testing" | "Scan the site", "Nothing is tested until you approve the plan." |
-| Address errors | "Target Connection Failed", "[ERR_TARGET_UNREACHABLE]", "Recommended Action:" | What happened, then what to do. No codes. |
-| Scan screen | "+ X:001 · Y:001 · SCAN_LAYER", "GRID_LOCK:TRUE · PHASE:DISCOVERY", "Stage 1 · Architectural Discovery & Plan Construction", "Mapping Site Architecture", "Discovery Engine Active" | "Scanning shop.example.com" and the numbers |
-| Scan screen | "Stop Scan & Return to Setup", "← Back to URL & Specs" | One button: "Stop scanning" |
-| Live screen | "LIVE", "LIVE EXECUTION INSPECTOR", "Latest Action", "Audits Running", "Completed Milestones", "Stop Run" | "Testing shop.example.com", "Now testing", "Latest screen", "Found so far", "Stop testing" |
-| Report | "Readiness Grade", "/100 Score", "Readiness by Aspect (A–F Grades)", "Prioritized Improvement Recommendations", "Site Architecture & Results Map", "Audit Findings" | The stamp and its reason, "How each area did", "What to improve first", "Map of results", "Problems found" |
-| Report | "Download Offline HTML Report", "Download MD & JSON", "Verify with CLI" | "Download the report", with the rest under Details for developers |
-| Report | "+ Go deeper (add login credentials)" | "Go deeper: test the signed-in pages" |
-| Errors | "Add it again with the “AI key” button at the top" | "…in Settings" |
+| Where          | Today                                                                                                                                                                               | New                                                                                                        |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Top bar        | "Direction B — Blueprint", "Dark · Architectural"                                                                                                                                   | "Release check-up"                                                                                         |
+| Top bar        | "Engineer view", "⚙ AI Settings"                                                                                                                                                    | New check-up · Past check-ups · Settings                                                                   |
+| Step bar       | "1 · Enter URL & Docs", "2 · Review & Approve Plan", "3 · Live testing", "4 · Report"                                                                                               | Address · Plan · Testing · Report                                                                          |
+| Address screen | "QA Tool · Site check", "+DOC", "DOCS ATTACHED", "📋 1. Specs & PRD", "🎨 2. Design System", "🔀 3. Flow Scenarios"                                                                 | "Specs", "Design notes", "Journeys to test", "Added"                                                       |
+| Address screen | "Scan Site & Build Plan →", "🔒 Mandatory gate: Plan must be reviewed and approved before testing"                                                                                  | "Scan the site", "Nothing is tested until you approve the plan."                                           |
+| Address errors | "Target Connection Failed", "[ERR_TARGET_UNREACHABLE]", "Recommended Action:"                                                                                                       | What happened, then what to do. No codes.                                                                  |
+| Scan screen    | "+ X:001 · Y:001 · SCAN_LAYER", "GRID_LOCK:TRUE · PHASE:DISCOVERY", "Stage 1 · Architectural Discovery & Plan Construction", "Mapping Site Architecture", "Discovery Engine Active" | "Scanning shop.example.com" and the numbers                                                                |
+| Scan screen    | "Stop Scan & Return to Setup", "← Back to URL & Specs"                                                                                                                              | One button: "Stop scanning"                                                                                |
+| Live screen    | "LIVE", "LIVE EXECUTION INSPECTOR", "Latest Action", "Audits Running", "Completed Milestones", "Stop Run"                                                                           | "Testing shop.example.com", "Now testing", "Latest screen", "Found so far", "Stop testing"                 |
+| Report         | "Readiness Grade", "/100 Score", "Readiness by Aspect (A–F Grades)", "Prioritized Improvement Recommendations", "Site Architecture & Results Map", "Audit Findings"                 | The stamp and its reason, "How each area did", "What to improve first", "Map of results", "Problems found" |
+| Report         | "Download Offline HTML Report", "Download MD & JSON", "Verify with CLI"                                                                                                             | "Download the report", with the rest under Details for developers                                          |
+| Report         | "+ Go deeper (add login credentials)"                                                                                                                                               | "Go deeper: test the signed-in pages"                                                                      |
+| Errors         | "Add it again with the “AI key” button at the top"                                                                                                                                  | "…in Settings"                                                                                             |
 
 A banned-words test replaces `LEAKED_INTERNALS` in
 [wizard-e2e.test.ts:58](packages/wizard/tests/wizard-e2e.test.ts#L58). It reads the visible text of every
 screen, outside Details for developers, and fails on:
+
 - event names, `ERR_`, `undefined` and `[object`
 - CSS selectors and checker ids (`bug-detection`, `ux-quality`, …)
 - the prototype labels: "Direction B", "Blueprint", "Architectural", "GRID_LOCK", "SCAN_LAYER",
@@ -268,6 +269,7 @@ screen, outside Details for developers, and fails on:
 screens, plus a few runner changes.
 
 ### Task 1.1 — Stopping keeps the plan
+
 F1, F6; decision 4.
 
 - **Runner:** `POST /api/runner/abort` during `testing` keeps the approved plan and goes back to
@@ -281,17 +283,20 @@ F1, F6; decision 4.
     again."
 
   After a stop during testing, the plan is fetched again and shown.
+
 - **Wizard:** the scan screen has one "Stop scanning" button. Until Phase 2 replaces the step bar, its
   steps never stop anything: during a scan or testing, the steps before the current one are disabled.
 - **Wizard:** starting a check-up while a plan waits asks first: "Start a new check-up? The plan for
   shop.example.com that's waiting for your review will be thrown away."
 
 **Done when**
+
 - A runner test stops testing and approves the same plan again.
 - A runner test gets 409 when starting over a waiting plan, and succeeds with `replacePlan`.
 - The e2e test stops during testing, sees the plan, approves it and gets a report.
 
 ### Task 1.2 — Failures are shown
+
 F2.
 
 - The live screen shows `feed.failure` in plain words, with what to do next: "Back to the plan" when the
@@ -302,6 +307,7 @@ F2.
 the message and a way out.
 
 ### Task 1.3 — The AI key comes first, and nothing typed is lost
+
 F3; decision 5.
 
 - The address screen's state (the address, the owner choice, specs, design notes, journeys and the page
@@ -317,6 +323,7 @@ F3; decision 5.
 specs in the plan's "Specs and design notes".
 
 ### Task 1.4 — Full testing or look-only, said up front
+
 F18; decision 6.
 
 - **Runner:** `POST /api/runner/preflight` also returns:
@@ -334,12 +341,14 @@ F18; decision 6.
   names the control that now exists.
 
 **Done when**
+
 - A runner test covers `testCopy` for `localhost`, for a public host, and for a public host marked as a
   Test Copy.
 - The e2e test sees the owner box unticked on a new site, ticks it, and sees it ticked on the next
   check-up of that site.
 
 ### Task 1.5 — The address box shows what's used
+
 F10.
 
 - No fixed "https://" prefix. A bare address gets a scheme as in Defaults.
@@ -349,6 +358,7 @@ F10.
 with its scheme.
 
 ### Task 1.6 — Live progress from the real events
+
 F8; decision 8.
 
 - A live-state reducer in `src/lib/translate.ts` reads the events that are ignored today:
@@ -363,11 +373,13 @@ F8; decision 8.
 - The hard-coded "Audits Running" list goes.
 
 **Done when**
+
 - Reducer unit tests cover each event.
 - The e2e test sees "Test 1 of N", at least one screenshot, and a problem pinned to a fixture page with a
   planted defect.
 
 ### Task 1.7 — One verdict
+
 F9; decision 9.
 
 - **Core:** the report records which checkers ran. Scoring marks an aspect `checked: false` when none of
@@ -386,11 +398,13 @@ F9; decision 9.
   ([html-report.ts:37-39](packages/core/src/html-report.ts#L37-L39)).
 
 **Done when**
+
 - A scoring test gives "Not checked" for an aspect whose checkers didn't run.
 - A report with one Major finding shows "Not ready yet" and no overall grade, both on screen and in
   `report.html`.
 
 ### Task 1.8 — Plain words
+
 F13, F14; decision 11.
 
 - Apply the Wording table. The product is "Release check-up" everywhere a person reads it, including the
@@ -402,6 +416,7 @@ F13, F14; decision 11.
 **Done when:** the banned-words test passes on every screen.
 
 ### Task 1.9 — Keyboard and motion
+
 F17.
 
 - Each finding is a button with `aria-expanded` that opens its detail.
@@ -412,6 +427,7 @@ F17.
 no violations.
 
 ### Task 1.10 — Looks
+
 F15; decision 12.
 
 - Declare `color-scheme: dark` in [index.css](packages/wizard/src/index.css).
@@ -423,6 +439,7 @@ F15; decision 12.
 **Done when:** no unused screens are left, and the contrast test covers the grade colours.
 
 ### Task 1.11 — "Go deeper" starts cleanly
+
 F21.
 
 - "Go deeper" goes through the same start as a new check-up: it gets a new run id, and the plan, report,
@@ -433,6 +450,7 @@ F21.
 **Done when:** the e2e test goes deeper on the fixture and sees the new scan's progress.
 
 ### Task 1.12 — Studio stop-gap
+
 F11.
 
 - Delete `MOCK_RUNS`, the fake product list and the hard-coded "Online" badge. Studio shows real runs only,
@@ -446,6 +464,7 @@ F11.
 kept.
 
 ### Task 2.1 — An address for every screen
+
 F5; decision 2.
 
 - The router (see Defaults) serves the seven addresses in decision 2, and `App` renders by address.
@@ -457,6 +476,7 @@ F5; decision 2.
 **Done when:** the e2e test uses Back, Forward and refresh on every screen and lands where it was.
 
 ### Task 2.2 — Top bar and step bar
+
 F6, F7; decision 2.
 
 - The top bar: "Release check-up", New check-up, Past check-ups, Settings, and Team Hub when a Hub is
@@ -469,6 +489,7 @@ F6, F7; decision 2.
 **Done when:** the e2e test checks every step bar link, and that none of them stops a check-up.
 
 ### Task 2.3 — Resume card and recent check-ups
+
 Decision 2.
 
 - `/` shows a Resume card when the runner has a check-up in progress, such as "Your check-up of
@@ -478,6 +499,7 @@ Decision 2.
 **Done when:** the e2e test leaves a plan waiting, opens `/`, and resumes from the card.
 
 ### Task 2.4 — Every report kept
+
 F4, F20; decision 3.
 
 - **Runner:** each run writes to `<outputDir>/runs/<runId>/`: `report.json`, `report.html`, `report.md`,
@@ -491,6 +513,7 @@ F4, F20; decision 3.
   - `DELETE /api/runs/<runId>`
 
   `GET /api/report` stays as the latest report, for the command line.
+
 - **Runner:** on start, the latest report is read from disk, so a restart keeps it.
 - **Runner:** after each run, only the newest 10 runs per site are kept. The grade history
   (`<host>.history.json`) keeps every run.
@@ -499,6 +522,7 @@ F4, F20; decision 3.
 the 11th-newest run of a site.
 
 ### Task 2.5 — Past check-ups
+
 Decision 3.
 
 - `/reports` lists check-ups by site, newest first. Each shows the date, the stamp and the problem counts,
@@ -508,6 +532,7 @@ Decision 3.
 **Done when:** the e2e test opens an older report from `/reports`, reloads its address, and deletes it.
 
 ### Task 2.6 — Test again
+
 Decision 7.
 
 - **Runner:** `POST /api/runner/run` takes `testAgain: true`.
@@ -525,6 +550,7 @@ Decision 7.
 page pauses with only that page flagged.
 
 ### Task 2.7 — Site data out of git
+
 F19; decision 3.
 
 - The runner's data folder defaults to `.qa-data/` (see Defaults). On start, an existing `sites/` folder in
@@ -540,6 +566,7 @@ F19; decision 3.
 empty.
 
 ### Task 2.8 — Settings
+
 Decision 5.
 
 - `/settings` shows whether the key works, the model in use and the free requests left today, with
@@ -553,6 +580,7 @@ Decision 5.
 screen works on a phone.
 
 ### Task 3.1 — Details for developers
+
 Decision 10.
 
 - Under each finding, collapsed by default:
@@ -573,6 +601,7 @@ Decision 10.
 and copies both texts.
 
 ### Task 3.2 — Filters and search
+
 Decision 10.
 
 - Reports with more than 10 findings get filters (how serious, page, aspect) and a search box.
@@ -581,6 +610,7 @@ Decision 10.
 **Done when:** the e2e test filters the fixture report by page and by aspect.
 
 ### Task 3.3 — Team Hub link
+
 Decision 10.
 
 - **Runner:** `/hub` is passed on to the Hub the way `/api/v1/*` is
@@ -590,10 +620,12 @@ Decision 10.
   Hub's own dashboard.
 
 **Done when**
+
 - A runner test forwards `/hub` to a fake Hub, and answers 503 without one.
 - The e2e test sees no Team Hub link when there's no Hub.
 
 ### Task 3.4 — Retire Studio
+
 F7, F11, F12; decision 1.
 
 - `/studio` and everything under it answer 308 → `/reports`.
@@ -609,6 +641,7 @@ F7, F11, F12; decision 1.
 redirects.
 
 ### Task 3.5 — Phones
+
 F16; decision 13.
 
 - Below 768 px, the live screen shows the progress, the page under test, the latest screenshot and "Found
@@ -648,13 +681,13 @@ F16; decision 13.
 
 ## Risks
 
-| Risk | Impact | Mitigation |
-|---|---|---|
-| Kept reports fill the disk; one site's output is 164 MB today | A full disk stops runs | Ten per site, older ones deleted after each run; delete by hand in Past check-ups |
-| Test again skips the review after a change it didn't detect | Something runs that wasn't reviewed | Any new page, link, journey or question pauses it, and the report says which approved plan it used |
-| The address and the runner's phase disagree | People land on the wrong screen | On `/check/*` the phase wins and the address is replaced; elsewhere the phase never moves anyone |
-| Retiring Studio loses something an engineer relied on | A missing tool | Task 3.4 comes after Tasks 3.1–3.3, whose e2e checks cover each moved piece |
-| Moving `sites/` loses site memory | Answers and approved plans are forgotten | The move copies before deleting, runs once, and is covered by a test |
+| Risk                                                          | Impact                                   | Mitigation                                                                                         |
+| ------------------------------------------------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Kept reports fill the disk; one site's output is 164 MB today | A full disk stops runs                   | Ten per site, older ones deleted after each run; delete by hand in Past check-ups                  |
+| Test again skips the review after a change it didn't detect   | Something runs that wasn't reviewed      | Any new page, link, journey or question pauses it, and the report says which approved plan it used |
+| The address and the runner's phase disagree                   | People land on the wrong screen          | On `/check/*` the phase wins and the address is replaced; elsewhere the phase never moves anyone   |
+| Retiring Studio loses something an engineer relied on         | A missing tool                           | Task 3.4 comes after Tasks 3.1–3.3, whose e2e checks cover each moved piece                        |
+| Moving `sites/` loses site memory                             | Answers and approved plans are forgotten | The move copies before deleting, runs once, and is covered by a test                               |
 
 ## Deviations found while building
 

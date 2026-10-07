@@ -1,0 +1,6 @@
+{
+  "note": "Uncalibrated, set conservatively. Recalibrate from the first real run at /verify-all. Only sites listed here gate the run; live sites are reported, never gated.",
+  "sites": {
+    "fixture": { "minDetectionRate": 0.85, "maxFalsePositiveRate": 0.9 }
+  }
+}

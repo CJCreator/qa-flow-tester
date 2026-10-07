@@ -40,7 +40,14 @@ export async function runSafeWebsiteScan(options: SafeWebsiteScanOptions): Promi
   const emit = (event: OrchestratorEvent) => onEvent(redactor.deep(event));
   const maxPages = options.maxPages ?? 25;
 
-  emit({ type: 'RUN_STARTED', runId, targetUrl: options.targetUrl, productId, testCaseCount: maxPages, mode: 'safe-public' });
+  emit({
+    type: 'RUN_STARTED',
+    runId,
+    targetUrl: options.targetUrl,
+    productId,
+    testCaseCount: maxPages,
+    mode: 'safe-public',
+  });
 
   let stepIndex = 0;
   let stepStartedAt = Date.now();
@@ -55,7 +62,13 @@ export async function runSafeWebsiteScan(options: SafeWebsiteScanOptions): Promi
     onStepStarted: (index, action) => {
       stepIndex = index - 1;
       stepStartedAt = Date.now();
-      emit({ type: 'STEP_STARTED', stepIndex, stepName: action, action: action.startsWith('Opened') || index === 1 ? 'navigate' : 'click', testCaseId: SCAN_TEST_CASE_ID });
+      emit({
+        type: 'STEP_STARTED',
+        stepIndex,
+        stepName: action,
+        action: action.startsWith('Opened') || index === 1 ? 'navigate' : 'click',
+        testCaseId: SCAN_TEST_CASE_ID,
+      });
     },
     onStepCompleted: (_index, findingsSoFar) => {
       emit({ type: 'STEP_COMPLETED', stepIndex, passed: true, durationMs: Date.now() - stepStartedAt });

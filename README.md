@@ -69,15 +69,15 @@ flowchart TD
 
 ## 📦 Monorepo Structure
 
-| Package / Directory | Purpose |
-| :--- | :--- |
-| [`packages/core`](packages/core) | Core test orchestration, AI discovery agent, test planner, crawler, benchmarking engine, and AI providers |
-| [`packages/checkers`](packages/checkers) | Automated checkers (A11y/WCAG, design tokens, visual diffs, console errors, network failures) |
-| [`packages/runner`](packages/runner) | The QA Tool server: runs checks over HTTP with Server-Sent Events (SSE) streaming, keeps every check-up's report, and serves the Wizard on the same port |
-| [`packages/wizard`](packages/wizard) | "Release check-up": the one app, in plain language, with details for developers under each finding ([ADR 0010](docs/adr/0010-one-app-with-details-on-demand.md)) |
-| [`packages/types`](packages/types) | Shared TypeScript type definitions, schemas, and interfaces |
-| [`fixtures/test-app`](fixtures/test-app) | Built-in target test application (Invoicing app with simulated errors) |
-| [`scripts/benchmark.ts`](scripts/benchmark.ts) | Automated benchmark harness measuring check accuracy and planted defect detection |
+| Package / Directory                            | Purpose                                                                                                                                                          |
+| :--------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`packages/core`](packages/core)               | Core test orchestration, AI discovery agent, test planner, crawler, benchmarking engine, and AI providers                                                        |
+| [`packages/checkers`](packages/checkers)       | Automated checkers (A11y/WCAG, design tokens, visual diffs, console errors, network failures)                                                                    |
+| [`packages/runner`](packages/runner)           | The QA Tool server: runs checks over HTTP with Server-Sent Events (SSE) streaming, keeps every check-up's report, and serves the Wizard on the same port         |
+| [`packages/wizard`](packages/wizard)           | "Release check-up": the one app, in plain language, with details for developers under each finding ([ADR 0010](docs/adr/0010-one-app-with-details-on-demand.md)) |
+| [`packages/types`](packages/types)             | Shared TypeScript type definitions, schemas, and interfaces                                                                                                      |
+| [`fixtures/test-app`](fixtures/test-app)       | Built-in target test application (Invoicing app with simulated errors)                                                                                           |
+| [`scripts/benchmark.ts`](scripts/benchmark.ts) | Automated benchmark harness measuring check accuracy and planted defect detection                                                                                |
 
 ---
 
@@ -132,15 +132,22 @@ cp .env.example .env
 Key environment variables in `.env`:
 
 ```env
-# AI Providers (At least one key or use mock mode)
-OPENROUTER_API_KEY=sk-or-v1-...
-ANTHROPIC_API_KEY=sk-ant-...
-OPENAI_API_KEY=sk-...
-GEMINI_API_KEY=AIza...
+# AI Providers (at least one key; with none, the plan is written by fixed rules)
+OPENROUTER_API_KEY=
+ANTHROPIC_API_KEY=
+OPENAI_API_KEY=
+GEMINI_API_KEY=
 
 # The QA Tool (pnpm start)
 RUNNER_PORT=3001
+
+# Needed whenever the QA Tool can be reached beyond this computer
+# RUNNER_ACCESS_TOKEN=
+# 1 = shared beta (keys in memory only, public sites only); pair with an access token
+# RUNNER_BETA=
 ```
+
+Every setting is listed in [docs/CONFIGURATION.md](docs/CONFIGURATION.md). The rest of the docs are indexed in [docs/README.md](docs/README.md).
 
 ---
 
@@ -244,6 +251,7 @@ The repository includes a fixture application (`@qa/fixture-test-app`) with simu
 cd fixtures/test-app
 node server.js
 ```
+
 The test app will start at: **`http://localhost:3050`**
 
 ---
@@ -261,6 +269,7 @@ The test app will start at: **`http://localhost:3050`**
    - **Live site**: only looked at, nothing is sent or changed.
 
    Both choices are remembered for the site. Optionally add specs, design notes or journeys to test, or change **Explore up to N pages** (default 200).
+
 5. Click **Scan the site**. The scan shows live progress with numbers: pages found, layouts, AI requests used and how many are left today, and about how long is left. **Stop scanning** asks first, then goes back with everything still filled in.
 6. Review the plan, change it if you like, and approve it. Nothing is tested before you approve (see [The plan review](#the-plan-review) below). Leaving the plan keeps it waiting: the new check-up screen offers it again.
 7. Watch the testing: the test count and time left, the page under test, the latest screenshot and what's been found so far. **Stop testing** keeps your plan, so you can approve it again.
@@ -294,9 +303,6 @@ pnpm test
 # Run tests in watch mode
 pnpm test:watch
 
-# Run code linter
-pnpm lint
-
 # Format code
 pnpm format
 
@@ -309,19 +315,24 @@ pnpm benchmark
 ## 🔍 Troubleshooting & FAQ
 
 ### 1. `Cannot find module '...telemetry_hook_bundle.js'`
+
 This occurs if the local Google Cloud telemetry plugin on Windows has invalid path quoting.
+
 - **Fix**: Blank out the hooks file in PowerShell:
   ```powershell
   Set-Content -Path "$HOME\.gemini\config\plugins\googlecloudtools.datacloud_telemetry\hooks.json" -Value "{}"
   ```
 
 ### 2. `TimeoutError: waiting for selector ... failed: timeout 30000ms exceeded`
+
 - Check that the target web application is actually running at the specified URL.
 - If testing locally via Docker, use `host.docker.internal` instead of `localhost`.
 - Check if elements are housed inside an `iframe`.
 
 ### 3. `Port 3001 is used by another program`
+
 `pnpm start` says so when something other than the QA Tool holds the port (if the QA Tool is already running, it just opens it).
+
 - Identify and stop the occupying process:
   ```powershell
   # Windows PowerShell:
@@ -330,11 +341,13 @@ This occurs if the local Google Cloud telemetry plugin on Windows has invalid pa
 - Or use another port: `$env:RUNNER_PORT=3055; pnpm start`.
 
 ### 4. The check-up stopped, or its screen says nothing is in progress
+
 - A scan that fails says why, with **Start a new check-up**; what you typed is still there.
 - Testing that fails part-way goes back to the plan with what happened above it. Approve the plan again once the site is working.
 - Addresses like `/check/plan` only show the check-up in progress. When there's none, open **Past check-ups** for finished ones.
 
 ### 5. Playwright Browser Launch Errors
+
 - `pnpm start` stops with a message when the browser is missing. `pnpm bootstrap` installs it. On Linux, system libraries may also be needed:
   ```bash
   pnpm --filter @qa/core exec playwright install chromium --with-deps

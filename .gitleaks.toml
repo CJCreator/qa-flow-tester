@@ -1,0 +1,8 @@
+title = "QA Tool gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Fake keys in fixtures and tests"
+paths = ['''^fixtures/''', '''^packages/[^/]+/tests/''']

@@ -4,7 +4,16 @@
  * expansion from Plan to tests that the approval summary and the run share.
  */
 import { describe, it, expect } from 'vitest';
-import type { AICompletion, AIMessage, AICompletionOptions, AIProviderType, DiscoveryDraft, ElementInventoryItem, PageInventoryItem, PageLink } from '@qa/types';
+import type {
+  AICompletion,
+  AIMessage,
+  AICompletionOptions,
+  AIProviderType,
+  DiscoveryDraft,
+  ElementInventoryItem,
+  PageInventoryItem,
+  PageLink,
+} from '@qa/types';
 import type { AIProvider } from '../src/ai/ai-provider.js';
 import { buildSiteGraph } from '../src/plan/site-graph.js';
 import { itemShape, sampleLayoutGroups } from '../src/plan/sampling.js';
@@ -14,7 +23,12 @@ import { expandPlan } from '../src/plan/expand.js';
 import { planJourneys } from '../src/plan/journeys.js';
 import { planToMarkdown } from '../src/plan/markdown.js';
 
-const el = (role: string, name: string, selector: string, extra: Partial<ElementInventoryItem> = {}): ElementInventoryItem => ({
+const el = (
+  role: string,
+  name: string,
+  selector: string,
+  extra: Partial<ElementInventoryItem> = {}
+): ElementInventoryItem => ({
   role,
   name,
   selector,
@@ -46,15 +60,44 @@ function page(urlPath: string, links: PageLink[] = [], extra: Partial<PageInvent
 
 /** A small shop: a home page, a product list linking six products, an about page, a partner link. */
 function shop(): PageInventoryItem[] {
-  const products = ['blue-cotton-shirt-1', 'red-wool-scarf-2', 'green-silk-tie-3', 'black-leather-belt-4', 'white-linen-dress-5', 'grey-denim-jacket-6'];
+  const products = [
+    'blue-cotton-shirt-1',
+    'red-wool-scarf-2',
+    'green-silk-tie-3',
+    'black-leather-belt-4',
+    'white-linen-dress-5',
+    'grey-denim-jacket-6',
+  ];
   return [
-    page('/', [{ name: 'Partner', selector: 'role=link[name="Partner"]', to: 'https://partner.example/offer', leavesSite: true }], {
-      elements: [el('button', 'Show offers', '[data-testid="offers"]'), el('button', 'Delete account', '[data-testid="delete"]')],
-    }),
-    page('/products', products.map((p) => ({ name: p, selector: `role=link[name="${p}"]`, to: `/products/${p}` }))),
+    page(
+      '/',
+      [
+        {
+          name: 'Partner',
+          selector: 'role=link[name="Partner"]',
+          to: 'https://partner.example/offer',
+          leavesSite: true,
+        },
+      ],
+      {
+        elements: [
+          el('button', 'Show offers', '[data-testid="offers"]'),
+          el('button', 'Delete account', '[data-testid="delete"]'),
+        ],
+      }
+    ),
+    page(
+      '/products',
+      products.map((p) => ({ name: p, selector: `role=link[name="${p}"]`, to: `/products/${p}` }))
+    ),
     page('/about'),
     page('/secret-landing', [], { links: [] }),
-    ...products.map((p) => page(`/products/${p}`, [], { layoutGroup: 'layout-product', elements: [el('tab', 'Details', '[data-testid="details"]')] })),
+    ...products.map((p) =>
+      page(`/products/${p}`, [], {
+        layoutGroup: 'layout-product',
+        elements: [el('tab', 'Details', '[data-testid="details"]')],
+      })
+    ),
   ];
 }
 
@@ -74,18 +117,34 @@ function goodAnswer(prompt: string): string {
   const pages = prompt.match(/Pages:\n(\[[\s\S]*?\])\n\nAnswer with ONLY/);
   if (pages) {
     return JSON.stringify({
-      pages: (JSON.parse(pages[1]) as Array<{ urlPath: string; controls: Array<{ role: string; name: string; selector: string }>; links: Array<{ selector: string; name: string }> }>).map((p) => ({
+      pages: (
+        JSON.parse(pages[1]) as Array<{
+          urlPath: string;
+          controls: Array<{ role: string; name: string; selector: string }>;
+          links: Array<{ selector: string; name: string }>;
+        }>
+      ).map((p) => ({
         urlPath: p.urlPath,
         tests: p.controls
           .filter((c) => c.name !== 'Delete account')
-          .map((c) => ({ name: `Pressing ${c.name} shows more`, steps: [{ action: 'click', selector: c.selector, name: `Press ${c.name}` }], expect: { text: 'More' } })),
+          .map((c) => ({
+            name: `Pressing ${c.name} shows more`,
+            steps: [{ action: 'click', selector: c.selector, name: `Press ${c.name}` }],
+            expect: { text: 'More' },
+          })),
         links: p.links.map((l) => ({ selector: l.selector, name: `AI: ${l.name}`, expect: `The ${l.name} page` })),
       })),
     });
   }
   const links = prompt.match(/Links:\n(\[[\s\S]*?\])\n\nAnswer with ONLY/);
   if (links) {
-    return JSON.stringify({ links: (JSON.parse(links[1]) as Array<{ selector: string; name: string }>).map((l) => ({ selector: l.selector, name: `AI menu: ${l.name}`, expect: 'It opens' })) });
+    return JSON.stringify({
+      links: (JSON.parse(links[1]) as Array<{ selector: string; name: string }>).map((l) => ({
+        selector: l.selector,
+        name: `AI menu: ${l.name}`,
+        expect: 'It opens',
+      })),
+    });
   }
   return '{}';
 }
@@ -130,8 +189,15 @@ describe('Layout Groups and Sample Pages', () => {
     expect(groups).toHaveLength(1);
     expect(groups[0].name).toBe('Pages like /products/…');
     // Spread across the group: the first, middle and last found.
-    expect(groups[0].samples).toEqual(['/products/blue-cotton-shirt-1', '/products/green-silk-tie-3', '/products/grey-denim-jacket-6']);
-    expect(coverage.get('/products/red-wool-scarf-2')).toMatchObject({ coverage: 'covered', coveredBy: groups[0].samples });
+    expect(groups[0].samples).toEqual([
+      '/products/blue-cotton-shirt-1',
+      '/products/green-silk-tie-3',
+      '/products/grey-denim-jacket-6',
+    ]);
+    expect(coverage.get('/products/red-wool-scarf-2')).toMatchObject({
+      coverage: 'covered',
+      coveredBy: groups[0].samples,
+    });
     expect(coverage.get('/products/blue-cotton-shirt-1')?.coverage).toBe('sample');
     // Same layout as the home page, but its own address: tested.
     expect(coverage.get('/about')?.coverage).toBe('tested');
@@ -151,16 +217,26 @@ describe('The AI Planner', () => {
     expect(home.source).toBe('ai');
     expect(home.tests.map((t) => t.name)).toEqual(['Pressing Show offers shows more']);
     expect(ai.prompts.join('\n')).not.toContain('"Delete account"');
-    expect(out.pages.find((p) => p.urlPath === '/products/red-wool-scarf-2')).toMatchObject({ coverage: 'covered', tests: [] });
+    expect(out.pages.find((p) => p.urlPath === '/products/red-wool-scarf-2')).toMatchObject({
+      coverage: 'covered',
+      tests: [],
+    });
 
     // Shared menu once, named from the links (their destinations were all seen, so the AI wasn't
     // asked about them); every sample's own links; the partner link leaves the site.
     const shared = out.navigation.filter((n) => n.shared);
-    expect(shared.map((n) => n.name).sort()).toEqual(['Menu: “About” opens /about', 'Menu: “Home” opens /', 'Menu: “Products” opens /products']);
+    expect(shared.map((n) => n.name).sort()).toEqual([
+      'Menu: “About” opens /about',
+      'Menu: “Home” opens /',
+      'Menu: “Products” opens /products',
+    ]);
     expect(shared.find((n) => n.linkName === 'About')!.expectation).toBe('The “about” page');
     expect(shared.every((n) => n.startPage === '/')).toBe(true);
     expect(out.navigation.filter((n) => n.startPage === '/products' && !n.shared)).toHaveLength(6);
-    expect(out.navigation.find((n) => n.leavesSite)).toMatchObject({ to: 'https://partner.example/offer', name: '“Partner” link to partner.example works' });
+    expect(out.navigation.find((n) => n.leavesSite)).toMatchObject({
+      to: 'https://partner.example/offer',
+      name: '“Partner” link to partner.example works',
+    });
     expect(out.navigation.every((n) => n.source === 'ai')).toBe(true);
   });
 
@@ -168,15 +244,28 @@ describe('The AI Planner', () => {
     // Every answer invents a selector and leaves the links out.
     const ai = new ScriptedAI((prompt) =>
       prompt.includes('Pages:')
-        ? JSON.stringify({ pages: [{ urlPath: '/', tests: [{ name: 'Made up', steps: [{ action: 'click', selector: '#invented', name: 'x' }] }], links: [] }] })
+        ? JSON.stringify({
+            pages: [
+              {
+                urlPath: '/',
+                tests: [{ name: 'Made up', steps: [{ action: 'click', selector: '#invented', name: 'x' }] }],
+                links: [],
+              },
+            ],
+          })
         : '{}'
     );
-    const input = plannerInput([page('/', [], { links: [menu[1]], elements: [el('button', 'Show offers', '[data-testid="offers"]')] })]);
+    const input = plannerInput([
+      page('/', [], { links: [menu[1]], elements: [el('button', 'Show offers', '[data-testid="offers"]')] }),
+    ]);
     const out = await planPagesAndMenus(input, ai);
 
     expect(ai.prompts).toHaveLength(2);
-    expect(ai.prompts[1]).toContain('“#invented”, which isn\'t on the page');
-    expect(out.pages[0]).toMatchObject({ source: 'fallback', tests: [{ name: 'Try the page’s buttons and tabs', source: 'fallback' }] });
+    expect(ai.prompts[1]).toContain("“#invented”, which isn't on the page");
+    expect(out.pages[0]).toMatchObject({
+      source: 'fallback',
+      tests: [{ name: 'Try the page’s buttons and tabs', source: 'fallback' }],
+    });
     expect(out.navigation[0]).toMatchObject({ source: 'fallback', name: '“Products” opens /products' });
     expect(out.notes[0]).toContain('fixed rules');
   });
@@ -199,7 +288,12 @@ describe('The AI Planner', () => {
       },
       async complete(messages: AIMessage[]): Promise<AICompletion> {
         prompts.push(messages.map((m) => m.content).join('\n'));
-        return { text: '', finishReason: 'length', model: 'vendor/thinker', usage: { promptTokens: 700, completionTokens: 4096, reasoningTokens: 4096 } };
+        return {
+          text: '',
+          finishReason: 'length',
+          model: 'vendor/thinker',
+          usage: { promptTokens: 700, completionTokens: 4096, reasoningTokens: 4096 },
+        };
       },
     };
     const input = plannerInput([page('/', [], { elements: [el('button', 'Show offers', '[data-testid="offers"]')] })]);
@@ -221,7 +315,10 @@ describe('The AI Planner', () => {
     const pagesPrompt = ai.prompts.find((p) => p.includes('Pages:'))!;
     expect(pagesPrompt).toContain('Careers');
     expect(pagesPrompt).not.toContain('"to":"/about"');
-    expect(out.navigation.find((n) => n.linkName === 'Careers')).toMatchObject({ source: 'ai', expectation: 'The Careers page' });
+    expect(out.navigation.find((n) => n.linkName === 'Careers')).toMatchObject({
+      source: 'ai',
+      expectation: 'The Careers page',
+    });
   });
 
   it('opens a folded menu first where narrow screens hide a link, and skips sizes where nothing shows it', async () => {
@@ -230,9 +327,14 @@ describe('The AI Planner', () => {
       links: folded,
       narrowMenus: [{ breakpoint: '375px', selector: 'role=button[name="Menu"]', name: 'Menu' }],
     });
-    const out = await planPagesAndMenus(plannerInput([home, page('/about', [], { links: folded })]), new ScriptedAI(goodAnswer));
+    const out = await planPagesAndMenus(
+      plannerInput([home, page('/about', [], { links: folded })]),
+      new ScriptedAI(goodAnswer)
+    );
     const about = out.navigation.find((n) => n.linkName === 'About')!;
-    expect(about.menuSteps).toEqual([{ action: 'click', selector: 'role=button[name="Menu"]', name: 'Open the menu (“Menu”)', onlyAt: ['375px'] }]);
+    expect(about.menuSteps).toEqual([
+      { action: 'click', selector: 'role=button[name="Menu"]', name: 'Open the menu (“Menu”)', onlyAt: ['375px'] },
+    ]);
     expect(about.notAt).toEqual(['768px']);
   });
 });
@@ -270,12 +372,19 @@ describe('PacedAI', () => {
       async complete(_m: AIMessage[], options?: AICompletionOptions): Promise<AICompletion> {
         asked.push(options?.model);
         if (options?.model === 'vendor/busy') {
-          throw new Error('OpenAI/OpenRouter API error (429): vendor/busy is temporarily rate-limited upstream. Please retry shortly');
+          throw new Error(
+            'OpenAI/OpenRouter API error (429): vendor/busy is temporarily rate-limited upstream. Please retry shortly'
+          );
         }
         return { text: '{}', finishReason: 'stop' };
       },
     };
-    const ai = new PacedAI(inner, Infinity, { gapMs: 0, sleep: async (ms) => void waits.push(ms), model: 'vendor/busy', fallbackModels: ['vendor/free'] });
+    const ai = new PacedAI(inner, Infinity, {
+      gapMs: 0,
+      sleep: async (ms) => void waits.push(ms),
+      model: 'vendor/busy',
+      fallbackModels: ['vendor/free'],
+    });
     expect((await ai.complete([], { stage: 'journeys' })).text).toBe('{}');
     expect(asked).toEqual(['vendor/busy', 'vendor/free']);
     expect(waits).toEqual([]);
@@ -298,7 +407,15 @@ describe('PacedAI', () => {
       },
     };
     const out = await planJourneys(
-      { targetUrl: 'https://shop.example/', productId: 'shop', promptPages: shop().slice(0, 2), spider: { pages: shop(), forms: [] }, roles: [], siteType: 'shop', redact: (t) => t },
+      {
+        targetUrl: 'https://shop.example/',
+        productId: 'shop',
+        promptPages: shop().slice(0, 2),
+        spider: { pages: shop(), forms: [] },
+        roles: [],
+        siteType: 'shop',
+        redact: (t) => t,
+      },
       ai
     );
     expect(prompts).toHaveLength(2);
@@ -316,7 +433,11 @@ describe('PacedAI', () => {
       async complete(_m: AIMessage[], options?: AICompletionOptions): Promise<AICompletion> {
         asked.push(options?.model);
         return options?.model === 'vendor/thinker'
-          ? { text: '', finishReason: 'length', usage: { promptTokens: 100, completionTokens: 4096, reasoningTokens: 4096 } }
+          ? {
+              text: '',
+              finishReason: 'length',
+              usage: { promptTokens: 100, completionTokens: 4096, reasoningTokens: 4096 },
+            }
           : { text: '{}', finishReason: 'stop', usage: { promptTokens: 100, completionTokens: 10 } };
       },
     };
@@ -325,9 +446,17 @@ describe('PacedAI', () => {
     expect((await ai.complete([], { stage: 'journeys' })).text).toBe('{}');
     expect(asked).toEqual(['vendor/thinker', 'vendor/plain', 'vendor/plain']);
     expect(ai.used).toBe(3);
-    expect(ai.tokens.planning).toMatchObject({ requests: 2, completionTokens: 4106, reasoningTokens: 4096, truncated: 1 });
+    expect(ai.tokens.planning).toMatchObject({
+      requests: 2,
+      completionTokens: 4106,
+      reasoningTokens: 4096,
+      truncated: 1,
+    });
     expect(ai.tokens.journeys).toMatchObject({ requests: 1 });
-    expect(ai.models).toEqual({ 'vendor/thinker': { ok: 0, truncated: 1, failed: 0 }, 'vendor/plain': { ok: 2, truncated: 0, failed: 0 } });
+    expect(ai.models).toEqual({
+      'vendor/thinker': { ok: 0, truncated: 1, failed: 0 },
+      'vendor/plain': { ok: 2, truncated: 0, failed: 0 },
+    });
   });
 });
 
@@ -343,7 +472,15 @@ describe('From Plan to tests', () => {
       pages,
       flows: [],
       sensitiveActions: [],
-      ambiguityQuestions: [{ id: 'Q-001', urlPath: '/', question: 'Press “Delete account”?', options: ['Skip it'], category: 'sensitive_action' }],
+      ambiguityQuestions: [
+        {
+          id: 'Q-001',
+          urlPath: '/',
+          question: 'Press “Delete account”?',
+          options: ['Skip it'],
+          category: 'sensitive_action',
+        },
+      ],
       plan: { pages: planned.pages, navigation: planned.navigation, layoutGroups: [], otherHosts: [] },
     };
   }
@@ -356,7 +493,12 @@ describe('From Plan to tests', () => {
     const kinds = (k: string) => testCases.filter((tc) => tc.kind === k);
     expect(kinds('page')).toHaveLength(7);
     expect(kinds('page-test')).toHaveLength(4);
-    expect(kinds('link')).toEqual([expect.objectContaining({ breakpoints: ['375px'], steps: [expect.objectContaining({ action: 'check-link', value: 'https://partner.example/offer' })] })]);
+    expect(kinds('link')).toEqual([
+      expect.objectContaining({
+        breakpoints: ['375px'],
+        steps: [expect.objectContaining({ action: 'check-link', value: 'https://partner.example/offer' })],
+      }),
+    ]);
     // 2 shared menu links left (About is off) + 6 product links on /products.
     expect(kinds('navigation')).toHaveLength(8);
     expect(kinds('navigation')[0].expectations).toMatchObject({ url: { pattern: '/' }, pageWorks: {} });
@@ -364,7 +506,9 @@ describe('From Plan to tests', () => {
     expect(kinds('navigation').every((tc) => JSON.stringify(tc.breakpoints) === JSON.stringify(['1440px']))).toBe(true);
     expect(testCases.every((tc) => tc.planItemId)).toBe(true);
     expect(testCases.some((tc) => tc.startPage === '/products/red-wool-scarf-2')).toBe(false);
-    expect(wontRun).toEqual([expect.objectContaining({ what: 'Menu: “About” opens /about', reason: 'Switched off in the review.' })]);
+    expect(wontRun).toEqual([
+      expect.objectContaining({ what: 'Menu: “About” opens /about', reason: 'Switched off in the review.' }),
+    ]);
 
     // (7 + 4) tests at 2 sizes, the 8 Navigation Checks and the link check once.
     expect(summary.tests).toBe(11 * 2 + 8 + 1);
@@ -398,9 +542,20 @@ describe('From Plan to tests', () => {
   });
 
   it('keeps tests that would send data out of a live site’s run, listed with the reason', async () => {
-    const form = page('/contact', [], { elements: [el('button', 'Send', '#send', { insideForm: true, inputType: 'submit' })] });
+    const form = page('/contact', [], {
+      elements: [el('button', 'Send', '#send', { insideForm: true, inputType: 'submit' })],
+    });
     const draft = await draftFor([form], true);
-    draft.plan!.pages[0].tests = [{ id: 'pagetest:/contact:1', name: 'Send the form', role: 'visitor', steps: [{ action: 'click', selector: '#send', name: 'Send' }], source: 'ai', needsTestCopy: true }];
+    draft.plan!.pages[0].tests = [
+      {
+        id: 'pagetest:/contact:1',
+        name: 'Send the form',
+        role: 'visitor',
+        steps: [{ action: 'click', selector: '#send', name: 'Send' }],
+        source: 'ai',
+        needsTestCopy: true,
+      },
+    ];
     const { testCases, notRun, wontRun } = expandPlan(draft, { readOnly: true, screenSizes: ['1440px'] });
     expect(testCases.filter((tc) => tc.kind === 'page-test')).toEqual([]);
     expect(notRun).toEqual([expect.objectContaining({ name: 'Send the form' })]);

@@ -107,7 +107,9 @@ function listOf(items: string[]): string {
 
 function stepSentence(event: RunnerEvent, mode: RunMode): string {
   if (mode === 'website') {
-    return event.action === 'navigate' ? 'Opening the page and looking it over…' : 'Opening a tab or section on the page to look inside…';
+    return event.action === 'navigate'
+      ? 'Opening the page and looking it over…'
+      : 'Opening a tab or section on the page to look inside…';
   }
   const name = plainLabel(event.stepName);
   switch (event.action) {
@@ -219,12 +221,16 @@ export function reduceFeed(state: FeedState, event: RunnerEvent, mode: RunMode):
         return milestone('Looking around the site safely. Nothing will be submitted or changed.');
       }
       const count = typeof event.testCaseCount === 'number' ? event.testCaseCount : 0;
-      return milestone(count > 0 ? `Getting ready to test ${count} ${count === 1 ? 'thing' : 'things'}…` : 'Getting ready to test…');
+      return milestone(
+        count > 0 ? `Getting ready to test ${count} ${count === 1 ? 'thing' : 'things'}…` : 'Getting ready to test…'
+      );
     }
 
     case 'PREFLIGHT_STARTED': {
       const roles = (Array.isArray(event.roles) ? event.roles : []).map(plainLabel).filter((r): r is string => !!r);
-      return milestone(roles.length > 0 ? `Checking your site is up and signing in as ${listOf(roles)}…` : 'Checking your site is up…');
+      return milestone(
+        roles.length > 0 ? `Checking your site is up and signing in as ${listOf(roles)}…` : 'Checking your site is up…'
+      );
     }
 
     case 'TEST_POINT_STARTED': {
@@ -274,7 +280,9 @@ export function reduceFeed(state: FeedState, event: RunnerEvent, mode: RunMode):
       return {
         ...state,
         findings: typeof event.totalFindings === 'number' ? event.totalFindings : state.findings,
-        progress: state.progress ? { ...state.progress, done: Math.min(state.progress.done + 1, state.progress.total) } : null,
+        progress: state.progress
+          ? { ...state.progress, done: Math.min(state.progress.done + 1, state.progress.total) }
+          : null,
         pages,
         found: found.length > 0 ? [...found.reverse(), ...state.found].slice(0, FOUND_KEPT) : state.found,
       };
@@ -290,7 +298,10 @@ export function reduceFeed(state: FeedState, event: RunnerEvent, mode: RunMode):
     case 'RUN_FINISHING':
       return {
         ...state,
-        current: event.phase === 'testing' ? 'Finishing: making a report from the tests done so far…' : 'Finishing: planning the pages found so far…',
+        current:
+          event.phase === 'testing'
+            ? 'Finishing: making a report from the tests done so far…'
+            : 'Finishing: planning the pages found so far…',
       };
 
     case 'VISUAL_REVIEW_STARTED':

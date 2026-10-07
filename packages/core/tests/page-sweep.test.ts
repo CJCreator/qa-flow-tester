@@ -55,7 +55,13 @@ describe('Page sweep', () => {
     });
     const titles = report.findings.map((f) => `${f.where.breakpoint} ${f.title}`);
 
-    expect(titles.some((t) => t.includes('Console Error') && report.findings.some((f) => f.expectedVsActual.actual.includes('Simulated Unhandled Runtime Bug')))).toBe(true);
+    expect(
+      titles.some(
+        (t) =>
+          t.includes('Console Error') &&
+          report.findings.some((f) => f.expectedVsActual.actual.includes('Simulated Unhandled Runtime Bug'))
+      )
+    ).toBe(true);
     expect(titles.some((t) => t.includes('HTTP 500 on GET') && t.includes('/api/failing-endpoint'))).toBe(true);
     expect(titles.some((t) => t.includes('Dead End Page'))).toBe(true);
     expect(titles.some((t) => t.startsWith('375px') && /touch target/i.test(t))).toBe(true);

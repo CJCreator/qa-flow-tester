@@ -54,13 +54,16 @@ export interface PlanReviewScreenProps {
  */
 function withChanges(plan: ReviewPlan, switched: Record<string, boolean>, sizes: Breakpoint[] | null): ReviewPlan {
   if (Object.keys(switched).length === 0 && !sizes) return plan;
-  const skip = <T extends { id: string; skipped?: boolean }>(item: T): T => (item.id in switched ? { ...item, skipped: switched[item.id] } : item);
+  const skip = <T extends { id: string; skipped?: boolean }>(item: T): T =>
+    item.id in switched ? { ...item, skipped: switched[item.id] } : item;
   return {
     ...plan,
     screenSizes: sizes ?? plan.screenSizes,
     planPages: plan.planPages?.map((p) => skip({ ...p, tests: p.tests.map(skip) })),
     navigation: plan.navigation?.map(skip),
-    flows: plan.flows.map((f) => (`journey:${f.id}` in switched ? { ...f, outOfScope: switched[`journey:${f.id}`] || undefined } : f)),
+    flows: plan.flows.map((f) =>
+      `journey:${f.id}` in switched ? { ...f, outOfScope: switched[`journey:${f.id}`] || undefined } : f
+    ),
   };
 }
 
@@ -73,7 +76,16 @@ const TABS = [
  * The Plan Review. Leaving it keeps the plan waiting (the new check-up screen offers it again), so
  * there's no Back here that could throw it away.
  */
-export function PlanReviewScreen({ plan, onApprove, onPlanUpdated, update, approveError, approving = false, notice, confirm }: PlanReviewScreenProps) {
+export function PlanReviewScreen({
+  plan,
+  onApprove,
+  onPlanUpdated,
+  update,
+  approveError,
+  approving = false,
+  notice,
+  confirm,
+}: PlanReviewScreenProps) {
   const [tab, setTab] = useState<'plan' | 'map'>(() => {
     try {
       const saved = sessionStorage.getItem('qa-plan-view-tab');
@@ -202,8 +214,8 @@ export function PlanReviewScreen({ plan, onApprove, onPlanUpdated, update, appro
         body: (
           <p>
             The AI plans every page, link and journey again, which takes about {about} AI requests
-            {budget?.left !== undefined ? ` (you have ${budget.left} left today)` : ''}. What you switched off stays off, but changes you made to
-            tests and journeys are replaced.
+            {budget?.left !== undefined ? ` (you have ${budget.left} left today)` : ''}. What you switched off stays
+            off, but changes you made to tests and journeys are replaced.
           </p>
         ),
         confirmLabel: 'Re-plan everything',
@@ -249,7 +261,10 @@ export function PlanReviewScreen({ plan, onApprove, onPlanUpdated, update, appro
 
   // The site's real links, for the map.
   const links = useMemo(
-    () => plan.pages.flatMap((p) => (p.links || []).filter((l) => !l.leavesSite).map((l) => ({ from: p.urlPath, to: l.landsOn ?? l.to }))),
+    () =>
+      plan.pages.flatMap((p) =>
+        (p.links || []).filter((l) => !l.leavesSite).map((l) => ({ from: p.urlPath, to: l.landsOn ?? l.to }))
+      ),
     [plan.pages]
   );
 
@@ -304,20 +319,30 @@ export function PlanReviewScreen({ plan, onApprove, onPlanUpdated, update, appro
               <Link to={PATHS.new} className="hover:text-ink transition-colors">
                 New check-up
               </Link>
-              <span aria-hidden="true" className="text-rule">/</span>
+              <span aria-hidden="true" className="text-rule">
+                /
+              </span>
               <span className="font-semibold text-ink">{host}</span>
-              <span aria-hidden="true" className="text-rule">/</span>
+              <span aria-hidden="true" className="text-rule">
+                /
+              </span>
               <span className="text-ink-soft">Plan review</span>
             </nav>
-            <FocusHeading className="break-words text-2xl font-bold text-ink sm:text-3xl">Review the plan for {host}</FocusHeading>
+            <FocusHeading className="break-words text-2xl font-bold text-ink sm:text-3xl">
+              Review the plan for {host}
+            </FocusHeading>
             <p className="text-sm text-ink-soft">
               {plan.siteType ? `${plan.siteType} · ` : ''}
-              {count(plan.planPages?.length ?? plan.pages.length, 'page', 'pages')} · {count(plan.navigation?.length ?? 0, 'link', 'links')} ·{' '}
-              {count(plan.flows.length, 'journey', 'journeys')}
+              {count(plan.planPages?.length ?? plan.pages.length, 'page', 'pages')} ·{' '}
+              {count(plan.navigation?.length ?? 0, 'link', 'links')} · {count(plan.flows.length, 'journey', 'journeys')}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <div role="tablist" aria-label="How to show the plan" className="flex rounded border border-rule bg-panel p-0.5 text-sm">
+            <div
+              role="tablist"
+              aria-label="How to show the plan"
+              className="flex rounded border border-rule bg-panel p-0.5 text-sm"
+            >
               {TABS.map(([id, name]) => (
                 <button
                   key={id}
@@ -346,7 +371,11 @@ export function PlanReviewScreen({ plan, onApprove, onPlanUpdated, update, appro
                 </button>
               ))}
             </div>
-            <button type="button" className="btn-quiet min-h-[44px] px-3 text-sm" onClick={() => downloadPlanMarkdown().catch((err: Error) => setError(err.message))}>
+            <button
+              type="button"
+              className="btn-quiet min-h-[44px] px-3 text-sm"
+              onClick={() => downloadPlanMarkdown().catch((err: Error) => setError(err.message))}
+            >
               Download the plan
             </button>
           </div>
@@ -377,15 +406,35 @@ export function PlanReviewScreen({ plan, onApprove, onPlanUpdated, update, appro
       <div className="sticky bottom-0 z-40 border-t border-rule bg-surface/95 px-4 py-2 backdrop-blur sm:px-6 sm:py-3">
         {/* Phones: one line that opens into the summary, so the bar doesn't cover the plan. */}
         <div className="flex items-center justify-between gap-3 sm:hidden">
-          <button type="button" className="min-h-[44px] min-w-0 flex-1 text-left text-sm font-bold text-ink" aria-expanded={barOpen} onClick={() => setBarOpen((o) => !o)}>
-            {tests !== undefined ? `${count(tests, 'test', 'tests')}${minutes ? ` · about ${minutes} min` : ''}` : 'Ready to test'} {barOpen ? '▾' : '▸'}
+          <button
+            type="button"
+            className="min-h-[44px] min-w-0 flex-1 text-left text-sm font-bold text-ink"
+            aria-expanded={barOpen}
+            onClick={() => setBarOpen((o) => !o)}
+          >
+            {tests !== undefined
+              ? `${count(tests, 'test', 'tests')}${minutes ? ` · about ${minutes} min` : ''}`
+              : 'Ready to test'}{' '}
+            {barOpen ? '▾' : '▸'}
           </button>
-          <button type="button" className="btn-primary min-h-[44px] shrink-0 px-4" disabled={busy || approving} onClick={onApprove}>
+          <button
+            type="button"
+            className="btn-primary min-h-[44px] shrink-0 px-4"
+            disabled={busy || approving}
+            onClick={onApprove}
+          >
             {approving ? <Spinner label="Starting…" /> : 'Approve'}
           </button>
         </div>
         {barOpen && (
-          <p className="pb-2 text-sm text-ink-soft sm:hidden">{lines.length > 1 ? lines.slice(1).map((l) => l.text).join(' · ') : 'Nothing runs until you approve.'}</p>
+          <p className="pb-2 text-sm text-ink-soft sm:hidden">
+            {lines.length > 1
+              ? lines
+                  .slice(1)
+                  .map((l) => l.text)
+                  .join(' · ')
+              : 'Nothing runs until you approve.'}
+          </p>
         )}
         <div className="mx-auto hidden max-w-6xl flex-wrap items-center justify-between gap-3 sm:flex">
           <div className="min-w-0 flex-1 text-sm text-ink">
@@ -393,7 +442,14 @@ export function PlanReviewScreen({ plan, onApprove, onPlanUpdated, update, appro
               {lines[0]?.text ?? 'Ready to test'}
               {minutes ? <span className="font-normal text-ink-soft"> · about {minutes} min</span> : null}
             </p>
-            <p className="text-ink-soft">{lines.length > 1 ? lines.slice(1).map((l) => l.text).join(' · ') : 'Nothing runs until you approve.'}</p>
+            <p className="text-ink-soft">
+              {lines.length > 1
+                ? lines
+                    .slice(1)
+                    .map((l) => l.text)
+                    .join(' · ')
+                : 'Nothing runs until you approve.'}
+            </p>
           </div>
           {approveButton}
         </div>

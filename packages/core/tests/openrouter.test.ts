@@ -16,8 +16,10 @@ function fakeOpenRouter(models: unknown[], opts: { keyStatus?: number } = {}) {
     const auth = (init?.headers as Record<string, string> | undefined)?.Authorization;
     calls.push({ url, auth });
     if (url.endsWith('/key')) {
-      const status = auth === `Bearer ${GOOD_KEY}` ? opts.keyStatus ?? 200 : 401;
-      return new Response(JSON.stringify(status === 200 ? { data: {} } : { error: { message: 'User not found.' } }), { status });
+      const status = auth === `Bearer ${GOOD_KEY}` ? (opts.keyStatus ?? 200) : 401;
+      return new Response(JSON.stringify(status === 200 ? { data: {} } : { error: { message: 'User not found.' } }), {
+        status,
+      });
     }
     if (url.endsWith('/models')) return new Response(JSON.stringify({ data: models }));
     return new Response('', { status: 404 });
@@ -98,7 +100,9 @@ describe('OpenRouterClient.listFreeModels', () => {
 
   it('leaves out models that write anything but text, such as music', async () => {
     const { client } = fakeOpenRouter([
-      model('google/lyria-3-pro-preview', { architecture: { input_modalities: ['text'], output_modalities: ['audio', 'text'] } }),
+      model('google/lyria-3-pro-preview', {
+        architecture: { input_modalities: ['text'], output_modalities: ['audio', 'text'] },
+      }),
       model('vendor/text'),
     ]);
     expect((await client.listFreeModels(GOOD_KEY)).map((m) => m.id)).toEqual(['vendor/text']);

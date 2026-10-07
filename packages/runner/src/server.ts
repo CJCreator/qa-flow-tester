@@ -107,7 +107,10 @@ function isInside(dir: string, file: string): boolean {
  * served, at any depth. Any case: Windows and macOS read "AUTH" as "auth".
  */
 function isSavedSession(dir: string, file: string): boolean {
-  return path.relative(dir, file).split(path.sep).some((part) => part.toLowerCase() === 'auth');
+  return path
+    .relative(dir, file)
+    .split(path.sep)
+    .some((part) => part.toLowerCase() === 'auth');
 }
 
 /** Run ids are made here ("run-<time>"); anything else in an address is refused, so it can't leave the runs folder. */
@@ -131,7 +134,9 @@ const RUNS_KEPT_PER_SITE = 10;
 /** "30 September 2026", for sentences in the report. */
 function formatDay(iso: string): string {
   const date = new Date(iso);
-  return Number.isNaN(date.getTime()) ? iso : date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  return Number.isNaN(date.getTime())
+    ? iso
+    : date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
 function isLoopbackOrigin(origin: string): boolean {
@@ -185,13 +190,12 @@ const MAX_RUN_EVENTS = 5000;
 const ALL_SCREEN_SIZES: Breakpoint[] = ['375px', '768px', '1440px'];
 
 /** Token use per stage, added together. */
-function addTokens(
-  a: AIRequestBudget['tokens'],
-  b: AIRequestBudget['tokens']
-): AIRequestBudget['tokens'] {
+function addTokens(a: AIRequestBudget['tokens'], b: AIRequestBudget['tokens']): AIRequestBudget['tokens'] {
   if (!b || Object.keys(b).length === 0) return a;
   const sum: NonNullable<AIRequestBudget['tokens']> = JSON.parse(JSON.stringify(a ?? {}));
-  for (const [stage, u] of Object.entries(b) as Array<[keyof typeof sum, NonNullable<(typeof sum)[keyof typeof sum]>]>) {
+  for (const [stage, u] of Object.entries(b) as Array<
+    [keyof typeof sum, NonNullable<(typeof sum)[keyof typeof sum]>]
+  >) {
     const s = (sum[stage] ??= { requests: 0, promptTokens: 0, completionTokens: 0, reasoningTokens: 0, truncated: 0 });
     s.requests += u.requests;
     s.promptTokens += u.promptTokens;
@@ -403,7 +407,8 @@ function planForClient(plan: ReviewPlan): ReviewPlan {
  * what won't run, the answers, the sizes, and the items touched (a page whole when one of its tests was).
  */
 function planDelta(plan: ReviewPlan, touched: Set<string>) {
-  const pageTouched = (p: NonNullable<ReviewPlan['planPages']>[number]) => touched.has(p.id) || p.tests.some((t) => touched.has(t.id));
+  const pageTouched = (p: NonNullable<ReviewPlan['planPages']>[number]) =>
+    touched.has(p.id) || p.tests.some((t) => touched.has(t.id));
   return {
     delta: true as const,
     summary: plan.summary,
@@ -525,7 +530,9 @@ export class RunnerServer {
     this.outputDir = path.resolve(options.outputDir || path.join(process.cwd(), '.qa-runner-report'));
     this.baselineDir = path.resolve(process.cwd(), '.qa-baselines');
     this.localhostAlias = options.localhostAlias;
-    this.hostAliases = Object.fromEntries(Object.entries(options.hostAliases || {}).map(([k, v]) => [k.toLowerCase(), v]));
+    this.hostAliases = Object.fromEntries(
+      Object.entries(options.hostAliases || {}).map(([k, v]) => [k.toLowerCase(), v])
+    );
     this.dataDir = path.resolve(options.dataDir || path.join(process.cwd(), '.qa-data'));
     if (!options.dataDir) this.legacyDataDir = process.cwd();
     this.scheduler = new SchedulerManager(this.dataDir);
@@ -542,7 +549,10 @@ export class RunnerServer {
     this.uiApps = options.ui || [];
     this.allowedOrigins = new Set(
       (options.allowedOrigins || []).map((o) => {
-        const clean = o.replace(/\u001b\[[0-9;]*[a-zA-Z]|\u001b\].*?\u0007/g, '').trim().replace(/\/+$/, '');
+        const clean = o
+          .replace(/\u001b\[[0-9;]*[a-zA-Z]|\u001b\].*?\u0007/g, '')
+          .trim()
+          .replace(/\/+$/, '');
         try {
           return new URL(clean).origin;
         } catch {
@@ -552,7 +562,6 @@ export class RunnerServer {
     );
     this.accessToken = options.accessToken || undefined;
   }
-
 
   /** Beta: whether a run belongs to the visitor making this request. Outside beta every run is everyone's. */
   private isMine(runId: string | null | undefined): boolean {
@@ -577,7 +586,10 @@ export class RunnerServer {
   public broadcastRunnerEvent(event: OrchestratorEvent | Record<string, unknown>): void {
     this.recordRunEvent(event as Record<string, unknown>);
     const payload = `data: ${JSON.stringify(event)}\n\n`;
-    const eventRun = typeof (event as Record<string, unknown>).runId === 'string' ? ((event as Record<string, unknown>).runId as string) : this.currentRunId;
+    const eventRun =
+      typeof (event as Record<string, unknown>).runId === 'string'
+        ? ((event as Record<string, unknown>).runId as string)
+        : this.currentRunId;
     const owner = this.beta && eventRun ? this.runOwners.get(eventRun) : undefined;
     for (const client of this.streamClients) {
       // Beta: a run's events go only to the visitor who started it.
@@ -600,7 +612,9 @@ export class RunnerServer {
     this.runEvents.push(event.type === 'RUN_COMPLETED' ? { type: event.type, runId: event.runId } : event);
     if (this.runEvents.length > MAX_RUN_EVENTS) {
       const half = this.runEvents.length / 2;
-      this.runEvents = this.runEvents.filter((e, i) => i >= half || (e.type !== 'STEP_STARTED' && e.type !== 'STEP_COMPLETED'));
+      this.runEvents = this.runEvents.filter(
+        (e, i) => i >= half || (e.type !== 'STEP_STARTED' && e.type !== 'STEP_COMPLETED')
+      );
     }
   }
 
@@ -645,7 +659,9 @@ export class RunnerServer {
       res.end(JSON.stringify({ error: 'This QA Tool is shared privately: send its access key.' }));
     } else {
       res.writeHead(401, { 'Content-Type': 'text/plain; charset=utf-8' });
-      res.end('This Release check-up is shared privately. Open it with the full link you were given: it includes the access key.');
+      res.end(
+        'This Release check-up is shared privately. Open it with the full link you were given: it includes the access key.'
+      );
     }
     return false;
   }
@@ -683,7 +699,9 @@ export class RunnerServer {
 
           if (!isAllowedHost) {
             res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
-            res.end(`Release check-up only answers on this computer or allowed tunnel hosts. Open http://localhost:${this.port}/ instead.`);
+            res.end(
+              `Release check-up only answers on this computer or allowed tunnel hosts. Open http://localhost:${this.port}/ instead.`
+            );
             return;
           }
 
@@ -715,7 +733,10 @@ export class RunnerServer {
             const proto = req.headers['x-forwarded-proto'];
             enterSession(sessionFor(req, res, (Array.isArray(proto) ? proto[0] : proto)?.includes('https') ?? false));
             if (this.closedInBeta(req.method, pathname)) {
-              this.sendJson(res, 403, { error: 'This is closed on the shared beta copy, so testers don’t change each other’s check-ups.', code: 'ERR_BETA' });
+              this.sendJson(res, 403, {
+                error: 'This is closed on the shared beta copy, so testers don’t change each other’s check-ups.',
+                code: 'ERR_BETA',
+              });
               return;
             }
             if (await this.betaScope(req, res, pathname)) return;
@@ -740,12 +761,14 @@ export class RunnerServer {
             res.writeHead(200, {
               'Content-Type': 'text/event-stream',
               'Cache-Control': 'no-cache, no-transform',
-              'Connection': 'keep-alive',
+              Connection: 'keep-alive',
               'X-Accel-Buffering': 'no',
             });
             res.write(`data: ${JSON.stringify({ type: 'connected', timestamp: Date.now() })}\n\n`);
             // A page that opens or reconnects mid-run catches up: this run's events so far, in order (beta: only the visitor's own run).
-            if (this.isMine(this.currentRunId)) for (const event of this.runEvents) res.write(`data: ${JSON.stringify({ ...event, replayed: true })}\n\n`);
+            if (this.isMine(this.currentRunId))
+              for (const event of this.runEvents)
+                res.write(`data: ${JSON.stringify({ ...event, replayed: true })}\n\n`);
             this.streamClients.add(res);
             if (this.beta) this.streamSessions.set(res, currentSessionId());
             req.on('close', () => {
@@ -862,7 +885,11 @@ export class RunnerServer {
 
           // GET /api/sites, POST /api/sites/<host> — what's remembered per site: its choices and saved sign-ins
           if (pathname === '/api/sites' || pathname.startsWith('/api/sites/')) {
-            await this.handleSites(decodeURIComponent(pathname.slice('/api/sites'.length).replace(/^\//, '')), req, res);
+            await this.handleSites(
+              decodeURIComponent(pathname.slice('/api/sites'.length).replace(/^\//, '')),
+              req,
+              res
+            );
             return;
           }
 
@@ -889,7 +916,6 @@ export class RunnerServer {
             await this.handleReportDownload(pathname.replace('/api/report/download/', ''), res);
             return;
           }
-
 
           // POST /api/runner/ai/finish (Task 2.4: finish visual review on remaining screens)
           if (pathname === '/api/runner/ai/finish' && req.method === 'POST') {
@@ -935,7 +961,11 @@ export class RunnerServer {
             return;
           }
           if (pathname.startsWith('/api/runner/benchmark/') && (req.method === 'GET' || req.method === 'DELETE')) {
-            await this.handleBenchmarkById(decodeURIComponent(pathname.slice('/api/runner/benchmark/'.length)), req.method, res);
+            await this.handleBenchmarkById(
+              decodeURIComponent(pathname.slice('/api/runner/benchmark/'.length)),
+              req.method,
+              res
+            );
             return;
           }
 
@@ -971,7 +1001,9 @@ export class RunnerServer {
             // Checked again on the path the file system really opens, so neither a link nor another
             // spelling of the same folder can reach a saved session.
             const realTarget = await fs.realpath(targetFile).catch(() => null);
-            const realRoot = realTarget ? await fs.realpath(this.outputDir).catch(() => this.outputDir) : this.outputDir;
+            const realRoot = realTarget
+              ? await fs.realpath(this.outputDir).catch(() => this.outputDir)
+              : this.outputDir;
             const forbidden =
               !isInside(this.outputDir, targetFile) ||
               isSavedSession(this.outputDir, targetFile) ||
@@ -1061,11 +1093,25 @@ export class RunnerServer {
     if (pathname === '/api/runner/status' && method === 'GET') {
       if (this.isMine(this.currentRunId)) return false;
       const busy = this.phase === 'scanning' || this.phase === 'testing' || this.benchmarkBusy;
-      this.sendJson(res, 200, { isRunning: false, hasReport: false, lastRunError: null, lastErrorCode: null, phase: 'idle', hasPlan: false, runId: null, targetUrl: null, reportRunId: null, beta: true, busy });
+      this.sendJson(res, 200, {
+        isRunning: false,
+        hasReport: false,
+        lastRunError: null,
+        lastErrorCode: null,
+        phase: 'idle',
+        hasPlan: false,
+        runId: null,
+        targetUrl: null,
+        reportRunId: null,
+        beta: true,
+        busy,
+      });
       return true;
     }
     // What the current run offers: its plan, its changes, finishing its review.
-    const ofCurrentRun = (pathname.startsWith('/api/runner/plan') && pathname !== '/api/runner/waiting-plans') || pathname === '/api/runner/ai/finish';
+    const ofCurrentRun =
+      (pathname.startsWith('/api/runner/plan') && pathname !== '/api/runner/waiting-plans') ||
+      pathname === '/api/runner/ai/finish';
     if (ofCurrentRun) return this.refuseNotMine(res, this.currentRunId);
     if ((pathname === '/api/runner/abort' || pathname === '/api/runner/stop') && method === 'POST') {
       if (this.isMine(this.currentRunId)) return false;
@@ -1090,7 +1136,10 @@ export class RunnerServer {
         this.sendJson(res, 200, []);
         return true;
       }
-      this.sendJson(res, 403, { error: 'This is closed on the shared beta copy, so testers don’t change each other’s check-ups.', code: 'ERR_BETA' });
+      this.sendJson(res, 403, {
+        error: 'This is closed on the shared beta copy, so testers don’t change each other’s check-ups.',
+        code: 'ERR_BETA',
+      });
       return true;
     }
     return false;
@@ -1107,7 +1156,13 @@ export class RunnerServer {
     if (!this.beta || !address) return false;
     const reason = await refusedTarget(address);
     if (!reason) return false;
-    this.sendJson(res, 400, { reachable: false, reason: 'private-address', code: 'ERR_PRIVATE_TARGET', error: reason, suggestion: reason });
+    this.sendJson(res, 400, {
+      reachable: false,
+      reason: 'private-address',
+      code: 'ERR_PRIVATE_TARGET',
+      error: reason,
+      suggestion: reason,
+    });
     return true;
   }
 
@@ -1163,7 +1218,9 @@ export class RunnerServer {
             owner: memory.owner,
             markedTestCopy: memory.staging || undefined,
             searchChecks: memory.searchChecks,
-            signIns: memory.signIns?.length ? memory.signIns.map((s) => ({ role: s.role, username: s.username })) : undefined,
+            signIns: memory.signIns?.length
+              ? memory.signIns.map((s) => ({ role: s.role, username: s.username }))
+              : undefined,
           }
         : undefined,
     };
@@ -1254,21 +1311,36 @@ export class RunnerServer {
    */
   private async handleSignInChange(
     host: string,
-    body: { addSignIn?: { role?: string; username?: string; password?: string; loginPath?: string }; testSignIn?: string },
+    body: {
+      addSignIn?: { role?: string; username?: string; password?: string; loginPath?: string };
+      testSignIn?: string;
+    },
     res: http.ServerResponse
   ): Promise<void> {
     const memory = (await loadSiteMemory(this.siteDir(), host)) ?? emptySiteMemory(host);
     let credential: RoleCredential;
     if (body.addSignIn) {
-      const role = (body.addSignIn.role || 'member').trim().toLowerCase().replace(/[^a-z0-9 _-]/g, '').slice(0, 40) || 'member';
+      const role =
+        (body.addSignIn.role || 'member')
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9 _-]/g, '')
+          .slice(0, 40) || 'member';
       if (!body.addSignIn.username?.trim() || !body.addSignIn.password) {
         this.sendJson(res, 400, { error: 'Enter the username and password to sign in with.' });
         return;
       }
-      credential = { role, username: body.addSignIn.username.trim(), password: body.addSignIn.password, loginPath: body.addSignIn.loginPath?.trim() || undefined };
+      credential = {
+        role,
+        username: body.addSignIn.username.trim(),
+        password: body.addSignIn.password,
+        loginPath: body.addSignIn.loginPath?.trim() || undefined,
+      };
     } else {
       const saved = memory.signIns?.find((s) => s.role === body.testSignIn);
-      const password = saved ? await this.keyResolver.readSecret(this.signInAccount(memory.host, saved.role)) : undefined;
+      const password = saved
+        ? await this.keyResolver.readSecret(this.signInAccount(memory.host, saved.role))
+        : undefined;
       if (!saved || !password) {
         this.sendJson(res, 404, { error: 'That sign-in isn’t saved here.' });
         return;
@@ -1304,8 +1376,15 @@ export class RunnerServer {
       return;
     }
     if (body.addSignIn) {
-      if (!(await this.keyResolver.saveSecret(this.signInAccount(memory.host, credential.role), credential.password!))) {
-        this.sendJson(res, 200, { verified: true, saved: false, landingPath: result.landingPath, error: 'Signing in worked, but this computer has no keychain to keep the password in.' });
+      if (
+        !(await this.keyResolver.saveSecret(this.signInAccount(memory.host, credential.role), credential.password!))
+      ) {
+        this.sendJson(res, 200, {
+          verified: true,
+          saved: false,
+          landingPath: result.landingPath,
+          error: 'Signing in worked, but this computer has no keychain to keep the password in.',
+        });
         return;
       }
       memory.signIns = [
@@ -1345,7 +1424,11 @@ export class RunnerServer {
         return;
       }
       await fs.mkdir(path.dirname(this.defaultsFile), { recursive: true });
-      await fs.writeFile(this.defaultsFile, JSON.stringify({ ...(await this.readDefaults()), screenSizes: sizes }, null, 2), 'utf8');
+      await fs.writeFile(
+        this.defaultsFile,
+        JSON.stringify({ ...(await this.readDefaults()), screenSizes: sizes }, null, 2),
+        'utf8'
+      );
       this.sendJson(res, 200, { screenSizes: sizes });
       return;
     }
@@ -1356,7 +1439,11 @@ export class RunnerServer {
    * The sign-ins a check-up uses: the ones given, remembered for the site when asked (passwords in
    * the OS keychain only); or, when none are given and the person asked for them, the saved ones.
    */
-  private async signInsFor(body: TriggerRunBody, memory: SiteMemory | null, host: string): Promise<{ roles?: RoleCredential[]; memory: SiteMemory | null; note?: string }> {
+  private async signInsFor(
+    body: TriggerRunBody,
+    memory: SiteMemory | null,
+    host: string
+  ): Promise<{ roles?: RoleCredential[]; memory: SiteMemory | null; note?: string }> {
     if (body.roles?.length) {
       if (!body.rememberSignIns) return { roles: body.roles, memory };
       const saved: NonNullable<SiteMemory['signIns']> = [];
@@ -1372,7 +1459,10 @@ export class RunnerServer {
       return {
         roles: body.roles,
         memory: next,
-        note: unsaved > 0 ? 'This computer has no keychain to keep passwords in, so the sign-ins weren’t remembered.' : undefined,
+        note:
+          unsaved > 0
+            ? 'This computer has no keychain to keep passwords in, so the sign-ins weren’t remembered.'
+            : undefined,
       };
     }
     if (!body.useSavedSignIns || !memory?.signIns?.length) return { memory };
@@ -1402,12 +1492,20 @@ export class RunnerServer {
       // estimated for a typical site
     }
     const memory = host ? await loadSiteMemory(this.siteDir(), host).catch(() => null) : null;
-    const maxPages = typeof body.maxPages === 'number' && body.maxPages > 0 ? Math.min(Math.floor(body.maxPages), 1000) : 200;
+    const maxPages =
+      typeof body.maxPages === 'number' && body.maxPages > 0 ? Math.min(Math.floor(body.maxPages), 1000) : 200;
     // Pages whose approved plan is reused aren't asked about again.
     const planned = memory?.plan ? Object.keys(memory.plan.pages).length : undefined;
-    const estimate = estimateScanRequests({ maxPages, pagesSeenBefore: planned ?? memory?.pages.length, visualReviewCalls: VISUAL_REVIEW_CALLS });
+    const estimate = estimateScanRequests({
+      maxPages,
+      pagesSeenBefore: planned ?? memory?.pages.length,
+      visualReviewCalls: VISUAL_REVIEW_CALLS,
+    });
     const setup = await this.aiSetup();
-    const today = setup.provider === 'openrouter' && setup.key ? await this.openRouter.freeRequestsToday(setup.key).catch(() => null) : null;
+    const today =
+      setup.provider === 'openrouter' && setup.key
+        ? await this.openRouter.freeRequestsToday(setup.key).catch(() => null)
+        : null;
     this.sendJson(res, 200, {
       ...estimate,
       seenBefore: !!memory,
@@ -1488,7 +1586,13 @@ export class RunnerServer {
     const finished = new Set(runs.map((r) => r.runId));
     const root = path.join(this.outputDir, 'runs');
     for (const name of await fs.readdir(root).catch(() => [] as string[])) {
-      if (!isRunId(name) || finished.has(name) || name === this.currentRunId || [...this.parkedPlans.values()].some((r) => r.plan.runId === name)) continue;
+      if (
+        !isRunId(name) ||
+        finished.has(name) ||
+        name === this.currentRunId ||
+        [...this.parkedPlans.values()].some((r) => r.plan.runId === name)
+      )
+        continue;
       await fs.rm(path.join(root, name), { recursive: true, force: true }).catch(() => {});
     }
   }
@@ -1548,7 +1652,9 @@ export class RunnerServer {
       const report = await this.readRunReport(runId);
       const titles = Array.isArray(body.titles) ? body.titles.filter((t) => typeof t === 'string') : [];
       if (!report || titles.length === 0) {
-        this.sendJson(res, report ? 400 : 404, { error: report ? 'Say which problem.' : 'That check-up’s report isn’t there any more.' });
+        this.sendJson(res, report ? 400 : 404, {
+          error: report ? 'Say which problem.' : 'That check-up’s report isn’t there any more.',
+        });
         return;
       }
       let host: string | undefined;
@@ -1566,7 +1672,13 @@ export class RunnerServer {
       const suppressions = new SuppressionsManager(this.outputDir);
       if (status) {
         for (const title of titles) {
-          await suppressions.saveSuppression({ findingTitle: title, triageStatus: status, reason: body.reason?.trim() || undefined, dateAdded: new Date().toISOString(), host });
+          await suppressions.saveSuppression({
+            findingTitle: title,
+            triageStatus: status,
+            reason: body.reason?.trim() || undefined,
+            dateAdded: new Date().toISOString(),
+            host,
+          });
         }
       } else {
         await suppressions.removeSuppressions(titles, host);
@@ -1591,7 +1703,8 @@ export class RunnerServer {
         const content = await fs.readFile(path.join(this.runDir(runId), file));
         let host = 'site';
         try {
-          host = new URL((await this.readRunReport(runId))?.targetUrl || '').host.replace(/[^a-z0-9.-]/gi, '_') || 'site';
+          host =
+            new URL((await this.readRunReport(runId))?.targetUrl || '').host.replace(/[^a-z0-9.-]/gi, '_') || 'site';
         } catch {
           // keep "site"
         }
@@ -1608,7 +1721,10 @@ export class RunnerServer {
     }
 
     if (!action && req.method === 'DELETE') {
-      if (runId === this.currentRunId && (this.phase === 'scanning' || this.phase === 'testing' || this.phase === 'awaiting-review')) {
+      if (
+        runId === this.currentRunId &&
+        (this.phase === 'scanning' || this.phase === 'testing' || this.phase === 'awaiting-review')
+      ) {
         this.sendJson(res, 409, { error: 'That check-up is still in progress. Stop it first.' });
         return;
       }
@@ -1638,9 +1754,14 @@ export class RunnerServer {
         await fs.mkdir(path.dirname(to), { recursive: true });
         await fs.cp(from, to, { recursive: true });
         await fs.rm(from, { recursive: true, force: true });
-        console.log(`[Release check-up] Moved ${name} into ${path.relative(process.cwd(), this.dataDir) || this.dataDir}`);
+        console.log(
+          `[Release check-up] Moved ${name} into ${path.relative(process.cwd(), this.dataDir) || this.dataDir}`
+        );
       } catch (err) {
-        console.warn(`[Release check-up] Couldn’t move ${name} into the data folder:`, err instanceof Error ? err.message : err);
+        console.warn(
+          `[Release check-up] Couldn’t move ${name} into the data folder:`,
+          err instanceof Error ? err.message : err
+        );
       }
     }
   }
@@ -1684,12 +1805,22 @@ export class RunnerServer {
     }
     const pending = this.pendingAiScreens?.runId === report.runId ? this.pendingAiScreens.screens : [];
     if (pending.length === 0) {
-      this.sendJson(res, 200, { completed: true, message: 'No remaining screens to review', reviewedCount: 0, remainingCount: 0, addedFindingsCount: 0, grades: report.grades });
+      this.sendJson(res, 200, {
+        completed: true,
+        message: 'No remaining screens to review',
+        reviewedCount: 0,
+        remainingCount: 0,
+        addedFindingsCount: 0,
+        grades: report.grades,
+      });
       return;
     }
     const reviewed = await this.visualReview(report, pending);
     if (!reviewed) {
-      this.sendJson(res, 409, { error: 'No AI model that reads screenshots is set up. Choose one in Settings.', code: 'ERR_NO_VISION_MODEL' });
+      this.sendJson(res, 409, {
+        error: 'No AI model that reads screenshots is set up. Choose one in Settings.',
+        code: 'ERR_NO_VISION_MODEL',
+      });
       return;
     }
     await this.saveReviewedReport(report);
@@ -1725,7 +1856,10 @@ export class RunnerServer {
       byGroup.set(group, screen);
       if (screen.urlPath === urlPath && !screen.screenshots.some((s) => s.breakpoint === result.breakpoint)) {
         // The report keeps evidence paths relative to the run's folder.
-        screen.screenshots.push({ breakpoint: result.breakpoint, imagePath: path.resolve(this.runDir(report.runId), shot.screenshotPath) });
+        screen.screenshots.push({
+          breakpoint: result.breakpoint,
+          imagePath: path.resolve(this.runDir(report.runId), shot.screenshotPath),
+        });
       }
     }
     return [...byGroup.values()];
@@ -1746,13 +1880,18 @@ export class RunnerServer {
     const setup = runAi?.apiKey ? { provider: runAi.provider, key: runAi.apiKey, vision: runAi.vision } : saved;
     if (!setup.key || !setup.vision) return null;
     const budget = await this.aiBudgetFor({ provider: setup.provider }, setup.key);
-    const paced = new PacedAI(this.makeAIProvider(setup.provider, setup.key, setup.vision), Math.min(budget.left ?? Infinity, VISUAL_REVIEW_CALLS), {
-      model: setup.vision,
-    });
+    const paced = new PacedAI(
+      this.makeAIProvider(setup.provider, setup.key, setup.vision),
+      Math.min(budget.left ?? Infinity, VISUAL_REVIEW_CALLS),
+      {
+        model: setup.vision,
+      }
+    );
     const result = await new VisualReviewer().reviewScreens(screens, paced, { maxCalls: VISUAL_REVIEW_CALLS });
     report.aiUsage = addTokens(report.aiUsage, paced.tokens);
     await this.recordModelOutcomes(paced.models);
-    this.pendingAiScreens = result.remainingScreens.length > 0 ? { runId: report.runId, screens: result.remainingScreens } : null;
+    this.pendingAiScreens =
+      result.remainingScreens.length > 0 ? { runId: report.runId, screens: result.remainingScreens } : null;
     if (result.findings.length > 0) report.findings.push(...result.findings);
     if (result.reviewedCount > 0) {
       const ran = report.results.flatMap((r) => (r.checks || []).map((c) => c.checker));
@@ -1786,7 +1925,15 @@ export class RunnerServer {
     if (!summary) return;
     const verdict = releaseVerdict(report.findings);
     await fs
-      .writeFile(summaryFile, JSON.stringify({ ...summary, ready: verdict.ready, stamp: verdict.stamp, reason: verdict.reason, counts: verdict.counts }, null, 2), 'utf8')
+      .writeFile(
+        summaryFile,
+        JSON.stringify(
+          { ...summary, ready: verdict.ready, stamp: verdict.stamp, reason: verdict.reason, counts: verdict.counts },
+          null,
+          2
+        ),
+        'utf8'
+      )
       .catch(() => {});
   }
 
@@ -1813,7 +1960,11 @@ export class RunnerServer {
 
   private async writeAiModels(settings: AiSettings): Promise<void> {
     await fs.mkdir(path.dirname(this.aiModelsFile), { recursive: true });
-    await fs.writeFile(this.aiModelsFile, JSON.stringify({ ...settings, chosenAt: new Date().toISOString() }, null, 2), 'utf8');
+    await fs.writeFile(
+      this.aiModelsFile,
+      JSON.stringify({ ...settings, chosenAt: new Date().toISOString() }, null, 2),
+      'utf8'
+    );
   }
 
   /** How each model has done on this machine: a model that keeps stopping before it answers is avoided. */
@@ -1844,21 +1995,41 @@ export class RunnerServer {
    * answering), replacing any that has gone. Returns the next best models too, to switch to when
    * the chosen one stops before answering.
    */
-  private async refreshAiModels(apiKey: string): Promise<{ text: string | null; vision: string | null; fallbacks: string[] }> {
-    const [free, current, record] = await Promise.all([this.openRouter.listFreeModels(apiKey), this.readAiModels(), this.readModelRecord()]);
+  private async refreshAiModels(
+    apiKey: string
+  ): Promise<{ text: string | null; vision: string | null; fallbacks: string[] }> {
+    const [free, current, record] = await Promise.all([
+      this.openRouter.listFreeModels(apiKey),
+      this.readAiModels(),
+      this.readModelRecord(),
+    ]);
     const models = keepOrPickModels(free, current, record);
     const chosenBy = current.chosenBy === 'person' && current.text === models.text ? 'person' : undefined;
-    await this.writeAiModels({ ...current, provider: 'openrouter', text: models.text, vision: models.vision, chosenBy });
+    await this.writeAiModels({
+      ...current,
+      provider: 'openrouter',
+      text: models.text,
+      vision: models.vision,
+      chosenBy,
+    });
     return { ...models, fallbacks: fallbackModels(free, models.text, record) };
   }
 
   /** The provider, key and models the AI uses, as saved in Settings. */
-  private async aiSetup(): Promise<{ provider: AIProviderType; key?: string; text?: string; vision?: string; chosenBy?: 'person' }> {
+  private async aiSetup(): Promise<{
+    provider: AIProviderType;
+    key?: string;
+    text?: string;
+    vision?: string;
+    chosenBy?: 'person';
+  }> {
     const settings = await this.readAiModels();
     const provider = settings.provider ?? 'openrouter';
     const key = await this.storedKey(provider);
     // Paid providers' models all read screenshots: the text model does the visual review too.
-    const text = settings.text ?? (provider === 'openrouter' ? undefined : DEFAULT_MODELS[provider as Exclude<AIProviderType, 'mock'>]);
+    const text =
+      settings.text ??
+      (provider === 'openrouter' ? undefined : DEFAULT_MODELS[provider as Exclude<AIProviderType, 'mock'>]);
     const vision = settings.vision ?? (provider === 'openrouter' ? undefined : text);
     return { provider, key, text: text ?? undefined, vision: vision ?? undefined, chosenBy: settings.chosenBy };
   }
@@ -1881,8 +2052,15 @@ export class RunnerServer {
     // GET usage: today's free requests, one call to OpenRouter (slow): loaded after the settings.
     if (route === 'usage' && req.method === 'GET') {
       const setup = await this.aiSetup();
-      const today = setup.provider === 'openrouter' && setup.key ? await this.openRouter.freeRequestsToday(setup.key).catch(() => null) : null;
-      this.sendJson(res, 200, { requestsLeft: today?.remaining ?? null, requestsLimit: today?.limit ?? null, used: today?.used ?? null });
+      const today =
+        setup.provider === 'openrouter' && setup.key
+          ? await this.openRouter.freeRequestsToday(setup.key).catch(() => null)
+          : null;
+      this.sendJson(res, 200, {
+        requestsLeft: today?.remaining ?? null,
+        requestsLimit: today?.limit ?? null,
+        used: today?.used ?? null,
+      });
       return true;
     }
 
@@ -1925,7 +2103,13 @@ export class RunnerServer {
       const key = await this.storedKey(provider);
       if (provider === 'openrouter' && key && !chosen) await this.refreshAiModels(key).catch(() => null);
       const setup = await this.aiSetup();
-      this.sendJson(res, 200, { saved: true, provider, configured: !!setup.key, model: setup.text ?? null, visionModel: setup.vision ?? null });
+      this.sendJson(res, 200, {
+        saved: true,
+        provider,
+        configured: !!setup.key,
+        model: setup.text ?? null,
+        visionModel: setup.vision ?? null,
+      });
       return true;
     }
 
@@ -1960,7 +2144,14 @@ export class RunnerServer {
           : answer.finishReason === 'length' && !answer.text.trim()
             ? 'The model spent its whole answer allowance thinking and answered nothing. Choose another model.'
             : 'The model answered, but not with what was asked. Plans from it may fall back to fixed rules.';
-        if (model) await this.recordModelOutcomes({ [model]: { ok: ok ? 1 : 0, truncated: answer.finishReason === 'length' ? 1 : 0, failed: ok || answer.finishReason === 'length' ? 0 : 1 } });
+        if (model)
+          await this.recordModelOutcomes({
+            [model]: {
+              ok: ok ? 1 : 0,
+              truncated: answer.finishReason === 'length' ? 1 : 0,
+              failed: ok || answer.finishReason === 'length' ? 0 : 1,
+            },
+          });
         this.sendJson(res, 200, { ok, ms, model: answer.model ?? model, reason, usage: answer.usage });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -1968,7 +2159,9 @@ export class RunnerServer {
           ok: false,
           ms: Date.now() - started,
           model,
-          reason: /\b429\b|rate.?limit/i.test(message) ? 'The AI service is busy or today’s free requests are used up. Try again later.' : `The AI service said: ${message.slice(0, 200)}`,
+          reason: /\b429\b|rate.?limit/i.test(message)
+            ? 'The AI service is busy or today’s free requests are used up. Try again later.'
+            : `The AI service said: ${message.slice(0, 200)}`,
         });
       }
       return true;
@@ -2069,9 +2262,13 @@ export class RunnerServer {
   private async handleTriggerRun(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
     if (this.phase === 'scanning' || this.phase === 'testing' || this.benchmarkBusy) {
       this.sendJson(res, 409, {
-        error: this.beta ? 'Someone else is running a check-up on this shared copy. Try again in a few minutes.' : 'Another check-up is running. Wait for it to finish, or stop it first.',
+        error: this.beta
+          ? 'Someone else is running a check-up on this shared copy. Try again in a few minutes.'
+          : 'Another check-up is running. Wait for it to finish, or stop it first.',
         code: 'ERR_RUN_IN_PROGRESS',
-        suggestion: this.beta ? 'Only one check-up runs at a time here. Try again in a few minutes.' : 'Wait for the check-up in progress to finish, or stop it, then start this one.',
+        suggestion: this.beta
+          ? 'Only one check-up runs at a time here. Try again in a few minutes.'
+          : 'Wait for the check-up in progress to finish, or stop it, then start this one.',
       });
       return;
     }
@@ -2139,7 +2336,13 @@ export class RunnerServer {
     // The wizard's plan is written by the AI (ADR 0009), so its scans need a working AI key.
     const wizardScan = body.owner !== undefined && body.mode !== 'safe-public' && !body.specTestCases?.length;
     const wantedProvider = body.aiProvider ?? 'openrouter';
-    if (wizardScan && body.useAI && wantedProvider !== 'mock' && !body.apiKey && !(await this.storedKey(wantedProvider))) {
+    if (
+      wizardScan &&
+      body.useAI &&
+      wantedProvider !== 'mock' &&
+      !body.apiKey &&
+      !(await this.storedKey(wantedProvider))
+    ) {
       this.sendJson(res, 400, {
         error: 'An AI key is needed: the AI writes the plan.',
         code: 'ERR_NO_AI_KEY',
@@ -2312,7 +2515,9 @@ export class RunnerServer {
         memory = signIns.memory;
         await saveSiteMemory(this.siteDir(), memory);
       }
-      const profile: ProductProfile | undefined = signIns.roles?.length ? { name: productId, productId, roles: signIns.roles } : undefined;
+      const profile: ProductProfile | undefined = signIns.roles?.length
+        ? { name: productId, productId, roles: signIns.roles }
+        : undefined;
       // Test again tests at the screen sizes the plan was approved with, unless told otherwise; a
       // new check-up at the sizes chosen in Settings.
       const breakpoints: Breakpoint[] =
@@ -2326,11 +2531,11 @@ export class RunnerServer {
       const readOnly = !(owner && testHost);
       // How search engines see a site matters on the public site, not on a test copy, unless asked.
       const searchChecks = body.searchChecks ?? memory?.searchChecks ?? (urlFirst ? !testHost : true);
-      const visibility = (body.visibility as { search: boolean; answers: boolean; aiSearch: boolean; marketing: boolean } | undefined) ?? (
-        searchChecks
+      const visibility =
+        (body.visibility as { search: boolean; answers: boolean; aiSearch: boolean; marketing: boolean } | undefined) ??
+        (searchChecks
           ? { search: true, answers: true, aiSearch: true, marketing: true }
-          : { search: false, answers: false, aiSearch: false, marketing: false }
-      );
+          : { search: false, answers: false, aiSearch: false, marketing: false });
 
       const context: StoredPlanRecord['context'] = {
         targetUrl,
@@ -2351,11 +2556,21 @@ export class RunnerServer {
 
       if (body.specTestCases && body.specTestCases.length > 0) {
         // Caller supplied an explicit spec — takes priority over AI discovery.
-        await this.executeTesting({ plan: this.emptyPlan(runId, body.targetUrl), context }, body.specTestCases, [], generation);
+        await this.executeTesting(
+          { plan: this.emptyPlan(runId, body.targetUrl), context },
+          body.specTestCases,
+          [],
+          generation
+        );
         return;
       }
       if (!body.useAI && !urlFirst) {
-        await this.executeTesting({ plan: this.emptyPlan(runId, body.targetUrl), context }, [this.defaultTestCase()], [], generation);
+        await this.executeTesting(
+          { plan: this.emptyPlan(runId, body.targetUrl), context },
+          [this.defaultTestCase()],
+          [],
+          generation
+        );
         return;
       }
 
@@ -2389,11 +2604,15 @@ export class RunnerServer {
         finishSignal: this.finishController?.signal,
         aiProvider: ai.provider,
         readOnly,
-        maxPages: typeof body.maxPages === 'number' && body.maxPages > 0 ? Math.min(Math.floor(body.maxPages), 1000) : undefined,
+        maxPages:
+          typeof body.maxPages === 'number' && body.maxPages > 0
+            ? Math.min(Math.floor(body.maxPages), 1000)
+            : undefined,
         aiBudget,
         aiModels: { model: ai.models?.text, fallbacks: ai.fallbacks },
         onProgress: (progress) => {
-          if (current()) this.broadcastRunnerEvent({ type: 'DISCOVERY_PROGRESS', runId, ...progress, timestamp: Date.now() });
+          if (current())
+            this.broadcastRunnerEvent({ type: 'DISCOVERY_PROGRESS', runId, ...progress, timestamp: Date.now() });
         },
         // The last approved Plan is reused where the site hasn't changed, unless asked to start afresh.
         remembered: body.replanAll ? undefined : memory?.plan,
@@ -2409,7 +2628,12 @@ export class RunnerServer {
         ];
       }
       context.reportNotes = [...(draft.exploration?.notes || []), ...(signIns.note ? [signIns.note] : [])];
-      this.broadcastRunnerEvent({ type: 'DISCOVERY_COMPLETED', runId, flowsFound: draft.flows.length, timestamp: Date.now() });
+      this.broadcastRunnerEvent({
+        type: 'DISCOVERY_COMPLETED',
+        runId,
+        flowsFound: draft.flows.length,
+        timestamp: Date.now(),
+      });
 
       const record: StoredPlanRecord = { plan: this.emptyPlan(runId, body.targetUrl), context };
       record.plan = this.buildPlan(record, sinceLastRun, !!ai.provider, readOnlyReason(owner, testHost));
@@ -2483,7 +2707,9 @@ export class RunnerServer {
     // for tests and a computer of your own: never on a shared copy, where it would reach other people.
     const providerType: AIProviderType = body.aiProvider || 'openrouter';
     if (providerType === 'mock' && this.beta) {
-      throw Object.assign(new Error('The test AI is not available here. Add a real AI key in Settings.'), { code: 'ERR_NO_AI_KEY' });
+      throw Object.assign(new Error('The test AI is not available here. Add a real AI key in Settings.'), {
+        code: 'ERR_NO_AI_KEY',
+      });
     }
     let apiKey = body.apiKey;
     if (!apiKey && providerType !== 'mock') {
@@ -2502,12 +2728,17 @@ export class RunnerServer {
     let visionModel: string | null | undefined;
     let fallbacks: string[] | undefined;
     if (providerType === 'openrouter') {
-      const chosen = await this.refreshAiModels(apiKey!).catch(async () => ({ ...(await this.readAiModels()), fallbacks: [] as string[] }));
+      const chosen = await this.refreshAiModels(apiKey!).catch(async () => ({
+        ...(await this.readAiModels()),
+        fallbacks: [] as string[],
+      }));
       model ??= chosen.text ?? undefined;
       visionModel = chosen.vision;
       fallbacks = chosen.fallbacks;
       if (!model) {
-        throw Object.assign(new Error('No free AI models are available right now — please try again later.'), { code: 'ERR_NO_FREE_MODELS' });
+        throw Object.assign(new Error('No free AI models are available right now — please try again later.'), {
+          code: 'ERR_NO_FREE_MODELS',
+        });
       }
     } else if (providerType !== 'mock' && saved.provider === providerType) {
       model ??= saved.text;
@@ -2523,8 +2754,14 @@ export class RunnerServer {
   }
 
   /** What the key has left of today's free AI requests, when OpenRouter says (ADR 0009's AI Request Budget). */
-  private async aiBudgetFor(settings: StoredPlanRecord['context']['ai'], key?: string): Promise<{ left?: number; limit?: number; visualReview: number }> {
-    const today = settings?.provider === 'openrouter' ? await this.openRouter.freeRequestsToday(key ?? (await this.storedOpenRouterKey())) : null;
+  private async aiBudgetFor(
+    settings: StoredPlanRecord['context']['ai'],
+    key?: string
+  ): Promise<{ left?: number; limit?: number; visualReview: number }> {
+    const today =
+      settings?.provider === 'openrouter'
+        ? await this.openRouter.freeRequestsToday(key ?? (await this.storedOpenRouterKey()))
+        : null;
     return { left: today?.remaining, limit: today?.limit, visualReview: VISUAL_REVIEW_CALLS };
   }
 
@@ -2578,12 +2815,17 @@ export class RunnerServer {
       productContext: record.context.productContext,
       designNotes: record.context.designNotes,
       // The complete Plan (ADR 0009): every Plan Item, what won't run, and what approving runs.
-      planPages: draft.plan?.pages.map((p) => ({ ...p, screenshotPath: relative(p.screenshotPath) ?? p.screenshotPath })),
+      planPages: draft.plan?.pages.map((p) => ({
+        ...p,
+        screenshotPath: relative(p.screenshotPath) ?? p.screenshotPath,
+      })),
       navigation: draft.plan?.navigation,
       gradedChecks: draft.plan ? this.gradedChecksFor(record) : undefined,
       layoutGroups: draft.plan?.layoutGroups,
       screenSizes: this.screenSizesOf(record.context),
-      roles: draft.plan ? [...new Set(draft.pages.flatMap((p) => p.reachedBy?.length ? p.reachedBy : ['visitor']))] : undefined,
+      roles: draft.plan
+        ? [...new Set(draft.pages.flatMap((p) => (p.reachedBy?.length ? p.reachedBy : ['visitor'])))]
+        : undefined,
       wontRun,
       budget: draft.plan?.budget,
       summary,
@@ -2610,7 +2852,10 @@ export class RunnerServer {
         };
       }
       if (check.id === 'check:findable' && context.searchChecks === false) {
-        return { ...check, notGraded: 'Not checked: this isn’t the public site. Broken links are still checked, under Works.' };
+        return {
+          ...check,
+          notGraded: 'Not checked: this isn’t the public site. Broken links are still checked, under Works.',
+        };
       }
       return check;
     });
@@ -2635,7 +2880,11 @@ export class RunnerServer {
     const { draft } = context;
     const readOnly = !!context.readOnly;
     if (draft.plan) {
-      const expanded = expandPlan(draft, { readOnly, screenSizes: this.screenSizesOf(context), questions: draft.ambiguityQuestions });
+      const expanded = expandPlan(draft, {
+        readOnly,
+        screenSizes: this.screenSizesOf(context),
+        questions: draft.ambiguityQuestions,
+      });
       return {
         specTestCases: expanded.testCases.length > 0 ? expanded.testCases : [this.defaultTestCase()],
         notRun: expanded.notRun,
@@ -2680,7 +2929,9 @@ export class RunnerServer {
   private handCheckNotes(draft: DiscoveryDraft): string[] {
     return draft.flows
       .filter((f) => !f.outOfScope)
-      .flatMap((f) => (f.userRules || []).filter((r) => !r.checkable).map((r) => `Check by hand (“${f.name}”): ${r.text}`));
+      .flatMap((f) =>
+        (f.userRules || []).filter((r) => !r.checkable).map((r) => `Check by hand (“${f.name}”): ${r.text}`)
+      );
   }
 
   private async executeTesting(
@@ -2783,7 +3034,12 @@ export class RunnerServer {
     if (context.draft && context.ai && context.ai.provider !== 'mock') {
       const screens = this.screensForReview(report, context.draft);
       if (screens.length > 0) {
-        this.broadcastRunnerEvent({ type: 'VISUAL_REVIEW_STARTED', runId: context.runId, screens: screens.length, timestamp: Date.now() });
+        this.broadcastRunnerEvent({
+          type: 'VISUAL_REVIEW_STARTED',
+          runId: context.runId,
+          screens: screens.length,
+          timestamp: Date.now(),
+        });
         const reviewed = await this.visualReview(report, screens, {
           provider: context.ai.provider,
           apiKey: context.ai.apiKey,
@@ -2791,7 +3047,10 @@ export class RunnerServer {
         }).catch(() => null);
         if (!current()) return;
         if (!reviewed) {
-          report.notes = [...(report.notes || []), 'Looks and reads well wasn’t fully checked: no AI model that reads screenshots is set up. Choose one in Settings.'];
+          report.notes = [
+            ...(report.notes || []),
+            'Looks and reads well wasn’t fully checked: no AI model that reads screenshots is set up. Choose one in Settings.',
+          ];
         } else if (reviewed.remaining > 0) {
           report.notes = [
             ...(report.notes || []),
@@ -2868,7 +3127,9 @@ export class RunnerServer {
   }
 
   /** Every plan kept aside, for the new check-up screen. */
-  private async listParkedPlans(): Promise<Array<{ host: string; targetUrl: string; runId: string; discoveredAt: string; pages: number }>> {
+  private async listParkedPlans(): Promise<
+    Array<{ host: string; targetUrl: string; runId: string; discoveredAt: string; pages: number }>
+  > {
     const dir = path.join(this.dataDir, 'waiting-plans');
     const list: Array<{ host: string; targetUrl: string; runId: string; discoveredAt: string; pages: number }> = [];
     for (const name of await fs.readdir(dir).catch(() => [] as string[])) {
@@ -2904,7 +3165,10 @@ export class RunnerServer {
       // checked below
     }
     if (this.phase === 'scanning' || this.phase === 'testing') {
-      this.sendJson(res, 409, { error: 'A check-up is running. Wait for it to finish, or stop it first.', code: 'ERR_RUN_IN_PROGRESS' });
+      this.sendJson(res, 409, {
+        error: 'A check-up is running. Wait for it to finish, or stop it first.',
+        code: 'ERR_RUN_IN_PROGRESS',
+      });
       return;
     }
     if (this.beta && body.host && !this.isMine(this.parkedPlans.get(body.host)?.plan.runId)) {
@@ -2947,7 +3211,10 @@ export class RunnerServer {
       plan: record.plan,
       context: {
         ...context,
-        profile: profile && { ...profile, roles: roles.map(({ role, loginPath }) => ({ role, username: '', loginPath })) },
+        profile: profile && {
+          ...profile,
+          roles: roles.map(({ role, loginPath }) => ({ role, username: '', loginPath })),
+        },
         signInNotSaved: notSaved.length > 0 ? notSaved : undefined,
         // An AI key sent with the request isn't kept either; a saved key is looked up again.
         ai: ai && { provider: ai.provider, model: ai.model },
@@ -3020,7 +3287,10 @@ export class RunnerServer {
 
     // A typed sign-in detail becomes its placeholder, so the plan never holds it.
     const roles = record.context.profile?.roles || [];
-    for (const item of [...(Array.isArray(body.flows) ? body.flows : []), ...(Array.isArray(body.testCases) ? body.testCases : [])]) {
+    for (const item of [
+      ...(Array.isArray(body.flows) ? body.flows : []),
+      ...(Array.isArray(body.testCases) ? body.testCases : []),
+    ]) {
       replaceCredentialsWithPlaceholders(item.steps || [], roles);
     }
 
@@ -3066,7 +3336,8 @@ export class RunnerServer {
       record.context.productContext = body.productContext;
       record.plan.productContext = body.productContext;
       if (body.productContext.trim()) {
-        const filePath = record.context.contextFilePath || path.join(this.runDir(record.plan.runId), 'product-context.md');
+        const filePath =
+          record.context.contextFilePath || path.join(this.runDir(record.plan.runId), 'product-context.md');
         await fs.mkdir(path.dirname(filePath), { recursive: true });
         await fs.writeFile(filePath, body.productContext, 'utf8');
         record.context.contextFilePath = filePath;
@@ -3105,11 +3376,16 @@ export class RunnerServer {
       if (change.id.startsWith('journey:')) {
         const flow = draft?.flows.find((f) => `journey:${f.id}` === change.id);
         if (!flow) continue;
-        flow.candidateExpectations = text ? { text: { contains: text }, origin: 'user' } : { ...(flow.candidateExpectations || {}), origin: 'user' };
+        flow.candidateExpectations = text
+          ? { text: { contains: text }, origin: 'user' }
+          : { ...(flow.candidateExpectations || {}), origin: 'user' };
         continue;
       }
       const test = draft?.plan?.pages.flatMap((pg) => pg.tests).find((t) => t.id === change.id);
-      if (test) test.expectations = text ? { text: { contains: text }, origin: 'user' } : { ...(test.expectations || {}), origin: 'user' };
+      if (test)
+        test.expectations = text
+          ? { text: { contains: text }, origin: 'user' }
+          : { ...(test.expectations || {}), origin: 'user' };
     }
 
     // A quick check: desktop only, and each page's own links left out (the shared menus stay).
@@ -3150,7 +3426,11 @@ export class RunnerServer {
   }
 
   /** How re-planning should go for this plan: its site, the owner's notes, and what they asked for. */
-  private replanOptions(record: StoredPlanRecord, instructions: string | undefined, report: (what: string) => void): ReplanOptions {
+  private replanOptions(
+    record: StoredPlanRecord,
+    instructions: string | undefined,
+    report: (what: string) => void
+  ): ReplanOptions {
     const roles = record.context.profile?.roles || [];
     const redactor = new Redactor(roles);
     return {
@@ -3180,7 +3460,10 @@ export class RunnerServer {
       return;
     }
     if (this.planUpdate) {
-      this.sendJson(res, 409, { error: 'The plan is already being updated. Wait for it to finish.', code: 'ERR_PLAN_UPDATING' });
+      this.sendJson(res, 409, {
+        error: 'The plan is already being updated. Wait for it to finish.',
+        code: 'ERR_PLAN_UPDATING',
+      });
       return;
     }
     const runId = record.plan.runId;
@@ -3190,9 +3473,17 @@ export class RunnerServer {
       try {
         const provider = await this.aiFor(record.context);
         const budget = provider ? await this.aiBudgetFor(record.context.ai) : undefined;
-        const paced = provider ? new PacedAI(provider, budget?.left ?? Infinity, { model: record.context.ai?.model }) : undefined;
+        const paced = provider
+          ? new PacedAI(provider, budget?.left ?? Infinity, { model: record.context.ai?.model })
+          : undefined;
         const notes = await work(record, paced, (step) =>
-          this.broadcastRunnerEvent({ type: 'PLAN_UPDATE_PROGRESS', runId, what: step, requestsUsed: paced?.used ?? 0, timestamp: Date.now() })
+          this.broadcastRunnerEvent({
+            type: 'PLAN_UPDATE_PROGRESS',
+            runId,
+            what: step,
+            requestsUsed: paced?.used ?? 0,
+            timestamp: Date.now(),
+          })
         );
         const draft = record.context.draft;
         const plan = draft.plan!;
@@ -3211,7 +3502,13 @@ export class RunnerServer {
         await this.savePlan(record);
         this.broadcastRunnerEvent({ type: 'PLAN_UPDATED', runId, what, timestamp: Date.now() });
       } catch (err) {
-        this.broadcastRunnerEvent({ type: 'PLAN_UPDATE_FAILED', runId, what, error: err instanceof Error ? err.message : String(err), timestamp: Date.now() });
+        this.broadcastRunnerEvent({
+          type: 'PLAN_UPDATE_FAILED',
+          runId,
+          what,
+          error: err instanceof Error ? err.message : String(err),
+          timestamp: Date.now(),
+        });
       } finally {
         this.planUpdate = null;
       }
@@ -3228,7 +3525,11 @@ export class RunnerServer {
       return;
     }
     const id = body.itemId || '';
-    const what = body.all ? 'Re-planning everything' : body.promote ? `Testing ${id.replace(/^page:/, '')} on its own` : 'Re-planning with the AI';
+    const what = body.all
+      ? 'Re-planning everything'
+      : body.promote
+        ? `Testing ${id.replace(/^page:/, '')} on its own`
+        : 'Re-planning with the AI';
     await this.startPlanUpdate(res, what, async (record, ai, report) => {
       const draft = record.context.draft;
       if (body.productContext !== undefined) {
@@ -3243,8 +3544,10 @@ export class RunnerServer {
         const asked = `Re-plan the journey “${flow?.name ?? id}”${options.instructions ? `: ${options.instructions}` : ''}. Keep the other journeys as they are.`;
         return replanJourneys(draft, ai, { ...options, productId, instructions: asked });
       }
-      if (id.startsWith('page:')) return replanPage(draft, id.slice('page:'.length), ai, { ...options, promote: body.promote });
-      if (id.startsWith('pagetest:')) return replanPage(draft, id.slice('pagetest:'.length, id.lastIndexOf(':')), ai, options);
+      if (id.startsWith('page:'))
+        return replanPage(draft, id.slice('page:'.length), ai, { ...options, promote: body.promote });
+      if (id.startsWith('pagetest:'))
+        return replanPage(draft, id.slice('pagetest:'.length, id.lastIndexOf(':')), ai, options);
       const nav = draft.plan!.navigation.find((n) => n.id === id);
       if (nav?.shared) return replanMenus(draft, ai, options);
       if (nav) return replanPage(draft, nav.startPage, ai, options);
@@ -3274,7 +3577,9 @@ export class RunnerServer {
       return;
     }
     if (!isSameSite(target.host, new URL(record.context.targetUrl).host)) {
-      this.sendJson(res, 400, { error: 'That address isn’t on this site. Links to other sites are listed under Navigation.' });
+      this.sendJson(res, 400, {
+        error: 'That address isn’t on this site. Links to other sites are listed under Navigation.',
+      });
       return;
     }
     const address = target.pathname + target.search;
@@ -3284,9 +3589,18 @@ export class RunnerServer {
     }
     await this.startPlanUpdate(res, `Adding ${address}`, async (rec, ai, report) => {
       report(`Opening ${address}`);
-      const found = await this.crawlMore(rec, rec.context.targetUrl, { startPaths: [address], maxPages: 1, exploreClicks: false });
+      const found = await this.crawlMore(rec, rec.context.targetUrl, {
+        startPaths: [address],
+        maxPages: 1,
+        exploreClicks: false,
+      });
       if (found.pages.length === 0) throw new Error(`${address} couldn’t be opened, or it asks for a sign-in.`);
-      return (await addPagesToPlan(rec.context.draft, found, ai, { ...this.replanOptions(rec, undefined, report), added: true })).notes;
+      return (
+        await addPagesToPlan(rec.context.draft, found, ai, {
+          ...this.replanOptions(rec, undefined, report),
+          added: true,
+        })
+      ).notes;
     });
   }
 
@@ -3302,7 +3616,9 @@ export class RunnerServer {
     }
     const draft = record?.context.draft;
     const other = draft?.plan?.otherHosts.find((h) => h.host === body.host);
-    const link = draft?.pages.flatMap((p) => p.links || []).find((l) => l.leavesSite && new URL(l.to).host === body.host);
+    const link = draft?.pages
+      .flatMap((p) => p.links || [])
+      .find((l) => l.leavesSite && new URL(l.to).host === body.host);
     if (!record || !draft || !other || !link) {
       this.sendJson(res, 400, { error: 'That host isn’t linked from this site.' });
       return;
@@ -3321,7 +3637,12 @@ export class RunnerServer {
         onPage: (_page, n) => report(`Exploring ${other.host}: ${n} ${n === 1 ? 'page' : 'pages'} found`),
       });
       if (crawled.pages.length === 0) throw new Error(`${other.host} couldn’t be explored.`);
-      const out = await addPagesToPlan(rec.context.draft, onOtherHost(crawled, origin), ai, this.replanOptions(rec, undefined, report));
+      const out = await addPagesToPlan(
+        rec.context.draft,
+        onOtherHost(crawled, origin),
+        ai,
+        this.replanOptions(rec, undefined, report)
+      );
       const included = rec.context.draft.plan!.otherHosts.find((h) => h.host === other.host);
       if (included) included.included = true;
       return out.notes;
@@ -3342,7 +3663,12 @@ export class RunnerServer {
       this.sendJson(res, 400, { error: 'Invalid JSON body' });
       return;
     }
-    const role = (body.role || 'member').trim().toLowerCase().replace(/[^a-z0-9 _-]/g, '').slice(0, 40) || 'member';
+    const role =
+      (body.role || 'member')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9 _-]/g, '')
+        .slice(0, 40) || 'member';
     if (!body.username?.trim() || !body.password) {
       this.sendJson(res, 400, { error: 'Enter the username and password to sign in with.' });
       return;
@@ -3355,16 +3681,29 @@ export class RunnerServer {
       this.sendJson(res, 400, { error: `There’s already a sign-in called “${role}”. Give this one another name.` });
       return;
     }
-    const credential: RoleCredential = { role, username: body.username.trim(), password: body.password, loginPath: body.loginPath?.trim() || undefined };
+    const credential: RoleCredential = {
+      role,
+      username: body.username.trim(),
+      password: body.password,
+      loginPath: body.loginPath?.trim() || undefined,
+    };
     await this.startPlanUpdate(res, `Adding the sign-in “${role}”`, async (rec, ai, report) => {
       report(`Signing in as ${role}`);
-      const profile: ProductProfile = { name: rec.context.productId, productId: rec.context.productId, roles: [credential] };
+      const profile: ProductProfile = {
+        name: rec.context.productId,
+        productId: rec.context.productId,
+        roles: [credential],
+      };
       const browser = new BrowserManager();
       let found: Awaited<ReturnType<RunnerServer['crawlMore']>>;
       try {
-        const signedIn = await new PreFlightChecker().runPreFlight(rec.context.targetUrl, profile, undefined, { browserManager: browser, authDir: this.authDir });
+        const signedIn = await new PreFlightChecker().runPreFlight(rec.context.targetUrl, profile, undefined, {
+          browserManager: browser,
+          authDir: this.authDir,
+        });
         const storageState = signedIn.roleStorageStates?.[role];
-        if (!storageState) throw new Error(`Signing in as “${role}” didn’t work. Check the username, password and sign-in page.`);
+        if (!storageState)
+          throw new Error(`Signing in as “${role}” didn’t work. Check the username, password and sign-in page.`);
         const landing = signedIn.roleLandingPaths?.[role];
         found = await this.crawlMore(rec, rec.context.targetUrl, {
           startPaths: landing ? [landing] : [],
@@ -3379,7 +3718,9 @@ export class RunnerServer {
       }
       const draft = rec.context.draft;
       // The sign-in is part of the check-up now: testing signs in as it too.
-      rec.context.profile = { ...(rec.context.profile ?? { name: rec.context.productId, productId: rec.context.productId, roles: [] }) };
+      rec.context.profile = {
+        ...(rec.context.profile ?? { name: rec.context.productId, productId: rec.context.productId, roles: [] }),
+      };
       rec.context.profile.roles = [...rec.context.profile.roles, credential];
       // Pages everyone reaches are visited as this role too.
       const known = new Map(draft.pages.map((p) => [pathOf(p.urlPath), p]));
@@ -3396,9 +3737,14 @@ export class RunnerServer {
         const reached = new Set(found.pages.map((p) => pathOf(p.urlPath)));
         draft.exploration.notReached = draft.exploration.notReached?.filter((p) => !reached.has(pathOf(p)));
         draft.exploration.signedInAs = [...new Set([...(draft.exploration.signedInAs || []), role])];
-        draft.exploration.notes = draft.exploration.notes.filter((n) => !/not reached|Add a sign-in/i.test(n) || (draft.exploration!.notReached?.length ?? 0) > 0);
+        draft.exploration.notes = draft.exploration.notes.filter(
+          (n) => !/not reached|Add a sign-in/i.test(n) || (draft.exploration!.notReached?.length ?? 0) > 0
+        );
       }
-      return [`Signed in as “${role}”: ${out.pages.length} new ${out.pages.length === 1 ? 'page' : 'pages'} added to the plan.`, ...out.notes];
+      return [
+        `Signed in as “${role}”: ${out.pages.length} new ${out.pages.length === 1 ? 'page' : 'pages'} added to the plan.`,
+        ...out.notes,
+      ];
     });
   }
 
@@ -3426,7 +3772,10 @@ export class RunnerServer {
     try {
       const context = await browser.createContext({ baseUrl: target, storageState: options.storageState });
       if (record.context.readOnly) await blockChanges(context);
-      const result = await new DeterministicSpider(record.context.profile?.forbiddenActions || [], options.maxPages).crawl(context, target, {
+      const result = await new DeterministicSpider(
+        record.context.profile?.forbiddenActions || [],
+        options.maxPages
+      ).crawl(context, target, {
         startPaths: options.startPaths,
         exploreClicks: options.exploreClicks,
         robots: ownMachine ? undefined : await RobotsPolicy.fetch(origin.origin, 'QA-Benchmarking-Bot'),
@@ -3436,8 +3785,17 @@ export class RunnerServer {
         onPage: options.onPage,
       });
       return {
-        pages: result.pages.map((p) => ({ ...p, reachedBy: [who], links: p.links?.map((l) => ({ ...l, seenBy: [who] })) })),
-        forms: result.forms.map((f) => ({ urlPath: f.urlPath, inputs: f.inputs.map((i) => ({ selector: i.selector })), submitButtonSelector: f.submitButtonSelector, method: f.method })),
+        pages: result.pages.map((p) => ({
+          ...p,
+          reachedBy: [who],
+          links: p.links?.map((l) => ({ ...l, seenBy: [who] })),
+        })),
+        forms: result.forms.map((f) => ({
+          urlPath: f.urlPath,
+          inputs: f.inputs.map((i) => ({ selector: i.selector })),
+          submitButtonSelector: f.submitButtonSelector,
+          method: f.method,
+        })),
       };
     } finally {
       await browser.close();
@@ -3447,7 +3805,9 @@ export class RunnerServer {
   /** Rebuilds the reviewed plan from the draft after a change: the summary, what won't run and the tests follow. */
   private refreshPlan(record: StoredPlanRecord): void {
     const before = record.plan;
-    const since: MemorySummary | undefined = before.sinceLastRun ? { seenBefore: true, ...before.sinceLastRun } : undefined;
+    const since: MemorySummary | undefined = before.sinceLastRun
+      ? { seenBefore: true, ...before.sinceLastRun }
+      : undefined;
     const custom = record.context.customTestCases ? before.testCases : undefined;
     record.plan = this.buildPlan(record, since, before.aiAvailable ?? true, before.readOnlyReason || '');
     if (custom) record.plan.testCases = custom;
@@ -3516,7 +3876,10 @@ export class RunnerServer {
       return;
     }
     if (this.planUpdate) {
-      this.sendJson(res, 409, { error: 'The plan is still being updated. Approve it when that’s done.', code: 'ERR_PLAN_UPDATING' });
+      this.sendJson(res, 409, {
+        error: 'The plan is still being updated. Approve it when that’s done.',
+        code: 'ERR_PLAN_UPDATING',
+      });
       return;
     }
 
@@ -3568,7 +3931,11 @@ export class RunnerServer {
         const memory = await loadSiteMemory(this.siteDir(), record.context.siteHost);
         await saveSiteMemory(
           this.siteDir(),
-          rememberRun(memory, record.context.siteHost, draft, { reviewed: true, answeredByOwner, screenSizes: this.screenSizesOf(record.context) })
+          rememberRun(memory, record.context.siteHost, draft, {
+            reviewed: true,
+            answeredByOwner,
+            screenSizes: this.screenSizesOf(record.context),
+          })
         );
       }
     }
@@ -3598,7 +3965,13 @@ export class RunnerServer {
       this.lastErrorCode = 'ERR_TEST_EXECUTION_FAILED';
       this.phase = 'failed';
       this.isRunning = false;
-      this.broadcastRunnerEvent({ type: 'RUN_FAILED', runId: record.plan.runId, error: msg, code: 'ERR_TEST_EXECUTION_FAILED', timestamp: Date.now() });
+      this.broadcastRunnerEvent({
+        type: 'RUN_FAILED',
+        runId: record.plan.runId,
+        error: msg,
+        code: 'ERR_TEST_EXECUTION_FAILED',
+        timestamp: Date.now(),
+      });
     });
   }
 
@@ -3726,7 +4099,9 @@ export class RunnerServer {
     const text = (typed ?? '').trim();
     if (!text || (/^[a-z][a-z0-9+.-]*:\/\//i.test(text) && !/^https?:\/\//i.test(text))) return null;
     try {
-      const withScheme = /^https?:\/\//i.test(text) ? text : `${isPrivateHost(new URL(`http://${text}`).hostname) ? 'http' : 'https'}://${text}`;
+      const withScheme = /^https?:\/\//i.test(text)
+        ? text
+        : `${isPrivateHost(new URL(`http://${text}`).hostname) ? 'http' : 'https'}://${text}`;
       const url = new URL(withScheme);
       return /^https?:$/.test(url.protocol) ? url.toString() : null;
     } catch {
@@ -3739,17 +4114,28 @@ export class RunnerServer {
   }
 
   private async handleStartBenchmark(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
-    const body = await this.readJsonBody<{ ourUrl?: string; ourName?: string; refUrl?: string; refName?: string; flowType?: string }>(req).catch(() => null);
+    const body = await this.readJsonBody<{
+      ourUrl?: string;
+      ourName?: string;
+      refUrl?: string;
+      refName?: string;
+      flowType?: string;
+    }>(req).catch(() => null);
     const ourUrl = this.benchmarkAddress(body?.ourUrl);
     const refUrl = this.benchmarkAddress(body?.refUrl);
     if (!body || !ourUrl || !refUrl) {
-      this.sendJson(res, 400, { error: 'Both addresses are needed, each a web address such as https://example.com.', code: 'ERR_INVALID_REQUEST' });
+      this.sendJson(res, 400, {
+        error: 'Both addresses are needed, each a web address such as https://example.com.',
+        code: 'ERR_INVALID_REQUEST',
+      });
       return;
     }
     if ((await this.refuseTarget(res, ourUrl)) || (await this.refuseTarget(res, refUrl))) return;
     if (this.phase === 'scanning' || this.phase === 'testing' || this.benchmarkBusy) {
       this.sendJson(res, 409, {
-        error: this.beta ? 'Someone else is using this shared copy right now. Try again in a few minutes.' : 'A check-up or comparison is running. Wait for it to finish first.',
+        error: this.beta
+          ? 'Someone else is using this shared copy right now. Try again in a few minutes.'
+          : 'A check-up or comparison is running. Wait for it to finish first.',
         code: 'ERR_RUN_IN_PROGRESS',
       });
       return;
@@ -3759,7 +4145,15 @@ export class RunnerServer {
     const flowType = cleanFlowType(body.flowType);
     const ourName = siteName(ourUrl, body.ourName);
     const refName = siteName(refUrl, body.refName);
-    const job: BenchmarkJob = { id, status: 'running', stage: 'Starting…', flowType, ourUrl, refUrl, startedAt: new Date().toISOString() };
+    const job: BenchmarkJob = {
+      id,
+      status: 'running',
+      stage: 'Starting…',
+      flowType,
+      ourUrl,
+      refUrl,
+      startedAt: new Date().toISOString(),
+    };
     this.benchmarkJobs.set(id, { job, owner: this.beta ? currentSessionId() : undefined });
     this.benchmarkBusy = true;
     const store = this.benchmarkStore();
@@ -3805,10 +4199,16 @@ export class RunnerServer {
   /** The comparisons this visitor can see: any running now, then the kept ones, newest first. The full result is fetched one at a time. */
   private async handleListBenchmarks(res: http.ServerResponse): Promise<void> {
     const me = this.beta ? currentSessionId() : undefined;
-    const running = [...this.benchmarkJobs.values()].filter((e) => e.job.status === 'running' && (!this.beta || e.owner === me)).map((e) => e.job);
+    const running = [...this.benchmarkJobs.values()]
+      .filter((e) => e.job.status === 'running' && (!this.beta || e.owner === me))
+      .map((e) => e.job);
     const kept = await this.benchmarkStore().list();
     const list = [...running, ...kept.filter((k) => !running.some((r) => r.id === k.id))];
-    this.sendJson(res, 200, list.map(({ result: _result, ...summary }) => summary));
+    this.sendJson(
+      res,
+      200,
+      list.map(({ result: _result, ...summary }) => summary)
+    );
   }
 
   private async handleBenchmarkById(id: string, method: string, res: http.ServerResponse): Promise<void> {
@@ -3879,4 +4279,3 @@ export class RunnerServer {
     };
   }
 }
-

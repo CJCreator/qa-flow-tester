@@ -144,7 +144,9 @@ function onTunnelData(chunk) {
   if (!runnerStarted) {
     tunnelOutputBuffer += text;
     const clean = stripAnsi(tunnelOutputBuffer);
-    const match = clean.match(/Tunnel ready at\s+(https?:\/\/[^\s\x1b]+)/i) || clean.match(/(https:\/\/[a-z0-9-]+\.trycloudflare\.com)/i);
+    const match =
+      clean.match(/Tunnel ready at\s+(https?:\/\/[^\s\x1b]+)/i) ||
+      clean.match(/(https:\/\/[a-z0-9-]+\.trycloudflare\.com)/i);
     if (match) {
       try {
         const cleanOrigin = new URL(match[1].trim()).origin;
@@ -185,7 +187,9 @@ function startRunner(origin) {
       RUNNER_PORT: String(port),
       RUNNER_ALLOWED_ORIGINS: origin,
       RUNNER_ACCESS_TOKEN: accessKey,
-      ...(beta ? { RUNNER_BETA: '1', OPENROUTER_API_KEY: '', ANTHROPIC_API_KEY: '', OPENAI_API_KEY: '', GEMINI_API_KEY: '' } : {}),
+      ...(beta
+        ? { RUNNER_BETA: '1', OPENROUTER_API_KEY: '', ANTHROPIC_API_KEY: '', OPENAI_API_KEY: '', GEMINI_API_KEY: '' }
+        : {}),
       RUNNER_DATA_DIR: tunnelDataDir,
       RUNNER_OUTPUT_DIR: tunnelOutputDir,
     },
@@ -216,8 +220,12 @@ function shutdown() {
   if (isShuttingDown) return;
   isShuttingDown = true;
   log('Shutting down…');
-  try { tunnelProc?.kill(); } catch {}
-  try { runnerProc?.kill(); } catch {}
+  try {
+    tunnelProc?.kill();
+  } catch {}
+  try {
+    runnerProc?.kill();
+  } catch {}
   if (!keepData) {
     try {
       if (existsSync(tunnelDataDir)) rmSync(tunnelDataDir, { recursive: true, force: true });

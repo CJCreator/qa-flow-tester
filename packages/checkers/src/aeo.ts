@@ -33,7 +33,7 @@ export class AeoChecker {
     const isRootOrAbout = context.urlPath === '/' || context.urlPath === '' || context.urlPath.includes('/about');
 
     // 1. JSON-LD Structured Data Audits
-    let parsedSchemas: any[] = [];
+    const parsedSchemas: any[] = [];
     let hasMalformedJsonLd = false;
 
     for (let i = 0; i < details.jsonLdScripts.length; i++) {
@@ -101,12 +101,17 @@ export class AeoChecker {
           title: 'Homepage is missing Organization or WebSite structured data',
           where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
           expectedVsActual: {
-            expected: 'The root/home page should define schema.org/Organization or WebSite schema with name, logo, and social profiles',
+            expected:
+              'The root/home page should define schema.org/Organization or WebSite schema with name, logo, and social profiles',
             actual: `Found schema types: ${schemaTypes.size > 0 ? Array.from(schemaTypes).join(', ') : 'None'}`,
           },
-          stepsToReproduce: [`Visit ${context.urlPath}`, 'Check for JSON-LD schema with @type "Organization" or "WebSite"'],
+          stepsToReproduce: [
+            `Visit ${context.urlPath}`,
+            'Check for JSON-LD schema with @type "Organization" or "WebSite"',
+          ],
           evidence: {},
-          resolution: 'Add a JSON-LD Organization schema on the homepage establishing your brand entity, logo, and authority links.',
+          resolution:
+            'Add a JSON-LD Organization schema on the homepage establishing your brand entity, logo, and authority links.',
         });
       }
     }
@@ -123,10 +128,14 @@ export class AeoChecker {
         title: 'Inner page is missing breadcrumb navigation or BreadcrumbList schema',
         where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
         expectedVsActual: {
-          expected: 'Inner pages should provide breadcrumbs or schema.org/BreadcrumbList to clarify site hierarchy for answer engines',
+          expected:
+            'Inner pages should provide breadcrumbs or schema.org/BreadcrumbList to clarify site hierarchy for answer engines',
           actual: 'No breadcrumb nav element or BreadcrumbList JSON-LD schema found',
         },
-        stepsToReproduce: [`Visit ${context.urlPath}`, 'Inspect navigation elements and structured data for breadcrumbs'],
+        stepsToReproduce: [
+          `Visit ${context.urlPath}`,
+          'Inspect navigation elements and structured data for breadcrumbs',
+        ],
         evidence: {},
         resolution: 'Add breadcrumb navigation with schema.org/BreadcrumbList JSON-LD markup.',
       });
@@ -145,14 +154,16 @@ export class AeoChecker {
           title: `Question heading "${qh.text.slice(0, 36)}..." lacks a concise direct answer`,
           where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
           expectedVsActual: {
-            expected: 'Question headings should be followed immediately by a concise direct answer paragraph (30–80 words) for answer snippet eligibility',
+            expected:
+              'Question headings should be followed immediately by a concise direct answer paragraph (30–80 words) for answer snippet eligibility',
             actual: qh.hasAnswerParagraph
               ? `Answer paragraph is ${qh.nextParagraphWordCount} words (ideal is 30–80 words)`
               : 'Heading is not followed by an immediate answer paragraph',
           },
           stepsToReproduce: [`Visit ${context.urlPath}`, `Inspect element following heading "${qh.text}"`],
           evidence: {},
-          resolution: 'Provide a direct, self-contained 1–2 sentence answer paragraph directly beneath question headings.',
+          resolution:
+            'Provide a direct, self-contained 1–2 sentence answer paragraph directly beneath question headings.',
         });
         break; // Flag once per page to avoid cluttering report
       }
@@ -170,7 +181,8 @@ export class AeoChecker {
         title: 'Substantial content page lacks structured lists or comparison tables',
         where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
         expectedVsActual: {
-          expected: 'Content-rich pages (>350 words) should utilize bulleted/numbered lists or tables to qualify for featured snippets',
+          expected:
+            'Content-rich pages (>350 words) should utilize bulleted/numbered lists or tables to qualify for featured snippets',
           actual: `Found ${details.wordCount} words of text with 0 lists and 0 tables`,
         },
         stepsToReproduce: [`Visit ${context.urlPath}`, 'Count <ul>, <ol>, and <table> elements'],
@@ -197,7 +209,8 @@ export class AeoChecker {
 
         // Check question headings
         const headings = document.querySelectorAll('h2, h3, h4');
-        const questionHeadings: Array<{ text: string; nextParagraphWordCount: number; hasAnswerParagraph: boolean }> = [];
+        const questionHeadings: Array<{ text: string; nextParagraphWordCount: number; hasAnswerParagraph: boolean }> =
+          [];
         headings.forEach((h) => {
           const text = (h.textContent || '').trim();
           const isQuestion = text.endsWith('?') || /^(what|how|why|when|where|who)\b/i.test(text);

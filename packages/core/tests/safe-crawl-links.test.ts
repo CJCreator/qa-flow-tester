@@ -5,16 +5,25 @@ import path from 'path';
 import { runSafeWebsiteScan } from '../src/safe-scan.js';
 import { isPrivateHost, scanScope } from '../src/competitive/safe-crawler.js';
 
-const layout = (title: string, main: string) => `<!doctype html><html lang="en"><head><title>${title}</title></head><body>
+const layout = (
+  title: string,
+  main: string
+) => `<!doctype html><html lang="en"><head><title>${title}</title></head><body>
   <header><nav><a href="/">Home</a> <a href="/category/books">Books</a> <a href="/category/games">Games</a> <a href="/logout">Log out</a></nav></header>
   <main><h1>${title}</h1>${main}</main><footer><a href="/private/admin">Staff</a> <a href="/catalogue.pdf">Catalogue (PDF)</a></footer>
 </body></html>`;
 
 const product = (slug: string) =>
-  layout(slug.replace(/-/g, ' '), `<section><img src="/x.png" alt=""><p>£10</p><form method="post" action="/basket"><button>Add to basket</button></form></section>`);
+  layout(
+    slug.replace(/-/g, ' '),
+    `<section><img src="/x.png" alt=""><p>£10</p><form method="post" action="/basket"><button>Add to basket</button></form></section>`
+  );
 
 const category = (name: string, items: string[]) =>
-  layout(name, `<ul>${items.map((i) => `<li><article><a href="/product/${i}">${i}</a></article></li>`).join('')}</ul><a href="/category/${name}?page=2">Next</a>`);
+  layout(
+    name,
+    `<ul>${items.map((i) => `<li><article><a href="/product/${i}">${i}</a></article></li>`).join('')}</ul><a href="/category/${name}?page=2">Next</a>`
+  );
 
 const PAGES: Record<string, string> = {
   '/': layout('Shop', '<p>Welcome</p><a href="/product/the-silent-sea-1">Featured</a>'),
@@ -90,7 +99,15 @@ describe('Read-only scan follows links', () => {
   });
 
   it('pauses between pages only on hosts we do not own', () => {
-    for (const host of ['localhost', '127.0.0.1', '192.168.1.20', '10.0.0.5', '172.20.0.2', 'host.docker.internal', 'app.localhost']) {
+    for (const host of [
+      'localhost',
+      '127.0.0.1',
+      '192.168.1.20',
+      '10.0.0.5',
+      '172.20.0.2',
+      'host.docker.internal',
+      'app.localhost',
+    ]) {
       expect(isPrivateHost(host), host).toBe(true);
     }
     for (const host of ['books.toscrape.com', '172.32.0.1', 'example.com']) {

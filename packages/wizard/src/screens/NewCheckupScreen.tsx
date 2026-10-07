@@ -1,6 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import type { RunSummary } from '@qa/types';
-import { checkReachable, estimateAi, RunnerError, type AiEstimate, type AiSetup, type RunnerStatus, type SiteFacts, type WaitingPlan } from '../api';
+import {
+  checkReachable,
+  estimateAi,
+  RunnerError,
+  type AiEstimate,
+  type AiSetup,
+  type RunnerStatus,
+  type SiteFacts,
+  type WaitingPlan,
+} from '../api';
 import { KeyField } from '../components/KeyField';
 import { ErrorMessage, Notice, Question, Spinner } from '../components/text';
 import { rejectReason } from '../lib/context';
@@ -91,7 +100,10 @@ export function NewCheckupScreen({
     const normal = normalizeUrl(typed);
     const id = ++latest.current;
     if (!normal.ok) {
-      const timer = setTimeout(() => id === latest.current && setCheck({ state: 'invalid', reason: normal.reason }), CHECK_DELAY_MS);
+      const timer = setTimeout(
+        () => id === latest.current && setCheck({ state: 'invalid', reason: normal.reason }),
+        CHECK_DELAY_MS
+      );
       return () => clearTimeout(timer);
     }
     setCheck({ state: 'checking', url: normal.url });
@@ -100,7 +112,11 @@ export function NewCheckupScreen({
         const result = await checkReachable(normal.url);
         if (id !== latest.current) return;
         const facts: SiteFacts = { host: result.host, testCopy: result.testCopy, remembered: result.remembered };
-        setCheck(result.ok ? { state: 'ok', url: normal.url, facts } : { state: 'unreachable', url: normal.url, reason: result.reason, suggestion: result.suggestion, facts });
+        setCheck(
+          result.ok
+            ? { state: 'ok', url: normal.url, facts }
+            : { state: 'unreachable', url: normal.url, reason: result.reason, suggestion: result.suggestion, facts }
+        );
       } catch (err) {
         if (id !== latest.current) return;
         setCheck({
@@ -115,7 +131,8 @@ export function NewCheckupScreen({
   }, [form.address, recheck]);
 
   // A site checked before starts from the choices made for it last time; a new one starts unticked.
-  const checkedHost = check.state === 'ok' || check.state === 'unreachable' ? check.facts.host ?? hostOf(check.url) : null;
+  const checkedHost =
+    check.state === 'ok' || check.state === 'unreachable' ? (check.facts.host ?? hostOf(check.url)) : null;
   const remembered = check.state === 'ok' || check.state === 'unreachable' ? check.facts.remembered : undefined;
   useEffect(() => {
     if (!checkedHost) return;
@@ -162,7 +179,8 @@ export function NewCheckupScreen({
     /(?:-|\.)(staging|dev|test|preview)(?:\.|$)/i.test(checkedHost || '') ||
     /\.(vercel\.app|netlify\.app|fly\.dev|railway\.app|onrender\.com)$/i.test(checkedHost || '');
 
-  const needsProdConfirmation = !!kind && !kind.natural && form.markedTestCopy && !hasStagingIndicator && !confirmedProd;
+  const needsProdConfirmation =
+    !!kind && !kind.natural && form.markedTestCopy && !hasStagingIndicator && !confirmedProd;
   // No key doesn't stop a scan: fixed rules write the plan, and the AI can be connected any time.
   // (Once the AI setup has been read, so the plan knows which way to go.)
   const canStart = ai !== null && check.state === 'ok' && !starting && !needsProdConfirmation;
@@ -183,13 +201,23 @@ export function NewCheckupScreen({
     <div className="mx-auto max-w-[44rem] px-4 py-10 sm:px-6 sm:py-14">
       {inProgress && <ResumeCard status={inProgress} />}
       {waitingPlans.length > 0 && (
-        <aside aria-label="Plans waiting for review" className="mb-10 space-y-2 rounded-lg border-2 border-edge bg-surface px-5 py-4">
-          <p className="font-bold text-ink">{waitingPlans.length === 1 ? 'A plan is also waiting for your review' : 'Plans are also waiting for your review'}</p>
+        <aside
+          aria-label="Plans waiting for review"
+          className="mb-10 space-y-2 rounded-lg border-2 border-edge bg-surface px-5 py-4"
+        >
+          <p className="font-bold text-ink">
+            {waitingPlans.length === 1
+              ? 'A plan is also waiting for your review'
+              : 'Plans are also waiting for your review'}
+          </p>
           <ul className="space-y-1">
             {waitingPlans.map((w) => (
               <li key={w.host} className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-ink">
-                  <span className="font-bold">{w.host}</span> <span className="text-sm text-ink-soft">· {w.pages} pages · scanned {formatWhen(w.discoveredAt)}</span>
+                  <span className="font-bold">{w.host}</span>{' '}
+                  <span className="text-sm text-ink-soft">
+                    · {w.pages} pages · scanned {formatWhen(w.discoveredAt)}
+                  </span>
                 </span>
                 <button type="button" className="btn-link" onClick={() => onResumePlan?.(w.host)}>
                   Open this plan
@@ -209,9 +237,15 @@ export function NewCheckupScreen({
         <div className="mb-8">
           <Notice tone="warn" title="This is a shared copy">
             <p>
-              Other people use this copy too, but you only see your own check-ups and reports. They share one server, so only one check-up runs at a time. Only public sites can be checked.
+              Other people use this copy too, but you only see your own check-ups and reports. They share one server, so
+              only one check-up runs at a time. Only public sites can be checked.
             </p>
-            {busy && <p className="mt-2 font-bold">Someone else’s check-up is running right now. Yours can start when it finishes: try again in a few minutes.</p>}
+            {busy && (
+              <p className="mt-2 font-bold">
+                Someone else’s check-up is running right now. Yours can start when it finishes: try again in a few
+                minutes.
+              </p>
+            )}
           </Notice>
         </div>
       )}
@@ -222,8 +256,9 @@ export function NewCheckupScreen({
             Connect the AI for a smarter plan
           </h2>
           <p className="mb-4 text-sm text-ink-soft">
-            Optional. Without it, fixed rules write the test plan and you can scan now. With it, the AI writes a plan that fits your site. It runs on
-            OpenRouter’s free models, so it costs nothing. You only do this once, and anything you type below is kept.
+            Optional. Without it, fixed rules write the test plan and you can scan now. With it, the AI writes a plan
+            that fits your site. It runs on OpenRouter’s free models, so it costs nothing. You only do this once, and
+            anything you type below is kept.
           </p>
           <KeyField
             onSaved={(model) => {
@@ -272,7 +307,8 @@ export function NewCheckupScreen({
           {check.state === 'ok' && kind && (
             <span className="block space-y-0.5">
               <span className="block text-ink-soft">
-                <span className="font-bold text-pass">✓ Found</span> <span className="break-all font-mono text-ink">{check.url}</span>
+                <span className="font-bold text-pass">✓ Found</span>{' '}
+                <span className="break-all font-mono text-ink">{check.url}</span>
               </span>
               <span className="block font-bold text-ink">
                 {kind.isTestCopy && form.owner
@@ -300,7 +336,8 @@ export function NewCheckupScreen({
           <div className="mt-4">
             <Notice tone="warn" title="This appears to be a live production site">
               <p>
-                The address doesn’t match typical staging or dev indicators. Form submissions and state-changing actions will be muted unless confirmed.
+                The address doesn’t match typical staging or dev indicators. Form submissions and state-changing actions
+                will be muted unless confirmed.
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-3">
                 <button
@@ -400,7 +437,9 @@ export function NewCheckupScreen({
                     />
                     <div>
                       <span className="font-semibold text-ink">Search (SEO)</span>
-                      <span className="block text-ink-soft">Titles, descriptions, headings, canonical, robots & sitemap</span>
+                      <span className="block text-ink-soft">
+                        Titles, descriptions, headings, canonical, robots & sitemap
+                      </span>
                     </div>
                   </label>
 
@@ -460,7 +499,9 @@ export function NewCheckupScreen({
                     />
                     <div>
                       <span className="font-semibold text-ink">Marketing (MKT)</span>
-                      <span className="block text-ink-soft">Share previews, picture, call to action, contact & privacy</span>
+                      <span className="block text-ink-soft">
+                        Share previews, picture, call to action, contact & privacy
+                      </span>
                     </div>
                   </label>
                 </div>
@@ -476,12 +517,16 @@ export function NewCheckupScreen({
             {added > 0 && <span className="rounded border border-pass px-1.5 text-xs text-pass">Added</span>}
           </summary>
           <div className="space-y-5 border-t border-rule p-4">
-            <p className="text-sm text-ink-soft">The AI plans with these, so the plan tests what the site is meant to do.</p>
+            <p className="text-sm text-ink-soft">
+              The AI plans with these, so the plan tests what the site is meant to do.
+            </p>
             <MaterialField
               id="specs"
               label="Specs"
               hint="Requirements, user stories or acceptance criteria."
-              placeholder={'For example:\n- Only managers can see reports\n- A new invoice needs a client name and an amount above zero'}
+              placeholder={
+                'For example:\n- Only managers can see reports\n- A new invoice needs a client name and an amount above zero'
+              }
               value={form.specs}
               onChange={(value) => onFormChange((f) => ({ ...f, specs: value }))}
             />
@@ -504,7 +549,9 @@ export function NewCheckupScreen({
           </div>
         </details>
 
-        {keyReady && check.state === 'ok' && <AiEstimateLine url={check.url} maxPages={form.maxPages} form={form} onFormChange={onFormChange} />}
+        {keyReady && check.state === 'ok' && (
+          <AiEstimateLine url={check.url} maxPages={form.maxPages} form={form} onFormChange={onFormChange} />
+        )}
 
         {startError && <ErrorMessage>{startError}</ErrorMessage>}
 
@@ -513,7 +560,9 @@ export function NewCheckupScreen({
             {starting ? <Spinner label="Starting…" /> : 'Scan the site'}
           </button>
           <p id="start-hint" className="text-sm text-ink-soft">
-            {ai && !keyReady ? 'No AI key yet, so fixed rules will write the plan. Nothing is tested until you approve it.' : 'Nothing is tested until you approve the plan.'}
+            {ai && !keyReady
+              ? 'No AI key yet, so fixed rules will write the plan. Nothing is tested until you approve it.'
+              : 'Nothing is tested until you approve the plan.'}
           </p>
         </div>
       </form>
@@ -561,7 +610,11 @@ function ResumeCard({ status }: { status: RunnerStatus }) {
           : null;
   if (!card) return null;
   return (
-    <aside data-transient="true" aria-label="Check-up in progress" className="mb-10 flex flex-wrap items-center justify-between gap-3 rounded-lg border-2 border-stamp bg-stamp-tint px-5 py-4">
+    <aside
+      data-transient="true"
+      aria-label="Check-up in progress"
+      className="mb-10 flex flex-wrap items-center justify-between gap-3 rounded-lg border-2 border-stamp bg-stamp-tint px-5 py-4"
+    >
       <p className="font-bold text-ink">{card.text}</p>
       <Link to={card.to} className="btn-primary">
         {card.action} <span aria-hidden="true">→</span>
@@ -654,7 +707,12 @@ function AccessChoice({
   onChange: (change: Partial<Pick<CheckupForm, 'owner' | 'markedTestCopy'>>) => void;
 }) {
   const access: Access = !form.owner ? 'look' : isTestCopyHost || form.markedTestCopy ? 'test' : 'live';
-  const options: Array<{ id: Access; title: string; hint: string; set: Partial<Pick<CheckupForm, 'owner' | 'markedTestCopy'>> }> = isTestCopyHost
+  const options: Array<{
+    id: Access;
+    title: string;
+    hint: string;
+    set: Partial<Pick<CheckupForm, 'owner' | 'markedTestCopy'>>;
+  }> = isTestCopyHost
     ? [
         { id: 'look', title: 'Only look at it', hint: 'Nothing is filled in, sent or changed.', set: { owner: false } },
         {
@@ -665,8 +723,18 @@ function AccessChoice({
         },
       ]
     : [
-        { id: 'look', title: 'Only look at it', hint: 'Someone else’s site, or you’re not sure. Nothing is sent or changed.', set: { owner: false, markedTestCopy: false } },
-        { id: 'live', title: 'It’s my live site: only look at it', hint: 'Nothing is sent or changed on the real site.', set: { owner: true, markedTestCopy: false } },
+        {
+          id: 'look',
+          title: 'Only look at it',
+          hint: 'Someone else’s site, or you’re not sure. Nothing is sent or changed.',
+          set: { owner: false, markedTestCopy: false },
+        },
+        {
+          id: 'live',
+          title: 'It’s my live site: only look at it',
+          hint: 'Nothing is sent or changed on the real site.',
+          set: { owner: true, markedTestCopy: false },
+        },
         {
           id: 'test',
           title: 'It’s a test copy I’m allowed to test fully',
@@ -678,7 +746,10 @@ function AccessChoice({
     <fieldset className="mt-6 space-y-3">
       <legend className="label">What may the check-up do?</legend>
       {options.map((o) => (
-        <label key={o.id} className="flex cursor-pointer items-start gap-3 rounded-lg border-2 border-edge bg-surface p-4 hover:border-stamp">
+        <label
+          key={o.id}
+          className="flex cursor-pointer items-start gap-3 rounded-lg border-2 border-edge bg-surface p-4 hover:border-stamp"
+        >
           <input
             type="radio"
             name="access"
@@ -718,11 +789,14 @@ function SignInsSection({
       <summary className="flex min-h-[48px] cursor-pointer flex-wrap items-center gap-x-2 px-4 py-3 font-bold">
         Test signed-in pages
         <span className="font-normal text-ink-soft">(optional)</span>
-        {(filled > 0 || usingSaved) && <span className="rounded border border-pass px-1.5 text-xs text-pass">{usingSaved ? 'Saved' : 'Added'}</span>}
+        {(filled > 0 || usingSaved) && (
+          <span className="rounded border border-pass px-1.5 text-xs text-pass">{usingSaved ? 'Saved' : 'Added'}</span>
+        )}
       </summary>
       <div className="space-y-4 border-t border-rule p-4">
         <p className="text-sm text-ink-soft">
-          The scan signs in as each role and explores what it sees, so pages behind the sign-in are planned and tested too.
+          The scan signs in as each role and explores what it sees, so pages behind the sign-in are planned and tested
+          too.
         </p>
         {!!saved?.length && (
           <label className="flex cursor-pointer items-start gap-3 text-sm">
@@ -740,19 +814,40 @@ function SignInsSection({
             <legend className="px-1 text-sm font-bold">Sign-in {i + 1}</legend>
             <label className="text-sm">
               <span className="mb-1 block font-bold">Role name</span>
-              <input className="field py-2 text-sm" value={s.role} placeholder={i === 0 ? 'member' : 'admin'} onChange={(e) => set(i, { role: e.target.value })} />
+              <input
+                className="field py-2 text-sm"
+                value={s.role}
+                placeholder={i === 0 ? 'member' : 'admin'}
+                onChange={(e) => set(i, { role: e.target.value })}
+              />
             </label>
             <label className="text-sm">
               <span className="mb-1 block font-bold">Sign-in page (optional)</span>
-              <input className="field py-2 text-sm" value={s.loginPath} placeholder="/login" onChange={(e) => set(i, { loginPath: e.target.value })} />
+              <input
+                className="field py-2 text-sm"
+                value={s.loginPath}
+                placeholder="/login"
+                onChange={(e) => set(i, { loginPath: e.target.value })}
+              />
             </label>
             <label className="text-sm">
               <span className="mb-1 block font-bold">Email or username</span>
-              <input className="field py-2 text-sm" autoComplete="off" value={s.username} onChange={(e) => set(i, { username: e.target.value })} />
+              <input
+                className="field py-2 text-sm"
+                autoComplete="off"
+                value={s.username}
+                onChange={(e) => set(i, { username: e.target.value })}
+              />
             </label>
             <label className="text-sm">
               <span className="mb-1 block font-bold">Password</span>
-              <input className="field py-2 text-sm" type="password" autoComplete="off" value={s.password} onChange={(e) => set(i, { password: e.target.value })} />
+              <input
+                className="field py-2 text-sm"
+                type="password"
+                autoComplete="off"
+                value={s.password}
+                onChange={(e) => set(i, { password: e.target.value })}
+              />
             </label>
             <button
               type="button"
@@ -763,7 +858,11 @@ function SignInsSection({
             </button>
           </fieldset>
         ))}
-        <button type="button" className="btn-quiet" onClick={() => onFormChange((f) => ({ ...f, signIns: [...f.signIns, { ...EMPTY_SIGN_IN }] }))}>
+        <button
+          type="button"
+          className="btn-quiet"
+          onClick={() => onFormChange((f) => ({ ...f, signIns: [...f.signIns, { ...EMPTY_SIGN_IN }] }))}
+        >
           {form.signIns.length === 0 ? 'Add a sign-in' : 'Add another sign-in'}
         </button>
         {form.signIns.length > 0 && (
@@ -819,12 +918,19 @@ function AiEstimateLine({
         ? ''
         : 'Your AI account is charged for them.';
   return (
-    <div className={`mt-6 rounded-md border-l-4 px-4 py-3 text-sm ${short ? 'border-warn bg-warn-tint' : 'border-rule bg-surface'}`} role="status">
+    <div
+      className={`mt-6 rounded-md border-l-4 px-4 py-3 text-sm ${short ? 'border-warn bg-warn-tint' : 'border-rule bg-surface'}`}
+      role="status"
+    >
       <p className="text-ink">
-        Planning needs about {needed} AI requests{estimate.seenBefore ? ' (fewer where the site hasn’t changed)' : ''}, and looking over the
-        screens afterwards up to {estimate.visualReview} more. {leftText}
+        Planning needs about {needed} AI requests{estimate.seenBefore ? ' (fewer where the site hasn’t changed)' : ''},
+        and looking over the screens afterwards up to {estimate.visualReview} more. {leftText}
       </p>
-      {short && <p className="mt-1 text-ink">Past that, fixed rules plan the rest. You can re-plan any part with the AI once requests are available again.</p>}
+      {short && (
+        <p className="mt-1 text-ink">
+          Past that, fixed rules plan the rest. You can re-plan any part with the AI once requests are available again.
+        </p>
+      )}
       <label className="mt-2 flex cursor-pointer items-start gap-3">
         <input
           type="checkbox"

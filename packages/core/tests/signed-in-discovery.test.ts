@@ -129,7 +129,9 @@ describe('Discovery explores signed in', () => {
     expect(draft.pages.map((p) => p.urlPath).sort()).toEqual(['/', '/login']);
     expect(draft.exploration?.signInPages).toEqual(['/login']);
     expect(draft.exploration?.notReached).toEqual(['/account']);
-    expect(draft.exploration?.notes).toEqual(['Pages behind the sign-in were not reached (/account). Add a sign-in to test them.']);
+    expect(draft.exploration?.notes).toEqual([
+      'Pages behind the sign-in were not reached (/account). Add a sign-in to test them.',
+    ]);
   }, 60000);
 
   it('explores as each role, records who reached what, and never logs itself out or clicks risky buttons', async () => {
@@ -156,8 +158,15 @@ describe('Discovery explores signed in', () => {
     expect(reachedBy['/admin']).toEqual(['admin']);
     expect(reachedBy['/logout']).toBeUndefined();
     expect(reachedBy['/deleted']).toBeUndefined();
-    expect(draft.exploration).toMatchObject({ signedInAs: ['member', 'admin'], signInFailed: [], notReached: [], notes: [] });
-    expect(ai.prompts.find((p) => p.includes('synthesizing application flows'))).toContain('Page /admin — "Admin" (reached by: admin)');
+    expect(draft.exploration).toMatchObject({
+      signedInAs: ['member', 'admin'],
+      signInFailed: [],
+      notReached: [],
+      notes: [],
+    });
+    expect(ai.prompts.find((p) => p.includes('synthesizing application flows'))).toContain(
+      'Page /admin — "Admin" (reached by: admin)'
+    );
   }, 90000);
 
   it('says so when a role cannot sign in', async () => {

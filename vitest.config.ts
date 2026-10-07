@@ -6,6 +6,14 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['packages/*/tests/**/*.test.{ts,tsx}'],
+    // Only active with --coverage (CI). Prints a summary; no thresholds.
+    coverage: {
+      provider: 'v8',
+      reporter: ['text-summary', 'json-summary'],
+      reportsDirectory: 'coverage',
+      include: ['packages/*/src/**/*.{ts,tsx}'],
+      exclude: ['**/dist/**', '**/*.d.ts', '**/tests/**'],
+    },
   },
   resolve: {
     // Exact names only, so a subpath such as '@qa/types/src/verdict.js' (the wizard imports single

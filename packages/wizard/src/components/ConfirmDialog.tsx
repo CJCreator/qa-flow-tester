@@ -53,7 +53,11 @@ function ConfirmDialog({ options, onClose }: { options: ConfirmOptions; onClose:
             {options.cancelLabel ?? 'Cancel'}
           </button>
           {options.altLabel && (
-            <button type="button" className={options.altDanger ? 'btn bg-fail text-surface hover:opacity-90' : 'btn-quiet'} onClick={() => onClose('alt')}>
+            <button
+              type="button"
+              className={options.altDanger ? 'btn bg-fail text-surface hover:opacity-90' : 'btn-quiet'}
+              onClick={() => onClose('alt')}
+            >
               {options.altLabel}
             </button>
           )}
@@ -81,7 +85,10 @@ export function useConfirm(): {
   dialog: ReactNode;
 } {
   const [pending, setPending] = useState<{ options: ConfirmOptions; resolve: (choice: Choice) => void } | null>(null);
-  const choose = useCallback((options: ConfirmOptions) => new Promise<Choice>((resolve) => setPending({ options, resolve })), []);
+  const choose = useCallback(
+    (options: ConfirmOptions) => new Promise<Choice>((resolve) => setPending({ options, resolve })),
+    []
+  );
   const confirm = useCallback(async (options: ConfirmOptions) => (await choose(options)) === 'confirm', [choose]);
   const dialog = pending ? (
     <ConfirmDialog

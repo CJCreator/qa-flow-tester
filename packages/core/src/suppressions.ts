@@ -44,7 +44,10 @@ export class SuppressionsManager {
   }
 
   /** Marks the findings a rule covers. `host`: only that site's rules (and rules for every site) apply. */
-  async applySuppressions(findings: Finding[], host?: string): Promise<{
+  async applySuppressions(
+    findings: Finding[],
+    host?: string
+  ): Promise<{
     activeFindings: Finding[];
     suppressedFindings: Finding[];
   }> {

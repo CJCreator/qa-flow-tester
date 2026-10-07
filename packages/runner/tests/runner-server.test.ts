@@ -125,7 +125,10 @@ describe('RunnerServer', () => {
 
   it('never serves saved sign-in sessions, which hold live session cookies', async () => {
     await fs.mkdir(path.join(outputDir, 'auth'), { recursive: true });
-    await fs.writeFile(path.join(outputDir, 'auth', 'manager.json'), '{"cookies":[{"name":"session","value":"secret"}]}');
+    await fs.writeFile(
+      path.join(outputDir, 'auth', 'manager.json'),
+      '{"cookies":[{"name":"session","value":"secret"}]}'
+    );
     await fs.writeFile(path.join(outputDir, 'visible.json'), '{}');
 
     expect((await fetch(`${runnerBaseUrl}/api/evidence/auth/manager.json`)).status).toBe(403);
@@ -197,7 +200,9 @@ describe('RunnerServer', () => {
             flowId: 'made-up',
             role: 'anonymous',
             startPage: '/dashboard',
-            steps: [{ action: 'click', selector: '[data-testid="no-such-button"]', name: 'Press a button that is not there' }],
+            steps: [
+              { action: 'click', selector: '[data-testid="no-such-button"]', name: 'Press a button that is not there' },
+            ],
             expectations: {},
           },
         ],
@@ -262,7 +267,9 @@ describe('RunnerServer', () => {
   }, 240000);
 
   it('keeps sign-in details out of the saved plan, and asks for them again after a restart', async () => {
-    const roles = [{ role: 'manager', username: 'manager@example.com', password: 'manager-password', loginPath: '/signin' }];
+    const roles = [
+      { role: 'manager', username: 'manager@example.com', password: 'manager-password', loginPath: '/signin' },
+    ];
     const runRes = await fetch(`${runnerBaseUrl}/api/runner/run`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -351,7 +358,4 @@ describe('RunnerServer', () => {
     const report = await reportRes.json();
     expect(report.runId).toBe(runId);
   }, 120000);
-
-
 });
-

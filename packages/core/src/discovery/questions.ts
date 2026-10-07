@@ -49,7 +49,10 @@ export function formQuestion(
   const where = pages.length > 1 ? `found on ${pages.length} pages, such as ${pages[0]}` : `on ${form.urlPath}`;
   return {
     id: `Q-FORM-${index}`,
-    key: pages.length > 1 ? `form:shared:${form.submitButtonSelector || 'form'}:${form.inputs.map((i) => i.label).join('|')}` : `form:${form.urlPath}:${form.submitButtonSelector || 'form'}`,
+    key:
+      pages.length > 1
+        ? `form:shared:${form.submitButtonSelector || 'form'}:${form.inputs.map((i) => i.label).join('|')}`
+        : `form:${form.urlPath}:${form.submitButtonSelector || 'form'}`,
     targetElement: form.submitButtonSelector || 'form',
     urlPath: form.urlPath,
     urlPaths: pages.length > 1 ? pages : undefined,

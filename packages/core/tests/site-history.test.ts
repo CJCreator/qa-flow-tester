@@ -84,7 +84,13 @@ describe('Site History & Delta Tracking (site-history.ts)', () => {
 
     const remainingFindings = [initialFindings[1]]; // Only F-002 remaining
 
-    const diff = await historyManager.recordRun('localhost:3050', 'run-002', improvedGrades, remainingFindings, 'prod-test');
+    const diff = await historyManager.recordRun(
+      'localhost:3050',
+      'run-002',
+      improvedGrades,
+      remainingFindings,
+      'prod-test'
+    );
 
     expect(diff.previousRunId).toBe('run-001');
     expect(diff.fixedFindingFingerprints.length).toBe(1);

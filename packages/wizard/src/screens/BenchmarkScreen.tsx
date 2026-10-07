@@ -20,7 +20,9 @@ function count(n: number, noun: string): string {
 
 function when(iso: string): string {
   const date = new Date(iso);
-  return Number.isNaN(date.getTime()) ? '' : date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  return Number.isNaN(date.getTime())
+    ? ''
+    : date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 }
 
 export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: string }) {
@@ -37,7 +39,7 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
   const timer = useRef<number | undefined>(undefined);
 
   const running = starting || job?.status === 'running';
-  const result = job?.status === 'done' ? job.result ?? null : null;
+  const result = job?.status === 'done' ? (job.result ?? null) : null;
 
   const refreshHistory = useCallback(async () => setHistory(await listBenchmarks()), []);
 
@@ -67,7 +69,9 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
         }
       } catch (err) {
         if (cancelled) return;
-        setError(err instanceof RunnerError ? err.message : 'Lost track of the comparison. Open it again from the list below.');
+        setError(
+          err instanceof RunnerError ? err.message : 'Lost track of the comparison. Open it again from the list below.'
+        );
         setJob(null);
         return;
       }
@@ -87,10 +91,25 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
     setError(null);
     setSelectedCategory('all');
     try {
-      const id = await startBenchmark({ ourUrl: ourUrl.trim(), ourName: ourName.trim(), refUrl: refUrl.trim(), refName: refName.trim() });
-      setJob({ id, status: 'running', stage: 'Starting…', flowType: 'custom', ourUrl: ourUrl.trim(), refUrl: refUrl.trim(), startedAt: new Date().toISOString() });
+      const id = await startBenchmark({
+        ourUrl: ourUrl.trim(),
+        ourName: ourName.trim(),
+        refUrl: refUrl.trim(),
+        refName: refName.trim(),
+      });
+      setJob({
+        id,
+        status: 'running',
+        stage: 'Starting…',
+        flowType: 'custom',
+        ourUrl: ourUrl.trim(),
+        refUrl: refUrl.trim(),
+        startedAt: new Date().toISOString(),
+      });
     } catch (err) {
-      setError(err instanceof RunnerError ? err.message : 'The comparison couldn’t start. Check both addresses and try again.');
+      setError(
+        err instanceof RunnerError ? err.message : 'The comparison couldn’t start. Check both addresses and try again.'
+      );
     } finally {
       setStarting(false);
     }
@@ -128,43 +147,91 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
       <header>
         <FocusHeading className="text-3xl font-bold tracking-tight">Compare with another site</FocusHeading>
         <p className="mt-1 max-w-prose text-ink-soft">
-          See how your journey stacks up against a competitor’s or a site you admire: how many steps and form fields a visitor meets, which helpful patterns each has, and what you could try.
-          It only looks: nothing is typed, sent or changed on either site, and the other site’s robots.txt is respected. It takes about a minute.
+          See how your journey stacks up against a competitor’s or a site you admire: how many steps and form fields a
+          visitor meets, which helpful patterns each has, and what you could try. It only looks: nothing is typed, sent
+          or changed on either site, and the other site’s robots.txt is respected. It takes about a minute.
         </p>
       </header>
 
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-panel border border-edge bg-surface p-5 shadow-level-2">
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-4 rounded-panel border border-edge bg-surface p-5 shadow-level-2"
+      >
         <h2 className="text-lg font-bold text-ink">Which two sites?</h2>
-        <p className="max-w-prose text-sm text-ink-soft">Enter the address where the journey starts on each, such as the pricing page or the sign-up page.</p>
+        <p className="max-w-prose text-sm text-ink-soft">
+          Enter the address where the journey starts on each, such as the pricing page or the sign-up page.
+        </p>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="target-url" className="label">
               Your site
             </label>
-            <input id="target-url" name="target-url" type="url" required placeholder="https://yourapp.com/signup" value={ourUrl} onChange={(e) => setOurUrl(e.target.value)} className="field" />
-            <input id="target-name" name="target-name" type="text" aria-label="Name for your site (optional)" placeholder="Name (optional)" value={ourName} onChange={(e) => setOurName(e.target.value)} className="field mt-2 text-xs" />
+            <input
+              id="target-url"
+              name="target-url"
+              type="url"
+              required
+              placeholder="https://yourapp.com/signup"
+              value={ourUrl}
+              onChange={(e) => setOurUrl(e.target.value)}
+              className="field"
+            />
+            <input
+              id="target-name"
+              name="target-name"
+              type="text"
+              aria-label="Name for your site (optional)"
+              placeholder="Name (optional)"
+              value={ourName}
+              onChange={(e) => setOurName(e.target.value)}
+              className="field mt-2 text-xs"
+            />
           </div>
 
           <div>
             <label htmlFor="competitor-url" className="label">
               The site to compare with
             </label>
-            <input id="competitor-url" name="competitor-url" type="url" required placeholder="https://competitor.com/signup" value={refUrl} onChange={(e) => setRefUrl(e.target.value)} className="field" />
-            <input id="competitor-name" name="competitor-name" type="text" aria-label="Name for the other site (optional)" placeholder="Name (optional)" value={refName} onChange={(e) => setRefName(e.target.value)} className="field mt-2 text-xs" />
+            <input
+              id="competitor-url"
+              name="competitor-url"
+              type="url"
+              required
+              placeholder="https://competitor.com/signup"
+              value={refUrl}
+              onChange={(e) => setRefUrl(e.target.value)}
+              className="field"
+            />
+            <input
+              id="competitor-name"
+              name="competitor-name"
+              type="text"
+              aria-label="Name for the other site (optional)"
+              placeholder="Name (optional)"
+              value={refName}
+              onChange={(e) => setRefName(e.target.value)}
+              className="field mt-2 text-xs"
+            />
           </div>
         </div>
 
         {error && <ErrorMessage>{error}</ErrorMessage>}
 
         <div className="pt-2">
-          <button type="submit" disabled={running || !ourUrl.trim() || !refUrl.trim()} className="btn-primary rounded-control px-5 py-2.5 text-sm font-bold shadow-level-1">
+          <button
+            type="submit"
+            disabled={running || !ourUrl.trim() || !refUrl.trim()}
+            className="btn-primary rounded-control px-5 py-2.5 text-sm font-bold shadow-level-1"
+          >
             {running ? <Spinner label={job?.stage || 'Starting…'} /> : 'Compare the two sites'}
           </button>
         </div>
       </form>
 
-      {job?.status === 'failed' && <ErrorMessage>{job.error || 'The comparison couldn’t finish. Try again.'}</ErrorMessage>}
+      {job?.status === 'failed' && (
+        <ErrorMessage>{job.error || 'The comparison couldn’t finish. Try again.'}</ErrorMessage>
+      )}
 
       {history.length > 0 && (
         <section aria-labelledby="earlier-comparisons" className="space-y-3">
@@ -176,7 +243,8 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
               <li key={h.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
                 <div>
                   <span className="font-bold text-ink">
-                    {hostOf(h.ourUrl)} <span className="font-normal text-ink-soft">compared with</span> {hostOf(h.refUrl)}
+                    {hostOf(h.ourUrl)} <span className="font-normal text-ink-soft">compared with</span>{' '}
+                    {hostOf(h.refUrl)}
                   </span>
                   <span className="block text-xs text-ink-soft">
                     {when(h.startedAt)}
@@ -184,11 +252,21 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button type="button" onClick={() => void open(h.id)} className="rounded px-3 py-1.5 text-xs font-bold text-stamp hover:underline" aria-label={`Open the comparison of ${hostOf(h.ourUrl)} with ${hostOf(h.refUrl)}`}>
+                  <button
+                    type="button"
+                    onClick={() => void open(h.id)}
+                    className="rounded px-3 py-1.5 text-xs font-bold text-stamp hover:underline"
+                    aria-label={`Open the comparison of ${hostOf(h.ourUrl)} with ${hostOf(h.refUrl)}`}
+                  >
                     Open
                   </button>
                   {h.status !== 'running' && (
-                    <button type="button" onClick={() => void remove(h.id)} className="rounded px-3 py-1.5 text-xs font-bold text-ink-soft hover:text-fail" aria-label={`Remove the comparison of ${hostOf(h.ourUrl)} with ${hostOf(h.refUrl)}`}>
+                    <button
+                      type="button"
+                      onClick={() => void remove(h.id)}
+                      className="rounded px-3 py-1.5 text-xs font-bold text-ink-soft hover:text-fail"
+                      aria-label={`Remove the comparison of ${hostOf(h.ourUrl)} with ${hostOf(h.refUrl)}`}
+                    >
                       Remove
                     </button>
                   )}
@@ -212,7 +290,9 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Friction Index */}
               <div className="rounded-card border border-edge bg-surface p-4 shadow-level-1">
-                <div className="text-xs font-bold uppercase tracking-wider text-ink-soft">Effort score (lower is better)</div>
+                <div className="text-xs font-bold uppercase tracking-wider text-ink-soft">
+                  Effort score (lower is better)
+                </div>
                 <div className="mt-3 flex items-baseline justify-between">
                   <div>
                     <span className="text-xs text-ink-soft block">{result.ourProduct.name}</span>
@@ -246,11 +326,15 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
                 <div className="mt-3 flex items-baseline justify-between">
                   <div>
                     <span className="text-xs text-ink-soft block">{result.ourProduct.name}</span>
-                    <span className="text-2xl font-bold text-ink">{count(result.ourProduct.scorecard.totalSteps, "step")}</span>
+                    <span className="text-2xl font-bold text-ink">
+                      {count(result.ourProduct.scorecard.totalSteps, 'step')}
+                    </span>
                   </div>
                   <div className="text-right">
                     <span className="text-xs text-ink-soft block">{result.referenceProduct.name}</span>
-                    <span className="text-2xl font-bold text-ink-soft">{count(result.referenceProduct.scorecard.totalSteps, "step")}</span>
+                    <span className="text-2xl font-bold text-ink-soft">
+                      {count(result.referenceProduct.scorecard.totalSteps, 'step')}
+                    </span>
                   </div>
                 </div>
                 <div className="mt-2 text-xs text-ink-soft">
@@ -266,11 +350,15 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
                 <div className="mt-3 flex items-baseline justify-between">
                   <div>
                     <span className="text-xs text-ink-soft block">{result.ourProduct.name}</span>
-                    <span className="text-2xl font-bold text-ink">{count(result.ourProduct.scorecard.totalFields, "field")}</span>
+                    <span className="text-2xl font-bold text-ink">
+                      {count(result.ourProduct.scorecard.totalFields, 'field')}
+                    </span>
                   </div>
                   <div className="text-right">
                     <span className="text-xs text-ink-soft block">{result.referenceProduct.name}</span>
-                    <span className="text-2xl font-bold text-ink-soft">{count(result.referenceProduct.scorecard.totalFields, "field")}</span>
+                    <span className="text-2xl font-bold text-ink-soft">
+                      {count(result.referenceProduct.scorecard.totalFields, 'field')}
+                    </span>
                   </div>
                 </div>
                 <div className="mt-2 text-xs text-ink-soft">
@@ -286,16 +374,18 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
                 <div className="mt-3 flex items-baseline justify-between">
                   <div>
                     <span className="text-xs text-ink-soft block">{result.ourProduct.name}</span>
-                    <span className="text-2xl font-bold text-ink">{count(result.ourProduct.scorecard.clickDepth, "click")}</span>
+                    <span className="text-2xl font-bold text-ink">
+                      {count(result.ourProduct.scorecard.clickDepth, 'click')}
+                    </span>
                   </div>
                   <div className="text-right">
                     <span className="text-xs text-ink-soft block">{result.referenceProduct.name}</span>
-                    <span className="text-2xl font-bold text-ink-soft">{count(result.referenceProduct.scorecard.clickDepth, "click")}</span>
+                    <span className="text-2xl font-bold text-ink-soft">
+                      {count(result.referenceProduct.scorecard.clickDepth, 'click')}
+                    </span>
                   </div>
                 </div>
-                <div className="mt-2 text-xs text-ink-soft">
-                  Interactions needed on the way.
-                </div>
+                <div className="mt-2 text-xs text-ink-soft">Interactions needed on the way.</div>
               </div>
             </div>
           </section>
@@ -303,15 +393,25 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
           {/* Interactive Pattern Matrix */}
           <section className="space-y-4">
             <h2 className="text-xl font-bold text-ink">Helpful patterns each site has</h2>
-            <p className="text-xs text-ink-soft">A ✗ means it wasn’t found on the pages looked at, not that the site can’t do it.</p>
+            <p className="text-xs text-ink-soft">
+              A ✗ means it wasn’t found on the pages looked at, not that the site can’t do it.
+            </p>
             <div className="overflow-hidden rounded-card border border-edge bg-surface shadow-level-1">
               <table className="w-full text-left text-sm">
                 <thead className="border-b border-rule bg-panel/70 text-xs font-bold uppercase text-ink-soft">
                   <tr>
-                    <th scope="col" className="px-4 py-3">Pattern</th>
-                    <th scope="col" className="px-4 py-3 text-center">{result.ourProduct.name}</th>
-                    <th scope="col" className="px-4 py-3 text-center">{result.referenceProduct.name}</th>
-                    <th scope="col" className="px-4 py-3">Status</th>
+                    <th scope="col" className="px-4 py-3">
+                      Pattern
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-center">
+                      {result.ourProduct.name}
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-center">
+                      {result.referenceProduct.name}
+                    </th>
+                    <th scope="col" className="px-4 py-3">
+                      Status
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-rule">
@@ -320,16 +420,24 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
                       <td className="px-4 py-3 font-bold text-ink">{p.pattern}</td>
                       <td className="px-4 py-3 text-center">
                         {p.ourProduct ? (
-                          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-pass/20 font-bold text-pass">✓</span>
+                          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-pass/20 font-bold text-pass">
+                            ✓
+                          </span>
                         ) : (
-                          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-fail/20 font-bold text-fail">✗</span>
+                          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-fail/20 font-bold text-fail">
+                            ✗
+                          </span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-center">
                         {p.referenceProduct ? (
-                          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-pass/20 font-bold text-pass">✓</span>
+                          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-pass/20 font-bold text-pass">
+                            ✓
+                          </span>
                         ) : (
-                          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-fail/20 font-bold text-fail">✗</span>
+                          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-fail/20 font-bold text-fail">
+                            ✗
+                          </span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-xs text-ink-soft">
@@ -357,8 +465,8 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
                   {result.recommendations.length === 0
                     ? 'Based on what was found on both sites.'
                     : job?.aiUsed
-                    ? 'Written by your AI from what was found on both sites, plus fixed checks.'
-                    : 'From fixed checks on what was found. Add an AI key in Settings to get ideas written by an AI as well.'}
+                      ? 'Written by your AI from what was found on both sites, plus fixed checks.'
+                      : 'From fixed checks on what was found. Add an AI key in Settings to get ideas written by an AI as well.'}
                 </p>
               </div>
 
@@ -370,7 +478,9 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
                       type="button"
                       onClick={() => setSelectedCategory(c)}
                       className={`rounded-control px-2.5 py-1 font-bold capitalize transition-colors ${
-                        selectedCategory === c ? 'bg-stamp text-surface shadow-level-1' : 'bg-surface text-ink-soft hover:text-ink'
+                        selectedCategory === c
+                          ? 'bg-stamp text-surface shadow-level-1'
+                          : 'bg-surface text-ink-soft hover:text-ink'
                       }`}
                     >
                       {c}
@@ -381,12 +491,24 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
             </div>
 
             {result.recommendations.length === 0 && (
-              <p className="rounded-card border border-edge bg-surface p-4 text-sm text-ink-soft">Nothing to suggest: on what was measured, the two sites ask the same of a visitor.</p>
+              <p className="rounded-card border border-edge bg-surface p-4 text-sm text-ink-soft">
+                Nothing to suggest: on what was measured, the two sites ask the same of a visitor.
+              </p>
             )}
             <div className="space-y-3">
               {filteredRecs.map((rec) => {
-                const impactTone = rec.impact === 'High' ? 'bg-fail/15 text-fail' : rec.impact === 'Medium' ? 'bg-warn/15 text-warn' : 'bg-pass/15 text-pass';
-                const effortTone = rec.effort === 'Low' ? 'bg-pass/15 text-pass' : rec.effort === 'Medium' ? 'bg-warn/15 text-warn' : 'bg-fail/15 text-fail';
+                const impactTone =
+                  rec.impact === 'High'
+                    ? 'bg-fail/15 text-fail'
+                    : rec.impact === 'Medium'
+                      ? 'bg-warn/15 text-warn'
+                      : 'bg-pass/15 text-pass';
+                const effortTone =
+                  rec.effort === 'Low'
+                    ? 'bg-pass/15 text-pass'
+                    : rec.effort === 'Medium'
+                      ? 'bg-warn/15 text-warn'
+                      : 'bg-fail/15 text-fail';
                 return (
                   <div key={rec.id} className="rounded-card border border-edge bg-surface p-4 shadow-level-1 space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">

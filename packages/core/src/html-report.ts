@@ -40,7 +40,8 @@ export async function generateSingleFileHtmlReport(
   const verdict = releaseVerdict(report.findings);
   const gradeStyle = verdict.ready ? GRADE_COLORS.A : GRADE_COLORS.F;
   /** Problems among an area's findings, counted as the verdict counts them. */
-  const problemsIn = (ids: string[]) => groupIntoProblems(report.findings.filter((f) => ids.includes(f.id))).filter((p) => !p.toConfirm).length;
+  const problemsIn = (ids: string[]) =>
+    groupIntoProblems(report.findings.filter((f) => ids.includes(f.id))).filter((p) => !p.toConfirm).length;
 
   const aspects: AspectType[] = [
     'Works',
@@ -120,7 +121,14 @@ export async function generateSingleFileHtmlReport(
         <p class="section-desc">Read from ${report.marketing.readPages.map((pg) => `<code>${escapeHtml(pg)}</code>`).join(', ')}. A suggestion depends on what the site is for.</p>
         ${report.marketing.checks
           .map((c) => {
-            const mark = c.status === 'ok' ? 'OK' : c.status === 'gap' ? (c.kind === 'opinion' ? 'Worth adding' : 'Missing') : 'Not checked';
+            const mark =
+              c.status === 'ok'
+                ? 'OK'
+                : c.status === 'gap'
+                  ? c.kind === 'opinion'
+                    ? 'Worth adding'
+                    : 'Missing'
+                  : 'Not checked';
             return `<div class="finding-row"><span class="finding-label">${escapeHtml(c.label)}${c.kind === 'opinion' ? ' (suggestion)' : ''}:</span><span class="finding-val"><strong>${mark}.</strong> ${escapeHtml(c.detail)}</span></div>`;
           })
           .join('')}

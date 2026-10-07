@@ -70,7 +70,11 @@ class ScriptedAI {
 }
 
 async function post(route: string, body: unknown = {}): Promise<Response> {
-  return fetch(`${runnerUrl}${route}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  return fetch(`${runnerUrl}${route}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
 }
 async function status(): Promise<{ phase: string; isRunning: boolean; lastRunError: string | null }> {
   return (await fetch(`${runnerUrl}/api/runner/status`)).json();
@@ -188,7 +192,14 @@ describe('URL-first runs', () => {
       const res = await fetch(`http://localhost:${RUNNER_PORT + 10}/api/runner/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetUrl: `http://localhost:${FIXTURE_PORT}/`, owner: true, useAI: true, aiProvider: 'openrouter', mode: 'product', skipReview: false }),
+        body: JSON.stringify({
+          targetUrl: `http://localhost:${FIXTURE_PORT}/`,
+          owner: true,
+          useAI: true,
+          aiProvider: 'openrouter',
+          mode: 'product',
+          skipReview: false,
+        }),
       });
       expect(res.status).toBe(400);
       expect(await res.json()).toMatchObject({ code: 'ERR_NO_AI_KEY' });
@@ -202,7 +213,12 @@ describe('URL-first runs', () => {
 
   it('plans with fixed rules when there is no AI, and says describing a test needs it', async () => {
     // The plan from the test before is still waiting for review: this replaces it.
-    await post('/api/runner/run', { targetUrl: `http://localhost:${FIXTURE_PORT}/`, owner: true, skipReview: false, replacePlan: true });
+    await post('/api/runner/run', {
+      targetUrl: `http://localhost:${FIXTURE_PORT}/`,
+      owner: true,
+      skipReview: false,
+      replacePlan: true,
+    });
     await waitForPhase(['awaiting-review']);
     const reviewed = await plan();
     expect(reviewed.aiAvailable).toBe(false);
@@ -210,7 +226,9 @@ describe('URL-first runs', () => {
     expect(reviewed.flows.every((f) => f.source === 'fallback')).toBe(true);
     expect(reviewed.notes?.some((n) => n.includes('No AI key'))).toBe(true);
 
-    const reply = await (await post('/api/runner/plan/interpret', { sentence: 'Save an invoice', urlPath: '/invoices/new' })).json();
+    const reply = await (
+      await post('/api/runner/plan/interpret', { sentence: 'Save an invoice', urlPath: '/invoices/new' })
+    ).json();
     expect(reply).toEqual({ ok: false, message: expect.stringContaining('needs the AI helper') });
   }, 120000);
 
@@ -228,7 +246,9 @@ describe('URL-first runs', () => {
     const first = await plan();
 
     // Something that isn't on the page gets a plain reply, and nothing is added.
-    const missing = await (await post('/api/runner/plan/interpret', { sentence: 'Press Export', urlPath: '/invoices/new' })).json();
+    const missing = await (
+      await post('/api/runner/plan/interpret', { sentence: 'Press Export', urlPath: '/invoices/new' })
+    ).json();
     expect(missing).toEqual({ ok: false, message: 'I couldn’t find a button called “Export” on this page.' });
 
     const understood = await (
@@ -239,7 +259,11 @@ describe('URL-first runs', () => {
     ).json();
     expect(understood.ok).toBe(true);
     const added: DiscoveredFlow = understood.flow;
-    expect(added).toMatchObject({ source: 'user', startPage: '/invoices/new', candidateExpectations: { origin: 'user' } });
+    expect(added).toMatchObject({
+      source: 'user',
+      startPage: '/invoices/new',
+      candidateExpectations: { origin: 'user' },
+    });
     expect((await plan()).flows.some((f) => f.source === 'user')).toBe(false); // not added until confirmed
 
     // The owner confirms it, answers the form question, and skips the dashboard journey.
@@ -257,7 +281,9 @@ describe('URL-first runs', () => {
     const result = await report();
     const userTest = result.results.find((r) => r.flowId === added.id);
     expect(userTest?.status).toBe('Failed'); // the fixture shows no error for an empty amount
-    expect(result.findings.some((f) => f.title === 'No error appeared after leaving "Amount" empty' && !f.needsConfirmation)).toBe(true);
+    expect(
+      result.findings.some((f) => f.title === 'No error appeared after leaving "Amount" empty' && !f.needsConfirmation)
+    ).toBe(true);
     expect(result.results.some((r) => r.flowId === 'FLOW-DASHBOARD')).toBe(false);
 
     // Pretend /about is new since that run.

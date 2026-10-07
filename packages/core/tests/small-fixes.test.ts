@@ -39,7 +39,9 @@ describe('Dead-end rule and WCAG 2.2', () => {
     expect(elsewhere.some((f) => f.title.startsWith('Dead End Page'))).toBe(true);
 
     // Nothing to do and no way out is a dead end even where the review started.
-    await page.setContent('<!doctype html><html lang="en"><body><main><h1>Lost in Space</h1><p>No way back.</p></main></body></html>');
+    await page.setContent(
+      '<!doctype html><html lang="en"><body><main><h1>Lost in Space</h1><p>No way back.</p></main></body></html>'
+    );
     const empty = await checker.check(page, { ...context, urlPath: '/deadend', entryPath: '/deadend' });
     expect(empty.some((f) => f.title.startsWith('Dead End Page'))).toBe(true);
     await page.close();
@@ -64,7 +66,9 @@ describe('Reports explain every failure and travel well', () => {
   beforeAll(async () => {
     server = http.createServer((_req, res) => {
       res.writeHead(200, { 'Content-Type': 'text/html' });
-      res.end('<!doctype html><html lang="en"><head><title>Home</title></head><body><nav><a href="/">Home</a></nav><main><h1>Home</h1></main></body></html>');
+      res.end(
+        '<!doctype html><html lang="en"><head><title>Home</title></head><body><nav><a href="/">Home</a></nav><main><h1>Home</h1></main></body></html>'
+      );
     });
     await new Promise<void>((resolve) => server.listen(PORT, resolve));
   });
@@ -83,7 +87,14 @@ describe('Reports explain every failure and travel well', () => {
       enableA11y: false,
       recordVideo: false,
       specTestCases: [
-        { id: 'TC-OK', flowId: 'home', role: 'visitor', startPage: '/', steps: [{ action: 'wait', name: 'Look' }], expectations: {} },
+        {
+          id: 'TC-OK',
+          flowId: 'home',
+          role: 'visitor',
+          startPage: '/',
+          steps: [{ action: 'wait', name: 'Look' }],
+          expectations: {},
+        },
         {
           id: 'TC-DOWN',
           flowId: 'elsewhere',

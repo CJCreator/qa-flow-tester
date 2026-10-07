@@ -5,7 +5,19 @@ import { buildPageSweep } from '../src/discovery/page-sweep.js';
 
 describe('Test hosts (Task 1.5 / D3)', () => {
   it('treats this machine, private networks, Docker and dev tunnels as test copies', () => {
-    for (const host of ['localhost', '127.0.0.1', '::1', '[::1]', 'host.docker.internal', '10.0.0.4', '172.20.1.9', '192.168.1.20', 'app.localhost', 'abc123-3050.uks1.devtunnels.ms', 'fd12:3456::1']) {
+    for (const host of [
+      'localhost',
+      '127.0.0.1',
+      '::1',
+      '[::1]',
+      'host.docker.internal',
+      '10.0.0.4',
+      '172.20.1.9',
+      '192.168.1.20',
+      'app.localhost',
+      'abc123-3050.uks1.devtunnels.ms',
+      'fd12:3456::1',
+    ]) {
       expect(isTestHost(host), host).toBe(true);
     }
   });
@@ -27,15 +39,38 @@ describe('Journeys that need a test copy', () => {
       interactiveElementsCount: 4,
       formsCount: 1,
       elements: [
-        { role: 'link', name: 'Backpack', selector: '#item-4', tagName: 'a', href: '/item/4', visible: true, enabled: true },
+        {
+          role: 'link',
+          name: 'Backpack',
+          selector: '#item-4',
+          tagName: 'a',
+          href: '/item/4',
+          visible: true,
+          enabled: true,
+        },
         { role: 'button', name: 'Add to cart', selector: '#add-4', tagName: 'button', visible: true, enabled: true },
         { role: 'button', name: 'Open menu', selector: '#menu', tagName: 'button', visible: true, enabled: true },
-        { role: 'button', name: 'Search', selector: '#search-go', tagName: 'button', visible: true, enabled: true, insideForm: true },
+        {
+          role: 'button',
+          name: 'Search',
+          selector: '#search-go',
+          tagName: 'button',
+          visible: true,
+          enabled: true,
+          insideForm: true,
+        },
       ],
     },
   ];
   const forms = [{ urlPath: '/', inputs: [{ selector: '#q' }], submitButtonSelector: '#search-go', method: 'GET' }];
-  const flow = (steps: DiscoveredFlow['steps']): DiscoveredFlow => ({ id: 'F', name: 'Journey', role: 'visitor', description: '', startPage: '/', steps });
+  const flow = (steps: DiscoveredFlow['steps']): DiscoveredFlow => ({
+    id: 'F',
+    name: 'Journey',
+    role: 'visitor',
+    description: '',
+    startPage: '/',
+    steps,
+  });
 
   it('browsing, opening menus, typing and searching need nothing', () => {
     expect(
@@ -53,9 +88,13 @@ describe('Journeys that need a test copy', () => {
   });
 
   it('adding to a cart, sending a POST form or paying needs a test copy', () => {
-    expect(needsTestCopy(flow([{ action: 'click', selector: '#add-4', name: 'Add to cart' }]), pages, forms)).toBe(true);
+    expect(needsTestCopy(flow([{ action: 'click', selector: '#add-4', name: 'Add to cart' }]), pages, forms)).toBe(
+      true
+    );
     expect(
-      needsTestCopy(flow([{ action: 'click', selector: '#send', name: 'Go' }]), pages, [{ urlPath: '/', inputs: [], submitButtonSelector: '#send', method: 'POST' }])
+      needsTestCopy(flow([{ action: 'click', selector: '#send', name: 'Go' }]), pages, [
+        { urlPath: '/', inputs: [], submitButtonSelector: '#send', method: 'POST' },
+      ])
     ).toBe(true);
     expect(needsTestCopy(flow([{ action: 'click', selector: '#pay', name: 'Pay now' }]), pages, forms)).toBe(true);
   });

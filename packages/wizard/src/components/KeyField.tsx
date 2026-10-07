@@ -46,7 +46,10 @@ export function KeyField({
         setStatus(result.valid ? { kind: 'valid' } : { kind: 'invalid', reason: result.reason });
       } catch (err) {
         if (checkId !== latestCheck.current) return;
-        setStatus({ kind: 'invalid', reason: err instanceof RunnerError ? err.message : 'The key couldn’t be checked. Try again.' });
+        setStatus({
+          kind: 'invalid',
+          reason: err instanceof RunnerError ? err.message : 'The key couldn’t be checked. Try again.',
+        });
       }
     }, VALIDATE_DELAY_MS);
     return () => clearTimeout(timer);
@@ -77,7 +80,12 @@ export function KeyField({
       </label>
       <p id="ai-key-hint" className="hint mb-3 text-sm">
         Don’t have one?{' '}
-        <a className="inline-flex min-h-[44px] items-center font-bold text-stamp underline underline-offset-4 hover:text-stamp-dark" href="https://openrouter.ai/keys" target="_blank" rel="noreferrer">
+        <a
+          className="inline-flex min-h-[44px] items-center font-bold text-stamp underline underline-offset-4 hover:text-stamp-dark"
+          href="https://openrouter.ai/keys"
+          target="_blank"
+          rel="noreferrer"
+        >
           Get a free key from OpenRouter
         </a>{' '}
         (opens in a new tab).
@@ -101,7 +109,12 @@ export function KeyField({
           aria-describedby="ai-key-hint ai-key-status"
           aria-invalid={status.kind === 'invalid'}
         />
-        <button type="button" className="btn-quiet shrink-0 px-4" onClick={() => setReveal((r) => !r)} aria-pressed={reveal}>
+        <button
+          type="button"
+          className="btn-quiet shrink-0 px-4"
+          onClick={() => setReveal((r) => !r)}
+          aria-pressed={reveal}
+        >
           {reveal ? 'Hide' : 'Show'}
         </button>
       </div>
@@ -109,13 +122,20 @@ export function KeyField({
       <p id="ai-key-status" role="status" className="mt-2 min-h-[1.6em] text-sm">
         {status.kind === 'checking' && <Spinner label="Checking the key…" />}
         {status.kind === 'valid' && <span className="font-bold text-pass">✓ The key works</span>}
-        {status.kind === 'invalid' && <span className="font-bold text-fail">✗ The key doesn’t work, or it’s out of credit. {status.reason}</span>}
+        {status.kind === 'invalid' && (
+          <span className="font-bold text-fail">✗ The key doesn’t work, or it’s out of credit. {status.reason}</span>
+        )}
       </p>
 
       {error && <ErrorMessage>{error}</ErrorMessage>}
 
       <div className="mt-4 flex flex-wrap items-center gap-4">
-        <button type="button" className="btn-primary" disabled={status.kind !== 'valid' || saving} onClick={() => void save()}>
+        <button
+          type="button"
+          className="btn-primary"
+          disabled={status.kind !== 'valid' || saving}
+          onClick={() => void save()}
+        >
           {saving ? <Spinner label="Saving your key…" /> : saveLabel}
         </button>
         {onCancel && (

@@ -46,7 +46,8 @@ export class GeoChecker {
         title: 'Page lacks a semantic <main> or <article> container for clean AI content extraction',
         where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
         expectedVsActual: {
-          expected: 'Content should be enclosed in a <main> or <article> landmark to allow LLM crawlers to isolate the primary text from navigation chrome',
+          expected:
+            'Content should be enclosed in a <main> or <article> landmark to allow LLM crawlers to isolate the primary text from navigation chrome',
           actual: 'No <main> or <article> element found in document',
         },
         stepsToReproduce: [`Visit ${context.urlPath}`, 'Check DOM structure for <main> or <article> tag'],
@@ -69,12 +70,14 @@ export class GeoChecker {
           title: 'Low text-to-code ratio: page content may be sparse or locked in client scripts',
           where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
           expectedVsActual: {
-            expected: 'Pages should maintain a healthy text-to-HTML ratio (> 8%) to ensure generative AI parsers can index meaningful content',
+            expected:
+              'Pages should maintain a healthy text-to-HTML ratio (> 8%) to ensure generative AI parsers can index meaningful content',
             actual: `Visible text ratio is ${(textRatio * 100).toFixed(1)}% (${details.wordCount} words across ${Math.round(details.totalHtmlLength / 1024)} KB of HTML)`,
           },
           stepsToReproduce: [`Visit ${context.urlPath}`, 'Compare innerText volume with outerHTML volume'],
           evidence: {},
-          resolution: 'Ensure primary textual content is server-rendered or hydrated cleanly without excessive HTML wrapper bloat.',
+          resolution:
+            'Ensure primary textual content is server-rendered or hydrated cleanly without excessive HTML wrapper bloat.',
         });
       }
     }
@@ -91,7 +94,8 @@ export class GeoChecker {
         title: 'Long-form content page lacks outbound source citations for LLM verifiability',
         where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
         expectedVsActual: {
-          expected: 'Informational pages (>400 words) should cite external sources or documentation to boost generative AI citation probability (E-E-A-T)',
+          expected:
+            'Informational pages (>400 words) should cite external sources or documentation to boost generative AI citation probability (E-E-A-T)',
           actual: `Page has ${details.wordCount} words but 0 outbound reference links`,
         },
         stepsToReproduce: [`Visit ${context.urlPath}`, 'Inspect links pointing to external domains'],
@@ -112,12 +116,14 @@ export class GeoChecker {
         title: 'Content page lacks author byline and publication timestamp for AI credibility',
         where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
         expectedVsActual: {
-          expected: 'Content should declare author attribution and publication/modified timestamps for generative search engines to evaluate source recency and trust',
+          expected:
+            'Content should declare author attribution and publication/modified timestamps for generative search engines to evaluate source recency and trust',
           actual: 'Neither an author byline nor a datetime stamp was detected',
         },
         stepsToReproduce: [`Visit ${context.urlPath}`, 'Inspect document for author metadata and <time> tags'],
         evidence: {},
-        resolution: 'Add an author byline with bio/profile links and a semantic <time datetime="..."> publication date.',
+        resolution:
+          'Add an author byline with bio/profile links and a semantic <time datetime="..."> publication date.',
       });
     }
 
@@ -153,7 +159,9 @@ export class GeoChecker {
         }
 
         // Author attribution
-        const authorEl = document.querySelector('[rel="author"], [class*="author" i], [itemprop="author"], meta[name="author"]');
+        const authorEl = document.querySelector(
+          '[rel="author"], [class*="author" i], [itemprop="author"], meta[name="author"]'
+        );
         const hasAuthorByline = !!authorEl;
 
         // Date published

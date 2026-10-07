@@ -2,7 +2,9 @@
   "name": "Fixture invoicing app",
   "url": "fixture",
   "mode": "product",
-  "roles": [{ "role": "manager", "username": "manager@example.com", "password": "manager-password", "loginPath": "/signin" }],
+  "roles": [
+    { "role": "manager", "username": "manager@example.com", "password": "manager-password", "loginPath": "/signin" }
+  ],
   "issues": [
     {
       "id": "console-error",
@@ -20,7 +22,10 @@
       "id": "tiny-target",
       "what": "A 20 × 20 px button on the dashboard",
       "planted": true,
-      "match": [{ "titleIncludes": "Touch target below WCAG 2.5.8 minimum: X " }, { "titleIncludes": "(target-size)", "urlIncludes": "/dashboard" }]
+      "match": [
+        { "titleIncludes": "Touch target below WCAG 2.5.8 minimum: X " },
+        { "titleIncludes": "(target-size)", "urlIncludes": "/dashboard" }
+      ]
     },
     {
       "id": "small-text-links",

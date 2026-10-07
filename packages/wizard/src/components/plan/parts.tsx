@@ -21,7 +21,15 @@ export function showItem(itemId: string): void {
   window.setTimeout(() => el.classList.remove('ring-2', 'ring-stamp'), 2500);
 }
 
-export function Badge({ tone = 'quiet', children, title }: { tone?: 'quiet' | 'stamp' | 'pass' | 'warn' | 'fail'; children: React.ReactNode; title?: string }) {
+export function Badge({
+  tone = 'quiet',
+  children,
+  title,
+}: {
+  tone?: 'quiet' | 'stamp' | 'pass' | 'warn' | 'fail';
+  children: React.ReactNode;
+  title?: string;
+}) {
   const tones = {
     quiet: 'border-rule text-ink-soft',
     stamp: 'border-stamp/50 text-stamp',
@@ -30,7 +38,10 @@ export function Badge({ tone = 'quiet', children, title }: { tone?: 'quiet' | 's
     fail: 'border-fail/50 text-fail',
   };
   return (
-    <span title={title} className={`inline-flex items-center rounded border px-1.5 py-0.5 text-xs font-bold ${tones[tone]}`}>
+    <span
+      title={title}
+      className={`inline-flex items-center rounded border px-1.5 py-0.5 text-xs font-bold ${tones[tone]}`}
+    >
       {children}
     </span>
   );
@@ -50,7 +61,17 @@ export function SourceBadge({ source }: { source?: 'ai' | 'fallback' | 'person' 
 }
 
 /** A Plan Item's on/off switch, with a hit area of at least 24 px (WCAG 2.5.8). */
-export function ItemToggle({ label, on, disabled, onChange }: { label: string; on: boolean; disabled?: boolean; onChange: (on: boolean) => void }) {
+export function ItemToggle({
+  label,
+  on,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  on: boolean;
+  disabled?: boolean;
+  onChange: (on: boolean) => void;
+}) {
   return (
     <label className="-m-1 inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded hover:bg-panel">
       <input
@@ -67,12 +88,26 @@ export function ItemToggle({ label, on, disabled, onChange }: { label: string; o
 }
 
 /** "Re-plan with the AI", with an optional note about what to change. */
-export function ReplanControl({ label, disabled, onReplan }: { label: string; disabled?: boolean; onReplan: (instructions?: string) => void }) {
+export function ReplanControl({
+  label,
+  disabled,
+  onReplan,
+}: {
+  label: string;
+  disabled?: boolean;
+  onReplan: (instructions?: string) => void;
+}) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
   if (!open) {
     return (
-      <button type="button" disabled={disabled} onClick={() => setOpen(true)} className="min-h-[32px] text-sm font-bold text-stamp hover:underline disabled:opacity-50" aria-label={label}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen(true)}
+        className="min-h-[32px] text-sm font-bold text-stamp hover:underline disabled:opacity-50"
+        aria-label={label}
+      >
         Re-plan with the AI
       </button>
     );

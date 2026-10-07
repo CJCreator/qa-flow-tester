@@ -22,7 +22,8 @@ export function CommandPalette({ route }: { route: Route }) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const activeTag = document.activeElement?.tagName?.toLowerCase();
-      const isInput = activeTag === 'input' || activeTag === 'textarea' || (document.activeElement as HTMLElement)?.isContentEditable;
+      const isInput =
+        activeTag === 'input' || activeTag === 'textarea' || (document.activeElement as HTMLElement)?.isContentEditable;
 
       // Cmd+K or Ctrl+K
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
@@ -369,7 +370,9 @@ export function CommandPalette({ route }: { route: Route }) {
                           }}
                           onMouseEnter={() => setSelectedIndex(index)}
                           className={`flex w-full items-center justify-between rounded-control px-3 py-2.5 text-left text-sm transition-colors ${
-                            isSelected ? 'bg-stamp/15 text-stamp font-bold shadow-level-1' : 'text-ink hover:bg-surface/60'
+                            isSelected
+                              ? 'bg-stamp/15 text-stamp font-bold shadow-level-1'
+                              : 'text-ink hover:bg-surface/60'
                           }`}
                         >
                           <div className="flex items-center gap-2">
@@ -394,7 +397,9 @@ export function CommandPalette({ route }: { route: Route }) {
             {/* Footer Hint */}
             <div className="flex items-center justify-between border-t border-rule bg-surface/40 px-4 py-2 text-xs text-ink-soft">
               <span>Use ↑ / ↓ to navigate, Enter to select</span>
-              <span>Press <kbd className="font-mono text-ink">?</kbd> for full cheat sheet</span>
+              <span>
+                Press <kbd className="font-mono text-ink">?</kbd> for full cheat sheet
+              </span>
             </div>
           </div>
         ) : (

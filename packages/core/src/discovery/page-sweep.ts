@@ -33,7 +33,8 @@ export function buildPageSweep(
     // Back to the page before each control, in case the previous one moved away from it.
     const steps: TestCaseStep[] = [{ action: 'wait', name: `Look at ${page.urlPath}` }];
     for (const el of controls.slice(0, MAX_CONTROLS_PER_PAGE)) {
-      if (steps.length > 1) steps.push({ action: 'navigate', value: page.urlPath, name: `Back to ${page.urlPath}`, optional: true });
+      if (steps.length > 1)
+        steps.push({ action: 'navigate', value: page.urlPath, name: `Back to ${page.urlPath}`, optional: true });
       steps.push({ action: 'click', selector: el.selector, name: `Try “${el.name}”`, optional: true });
     }
 

@@ -64,19 +64,27 @@ export class OpenRouterClient {
 
     if (res.ok) return { valid: true };
     if (res.status === 401 || res.status === 403) {
-      return { valid: false, reason: 'OpenRouter doesn’t recognise this key. It may have been deleted, or part of it is missing.' };
+      return {
+        valid: false,
+        reason: 'OpenRouter doesn’t recognise this key. It may have been deleted, or part of it is missing.',
+      };
     }
     if (res.status === 402) {
       return { valid: false, reason: 'This key is out of credit.' };
     }
-    return { valid: false, reason: `OpenRouter couldn’t check the key right now (error ${res.status}). Try again in a minute.` };
+    return {
+      valid: false,
+      reason: `OpenRouter couldn’t check the key right now (error ${res.status}). Try again in a minute.`,
+    };
   }
 
   /**
    * The key's free-model requests for the current UTC day, as OpenRouter counts them, or null when
    * it can't say. The AI Request Budget is checked against `remaining`.
    */
-  async freeRequestsToday(apiKey: string | undefined): Promise<{ used: number; limit: number; remaining: number } | null> {
+  async freeRequestsToday(
+    apiKey: string | undefined
+  ): Promise<{ used: number; limit: number; remaining: number } | null> {
     const key = apiKey?.trim();
     if (!key) return null;
     try {
@@ -85,7 +93,9 @@ export class OpenRouterClient {
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
       if (!res.ok) return null;
-      const body = (await res.json()) as { data?: { free_model_daily_requests?: { used?: number; limit?: number; remaining?: number } } };
+      const body = (await res.json()) as {
+        data?: { free_model_daily_requests?: { used?: number; limit?: number; remaining?: number } };
+      };
       const today = body.data?.free_model_daily_requests;
       if (typeof today?.remaining !== 'number' || typeof today.limit !== 'number') return null;
       return { used: today.used ?? today.limit - today.remaining, limit: today.limit, remaining: today.remaining };
@@ -182,7 +192,12 @@ export function pickVisionModel(models: OpenRouterModel[], record: ModelRecord =
 }
 
 /** Models to switch to when the chosen one stops before answering: the next best few. */
-export function fallbackModels(models: OpenRouterModel[], chosen: string | null | undefined, record: ModelRecord = {}, count = 3): string[] {
+export function fallbackModels(
+  models: OpenRouterModel[],
+  chosen: string | null | undefined,
+  record: ModelRecord = {},
+  count = 3
+): string[] {
   return byTrackRecord(models, record)
     .filter((m) => m.id !== chosen && m.supportsJsonOutput && !unreliable(m.id, record))
     .slice(0, count)

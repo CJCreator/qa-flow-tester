@@ -4,7 +4,9 @@ import { urlMatchesPattern } from '../src/spec-conformance.js';
 describe('Expected page addresses', () => {
   it('matches a plain address as written, query and dots included', () => {
     // An AI expected this exact page; "?" must not be read as "the l is optional".
-    expect(urlMatchesPattern('/inventory-item.html?id=4', ['/inventory-item.html', '/inventory-item.html?id=4'])).toBe(true);
+    expect(urlMatchesPattern('/inventory-item.html?id=4', ['/inventory-item.html', '/inventory-item.html?id=4'])).toBe(
+      true
+    );
     expect(urlMatchesPattern('/inventory-item.html?id=4', ['/inventory-item.html?id=5'])).toBe(false);
   });
 

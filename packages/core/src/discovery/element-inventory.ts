@@ -162,12 +162,16 @@ export async function collectElementInventory(page: Page): Promise<ElementInvent
           id,
           nameAttribute,
           inputType: tag === 'input' ? (el.getAttribute('type') || 'text').toLowerCase() : undefined,
-          href: tag === 'a' ? el.getAttribute('href') ?? undefined : undefined,
+          href: tag === 'a' ? (el.getAttribute('href') ?? undefined) : undefined,
           insideForm: !!el.closest('form') || undefined,
           visible,
           enabled,
           landmark: landmarkOf(el),
-          toggles: el.hasAttribute('aria-expanded') || el.hasAttribute('aria-haspopup') || el.hasAttribute('aria-controls') || undefined,
+          toggles:
+            el.hasAttribute('aria-expanded') ||
+            el.hasAttribute('aria-haspopup') ||
+            el.hasAttribute('aria-controls') ||
+            undefined,
           transient: !!el.closest('[data-transient="true"]') || undefined,
         });
       }

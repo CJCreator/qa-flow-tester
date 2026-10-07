@@ -41,18 +41,18 @@ effort estimate (S / M / L), the evidence and a suggested fix.
 
 ## Fix first (top 10)
 
-| # | Item | Type | Severity | Effort |
-|---|---|---|---|---|
-| 1 | [T1](#t1) The chosen free model spends its whole output allowance on hidden reasoning, so every plan falls back to fixed rules | Issue | Blocker | S |
-| 2 | [F1](#f1) A sign-in can only be added after a whole check-up, through "Go deeper" | Issue | Major | M |
-| 3 | [L1](#l1) "What to improve first" ranks SEO nits above an HTTP 500 Blocker | Issue | Major | S |
-| 4 | [U1](#u1) The plan asks the same form question once per page (112 times on a 60-page shop) | Issue | Major | S |
-| 5 | [L2](#l2) Site-wide SEO checks swamp the report (56 of 79 findings on a localhost app) | Issue | Major | M |
-| 6 | [F2](#f2) A finding can't be marked "intended" or "not a problem" from the UI | Enhancement | Major | M |
-| 7 | [T2](#t2) Nothing records AI token use, and the AI notes blame the wrong cause | Issue | Major | S |
-| 8 | [U8](#u8) The report's counts contradict each other ("18 must be fixed" above a list of 8) | Issue | Major | S |
-| 9 | [P1](#p1) The plan response is 1.8 MB for 60 pages and is fetched again after every change | Issue | Major | S |
-| 10 | [T4](#t4) The "finish the AI review" endpoint uses a paid default model and skips the budget | Issue | Major | S |
+| #   | Item                                                                                                                           | Type        | Severity | Effort |
+| --- | ------------------------------------------------------------------------------------------------------------------------------ | ----------- | -------- | ------ |
+| 1   | [T1](#t1) The chosen free model spends its whole output allowance on hidden reasoning, so every plan falls back to fixed rules | Issue       | Blocker  | S      |
+| 2   | [F1](#f1) A sign-in can only be added after a whole check-up, through "Go deeper"                                              | Issue       | Major    | M      |
+| 3   | [L1](#l1) "What to improve first" ranks SEO nits above an HTTP 500 Blocker                                                     | Issue       | Major    | S      |
+| 4   | [U1](#u1) The plan asks the same form question once per page (112 times on a 60-page shop)                                     | Issue       | Major    | S      |
+| 5   | [L2](#l2) Site-wide SEO checks swamp the report (56 of 79 findings on a localhost app)                                         | Issue       | Major    | M      |
+| 6   | [F2](#f2) A finding can't be marked "intended" or "not a problem" from the UI                                                  | Enhancement | Major    | M      |
+| 7   | [T2](#t2) Nothing records AI token use, and the AI notes blame the wrong cause                                                 | Issue       | Major    | S      |
+| 8   | [U8](#u8) The report's counts contradict each other ("18 must be fixed" above a list of 8)                                     | Issue       | Major    | S      |
+| 9   | [P1](#p1) The plan response is 1.8 MB for 60 pages and is fetched again after every change                                     | Issue       | Major    | S      |
+| 10  | [T4](#t4) The "finish the AI review" endpoint uses a paid default model and skips the budget                                   | Issue       | Major    | S      |
 
 ---
 
@@ -256,7 +256,7 @@ effort estimate (S / M / L), the evidence and a suggested fix.
   no control anywhere sets the expectation's `origin` to `user`.
 - **Fix:** add a "Confirm" button, plus inline editing of the expected wording, next to each guess.
 
-### L7. The new `select` fallback silently picks another option (Issue · Minor · S) · *code in progress*
+### L7. The new `select` fallback silently picks another option (Issue · Minor · S) · _code in progress_
 
 - **Evidence:** the uncommitted change to [browser.ts](packages/core/src/browser.ts) falls back to any option that
   partly matches, and then to `options[1]`. The step still passes, even though a different value was chosen.
@@ -396,7 +396,7 @@ effort estimate (S / M / L), the evidence and a suggested fix.
   - Add per-site defaults.
   - Load the key status first and the usage count afterwards.
 
-#### U13. Dark theme only (Enhancement · Minor · M) · *taste*
+#### U13. Dark theme only (Enhancement · Minor · M) · _taste_
 
 - `color-scheme: dark` is fixed, and there's no light theme or print style, even though reports are downloaded and
   shared.
@@ -451,44 +451,45 @@ their own pass.
 Every item above was addressed in the code.
 
 **Live check (Oct 1, fixture app, OpenRouter free tier, `dots-3-note-preview:free`):**
+
 - The AI planned every page in 4 requests, with none cut off and no fixed-rule items. The tests were sensible: empty-field validation on the forms, and pressing the dashboard's planted defect buttons.
 - The journeys were the weak spot. One scan was cut off after the model spent 6,188 of its 8,192 tokens thinking. In another the model answered nothing and the fallback model's shared pool was busy. That led to two more fixes: a retry that asks for 3 shorter journeys, and moving straight to the next model when a pool is busy. On the third scan the AI planned 5 journeys and the whole plan used 5 requests.
 - Testing found every planted defect, and "What to improve first" led with the HTTP 500 Blocker.
 - The after-run visual review needed two fixes before it read any screenshots: it was reading them from the wrong folder, and it used the saved key instead of the run's key. It then looked at all 8 screens using 8 requests, and its notes were accurate.
 - The AI review can now lower "Looks and reads well" only to a C, and asks for at most 3 issues per screen. With 30 opinions and no limit, it had failed the area. The decisions behind T1–T3 are recorded in [ADR 0011](docs/adr/0011-ai-asked-only-what-facts-cannot-say.md).
 
-| Item | What changed |
-|---|---|
-| T1 | Planning asks for low, hidden reasoning and 8,192 answer tokens. A cut-off answer isn't repaired. A model that answers nothing is swapped for the next one mid-scan. Models are ranked with non-reasoning ones first, and one that keeps failing is moved last (a record is kept in the data folder). |
-| T2 | Providers return tokens, finish reason and model. Tokens per stage are shown in the plan and the report's developer details. Each fixed-rule item records why it was planned by fixed rules, and the notes and summary count those items. |
-| T3 | Link checks are named from the link text and destination. The AI is asked only about links to pages it didn't see, and a missing entry no longer triggers a repair. |
-| T4 | The visual review now runs after each check-up with the vision model, within the budget. "Finish the AI review" is a button on the report and is paced by the budget too. |
-| T5 | Compact JSON, one entry for a form repeated across pages, product notes capped per request, and no `siteType` in the prompt. |
-| T6 | The new check-up screen shows the estimate (repairs and visual review included) against the requests left today. It also offers "Plan with fixed rules now, re-plan with the AI later". |
-| F1 | Sign-ins can be added on the new check-up form, one or more roles, and remembered per site in the keychain. The plan also has "Add a sign-in", which crawls just the signed-in pages. |
-| F2 | Each problem has "Not a problem" and "It's intended" with an optional reason. The choice is remembered per site, and hidden problems are counted with an Undo. |
-| F3 | Stopping a scan offers "Stop and plan what's found". Stopping testing offers "Make a report from what's done", marked as partial. |
-| F4 | Starting a check-up of another site keeps the waiting plan aside; the new check-up screen lists it with "Open this plan". |
-| F5 | One question with two answers (test copies) or three (live-looking sites). |
-| L1 | Ranked by severity, then pages, then effort. A Blocker always leads, and each area gets at most two of the top five. |
-| L2 | Site-wide facts are reported once, and search checks run at one screen size. Search checks are off by default for test copies, with a remembered per-site choice. Broken links count under Works. |
-| L3 | Finding paths are normalised in one place in the orchestrator. |
-| L4 | Problems are grouped by their plain meaning across checkers, so a missing title is one problem. |
-| L5 | Viewport and tap-target findings count toward Fast and mobile. The plan says up front when "Looks and reads well" or "Findable" won't be graded. |
-| L6 | Each AI guess has "Confirm" and "Change the wording"; the result is saved as the person's own. |
-| L7 | When another option than the planned one is picked, the test says so and is marked "Could not verify". |
-| U1 | One question per form layout, only for tested pages, and none on a live site. |
-| U2 | Overview cards, a find box, "Only what needs me", bulk switches on groups and pages, and long sections collapsed. |
-| U3 | Plan text is at least 14 px, with 12 px badges. Checkboxes have 24 px hit areas and main controls 44 px. The map's 10 px labels are now 12 px. |
-| U4 | On phones the approval bar is one line that opens into the summary. |
-| U5 | "anonymous" is shown as visitor, answers can be cleared, and "Re-plan everything" asks first with a request count. The tabs have a tabpanel and arrow keys, and the specs box follows a re-plan. |
-| U6 | The scan says which request is in flight, which try it is and how long it's taken. Layouts: 0 is hidden. |
-| U7 | The feed is grouped by problem, with counts and sizes, and names small tap targets. The plan is fetched during testing, and the side panel scrolls on its own. |
-| U8 | The verdict counts grouped problems everywhere ("8 must fix · 15 problems in all"). Raw findings are in the developer details. |
-| U9 | New order: verdict, problems, since last time, improvements, areas, then the map, folded on bigger sites. The tags now read Search, AI answers and AI search, with tooltips. Plain fallbacks replace technical text. |
-| U10 | Every problem has "Why it matters" and "How to fix" above the developer details. |
-| U11 | The page limit keeps what's typed and is checked when leaving the box. |
-| U12 | Settings covers the service, the model (with "Test this model"), default screen sizes and sites. The key status loads first and the usage after. |
-| U13 | A light, printable view of the report, and print styles for the downloaded HTML. |
-| P1 | The plan response leaves out each page's raw controls, and small changes return only what changed. |
-| P2 | Link checks run at one size, plus menu-button sizes. The approval bar shows "about N min", and a "quick check" preset is available. |
+| Item | What changed                                                                                                                                                                                                                                                                                          |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| T1   | Planning asks for low, hidden reasoning and 8,192 answer tokens. A cut-off answer isn't repaired. A model that answers nothing is swapped for the next one mid-scan. Models are ranked with non-reasoning ones first, and one that keeps failing is moved last (a record is kept in the data folder). |
+| T2   | Providers return tokens, finish reason and model. Tokens per stage are shown in the plan and the report's developer details. Each fixed-rule item records why it was planned by fixed rules, and the notes and summary count those items.                                                             |
+| T3   | Link checks are named from the link text and destination. The AI is asked only about links to pages it didn't see, and a missing entry no longer triggers a repair.                                                                                                                                   |
+| T4   | The visual review now runs after each check-up with the vision model, within the budget. "Finish the AI review" is a button on the report and is paced by the budget too.                                                                                                                             |
+| T5   | Compact JSON, one entry for a form repeated across pages, product notes capped per request, and no `siteType` in the prompt.                                                                                                                                                                          |
+| T6   | The new check-up screen shows the estimate (repairs and visual review included) against the requests left today. It also offers "Plan with fixed rules now, re-plan with the AI later".                                                                                                               |
+| F1   | Sign-ins can be added on the new check-up form, one or more roles, and remembered per site in the keychain. The plan also has "Add a sign-in", which crawls just the signed-in pages.                                                                                                                 |
+| F2   | Each problem has "Not a problem" and "It's intended" with an optional reason. The choice is remembered per site, and hidden problems are counted with an Undo.                                                                                                                                        |
+| F3   | Stopping a scan offers "Stop and plan what's found". Stopping testing offers "Make a report from what's done", marked as partial.                                                                                                                                                                     |
+| F4   | Starting a check-up of another site keeps the waiting plan aside; the new check-up screen lists it with "Open this plan".                                                                                                                                                                             |
+| F5   | One question with two answers (test copies) or three (live-looking sites).                                                                                                                                                                                                                            |
+| L1   | Ranked by severity, then pages, then effort. A Blocker always leads, and each area gets at most two of the top five.                                                                                                                                                                                  |
+| L2   | Site-wide facts are reported once, and search checks run at one screen size. Search checks are off by default for test copies, with a remembered per-site choice. Broken links count under Works.                                                                                                     |
+| L3   | Finding paths are normalised in one place in the orchestrator.                                                                                                                                                                                                                                        |
+| L4   | Problems are grouped by their plain meaning across checkers, so a missing title is one problem.                                                                                                                                                                                                       |
+| L5   | Viewport and tap-target findings count toward Fast and mobile. The plan says up front when "Looks and reads well" or "Findable" won't be graded.                                                                                                                                                      |
+| L6   | Each AI guess has "Confirm" and "Change the wording"; the result is saved as the person's own.                                                                                                                                                                                                        |
+| L7   | When another option than the planned one is picked, the test says so and is marked "Could not verify".                                                                                                                                                                                                |
+| U1   | One question per form layout, only for tested pages, and none on a live site.                                                                                                                                                                                                                         |
+| U2   | Overview cards, a find box, "Only what needs me", bulk switches on groups and pages, and long sections collapsed.                                                                                                                                                                                     |
+| U3   | Plan text is at least 14 px, with 12 px badges. Checkboxes have 24 px hit areas and main controls 44 px. The map's 10 px labels are now 12 px.                                                                                                                                                        |
+| U4   | On phones the approval bar is one line that opens into the summary.                                                                                                                                                                                                                                   |
+| U5   | "anonymous" is shown as visitor, answers can be cleared, and "Re-plan everything" asks first with a request count. The tabs have a tabpanel and arrow keys, and the specs box follows a re-plan.                                                                                                      |
+| U6   | The scan says which request is in flight, which try it is and how long it's taken. Layouts: 0 is hidden.                                                                                                                                                                                              |
+| U7   | The feed is grouped by problem, with counts and sizes, and names small tap targets. The plan is fetched during testing, and the side panel scrolls on its own.                                                                                                                                        |
+| U8   | The verdict counts grouped problems everywhere ("8 must fix · 15 problems in all"). Raw findings are in the developer details.                                                                                                                                                                        |
+| U9   | New order: verdict, problems, since last time, improvements, areas, then the map, folded on bigger sites. The tags now read Search, AI answers and AI search, with tooltips. Plain fallbacks replace technical text.                                                                                  |
+| U10  | Every problem has "Why it matters" and "How to fix" above the developer details.                                                                                                                                                                                                                      |
+| U11  | The page limit keeps what's typed and is checked when leaving the box.                                                                                                                                                                                                                                |
+| U12  | Settings covers the service, the model (with "Test this model"), default screen sizes and sites. The key status loads first and the usage after.                                                                                                                                                      |
+| U13  | A light, printable view of the report, and print styles for the downloaded HTML.                                                                                                                                                                                                                      |
+| P1   | The plan response leaves out each page's raw controls, and small changes return only what changed.                                                                                                                                                                                                    |
+| P2   | Link checks run at one size, plus menu-button sizes. The approval bar shows "about N min", and a "quick check" preset is available.                                                                                                                                                                   |

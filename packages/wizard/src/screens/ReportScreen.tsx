@@ -52,7 +52,10 @@ export function ReportScreen({ runId, actions }: { runId: string; actions: Repor
     setError(null);
     getRun(runId)
       .then((r) => !cancelled && setReport(r))
-      .catch((err) => !cancelled && setError(err instanceof RunnerError ? err.message : 'The report couldn’t be opened. Try again.'));
+      .catch(
+        (err) =>
+          !cancelled && setError(err instanceof RunnerError ? err.message : 'The report couldn’t be opened. Try again.')
+      );
     return () => {
       cancelled = true;
     };
@@ -109,7 +112,15 @@ function useLightReport(): [boolean, (on: boolean) => void] {
   return [light, set];
 }
 
-function Report({ report, actions, onReportChanged }: { report: ReleaseReport; actions: ReportActions; onReportChanged: (report: ReleaseReport) => void }) {
+function Report({
+  report,
+  actions,
+  onReportChanged,
+}: {
+  report: ReleaseReport;
+  actions: ReportActions;
+  onReportChanged: (report: ReleaseReport) => void;
+}) {
   const summary = useMemo(() => summarizeReport(report), [report]);
   const host = hostOf(report.targetUrl);
   const { pages, statuses } = useMemo(() => pageResults(report), [report]);
@@ -119,7 +130,8 @@ function Report({ report, actions, onReportChanged }: { report: ReleaseReport; a
   const coverage = report.coverage;
   const [light, setLight] = useLightReport();
   const mustFix = useMemo(
-    () => summary.counts.filter((c) => c.severity === 'Blocker' || c.severity === 'Major').reduce((n, c) => n + c.count, 0),
+    () =>
+      summary.counts.filter((c) => c.severity === 'Blocker' || c.severity === 'Major').reduce((n, c) => n + c.count, 0),
     [summary]
   );
   const tokens = Object.entries(report.aiUsage || {});
@@ -133,9 +145,12 @@ function Report({ report, actions, onReportChanged }: { report: ReleaseReport; a
       const raw = window.location.hash.slice(1);
       if (!raw) return;
       const decoded = decodeURIComponent(raw);
-      const target = document.getElementById(decoded) || document.querySelector<HTMLElement>(`[data-problem-key="${decoded}"]`);
+      const target =
+        document.getElementById(decoded) || document.querySelector<HTMLElement>(`[data-problem-key="${decoded}"]`);
       if (target) {
-        const button = target.querySelector<HTMLButtonElement>('button[aria-expanded]') || (target instanceof HTMLButtonElement ? target : null);
+        const button =
+          target.querySelector<HTMLButtonElement>('button[aria-expanded]') ||
+          (target instanceof HTMLButtonElement ? target : null);
         if (button && button.getAttribute('aria-expanded') === 'false') {
           button.click();
         }
@@ -161,7 +176,9 @@ function Report({ report, actions, onReportChanged }: { report: ReleaseReport; a
         <Link to={PATHS.reports} className="hover:text-ink transition-colors">
           Past check-ups
         </Link>
-        <span aria-hidden="true" className="text-rule">/</span>
+        <span aria-hidden="true" className="text-rule">
+          /
+        </span>
         <button
           type="button"
           onClick={() => setPageFilter(null)}
@@ -169,11 +186,15 @@ function Report({ report, actions, onReportChanged }: { report: ReleaseReport; a
         >
           {host}
         </button>
-        <span aria-hidden="true" className="text-rule">/</span>
+        <span aria-hidden="true" className="text-rule">
+          /
+        </span>
         <span className="font-mono text-xs text-ink-soft">run #{report.runId.slice(0, 8)}</span>
         {pageFilter && (
           <>
-            <span aria-hidden="true" className="text-rule">/</span>
+            <span aria-hidden="true" className="text-rule">
+              /
+            </span>
             <span className="font-mono text-xs font-bold text-stamp">{pageFilter}</span>
             <button
               type="button"
@@ -203,18 +224,29 @@ function Report({ report, actions, onReportChanged }: { report: ReleaseReport; a
           </p>
           <p className="mt-1 text-2xl font-bold text-ink">{summary.reason}</p>
           <p className="mt-1 text-ink-soft">
-            {summary.total === 0 ? summary.headline : `${mustFix} must fix · ${count(summary.total, 'problem', 'problems')} in all`}
-            {coverage.totalTestPoints > 0 && ` · ${count(coverage.totalTestPoints, 'test', 'tests')} in ${formatDuration(report.durationMs)}`}
+            {summary.total === 0
+              ? summary.headline
+              : `${mustFix} must fix · ${count(summary.total, 'problem', 'problems')} in all`}
+            {coverage.totalTestPoints > 0 &&
+              ` · ${count(coverage.totalTestPoints, 'test', 'tests')} in ${formatDuration(report.durationMs)}`}
           </p>
-          {summary.readOnly && <p className="mt-2 text-sm text-ink">Only looked at: nothing was sent or changed, so forms weren’t tested.</p>}
-          {report.testedWithApprovedPlan && <p className="mt-2 text-sm text-ink">Tested with the plan you approved on {formatDay(report.testedWithApprovedPlan)}.</p>}
+          {summary.readOnly && (
+            <p className="mt-2 text-sm text-ink">
+              Only looked at: nothing was sent or changed, so forms weren’t tested.
+            </p>
+          )}
+          {report.testedWithApprovedPlan && (
+            <p className="mt-2 text-sm text-ink">
+              Tested with the plan you approved on {formatDay(report.testedWithApprovedPlan)}.
+            </p>
+          )}
         </div>
       </header>
 
       {report.partial && (
         <Notice tone="warn" title="A partial check-up">
-          Testing was stopped after {report.partial.done} of {report.partial.planned} tests. What wasn’t tested isn’t in this report, so it can’t say the whole site is
-          ready.
+          Testing was stopped after {report.partial.done} of {report.partial.planned} tests. What wasn’t tested isn’t in
+          this report, so it can’t say the whole site is ready.
         </Notice>
       )}
 
@@ -222,12 +254,21 @@ function Report({ report, actions, onReportChanged }: { report: ReleaseReport; a
 
       {/* Quality Gate Status */}
       {evaluatedGate.gate && (
-        <section aria-labelledby="gate-verdict-title" className="rounded-panel border border-edge bg-surface/60 p-4 shadow-level-1">
+        <section
+          aria-labelledby="gate-verdict-title"
+          className="rounded-panel border border-edge bg-surface/60 p-4 shadow-level-1"
+        >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <span id="gate-verdict-title" className="text-xs font-bold uppercase tracking-wider text-ink-soft">Quality Gate:</span>
+              <span id="gate-verdict-title" className="text-xs font-bold uppercase tracking-wider text-ink-soft">
+                Quality Gate:
+              </span>
               <span className="font-bold text-ink">
-                {evaluatedGate.gate.strictAccessibility ? 'Strict' : evaluatedGate.gate.maxBlockers === 0 ? 'Standard' : 'Lenient'}
+                {evaluatedGate.gate.strictAccessibility
+                  ? 'Strict'
+                  : evaluatedGate.gate.maxBlockers === 0
+                    ? 'Standard'
+                    : 'Lenient'}
               </span>
               <span
                 className={`rounded px-2 py-0.5 text-xs font-bold uppercase ${
@@ -256,7 +297,13 @@ function Report({ report, actions, onReportChanged }: { report: ReleaseReport; a
 
       <VisualReview report={report} onReportChanged={onReportChanged} />
 
-      <Problems report={report} pageFilter={pageFilter} onPageFilter={setPageFilter} sectionRef={problemsRef} onReportChanged={onReportChanged} />
+      <Problems
+        report={report}
+        pageFilter={pageFilter}
+        onPageFilter={setPageFilter}
+        sectionRef={problemsRef}
+        onReportChanged={onReportChanged}
+      />
 
       {/* Only once there's an earlier check-up to compare with. */}
       {report.history?.previousTimestamp && <Changes report={report} />}
@@ -279,7 +326,9 @@ function Report({ report, actions, onReportChanged }: { report: ReleaseReport; a
           </summary>
           {mapOpen && (
             <div className="border-t border-rule p-4">
-              <p className="mb-3 text-ink-soft">Every page that was tested, coloured by what was found on it. Choose a page to see its problems.</p>
+              <p className="mb-3 text-ink-soft">
+                Every page that was tested, coloured by what was found on it. Choose a page to see its problems.
+              </p>
               <div className="flex h-[30rem] overflow-hidden rounded-card border border-edge">
                 <SiteMap
                   pages={pages}
@@ -316,10 +365,18 @@ function Report({ report, actions, onReportChanged }: { report: ReleaseReport; a
         <summary className="min-h-[44px] cursor-pointer px-4 py-3 font-bold">Details for developers</summary>
         <div className="space-y-3 border-t border-rule p-4 text-sm">
           <div className="flex flex-wrap gap-3">
-            <button type="button" className="btn-quiet min-h-[44px] px-3 text-sm" onClick={() => void downloadRunFile(report.runId, 'report.md')}>
+            <button
+              type="button"
+              className="btn-quiet min-h-[44px] px-3 text-sm"
+              onClick={() => void downloadRunFile(report.runId, 'report.md')}
+            >
               Download report.md
             </button>
-            <button type="button" className="btn-quiet min-h-[44px] px-3 text-sm" onClick={() => void downloadRunFile(report.runId, 'findings.json')}>
+            <button
+              type="button"
+              className="btn-quiet min-h-[44px] px-3 text-sm"
+              onClick={() => void downloadRunFile(report.runId, 'findings.json')}
+            >
               Download findings.json
             </button>
           </div>
@@ -330,11 +387,13 @@ function Report({ report, actions, onReportChanged }: { report: ReleaseReport; a
             <dd className="break-all text-ink">{report.targetUrl}</dd>
             <dt className="text-ink-soft">Tests</dt>
             <dd className="text-ink">
-              {coverage.passed} passed · {coverage.failed} failed · {coverage.blocked} blocked · {coverage.skipped} skipped · {coverage.couldNotVerify} could not verify
+              {coverage.passed} passed · {coverage.failed} failed · {coverage.blocked} blocked · {coverage.skipped}{' '}
+              skipped · {coverage.couldNotVerify} could not verify
             </dd>
             <dt className="text-ink-soft">Findings</dt>
             <dd className="text-ink">
-              {summary.findings} behind the {count(summary.total, 'problem', 'problems')} (the same problem on several pages or sizes is one problem)
+              {summary.findings} behind the {count(summary.total, 'problem', 'problems')} (the same problem on several
+              pages or sizes is one problem)
             </dd>
             {report.aiModels?.text && (
               <>
@@ -349,7 +408,8 @@ function Report({ report, actions, onReportChanged }: { report: ReleaseReport; a
               <div key={stage} className="contents">
                 <dt className="text-ink-soft">AI tokens: {stage}</dt>
                 <dd className="text-ink">
-                  {u!.requests} requests · {u!.promptTokens.toLocaleString()} sent · {u!.completionTokens.toLocaleString()} answered
+                  {u!.requests} requests · {u!.promptTokens.toLocaleString()} sent ·{' '}
+                  {u!.completionTokens.toLocaleString()} answered
                   {u!.reasoningTokens ? ` (${u!.reasoningTokens.toLocaleString()} thinking)` : ''}
                   {u!.truncated ? ` · ${u!.truncated} cut off` : ''}
                 </dd>
@@ -363,7 +423,13 @@ function Report({ report, actions, onReportChanged }: { report: ReleaseReport; a
 }
 
 /** How far the AI's look over the screens got, and a way to finish it when requests are available again. */
-function VisualReview({ report, onReportChanged }: { report: ReleaseReport; onReportChanged: (report: ReleaseReport) => void }) {
+function VisualReview({
+  report,
+  onReportChanged,
+}: {
+  report: ReleaseReport;
+  onReportChanged: (report: ReleaseReport) => void;
+}) {
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState<{ tone: 'pass' | 'fail' | 'warn'; text: string } | null>(null);
   const review = report.visualReview;
@@ -385,17 +451,27 @@ function VisualReview({ report, onReportChanged }: { report: ReleaseReport; onRe
               onReportChanged(await getRun(report.runId));
               setMessage(
                 result.remainingCount > 0
-                  ? { tone: 'warn', text: `${result.reviewedCount} more looked over; ${result.remainingCount} left for another time.` }
+                  ? {
+                      tone: 'warn',
+                      text: `${result.reviewedCount} more looked over; ${result.remainingCount} left for another time.`,
+                    }
                   : { tone: 'pass', text: 'All the screens are looked over now.' }
               );
             } catch (err) {
-              setMessage({ tone: 'fail', text: err instanceof RunnerError ? err.message : 'That couldn’t be finished. Try again later.' });
+              setMessage({
+                tone: 'fail',
+                text: err instanceof RunnerError ? err.message : 'That couldn’t be finished. Try again later.',
+              });
             } finally {
               setWorking(false);
             }
           }}
         >
-          {working ? <Spinner label="Looking over the screens…" /> : `Look over the other ${count(review.remaining, 'screen', 'screens')}`}
+          {working ? (
+            <Spinner label="Looking over the screens…" />
+          ) : (
+            `Look over the other ${count(review.remaining, 'screen', 'screens')}`
+          )}
         </button>
       }
     >
@@ -443,7 +519,12 @@ function ReportActionsBar({
         >
           {downloading ? <Spinner label="Downloading…" /> : 'Download the report'}
         </button>
-        <button type="button" className="btn-quiet" disabled={actions.starting} onClick={() => actions.onTestAgain(report)}>
+        <button
+          type="button"
+          className="btn-quiet"
+          disabled={actions.starting}
+          onClick={() => actions.onTestAgain(report)}
+        >
           {actions.starting ? <Spinner label="Starting…" /> : 'Test again'}
         </button>
         <button type="button" className="btn-link" aria-expanded={deeper} onClick={() => setDeeper((d) => !d)}>
@@ -472,8 +553,9 @@ function ReportActionsBar({
           <div>
             <h2 className="text-lg font-bold">Test the pages behind a sign-in</h2>
             <p className="text-sm text-ink-soft">
-              A new check-up signs in with this account, then scans and plans the pages it can reach. Use a test account, not a real
-              person’s. Next time you can add a sign-in when you start the check-up, or from the plan.
+              A new check-up signs in with this account, then scans and plans the pages it can reach. Use a test
+              account, not a real person’s. Next time you can add a sign-in when you start the check-up, or from the
+              plan.
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -481,13 +563,26 @@ function ReportActionsBar({
               <label htmlFor="deeper-username" className="label">
                 Email or username
               </label>
-              <input id="deeper-username" className="field" autoComplete="off" value={username} onChange={(e) => setUsername(e.target.value)} />
+              <input
+                id="deeper-username"
+                className="field"
+                autoComplete="off"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
             </div>
             <div>
               <label htmlFor="deeper-password" className="label">
                 Password
               </label>
-              <input id="deeper-password" type="password" className="field" autoComplete="off" value={password} onChange={(e) => setPassword(e.target.value)} />
+              <input
+                id="deeper-password"
+                type="password"
+                className="field"
+                autoComplete="off"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
             </div>
           </div>
           <button type="submit" className="btn-primary" disabled={actions.starting || !username.trim() || !password}>
@@ -517,8 +612,11 @@ function MarketingPanel({ report }: { report: ReleaseReport }) {
         Marketing basics
       </h2>
       <p className="mb-3 max-w-prose text-ink-soft">
-        What a visitor or a marketer looks for, read from {marketing.readPages.length === 1 ? 'one page' : `${marketing.readPages.length} pages`} ({marketing.readPages.slice(0, 3).join(', ')}
-        {marketing.readPages.length > 3 ? ', …' : ''}). Items marked as suggestions depend on what the site is for, so they never count as faults.
+        What a visitor or a marketer looks for, read from{' '}
+        {marketing.readPages.length === 1 ? 'one page' : `${marketing.readPages.length} pages`} (
+        {marketing.readPages.slice(0, 3).join(', ')}
+        {marketing.readPages.length > 3 ? ', …' : ''}). Items marked as suggestions depend on what the site is for, so
+        they never count as faults.
       </p>
       <ul className="divide-y divide-rule rounded-card border border-edge bg-surface shadow-level-1">
         {marketing.checks.map((c) => {
@@ -558,21 +656,32 @@ function AspectGrades({ report }: { report: ReleaseReport }) {
           const checked = data && data.checked !== false;
           const sub = aspect === 'Findable' ? data?.subBreakdown : undefined;
           const problems = checked ? groupProblems(report.findings.filter((f) => data.findings.includes(f.id))) : null;
-          const problemCount = problems ? problems['must-fix'].length + problems['should-fix'].length + problems.suggestion.length : 0;
+          const problemCount = problems
+            ? problems['must-fix'].length + problems['should-fix'].length + problems.suggestion.length
+            : 0;
           return (
-            <li key={aspect} className="flex flex-col justify-between gap-3 rounded-card border border-edge bg-surface p-4 shadow-level-1">
+            <li
+              key={aspect}
+              className="flex flex-col justify-between gap-3 rounded-card border border-edge bg-surface p-4 shadow-level-1"
+            >
               <div className="flex items-center justify-between gap-3">
                 <span>
                   <span className="block font-bold text-ink">{aspect}</span>
-                  <span className="block text-sm text-ink-soft">{checked ? count(problemCount, 'problem', 'problems') : 'Nothing here was checked this time'}</span>
+                  <span className="block text-sm text-ink-soft">
+                    {checked ? count(problemCount, 'problem', 'problems') : 'Nothing here was checked this time'}
+                  </span>
                 </span>
                 {checked ? (
-                  <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-control border-2 text-2xl font-bold ${gradeClasses(data.grade)}`}>
+                  <span
+                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-control border-2 text-2xl font-bold ${gradeClasses(data.grade)}`}
+                  >
                     <span className="sr-only">Grade </span>
                     {data.grade}
                   </span>
                 ) : (
-                  <span className="shrink-0 rounded-control border-2 border-edge px-2 py-1 text-sm font-bold text-ink-soft">Not checked</span>
+                  <span className="shrink-0 rounded-control border-2 border-edge px-2 py-1 text-sm font-bold text-ink-soft">
+                    Not checked
+                  </span>
                 )}
               </div>
               {checked && sub && (
@@ -581,14 +690,28 @@ function AspectGrades({ report }: { report: ReleaseReport }) {
                     {(
                       [
                         ['Search', sub.seo, 'How search engines, such as Google, find and list the site (SEO).'],
-                        ['AI answers', sub.aeo, 'How answer engines and AI assistants pick answers from the site (AEO).'],
+                        [
+                          'AI answers',
+                          sub.aeo,
+                          'How answer engines and AI assistants pick answers from the site (AEO).',
+                        ],
                         ['AI search', sub.geo, 'How AI search tools read and quote the site (GEO).'],
-                        ['Marketing', sub.marketing, 'Share previews, a clear call to action, contact details, analytics and social links.'],
+                        [
+                          'Marketing',
+                          sub.marketing,
+                          'Share previews, a clear call to action, contact details, analytics and social links.',
+                        ],
                       ] as const
                     ).map(([label, part, hint]) => (
                       <div key={label} title={hint}>
                         <dt className="text-ink-soft">{label}</dt>
-                        <dd className="font-bold text-ink">{part?.checked === false ? <span className="font-normal text-ink-soft">Not checked</span> : `${part?.score ?? 100}%`}</dd>
+                        <dd className="font-bold text-ink">
+                          {part?.checked === false ? (
+                            <span className="font-normal text-ink-soft">Not checked</span>
+                          ) : (
+                            `${part?.score ?? 100}%`
+                          )}
+                        </dd>
                       </div>
                     ))}
                   </dl>
@@ -625,7 +748,9 @@ function Improvements({ report }: { report: ReleaseReport }) {
           return (
             <li key={rec.id} className="rounded-card border border-edge bg-surface p-4 shadow-level-1">
               <p className="flex flex-wrap items-center gap-2 text-sm">
-                <span className={`rounded-control border px-1.5 font-bold ${rec.category === 'quick-win' ? 'border-pass text-pass' : 'border-stamp text-stamp'}`}>
+                <span
+                  className={`rounded-control border px-1.5 font-bold ${rec.category === 'quick-win' ? 'border-pass text-pass' : 'border-stamp text-stamp'}`}
+                >
                   {rec.category === 'quick-win' ? 'Quick win' : 'Bigger change'}
                 </span>
                 <span className="text-ink-soft">
@@ -663,10 +788,15 @@ function Changes({ report }: { report: ReleaseReport }) {
       <h2 id="changes-title" className="mb-1 text-2xl font-bold">
         Since the last check-up
       </h2>
-      {history.previousTimestamp && <p className="mb-3 text-ink-soft">Compared with the check-up on {formatDay(history.previousTimestamp)}.</p>}
+      {history.previousTimestamp && (
+        <p className="mb-3 text-ink-soft">Compared with the check-up on {formatDay(history.previousTimestamp)}.</p>
+      )}
       <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {items.map((item) => (
-          <div key={item.label} className="flex flex-col-reverse rounded-card border border-edge bg-surface p-4 text-center shadow-level-1">
+          <div
+            key={item.label}
+            className="flex flex-col-reverse rounded-card border border-edge bg-surface p-4 text-center shadow-level-1"
+          >
             <dt className="text-sm text-ink-soft">{item.label}</dt>
             <dd className={`text-3xl font-bold ${item.tone}`}>{item.value}</dd>
           </div>
@@ -698,8 +828,14 @@ function Problems({
   const [filters, setFilters] = useState<Filters>({ search: '', bucket: 'all', aspect: 'all' });
   const [showHidden, setShowHidden] = useState(false);
   const withFilters = report.findings.length > FILTER_ABOVE;
-  const problemPages = useMemo(() => [...new Set(report.findings.map((f) => f.where.urlPath))].sort(), [report.findings]);
-  const dismissed = useMemo(() => report.findings.filter((f) => f.triageStatus === 'Intended' || f.triageStatus === 'False Positive'), [report.findings]);
+  const problemPages = useMemo(
+    () => [...new Set(report.findings.map((f) => f.where.urlPath))].sort(),
+    [report.findings]
+  );
+  const dismissed = useMemo(
+    () => report.findings.filter((f) => f.triageStatus === 'Intended' || f.triageStatus === 'False Positive'),
+    [report.findings]
+  );
   const dismissedTitles = useMemo(() => [...new Set(dismissed.map((f) => f.title))], [dismissed]);
 
   const shown = useMemo(() => {
@@ -711,7 +847,9 @@ function Problems({
     return groupProblems(report.findings.filter(matches));
   }, [report.findings, pageFilter, filters]);
 
-  const buckets = BUCKETS.filter((b) => (filters.bucket === 'all' || filters.bucket === b.id) && shown[b.id].length > 0);
+  const buckets = BUCKETS.filter(
+    (b) => (filters.bucket === 'all' || filters.bucket === b.id) && shown[b.id].length > 0
+  );
   const filtered = !!pageFilter || filters.search.trim() !== '' || filters.bucket !== 'all' || filters.aspect !== 'all';
 
   const triage = async (titles: string[], status: 'Intended' | 'False Positive' | null, reason?: string) => {
@@ -725,7 +863,11 @@ function Problems({
       </h2>
 
       {withFilters && (
-        <div role="search" aria-label="Filter the problems" className="mb-4 grid gap-3 rounded-lg border border-rule bg-panel p-4 sm:grid-cols-2 lg:grid-cols-4 print:hidden">
+        <div
+          role="search"
+          aria-label="Filter the problems"
+          className="mb-4 grid gap-3 rounded-lg border border-rule bg-panel p-4 sm:grid-cols-2 lg:grid-cols-4 print:hidden"
+        >
           <div>
             <label htmlFor="problem-search" className="mb-1 block text-sm font-bold">
               Search
@@ -760,7 +902,12 @@ function Problems({
             <label htmlFor="problem-page" className="mb-1 block text-sm font-bold">
               Page
             </label>
-            <select id="problem-page" className="field py-2 text-sm" value={pageFilter ?? ''} onChange={(e) => onPageFilter(e.target.value || null)}>
+            <select
+              id="problem-page"
+              className="field py-2 text-sm"
+              value={pageFilter ?? ''}
+              onChange={(e) => onPageFilter(e.target.value || null)}
+            >
               <option value="">All pages</option>
               {problemPages.map((page) => (
                 <option key={page} value={page}>
@@ -793,16 +940,24 @@ function Problems({
       {pageFilter && (
         <p className="mb-4 text-ink">
           Showing the problems on <span className="break-all font-mono">{pageFilter}</span>.{' '}
-          <button type="button" className="btn-link inline-flex min-h-[44px] items-center" onClick={() => onPageFilter(null)}>
+          <button
+            type="button"
+            className="btn-link inline-flex min-h-[44px] items-center"
+            onClick={() => onPageFilter(null)}
+          >
             Show every page
           </button>
         </p>
       )}
 
       {report.findings.length === 0 ? (
-        <p className="rounded-lg border border-pass bg-pass-tint p-6 text-center font-bold text-pass">No problems found.</p>
+        <p className="rounded-lg border border-pass bg-pass-tint p-6 text-center font-bold text-pass">
+          No problems found.
+        </p>
       ) : buckets.length === 0 ? (
-        <p className="text-ink-soft">{filtered ? 'No problems match these filters.' : 'No problems count against this check-up.'}</p>
+        <p className="text-ink-soft">
+          {filtered ? 'No problems match these filters.' : 'No problems count against this check-up.'}
+        </p>
       ) : (
         <div className="space-y-8">
           {buckets.map((bucket) => (
@@ -824,9 +979,14 @@ function Problems({
       {dismissedTitles.length > 0 && (
         <div className="mt-6 text-sm text-ink-soft">
           <p>
-            {count(dismissedTitles.length, 'problem is', 'problems are')} hidden because you marked {dismissedTitles.length === 1 ? 'it' : 'them'} as intended or not
-            a problem.{' '}
-            <button type="button" className="btn-link text-sm" aria-expanded={showHidden} onClick={() => setShowHidden((s) => !s)}>
+            {count(dismissedTitles.length, 'problem is', 'problems are')} hidden because you marked{' '}
+            {dismissedTitles.length === 1 ? 'it' : 'them'} as intended or not a problem.{' '}
+            <button
+              type="button"
+              className="btn-link text-sm"
+              aria-expanded={showHidden}
+              onClick={() => setShowHidden((s) => !s)}
+            >
               {showHidden ? 'Hide them' : 'Show them'}
             </button>
           </p>
@@ -883,7 +1043,14 @@ function ProblemItem({
   const [copiedMd, setCopiedMd] = useState(false);
   const first = group.findings[0];
   const id = `problem-${group.key.replace(/[^A-Za-z0-9_-]+/g, '_')}`;
-  const kinds = [...new Map(group.findings.map((f) => searchKind(f)).filter((k): k is NonNullable<typeof k> => !!k).map((k) => [k.label, k])).values()];
+  const kinds = [
+    ...new Map(
+      group.findings
+        .map((f) => searchKind(f))
+        .filter((k): k is NonNullable<typeof k> => !!k)
+        .map((k) => [k.label, k])
+    ).values(),
+  ];
   const titles = [...new Set(group.findings.map((f) => f.title))];
 
   const copyMarkdown = async () => {
@@ -907,7 +1074,11 @@ function ProblemItem({
   };
 
   return (
-    <li id={id} data-problem-key={group.key} className={`rounded-card border border-l-4 border-rule bg-surface/80 shadow-level-1 transition-all ${BUCKET_BORDER[group.bucket]}`}>
+    <li
+      id={id}
+      data-problem-key={group.key}
+      className={`rounded-card border border-l-4 border-rule bg-surface/80 shadow-level-1 transition-all ${BUCKET_BORDER[group.bucket]}`}
+    >
       <button
         type="button"
         aria-expanded={open}
@@ -918,7 +1089,11 @@ function ProblemItem({
         <span className="min-w-0">
           <span className="flex flex-wrap items-center gap-2 font-bold text-ink">
             {kinds.map((k) => (
-              <span key={k.label} title={k.hint} className="rounded border border-stamp/50 px-1.5 py-0.5 text-xs font-bold text-stamp">
+              <span
+                key={k.label}
+                title={k.hint}
+                className="rounded border border-stamp/50 px-1.5 py-0.5 text-xs font-bold text-stamp"
+              >
                 {k.label}
               </span>
             ))}
@@ -931,7 +1106,11 @@ function ProblemItem({
               .filter((c) => !kinds.some((k) => k.label === c))
               .map((c) => `${c} · `)
               .join('')}
-            {group.pages.length === 1 ? <span className="break-all font-mono">{group.pages[0]}</span> : count(group.pages.length, 'page', 'pages')}
+            {group.pages.length === 1 ? (
+              <span className="break-all font-mono">{group.pages[0]}</span>
+            ) : (
+              count(group.pages.length, 'page', 'pages')
+            )}
           </span>
         </span>
         <span aria-hidden="true" className="mt-1 shrink-0 text-ink-soft">
@@ -948,12 +1127,17 @@ function ProblemItem({
             <strong>How to fix: </strong>
             {howToFix(group, looksTechnical)}
           </p>
-          {group.aspects.length > 1 && <p className="text-sm text-ink-soft">It counts toward {group.aspects.join(' and ')}.</p>}
+          {group.aspects.length > 1 && (
+            <p className="text-sm text-ink-soft">It counts toward {group.aspects.join(' and ')}.</p>
+          )}
           <div>
             <p className="text-sm text-ink-soft">Found on:</p>
             <ul className="mt-1 flex flex-wrap gap-2">
               {group.pages.map((page) => (
-                <li key={page} className="break-all rounded border border-rule bg-canvas px-2 py-0.5 font-mono text-sm text-ink">
+                <li
+                  key={page}
+                  className="break-all rounded border border-rule bg-canvas px-2 py-0.5 font-mono text-sm text-ink"
+                >
                   {page}
                 </li>
               ))}
@@ -1014,7 +1198,11 @@ function ProblemItem({
                 </button>
               </div>
             )}
-            {marking && <p className="mt-1 text-sm text-ink-soft">It’s hidden from this report and not raised again for this site. You can undo it.</p>}
+            {marking && (
+              <p className="mt-1 text-sm text-ink-soft">
+                It’s hidden from this report and not raised again for this site. You can undo it.
+              </p>
+            )}
             {error && (
               <p role="alert" className="text-sm text-fail">
                 {error}

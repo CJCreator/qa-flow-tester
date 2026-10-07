@@ -10,7 +10,8 @@ const localhostAlias = process.env.RUNNER_LOCALHOST_ALIAS || undefined;
 // On Render the service's own public address is allowed without setting it by hand.
 const originList = [process.env.RUNNER_ALLOWED_ORIGINS, process.env.RENDER_EXTERNAL_URL].filter(Boolean).join(',');
 const allowedOrigins = originList
-  ? originList.split(',')
+  ? originList
+      .split(',')
       .map((o) => {
         const clean = o.replace(/\u001b\[[0-9;]*[a-zA-Z]|\u001b\].*?\u0007/g, '').trim();
         try {
@@ -25,7 +26,9 @@ const accessToken = process.env.RUNNER_ACCESS_TOKEN || undefined;
 const beta = process.env.RUNNER_BETA === '1';
 
 if (beta && !accessToken) {
-  console.warn('[Release check-up] RUNNER_BETA is set without RUNNER_ACCESS_TOKEN: anyone who can reach this server can use it.');
+  console.warn(
+    '[Release check-up] RUNNER_BETA is set without RUNNER_ACCESS_TOKEN: anyone who can reach this server can use it.'
+  );
 }
 
 if (allowedOrigins && !accessToken) {

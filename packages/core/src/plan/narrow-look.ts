@@ -54,7 +54,10 @@ export async function lookAtNarrowScreens(
         await options.pause?.();
         context = await options.openContext(size, representative);
         const tab = await context.newPage();
-        await tab.goto(new URL(representative.urlPath, options.baseUrl).toString(), { waitUntil: 'domcontentloaded', timeout: 10000 });
+        await tab.goto(new URL(representative.urlPath, options.baseUrl).toString(), {
+          waitUntil: 'domcontentloaded',
+          timeout: 10000,
+        });
         const elements = await collectElementInventory(tab);
         const visible = new Set(elements.filter((el) => el.visible).map((el) => el.selector));
         const hidden = new Set(

@@ -87,9 +87,7 @@ describe('Competitive & Reference Flow Benchmarking', () => {
       expect(googleSsoPattern?.ourProduct).toBe(false);
       expect(googleSsoPattern?.referenceProduct).toBe(true);
 
-      const pricingTogglePattern = benchmark.patterns.find(
-        (p) => p.pattern === 'Annual/Monthly Billing Toggle'
-      );
+      const pricingTogglePattern = benchmark.patterns.find((p) => p.pattern === 'Annual/Monthly Billing Toggle');
       expect(pricingTogglePattern?.ourProduct).toBe(false);
       expect(pricingTogglePattern?.referenceProduct).toBe(true);
     });

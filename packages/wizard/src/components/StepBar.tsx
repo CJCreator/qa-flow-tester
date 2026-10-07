@@ -42,11 +42,17 @@ export function StepBar({ current, links = {} }: { current: Step; links?: Partia
                   {state === 'done' ? '✓' : i + 1}
                 </span>
                 <span className={state === 'todo' ? 'text-ink-soft' : 'font-bold text-ink'}>{step.label}</span>
-                <span className="sr-only">{state === 'done' ? '(done)' : state === 'current' ? '(current step)' : '(to come)'}</span>
+                <span className="sr-only">
+                  {state === 'done' ? '(done)' : state === 'current' ? '(current step)' : '(to come)'}
+                </span>
               </>
             );
             return (
-              <li key={step.id} className="flex items-center gap-2" aria-current={state === 'current' ? 'step' : undefined}>
+              <li
+                key={step.id}
+                className="flex items-center gap-2"
+                aria-current={state === 'current' ? 'step' : undefined}
+              >
                 {href ? (
                   <Link to={href} className="inline-flex min-h-[36px] items-center gap-2 rounded px-1 hover:underline">
                     {content}

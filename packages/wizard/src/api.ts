@@ -1,4 +1,13 @@
-import type { ReleaseReport, RoleCredential, ReviewPlan, DiscoveredFlow, TestCase, RunSummary, BenchmarkJob, ReleaseGateCriteria } from '@qa/types';
+import type {
+  ReleaseReport,
+  RoleCredential,
+  ReviewPlan,
+  DiscoveredFlow,
+  TestCase,
+  RunSummary,
+  BenchmarkJob,
+  ReleaseGateCriteria,
+} from '@qa/types';
 
 /**
  * Every call to the runner lives here, and every failure becomes a RunnerError whose message is a
@@ -29,7 +38,11 @@ async function call(path: string, init: RequestInit = {}, timeoutMs = 15000): Pr
       signal: AbortSignal.timeout(timeoutMs),
     });
   } catch {
-    throw new RunnerError(NOT_RESPONDING, 'ERR_SERVER_UNRESPONSIVE', 'Check that it’s still running in its terminal (start it with pnpm start).');
+    throw new RunnerError(
+      NOT_RESPONDING,
+      'ERR_SERVER_UNRESPONSIVE',
+      'Check that it’s still running in its terminal (start it with pnpm start).'
+    );
   }
 }
 
@@ -113,7 +126,9 @@ export async function saveAiSettings(settings: {
   visionModel?: string | null;
 }): Promise<AiSetup> {
   const res = await call('/api/ai/settings', { method: 'POST', body: JSON.stringify(settings) }, 25000);
-  const body = await json<AiSetup & { reason?: string; error?: string }>(res).catch(() => ({}) as AiSetup & { reason?: string; error?: string });
+  const body = await json<AiSetup & { reason?: string; error?: string }>(res).catch(
+    () => ({}) as AiSetup & { reason?: string; error?: string }
+  );
   if (!res.ok) throw new RunnerError(body.reason || body.error || 'The settings couldn’t be saved. Try again.');
   return { ...body, model: body.model ?? null };
 }
@@ -160,7 +175,11 @@ export interface AiEstimate {
 
 export async function estimateAi(targetUrl: string, maxPages: number): Promise<AiEstimate | null> {
   try {
-    const res = await call('/api/runner/ai-estimate', { method: 'POST', body: JSON.stringify({ targetUrl, maxPages }) }, 15000);
+    const res = await call(
+      '/api/runner/ai-estimate',
+      { method: 'POST', body: JSON.stringify({ targetUrl, maxPages }) },
+      15000
+    );
     return res.ok ? await json<AiEstimate>(res) : null;
   } catch {
     return null;
@@ -210,7 +229,14 @@ export type Reachability =
 export async function checkReachable(targetUrl: string): Promise<Reachability> {
   const res = await call('/api/runner/preflight', { method: 'POST', body: JSON.stringify({ targetUrl }) }, 15000);
   const body = await json<
-    { reachable: boolean; reason?: string; code?: string; suggestion?: string; statusCode?: number; error?: string } & SiteFacts
+    {
+      reachable: boolean;
+      reason?: string;
+      code?: string;
+      suggestion?: string;
+      statusCode?: number;
+      error?: string;
+    } & SiteFacts
   >(res);
   const facts: SiteFacts = { host: body.host, testCopy: body.testCopy, remembered: body.remembered };
   if (body.reachable) return { ok: true, statusCode: body.statusCode, ...facts };
@@ -239,9 +265,10 @@ export async function checkReachable(targetUrl: string): Promise<Reachability> {
       ok: false,
       reason: body.error || 'Access to QA runner was refused.',
       code: 'ERR_RUNNER_REFUSED',
-      suggestion: res.status === 401
-        ? 'Open the app using the link with ?access= key.'
-        : 'Cross-origin request was refused by the runner.',
+      suggestion:
+        res.status === 401
+          ? 'Open the app using the link with ?access= key.'
+          : 'Cross-origin request was refused by the runner.',
       statusCode: res.status,
       ...facts,
     };
@@ -344,7 +371,10 @@ export async function startRun(request: StartRunRequest): Promise<string> {
  */
 export async function abortRun(finish = false): Promise<{ aborted: boolean; planKept?: boolean; finishing?: boolean }> {
   try {
-    const res = await call('/api/runner/abort', { method: 'POST', body: finish ? JSON.stringify({ finish: true }) : undefined });
+    const res = await call('/api/runner/abort', {
+      method: 'POST',
+      body: finish ? JSON.stringify({ finish: true }) : undefined,
+    });
     if (res.ok) return await json<{ aborted: boolean; planKept?: boolean; finishing?: boolean }>(res);
   } catch {
     // runner might be busy or unreachable
@@ -420,7 +450,8 @@ async function startPlanUpdate(route: string, body: unknown): Promise<void> {
 export const replanItem = (itemId: string, instructions?: string, promote?: boolean) =>
   startPlanUpdate('/api/runner/plan/replan', { itemId, instructions: instructions?.trim() || undefined, promote });
 /** The AI plans everything again, e.g. with new specs. */
-export const replanEverything = (productContext?: string) => startPlanUpdate('/api/runner/plan/replan', { all: true, productContext });
+export const replanEverything = (productContext?: string) =>
+  startPlanUpdate('/api/runner/plan/replan', { all: true, productContext });
 /** Adds a page no link reaches, by its address; it's opened and planned like the rest. */
 export const addPageToPlan = (address: string) => startPlanUpdate('/api/runner/plan/add-page', { address });
 /** Explores another host the site links to, and plans its pages. */
@@ -458,7 +489,11 @@ export async function patchPlan(body: PatchPlanBody): Promise<ReviewPlan | PlanD
   return json<ReviewPlan | PlanDelta>(res);
 }
 
-export async function approvePlan(options?: { roles?: RoleCredential[]; breakpoints?: string[]; idempotencyKey?: string }): Promise<void> {
+export async function approvePlan(options?: {
+  roles?: RoleCredential[];
+  breakpoints?: string[];
+  idempotencyKey?: string;
+}): Promise<void> {
   const token = options?.idempotencyKey || `approve-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
   const res = await call('/api/runner/plan/approve', {
     method: 'POST',
@@ -472,7 +507,8 @@ export async function approvePlan(options?: { roles?: RoleCredential[]; breakpoi
     }
     throw new RunnerError(err.error, err.code);
   }
-  if (res.status === 404) throw new RunnerError('This plan isn’t waiting for review any more. Start a new check-up.', 'ERR_NO_PLAN');
+  if (res.status === 404)
+    throw new RunnerError('This plan isn’t waiting for review any more. Start a new check-up.', 'ERR_NO_PLAN');
   if (!res.ok) throw new RunnerError('Couldn’t start testing the plan. Try again.');
 }
 
@@ -504,7 +540,8 @@ export async function listRuns(): Promise<RunSummary[]> {
 /** One check-up's report. */
 export async function getRun(runId: string): Promise<ReleaseReport> {
   const res = await call(`/api/runs/${encodeURIComponent(runId)}`);
-  if (res.status === 404) throw new RunnerError('That check-up’s report isn’t on this computer any more.', 'ERR_NO_REPORT');
+  if (res.status === 404)
+    throw new RunnerError('That check-up’s report isn’t on this computer any more.', 'ERR_NO_REPORT');
   if (!res.ok) throw new RunnerError('The report couldn’t be opened. Try again.');
   return json<ReleaseReport>(res);
 }
@@ -518,7 +555,10 @@ export async function deleteRun(runId: string): Promise<void> {
 }
 
 /** Saves one of a check-up's files: report.html, report.md or findings.json. */
-export async function downloadRunFile(runId: string, file: 'report.html' | 'report.md' | 'findings.json'): Promise<void> {
+export async function downloadRunFile(
+  runId: string,
+  file: 'report.html' | 'report.md' | 'findings.json'
+): Promise<void> {
   const res = await call(`/api/runs/${encodeURIComponent(runId)}/download/${file}`);
   if (!res.ok) throw new RunnerError('That file couldn’t be downloaded. Try again.');
   await saveResponse(res, file);
@@ -569,7 +609,10 @@ export async function listSites(): Promise<RememberedSite[]> {
 }
 
 /** Changes what's remembered for a site: whether search is checked (null: the default), or forgets a saved sign-in. */
-export async function updateSite(host: string, change: { searchChecks?: boolean | null; forgetSignIn?: string }): Promise<void> {
+export async function updateSite(
+  host: string,
+  change: { searchChecks?: boolean | null; forgetSignIn?: string }
+): Promise<void> {
   const res = await call(`/api/sites/${encodeURIComponent(host)}`, { method: 'POST', body: JSON.stringify(change) });
   if (!res.ok) throw new RunnerError('That couldn’t be saved. Try again.');
 }
@@ -582,15 +625,26 @@ export async function addSiteSignIn(
   host: string,
   signIn: { role: string; username: string; password: string; loginPath?: string }
 ): Promise<{ landingPath?: string; saved: boolean; note?: string }> {
-  const res = await call(`/api/sites/${encodeURIComponent(host)}`, { method: 'POST', body: JSON.stringify({ addSignIn: signIn }) }, 30000);
+  const res = await call(
+    `/api/sites/${encodeURIComponent(host)}`,
+    { method: 'POST', body: JSON.stringify({ addSignIn: signIn }) },
+    30000
+  );
   const body = await json<{ saved?: boolean; landingPath?: string; error?: string }>(res);
   if (!res.ok) throw new RunnerError(body.error || 'That sign-in couldn’t be saved. Try again.');
   return { landingPath: body.landingPath, saved: !!body.saved, note: body.error };
 }
 
 /** Signs in with a saved sign-in to check it still works. */
-export async function testSiteSignIn(host: string, role: string): Promise<{ verified: boolean; landingPath?: string; error?: string }> {
-  const res = await call(`/api/sites/${encodeURIComponent(host)}`, { method: 'POST', body: JSON.stringify({ testSignIn: role }) }, 30000);
+export async function testSiteSignIn(
+  host: string,
+  role: string
+): Promise<{ verified: boolean; landingPath?: string; error?: string }> {
+  const res = await call(
+    `/api/sites/${encodeURIComponent(host)}`,
+    { method: 'POST', body: JSON.stringify({ testSignIn: role }) },
+    30000
+  );
   const body = await json<{ verified?: boolean; landingPath?: string; error?: string }>(res);
   if (!res.ok) throw new RunnerError(body.error || 'The sign-in couldn’t be tested. Try again.');
   return { verified: !!body.verified, landingPath: body.landingPath, error: body.error };
@@ -622,7 +676,10 @@ export async function triageProblem(
   status: 'Intended' | 'False Positive' | null,
   reason?: string
 ): Promise<ReleaseReport> {
-  const res = await call(`/api/runs/${encodeURIComponent(runId)}/triage`, { method: 'POST', body: JSON.stringify({ titles, status, reason }) });
+  const res = await call(`/api/runs/${encodeURIComponent(runId)}/triage`, {
+    method: 'POST',
+    body: JSON.stringify({ titles, status, reason }),
+  });
   if (!res.ok) {
     const err = await json<{ error?: string }>(res).catch((): { error?: string } => ({}));
     throw new RunnerError(err.error || 'That couldn’t be saved. Try again.');
@@ -693,10 +750,16 @@ export async function deleteVisualBaseline(id: string): Promise<void> {
 }
 
 /** Starts comparing two sites; the comparison runs on the server and is followed with getBenchmark. */
-export async function startBenchmark(params: { ourUrl: string; ourName?: string; refUrl: string; refName?: string }): Promise<string> {
+export async function startBenchmark(params: {
+  ourUrl: string;
+  ourName?: string;
+  refUrl: string;
+  refName?: string;
+}): Promise<string> {
   const res = await call('/api/runner/benchmark', { method: 'POST', body: JSON.stringify(params) });
   const body = await json<{ id?: string; error?: string }>(res);
-  if (!res.ok || !body.id) throw new RunnerError(body.error || 'The comparison couldn’t start. Check both addresses and try again.');
+  if (!res.ok || !body.id)
+    throw new RunnerError(body.error || 'The comparison couldn’t start. Check both addresses and try again.');
   return body.id;
 }
 

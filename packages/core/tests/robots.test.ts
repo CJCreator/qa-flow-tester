@@ -16,7 +16,9 @@ describe('RobotsPolicy', () => {
   });
 
   it('prefers a group naming our bot over the wildcard group', () => {
-    const txt = ['User-agent: *', 'Disallow: /', '', 'User-agent: qa-benchmarking-bot', 'Disallow: /private'].join('\n');
+    const txt = ['User-agent: *', 'Disallow: /', '', 'User-agent: qa-benchmarking-bot', 'Disallow: /private'].join(
+      '\n'
+    );
     const policy = RobotsPolicy.parse(txt, UA);
     expect(policy.isAllowed('/pricing')).toBe(true);
     expect(policy.isAllowed('/private/x')).toBe(false);

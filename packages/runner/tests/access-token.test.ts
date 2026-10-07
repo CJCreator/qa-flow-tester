@@ -43,7 +43,11 @@ describe('A runner shared with an access key', () => {
       dataDir: path.join(scratch, 'keyed-data'),
       accessToken: KEY,
     });
-    open = new RunnerServer({ port: OPEN_PORT, outputDir: path.join(scratch, 'open-report'), dataDir: path.join(scratch, 'open-data') });
+    open = new RunnerServer({
+      port: OPEN_PORT,
+      outputDir: path.join(scratch, 'open-report'),
+      dataDir: path.join(scratch, 'open-data'),
+    });
     await keyed.start();
     await open.start();
   });

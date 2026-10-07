@@ -104,9 +104,7 @@ describe('FlowTestOrchestrator E2E', () => {
     );
     expect(consoleFinding).toBeDefined();
 
-    const apiFinding = report.findings.find(
-      (f) => f.title.includes('HTTP 500') && f.testCaseId === 'TC-E2E-002'
-    );
+    const apiFinding = report.findings.find((f) => f.title.includes('HTTP 500') && f.testCaseId === 'TC-E2E-002');
     expect(apiFinding).toBeDefined();
 
     // Video is retained only for the failed test point, and linked from its findings
@@ -134,8 +132,14 @@ describe('FlowTestOrchestrator E2E', () => {
     const reportMdPath = path.join(outputDir, 'report.md');
     const findingsJsonPath = path.join(outputDir, 'findings.json');
 
-    const mdExists = await fs.stat(reportMdPath).then(() => true).catch(() => false);
-    const jsonExists = await fs.stat(findingsJsonPath).then(() => true).catch(() => false);
+    const mdExists = await fs
+      .stat(reportMdPath)
+      .then(() => true)
+      .catch(() => false);
+    const jsonExists = await fs
+      .stat(findingsJsonPath)
+      .then(() => true)
+      .catch(() => false);
 
     expect(mdExists).toBe(true);
     expect(jsonExists).toBe(true);
@@ -156,7 +160,12 @@ describe('FlowTestOrchestrator E2E', () => {
       steps: [{ action: 'wait', name: 'Wait for page load' }],
       expectations: { url: { pattern: '/login*' } },
     };
-    const profile: ProductProfile = { name: 'Fixture App', productId: 'fixture-app', roles: [], visualBaselineDir: baselineDir };
+    const profile: ProductProfile = {
+      name: 'Fixture App',
+      productId: 'fixture-app',
+      roles: [],
+      visualBaselineDir: baselineDir,
+    };
     const run = (updateBaselines: boolean) =>
       new FlowTestOrchestrator().run({
         targetUrl: baseUrl,
@@ -168,7 +177,8 @@ describe('FlowTestOrchestrator E2E', () => {
         recordVideo: false,
         updateBaselines,
       });
-    const visualFindings = (r: Awaited<ReturnType<typeof run>>) => r.findings.filter((f) => f.id.startsWith('F-VISUAL-'));
+    const visualFindings = (r: Awaited<ReturnType<typeof run>>) =>
+      r.findings.filter((f) => f.id.startsWith('F-VISUAL-'));
 
     await run(true);
     const baselinePath = path.join(baselineDir, 'TC-VISUAL-001-1440px.png');

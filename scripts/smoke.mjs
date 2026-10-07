@@ -19,14 +19,30 @@ const env = {
   RUNNER_OUTPUT_DIR: path.join(scratch, 'report'),
 };
 delete env.HUB_API_URL;
-const tool = spawn(process.execPath, [path.join(root, 'scripts/start.mjs'), '--no-open'], { cwd: root, env, stdio: 'inherit' });
+const tool = spawn(process.execPath, [path.join(root, 'scripts/start.mjs'), '--no-open'], {
+  cwd: root,
+  env,
+  stdio: 'inherit',
+});
 
 const checks = [
   ['the Wizard at /', '/', (res, body) => res.status === 200 && body.includes('id="root"')],
   ['the Wizard at /reports', '/reports', (res, body) => res.status === 200 && body.includes('id="root"')],
-  ["Studio's old address redirects to /reports", '/studio/', (res) => res.status === 308 && res.headers.get('location') === '/reports'],
-  ['the API at /api/runner/status', '/api/runner/status', (res, body) => res.status === 200 && 'phase' in JSON.parse(body)],
-  ['"Hub not connected" at /api/v1/', '/api/v1/health', (res, body) => res.status === 503 && JSON.parse(body).hubConnected === false],
+  [
+    "Studio's old address redirects to /reports",
+    '/studio/',
+    (res) => res.status === 308 && res.headers.get('location') === '/reports',
+  ],
+  [
+    'the API at /api/runner/status',
+    '/api/runner/status',
+    (res, body) => res.status === 200 && 'phase' in JSON.parse(body),
+  ],
+  [
+    '"Hub not connected" at /api/v1/',
+    '/api/v1/health',
+    (res, body) => res.status === 503 && JSON.parse(body).hubConnected === false,
+  ],
 ];
 
 let failed = false;
@@ -34,7 +50,10 @@ try {
   let up = false;
   // The first start may build everything, so give it a few minutes.
   for (let i = 0; i < 600 && !up && tool.exitCode === null; i++) {
-    up = await fetch(`${base}/api/runner/status`).then((r) => r.ok, () => false);
+    up = await fetch(`${base}/api/runner/status`).then(
+      (r) => r.ok,
+      () => false
+    );
     if (!up) await new Promise((r) => setTimeout(r, 500));
   }
   if (!up) throw new Error('the QA Tool never answered');

@@ -26,9 +26,7 @@ export class EvidenceCollector {
       const type = msg.type();
       const validTypes: Array<ConsoleEntry['type']> = ['error', 'warning', 'log', 'info'];
       this.consoleLogs.push({
-        type: validTypes.includes(type as ConsoleEntry['type'])
-          ? (type as ConsoleEntry['type'])
-          : 'info',
+        type: validTypes.includes(type as ConsoleEntry['type']) ? (type as ConsoleEntry['type']) : 'info',
         text: msg.text(),
         // For "Failed to load resource", this is the file that failed.
         url: msg.location()?.url || undefined,
@@ -99,7 +97,9 @@ export class EvidenceCollector {
     // Only what happened since the previous step: otherwise one console error is reported again
     // at every later step of the flow.
     const consoleErrors = this.consoleLogs.slice(this.consoleReported).filter((l) => l.type === 'error');
-    const failedRequests = this.networkLogs.slice(this.networkReported).filter((n) => n.status >= 400 || n.status === 0);
+    const failedRequests = this.networkLogs
+      .slice(this.networkReported)
+      .filter((n) => n.status >= 400 || n.status === 0);
     this.consoleReported = this.consoleLogs.length;
     this.networkReported = this.networkLogs.length;
 

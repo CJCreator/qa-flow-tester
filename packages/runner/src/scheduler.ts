@@ -70,9 +70,7 @@ export class SchedulerManager {
     await fs.writeFile(this.schedulesFile, JSON.stringify(schedules, null, 2), 'utf8');
   }
 
-  async addSchedule(
-    input: Omit<CheckupSchedule, 'id' | 'createdAt' | 'nextRunAt'>
-  ): Promise<CheckupSchedule> {
+  async addSchedule(input: Omit<CheckupSchedule, 'id' | 'createdAt' | 'nextRunAt'>): Promise<CheckupSchedule> {
     const schedules = await this.loadSchedules();
     const id = `sched_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const nextRunAt = this.calculateNextRun(input.cadence, input.hour, input.dayOfWeek);

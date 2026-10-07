@@ -64,7 +64,9 @@ describe('Looking at narrow screens', () => {
     for (const page of pages) {
       const alpha = page.links!.find((l) => l.name === 'Alpha')!;
       expect(alpha.hiddenAt, page.urlPath).toEqual(['375px']);
-      expect(page.narrowMenus, page.urlPath).toEqual([{ breakpoint: '375px', selector: 'role=button[name="Menu"]', name: 'Menu' }]);
+      expect(page.narrowMenus, page.urlPath).toEqual([
+        { breakpoint: '375px', selector: 'role=button[name="Menu"]', name: 'Menu' },
+      ]);
       // A link in the page itself stays where it is.
       const inPage = page.links!.find((l) => l.name === 'Read about Beta');
       if (inPage) expect(inPage.hiddenAt).toBeUndefined();

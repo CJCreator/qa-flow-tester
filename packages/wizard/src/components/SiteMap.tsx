@@ -50,7 +50,11 @@ const JOURNEY_COLORS = ['#B69CFB', '#6FB0FA', '#4ADE9A', '#F59AC6', '#FBA35C'];
 
 /** Phones get the list: the drawing is wider than their screen. */
 function startsAsList(): boolean {
-  return typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 767px)').matches;
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(max-width: 767px)').matches
+  );
 }
 
 const STATUS_WORDS: Record<NonNullable<PageNode['status']>, string> = {
@@ -112,7 +116,7 @@ export function SiteMap({
           urlPath: p.urlPath,
           title: p.title || p.urlPath,
           journeys: onJourney.get(p.urlPath) || [],
-          status: runningPagePath === p.urlPath ? 'running' : known?.status ?? 'pending',
+          status: runningPagePath === p.urlPath ? 'running' : (known?.status ?? 'pending'),
           issuesCount: known?.issuesCount ?? 0,
         });
       } else {
@@ -168,7 +172,11 @@ export function SiteMap({
         const x2 = to.x;
         const y2 = to.y + to.height / 2;
         const dx = Math.max(Math.abs(x2 - x1) * 0.5, 30);
-        paths.push({ id: `${journey.id}-${i}`, d: `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`, color: colorOf(index) });
+        paths.push({
+          id: `${journey.id}-${i}`,
+          d: `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`,
+          color: colorOf(index),
+        });
       }
     });
     setConnectorPaths(paths);
@@ -198,7 +206,8 @@ export function SiteMap({
     <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-canvas">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rule bg-panel/80 px-4 py-2 text-xs">
         <p className="text-ink-soft">
-          {pageCount} {pageCount === 1 ? 'page' : 'pages'} · {journeys.length} {journeys.length === 1 ? 'journey' : 'journeys'}
+          {pageCount} {pageCount === 1 ? 'page' : 'pages'} · {journeys.length}{' '}
+          {journeys.length === 1 ? 'journey' : 'journeys'}
         </p>
         <div className="flex items-center gap-1" role="group" aria-label="How to show the map">
           {(
@@ -223,7 +232,10 @@ export function SiteMap({
       </div>
 
       {showStatus && (
-        <ul aria-label="What the colours mean" className="flex flex-wrap gap-x-4 gap-y-1 border-b border-rule bg-panel/60 px-4 py-1.5 text-xs text-ink-soft">
+        <ul
+          aria-label="What the colours mean"
+          className="flex flex-wrap gap-x-4 gap-y-1 border-b border-rule bg-panel/60 px-4 py-1.5 text-xs text-ink-soft"
+        >
           <li className="flex items-center gap-1.5">
             <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-pass" /> Tested, no problems
           </li>
@@ -234,7 +246,8 @@ export function SiteMap({
             <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-fail" /> Serious problems
           </li>
           <li className="flex items-center gap-1.5">
-            <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-rule" /> {mode === 'live' ? 'Not reached yet' : 'Not tested on its own'}
+            <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-rule" />{' '}
+            {mode === 'live' ? 'Not reached yet' : 'Not tested on its own'}
           </li>
         </ul>
       )}
@@ -250,7 +263,9 @@ export function SiteMap({
                   aria-pressed={selectedPagePath === node.urlPath}
                   aria-label={`${node.title}, ${node.urlPath}${showStatus ? `: ${statusText(node)}` : ''}`}
                   className={`flex min-h-[44px] w-full items-center justify-between gap-3 rounded-md border-2 p-3 text-left transition-colors ${
-                    selectedPagePath === node.urlPath ? 'border-stamp bg-surface' : 'border-rule bg-surface/50 hover:border-edge'
+                    selectedPagePath === node.urlPath
+                      ? 'border-stamp bg-surface'
+                      : 'border-rule bg-surface/50 hover:border-edge'
                   }`}
                 >
                   <span className="min-w-0">
@@ -298,9 +313,21 @@ export function SiteMap({
               minWidth: '960px',
             }}
           >
-            <svg aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full" xmlns="http://www.w3.org/2000/svg">
+            <svg
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 h-full w-full"
+              xmlns="http://www.w3.org/2000/svg"
+            >
               {linkPaths.map((p) => (
-                <path key={p.id} d={p.d} fill="none" stroke="currentColor" strokeWidth={1} className="text-rule" strokeOpacity={0.9} />
+                <path
+                  key={p.id}
+                  d={p.d}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1}
+                  className="text-rule"
+                  strokeOpacity={0.9}
+                />
               ))}
               {connectorPaths.map((p) => (
                 <path key={p.id} d={p.d} fill="none" stroke={p.color} strokeWidth={2} strokeOpacity={0.9} />
@@ -334,7 +361,10 @@ export function SiteMap({
                     <span aria-hidden="true">{node.ref}</span>
                     <span className="max-w-[100px] truncate">{node.urlPath}</span>
                   </span>
-                  <span aria-hidden="true" className="relative mx-2 my-1.5 block aspect-video overflow-hidden rounded border border-rule/30 bg-canvas/70 p-1.5">
+                  <span
+                    aria-hidden="true"
+                    className="relative mx-2 my-1.5 block aspect-video overflow-hidden rounded border border-rule/30 bg-canvas/70 p-1.5"
+                  >
                     <span className="mb-1 block h-1 w-2/3 rounded-sm bg-rule" />
                     <span className="mb-1 block h-3 w-full rounded bg-stamp/10" />
                     <span className="block h-1 w-1/2 rounded-sm bg-rule/70" />
@@ -346,7 +376,12 @@ export function SiteMap({
                         <PageStatusLabel node={node} compact />
                       ) : (
                         node.journeys.map((j) => (
-                          <span key={j.id} aria-hidden="true" className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: colorOf(j.index) }} />
+                          <span
+                            key={j.id}
+                            aria-hidden="true"
+                            className="inline-block h-2 w-2 rounded-full"
+                            style={{ backgroundColor: colorOf(j.index) }}
+                          />
                         ))
                       )}
                     </span>
@@ -356,7 +391,15 @@ export function SiteMap({
             })}
 
             {groups.map((group, idx) => (
-              <div key={group.id} style={{ position: 'absolute', left: `${60 + (idx % 3) * 240}px`, top: `${groupsTop + Math.floor(idx / 3) * 110}px`, width: '200px' }}>
+              <div
+                key={group.id}
+                style={{
+                  position: 'absolute',
+                  left: `${60 + (idx % 3) * 240}px`,
+                  top: `${groupsTop + Math.floor(idx / 3) * 110}px`,
+                  width: '200px',
+                }}
+              >
                 <button
                   type="button"
                   aria-expanded={openGroup === group.id}
@@ -394,8 +437,25 @@ export function SiteMap({
 
 function PageStatusLabel({ node, compact = false }: { node: PageNode; compact?: boolean }) {
   const tone =
-    node.status === 'fail' ? 'text-fail' : node.status === 'warn' ? 'text-warn' : node.status === 'pass' ? 'text-pass' : node.status === 'running' ? 'text-stamp' : 'text-ink-soft';
-  const mark = node.status === 'fail' ? '✕' : node.status === 'warn' ? '!' : node.status === 'pass' ? '✓' : node.status === 'running' ? '●' : '–';
+    node.status === 'fail'
+      ? 'text-fail'
+      : node.status === 'warn'
+        ? 'text-warn'
+        : node.status === 'pass'
+          ? 'text-pass'
+          : node.status === 'running'
+            ? 'text-stamp'
+            : 'text-ink-soft';
+  const mark =
+    node.status === 'fail'
+      ? '✕'
+      : node.status === 'warn'
+        ? '!'
+        : node.status === 'pass'
+          ? '✓'
+          : node.status === 'running'
+            ? '●'
+            : '–';
   return (
     <span className={`shrink-0 font-mono ${compact ? 'text-xs' : 'text-xs'} font-bold ${tone}`}>
       <span aria-hidden="true">{mark} </span>

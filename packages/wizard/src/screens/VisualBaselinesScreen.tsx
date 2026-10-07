@@ -146,7 +146,9 @@ export function VisualBaselinesScreen() {
               type="button"
               onClick={() => setBreakpointFilter(bp)}
               className={`rounded-control px-3 py-1 text-xs font-bold transition-colors ${
-                breakpointFilter === bp ? 'bg-stamp text-surface shadow-level-1' : 'bg-panel text-ink-soft hover:text-ink'
+                breakpointFilter === bp
+                  ? 'bg-stamp text-surface shadow-level-1'
+                  : 'bg-panel text-ink-soft hover:text-ink'
               }`}
             >
               {bp === 'all' ? 'All Sizes' : bp}
@@ -300,7 +302,9 @@ export function VisualBaselinesScreen() {
                         type="button"
                         onClick={() => setViewMode('diff-only')}
                         className={`rounded px-2.5 py-1 font-bold ${
-                          viewMode === 'diff-only' ? 'bg-stamp text-surface shadow-level-1' : 'text-ink-soft hover:text-ink'
+                          viewMode === 'diff-only'
+                            ? 'bg-stamp text-surface shadow-level-1'
+                            : 'text-ink-soft hover:text-ink'
                         }`}
                       >
                         Diff Map

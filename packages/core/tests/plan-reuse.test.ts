@@ -33,7 +33,10 @@ class CountingAI implements AIProvider {
 }
 
 let pricingHasYearly = false;
-const layout = (title: string, main: string) => `<!doctype html><html lang="en"><head><title>${title}</title></head><body>
+const layout = (
+  title: string,
+  main: string
+) => `<!doctype html><html lang="en"><head><title>${title}</title></head><body>
   <header><nav><a href="/">Home</a> <a href="/about">About</a> <a href="/pricing">Pricing</a></nav></header>
   <main><h1>${title}</h1>${main}</main></body></html>`;
 
@@ -45,7 +48,10 @@ describe('Re-runs reuse the approved Plan', () => {
       const pages: Record<string, string> = {
         '/': layout('Home', '<button type="button">Show offers</button>'),
         '/about': layout('About', '<p>We make things.</p>'),
-        '/pricing': layout('Pricing', `<button type="button">Monthly</button>${pricingHasYearly ? '<button type="button">Yearly</button>' : ''}`),
+        '/pricing': layout(
+          'Pricing',
+          `<button type="button">Monthly</button>${pricingHasYearly ? '<button type="button">Yearly</button>' : ''}`
+        ),
       };
       const page = pages[new URL(req.url || '/', base).pathname];
       res.writeHead(page ? 200 : 404, { 'Content-Type': 'text/html' });
@@ -61,7 +67,13 @@ describe('Re-runs reuse the approved Plan', () => {
 
   it('asks the AI only about what changed since the last approved Plan', async () => {
     const discover = (ai: AIProvider, remembered?: Parameters<DiscoveryAgent['discover']>[0]['remembered']) =>
-      new DiscoveryAgent().discover({ targetUrl: `${base}/`, productId: 'reuse', outputDir, aiProvider: ai, remembered });
+      new DiscoveryAgent().discover({
+        targetUrl: `${base}/`,
+        productId: 'reuse',
+        outputDir,
+        aiProvider: ai,
+        remembered,
+      });
 
     // First run: every page and the journeys. The shared menu's links all go to pages the crawl saw,
     // so their checks need nothing from the AI.
@@ -79,7 +91,9 @@ describe('Re-runs reuse the approved Plan', () => {
     expect(second.asked).toEqual([]);
     expect(secondDraft.plan!.pages.find((p) => p.urlPath === '/pricing')!.tests).toEqual(pricingTests);
     expect(secondDraft.plan!.budget).toMatchObject({ needed: 0, used: 0 });
-    expect(secondDraft.plan!.navigation.map((n) => n.name).sort()).toEqual(firstDraft.plan!.navigation.map((n) => n.name).sort());
+    expect(secondDraft.plan!.navigation.map((n) => n.name).sort()).toEqual(
+      firstDraft.plan!.navigation.map((n) => n.name).sort()
+    );
 
     // The pricing page gained a button: only it, and the journeys, are asked about again.
     pricingHasYearly = true;

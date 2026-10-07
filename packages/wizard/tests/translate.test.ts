@@ -1,5 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { initialFeed, looksTechnical, plainFailure, reduceFeed, secondsLeft, timeLeft, translateReviewPlan, type FeedState, type RunnerEvent } from '../src/lib/translate';
+import {
+  initialFeed,
+  looksTechnical,
+  plainFailure,
+  reduceFeed,
+  secondsLeft,
+  timeLeft,
+  translateReviewPlan,
+  type FeedState,
+  type RunnerEvent,
+} from '../src/lib/translate';
 import { plainTitle } from '../src/lib/summary';
 
 const run = (events: RunnerEvent[], mode: 'product' | 'website' = 'product'): FeedState =>
@@ -14,9 +24,30 @@ const EVERY_EVENT_TYPE: RunnerEvent[] = [
   { type: 'DISCOVERY_COMPLETED', runId: 'r', flowsFound: 3 },
   { type: 'RUN_STARTED', runId: 'r', targetUrl: 'http://x', productId: 'p', testCaseCount: 3 },
   { type: 'PREFLIGHT_STARTED', roles: ['admin', 'customer'] },
-  { type: 'TEST_POINT_STARTED', testCaseId: 'TC-1', testCaseName: 'Create Invoice', role: 'admin', breakpoint: '1440px', index: 0, total: 3 },
-  { type: 'STEP_STARTED', stepIndex: 0, stepName: 'Click [data-testid="save-btn"]', action: 'click', target: '[data-testid="save-btn"]', testCaseId: 'TC-1' },
-  { type: 'STEP_COMPLETED', stepIndex: 0, passed: false, durationMs: 10, error: 'locator.click: Timeout 4000ms exceeded' },
+  {
+    type: 'TEST_POINT_STARTED',
+    testCaseId: 'TC-1',
+    testCaseName: 'Create Invoice',
+    role: 'admin',
+    breakpoint: '1440px',
+    index: 0,
+    total: 3,
+  },
+  {
+    type: 'STEP_STARTED',
+    stepIndex: 0,
+    stepName: 'Click [data-testid="save-btn"]',
+    action: 'click',
+    target: '[data-testid="save-btn"]',
+    testCaseId: 'TC-1',
+  },
+  {
+    type: 'STEP_COMPLETED',
+    stepIndex: 0,
+    passed: false,
+    durationMs: 10,
+    error: 'locator.click: Timeout 4000ms exceeded',
+  },
   { type: 'FINDINGS_UPDATED', totalFindings: 2 },
   { type: 'RUN_COMPLETED', runId: 'r', report: {} },
 ];
@@ -25,7 +56,9 @@ describe('reduceFeed', () => {
   it('has a plain sentence for every event type the runner emits, and never shows raw internals', () => {
     const state = run(EVERY_EVENT_TYPE);
     const text = visibleText(state);
-    expect(text).not.toMatch(/data-testid|\[|\]|locator|Timeout 4000|_[A-Z]|RUN_|STEP_|DISCOVERY|PREFLIGHT|FINDINGS|http:\/\//);
+    expect(text).not.toMatch(
+      /data-testid|\[|\]|locator|Timeout 4000|_[A-Z]|RUN_|STEP_|DISCOVERY|PREFLIGHT|FINDINGS|http:\/\//
+    );
     expect(state.history).toEqual([
       'Exploring your site to learn what people can do on it…',
       'Found 3 things people can do on your site. Planning how to test them…',
@@ -39,9 +72,13 @@ describe('reduceFeed', () => {
   });
 
   it('describes a step with a technical name by its action only', () => {
-    const state = run([{ type: 'STEP_STARTED', stepIndex: 0, stepName: 'Click [data-testid="save-btn"]', action: 'click' }]);
+    const state = run([
+      { type: 'STEP_STARTED', stepIndex: 0, stepName: 'Click [data-testid="save-btn"]', action: 'click' },
+    ]);
     expect(state.current).toBe('Clicking a button…');
-    expect(run([{ type: 'STEP_STARTED', stepName: 'Save invoice', action: 'click' }]).current).toBe('Clicking “Save invoice”…');
+    expect(run([{ type: 'STEP_STARTED', stepName: 'Save invoice', action: 'click' }]).current).toBe(
+      'Clicking “Save invoice”…'
+    );
   });
 
   it('falls back to a generic line for unknown events instead of rendering nothing', () => {
@@ -70,9 +107,13 @@ describe('reduceFeed', () => {
   });
 
   it('turns a failure into a plain explanation', () => {
-    const state = run([{ type: 'RUN_FAILED', error: 'Pre-flight check failed: Target URL is unreachable (fetch failed).' }]);
+    const state = run([
+      { type: 'RUN_FAILED', error: 'Pre-flight check failed: Target URL is unreachable (fetch failed).' },
+    ]);
     expect(state.status).toBe('failed');
-    expect(state.failure).toBe('Your site couldn’t be reached. Make sure it’s running and the address is right, then try again.');
+    expect(state.failure).toBe(
+      'Your site couldn’t be reached. Make sure it’s running and the address is right, then try again.'
+    );
   });
 });
 
@@ -91,10 +132,15 @@ describe('plainFailure', () => {
 });
 
 describe('looksTechnical', () => {
-  it.each(['[data-testid="x"]', '#submit', 'save-btn', 'div > a.nav', 'https://x.com/a', 'createInvoiceFlow', 'user_name'])(
-    'flags %s',
-    (label) => expect(looksTechnical(label)).toBe(true)
-  );
+  it.each([
+    '[data-testid="x"]',
+    '#submit',
+    'save-btn',
+    'div > a.nav',
+    'https://x.com/a',
+    'createInvoiceFlow',
+    'user_name',
+  ])('flags %s', (label) => expect(looksTechnical(label)).toBe(true));
   it.each(['Save invoice', 'Sign-in', 'Create Invoice Flow', 'E-mail address'])('accepts %s', (label) =>
     expect(looksTechnical(label)).toBe(false)
   );
@@ -187,7 +233,6 @@ describe('translateReviewPlan (Task 1.3)', () => {
   });
 });
 
-
 describe('plainTitle (M6 gap fixes)', () => {
   it('rewrites raw regex patterns into plain English sentences', () => {
     const finding: any = {
@@ -243,7 +288,11 @@ describe('live state from the real events (Task 1.6)', () => {
   it('STEP_COMPLETED: the newest screenshot, and the page the browser is on', () => {
     const state = run([
       testPoint(0, '/'),
-      { type: 'STEP_COMPLETED', urlPath: '/checkout', screenshotUrl: '/api/evidence/runs/run-1/evidence/TC-1/step-1.png' },
+      {
+        type: 'STEP_COMPLETED',
+        urlPath: '/checkout',
+        screenshotUrl: '/api/evidence/runs/run-1/evidence/TC-1/step-1.png',
+      },
     ]);
     expect(state.screenshot).toEqual({ url: '/api/evidence/runs/run-1/evidence/TC-1/step-1.png', page: '/checkout' });
     expect(state.currentPage).toBe('/checkout');
@@ -258,14 +307,24 @@ describe('live state from the real events (Task 1.6)', () => {
         type: 'FINDINGS_UPDATED',
         totalFindings: 3,
         latest: [
-          { id: 'F-1', title: 'Console Error in step "Save"', severity: 'Minor', urlPath: '/cart', breakpoint: '375px' },
+          {
+            id: 'F-1',
+            title: 'Console Error in step "Save"',
+            severity: 'Minor',
+            urlPath: '/cart',
+            breakpoint: '375px',
+          },
           { id: 'F-2', title: 'HTTP 500 on POST /api/orders', severity: 'Major', urlPath: '/cart' },
           { id: 'F-3', title: 'Touch target too small', severity: 'Minor', urlPath: 'http://shop.example.com/about' },
         ],
       },
     ]);
     expect(state.findings).toBe(3);
-    expect(state.pages).toEqual({ '/': { status: 'pass', issues: 0 }, '/cart': { status: 'fail', issues: 2 }, '/about': { status: 'warn', issues: 1 } });
+    expect(state.pages).toEqual({
+      '/': { status: 'pass', issues: 0 },
+      '/cart': { status: 'fail', issues: 2 },
+      '/about': { status: 'warn', issues: 1 },
+    });
     expect(state.found.map((f) => f.id)).toEqual(['F-3', 'F-2', 'F-1']);
     expect(state.found[2]).toMatchObject({ urlPath: '/cart', breakpoint: '375px', severity: 'Minor' });
     expect(state.progress).toEqual({ done: 1, total: 12 });
@@ -273,7 +332,10 @@ describe('live state from the real events (Task 1.6)', () => {
 
   it('keeps whether the plan was kept when testing stops or fails', () => {
     expect(run([{ type: 'RUN_ABORTED', planKept: true }])).toMatchObject({ status: 'failed', planKept: true });
-    expect(run([{ type: 'RUN_FAILED', error: 'page.goto: Timeout 30000ms exceeded', planKept: true }])).toMatchObject({ status: 'failed', planKept: true });
+    expect(run([{ type: 'RUN_FAILED', error: 'page.goto: Timeout 30000ms exceeded', planKept: true }])).toMatchObject({
+      status: 'failed',
+      planKept: true,
+    });
     expect(run([{ type: 'RUN_FAILED', error: 'x' }]).planKept).toBe(false);
   });
 
@@ -288,6 +350,8 @@ describe('live state from the real events (Task 1.6)', () => {
   });
 
   it('points to Settings when the AI key is the problem', () => {
-    expect(plainFailure('No OpenRouter key is saved.', 'product')).toBe('Your AI key is missing. Add it again in Settings, then try again.');
+    expect(plainFailure('No OpenRouter key is saved.', 'product')).toBe(
+      'Your AI key is missing. Add it again in Settings, then try again.'
+    );
   });
 });

@@ -30,7 +30,13 @@ export class BrowserManager {
       this.browser = await chromium.launch({
         headless,
         // Small hosts have little memory: no GPU process or extensions to hold on to.
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-extensions'],
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--disable-extensions',
+        ],
       });
     }
     return this.browser;
@@ -38,7 +44,7 @@ export class BrowserManager {
 
   async createContext(options: BrowserOptions = {}): Promise<BrowserContext> {
     const browser = await this.launch(options.headless ?? true);
-    
+
     const extraHTTPHeaders: Record<string, string> = {};
     if (options.tunnelAuth) {
       extraHTTPHeaders['X-Tunnel-Skip-AntiPhishing-Page'] = 'true';
@@ -62,7 +68,9 @@ export class BrowserManager {
         });
       } catch (err) {
         // Missing ffmpeg (`npx playwright install ffmpeg`) must not block the run.
-        console.warn(`[Browser] Video recording unavailable, continuing without it: ${err instanceof Error ? err.message : err}`);
+        console.warn(
+          `[Browser] Video recording unavailable, continuing without it: ${err instanceof Error ? err.message : err}`
+        );
       }
     }
     return browser.newContext(contextOptions);
@@ -98,16 +106,18 @@ export class BrowserManager {
 
 // If an element is nested inside a closed <details> accordion/disclosure, auto-open it
 async function revealIfInsideDetails(locator: Locator): Promise<void> {
-  await locator.evaluate((el) => {
-    let curr: HTMLElement | null = el as HTMLElement;
-    while (curr) {
-      if (curr.tagName === 'DETAILS' && !(curr as HTMLDetailsElement).open) {
-        (curr as HTMLDetailsElement).open = true;
-        curr.dispatchEvent(new Event('toggle'));
+  await locator
+    .evaluate((el) => {
+      let curr: HTMLElement | null = el as HTMLElement;
+      while (curr) {
+        if (curr.tagName === 'DETAILS' && !(curr as HTMLDetailsElement).open) {
+          (curr as HTMLDetailsElement).open = true;
+          curr.dispatchEvent(new Event('toggle'));
+        }
+        curr = curr.parentElement;
       }
-      curr = curr.parentElement;
-    }
-  }).catch(() => {});
+    })
+    .catch(() => {});
 }
 
 /**
@@ -166,9 +176,7 @@ export async function locateElement(page: Page, selector: string): Promise<Locat
     }
 
     // Button or link by accessible name
-    const roleLocator = page
-      .getByRole('button', { name: target })
-      .or(page.getByRole('link', { name: target }));
+    const roleLocator = page.getByRole('button', { name: target }).or(page.getByRole('link', { name: target }));
     if ((await roleLocator.count()) > 0) {
       const loc = roleLocator.first();
       await revealIfInsideDetails(loc);

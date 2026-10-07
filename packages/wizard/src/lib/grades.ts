@@ -4,7 +4,10 @@ import type { AspectGrade } from '@qa/types';
  * The palette tokens each grade is drawn in: A and B pass, C and D warn, F fails. Only palette
  * tokens, so tests/contrast.test.ts checks every pairing.
  */
-export const GRADE_TOKENS: Record<AspectGrade, { text: 'pass' | 'warn' | 'fail'; tint: 'pass-tint' | 'warn-tint' | 'fail-tint' }> = {
+export const GRADE_TOKENS: Record<
+  AspectGrade,
+  { text: 'pass' | 'warn' | 'fail'; tint: 'pass-tint' | 'warn-tint' | 'fail-tint' }
+> = {
   A: { text: 'pass', tint: 'pass-tint' },
   B: { text: 'pass', tint: 'pass-tint' },
   C: { text: 'warn', tint: 'warn-tint' },

@@ -1,7 +1,14 @@
 import type { AspectType, CheckerType, Finding, FindingSeverity, ReleaseReport } from '@qa/types';
 // The verdict and problem modules only: the package index also exports Node-only code (fingerprints).
 import { countsTowardVerdict, releaseVerdict } from '@qa/types/src/verdict.js';
-import { ASPECT_CHECKERS, ASPECTS, aspectOfChecker, groupIntoProblems, plainTitleText, SEVERITY_ORDER } from '@qa/types/src/problems.js';
+import {
+  ASPECT_CHECKERS,
+  ASPECTS,
+  aspectOfChecker,
+  groupIntoProblems,
+  plainTitleText,
+  SEVERITY_ORDER,
+} from '@qa/types/src/problems.js';
 
 export interface SeverityCount {
   severity: FindingSeverity;
@@ -89,7 +96,10 @@ export function summarizeReport(report: ReleaseReport): ReportSummary {
     .map((c) => ({ ...c, sentence: SEVERITY_WORDS[c.severity](c.count) }));
 
   const top = [...problems]
-    .sort((a, b) => SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity) || b.pages.length - a.pages.length)
+    .sort(
+      (a, b) =>
+        SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity) || b.pages.length - a.pages.length
+    )
     .slice(0, 3)
     .map((p) => ({ title: p.title, category: category(p.findings[0]), severity: p.severity }));
 
@@ -116,7 +126,11 @@ export function summarizeReport(report: ReleaseReport): ReportSummary {
 export type Bucket = 'must-fix' | 'should-fix' | 'suggestion' | 'to-confirm';
 
 export const BUCKETS: Array<{ id: Bucket; title: string; intro: string }> = [
-  { id: 'must-fix', title: 'Must fix before release', intro: 'These stop the site working for people, or put them at risk.' },
+  {
+    id: 'must-fix',
+    title: 'Must fix before release',
+    intro: 'These stop the site working for people, or put them at risk.',
+  },
   { id: 'should-fix', title: 'Should fix', intro: 'Smaller problems people will notice.' },
   { id: 'suggestion', title: 'Suggestions', intro: 'Worth doing when you can.' },
   {
@@ -171,7 +185,10 @@ export function groupProblems(findings: Finding[]): Record<Bucket, ProblemGroup[
     });
   }
   for (const list of Object.values(result)) {
-    list.sort((a, b) => SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity) || b.pages.length - a.pages.length);
+    list.sort(
+      (a, b) =>
+        SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity) || b.pages.length - a.pages.length
+    );
   }
   return result;
 }
@@ -213,9 +230,15 @@ export function pageResults(report: Pick<ReleaseReport, 'results' | 'findings' |
     const page = f.where.urlPath || '/';
     const before = statuses[page] ?? { status: 'pass', issuesCount: 0 };
     const serious = f.severity === 'Blocker' || f.severity === 'Major';
-    statuses[page] = { status: serious || before.status === 'fail' ? 'fail' : 'warn', issuesCount: before.issuesCount + 1 };
+    statuses[page] = {
+      status: serious || before.status === 'fail' ? 'fail' : 'warn',
+      issuesCount: before.issuesCount + 1,
+    };
   }
-  const pages: PageResults['pages'] = (report.siteMap?.pages || []).map((p) => ({ urlPath: p.urlPath, title: p.title }));
+  const pages: PageResults['pages'] = (report.siteMap?.pages || []).map((p) => ({
+    urlPath: p.urlPath,
+    title: p.title,
+  }));
   for (const page of Object.keys(statuses)) if (!pages.some((p) => p.urlPath === page)) pages.push({ urlPath: page });
   return { pages, statuses };
 }
@@ -266,7 +289,8 @@ ${steps || '  // Open the page and look for the problem.'}
 /** Why a problem in each area matters to the people using the site, in one plain sentence. */
 const WHY_BY_ASPECT: Record<AspectType, string> = {
   Works: 'People hit an error, or can’t finish what they came to do.',
-  Accessible: 'Some people, such as those using a screen reader, a keyboard or large text, can’t use this part of the site.',
+  Accessible:
+    'Some people, such as those using a screen reader, a keyboard or large text, can’t use this part of the site.',
   'Fast and mobile': 'People on phones get a slow, cramped or broken page, and many leave.',
   Findable: 'Fewer people find the site through search engines and AI assistants.',
   Secure: 'People’s data or accounts could be put at risk.',
@@ -277,12 +301,21 @@ const WHY_BY_ASPECT: Record<AspectType, string> = {
 const WHY_BY_TITLE: Array<[RegExp, string]> = [
   [/too small to tap/i, 'Small buttons are easy to miss on a phone, so people tap the wrong thing or give up.'],
   [/contrast/i, 'Text that blends into its background is hard to read, especially outdoors or with poor eyesight.'],
-  [/password|sign-in details/i, 'Passwords in page addresses end up in browser history and server logs, where others can find them.'],
-  [/request to your site failed|crashed|error behind the scenes/i, 'Something on the page broke, so people may see missing content or be unable to continue.'],
+  [
+    /password|sign-in details/i,
+    'Passwords in page addresses end up in browser history and server logs, where others can find them.',
+  ],
+  [
+    /request to your site failed|crashed|error behind the scenes/i,
+    'Something on the page broke, so people may see missing content or be unable to continue.',
+  ],
   [/no way back or menu/i, 'People who land here get stuck, with no way to reach the rest of the site.'],
   [/wider than the screen/i, 'On a phone, people have to scroll sideways to read, which most won’t do.'],
   [/fit phone screens/i, 'Without it, phones show a tiny desktop page that people have to zoom to read.'],
-  [/missing a title/i, 'The browser tab, bookmarks, screen readers and search results all use the title to say what the page is.'],
+  [
+    /missing a title/i,
+    'The browser tab, bookmarks, screen readers and search results all use the title to say what the page is.',
+  ],
 ];
 
 /** Why a problem matters, in one plain sentence. */
@@ -295,16 +328,42 @@ export function whyItMatters(group: Pick<ProblemGroup, 'title' | 'aspect'>): str
  * a pointer to the developer details below it.
  */
 export function howToFix(group: Pick<ProblemGroup, 'findings'>, looksTechnical: (text: string) => boolean): string {
-  const advice = group.findings.map((f) => f.resolution?.trim()).find((r): r is string => !!r && !looksTechnical(r) && r.length <= 240);
-  return advice ?? 'Ask a developer to look at “Details for developers” below: it says exactly where and what to change.';
+  const advice = group.findings
+    .map((f) => f.resolution?.trim())
+    .find((r): r is string => !!r && !looksTechnical(r) && r.length <= 240);
+  return (
+    advice ?? 'Ask a developer to look at “Details for developers” below: it says exactly where and what to change.'
+  );
 }
 
 /** The kind of search problem, in words people know: search engines, AI answers, or AI search. */
-export function searchKind(f: Pick<Finding, 'checker' | 'id'> & { categoryTag?: string }): { label: string; hint: string } | null {
-  const tag = f.categoryTag || (f.id.includes('MKT') ? 'MKT' : f.id.includes('GEO') ? 'GEO' : f.id.includes('AEO') ? 'AEO' : f.checker === 'seo' ? 'SEO' : undefined);
-  if (tag === 'MKT') return { label: 'Marketing', hint: 'The basics that bring visitors in and turn them into customers: share previews, a clear next step, contact details and analytics.' };
-  if (tag === 'GEO') return { label: 'AI search', hint: 'How AI search tools, such as ChatGPT search or Perplexity, read and quote the site (GEO).' };
-  if (tag === 'AEO') return { label: 'AI answers', hint: 'How answer engines and AI assistants pick answers from the site (AEO).' };
-  if (tag === 'SEO') return { label: 'Search', hint: 'How search engines, such as Google, find and list the site (SEO).' };
+export function searchKind(
+  f: Pick<Finding, 'checker' | 'id'> & { categoryTag?: string }
+): { label: string; hint: string } | null {
+  const tag =
+    f.categoryTag ||
+    (f.id.includes('MKT')
+      ? 'MKT'
+      : f.id.includes('GEO')
+        ? 'GEO'
+        : f.id.includes('AEO')
+          ? 'AEO'
+          : f.checker === 'seo'
+            ? 'SEO'
+            : undefined);
+  if (tag === 'MKT')
+    return {
+      label: 'Marketing',
+      hint: 'The basics that bring visitors in and turn them into customers: share previews, a clear next step, contact details and analytics.',
+    };
+  if (tag === 'GEO')
+    return {
+      label: 'AI search',
+      hint: 'How AI search tools, such as ChatGPT search or Perplexity, read and quote the site (GEO).',
+    };
+  if (tag === 'AEO')
+    return { label: 'AI answers', hint: 'How answer engines and AI assistants pick answers from the site (AEO).' };
+  if (tag === 'SEO')
+    return { label: 'Search', hint: 'How search engines, such as Google, find and list the site (SEO).' };
   return null;
 }

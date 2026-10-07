@@ -74,7 +74,14 @@ describe('The runner as the one server', () => {
   });
 
   it('gives every screen address to the app, so a refresh or a bookmark opens it, but a missing file is a 404', async () => {
-    for (const address of ['/check/plan', '/check/testing', '/reports', '/reports/run-1700000000000', '/settings', '/no-such-page']) {
+    for (const address of [
+      '/check/plan',
+      '/check/testing',
+      '/reports',
+      '/reports/run-1700000000000',
+      '/settings',
+      '/no-such-page',
+    ]) {
       const page = await get(RUNNER_PORT, address);
       expect(page.status, address).toBe(200);
       expect(page.body, address).toContain('<title>Wizard</title>');
@@ -91,7 +98,13 @@ describe('The runner as the one server', () => {
   });
 
   it('never reads a file outside a build folder', async () => {
-    for (const attempt of ['/..%2fsecret.txt', '/..%5csecret.txt', '/assets/..%2f..%2fsecret.txt', '/../secret.txt', '/%2e%2e/secret.txt']) {
+    for (const attempt of [
+      '/..%2fsecret.txt',
+      '/..%5csecret.txt',
+      '/assets/..%2f..%2fsecret.txt',
+      '/../secret.txt',
+      '/%2e%2e/secret.txt',
+    ]) {
       const answer = await get(RUNNER_PORT, attempt);
       expect(answer.status, attempt).toBe(404);
       expect(answer.body, attempt).not.toContain('do not serve');

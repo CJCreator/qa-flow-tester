@@ -66,7 +66,10 @@ export function buildSiteGraph(pages: PageInventoryItem[], startPath: string): S
 
   const inPage = new Map<string, PageLink[]>();
   for (const page of pages) {
-    inPage.set(page.urlPath, (page.links || []).filter((l) => !sharedKeys.has(linkKey(l))));
+    inPage.set(
+      page.urlPath,
+      (page.links || []).filter((l) => !sharedKeys.has(linkKey(l)))
+    );
   }
 
   // Shortest click paths from the start page, over every link on the site.
@@ -90,9 +93,7 @@ export function buildSiteGraph(pages: PageInventoryItem[], startPath: string): S
   }
 
   const linkedTo = new Set(pages.flatMap((p) => (p.links || []).filter((l) => !l.leavesSite).map((l) => pathOf(l.to))));
-  const unlinked = pages
-    .filter((p) => p !== start && !linkedTo.has(pathOf(p.urlPath)))
-    .map((p) => p.urlPath);
+  const unlinked = pages.filter((p) => p !== start && !linkedTo.has(pathOf(p.urlPath))).map((p) => p.urlPath);
 
   const hosts = new Map<string, Set<string>>();
   for (const page of pages) {
@@ -106,7 +107,9 @@ export function buildSiteGraph(pages: PageInventoryItem[], startPath: string): S
       }
     }
   }
-  const otherHosts = [...hosts].map(([host, targets]) => ({ host, links: targets.size })).sort((a, b) => b.links - a.links);
+  const otherHosts = [...hosts]
+    .map(([host, targets]) => ({ host, links: targets.size }))
+    .sort((a, b) => b.links - a.links);
 
   return { shared, inPage, clickPaths, unlinked, otherHosts };
 }

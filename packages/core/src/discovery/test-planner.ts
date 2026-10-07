@@ -1,12 +1,22 @@
 import { promises as fs } from 'fs';
-import type { AmbiguityQuestion, DiscoveredFlow, DiscoveryDraft, SpecFile, TestCase, TestCaseExpectations, TestCaseStep } from '@qa/types';
+import type {
+  AmbiguityQuestion,
+  DiscoveredFlow,
+  DiscoveryDraft,
+  SpecFile,
+  TestCase,
+  TestCaseExpectations,
+  TestCaseStep,
+} from '@qa/types';
 import { FORM_ANSWERS, isSkipAnswer } from './questions.js';
 
 /** True when the flow presses the form's send button on the form's page. */
 function submitsForm(flow: DiscoveredFlow, q: AmbiguityQuestion): boolean {
   if (!q.targetElement) return false;
   const pages = q.urlPaths ?? [q.urlPath];
-  const onFormPage = pages.includes(flow.startPage) || flow.steps.some((s) => s.action === 'navigate' && !!s.value && pages.includes(s.value));
+  const onFormPage =
+    pages.includes(flow.startPage) ||
+    flow.steps.some((s) => s.action === 'navigate' && !!s.value && pages.includes(s.value));
   return onFormPage && flow.steps.some((s) => s.action === 'click' && s.selector === q.targetElement);
 }
 
@@ -16,7 +26,10 @@ function submitsForm(flow: DiscoveredFlow, q: AmbiguityQuestion): boolean {
  */
 function expectationFromAnswer(q: AmbiguityQuestion): TestCaseExpectations | null {
   if (q.selectedAnswer === FORM_ANSWERS.confirmationPage) {
-    return { origin: 'user', navigatesAway: { fromPath: q.urlPath, description: 'Sending the form leads to a confirmation page' } };
+    return {
+      origin: 'user',
+      navigatesAway: { fromPath: q.urlPath, description: 'Sending the form leads to a confirmation page' },
+    };
   }
   if (q.selectedAnswer === FORM_ANSWERS.successMessage) {
     return { origin: 'user', successMessage: { description: 'Sending the form shows a success message' } };
@@ -26,9 +39,7 @@ function expectationFromAnswer(q: AmbiguityQuestion): TestCaseExpectations | nul
 
 export class TestPlanner {
   plan(draft: DiscoveryDraft, options: { readOnly?: boolean } = {}): SpecFile {
-    const outOfScopePages = new Set(
-      draft.pages.filter((p) => p.outOfScope).map((p) => p.urlPath)
-    );
+    const outOfScopePages = new Set(draft.pages.filter((p) => p.outOfScope).map((p) => p.urlPath));
 
     // Buttons the answers said not to press
     const skippedElements = new Set<string>();

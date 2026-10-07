@@ -135,7 +135,9 @@ describe('PerformanceChecker', () => {
       slowestRequests: [],
       overflowElements: [],
       hasHorizontalScroll: false,
-      overlappingElements: [{ tag: 'button', selector: '[data-testid="submit-btn"]', overlapsWith: '[data-testid="cancel-btn"]' }],
+      overlappingElements: [
+        { tag: 'button', selector: '[data-testid="submit-btn"]', overlapsWith: '[data-testid="cancel-btn"]' },
+      ],
     });
 
     const findings = await checker.checkPage(overlappingPage, {
@@ -150,7 +152,13 @@ describe('PerformanceChecker', () => {
     expect(overlapFinding?.severity).toBe('Major');
   });
 
-  const quiet = { slowestRequests: [], overflowElements: [], hasHorizontalScroll: false, overlappingElements: [], totalWeightBytes: 1000 };
+  const quiet = {
+    slowestRequests: [],
+    overflowElements: [],
+    hasHorizontalScroll: false,
+    overlappingElements: [],
+    totalWeightBytes: 1000,
+  };
   const ctx = { role: 'visitor', breakpoint: '1440px' as const, urlPath: '/' };
 
   it('never reports the HTML-ready time as Largest Contentful Paint', async () => {

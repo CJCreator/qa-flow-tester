@@ -1,21 +1,22 @@
 # Implementation Plan: URL-first review
 
-Companion to [GAP_REVIEW.md](./GAP_REVIEW.md), which holds the live review of today's tool and the 28 agreed
-decisions (numbered in its appendix; "D7" below means decision 7). This plan turns those decisions into
-tasks. It builds on the wizard (`packages/wizard`) and the runner (`packages/runner`). QA Flow Studio
-(`packages/web`) is not changed.
+Companion to a gap review of the tool as it was, which held 28 agreed decisions ("D7" below means
+decision 7, up to D28). The review file is no longer in the repo; the decisions are cited here by number.
+This plan turns those decisions into tasks. It builds on the wizard (`packages/wizard`) and the runner
+(`packages/runner`). QA Flow Studio (`packages/web`) was not changed by this plan and has since been retired
+([ADR 0010](docs/adr/0010-one-app-with-details-on-demand.md)).
 
-## Status (as of 2026-09-28)
+## Status (as of 2026-10-07)
 
-**Not started.** Phase 0 is a recommended addition from the gap review and **awaits your go-ahead**; it
-changes D28, which put the new UI first. If you decline it, its tasks move into Phase 1, and Phase 1
-cannot pass its exit check without them.
+**Built.** Checked on 2026-10-07 against the code and test files; the full test suite has not been re-run
+for this check (that happens in `/verify-all`). The go-ahead for Phase 0 was given and it is built. Task 2.9
+is the one task not built.
 
-| Phase | What it delivers | Tasks | Estimate (one engineer) |
-|---|---|---|---|
-| 0. Trust fixes (recommended) | Plans grounded in the real page, deeper crawling, no leaked passwords | 11 | 2 weeks |
-| 1. Plan review and new UI | One URL box, a plan you can read and change, map-based live view and report | 13 | 5–6 weeks |
-| 2. New aspects | Speed, SEO, security, AI visual review, grades, recommendations, HTML report, history | 9 | 4–5 weeks |
+| Phase                     | What it delivers                                                                      | Tasks | Estimate (one engineer) | Status                                                                                                                                                         |
+| ------------------------- | ------------------------------------------------------------------------------------- | ----- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0. Trust fixes            | Plans grounded in the real page, deeper crawling, no leaked passwords                 | 11    | 2 weeks                 | Built                                                                                                                                                          |
+| 1. Plan review and new UI | One URL box, a plan you can read and change, map-based live view and report           | 13    | 5–6 weeks               | Built                                                                                                                                                          |
+| 2. New aspects            | Speed, SEO, security, AI visual review, grades, recommendations, HTML report, history | 9     | 4–5 weeks               | Built except 2.9: the spec file `Pre-Release Readiness Checker — Product Spec.md` is not in the repo (WCAG 2.2 wording was fixed elsewhere, E2E plan item 0.2) |
 
 ## The experience this plan builds
 
@@ -54,6 +55,7 @@ was saved in a report.
 at least 3 of the 4 fixture defects planted before the review must be found.
 
 ### Task 0.1 — Record the real elements on every page
+
 Fixes gaps T1 and M3.
 
 The crawler already reads each element's text and test id, then keeps only a count
@@ -68,6 +70,7 @@ The crawler already reads each element's text and test id, then keeps only a cou
   produced "fields [, ]".
 
 **Done when**
+
 - The fixture's `/dashboard` inventory lists `trigger-error-btn`, `trigger-failed-api-btn` and
   `tiny-touch-btn` with their visible names.
 - The fixture's invoice form fields are named "Customer" and "Amount".
@@ -75,6 +78,7 @@ The crawler already reads each element's text and test id, then keeps only a cou
   `name`.
 
 ### Task 0.2 — Build the AI's plan from the real page, and check it
+
 Fixes gap T1.
 
 - **Prompt:** send the AI the element inventory from Task 0.1 for each page, not counts
@@ -87,6 +91,7 @@ Fixes gap T1.
 - **Where it runs:** after discovery, and on every plan the user edits or adds.
 
 **Done when**
+
 - Given an AI response that invents `dashboard-element-1`, the validator rejects it and the repair
   request contains the real element names.
 - No step aimed at an element that isn't in the inventory ever reaches the test runner (test with a mock
@@ -94,6 +99,7 @@ Fixes gap T1.
 - A rerun of the fixture reports no "Couldn't complete 'Interact with first dashboard element'".
 
 ### Task 0.3 — Label guesses, and never fail a site on one
+
 Fixes gap T2.
 
 - **Where each rule came from:** add `origin: 'observed' | 'ai-guess' | 'user'` to inferred rules,
@@ -109,6 +115,7 @@ Fixes gap T2.
 - **Skipped reviews:** they keep guesses as guesses (D19).
 
 **Done when**
+
 - A saucedemo rerun reports no "Expected text not found: 'Field is empty'". The empty-field checks pass,
   because an error does appear.
 - The fixture's empty-amount check says "Could not verify: no error appeared after sending an empty
@@ -116,6 +123,7 @@ Fixes gap T2.
 - Unit tests cover all three origins through the expander and the spec checker.
 
 ### Task 0.4 — Explore while signed in
+
 Fixes gap T3.
 
 Pre-flight already signs in each role and saves the session
@@ -128,12 +136,14 @@ Pre-flight already signs in each role and saves the session
 - Without logins, nothing changes. The login-gated pages found are listed as "not reached" (D2).
 
 **Done when**
+
 - On saucedemo with `standard_user`, discovery reaches the inventory, product, cart and checkout pages,
   and plans at least one journey beyond login.
 - With no login, the same run lists the sign-in page and reports "pages behind sign-in were not reached".
 - A test with two fixture roles records different page lists for each.
 
 ### Task 0.5 — Let the read-only crawl follow links
+
 Fixes gap T4.
 
 Extend `SafePublicCrawler` ([safe-crawler.ts](packages/core/src/competitive/safe-crawler.ts)):
@@ -148,11 +158,13 @@ Extend `SafePublicCrawler` ([safe-crawler.ts](packages/core/src/competitive/safe
   the page budget.
 
 **Done when**
+
 - books.toscrape.com reaches 25 pages, and the book pages fall into one or two layout groups.
 - The request log still shows no POST, PUT, PATCH or DELETE on a form-heavy test page.
 - A page that robots.txt blocks is skipped and listed as skipped.
 
 ### Task 0.6 — Keep passwords out of reports, and flag them on the site
+
 Fixes gap T5.
 
 - **Redaction:** one `redact()` step runs before anything is written: findings, `report.md`, repro
@@ -164,11 +176,13 @@ Fixes gap T5.
   appears in a page address. The finding is Major, with its own plain title.
 
 **Done when**
+
 - After a fixture run, searching every output file for `manager-password` finds nothing.
 - The fixture run reports "The sign-in form sends passwords in the page address".
 - A unit test covers the masking rules.
 
 ### Task 0.7 — One problem, one finding
+
 Fixes gap M2.
 
 - **Grouping:** group findings from the same step that point at the same resource URL (console error, 404
@@ -179,10 +193,12 @@ Fixes gap M2.
   written.
 
 **Done when**
+
 - The W3C BAD demo's missing analytics file appears once, as Minor.
 - books.toscrape.com's blocked jQuery appears once, with both signs listed.
 
 ### Task 0.8 — Check every page, at three widths
+
 Fixes gap M1.
 
 - **Page sweep:** after the journeys, visit every discovered page for each role. Run all checks and use
@@ -191,11 +207,13 @@ Fixes gap M1.
   ([server.ts:532](packages/runner/src/server.ts#L532)).
 
 **Done when**
+
 - The fixture run finds the console error, the failing API call, the dead-end page and the 20 px tap
   target (at 375 px).
 - Every finding records the width it was seen at.
 
 ### Task 0.9 — Fixed AI models, remembered by the runner
+
 Fixes gaps M4 and M5.
 
 - **Two models:** the runner picks and stores two free models, one for text and one for vision.
@@ -209,11 +227,13 @@ Fixes gaps M4 and M5.
   ([api.ts:152](packages/wizard/src/api.ts#L152)) and asks for a key only when the runner has none.
 
 **Done when**
+
 - A new browser goes straight past the key screen when the runner has a key.
 - The free-model list contains no Lyria or other non-chat models.
 - Running discovery twice on the fixture uses the same model both times.
 
 ### Task 0.10 — Small fixes from the review
+
 - **Dead-end rule:** it no longer fires on a site's only screen or on pages with working in-page
   controls, such as TodoMVC ([ux-quality.ts:123](packages/checkers/src/ux-quality.ts#L123)).
 - **A failed test always explains itself:** a test point marked Failed always has at least one finding
@@ -225,6 +245,7 @@ Fixes gaps M4 and M5.
 **Done when:** each fix has a unit test, and TodoMVC reports no dead end.
 
 ### Task 0.11 — A benchmark that scores the tool itself
+
 - **Richer fixture:** extend the fixture app (`fixtures/test-app`) with:
   - a real signed-in area
   - a form that shows a real error message
@@ -252,6 +273,7 @@ journey, answers a question, adds a test by sentence, watches the run, and finds
 the report map. A re-run shows only what's new.
 
 ### Task 1.1 — Prototypes, then pick a direction
+
 D27.
 
 Build 2–3 clearly different visual directions for the four key screens (URL, plan map, live map, report)
@@ -263,6 +285,7 @@ as clickable prototypes, using real data from the benchmark runs. Use the `proto
 `packages/wizard/DESIGN.md`, and Tasks 1.5–1.11 follow it.
 
 ### Task 1.2 — Runner: pause for review, then resume
+
 D19.
 
 - **States:** a run moves through `scanning` → `awaiting-review` → `testing` → `done`, or `failed` from
@@ -281,11 +304,13 @@ D19.
   run starts.
 
 **Done when**
+
 - Runner tests cover pause, a reload during the pause, approve, and skip.
 - The existing `/api/runner/run` callers (QA Flow Studio, the command line) still work unchanged, because
   they get `skipReview` by default.
 
 ### Task 1.3 — The plan in plain language
+
 D20, D24.
 
 - **Plan type:** add a `ReviewPlan` type to `packages/types`, derived from `DiscoveryDraft`, holding:
@@ -299,11 +324,13 @@ D20, D24.
   under its own heading.
 
 **Done when**
+
 - A unit test turns the fixture's plan into sentences, with no selectors, patterns or library titles in
   the output.
 - The existing test that no jargon appears on screen covers the plan screen too.
 
 ### Task 1.4 — Name the site type and pick the journeys
+
 D4.
 
 - After the scan, the text model names the site type (shop, SaaS, content, booking, app, other) and picks
@@ -314,12 +341,14 @@ D4.
   plus a generic "visit the main pages" journey.
 
 **Done when**
+
 - books.toscrape.com is named a shop and gets a browse → book journey.
 - TodoMVC is named an app.
 - Each journey has a reason.
 - The no-key fallback still produces a plan.
 
 ### Task 1.5 — The URL-first front door
+
 D1, D3, D12.
 
 - **First screen:** one URL box, the owner checkbox, and "Skip review, just test it". The
@@ -333,11 +362,13 @@ D1, D3, D12.
   - Anything else is live and stays read-only (gap M7).
 
 **Done when**
+
 - The wizard's end-to-end test starts a run from one screen.
 - A runner test refuses full interaction for a public host even when the owner box is ticked, and allows
   it for `localhost:3050`.
 
 ### Task 1.6 — The site map component
+
 D24–D26.
 
 - **One map, three modes:** plan, live and report.
@@ -351,11 +382,13 @@ D24–D26.
   library such as React Flow.
 
 **Done when**
+
 - The fixture and books.toscrape.com maps render readably at 1440 px and 375 px.
 - An axe scan of the plan screen finds no violations.
 - Every map action is reachable by keyboard.
 
 ### Task 1.7 — Plan review panel
+
 D20, D23.
 
 For each page or journey, the side panel lets the user:
@@ -369,10 +402,12 @@ Tests that need a form sent on a live site stay in the plan, labelled "Needs a t
 "Looks good, start testing" calls approve (Task 1.2).
 
 **Done when**
+
 - The end-to-end test does each of the four edits on the fixture and sees them take effect in the results.
 - A "needs a test copy" test shows as not run, with that reason, on a public site.
 
 ### Task 1.8 — Add a test by describing it
+
 D21.
 
 - **New endpoint:** `POST /api/runner/plan/interpret` takes a sentence and the page it's about.
@@ -383,11 +418,13 @@ D21.
 - **Can't translate:** the reply says what's unclear and asks the user to rephrase. Nothing is added.
 
 **Done when**
+
 - "Save an invoice with an empty amount — it should show an error" on the fixture becomes a runnable test
   after confirmation.
 - A sentence about a button that doesn't exist gets a plain "I couldn't find…" reply.
 
 ### Task 1.9 — Remember each site
+
 D22.
 
 - **Storage:** per site (keyed by host), the runner stores journeys kept or skipped, answers, rules,
@@ -399,6 +436,7 @@ D22.
 fixture between runs is flagged as new.
 
 ### Task 1.10 — Live map
+
 D25.
 
 - The map lights up as pages are visited, and the current page pulses.
@@ -412,6 +450,7 @@ D25.
 fixture run, and reconnecting after a dropped stream shows the current state.
 
 ### Task 1.11 — Report screen on the map
+
 D9, D26.
 
 - **Top:** until Phase 2 adds grades, the ready / not-ready verdict. Then the map coloured by result:
@@ -424,6 +463,7 @@ D9, D26.
 lists the checks that passed.
 
 ### Task 1.12 — "Go deeper"
+
 D2.
 
 The report has a "Go deeper" panel where the user adds logins or product notes and starts a deeper
@@ -433,6 +473,7 @@ re-run. The re-run reuses the site's saved choices (Task 1.9) and signed-in expl
 cart and checkout journeys.
 
 ### Task 1.13 — End-to-end test for the whole flow
+
 Extend `packages/wizard/tests/wizard-e2e.test.ts` to cover the Phase 1 exit check against the real runner
 and the fixture. Only OpenRouter is faked, as today.
 
@@ -449,6 +490,7 @@ file, and shows what changed since the last run.
 listed, and the HTML report opens offline.
 
 ### Task 2.1 — Speed and mobile check
+
 D6.
 
 - **New checker:** add `performance` to `packages/checkers`. Per page and width, it measures:
@@ -464,6 +506,7 @@ D6.
 across two runs within a stated tolerance.
 
 ### Task 2.2 — SEO and link health check
+
 D6.
 
 Checks page title, meta description, one H1 and heading order, canonical link, social preview tags, page
@@ -473,6 +516,7 @@ language, robots.txt and sitemap, and broken links (same-site links checked at a
 check completes within its page budget without flooding the site.
 
 ### Task 2.3 — Security basics check (passive only)
+
 D6.
 
 Checks:
@@ -491,6 +535,7 @@ No attacks and no probing: it only reads what the normal visit returned.
 here as a security finding, not as "an error behind the scenes".
 
 ### Task 2.4 — AI visual and copy review
+
 D6, D13–D15.
 
 - **Calls:** one call per layout group (Task 0.5) to the fixed free vision model (Task 0.9), with the
@@ -504,11 +549,13 @@ D6, D13–D15.
 - **No key:** the section shows as "skipped" (D12).
 
 **Done when**
+
 - A mock-provider test covers full, partial and skipped runs.
 - "Finish AI review" completes a partial run.
 - One real run with a free vision model is checked by hand and its result recorded here.
 
 ### Task 2.5 — A–F grades
+
 D7.
 
 - **Aspects:** Works, Accessible, Fast and mobile, Findable, Secure, Looks and reads well.
@@ -521,6 +568,7 @@ D7.
 it.
 
 ### Task 2.6 — Ranked improvement recommendations
+
 D8.
 
 - **Grouping:** from all findings plus the AI review, build a list split into quick wins and bigger
@@ -536,6 +584,7 @@ D8.
 same across two runs.
 
 ### Task 2.7 — Single-file HTML report
+
 D9, D10.
 
 - **What it is:** one self-contained HTML file with the grades, recommendations, map snapshot and all
@@ -548,6 +597,7 @@ D9, D10.
 scan.
 
 ### Task 2.8 — History and changes since last run
+
 D11.
 
 - **Storage:** per site, the runner keeps each run's grades and finding fingerprints in its data volume.
@@ -558,6 +608,7 @@ D11.
 **Done when:** two fixture runs with one defect fixed in between show it as fixed, with the grade going up.
 
 ### Task 2.9 — Update the product spec
+
 D18.
 
 In `Pre-Release Readiness Checker — Product Spec.md`:
@@ -566,39 +617,39 @@ In `Pre-Release Readiness Checker — Product Spec.md`:
 - Resolve the contradiction between "AI is required" and "AI mode is optional" as optional.
 - Add the URL-first flow as the main entry point.
 
-**Done when:** the spec matches this plan and GAP_REVIEW.md, with no contradictions.
+**Done when:** the spec matches this plan, with no contradictions. _Not built: the spec file is not in the repo._
 
 ---
 
 ## Timeline
 
-| Phase | Duration (one engineer) | Depends on |
-|---|---|---|
-| 0. Trust fixes | 2 weeks | Your go-ahead |
-| 1. Plan review and new UI | 5–6 weeks | Phase 0 exit check; Task 1.1 before Tasks 1.5–1.11 |
-| 2. New aspects | 4–5 weeks | Tasks 0.5 and 0.9 for Task 2.4; Phase 1's report screen for Tasks 2.5–2.7 |
+| Phase                     | Duration (one engineer) | Depends on                                                                |
+| ------------------------- | ----------------------- | ------------------------------------------------------------------------- |
+| 0. Trust fixes            | 2 weeks                 | Your go-ahead                                                             |
+| 1. Plan review and new UI | 5–6 weeks               | Phase 0 exit check; Task 1.1 before Tasks 1.5–1.11                        |
+| 2. New aspects            | 4–5 weeks               | Tasks 0.5 and 0.9 for Task 2.4; Phase 1's report screen for Tasks 2.5–2.7 |
 
 Tasks 2.1–2.3 (the fixed-rule checks) don't depend on the new UI. They can run in parallel with Phase 1 if
 a second person is available.
 
 ## Risks
 
-| Risk | Impact | Mitigation |
-|---|---|---|
+| Risk                                                   | Impact                         | Mitigation                                                                                                                                           |
+| ------------------------------------------------------ | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Free vision models are scarce or change without notice | The AI visual review can't run | The partial and skipped states are built in (Task 2.4); fixed models are re-checked at the start of each run; the report always names the model used |
-| The map is crowded on large sites | Users can't read the plan | Journeys in focus, other pages grouped by section and layout (D24); a list view as the alternative |
-| The plan pause is lost if the runner restarts | The user loses their review | The plan is stored on disk (Task 1.2) |
-| The test-host rule misjudges a host | Forms sent on a live site | Anything unknown is treated as live; the rule is enforced in the runner, not only the screen |
-| Speed numbers vary between machines | Grades change from run to run | A stated tolerance; slow or poor thresholds only; the label "measured in a test browser" |
-| Public benchmark sites change | Benchmark numbers drift | The fixture's answer key is exact; public-site keys are re-labelled when a site changes |
-| The HTML report grows large | Hard to share | A size limit with screenshot downscaling (Task 2.7) |
+| The map is crowded on large sites                      | Users can't read the plan      | Journeys in focus, other pages grouped by section and layout (D24); a list view as the alternative                                                   |
+| The plan pause is lost if the runner restarts          | The user loses their review    | The plan is stored on disk (Task 1.2)                                                                                                                |
+| The test-host rule misjudges a host                    | Forms sent on a live site      | Anything unknown is treated as live; the rule is enforced in the runner, not only the screen                                                         |
+| Speed numbers vary between machines                    | Grades change from run to run  | A stated tolerance; slow or poor thresholds only; the label "measured in a test browser"                                                             |
+| Public benchmark sites change                          | Benchmark numbers drift        | The fixture's answer key is exact; public-site keys are re-labelled when a site changes                                                              |
+| The HTML report grows large                            | Hard to share                  | A size limit with screenshot downscaling (Task 2.7)                                                                                                  |
 
 ## Open questions
 
-1. **Phase 0 go-ahead.** Recommended: yes. It changes D28's order.
+1. **Phase 0 go-ahead.** Decided: go-ahead given and built. It changed D28's order.
 2. **The "Looks and reads well" grade.** Every finding in this aspect comes from AI, and D7 says AI never
    sets a grade. Recommended: show AI notes and recommendations for this aspect, with no letter grade,
    labelled "AI review, not graded". Alternative: grade it with the same fixed rules, applied to AI
    findings.
-3. **How long a paused plan waits.** Recommended: until the next run starts, with no timeout.
+3. **How long a paused plan waits.** Decided: until the next run starts, with no timeout. Waiting plans are kept on disk (`GET /api/runner/waiting-plans`).
 4. **Map library.** Decided in the prototypes (Task 1.1).

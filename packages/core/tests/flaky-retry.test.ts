@@ -15,7 +15,9 @@ describe('Clean flow retry', () => {
     if (req.url?.startsWith('/flaky')) {
       loads++;
       // The button is hidden the first time the page loads, as when a slow script loses a race.
-      res.end(`<html lang="en"><head><title>Flaky</title></head><body><header><a href="/">Home</a></header><main><h1>Flaky</h1><button data-testid="go" ${loads > 1 ? '' : 'style="display:none"'}>Go</button></main></body></html>`);
+      res.end(
+        `<html lang="en"><head><title>Flaky</title></head><body><header><a href="/">Home</a></header><main><h1>Flaky</h1><button data-testid="go" ${loads > 1 ? '' : 'style="display:none"'}>Go</button></main></body></html>`
+      );
       return;
     }
     res.end('<html lang="en"><head><title>x</title></head><body><main>ok</main></body></html>');

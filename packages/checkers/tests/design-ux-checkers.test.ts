@@ -1,9 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import {
-  DesignStandardsChecker,
-  hexToRgb,
-  normalizeColor,
-} from '../src/design-standards.js';
+import { DesignStandardsChecker, hexToRgb, normalizeColor } from '../src/design-standards.js';
 import { UXQualityChecker, wcagCriteria } from '../src/ux-quality.js';
 import { chromium, type Browser } from 'playwright';
 import type { Finding } from '@qa/types';
@@ -143,7 +139,11 @@ describe('UXQualityChecker accessibility scan', () => {
   });
 
   it('reports a scan that could not run instead of a clean pass', async () => {
-    const brokenPage = { evaluate: async () => { throw new Error('boom'); } } as never;
+    const brokenPage = {
+      evaluate: async () => {
+        throw new Error('boom');
+      },
+    } as never;
     const findings = await checker.check(brokenPage, ctx);
     const failed = findings.find((f) => f.id.startsWith('F-A11Y-SCAN-FAILED'));
     expect(failed?.severity).toBe('Major');

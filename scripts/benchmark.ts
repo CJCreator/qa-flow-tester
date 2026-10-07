@@ -8,14 +8,32 @@
  *   pnpm benchmark --no-ai             no AI: journeys are skipped, the page sweep still runs
  *   pnpm benchmark --score-only        re-score the last run's reports, e.g. after labelling an answer key
  *
- * Build first (pnpm build): this uses the compiled runner. Results go to .benchmark/.
+ * Build first (pnpm build): this uses the compiled runner. Results go to .benchmark/:
+ * results.json (per-site and overall detection and false positive rates) and summary.md.
+ * Sites listed in fixtures/benchmarks/thresholds.json are gated: a missed threshold, or an error
+ * on one of those sites, sets exit code 1. Other sites are reported and never fail the run.
  */
 import { promises as fs } from 'fs';
 import path from 'path';
 import type http from 'http';
 import { fileURLToPath } from 'url';
 import { RunnerServer } from '../packages/runner/dist/index.js';
-import type { AIMessage, AIProviderType, Finding, ReleaseReport, RoleCredential } from '../packages/types/dist/index.js';
+import type {
+  AIMessage,
+  AIProviderType,
+  Finding,
+  ReleaseReport,
+  RoleCredential,
+} from '../packages/types/dist/index.js';
+import {
+  checkThresholds,
+  detectionRate,
+  falsePositiveRate,
+  renderSummary,
+  round3,
+  type RateInput,
+  type Thresholds,
+} from './benchmark-gate.js';
 
 interface Matcher {
   checker?: string;
@@ -48,6 +66,8 @@ interface SiteScore {
   plantedMissed: string[];
   waitingForLaterPhase: string[];
   minutes: number;
+  detectionRate: number | null;
+  falsePositiveRate: number | null;
 }
 
 /** Phase 0 is the current one: planted defects for later phases are listed, not scored. */
@@ -97,20 +117,33 @@ function score(site: string, key: AnswerKey, report: ReleaseReport, minutes: num
     }
   }
 
+  const plantedFound = planted.filter((i) => due(i.expectedBy) && found(i)).map((i) => i.id);
+  const plantedMissed = planted.filter((i) => due(i.expectedBy) && !found(i)).map((i) => i.id);
+  const realCount = reported.filter(isReal).length;
+  const rates = rateInput(reported.length, realCount, plantedFound, plantedMissed);
+
   return {
     site,
     name: key.name,
     pagesReached: pages.size,
     reported: reported.length,
-    real: reported.filter(isReal).length,
+    real: realCount,
     knownFalse: reported.filter((f) => !isReal(f) && isKnownFalse(f)).length,
-    unlabelled: reported.filter((f) => !isReal(f) && !isKnownFalse(f)).map((f) => `${f.severity} ${f.title} (${f.where.urlPath})`),
+    unlabelled: reported
+      .filter((f) => !isReal(f) && !isKnownFalse(f))
+      .map((f) => `${f.severity} ${f.title} (${f.where.urlPath})`),
     toConfirm: active.length - reported.length,
-    plantedFound: planted.filter((i) => due(i.expectedBy) && found(i)).map((i) => i.id),
-    plantedMissed: planted.filter((i) => due(i.expectedBy) && !found(i)).map((i) => i.id),
+    plantedFound,
+    plantedMissed,
     waitingForLaterPhase: planted.filter((i) => !due(i.expectedBy)).map((i) => `${i.id} (${i.expectedBy})`),
     minutes,
+    detectionRate: round3(detectionRate(rates)),
+    falsePositiveRate: round3(falsePositiveRate(rates)),
   };
+}
+
+function rateInput(reported: number, real: number, found: string[], missed: string[]): RateInput {
+  return { reported, real, plantedFound: found.length, plantedMissed: missed.length };
 }
 
 async function runSite(site: string, key: AnswerKey, noAi: boolean): Promise<SiteScore> {
@@ -126,7 +159,12 @@ async function runSite(site: string, key: AnswerKey, noAi: boolean): Promise<Sit
 
   // Where the app keeps the OpenRouter key and chosen models: .qa-data, or the repo folder itself
   // until the app has been started once and moved them there.
-  const dataDir = (await fs.stat(path.join(root, '.qa-data')).then(() => true, () => false)) ? path.join(root, '.qa-data') : root;
+  const dataDir = (await fs.stat(path.join(root, '.qa-data')).then(
+    () => true,
+    () => false
+  ))
+    ? path.join(root, '.qa-data')
+    : root;
   const runner = new RunnerServer({
     port: RUNNER_PORT,
     outputDir: path.join(root, '.benchmark', site),
@@ -172,10 +210,15 @@ async function runSite(site: string, key: AnswerKey, noAi: boolean): Promise<Sit
 /** Scores the report a previous run left in .benchmark/<site>/, without visiting the site again. */
 async function scoreSavedRun(site: string, key: AnswerKey, previous?: SiteScore): Promise<SiteScore> {
   try {
-    const report = JSON.parse(await fs.readFile(path.join(root, '.benchmark', site, 'findings.json'), 'utf8')) as ReleaseReport;
+    const report = JSON.parse(
+      await fs.readFile(path.join(root, '.benchmark', site, 'findings.json'), 'utf8')
+    ) as ReleaseReport;
     return score(site, key, report, previous?.minutes ?? 0);
   } catch {
-    return { ...score(site, key, { findings: [], results: [] } as unknown as ReleaseReport, 0), error: 'no saved report for this site' };
+    return {
+      ...score(site, key, { findings: [], results: [] } as unknown as ReleaseReport, 0),
+      error: 'no saved report for this site',
+    };
   }
 }
 
@@ -184,11 +227,17 @@ async function main() {
   const noAi = args.includes('--no-ai');
   const scoreOnly = args.includes('--score-only');
   const previousRun = scoreOnly
-    ? (JSON.parse(await fs.readFile(path.join(root, '.benchmark', 'results.json'), 'utf8').catch(() => '{}')) as { noAi?: boolean; scores?: SiteScore[] })
+    ? (JSON.parse(await fs.readFile(path.join(root, '.benchmark', 'results.json'), 'utf8').catch(() => '{}')) as {
+        noAi?: boolean;
+        scores?: SiteScore[];
+      })
     : {};
   const sitesArg = args[args.indexOf('--sites') + 1];
   const keyDir = path.join(root, 'fixtures', 'benchmarks');
-  const allSites = (await fs.readdir(keyDir)).filter((f) => f.endsWith('.json')).map((f) => f.replace(/\.json$/, ''));
+  // thresholds.json sits beside the answer keys but is not one.
+  const allSites = (await fs.readdir(keyDir))
+    .filter((f) => f.endsWith('.json') && f !== 'thresholds.json')
+    .map((f) => f.replace(/\.json$/, ''));
   const sites = args.includes('--sites') && sitesArg ? sitesArg.split(',') : allSites;
 
   const scores: SiteScore[] = [];
@@ -207,9 +256,12 @@ async function main() {
       `  ${s.pagesReached} pages · ${s.reported} issues reported · ${s.real} real · ${s.knownFalse} known false · ${s.unlabelled.length} unlabelled · ${s.toConfirm} to confirm${s.minutes ? ` · ${s.minutes.toFixed(1)} min` : ''}`
     );
     if (s.plantedFound.length + s.plantedMissed.length > 0) {
-      console.log(`  Planted defects found: ${s.plantedFound.length} of ${s.plantedFound.length + s.plantedMissed.length}${s.plantedMissed.length ? ` (missed: ${s.plantedMissed.join(', ')})` : ''}`);
+      console.log(
+        `  Planted defects found: ${s.plantedFound.length} of ${s.plantedFound.length + s.plantedMissed.length}${s.plantedMissed.length ? ` (missed: ${s.plantedMissed.join(', ')})` : ''}`
+      );
     }
-    if (s.waitingForLaterPhase.length) console.log(`  Not checked until a later phase: ${s.waitingForLaterPhase.join(', ')}`);
+    if (s.waitingForLaterPhase.length)
+      console.log(`  Not checked until a later phase: ${s.waitingForLaterPhase.join(', ')}`);
     for (const u of s.unlabelled) console.log(`    ? ${u}`);
   }
 
@@ -222,11 +274,76 @@ async function main() {
   );
   console.log('Unlabelled issues count as not real until someone checks them and adds them to the answer key.');
 
+  const finished = scores.filter((s) => !s.error);
+  const overallCounts = finished.reduce(
+    (n, s) => ({
+      reported: n.reported + s.reported,
+      real: n.real + s.real,
+      plantedFound: n.plantedFound + s.plantedFound.length,
+      plantedMissed: n.plantedMissed + s.plantedMissed.length,
+    }),
+    { reported: 0, real: 0, plantedFound: 0, plantedMissed: 0 }
+  );
+  const overall = {
+    ...overallCounts,
+    detectionRate: round3(detectionRate(overallCounts)),
+    falsePositiveRate: round3(falsePositiveRate(overallCounts)),
+  };
+
+  let thresholds: Thresholds | null = null;
+  try {
+    thresholds = JSON.parse(await fs.readFile(path.join(keyDir, 'thresholds.json'), 'utf8')) as Thresholds;
+  } catch {
+    console.log('No fixtures/benchmarks/thresholds.json (or it is not valid JSON): nothing is gated.');
+  }
+  const { failures, warnings } = checkThresholds(
+    scores.map((s) => ({
+      site: s.site,
+      error: s.error,
+      reported: s.reported,
+      real: s.real,
+      plantedFound: s.plantedFound.length,
+      plantedMissed: s.plantedMissed.length,
+      plantedMissedIds: s.plantedMissed,
+    })),
+    thresholds ?? { sites: {} }
+  );
+  for (const w of warnings) console.log(`Warning: ${w}`);
+  for (const f of failures) console.log(`Threshold missed: ${f}`);
+
   await fs.mkdir(path.join(root, '.benchmark'), { recursive: true });
   await fs.writeFile(
     path.join(root, '.benchmark', 'results.json'),
-    JSON.stringify({ when: new Date().toISOString(), noAi: scoreOnly ? !!previousRun.noAi : noAi, scores }, null, 2)
+    JSON.stringify(
+      {
+        when: new Date().toISOString(),
+        noAi: scoreOnly ? !!previousRun.noAi : noAi,
+        scores,
+        overall,
+        thresholds,
+        failures,
+        passed: failures.length === 0,
+      },
+      null,
+      2
+    )
   );
+  await fs.writeFile(
+    path.join(root, '.benchmark', 'summary.md'),
+    renderSummary(
+      scores.map((s) => ({
+        ...s,
+        plantedFound: s.plantedFound.length,
+        plantedMissed: s.plantedMissed.length,
+        plantedMissedIds: s.plantedMissed,
+        detectionRate: s.detectionRate ?? null,
+        falsePositiveRate: s.falsePositiveRate ?? null,
+      })),
+      failures,
+      warnings
+    )
+  );
+  if (failures.length) process.exitCode = 1;
 }
 
 main().catch((err) => {

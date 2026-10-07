@@ -1,12 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import type {
-  AspectGradeDelta,
-  AspectType,
-  Finding,
-  SiteAspectGrades,
-  SiteHistoryDiff,
-} from '@qa/types';
+import type { AspectGradeDelta, AspectType, Finding, SiteAspectGrades, SiteHistoryDiff } from '@qa/types';
 import { computeStructuralFingerprint } from '@qa/types';
 
 export interface SiteHistoryEntry {

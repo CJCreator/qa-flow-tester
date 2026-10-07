@@ -39,7 +39,11 @@ describe('Element inventory', () => {
     expect(byName('Search books')).toMatchObject({ role: 'textbox', selector: 'role=textbox[name="Search books"]' });
     expect(byName('promo_code')).toMatchObject({ role: 'textbox', selector: 'input[name="promo_code"]' });
     expect(byName('Country')).toMatchObject({ role: 'combobox', selector: 'select[name="country"]' });
-    expect(byName('Save invoice')).toMatchObject({ role: 'button', selector: '[data-testid="save-btn"]', testId: 'save-btn' });
+    expect(byName('Save invoice')).toMatchObject({
+      role: 'button',
+      selector: '[data-testid="save-btn"]',
+      testId: 'save-btn',
+    });
     expect(byName('Close dialog')).toMatchObject({ role: 'button' });
     expect(byName('Get help')).toMatchObject({ role: 'link' });
     expect(byName('Hidden action')).toMatchObject({ visible: false });

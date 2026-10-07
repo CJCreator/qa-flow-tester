@@ -9,34 +9,43 @@ import { PlanValidator } from './plan-validator.js';
  * checked like any AI plan before it is shown back for the person to confirm.
  */
 
-export type Interpretation =
-  | { ok: true; flow: DiscoveredFlow }
-  | { ok: false; message: string };
+export type Interpretation = { ok: true; flow: DiscoveredFlow } | { ok: false; message: string };
 
 export type RuleInterpretation =
-  | { ok: true; rule: NonNullable<DiscoveredFlow['userRules']>[number] }
-  | { ok: false; message: string };
+  { ok: true; rule: NonNullable<DiscoveredFlow['userRules']>[number] } | { ok: false; message: string };
 
-const NO_AI = 'Turning a sentence into a test needs the AI helper, which isn’t set up. Add an AI key in Settings, then try again.';
+const NO_AI =
+  'Turning a sentence into a test needs the AI helper, which isn’t set up. Add an AI key in Settings, then try again.';
 const UNCLEAR = 'I couldn’t work out what to do from that. Say what to click or fill in, and what should happen.';
 
 type Expected = { kind?: string; field?: string; text?: string; page?: string };
 
 /** The person's expectation, as a check that is theirs: it can fail the site. */
-function toExpectations(expected: Expected | undefined, page: PageInventoryItem | undefined): TestCaseExpectations | null {
+function toExpectations(
+  expected: Expected | undefined,
+  page: PageInventoryItem | undefined
+): TestCaseExpectations | null {
   switch (expected?.kind) {
     case 'error-message': {
       if (!expected.field) return null;
       const field = (page?.elements || []).find((el) => el.name.toLowerCase() === expected.field!.toLowerCase());
       return {
         origin: 'user',
-        validationError: { field: expected.field, selector: field?.selector, description: `An error appears about “${expected.field}”` },
+        validationError: {
+          field: expected.field,
+          selector: field?.selector,
+          description: `An error appears about “${expected.field}”`,
+        },
       };
     }
     case 'text':
-      return expected.text ? { origin: 'user', text: { contains: expected.text, description: `The page says “${expected.text}”` } } : null;
+      return expected.text
+        ? { origin: 'user', text: { contains: expected.text, description: `The page says “${expected.text}”` } }
+        : null;
     case 'page':
-      return expected.page ? { origin: 'user', url: { pattern: expected.page, description: `Ends on ${expected.page}` } } : null;
+      return expected.page
+        ? { origin: 'user', url: { pattern: expected.page, description: `Ends on ${expected.page}` } }
+        : null;
     case 'success-message':
       return { origin: 'user', successMessage: { description: 'A success message appears' } };
     case 'nothing-breaks':
@@ -48,7 +57,12 @@ function toExpectations(expected: Expected | undefined, page: PageInventoryItem 
 
 function parseJson<T>(text: string): T | null {
   try {
-    return JSON.parse(text.replace(/```json/gi, '').replace(/```/g, '').trim()) as T;
+    return JSON.parse(
+      text
+        .replace(/```json/gi, '')
+        .replace(/```/g, '')
+        .trim()
+    ) as T;
   } catch {
     return null;
   }
@@ -72,7 +86,10 @@ export async function interpretTest(options: {
   const response = await options.ai
     .generateText(
       [
-        { role: 'system', content: 'You turn a person’s description of a website test into steps. Output strictly valid JSON.' },
+        {
+          role: 'system',
+          content: 'You turn a person’s description of a website test into steps. Output strictly valid JSON.',
+        },
         {
           role: 'user',
           content: `A person describes a test for one page in their own words. Turn it into steps, using ONLY the elements listed for the page.
@@ -96,7 +113,11 @@ If the sentence mentions something that isn't in the list, set "understood" to f
     )
     .catch(() => null);
 
-  const parsed = response ? parseJson<{ understood?: boolean; unclear?: string; name?: string; steps?: TestCaseStep[]; expected?: Expected }>(response) : null;
+  const parsed = response
+    ? parseJson<{ understood?: boolean; unclear?: string; name?: string; steps?: TestCaseStep[]; expected?: Expected }>(
+        response
+      )
+    : null;
   if (!parsed) return { ok: false, message: UNCLEAR };
   if (parsed.understood === false) return { ok: false, message: parsed.unclear?.trim() || UNCLEAR };
 
@@ -142,7 +163,10 @@ export async function interpretRule(options: {
   const response = await options.ai
     .generateText(
       [
-        { role: 'system', content: 'You decide how a website test can check a business rule. Output strictly valid JSON.' },
+        {
+          role: 'system',
+          content: 'You decide how a website test can check a business rule. Output strictly valid JSON.',
+        },
         {
           role: 'user',
           content: `A journey on a website: "${options.flow.name}", starting on ${options.flow.startPage}, with these steps:
@@ -160,5 +184,8 @@ Can the rule be checked by looking at the page after the journey's steps? Reply 
 
   const parsed = response ? parseJson<{ checkable?: boolean; expected?: Expected }>(response) : null;
   const check = parsed?.checkable ? toExpectations(parsed.expected, lastPage) : null;
-  return { ok: true, rule: check ? { text, origin: 'user', checkable: true, check } : { text, origin: 'user', checkable: false } };
+  return {
+    ok: true,
+    rule: check ? { text, origin: 'user', checkable: true, check } : { text, origin: 'user', checkable: false },
+  };
 }

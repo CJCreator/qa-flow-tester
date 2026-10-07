@@ -124,9 +124,7 @@ describe('DiscoveryAgent fill-step value handling', () => {
     // Never silently blank -- and the heuristic should recognize the "email" hint in the selector.
     expect(fillStep?.value).toBeTruthy();
     expect(fillStep?.value).toBe('test.user@example.com');
-    expect(
-      warnSpy.mock.calls.some((call) => String(call[0]).includes('backfilling with a placeholder'))
-    ).toBe(true);
+    expect(warnSpy.mock.calls.some((call) => String(call[0]).includes('backfilling with a placeholder'))).toBe(true);
 
     warnSpy.mockRestore();
   }, 90000);

@@ -83,12 +83,11 @@ export class SecurityChecker {
     // checkEvidence catches it if the password does end up in an address.
     const hasGetPasswordForm = await page
       .evaluate(() =>
-        Array.from(document.querySelectorAll('form'))
-          .some((f) => {
-            if (!f.querySelector('input[type="password"]')) return false;
-            const method = f.getAttribute('method')?.trim().toLowerCase();
-            return method === 'get' || (!method && !!f.getAttribute('action')?.trim());
-          })
+        Array.from(document.querySelectorAll('form')).some((f) => {
+          if (!f.querySelector('input[type="password"]')) return false;
+          const method = f.getAttribute('method')?.trim().toLowerCase();
+          return method === 'get' || (!method && !!f.getAttribute('action')?.trim());
+        })
       )
       .catch(() => false);
 
@@ -98,7 +97,8 @@ export class SecurityChecker {
           title: PASSWORD_IN_ADDRESS,
           severity: 'Major',
           expected: 'A form with a password field is sent with method="post"',
-          actual: 'The form uses GET (or names a page to send to with no method, which means GET), so the password goes into the address',
+          actual:
+            'The form uses GET (or names a page to send to with no method, which means GET), so the password goes into the address',
           steps: [`Go to ${context.urlPath}`, 'Inspect the sign-in form: it has no method="post"'],
           resolution: PASSWORD_IN_ADDRESS_FIX,
         })
@@ -169,69 +169,99 @@ export class SecurityChecker {
 
     if (exposedStackTrace) {
       findings.push(
-        this.finding(`F-SEC-${context.testCaseId || 'GEN'}-STACKTRACE-${findings.length + 1}`, context, context.urlPath, {
-          title: 'Internal server stack trace or debug information exposed on page',
-          severity: 'Major',
-          expected: 'Production error pages should show generic user-friendly messages without internal stack traces',
-          actual: `Page text contains exposed trace: "${truncate(exposedStackTrace, 50)}"`,
-          steps: [`Visit ${context.urlPath}`, 'Observe visible error stack trace on the screen'],
-          resolution: 'Disable detailed debugging in production and render custom error pages (e.g. 500.html).',
-        })
+        this.finding(
+          `F-SEC-${context.testCaseId || 'GEN'}-STACKTRACE-${findings.length + 1}`,
+          context,
+          context.urlPath,
+          {
+            title: 'Internal server stack trace or debug information exposed on page',
+            severity: 'Major',
+            expected: 'Production error pages should show generic user-friendly messages without internal stack traces',
+            actual: `Page text contains exposed trace: "${truncate(exposedStackTrace, 50)}"`,
+            steps: [`Visit ${context.urlPath}`, 'Observe visible error stack trace on the screen'],
+            resolution: 'Disable detailed debugging in production and render custom error pages (e.g. 500.html).',
+          }
+        )
       );
     }
 
     // 4. Cookie flags (Secure, HttpOnly, SameSite)
     try {
-      const cookies = await page.context().cookies(page.url()).catch(() => []);
+      const cookies = await page
+        .context()
+        .cookies(page.url())
+        .catch(() => []);
       for (const cookie of cookies) {
         const isAuthOrSession = /(?:session|auth|token|jwt|id|sid|user)/i.test(cookie.name);
         if (!cookie.secure && page.url().startsWith('https://')) {
           findings.push(
-            this.finding(`F-SEC-${context.testCaseId || 'GEN'}-COOKIE-SECURE-${findings.length + 1}`, context, context.urlPath, {
-              title: `Cookie "${cookie.name}" is missing the Secure flag`,
-              severity: 'Major',
-              expected: 'Cookies transmitted over HTTPS must have the "Secure" flag set',
-              actual: `Cookie "${cookie.name}" lacks the Secure attribute and could be transmitted in cleartext`,
-              steps: [`Visit ${context.urlPath}`, `Inspect cookie "${cookie.name}" in application storage`],
-              resolution: 'Add "; Secure" to the Set-Cookie response header.',
-            })
+            this.finding(
+              `F-SEC-${context.testCaseId || 'GEN'}-COOKIE-SECURE-${findings.length + 1}`,
+              context,
+              context.urlPath,
+              {
+                title: `Cookie "${cookie.name}" is missing the Secure flag`,
+                severity: 'Major',
+                expected: 'Cookies transmitted over HTTPS must have the "Secure" flag set',
+                actual: `Cookie "${cookie.name}" lacks the Secure attribute and could be transmitted in cleartext`,
+                steps: [`Visit ${context.urlPath}`, `Inspect cookie "${cookie.name}" in application storage`],
+                resolution: 'Add "; Secure" to the Set-Cookie response header.',
+              }
+            )
           );
         }
         if (isAuthOrSession && !cookie.httpOnly) {
           findings.push(
-            this.finding(`F-SEC-${context.testCaseId || 'GEN'}-COOKIE-HTTPONLY-${findings.length + 1}`, context, context.urlPath, {
-              title: `Sensitive session cookie "${cookie.name}" is missing HttpOnly flag`,
-              severity: 'Major',
-              expected: 'Session and authentication cookies should have the HttpOnly flag to prevent XSS theft',
-              actual: `Cookie "${cookie.name}" can be accessed via document.cookie JavaScript API`,
-              steps: [`Visit ${context.urlPath}`, `Query document.cookie for "${cookie.name}"`],
-              resolution: 'Set the HttpOnly flag on all session and authentication cookies.',
-            })
+            this.finding(
+              `F-SEC-${context.testCaseId || 'GEN'}-COOKIE-HTTPONLY-${findings.length + 1}`,
+              context,
+              context.urlPath,
+              {
+                title: `Sensitive session cookie "${cookie.name}" is missing HttpOnly flag`,
+                severity: 'Major',
+                expected: 'Session and authentication cookies should have the HttpOnly flag to prevent XSS theft',
+                actual: `Cookie "${cookie.name}" can be accessed via document.cookie JavaScript API`,
+                steps: [`Visit ${context.urlPath}`, `Query document.cookie for "${cookie.name}"`],
+                resolution: 'Set the HttpOnly flag on all session and authentication cookies.',
+              }
+            )
           );
         }
         const sameSite = cookie.sameSite?.toLowerCase();
         if (sameSite === 'none' && !cookie.secure) {
           // Browsers reject this combination outright, so the cookie is not stored at all.
           findings.push(
-            this.finding(`F-SEC-${context.testCaseId || 'GEN'}-COOKIE-SAMESITE-${findings.length + 1}`, context, context.urlPath, {
-              title: `Cookie "${cookie.name}" has SameSite=None without Secure`,
-              severity: 'Major',
-              expected: 'A cookie with SameSite=None must also be Secure; modern browsers reject it otherwise',
-              actual: `Cookie "${cookie.name}" has SameSite=None and no Secure flag`,
-              steps: [`Visit ${context.urlPath}`, `Inspect SameSite and Secure on cookie "${cookie.name}"`],
-              resolution: 'Add "; Secure" to the cookie, or use SameSite=Lax if it is not needed in cross-site embeds.',
-            })
+            this.finding(
+              `F-SEC-${context.testCaseId || 'GEN'}-COOKIE-SAMESITE-${findings.length + 1}`,
+              context,
+              context.urlPath,
+              {
+                title: `Cookie "${cookie.name}" has SameSite=None without Secure`,
+                severity: 'Major',
+                expected: 'A cookie with SameSite=None must also be Secure; modern browsers reject it otherwise',
+                actual: `Cookie "${cookie.name}" has SameSite=None and no Secure flag`,
+                steps: [`Visit ${context.urlPath}`, `Inspect SameSite and Secure on cookie "${cookie.name}"`],
+                resolution:
+                  'Add "; Secure" to the cookie, or use SameSite=Lax if it is not needed in cross-site embeds.',
+              }
+            )
           );
         } else if (sameSite === 'none' || !sameSite) {
           findings.push(
-            this.finding(`F-SEC-${context.testCaseId || 'GEN'}-COOKIE-SAMESITE-${findings.length + 1}`, context, context.urlPath, {
-              title: `Cookie "${cookie.name}" has loose or missing SameSite attribute`,
-              severity: isAuthOrSession && sameSite === 'none' ? 'Major' : 'Minor',
-              expected: 'Cookies should have SameSite=Lax or SameSite=Strict to defend against Cross-Site Request Forgery',
-              actual: `Cookie "${cookie.name}" has ${sameSite === 'none' ? 'SameSite=None' : 'no SameSite attribute'}`,
-              steps: [`Visit ${context.urlPath}`, `Inspect SameSite property on cookie "${cookie.name}"`],
-              resolution: 'Set SameSite=Lax (or Strict) on cookies unless cross-site embeds are explicitly required.',
-            })
+            this.finding(
+              `F-SEC-${context.testCaseId || 'GEN'}-COOKIE-SAMESITE-${findings.length + 1}`,
+              context,
+              context.urlPath,
+              {
+                title: `Cookie "${cookie.name}" has loose or missing SameSite attribute`,
+                severity: isAuthOrSession && sameSite === 'none' ? 'Major' : 'Minor',
+                expected:
+                  'Cookies should have SameSite=Lax or SameSite=Strict to defend against Cross-Site Request Forgery',
+                actual: `Cookie "${cookie.name}" has ${sameSite === 'none' ? 'SameSite=None' : 'no SameSite attribute'}`,
+                steps: [`Visit ${context.urlPath}`, `Inspect SameSite property on cookie "${cookie.name}"`],
+                resolution: 'Set SameSite=Lax (or Strict) on cookies unless cross-site embeds are explicitly required.',
+              }
+            )
           );
         }
       }
@@ -268,7 +298,8 @@ export class SecurityChecker {
         this.finding(`F-SEC-${context.testCaseId || 'GEN'}-CSP`, context, context.urlPath, {
           title: 'Missing Content-Security-Policy (CSP) header',
           severity: 'Major',
-          expected: 'Responses should define a Content-Security-Policy header to restrict resource loading and mitigate XSS',
+          expected:
+            'Responses should define a Content-Security-Policy header to restrict resource loading and mitigate XSS',
           actual: 'No Content-Security-Policy header was returned in the response',
           steps: [`Request ${context.urlPath}`, 'Inspect HTTP response headers for Content-Security-Policy'],
           resolution: "Configure a Content-Security-Policy header, e.g.: default-src 'self'; script-src 'self';",
@@ -293,12 +324,16 @@ export class SecurityChecker {
     // Clickjacking protection: X-Frame-Options or frame-ancestors
     const hasFrameAncestors = normalized['content-security-policy']?.includes('frame-ancestors');
     const xFrameOptions = normalized['x-frame-options']?.toUpperCase();
-    if (!hasFrameAncestors && (!xFrameOptions || (!xFrameOptions.includes('DENY') && !xFrameOptions.includes('SAMEORIGIN')))) {
+    if (
+      !hasFrameAncestors &&
+      (!xFrameOptions || (!xFrameOptions.includes('DENY') && !xFrameOptions.includes('SAMEORIGIN')))
+    ) {
       findings.push(
         this.finding(`F-SEC-${context.testCaseId || 'GEN'}-CLICKJACK`, context, context.urlPath, {
           title: 'Missing clickjacking protection (X-Frame-Options or CSP frame-ancestors)',
           severity: 'Minor',
-          expected: 'Responses must declare X-Frame-Options: DENY/SAMEORIGIN or CSP frame-ancestors to prevent clickjacking',
+          expected:
+            'Responses must declare X-Frame-Options: DENY/SAMEORIGIN or CSP frame-ancestors to prevent clickjacking',
           actual: 'No frame restriction headers were found',
           steps: [`Request ${context.urlPath}`, 'Check headers for X-Frame-Options or CSP frame-ancestors'],
           resolution: 'Add "X-Frame-Options: SAMEORIGIN" or CSP "frame-ancestors \'self\'" to response headers.',

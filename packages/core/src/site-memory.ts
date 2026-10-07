@@ -1,6 +1,15 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import type { Breakpoint, DiscoveredFlow, DiscoveryDraft, PageInventoryItem, PlanItemSource, PlanPageTest, ReleaseReport, TestCaseExpectations } from '@qa/types';
+import type {
+  Breakpoint,
+  DiscoveredFlow,
+  DiscoveryDraft,
+  PageInventoryItem,
+  PlanItemSource,
+  PlanPageTest,
+  ReleaseReport,
+  TestCaseExpectations,
+} from '@qa/types';
 import { PlanValidator } from './discovery/plan-validator.js';
 
 /**
@@ -33,7 +42,10 @@ export interface RememberedPlan {
 
 /** A fingerprint of every page's controls: the same while no page changed. */
 export function siteContentKey(pages: PageInventoryItem[]): string {
-  const text = pages.map((p) => `${p.urlPath}:${p.contentKey ?? ''}`).sort().join('\n');
+  const text = pages
+    .map((p) => `${p.urlPath}:${p.contentKey ?? ''}`)
+    .sort()
+    .join('\n');
   let hash = 5381;
   for (let i = 0; i < text.length; i++) hash = ((hash << 5) + hash + text.charCodeAt(i)) >>> 0;
   return hash.toString(36);
@@ -91,12 +103,25 @@ function memoryFile(dataDir: string, host: string): string {
 }
 
 export function emptySiteMemory(host: string): SiteMemory {
-  return { host, updatedAt: new Date().toISOString(), pages: [], journeys: {}, questions: [], answers: {}, edits: {}, addedJourneys: [], observed: {} };
+  return {
+    host,
+    updatedAt: new Date().toISOString(),
+    pages: [],
+    journeys: {},
+    questions: [],
+    answers: {},
+    edits: {},
+    addedJourneys: [],
+    observed: {},
+  };
 }
 
 export async function loadSiteMemory(dataDir: string, host: string): Promise<SiteMemory | null> {
   try {
-    return { ...emptySiteMemory(host), ...(JSON.parse(await fs.readFile(memoryFile(dataDir, host), 'utf8')) as SiteMemory) };
+    return {
+      ...emptySiteMemory(host),
+      ...(JSON.parse(await fs.readFile(memoryFile(dataDir, host), 'utf8')) as SiteMemory),
+    };
   } catch {
     return null;
   }
@@ -167,7 +192,7 @@ export function applySiteMemory(draft: DiscoveryDraft, memory: SiteMemory | null
   for (const flow of draft.flows) {
     const key = journeyKey(flow);
     const before = memory.journeys[key];
-    flow.isNew = (!before || before.steps !== journeyFingerprint(flow)) || undefined;
+    flow.isNew = !before || before.steps !== journeyFingerprint(flow) || undefined;
     if (flow.isNew && flow.source !== 'user') summary.newJourneys++;
     if (before?.skipped) flow.outOfScope = true;
 
@@ -196,7 +221,7 @@ export function applySiteMemory(draft: DiscoveryDraft, memory: SiteMemory | null
       q.selectedAnswer = remembered;
       summary.rememberedAnswers++;
     }
-    q.isNew = (!q.key || !knownQuestions.has(q.key)) || undefined;
+    q.isNew = !q.key || !knownQuestions.has(q.key) || undefined;
     if (q.isNew) summary.newQuestions++;
   }
 
@@ -224,7 +249,9 @@ export function rememberRun(
   memory: SiteMemory | null,
   host: string,
   draft: DiscoveryDraft,
-  review: { reviewed: boolean; answeredByOwner?: Record<string, string>; screenSizes?: Breakpoint[] } = { reviewed: false }
+  review: { reviewed: boolean; answeredByOwner?: Record<string, string>; screenSizes?: Breakpoint[] } = {
+    reviewed: false,
+  }
 ): SiteMemory {
   const next: SiteMemory = memory ? JSON.parse(JSON.stringify(memory)) : emptySiteMemory(host);
   next.pages = draft.pages.map((p) => p.urlPath);
@@ -274,7 +301,10 @@ export function rememberRun(
           ])
         ),
         navigation: Object.fromEntries(
-          draft.plan.navigation.map((n) => [n.id, { name: n.name, expectation: n.expectation, source: n.source, skipped: n.skipped || undefined }])
+          draft.plan.navigation.map((n) => [
+            n.id,
+            { name: n.name, expectation: n.expectation, source: n.source, skipped: n.skipped || undefined },
+          ])
         ),
         flows: draft.flows
           .filter((f) => f.source !== 'user')

@@ -24,7 +24,6 @@ import { blockChanges, markJourneysNeedingTestCopy } from '../live-site.js';
 import type { AIProvider } from '../ai/ai-provider.js';
 import { stopIfAborted } from '../abort.js';
 
-
 export interface DiscoveryOptions {
   targetUrl: string;
   productId: string;
@@ -157,7 +156,9 @@ function describeExploration(
     notes.push(`These pages ask for a sign-in that no role could get past: ${merged.signInWalls.join(', ')}.`);
   }
   for (const role of signInFailed) {
-    notes.push(`Signing in as "${role}" didn't work, so nothing was explored as that role. Check its username, password and sign-in page.`);
+    notes.push(
+      `Signing in as "${role}" didn't work, so nothing was explored as that role. Check its username, password and sign-in page.`
+    );
   }
   const robotsSkipped = merged.skippedByRobots || [];
   if (robotsSkipped.length > 0) {
@@ -191,7 +192,10 @@ export class DiscoveryAgent {
     const parsedContext = await this.contextParser.parseFile(options.contextFilePath);
 
     // 2. Explore: signed out first, then once per role that can sign in, starting where it landed.
-    const spider = new DeterministicSpider(options.profile?.forbiddenActions || [], options.maxPages ?? DEFAULT_MAX_PAGES);
+    const spider = new DeterministicSpider(
+      options.profile?.forbiddenActions || [],
+      options.maxPages ?? DEFAULT_MAX_PAGES
+    );
     const roles = options.profile?.roles || [];
     const redactor = new Redactor(roles);
     // Signing in with the roles' own details is allowed on any site; it happens here, before the guard.
@@ -212,7 +216,10 @@ export class DiscoveryAgent {
       pageDelayMs: ownMachine ? 0 : PUBLIC_SITE_PAGE_DELAY_MS,
       screenshotDir: path.join(outputDir, 'plan-pages'),
       // Stopping to plan what's found ends the crawl the same way as stopping outright.
-      signal: options.finishSignal && signal ? AbortSignal.any([signal, options.finishSignal]) : (options.finishSignal ?? signal),
+      signal:
+        options.finishSignal && signal
+          ? AbortSignal.any([signal, options.finishSignal])
+          : (options.finishSignal ?? signal),
     };
     const newContext = async (storageState?: string) => {
       const context = await this.browserManager.createContext({ baseUrl: options.targetUrl, storageState });
@@ -251,7 +258,9 @@ export class DiscoveryAgent {
         continue;
       }
       const landing = preflight?.roleLandingPaths?.[role.role];
-      console.log(`[DiscoveryAgent] Exploring signed in as "${role.role}"${landing ? ` from ${redactor.text(landing)}` : ''}...`);
+      console.log(
+        `[DiscoveryAgent] Exploring signed in as "${role.role}"${landing ? ` from ${redactor.text(landing)}` : ''}...`
+      );
       const roleContext = await newContext(storageState);
       crawls.push({
         who: role.role,
@@ -278,26 +287,27 @@ export class DiscoveryAgent {
     // Skipped when the person asked to finish with what's found.
     options.onProgress?.({ stage: 'narrow-screens' });
     let lastNarrowLoad = 0;
-    if (!options.finishSignal?.aborted) await lookAtNarrowScreens(spiderResult.pages, {
-      baseUrl: options.targetUrl,
-      openContext: async (size, page) => {
-        const signedIn = page.reachedBy?.includes('visitor') ? undefined : page.reachedBy?.[0];
-        const context = await this.browserManager.createContext({
-          baseUrl: options.targetUrl,
-          viewport: BREAKPOINT_VIEWPORTS[size],
-          storageState: signedIn ? preflight?.roleStorageStates?.[signedIn] : undefined,
-        });
-        if (options.readOnly) await blockChanges(context);
-        return context;
-      },
-      pause: async () => {
-        // Stopped: every remaining page is passed over at once.
-        stopIfAborted(signal);
-        const wait = lastNarrowLoad + (crawlOptions.pageDelayMs ?? 0) - Date.now();
-        if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
-        lastNarrowLoad = Date.now();
-      },
-    });
+    if (!options.finishSignal?.aborted)
+      await lookAtNarrowScreens(spiderResult.pages, {
+        baseUrl: options.targetUrl,
+        openContext: async (size, page) => {
+          const signedIn = page.reachedBy?.includes('visitor') ? undefined : page.reachedBy?.[0];
+          const context = await this.browserManager.createContext({
+            baseUrl: options.targetUrl,
+            viewport: BREAKPOINT_VIEWPORTS[size],
+            storageState: signedIn ? preflight?.roleStorageStates?.[signedIn] : undefined,
+          });
+          if (options.readOnly) await blockChanges(context);
+          return context;
+        },
+        pause: async () => {
+          // Stopped: every remaining page is passed over at once.
+          stopIfAborted(signal);
+          const wait = lastNarrowLoad + (crawlOptions.pageDelayMs ?? 0) - Date.now();
+          if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+          lastNarrowLoad = Date.now();
+        },
+      });
     await this.browserManager.close();
     stopIfAborted(signal);
 
@@ -318,7 +328,8 @@ export class DiscoveryAgent {
     // Pages the person promoted or added last time are still tested on their own.
     for (const [urlPath, before] of Object.entries(options.remembered?.pages || {})) {
       const info = coverage.get(urlPath);
-      if (info && (before.promoted || before.added)) coverage.set(urlPath, { ...info, coverage: 'promoted', coveredBy: undefined });
+      if (info && (before.promoted || before.added))
+        coverage.set(urlPath, { ...info, coverage: 'promoted', coveredBy: undefined });
     }
     const tested = testedPages({ pages: spiderResult.pages, coverage });
 
@@ -345,9 +356,12 @@ export class DiscoveryAgent {
     const journeysFrom = siteContentKey(spiderResult.pages);
     const remembered = options.remembered;
     const reuseJourneys =
-      !!remembered?.flows && remembered.journeysFrom === journeysFrom && remembered.flows.every((f) => f.source !== 'fallback');
+      !!remembered?.flows &&
+      remembered.journeysFrom === journeysFrom &&
+      remembered.flows.every((f) => f.source !== 'fallback');
     const requestsNeeded =
-      estimatePageRequests({ pages: spiderResult.pages, coverage, graph, remembered: options.remembered }) + (reuseJourneys ? 0 : 1);
+      estimatePageRequests({ pages: spiderResult.pages, coverage, graph, remembered: options.remembered }) +
+      (reuseJourneys ? 0 : 1);
     const requestsLeft = options.aiBudget?.left;
     const paced = options.aiProvider
       ? new PacedAI(options.aiProvider, requestsLeft ?? Infinity, {
@@ -396,12 +410,20 @@ export class DiscoveryAgent {
     // Journeys across pages, from the tested pages closest to the start page. While no page has
     // changed since the last approved Plan, its journeys are reused.
     const byClicks = (p: PageInventoryItem) => graph.clickPaths.get(p.urlPath)?.length ?? Number.MAX_SAFE_INTEGER;
-    if (!reuseJourneys && paced) planningProgress(requestsNeeded - 1, 'Asking the AI about the journeys…', { attempt: 1 });
+    if (!reuseJourneys && paced)
+      planningProgress(requestsNeeded - 1, 'Asking the AI about the journeys…', { attempt: 1 });
     const journeyPlan = reuseJourneys
       ? (() => {
           const flows: DiscoveredFlow[] = JSON.parse(JSON.stringify(options.remembered!.flows));
           new PlanValidator(spiderResult.pages, spiderResult.forms).markFlowsNeedingHelp(flows);
-          return { flows, siteType, usedFallback: false, overBudget: false, notes: [] as string[], questions: [] as AmbiguityQuestion[] };
+          return {
+            flows,
+            siteType,
+            usedFallback: false,
+            overBudget: false,
+            notes: [] as string[],
+            questions: [] as AmbiguityQuestion[],
+          };
         })()
       : await planJourneys(
           {
@@ -457,7 +479,9 @@ export class DiscoveryAgent {
           visualReview: options.aiBudget?.visualReview,
           // Counted from the items, as the approval summary counts them.
           overBudget:
-            pagePlan.overBudget + synthesizedFlows.filter((f) => f.source === 'fallback' && f.fallbackReason === 'budget').length || undefined,
+            pagePlan.overBudget +
+              synthesizedFlows.filter((f) => f.source === 'fallback' && f.fallbackReason === 'budget').length ||
+            undefined,
           tokens: paced && Object.keys(paced.tokens).length > 0 ? paced.tokens : undefined,
           models: paced && Object.keys(paced.models).length > 0 ? paced.models : undefined,
         },
@@ -465,7 +489,6 @@ export class DiscoveryAgent {
     };
     // Journeys that send a form are marked on every site; on a live one they're kept but not run.
     markJourneysNeedingTestCopy(draft);
-
 
     // A plan never holds credentials: sign-in details become placeholders the runner fills in,
     // and anything left that looks secret is hidden before the draft is saved or returned.

@@ -20,14 +20,20 @@
     "test:watch": "vitest",
     "test:url-first": "vitest run packages/checkers/tests packages/core/tests/scoring.test.ts packages/core/tests/recommendations.test.ts packages/core/tests/site-history.test.ts packages/core/tests/html-report.test.ts packages/core/tests/visual-review.test.ts packages/wizard/tests/contrast.test.ts packages/runner/tests/url-first.test.ts",
     "lint": "eslint .",
-    "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "benchmark": "tsx scripts/benchmark.ts"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@types/node": "^22.10.2",
+    "@vitest/coverage-v8": "^2.1.8",
+    "eslint": "^9.39.5",
+    "globals": "^16.5.0",
     "prettier": "^3.4.2",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
+    "typescript-eslint": "^8.71.1",
     "vitest": "^2.1.8"
   }
 }

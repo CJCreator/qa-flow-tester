@@ -180,8 +180,9 @@ export class PlanValidator {
       lines.push(`  - …and ${visible.length - MAX_PROMPT_ELEMENTS_PER_PAGE} more`);
     }
     const reachedBy = page.reachedBy?.length ? ` (reached by: ${page.reachedBy.join(', ')})` : '';
-    return [`Page ${page.urlPath} — "${page.title}"${reachedBy}`, ...(lines.length ? lines : ['  (no interactive elements)'])].join(
-      '\n'
-    );
+    return [
+      `Page ${page.urlPath} — "${page.title}"${reachedBy}`,
+      ...(lines.length ? lines : ['  (no interactive elements)']),
+    ].join('\n');
   }
 }

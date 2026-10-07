@@ -17,7 +17,10 @@ describe('The Marketing score of the Findable area', () => {
   });
 
   it('is an ordinary score when it was checked, or when nobody says (older callers)', () => {
-    expect(calculateSiteAspectGrades([], { ...searchRan, marketingChecked: true }).aspects.Findable.subBreakdown?.marketing.checked).toBeUndefined();
+    expect(
+      calculateSiteAspectGrades([], { ...searchRan, marketingChecked: true }).aspects.Findable.subBreakdown?.marketing
+        .checked
+    ).toBeUndefined();
     expect(calculateSiteAspectGrades([], searchRan).aspects.Findable.subBreakdown?.marketing.checked).toBeUndefined();
   });
 
@@ -35,7 +38,11 @@ describe('The Marketing score of the Findable area', () => {
       resolution: 'r',
     } as unknown as Finding;
     const grades = calculateSiteAspectGrades([finding], { ...searchRan, marketingChecked: true });
-    expect(grades.aspects.Findable.subBreakdown?.marketing).toMatchObject({ score: 95, issueCount: 1, status: 'Clean' });
+    expect(grades.aspects.Findable.subBreakdown?.marketing).toMatchObject({
+      score: 95,
+      issueCount: 1,
+      status: 'Clean',
+    });
   });
 });
 
@@ -43,9 +50,22 @@ describe('The marketing checklist in the written reports', () => {
   const marketing: MarketingReview = {
     readPages: ['/'],
     checks: [
-      { key: 'CTA', label: 'A clear call to action', kind: 'fact', status: 'gap', detail: 'Not found on /.', findingId: 'F-MKT-1' },
+      {
+        key: 'CTA',
+        label: 'A clear call to action',
+        kind: 'fact',
+        status: 'gap',
+        detail: 'Not found on /.',
+        findingId: 'F-MKT-1',
+      },
       { key: 'PRICING', label: 'Pricing or plans', kind: 'opinion', status: 'gap', detail: 'Not found on /.' },
-      { key: 'SOCIAL', label: 'Links to social profiles', kind: 'fact', status: 'not-checked', detail: 'This is looked for on the home page, which wasn’t among the pages tested.' },
+      {
+        key: 'SOCIAL',
+        label: 'Links to social profiles',
+        kind: 'fact',
+        status: 'not-checked',
+        detail: 'This is looked for on the home page, which wasn’t among the pages tested.',
+      },
     ],
   };
 
@@ -58,7 +78,16 @@ describe('The marketing checklist in the written reports', () => {
         targetUrl: 'https://example.com',
         timestamp: new Date().toISOString(),
         durationMs: 1,
-        coverage: { totalTestPoints: 0, passed: 0, failed: 0, blocked: 0, skipped: 0, couldNotVerify: 0, flakyFlows: 0, completionRate: 100 },
+        coverage: {
+          totalTestPoints: 0,
+          passed: 0,
+          failed: 0,
+          blocked: 0,
+          skipped: 0,
+          couldNotVerify: 0,
+          flakyFlows: 0,
+          completionRate: 100,
+        },
         results: [],
         findings: [],
         marketing,

@@ -63,7 +63,10 @@ export function ScanningScreen({
   onStop: () => void;
 }) {
   const stageIndex = progress ? STAGES.findIndex((s) => s.id === progress.stage) : -1;
-  const planning = progress?.stage === 'planning' && progress.total ? { done: Math.min(progress.done ?? 0, progress.total), total: progress.total } : null;
+  const planning =
+    progress?.stage === 'planning' && progress.total
+      ? { done: Math.min(progress.done ?? 0, progress.total), total: progress.total }
+      : null;
   const left = timeLeft(progress?.secondsLeft);
   const waited = useSecondsSince(progress?.asking ? progress.askingSince : undefined);
 
@@ -81,19 +84,38 @@ export function ScanningScreen({
         <>
           <ol className="mb-6 space-y-2" aria-label="Scan stages">
             {STAGES.map((stage, i) => {
-              const state = stageIndex < 0 ? (i === 0 ? 'current' : 'todo') : i < stageIndex ? 'done' : i === stageIndex ? 'current' : 'todo';
+              const state =
+                stageIndex < 0
+                  ? i === 0
+                    ? 'current'
+                    : 'todo'
+                  : i < stageIndex
+                    ? 'done'
+                    : i === stageIndex
+                      ? 'current'
+                      : 'todo';
               return (
-                <li key={stage.id} className="flex items-center gap-3" aria-current={state === 'current' ? 'step' : undefined}>
+                <li
+                  key={stage.id}
+                  className="flex items-center gap-3"
+                  aria-current={state === 'current' ? 'step' : undefined}
+                >
                   <span
                     aria-hidden="true"
                     className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold ${
-                      state === 'done' ? 'border-stamp bg-stamp text-surface' : state === 'current' ? 'border-stamp text-stamp' : 'border-edge text-ink-soft'
+                      state === 'done'
+                        ? 'border-stamp bg-stamp text-surface'
+                        : state === 'current'
+                          ? 'border-stamp text-stamp'
+                          : 'border-edge text-ink-soft'
                     }`}
                   >
                     {state === 'done' ? '✓' : i + 1}
                   </span>
                   <span className={state === 'todo' ? 'text-ink-soft' : 'font-bold text-ink'}>{stage.label}</span>
-                  <span className="sr-only">{state === 'done' ? '(done)' : state === 'current' ? '(now)' : '(to come)'}</span>
+                  <span className="sr-only">
+                    {state === 'done' ? '(done)' : state === 'current' ? '(now)' : '(to come)'}
+                  </span>
                 </li>
               );
             })}
@@ -110,7 +132,9 @@ export function ScanningScreen({
                     : progress.asking
                       ? progress.what
                       : `${progress.what ?? 'Writing the plan'}${planning ? ` (${planning.done} of ${planning.total} requests)` : ''}…`}
-              {waited !== null && waited >= 3 && <span className="font-normal text-ink-soft"> · {waited} s so far</span>}
+              {waited !== null && waited >= 3 && (
+                <span className="font-normal text-ink-soft"> · {waited} s so far</span>
+              )}
               {left && !progress?.asking && <span className="font-normal text-ink-soft"> · {left}</span>}
             </p>
 
@@ -123,7 +147,10 @@ export function ScanningScreen({
                 aria-valuenow={planning.done}
                 className="mt-3 h-2 overflow-hidden rounded-full bg-rule"
               >
-                <div className="h-full rounded-full bg-stamp transition-[width] motion-reduce:transition-none" style={{ width: `${(planning.done / planning.total) * 100}%` }} />
+                <div
+                  className="h-full rounded-full bg-stamp transition-[width] motion-reduce:transition-none"
+                  style={{ width: `${(planning.done / planning.total) * 100}%` }}
+                />
               </div>
             ) : (
               <div aria-hidden="true" className="mt-3 h-2 overflow-hidden rounded-full bg-rule">
@@ -148,14 +175,20 @@ export function ScanningScreen({
                   <dd className="font-mono text-xl font-bold text-ink">
                     {progress.requestsUsed ?? 0} of about {progress.requestsNeeded ?? 0}
                   </dd>
-                  {progress.requestsLeft !== undefined && <dd className="text-ink-soft">{progress.requestsLeft} free left today</dd>}
+                  {progress.requestsLeft !== undefined && (
+                    <dd className="text-ink-soft">{progress.requestsLeft} free left today</dd>
+                  )}
                 </div>
               )}
             </dl>
           </section>
 
           <div className="mt-8">
-            <button type="button" className="btn-quiet border-fail text-fail hover:border-fail hover:bg-fail-tint" onClick={onStop}>
+            <button
+              type="button"
+              className="btn-quiet border-fail text-fail hover:border-fail hover:bg-fail-tint"
+              onClick={onStop}
+            >
               Stop scanning
             </button>
           </div>

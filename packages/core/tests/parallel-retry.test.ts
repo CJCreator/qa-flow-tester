@@ -59,10 +59,11 @@ describe('Parallelism, Account Pooling & Retry Hardening', () => {
 
   describe('RetryRunner Clean Retry', () => {
     it('returns PASSED on clean first attempt', async () => {
-      const outcome = await RetryRunner.runWithCleanRetry(
-        async () => 'success',
-        { flowId: 'flow-1', testCaseId: 'TC-1', maxRetries: 1 }
-      );
+      const outcome = await RetryRunner.runWithCleanRetry(async () => 'success', {
+        flowId: 'flow-1',
+        testCaseId: 'TC-1',
+        maxRetries: 1,
+      });
 
       expect(outcome.outcome).toBe('PASSED');
       expect(outcome.attempts).toBe(1);

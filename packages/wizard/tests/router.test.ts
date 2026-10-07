@@ -27,7 +27,11 @@ describe('every screen has an address', () => {
   });
 
   it('knows which addresses belong to the check-up in progress', () => {
-    expect(['/check/scan', '/check/plan', '/check/testing'].map((path) => isCheckRoute(matchRoute(path)))).toEqual([true, true, true]);
+    expect(['/check/scan', '/check/plan', '/check/testing'].map((path) => isCheckRoute(matchRoute(path)))).toEqual([
+      true,
+      true,
+      true,
+    ]);
     expect(isCheckRoute(matchRoute('/reports/run-1'))).toBe(false);
     expect(isCheckRoute(matchRoute('/'))).toBe(false);
     expect(isCheckRoute(matchRoute('/check'))).toBe(false);

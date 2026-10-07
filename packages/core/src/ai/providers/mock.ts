@@ -31,14 +31,28 @@ export class MockAIProvider implements AIProvider {
       return JSON.stringify({
         pages: pages.map((p) => {
           const control = (p.controls || []).find(
-            (c) => ['button', 'tab', 'switch'].includes(c.role) && !c.inForm && !c.disabled && !/delete|remove|pay|buy|sign ?out|log ?out|reset|trigger/i.test(c.name)
+            (c) =>
+              ['button', 'tab', 'switch'].includes(c.role) &&
+              !c.inForm &&
+              !c.disabled &&
+              !/delete|remove|pay|buy|sign ?out|log ?out|reset|trigger/i.test(c.name)
           );
           return {
             urlPath: p.urlPath,
             tests: control
-              ? [{ name: `Pressing “${control.name}” keeps the page working`, steps: [{ action: 'click', selector: control.selector, name: `Press “${control.name}”` }], expect: {} }]
+              ? [
+                  {
+                    name: `Pressing “${control.name}” keeps the page working`,
+                    steps: [{ action: 'click', selector: control.selector, name: `Press “${control.name}”` }],
+                    expect: {},
+                  },
+                ]
               : [],
-            links: (p.links || []).map((l) => ({ selector: l.selector, name: `“${l.name}” opens ${l.to}`, expect: 'The page opens' })),
+            links: (p.links || []).map((l) => ({
+              selector: l.selector,
+              name: `“${l.name}” opens ${l.to}`,
+              expect: 'The page opens',
+            })),
           };
         }),
       });
@@ -46,9 +60,18 @@ export class MockAIProvider implements AIProvider {
     // The AI Planner's shared-menu request.
     const linksBlock = fullText.match(/Links:\n(\[[\s\S]*?\])\n\nAnswer with ONLY/);
     if (linksBlock) {
-      const links = JSON.parse(linksBlock[1]) as Array<{ selector: string; name: string; to: string; destination?: string }>;
+      const links = JSON.parse(linksBlock[1]) as Array<{
+        selector: string;
+        name: string;
+        to: string;
+        destination?: string;
+      }>;
       return JSON.stringify({
-        links: links.map((l) => ({ selector: l.selector, name: `Menu: “${l.name}” opens ${l.to}`, expect: l.destination ? `The “${l.destination}” page` : 'The page opens' })),
+        links: links.map((l) => ({
+          selector: l.selector,
+          name: `Menu: “${l.name}” opens ${l.to}`,
+          expect: l.destination ? `The “${l.destination}” page` : 'The page opens',
+        })),
       });
     }
 
@@ -79,10 +102,7 @@ export class MockAIProvider implements AIProvider {
             },
           },
         ],
-        inferredRules: [
-          'Invoices require authenticated manager role',
-          'Dashboard tracks system telemetry',
-        ],
+        inferredRules: ['Invoices require authenticated manager role', 'Dashboard tracks system telemetry'],
       });
     }
 

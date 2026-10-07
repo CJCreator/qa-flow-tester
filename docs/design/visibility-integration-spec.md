@@ -8,37 +8,37 @@ Plain words in the UI, jargon only in hints: **Search** (SEO), **AI answers** (A
 
 ## 1. Decisions
 
-| # | Decision | Choice |
-|---|---|---|
-| 1 | Scope | The review flow. The public landing page stays governed by [SEO_AEO_GEO_STRATEGY.md](../SEO_AEO_GEO_STRATEGY.md) and is only audited here (section 2). |
-| 2 | Report | A dedicated **Visibility** view with four tabs. The Findable card links to it. |
-| 3 | Setup | Existing checkbox stays the master switch; a collapsed "Choose which" row holds four toggles, remembered per site. |
-| 4 | Plan review | A new "Search and AI visibility" section in the existing plan-item style, each item switchable. |
-| 5 | Fixes | AI-written when an AI key is set; deterministic templates filled from scan facts otherwise. |
-| 6 | AI gate | Facts-only prompt, deterministic validation, our own checkers and a grammar/flow review re-run on the draft; any failure shows the template fix with a note. |
-| 7 | Deliverable | This Markdown spec plus a visual HTML page. |
-| 8 | Ownership | Fixes for every site, owned or not. Consequence: AI requests may be spent on sites the person can't change; the cost estimate on New check-up must include them (4.2). |
+| #   | Decision    | Choice                                                                                                                                                                 |
+| --- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Scope       | The review flow. The public landing page stays governed by [SEO_AEO_GEO_STRATEGY.md](../SEO_AEO_GEO_STRATEGY.md) and is only audited here (section 2).                 |
+| 2   | Report      | A dedicated **Visibility** view with four tabs. The Findable card links to it.                                                                                         |
+| 3   | Setup       | Existing checkbox stays the master switch; a collapsed "Choose which" row holds four toggles, remembered per site.                                                     |
+| 4   | Plan review | A new "Search and AI visibility" section in the existing plan-item style, each item switchable.                                                                        |
+| 5   | Fixes       | AI-written when an AI key is set; deterministic templates filled from scan facts otherwise.                                                                            |
+| 6   | AI gate     | Facts-only prompt, deterministic validation, our own checkers and a grammar/flow review re-run on the draft; any failure shows the template fix with a note.           |
+| 7   | Deliverable | This Markdown spec plus a visual HTML page.                                                                                                                            |
+| 8   | Ownership   | Fixes for every site, owned or not. Consequence: AI requests may be spent on sites the person can't change; the cost estimate on New check-up must include them (4.2). |
 
 ## 2. Audit of the current design
 
-| Surface | Today | Gap |
-|---|---|---|
-| New check-up ([NewCheckupScreen.tsx:347](../../packages/wizard/src/screens/NewCheckupScreen.tsx#L347)) | One checkbox: "Check how search engines and AI assistants see it". Default on for live sites, off for a test copy. | Doesn't say what is checked, or that AI answers, AI search and marketing exist. No per-lens choice. |
-| Plan review ([PlanDocument.tsx](../../packages/wizard/src/components/plan/PlanDocument.tsx)) | Pages, navigation checks, journeys, questions, sign-ins. | Nothing about search. Site files (robots.txt, sitemap.xml, llms.txt) are read but never listed, so people can't see or switch them off. |
-| Live progress ([TestingScreen.tsx](../../packages/wizard/src/screens/TestingScreen.tsx)) | Steps and a feed. | Search findings are repeated per screen size (see [PRODUCT_REVIEW.md](../../PRODUCT_REVIEW.md) L2) and aren't grouped as one phase. |
-| Report ([ReportScreen.tsx](../../packages/wizard/src/screens/ReportScreen.tsx)) | "How each area did": Findable card with Search / AI answers / AI search percentages; problems in buckets. | Percentages have no drill-down, no "what's present", no fix snippets. Search findings are mixed into must-fix buckets and out-rank real defects (PRODUCT_REVIEW L1). |
-| Settings → Sites | Per-site "check how search engines see it": As usual / Yes / No. | Single value; must become four. |
-| Public home page | Fully covered by the strategy doc (JSON-LD graph, FAQ, llms.txt, robots, sitemap, noindex on private screens). | None. Audit only: keep FAQ text and JSON-LD in sync ([faq.ts](../../packages/wizard/src/lib/faq.ts)). |
-| Design system ([tailwind.config.js](../../packages/wizard/tailwind.config.js)) | Blueprint palette, `rounded-card`/`panel`, levels 1-4 shadows, `btn-primary`, `btn-link`, `field`. | No component for a score-with-parts, a tab set, a code-snippet block or a "present / missing" checklist. Section 6 adds them from existing tokens. |
+| Surface                                                                                                | Today                                                                                                              | Gap                                                                                                                                                                  |
+| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| New check-up ([NewCheckupScreen.tsx:347](../../packages/wizard/src/screens/NewCheckupScreen.tsx#L347)) | One checkbox: "Check how search engines and AI assistants see it". Default on for live sites, off for a test copy. | Doesn't say what is checked, or that AI answers, AI search and marketing exist. No per-lens choice.                                                                  |
+| Plan review ([PlanDocument.tsx](../../packages/wizard/src/components/plan/PlanDocument.tsx))           | Pages, navigation checks, journeys, questions, sign-ins.                                                           | Nothing about search. Site files (robots.txt, sitemap.xml, llms.txt) are read but never listed, so people can't see or switch them off.                              |
+| Live progress ([TestingScreen.tsx](../../packages/wizard/src/screens/TestingScreen.tsx))               | Steps and a feed.                                                                                                  | Search findings are repeated per screen size (see [PRODUCT_REVIEW.md](../../PRODUCT_REVIEW.md) L2) and aren't grouped as one phase.                                  |
+| Report ([ReportScreen.tsx](../../packages/wizard/src/screens/ReportScreen.tsx))                        | "How each area did": Findable card with Search / AI answers / AI search percentages; problems in buckets.          | Percentages have no drill-down, no "what's present", no fix snippets. Search findings are mixed into must-fix buckets and out-rank real defects (PRODUCT_REVIEW L1). |
+| Settings → Sites                                                                                       | Per-site "check how search engines see it": As usual / Yes / No.                                                   | Single value; must become four.                                                                                                                                      |
+| Public home page                                                                                       | Fully covered by the strategy doc (JSON-LD graph, FAQ, llms.txt, robots, sitemap, noindex on private screens).     | None. Audit only: keep FAQ text and JSON-LD in sync ([faq.ts](../../packages/wizard/src/lib/faq.ts)).                                                                |
+| Design system ([tailwind.config.js](../../packages/wizard/tailwind.config.js))                         | Blueprint palette, `rounded-card`/`panel`, levels 1-4 shadows, `btn-primary`, `btn-link`, `field`.                 | No component for a score-with-parts, a tab set, a code-snippet block or a "present / missing" checklist. Section 6 adds them from existing tokens.                   |
 
 ## 3. Integration points per optimization type
 
-| Type | What it is for the reader | Checked today | Where it surfaces (new) | Fix the tool offers |
-|---|---|---|---|---|
-| **Search** (SEO) | Being found and listed by search engines | Title, description, H1, canonical, noindex, viewport, favicon, alt text, broken links, robots.txt, sitemap | Setup toggle; plan items "Home and key pages", "robots.txt", "sitemap.xml"; Visibility tab 1 | Meta tags, canonical, robots rules, sitemap entries (HTML/text snippets) |
-| **AI answers** (AEO) | Being picked as the answer by assistants and answer boxes | JSON-LD, question headings, FAQ/HowTo markup, breadcrumbs | Plan item "Pages that answer questions"; tab 2 | JSON-LD (FAQPage, HowTo, BreadcrumbList, Organization) built only from visible text |
-| **AI search** (GEO) | Being read and quoted by AI search tools | `<main>`/`<article>`, text density, author and date, external citations, llms.txt, AI-crawler rules | Plan items "llms.txt", "AI crawler access"; tab 3 | `llms.txt` draft, robots.txt AI-crawler block, content-structure suggestions |
-| **Marketing** (MKT, new) | Turning visits into customers | Twitter card, share image, call to action, contact route, privacy/terms, analytics, social links | Setup toggle; tab 4 | Meta tags, link placement notes |
+| Type                     | What it is for the reader                                 | Checked today                                                                                              | Where it surfaces (new)                                                                      | Fix the tool offers                                                                 |
+| ------------------------ | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| **Search** (SEO)         | Being found and listed by search engines                  | Title, description, H1, canonical, noindex, viewport, favicon, alt text, broken links, robots.txt, sitemap | Setup toggle; plan items "Home and key pages", "robots.txt", "sitemap.xml"; Visibility tab 1 | Meta tags, canonical, robots rules, sitemap entries (HTML/text snippets)            |
+| **AI answers** (AEO)     | Being picked as the answer by assistants and answer boxes | JSON-LD, question headings, FAQ/HowTo markup, breadcrumbs                                                  | Plan item "Pages that answer questions"; tab 2                                               | JSON-LD (FAQPage, HowTo, BreadcrumbList, Organization) built only from visible text |
+| **AI search** (GEO)      | Being read and quoted by AI search tools                  | `<main>`/`<article>`, text density, author and date, external citations, llms.txt, AI-crawler rules        | Plan items "llms.txt", "AI crawler access"; tab 3                                            | `llms.txt` draft, robots.txt AI-crawler block, content-structure suggestions        |
+| **Marketing** (MKT, new) | Turning visits into customers                             | Twitter card, share image, call to action, contact route, privacy/terms, analytics, social links           | Setup toggle; tab 4                                                                          | Meta tags, link placement notes                                                     |
 
 Navigation and flow impact: none of these add a step. Setup keeps one screen; Plan review gains one section; the report gains one route.
 
@@ -193,13 +193,13 @@ scan facts ──► template fix (always built; deterministic)
 
 ## 6. Design-system additions (existing tokens only)
 
-| Component | Built from | Notes |
-|---|---|---|
-| `ScoreTabs` | `rounded-control`, `border-edge`, `stamp` underline, `gradeClasses` | Four tabs with grade; tablist semantics; 44 px targets. |
-| `PresentMissingList` | `pass` ✓ / `warn` ⚠ with text labels | Never colour alone (contrast tested in [contrast.test.ts](../../packages/wizard/tests/contrast.test.ts)). |
-| `SnippetBlock` | `bg-canvas`, `font-mono`, `btn-link` | Horizontal scroll, never wraps JSON; copy button. |
-| `CheckBadges` | `rounded border` pills as the "Added" badge | "parses ✓ matches page ✓ grammar ✓". |
-| `LensToggleGroup` | native `<details>` + checkboxes | Shared by New check-up and Settings. |
+| Component            | Built from                                                          | Notes                                                                                                     |
+| -------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `ScoreTabs`          | `rounded-control`, `border-edge`, `stamp` underline, `gradeClasses` | Four tabs with grade; tablist semantics; 44 px targets.                                                   |
+| `PresentMissingList` | `pass` ✓ / `warn` ⚠ with text labels                                | Never colour alone (contrast tested in [contrast.test.ts](../../packages/wizard/tests/contrast.test.ts)). |
+| `SnippetBlock`       | `bg-canvas`, `font-mono`, `btn-link`                                | Horizontal scroll, never wraps JSON; copy button.                                                         |
+| `CheckBadges`        | `rounded border` pills as the "Added" badge                         | "parses ✓ matches page ✓ grammar ✓".                                                                      |
+| `LensToggleGroup`    | native `<details>` + checkboxes                                     | Shared by New check-up and Settings.                                                                      |
 
 ## 7. Accessibility and performance
 

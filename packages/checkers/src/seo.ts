@@ -85,285 +85,297 @@ export class SeoChecker {
     if (vis.search) {
       // 1. Page Title
       if (!details.title || details.title.trim().length === 0) {
-      findings.push({
-        id: `F-SEO-${tcId}-TITLE-${findings.length + 1}`,
-        testCaseId: context.testCaseId,
-        flowId: context.flowId,
-        severity: 'Major',
-        checker: 'seo',
-        categoryTag: 'SEO',
-        title: 'Page is missing a title tag',
-        where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
-        expectedVsActual: {
-          expected: 'Page should have a descriptive <title> tag between 10 and 60 characters',
-          actual: 'The <title> tag is missing or empty',
-        },
-        stepsToReproduce: [`Visit ${context.urlPath}`, 'Inspect the <head> element for a <title> tag'],
-        evidence: {},
-        resolution: 'Add a distinct, descriptive <title> in the <head> of the HTML document.',
-      });
-    }
+        findings.push({
+          id: `F-SEO-${tcId}-TITLE-${findings.length + 1}`,
+          testCaseId: context.testCaseId,
+          flowId: context.flowId,
+          severity: 'Major',
+          checker: 'seo',
+          categoryTag: 'SEO',
+          title: 'Page is missing a title tag',
+          where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
+          expectedVsActual: {
+            expected: 'Page should have a descriptive <title> tag between 10 and 60 characters',
+            actual: 'The <title> tag is missing or empty',
+          },
+          stepsToReproduce: [`Visit ${context.urlPath}`, 'Inspect the <head> element for a <title> tag'],
+          evidence: {},
+          resolution: 'Add a distinct, descriptive <title> in the <head> of the HTML document.',
+        });
+      }
 
-    // 2. Meta Description
-    if (!details.metaDescription || details.metaDescription.trim().length === 0) {
-      findings.push({
-        id: `F-SEO-${tcId}-DESC-${findings.length + 1}`,
-        testCaseId: context.testCaseId,
-        flowId: context.flowId,
-        severity: 'Minor',
-        checker: 'seo',
-        categoryTag: 'SEO',
-        title: 'Page is missing a meta description',
-        where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
-        expectedVsActual: {
-          expected: 'Page should have a <meta name="description"> tag summarizing the page for search engines',
-          actual: 'No meta description tag was found',
-        },
-        stepsToReproduce: [`Visit ${context.urlPath}`, 'Search for <meta name="description"> in <head>'],
-        evidence: {},
-        resolution: 'Add a <meta name="description" content="..."> tag with a 50–160 character summary.',
-      });
-    }
+      // 2. Meta Description
+      if (!details.metaDescription || details.metaDescription.trim().length === 0) {
+        findings.push({
+          id: `F-SEO-${tcId}-DESC-${findings.length + 1}`,
+          testCaseId: context.testCaseId,
+          flowId: context.flowId,
+          severity: 'Minor',
+          checker: 'seo',
+          categoryTag: 'SEO',
+          title: 'Page is missing a meta description',
+          where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
+          expectedVsActual: {
+            expected: 'Page should have a <meta name="description"> tag summarizing the page for search engines',
+            actual: 'No meta description tag was found',
+          },
+          stepsToReproduce: [`Visit ${context.urlPath}`, 'Search for <meta name="description"> in <head>'],
+          evidence: {},
+          resolution: 'Add a <meta name="description" content="..."> tag with a 50–160 character summary.',
+        });
+      }
 
-    // 3. Heading Structure: Exactly one H1 and sequential order
-    if (details.h1Count === 0) {
-      findings.push({
-        id: `F-SEO-${tcId}-H1-MISSING-${findings.length + 1}`,
-        testCaseId: context.testCaseId,
-        flowId: context.flowId,
-        severity: 'Major',
-        checker: 'seo',
-        categoryTag: 'SEO',
-        title: 'Page has no primary <h1> heading',
-        where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
-        expectedVsActual: {
-          expected: 'Every page should have exactly one primary <h1> heading',
-          actual: 'Found 0 <h1> headings on the page',
-        },
-        stepsToReproduce: [`Visit ${context.urlPath}`, 'Check the document headings'],
-        evidence: {},
-        resolution: 'Add a single top-level <h1> heading identifying the page content.',
-      });
-    } else if (details.h1Count > 1) {
-      findings.push({
-        id: `F-SEO-${tcId}-H1-MULTIPLE-${findings.length + 1}`,
-        testCaseId: context.testCaseId,
-        flowId: context.flowId,
-        severity: 'Minor',
-        checker: 'seo',
-        categoryTag: 'SEO',
-        title: `Page has multiple <h1> headings (${details.h1Count} found)`,
-        where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
-        expectedVsActual: {
-          expected: 'Page should have a single <h1> heading representing the main topic',
-          actual: `Found ${details.h1Count} <h1> headings`,
-        },
-        stepsToReproduce: [`Visit ${context.urlPath}`, 'Query document.querySelectorAll("h1")'],
-        evidence: {},
-        resolution: 'Demote secondary <h1> tags to <h2> or <h3> to maintain a single page heading.',
-      });
-    }
+      // 3. Heading Structure: Exactly one H1 and sequential order
+      if (details.h1Count === 0) {
+        findings.push({
+          id: `F-SEO-${tcId}-H1-MISSING-${findings.length + 1}`,
+          testCaseId: context.testCaseId,
+          flowId: context.flowId,
+          severity: 'Major',
+          checker: 'seo',
+          categoryTag: 'SEO',
+          title: 'Page has no primary <h1> heading',
+          where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
+          expectedVsActual: {
+            expected: 'Every page should have exactly one primary <h1> heading',
+            actual: 'Found 0 <h1> headings on the page',
+          },
+          stepsToReproduce: [`Visit ${context.urlPath}`, 'Check the document headings'],
+          evidence: {},
+          resolution: 'Add a single top-level <h1> heading identifying the page content.',
+        });
+      } else if (details.h1Count > 1) {
+        findings.push({
+          id: `F-SEO-${tcId}-H1-MULTIPLE-${findings.length + 1}`,
+          testCaseId: context.testCaseId,
+          flowId: context.flowId,
+          severity: 'Minor',
+          checker: 'seo',
+          categoryTag: 'SEO',
+          title: `Page has multiple <h1> headings (${details.h1Count} found)`,
+          where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
+          expectedVsActual: {
+            expected: 'Page should have a single <h1> heading representing the main topic',
+            actual: `Found ${details.h1Count} <h1> headings`,
+          },
+          stepsToReproduce: [`Visit ${context.urlPath}`, 'Query document.querySelectorAll("h1")'],
+          evidence: {},
+          resolution: 'Demote secondary <h1> tags to <h2> or <h3> to maintain a single page heading.',
+        });
+      }
 
-    // Heading hierarchy skip (e.g. h1 followed directly by h3 or h4)
-    if (details.headings.length > 1) {
-      for (let i = 0; i < details.headings.length - 1; i++) {
-        const curr = details.headings[i].level;
-        const next = details.headings[i + 1].level;
-        if (next > curr + 1) {
+      // Heading hierarchy skip (e.g. h1 followed directly by h3 or h4)
+      if (details.headings.length > 1) {
+        for (let i = 0; i < details.headings.length - 1; i++) {
+          const curr = details.headings[i].level;
+          const next = details.headings[i + 1].level;
+          if (next > curr + 1) {
+            findings.push({
+              id: `F-SEO-${tcId}-HEADING-SKIP-${findings.length + 1}`,
+              testCaseId: context.testCaseId,
+              flowId: context.flowId,
+              severity: 'Minor',
+              checker: 'seo',
+              categoryTag: 'SEO',
+              title: `Heading levels skipped: <h${curr}> followed directly by <h${next}>`,
+              where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
+              expectedVsActual: {
+                expected: `Headings should follow hierarchical order without skipping levels (e.g. h${curr} -> h${curr + 1})`,
+                actual: `Heading hierarchy jumped from <h${curr}> to <h${next}> ("${details.headings[i + 1].text.slice(0, 30)}")`,
+              },
+              stepsToReproduce: [`Visit ${context.urlPath}`, `Inspect heading flow between h${curr} and h${next}`],
+              evidence: {},
+              resolution: `Ensure heading tags don't skip levels. Use CSS classes if styling needs to differ from semantic rank.`,
+            });
+            break; // Only flag once per page
+          }
+        }
+      }
+
+      // 4. HTML Language Attribute
+      if (!details.htmlLang || details.htmlLang.trim().length === 0) {
+        findings.push({
+          id: `F-SEO-${tcId}-LANG-${findings.length + 1}`,
+          testCaseId: context.testCaseId,
+          flowId: context.flowId,
+          severity: 'Minor',
+          checker: 'seo',
+          categoryTag: 'SEO',
+          title: '<html> element is missing a lang attribute',
+          where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
+          expectedVsActual: {
+            expected: 'The <html> tag must specify the document language (e.g. <html lang="en">)',
+            actual: 'The <html> tag has no lang attribute',
+          },
+          stepsToReproduce: [`Visit ${context.urlPath}`, 'View source and inspect <html lang="...">'],
+          evidence: {},
+          resolution: 'Add a valid lang attribute to the <html> root element, such as lang="en".',
+        });
+      }
+
+      // 5. Canonical Tag Check (for public search-indexed pages)
+      if (isPublicVisitor) {
+        if (!details.canonicalUrl || details.canonicalUrl.trim().length === 0) {
           findings.push({
-            id: `F-SEO-${tcId}-HEADING-SKIP-${findings.length + 1}`,
+            id: `F-SEO-${tcId}-CANONICAL-MISSING-${findings.length + 1}`,
             testCaseId: context.testCaseId,
             flowId: context.flowId,
             severity: 'Minor',
             checker: 'seo',
             categoryTag: 'SEO',
-            title: `Heading levels skipped: <h${curr}> followed directly by <h${next}>`,
+            title: 'Page is missing a canonical URL tag',
             where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
             expectedVsActual: {
-              expected: `Headings should follow hierarchical order without skipping levels (e.g. h${curr} -> h${curr + 1})`,
-              actual: `Heading hierarchy jumped from <h${curr}> to <h${next}> ("${details.headings[i + 1].text.slice(0, 30)}")`,
+              expected:
+                'Every page should specify a canonical URL via <link rel="canonical" href="..."> to prevent duplicate content indexing',
+              actual: 'No <link rel="canonical"> tag was found in <head>',
             },
-            stepsToReproduce: [`Visit ${context.urlPath}`, `Inspect heading flow between h${curr} and h${next}`],
+            stepsToReproduce: [`Visit ${context.urlPath}`, 'Inspect <head> for link[rel="canonical"]'],
             evidence: {},
-            resolution: `Ensure heading tags don't skip levels. Use CSS classes if styling needs to differ from semantic rank.`,
+            resolution:
+              'Add a <link rel="canonical" href="https://example.com/page"> pointing to the definitive address of this page.',
           });
-          break; // Only flag once per page
+        } else if (details.canonicalCount > 1) {
+          findings.push({
+            id: `F-SEO-${tcId}-CANONICAL-MULTIPLE-${findings.length + 1}`,
+            testCaseId: context.testCaseId,
+            flowId: context.flowId,
+            severity: 'Minor',
+            checker: 'seo',
+            categoryTag: 'SEO',
+            title: `Page contains multiple canonical URL tags (${details.canonicalCount} found)`,
+            where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
+            expectedVsActual: {
+              expected: 'A page must have exactly one canonical URL tag',
+              actual: `Found ${details.canonicalCount} conflicting <link rel="canonical"> tags`,
+            },
+            stepsToReproduce: [
+              `Visit ${context.urlPath}`,
+              'Query document.querySelectorAll("link[rel=\'canonical\']")]',
+            ],
+            evidence: {},
+            resolution: 'Remove duplicate <link rel="canonical"> declarations.',
+          });
         }
       }
-    }
 
-    // 4. HTML Language Attribute
-    if (!details.htmlLang || details.htmlLang.trim().length === 0) {
-      findings.push({
-        id: `F-SEO-${tcId}-LANG-${findings.length + 1}`,
-        testCaseId: context.testCaseId,
-        flowId: context.flowId,
-        severity: 'Minor',
-        checker: 'seo',
-        categoryTag: 'SEO',
-        title: '<html> element is missing a lang attribute',
-        where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
-        expectedVsActual: {
-          expected: 'The <html> tag must specify the document language (e.g. <html lang="en">)',
-          actual: 'The <html> tag has no lang attribute',
-        },
-        stepsToReproduce: [`Visit ${context.urlPath}`, 'View source and inspect <html lang="...">'],
-        evidence: {},
-        resolution: 'Add a valid lang attribute to the <html> root element, such as lang="en".',
-      });
-    }
-
-    // 5. Canonical Tag Check (for public search-indexed pages)
-    if (isPublicVisitor) {
-      if (!details.canonicalUrl || details.canonicalUrl.trim().length === 0) {
+      // 6. Meta Robots Noindex Warning (only on public routes, not intentionally private/app screens)
+      const isPrivateOrAppRoute = /^\/(settings|check\/scan|check\/testing|reports\/run-)/i.test(context.urlPath);
+      if (!isPrivateOrAppRoute && details.metaRobots && details.metaRobots.toLowerCase().includes('noindex')) {
         findings.push({
-          id: `F-SEO-${tcId}-CANONICAL-MISSING-${findings.length + 1}`,
+          id: `F-SEO-${tcId}-NOINDEX-${findings.length + 1}`,
           testCaseId: context.testCaseId,
           flowId: context.flowId,
-          severity: 'Minor',
+          severity: 'Major',
           checker: 'seo',
           categoryTag: 'SEO',
-          title: 'Page is missing a canonical URL tag',
+          title: 'Page has a noindex directive preventing search engine indexing',
           where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
           expectedVsActual: {
-            expected: 'Every page should specify a canonical URL via <link rel="canonical" href="..."> to prevent duplicate content indexing',
-            actual: 'No <link rel="canonical"> tag was found in <head>',
+            expected: 'Public production pages should not block search crawlers unless intentionally hidden',
+            actual: `meta robots directive is "${details.metaRobots}"`,
           },
-          stepsToReproduce: [`Visit ${context.urlPath}`, 'Inspect <head> for link[rel="canonical"]'],
+          stepsToReproduce: [`Visit ${context.urlPath}`, 'Check <meta name="robots"> in <head>'],
           evidence: {},
-          resolution: 'Add a <link rel="canonical" href="https://example.com/page"> pointing to the definitive address of this page.',
-        });
-      } else if (details.canonicalCount > 1) {
-        findings.push({
-          id: `F-SEO-${tcId}-CANONICAL-MULTIPLE-${findings.length + 1}`,
-          testCaseId: context.testCaseId,
-          flowId: context.flowId,
-          severity: 'Minor',
-          checker: 'seo',
-          categoryTag: 'SEO',
-          title: `Page contains multiple canonical URL tags (${details.canonicalCount} found)`,
-          where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
-          expectedVsActual: {
-            expected: 'A page must have exactly one canonical URL tag',
-            actual: `Found ${details.canonicalCount} conflicting <link rel="canonical"> tags`,
-          },
-          stepsToReproduce: [`Visit ${context.urlPath}`, 'Query document.querySelectorAll("link[rel=\'canonical\']")]'],
-          evidence: {},
-          resolution: 'Remove duplicate <link rel="canonical"> declarations.',
+          resolution: 'Remove "noindex" from the meta robots tag if this page should appear in search results.',
         });
       }
-    }
 
-    // 6. Meta Robots Noindex Warning (only on public routes, not intentionally private/app screens)
-    const isPrivateOrAppRoute = /^\/(settings|check\/scan|check\/testing|reports\/run-)/i.test(context.urlPath);
-    if (!isPrivateOrAppRoute && details.metaRobots && details.metaRobots.toLowerCase().includes('noindex')) {
-      findings.push({
-        id: `F-SEO-${tcId}-NOINDEX-${findings.length + 1}`,
-        testCaseId: context.testCaseId,
-        flowId: context.flowId,
-        severity: 'Major',
-        checker: 'seo',
-        categoryTag: 'SEO',
-        title: 'Page has a noindex directive preventing search engine indexing',
-        where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
-        expectedVsActual: {
-          expected: 'Public production pages should not block search crawlers unless intentionally hidden',
-          actual: `meta robots directive is "${details.metaRobots}"`,
-        },
-        stepsToReproduce: [`Visit ${context.urlPath}`, 'Check <meta name="robots"> in <head>'],
-        evidence: {},
-        resolution: 'Remove "noindex" from the meta robots tag if this page should appear in search results.',
-      });
-    }
+      // 7. Mobile Viewport Meta Tag (for public pages)
+      if (isPublicVisitor && !details.hasViewportMeta && firstTime('viewport')) {
+        findings.push({
+          id: `F-SEO-${tcId}-VIEWPORT-MISSING-${findings.length + 1}`,
+          testCaseId: context.testCaseId,
+          flowId: context.flowId,
+          severity: 'Major',
+          checker: 'seo',
+          // Found by the search checks, but it's about how the site works on phones.
+          aspect: 'Fast and mobile',
+          title: 'Page is missing a mobile viewport meta tag',
+          where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
+          expectedVsActual: {
+            expected:
+              'Page should declare <meta name="viewport" content="width=device-width, initial-scale=1"> for mobile search ranking',
+            actual: 'No viewport meta tag was found',
+          },
+          stepsToReproduce: [`Visit ${context.urlPath}`, 'Search for <meta name="viewport"> in <head>'],
+          evidence: {},
+          resolution: 'Add <meta name="viewport" content="width=device-width, initial-scale=1"> inside <head>.',
+        });
+      }
 
-    // 7. Mobile Viewport Meta Tag (for public pages)
-    if (isPublicVisitor && !details.hasViewportMeta && firstTime('viewport')) {
-      findings.push({
-        id: `F-SEO-${tcId}-VIEWPORT-MISSING-${findings.length + 1}`,
-        testCaseId: context.testCaseId,
-        flowId: context.flowId,
-        severity: 'Major',
-        checker: 'seo',
-        // Found by the search checks, but it's about how the site works on phones.
-        aspect: 'Fast and mobile',
-        title: 'Page is missing a mobile viewport meta tag',
-        where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
-        expectedVsActual: {
-          expected: 'Page should declare <meta name="viewport" content="width=device-width, initial-scale=1"> for mobile search ranking',
-          actual: 'No viewport meta tag was found',
-        },
-        stepsToReproduce: [`Visit ${context.urlPath}`, 'Search for <meta name="viewport"> in <head>'],
-        evidence: {},
-        resolution: 'Add <meta name="viewport" content="width=device-width, initial-scale=1"> inside <head>.',
-      });
-    }
+      // 8. Favicon Link Tag (for public pages)
+      if (isPublicVisitor && !details.hasFavicon && firstTime('favicon')) {
+        findings.push({
+          id: `F-SEO-${tcId}-FAVICON-MISSING-${findings.length + 1}`,
+          testCaseId: context.testCaseId,
+          flowId: context.flowId,
+          severity: 'Minor',
+          checker: 'seo',
+          categoryTag: 'SEO',
+          title: 'Page is missing a favicon link tag',
+          where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
+          expectedVsActual: {
+            expected: 'Search results display brand icons; site should provide <link rel="icon" href="...">',
+            actual: 'No favicon link tag found in <head>',
+          },
+          stepsToReproduce: [`Visit ${context.urlPath}`, 'Inspect <head> for link[rel="icon"]'],
+          evidence: {},
+          resolution: 'Add a <link rel="icon" href="/favicon.ico"> tag in <head>.',
+        });
+      }
 
-    // 8. Favicon Link Tag (for public pages)
-    if (isPublicVisitor && !details.hasFavicon && firstTime('favicon')) {
-      findings.push({
-        id: `F-SEO-${tcId}-FAVICON-MISSING-${findings.length + 1}`,
-        testCaseId: context.testCaseId,
-        flowId: context.flowId,
-        severity: 'Minor',
-        checker: 'seo',
-        categoryTag: 'SEO',
-        title: 'Page is missing a favicon link tag',
-        where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
-        expectedVsActual: {
-          expected: 'Search results display brand icons; site should provide <link rel="icon" href="...">',
-          actual: 'No favicon link tag found in <head>',
-        },
-        stepsToReproduce: [`Visit ${context.urlPath}`, 'Inspect <head> for link[rel="icon"]'],
-        evidence: {},
-        resolution: 'Add a <link rel="icon" href="/favicon.ico"> tag in <head>.',
-      });
-    }
+      // 9. Content Image Alt Descriptions
+      if (details.imagesWithoutAltCount > 0) {
+        findings.push({
+          id: `F-SEO-${tcId}-IMG-ALT-MISSING-${findings.length + 1}`,
+          testCaseId: context.testCaseId,
+          flowId: context.flowId,
+          severity: 'Minor',
+          checker: 'seo',
+          categoryTag: 'SEO',
+          title: `Images missing alt text descriptions (${details.imagesWithoutAltCount} found)`,
+          where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
+          expectedVsActual: {
+            expected:
+              'All content images must have descriptive alt attributes for Google Image Search and screen readers',
+            actual: `Found ${details.imagesWithoutAltCount} images without alt attributes`,
+          },
+          stepsToReproduce: [
+            `Visit ${context.urlPath}`,
+            'Query images missing alt attribute: document.querySelectorAll("img:not([alt])")',
+          ],
+          evidence: {},
+          resolution: 'Add descriptive alt text to all informative images, or alt="" for purely decorative graphics.',
+        });
+      }
 
-    // 9. Content Image Alt Descriptions
-    if (details.imagesWithoutAltCount > 0) {
-      findings.push({
-        id: `F-SEO-${tcId}-IMG-ALT-MISSING-${findings.length + 1}`,
-        testCaseId: context.testCaseId,
-        flowId: context.flowId,
-        severity: 'Minor',
-        checker: 'seo',
-        categoryTag: 'SEO',
-        title: `Images missing alt text descriptions (${details.imagesWithoutAltCount} found)`,
-        where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
-        expectedVsActual: {
-          expected: 'All content images must have descriptive alt attributes for Google Image Search and screen readers',
-          actual: `Found ${details.imagesWithoutAltCount} images without alt attributes`,
-        },
-        stepsToReproduce: [`Visit ${context.urlPath}`, 'Query images missing alt attribute: document.querySelectorAll("img:not([alt])")'],
-        evidence: {},
-        resolution: 'Add descriptive alt text to all informative images, or alt="" for purely decorative graphics.',
-      });
-    }
-
-    // 10. OpenGraph Tags (Social preview)
-    const missingOg: string[] = [];
-    if (!details.ogTitle) missingOg.push('og:title');
-    if (!details.ogDescription) missingOg.push('og:description');
-    if (!details.ogImage) missingOg.push('og:image');
-    if (missingOg.length === 3 && firstTime('opengraph')) {
-      findings.push({
-        id: `F-SEO-${tcId}-OG-${findings.length + 1}`,
-        testCaseId: context.testCaseId,
-        flowId: context.flowId,
-        severity: 'Suggestion',
-        checker: 'seo',
-        categoryTag: 'SEO',
-        title: 'Page is missing OpenGraph social preview tags',
-        where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
-        expectedVsActual: {
-          expected: 'Pages should define OpenGraph tags (og:title, og:description, og:image) for rich link previews on social platforms',
-          actual: `Missing OpenGraph tags: ${missingOg.join(', ')}`,
-        },
-        stepsToReproduce: [`Visit ${context.urlPath}`, 'Inspect meta tags for property="og:*"'],
-        evidence: {},
-        resolution: 'Add <meta property="og:title">, <meta property="og:description">, and <meta property="og:image"> tags.',
-      });
-    }
+      // 10. OpenGraph Tags (Social preview)
+      const missingOg: string[] = [];
+      if (!details.ogTitle) missingOg.push('og:title');
+      if (!details.ogDescription) missingOg.push('og:description');
+      if (!details.ogImage) missingOg.push('og:image');
+      if (missingOg.length === 3 && firstTime('opengraph')) {
+        findings.push({
+          id: `F-SEO-${tcId}-OG-${findings.length + 1}`,
+          testCaseId: context.testCaseId,
+          flowId: context.flowId,
+          severity: 'Suggestion',
+          checker: 'seo',
+          categoryTag: 'SEO',
+          title: 'Page is missing OpenGraph social preview tags',
+          where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
+          expectedVsActual: {
+            expected:
+              'Pages should define OpenGraph tags (og:title, og:description, og:image) for rich link previews on social platforms',
+            actual: `Missing OpenGraph tags: ${missingOg.join(', ')}`,
+          },
+          stepsToReproduce: [`Visit ${context.urlPath}`, 'Inspect meta tags for property="og:*"'],
+          evidence: {},
+          resolution:
+            'Add <meta property="og:title">, <meta property="og:description">, and <meta property="og:image"> tags.',
+        });
+      }
     } // end if (vis.search)
 
     // 11. Check for broken links on page (limited rate, same-site only)
@@ -456,7 +468,9 @@ export class SeoChecker {
         const canonicalUrl = canonicalEls.length > 0 ? canonicalEls[0].getAttribute('href') || '' : undefined;
 
         const hasViewportMeta = !!document.querySelector('meta[name="viewport"]');
-        const hasFavicon = !!document.querySelector('link[rel="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"]');
+        const hasFavicon = !!document.querySelector(
+          'link[rel="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"]'
+        );
 
         const images = Array.from(document.querySelectorAll('img'));
         let imagesWithoutAltCount = 0;
@@ -471,7 +485,8 @@ export class SeoChecker {
         }
 
         const ogTitle = document.querySelector('meta[property="og:title"]')?.getAttribute('content') || undefined;
-        const ogDescription = document.querySelector('meta[property="og:description"]')?.getAttribute('content') || undefined;
+        const ogDescription =
+          document.querySelector('meta[property="og:description"]')?.getAttribute('content') || undefined;
         const ogImage = document.querySelector('meta[property="og:image"]')?.getAttribute('content') || undefined;
 
         const htmlLang = document.documentElement.getAttribute('lang') || undefined;
@@ -485,7 +500,13 @@ export class SeoChecker {
 
         for (const a of rawLinks) {
           const href = a.getAttribute('href');
-          if (!href || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:')) {
+          if (
+            !href ||
+            href.startsWith('#') ||
+            href.startsWith('javascript:') ||
+            href.startsWith('mailto:') ||
+            href.startsWith('tel:')
+          ) {
             continue;
           }
           try {

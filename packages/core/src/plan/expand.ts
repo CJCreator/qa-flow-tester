@@ -1,16 +1,49 @@
-import type { AmbiguityQuestion, Breakpoint, DiscoveryDraft, PlanGradedCheck, PlanSummary, PlanWontRun, TestCase } from '@qa/types';
+import type {
+  AmbiguityQuestion,
+  Breakpoint,
+  DiscoveryDraft,
+  PlanGradedCheck,
+  PlanSummary,
+  PlanWontRun,
+  TestCase,
+} from '@qa/types';
 import { TestPlanner } from '../discovery/test-planner.js';
 import { NEEDS_TEST_COPY } from '../live-site.js';
 import { expandValidationTestCases } from '../validator-expander.js';
 
 /** The graded aspects every tested page gets at every screen size (scoring.ts grades them). */
 export const GRADED_CHECKS: PlanGradedCheck[] = [
-  { id: 'check:works', name: 'Works', description: 'No browser errors or failed requests, every step works, and what was expected happens.' },
-  { id: 'check:accessible', name: 'Accessible', description: 'WCAG 2.2 AA with axe-core, plus tap target sizes, after each page loads and after each test on it.' },
-  { id: 'check:fast', name: 'Fast and mobile', description: 'Load speed and Core Web Vitals, and nothing spilling sideways or overlapping on small screens.' },
-  { id: 'check:findable', name: 'Findable', description: 'Page titles, descriptions and headings, and link health, for search engines.' },
-  { id: 'check:secure', name: 'Secure', description: 'A secure connection and headers, and no passwords in page addresses.' },
-  { id: 'check:looks', name: 'Looks and reads well', description: 'Design tokens and visual baselines when given, and the AI’s visual review of each screen after the run.' },
+  {
+    id: 'check:works',
+    name: 'Works',
+    description: 'No browser errors or failed requests, every step works, and what was expected happens.',
+  },
+  {
+    id: 'check:accessible',
+    name: 'Accessible',
+    description: 'WCAG 2.2 AA with axe-core, plus tap target sizes, after each page loads and after each test on it.',
+  },
+  {
+    id: 'check:fast',
+    name: 'Fast and mobile',
+    description: 'Load speed and Core Web Vitals, and nothing spilling sideways or overlapping on small screens.',
+  },
+  {
+    id: 'check:findable',
+    name: 'Findable',
+    description: 'Page titles, descriptions and headings, and link health, for search engines.',
+  },
+  {
+    id: 'check:secure',
+    name: 'Secure',
+    description: 'A secure connection and headers, and no passwords in page addresses.',
+  },
+  {
+    id: 'check:looks',
+    name: 'Looks and reads well',
+    description:
+      'Design tokens and visual baselines when given, and the AI’s visual review of each screen after the run.',
+  },
 ];
 
 const SWITCHED_OFF = 'Switched off in the review.';
@@ -76,7 +109,8 @@ export function expandPlan(
             : undefined;
       if (reason) {
         wontRun.push({ itemId: test.id, what: `${page.urlPath}: ${test.name}`, reason });
-        if (reason === NEEDS_TEST_COPY) notRun.push({ id: test.id, flowId: 'page-test', name: test.name, role: test.role, reason });
+        if (reason === NEEDS_TEST_COPY)
+          notRun.push({ id: test.id, flowId: 'page-test', name: test.name, role: test.role, reason });
         continue;
       }
       testCases.push({
@@ -137,7 +171,10 @@ export function expandPlan(
         name: nav.roles.length > 1 && role !== 'visitor' ? `${nav.name} (as ${role})` : nav.name,
         role,
         startPage: nav.startPage,
-        steps: [...(nav.menuSteps || []).map((s) => ({ ...s })), { action: 'click', selector: nav.selector, name: `Click “${nav.linkName}”` }],
+        steps: [
+          ...(nav.menuSteps || []).map((s) => ({ ...s })),
+          { action: 'click', selector: nav.selector, name: `Click “${nav.linkName}”` },
+        ],
         // Each role lands where it landed while exploring: a signed-out visitor on the sign-in page.
         expectations: {
           url: { pattern: nav.landsOnBy ? (nav.landsOnBy[role] ?? nav.to) : (nav.landsOn ?? nav.to) },
@@ -167,7 +204,8 @@ export function expandPlan(
           ? NEEDS_TEST_COPY
           : 'An answer in the review leaves it out.';
     wontRun.push({ itemId: `journey:${flow.id}`, what: `Journey: ${flow.name}`, reason });
-    if (reason === NEEDS_TEST_COPY) notRun.push({ id: `TC-${flow.id}`, flowId: flow.id, name: flow.name, role: flow.role, reason });
+    if (reason === NEEDS_TEST_COPY)
+      notRun.push({ id: `TC-${flow.id}`, flowId: flow.id, name: flow.name, role: flow.role, reason });
   }
   for (const path of draft.exploration?.notReached || []) {
     wontRun.push({ what: `Page ${path}`, reason: 'It’s behind a sign-in no role could get past.' });
@@ -184,7 +222,10 @@ function summarize(
   questions: AmbiguityQuestion[] = draft.ambiguityQuestions
 ): PlanSummary {
   const plan = draft.plan ?? { pages: [], navigation: [], layoutGroups: [], otherHosts: [] };
-  const tests = testCases.reduce((n, tc) => n + (tc.breakpoints ? tc.breakpoints.filter((b) => sizes.includes(b)).length : sizes.length), 0);
+  const tests = testCases.reduce(
+    (n, tc) => n + (tc.breakpoints ? tc.breakpoints.filter((b) => sizes.includes(b)).length : sizes.length),
+    0
+  );
   const visited = new Set(testCases.filter((tc) => tc.kind === 'page').map((tc) => tc.startPage));
   const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
   const lines: PlanSummary['lines'] = [
@@ -195,7 +236,10 @@ function summarize(
   ];
   const covered = plan.pages.filter((p) => p.coverage === 'covered' && !p.skipped);
   if (covered.length > 0) {
-    lines.push({ text: `${plural(covered.length, 'page is', 'pages are')} covered by Sample Pages and not visited`, itemIds: covered.map((p) => p.id) });
+    lines.push({
+      text: `${plural(covered.length, 'page is', 'pages are')} covered by Sample Pages and not visited`,
+      itemIds: covered.map((p) => p.id),
+    });
   }
   const fallback = [
     ...plan.pages.filter((p) => p.coverage !== 'covered' && p.source === 'fallback').map((p) => p.id),
@@ -203,14 +247,30 @@ function summarize(
     ...draft.flows.filter((f) => f.source === 'fallback').map((f) => `journey:${f.id}`),
   ];
   if (fallback.length > 0) {
-    lines.push({ text: `${plural(fallback.length, 'item was', 'items were')} planned by fixed rules, not the AI`, itemIds: fallback });
+    lines.push({
+      text: `${plural(fallback.length, 'item was', 'items were')} planned by fixed rules, not the AI`,
+      itemIds: fallback,
+    });
   }
   const unanswered = questions.filter((q) => !q.selectedAnswer);
   if (unanswered.length > 0) {
-    lines.push({ text: `${plural(unanswered.length, 'question', 'questions')} will use the safe answer`, itemIds: unanswered.map((q) => q.id) });
+    lines.push({
+      text: `${plural(unanswered.length, 'question', 'questions')} will use the safe answer`,
+      itemIds: unanswered.map((q) => q.id),
+    });
   }
   if (wontRun.length > 0) {
-    lines.push({ text: `${plural(wontRun.length, 'item', 'items')} won’t run`, itemIds: wontRun.flatMap((w) => (w.itemId ? [w.itemId] : [])) });
+    lines.push({
+      text: `${plural(wontRun.length, 'item', 'items')} won’t run`,
+      itemIds: wontRun.flatMap((w) => (w.itemId ? [w.itemId] : [])),
+    });
   }
-  return { tests, pages: visited.size, pagesListed: plan.pages.length, screenSizes: sizes, lines, minutes: Math.max(1, Math.round((tests * SECONDS_PER_TEST) / 60)) };
+  return {
+    tests,
+    pages: visited.size,
+    pagesListed: plan.pages.length,
+    screenSizes: sizes,
+    lines,
+    minutes: Math.max(1, Math.round((tests * SECONDS_PER_TEST) / 60)),
+  };
 }

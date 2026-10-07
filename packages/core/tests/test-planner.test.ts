@@ -10,9 +10,7 @@ describe('TestPlanner', () => {
       productId: 'test-product',
       targetUrl: 'http://localhost:3000',
       timestamp: new Date().toISOString(),
-      pages: [
-        { urlPath: '/invoices/new', title: 'New Invoice', interactiveElementsCount: 3, formsCount: 1 },
-      ],
+      pages: [{ urlPath: '/invoices/new', title: 'New Invoice', interactiveElementsCount: 3, formsCount: 1 }],
       flows: [
         {
           id: 'FLOW-INV-1',
@@ -151,7 +149,11 @@ describe('Answers to the plan review’s questions change what runs', () => {
   });
   const draftWith = (answer: string | undefined, extra: Partial<DiscoveryDraft> = {}): DiscoveryDraft => {
     const q = formQuestion(
-      { urlPath: '/invoices/new', submitButtonSelector: '[data-testid="save-btn"]', inputs: [{ label: 'Customer' }, { label: 'Amount' }] },
+      {
+        urlPath: '/invoices/new',
+        submitButtonSelector: '[data-testid="save-btn"]',
+        inputs: [{ label: 'Customer' }, { label: 'Amount' }],
+      },
       1
     );
     return {
@@ -169,7 +171,9 @@ describe('Answers to the plan review’s questions change what runs', () => {
 
   it('asks in plain words, with a safe answer that sends nothing new', () => {
     const [q] = draftWith(undefined).ambiguityQuestions;
-    expect(q.question).toBe('What should happen after someone fills in the form on /invoices/new (Customer and Amount) and sends it?');
+    expect(q.question).toBe(
+      'What should happen after someone fills in the form on /invoices/new (Customer and Amount) and sends it?'
+    );
     applySafeAnswers([q]);
     expect(q.selectedAnswer).toBe(FORM_ANSWERS.noBreak);
   });
@@ -200,7 +204,13 @@ describe('Answers to the plan review’s questions change what runs', () => {
   });
 
   it('never falls back to the first option for a question with no safe answer recorded', () => {
-    const old = { id: 'Q', urlPath: '/', question: '?', options: ['Expect navigation', 'Expect banner'], category: 'untested_form' as const };
+    const old = {
+      id: 'Q',
+      urlPath: '/',
+      question: '?',
+      options: ['Expect navigation', 'Expect banner'],
+      category: 'untested_form' as const,
+    };
     applySafeAnswers([old]);
     expect(old).not.toHaveProperty('selectedAnswer');
   });

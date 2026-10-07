@@ -48,7 +48,8 @@ const MAX_SCAN_PAGES = 60;
 const DEFAULT_PAGE_DELAY_MS = 2000;
 const MUTATING_METHODS = ['POST', 'PUT', 'DELETE', 'PATCH'];
 /** Links to files rather than pages. */
-const NOT_A_PAGE = /\.(pdf|zip|gz|rar|7z|jpe?g|png|gif|webp|svg|ico|mp4|webm|mp3|wav|docx?|xlsx?|pptx?|csv|exe|dmg|apk)$/i;
+const NOT_A_PAGE =
+  /\.(pdf|zip|gz|rar|7z|jpe?g|png|gif|webp|svg|ico|mp4|webm|mp3|wav|docx?|xlsx?|pptx?|csv|exe|dmg|apk)$/i;
 /** Links that would end a session, never followed. */
 const SESSION_ENDING = /log-?out|sign-?out|logoff/i;
 
@@ -199,10 +200,18 @@ export class SafePublicCrawler {
       // Block third-party redirects / navigation outside target host
       try {
         const u = new URL(reqUrl);
-        if (request.isNavigationRequest() && !isSameSite(u.hostname, targetHost) && !u.hostname.endsWith(`.${targetHost}`)) {
+        if (
+          request.isNavigationRequest() &&
+          !isSameSite(u.hostname, targetHost) &&
+          !u.hostname.endsWith(`.${targetHost}`)
+        ) {
           return block();
         }
-        if (request.isNavigationRequest() && isSameSite(u.hostname, targetHost) && !robots.isAllowed(u.pathname + u.search)) {
+        if (
+          request.isNavigationRequest() &&
+          isSameSite(u.hostname, targetHost) &&
+          !robots.isAllowed(u.pathname + u.search)
+        ) {
           return block();
         }
       } catch {

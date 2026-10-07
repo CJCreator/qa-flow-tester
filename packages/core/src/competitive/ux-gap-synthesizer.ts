@@ -1,8 +1,4 @@
-import type {
-  ReferenceFlow,
-  FrictionScorecard,
-  UXRecommendation,
-} from '@qa/types';
+import type { ReferenceFlow, FrictionScorecard, UXRecommendation } from '@qa/types';
 import type { AIProvider } from '../ai/ai-provider.js';
 
 export class UXGapSynthesizer {
@@ -30,8 +26,7 @@ export class UXGapSynthesizer {
         effort: 'Low',
         impact: 'High',
         rationale: `Our flow demands ${ourScore.requiredFieldsCount} required inputs compared to ${refScore.requiredFieldsCount} on ${refFlow.name}. Extra fields increase drop-off rates on mobile viewports.`,
-        suggestedAction:
-          'Defer optional fields (e.g. phone number, company size) to post-onboarding profile settings.',
+        suggestedAction: 'Defer optional fields (e.g. phone number, company size) to post-onboarding profile settings.',
       });
     }
 
@@ -44,8 +39,7 @@ export class UXGapSynthesizer {
         effort: 'Medium',
         impact: 'High',
         rationale: `Competitor achieves the flow goal in ${refScore.totalSteps} steps while our product requires ${ourScore.totalSteps} discrete pages.`,
-        suggestedAction:
-          'Consolidate steps into an inline accordion or single-page wizard with instant validation.',
+        suggestedAction: 'Consolidate steps into an inline accordion or single-page wizard with instant validation.',
       });
     }
 
@@ -66,8 +60,12 @@ export class UXGapSynthesizer {
     }
 
     // Gap: Pricing frequency toggle
-    const ourHasPricingToggle = ourFlow.steps.some((s) => s.interactiveControlsFound.includes('pricing-frequency-tabs'));
-    const refHasPricingToggle = refFlow.steps.some((s) => s.interactiveControlsFound.includes('pricing-frequency-tabs'));
+    const ourHasPricingToggle = ourFlow.steps.some((s) =>
+      s.interactiveControlsFound.includes('pricing-frequency-tabs')
+    );
+    const refHasPricingToggle = refFlow.steps.some((s) =>
+      s.interactiveControlsFound.includes('pricing-frequency-tabs')
+    );
     if (!ourHasPricingToggle && refHasPricingToggle) {
       recommendations.push({
         id: `REC-${counter++}`,
@@ -77,8 +75,7 @@ export class UXGapSynthesizer {
         impact: 'Medium',
         rationale:
           'Competitor highlights annual savings via an interactive switch, increasing annual contract conversions.',
-        suggestedAction:
-          'Add a pill toggle between monthly and annual prices with a "Save 20%" badge.',
+        suggestedAction: 'Add a pill toggle between monthly and annual prices with a "Save 20%" badge.',
       });
     }
 
@@ -115,7 +112,12 @@ Generate 2 strategic UX improvements as JSON:
           { role: 'user', content: prompt },
         ]);
 
-        const parsed = JSON.parse(textResponse.replace(/```json/g, '').replace(/```/g, '').trim());
+        const parsed = JSON.parse(
+          textResponse
+            .replace(/```json/g, '')
+            .replace(/```/g, '')
+            .trim()
+        );
 
         if (Array.isArray(parsed)) {
           for (const item of parsed) {

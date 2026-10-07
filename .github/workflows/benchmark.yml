@@ -1,0 +1,52 @@
+# Planted-defect benchmark on the local fixture app, no AI. Manual or weekly; never a pull request check.
+name: Benchmark
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * 1'
+
+concurrency:
+  group: benchmark
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  fixture-benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the runner and the packages it uses
+        run: pnpm --filter "@qa/runner..." run build
+
+      - name: Install Chromium
+        run: pnpm --filter @qa/core exec playwright install --with-deps chromium
+
+      # Exits 1 when a threshold in fixtures/benchmarks/thresholds.json is missed.
+      - name: Run the fixture benchmark
+        run: pnpm benchmark --sites fixture --no-ai
+
+      - name: Show the summary
+        if: always()
+        run: |
+          if [ -f .benchmark/summary.md ]; then cat .benchmark/summary.md >> "$GITHUB_STEP_SUMMARY"; fi
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark
+          path: .benchmark/
+          if-no-files-found: warn

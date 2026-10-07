@@ -25,7 +25,8 @@ function fail(message) {
 
 function pnpm(args) {
   const result = spawnSync('pnpm', args, { cwd: root, stdio: 'inherit', shell: process.platform === 'win32' });
-  if (result.status !== 0) fail(`"pnpm ${args.join(' ')}" failed. Run pnpm bootstrap to reinstall and rebuild everything.`);
+  if (result.status !== 0)
+    fail(`"pnpm ${args.join(' ')}" failed. Run pnpm bootstrap to reinstall and rebuild everything.`);
 }
 
 const built = (file) => existsSync(path.join(root, file));
@@ -58,7 +59,9 @@ function open(url) {
       : process.platform === 'darwin'
         ? ['open', [url]]
         : ['xdg-open', [url]];
-  spawn(command, args, { stdio: 'ignore', detached: true }).on('error', () => {}).unref();
+  spawn(command, args, { stdio: 'ignore', detached: true })
+    .on('error', () => {})
+    .unref();
 }
 
 if (!built('node_modules')) fail('Nothing is installed yet. Run pnpm bootstrap first.');

@@ -21,7 +21,9 @@ const JOURNEYS: Token[] = ['j1', 'j2', 'j3', 'j4', 'j5'];
 
 /** Every foreground/background pairing the wizard actually uses for text. */
 const TEXT_PAIRS: Array<[Token, Token]> = [
-  ...BACKGROUNDS.flatMap((bg) => (['ink', 'ink-soft', 'stamp', 'pass', 'fail', 'warn'] as Token[]).map((fg): [Token, Token] => [fg, bg])),
+  ...BACKGROUNDS.flatMap((bg) =>
+    (['ink', 'ink-soft', 'stamp', 'pass', 'fail', 'warn'] as Token[]).map((fg): [Token, Token] => [fg, bg])
+  ),
   ['ink', 'stamp-tint'],
   ['stamp', 'stamp-tint'],
   ['paper', 'stamp'], // text on a primary button

@@ -65,7 +65,8 @@
 
 /* High contrast support */
 @media (prefers-contrast: more) {
-  .btn-primary, .btn-quiet {
+  .btn-primary,
+  .btn-quiet {
     @apply border-2 border-current;
   }
   .field {

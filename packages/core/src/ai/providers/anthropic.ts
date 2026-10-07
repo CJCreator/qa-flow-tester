@@ -77,7 +77,9 @@ export class AnthropicProvider implements AIProvider {
       text: textBlock?.text || '',
       finishReason: data.stop_reason === 'max_tokens' ? 'length' : data.stop_reason,
       model: data.model || body.model,
-      usage: data.usage ? { promptTokens: data.usage.input_tokens ?? 0, completionTokens: data.usage.output_tokens ?? 0 } : undefined,
+      usage: data.usage
+        ? { promptTokens: data.usage.input_tokens ?? 0, completionTokens: data.usage.output_tokens ?? 0 }
+        : undefined,
     };
   }
 }

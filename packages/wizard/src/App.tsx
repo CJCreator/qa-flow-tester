@@ -28,7 +28,14 @@ import { TopBar } from './components/TopBar';
 import { CommandPalette } from './components/CommandPalette';
 import { useRunnerConnection } from './hooks/useRunnerConnection';
 import { useRunnerStream } from './hooks/useRunnerStream';
-import { DEFAULT_MAX_PAGES, EMPTY_FORM, addressFromSearch, productContextOf, rolesOf, type CheckupForm } from './lib/form';
+import {
+  DEFAULT_MAX_PAGES,
+  EMPTY_FORM,
+  addressFromSearch,
+  productContextOf,
+  rolesOf,
+  type CheckupForm,
+} from './lib/form';
 import { isCheckRoute, matchRoute, navigate, PATHS, usePathname, type Route } from './lib/router';
 import { useDocumentTitle } from './lib/title';
 import { initialFeed, plainFailure, reduceFeed, type FeedState, type RunnerEvent } from './lib/translate';
@@ -111,7 +118,10 @@ export default function App() {
   const [status, setStatus] = useState<RunnerStatus | null>(null);
   const [ai, setAi] = useState<AiSetup | null>(null);
   // The new check-up form lives here, so changing screens or adding the key never loses it.
-  const [form, setForm] = useState<CheckupForm>(() => ({ ...EMPTY_FORM, address: addressFromSearch(window.location.search) }));
+  const [form, setForm] = useState<CheckupForm>(() => ({
+    ...EMPTY_FORM,
+    address: addressFromSearch(window.location.search),
+  }));
   const [plan, setPlan] = useState<ReviewPlan | null>(null);
   const [planNotice, setPlanNotice] = useState<PlanNotice | null>(null);
   const [planUpdate, setPlanUpdate] = useState<PlanUpdateState>({ running: false });
@@ -213,9 +223,14 @@ export default function App() {
           if (p.stage === 'planning') planningStartedAt.current ??= at;
           // Time left, from how long the AI requests so far took.
           const elapsed = planningStartedAt.current ? (at - planningStartedAt.current) / 1000 : 0;
-          const secondsLeft = p.stage === 'planning' && p.done && p.total ? (elapsed / p.done) * Math.max(0, p.total - p.done) : undefined;
+          const secondsLeft =
+            p.stage === 'planning' && p.done && p.total
+              ? (elapsed / p.done) * Math.max(0, p.total - p.done)
+              : undefined;
           // The same request asked about again keeps its start time; a new one starts its own.
-          const askingSince = p.asking ? (before: ScanProgress | null) => (before?.asking && before.what === p.what ? before.askingSince : at) : () => undefined;
+          const askingSince = p.asking
+            ? (before: ScanProgress | null) => (before?.asking && before.what === p.what ? before.askingSince : at)
+            : () => undefined;
           setScan((before) => ({
             ...before,
             ...p,
@@ -240,7 +255,10 @@ export default function App() {
             .finally(() => setPlanUpdate({ running: false }));
           return;
         case 'PLAN_UPDATE_FAILED':
-          setPlanUpdate({ running: false, error: 'The plan couldn’t be updated. Try again. If it keeps failing, check your AI key in Settings.' });
+          setPlanUpdate({
+            running: false,
+            error: 'The plan couldn’t be updated. Try again. If it keeps failing, check your AI key in Settings.',
+          });
           return;
 
         case 'PLAN_READY':
@@ -340,7 +358,12 @@ export default function App() {
         const waiting = (await getStatus())?.targetUrl;
         const ok = await confirm({
           title: 'Start a new check-up?',
-          body: <p>The plan for {waiting ? hostOf(waiting) : 'this site'} that’s waiting for your review will be thrown away. (Plans for other sites are kept.)</p>,
+          body: (
+            <p>
+              The plan for {waiting ? hostOf(waiting) : 'this site'} that’s waiting for your review will be thrown away.
+              (Plans for other sites are kept.)
+            </p>
+          ),
           confirmLabel: 'Start a new check-up',
           cancelLabel: 'Keep the plan',
           danger: true,
@@ -415,14 +438,23 @@ export default function App() {
     }));
     // The specs go along, so anything new is planned with them and the next Go deeper has them too.
     const productContext = await readRunText(runId, 'product-context.md').catch(() => undefined);
-    await start({ targetUrl, owner: remembered?.owner ?? false, stagingHost: remembered?.markedTestCopy, testAgain: true, productContext, useSavedSignIns: true });
+    await start({
+      targetUrl,
+      owner: remembered?.owner ?? false,
+      stagingHost: remembered?.markedTestCopy,
+      testAgain: true,
+      productContext,
+      useSavedSignIns: true,
+    });
   };
 
   /** A new check-up of the same site, signed in, with the first one's specs and page limit. */
   const goDeeper = async (report: ReleaseReport, signIn: { username: string; password: string }) => {
     const targetUrl = await typedAddressOf(report.runId, report.targetUrl);
     const sameSite = form.choicesFor === hostOf(targetUrl);
-    const productContext = (sameSite && productContextOf(form)) || (await readRunText(report.runId, 'product-context.md').catch(() => undefined));
+    const productContext =
+      (sameSite && productContextOf(form)) ||
+      (await readRunText(report.runId, 'product-context.md').catch(() => undefined));
     const remembered = await rememberedFor(targetUrl);
     setForm((f) => {
       let specs = f.specs;
@@ -457,7 +489,18 @@ export default function App() {
       const resumed = await resumeWaitingPlan(planHost);
       epoch.current++;
       resetRun();
-      setStatus((s) => (s ? { ...s, phase: 'awaiting-review', isRunning: true, hasPlan: true, runId: resumed.runId, targetUrl: resumed.targetUrl } : s));
+      setStatus((s) =>
+        s
+          ? {
+              ...s,
+              phase: 'awaiting-review',
+              isRunning: true,
+              hasPlan: true,
+              runId: resumed.runId,
+              targetUrl: resumed.targetUrl,
+            }
+          : s
+      );
       refreshRecent();
       navigate(PATHS.plan);
     } catch (err) {
@@ -470,8 +513,8 @@ export default function App() {
       title: 'Stop scanning?',
       body: (
         <p>
-          Plan the {scan?.pagesFound ? count(scan.pagesFound, 'page', 'pages') : 'pages'} found so far, and review them, or throw the scan away. AI requests
-          already used stay used.
+          Plan the {scan?.pagesFound ? count(scan.pagesFound, 'page', 'pages') : 'pages'} found so far, and review them,
+          or throw the scan away. AI requests already used stay used.
         </p>
       ),
       confirmLabel: 'Stop and plan what’s found',
@@ -502,8 +545,8 @@ export default function App() {
       title: 'Stop testing?',
       body: (
         <p>
-          Make a report from the tests done so far (marked as a partial check-up), or go back to the plan to change it and approve it again, throwing the results
-          away.
+          Make a report from the tests done so far (marked as a partial check-up), or go back to the plan to change it
+          and approve it again, throwing the results away.
         </p>
       ),
       confirmLabel: 'Make a report from what’s done',
@@ -526,7 +569,11 @@ export default function App() {
     setFeed(initialFeed('product'));
     if (result.planKept) {
       setStatus((s) => (s ? { ...s, phase: 'awaiting-review' } : s));
-      setPlanNotice({ tone: 'stamp', title: 'Testing stopped. Your plan is kept.', body: 'Change it if you like, then approve it again.' });
+      setPlanNotice({
+        tone: 'stamp',
+        title: 'Testing stopped. Your plan is kept.',
+        body: 'Change it if you like, then approve it again.',
+      });
       await getPlan()
         .then(setPlan)
         .catch(() => {});
@@ -578,7 +625,8 @@ export default function App() {
                   : null
   );
 
-  const scanFailure = feed.failure ?? (status?.phase === 'failed' ? plainFailure(status.lastRunError, 'product') : null);
+  const scanFailure =
+    feed.failure ?? (status?.phase === 'failed' ? plainFailure(status.lastRunError, 'product') : null);
 
   let body: ReactNode;
   if (route.name === 'landing') {
@@ -610,7 +658,13 @@ export default function App() {
         body = !status ? (
           <Loading label="Opening the scan…" />
         ) : status.phase === 'scanning' || (status.phase === 'failed' && scanFailure) ? (
-          <ScanningScreen host={host} progress={scan} failure={status.phase === 'failed' ? scanFailure : null} hasMaterials={!!productContextOf(form)} onStop={() => void stopScan()} />
+          <ScanningScreen
+            host={host}
+            progress={scan}
+            failure={status.phase === 'failed' ? scanFailure : null}
+            hasMaterials={!!productContextOf(form)}
+            onStop={() => void stopScan()}
+          />
         ) : (
           <NothingInProgress what="Nothing is being scanned" />
         );
@@ -652,7 +706,12 @@ export default function App() {
         break;
       case 'reports':
         body = (
-          <PastCheckupsScreen confirm={confirm} onTestAgain={(run) => void testAgain(run.runId, run.targetUrl)} starting={starting || inProgress} actionError={startError} />
+          <PastCheckupsScreen
+            confirm={confirm}
+            onTestAgain={(run) => void testAgain(run.runId, run.targetUrl)}
+            starting={starting || inProgress}
+            actionError={startError}
+          />
         );
         break;
       case 'report':
@@ -690,7 +749,10 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-paper text-ink">
-      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-2 focus:z-[60] focus:inline-flex focus:min-h-[44px] focus:items-center rounded bg-stamp px-4 py-2 font-bold text-surface">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-2 focus:z-[60] focus:inline-flex focus:min-h-[44px] focus:items-center rounded bg-stamp px-4 py-2 font-bold text-surface"
+      >
         Skip to the content
       </a>
       {!landing && <TopBar route={route} checkupInProgress={inProgress} />}

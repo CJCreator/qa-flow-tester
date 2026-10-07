@@ -6,7 +6,10 @@ import { PATHS } from './router';
  * address. When it is served from a static host (Vercel) and an online copy is published, it is that
  * copy's new check-up screen, which is on another origin.
  */
-export function startAddress(onlineAppUrl: string | null = ONLINE_APP_URL, here: string = window.location.origin): string {
+export function startAddress(
+  onlineAppUrl: string | null = ONLINE_APP_URL,
+  here: string = window.location.origin
+): string {
   if (!onlineAppUrl) return PATHS.new;
   try {
     const online = new URL(onlineAppUrl);
@@ -18,7 +21,10 @@ export function startAddress(onlineAppUrl: string | null = ONLINE_APP_URL, here:
 }
 
 /** The online copy's health address, to wake it while a visitor is still reading; null when it is this page's own origin. */
-export function wakeAddress(onlineAppUrl: string | null = ONLINE_APP_URL, here: string = window.location.origin): string | null {
+export function wakeAddress(
+  onlineAppUrl: string | null = ONLINE_APP_URL,
+  here: string = window.location.origin
+): string | null {
   if (!onlineAppUrl) return null;
   try {
     const online = new URL(onlineAppUrl);

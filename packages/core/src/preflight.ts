@@ -78,7 +78,9 @@ export class PreFlightChecker {
       const hadPasswordField = (await passwordInput.count()) > 0;
 
       const usernameInput = scope
-        .locator('input[type="email"], input[type="text"], input:not([type]), [data-testid="username-input"], [data-testid="email-input"]')
+        .locator(
+          'input[type="email"], input[type="text"], input:not([type]), [data-testid="username-input"], [data-testid="email-input"]'
+        )
         .first();
 
       if ((await usernameInput.count()) > 0 && credential.username) {
@@ -90,7 +92,9 @@ export class PreFlightChecker {
       }
 
       const submitBtn = scope
-        .locator('button[type="submit"], input[type="submit"], [data-testid="login-btn"], [data-testid="submit-btn"], button:not([type])')
+        .locator(
+          'button[type="submit"], input[type="submit"], [data-testid="login-btn"], [data-testid="submit-btn"], button:not([type])'
+        )
         .first();
 
       if ((await submitBtn.count()) > 0) {
@@ -180,4 +184,3 @@ export class PreFlightChecker {
     };
   }
 }
-

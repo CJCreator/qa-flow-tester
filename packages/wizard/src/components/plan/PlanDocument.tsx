@@ -1,5 +1,14 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
-import type { Breakpoint, DiscoveredFlow, NavigationCheck, PlanPage, PlanPageTest, ReviewPlan, RoleCredential, TestCaseExpectations } from '@qa/types';
+import type {
+  Breakpoint,
+  DiscoveredFlow,
+  NavigationCheck,
+  PlanPage,
+  PlanPageTest,
+  ReviewPlan,
+  RoleCredential,
+  TestCaseExpectations,
+} from '@qa/types';
 import { stepToSentence, expectationsToChecks } from '../../lib/plan-translate';
 import type { InterpretResult } from '../../api';
 import { Badge, ItemToggle, ReplanControl, SourceBadge, itemDomId, showItem } from './parts';
@@ -51,7 +60,11 @@ export interface PlanActions {
 }
 
 const SIZES: Breakpoint[] = ['375px', '768px', '1440px'];
-const SIZE_NAMES: Record<Breakpoint, string> = { '375px': 'Phone (375px)', '768px': 'Tablet (768px)', '1440px': 'Desktop (1440px)' };
+const SIZE_NAMES: Record<Breakpoint, string> = {
+  '375px': 'Phone (375px)',
+  '768px': 'Tablet (768px)',
+  '1440px': 'Desktop (1440px)',
+};
 /** Sections longer than this start collapsed. */
 const COLLAPSE_OVER = 20;
 
@@ -79,7 +92,11 @@ function isGuess(expectations?: TestCaseExpectations): boolean {
 }
 
 function pageNeedsMe(page: PlanPage): boolean {
-  return page.source === 'fallback' || !!page.isNew || page.tests.some((t) => t.source === 'fallback' || isGuess(t.expectations) || !!t.needsHelp?.length);
+  return (
+    page.source === 'fallback' ||
+    !!page.isNew ||
+    page.tests.some((t) => t.source === 'fallback' || isGuess(t.expectations) || !!t.needsHelp?.length)
+  );
 }
 function navNeedsMe(nav: NavigationCheck): boolean {
   return nav.source === 'fallback' || !!nav.isNew || !!nav.notAt?.length;
@@ -132,7 +149,11 @@ function Section({
     }, [view.expandAll, view.query, view.needsMe]);
 
     return (
-      <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-4 rounded-card border border-rule bg-surface/70 shadow-level-2">
+      <section
+        id={id}
+        aria-labelledby={`${id}-title`}
+        className="scroll-mt-4 rounded-card border border-rule bg-surface/70 shadow-level-2"
+      >
         <details open={open} onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
           <summary className="flex min-h-[56px] cursor-pointer items-center px-5 py-3">
             <h2 id={`${id}-title`} className="text-lg font-bold text-ink">
@@ -150,7 +171,11 @@ function Section({
     );
   }
   return (
-    <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-4 rounded-card border border-rule bg-surface/70 shadow-level-2 p-5">
+    <section
+      id={id}
+      aria-labelledby={`${id}-title`}
+      className="scroll-mt-4 rounded-card border border-rule bg-surface/70 shadow-level-2 p-5"
+    >
       <h2 id={`${id}-title`} className="mb-1 text-lg font-bold text-ink">
         {heading}
       </h2>
@@ -338,7 +363,15 @@ export function EditableTitle({
 }
 
 /** What should happen, in plain words. An AI guess can be confirmed or reworded right here. */
-function Expected({ itemId, expectations, actions }: { itemId: string; expectations?: TestCaseExpectations; actions: PlanActions }) {
+function Expected({
+  itemId,
+  expectations,
+  actions,
+}: {
+  itemId: string;
+  expectations?: TestCaseExpectations;
+  actions: PlanActions;
+}) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState('');
   if (!expectations || !Object.keys(expectations).some((k) => k !== 'origin')) return null;
@@ -350,13 +383,22 @@ function Expected({ itemId, expectations, actions }: { itemId: string; expectati
         {checks.map((c, i) => (
           <li key={i}>
             ✓ {c.sentence}
-            {guess ? <span className="text-ink-soft"> (the AI’s guess)</span> : expectations.origin === 'user' ? <span className="text-ink-soft"> (confirmed by you)</span> : null}
+            {guess ? (
+              <span className="text-ink-soft"> (the AI’s guess)</span>
+            ) : expectations.origin === 'user' ? (
+              <span className="text-ink-soft"> (confirmed by you)</span>
+            ) : null}
           </li>
         ))}
       </ul>
       {guess && !editing && (
         <div className="mt-1 flex flex-wrap gap-x-4">
-          <button type="button" className="min-h-[32px] font-bold text-stamp hover:underline disabled:opacity-50" disabled={actions.busy} onClick={() => actions.setExpectation(itemId)}>
+          <button
+            type="button"
+            className="min-h-[32px] font-bold text-stamp hover:underline disabled:opacity-50"
+            disabled={actions.busy}
+            onClick={() => actions.setExpectation(itemId)}
+          >
             Confirm
           </button>
           <button
@@ -390,7 +432,11 @@ function Expected({ itemId, expectations, actions }: { itemId: string; expectati
             onChange={(e) => setText(e.target.value)}
             autoFocus
           />
-          <button type="submit" className="btn-primary min-h-[44px] px-4 text-sm" disabled={actions.busy || !text.trim()}>
+          <button
+            type="submit"
+            className="btn-primary min-h-[44px] px-4 text-sm"
+            disabled={actions.busy || !text.trim()}
+          >
             Save
           </button>
           <button type="button" className="btn-link text-sm" onClick={() => setEditing(false)}>
@@ -412,7 +458,12 @@ function AddSignIn({ actions }: { actions: PlanActions }) {
   const [error, setError] = useState<string | null>(null);
   if (!open) {
     return (
-      <button type="button" className="btn-quiet mt-3 min-h-[44px] px-4 text-sm" disabled={actions.busy} onClick={() => setOpen(true)}>
+      <button
+        type="button"
+        className="btn-quiet mt-3 min-h-[44px] px-4 text-sm"
+        disabled={actions.busy}
+        onClick={() => setOpen(true)}
+      >
         Add a sign-in
       </button>
     );
@@ -424,7 +475,12 @@ function AddSignIn({ actions }: { actions: PlanActions }) {
         e.preventDefault();
         setError(null);
         try {
-          await actions.addSignIn({ role: role.trim() || 'member', username: username.trim(), password, loginPath: loginPath.trim() || undefined });
+          await actions.addSignIn({
+            role: role.trim() || 'member',
+            username: username.trim(),
+            password,
+            loginPath: loginPath.trim() || undefined,
+          });
           setOpen(false);
           setPassword('');
         } catch (err) {
@@ -437,19 +493,40 @@ function AddSignIn({ actions }: { actions: PlanActions }) {
       </p>
       <label className="text-sm">
         <span className="mb-1 block font-bold">Role name</span>
-        <input className="field py-2 text-sm" placeholder="member" value={role} onChange={(e) => setRole(e.target.value)} />
+        <input
+          className="field py-2 text-sm"
+          placeholder="member"
+          value={role}
+          onChange={(e) => setRole(e.target.value)}
+        />
       </label>
       <label className="text-sm">
         <span className="mb-1 block font-bold">Sign-in page (optional)</span>
-        <input className="field py-2 text-sm" placeholder="/login" value={loginPath} onChange={(e) => setLoginPath(e.target.value)} />
+        <input
+          className="field py-2 text-sm"
+          placeholder="/login"
+          value={loginPath}
+          onChange={(e) => setLoginPath(e.target.value)}
+        />
       </label>
       <label className="text-sm">
         <span className="mb-1 block font-bold">Email or username</span>
-        <input className="field py-2 text-sm" autoComplete="off" value={username} onChange={(e) => setUsername(e.target.value)} />
+        <input
+          className="field py-2 text-sm"
+          autoComplete="off"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+        />
       </label>
       <label className="text-sm">
         <span className="mb-1 block font-bold">Password</span>
-        <input className="field py-2 text-sm" type="password" autoComplete="off" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <input
+          className="field py-2 text-sm"
+          type="password"
+          autoComplete="off"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
       </label>
       {error && (
         <p role="alert" className="text-sm text-fail sm:col-span-2">
@@ -457,7 +534,11 @@ function AddSignIn({ actions }: { actions: PlanActions }) {
         </p>
       )}
       <div className="flex flex-wrap gap-3 sm:col-span-2">
-        <button type="submit" className="btn-primary min-h-[44px] px-4 text-sm" disabled={actions.busy || !username.trim() || !password}>
+        <button
+          type="submit"
+          className="btn-primary min-h-[44px] px-4 text-sm"
+          disabled={actions.busy || !username.trim() || !password}
+        >
           Sign in and explore
         </button>
         <button type="button" className="btn-link text-sm" onClick={() => setOpen(false)}>
@@ -480,7 +561,9 @@ const TOKEN_STAGES: Record<string, string> = {
 function SummarySection({ plan, actions }: { plan: ReviewPlan; actions: PlanActions }) {
   const sizes = plan.screenSizes?.length ? plan.screenSizes : SIZES;
   const budget = plan.budget;
-  const notReached = (plan.wontRun || []).some((w) => /behind a sign-in/i.test(w.reason)) || (plan.notes || []).some((n) => /sign-in|sign in/i.test(n));
+  const notReached =
+    (plan.wontRun || []).some((w) => /behind a sign-in/i.test(w.reason)) ||
+    (plan.notes || []).some((n) => /sign-in|sign in/i.test(n));
   const tokens = Object.entries(budget?.tokens || {});
   return (
     <Section id="plan-summary" title="What approving runs">
@@ -489,7 +572,9 @@ function SummarySection({ plan, actions }: { plan: ReviewPlan; actions: PlanActi
           <li key={i} className="flex items-start justify-between gap-3 text-base text-ink">
             <span>
               {line.text}
-              {i === 0 && plan.summary?.minutes ? <span className="text-ink-soft"> · about {plan.summary.minutes} min</span> : null}
+              {i === 0 && plan.summary?.minutes ? (
+                <span className="text-ink-soft"> · about {plan.summary.minutes} min</span>
+              ) : null}
             </span>
             {line.itemIds.length > 0 && (
               <button type="button" className="btn-link shrink-0 text-sm" onClick={() => showItem(line.itemIds[0])}>
@@ -512,7 +597,13 @@ function SummarySection({ plan, actions }: { plan: ReviewPlan; actions: PlanActi
                   className="h-5 w-5 accent-[#6C9BF2]"
                   checked={on}
                   disabled={actions.busy || (on && sizes.length === 1)}
-                  onChange={(e) => actions.setScreenSizes(e.target.checked ? SIZES.filter((s) => s === size || sizes.includes(s)) : sizes.filter((s) => s !== size))}
+                  onChange={(e) =>
+                    actions.setScreenSizes(
+                      e.target.checked
+                        ? SIZES.filter((s) => s === size || sizes.includes(s))
+                        : sizes.filter((s) => s !== size)
+                    )
+                  }
                 />
                 {SIZE_NAMES[size]}
               </label>
@@ -571,7 +662,9 @@ function SummarySection({ plan, actions }: { plan: ReviewPlan; actions: PlanActi
         </details>
       )}
 
-      {plan.readOnlyReason && <p className="mt-4 rounded border border-warn/40 bg-warn-tint/40 p-3 text-sm text-ink">{plan.readOnlyReason}</p>}
+      {plan.readOnlyReason && (
+        <p className="mt-4 rounded border border-warn/40 bg-warn-tint/40 p-3 text-sm text-ink">{plan.readOnlyReason}</p>
+      )}
       {(plan.notes || []).length > 0 && (
         <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-ink">
           {plan.notes!.map((note, i) => (
@@ -581,7 +674,12 @@ function SummarySection({ plan, actions }: { plan: ReviewPlan; actions: PlanActi
       )}
       {notReached && <AddSignIn actions={actions} />}
       <div>
-        <button type="button" className="btn-quiet mt-4 min-h-[44px] px-4 text-sm" disabled={actions.busy} onClick={actions.replanEverything}>
+        <button
+          type="button"
+          className="btn-quiet mt-4 min-h-[44px] px-4 text-sm"
+          disabled={actions.busy}
+          onClick={actions.replanEverything}
+        >
           Re-plan everything with the AI
         </button>
       </div>
@@ -591,7 +689,9 @@ function SummarySection({ plan, actions }: { plan: ReviewPlan; actions: PlanActi
 
 function QuestionsSection({ plan, actions }: { plan: ReviewPlan; actions: PlanActions }) {
   const view = useContext(ViewContext);
-  const shown = plan.questions.filter((q) => matches(view, `${q.question} ${q.urlPath}`) && (!view.needsMe || !q.selectedAnswer));
+  const shown = plan.questions.filter(
+    (q) => matches(view, `${q.question} ${q.urlPath}`) && (!view.needsMe || !q.selectedAnswer)
+  );
   if (plan.questions.length === 0) return null;
   return (
     <Section
@@ -603,7 +703,12 @@ function QuestionsSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAc
     >
       <ul className="space-y-3">
         {shown.map((q) => (
-          <li key={q.id} id={itemDomId(q.id)} data-plan-item={q.id} className="rounded border border-rule p-3 transition-all">
+          <li
+            key={q.id}
+            id={itemDomId(q.id)}
+            data-plan-item={q.id}
+            className="rounded border border-rule p-3 transition-all"
+          >
             <p className="mb-2 text-base font-bold text-ink">
               {q.question} {q.isNew && <Badge tone="stamp">New</Badge>}
             </p>
@@ -625,7 +730,12 @@ function QuestionsSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAc
                 );
               })}
               {q.selectedAnswer && (
-                <button type="button" className="btn-link text-sm" disabled={actions.busy} onClick={() => actions.answer(q.id, '')}>
+                <button
+                  type="button"
+                  className="btn-link text-sm"
+                  disabled={actions.busy}
+                  onClick={() => actions.answer(q.id, '')}
+                >
                   Clear the answer
                 </button>
               )}
@@ -640,9 +750,18 @@ function QuestionsSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAc
 
 function TestRow({ test, page, actions }: { test: PlanPageTest; page: PlanPage; actions: PlanActions }) {
   return (
-    <li id={itemDomId(test.id)} data-plan-item={test.id} className={`rounded bg-canvas/60 p-2 transition-all ${test.skipped ? 'opacity-60' : ''}`}>
+    <li
+      id={itemDomId(test.id)}
+      data-plan-item={test.id}
+      className={`rounded bg-canvas/60 p-2 transition-all ${test.skipped ? 'opacity-60' : ''}`}
+    >
       <div className="flex items-start gap-2">
-        <ItemToggle label={`Run the test “${test.name}”`} on={!test.skipped} disabled={actions.busy || !!page.skipped} onChange={(on) => actions.setSkipped(test.id, !on)} />
+        <ItemToggle
+          label={`Run the test “${test.name}”`}
+          on={!test.skipped}
+          disabled={actions.busy || !!page.skipped}
+          onChange={(on) => actions.setSkipped(test.id, !on)}
+        />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2 text-base text-ink">
             {test.name}
@@ -668,9 +787,20 @@ function TestRow({ test, page, actions }: { test: PlanPageTest; page: PlanPage; 
 function PageRow({ page, actions }: { page: PlanPage; actions: PlanActions }) {
   const covered = page.coverage === 'covered';
   return (
-    <li id={itemDomId(page.id)} data-plan-item={page.id} className={`rounded border border-rule p-3 transition-all ${page.skipped ? 'opacity-60' : ''}`}>
+    <li
+      id={itemDomId(page.id)}
+      data-plan-item={page.id}
+      className={`rounded border border-rule p-3 transition-all ${page.skipped ? 'opacity-60' : ''}`}
+    >
       <div className="flex items-start gap-3">
-        {!covered && <ItemToggle label={`Test the page ${page.urlPath}`} on={!page.skipped} disabled={actions.busy} onChange={(on) => actions.setSkipped(page.id, !on)} />}
+        {!covered && (
+          <ItemToggle
+            label={`Test the page ${page.urlPath}`}
+            on={!page.skipped}
+            disabled={actions.busy}
+            onChange={(on) => actions.setSkipped(page.id, !on)}
+          />
+        )}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="break-all font-mono text-base font-bold text-ink">{page.urlPath}</span>
@@ -683,11 +813,17 @@ function PageRow({ page, actions }: { page: PlanPage; actions: PlanActions }) {
             {!covered && <SourceBadge source={page.source} />}
           </div>
           {covered ? (
-            <p className="mt-1 text-sm text-ink-soft">Same layout as {page.coveredBy?.join(', ')}, which are tested for it. Not visited.</p>
+            <p className="mt-1 text-sm text-ink-soft">
+              Same layout as {page.coveredBy?.join(', ')}, which are tested for it. Not visited.
+            </p>
           ) : (
             <p className="mt-1 text-sm text-ink-soft">
-              {page.clickPath ? (page.clickPath.length > 0 ? `Reached by: Start → ${page.clickPath.join(' → ')}` : 'The start page') : 'No link leads here'} · visited as{' '}
-              {page.reachedBy.map(roleName).join(', ')}
+              {page.clickPath
+                ? page.clickPath.length > 0
+                  ? `Reached by: Start → ${page.clickPath.join(' → ')}`
+                  : 'The start page'
+                : 'No link leads here'}{' '}
+              · visited as {page.reachedBy.map(roleName).join(', ')}
             </p>
           )}
           {!covered && page.tests.length > 0 && (
@@ -697,14 +833,25 @@ function PageRow({ page, actions }: { page: PlanPage; actions: PlanActions }) {
               ))}
             </ul>
           )}
-          {!covered && page.tests.length === 0 && <p className="mt-2 text-sm text-ink-soft">Nothing to try beyond the visit. Every check still runs on it.</p>}
+          {!covered && page.tests.length === 0 && (
+            <p className="mt-2 text-sm text-ink-soft">Nothing to try beyond the visit. Every check still runs on it.</p>
+          )}
           <div className="mt-2">
             {covered ? (
-              <button type="button" className="min-h-[32px] text-sm font-bold text-stamp hover:underline disabled:opacity-50" disabled={actions.busy} onClick={() => actions.promote(page.id)}>
+              <button
+                type="button"
+                className="min-h-[32px] text-sm font-bold text-stamp hover:underline disabled:opacity-50"
+                disabled={actions.busy}
+                onClick={() => actions.promote(page.id)}
+              >
                 Test this page too
               </button>
             ) : (
-              <ReplanControl label={`Re-plan ${page.urlPath} with the AI`} disabled={actions.busy} onReplan={(text) => actions.replan(page.id, text)} />
+              <ReplanControl
+                label={`Re-plan ${page.urlPath} with the AI`}
+                disabled={actions.busy}
+                onReplan={(text) => actions.replan(page.id, text)}
+              />
             )}
           </div>
         </div>
@@ -714,7 +861,17 @@ function PageRow({ page, actions }: { page: PlanPage; actions: PlanActions }) {
 }
 
 /** "Switch all off" / "Switch all on" for a group of items. */
-function BulkSwitch({ ids, skippedCount, actions, what }: { ids: string[]; skippedCount: number; actions: PlanActions; what: string }) {
+function BulkSwitch({
+  ids,
+  skippedCount,
+  actions,
+  what,
+}: {
+  ids: string[];
+  skippedCount: number;
+  actions: PlanActions;
+  what: string;
+}) {
   if (ids.length < 2) return null;
   const allOff = skippedCount === ids.length;
   return (
@@ -734,7 +891,11 @@ function BulkSwitch({ ids, skippedCount, actions, what }: { ids: string[]; skipp
 
 function PagesSection({ plan, actions }: { plan: ReviewPlan; actions: PlanActions }) {
   const view = useContext(ViewContext);
-  const pages = (plan.planPages || []).filter((p) => matches(view, `${p.urlPath} ${p.title} ${p.tests.map((t) => t.name).join(' ')}`) && (!view.needsMe || pageNeedsMe(p)));
+  const pages = (plan.planPages || []).filter(
+    (p) =>
+      matches(view, `${p.urlPath} ${p.title} ${p.tests.map((t) => t.name).join(' ')}`) &&
+      (!view.needsMe || pageNeedsMe(p))
+  );
   const groups = plan.layoutGroups || [];
   const grouped = new Set(groups.flatMap((g) => g.pages));
   const [address, setAddress] = useState('');
@@ -765,7 +926,12 @@ function PagesSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAction
             }
             startOpen={members.length <= 6}
             headerRight={
-              <BulkSwitch ids={testable.map((p) => p.id)} skippedCount={testable.filter((p) => p.skipped).length} actions={actions} what="this group’s pages" />
+              <BulkSwitch
+                ids={testable.map((p) => p.id)}
+                skippedCount={testable.filter((p) => p.skipped).length}
+                actions={actions}
+                what="this group’s pages"
+              />
             }
           >
             <ul className="space-y-2">
@@ -800,7 +966,11 @@ function PagesSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAction
           value={address}
           onChange={(e) => setAddress(e.target.value)}
         />
-        <button type="submit" className="btn-quiet min-h-[44px] px-4 text-sm" disabled={actions.busy || !address.trim()}>
+        <button
+          type="submit"
+          className="btn-quiet min-h-[44px] px-4 text-sm"
+          disabled={actions.busy || !address.trim()}
+        >
           Add page
         </button>
       </form>
@@ -816,9 +986,18 @@ function PagesSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAction
 function NavRow({ nav, actions }: { nav: NavigationCheck; actions: PlanActions }) {
   const menuSizes = (nav.menuSteps || []).flatMap((s) => s.onlyAt || []);
   return (
-    <li id={itemDomId(nav.id)} data-plan-item={nav.id} className={`rounded border border-rule p-2.5 transition-all ${nav.skipped ? 'opacity-60' : ''}`}>
+    <li
+      id={itemDomId(nav.id)}
+      data-plan-item={nav.id}
+      className={`rounded border border-rule p-2.5 transition-all ${nav.skipped ? 'opacity-60' : ''}`}
+    >
       <div className="flex items-start gap-2">
-        <ItemToggle label={`Check the link: ${nav.name}`} on={!nav.skipped} disabled={actions.busy} onChange={(on) => actions.setSkipped(nav.id, !on)} />
+        <ItemToggle
+          label={`Check the link: ${nav.name}`}
+          on={!nav.skipped}
+          disabled={actions.busy}
+          onChange={(on) => actions.setSkipped(nav.id, !on)}
+        />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2 text-base text-ink">
             {nav.name}
@@ -826,20 +1005,35 @@ function NavRow({ nav, actions }: { nav: NavigationCheck; actions: PlanActions }
             {nav.isNew && <Badge tone="stamp">New</Badge>}
           </div>
           <p className="break-words text-sm text-ink-soft">
-            {nav.leavesSite ? `Checked with one request: ${nav.to}` : `Clicks “${nav.linkName}” on ${nav.startPage}; ${nav.to} should open and work`}
+            {nav.leavesSite
+              ? `Checked with one request: ${nav.to}`
+              : `Clicks “${nav.linkName}” on ${nav.startPage}; ${nav.to} should open and work`}
             {nav.expectation ? `. Should show: ${nav.expectation}` : ''}
           </p>
           {Object.entries(nav.landsOnBy || {})
             .filter(([, landing]) => landing !== nav.to)
             .map(([who, landing]) => (
               <p key={who} className="text-sm text-ink-soft">
-                {who === 'visitor' ? 'Signed-out visitors' : `As ${who}, it`} land{who === 'visitor' ? '' : 's'} on {landing} instead, as the site sends them there.
+                {who === 'visitor' ? 'Signed-out visitors' : `As ${who}, it`} land{who === 'visitor' ? '' : 's'} on{' '}
+                {landing} instead, as the site sends them there.
               </p>
             ))}
-          {menuSizes.length > 0 && <p className="text-sm text-ink-soft">Opens the menu first at {menuSizes.join(' and ')}.</p>}
-          {nav.notAt?.length ? <p className="text-sm text-warn">Not checked at {nav.notAt.join(' and ')}: the link is hidden there and no menu button shows it.</p> : null}
-          {nav.roles.some((r) => roleName(r) !== 'visitor') && <p className="text-sm text-ink-soft">As {nav.roles.map(roleName).join(', ')}</p>}
-          <ReplanControl label={`Re-plan the check “${nav.name}” with the AI`} disabled={actions.busy} onReplan={(text) => actions.replan(nav.id, text)} />
+          {menuSizes.length > 0 && (
+            <p className="text-sm text-ink-soft">Opens the menu first at {menuSizes.join(' and ')}.</p>
+          )}
+          {nav.notAt?.length ? (
+            <p className="text-sm text-warn">
+              Not checked at {nav.notAt.join(' and ')}: the link is hidden there and no menu button shows it.
+            </p>
+          ) : null}
+          {nav.roles.some((r) => roleName(r) !== 'visitor') && (
+            <p className="text-sm text-ink-soft">As {nav.roles.map(roleName).join(', ')}</p>
+          )}
+          <ReplanControl
+            label={`Re-plan the check “${nav.name}” with the AI`}
+            disabled={actions.busy}
+            onReplan={(text) => actions.replan(nav.id, text)}
+          />
         </div>
       </div>
     </li>
@@ -849,7 +1043,9 @@ function NavRow({ nav, actions }: { nav: NavigationCheck; actions: PlanActions }
 function NavigationSection({ plan, actions }: { plan: ReviewPlan; actions: PlanActions }) {
   const view = useContext(ViewContext);
   const all = plan.navigation || [];
-  const navigation = all.filter((n) => matches(view, `${n.name} ${n.to} ${n.startPage}`) && (!view.needsMe || navNeedsMe(n)));
+  const navigation = all.filter(
+    (n) => matches(view, `${n.name} ${n.to} ${n.startPage}`) && (!view.needsMe || navNeedsMe(n))
+  );
   const shared = navigation.filter((n) => n.shared);
   const inPage = navigation.filter((n) => !n.shared && !n.leavesSite);
   const leaving = navigation.filter((n) => n.leavesSite);
@@ -867,7 +1063,12 @@ function NavigationSection({ plan, actions }: { plan: ReviewPlan; actions: PlanA
         <>
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-base font-bold text-ink">Shared menus</h3>
-            <BulkSwitch ids={shared.map((n) => n.id)} skippedCount={shared.filter((n) => n.skipped).length} actions={actions} what="every shared menu link" />
+            <BulkSwitch
+              ids={shared.map((n) => n.id)}
+              skippedCount={shared.filter((n) => n.skipped).length}
+              actions={actions}
+              what="every shared menu link"
+            />
           </div>
           <ul className="mb-4 space-y-2">
             {shared.map((nav) => (
@@ -891,7 +1092,12 @@ function NavigationSection({ plan, actions }: { plan: ReviewPlan; actions: PlanA
                 }
                 startOpen={starts.length <= 3}
                 headerRight={
-                  <BulkSwitch ids={links.map((n) => n.id)} skippedCount={links.filter((n) => n.skipped).length} actions={actions} what="every link on this page" />
+                  <BulkSwitch
+                    ids={links.map((n) => n.id)}
+                    skippedCount={links.filter((n) => n.skipped).length}
+                    actions={actions}
+                    what="every link on this page"
+                  />
                 }
               >
                 <ul className="space-y-2">
@@ -910,14 +1116,22 @@ function NavigationSection({ plan, actions }: { plan: ReviewPlan; actions: PlanA
           {hosts.length > 0 && (
             <ul className="mb-3 space-y-1.5">
               {hosts.map((host) => (
-                <li key={host.host} className="flex flex-wrap items-center justify-between gap-2 rounded bg-canvas/60 px-3 py-2 text-base text-ink">
+                <li
+                  key={host.host}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded bg-canvas/60 px-3 py-2 text-base text-ink"
+                >
                   <span>
                     <span className="font-mono">{host.host}</span> · {host.links} {host.links === 1 ? 'link' : 'links'}
                   </span>
                   {host.included ? (
                     <Badge tone="pass">Explored</Badge>
                   ) : (
-                    <button type="button" className="btn-link text-sm" disabled={actions.busy} onClick={() => actions.includeHost(host.host)}>
+                    <button
+                      type="button"
+                      className="btn-link text-sm"
+                      disabled={actions.busy}
+                      onClick={() => actions.includeHost(host.host)}
+                    >
                       Explore this site too
                     </button>
                   )}
@@ -950,7 +1164,12 @@ function DescribeTest({ plan, actions }: { plan: ReviewPlan; actions: PlanAction
         <label className="sr-only" htmlFor="describe-page">
           On the page
         </label>
-        <select id="describe-page" className="field py-2 text-sm sm:w-48" value={urlPath} onChange={(e) => setUrlPath(e.target.value)}>
+        <select
+          id="describe-page"
+          className="field py-2 text-sm sm:w-48"
+          value={urlPath}
+          onChange={(e) => setUrlPath(e.target.value)}
+        >
           {pages.map((p) => (
             <option key={p} value={p}>
               {p}
@@ -960,7 +1179,13 @@ function DescribeTest({ plan, actions }: { plan: ReviewPlan; actions: PlanAction
         <label className="sr-only" htmlFor="describe-sentence">
           Describe the test
         </label>
-        <input id="describe-sentence" className="field flex-1 py-2 text-sm" value={sentence} onChange={(e) => setSentence(e.target.value)} placeholder="What to do, and what should happen" />
+        <input
+          id="describe-sentence"
+          className="field flex-1 py-2 text-sm"
+          value={sentence}
+          onChange={(e) => setSentence(e.target.value)}
+          placeholder="What to do, and what should happen"
+        />
         <button
           type="button"
           className="btn-quiet min-h-[44px] px-4 text-sm"
@@ -1052,7 +1277,12 @@ function SortableJourneyItem({ flow, actions }: { flow: DiscoveredFlow; actions:
             <circle cx="13" cy="16" r="1.5" />
           </svg>
         </button>
-        <ItemToggle label={`Run the journey “${flow.name}”`} on={!flow.outOfScope} disabled={actions.busy} onChange={(on) => actions.setSkipped(id, !on)} />
+        <ItemToggle
+          label={`Run the journey “${flow.name}”`}
+          on={!flow.outOfScope}
+          disabled={actions.busy}
+          onChange={(on) => actions.setSkipped(id, !on)}
+        />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <EditableTitle
@@ -1061,7 +1291,9 @@ function SortableJourneyItem({ flow, actions }: { flow: DiscoveredFlow; actions:
               disabled={actions.busy}
               className="text-base font-bold text-ink"
             />
-            {roleName(flow.role) !== 'visitor' && <span className="font-normal text-ink-soft">as {roleName(flow.role)}</span>}
+            {roleName(flow.role) !== 'visitor' && (
+              <span className="font-normal text-ink-soft">as {roleName(flow.role)}</span>
+            )}
             <SourceBadge source={flow.source} />
             {flow.isNew && <Badge tone="stamp">New</Badge>}
             {flow.needsTestCopy && <Badge tone="warn">Needs a test copy</Badge>}
@@ -1079,7 +1311,11 @@ function SortableJourneyItem({ flow, actions }: { flow: DiscoveredFlow; actions:
             </p>
           ))}
           <div className="mt-2">
-            <ReplanControl label={`Re-plan the journey “${flow.name}” with the AI`} disabled={actions.busy} onReplan={(text) => actions.replan(id, text)} />
+            <ReplanControl
+              label={`Re-plan the journey “${flow.name}” with the AI`}
+              disabled={actions.busy}
+              onReplan={(text) => actions.replan(id, text)}
+            />
           </div>
         </div>
       </div>
@@ -1089,7 +1325,9 @@ function SortableJourneyItem({ flow, actions }: { flow: DiscoveredFlow; actions:
 
 function JourneysSection({ plan, actions }: { plan: ReviewPlan; actions: PlanActions }) {
   const view = useContext(ViewContext);
-  const flows = plan.flows.filter((f) => matches(view, `${f.name} ${f.description} ${f.startPage}`) && (!view.needsMe || flowNeedsMe(f)));
+  const flows = plan.flows.filter(
+    (f) => matches(view, `${f.name} ${f.description} ${f.startPage}`) && (!view.needsMe || flowNeedsMe(f))
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -1133,12 +1371,19 @@ function JourneysSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAct
 function ChecksSection({ plan }: { plan: ReviewPlan }) {
   const sizes = (plan.screenSizes?.length ? plan.screenSizes : SIZES).join(', ');
   return (
-    <Section id="plan-checks" title="Checks on every tested page" intro={`At ${sizes}, as ${(plan.roles?.length ? plan.roles : ['visitor']).map(roleName).join(', ')}. Each is graded in the report.`}>
+    <Section
+      id="plan-checks"
+      title="Checks on every tested page"
+      intro={`At ${sizes}, as ${(plan.roles?.length ? plan.roles : ['visitor']).map(roleName).join(', ')}. Each is graded in the report.`}
+    >
       <ul className="space-y-2 text-base">
         {(plan.gradedChecks || []).map((check) => (
           <li key={check.id} id={itemDomId(check.id)}>
-            <strong className="text-ink">{check.name}:</strong> <span className="text-ink-soft">{check.description}</span>
-            {check.notGraded && <span className="mt-0.5 block text-sm text-warn">Won’t be graded this time. {check.notGraded}</span>}
+            <strong className="text-ink">{check.name}:</strong>{' '}
+            <span className="text-ink-soft">{check.description}</span>
+            {check.notGraded && (
+              <span className="mt-0.5 block text-sm text-warn">Won’t be graded this time. {check.notGraded}</span>
+            )}
           </li>
         ))}
       </ul>
@@ -1179,16 +1424,37 @@ function DocsSection({ plan, actions }: { plan: ReviewPlan; actions: PlanActions
   useEffect(() => setProductContext(plan.productContext || ''), [plan.productContext]);
   useEffect(() => setDesignNotes(plan.designNotes || ''), [plan.designNotes]);
   return (
-    <Section id="plan-docs" title="Specs and design notes" intro="The AI plans with these. Change them, then re-plan so the plan uses them.">
+    <Section
+      id="plan-docs"
+      title="Specs and design notes"
+      intro="The AI plans with these. Change them, then re-plan so the plan uses them."
+    >
       <label className="label" htmlFor="plan-product-context">
         Specs, requirements or user stories
       </label>
-      <textarea id="plan-product-context" rows={5} className="field mb-3 w-full font-mono text-sm" value={productContext} onChange={(e) => setProductContext(e.target.value)} />
+      <textarea
+        id="plan-product-context"
+        rows={5}
+        className="field mb-3 w-full font-mono text-sm"
+        value={productContext}
+        onChange={(e) => setProductContext(e.target.value)}
+      />
       <label className="label" htmlFor="plan-design-notes">
         Design notes
       </label>
-      <textarea id="plan-design-notes" rows={4} className="field mb-3 w-full font-mono text-sm" value={designNotes} onChange={(e) => setDesignNotes(e.target.value)} />
-      <button type="button" className="btn-primary min-h-[44px] px-4 text-sm" disabled={actions.busy} onClick={() => actions.saveDocsAndReplan(productContext, designNotes)}>
+      <textarea
+        id="plan-design-notes"
+        rows={4}
+        className="field mb-3 w-full font-mono text-sm"
+        value={designNotes}
+        onChange={(e) => setDesignNotes(e.target.value)}
+      />
+      <button
+        type="button"
+        className="btn-primary min-h-[44px] px-4 text-sm"
+        disabled={actions.busy}
+        onClick={() => actions.saveDocsAndReplan(productContext, designNotes)}
+      >
         Save and re-plan everything with the AI
       </button>
     </Section>
@@ -1201,19 +1467,28 @@ function Overview({ plan, view, setView }: { plan: ReviewPlan; view: View; setVi
   const navigation = plan.navigation || [];
   const unanswered = plan.questions.filter((q) => !q.selectedAnswer).length;
   const needsMe =
-    unanswered + pages.filter((p) => p.coverage !== 'covered' && pageNeedsMe(p)).length + navigation.filter(navNeedsMe).length + plan.flows.filter(flowNeedsMe).length;
+    unanswered +
+    pages.filter((p) => p.coverage !== 'covered' && pageNeedsMe(p)).length +
+    navigation.filter(navNeedsMe).length +
+    plan.flows.filter(flowNeedsMe).length;
   const cards: Array<[string, string, string]> = [
     ['plan-pages', 'Pages', `${pages.length} (${pages.filter((p) => p.coverage !== 'covered').length} tested)`],
     ['plan-navigation', 'Links', String(navigation.length)],
     ['plan-journeys', 'Journeys', String(plan.flows.length)],
-    ...(plan.questions.length > 0 ? ([['plan-questions', 'Questions', `${unanswered} unanswered`]] as Array<[string, string, string]>) : []),
+    ...(plan.questions.length > 0
+      ? ([['plan-questions', 'Questions', `${unanswered} unanswered`]] as Array<[string, string, string]>)
+      : []),
     ['plan-wontrun', 'Won’t run', String(plan.wontRun?.length ?? 0)],
   ];
   return (
     <div className="space-y-3">
       <nav aria-label="Plan contents" className="grid grid-cols-2 gap-2 sm:grid-cols-5">
         {cards.map(([id, name, value]) => (
-          <a key={id} href={`#${id}`} className="interactive flex min-h-[56px] flex-col justify-center rounded-card border border-rule bg-surface/80 px-3 py-2 shadow-level-1 hover:border-stamp hover:shadow-level-2">
+          <a
+            key={id}
+            href={`#${id}`}
+            className="interactive flex min-h-[56px] flex-col justify-center rounded-card border border-rule bg-surface/80 px-3 py-2 shadow-level-1 hover:border-stamp hover:shadow-level-2"
+          >
             <span className="text-sm text-ink-soft">{name}</span>
             <span className="font-bold text-ink">{value}</span>
           </a>
@@ -1233,7 +1508,12 @@ function Overview({ plan, view, setView }: { plan: ReviewPlan; view: View; setVi
         />
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-base text-ink">
-            <input type="checkbox" className="h-5 w-5 accent-[#6C9BF2]" checked={view.needsMe} onChange={(e) => setView({ ...view, needsMe: e.target.checked })} />
+            <input
+              type="checkbox"
+              className="h-5 w-5 accent-[#6C9BF2]"
+              checked={view.needsMe}
+              onChange={(e) => setView({ ...view, needsMe: e.target.checked })}
+            />
             Only what needs me ({needsMe})
           </label>
           <button
@@ -1359,7 +1639,8 @@ function usePlanKeyboardNavigation() {
       if (e.key === 'Enter' && activeItemId) {
         const activeItem = items.find((el) => el.dataset.planItem === activeItemId);
         if (activeItem) {
-          const details = activeItem.querySelector('details') || (activeItem.closest('details') as HTMLDetailsElement | null);
+          const details =
+            activeItem.querySelector('details') || (activeItem.closest('details') as HTMLDetailsElement | null);
           if (details) {
             e.preventDefault();
             details.open = !details.open;

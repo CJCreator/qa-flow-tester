@@ -1,0 +1,103 @@
+# Runs on every pull request so a broken build or test is caught before main (and the deploy) sees it.
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Playwright version matches the Docker image tag
+        run: node scripts/check-playwright-version.mjs
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      - name: Build the site (also type-checks types and the wizard)
+        run: pnpm run vercel-build
+
+      - name: Build the runner and the packages it uses
+        run: pnpm --filter "@qa/runner..." run build
+
+      - name: Install Chromium (the browser tests drive it)
+        run: pnpm --filter @qa/core exec playwright install --with-deps chromium
+
+      # Every package test except wizard-e2e (takes minutes, run it before a release). Same command as the deploy workflow.
+      # Chromium is installed above for the browser-driven checker and core tests.
+      - name: Tests
+        run: pnpm exec vitest run --exclude "**/wizard-e2e.test.ts" --coverage
+
+      # Totals from the coverage run, shown on the workflow summary page. Print only; no threshold.
+      - name: Coverage summary
+        if: ${{ !cancelled() }}
+        run: |
+          node -e '
+          const fs = require("fs");
+          const out = process.env.GITHUB_STEP_SUMMARY;
+          let md = "### Coverage\n\nNo coverage data (tests did not finish)\n";
+          try {
+            const t = JSON.parse(fs.readFileSync("coverage/coverage-summary.json", "utf8")).total;
+            md = "### Coverage\n\n| Statements | Branches | Functions | Lines |\n|---|---|---|---|\n| " +
+              ["statements", "branches", "functions", "lines"].map((k) => t[k].pct + "%").join(" | ") + " |\n";
+          } catch {}
+          if (out) fs.appendFileSync(out, md);
+          console.log(md);
+          '
+
+  # Fails on any high or critical advisory in production dependencies. Reads the lockfile; no install needed.
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Audit production dependencies
+        run: pnpm audit --prod --audit-level high
+
+  # Scans the full git history for secrets. Output is redacted; no report is uploaded.
+  secret-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install gitleaks
+        env:
+          GITLEAKS_VERSION: 8.30.1
+        run: |
+          base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+          tarball="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          cd "$RUNNER_TEMP"
+          curl -sSfL -O "${base}/${tarball}"
+          curl -sSfL -O "${base}/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          sha256sum --ignore-missing -c "gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          tar -xzf "$tarball" gitleaks
+      - name: Scan history
+        run: '"$RUNNER_TEMP/gitleaks" git --config .gitleaks.toml --redact --no-banner --exit-code 1 .'

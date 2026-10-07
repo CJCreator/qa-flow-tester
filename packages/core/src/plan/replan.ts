@@ -32,12 +32,20 @@ function startPathOf(draft: DiscoveryDraft): string {
 function currentCoverage(draft: DiscoveryDraft): Map<string, PageCoverageInfo> {
   const coverage = sampleLayoutGroups(draft.pages).coverage;
   for (const page of draft.plan?.pages || []) {
-    if (page.coverage === 'promoted' || page.added) coverage.set(page.urlPath, { coverage: 'promoted', layoutGroup: page.layoutGroup });
+    if (page.coverage === 'promoted' || page.added)
+      coverage.set(page.urlPath, { coverage: 'promoted', layoutGroup: page.layoutGroup });
   }
   return coverage;
 }
 
-function plannerInput(draft: DiscoveryDraft, pages: PageInventoryItem[], coverage: Map<string, PageCoverageInfo>, graph: SiteGraph, options: ReplanOptions, notesFor?: string): PagePlannerInput {
+function plannerInput(
+  draft: DiscoveryDraft,
+  pages: PageInventoryItem[],
+  coverage: Map<string, PageCoverageInfo>,
+  graph: SiteGraph,
+  options: ReplanOptions,
+  notesFor?: string
+): PagePlannerInput {
   const asked = options.instructions?.trim();
   return {
     pages,
@@ -46,7 +54,10 @@ function plannerInput(draft: DiscoveryDraft, pages: PageInventoryItem[], coverag
     graph,
     targetUrl: draft.targetUrl,
     siteType: draft.siteType || 'other',
-    productContext: [options.productContext?.trim(), asked ? `The owner asks${notesFor ? ` about ${notesFor}` : ''}: ${asked}` : ''].filter(Boolean).join('\n\n') || undefined,
+    productContext:
+      [options.productContext?.trim(), asked ? `The owner asks${notesFor ? ` about ${notesFor}` : ''}: ${asked}` : '']
+        .filter(Boolean)
+        .join('\n\n') || undefined,
     readOnly: options.readOnly,
     forbiddenActions: options.forbiddenActions,
     redact: options.redact,
@@ -63,7 +74,12 @@ function keepSwitchedOff<T extends { id: string; skipped?: boolean }>(fresh: T[]
  * Plans one page again with the AI: its tests and its own links. Used when the person asks for
  * changes to a page, promotes a page covered by its Layout Group's samples, or adds a page.
  */
-export async function replanPage(draft: DiscoveryDraft, urlPath: string, ai: AIProvider | undefined, options: ReplanOptions & { promote?: boolean }): Promise<string[]> {
+export async function replanPage(
+  draft: DiscoveryDraft,
+  urlPath: string,
+  ai: AIProvider | undefined,
+  options: ReplanOptions & { promote?: boolean }
+): Promise<string[]> {
   const plan = draft.plan!;
   const page = draft.pages.find((p) => p.urlPath === urlPath);
   const planned = plan.pages.find((p) => p.urlPath === urlPath);
@@ -72,7 +88,14 @@ export async function replanPage(draft: DiscoveryDraft, urlPath: string, ai: AIP
   const coverage = planned.coverage === 'covered' || options.promote ? 'promoted' : planned.coverage;
   options.onProgress?.(`Planning ${urlPath}`);
   const out = await planPagesAndMenus(
-    plannerInput(draft, [page], new Map([[urlPath, { coverage, layoutGroup: planned.layoutGroup }]]), { ...graph, shared: [] }, options, urlPath),
+    plannerInput(
+      draft,
+      [page],
+      new Map([[urlPath, { coverage, layoutGroup: planned.layoutGroup }]]),
+      { ...graph, shared: [] },
+      options,
+      urlPath
+    ),
     ai
   );
   const fresh = out.pages[0];
@@ -83,20 +106,31 @@ export async function replanPage(draft: DiscoveryDraft, urlPath: string, ai: AIP
 }
 
 /** Plans the shared menus' Navigation Checks again. */
-export async function replanMenus(draft: DiscoveryDraft, ai: AIProvider | undefined, options: ReplanOptions): Promise<string[]> {
+export async function replanMenus(
+  draft: DiscoveryDraft,
+  ai: AIProvider | undefined,
+  options: ReplanOptions
+): Promise<string[]> {
   const plan = draft.plan!;
   const graph = buildSiteGraph(draft.pages, startPathOf(draft));
   // Every page "covered": only the menus are planned.
   const coverage = new Map<string, PageCoverageInfo>(draft.pages.map((p) => [p.urlPath, { coverage: 'covered' }]));
   options.onProgress?.('Planning the shared menus');
-  const out = await planPagesAndMenus(plannerInput(draft, draft.pages, coverage, graph, options, 'the shared menus'), ai);
+  const out = await planPagesAndMenus(
+    plannerInput(draft, draft.pages, coverage, graph, options, 'the shared menus'),
+    ai
+  );
   const shared = out.navigation.filter((n) => n.shared);
   plan.navigation = [...keepSwitchedOff(shared, plan.navigation), ...plan.navigation.filter((n) => !n.shared)];
   return out.notes;
 }
 
 /** Plans the journeys again; the questions about journeys that can't run are asked afresh. */
-export async function replanJourneys(draft: DiscoveryDraft, ai: AIProvider | undefined, options: ReplanOptions & { productId: string }): Promise<string[]> {
+export async function replanJourneys(
+  draft: DiscoveryDraft,
+  ai: AIProvider | undefined,
+  options: ReplanOptions & { productId: string }
+): Promise<string[]> {
   const coverage = currentCoverage(draft);
   const graph = buildSiteGraph(draft.pages, startPathOf(draft));
   const byClicks = (p: PageInventoryItem) => graph.clickPaths.get(p.urlPath)?.length ?? Number.MAX_SAFE_INTEGER;
@@ -126,7 +160,11 @@ export async function replanJourneys(draft: DiscoveryDraft, ai: AIProvider | und
 }
 
 /** Plans everything again: every tested page, the shared menus and the journeys, e.g. after new specs. */
-export async function replanAll(draft: DiscoveryDraft, ai: AIProvider | undefined, options: ReplanOptions & { productId: string }): Promise<string[]> {
+export async function replanAll(
+  draft: DiscoveryDraft,
+  ai: AIProvider | undefined,
+  options: ReplanOptions & { productId: string }
+): Promise<string[]> {
   const plan = draft.plan!;
   const graph = buildSiteGraph(draft.pages, startPathOf(draft));
   const coverage = currentCoverage(draft);
@@ -166,7 +204,9 @@ export async function addPagesToPlan(
   if (options.added) for (const page of fresh) coverage.set(page.urlPath, { coverage: 'promoted' });
   const graph = buildSiteGraph(fresh, fresh[0].urlPath);
   options.onProgress?.(`Planning ${fresh.length === 1 ? fresh[0].urlPath : `${fresh.length} new pages`}`);
-  const out = await planPagesAndMenus(plannerInput(draft, fresh, coverage, graph, options), ai, (p) => options.onProgress?.(`${p.what} (${p.done} of ${p.total})`));
+  const out = await planPagesAndMenus(plannerInput(draft, fresh, coverage, graph, options), ai, (p) =>
+    options.onProgress?.(`${p.what} (${p.done} of ${p.total})`)
+  );
   const newPages: PlanPage[] = out.pages.map((p) => ({ ...p, added: options.added || undefined, isNew: true }));
   plan.pages.push(...newPages);
   const ids = new Set(plan.navigation.map((n) => n.id));
@@ -175,13 +215,18 @@ export async function addPagesToPlan(
 }
 
 /** Pages crawled on another host, addressed in full so they can't be mistaken for the site's own. */
-export function onOtherHost(found: { pages: PageInventoryItem[]; forms: NonNullable<DiscoveryDraft['forms']> }, origin: string): typeof found {
+export function onOtherHost(
+  found: { pages: PageInventoryItem[]; forms: NonNullable<DiscoveryDraft['forms']> },
+  origin: string
+): typeof found {
   const full = (path: string) => (/^https?:\/\//.test(path) ? path : `${origin}${path}`);
   return {
     pages: found.pages.map((p) => ({
       ...p,
       urlPath: full(p.urlPath),
-      links: p.links?.map((l) => (l.leavesSite ? l : { ...l, to: full(l.to), landsOn: l.landsOn ? full(l.landsOn) : undefined })),
+      links: p.links?.map((l) =>
+        l.leavesSite ? l : { ...l, to: full(l.to), landsOn: l.landsOn ? full(l.landsOn) : undefined }
+      ),
     })),
     forms: found.forms.map((f) => ({ ...f, urlPath: full(f.urlPath) })),
   };

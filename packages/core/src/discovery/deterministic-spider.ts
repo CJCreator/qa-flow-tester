@@ -109,7 +109,9 @@ export function pageLinks(elements: ElementInventoryItem[], pageUrl: string, onS
 
 /** A short fingerprint of a page's controls and forms: the same on the next run when the page hasn't changed. */
 export function contentKeyOf(elements: ElementInventoryItem[], formCount: number): string {
-  const text = [...elements.map((el) => `${el.role}|${el.name}|${el.selector}`).sort(), `forms:${formCount}`].join('\n');
+  const text = [...elements.map((el) => `${el.role}|${el.name}|${el.selector}`).sort(), `forms:${formCount}`].join(
+    '\n'
+  );
   let hash = 5381;
   for (let i = 0; i < text.length; i++) hash = ((hash << 5) + hash + text.charCodeAt(i)) >>> 0;
   return hash.toString(36);
@@ -246,62 +248,64 @@ export class DeterministicSpider {
         const pageForms = await page.$$eval(
           'form',
           (formEls, testIdAttributes) =>
-          formEls.map((f) => {
-            const action = f.getAttribute('action') || '';
-            const method = (f.getAttribute('method') || 'GET').toUpperCase();
-            const clean = (s: string | null | undefined) => (s || '').replace(/\s+/g, ' ').trim();
-            const testIdSelector = (el: Element) => {
-              const attr = testIdAttributes.find((a) => el.hasAttribute(a));
-              return attr ? `[${attr}="${el.getAttribute(attr)}"]` : null;
-            };
-            const inputs = Array.from(f.querySelectorAll('input:not([type="hidden"]), select, textarea')).map((inp) => {
-              const name = inp.getAttribute('name') || '';
-              const type = inp.getAttribute('type') || inp.tagName.toLowerCase();
-              const id = inp.getAttribute('id');
-              const ariaLabel = clean(inp.getAttribute('aria-label'));
-              const placeholder = clean(inp.getAttribute('placeholder'));
-              const selector =
-                testIdSelector(inp) ||
-                (id
-                  ? `#${id}`
-                  : name
-                  ? `[name="${name}"]`
-                  : ariaLabel
-                  ? `[aria-label="${ariaLabel}"]`
-                  : placeholder
-                  ? `[placeholder="${placeholder}"]`
-                  : `${inp.tagName.toLowerCase()}[type="${type}"]`);
-              const required = inp.hasAttribute('required');
-              const forLabel = id ? document.querySelector(`label[for="${id}"]`) : null;
-              const wrapping = inp.closest('label')?.cloneNode(true) as Element | undefined;
-              wrapping?.querySelectorAll('input, select, textarea').forEach((c) => c.remove());
-              // What a person would call the field: its label, then placeholder, then id, then name.
-              const label =
-                clean(inp.getAttribute('aria-label')) ||
-                clean(forLabel?.textContent) ||
-                clean(wrapping?.textContent) ||
-                clean(inp.getAttribute('placeholder')) ||
-                clean(id) ||
-                name;
-              return { name, label, type, selector, required };
-            });
+            formEls.map((f) => {
+              const action = f.getAttribute('action') || '';
+              const method = (f.getAttribute('method') || 'GET').toUpperCase();
+              const clean = (s: string | null | undefined) => (s || '').replace(/\s+/g, ' ').trim();
+              const testIdSelector = (el: Element) => {
+                const attr = testIdAttributes.find((a) => el.hasAttribute(a));
+                return attr ? `[${attr}="${el.getAttribute(attr)}"]` : null;
+              };
+              const inputs = Array.from(f.querySelectorAll('input:not([type="hidden"]), select, textarea')).map(
+                (inp) => {
+                  const name = inp.getAttribute('name') || '';
+                  const type = inp.getAttribute('type') || inp.tagName.toLowerCase();
+                  const id = inp.getAttribute('id');
+                  const ariaLabel = clean(inp.getAttribute('aria-label'));
+                  const placeholder = clean(inp.getAttribute('placeholder'));
+                  const selector =
+                    testIdSelector(inp) ||
+                    (id
+                      ? `#${id}`
+                      : name
+                        ? `[name="${name}"]`
+                        : ariaLabel
+                          ? `[aria-label="${ariaLabel}"]`
+                          : placeholder
+                            ? `[placeholder="${placeholder}"]`
+                            : `${inp.tagName.toLowerCase()}[type="${type}"]`);
+                  const required = inp.hasAttribute('required');
+                  const forLabel = id ? document.querySelector(`label[for="${id}"]`) : null;
+                  const wrapping = inp.closest('label')?.cloneNode(true) as Element | undefined;
+                  wrapping?.querySelectorAll('input, select, textarea').forEach((c) => c.remove());
+                  // What a person would call the field: its label, then placeholder, then id, then name.
+                  const label =
+                    clean(inp.getAttribute('aria-label')) ||
+                    clean(forLabel?.textContent) ||
+                    clean(wrapping?.textContent) ||
+                    clean(inp.getAttribute('placeholder')) ||
+                    clean(id) ||
+                    name;
+                  return { name, label, type, selector, required };
+                }
+              );
 
-            const submitBtn = f.querySelector('button[type="submit"], input[type="submit"], button:not([type])');
-            let submitSelector: string | undefined;
-            if (submitBtn) {
-              const sTestId = testIdSelector(submitBtn);
-              const sId = submitBtn.getAttribute('id');
-              submitSelector = sTestId
-                ? sTestId
-                : sId
-                ? `#${sId}`
-                : submitBtn.tagName.toLowerCase() === 'input'
-                ? 'input[type="submit"]'
-                : 'button[type="submit"]';
-            }
+              const submitBtn = f.querySelector('button[type="submit"], input[type="submit"], button:not([type])');
+              let submitSelector: string | undefined;
+              if (submitBtn) {
+                const sTestId = testIdSelector(submitBtn);
+                const sId = submitBtn.getAttribute('id');
+                submitSelector = sTestId
+                  ? sTestId
+                  : sId
+                    ? `#${sId}`
+                    : submitBtn.tagName.toLowerCase() === 'input'
+                      ? 'input[type="submit"]'
+                      : 'button[type="submit"]';
+              }
 
-            return { action, method, inputs, submitButtonSelector: submitSelector };
-          }),
+              return { action, method, inputs, submitButtonSelector: submitSelector };
+            }),
           TEST_ID_ATTRIBUTES
         );
 
@@ -320,8 +324,13 @@ export class DeterministicSpider {
         const fingerprint = await readLayoutFingerprint(page);
         let screenshotPath: string | undefined;
         if (options.screenshotDir) {
-          screenshotPath = path.join(options.screenshotDir, `${options.screenshotPrefix || 'page'}-${pages.length + 1}.jpg`);
-          await page.screenshot({ path: screenshotPath, type: 'jpeg', quality: 55 }).catch(() => (screenshotPath = undefined));
+          screenshotPath = path.join(
+            options.screenshotDir,
+            `${options.screenshotPrefix || 'page'}-${pages.length + 1}.jpg`
+          );
+          await page
+            .screenshot({ path: screenshotPath, type: 'jpeg', quality: 55 })
+            .catch(() => (screenshotPath = undefined));
         }
 
         pages.push({
@@ -351,7 +360,8 @@ export class DeterministicSpider {
             if (clickBudget-- <= 0) break;
             try {
               if (page.url() !== pageUrl) {
-                if (options.pageDelayMs) await page.waitForTimeout(Math.max(0, lastLoadAt + options.pageDelayMs - Date.now()));
+                if (options.pageDelayMs)
+                  await page.waitForTimeout(Math.max(0, lastLoadAt + options.pageDelayMs - Date.now()));
                 lastLoadAt = Date.now();
                 await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 10000 });
               }
@@ -362,7 +372,13 @@ export class DeterministicSpider {
                 enqueue(after.pathname + after.search);
                 // A button or script link that moved to another page is navigation too.
                 if (!links.some((l) => l.selector === el.selector)) {
-                  links.push({ name: el.name, selector: el.selector, to: after.pathname, scripted: true, landmark: el.landmark });
+                  links.push({
+                    name: el.name,
+                    selector: el.selector,
+                    to: after.pathname,
+                    scripted: true,
+                    landmark: el.landmark,
+                  });
                 }
               }
             } catch {

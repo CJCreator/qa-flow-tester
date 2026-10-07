@@ -14,20 +14,21 @@ export class ReproScriptGenerator {
     const filename = `repro-${finding.id}.ts`;
     const filePath = path.join(this.outputDir, filename);
 
-    const stepsCode = testCase?.steps
-      .map((s) => {
-        if (s.action === 'click') {
-          return `  // Step: ${s.name}\n  await page.locator('${s.selector}').click();`;
-        }
-        if (s.action === 'fill') {
-          return `  // Step: ${s.name}\n  await page.locator('${s.selector}').fill('${s.value || ''}');`;
-        }
-        if (s.action === 'navigate') {
-          return `  // Step: ${s.name}\n  await page.goto('${s.value}');`;
-        }
-        return `  // Step: ${s.name}\n  await page.waitForTimeout(500);`;
-      })
-      .join('\n\n') || `  // Finding reproduced on page\n  await page.goto('${finding.where.urlPath}');`;
+    const stepsCode =
+      testCase?.steps
+        .map((s) => {
+          if (s.action === 'click') {
+            return `  // Step: ${s.name}\n  await page.locator('${s.selector}').click();`;
+          }
+          if (s.action === 'fill') {
+            return `  // Step: ${s.name}\n  await page.locator('${s.selector}').fill('${s.value || ''}');`;
+          }
+          if (s.action === 'navigate') {
+            return `  // Step: ${s.name}\n  await page.goto('${s.value}');`;
+          }
+          return `  // Step: ${s.name}\n  await page.waitForTimeout(500);`;
+        })
+        .join('\n\n') || `  // Finding reproduced on page\n  await page.goto('${finding.where.urlPath}');`;
 
     const script = `/**
  * Standalone Playwright Reproduction Script for Finding ${finding.id}

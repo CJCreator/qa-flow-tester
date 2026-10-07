@@ -51,7 +51,9 @@ export function parseArgs(argv: string[], env: NodeJS.ProcessEnv = process.env):
     throw new Error(`The AI provider must be one of ${PROVIDERS.join(', ')}, not "${provider}"`);
   }
   const maxPages = Number(flag('--max-pages') ?? env.QA_MAX_PAGES ?? 50);
-  const flagValues = new Set(['--fail-on', '--provider', '--max-pages', '--output'].map((f) => flag(f)).filter(Boolean));
+  const flagValues = new Set(
+    ['--fail-on', '--provider', '--max-pages', '--output'].map((f) => flag(f)).filter(Boolean)
+  );
   return {
     url: argv.find((a) => !a.startsWith('--') && !flagValues.has(a)) ?? env.QA_TARGET_URL,
     staging: argv.includes('--staging') || env.QA_STAGING === 'true',
@@ -65,7 +67,9 @@ export function parseArgs(argv: string[], env: NodeJS.ProcessEnv = process.env):
 
 /** Findings that count against the release: confirmed, and not marked intended or not a problem. */
 function active(findings: Finding[]): Finding[] {
-  return findings.filter((f) => !f.needsConfirmation && f.triageStatus !== 'Intended' && f.triageStatus !== 'False Positive');
+  return findings.filter(
+    (f) => !f.needsConfirmation && f.triageStatus !== 'Intended' && f.triageStatus !== 'False Positive'
+  );
 }
 
 /** The process exit code: 1 when something at or above the chosen level was found. */
@@ -99,7 +103,7 @@ export function summaryMarkdown(report: ReleaseReport, args: Pick<CheckupArgs, '
     lines.push('');
   }
   lines.push(
-    'The full report (`report.html`, `report.md`, `findings.json`) is in this run\'s **qa-report** artifact.',
+    "The full report (`report.html`, `report.md`, `findings.json`) is in this run's **qa-report** artifact.",
     '',
     '_Automatic checks only. This lists what was checked, and does not say the site is compliant or secure._'
   );
@@ -122,7 +126,9 @@ export async function runCheckup(args: CheckupArgs): Promise<number> {
   try {
     const hasKey = !!args.apiKey;
     if (hasKey && (args.provider === 'openrouter' || args.provider === 'gemini')) {
-      console.log('[checkup] Note: free-tier AI keys may be used by the provider for training. Page text from the checked site is sent to the AI.');
+      console.log(
+        '[checkup] Note: free-tier AI keys may be used by the provider for training. Page text from the checked site is sent to the AI.'
+      );
     }
     if (!hasKey) console.log('[checkup] No QA_AI_API_KEY set: the plan is written by fixed rules, with no AI.');
     const res = await fetch(`${base}/api/runner/run`, {
@@ -145,7 +151,9 @@ export async function runCheckup(args: CheckupArgs): Promise<number> {
     });
     if (!res.ok) {
       const body = (await res.json().catch(() => ({}))) as { error?: string; suggestion?: string };
-      throw new Error(`The check-up could not start: ${body.error ?? `HTTP ${res.status}`}${body.suggestion ? ` ${body.suggestion}` : ''}`);
+      throw new Error(
+        `The check-up could not start: ${body.error ?? `HTTP ${res.status}`}${body.suggestion ? ` ${body.suggestion}` : ''}`
+      );
     }
 
     const deadline = Date.now() + RUN_TIMEOUT_MS;
@@ -166,7 +174,10 @@ export async function runCheckup(args: CheckupArgs): Promise<number> {
       await fs.appendFile(process.env.GITHUB_STEP_SUMMARY, summaryMarkdown(report, args) + '\n').catch(() => {});
     }
     const code = exitCodeFor(report.findings, args.failOn);
-    if (code !== 0) console.log(`[checkup] Failing the build: findings at or above "${args.failOn}" were found (--fail-on ${args.failOn}).`);
+    if (code !== 0)
+      console.log(
+        `[checkup] Failing the build: findings at or above "${args.failOn}" were found (--fail-on ${args.failOn}).`
+      );
     return code;
   } finally {
     await server.stop();

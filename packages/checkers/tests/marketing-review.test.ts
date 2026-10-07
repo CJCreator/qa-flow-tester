@@ -30,7 +30,8 @@ const at = (urlPath: string, log = newMarketingLog(), extra: Record<string, unkn
 
 describe('What counts as the home page', () => {
   it('is the root, an index page, a language home, or the page the run started from', () => {
-    for (const path of ['/', '/index.html', '/home', '/en', '/en/', '/pt-br']) expect(isHomePath(path), path).toBe(true);
+    for (const path of ['/', '/index.html', '/home', '/en', '/en/', '/pt-br'])
+      expect(isHomePath(path), path).toBe(true);
     expect(isHomePath('/pricing')).toBe(false);
     expect(isHomePath('/shop/page')).toBe(false);
     expect(isHomePath('/start/here', 'https://example.com/start/here')).toBe(true);
@@ -73,7 +74,10 @@ describe('The marketing checklist', () => {
     const siteWide = new Set<string>();
     await checker.checkPage(page({ ...COMPLETE, hasTwitterCard: false }), at('/about', log, { siteWide }));
     await checker.checkPage(page(COMPLETE), at('/', log, { siteWide }));
-    expect(marketingReview(log)!.checks.find((c) => c.key === 'TWITTER-CARD')).toMatchObject({ status: 'gap', findingId: expect.stringContaining('TWITTER-CARD') });
+    expect(marketingReview(log)!.checks.find((c) => c.key === 'TWITTER-CARD')).toMatchObject({
+      status: 'gap',
+      findingId: expect.stringContaining('TWITTER-CARD'),
+    });
   });
 
   it('checks a site whose home page is a language folder, not "/"', async () => {
@@ -86,7 +90,13 @@ describe('The marketing checklist', () => {
 
 describe('The suggestions that depend on what the site is for', () => {
   const checker = new MarketingChecker();
-  const missing = { ...COMPLETE, hasPricing: false, hasTrustSignals: false, hasLeadCapture: false, hasCookieNotice: false };
+  const missing = {
+    ...COMPLETE,
+    hasPricing: false,
+    hasTrustSignals: false,
+    hasLeadCapture: false,
+    hasCookieNotice: false,
+  };
 
   it('reports each as a suggestion, worded as one', async () => {
     const log = newMarketingLog();
@@ -98,12 +108,20 @@ describe('The suggestions that depend on what the site is for', () => {
       expect(f.resolution.startsWith('A suggestion, not a fault:')).toBe(true);
     }
     const review = marketingReview(log)!;
-    expect(review.checks.filter((c) => c.kind === 'opinion').map((c) => c.status)).toEqual(['gap', 'gap', 'gap', 'gap']);
+    expect(review.checks.filter((c) => c.kind === 'opinion').map((c) => c.status)).toEqual([
+      'gap',
+      'gap',
+      'gap',
+      'gap',
+    ]);
   });
 
   it('expects a cookie notice only where analytics run', async () => {
     const log = newMarketingLog();
-    const findings = await checker.checkPage(page({ ...COMPLETE, hasAnalytics: false, hasCookieNotice: false }), at('/', log));
+    const findings = await checker.checkPage(
+      page({ ...COMPLETE, hasAnalytics: false, hasCookieNotice: false }),
+      at('/', log)
+    );
     expect(findings.map((f) => f.id).join()).not.toContain('COOKIE');
     expect(marketingReview(log)!.checks.find((c) => c.key === 'COOKIE')!.status).toBe('ok');
   });
@@ -117,7 +135,10 @@ describe('What the checklist says about where', () => {
     const siteWide = new Set<string>();
     await checker.checkPage(page({ ...COMPLETE, hasTwitterCard: false }), at('/', log, { siteWide }));
     await checker.checkPage(page({ ...COMPLETE, hasTwitterCard: false }), at('/deadend', log, { siteWide }));
-    expect(marketingReview(log)!.checks.find((c) => c.key === 'TWITTER-CARD')).toMatchObject({ status: 'gap', detail: 'Not found on /.' });
+    expect(marketingReview(log)!.checks.find((c) => c.key === 'TWITTER-CARD')).toMatchObject({
+      status: 'gap',
+      detail: 'Not found on /.',
+    });
   });
 
   it('explains a cookie notice that is not needed instead of claiming it was found', async () => {

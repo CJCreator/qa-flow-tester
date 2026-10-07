@@ -35,7 +35,11 @@ const PROVIDERS: Array<{ id: AiProviderId; name: string; hint: string }> = [
   { id: 'openrouter', name: 'OpenRouter’s free models', hint: 'Costs nothing. Free models allow 50 requests a day.' },
   { id: 'anthropic', name: 'Anthropic (Claude)', hint: 'Paid: your Anthropic account is charged for each request.' },
   { id: 'openai', name: 'OpenAI', hint: 'Paid: your OpenAI account is charged for each request.' },
-  { id: 'gemini', name: 'Google Gemini', hint: 'Paid or free, depending on your Google account. A free key may be used for training.' },
+  {
+    id: 'gemini',
+    name: 'Google Gemini',
+    hint: 'Paid or free, depending on your Google account. A free key may be used for training.',
+  },
 ];
 
 /**
@@ -90,8 +94,8 @@ export function SettingsScreen({ onKeySaved }: { onKeySaved: (model: string) => 
           AI
         </h2>
         <p className="mb-4 text-sm text-ink-soft">
-          The AI writes each check-up’s test plan and looks over the screens afterwards. Keys are kept on this computer, never in the
-          browser.
+          The AI writes each check-up’s test plan and looks over the screens afterwards. Keys are kept on this computer,
+          never in the browser.
         </p>
 
         {error && <ErrorMessage>{error}</ErrorMessage>}
@@ -108,7 +112,10 @@ export function SettingsScreen({ onKeySaved }: { onKeySaved: (model: string) => 
               <legend className="label">Which AI to use</legend>
               <div className="space-y-2">
                 {PROVIDERS.map((p) => (
-                  <label key={p.id} className="flex min-h-[44px] cursor-pointer items-start gap-3 rounded-md border-2 border-edge px-3 py-2 hover:border-stamp">
+                  <label
+                    key={p.id}
+                    className="flex min-h-[44px] cursor-pointer items-start gap-3 rounded-md border-2 border-edge px-3 py-2 hover:border-stamp"
+                  >
                     <input
                       type="radio"
                       name="ai-provider"
@@ -133,7 +140,14 @@ export function SettingsScreen({ onKeySaved }: { onKeySaved: (model: string) => 
 
             {FREE_KEY_PRIVACY[shown] && (
               <div className="mb-5">
-                <Notice tone="warn" title={shown === 'openrouter' ? 'Free models can learn from what you send' : 'A free Gemini key can be used for training'}>
+                <Notice
+                  tone="warn"
+                  title={
+                    shown === 'openrouter'
+                      ? 'Free models can learn from what you send'
+                      : 'A free Gemini key can be used for training'
+                  }
+                >
                   {FREE_KEY_PRIVACY[shown]}
                 </Notice>
               </div>
@@ -202,7 +216,9 @@ function OpenRouterKey({
     <>
       <dl className="mb-5 grid gap-x-4 gap-y-2 sm:grid-cols-[12rem_1fr]">
         <dt className="text-ink-soft">Key</dt>
-        <dd className={`font-bold ${setup.configured ? 'text-pass' : 'text-fail'}`}>{setup.configured ? '✓ Saved' : 'No key yet'}</dd>
+        <dd className={`font-bold ${setup.configured ? 'text-pass' : 'text-fail'}`}>
+          {setup.configured ? '✓ Saved' : 'No key yet'}
+        </dd>
       </dl>
       {setup.configured && !replacing ? (
         <button type="button" className="btn-quiet" onClick={() => setReplacing(true)}>
@@ -222,7 +238,15 @@ function OpenRouterKey({
 }
 
 /** A key for a paid service: saved as it is (the service checks it on the first request). */
-function PaidKey({ provider, configured, onSaved }: { provider: AiProviderId; configured: boolean; onSaved: (setup: AiSetup) => void }) {
+function PaidKey({
+  provider,
+  configured,
+  onSaved,
+}: {
+  provider: AiProviderId;
+  configured: boolean;
+  onSaved: (setup: AiSetup) => void;
+}) {
   const [key, setKey] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -270,11 +294,15 @@ function ModelChoice({ setup, onSaved }: { setup: AiSetup; onSaved: () => void }
   const openRouter = (setup.provider ?? 'openrouter') === 'openrouter';
   const [models, setModels] = useState<FreeModel[] | null>(null);
   const [listError, setListError] = useState<string | null>(null);
-  const [text, setText] = useState<string>(setup.chosenBy === 'person' ? setup.model ?? '' : '');
-  const [vision, setVision] = useState<string>(setup.chosenBy === 'person' ? setup.visionModel ?? '' : '');
+  const [text, setText] = useState<string>(setup.chosenBy === 'person' ? (setup.model ?? '') : '');
+  const [vision, setVision] = useState<string>(setup.chosenBy === 'person' ? (setup.visionModel ?? '') : '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [test, setTest] = useState<{ running: boolean; result?: { ok: boolean; ms: number; reason?: string; model?: string }; error?: string }>({ running: false });
+  const [test, setTest] = useState<{
+    running: boolean;
+    result?: { ok: boolean; ms: number; reason?: string; model?: string };
+    error?: string;
+  }>({ running: false });
 
   useEffect(() => {
     if (!openRouter || !setup.configured) return;
@@ -287,7 +315,11 @@ function ModelChoice({ setup, onSaved }: { setup: AiSetup; onSaved: () => void }
     setSaving(true);
     setError(null);
     try {
-      await saveAiSettings({ provider: setup.provider ?? 'openrouter', model: text || null, visionModel: vision || null });
+      await saveAiSettings({
+        provider: setup.provider ?? 'openrouter',
+        model: text || null,
+        visionModel: vision || null,
+      });
       onSaved();
     } catch (err) {
       setError(err instanceof RunnerError ? err.message : 'The model couldn’t be saved. Try again.');
@@ -320,7 +352,13 @@ function ModelChoice({ setup, onSaved }: { setup: AiSetup; onSaved: () => void }
             Writes the plan
           </label>
           {listError && <p className="mb-2 text-sm text-fail">{listError}</p>}
-          <select id="text-model" className="field mb-4" value={text} onChange={(e) => setText(e.target.value)} disabled={!models}>
+          <select
+            id="text-model"
+            className="field mb-4"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            disabled={!models}
+          >
             <option value="">Choose automatically (recommended)</option>
             {(models ?? []).map((m) => (
               <option key={m.id} value={m.id}>
@@ -331,7 +369,13 @@ function ModelChoice({ setup, onSaved }: { setup: AiSetup; onSaved: () => void }
           <label htmlFor="vision-model" className="label">
             Looks over the screens
           </label>
-          <select id="vision-model" className="field mb-4" value={vision} onChange={(e) => setVision(e.target.value)} disabled={!models}>
+          <select
+            id="vision-model"
+            className="field mb-4"
+            value={vision}
+            onChange={(e) => setVision(e.target.value)}
+            disabled={!models}
+          >
             <option value="">Choose automatically (recommended)</option>
             {(models ?? [])
               .filter((m) => m.supportsImages)
@@ -363,7 +407,13 @@ function ModelChoice({ setup, onSaved }: { setup: AiSetup; onSaved: () => void }
         <button type="button" className="btn-primary" disabled={saving} onClick={() => void save()}>
           {saving ? <Spinner label="Saving…" /> : 'Save the model choice'}
         </button>
-        <button type="button" className="btn-quiet" disabled={test.running} onClick={() => void runTest()} aria-describedby="test-model-hint">
+        <button
+          type="button"
+          className="btn-quiet"
+          disabled={test.running}
+          onClick={() => void runTest()}
+          aria-describedby="test-model-hint"
+        >
           {test.running ? <Spinner label="Asking the model…" /> : 'Test this model'}
         </button>
       </div>
@@ -372,9 +422,7 @@ function ModelChoice({ setup, onSaved }: { setup: AiSetup; onSaved: () => void }
       </p>
       <div role="status" className="mt-2 text-sm">
         {test.result?.ok && (
-          <span className="font-bold text-pass">
-            ✓ It answered in {(test.result.ms / 1000).toFixed(1)} s.
-          </span>
+          <span className="font-bold text-pass">✓ It answered in {(test.result.ms / 1000).toFixed(1)} s.</span>
         )}
         {test.result && !test.result.ok && <span className="font-bold text-fail">✗ {test.result.reason}</span>}
         {test.error && <span className="font-bold text-fail">✗ {test.error}</span>}
@@ -385,7 +433,9 @@ function ModelChoice({ setup, onSaved }: { setup: AiSetup; onSaved: () => void }
 
 /** Today's free requests: read after the rest of Settings, since it asks OpenRouter. */
 function Usage() {
-  const [usage, setUsage] = useState<{ requestsLeft: number | null; requestsLimit: number | null } | null | 'failed'>(null);
+  const [usage, setUsage] = useState<{ requestsLeft: number | null; requestsLimit: number | null } | null | 'failed'>(
+    null
+  );
   useEffect(() => {
     getAiUsage()
       .then(setUsage)
@@ -418,7 +468,9 @@ function Defaults() {
   }, []);
   const toggle = async (size: ScreenSize, on: boolean) => {
     if (!sizes) return;
-    const next = on ? SIZES.map((s) => s.id).filter((s) => s === size || sizes.includes(s)) : sizes.filter((s) => s !== size);
+    const next = on
+      ? SIZES.map((s) => s.id).filter((s) => s === size || sizes.includes(s))
+      : sizes.filter((s) => s !== size);
     try {
       setSizes((await saveDefaults({ screenSizes: next })).screenSizes);
       setMessage({ ok: true, text: 'Saved.' });
@@ -431,7 +483,9 @@ function Defaults() {
       <h2 id="defaults-title" className="mb-1 text-xl font-bold">
         Check-up defaults
       </h2>
-      <p className="mb-4 text-sm text-ink-soft">The screen sizes a new check-up tests at. You can still change them in each plan.</p>
+      <p className="mb-4 text-sm text-ink-soft">
+        The screen sizes a new check-up tests at. You can still change them in each plan.
+      </p>
       {!sizes ? (
         <Spinner label="Reading the defaults…" />
       ) : (
@@ -849,9 +903,7 @@ function CheckupSchedules() {
               <div>
                 <div className="flex items-center gap-2">
                   <span
-                    className={`inline-block h-2.5 w-2.5 rounded-full ${
-                      s.enabled ? 'bg-pass' : 'bg-ink-soft/40'
-                    }`}
+                    className={`inline-block h-2.5 w-2.5 rounded-full ${s.enabled ? 'bg-pass' : 'bg-ink-soft/40'}`}
                   />
                   <span className="font-bold text-ink text-sm break-all">{s.targetUrl}</span>
                   <span className="rounded bg-panel px-2 py-0.5 font-mono text-xs uppercase text-ink-soft border border-rule">
@@ -912,7 +964,12 @@ function AddSignIn({ host, onSaved }: { host: string; onSaved: () => void }) {
     setError(null);
     setNote(null);
     try {
-      const r = await addSiteSignIn(host, { role: role.trim() || 'member', username: username.trim(), password, loginPath: loginPath.trim() || undefined });
+      const r = await addSiteSignIn(host, {
+        role: role.trim() || 'member',
+        username: username.trim(),
+        password,
+        loginPath: loginPath.trim() || undefined,
+      });
       setNote(r.note ?? 'Signed in and saved' + (r.landingPath ? ' (lands on ' + r.landingPath + ')' : '') + '.');
       setRole('');
       setUsername('');
@@ -926,33 +983,73 @@ function AddSignIn({ host, onSaved }: { host: string; onSaved: () => void }) {
     }
   };
   return (
-    <form onSubmit={submit} className="mt-3 grid gap-3 rounded-card border border-edge p-3 sm:grid-cols-2" aria-label={'Add a sign-in for ' + host}>
-      <p className="text-sm text-ink-soft sm:col-span-2">Use a test account, not a real person’s. It signs in once to check the details work, then keeps the password in this computer’s keychain.</p>
+    <form
+      onSubmit={submit}
+      className="mt-3 grid gap-3 rounded-card border border-edge p-3 sm:grid-cols-2"
+      aria-label={'Add a sign-in for ' + host}
+    >
+      <p className="text-sm text-ink-soft sm:col-span-2">
+        Use a test account, not a real person’s. It signs in once to check the details work, then keeps the password in
+        this computer’s keychain.
+      </p>
       <label className="text-sm">
         <span className="mb-1 block font-bold">Who it is (e.g. admin, member)</span>
-        <input className="field py-2 text-sm" value={role} placeholder="member" onChange={(e) => setRole(e.target.value)} />
+        <input
+          className="field py-2 text-sm"
+          value={role}
+          placeholder="member"
+          onChange={(e) => setRole(e.target.value)}
+        />
       </label>
       <label className="text-sm">
         <span className="mb-1 block font-bold">Sign-in page</span>
-        <input className="field py-2 text-sm" value={loginPath} placeholder="/login" onChange={(e) => setLoginPath(e.target.value)} />
+        <input
+          className="field py-2 text-sm"
+          value={loginPath}
+          placeholder="/login"
+          onChange={(e) => setLoginPath(e.target.value)}
+        />
       </label>
       <label className="text-sm">
         <span className="mb-1 block font-bold">Username or email</span>
-        <input className="field py-2 text-sm" autoComplete="off" value={username} onChange={(e) => setUsername(e.target.value)} />
+        <input
+          className="field py-2 text-sm"
+          autoComplete="off"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+        />
       </label>
       <label className="text-sm">
         <span className="mb-1 block font-bold">Password</span>
-        <input className="field py-2 text-sm" type="password" autoComplete="off" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <input
+          className="field py-2 text-sm"
+          type="password"
+          autoComplete="off"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
       </label>
       <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
-        <button type="submit" className="btn-primary min-h-[44px] px-4 text-sm" disabled={busy || !username.trim() || !password}>
+        <button
+          type="submit"
+          className="btn-primary min-h-[44px] px-4 text-sm"
+          disabled={busy || !username.trim() || !password}
+        >
           {busy ? 'Signing in…' : 'Test and save'}
         </button>
         <button type="button" className="btn-link text-sm" onClick={() => setOpen(false)}>
           Close
         </button>
-        {error && <span role="alert" className="text-sm font-bold">{error}</span>}
-        {note && <span role="status" className="text-sm text-ink-soft">{note}</span>}
+        {error && (
+          <span role="alert" className="text-sm font-bold">
+            {error}
+          </span>
+        )}
+        {note && (
+          <span role="status" className="text-sm text-ink-soft">
+            {note}
+          </span>
+        )}
       </div>
     </form>
   );
@@ -974,9 +1071,20 @@ function Sites() {
     setTested((t) => ({ ...t, [key]: { ok: true, text: 'Signing in…' } }));
     try {
       const r = await testSiteSignIn(host, role);
-      setTested((t) => ({ ...t, [key]: { ok: r.verified, text: r.verified ? 'Works' + (r.landingPath ? ' (lands on ' + r.landingPath + ')' : '') : r.error || 'Didn’t work' } }));
+      setTested((t) => ({
+        ...t,
+        [key]: {
+          ok: r.verified,
+          text: r.verified
+            ? 'Works' + (r.landingPath ? ' (lands on ' + r.landingPath + ')' : '')
+            : r.error || 'Didn’t work',
+        },
+      }));
     } catch (err) {
-      setTested((t) => ({ ...t, [key]: { ok: false, text: err instanceof RunnerError ? err.message : 'Couldn’t test it.' } }));
+      setTested((t) => ({
+        ...t,
+        [key]: { ok: false, text: err instanceof RunnerError ? err.message : 'Couldn’t test it.' },
+      }));
     }
   };
   const change = async (host: string, update: { searchChecks?: boolean | null; forgetSignIn?: string }) => {
@@ -992,7 +1100,9 @@ function Sites() {
       <h2 id="sites-title" className="mb-1 text-xl font-bold">
         Sites
       </h2>
-      <p className="mb-4 text-sm text-ink-soft">What’s remembered for each site you’ve checked. Saved passwords stay in this computer’s keychain.</p>
+      <p className="mb-4 text-sm text-ink-soft">
+        What’s remembered for each site you’ve checked. Saved passwords stay in this computer’s keychain.
+      </p>
       {error && <ErrorMessage>{error}</ErrorMessage>}
       {!sites && !error && <Spinner label="Reading the sites…" />}
       {sites && sites.length === 0 && <p className="text-ink-soft">No sites yet.</p>}
@@ -1009,7 +1119,11 @@ function Sites() {
                 <select
                   className="field w-auto py-1.5 text-sm"
                   value={site.searchChecks === undefined ? 'default' : site.searchChecks ? 'on' : 'off'}
-                  onChange={(e) => void change(site.host, { searchChecks: e.target.value === 'default' ? null : e.target.value === 'on' })}
+                  onChange={(e) =>
+                    void change(site.host, {
+                      searchChecks: e.target.value === 'default' ? null : e.target.value === 'on',
+                    })
+                  }
                 >
                   <option value="default">As usual (live site: yes, test copy: no)</option>
                   <option value="on">Yes</option>
@@ -1026,11 +1140,18 @@ function Sites() {
                       <button type="button" className="btn-link text-sm" onClick={() => void test(site.host, s.role)}>
                         Test it
                       </button>
-                      <button type="button" className="btn-link text-sm" onClick={() => void change(site.host, { forgetSignIn: s.role })}>
+                      <button
+                        type="button"
+                        className="btn-link text-sm"
+                        onClick={() => void change(site.host, { forgetSignIn: s.role })}
+                      >
                         Forget
                       </button>
                       {tested[site.host + '|' + s.role] && (
-                        <span role="status" className={tested[site.host + '|' + s.role].ok ? 'text-ink-soft' : 'font-bold text-ink'}>
+                        <span
+                          role="status"
+                          className={tested[site.host + '|' + s.role].ok ? 'text-ink-soft' : 'font-bold text-ink'}
+                        >
                           {tested[site.host + '|' + s.role].text}
                         </span>
                       )}

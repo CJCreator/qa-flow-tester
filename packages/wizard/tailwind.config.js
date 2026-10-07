@@ -61,7 +61,10 @@ export const lightPalette = {
 /** A palette as CSS variables of "r g b", so classes like bg-surface/60 still work. */
 function asVariables(colors) {
   return Object.fromEntries(
-    Object.entries(colors).map(([name, hex]) => [`--c-${name}`, [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(' ')])
+    Object.entries(colors).map(([name, hex]) => [
+      `--c-${name}`,
+      [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(' '),
+    ])
   );
 }
 

@@ -1,9 +1,4 @@
-import type {
-  ReferenceFlow,
-  FrictionScorecard,
-  CompetitiveBenchmark,
-  UXRecommendation,
-} from '@qa/types';
+import type { ReferenceFlow, FrictionScorecard, CompetitiveBenchmark, UXRecommendation } from '@qa/types';
 
 export class BenchmarkingEngine {
   /**

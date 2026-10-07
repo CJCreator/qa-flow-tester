@@ -88,9 +88,12 @@ describe('AIProvider and KeyResolver', () => {
     let finish = 'stop';
     globalThis.fetch = (async (_url: string, init: RequestInit) => {
       bodies.push(JSON.parse(String(init.body)));
-      return new Response(JSON.stringify({ choices: [{ finish_reason: finish, message: { content: '{"flows":[' } }] }), {
-        status: 200,
-      });
+      return new Response(
+        JSON.stringify({ choices: [{ finish_reason: finish, message: { content: '{"flows":[' } }] }),
+        {
+          status: 200,
+        }
+      );
     }) as typeof fetch;
     try {
       const openRouter = createAIProvider('openrouter', 'test-key', undefined, 'some/model:free');
@@ -101,7 +104,9 @@ describe('AIProvider and KeyResolver', () => {
       finish = 'length';
       await expect(openRouter.generateText([{ role: 'user', content: 'plan' }])).rejects.toThrow(/cut off/);
 
-      await createAIProvider('openai', 'test-key').generateText([{ role: 'user', content: 'plan' }]).catch(() => {});
+      await createAIProvider('openai', 'test-key')
+        .generateText([{ role: 'user', content: 'plan' }])
+        .catch(() => {});
       expect(bodies[2].reasoning).toBeUndefined();
     } finally {
       globalThis.fetch = realFetch;

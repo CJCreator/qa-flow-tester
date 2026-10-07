@@ -59,7 +59,9 @@ export interface PagePlannerInput {
  */
 function rememberedFor(page: PageInventoryItem, input: Pick<PagePlannerInput, 'remembered'>) {
   const before = input.remembered?.pages[page.urlPath];
-  return before?.contentKey && before.contentKey === page.contentKey && before.source !== 'fallback' ? before : undefined;
+  return before?.contentKey && before.contentKey === page.contentKey && before.source !== 'fallback'
+    ? before
+    : undefined;
 }
 
 /** A remembered Navigation Check the AI (or the person) wrote. */
@@ -87,7 +89,10 @@ function asksAbout(link: PageLink, titles: Map<string, string>): boolean {
 }
 
 /** Shared-menu links to ask the AI about: unseen destinations the site's memory doesn't know yet. */
-function unknownSharedLinks(input: Pick<PagePlannerInput, 'pages' | 'graph' | 'remembered'>, links: SharedLink[]): SharedLink[] {
+function unknownSharedLinks(
+  input: Pick<PagePlannerInput, 'pages' | 'graph' | 'remembered'>,
+  links: SharedLink[]
+): SharedLink[] {
   const titles = titlesOf(input.pages);
   return links.filter((s) => asksAbout(s.link, titles) && !rememberedCheck(input, `nav:shared|${linkKey(s.link)}`));
 }
@@ -156,11 +161,16 @@ export function pageBatches(pages: PageInventoryItem[]): PageInventoryItem[][] {
  * AI requests the pages and menus need: one per batch of pages to plan, and one for the shared
  * menus. Pages and links the site's memory already has don't count.
  */
-export function estimatePageRequests(input: Pick<PagePlannerInput, 'pages' | 'coverage' | 'graph' | 'remembered'>): number {
+export function estimatePageRequests(
+  input: Pick<PagePlannerInput, 'pages' | 'coverage' | 'graph' | 'remembered'>
+): number {
   const toPlan = testedPages(input).filter((p) => !rememberedFor(p, input));
   // Links that delete, pay or sign out are never checked, so they're never asked about either.
   const safety = new SafetyFilter([]);
-  const shared = unknownSharedLinks(input, input.graph.shared.filter((s) => clickable(s.link, safety))).length;
+  const shared = unknownSharedLinks(
+    input,
+    input.graph.shared.filter((s) => clickable(s.link, safety))
+  ).length;
   return pageBatches(toPlan).length + Math.ceil(shared / SHARED_LINKS_PER_REQUEST);
 }
 
@@ -169,7 +179,10 @@ export function estimatePageRequests(input: Pick<PagePlannerInput, 'pages' | 'co
  * often leave a comma before a closing bracket; that one slip is forgiven, nothing else is guessed.
  */
 export function parseJsonAnswer(text: string): any {
-  const cleaned = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+  const cleaned = text
+    .replace(/```json/gi, '')
+    .replace(/```/g, '')
+    .trim();
   const start = cleaned.indexOf('{');
   const end = cleaned.lastIndexOf('}');
   const body = start >= 0 && end > start ? cleaned.slice(start, end + 1) : cleaned;
@@ -192,7 +205,14 @@ function guessFillValue(target: string): string {
   const hint = target.toLowerCase();
   if (hint.includes('email')) return 'test.user@example.com';
   if (hint.includes('password') || hint.includes('pass')) return 'TestPassword123!';
-  if (hint.includes('url') || hint.includes('address') || hint.includes('site') || hint.includes('domain') || hint.includes('host')) return 'https://example.com';
+  if (
+    hint.includes('url') ||
+    hint.includes('address') ||
+    hint.includes('site') ||
+    hint.includes('domain') ||
+    hint.includes('host')
+  )
+    return 'https://example.com';
   if (hint.includes('phone') || hint.includes('tel')) return '5555550123';
   if (hint.includes('name')) return 'Test User';
   if (/number|amount|qty|quantity|price/.test(hint)) return '1';
@@ -222,7 +242,13 @@ export function defaultNavigationName(link: PageLink, shared?: NavigationCheck['
 export function navigationCheck(
   link: PageLink,
   startPage: PageInventoryItem,
-  options: { shared?: NavigationCheck['shared']; roles: string[]; source: PlanItemSource; name?: string; expectation?: string }
+  options: {
+    shared?: NavigationCheck['shared'];
+    roles: string[];
+    source: PlanItemSource;
+    name?: string;
+    expectation?: string;
+  }
 ): NavigationCheck {
   const menuSteps: TestCaseStep[] = [];
   const notAt: Breakpoint[] = [];
@@ -234,7 +260,13 @@ export function navigationCheck(
     }
     const same = menuSteps.find((s) => s.selector === menu.selector);
     if (same) same.onlyAt = [...(same.onlyAt || []), size];
-    else menuSteps.push({ action: 'click', selector: menu.selector, name: `Open the menu (“${menu.name}”)`, onlyAt: [size] });
+    else
+      menuSteps.push({
+        action: 'click',
+        selector: menu.selector,
+        name: `Open the menu (“${menu.name}”)`,
+        onlyAt: [size],
+      });
   }
   return {
     id: `nav:${options.shared ? 'shared' : startPage.urlPath}|${linkKey(link)}`,
@@ -270,14 +302,16 @@ export function fallbackPageTests(page: PageInventoryItem, safety: SafetyFilter)
     const key = el.name.toLowerCase();
     if (tried.has(key) || !el.visible || !el.enabled || el.insideForm) return false;
     if (!['button', 'tab', 'switch', 'checkbox'].includes(el.role)) return false;
-    if (RISKY_TO_CLICK.test(el.name) || SESSION_ENDING.test(el.name) || safety.isSensitive(el.name, el.selector)) return false;
+    if (RISKY_TO_CLICK.test(el.name) || SESSION_ENDING.test(el.name) || safety.isSensitive(el.name, el.selector))
+      return false;
     tried.add(key);
     return true;
   });
   if (controls.length === 0) return [];
   const steps: TestCaseStep[] = [];
   for (const el of controls.slice(0, 6)) {
-    if (steps.length > 0) steps.push({ action: 'navigate', value: page.urlPath, name: `Back to ${page.urlPath}`, optional: true });
+    if (steps.length > 0)
+      steps.push({ action: 'navigate', value: page.urlPath, name: `Back to ${page.urlPath}`, optional: true });
     steps.push({ action: 'click', selector: el.selector, name: `Try “${el.name}”`, optional: true });
   }
   return [
@@ -294,8 +328,19 @@ export function fallbackPageTests(page: PageInventoryItem, safety: SafetyFilter)
 interface PageFacts {
   urlPath: string;
   title: string;
-  controls: Array<{ role: string; name: string; selector: string; type?: string; disabled?: boolean; inForm?: boolean }>;
-  forms: Array<{ fields: Array<{ label?: string; type?: string; required?: boolean; selector: string }>; submit?: string; sendsData: boolean }>;
+  controls: Array<{
+    role: string;
+    name: string;
+    selector: string;
+    type?: string;
+    disabled?: boolean;
+    inForm?: boolean;
+  }>;
+  forms: Array<{
+    fields: Array<{ label?: string; type?: string; required?: boolean; selector: string }>;
+    submit?: string;
+    sendsData: boolean;
+  }>;
   links: Array<{ selector: string; name: string; to: string }>;
 }
 
@@ -304,13 +349,21 @@ function pageLinks(page: PageInventoryItem, input: Pick<PagePlannerInput, 'graph
   return (input.graph.inPage.get(page.urlPath) || []).filter((l) => clickable(l, safety)).slice(0, LINKS_PER_PAGE);
 }
 
-function pageFacts(page: PageInventoryItem, input: PagePlannerInput, safety: SafetyFilter, titles: Map<string, string>): PageFacts {
+function pageFacts(
+  page: PageInventoryItem,
+  input: PagePlannerInput,
+  safety: SafetyFilter,
+  titles: Map<string, string>
+): PageFacts {
   return {
     urlPath: page.urlPath,
     title: page.title,
     // Controls it must never press (deleting, paying, signing out) aren't offered at all.
     controls: (page.elements || [])
-      .filter((el) => el.visible && el.role !== 'link' && !SESSION_ENDING.test(el.name) && !safety.isSensitive(el.name, el.selector))
+      .filter(
+        (el) =>
+          el.visible && el.role !== 'link' && !SESSION_ENDING.test(el.name) && !safety.isSensitive(el.name, el.selector)
+      )
       .slice(0, CONTROLS_PER_PAGE)
       .map((el) => ({
         role: el.role,
@@ -323,7 +376,12 @@ function pageFacts(page: PageInventoryItem, input: PagePlannerInput, safety: Saf
     forms: input.forms
       .filter((f) => f.urlPath === page.urlPath)
       .map((f) => ({
-        fields: f.inputs.map((i) => ({ label: i.label, type: i.type, required: i.required || undefined, selector: i.selector })),
+        fields: f.inputs.map((i) => ({
+          label: i.label,
+          type: i.type,
+          required: i.required || undefined,
+          selector: i.selector,
+        })),
         submit: f.submitButtonSelector,
         sendsData: (f.method || 'GET').toUpperCase() !== 'GET',
       })),
@@ -371,7 +429,10 @@ ${JSON.stringify(facts)}
 Answer with ONLY this JSON: {"pages": [{"urlPath": "...", "tests": [...]}]}`;
 }
 
-function menusPrompt(input: PagePlannerInput, links: Array<{ selector: string; name: string; to: string; where: string; destination?: string }>): string {
+function menusPrompt(
+  input: PagePlannerInput,
+  links: Array<{ selector: string; name: string; to: string; where: string; destination?: string }>
+): string {
   return `${siteIntro(input)}
 
 These links are in the header, menu or footer of many pages and go to pages not yet seen. For each one you can, say what the destination should show.
@@ -406,8 +467,10 @@ function readPageAnswer(raw: any, page: PageInventoryItem, input: PagePlannerInp
   for (const el of page.elements || []) byTarget.set(el.selector, { name: el.name, element: el });
   const forms = input.forms.filter((f) => f.urlPath === page.urlPath);
   for (const form of forms) {
-    for (const field of form.inputs) if (!byTarget.has(field.selector)) byTarget.set(field.selector, { name: field.label || field.selector });
-    if (form.submitButtonSelector && !byTarget.has(form.submitButtonSelector)) byTarget.set(form.submitButtonSelector, { name: 'Send' });
+    for (const field of form.inputs)
+      if (!byTarget.has(field.selector)) byTarget.set(field.selector, { name: field.label || field.selector });
+    if (form.submitButtonSelector && !byTarget.has(form.submitButtonSelector))
+      byTarget.set(form.submitButtonSelector, { name: 'Send' });
   }
   const notes = input.productContext || '';
   const role = plannedAs(page);
@@ -425,11 +488,15 @@ function readPageAnswer(raw: any, page: PageInventoryItem, input: PagePlannerInp
       const action = s?.action;
       const target = typeof s?.selector === 'string' ? byTarget.get(s.selector) : undefined;
       if (!['click', 'fill', 'select', 'check'].includes(action) || !target) {
-        answer.problems.push(`${page.urlPath}: “${name}” uses ${s?.selector ? `“${s.selector}”, which isn't on the page` : 'a step with no selector'}.`);
+        answer.problems.push(
+          `${page.urlPath}: “${name}” uses ${s?.selector ? `“${s.selector}”, which isn't on the page` : 'a step with no selector'}.`
+        );
         return;
       }
       if (SESSION_ENDING.test(target.name) || safety.isSensitive(target.name, s.selector)) {
-        answer.problems.push(`${page.urlPath}: “${name}” presses “${target.name}”, which could delete, pay or sign out.`);
+        answer.problems.push(
+          `${page.urlPath}: “${name}” presses “${target.name}”, which could delete, pay or sign out.`
+        );
         return;
       }
       const value =
@@ -438,7 +505,12 @@ function readPageAnswer(raw: any, page: PageInventoryItem, input: PagePlannerInp
             ? s.value
             : guessFillValue(`${s.selector} ${target.name}`)
           : undefined;
-      steps.push({ action, selector: s.selector, value, name: typeof s.name === 'string' && s.name.trim() ? s.name.trim() : target.name });
+      steps.push({
+        action,
+        selector: s.selector,
+        value,
+        name: typeof s.name === 'string' && s.name.trim() ? s.name.trim() : target.name,
+      });
     }
 
     let expectations: TestCaseExpectations | undefined;
@@ -453,7 +525,14 @@ function readPageAnswer(raw: any, page: PageInventoryItem, input: PagePlannerInp
       expectations = { validationError: { field: expect.error.trim() }, origin: 'ai-guess' };
     }
 
-    const test: PlanPageTest = { id: `pagetest:${page.urlPath}:${answer.tests.length + 1}`, name, role, steps, expectations, source: 'ai' };
+    const test: PlanPageTest = {
+      id: `pagetest:${page.urlPath}:${answer.tests.length + 1}`,
+      name,
+      role,
+      steps,
+      expectations,
+      source: 'ai',
+    };
     const asFlow = { id: test.id, name, role, description: '', startPage: page.urlPath, steps } as DiscoveredFlow;
     if (needsTestCopy(asFlow, [page], forms)) test.needsTestCopy = true;
     answer.tests.push(test);
@@ -462,7 +541,8 @@ function readPageAnswer(raw: any, page: PageInventoryItem, input: PagePlannerInp
   for (const l of Array.isArray(raw?.links) ? raw.links : []) {
     if (typeof l?.selector !== 'string') continue;
     answer.links.set(l.selector, {
-      expectation: typeof l.expect === 'string' ? l.expect : typeof l.expectation === 'string' ? l.expectation : undefined,
+      expectation:
+        typeof l.expect === 'string' ? l.expect : typeof l.expectation === 'string' ? l.expectation : undefined,
     });
   }
   return answer;
@@ -486,7 +566,10 @@ export interface AskOptions {
  */
 export async function askWithOneRepair(ai: AIProvider, prompt: string, options: AskOptions): Promise<any> {
   const messages: AIMessage[] = [
-    { role: 'system', content: options.system ?? 'You plan pre-release website tests. Answer with strictly valid JSON only.' },
+    {
+      role: 'system',
+      content: options.system ?? 'You plan pre-release website tests. Answer with strictly valid JSON only.',
+    },
     { role: 'user', content: options.redact(prompt) },
   ];
   const asked = { responseFormat: 'json', reasoning: 'low', maxTokens: PLANNING_MAX_TOKENS } as const;
@@ -512,7 +595,12 @@ export async function askWithOneRepair(ai: AIProvider, prompt: string, options: 
       { role: 'assistant', content: first },
       {
         role: 'user',
-        content: `That answer can't be used as it is:\n${problems.slice(0, 25).map((p) => `- ${p}`).join('\n')}\n\nReply again with the COMPLETE JSON object, covering everything asked for. Copy selectors exactly as listed. No commentary.`,
+        content: `That answer can't be used as it is:\n${problems
+          .slice(0, 25)
+          .map((p) => `- ${p}`)
+          .join(
+            '\n'
+          )}\n\nReply again with the COMPLETE JSON object, covering everything asked for. Copy selectors exactly as listed. No commentary.`,
       },
     ],
     { ...asked, temperature: 0, stage: 'repair' }
@@ -539,7 +627,8 @@ export function fallbackReasonOf(err: unknown): FallbackReason {
  * items themselves, the same ones the approval summary counts, so the two always agree.
  */
 export function fallbackNotes(items: Array<{ source?: string; fallbackReason?: FallbackReason }>): string[] {
-  const count = (reason: FallbackReason) => items.filter((i) => i.source === 'fallback' && i.fallbackReason === reason).length;
+  const count = (reason: FallbackReason) =>
+    items.filter((i) => i.source === 'fallback' && i.fallbackReason === reason).length;
   const n = (k: number) => `${k} ${k === 1 ? 'item' : 'items'}`;
   const notes: string[] = [];
   const truncated = count('truncated');
@@ -550,14 +639,22 @@ export function fallbackNotes(items: Array<{ source?: string; fallbackReason?: F
   }
   const overBudget = count('budget');
   if (overBudget > 0) {
-    notes.push(`The AI Request Budget ran out: ${n(overBudget)} ${overBudget === 1 ? 'was' : 'were'} planned by fixed rules. Re-plan them with the AI when requests are available again.`);
+    notes.push(
+      `The AI Request Budget ran out: ${n(overBudget)} ${overBudget === 1 ? 'was' : 'were'} planned by fixed rules. Re-plan them with the AI when requests are available again.`
+    );
   }
   const stopped = count('stopped');
-  if (stopped > 0) notes.push(`You stopped the scan early, so fixed rules planned ${n(stopped)}. Re-plan them with the AI when you like.`);
+  if (stopped > 0)
+    notes.push(
+      `You stopped the scan early, so fixed rules planned ${n(stopped)}. Re-plan them with the AI when you like.`
+    );
   const noAnswer = count('no-answer');
   if (noAnswer > 0) notes.push(`The AI service didn’t answer for ${n(noAnswer)}, so fixed rules planned them.`);
   const unusable = count('unusable');
-  if (unusable > 0) notes.push(`The AI’s answers for ${n(unusable)} couldn’t be used even after asking again, so fixed rules planned them.`);
+  if (unusable > 0)
+    notes.push(
+      `The AI’s answers for ${n(unusable)} couldn’t be used even after asking again, so fixed rules planned them.`
+    );
   return notes;
 }
 
@@ -583,13 +680,27 @@ export async function planPagesAndMenus(
   const total = batches.length + Math.ceil(sharedToAsk.length / SHARED_LINKS_PER_REQUEST);
   let done = 0;
   const asking = (what: string) => (attempt: number) =>
-    onProgress?.({ done, total, what: `Asking the AI about ${what}${attempt > 1 ? ` (try ${attempt})` : ''}…`, asking: true, attempt });
+    onProgress?.({
+      done,
+      total,
+      what: `Asking the AI about ${what}${attempt > 1 ? ` (try ${attempt})` : ''}…`,
+      asking: true,
+      attempt,
+    });
 
   /** Pages' tests, who planned them, and what the AI said about their links' destinations. */
-  const planned = new Map<string, { tests: PlanPageTest[]; source: PlanItemSource; reason?: FallbackReason; links: Map<string, PlannedLink> }>();
+  const planned = new Map<
+    string,
+    { tests: PlanPageTest[]; source: PlanItemSource; reason?: FallbackReason; links: Map<string, PlannedLink> }
+  >();
   for (const page of tested) {
     const before = rememberedFor(page, input);
-    if (before) planned.set(page.urlPath, { tests: JSON.parse(JSON.stringify(before.tests)), source: before.source, links: new Map() });
+    if (before)
+      planned.set(page.urlPath, {
+        tests: JSON.parse(JSON.stringify(before.tests)),
+        source: before.source,
+        links: new Map(),
+      });
   }
 
   for (const batch of batches) {
@@ -617,8 +728,15 @@ export async function planPagesAndMenus(
           return problems;
         };
         const paths = batch.map((p) => p.urlPath);
-        const what = paths.length > 2 ? `${paths.slice(0, 2).join(', ')} and ${paths.length - 2} more` : paths.join(', ');
-        readAll(await askWithOneRepair(ai, pagesPrompt(input, facts), { redact: input.redact, problemsIn: readAll, onTry: asking(what) }));
+        const what =
+          paths.length > 2 ? `${paths.slice(0, 2).join(', ')} and ${paths.length - 2} more` : paths.join(', ');
+        readAll(
+          await askWithOneRepair(ai, pagesPrompt(input, facts), {
+            redact: input.redact,
+            problemsIn: readAll,
+            onTry: asking(what),
+          })
+        );
       } catch (err) {
         failure = fallbackReasonOf(err);
       }
@@ -650,7 +768,12 @@ export async function planPagesAndMenus(
       for (const s of chunk) sharedUnplanned.set(s.link.selector, 'no-ai');
       continue;
     }
-    const list = chunk.map((s) => ({ selector: s.link.selector, name: s.link.name, to: s.link.to, where: s.link.landmark ?? 'page' }));
+    const list = chunk.map((s) => ({
+      selector: s.link.selector,
+      name: s.link.name,
+      to: s.link.to,
+      where: s.link.landmark ?? 'page',
+    }));
     try {
       const read = (parsed: any) => {
         for (const l of Array.isArray(parsed?.links) ? parsed.links : []) {
@@ -661,7 +784,13 @@ export async function planPagesAndMenus(
         // Leaving a link out is fine: its check is named from its text either way.
         return [];
       };
-      read(await askWithOneRepair(ai, menusPrompt(input, list), { redact: input.redact, problemsIn: read, onTry: asking('the shared menus') }));
+      read(
+        await askWithOneRepair(ai, menusPrompt(input, list), {
+          redact: input.redact,
+          problemsIn: read,
+          onTry: asking('the shared menus'),
+        })
+      );
     } catch (err) {
       for (const s of chunk) sharedUnplanned.set(s.link.selector, fallbackReasonOf(err));
     }
@@ -707,7 +836,10 @@ export async function planPagesAndMenus(
    * Who planned a link's check. One to a page the crawl saw needs no AI, so it counts as planned
    * unless there's no AI at all; one the AI was to be asked about counts as fixed rules when it wasn't.
    */
-  const sourceOf = (link: PageLink, unasked: FallbackReason | undefined): Pick<NavigationCheck, 'source' | 'fallbackReason'> => {
+  const sourceOf = (
+    link: PageLink,
+    unasked: FallbackReason | undefined
+  ): Pick<NavigationCheck, 'source' | 'fallbackReason'> => {
     const reason = !ai ? 'no-ai' : asksAbout(link, titles) ? unasked : undefined;
     return reason ? { source: 'fallback', fallbackReason: reason } : { source: 'ai' };
   };
@@ -715,7 +847,13 @@ export async function planPagesAndMenus(
   const withMemory = (check: NavigationCheck, written?: PlannedLink): NavigationCheck => {
     const before = written ? undefined : rememberedCheck(input, check.id);
     return before
-      ? { ...check, name: before.name, expectation: before.expectation ?? check.expectation, source: before.source, fallbackReason: undefined }
+      ? {
+          ...check,
+          name: before.name,
+          expectation: before.expectation ?? check.expectation,
+          source: before.source,
+          fallbackReason: undefined,
+        }
       : check;
   };
   for (const shared of sharedToPlan) {
@@ -760,6 +898,7 @@ export async function planPagesAndMenus(
   }
 
   const items = [...pages.filter((p) => p.coverage !== 'covered'), ...navigation];
-  const count = (reason: FallbackReason) => items.filter((i) => i.source === 'fallback' && i.fallbackReason === reason).length;
+  const count = (reason: FallbackReason) =>
+    items.filter((i) => i.source === 'fallback' && i.fallbackReason === reason).length;
   return { pages, navigation, overBudget: count('budget'), truncated: count('truncated'), notes: fallbackNotes(items) };
 }

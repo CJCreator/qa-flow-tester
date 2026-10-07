@@ -70,7 +70,9 @@ export function needsTestCopy(flow: DiscoveredFlow, pages: PageInventoryItem[], 
       continue;
     }
     if (safety.isSensitive(name, step.selector)) return true;
-    const isLink = el ? el.role === 'link' && !!el.href && el.href !== '#' && !el.href.startsWith('javascript:') : false;
+    const isLink = el
+      ? el.role === 'link' && !!el.href && el.href !== '#' && !el.href.startsWith('javascript:')
+      : false;
     if (isLink) continue;
     if (el?.insideForm && (el.role === 'button' || el.inputType === 'submit')) return true;
     if (CHANGES_SOMETHING.test(name)) return true;

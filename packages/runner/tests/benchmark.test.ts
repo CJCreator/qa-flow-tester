@@ -66,7 +66,11 @@ describe('Comparing two sites', () => {
 
   beforeAll(async () => {
     await new Promise<void>((resolve) => fixtureServer.listen(FIXTURE_PORT, () => resolve()));
-    runner = new RunnerServer({ port: RUNNER_PORT, outputDir: path.join(scratch, 'report'), dataDir: path.join(scratch, 'data') });
+    runner = new RunnerServer({
+      port: RUNNER_PORT,
+      outputDir: path.join(scratch, 'report'),
+      dataDir: path.join(scratch, 'data'),
+    });
     await runner.start();
   });
 
@@ -76,7 +80,11 @@ describe('Comparing two sites', () => {
   });
 
   const post = (body: unknown) =>
-    fetch(`${base}/api/runner/benchmark`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    fetch(`${base}/api/runner/benchmark`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
 
   it('asks for both addresses', async () => {
     expect((await post({ ourUrl: fixture })).status).toBe(400);

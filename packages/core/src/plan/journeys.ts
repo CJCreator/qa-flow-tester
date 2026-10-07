@@ -1,4 +1,11 @@
-import type { AIMessage, AmbiguityQuestion, FallbackReason, DiscoveredFlow, PageInventoryItem, RoleCredential } from '@qa/types';
+import type {
+  AIMessage,
+  AmbiguityQuestion,
+  FallbackReason,
+  DiscoveredFlow,
+  PageInventoryItem,
+  RoleCredential,
+} from '@qa/types';
 import { AITruncatedError, completeWith, type AIProvider } from '../ai/ai-provider.js';
 import { PlanValidator } from '../discovery/plan-validator.js';
 import { CREDENTIAL_PLACEHOLDERS } from '../credentials.js';
@@ -48,7 +55,14 @@ function guessFillValue(step: { selector?: string; name: string }): string {
   const hint = `${step.selector || ''} ${step.name}`.toLowerCase();
   if (hint.includes('email')) return 'test.user@example.com';
   if (hint.includes('password') || hint.includes('pass')) return 'TestPassword123!';
-  if (hint.includes('url') || hint.includes('address') || hint.includes('site') || hint.includes('domain') || hint.includes('host')) return 'https://example.com';
+  if (
+    hint.includes('url') ||
+    hint.includes('address') ||
+    hint.includes('site') ||
+    hint.includes('domain') ||
+    hint.includes('host')
+  )
+    return 'https://example.com';
   if (hint.includes('phone') || hint.includes('tel')) return '5555550123';
   if (hint.includes('name')) return 'Test User';
   if (hint.includes('number') || hint.includes('amount') || hint.includes('qty')) return '1';
@@ -61,7 +75,10 @@ function guessFillValue(step: { selector?: string; name: string }): string {
  * shown; the plan validator checks that, with one repair. Without the AI, or past the AI Request
  * Budget, fixed rules choose the journeys.
  */
-export async function planJourneys(input: JourneyPlannerInput, ai: AIProvider | undefined): Promise<JourneyPlannerOutput> {
+export async function planJourneys(
+  input: JourneyPlannerInput,
+  ai: AIProvider | undefined
+): Promise<JourneyPlannerOutput> {
   const siteType = input.siteType;
   const notes: string[] = [];
   const validator = new PlanValidator(input.spider.pages, input.spider.forms);
@@ -73,13 +90,24 @@ export async function planJourneys(input: JourneyPlannerInput, ai: AIProvider | 
   }
 
   // A form repeated on many pages (a search box in the header) is listed once, with its pages.
-  const formsForPrompt: Array<{ pages: string[]; method?: string; action?: string; fields: unknown[]; submitSelector?: string }> = [];
+  const formsForPrompt: Array<{
+    pages: string[];
+    method?: string;
+    action?: string;
+    fields: unknown[];
+    submitSelector?: string;
+  }> = [];
   const byShape = new Map<string, (typeof formsForPrompt)[number]>();
   for (const f of input.spider.forms) {
     const form = {
       method: f.method,
       action: f.action,
-      fields: f.inputs.map((i) => ({ label: i.label, type: i.type, required: i.required || undefined, selector: i.selector })),
+      fields: f.inputs.map((i) => ({
+        label: i.label,
+        type: i.type,
+        required: i.required || undefined,
+        selector: i.selector,
+      })),
       submitSelector: f.submitButtonSelector,
     };
     const shape = JSON.stringify(form);
@@ -155,8 +183,16 @@ Respond with ONLY the JSON object.
     return problems;
   };
 
-  const system: AIMessage = { role: 'system', content: 'You are an autonomous QA flow extraction agent. Output strictly valid JSON.' };
-  const asked = { responseFormat: 'json', reasoning: 'low', maxTokens: PLANNING_MAX_TOKENS, stage: 'journeys' } as const;
+  const system: AIMessage = {
+    role: 'system',
+    content: 'You are an autonomous QA flow extraction agent. Output strictly valid JSON.',
+  };
+  const asked = {
+    responseFormat: 'json',
+    reasoning: 'low',
+    maxTokens: PLANNING_MAX_TOKENS,
+    stage: 'journeys',
+  } as const;
   // Asked again when the answer is cut off: fewer, leaner journeys fit in what the model has left
   // after thinking. The same request again would be cut off the same way.
   const shorterMessage: AIMessage = {
@@ -199,7 +235,9 @@ Respond with ONLY the JSON object.
           content: `That response was not usable:\n${problems
             .slice(0, 20)
             .map((p) => `- ${p}`)
-            .join('\n')}\n\nReply again with ONLY a single valid JSON object matching the requested schema — no markdown fences, no commentary, no truncation. Copy every selector exactly from the element lists, and every "fill" step MUST include a concrete non-empty "value".`,
+            .join(
+              '\n'
+            )}\n\nReply again with ONLY a single valid JSON object matching the requested schema — no markdown fences, no commentary, no truncation. Copy every selector exactly from the element lists, and every "fill" step MUST include a concrete non-empty "value".`,
         },
       ],
       { ...asked, stage: 'repair', temperature: 0 }
@@ -233,13 +271,18 @@ Respond with ONLY the JSON object.
         : aiErr instanceof StoppedEarlyError
           ? 'You stopped the scan early, so fixed rules chose the journeys.'
           : aiErr instanceof AITruncatedError
-          ? 'The AI model stopped before it finished planning the journeys (it used its whole answer allowance), so fixed rules chose them. Choose another model in Settings, then re-plan them.'
-          : 'The AI service didn’t answer for the journeys, so fixed rules chose them.'
+            ? 'The AI model stopped before it finished planning the journeys (it used its whole answer allowance), so fixed rules chose them. Choose another model in Settings, then re-plan them.'
+            : 'The AI service didn’t answer for the journeys, so fixed rules chose them.'
     );
     return finish(fallback(), true, overBudget, fallbackReasonOf(aiErr));
   }
 
-  function finish(flows: DiscoveredFlow[], usedFallback: boolean, overBudget: boolean, reason?: FallbackReason): JourneyPlannerOutput {
+  function finish(
+    flows: DiscoveredFlow[],
+    usedFallback: boolean,
+    overBudget: boolean,
+    reason?: FallbackReason
+  ): JourneyPlannerOutput {
     for (const flow of flows) {
       flow.source ??= usedFallback ? 'fallback' : 'ai';
       if (flow.source === 'fallback' && reason) flow.fallbackReason = reason;
@@ -248,17 +291,24 @@ Respond with ONLY the JSON object.
     // on its own: it's reported as "Could not verify" until someone confirms it.
     const context = input.productContext || '';
     const inNotes = (text: string) => {
-      const wording = text.replace(/^\^|\$$/g, '').replace(/\*/g, '').trim();
+      const wording = text
+        .replace(/^\^|\$$/g, '')
+        .replace(/\*/g, '')
+        .trim();
       return wording.length >= 3 && context.includes(wording);
     };
     for (const flow of flows) {
-      if (!flow.description || flow.description.trim() === '') flow.description = `Primary ${siteType} journey: ${flow.name}`;
+      if (!flow.description || flow.description.trim() === '')
+        flow.description = `Primary ${siteType} journey: ${flow.name}`;
       const expectations = flow.candidateExpectations;
       if (expectations) {
-        const wording = [expectations.text?.contains, expectations.text?.notContains, expectations.url?.pattern].filter((w): w is string => !!w);
+        const wording = [expectations.text?.contains, expectations.text?.notContains, expectations.url?.pattern].filter(
+          (w): w is string => !!w
+        );
         expectations.origin = wording.length > 0 && wording.every(inNotes) ? 'user' : 'ai-guess';
       }
-      for (const rule of flow.candidateValidationRules || []) rule.origin = inNotes(rule.expectedError) ? 'user' : 'ai-guess';
+      for (const rule of flow.candidateValidationRules || [])
+        rule.origin = inNotes(rule.expectedError) ? 'user' : 'ai-guess';
     }
     // Whatever is still wrong: the journey isn't run, and the plan review asks about it.
     validator.markFlowsNeedingHelp(flows);

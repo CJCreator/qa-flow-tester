@@ -7,7 +7,9 @@ export function NotFoundScreen() {
   return (
     <div className="mx-auto max-w-prose px-4 py-12 sm:px-6">
       <Question>Page not found</Question>
-      <p className="mb-6 text-ink-soft">There’s nothing at this address. It may be an old link, or it was typed with a mistake.</p>
+      <p className="mb-6 text-ink-soft">
+        There’s nothing at this address. It may be an old link, or it was typed with a mistake.
+      </p>
       <div className="flex flex-wrap gap-3">
         <Link to={PATHS.new} className="btn-primary">
           Start a new check-up

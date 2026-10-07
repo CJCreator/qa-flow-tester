@@ -47,5 +47,7 @@ export function mergeDuplicateFindings(findings: Finding[]): Finding[] {
     if (f.testCaseId && !seenAt.testCaseIds.includes(f.testCaseId)) seenAt.testCaseIds.push(f.testCaseId);
   }
   // A problem seen only once needs no "seen at" note.
-  return [...merged.values()].map((f) => (f.occurrences === 1 ? { ...f, occurrences: undefined, seenAt: undefined } : f));
+  return [...merged.values()].map((f) =>
+    f.occurrences === 1 ? { ...f, occurrences: undefined, seenAt: undefined } : f
+  );
 }

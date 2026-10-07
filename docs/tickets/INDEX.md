@@ -1,16 +1,16 @@
 # Tickets
 
-Source: `docs/GAP_ANALYSIS.md`. Status: todo, planned, approved, built, done, blocked. A gap closes only after its wave's /verify-all passes. Human items: [HUMAN_TODO.md](HUMAN_TODO.md).
+Source: `docs/GAP_ANALYSIS.md`. Status: todo, planned, approved, built, done, blocked. A gap closes only after its wave's /verify-all passes. Human items: [HUMAN_TODO.md](HUMAN_TODO.md). This table is the committed record; `.claude/work/backlog.md` is git-ignored scratch and loses on conflict. New TODOs in code use `TODO(T-nn)` (see CONTRIBUTING.md).
 
 | id | title | gaps | priority | size | wave | status | depends on |
 |---|---|---|---|---|---|---|---|
-| [T-01](T-01-full-suite-and-ci.md) | Run and fix the full suite; CI runs every non-browser test | G1, G2 | P0 | S | 0 | todo | - |
-| [T-02](T-02-lint-and-format.md) | ESLint and Prettier configured and runnable | G5 | P0 | S | 0 | todo | - |
-| [T-03](T-03-dependency-and-secret-scanning.md) | Dependabot, audit, secret scan, coverage figure | G36 | P1 | S | 0 | todo | T-01 |
-| [T-04](T-04-playwright-version-check.md) | Enforce Playwright version equals Docker image tag | G37 | P2 | S | 0 | todo | T-01 |
-| [T-05](T-05-docs-and-dead-code-cleanup.md) | Bring docs in line with code; remove dead code | G33, G34 | P0 | S-M | 0 | todo | - |
-| [T-06](T-06-task-tracking.md) | Make open work trackable in the repo | G39 | P2 | S | 0 | todo | - |
-| [T-07](T-07-benchmark-automation.md) | Automate the planted-defect benchmark | G3 | P1 | M | 0 | todo | T-01 |
+| [T-01](T-01-full-suite-and-ci.md) | Run and fix the full suite; CI runs every non-browser test | G1, G2 | P0 | S | 0 | blocked | - |
+| [T-02](T-02-lint-and-format.md) | ESLint and Prettier configured and runnable | G5 | P0 | S | 0 | done | - |
+| [T-03](T-03-dependency-and-secret-scanning.md) | Dependabot, audit, secret scan, coverage figure | G36 | P1 | S | 0 | done | T-01 |
+| [T-04](T-04-playwright-version-check.md) | Enforce Playwright version equals Docker image tag | G37 | P2 | S | 0 | done | T-01 |
+| [T-05](T-05-docs-and-dead-code-cleanup.md) | Bring docs in line with code; remove dead code | G33, G34 | P0 | S-M | 0 | done | - |
+| [T-06](T-06-task-tracking.md) | Make open work trackable in the repo | G39 | P2 | S | 0 | done | - |
+| [T-07](T-07-benchmark-automation.md) | Automate the planted-defect benchmark | G3 | P1 | M | 0 | done | T-01 |
 | [T-08](T-08-fast-fail-missing-element.md) | Missing element fails fast, not after about 35 s | G7 | P1 | S-M | 1 | todo | - |
 | [T-09](T-09-retry-duplicate-records.md) | Retried flow on a Test Copy cannot create duplicates | G8 | P1 | M | 1 | todo | - |
 | [T-10](T-10-slower-than-last-time.md) | "Slower than last time" rule (20% and 300 ms) | G9 | P1 | S | 1 | todo | - |

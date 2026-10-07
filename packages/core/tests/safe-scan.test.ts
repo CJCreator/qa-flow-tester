@@ -71,7 +71,9 @@ describe('Safe website scan', () => {
     expect(a11y?.where.urlPath).toBe('/');
 
     // Bug detection: the console error
-    const consoleFinding = result.findings.find((f) => f.checker === 'bug-detection' && f.title.includes('Console Error'));
+    const consoleFinding = result.findings.find(
+      (f) => f.checker === 'bug-detection' && f.title.includes('Console Error')
+    );
     expect(consoleFinding?.expectedVsActual.actual).toContain('Widget failed to initialise');
 
     // Safety: the server saw no mutating request and no form submission of either kind

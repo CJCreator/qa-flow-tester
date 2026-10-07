@@ -94,7 +94,14 @@ export type OrchestratorEvent =
       type: 'FINDINGS_UPDATED';
       totalFindings: number;
       /** The issues this test point found, so a live view can pin them to their page. */
-      latest?: Array<{ id: string; title: string; severity: Finding['severity']; checker: Finding['checker']; urlPath: string; breakpoint: Breakpoint }>;
+      latest?: Array<{
+        id: string;
+        title: string;
+        severity: Finding['severity'];
+        checker: Finding['checker'];
+        urlPath: string;
+        breakpoint: Breakpoint;
+      }>;
     }
   | { type: 'RUN_COMPLETED'; runId: string; report: ReleaseReport }
   /**
@@ -102,13 +109,19 @@ export type OrchestratorEvent =
    * true). The wizard can open /api/runner/plan and show the map. Testing will not start until
    * POST /api/runner/plan/approve arrives.
    */
-  | { type: 'PLAN_READY'; runId: string; pageCount: number; flowCount: number; questionCount: number; timestamp: number }
+  | {
+      type: 'PLAN_READY';
+      runId: string;
+      pageCount: number;
+      flowCount: number;
+      questionCount: number;
+      timestamp: number;
+    }
   /**
    * Emitted when the user approves (or skipReview bypasses) the plan and the runner moves from
    * awaiting-review into the testing phase.
    */
   | { type: 'TESTING_STARTED'; runId: string; testCaseCount: number; timestamp: number };
-
 
 function pathOf(url: string): string {
   try {
@@ -153,9 +166,12 @@ async function checkLink(page: Page, address: string): Promise<void> {
     const res = await page.request.get(address, { timeout: 10000, maxRedirects: 10, failOnStatusCode: false });
     status = res.status();
   } catch (err) {
-    throw new Error(`The link doesn’t open: ${address} (${(err instanceof Error ? err.message : String(err)).split('\n')[0]})`);
+    throw new Error(
+      `The link doesn’t open: ${address} (${(err instanceof Error ? err.message : String(err)).split('\n')[0]})`
+    );
   }
-  if (status === 404 || status === 410 || status >= 500) throw new Error(`The link is broken: ${address} answered ${status}`);
+  if (status === 404 || status === 410 || status >= 500)
+    throw new Error(`The link is broken: ${address} answered ${status}`);
 }
 
 /** The checks a test point runs, in plain words, and how each went. */
@@ -171,7 +187,8 @@ function checksRun(
   const checks: NonNullable<TestPointResult['checks']> = [
     { checker: 'bug-detection', name: 'Works without errors', outcome: outcome('bug-detection') },
   ];
-  if (ran.ux) checks.push({ checker: 'ux-quality', name: 'Accessible and easy to use', outcome: outcome('ux-quality') });
+  if (ran.ux)
+    checks.push({ checker: 'ux-quality', name: 'Accessible and easy to use', outcome: outcome('ux-quality') });
   if (ran.pageLevel) {
     checks.push(
       { checker: 'security', name: 'Secure connections and headers', outcome: outcome('security') },
@@ -179,9 +196,20 @@ function checksRun(
     );
     if (ran.search) checks.push({ checker: 'seo', name: 'Search and link health', outcome: outcome('seo') });
   }
-  if (ran.spec) checks.splice(1, 0, { checker: 'spec-conformance', name: 'Does what was expected', outcome: outcome('spec-conformance') });
-  if (ran.permissions) checks.push({ checker: 'permission-matrix', name: 'Only the right people can see it', outcome: outcome('permission-matrix') });
-  if (ran.design) checks.push({ checker: 'design-standards', name: 'Matches the design', outcome: outcome('design-standards') });
+  if (ran.spec)
+    checks.splice(1, 0, {
+      checker: 'spec-conformance',
+      name: 'Does what was expected',
+      outcome: outcome('spec-conformance'),
+    });
+  if (ran.permissions)
+    checks.push({
+      checker: 'permission-matrix',
+      name: 'Only the right people can see it',
+      outcome: outcome('permission-matrix'),
+    });
+  if (ran.design)
+    checks.push({ checker: 'design-standards', name: 'Matches the design', outcome: outcome('design-standards') });
   return checks;
 }
 
@@ -284,15 +312,10 @@ export class FlowTestOrchestrator {
 
     onEvent({ type: 'PREFLIGHT_STARTED', roles: (options.profile?.roles || []).map((r) => r.role) });
     console.log(`[QA Orchestrator] Running Pre-flight health check on ${options.targetUrl}...`);
-    const preflight = await this.preflightChecker.runPreFlight(
-      options.targetUrl,
-      options.profile,
-      options.tunnelAuth,
-      {
-        browserManager: this.browserManager,
-        authDir,
-      }
-    );
+    const preflight = await this.preflightChecker.runPreFlight(options.targetUrl, options.profile, options.tunnelAuth, {
+      browserManager: this.browserManager,
+      authDir,
+    });
 
     if (!preflight.ok) {
       throw new Error(`Pre-flight check failed: ${preflight.error}`);
@@ -348,7 +371,8 @@ export class FlowTestOrchestrator {
     // for the whole run rather than restarting at 0 for every test point.
     let globalStepIndex = 0;
     // A test can be limited to some screen sizes (a link check runs once, at the first).
-    const sizesFor = (tc: TestCase) => (tc.breakpoints ? breakpoints.filter((b) => tc.breakpoints!.includes(b)) : breakpoints);
+    const sizesFor = (tc: TestCase) =>
+      tc.breakpoints ? breakpoints.filter((b) => tc.breakpoints!.includes(b)) : breakpoints;
     const plannedTestPoints = testCasesToRun.reduce((n, tc) => n + sizesFor(tc).length, 0);
 
     // Facts about the whole site (its icon, its phone set-up) are reported once per run.
@@ -385,7 +409,9 @@ export class FlowTestOrchestrator {
           startPage: testCase.startPage,
           flowId: testCase.flowId,
         });
-        console.log(`[QA Orchestrator] Executing ${testCase.id} ("${testCase.flowId}") on ${bp} as ${testCase.role}...`);
+        console.log(
+          `[QA Orchestrator] Executing ${testCase.id} ("${testCase.flowId}") on ${bp} as ${testCase.role}...`
+        );
         const pointStartTime = Date.now();
         const testCaseEvidenceDir = path.join(evidenceDir, `${testCase.id}-${bp}`);
         let evidenceCollector = new EvidenceCollector(testCaseEvidenceDir);
@@ -466,7 +492,11 @@ export class FlowTestOrchestrator {
                   } else if (step.action === 'fill') {
                     const locator = await locateElement(page, step.selector || '');
                     await locator.waitFor({ state: 'visible', timeout: 4000 });
-                    const value = resolveCredentialPlaceholders(step.value || '', testCase.role, options.profile?.roles || []);
+                    const value = resolveCredentialPlaceholders(
+                      step.value || '',
+                      testCase.role,
+                      options.profile?.roles || []
+                    );
                     await locator.fill(value, { timeout: 4000 });
                   } else if (step.action === 'select') {
                     const locator = await locateElement(page, step.selector || '');
@@ -479,7 +509,9 @@ export class FlowTestOrchestrator {
                       const matched = await locator
                         .evaluate((select: HTMLSelectElement, target: string) => {
                           const options = Array.from(select.options);
-                          const exact = options.find((o) => o.value.toLowerCase() === target || o.text.toLowerCase() === target);
+                          const exact = options.find(
+                            (o) => o.value.toLowerCase() === target || o.text.toLowerCase() === target
+                          );
                           if (exact) return { value: exact.value, text: exact.text, exact: true };
                           const partial = options.find(
                             (o) =>
@@ -489,14 +521,22 @@ export class FlowTestOrchestrator {
                               (o.text && target.includes(o.text.toLowerCase()))
                           );
                           if (partial) return { value: partial.value, text: partial.text, exact: false };
-                          return options.length > 1 ? { value: options[1].value, text: options[1].text, exact: false } : undefined;
+                          return options.length > 1
+                            ? { value: options[1].value, text: options[1].text, exact: false }
+                            : undefined;
                         }, targetVal)
                         .catch(() => undefined);
-                      if (!matched) throw new Error(`The list has no option “${step.value}”, and no other option to pick.`);
+                      if (!matched)
+                        throw new Error(`The list has no option “${step.value}”, and no other option to pick.`);
                       await locator.selectOption(matched.value, { timeout: 2000 });
                       // Another option than the planned one: the step goes on, but what follows can't
                       // say whether the site handles the planned value.
-                      if (!matched.exact) substitutes.push({ step: step.name, planned: step.value || '', chosen: matched.text.trim() || matched.value });
+                      if (!matched.exact)
+                        substitutes.push({
+                          step: step.name,
+                          planned: step.value || '',
+                          chosen: matched.text.trim() || matched.value,
+                        });
                     }
                   } else if (step.action === 'navigate') {
                     await page.goto(new URL(step.value || '', options.targetUrl).toString(), {
@@ -635,14 +675,16 @@ export class FlowTestOrchestrator {
 
           // 3. UX Quality (accessibility of the state the steps left): not for a Navigation Check,
           // whose destination page is checked by its own visit.
-          const uxFindings = lightChecks ? [] : await this.uxChecker.check(page, {
-            testCaseId: testCase.id,
-            role: testCase.role,
-            breakpoint: bp,
-            urlPath: new URL(page.url(), options.targetUrl).pathname,
-            enableAxe: options.enableA11y ?? true,
-            entryPath: new URL(options.targetUrl).pathname,
-          });
+          const uxFindings = lightChecks
+            ? []
+            : await this.uxChecker.check(page, {
+                testCaseId: testCase.id,
+                role: testCase.role,
+                breakpoint: bp,
+                urlPath: new URL(page.url(), options.targetUrl).pathname,
+                enableAxe: options.enableA11y ?? true,
+                entryPath: new URL(options.targetUrl).pathname,
+              });
 
           // 3b. Security (passive): passwords in page addresses. Page-level checks (security, speed,
           // findability, design) run on page visits and journeys, not on every test on a page.
@@ -670,36 +712,35 @@ export class FlowTestOrchestrator {
           const perfFindings =
             options.enablePerformance === false || !pageLevelChecks
               ? []
-              : await this.performanceChecker.checkPage(
-                  page,
-                  {
-                    testCaseId: testCase.id,
-                    flowId: testCase.flowId,
-                    role: testCase.role,
-                    breakpoint: bp,
-                    urlPath: new URL(page.url(), options.targetUrl).pathname,
-                    // Throttled repeat loads cost minutes, so each page gets them once per run, at the
-                    // phone width when there is one. Other widths read the vitals the page already had.
-                    repeatLoads: wantsRepeatLoads(new URL(page.url(), options.targetUrl).pathname, bp, sizes) ? 3 : undefined,
-                  }
-                );
-
-          // 3d. SEO & Link Health
-          const searchHere = options.enableSeo !== false && pageLevelChecks && bp === searchSize;
-          const seoFindings = !searchHere
-              ? []
-              : await this.seoChecker.checkPage(page, {
+              : await this.performanceChecker.checkPage(page, {
                   testCaseId: testCase.id,
                   flowId: testCase.flowId,
                   role: testCase.role,
                   breakpoint: bp,
                   urlPath: new URL(page.url(), options.targetUrl).pathname,
-                  baseUrl: options.targetUrl,
-                  searchChecks: options.searchChecks,
-                  visibility: options.visibility,
-                  siteWide,
-                  marketingLog,
+                  // Throttled repeat loads cost minutes, so each page gets them once per run, at the
+                  // phone width when there is one. Other widths read the vitals the page already had.
+                  repeatLoads: wantsRepeatLoads(new URL(page.url(), options.targetUrl).pathname, bp, sizes)
+                    ? 3
+                    : undefined,
                 });
+
+          // 3d. SEO & Link Health
+          const searchHere = options.enableSeo !== false && pageLevelChecks && bp === searchSize;
+          const seoFindings = !searchHere
+            ? []
+            : await this.seoChecker.checkPage(page, {
+                testCaseId: testCase.id,
+                flowId: testCase.flowId,
+                role: testCase.role,
+                breakpoint: bp,
+                urlPath: new URL(page.url(), options.targetUrl).pathname,
+                baseUrl: options.targetUrl,
+                searchChecks: options.searchChecks,
+                visibility: options.visibility,
+                siteWide,
+                marketingLog,
+              });
 
           // 4. Permission Matrix Check
           const permFindings: Finding[] = [];
@@ -780,8 +821,14 @@ export class FlowTestOrchestrator {
             checker: 'spec-conformance',
             title: `“${s.planned}” isn’t in the list, so “${s.chosen}” was picked instead`,
             where: { urlPath: pathOf(page?.url() ?? testCase.startPage), role: testCase.role, breakpoint: bp },
-            expectedVsActual: { expected: `The option “${s.planned}” can be picked (${s.step})`, actual: `It isn’t there; “${s.chosen}” was picked, so the test can’t say how the planned option works` },
-            stepsToReproduce: [`Open ${testCase.startPage} as ${testCase.role} at ${bp}`, `${s.step}: look for “${s.planned}”`],
+            expectedVsActual: {
+              expected: `The option “${s.planned}” can be picked (${s.step})`,
+              actual: `It isn’t there; “${s.chosen}” was picked, so the test can’t say how the planned option works`,
+            },
+            stepsToReproduce: [
+              `Open ${testCase.startPage} as ${testCase.role} at ${bp}`,
+              `${s.step}: look for “${s.planned}”`,
+            ],
             evidence: {},
             resolution: `Check the plan’s value for this step, or whether “${s.planned}” should be offered.`,
             needsConfirmation: true,
@@ -796,9 +843,7 @@ export class FlowTestOrchestrator {
             ...seoFindings,
             ...permFindings,
             ...designFindings,
-          ].filter(
-            (f) => !sentData || (f.checker !== 'spec-conformance' && !f.id.startsWith('F-STEP-'))
-          );
+          ].filter((f) => !sentData || (f.checker !== 'spec-conformance' && !f.id.startsWith('F-STEP-')));
 
           // Enrich findings with Source Code Locator and Repro Script
           for (const f of keptFindings) {
@@ -818,7 +863,9 @@ export class FlowTestOrchestrator {
           // Unconfirmed AI guesses never fail a test point on their own.
           const hasStepFailure = !testPointPassed && !sentData;
           const hasRealFinding = keptFindings.some((f) => !f.needsConfirmation);
-          const hasGuessedFailure = testCase.expectations?.origin === 'ai-guess' && keptFindings.some((f) => f.needsConfirmation && f.id.startsWith('F-STEP-'));
+          const hasGuessedFailure =
+            testCase.expectations?.origin === 'ai-guess' &&
+            keptFindings.some((f) => f.needsConfirmation && f.id.startsWith('F-STEP-'));
           const status: TestPointResult['status'] = sentData
             ? 'Skipped'
             : hasRealFinding || (hasStepFailure && !hasGuessedFailure)
@@ -869,7 +916,8 @@ export class FlowTestOrchestrator {
             },
             stepsToReproduce: [`Open ${testCase.startPage} as ${testCase.role} at ${bp}`],
             evidence: {},
-            resolution: 'Check the page loads at this address for this role; a timeout usually means the page is slow or the server stopped.',
+            resolution:
+              'Check the page loads at this address for this role; a timeout usually means the page is slow or the server stopped.',
           };
           allFindings.push(couldNotRun);
           pointResult = {
@@ -983,11 +1031,7 @@ export class FlowTestOrchestrator {
         flowId: r.flowId,
         name,
         status: r.status,
-        description:
-          r.skipReason ||
-          tc?.expectations.text?.description ||
-          tc?.expectations.url?.description ||
-          name,
+        description: r.skipReason || tc?.expectations.text?.description || tc?.expectations.url?.description || name,
         evidencePath: lastStep?.screenshotPath,
       });
     }
@@ -1028,7 +1072,9 @@ export class FlowTestOrchestrator {
       suppressions: activeSuppressions,
       delta,
       notes: notes.length > 0 ? notes : undefined,
-      partial: options.finishSignal?.aborted ? { done: results.filter((r) => r.status !== 'Skipped' || !r.skipReason).length, planned: plannedTestPoints } : undefined,
+      partial: options.finishSignal?.aborted
+        ? { done: results.filter((r) => r.status !== 'Skipped' || !r.skipReason).length, planned: plannedTestPoints }
+        : undefined,
       aiModels: options.aiModels,
       scanMode: options.readOnly ? 'read-only' : undefined,
       siteMap: options.siteMap,

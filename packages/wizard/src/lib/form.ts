@@ -82,7 +82,9 @@ export const EMPTY_FORM: CheckupForm = {
 };
 
 /** The sign-ins filled in, as the runner takes them: a role name is made up when none was given. */
-export function rolesOf(form: Pick<CheckupForm, 'signIns'>): Array<{ role: string; username: string; password: string; loginPath?: string }> {
+export function rolesOf(
+  form: Pick<CheckupForm, 'signIns'>
+): Array<{ role: string; username: string; password: string; loginPath?: string }> {
   return form.signIns
     .filter((s) => s.username.trim() && s.password)
     .map((s, i) => ({

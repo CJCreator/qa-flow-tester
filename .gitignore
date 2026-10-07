@@ -22,11 +22,17 @@ dist/
 .qa-cache/
 .qa-hub-storage/
 .tmp-*/
+# Test coverage output (vitest --coverage)
+coverage/
 
 # Tooling
 .kilo/
 .playwright-mcp/
-.claude/
+# Claude Code: settings, skills and commands are shared; worktrees and personal overrides are not
+.claude/worktrees/
+.claude/settings.local.json
+# Hand-off files between the pipeline agents (/ship)
+.claude/work/
 .scratch/
 
 # Benchmark runs (scripts/benchmark.ts)

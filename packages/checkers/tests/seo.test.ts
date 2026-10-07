@@ -233,8 +233,12 @@ Disallow: /
     expect(result.hasRobotsTxt).toBe(true);
     expect(result.blockedAiBots).toContain('GPTBot');
     expect(result.blockedAiBots).toContain('PerplexityBot');
-    expect(result.findings.some((f) => f.categoryTag === 'GEO' && f.title.includes('AI search crawlers are disallowed'))).toBe(true);
-    expect(result.findings.some((f) => f.categoryTag === 'GEO' && f.title.includes('missing an /llms.txt file'))).toBe(true);
+    expect(
+      result.findings.some((f) => f.categoryTag === 'GEO' && f.title.includes('AI search crawlers are disallowed'))
+    ).toBe(true);
+    expect(result.findings.some((f) => f.categoryTag === 'GEO' && f.title.includes('missing an /llms.txt file'))).toBe(
+      true
+    );
   });
 
   it('evaluates AEO features (JSON-LD syntax, entity schema, Q&A patterns)', async () => {

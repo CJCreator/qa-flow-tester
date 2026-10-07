@@ -52,7 +52,9 @@ export class BenchmarkStore {
     } catch {
       return [];
     }
-    const jobs = (await Promise.all(names.map((n) => this.get(n.replace(/\.json$/, ''))))).filter((j): j is BenchmarkJob => !!j);
+    const jobs = (await Promise.all(names.map((n) => this.get(n.replace(/\.json$/, ''))))).filter(
+      (j): j is BenchmarkJob => !!j
+    );
     return jobs.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
   }
 
@@ -87,7 +89,9 @@ export interface ComparisonOptions {
 }
 
 /** Visits both sites for real, scores each, and compares them. Nothing is sent or changed on either site. */
-export async function compareSites(options: ComparisonOptions): Promise<{ result: NonNullable<BenchmarkJob['result']>; aiUsed: boolean }> {
+export async function compareSites(
+  options: ComparisonOptions
+): Promise<{ result: NonNullable<BenchmarkJob['result']>; aiUsed: boolean }> {
   const crawler = new SafePublicCrawler();
   const engine = new BenchmarkingEngine();
 

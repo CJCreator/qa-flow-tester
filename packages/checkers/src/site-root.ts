@@ -57,7 +57,7 @@ export class SiteRootAuditor {
     let hasRobotsTxt = false;
     let robotsTxtContent: string | undefined;
     const blockedAiBots: string[] = [];
-    let declaredSitemaps: string[] = [];
+    const declaredSitemaps: string[] = [];
 
     try {
       const robotsUrl = `${origin}/robots.txt`;
@@ -127,12 +127,14 @@ export class SiteRootAuditor {
             title: `AI search crawlers are disallowed in robots.txt (${blockedAiBots.slice(0, 3).join(', ')}${blockedAiBots.length > 3 ? '...' : ''})`,
             where: { urlPath: '/robots.txt', role, breakpoint: bp },
             expectedVsActual: {
-              expected: 'robots.txt should permit generative AI engines (e.g. GPTBot, PerplexityBot, ClaudeBot) to crawl public content if you want to appear in AI search results and citations',
+              expected:
+                'robots.txt should permit generative AI engines (e.g. GPTBot, PerplexityBot, ClaudeBot) to crawl public content if you want to appear in AI search results and citations',
               actual: `Directives disallow: ${blockedAiBots.join(', ')}`,
             },
             stepsToReproduce: [`Fetch ${robotsUrl}`, 'Inspect User-agent and Disallow rules'],
             evidence: {},
-            resolution: 'Update robots.txt to explicitly allow AI crawlers (e.g. "User-agent: GPTBot / Allow: /") if you want generative AI search engines to reference your site.',
+            resolution:
+              'Update robots.txt to explicitly allow AI crawlers (e.g. "User-agent: GPTBot / Allow: /") if you want generative AI search engines to reference your site.',
           });
         }
       } else {
@@ -213,12 +215,14 @@ export class SiteRootAuditor {
             title: '/llms.txt file is missing standard H1 title structure',
             where: { urlPath: '/llms.txt', role, breakpoint: bp },
             expectedVsActual: {
-              expected: 'The /llms.txt standard requires an H1 heading (# Project/Site Name) followed by a blockquote summary and markdown links',
+              expected:
+                'The /llms.txt standard requires an H1 heading (# Project/Site Name) followed by a blockquote summary and markdown links',
               actual: 'The file does not start with an H1 (# Title)',
             },
             stepsToReproduce: [`Fetch ${llmsUrl}`, 'Verify markdown format conforms to llmstxt.org'],
             evidence: {},
-            resolution: 'Format /llms.txt according to the llmstxt.org proposal with an H1 project title and section links.',
+            resolution:
+              'Format /llms.txt according to the llmstxt.org proposal with an H1 project title and section links.',
           });
         }
       } else {
@@ -232,12 +236,14 @@ export class SiteRootAuditor {
           title: 'Site is missing an /llms.txt file for generative AI models',
           where: { urlPath: '/llms.txt', role, breakpoint: bp },
           expectedVsActual: {
-            expected: 'Modern websites provide /llms.txt to help LLMs understand and cite their core documentation and services accurately',
+            expected:
+              'Modern websites provide /llms.txt to help LLMs understand and cite their core documentation and services accurately',
             actual: `GET ${llmsUrl} returned HTTP ${llmsRes ? llmsRes.status() : 'Error/NotFound'}`,
           },
           stepsToReproduce: [`Request ${llmsUrl}`],
           evidence: {},
-          resolution: 'Add an /llms.txt file at your domain root summarizing your product and key links in concise markdown (see llmstxt.org).',
+          resolution:
+            'Add an /llms.txt file at your domain root summarizing your product and key links in concise markdown (see llmstxt.org).',
         });
       }
     } catch {

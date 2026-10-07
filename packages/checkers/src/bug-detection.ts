@@ -12,7 +12,8 @@ function safeOrigin(url: string | undefined): string | null {
 const withoutHash = (url: string) => url.split('#')[0];
 
 /** Playwright's ways of saying the control never showed up (as opposed to failing once found). */
-const CONTROL_NOT_FOUND = /waiting for (?:locator|getBy)[\s\S]*to be visible|resolved to 0 elements|element is not visible/i;
+const CONTROL_NOT_FOUND =
+  /waiting for (?:locator|getBy)[\s\S]*to be visible|resolved to 0 elements|element is not visible/i;
 
 export class BugDetectionChecker {
   check(
@@ -97,8 +98,8 @@ export class BugDetectionChecker {
           resolution: isThirdParty
             ? 'Failure originates from a third-party domain (analytics, fonts, CDN, etc.), not this application. Confirm it is not blocking a critical user flow before prioritizing.'
             : is5xx
-            ? 'Backend API error (5xx). Check server endpoint logs and database connections.'
-            : 'Client request failure (4xx). Check request payload, authentication headers, or route.',
+              ? 'Backend API error (5xx). Check server endpoint logs and database connections.'
+              : 'Client request failure (4xx). Check request payload, authentication headers, or route.',
           thirdParty: isThirdParty,
         });
       }
@@ -156,7 +157,9 @@ export class BugDetectionChecker {
           flowId: context.flowId,
           severity: brokenLink ? 'Major' : 'Blocker',
           checker: 'bug-detection',
-          title: brokenLink ? `Broken link: ${step.stepName.replace(/^Check the link to /, '')}` : `Step failed: "${step.stepName}"`,
+          title: brokenLink
+            ? `Broken link: ${step.stepName.replace(/^Check the link to /, '')}`
+            : `Step failed: "${step.stepName}"`,
           where: {
             urlPath: step.urlBefore,
             role: context.role,
@@ -166,10 +169,7 @@ export class BugDetectionChecker {
             expected: `Step "${step.stepName}" executes cleanly`,
             actual: step.error,
           },
-          stepsToReproduce: [
-            `Navigate to ${step.urlBefore}`,
-            `Execute step "${step.stepName}" (${step.action})`,
-          ],
+          stepsToReproduce: [`Navigate to ${step.urlBefore}`, `Execute step "${step.stepName}" (${step.action})`],
           evidence: {
             screenshotPath: step.screenshotPath,
             domSnapshotPath: step.domSnapshotPath,

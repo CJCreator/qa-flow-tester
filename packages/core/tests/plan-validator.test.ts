@@ -35,7 +35,9 @@ const pages: PageInventoryItem[] = [
     title: 'Dashboard',
     interactiveElementsCount: 1,
     formsCount: 0,
-    elements: [el('button', 'Trigger Console Error', '[data-testid="trigger-error-btn"]', { testId: 'trigger-error-btn' })],
+    elements: [
+      el('button', 'Trigger Console Error', '[data-testid="trigger-error-btn"]', { testId: 'trigger-error-btn' }),
+    ],
   },
 ];
 
@@ -66,7 +68,16 @@ describe('PlanValidator', () => {
 
   it('rejects a step aimed at an element that does not exist, naming it', () => {
     const issues = validator.checkFlow(
-      flow([{ action: 'click', selector: '[data-testid="dashboard-element-1"]', name: 'Interact with first dashboard element' }], '/dashboard')
+      flow(
+        [
+          {
+            action: 'click',
+            selector: '[data-testid="dashboard-element-1"]',
+            name: 'Interact with first dashboard element',
+          },
+        ],
+        '/dashboard'
+      )
     );
     expect(issues).toHaveLength(1);
     expect(issues[0].message).toContain('dashboard-element-1');
@@ -75,7 +86,9 @@ describe('PlanValidator', () => {
 
   it('checks a step against its own page until a click may have changed the page', () => {
     // The save button exists, but not on the dashboard, where this flow starts.
-    expect(validator.checkFlow(flow([{ action: 'click', selector: '[data-testid="save-btn"]', name: 'Save' }], '/dashboard'))).toHaveLength(1);
+    expect(
+      validator.checkFlow(flow([{ action: 'click', selector: '[data-testid="save-btn"]', name: 'Save' }], '/dashboard'))
+    ).toHaveLength(1);
     // After a click the page is unknown, so any page that was found counts.
     expect(
       validator.checkFlow(
@@ -117,7 +130,9 @@ describe('PlanValidator', () => {
   it('accepts the form selectors the crawler recorded, which the element list may not name', () => {
     const submit = flow([{ action: 'click', selector: 'button[type="submit"]', name: 'Submit' }]);
     expect(validator.checkFlow(submit)).toHaveLength(1);
-    const withForms = new PlanValidator(pages, [{ urlPath: '/invoices/new', inputs: [], submitButtonSelector: 'button[type="submit"]' }]);
+    const withForms = new PlanValidator(pages, [
+      { urlPath: '/invoices/new', inputs: [], submitButtonSelector: 'button[type="submit"]' },
+    ]);
     expect(withForms.checkFlow(submit)).toEqual([]);
   });
 
@@ -153,7 +168,13 @@ const invented = JSON.stringify({
       role: 'manager',
       description: 'Use the dashboard',
       startPage: '/dashboard',
-      steps: [{ action: 'click', selector: '[data-testid="dashboard-element-1"]', name: 'Interact with first dashboard element' }],
+      steps: [
+        {
+          action: 'click',
+          selector: '[data-testid="dashboard-element-1"]',
+          name: 'Interact with first dashboard element',
+        },
+      ],
     },
   ],
 });
@@ -217,7 +238,9 @@ describe('Discovery grounds the AI plan in the real page', () => {
     warn.mockRestore();
 
     expect(draft.flows[0].needsHelp?.[0]).toContain('dashboard-element-1');
-    expect(draft.ambiguityQuestions.some((q) => q.category === 'unverified_step' && q.question.includes('Dashboard buttons'))).toBe(true);
+    expect(
+      draft.ambiguityQuestions.some((q) => q.category === 'unverified_step' && q.question.includes('Dashboard buttons'))
+    ).toBe(true);
     expect(new TestPlanner().plan(draft).testCases).toEqual([]);
   }, 60000);
 
@@ -231,7 +254,9 @@ describe('Discovery grounds the AI plan in the real page', () => {
       profile: {
         name: 'Fixture',
         productId: 'fixture',
-        roles: [{ role: 'manager', username: 'manager@example.com', password: 'manager-password', loginPath: '/login' }],
+        roles: [
+          { role: 'manager', username: 'manager@example.com', password: 'manager-password', loginPath: '/login' },
+        ],
       },
     });
     expect(ai.allPrompts.join('\n')).not.toContain('manager-password');

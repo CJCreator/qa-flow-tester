@@ -36,7 +36,10 @@ export class OpenAIProvider implements AIProvider {
     });
 
     const body: Record<string, any> = {
-      model: options.model || this.defaultModel || DEFAULT_MODELS[this.providerType === 'openrouter' ? 'openrouter' : 'openai'],
+      model:
+        options.model ||
+        this.defaultModel ||
+        DEFAULT_MODELS[this.providerType === 'openrouter' ? 'openrouter' : 'openai'],
       temperature: options.temperature ?? 0.2,
       max_tokens: options.maxTokens || 4096,
       messages: formattedMessages,
@@ -67,7 +70,9 @@ export class OpenAIProvider implements AIProvider {
     } catch (err) {
       // fetch only says "fetch failed"; the reason is in its cause.
       const cause = (err as { cause?: { code?: string; message?: string } }).cause;
-      throw new Error(`Couldn’t reach the AI service: ${cause?.code || cause?.message || (err instanceof Error ? err.message : String(err))}`);
+      throw new Error(
+        `Couldn’t reach the AI service: ${cause?.code || cause?.message || (err instanceof Error ? err.message : String(err))}`
+      );
     }
 
     if (!res.ok) {
@@ -78,7 +83,9 @@ export class OpenAIProvider implements AIProvider {
     const data = (await res.json()) as any;
     const choice = data.choices?.[0];
     if (choice?.finish_reason === 'length') {
-      throw new Error(`The AI's answer was cut off at its length limit (${body.max_tokens} tokens) before it finished.`);
+      throw new Error(
+        `The AI's answer was cut off at its length limit (${body.max_tokens} tokens) before it finished.`
+      );
     }
     const usage = data.usage;
     return {

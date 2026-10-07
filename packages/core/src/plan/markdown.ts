@@ -15,7 +15,8 @@ function expectationLine(expectations?: TestCaseExpectations): string | undefine
   const guess = expectations.origin === 'ai-guess' ? ' (AI’s guess until confirmed)' : '';
   if (expectations.text?.contains) return `Expected: the page says “${expectations.text.contains}”${guess}`;
   if (expectations.url) return `Expected: ends on ${expectations.url.pattern}${guess}`;
-  if (expectations.elementState) return `Expected: ${expectations.elementState.description || `${expectations.elementState.selector} shows`}${guess}`;
+  if (expectations.elementState)
+    return `Expected: ${expectations.elementState.description || `${expectations.elementState.selector} shows`}${guess}`;
   if (expectations.validationError) return `Expected: an error about “${expectations.validationError.field}”${guess}`;
   if (expectations.successMessage) return `Expected: a success message${guess}`;
   if (expectations.navigatesAway) return `Expected: moves on from ${expectations.navigatesAway.fromPath}${guess}`;
@@ -23,15 +24,25 @@ function expectationLine(expectations?: TestCaseExpectations): string | undefine
 }
 
 function pageSection(page: PlanPage): string[] {
-  const out = [`### ${page.urlPath} — ${page.title || 'untitled'}${page.source === 'fallback' ? BY_FIXED_RULES : ''}${page.skipped ? ' _(switched off)_' : ''}`, ''];
+  const out = [
+    `### ${page.urlPath} — ${page.title || 'untitled'}${page.source === 'fallback' ? BY_FIXED_RULES : ''}${page.skipped ? ' _(switched off)_' : ''}`,
+    '',
+  ];
   if (page.coverage === 'sample') out.push('Sample Page for its Layout Group.  ');
   if (page.coverage === 'promoted') out.push('Tested on its own (promoted from its Layout Group).  ');
-  if (page.clickPath) out.push(`Reached by: ${page.clickPath.length === 0 ? 'the start page' : ['Start', ...page.clickPath].join(' → ')}  `);
+  if (page.clickPath)
+    out.push(
+      `Reached by: ${page.clickPath.length === 0 ? 'the start page' : ['Start', ...page.clickPath].join(' → ')}  `
+    );
   if (page.unlinked) out.push('No link on the site leads here.  ');
   out.push(`Visited as: ${page.reachedBy.join(', ')}`, '');
   if (page.tests.length === 0) out.push('- Nothing to try beyond the page visit.');
   for (const test of page.tests) {
-    const flags = [test.source === 'fallback' ? 'fixed rules' : '', test.needsTestCopy ? 'needs a test copy' : '', test.skipped ? 'switched off' : '']
+    const flags = [
+      test.source === 'fallback' ? 'fixed rules' : '',
+      test.needsTestCopy ? 'needs a test copy' : '',
+      test.skipped ? 'switched off' : '',
+    ]
       .filter(Boolean)
       .join(', ');
     out.push(`- ${test.name}${flags ? ` _(${flags})_` : ''}`);
@@ -111,10 +122,17 @@ export function planToMarkdown(plan: ReviewPlan): string {
 
   out.push(`## Journeys (${plan.flows.length})`, '');
   for (const flow of plan.flows) {
-    const flags = [flow.source === 'fallback' ? 'fixed rules' : '', flow.needsTestCopy ? 'needs a test copy' : '', flow.outOfScope ? 'switched off' : '']
+    const flags = [
+      flow.source === 'fallback' ? 'fixed rules' : '',
+      flow.needsTestCopy ? 'needs a test copy' : '',
+      flow.outOfScope ? 'switched off' : '',
+    ]
       .filter(Boolean)
       .join(', ');
-    out.push(`### ${flow.name}${flow.role && flow.role !== 'visitor' ? ` (as ${flow.role})` : ''}${flags ? ` _(${flags})_` : ''}`, '');
+    out.push(
+      `### ${flow.name}${flow.role && flow.role !== 'visitor' ? ` (as ${flow.role})` : ''}${flags ? ` _(${flags})_` : ''}`,
+      ''
+    );
     if (flow.description) out.push(`${flow.description}`, '');
     flow.steps.forEach((s, i) => out.push(`${i + 1}. ${s.name}`));
     const expected = expectationLine(flow.candidateExpectations);
@@ -137,7 +155,9 @@ export function planToMarkdown(plan: ReviewPlan): string {
   if (plan.questions.length > 0) {
     out.push('## Questions', '');
     for (const q of plan.questions) {
-      out.push(`- ${q.question} — ${q.selectedAnswer ? `answer: ${q.selectedAnswer}` : `no answer yet; the safe answer is used: ${q.safeAnswer ?? q.options[0]}`}`);
+      out.push(
+        `- ${q.question} — ${q.selectedAnswer ? `answer: ${q.selectedAnswer}` : `no answer yet; the safe answer is used: ${q.safeAnswer ?? q.options[0]}`}`
+      );
     }
     out.push('');
   }

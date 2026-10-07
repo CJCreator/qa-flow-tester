@@ -62,7 +62,12 @@ export function useDocumentTitle(title: string | null): void {
     setMeta('meta[property="og:description"]', metaByProperty('og:description'), 'content', description);
 
     const canonical = isHome ? `${window.location.origin}/` : `${window.location.origin}${window.location.pathname}`;
-    setMeta('link[rel="canonical"]', () => Object.assign(document.createElement('link'), { rel: 'canonical' }), 'href', canonical);
+    setMeta(
+      'link[rel="canonical"]',
+      () => Object.assign(document.createElement('link'), { rel: 'canonical' }),
+      'href',
+      canonical
+    );
     setMeta('meta[property="og:url"]', metaByProperty('og:url'), 'content', canonical);
   }, [title]);
 }

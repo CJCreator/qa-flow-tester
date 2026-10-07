@@ -14,19 +14,25 @@ const server = http.createServer((req, res) => {
 
   if (url.pathname === '/robots.txt') {
     res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
-    res.end(`User-agent: *\nAllow: /\n\nUser-agent: GPTBot\nAllow: /\n\nSitemap: http://localhost:${port}/sitemap.xml\n`);
+    res.end(
+      `User-agent: *\nAllow: /\n\nUser-agent: GPTBot\nAllow: /\n\nSitemap: http://localhost:${port}/sitemap.xml\n`
+    );
     return;
   }
 
   if (url.pathname === '/sitemap.xml') {
     res.writeHead(200, { 'Content-Type': 'application/xml; charset=utf-8' });
-    res.end(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>http://localhost:${port}/</loc></url></urlset>`);
+    res.end(
+      `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>http://localhost:${port}/</loc></url></urlset>`
+    );
     return;
   }
 
   if (url.pathname === '/llms.txt') {
     res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
-    res.end(`# Fixture QA App\n\n> Test application for verifying QA Flow Tester checks.\n\n- [About](http://localhost:${port}/about): Overview of invoice features.\n`);
+    res.end(
+      `# Fixture QA App\n\n> Test application for verifying QA Flow Tester checks.\n\n- [About](http://localhost:${port}/about): Overview of invoice features.\n`
+    );
     return;
   }
 
@@ -55,7 +61,10 @@ const server = http.createServer((req, res) => {
       <label for="signin-password">Password</label><input id="signin-password" name="password" type="password">
       <button type="submit" data-testid="signin-btn">Sign in</button>
     </form>`;
-  const ACCOUNTS = { 'manager@example.com': ['manager-password', 'manager'], 'viewer@example.com': ['viewer-password', 'viewer'] };
+  const ACCOUNTS = {
+    'manager@example.com': ['manager-password', 'manager'],
+    'viewer@example.com': ['viewer-password', 'viewer'],
+  };
 
   if (url.pathname === '/signin' && req.method === 'POST') {
     let body = '';

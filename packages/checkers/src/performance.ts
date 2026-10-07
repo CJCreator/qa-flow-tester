@@ -119,10 +119,7 @@ export class PerformanceChecker {
   /**
    * Run speed, vitals, and mobile layout checks on the current page.
    */
-  async checkPage(
-    page: Page,
-    context: PerformanceContext
-  ): Promise<Finding[]> {
+  async checkPage(page: Page, context: PerformanceContext): Promise<Finding[]> {
     const findings: Finding[] = [];
     const metrics = await this.collectMetrics(page);
     const repeated = context.repeatLoads ? await this.measureVitals(page, context.repeatLoads) : null;
@@ -160,11 +157,18 @@ export class PerformanceChecker {
           expected: `Largest Contentful Paint should be under ${(SPEED_THRESHOLDS.LCP_GOOD_MS / 1000).toFixed(1)}s (${TEST_BROWSER_NOTE})`,
           actual: `Measured ${(vitals.lcpMs / 1000).toFixed(1)}s to render the largest visible element (${basis}). ${TEST_BROWSER_NOTE}`,
         },
-        stepsToReproduce: [`Visit ${context.urlPath} at screen width ${context.breakpoint}`, 'Measure page render timing'],
+        stepsToReproduce: [
+          `Visit ${context.urlPath} at screen width ${context.breakpoint}`,
+          'Measure page render timing',
+        ],
         evidence: { measurements: vitals.measurements },
         resolution: 'Optimize server response time, defer heavy non-critical scripts, and compress hero images.',
       });
-    } else if (vitals?.lcpMs === undefined && vitals?.domReadyMs !== undefined && vitals.domReadyMs > SPEED_THRESHOLDS.LCP_GOOD_MS) {
+    } else if (
+      vitals?.lcpMs === undefined &&
+      vitals?.domReadyMs !== undefined &&
+      vitals.domReadyMs > SPEED_THRESHOLDS.LCP_GOOD_MS
+    ) {
       // The browser reported no LCP, so say what was measured: how long the HTML took to be ready.
       findings.push({
         id: `${idPrefix}-LOAD-${findings.length + 1}`,
@@ -176,7 +180,10 @@ export class PerformanceChecker {
           expected: `The page's HTML should be loaded and parsed within ${(SPEED_THRESHOLDS.LCP_GOOD_MS / 1000).toFixed(1)}s (${TEST_BROWSER_NOTE})`,
           actual: `The page was ready after ${(vitals.domReadyMs / 1000).toFixed(1)}s (${basis}). The browser reported no Largest Contentful Paint for it, so that number was not measured.`,
         },
-        stepsToReproduce: [`Visit ${context.urlPath} at screen width ${context.breakpoint}`, 'Measure page load timing'],
+        stepsToReproduce: [
+          `Visit ${context.urlPath} at screen width ${context.breakpoint}`,
+          'Measure page load timing',
+        ],
         evidence: { measurements: vitals.measurements },
         resolution: 'Optimize server response time and defer heavy non-critical scripts.',
       });
@@ -196,7 +203,10 @@ export class PerformanceChecker {
           expected: `Cumulative Layout Shift should be under ${SPEED_THRESHOLDS.CLS_GOOD} (${TEST_BROWSER_NOTE})`,
           actual: `Measured CLS of ${vitals.cls.toFixed(2)} during page visit (${basis}). ${TEST_BROWSER_NOTE}`,
         },
-        stepsToReproduce: [`Open ${context.urlPath} at ${context.breakpoint}`, 'Observe content shifting during loading'],
+        stepsToReproduce: [
+          `Open ${context.urlPath} at ${context.breakpoint}`,
+          'Observe content shifting during loading',
+        ],
         evidence: { measurements: vitals.measurements },
         resolution: 'Set explicit width and height dimensions on images and banners to reserve space before loading.',
       });
@@ -215,9 +225,13 @@ export class PerformanceChecker {
           expected: `The page should react to an interaction within ${SPEED_THRESHOLDS.INP_GOOD_MS}ms (${TEST_BROWSER_NOTE})`,
           actual: `The slowest interaction took ${Math.round(vitals.inpMs)}ms to show a result (${basis}). It covers the interactions the test performed, not every one a visitor might.`,
         },
-        stepsToReproduce: [`Open ${context.urlPath} at ${context.breakpoint}`, 'Click a menu button or press Tab and watch how long the page takes to react'],
+        stepsToReproduce: [
+          `Open ${context.urlPath} at ${context.breakpoint}`,
+          'Click a menu button or press Tab and watch how long the page takes to react',
+        ],
         evidence: { measurements: vitals.measurements },
-        resolution: 'Break up long JavaScript tasks, defer work that is not needed to show the next screen, and avoid heavy re-renders on click.',
+        resolution:
+          'Break up long JavaScript tasks, defer work that is not needed to show the next screen, and avoid heavy re-renders on click.',
       });
     }
 
@@ -234,7 +248,10 @@ export class PerformanceChecker {
           expected: `A page should download less than ${formatMb(SPEED_THRESHOLDS.MAX_PAGE_WEIGHT_BYTES)}`,
           actual: `At least ${formatMb(metrics.totalWeightBytes)} was downloaded: ${formatMb(weight.firstPartyBytes)} from this site and ${formatMb(weight.thirdPartyBytes)} from other sites. Files from other sites that hide their size are not counted.`,
         },
-        stepsToReproduce: [`Open ${context.urlPath} with the browser's network panel open`, 'Add up the transferred size'],
+        stepsToReproduce: [
+          `Open ${context.urlPath} with the browser's network panel open`,
+          'Add up the transferred size',
+        ],
         evidence: { measurements: { weight } },
         resolution: 'Compress and resize images, drop unused scripts and fonts, and lazy-load what is below the fold.',
       });
@@ -290,7 +307,8 @@ export class PerformanceChecker {
           `Notice horizontal scrollbar and overflowing element: ${target}`,
         ],
         evidence: {},
-        resolution: 'Ensure all containers use max-width: 100% or overflow: hidden, and avoid fixed pixel widths wider than 375px.',
+        resolution:
+          'Ensure all containers use max-width: 100% or overflow: hidden, and avoid fixed pixel widths wider than 375px.',
       });
     }
 
@@ -319,7 +337,8 @@ export class PerformanceChecker {
           `Inspect ${overlap.selector} and ${overlap.overlapsWith}`,
         ],
         evidence: {},
-        resolution: 'Adjust CSS margins, z-index, or flex/grid stacking order so interactive controls do not cover each other.',
+        resolution:
+          'Adjust CSS margins, z-index, or flex/grid stacking order so interactive controls do not cover each other.',
       });
     }
 
@@ -515,8 +534,8 @@ const READ_PAGE_METRICS = async (): Promise<RawPageMetrics> => {
       const selector = el.getAttribute('data-testid')
         ? `[data-testid="${el.getAttribute('data-testid')}"]`
         : el.id
-        ? `#${el.id}`
-        : el.tagName.toLowerCase();
+          ? `#${el.id}`
+          : el.tagName.toLowerCase();
       overflowElements.push({ tag: el.tagName.toLowerCase(), selector, right: Math.round(r.right) });
       if (overflowElements.length >= 2) break;
     }
@@ -531,7 +550,11 @@ const READ_PAGE_METRICS = async (): Promise<RawPageMetrics> => {
       if (el.closest('details:not([open])')) return false;
       const style = window.getComputedStyle(el);
       if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
-      if (typeof el.checkVisibility === 'function' && !el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) return false;
+      if (
+        typeof el.checkVisibility === 'function' &&
+        !el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })
+      )
+        return false;
       const r = el.getBoundingClientRect();
       return r.width > 0 && r.height > 0;
     }
@@ -559,8 +582,12 @@ const READ_PAGE_METRICS = async (): Promise<RawPageMetrics> => {
             continue;
           }
 
-          const selA = a.getAttribute('data-testid') ? `[data-testid="${a.getAttribute('data-testid')}"]` : a.tagName.toLowerCase();
-          const selB = b.getAttribute('data-testid') ? `[data-testid="${b.getAttribute('data-testid')}"]` : b.tagName.toLowerCase();
+          const selA = a.getAttribute('data-testid')
+            ? `[data-testid="${a.getAttribute('data-testid')}"]`
+            : a.tagName.toLowerCase();
+          const selB = b.getAttribute('data-testid')
+            ? `[data-testid="${b.getAttribute('data-testid')}"]`
+            : b.tagName.toLowerCase();
           overlappingElements.push({ tag: a.tagName.toLowerCase(), selector: selA, overlapsWith: selB });
           break;
         }

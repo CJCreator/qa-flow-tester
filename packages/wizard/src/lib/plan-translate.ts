@@ -73,7 +73,9 @@ function formatTokenWords(token: string): string {
     .split(/[-_\s]+/)
     .filter(Boolean);
   if (!words.length) return token;
-  const capitalized = words.map((w, i) => (i === 0 ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : w.toLowerCase()));
+  const capitalized = words.map((w, i) =>
+    i === 0 ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : w.toLowerCase()
+  );
   return capitalized.join(' ');
 }
 
@@ -95,7 +97,6 @@ export function cleanUrlPattern(pattern?: string): string {
   return cleaned || '/';
 }
 
-
 /**
  * Converts a TestCaseStep into a plain English sentence without code or selectors.
  */
@@ -105,7 +106,7 @@ export function stepToSentence(step: TestCaseStep): string {
   const selectorWords = cleanSelectorWords(step.selector);
 
   // Pick target phrase
-  let target = nameIsClean ? stepName : selectorWords;
+  const target = nameIsClean ? stepName : selectorWords;
 
   switch (step.action) {
     case 'click':
@@ -259,7 +260,10 @@ export function flowToJourney(flow: DiscoveredFlow, siteType?: string): PlanJour
     id: flow.id,
     name: flow.name || 'User Journey',
     role: flow.role || 'anonymous',
-    reason: flow.description && !looksTechnical(flow.description) ? flow.description : defaultReasonForFlow(flow.name, flow.role, siteType),
+    reason:
+      flow.description && !looksTechnical(flow.description)
+        ? flow.description
+        : defaultReasonForFlow(flow.name, flow.role, siteType),
     startPage: flow.startPage || '/',
     steps: (flow.steps || []).map(stepToSentence),
     checks: expectationsToChecks(flow.candidateExpectations, flow.candidateValidationRules),
@@ -282,7 +286,8 @@ export function defaultSiteWideChecks(): PlanSiteWideCheck[] {
     },
     {
       name: 'Screen layout (responsive)',
-      description: 'Checks pages fit on mobile (375px), tablet (768px), and desktop (1440px) without scrolling sideways.',
+      description:
+        'Checks pages fit on mobile (375px), tablet (768px), and desktop (1440px) without scrolling sideways.',
     },
     {
       name: 'Working navigation',

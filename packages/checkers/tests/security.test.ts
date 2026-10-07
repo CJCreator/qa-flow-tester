@@ -51,10 +51,10 @@ describe('SecurityChecker', () => {
       passed: true,
     });
     const leaked = 'http://localhost/dashboard?user=sam&password=hunter2';
-    const findings = checker.checkEvidence(
-      [step(1, 'http://localhost/login', leaked), step(2, leaked, leaked)],
-      { role: 'visitor', breakpoint: '1440px' }
-    );
+    const findings = checker.checkEvidence([step(1, 'http://localhost/login', leaked), step(2, leaked, leaked)], {
+      role: 'visitor',
+      breakpoint: '1440px',
+    });
     expect(findings).toHaveLength(1);
     expect(findings[0].title).toBe('The sign-in form sends passwords in the page address');
     // The same place as the form check's finding, so the two merge into one.
@@ -167,9 +167,7 @@ describe('SecurityChecker', () => {
       url: () => 'https://example.com/account',
       evaluate: async () => [],
       context: () => ({
-        cookies: async () => [
-          { name: 'session_token', secure: false, httpOnly: false, sameSite: 'None' },
-        ],
+        cookies: async () => [{ name: 'session_token', secure: false, httpOnly: false, sameSite: 'None' }],
       }),
     } as unknown as Page;
 
@@ -237,7 +235,12 @@ describe('SecurityChecker', () => {
               body: '<html><body><script>fetch("http://plain.test/data.json").catch(()=>{})</script></body></html>',
             });
           }
-          return route.fulfill({ status: 200, contentType: 'application/json', body: '{}', headers: { 'access-control-allow-origin': '*' } });
+          return route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: '{}',
+            headers: { 'access-control-allow-origin': '*' },
+          });
         });
         await page.goto('https://secure.test/');
         await page.waitForTimeout(300);

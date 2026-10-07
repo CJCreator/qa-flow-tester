@@ -19,6 +19,7 @@ blue, green) like an architect's mark-up. Monospaced reference labels (pg-01, pg
 reading systematic. Findings appear as red/amber left-border annotations on the cards.
 
 **Why it was chosen over A (Cartographer) and C (Signal Board):**
+
 - Direction A (light, paper-and-ink, same palette as the current wizard) was calm but felt like
   an extension of the setup form rather than a new kind of screen.
 - Direction C (coloured status tiles, light background) was status-forward but the saturated tiles
@@ -51,7 +52,7 @@ A check-up is a real sequence, so it's shown as one:
   - On phones it reads "Step 2 of 4: Plan".
   - It only shows where you are. Stopping and deleting are always separate buttons, and they ask first.
 - **Every screen has its own address,** so Back, Forward, refresh and bookmarks work.
-- **The report's one bold element** is an inspector's rubber stamp: *Ready to release* or *Not ready yet*.
+- **The report's one bold element** is an inspector's rubber stamp: _Ready to release_ or _Not ready yet_.
   It is the verdict. The A–F grades per aspect sit under it; there is no overall grade to contradict it.
 
 This replaces the check-up slip: a list of steps down the left that filled in with each answer. That suited
@@ -61,24 +62,25 @@ the old five-question wizard, not the one-box, URL-first flow.
 
 The dark Blueprint palette, defined in [tailwind.config.js](tailwind.config.js):
 
-| Token | Hex | Use |
-|---|---|---|
-| paper | `#111827` | Page background |
-| canvas | `#0D1322` | The map's drawing board |
-| surface | `#1E2A3B` | Cards and fields |
-| panel | `#1A2438` | Sidebars and side panels |
-| ink | `#E8EDF5` | Text |
-| ink-soft | `#A7B3C7` | Secondary text |
-| rule | `#2A3A52` | Decorative dividers only, never the only cue |
-| edge | `#74859F` | Control borders, ≥ 3:1 against paper, panel and surface (WCAG 1.4.11) |
-| stamp | `#6C9BF2` | Accent: actions, focus ring, progress |
-| pass / fail / warn | `#4ADE9A` / `#FA9191` / `#FBC54A` | Verdict and status, on their tints `#12302A` / `#3A1C20` / `#3A2F14` |
-| j1–j5 | `#B69CFB` `#6FB0FA` `#4ADE9A` `#F59AC6` `#FBA35C` | One colour per journey on the map |
+| Token              | Hex                                               | Use                                                                   |
+| ------------------ | ------------------------------------------------- | --------------------------------------------------------------------- |
+| paper              | `#111827`                                         | Page background                                                       |
+| canvas             | `#0D1322`                                         | The map's drawing board                                               |
+| surface            | `#1E2A3B`                                         | Cards and fields                                                      |
+| panel              | `#1A2438`                                         | Sidebars and side panels                                              |
+| ink                | `#E8EDF5`                                         | Text                                                                  |
+| ink-soft           | `#A7B3C7`                                         | Secondary text                                                        |
+| rule               | `#2A3A52`                                         | Decorative dividers only, never the only cue                          |
+| edge               | `#74859F`                                         | Control borders, ≥ 3:1 against paper, panel and surface (WCAG 1.4.11) |
+| stamp              | `#6C9BF2`                                         | Accent: actions, focus ring, progress                                 |
+| pass / fail / warn | `#4ADE9A` / `#FA9191` / `#FBC54A`                 | Verdict and status, on their tints `#12302A` / `#3A1C20` / `#3A2F14`  |
+| j1–j5              | `#B69CFB` `#6FB0FA` `#4ADE9A` `#F59AC6` `#FBA35C` | One colour per journey on the map                                     |
 
 Every text pairing is checked by `tests/contrast.test.ts`, which fails the build if a palette change
 drops below WCAG 2.1 AA.
 
 Colour rules:
+
 - Grades, statuses and verdicts use these tokens only, never Tailwind's built-in colours, so the contrast
   test covers them.
 - App working screens declare `color-scheme: dark`, so the browser's own checkboxes, number fields and

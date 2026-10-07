@@ -15,7 +15,9 @@ describe('Redactor', () => {
 
   it('hides passwords, tokens and email usernames, as typed and as they appear in addresses', () => {
     expect(redactor.text('logged in with manager-password')).toBe('logged in with ***');
-    expect(redactor.text('/dashboard?email=manager%40example.com&password=manager-password')).toBe('/dashboard?email=***&password=***');
+    expect(redactor.text('/dashboard?email=manager%40example.com&password=manager-password')).toBe(
+      '/dashboard?email=***&password=***'
+    );
     expect(redactor.text('p@ss word! and p%40ss%20word! and p%40ss+word!')).toBe('*** and *** and ***');
     expect(redactor.text('Bearer tok_12345')).toBe('Bearer ***');
   });
@@ -25,7 +27,9 @@ describe('Redactor', () => {
   });
 
   it('hides secret-looking URL parameters even when the secret is unknown', () => {
-    expect(redactUrl('https://x.test/cb?code=1&access_token=abc.def&state=2')).toBe('https://x.test/cb?code=1&access_token=***&state=2');
+    expect(redactUrl('https://x.test/cb?code=1&access_token=abc.def&state=2')).toBe(
+      'https://x.test/cb?code=1&access_token=***&state=2'
+    );
     expect(redactUrl('see /reset?token=zzz for details')).toBe('see /reset?token=*** for details');
     expect(redactUrl('/search?q=password')).toBe('/search?q=password');
   });
@@ -75,7 +79,9 @@ describe('A run keeps passwords out of everything it writes', () => {
   async function allFiles(dir: string): Promise<string[]> {
     const entries = await fs.readdir(dir, { withFileTypes: true });
     const nested = await Promise.all(
-      entries.map((e) => (e.isDirectory() ? allFiles(path.join(dir, e.name)) : Promise.resolve([path.join(dir, e.name)])))
+      entries.map((e) =>
+        e.isDirectory() ? allFiles(path.join(dir, e.name)) : Promise.resolve([path.join(dir, e.name)])
+      )
     );
     return nested.flat();
   }
@@ -93,7 +99,9 @@ describe('A run keeps passwords out of everything it writes', () => {
       profile: {
         name: 'Fixture',
         productId: 'fixture',
-        roles: [{ role: 'manager', username: 'manager@example.com', password: 'manager-password', loginPath: '/login' }],
+        roles: [
+          { role: 'manager', username: 'manager@example.com', password: 'manager-password', loginPath: '/login' },
+        ],
       },
       specTestCases: [
         {
@@ -103,7 +111,12 @@ describe('A run keeps passwords out of everything it writes', () => {
           startPage: '/login',
           steps: [
             { action: 'fill', selector: '[data-testid="email-input"]', value: '{{username}}', name: 'Enter email' },
-            { action: 'fill', selector: '[data-testid="password-input"]', value: '{{password}}', name: 'Enter password' },
+            {
+              action: 'fill',
+              selector: '[data-testid="password-input"]',
+              value: '{{password}}',
+              name: 'Enter password',
+            },
             { action: 'click', selector: '[data-testid="submit-btn"]', name: 'Sign in' },
           ],
           expectations: { url: { pattern: '/dashboard' } },

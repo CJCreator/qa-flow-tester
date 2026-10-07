@@ -79,7 +79,9 @@ export class ReportGenerator {
     lines.push(``);
     if (report.testedWithApprovedPlan) {
       lines.push(`> [!NOTE]`);
-      lines.push(`> Nothing on the site had changed, so this run used the plan approved on ${report.testedWithApprovedPlan.slice(0, 10)} without a new review.`);
+      lines.push(
+        `> Nothing on the site had changed, so this run used the plan approved on ${report.testedWithApprovedPlan.slice(0, 10)} without a new review.`
+      );
       lines.push(``);
     }
 
@@ -151,15 +153,13 @@ export class ReportGenerator {
           entry.status === 'Passed'
             ? '✅ Passed'
             : entry.status === 'Failed'
-            ? '❌ Failed'
-            : entry.status === 'Blocked'
-            ? '⛔ Blocked'
-            : entry.status === 'Skipped'
-            ? '⏭️ Skipped'
-            : '❓ Could not verify';
-        const evidenceLink = entry.evidencePath
-          ? `[Evidence](${entry.evidencePath.replace(/\\/g, '/')})`
-          : '—';
+              ? '❌ Failed'
+              : entry.status === 'Blocked'
+                ? '⛔ Blocked'
+                : entry.status === 'Skipped'
+                  ? '⏭️ Skipped'
+                  : '❓ Could not verify';
+        const evidenceLink = entry.evidencePath ? `[Evidence](${entry.evidencePath.replace(/\\/g, '/')})` : '—';
         lines.push(
           `| \`${entry.requirementId}\` | \`${entry.flowId}\` | \`${entry.testCaseId}\` | ${icon} | ${entry.description || entry.name || '—'} | ${evidenceLink} |`
         );
@@ -175,16 +175,23 @@ export class ReportGenerator {
       lines.push('| Check | Result | Details |');
       lines.push('| :--- | :--- | :--- |');
       for (const c of report.marketing.checks) {
-        const result = c.status === 'ok' ? '✅ OK' : c.status === 'gap' ? (c.kind === 'opinion' ? '💡 Worth adding' : '⚠️ Missing') : '➖ Not checked';
-        lines.push(`| ${c.label}${c.kind === 'opinion' ? ' (suggestion)' : ''} | ${result} | ${c.detail}${c.findingId ? ` See ${c.findingId}.` : ''} |`);
+        const result =
+          c.status === 'ok'
+            ? '✅ OK'
+            : c.status === 'gap'
+              ? c.kind === 'opinion'
+                ? '💡 Worth adding'
+                : '⚠️ Missing'
+              : '➖ Not checked';
+        lines.push(
+          `| ${c.label}${c.kind === 'opinion' ? ' (suggestion)' : ''} | ${result} | ${c.detail}${c.findingId ? ` See ${c.findingId}.` : ''} |`
+        );
       }
       lines.push('');
     }
 
     // Findings section
-    const activeFindings = findings.filter(
-      (f) => f.triageStatus !== 'Intended' && f.triageStatus !== 'False Positive'
-    );
+    const activeFindings = findings.filter((f) => f.triageStatus !== 'Intended' && f.triageStatus !== 'False Positive');
     const suppressedFindings = findings.filter(
       (f) => f.triageStatus === 'Intended' || f.triageStatus === 'False Positive'
     );
@@ -204,8 +211,12 @@ export class ReportGenerator {
       lines.push(``);
       for (const f of group) {
         lines.push(`#### [${f.id}] ${f.title}`);
-        lines.push(`- **Checker:** \`${f.checker}\` | **Role:** \`${f.where.role}\` | **Breakpoint:** \`${f.where.breakpoint}\``);
-        lines.push(`- **Location:** \`${f.where.urlPath}\`${f.where.dataTestId ? ` (\`data-testid="${f.where.dataTestId}"\`)` : ''}`);
+        lines.push(
+          `- **Checker:** \`${f.checker}\` | **Role:** \`${f.where.role}\` | **Breakpoint:** \`${f.where.breakpoint}\``
+        );
+        lines.push(
+          `- **Location:** \`${f.where.urlPath}\`${f.where.dataTestId ? ` (\`data-testid="${f.where.dataTestId}"\`)` : ''}`
+        );
         if (f.sourceLocation) {
           lines.push(`- **Source Code:** \`${f.sourceLocation.file}:${f.sourceLocation.line || 1}\``);
           if (f.sourceLocation.matchSnippet) {
@@ -221,7 +232,9 @@ export class ReportGenerator {
         lines.push(`- **Expected:** ${f.expectedVsActual.expected}`);
         lines.push(`- **Actual:** ${f.expectedVsActual.actual}`);
         lines.push(`- **Recommended Resolution:** ${f.resolution}`);
-        lines.push('- **After you fix it:** Run the check-up again on the same address. This finding should no longer appear.');
+        lines.push(
+          '- **After you fix it:** Run the check-up again on the same address. This finding should no longer appear.'
+        );
         if (f.reproScriptPath) {
           lines.push(`- **Repro Script:** \`${f.reproScriptPath}\``);
         }

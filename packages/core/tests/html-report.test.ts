@@ -118,7 +118,10 @@ describe('Single-File Offline HTML Report (html-report.ts)', () => {
     expect(content).not.toContain('Overall Readiness');
     expect(content).not.toContain('Ready to release');
 
-    const clean = await fs.readFile(await generateSingleFileHtmlReport({ ...mockReport, findings: [] }, { outputDir: tempDir }), 'utf8');
+    const clean = await fs.readFile(
+      await generateSingleFileHtmlReport({ ...mockReport, findings: [] }, { outputDir: tempDir }),
+      'utf8'
+    );
     expect(clean).toContain('Ready to release');
     expect(clean).toContain('No problems found.');
   });

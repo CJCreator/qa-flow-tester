@@ -81,9 +81,21 @@ async function openStream(): Promise<{ events: RunnerEvent[]; close: () => void 
 }
 
 const post = (route: string, body: unknown = {}) =>
-  fetch(`${runnerUrl}${route}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  fetch(`${runnerUrl}${route}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
 const get = async <T>(route: string): Promise<T> => (await fetch(`${runnerUrl}${route}`)).json() as Promise<T>;
-const status = () => get<{ phase: string; isRunning: boolean; runId: string | null; lastRunError: string | null; reportRunId: string | null; targetUrl: string | null }>('/api/runner/status');
+const status = () =>
+  get<{
+    phase: string;
+    isRunning: boolean;
+    runId: string | null;
+    lastRunError: string | null;
+    reportRunId: string | null;
+    targetUrl: string | null;
+  }>('/api/runner/status');
 
 async function waitForPhase(wanted: string, seconds = 120): Promise<void> {
   for (let i = 0; i < seconds * 4; i++) {
@@ -131,7 +143,10 @@ async function fakeRun(runId: string, daysAgo: number): Promise<void> {
     counts: { Blocker: 0, Major: 0, Minor: 0, Suggestion: 0 },
   };
   await fs.writeFile(path.join(dir, 'summary.json'), JSON.stringify(summary));
-  await fs.writeFile(path.join(dir, 'report.json'), JSON.stringify({ runId, targetUrl: siteUrl, timestamp, findings: [], results: [] }));
+  await fs.writeFile(
+    path.join(dir, 'report.json'),
+    JSON.stringify({ runId, targetUrl: siteUrl, timestamp, findings: [], results: [] })
+  );
 }
 
 describe('A check-up on the runner', () => {
@@ -167,7 +182,11 @@ describe('A check-up on the runner', () => {
     expect((await facts(siteUrl)).remembered).toBeUndefined();
 
     const shop = `http://shop.example.test:${SITE_PORT}/`;
-    expect(await facts(shop)).toMatchObject({ reachable: true, host: `shop.example.test:${SITE_PORT}`, testCopy: false });
+    expect(await facts(shop)).toMatchObject({
+      reachable: true,
+      host: `shop.example.test:${SITE_PORT}`,
+      testCopy: false,
+    });
 
     // Marked as a test copy by its owner last time (the runner saves this when a check-up starts).
     await fs.mkdir(path.join(dataDir, 'sites'), { recursive: true });
@@ -187,7 +206,9 @@ describe('A check-up on the runner', () => {
     await waitForPhase('awaiting-review');
 
     // The owner choice is remembered from the start of the check-up.
-    expect((await (await post('/api/runner/preflight', { targetUrl: siteUrl })).json()).remembered).toMatchObject({ owner: true });
+    expect((await (await post('/api/runner/preflight', { targetUrl: siteUrl })).json()).remembered).toMatchObject({
+      owner: true,
+    });
 
     const refused = await post('/api/runner/run', checkUp());
     expect(refused.status).toBe(409);
@@ -251,7 +272,13 @@ describe('A check-up on the runner', () => {
     expect(await exists(path.join(dir, 'auth'))).toBe(false);
 
     const { runs } = await get<{ runs: RunSummary[] }>('/api/runs');
-    expect(runs[0]).toMatchObject({ runId, host: siteHost, targetUrl: siteUrl, stamp: expect.any(String), counts: expect.any(Object) });
+    expect(runs[0]).toMatchObject({
+      runId,
+      host: siteHost,
+      targetUrl: siteUrl,
+      stamp: expect.any(String),
+      counts: expect.any(Object),
+    });
     expect(runs.map((r) => r.timestamp)).toEqual([...runs.map((r) => r.timestamp)].sort().reverse());
 
     const report = await get<ReleaseReport>(`/api/runs/${runId}`);
@@ -268,7 +295,9 @@ describe('A check-up on the runner', () => {
       const download = await fetch(`${runnerUrl}/api/runs/${runId}/download/${file}`);
       expect(download.status, file).toBe(200);
       expect(download.headers.get('content-disposition'), file).toContain(runId);
-      expect(Buffer.from(await download.arrayBuffer()).equals(await fs.readFile(path.join(dir, file))), file).toBe(true);
+      expect(Buffer.from(await download.arrayBuffer()).equals(await fs.readFile(path.join(dir, file))), file).toBe(
+        true
+      );
     }
     expect((await fetch(`${runnerUrl}/api/runs/${runId}/download/summary.json`)).status).toBe(404);
     expect((await fetch(`${runnerUrl}/api/runs/..%2F..%2Fdata/download/report.md`)).status).toBe(404);
@@ -310,7 +339,10 @@ describe('A check-up on the runner', () => {
       expect(report.testedWithApprovedPlan).toEqual(expect.any(String));
       expect(new Set(report.results.map((r) => r.breakpoint))).toEqual(new Set(['1440px']));
       expect(report.notes?.some((n) => n.includes('tested as approved, without a new review'))).toBe(true);
-      expect((await get<{ runs: RunSummary[] }>('/api/runs')).runs[0]).toMatchObject({ runId: againId, testedWithApprovedPlan: report.testedWithApprovedPlan });
+      expect((await get<{ runs: RunSummary[] }>('/api/runs')).runs[0]).toMatchObject({
+        runId: againId,
+        testedWithApprovedPlan: report.testedWithApprovedPlan,
+      });
     } finally {
       stream.close();
     }
@@ -336,7 +368,10 @@ describe('A check-up on the runner', () => {
   it('moves site data kept in the working folder into .qa-data on start, copying before it deletes', async () => {
     const work = path.join(scratch, 'old-working-folder');
     await fs.mkdir(path.join(work, 'sites'), { recursive: true });
-    await fs.writeFile(path.join(work, 'sites', 'shop.example.com.json'), JSON.stringify({ host: 'shop.example.com', pages: ['/'] }));
+    await fs.writeFile(
+      path.join(work, 'sites', 'shop.example.com.json'),
+      JSON.stringify({ host: 'shop.example.com', pages: ['/'] })
+    );
     await fs.writeFile(path.join(work, 'sites', 'shop.example.com.history.json'), '[]');
     await fs.writeFile(path.join(work, '.qa-ai-models.json'), JSON.stringify({ text: 'vendor/model:free' }));
 
@@ -353,7 +388,9 @@ describe('A check-up on the runner', () => {
 
     expect(await exists(path.join(work, 'sites'))).toBe(false);
     expect(await exists(path.join(work, '.qa-ai-models.json'))).toBe(false);
-    expect(JSON.parse(await fs.readFile(path.join(work, '.qa-data', 'sites', 'shop.example.com.json'), 'utf8'))).toMatchObject({ pages: ['/'] });
+    expect(
+      JSON.parse(await fs.readFile(path.join(work, '.qa-data', 'sites', 'shop.example.com.json'), 'utf8'))
+    ).toMatchObject({ pages: ['/'] });
     expect(await exists(path.join(work, '.qa-data', 'sites', 'shop.example.com.history.json'))).toBe(true);
     expect(await exists(path.join(work, '.qa-data', '.qa-ai-models.json'))).toBe(true);
   });
