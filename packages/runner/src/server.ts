@@ -3567,7 +3567,7 @@ export class RunnerServer {
       if (record.context.siteHost) {
         const memory = await loadSiteMemory(this.siteDir(), record.context.siteHost);
         await saveSiteMemory(
-          this.dataDir,
+          this.siteDir(),
           rememberRun(memory, record.context.siteHost, draft, { reviewed: true, answeredByOwner, screenSizes: this.screenSizesOf(record.context) })
         );
       }

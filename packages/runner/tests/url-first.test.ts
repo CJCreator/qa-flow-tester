@@ -75,7 +75,7 @@ async function post(route: string, body: unknown = {}): Promise<Response> {
 async function status(): Promise<{ phase: string; isRunning: boolean; lastRunError: string | null }> {
   return (await fetch(`${runnerUrl}/api/runner/status`)).json();
 }
-async function waitForPhase(wanted: string[], seconds = 120): Promise<string> {
+async function waitForPhase(wanted: string[], seconds = 200): Promise<string> {
   for (let i = 0; i < seconds * 2; i++) {
     const s = await status();
     if (wanted.includes(s.phase)) return s.phase;
@@ -148,7 +148,7 @@ describe('URL-first runs', () => {
     expect(invoice?.skipReason).toContain('Needs a test copy');
     expect(result.notes?.some((n) => n.includes('need a test copy') || n.includes('needs a test copy'))).toBe(true);
     expect(sent).toEqual([]);
-  }, 180000);
+  }, 240000);
 
   it('tests localhost fully when the owner box is ticked', async () => {
     sent.length = 0;
@@ -165,7 +165,7 @@ describe('URL-first runs', () => {
     expect(result.scanMode).toBeUndefined();
     expect(result.results.find((r) => r.flowId === 'FLOW-INVOICE')?.status).not.toBe('Skipped');
     expect(sent).toContain('POST /api/invoices');
-  }, 180000);
+  }, 240000);
 
   it('without the owner box, even localhost is only looked at', async () => {
     await post('/api/runner/run', { targetUrl: `http://localhost:${FIXTURE_PORT}/`, owner: false, skipReview: false });

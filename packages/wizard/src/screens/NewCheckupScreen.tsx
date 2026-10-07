@@ -366,7 +366,7 @@ export function NewCheckupScreen({
                 }}
               />
               <span className="flex-1">
-                <span className="block font-bold text-ink">Check how people and AI find the site</span>
+                <span className="block font-bold text-ink">Check how search engines and AI find the site</span>
                 <span className="block text-xs font-medium text-ink-soft">
                   Search (SEO) · AI answers (AEO) · AI search (GEO) · Marketing (MKT)
                 </span>

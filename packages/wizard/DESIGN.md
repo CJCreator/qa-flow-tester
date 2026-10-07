@@ -30,6 +30,10 @@ reading systematic. Findings appear as red/amber left-border annotations on the 
 **What stays the same:** Atkinson Hyperlegible Next for body text. The same pass/warn/fail colour
 meanings. The stamp animation on the report. Writing rules (plain verbs, no jargon).
 
+2026-10-06: after the landing and UX grilling, motion and the stencil font are no longer limited to the
+stamp; the landing page follows the system colour scheme; the landing hero and a planned top bar are
+described. See Type, Motion, Theming, Landing hero and The top bar.
+
 The direction names are for this document only. None of them ("Direction B", "Blueprint",
 "Architectural") appear on screen.
 
@@ -39,6 +43,8 @@ A check-up is a real sequence, so it's shown as one:
 
 - **The top bar** is on every screen. It holds the places you can go: New check-up, Past check-ups and
   Settings, plus Team Hub when a Report Hub is connected.
+  - **Planned, not built yet:** three main links (New check-up, Past check-ups, Settings) and a "More" menu
+    holding Baselines and Compare sites. The keyboard hints (Cmd+K and ?) are hidden on touch devices.
 - **The step bar** sits under the top bar during a check-up and on its report: Address · Plan · Testing ·
   Report.
   - Finished steps are links, the current step is highlighted, and later steps are greyed out.
@@ -75,8 +81,8 @@ drops below WCAG 2.1 AA.
 Colour rules:
 - Grades, statuses and verdicts use these tokens only, never Tailwind's built-in colours, so the contrast
   test covers them.
-- The page declares `color-scheme: dark`, so the browser's own checkboxes, number fields and selects match
-  the board.
+- App working screens declare `color-scheme: dark`, so the browser's own checkboxes, number fields and
+  selects match the board. The landing page and the report follow the rules under Theming.
 
 ## Type
 
@@ -84,14 +90,31 @@ Colour rules:
   readers with low vision, which fits a tool that audits accessibility and an audience that reads
   every word. Base size is 18px; questions are set large (up to 44px) because each screen asks
   exactly one.
-- **Big Shoulders Stencil Display** appears once, on the stamp. Stencil lettering is what
-  inspection stamps and crates use; confining it to one element keeps it special.
+- **Big Shoulders Stencil Display** started on the stamp. Stencil lettering is what inspection stamps and
+  crates use. It is no longer confined to the stamp: use it where it earns its place. Keep it rare, or it
+  stops being special.
 
 ## Motion
 
-One moment only: the stamp lands when the report appears. The rest is still, apart from what shows
-progress: the progress bar, and the pulse on the page being tested. Everything, the stamp included, stops
-under `prefers-reduced-motion`.
+Motion is allowed everywhere. Each use is judged case by case: it should help someone see what changed or
+what is happening, not just decorate. Today that includes the stamp landing on the report, the progress
+bar, and the pulse on the page being tested.
+
+One rule is fixed: everything stops under `prefers-reduced-motion`, with no exceptions.
+
+## Theming
+
+- **Landing page:** follows the system colour scheme (`prefers-color-scheme`). Dark is the default look.
+  There is no toggle.
+- **App working screens:** stay dark.
+- **The report:** stays light-capable, so it can be read and printed on paper.
+
+## Landing hero
+
+- The address form sits beside the real sample report. It is a plain GET to `/check?url=`, which prefills
+  the New check-up screen.
+- The real sample report is the only proof on the page.
+- Marketing wording follows [ADR 0018](../../docs/adr/0018-claim-wording.md).
 
 ## Writing
 
