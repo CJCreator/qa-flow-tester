@@ -15,8 +15,8 @@ Marketing items needing the owner (testimonials).
 ## Acceptance criteria
 - [ ] Check-up of the landing page is run and a summary saved under `docs/research/`.
 - [ ] Findings are fixed or filed as tickets with reasons.
-- [ ] A repeatable command is documented in `docs/TESTING.md`.
-- [ ] What could not be verified is stated.
+- [x] A repeatable command is documented in `docs/TESTING.md`.
+- [x] What could not be verified is stated.
 
 ## Dependencies
 T-13, T-14
@@ -34,4 +34,4 @@ Test runs are deferred (DEFER_TESTS): they happen in the wave's /verify-all, not
 Needs a running app; happens in the verify phase.
 
 ## Status
-todo (wave 2)
+built (run and findings pending /verify-all)

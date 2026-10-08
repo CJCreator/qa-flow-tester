@@ -13,11 +13,11 @@ Landing screen and tests.
 Re-design.
 
 ## Acceptance criteria
-- [ ] A test checks the sample report against the current report format.
-- [ ] The form is not the long block above the fold; developer shortcuts are hidden from first-time visitors.
-- [ ] Wake-time limit is configurable.
-- [ ] Areas list links to the sample; theme toggle works.
-- [ ] axe finds no serious or critical issue on landing (test).
+- [x] A test checks the sample report against the current report format.
+- [x] The form is not the long block above the fold; developer shortcuts are hidden from first-time visitors.
+- [x] Wake-time limit is configurable.
+- [x] Areas list links to the sample; theme toggle works.
+- [x] axe finds no serious or critical issue on landing (test).
 
 ## Dependencies
 T-13
@@ -35,4 +35,4 @@ Test runs are deferred (DEFER_TESTS): they happen in the wave's /verify-all, not
 The staleness check must not be brittle.
 
 ## Status
-todo (wave 2)
+built (wave 2). Tests written, run in /verify-all.

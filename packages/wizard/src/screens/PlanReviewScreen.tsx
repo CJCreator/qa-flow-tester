@@ -11,6 +11,7 @@ import {
   addSignInToPlan,
   applyPlanChange,
   downloadPlanMarkdown,
+  downloadPlaywrightExport,
   includeHostInPlan,
   interpretSentence,
   patchPlan,
@@ -377,6 +378,14 @@ export function PlanReviewScreen({
               onClick={() => downloadPlanMarkdown().catch((err: Error) => setError(err.message))}
             >
               Download the plan
+            </button>
+            <button
+              type="button"
+              className="btn-quiet min-h-[44px] px-3 text-sm"
+              title="Download the Plan as a Playwright project"
+              onClick={() => downloadPlaywrightExport().catch((err: Error) => setError(err.message))}
+            >
+              Export as Playwright tests
             </button>
           </div>
         </div>

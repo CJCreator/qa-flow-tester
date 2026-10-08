@@ -11,6 +11,8 @@ import type {
   RunCoverage,
   TraceabilityEntry,
   RetryTelemetryEntry,
+  PageSpeedMap,
+  SlowerThanLastTime,
 } from '@qa/types';
 import { normalizeRoute } from '@qa/types';
 import { BrowserManager, BREAKPOINT_VIEWPORTS, locateElement } from './browser.js';
@@ -25,6 +27,8 @@ import { Redactor } from './redact.js';
 import { mergeDuplicateFindings } from './finding-groups.js';
 import { resolveCredentialPlaceholders } from './credentials.js';
 import { blockChanges, NEEDS_TEST_COPY } from './live-site.js';
+import { EntityNamespacer } from './entity-namespacing.js';
+import { SendGuard, watchSends } from './send-guard.js';
 import {
   BugDetectionChecker,
   SpecConformanceChecker,
@@ -41,9 +45,11 @@ import {
 import { calculateSiteAspectGrades } from './scoring.js';
 import { generateRankedRecommendations } from './recommendations.js';
 import { SiteHistoryManager } from './site-history.js';
+import { findSlowerPages, pageSpeedKey } from './speed-change.js';
 import { generateSingleFileHtmlReport } from './html-report.js';
 import { abortError, isAbortError } from './abort.js';
 import { RetryRunner } from './retry-runner.js';
+import { createStepBudget, resolveStepTimeoutMs } from './step-budget.js';
 
 /** The steps of a test point failed. Thrown inside a retry attempt so the runner can try again. */
 class StepsFailed extends Error {
@@ -128,6 +134,25 @@ function pathOf(url: string): string {
     return new URL(url).pathname;
   } catch {
     return url;
+  }
+}
+
+/**
+ * Deletes every `.webm` in one test point's folder except `keep`. The speed check opens an extra
+ * tab in the same recorded context, so a point can hold more than one clip. Best effort: never throws.
+ */
+export async function removeVideosExcept(dir: string, keep?: string): Promise<void> {
+  try {
+    const keepPath = keep ? path.resolve(keep) : undefined;
+    const names = await fs.readdir(dir);
+    for (const name of names) {
+      if (!name.toLowerCase().endsWith('.webm')) continue;
+      const full = path.resolve(dir, name);
+      if (full === keepPath) continue;
+      await fs.rm(full, { force: true }).catch(() => {});
+    }
+  } catch {
+    // Missing folder or unreadable: nothing to clean.
   }
 }
 
@@ -267,6 +292,8 @@ export interface RunOptions {
   dataDir?: string;
   /** Recorded in the report when "Test again" skipped the review: when the plan it used was approved. */
   testedWithApprovedPlan?: string;
+  /** Most time one test step may spend finding and acting on its element, in ms, across retries. Default 10000. */
+  stepTimeoutMs?: number;
 }
 
 export class FlowTestOrchestrator {
@@ -382,6 +409,8 @@ export class FlowTestOrchestrator {
 
     // Pages whose vitals were already measured with repeat loads in this run.
     const vitalsMeasured = new Set<string>();
+    // Speed numbers from those repeat loads, kept in site history for the next check-up.
+    const speedSamples: PageSpeedMap = {};
     const wantsRepeatLoads = (urlPath: string, bp: Breakpoint, sizes: Breakpoint[]) => {
       if (bp !== (sizes.includes('375px') ? '375px' : sizes[0]) || vitalsMeasured.has(urlPath)) return false;
       vitalsMeasured.add(urlPath);
@@ -428,6 +457,9 @@ export class FlowTestOrchestrator {
         let blockedChanges: string[] = [];
         /** Lists where the planned option wasn't there, and what was picked instead. */
         const substitutes: Array<{ step: string; planned: string; chosen: string }> = [];
+        // Test Copy only: one token per Test point, shared by both attempts, and a memory of any form sent.
+        const runToken = options.readOnly ? undefined : EntityNamespacer.runToken(runId, testCase.id, bp);
+        const sendGuard = options.readOnly ? undefined : SendGuard.forUrl(options.targetUrl);
 
         try {
           // Steps run in a fresh browser context. One that fails is thrown away and run once more
@@ -438,6 +470,8 @@ export class FlowTestOrchestrator {
               await context?.close().catch(() => {});
               const discardedPath = discarded ? await discarded.path().catch(() => undefined) : undefined;
               if (discardedPath) await fs.rm(discardedPath, { force: true }).catch(() => {});
+              // Also the extra tab's clip from the speed check.
+              await removeVideosExcept(testCaseEvidenceDir);
               evidenceCollector = new EvidenceCollector(testCaseEvidenceDir);
               testPointPassed = true;
               stepError = undefined;
@@ -454,6 +488,7 @@ export class FlowTestOrchestrator {
 
             // On a live site nothing that could change data leaves the browser.
             blockedChanges = options.readOnly ? await blockChanges(context) : [];
+            if (sendGuard) watchSends(context, sendGuard);
             evidenceCollector.attach(page);
 
             const startUrl = new URL(testCase.startPage, options.targetUrl).toString();
@@ -483,26 +518,33 @@ export class FlowTestOrchestrator {
               // An optional step gets one quick try: if the control isn't there at this width, it isn't.
               // A link check is one request, never repeated at a site we don't own.
               const MAX_RETRIES = step.optional || step.action === 'check-link' ? 0 : 2;
+              // One time budget for the whole step: finding the element, every try and the waits between.
+              const budget = createStepBudget(resolveStepTimeoutMs(options.stepTimeoutMs), stepStartedAt);
               for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+                // The last try gets all the time left, so a raised cap is used; earlier tries keep 4 s.
+                const waitTimeout = (): number =>
+                  step.optional
+                    ? budget.clamp(1500)
+                    : attempt === MAX_RETRIES
+                      ? budget.clamp(Infinity)
+                      : budget.clamp(4000);
                 try {
                   if (step.action === 'click') {
                     const locator = await locateElement(page, step.selector || '');
-                    await locator.waitFor({ state: 'visible', timeout: step.optional ? 1500 : 4000 });
-                    await locator.click({ timeout: step.optional ? 1500 : 4000 });
+                    await locator.waitFor({ state: 'visible', timeout: waitTimeout() });
+                    sendGuard?.clickStarted(i);
+                    await locator.click({ timeout: budget.clamp(step.optional ? 1500 : 4000) });
                   } else if (step.action === 'fill') {
                     const locator = await locateElement(page, step.selector || '');
-                    await locator.waitFor({ state: 'visible', timeout: 4000 });
-                    const value = resolveCredentialPlaceholders(
-                      step.value || '',
-                      testCase.role,
-                      options.profile?.roles || []
-                    );
-                    await locator.fill(value, { timeout: 4000 });
+                    await locator.waitFor({ state: 'visible', timeout: waitTimeout() });
+                    const planned = runToken ? EntityNamespacer.namespaceFillValue(step, runToken) : step.value || '';
+                    const value = resolveCredentialPlaceholders(planned, testCase.role, options.profile?.roles || []);
+                    await locator.fill(value, { timeout: budget.clamp(4000) });
                   } else if (step.action === 'select') {
                     const locator = await locateElement(page, step.selector || '');
-                    await locator.waitFor({ state: 'visible', timeout: 4000 });
+                    await locator.waitFor({ state: 'visible', timeout: waitTimeout() });
                     try {
-                      await locator.selectOption(step.value || '', { timeout: 2000 });
+                      await locator.selectOption(step.value || '', { timeout: budget.clamp(2000) });
                     } catch {
                       // Resilient fallback: case-insensitive or partial match across options
                       const targetVal = (step.value || '').trim().toLowerCase();
@@ -528,7 +570,7 @@ export class FlowTestOrchestrator {
                         .catch(() => undefined);
                       if (!matched)
                         throw new Error(`The list has no option “${step.value}”, and no other option to pick.`);
-                      await locator.selectOption(matched.value, { timeout: 2000 });
+                      await locator.selectOption(matched.value, { timeout: budget.clamp(2000) });
                       // Another option than the planned one: the step goes on, but what follows can't
                       // say whether the site handles the planned value.
                       if (!matched.exact)
@@ -556,8 +598,11 @@ export class FlowTestOrchestrator {
                 } catch (err: unknown) {
                   // Playwright colours its messages for terminals; reports want plain text.
                   currentStepError = (err instanceof Error ? err.message : String(err)).replace(/\x1b\[[0-9;]*m/g, '');
-                  if (attempt < MAX_RETRIES) {
-                    await page.waitForTimeout(500);
+                  // The step's time is used up: another try would only run past the cap.
+                  if (attempt < MAX_RETRIES && budget.remaining() > 500) {
+                    await page.waitForTimeout(Math.min(500, budget.remaining()));
+                  } else {
+                    break;
                   }
                 }
               }
@@ -636,8 +681,22 @@ export class FlowTestOrchestrator {
             testCaseId: testCase.id,
             // A link check is one request, never repeated at a site we don't own.
             maxRetries: testCase.kind === 'link' ? 0 : 1,
-            shouldRetry: (err) => !isAbortError(err),
+            // Once a form was sent, a second try would send it twice: decline the retry.
+            shouldRetry: (err) => !isAbortError(err) && !sendGuard?.hasSentAny(),
           });
+          if (
+            attemptResult.outcome === 'FAILED' &&
+            attemptResult.attempts === 1 &&
+            testCase.kind !== 'link' &&
+            !isAbortError(attemptResult.error) &&
+            sendGuard?.hasSentAny()
+          ) {
+            stepError =
+              `${stepError ?? ''} Not tried again: this test already sent a form, and a second try would send it twice.`.trim();
+            console.log(
+              `[QA Orchestrator] ${testCase.id} on ${bp}: not retried, a form was already sent (a retry would send it twice).`
+            );
+          }
           if (attemptResult.outcome === 'FAILED' && !(attemptResult.error instanceof StepsFailed)) {
             throw attemptResult.error;
           }
@@ -718,6 +777,9 @@ export class FlowTestOrchestrator {
                   role: testCase.role,
                   breakpoint: bp,
                   urlPath: new URL(page.url(), options.targetUrl).pathname,
+                  onSpeed: (s) => {
+                    speedSamples[pageSpeedKey(testCase.role, bp, new URL(page.url(), options.targetUrl).pathname)] = s;
+                  },
                   // Throttled repeat loads cost minutes, so each page gets them once per run, at the
                   // phone width when there is one. Other widths read the vitals the page already had.
                   repeatLoads: wantsRepeatLoads(new URL(page.url(), options.targetUrl).pathname, bp, sizes)
@@ -945,6 +1007,9 @@ export class FlowTestOrchestrator {
               await fs.rm(videoPath, { force: true }).catch(() => {});
             }
           }
+          // Extra tabs (the speed check's) record their own clips; keep only a failed point's main one.
+          const kept = pointResult?.status === 'Failed' ? pointResult.videoPath : undefined;
+          await removeVideosExcept(testCaseEvidenceDir, kept);
         }
         // A problem shows the screen it was found on: its own screenshot, or its test's latest one.
         const lastScreen = [...pointResult!.stepEvidence].reverse().find((s) => s.screenshotPath)?.screenshotPath;
@@ -1048,9 +1113,24 @@ export class FlowTestOrchestrator {
     // Site history tracking, in the data folder beside the site's memory
     const historyManager = new SiteHistoryManager(options.dataDir ? path.join(options.dataDir, 'sites') : undefined);
     let historyDiff;
+    let slowerThanLastTime: SlowerThanLastTime[] = [];
     try {
       const host = new URL(options.targetUrl).host;
-      historyDiff = await historyManager.recordRun(host, runId, grades, uniqueFindings, options.productId);
+      // Read the last check-up's speeds BEFORE recordRun replaces them. Kept out of `findings`:
+      // it never reaches grades, the verdict, recommendations or the CI gate.
+      const previousSpeeds = await historyManager.previousPageSpeeds(host);
+      slowerThanLastTime = findSlowerPages(previousSpeeds?.speeds, speedSamples, {
+        previousRunId: previousSpeeds?.runId,
+        previousTimestamp: previousSpeeds?.timestamp,
+      });
+      historyDiff = await historyManager.recordRun(
+        host,
+        runId,
+        grades,
+        uniqueFindings,
+        options.productId,
+        speedSamples
+      );
     } catch {
       // Ignore URL parsing or storage errors in test mode
     }
@@ -1068,6 +1148,7 @@ export class FlowTestOrchestrator {
       marketing,
       recommendations,
       history: historyDiff,
+      ...(slowerThanLastTime.length > 0 ? { slowerThanLastTime } : {}),
       traceability,
       suppressions: activeSuppressions,
       delta,

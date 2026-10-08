@@ -139,4 +139,35 @@ describe('Single-File Offline HTML Report (html-report.ts)', () => {
     expect(findable).toContain('Not checked');
     expect(findable).not.toContain('Grade A');
   });
+
+  it('slower: report.html lists it with escaped text, and omits the section when none', async () => {
+    const report: ReleaseReport = {
+      ...mockReport,
+      slowerThanLastTime: [
+        {
+          urlPath: '/a<b>',
+          role: 'visitor',
+          breakpoint: '375px',
+          aspect: 'Fast and mobile',
+          checker: 'performance',
+          metric: 'lcp',
+          previousMs: 2000,
+          currentMs: 2600,
+          increaseMs: 600,
+          increasePercent: 30,
+          loads: 3,
+          throttled: true,
+          summary: 'Slower than the last check-up: <script>x</script> 2.0 s to 2.6 s',
+        },
+      ],
+    };
+    const content = await fs.readFile(await generateSingleFileHtmlReport(report, { outputDir: tempDir }), 'utf8');
+    expect(content).toContain('Slower than the last check-up');
+    expect(content).toContain('&lt;script&gt;x&lt;/script&gt;');
+    expect(content).not.toContain('<script>x</script>');
+    expect(content).toContain('/a&lt;b&gt;');
+
+    const none = await fs.readFile(await generateSingleFileHtmlReport(mockReport, { outputDir: tempDir }), 'utf8');
+    expect(none).not.toContain('Slower than the last check-up');
+  });
 });

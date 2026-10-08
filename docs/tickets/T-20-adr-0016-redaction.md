@@ -13,9 +13,9 @@ One ADR (via /adr).
 Behaviour change.
 
 ## Acceptance criteria
-- [ ] `docs/adr/0016-*.md` records the shipped redaction behaviour, citing the code files.
-- [ ] It is listed wherever ADRs are indexed.
-- [ ] Notes that 0013 and 0015 are written with G22 and G14, and 0014 and 0017 with T-12 and T-16.
+- [x] `docs/adr/0016-*.md` records the shipped redaction behaviour, citing the code files.
+- [x] It is listed wherever ADRs are indexed.
+- [x] Notes that 0013 and 0015 are written with G22 and G14, and 0014 and 0017 with T-12 and T-16.
 
 ## Dependencies
 none
@@ -33,4 +33,4 @@ Test runs are deferred (DEFER_TESTS): they happen in the wave's /verify-all, not
 The ADR must describe the code as it is.
 
 ## Status
-todo (wave 3)
+built (wave 3), docs only, not run (verify-all)

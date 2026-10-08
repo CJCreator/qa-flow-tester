@@ -12,6 +12,8 @@ Runner: vitest (`vitest.config.ts`), Node environment, tests in `packages/*/test
 | `types/tests`    | Structural fingerprints                                                                                                                                                                                                                                                                      |
 | `wizard/tests`   | Router, translation of plan text, contrast, landing prefill, run start, online wake, and `wizard-e2e` (drives real screens in a browser)                                                                                                                                                     |
 
+`findings.json` is checked against `docs/findings.schema.json` (`core/tests/findings-contract.test.ts`) with a small in-repo validator (`core/tests/helpers/json-schema-lite.ts`, no `ajv`). It supports only `type, required, properties, items, enum, const, pattern, minimum`; a test fails if the schema uses another keyword.
+
 `fixtures/test-app` (`pnpm fixture`, port 3050) is the app the end-to-end tests and the README walkthrough check.
 
 ## What to run
@@ -24,6 +26,45 @@ Runner: vitest (`vitest.config.ts`), Node environment, tests in `packages/*/test
 | Before a release                               | everything above, plus `pnpm smoke` and `wizard-e2e.test.ts` (needs Chromium: `pnpm --filter @qa/core exec playwright install chromium`)                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | CI on pull requests                            | `.github/workflows/ci.yml`: both builds, then every test except `wizard-e2e` (takes minutes). Chromium is installed in CI for the browser-driven tests. The deploy workflow runs the same step. Also prints a coverage summary, runs a `pnpm audit --prod --audit-level high` gate and a gitleaks secret scan of the full history (config: `.gitleaks.toml`, allowlists only `fixtures/` and `packages/*/tests/`; not yet run, so a history hit is possible until the G38 key is rotated). Dependabot (`.github/dependabot.yml`) opens weekly update PRs. |
 | Checking detection quality                     | `pnpm build` then `pnpm benchmark --sites fixture --no-ai` (see Planted-defect benchmark)                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Touching the landing page                      | see Check-up of our own landing page                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+
+### Check-up of our own landing page
+
+Prerequisite: `pnpm bootstrap` (all packages built, Chromium installed, `packages/wizard/dist` present). Same syntax in PowerShell and bash.
+
+1. Terminal 1: `pnpm start --no-open` (serves the landing page on http://localhost:3001/).
+2. Terminal 2: `node packages/runner/dist/checkup.js http://localhost:3001/ --fail-on none --max-pages 20 --output .tmp-self-checkup`
+3. Stop terminal 1 when done.
+
+Notes:
+
+- Read-only: no `--staging`, so nothing is sent from forms. No `QA_AI_API_KEY` is needed; the Plan is the fixed-rule Plan.
+- Exit code 0 with `--fail-on none` whatever the verdict; 2 means the Check-up could not run.
+- Output goes to `.tmp-self-checkup` (ignored by git): `report.html`, `report.md`, `findings.json`. Copy the verdict and findings into `docs/research/self-checkup-landing.md`.
+- The crawl also reaches the app's own routes, which are noindex by design. Treat only findings on `/` and `/sample-report.html` as landing findings.
+- Speed numbers are lab measurements on localhost; see `docs/research/lab-lcp-noise.md` before filing a performance finding.
+- If port 3001 is busy, set `RUNNER_PORT` and change the URL.
+
+## Exported Playwright project
+
+Plan Review has "Export as Playwright tests" (`GET /api/runner/plan/export`): the approved Plan as a zip with `playwright.config.ts`, one Playwright project per role, `tests/<role>/*.spec.ts` and a README. Sign-in state is a path (`auth/<role>.json`), never a value; see the README inside the zip.
+
+Verify by hand (deferred to `/verify-all`):
+
+1. `pnpm build`, `pnpm fixture` (port 3050), `pnpm start --no-open`.
+2. Start a Check-up of `http://localhost:3050` with review on and no AI key.
+3. `curl -o t17.zip http://localhost:3001/api/runner/plan/export`; unzip into a new empty directory.
+4. In that directory: `npm install`, install Chromium for Playwright, then run its `test` script. Expect no failures (skipped and fixme tests are allowed).
+
+Limits of the export (also in the README of the zip):
+
+- Checkers and findings are not exported, only steps and expectations.
+- No fuzzy or quoted-text selector fallback, no closest-option select.
+- No Clean Flow Retry, Entity Namespacing, per-step retries or budgets.
+- One screen size per test; menu steps appear only through their size.
+- AI-judged and AI-guess expectations are comments, not checks.
+- URL expectations support the `*` wildcard only, not regular expressions.
+- No evidence, screenshots or visual baselines.
 
 ## Planted-defect benchmark
 

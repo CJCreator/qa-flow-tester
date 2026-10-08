@@ -185,7 +185,7 @@ On [vercel.com](https://vercel.com), choose **Add New, Project**, import this re
 2. When it is live, copy its address (for example `https://qa-check-up.onrender.com`).
 3. In Vercel, open the project's **Settings, Environment Variables** and add `VITE_ONLINE_APP_URL` with that address, then redeploy: the site now shows an **Open the online app** button.
 
-The free plan has 512 MB of memory, sleeps after 15 minutes idle (the first visit then takes about a minute) and runs one check-up at a time. A big site can run out of memory. There are no accounts or limits, so treat it as a beta.
+The free plan has 512 MB of memory, sleeps after 15 minutes idle (the first visit then takes about a minute) and runs one check-up at a time. A big site can run out of memory. There are no accounts, and check-ups are limited per visitor and per day, so treat it as a beta.
 
 ### Automatic deploys
 
@@ -232,7 +232,7 @@ It prints a **Public** link. Send each tester that link (it carries a private ac
 - Each tester adds **their own AI key** in Settings. It is kept in memory for their session only: never saved to disk, never shared with other testers, gone when you stop the tunnel. Your own saved key and sign-ins are not used.
 - Only **public sites** can be checked. Addresses on your computer or network (`localhost`, `192.168.x.x`) are refused.
 - One check-up runs at a time. Everyone with the link sees the same reports, and deleting check-ups, schedules and comparisons are closed.
-- Testers should only check sites they own. Do not give the link to strangers: there are no accounts or usage limits.
+- Testers should only check sites they own. Do not give the link to strangers: there are no accounts; check-ups are limited per visitor and per day.
 
 Without `--beta`, `pnpm tunnel` shares **your** saved AI key with whoever has the link.
 

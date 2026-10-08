@@ -31,7 +31,16 @@ export function Mark({ size = 24 }: { size?: number }) {
  * On every screen: the places you can go. Nothing here stops or deletes anything. The check-up in
  * progress is reached from its Resume card on the new check-up screen.
  */
-export function TopBar({ route, checkupInProgress }: { route: Route; checkupInProgress: boolean }) {
+export function TopBar({
+  route,
+  checkupInProgress,
+  showDeveloperShortcuts = false,
+}: {
+  route: Route;
+  checkupInProgress: boolean;
+  /** The Commands and shortcuts buttons: hidden until a first check-up is done. The keys still work. */
+  showDeveloperShortcuts?: boolean;
+}) {
   const current = (names: Route['name'][]) => (names.includes(route.name) ? 'page' : undefined);
   const item = 'inline-flex min-h-[44px] items-center rounded px-2 text-sm font-bold transition-colors hover:text-ink';
   const tone = (active?: string) =>
@@ -44,30 +53,34 @@ export function TopBar({ route, checkupInProgress }: { route: Route; checkupInPr
             <Mark />
             Release check-up
           </Link>
-          <button
-            type="button"
-            onClick={() =>
-              window.dispatchEvent(new CustomEvent('qa:open-command-palette', { detail: { mode: 'command' } }))
-            }
-            className="hidden items-center gap-2 rounded-control border border-edge/60 bg-panel px-2.5 py-1 text-xs font-medium text-ink-soft hover:border-stamp hover:text-ink transition-colors sm:inline-flex"
-            title="Search commands, sections & shortcuts (Cmd+K)"
-          >
-            <span>Commands</span>
-            <kbd className="rounded border border-edge/40 bg-surface px-1.5 py-0.5 font-mono text-[10px] text-ink">
-              ⌘K
-            </kbd>
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              window.dispatchEvent(new CustomEvent('qa:open-command-palette', { detail: { mode: 'shortcuts' } }))
-            }
-            className="inline-flex h-7 w-7 items-center justify-center rounded-control border border-edge/60 bg-panel font-mono text-xs font-bold text-ink-soft hover:border-stamp hover:text-ink"
-            title="Keyboard shortcuts (?)"
-            aria-label="Keyboard shortcuts"
-          >
-            ?
-          </button>
+          {showDeveloperShortcuts && (
+            <>
+              <button
+                type="button"
+                onClick={() =>
+                  window.dispatchEvent(new CustomEvent('qa:open-command-palette', { detail: { mode: 'command' } }))
+                }
+                className="hidden items-center gap-2 rounded-control border border-edge/60 bg-panel px-2.5 py-1 text-xs font-medium text-ink-soft hover:border-stamp hover:text-ink transition-colors sm:inline-flex"
+                title="Search commands, sections & shortcuts (Cmd+K)"
+              >
+                <span>Commands</span>
+                <kbd className="rounded border border-edge/40 bg-surface px-1.5 py-0.5 font-mono text-[10px] text-ink">
+                  ⌘K
+                </kbd>
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  window.dispatchEvent(new CustomEvent('qa:open-command-palette', { detail: { mode: 'shortcuts' } }))
+                }
+                className="inline-flex h-7 w-7 items-center justify-center rounded-control border border-edge/60 bg-panel font-mono text-xs font-bold text-ink-soft hover:border-stamp hover:text-ink"
+                title="Keyboard shortcuts (?)"
+                aria-label="Keyboard shortcuts"
+              >
+                ?
+              </button>
+            </>
+          )}
         </div>
         <nav aria-label="Main">
           <ul className="flex flex-wrap items-center gap-x-3 sm:gap-x-5">

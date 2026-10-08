@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { PerformanceChecker, SPEED_THRESHOLDS, sessionWindowCls, median } from '../src/performance.js';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import { PerformanceChecker, SPEED_THRESHOLDS, LAB_PROFILE_ID, sessionWindowCls, median } from '../src/performance.js';
 import { chromium, type Browser } from 'playwright';
 import type { Page } from 'playwright';
 
@@ -279,5 +279,71 @@ describe('PerformanceChecker', () => {
         await context.close();
       }
     }, 90000);
+  });
+
+  describe('slower than last time: speed sample', () => {
+    const rawMetrics = {
+      layoutShifts: [],
+      slowestRequests: [],
+      overflowElements: [],
+      hasHorizontalScroll: false,
+      overlappingElements: [],
+    };
+    const ctx = { testCaseId: 'TC-S', role: 'visitor', breakpoint: '375px' as const, urlPath: '/reports' };
+    const summary = (over: Record<string, unknown>) => ({
+      loads: 3,
+      throttled: true,
+      cls: 0,
+      measurements: {},
+      ...over,
+    });
+
+    it('slower: sample uses LCP when the browser reported it', async () => {
+      const c = new PerformanceChecker();
+      vi.spyOn(c, 'measureVitals').mockResolvedValue(summary({ lcpMs: 1234.6, domReadyMs: 900 }) as never);
+      const onSpeed = vi.fn();
+      await c.checkPage(createMockPage({ ...rawMetrics, lcpMs: 1000 }), { ...ctx, repeatLoads: 3, onSpeed });
+      expect(onSpeed).toHaveBeenCalledTimes(1);
+      expect(onSpeed).toHaveBeenCalledWith({
+        metric: 'lcp',
+        ms: 1235,
+        loads: 3,
+        throttled: true,
+        profile: LAB_PROFILE_ID,
+      });
+    });
+
+    it('slower: sample falls back to page-ready time when no LCP', async () => {
+      const c = new PerformanceChecker();
+      vi.spyOn(c, 'measureVitals').mockResolvedValue(summary({ domReadyMs: 800 }) as never);
+      const onSpeed = vi.fn();
+      await c.checkPage(createMockPage(rawMetrics), { ...ctx, repeatLoads: 3, onSpeed });
+      expect(onSpeed).toHaveBeenCalledWith(expect.objectContaining({ metric: 'domReady', ms: 800 }));
+    });
+
+    it('slower: no sample for a single un-throttled load', async () => {
+      const c = new PerformanceChecker();
+      const onSpeed = vi.fn();
+      await c.checkPage(createMockPage({ ...rawMetrics, lcpMs: 3000 }), { ...ctx, onSpeed });
+      expect(onSpeed).not.toHaveBeenCalled();
+    });
+
+    it('slower: no sample when neither LCP nor page-ready time exists', async () => {
+      const c = new PerformanceChecker();
+      vi.spyOn(c, 'measureVitals').mockResolvedValue(summary({}) as never);
+      const onSpeed = vi.fn();
+      await c.checkPage(createMockPage(rawMetrics), { ...ctx, repeatLoads: 3, onSpeed });
+      expect(onSpeed).not.toHaveBeenCalled();
+    });
+
+    it('slower: findings returned are unchanged when a sample callback is given', async () => {
+      const c = new PerformanceChecker();
+      vi.spyOn(c, 'measureVitals').mockResolvedValue(summary({ lcpMs: 4500 }) as never);
+      const page = createMockPage({ ...rawMetrics, lcpMs: 4500 });
+      const without = await c.checkPage(page, { ...ctx, repeatLoads: 3 });
+      const withCb = await c.checkPage(page, { ...ctx, repeatLoads: 3, onSpeed: () => {} });
+      expect(withCb).toEqual(without);
+      expect(without.length).toBeGreaterThan(0);
+    });
   });
 });

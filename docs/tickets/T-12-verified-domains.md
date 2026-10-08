@@ -35,4 +35,4 @@ Test runs are deferred (DEFER_TESTS): they happen in the wave's /verify-all, not
 Safety-critical: any loosening needs ADR + test. Owner approves the ADR.
 
 ## Status
-todo (wave 1)
+built (wave 1), tests written, not yet run (verify-all)

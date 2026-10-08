@@ -12,12 +12,16 @@
  *   QA_OUTPUT_DIR    where the report goes (default qa-report)
  *   QA_MAX_PAGES     pages to explore at most (default 50, to keep a run inside free Actions minutes)
  *   QA_FAIL_ON       blocker (default), major or none
+ *
+ * On GitHub Actions (GITHUB_ACTIONS=true) it also prints one annotation per active Blocker (error) or
+ * Major (warning). The exit code does not depend on them.
  */
 import { promises as fs } from 'fs';
 import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { releaseVerdict } from '@qa/types';
+import { isActiveFinding, releaseVerdict } from '@qa/types';
+import { githubAnnotations } from '@qa/core';
 import type { AIProviderType, Finding, ReleaseReport } from '@qa/types';
 import { RunnerServer } from './server.js';
 
@@ -67,9 +71,7 @@ export function parseArgs(argv: string[], env: NodeJS.ProcessEnv = process.env):
 
 /** Findings that count against the release: confirmed, and not marked intended or not a problem. */
 function active(findings: Finding[]): Finding[] {
-  return findings.filter(
-    (f) => !f.needsConfirmation && f.triageStatus !== 'Intended' && f.triageStatus !== 'False Positive'
-  );
+  return findings.filter(isActiveFinding);
 }
 
 /** The process exit code: 1 when something at or above the chosen level was found. */
@@ -169,6 +171,11 @@ export async function runCheckup(args: CheckupArgs): Promise<number> {
     const verdict = releaseVerdict(report.findings);
     console.log(`\n[checkup] ${verdict.stamp}: ${verdict.reason}`);
     console.log(`[checkup] Report written to ${args.outputDir}`);
+
+    // Inline annotations on GitHub Actions: one per active Blocker (error) or Major (warning). ADR 0017.
+    if (process.env.GITHUB_ACTIONS === 'true') {
+      for (const line of githubAnnotations(report.findings)) console.log(line);
+    }
 
     if (process.env.GITHUB_STEP_SUMMARY) {
       await fs.appendFile(process.env.GITHUB_STEP_SUMMARY, summaryMarkdown(report, args) + '\n').catch(() => {});

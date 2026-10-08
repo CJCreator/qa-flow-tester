@@ -115,7 +115,9 @@ Spacing: sections are 56 px top and bottom (80 px from 640 px). Cards use 16 px 
 | `WakeNote`                    | same                                                                             | `role="status"`; text for `waking`, `ready`, `failed`; renders nothing when there is nothing to wake.                                                        |
 | `VerdictPreview`              | same                                                                             | `<figure>` with a caption; the stamp uses the app's `.stamp` class.                                                                                          |
 | `LandingRoot`                 | [LandingRoot.tsx](../../packages/wizard/src/LandingRoot.tsx)                     | Skip link, `<main id="main">` and the page, without the app.                                                                                                 |
-| `useWakeOnline`               | [hooks/useWakeOnline.ts](../../packages/wizard/src/hooks/useWakeOnline.ts)       | One no-cors `GET /healthz` on load; states `none`, `waking`, `ready`, `failed`; 90 s timeout.                                                                |
+| `useWakeOnline`               | [hooks/useWakeOnline.ts](../../packages/wizard/src/hooks/useWakeOnline.ts)       | One no-cors `GET /healthz` on load; states `none`, `waking`, `ready`, `failed`; 90 s timeout by default, `VITE_WAKE_LIMIT_SECONDS` (5 to 600).               |
+| `ThemeToggle`                 | same                                                                             | "Light theme" button (`aria-pressed`) in the header; token swap only, landing page only; saved in `localStorage` (`qa-theme`). Logic in `lib/theme.ts`.      |
+| `onboarding` helpers          | [lib/onboarding.ts](../../packages/wizard/src/lib/onboarding.ts)                 | `hasNonDefaultOptions` (opens "More options"), `hasFinishedCheckup` (shows the top-bar shortcuts).                                                           |
 | `startAddress`, `wakeAddress` | [lib/online.ts](../../packages/wizard/src/lib/online.ts)                         | Pure; tested in `tests/online.test.ts`.                                                                                                                      |
 | FAQ and steps                 | [lib/faq.ts](../../packages/wizard/src/lib/faq.ts)                               | The text the page shows. Mirrored in the `FAQPage` and `HowTo` data in `index.html`: keep the two in step.                                                   |
 
@@ -133,7 +135,7 @@ Served by the app itself (Render, local): `/check`. Served from Vercel with `VIT
 
 ### 7.3 Cold start
 
-The free Render copy sleeps after 15 minutes and takes about a minute to wake. From Vercel the landing page calls its `/healthz` the moment it opens and shows "Getting the free online copy ready", then a tick. If the call fails or takes over 90 seconds, it says the copy is slow to wake. Served by the app itself there is nothing to wake and nothing is shown.
+The free Render copy sleeps after 15 minutes and takes about a minute to wake. From Vercel the landing page calls its `/healthz` the moment it opens and shows "Getting the free online copy ready", then a tick. If the call fails or takes over 90 seconds (the default; `VITE_WAKE_LIMIT_SECONDS` changes it), it says the copy is slow to wake. Served by the app itself there is nothing to wake and nothing is shown.
 
 ### 7.4 What the page says about data
 
@@ -145,7 +147,7 @@ Known limits: the server and its disk are still shared, so don't check anything 
 
 ## 8. Accessibility
 
-Checked by reading the markup and by the existing contrast test; no assistive-technology pass has been done.
+Checked by reading the markup, by the existing contrast test and by an axe test in Chromium (`tests/landing-audit-browser.test.ts`: no serious or critical issue, dark, light and 375 px); no assistive-technology pass has been done.
 
 - One `h1`; each section is a `<section aria-labelledby>` with an `h2`; the promise strip has a screen-reader-only heading.
 - Skip link to `#main`, first in the tab order.
@@ -193,13 +195,13 @@ Rated against the decisions above. P0 blocks the goal (a visitor completing a fr
 
 1. **No measurement.** Nothing records visits or button clicks, so the conversion goal can't be judged. Needs a cookie-free, free counter (your decision).
 2. **The share image is an SVG** (`public/og-image.svg`). LinkedIn, X and Slack don't show SVG previews. Fix: a 1200 × 630 PNG.
-3. **The sample report is only as fresh as its run.** It must be regenerated when the report's format changes.
-4. **Home form is long above the fold for a first scan.** The address box is first, but "Explore up to N pages", sign-ins and the optional specs sit right under it. Collapse them behind one "More options" for first-time visitors.
-5. **The command palette and the keyboard-shortcuts button** in the app's top bar are developer features on the screen a founder lands on. Hide them until a first check-up is done.
+3. ~~**The sample report is only as fresh as its run.** It must be regenerated when the report's format changes.~~ Done 2026-10-07: `tests/sample-report-format.test.ts` fails when the sample's structure differs from what the generator writes.
+4. ~~**Home form is long above the fold for a first scan.** The address box is first, but "Explore up to N pages", sign-ins and the optional specs sit right under it. Collapse them behind one "More options" for first-time visitors.~~ Done 2026-10-07: one "More options" (opens by itself when something in it is set).
+5. ~~**The command palette and the keyboard-shortcuts button** in the app's top bar are developer features on the screen a founder lands on. Hide them until a first check-up is done.~~ Done 2026-10-07 (keys still work).
 
 ### P2
 
-1. The wake request uses a fixed 90 s limit; make it follow Render's documented wake time if that changes.
-2. The area list ("It works", "Everyone can use it"…) could link to the matching report section of the sample.
-3. Add a dark/light toggle on the landing page like the report has.
+1. ~~The wake request uses a fixed 90 s limit; make it follow Render's documented wake time if that changes.~~ Done 2026-10-07: `VITE_WAKE_LIMIT_SECONDS`.
+2. ~~The area list ("It works", "Everyone can use it"…) could link to the matching report section of the sample.~~ Done 2026-10-07: each links to the sample report (per-section anchors need ids in the report).
+3. ~~Add a dark/light toggle on the landing page like the report has.~~ Done 2026-10-07.
 4. An assistive-technology pass (NVDA or VoiceOver) and a Lighthouse run on the deployed page.

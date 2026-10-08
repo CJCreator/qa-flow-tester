@@ -265,8 +265,21 @@ describe('A check-up on the runner', () => {
 
   it('keeps the report in the run’s own folder, and lists, serves and downloads it', async () => {
     const dir = path.join(outputDir, 'runs', runId);
-    for (const file of ['report.json', 'summary.json', 'report.html', 'report.md', 'findings.json']) {
+    for (const file of [
+      'report.json',
+      'summary.json',
+      'report.html',
+      'report.md',
+      'findings.json',
+      'fix-these.md',
+      'known-findings.json',
+      'AGENTS.snippet.md',
+    ]) {
       expect(await exists(path.join(dir, file)), file).toBe(true);
+    }
+    // The CI artifact folder gets the contract files too (ADR 0017).
+    for (const file of ['findings.json', 'fix-these.md', 'known-findings.json', 'AGENTS.snippet.md']) {
+      expect(await exists(path.join(outputDir, file)), `top-level ${file}`).toBe(true);
     }
     // Sign-in sessions stay beside the runs, never inside one.
     expect(await exists(path.join(dir, 'auth'))).toBe(false);

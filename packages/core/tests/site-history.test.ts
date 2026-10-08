@@ -3,7 +3,7 @@ import { SiteHistoryManager } from '../src/site-history.js';
 import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';
-import type { Finding, SiteAspectGrades } from '@qa/types';
+import type { Finding, PageSpeedMap, SiteAspectGrades } from '@qa/types';
 
 describe('Site History & Delta Tracking (site-history.ts)', () => {
   let tempDir: string;
@@ -101,5 +101,53 @@ describe('Site History & Delta Tracking (site-history.ts)', () => {
     expect(diff.aspectDeltas.Works.previousGrade).toBe('B');
     expect(diff.aspectDeltas.Works.currentGrade).toBe('A');
     expect(diff.aspectDeltas.Works.currentScore).toBe(100);
+  });
+
+  describe('slower than last check-up: stored page speeds', () => {
+    const speeds = (ms: number): PageSpeedMap => ({
+      'visitor|375px|/': { metric: 'lcp', ms, loads: 3, throttled: true, profile: 'p1' },
+    });
+
+    it("slower: stores this check-up's page speeds so the next one can compare", async () => {
+      await historyManager.recordRun('h', 'run-001', baseGrades, [], 'p', speeds(1200));
+      const prev = await historyManager.previousPageSpeeds('h');
+      expect(prev?.runId).toBe('run-001');
+      expect(prev?.speeds).toEqual(speeds(1200));
+    });
+
+    it('slower: only the latest entry keeps page speeds', async () => {
+      await historyManager.recordRun('h', 'run-001', baseGrades, [], 'p', speeds(1000));
+      await historyManager.recordRun('h', 'run-002', baseGrades, [], 'p', speeds(1100));
+      await historyManager.recordRun('h', 'run-003', baseGrades, [], 'p', speeds(1200));
+      const history = await historyManager.loadHistory('h');
+      expect(history.runs).toHaveLength(3);
+      expect(history.runs[0].pageSpeeds).toBeUndefined();
+      expect(history.runs[1].pageSpeeds).toBeUndefined();
+      expect(history.runs[2].pageSpeeds).toEqual(speeds(1200));
+    });
+
+    it('slower: history file written before this change has no speeds and gives no baseline', async () => {
+      const old = {
+        host: 'h',
+        runs: [
+          { runId: 'run-old', timestamp: '2026-01-01T00:00:00.000Z', grades: baseGrades, findingFingerprints: [] },
+        ],
+      };
+      await fs.writeFile(path.join(tempDir, 'h.history.json'), JSON.stringify(old), 'utf8');
+      expect(await historyManager.previousPageSpeeds('h')).toBeUndefined();
+      const diff = await historyManager.recordRun('h', 'run-new', baseGrades, [], 'p', speeds(900));
+      expect(diff.previousRunId).toBe('run-old');
+    });
+
+    it('slower: first check-up has no previous speeds', async () => {
+      expect(await historyManager.previousPageSpeeds('never-seen')).toBeUndefined();
+    });
+
+    it('slower: recordRun without speeds keeps existing diff behaviour', async () => {
+      await historyManager.recordRun('h', 'run-001', baseGrades, initialFindings, 'p');
+      const diff = await historyManager.recordRun('h', 'run-002', baseGrades, initialFindings, 'p');
+      expect(diff.openFindingFingerprints).toHaveLength(2);
+      expect(await historyManager.previousPageSpeeds('h')).toBeUndefined();
+    });
   });
 });

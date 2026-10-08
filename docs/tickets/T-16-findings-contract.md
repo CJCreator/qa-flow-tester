@@ -36,4 +36,4 @@ Test runs are deferred (DEFER_TESTS): they happen in the wave's /verify-all, not
 Public contract: version it.
 
 ## Status
-todo (wave 3)
+built (wave 3, tests deferred)

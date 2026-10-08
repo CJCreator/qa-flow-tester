@@ -72,4 +72,43 @@ describe('SuppressionsManager', () => {
     expect(activeFindings).toHaveLength(1);
     expect(activeFindings[0].id).toBe('F-2');
   });
+
+  const mk = (id: string, title: string): Finding => ({
+    id,
+    title,
+    severity: 'Major',
+    checker: 'bug-detection',
+    where: { urlPath: '/a', role: 'anonymous', breakpoint: '1440px' },
+    expectedVsActual: { expected: 'a', actual: 'b' },
+    stepsToReproduce: [],
+    evidence: {},
+    resolution: 'Fix',
+  });
+
+  it('computeDelta reads a pre-contract findings.json with no schemaVersion or fingerprint', async () => {
+    await fs.writeFile(
+      path.join(tmpDir, 'findings.json'),
+      JSON.stringify({ runId: 'old', findings: [mk('F-1', 'Old one'), mk('F-2', 'Still here')] }),
+      'utf8'
+    );
+    const delta = await new SuppressionsManager(tmpDir).computeDelta([
+      mk('F-9', 'Still here'),
+      mk('F-10', 'Brand new'),
+    ]);
+    expect(delta).toEqual({ newFindings: 1, fixedFindings: 1, openFindings: 1, suppressedFindings: 0 });
+  });
+
+  it('computeDelta ignores unknown extra fields from a newer file', async () => {
+    await fs.writeFile(
+      path.join(tmpDir, 'findings.json'),
+      JSON.stringify({
+        schemaVersion: 7,
+        futureField: { a: 1 },
+        findings: [{ ...mk('F-1', 'Still here'), fingerprint: 'fp_0123456789abcdef', somethingNew: true }],
+      }),
+      'utf8'
+    );
+    const delta = await new SuppressionsManager(tmpDir).computeDelta([mk('F-2', 'Still here')]);
+    expect(delta).toEqual({ newFindings: 0, fixedFindings: 0, openFindings: 1, suppressedFindings: 0 });
+  });
 });

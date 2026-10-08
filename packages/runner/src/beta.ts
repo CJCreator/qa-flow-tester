@@ -4,7 +4,7 @@ import net from 'net';
 import { randomBytes } from 'crypto';
 import { AsyncLocalStorage } from 'async_hooks';
 import type { AIProviderType } from '@qa/types';
-import { KeyResolver, isPrivateHost, type ResolvedKeyInfo, type SecretStore } from '@qa/core';
+import { KeyResolver, classifyAddress, isPrivateHost, type ResolvedKeyInfo, type SecretStore } from '@qa/core';
 
 /**
  * Beta mode (RUNNER_BETA=1): a runner shared with a few outside testers over a tunnel. Each tester
@@ -22,6 +22,10 @@ const current = new AsyncLocalStorage<string>();
 interface Session {
   secrets: Map<string, string>;
   lastSeen: number;
+  /** Check-ups and comparisons this visitor started on `day` (UTC, YYYY-MM-DD). In memory only. */
+  usage?: { day: string; count: number };
+  /** When each address last had its Verified Domain proof fetched (ms). In memory only. */
+  proofChecks?: Map<string, number>;
 }
 const sessions = new Map<string, Session>();
 
@@ -65,6 +69,93 @@ export function sessionFor(req: http.IncomingMessage, res: http.ServerResponse, 
   }
   sessions.get(id)!.lastSeen = Date.now();
   return id;
+}
+
+export interface BetaLimits {
+  /** Most check-ups and comparisons one visitor session may start per UTC day. */
+  perVisitor: number;
+  /** Most the whole shared copy may start per UTC day. */
+  perDay: number;
+}
+
+export const DEFAULT_RUNS_PER_VISITOR = 5;
+export const DEFAULT_RUNS_PER_DAY = 40;
+
+/** A limit that was reached: what to tell the tester, and when it resets. */
+export interface BetaLimitHit {
+  scope: 'visitor' | 'day';
+  limit: number;
+  resetsAt: string;
+  error: string;
+  suggestion: string;
+}
+
+function positiveWhole(value: string | undefined, fallback: number): number {
+  if (value === undefined || !/^\d+$/.test(value)) return fallback;
+  const n = Number(value);
+  return Number.isSafeInteger(n) && n >= 1 ? n : fallback;
+}
+
+/** Limits from RUNNER_BETA_RUNS_PER_VISITOR and RUNNER_BETA_RUNS_PER_DAY; unset or invalid values use the defaults. */
+export function betaLimitsFromEnv(env: Record<string, string | undefined> = process.env): BetaLimits {
+  return {
+    perVisitor: positiveWhole(env.RUNNER_BETA_RUNS_PER_VISITOR, DEFAULT_RUNS_PER_VISITOR),
+    perDay: positiveWhole(env.RUNNER_BETA_RUNS_PER_DAY, DEFAULT_RUNS_PER_DAY),
+  };
+}
+
+// The whole shared copy's count for one UTC day. Memory only: a restart starts it again.
+let dayUsage: { day: string; count: number } = { day: '', count: 0 };
+
+const utcDay = (now: number): string => new Date(now).toISOString().slice(0, 10);
+const nextMidnight = (now: number): number => Date.parse(`${utcDay(now)}T00:00:00.000Z`) + 86_400_000;
+
+function hitFor(scope: 'visitor' | 'day', limit: number, now: number): BetaLimitHit {
+  const reset = nextMidnight(now);
+  const hours = Math.max(1, Math.ceil((reset - now) / 3_600_000));
+  const inAbout = `in about ${hours} hour${hours === 1 ? '' : 's'}`;
+  return {
+    scope,
+    limit,
+    resetsAt: new Date(reset).toISOString(),
+    error:
+      scope === 'visitor'
+        ? `You have used your ${limit} check-ups for today on this shared copy (a comparison counts as one). The limit resets at 00:00 UTC, ${inAbout}.`
+        : `This shared copy has reached its limit of ${limit} check-ups for today. It resets at 00:00 UTC, ${inAbout}.`,
+    suggestion:
+      'Come back after the reset, or run the QA Tool on your own computer or in your own GitHub Actions, which have no such limit.',
+  };
+}
+
+/**
+ * Beta: checks and records one check-up or comparison start in a single step. Returns null when it is
+ * allowed (and now counted), or the limit that was reached (nothing is counted then). The day's cap is
+ * checked first, then the visitor's. With no session (or one that was forgotten) only the day's cap applies.
+ * The counts are in memory and are never keyed on an address.
+ */
+export function claimBetaRun(
+  sessionId: string | undefined,
+  opts: { limits?: BetaLimits; now?: number } = {}
+): BetaLimitHit | null {
+  const limits = opts.limits ?? betaLimitsFromEnv();
+  const now = opts.now ?? Date.now();
+  const day = utcDay(now);
+  if (dayUsage.day !== day) dayUsage = { day, count: 0 };
+  if (dayUsage.count >= limits.perDay) return hitFor('day', limits.perDay, now);
+  const session = sessionId ? sessions.get(sessionId) : undefined;
+  if (session) {
+    if (!session.usage || session.usage.day !== day) session.usage = { day, count: 0 };
+    if (session.usage.count >= limits.perVisitor) return hitFor('visitor', limits.perVisitor, now);
+    session.usage.count++;
+  }
+  dayUsage.count++;
+  return null;
+}
+
+/** Test helper: forgets the day's count and every session's count. */
+export function resetBetaUsage(): void {
+  dayUsage = { day: '', count: 0 };
+  for (const s of sessions.values()) s.usage = undefined;
 }
 
 /** The session the current request (or a run it started) belongs to; undefined outside beta mode. */
@@ -125,30 +216,7 @@ export class SessionKeyResolver extends KeyResolver {
 }
 
 function isPrivateAddress(address: string): boolean {
-  const a = address.toLowerCase();
-  if (net.isIPv4(a)) {
-    return (
-      isPrivateHost(a) ||
-      a.startsWith('0.') ||
-      a.startsWith('169.254.') ||
-      /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(a) || // carrier-grade NAT
-      /^22[4-9]\.|^2[3-5]\d\./.test(a) // multicast and reserved
-    );
-  }
-  if (net.isIPv6(a)) {
-    if (a === '::' || a === '::1') return true;
-    if (/^f[cd][0-9a-f]{2}:/.test(a) || /^fe[89ab][0-9a-f]:/.test(a)) return true;
-    // An IPv4 address written inside IPv6: dotted (::ffff:127.0.0.1), or as the URL parser rewrites it (::ffff:7f00:1).
-    const dotted = a.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-    if (dotted) return isPrivateAddress(dotted[1]);
-    const hex = a.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
-    if (hex) {
-      const high = parseInt(hex[1], 16);
-      const low = parseInt(hex[2], 16);
-      return isPrivateAddress(`${high >> 8}.${high & 255}.${low >> 8}.${low & 255}`);
-    }
-  }
-  return false;
+  return classifyAddress(address) !== null;
 }
 
 /**
@@ -156,7 +224,10 @@ function isPrivateAddress(address: string): boolean {
  * so a public-looking name that leads to a private address is refused too. A site that redirects to a
  * private address afterwards is not caught here.
  */
-export async function refusedTarget(address: string): Promise<string | null> {
+export async function refusedTarget(
+  address: string,
+  lookup?: (host: string) => Promise<string[]>
+): Promise<string | null> {
   let url: URL;
   try {
     url = new URL(address);
@@ -170,11 +241,52 @@ export async function refusedTarget(address: string): Promise<string | null> {
   if (isPrivateHost(host) || isPrivateAddress(host)) return why;
   if (net.isIP(host)) return null;
   try {
-    const found = await dns.promises.lookup(host, { all: true, verbatim: true });
+    const found = lookup
+      ? await lookup(host)
+      : (await dns.promises.lookup(host, { all: true, verbatim: true })).map((f) => f.address);
     if (found.length === 0) return 'That address could not be found.';
-    if (found.some((f) => isPrivateAddress(f.address))) return why;
+    if (found.some((f) => isPrivateAddress(f))) return why;
   } catch {
     return 'That address could not be found.';
   }
   return null;
+}
+
+const PROOF_PREFIX = 'qa-verify:';
+const PROOF_THROTTLE_MS = 10_000;
+
+/**
+ * The Verified Domain token for an exact origin in the current session: made on first use, kept in
+ * this session's memory only (never on disk), never logged. Throws outside a session.
+ */
+export function proofTokenFor(origin: string): string {
+  const id = current.getStore();
+  const session = id ? sessions.get(id) : undefined;
+  if (!session) throw new Error('No session');
+  const key = PROOF_PREFIX + origin.toLowerCase();
+  let token = session.secrets.get(key);
+  if (!token) {
+    token = randomBytes(24).toString('base64url');
+    session.secrets.set(key, token);
+  }
+  return token;
+}
+
+/** The current session's token for an origin, or undefined when none was made (nothing is created). */
+export function peekProofToken(origin: string): string | undefined {
+  const id = current.getStore();
+  return (id ? sessions.get(id) : undefined)?.secrets.get(PROOF_PREFIX + origin.toLowerCase());
+}
+
+/** True when this session may fetch the proof for the origin now (one fetch per origin per 10 seconds); counts it. */
+export function claimProofCheck(origin: string, now: number = Date.now()): boolean {
+  const id = current.getStore();
+  const session = id ? sessions.get(id) : undefined;
+  if (!session) return false;
+  const checks = (session.proofChecks ??= new Map());
+  const key = origin.toLowerCase();
+  const last = checks.get(key);
+  if (last !== undefined && now - last < PROOF_THROTTLE_MS) return false;
+  checks.set(key, now);
+  return true;
 }

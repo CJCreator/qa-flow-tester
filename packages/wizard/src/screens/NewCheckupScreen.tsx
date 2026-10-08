@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import type { RunSummary } from '@qa/types';
 import {
+  checkDomainProof,
   checkReachable,
   estimateAi,
   RunnerError,
   type AiEstimate,
   type AiSetup,
+  type DomainProofStatus,
   type RunnerStatus,
   type SiteFacts,
   type WaitingPlan,
@@ -15,6 +17,7 @@ import { ErrorMessage, Notice, Question, Spinner } from '../components/text';
 import { rejectReason } from '../lib/context';
 import { clampMaxPages, EMPTY_SIGN_IN, MAX_PAGES_LIMIT, type CheckupForm } from '../lib/form';
 import { formatWhen } from '../lib/format';
+import { hasNonDefaultOptions } from '../lib/onboarding';
 import { Link, PATHS } from '../lib/router';
 import { useDocumentTitle } from '../lib/title';
 import { hostOf, normalizeUrl } from '../lib/url';
@@ -332,6 +335,10 @@ export function NewCheckupScreen({
 
         {kind && <AccessChoice isTestCopyHost={kind.natural} form={form} onChange={setChoice} />}
 
+        {shared && check.state === 'ok' && form.owner && form.markedTestCopy && !kind?.natural && (
+          <DomainProofPanel url={check.url} />
+        )}
+
         {needsProdConfirmation && (
           <div className="mt-4">
             <Notice tone="warn" title="This appears to be a live production site">
@@ -359,193 +366,209 @@ export function NewCheckupScreen({
           </div>
         )}
 
-        <div className="mt-6 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-          <label htmlFor="max-pages">Explore up to</label>
-          <input
-            id="max-pages"
-            type="number"
-            inputMode="numeric"
-            min={1}
-            max={MAX_PAGES_LIMIT}
-            className="field w-24 py-1.5 text-sm"
-            value={maxPagesText}
-            // The number is kept as typed, so it can be cleared and retyped; it's checked on leaving the box.
-            onChange={(e) => setMaxPagesText(e.target.value)}
-            onBlur={() => {
-              const n = clampMaxPages(maxPagesText);
-              setMaxPagesText(String(n));
-              onFormChange((f) => ({ ...f, maxPages: n }));
-            }}
-            aria-describedby="max-pages-hint"
-          />
-          <span>pages</span>
-          <span id="max-pages-hint" className="basis-full text-ink-soft">
-            Pages that share a layout are tested through a few samples, so big sites stay quick.
-          </span>
-        </div>
-
-        <SignInsSection form={form} saved={remembered?.signIns} onFormChange={onFormChange} />
-
-        {kind && (
-          <div className="mt-4 rounded-lg border border-edge bg-surface p-4">
-            <label className="flex cursor-pointer items-start gap-3 text-sm">
-              <input
-                type="checkbox"
-                className="mt-0.5 h-5 w-5 shrink-0 accent-[#6C9BF2]"
-                checked={searchChecksOn}
-                onChange={(e) => {
-                  const on = e.target.checked;
-                  onFormChange((f) => ({
-                    ...f,
-                    searchChecks: on,
-                    visibility: { search: on, answers: on, aiSearch: on, marketing: on },
-                  }));
-                }}
-              />
-              <span className="flex-1">
-                <span className="block font-bold text-ink">Check how search engines and AI find the site</span>
-                <span className="block text-xs font-medium text-ink-soft">
-                  Search (SEO) · AI answers (AEO) · AI search (GEO) · Marketing (MKT)
-                </span>
-                <span className="mt-1 block text-xs text-ink-soft">
-                  {kind.isTestCopy && form.owner
-                    ? 'Off by default for local test copies, but you can turn it on anytime to audit SEO, AI discovery, and Marketing.'
-                    : 'Audits search engine tags, AI assistant schemas, crawler access, and marketing readiness.'}
-                </span>
-              </span>
-            </label>
-
-            {searchChecksOn && (
-              <details className="mt-3 border-t border-rule pt-3 text-sm" open>
-                <summary className="cursor-pointer text-xs font-semibold text-accent hover:underline">
-                  Choose which to check
-                </summary>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <label className="flex cursor-pointer items-start gap-2.5 text-xs">
-                    <input
-                      type="checkbox"
-                      className="mt-0.5 h-4 w-4 shrink-0 accent-[#6C9BF2]"
-                      checked={visibilityOn.search}
-                      onChange={(e) => {
-                        const next = { ...visibilityOn, search: e.target.checked };
-                        onFormChange((f) => ({
-                          ...f,
-                          searchChecks: next.search || next.answers || next.aiSearch || next.marketing,
-                          visibility: next,
-                        }));
-                      }}
-                    />
-                    <div>
-                      <span className="font-semibold text-ink">Search (SEO)</span>
-                      <span className="block text-ink-soft">
-                        Titles, descriptions, headings, canonical, robots & sitemap
-                      </span>
-                    </div>
-                  </label>
-
-                  <label className="flex cursor-pointer items-start gap-2.5 text-xs">
-                    <input
-                      type="checkbox"
-                      className="mt-0.5 h-4 w-4 shrink-0 accent-[#6C9BF2]"
-                      checked={visibilityOn.answers}
-                      onChange={(e) => {
-                        const next = { ...visibilityOn, answers: e.target.checked };
-                        onFormChange((f) => ({
-                          ...f,
-                          searchChecks: next.search || next.answers || next.aiSearch || next.marketing,
-                          visibility: next,
-                        }));
-                      }}
-                    />
-                    <div>
-                      <span className="font-semibold text-ink">AI answers (AEO)</span>
-                      <span className="block text-ink-soft">FAQPage, HowTo, Organization JSON-LD markup</span>
-                    </div>
-                  </label>
-
-                  <label className="flex cursor-pointer items-start gap-2.5 text-xs">
-                    <input
-                      type="checkbox"
-                      className="mt-0.5 h-4 w-4 shrink-0 accent-[#6C9BF2]"
-                      checked={visibilityOn.aiSearch}
-                      onChange={(e) => {
-                        const next = { ...visibilityOn, aiSearch: e.target.checked };
-                        onFormChange((f) => ({
-                          ...f,
-                          searchChecks: next.search || next.answers || next.aiSearch || next.marketing,
-                          visibility: next,
-                        }));
-                      }}
-                    />
-                    <div>
-                      <span className="font-semibold text-ink">AI search (GEO)</span>
-                      <span className="block text-ink-soft">llms.txt, AI crawlers (GPTBot, ClaudeBot), citations</span>
-                    </div>
-                  </label>
-
-                  <label className="flex cursor-pointer items-start gap-2.5 text-xs">
-                    <input
-                      type="checkbox"
-                      className="mt-0.5 h-4 w-4 shrink-0 accent-[#6C9BF2]"
-                      checked={visibilityOn.marketing}
-                      onChange={(e) => {
-                        const next = { ...visibilityOn, marketing: e.target.checked };
-                        onFormChange((f) => ({
-                          ...f,
-                          searchChecks: next.search || next.answers || next.aiSearch || next.marketing,
-                          visibility: next,
-                        }));
-                      }}
-                    />
-                    <div>
-                      <span className="font-semibold text-ink">Marketing (MKT)</span>
-                      <span className="block text-ink-soft">
-                        Share previews, picture, call to action, contact & privacy
-                      </span>
-                    </div>
-                  </label>
-                </div>
-              </details>
-            )}
-          </div>
-        )}
-
-        <details className="mt-6 rounded-lg border-2 border-edge bg-surface" open={added > 0 || undefined}>
+        <details
+          className="mt-6 rounded-lg border-2 border-edge bg-surface"
+          open={hasNonDefaultOptions(form) || undefined}
+          data-testid="more-options"
+        >
           <summary className="flex min-h-[48px] cursor-pointer flex-wrap items-center gap-x-2 px-4 py-3 font-bold">
-            Add specs, design notes or journeys
+            More options
             <span className="font-normal text-ink-soft">(optional)</span>
-            {added > 0 && <span className="rounded border border-pass px-1.5 text-xs text-pass">Added</span>}
           </summary>
-          <div className="space-y-5 border-t border-rule p-4">
-            <p className="text-sm text-ink-soft">
-              The AI plans with these, so the plan tests what the site is meant to do.
-            </p>
-            <MaterialField
-              id="specs"
-              label="Specs"
-              hint="Requirements, user stories or acceptance criteria."
-              placeholder={
-                'For example:\n- Only managers can see reports\n- A new invoice needs a client name and an amount above zero'
-              }
-              value={form.specs}
-              onChange={(value) => onFormChange((f) => ({ ...f, specs: value }))}
-            />
-            <MaterialField
-              id="design-notes"
-              label="Design notes"
-              hint="Colours, type and layout rules the site should follow."
-              placeholder={'For example:\n- The main colour is #2E6BFF\n- Nothing scrolls sideways on a phone'}
-              value={form.designNotes}
-              onChange={(value) => onFormChange((f) => ({ ...f, designNotes: value }))}
-            />
-            <MaterialField
-              id="journeys"
-              label="Journeys to test"
-              hint="Things people do across pages that matter most."
-              placeholder={'For example:\nSign in as a manager, open Reports and check the open invoices are listed.'}
-              value={form.journeys}
-              onChange={(value) => onFormChange((f) => ({ ...f, journeys: value }))}
-            />
+          <div className="border-t border-rule px-4 pb-4">
+            <div className="mt-6 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+              <label htmlFor="max-pages">Explore up to</label>
+              <input
+                id="max-pages"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={MAX_PAGES_LIMIT}
+                className="field w-24 py-1.5 text-sm"
+                value={maxPagesText}
+                // The number is kept as typed, so it can be cleared and retyped; it's checked on leaving the box.
+                onChange={(e) => setMaxPagesText(e.target.value)}
+                onBlur={() => {
+                  const n = clampMaxPages(maxPagesText);
+                  setMaxPagesText(String(n));
+                  onFormChange((f) => ({ ...f, maxPages: n }));
+                }}
+                aria-describedby="max-pages-hint"
+              />
+              <span>pages</span>
+              <span id="max-pages-hint" className="basis-full text-ink-soft">
+                Pages that share a layout are tested through a few samples, so big sites stay quick.
+              </span>
+            </div>
+
+            <SignInsSection form={form} saved={remembered?.signIns} onFormChange={onFormChange} />
+
+            {kind && (
+              <div className="mt-4 rounded-lg border border-edge bg-surface p-4">
+                <label className="flex cursor-pointer items-start gap-3 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 h-5 w-5 shrink-0 accent-[#6C9BF2]"
+                    checked={searchChecksOn}
+                    onChange={(e) => {
+                      const on = e.target.checked;
+                      onFormChange((f) => ({
+                        ...f,
+                        searchChecks: on,
+                        visibility: { search: on, answers: on, aiSearch: on, marketing: on },
+                      }));
+                    }}
+                  />
+                  <span className="flex-1">
+                    <span className="block font-bold text-ink">Check how search engines and AI find the site</span>
+                    <span className="block text-xs font-medium text-ink-soft">
+                      Search (SEO) · AI answers (AEO) · AI search (GEO) · Marketing (MKT)
+                    </span>
+                    <span className="mt-1 block text-xs text-ink-soft">
+                      {kind.isTestCopy && form.owner
+                        ? 'Off by default for local test copies, but you can turn it on anytime to audit SEO, AI discovery, and Marketing.'
+                        : 'Audits search engine tags, AI assistant schemas, crawler access, and marketing readiness.'}
+                    </span>
+                  </span>
+                </label>
+
+                {searchChecksOn && (
+                  <details className="mt-3 border-t border-rule pt-3 text-sm" open>
+                    <summary className="cursor-pointer text-xs font-semibold text-accent hover:underline">
+                      Choose which to check
+                    </summary>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      <label className="flex cursor-pointer items-start gap-2.5 text-xs">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5 h-4 w-4 shrink-0 accent-[#6C9BF2]"
+                          checked={visibilityOn.search}
+                          onChange={(e) => {
+                            const next = { ...visibilityOn, search: e.target.checked };
+                            onFormChange((f) => ({
+                              ...f,
+                              searchChecks: next.search || next.answers || next.aiSearch || next.marketing,
+                              visibility: next,
+                            }));
+                          }}
+                        />
+                        <div>
+                          <span className="font-semibold text-ink">Search (SEO)</span>
+                          <span className="block text-ink-soft">
+                            Titles, descriptions, headings, canonical, robots & sitemap
+                          </span>
+                        </div>
+                      </label>
+
+                      <label className="flex cursor-pointer items-start gap-2.5 text-xs">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5 h-4 w-4 shrink-0 accent-[#6C9BF2]"
+                          checked={visibilityOn.answers}
+                          onChange={(e) => {
+                            const next = { ...visibilityOn, answers: e.target.checked };
+                            onFormChange((f) => ({
+                              ...f,
+                              searchChecks: next.search || next.answers || next.aiSearch || next.marketing,
+                              visibility: next,
+                            }));
+                          }}
+                        />
+                        <div>
+                          <span className="font-semibold text-ink">AI answers (AEO)</span>
+                          <span className="block text-ink-soft">FAQPage, HowTo, Organization JSON-LD markup</span>
+                        </div>
+                      </label>
+
+                      <label className="flex cursor-pointer items-start gap-2.5 text-xs">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5 h-4 w-4 shrink-0 accent-[#6C9BF2]"
+                          checked={visibilityOn.aiSearch}
+                          onChange={(e) => {
+                            const next = { ...visibilityOn, aiSearch: e.target.checked };
+                            onFormChange((f) => ({
+                              ...f,
+                              searchChecks: next.search || next.answers || next.aiSearch || next.marketing,
+                              visibility: next,
+                            }));
+                          }}
+                        />
+                        <div>
+                          <span className="font-semibold text-ink">AI search (GEO)</span>
+                          <span className="block text-ink-soft">
+                            llms.txt, AI crawlers (GPTBot, ClaudeBot), citations
+                          </span>
+                        </div>
+                      </label>
+
+                      <label className="flex cursor-pointer items-start gap-2.5 text-xs">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5 h-4 w-4 shrink-0 accent-[#6C9BF2]"
+                          checked={visibilityOn.marketing}
+                          onChange={(e) => {
+                            const next = { ...visibilityOn, marketing: e.target.checked };
+                            onFormChange((f) => ({
+                              ...f,
+                              searchChecks: next.search || next.answers || next.aiSearch || next.marketing,
+                              visibility: next,
+                            }));
+                          }}
+                        />
+                        <div>
+                          <span className="font-semibold text-ink">Marketing (MKT)</span>
+                          <span className="block text-ink-soft">
+                            Share previews, picture, call to action, contact & privacy
+                          </span>
+                        </div>
+                      </label>
+                    </div>
+                  </details>
+                )}
+              </div>
+            )}
+
+            <details className="mt-6 rounded-lg border-2 border-edge bg-surface" open={added > 0 || undefined}>
+              <summary className="flex min-h-[48px] cursor-pointer flex-wrap items-center gap-x-2 px-4 py-3 font-bold">
+                Add specs, design notes or journeys
+                <span className="font-normal text-ink-soft">(optional)</span>
+                {added > 0 && <span className="rounded border border-pass px-1.5 text-xs text-pass">Added</span>}
+              </summary>
+              <div className="space-y-5 border-t border-rule p-4">
+                <p className="text-sm text-ink-soft">
+                  The AI plans with these, so the plan tests what the site is meant to do.
+                </p>
+                <MaterialField
+                  id="specs"
+                  label="Specs"
+                  hint="Requirements, user stories or acceptance criteria."
+                  placeholder={
+                    'For example:\n- Only managers can see reports\n- A new invoice needs a client name and an amount above zero'
+                  }
+                  value={form.specs}
+                  onChange={(value) => onFormChange((f) => ({ ...f, specs: value }))}
+                />
+                <MaterialField
+                  id="design-notes"
+                  label="Design notes"
+                  hint="Colours, type and layout rules the site should follow."
+                  placeholder={'For example:\n- The main colour is #2E6BFF\n- Nothing scrolls sideways on a phone'}
+                  value={form.designNotes}
+                  onChange={(value) => onFormChange((f) => ({ ...f, designNotes: value }))}
+                />
+                <MaterialField
+                  id="journeys"
+                  label="Journeys to test"
+                  hint="Things people do across pages that matter most."
+                  placeholder={
+                    'For example:\nSign in as a manager, open Reports and check the open invoices are listed.'
+                  }
+                  value={form.journeys}
+                  onChange={(value) => onFormChange((f) => ({ ...f, journeys: value }))}
+                />
+              </div>
+            </details>
           </div>
         </details>
 
@@ -767,6 +790,65 @@ function AccessChoice({
         </label>
       ))}
     </fieldset>
+  );
+}
+
+/**
+ * On the shared copy a test copy is tested fully only after its Verified Domain line is published:
+ * until then the check-up only looks. Shows the line and where it goes, and checks it again on request.
+ */
+function DomainProofPanel({ url }: { url: string }) {
+  const [status, setStatus] = useState<DomainProofStatus | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const run = async () => {
+    setBusy(true);
+    setProblem(null);
+    try {
+      setStatus(await checkDomainProof(url));
+    } catch (err) {
+      setProblem(err instanceof RunnerError ? err.message : 'The Verified Domain line couldn’t be checked.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  useEffect(() => {
+    setStatus(null);
+    void run();
+  }, [url]);
+
+  if (status && (!status.required || status.verified)) {
+    return status.verified && status.required ? (
+      <p className="mt-4 text-sm text-pass">
+        Verified Domain: the line was found, so this test copy can be tested fully.
+      </p>
+    ) : null;
+  }
+  return (
+    <div className="mt-4 rounded-lg border-2 border-edge bg-surface p-4" role="region" aria-label="Verified Domain">
+      <p className="font-bold">This test copy isn’t verified yet, so it is only looked at</p>
+      {status?.line ? (
+        <>
+          <p className="mt-2 text-sm text-ink-soft">
+            To test it fully, publish this one line as a file at the address below, on this exact address. It works for
+            this visit only.
+          </p>
+          <p className="mt-2 break-all font-mono text-sm">{status.line}</p>
+          <p className="mt-1 break-all font-mono text-sm">{status.proofUrl}</p>
+        </>
+      ) : (
+        status && (
+          <p className="mt-2 text-sm text-ink-soft">
+            This address can’t be verified (a Verified Domain needs an https address on the public internet), so it is
+            only looked at.
+          </p>
+        )
+      )}
+      {problem && <p className="mt-2 text-sm text-fail">{problem}</p>}
+      <button type="button" className="btn-link mt-2 text-sm" disabled={busy} onClick={() => void run()}>
+        {busy ? 'Checking…' : 'Check again'}
+      </button>
+    </div>
   );
 }
 

@@ -34,5 +34,9 @@ Test runs are deferred (DEFER_TESTS): they happen in the wave's /verify-all, not
 ## Risks
 Third-party script weight; keep it small and optional.
 
+## Notes
+Provider chosen: GoatCounter (pixel/fetch only, no script). See `docs/LANDING_MEASUREMENT.md`.
+Env: `VITE_COUNTER_URL`, `VITE_CONTACT_EMAIL`, `VITE_SIGNUP_URL` (build-time; Vercel and Render).
+
 ## Status
-todo (wave 2)
+built (tests written, not run)

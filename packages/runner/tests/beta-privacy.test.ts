@@ -161,7 +161,7 @@ describe('On the shared copy, a visitor sees only their own check-up', () => {
   });
 
   it('keeps the plan, the report and the evidence of a run to its owner', async () => {
-    for (const route of ['/api/runner/plan', '/api/runner/plan/markdown']) {
+    for (const route of ['/api/runner/plan', '/api/runner/plan/markdown', '/api/runner/plan/export']) {
       const answer = await call('GET', route, bob.cookie);
       expect(answer.status, route).toBe(404);
       expect(JSON.parse(answer.body).code).toBe('ERR_NOT_YOURS');

@@ -4,7 +4,7 @@
 
 @layer base {
   /* The board is dark, so the browser's own checkboxes, number fields and selects are drawn dark too. */
-  :root {
+  :root:not([data-theme='light']) {
     color-scheme: dark;
   }
 

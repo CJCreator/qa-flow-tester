@@ -64,6 +64,7 @@ const server = http.createServer((req, res) => {
   const ACCOUNTS = {
     'manager@example.com': ['manager-password', 'manager'],
     'viewer@example.com': ['viewer-password', 'viewer'],
+    'two-step@example.com': ['two-step-password', 'manager'],
   };
 
   if (url.pathname === '/signin' && req.method === 'POST') {
@@ -82,6 +83,110 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (url.pathname === '/signin') return html('Sign in', `<h1>Sign in</h1>${SIGN_IN_FORM}`);
+
+  // Sign-in variants for the sign-in robustness tests. Linked from nowhere, so crawls never see them.
+  const readJson = (cb) => {
+    let raw = '';
+    req.on('data', (chunk) => (raw += chunk));
+    req.on('end', () => {
+      let data = {};
+      try {
+        data = JSON.parse(raw || '{}');
+      } catch {
+        data = {};
+      }
+      cb(data);
+    });
+  };
+  const json = (status, obj, headers = {}) => {
+    res.writeHead(status, { 'Content-Type': 'application/json', ...headers });
+    res.end(JSON.stringify(obj));
+  };
+  const sessionCookie = (account) => ({ 'Set-Cookie': `fixture_session=${account[1]}; Path=/; HttpOnly` });
+
+  if (url.pathname === '/login-two-step/email' && req.method === 'POST') {
+    return readJson((data) => (ACCOUNTS[data.email] ? json(200, { ok: true }) : json(401, { ok: false })));
+  }
+  if (url.pathname === '/login-two-step/password' && req.method === 'POST') {
+    return readJson((data) => {
+      const account = ACCOUNTS[data.email];
+      return account && account[0] === data.password
+        ? json(200, { ok: true }, sessionCookie(account))
+        : json(401, { ok: false });
+    });
+  }
+  if (url.pathname === '/login-two-step') {
+    return html(
+      'Sign in (two steps)',
+      `<h1>Sign in</h1>
+       <form id="two-step" novalidate>
+         <p role="alert" id="two-step-error" hidden>Wrong email or password</p>
+         <div id="step-email"><label for="ts-email">Email</label><input id="ts-email" name="email" type="email">
+           <button type="button" id="ts-next">Next</button></div>
+         <div id="step-password" hidden><label for="ts-password">Password</label><input id="ts-password" name="password" type="password">
+           <button type="submit" id="ts-submit">Sign in</button></div>
+       </form>
+       <script>
+         const $ = (id) => document.getElementById(id);
+         const post = (path, body) => fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+         $('ts-next').addEventListener('click', async () => {
+           const r = await post('/login-two-step/email', { email: $('ts-email').value });
+           if (r.ok) { $('two-step-error').hidden = true; $('step-email').hidden = true; $('step-password').hidden = false; }
+           else $('two-step-error').hidden = false;
+         });
+         $('two-step').addEventListener('submit', async (e) => {
+           e.preventDefault();
+           const r = await post('/login-two-step/password', { email: $('ts-email').value, password: $('ts-password').value });
+           if (r.ok) location.href = '/account'; else $('two-step-error').hidden = false;
+         });
+       </script>`
+    );
+  }
+
+  if (url.pathname === '/login-modal/submit' && req.method === 'POST') {
+    return readJson((data) => {
+      const account = ACCOUNTS[data.email];
+      return account && account[0] === data.password
+        ? json(200, { ok: true }, sessionCookie(account))
+        : json(401, { ok: false });
+    });
+  }
+  if (url.pathname === '/login-modal') {
+    return html(
+      'Sign in (modal)',
+      `<h1>Welcome</h1>
+       <button type="button" id="open-signin">Sign in</button>
+       <dialog id="signin-dialog">
+         <form id="modal-form" method="dialog" novalidate>
+           <p role="alert" id="modal-error" hidden>Wrong email or password</p>
+           <label for="m-email">Email</label><input id="m-email" name="email" type="email">
+           <label for="m-password">Password</label><input id="m-password" name="password" type="password">
+           <button type="submit" id="m-submit">Sign in</button>
+         </form>
+       </dialog>
+       <script>
+         const $ = (id) => document.getElementById(id);
+         $('open-signin').addEventListener('click', () => $('signin-dialog').showModal());
+         $('modal-form').addEventListener('submit', async (e) => {
+           e.preventDefault();
+           const r = await fetch('/login-modal/submit', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({ email: $('m-email').value, password: $('m-password').value }) });
+           if (r.ok) location.href = '/account'; else $('modal-error').hidden = false;
+         });
+       </script>`
+    );
+  }
+
+  if (url.pathname === '/login-captcha') {
+    return html(
+      'Sign in (CAPTCHA)',
+      `<h1>Sign in</h1>${SIGN_IN_FORM}<div class="g-recaptcha" data-sitekey="x" style="width:300px;height:78px;border:1px solid #ccc">I am not a robot</div>`
+    );
+  }
+  if (url.pathname === '/login-nothing') return html('Nothing here', '<h1>Welcome</h1><p>No sign-in on this page.</p>');
+  if (url.pathname === '/login-sso') {
+    return html('Sign in (single sign-on)', '<h1>Sign in</h1><button type="button">Continue with Google</button>');
+  }
   if (url.pathname === '/signout') {
     res.writeHead(302, { 'Set-Cookie': 'fixture_session=; Path=/; Max-Age=0', Location: '/' });
     res.end();

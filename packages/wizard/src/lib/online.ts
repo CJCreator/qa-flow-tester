@@ -20,6 +20,18 @@ export function startAddress(
   }
 }
 
+export const DEFAULT_WAKE_LIMIT_MS = 90_000;
+
+/** How long to wait for the online copy to wake, from `VITE_WAKE_LIMIT_SECONDS` (5 to 600 s); 90 s when unset or not a positive number. */
+export function wakeLimitMs(
+  raw: string | undefined = import.meta.env.VITE_WAKE_LIMIT_SECONDS as string | undefined
+): number {
+  if (typeof raw !== 'string' || raw.trim() === '') return DEFAULT_WAKE_LIMIT_MS;
+  const seconds = Number(raw);
+  if (!Number.isFinite(seconds) || seconds <= 0) return DEFAULT_WAKE_LIMIT_MS;
+  return Math.min(600, Math.max(5, seconds)) * 1000;
+}
+
 /** The online copy's health address, to wake it while a visitor is still reading; null when it is this page's own origin. */
 export function wakeAddress(
   onlineAppUrl: string | null = ONLINE_APP_URL,

@@ -7,7 +7,9 @@ import type {
   RunSummary,
   BenchmarkJob,
   ReleaseGateCriteria,
+  SignInFailureReason,
 } from '@qa/types';
+import { isSignInFailureReason, signInReasonText } from '@qa/types/src/signin.js';
 
 /**
  * Every call to the runner lives here, and every failure becomes a RunnerError whose message is a
@@ -219,6 +221,41 @@ export interface SiteFacts {
     searchChecks?: boolean;
     /** Sign-ins saved for the site (never their passwords). */
     signIns?: Array<{ role: string; username: string }>;
+  };
+}
+
+/** Where a test copy stands on a shared copy: the one line to publish, and whether it is there now. */
+export interface DomainProofStatus {
+  /** False on your own computer: no Verified Domain is needed there. */
+  required: boolean;
+  verified: boolean;
+  origin: string;
+  /** Where the file goes (https only). Empty when this address cannot be verified. */
+  proofUrl: string;
+  /** The one line the file holds. Empty when this address cannot be verified. */
+  line: string;
+  /** Why it is not verified yet, as a short code. */
+  reason?: string;
+}
+
+export async function checkDomainProof(targetUrl: string): Promise<DomainProofStatus> {
+  const res = await call('/api/runner/domain-proof', { method: 'POST', body: JSON.stringify({ targetUrl }) }, 20000);
+  const body = await json<Partial<DomainProofStatus> & { error?: string; code?: string }>(res);
+  if (res.status === 429) {
+    throw new RunnerError(
+      body.error || 'The Verified Domain line was checked a moment ago.',
+      body.code || 'ERR_RATE',
+      'Wait about 10 seconds, then check again.'
+    );
+  }
+  if (!res.ok) throw new RunnerError(body.error || 'The address couldn’t be checked.', body.code);
+  return {
+    required: !!body.required,
+    verified: !!body.verified,
+    origin: body.origin || '',
+    proofUrl: body.proofUrl || '',
+    line: body.line || '',
+    reason: body.reason,
   };
 }
 
@@ -479,6 +516,13 @@ export async function downloadPlanMarkdown(): Promise<void> {
   await saveResponse(res, 'test-plan.md');
 }
 
+/** Saves the approved plan as a Playwright project (a zip). Sign-in state is a path, never a secret. */
+export async function downloadPlaywrightExport(): Promise<void> {
+  const res = await call('/api/runner/plan/export');
+  if (!res.ok) throw new RunnerError('The Playwright export couldn’t be downloaded. Try again.');
+  await saveResponse(res, 'playwright-export.zip');
+}
+
 export async function patchPlan(body: PatchPlanBody): Promise<ReviewPlan | PlanDelta> {
   const res = await call('/api/runner/plan', { method: 'PATCH', body: JSON.stringify(body) });
   if (res.status === 422) {
@@ -630,8 +674,15 @@ export async function addSiteSignIn(
     { method: 'POST', body: JSON.stringify({ addSignIn: signIn }) },
     30000
   );
-  const body = await json<{ saved?: boolean; landingPath?: string; error?: string }>(res);
-  if (!res.ok) throw new RunnerError(body.error || 'That sign-in couldn’t be saved. Try again.');
+  const body = await json<{ saved?: boolean; landingPath?: string; error?: string; reason?: string }>(res);
+  // A named reason is shown in our fixed words, never the runner's free text.
+  if (!res.ok) {
+    throw new RunnerError(
+      isSignInFailureReason(body.reason)
+        ? signInReasonText(body.reason)
+        : body.error || 'That sign-in couldn’t be saved. Try again.'
+    );
+  }
   return { landingPath: body.landingPath, saved: !!body.saved, note: body.error };
 }
 
@@ -639,15 +690,21 @@ export async function addSiteSignIn(
 export async function testSiteSignIn(
   host: string,
   role: string
-): Promise<{ verified: boolean; landingPath?: string; error?: string }> {
+): Promise<{ verified: boolean; landingPath?: string; reason?: SignInFailureReason; error?: string }> {
   const res = await call(
     `/api/sites/${encodeURIComponent(host)}`,
     { method: 'POST', body: JSON.stringify({ testSignIn: role }) },
     30000
   );
-  const body = await json<{ verified?: boolean; landingPath?: string; error?: string }>(res);
+  const body = await json<{ verified?: boolean; landingPath?: string; error?: string; reason?: string }>(res);
   if (!res.ok) throw new RunnerError(body.error || 'The sign-in couldn’t be tested. Try again.');
-  return { verified: !!body.verified, landingPath: body.landingPath, error: body.error };
+  const reason = isSignInFailureReason(body.reason) ? body.reason : undefined;
+  return {
+    verified: !!body.verified,
+    landingPath: body.landingPath,
+    reason,
+    error: reason ? signInReasonText(reason) : body.error,
+  };
 }
 
 export type ScreenSize = '375px' | '768px' | '1440px';

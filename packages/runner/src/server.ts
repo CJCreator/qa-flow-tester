@@ -2,7 +2,7 @@ import http from 'http';
 import { timingSafeEqual } from 'crypto';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { journeyPages, releaseVerdict } from '@qa/types';
+import { journeyPages, releaseVerdict, signInReasonText } from '@qa/types';
 import { serveUi, type UiApp } from './ui-static.js';
 import type {
   RunSummary,
@@ -22,6 +22,7 @@ import type {
   PageLink,
   AIRequestBudget,
   BenchmarkJob,
+  SignInFailureReason,
 } from '@qa/types';
 import {
   FlowTestOrchestrator,
@@ -48,6 +49,15 @@ import {
   replaceCredentialsWithPlaceholders,
   applySafeAnswers,
   isTestHost,
+  setBrowserPolicy,
+  makeRequestGuard,
+  verifyDomainProof,
+  resolvePublic,
+  isIpLiteral,
+  safeGet,
+  proofUrl,
+  proofLine,
+  type NetDeps,
   markJourneysNeedingTestCopy,
   needsTestCopy,
   NEEDS_TEST_COPY,
@@ -67,6 +77,8 @@ import {
   expandPlan,
   GRADED_CHECKS,
   planToMarkdown,
+  planToPlaywrightProject,
+  zipFiles,
   PacedAI,
   BudgetSpentError,
   estimateScanRequests,
@@ -95,7 +107,20 @@ import {
 } from '@qa/core';
 import { BenchmarkStore, cleanFlowType, compareSites, siteName } from './benchmarks.js';
 import { SchedulerManager, type CheckupSchedule } from './scheduler.js';
-import { SessionKeyResolver, currentSessionId, enterSession, refusedTarget, sessionFor } from './beta.js';
+import {
+  SessionKeyResolver,
+  betaLimitsFromEnv,
+  claimBetaRun,
+  currentSessionId,
+  enterSession,
+  refusedTarget,
+  proofTokenFor,
+  peekProofToken,
+  claimProofCheck,
+  sessionFor,
+  type BetaLimits,
+} from './beta.js';
+import { testCopyFor } from './host-policy.js';
 
 function isInside(dir: string, file: string): boolean {
   const rel = path.relative(dir, file);
@@ -280,6 +305,12 @@ export interface RunnerServerOptions {
    * change what other testers see (deleting check-ups, schedules, comparisons) are closed.
    */
   beta?: boolean;
+  /** Test seam for a shared machine (beta): replaces DNS lookup and the pinned connection used for host checks. */
+  hostChecks?: NetDeps;
+  /** Beta only: check-ups per visitor and per day. A test seam; default from RUNNER_BETA_RUNS_PER_VISITOR / _PER_DAY. */
+  betaLimits?: BetaLimits;
+  /** Most time one test step may spend finding and acting on its element, in ms (env RUNNER_STEP_TIMEOUT_MS). Default 10000. */
+  stepTimeoutMs?: number;
 }
 
 export interface TriggerRunBody {
@@ -431,9 +462,12 @@ function hostOfAddress(address: string): string {
 }
 
 /** Why a run is read-only, in plain words. */
-function readOnlyReason(owner: boolean, testHost: boolean): string {
+function readOnlyReason(owner: boolean, testHost: boolean, unverifiedMarked = false): string {
   if (!owner) {
     return 'You didn’t say you own this site, so it’s only looked at: nothing is sent or changed. If it’s yours, start a new check-up and tick “I own this site”.';
+  }
+  if (!testHost && unverifiedMarked) {
+    return 'This address isn’t a verified test copy yet, so it’s only looked at: nothing is sent or changed. Publish the Verified Domain line shown for it, then start a new check-up.';
   }
   if (!testHost) {
     return 'This looks like a live site, so it’s only looked at: nothing is sent or changed. If it’s a test copy of your site, start a new check-up and choose “This is a test copy”.';
@@ -479,6 +513,9 @@ export class RunnerServer {
   private keyResolver: KeyResolver;
   /** Shared with outside testers: see RunnerServerOptions.beta. */
   private beta: boolean;
+  private betaLimits: BetaLimits;
+  private hostChecks: NetDeps | undefined;
+  private stepTimeoutMs: number | undefined;
   private openRouter: OpenRouterClient;
   private makeAIProvider: (provider: AIProviderType, apiKey: string, model?: string) => AIProvider;
   private uiApps: UiApp[];
@@ -542,6 +579,9 @@ export class RunnerServer {
     this.modelRecordFile = path.join(this.dataDir, '.qa-ai-model-record.json');
     this.defaultsFile = path.join(this.dataDir, '.qa-settings.json');
     this.beta = !!options.beta;
+    this.betaLimits = options.betaLimits ?? betaLimitsFromEnv();
+    this.hostChecks = options.hostChecks;
+    this.stepTimeoutMs = options.stepTimeoutMs;
     this.keyResolver = options.keyResolver || (this.beta ? new SessionKeyResolver() : new KeyResolver(this.dataDir));
     this.openRouter = options.openRouter || new OpenRouterClient();
     this.makeAIProvider =
@@ -667,6 +707,8 @@ export class RunnerServer {
   }
 
   public async start(): Promise<string> {
+    // A shared machine checks every browser request: nothing may reach a non-public address (ADR 0014).
+    if (this.beta) setBrowserPolicy({ guard: makeRequestGuard(this.hostChecks) });
     await this.moveLegacyData();
     await this.ensurePlanLoaded();
     await this.loadLatestReport();
@@ -856,6 +898,12 @@ export class RunnerServer {
             return;
           }
 
+          // GET /api/runner/plan/export — the approved plan as a Playwright project (zip)
+          if (pathname === '/api/runner/plan/export' && req.method === 'GET') {
+            await this.handlePlanExport(res);
+            return;
+          }
+
           // Changes that need the AI or the crawler run in the background (202, then PLAN_UPDATE_* events):
           // POST /api/runner/plan/replan — plan an item, a promoted page, or everything again
           if (pathname === '/api/runner/plan/replan' && req.method === 'POST') {
@@ -908,6 +956,12 @@ export class RunnerServer {
           // POST /api/runner/preflight — is the target URL reachable? (no browser, no run)
           if (pathname === '/api/runner/preflight' && req.method === 'POST') {
             await this.handlePreflight(req, res);
+            return;
+          }
+
+          // POST /api/runner/domain-proof — the Verified Domain line to publish, and whether it is there now
+          if (pathname === '/api/runner/domain-proof' && req.method === 'POST') {
+            await this.handleDomainProof(req, res);
             return;
           }
 
@@ -1062,6 +1116,7 @@ export class RunnerServer {
   }
 
   public async stop(): Promise<void> {
+    if (this.beta) setBrowserPolicy(null);
     // Open event streams would otherwise keep the server from ever finishing its close.
     for (const client of this.streamClients) client.end();
     this.streamClients.clear();
@@ -1154,7 +1209,7 @@ export class RunnerServer {
   /** Beta only: answers 400 and returns true when a tester asked for an address that isn't on the public internet. */
   private async refuseTarget(res: http.ServerResponse, address: string | undefined): Promise<boolean> {
     if (!this.beta || !address) return false;
-    const reason = await refusedTarget(address);
+    const reason = await refusedTarget(address, this.hostChecks?.lookup);
     if (!reason) return false;
     this.sendJson(res, 400, {
       reachable: false,
@@ -1162,6 +1217,27 @@ export class RunnerServer {
       code: 'ERR_PRIVATE_TARGET',
       error: reason,
       suggestion: reason,
+    });
+    return true;
+  }
+
+  /**
+   * Beta only: counts this start against the visitor's and the day's limits. Answers 429 and returns true
+   * when one is reached. Call it after every other check, so a refused start costs nothing. Counted: check-up
+   * and comparison starts. Not counted: preflight (no browser run) and the plan routes, which continue an
+   * already counted check-up (known gap: include-host / add-page can repeat within one plan; the day's cap
+   * and one run at a time bound it). Keyed on the session, never the address.
+   */
+  private betaLimitHit(res: http.ServerResponse): boolean {
+    if (!this.beta) return false;
+    const hit = claimBetaRun(currentSessionId(), { limits: this.betaLimits });
+    if (!hit) return false;
+    this.sendJson(res, 429, {
+      error: hit.error,
+      code: 'ERR_BETA_LIMIT',
+      suggestion: hit.suggestion,
+      scope: hit.scope,
+      resetsAt: hit.resetsAt,
     });
     return true;
   }
@@ -1189,6 +1265,98 @@ export class RunnerServer {
     }
   }
 
+  /**
+   * Whether this address is a Test Copy. Local mode: by its name (and the owner's mark), as before.
+   * Shared machine: marked AND public AND the Verified Domain proof passes right now (ADR 0014).
+   */
+  private testCopyOf(typed: URL, marked: boolean): Promise<boolean> {
+    return testCopyFor({
+      beta: this.beta,
+      hostname: typed.hostname,
+      origin: typed.origin,
+      marked,
+      token: () => peekProofToken(typed.origin),
+      deps: this.hostChecks,
+    });
+  }
+
+  /** Shared machine: a GET whose every hop is resolved, checked and connected to by address. */
+  private async sharedGet(
+    url: string,
+    headers: Record<string, string>
+  ): Promise<{ status: number; headers: Record<string, string> }> {
+    const got = await safeGet(url, { headers, maxBytes: 5_000_000 }, this.hostChecks);
+    if (got.ok) {
+      const flat: Record<string, string> = {};
+      for (const [k, v] of Object.entries(got.headers))
+        if (v !== undefined) flat[k] = Array.isArray(v) ? v.join(', ') : v;
+      return { status: got.status, headers: flat };
+    }
+    // A page over the size cap was still answered: only its body is not read.
+    if (got.reason === 'too-large' && got.status) return { status: got.status, headers: {} };
+    throw new Error(got.reason);
+  }
+
+  /**
+   * POST /api/runner/domain-proof { targetUrl }: the one line to publish at /.well-known/qa-verify.txt on
+   * the exact address, and whether it is there now. Shared machine only; the fetched file is never sent back.
+   */
+  private async handleDomainProof(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+    let typed: URL;
+    try {
+      const { targetUrl } = await this.readJsonBody<{ targetUrl?: string }>(req);
+      typed = new URL(targetUrl || '');
+      if (!/^https?:$/.test(typed.protocol)) throw new Error();
+    } catch {
+      this.sendJson(res, 400, {
+        code: 'ERR_INVALID_URL',
+        error: 'Please enter a valid HTTP or HTTPS address.',
+      });
+      return;
+    }
+    const origin = typed.origin;
+    if (!this.beta) {
+      this.sendJson(res, 200, { required: false, verified: true, origin, proofUrl: '', line: '' });
+      return;
+    }
+    if (await this.refuseTarget(res, origin)) return;
+    const url = proofUrl(origin);
+    if (!url) {
+      this.sendJson(res, 200, {
+        required: true,
+        verified: false,
+        origin,
+        proofUrl: '',
+        line: '',
+        reason: typed.protocol === 'https:' ? 'private-address' : 'not-https',
+      });
+      return;
+    }
+    let token: string;
+    try {
+      token = proofTokenFor(origin);
+    } catch {
+      this.sendJson(res, 400, { code: 'ERR_NO_SESSION', error: 'Open the QA Tool in your browser first.' });
+      return;
+    }
+    if (!claimProofCheck(origin)) {
+      this.sendJson(res, 429, {
+        code: 'ERR_RATE',
+        error: 'The Verified Domain line was checked a moment ago. Wait about 10 seconds and check again.',
+      });
+      return;
+    }
+    const result = await verifyDomainProof(origin, token, this.hostChecks);
+    this.sendJson(res, 200, {
+      required: true,
+      verified: result.ok,
+      origin,
+      proofUrl: url,
+      line: proofLine(token),
+      ...(result.ok ? {} : { reason: result.reason }),
+    });
+  }
+
   private async handlePreflight(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
     let targetUrl: string | undefined;
     try {
@@ -1212,7 +1380,7 @@ export class RunnerServer {
     const memory = await loadSiteMemory(this.siteDir(), typed.host).catch(() => null);
     const about = {
       host: typed.host,
-      testCopy: isTestHost(typed.hostname, memory?.staging ? [typed.hostname] : []),
+      testCopy: await this.testCopyOf(typed, !!memory?.staging),
       remembered: memory
         ? {
             owner: memory.owner,
@@ -1225,9 +1393,14 @@ export class RunnerServer {
         : undefined,
     };
 
-    const check = await new PreFlightChecker().checkUrlReachable(this.resolveTargetUrl(targetUrl));
+    const check = await new PreFlightChecker().checkUrlReachable(
+      this.resolveTargetUrl(targetUrl),
+      undefined,
+      this.beta ? (url, headers) => this.sharedGet(url, headers) : undefined
+    );
     if (check.ok) {
-      if (check.testCopyHeader) {
+      // On a shared machine a response header never makes a test copy (ADR 0014).
+      if (check.testCopyHeader && !this.beta) {
         about.testCopy = true;
       }
       this.sendJson(res, 200, { reachable: true, statusCode: check.status, ...about });
@@ -1351,27 +1524,34 @@ export class RunnerServer {
     let target: string;
     try {
       const typed = new URL(/^https?:\/\//i.test(host) ? host : `http://${host}`);
-      const scheme = /^https?:\/\//i.test(host) ? typed.protocol : isTestHost(typed.hostname) ? 'http:' : 'https:';
+      const scheme = /^https?:\/\//i.test(host)
+        ? typed.protocol
+        : !this.beta && isTestHost(typed.hostname)
+          ? 'http:'
+          : 'https:';
       target = this.resolveTargetUrl(`${scheme}//${typed.host}`);
     } catch {
       this.sendJson(res, 400, { error: 'That isn’t a site address.' });
       return;
     }
     const browser = new BrowserManager();
-    let result: { ok: boolean; landingPath?: string };
+    let result: { ok: boolean; landingPath?: string; reason?: SignInFailureReason };
     try {
       const context = await browser.createContext({ baseUrl: target });
       result = await new PreFlightChecker().signIn(context, target, credential);
     } catch {
-      result = { ok: false };
+      result = { ok: false, reason: 'unreachable' };
     } finally {
       await browser.close();
     }
 
     if (!result.ok) {
+      // The reason is one of four fixed ids and the words are fixed text: no typed detail can appear here.
+      const reason: SignInFailureReason = result.reason ?? 'no-form';
       this.sendJson(res, body.addSignIn ? 422 : 200, {
         verified: false,
-        error: 'Signing in didn’t work. Check the username, password and sign-in page, and that the site is reachable.',
+        reason,
+        error: signInReasonText(reason),
       });
       return;
     }
@@ -1574,7 +1754,9 @@ export class RunnerServer {
       testedWithApprovedPlan: report.testedWithApprovedPlan,
     };
     await fs.writeFile(path.join(dir, 'summary.json'), JSON.stringify(summary, null, 2), 'utf8');
-    await fs.copyFile(path.join(dir, 'findings.json'), path.join(this.outputDir, 'findings.json')).catch(() => {});
+    for (const name of ['findings.json', 'fix-these.md', 'known-findings.json', 'AGENTS.snippet.md']) {
+      await fs.copyFile(path.join(dir, name), path.join(this.outputDir, name)).catch(() => {});
+    }
     await this.pruneRuns(host);
   }
 
@@ -2351,6 +2533,7 @@ export class RunnerServer {
       return;
     }
 
+    if (this.betaLimitHit(res)) return;
     if (parkWaiting && waiting) await this.parkPlan(waiting);
     // A plan kept aside for this same site is replaced by the new check-up.
     await this.unparkPlan(hostOfAddress(body.targetUrl));
@@ -2527,8 +2710,16 @@ export class RunnerServer {
         ALL_SCREEN_SIZES;
       const urlFirst = body.owner !== undefined;
       const owner = body.owner ?? true;
-      const testHost = isTestHost(typed.hostname, memory?.staging ? [typed.hostname] : []);
+      const testHost = await this.testCopyOf(typed, !!memory?.staging);
       const readOnly = !(owner && testHost);
+      // On a shared machine the browser reaches the target at the address that was just checked.
+      if (this.beta) {
+        const checked = await resolvePublic(typed.hostname, this.hostChecks);
+        setBrowserPolicy({
+          guard: makeRequestGuard(this.hostChecks),
+          pinned: checked.ok && !isIpLiteral(typed.hostname) ? { [typed.hostname]: checked.address } : undefined,
+        });
+      }
       // How search engines see a site matters on the public site, not on a test copy, unless asked.
       const searchChecks = body.searchChecks ?? memory?.searchChecks ?? (urlFirst ? !testHost : true);
       const visibility =
@@ -2636,7 +2827,12 @@ export class RunnerServer {
       });
 
       const record: StoredPlanRecord = { plan: this.emptyPlan(runId, body.targetUrl), context };
-      record.plan = this.buildPlan(record, sinceLastRun, !!ai.provider, readOnlyReason(owner, testHost));
+      record.plan = this.buildPlan(
+        record,
+        sinceLastRun,
+        !!ai.provider,
+        readOnlyReason(owner, testHost, this.beta && !!memory?.staging)
+      );
 
       // Test again: nothing new since the plan was approved, so it's tested as approved. The plan is
       // still kept, so stopping or a failure can go back to it.
@@ -2984,6 +3180,7 @@ export class RunnerServer {
         testedWithApprovedPlan: extra.testedWithApprovedPlan,
         searchChecks: context.searchChecks,
         visibility: context.visibility,
+        stepTimeoutMs: this.stepTimeoutMs,
         onEvent: (event) => {
           if (current()) this.forwardRunEvent(event);
         },
@@ -3423,6 +3620,33 @@ export class RunnerServer {
       'Content-Disposition': `attachment; filename="test-plan-${host}.md"`,
     });
     res.end(planToMarkdown(record.plan));
+  }
+
+  private async handlePlanExport(res: http.ServerResponse): Promise<void> {
+    const record = await this.ensurePlanLoaded();
+    if (!record || this.phase !== 'awaiting-review') {
+      this.sendJson(res, 404, { error: 'No plan awaiting review' });
+      return;
+    }
+    let zip: Buffer;
+    try {
+      zip = zipFiles(planToPlaywrightProject(record.plan));
+    } catch {
+      this.sendJson(res, 409, { error: 'The plan has no tests to export yet' });
+      return;
+    }
+    let host = 'site';
+    try {
+      host = new URL(record.plan.targetUrl).host.replace(/[^a-z0-9.-]/gi, '_');
+    } catch {
+      // keep "site"
+    }
+    res.writeHead(200, {
+      'Content-Type': 'application/zip',
+      'Content-Disposition': `attachment; filename="playwright-export-${host}.zip"`,
+      'Content-Length': zip.length,
+    });
+    res.end(zip);
   }
 
   /** How re-planning should go for this plan: its site, the owner's notes, and what they asked for. */
@@ -3907,6 +4131,20 @@ export class RunnerServer {
       return;
     }
 
+    // A shared machine looks again before anything is sent: a proof removed since the plan was made
+    // turns the run back to look-only (ADR 0014).
+    if (this.beta && !record.context.readOnly) {
+      try {
+        const typed = new URL(record.context.targetUrl);
+        const memory = record.context.siteHost
+          ? await loadSiteMemory(this.siteDir(), record.context.siteHost).catch(() => null)
+          : null;
+        if (!(await this.testCopyOf(typed, !!memory?.staging))) record.context.readOnly = true;
+      } catch {
+        record.context.readOnly = true;
+      }
+    }
+
     // The owner's own answers are remembered for the site; safe answers filled in now are not.
     const draft = record.context.draft;
     const answeredByOwner = Object.fromEntries(
@@ -4140,6 +4378,7 @@ export class RunnerServer {
       });
       return;
     }
+    if (this.betaLimitHit(res)) return;
 
     const id = `bench-${Date.now()}`;
     const flowType = cleanFlowType(body.flowType);

@@ -215,6 +215,8 @@ export interface Finding {
   aspect?: AspectType;
   /** The same problem found by another check has the same key, so the report lists it once (see problems.ts). */
   issueKey?: string;
+  /** Structural Fingerprint (ADR 0017). Stamped when findings.json is written; not unique per finding. */
+  fingerprint?: string;
   /** How many times the same problem was seen in this run, when more than once. */
   occurrences?: number;
   /** Where else the same problem was seen: pages, widths, roles and test points. */
@@ -333,6 +335,8 @@ export interface RunDelta {
 }
 
 export interface ReleaseReport {
+  /** Contract version of the written findings.json (ADR 0017). Absent in files from before the contract. */
+  schemaVersion?: number;
   runId: string;
   productId: string;
   targetUrl: string;
@@ -369,6 +373,8 @@ export interface ReleaseReport {
   marketing?: MarketingReview;
   recommendations?: RankedRecommendation[];
   history?: SiteHistoryDiff;
+  /** Pages slower than the last check-up. Absent when none. Not part of `findings`. */
+  slowerThanLastTime?: SlowerThanLastTime[];
   singleFileHtmlReportPath?: string;
   /** The site as the plan saw it, so the report can be drawn as a map. Absent for runs without a scan. */
   siteMap?: SiteMapSummary;
@@ -483,6 +489,42 @@ export interface SiteHistoryDiff {
   newFindingFingerprints: string[];
   fixedFindingFingerprints: string[];
   openFindingFingerprints: string[];
+}
+
+/** One page's speed number from the throttled repeat-load measurement, kept in site history. */
+export interface PageSpeedSample {
+  metric: 'lcp' | 'domReady';
+  /** Rounded to whole milliseconds. */
+  ms: number;
+  loads: number;
+  throttled: boolean;
+  /** Id of the simulated phone/network profile, so only like is compared with like. */
+  profile: string;
+}
+
+/** Keyed by `role|breakpoint|urlPath`. */
+export type PageSpeedMap = Record<string, PageSpeedSample>;
+
+/**
+ * A page that got slower than the last check-up by both 20% and 300 ms. A note beside the
+ * findings, not a finding: it never changes grades, the verdict or the CI gate.
+ */
+export interface SlowerThanLastTime {
+  urlPath: string;
+  role: string;
+  breakpoint: Breakpoint;
+  aspect: 'Fast and mobile';
+  checker: 'performance';
+  metric: 'lcp' | 'domReady';
+  previousMs: number;
+  currentMs: number;
+  increaseMs: number;
+  increasePercent: number;
+  previousRunId?: string;
+  previousTimestamp?: string;
+  loads: number;
+  throttled: boolean;
+  summary: string;
 }
 
 /** Pages and journeys of a planned run, for drawing the site map in a report. */
@@ -719,10 +761,12 @@ export interface DiscoveryDraft {
 // --- Phase 3: Hub, Consolidation, Design & UX Types ---
 
 export * from './fingerprint.js';
+export * from './findings-contract.js';
 export * from './site-map.js';
 export * from './plan.js';
 export * from './verdict.js';
 export * from './problems.js';
+export * from './signin.js';
 import type {
   AIRequestBudget,
   AIStageUsage,

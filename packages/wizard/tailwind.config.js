@@ -107,7 +107,7 @@ export default {
     ({ addBase }) =>
       addBase({
         ':root': asVariables(palette),
-        '[data-theme="light"]': { ...asVariables(lightPalette), colorScheme: 'light' },
+        ':root[data-theme="light"]': { ...asVariables(lightPalette), colorScheme: 'light' },
         '@media print': { ':root': { ...asVariables(lightPalette), colorScheme: 'light' } },
       }),
   ],

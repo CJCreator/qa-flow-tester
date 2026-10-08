@@ -11,6 +11,44 @@ export interface BrowserOptions {
   recordVideoDir?: string;
 }
 
+/**
+ * Browser-wide policy for a shared machine (ADR 0014). Null (the default) changes nothing. `guard` is
+ * asked about every request and aborts it on false; `pinned` maps a host to the address that was
+ * checked, so the browser cannot resolve it to anything else.
+ */
+export interface BrowserPolicy {
+  guard?: (url: string, redirected: boolean) => Promise<boolean>;
+  pinned?: Record<string, string>;
+}
+
+let browserPolicy: BrowserPolicy | null = null;
+
+export function setBrowserPolicy(policy: BrowserPolicy | null): void {
+  browserPolicy = policy;
+}
+
+export function getBrowserPolicy(): BrowserPolicy | null {
+  return browserPolicy;
+}
+
+/** Adds the guard as the first route of a context; later routes (blockChanges) fall back to it. */
+export async function installRequestGuard(
+  context: BrowserContext,
+  guard: (url: string, redirected: boolean) => Promise<boolean>
+): Promise<void> {
+  await context.route('**/*', async (route) => {
+    const request = route.request();
+    let allowed = false;
+    try {
+      allowed = await guard(request.url(), !!request.redirectedFrom());
+    } catch {
+      allowed = false;
+    }
+    if (!allowed) return route.abort('blockedbyclient');
+    return route.fallback();
+  });
+}
+
 export const BREAKPOINT_VIEWPORTS: Record<Breakpoint, { width: number; height: number }> = {
   '375px': { width: 375, height: 667 }, // Mobile
   '768px': { width: 768, height: 1024 }, // Tablet
@@ -27,6 +65,9 @@ export class BrowserManager {
       this.browser = null;
     }
     if (!this.browser) {
+      const pinned = Object.entries(browserPolicy?.pinned ?? {}).map(
+        ([host, ip]) => `MAP ${host} ${ip.includes(':') ? `[${ip.replace(/^\[|\]$/g, '')}]` : ip}`
+      );
       this.browser = await chromium.launch({
         headless,
         // Small hosts have little memory: no GPU process or extensions to hold on to.
@@ -36,6 +77,7 @@ export class BrowserManager {
           '--disable-dev-shm-usage',
           '--disable-gpu',
           '--disable-extensions',
+          ...(pinned.length ? [`--host-resolver-rules=${pinned.join(', ')}`] : []),
         ],
       });
     }
@@ -60,12 +102,19 @@ export class BrowserManager {
       storageState: options.storageState,
     };
 
+    const guarded = async (context: BrowserContext): Promise<BrowserContext> => {
+      if (browserPolicy?.guard) await installRequestGuard(context, browserPolicy.guard);
+      return context;
+    };
+
     if (options.recordVideoDir) {
       try {
-        return await browser.newContext({
-          ...contextOptions,
-          recordVideo: { dir: options.recordVideoDir, size: viewport },
-        });
+        return await guarded(
+          await browser.newContext({
+            ...contextOptions,
+            recordVideo: { dir: options.recordVideoDir, size: viewport },
+          })
+        );
       } catch (err) {
         // Missing ffmpeg (`npx playwright install ffmpeg`) must not block the run.
         console.warn(
@@ -73,7 +122,7 @@ export class BrowserManager {
         );
       }
     }
-    return browser.newContext(contextOptions);
+    return guarded(await browser.newContext(contextOptions));
   }
 
   /**
@@ -106,6 +155,8 @@ export class BrowserManager {
 
 // If an element is nested inside a closed <details> accordion/disclosure, auto-open it
 async function revealIfInsideDetails(locator: Locator): Promise<void> {
+  // evaluate() waits up to Playwright's 30 s default for a missing element, which ate the step budget.
+  if ((await locator.count().catch(() => 0)) === 0) return;
   await locator
     .evaluate((el) => {
       let curr: HTMLElement | null = el as HTMLElement;

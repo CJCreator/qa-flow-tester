@@ -34,4 +34,4 @@ Test runs are deferred (DEFER_TESTS): they happen in the wave's /verify-all, not
 Redaction must not weaken.
 
 ## Status
-todo (wave 3)
+built (wave 3). Tests written, not run (deferred to /verify-all).

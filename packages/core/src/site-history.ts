@@ -1,13 +1,15 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import type { AspectGradeDelta, AspectType, Finding, SiteAspectGrades, SiteHistoryDiff } from '@qa/types';
-import { computeStructuralFingerprint } from '@qa/types';
+import type { AspectGradeDelta, AspectType, Finding, PageSpeedMap, SiteAspectGrades, SiteHistoryDiff } from '@qa/types';
+import { findingFingerprint } from '@qa/types';
 
 export interface SiteHistoryEntry {
   runId: string;
   timestamp: string;
   grades: SiteAspectGrades;
   findingFingerprints: string[];
+  /** Speed numbers of this check-up. Only the latest entry keeps them. */
+  pageSpeeds?: PageSpeedMap;
 }
 
 export interface SiteHistoryData {
@@ -33,12 +35,23 @@ export class SiteHistoryManager {
     }
   }
 
+  /** Page speeds of the last check-up, or undefined when there is none (or the file predates them). */
+  async previousPageSpeeds(
+    host: string
+  ): Promise<{ runId: string; timestamp: string; speeds: PageSpeedMap } | undefined> {
+    const history = await this.loadHistory(host);
+    const last = history.runs.length > 0 ? history.runs[history.runs.length - 1] : undefined;
+    if (!last?.pageSpeeds) return undefined;
+    return { runId: last.runId, timestamp: last.timestamp, speeds: last.pageSpeeds };
+  }
+
   async recordRun(
     host: string,
     runId: string,
     grades: SiteAspectGrades,
     findings: Finding[],
-    productId: string
+    productId: string,
+    pageSpeeds?: PageSpeedMap
   ): Promise<SiteHistoryDiff> {
     const history = await this.loadHistory(host);
     const lastRun = history.runs.length > 0 ? history.runs[history.runs.length - 1] : undefined;
@@ -47,13 +60,7 @@ export class SiteHistoryManager {
     const currentFingerprints = new Set<string>();
     for (const f of findings) {
       if (!f.needsConfirmation && f.triageStatus !== 'False Positive' && f.triageStatus !== 'Intended') {
-        const fp = computeStructuralFingerprint({
-          productId,
-          route: f.where.urlPath,
-          checkerId: f.checker,
-          ruleCode: f.title,
-          selector: f.where.cssSelector || f.where.dataTestId,
-        });
+        const fp = findingFingerprint(f, productId);
         currentFingerprints.add(fp);
       }
     }
@@ -97,11 +104,14 @@ export class SiteHistoryManager {
 
     // Append current run to history. Every run is kept: the reports themselves are pruned, the
     // grade history (a few kilobytes a run) isn't.
+    // Only the latest entry keeps page speeds, so the file does not grow with every check-up.
+    for (const older of history.runs) delete older.pageSpeeds;
     history.runs.push({
       runId,
       timestamp: new Date().toISOString(),
       grades,
       findingFingerprints: currentFpList,
+      ...(pageSpeeds && Object.keys(pageSpeeds).length > 0 ? { pageSpeeds } : {}),
     });
 
     await fs.mkdir(this.dataDir, { recursive: true });

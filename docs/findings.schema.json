@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "QA Flow Tester findings.json",
+  "description": "Contract v1 (docs/adr/0017-findings-contract.md). Unknown fields are allowed. A file without schemaVersion is version 0 and predates this contract.",
+  "type": "object",
+  "required": ["schemaVersion", "runId", "productId", "targetUrl", "timestamp", "coverage", "results", "findings"],
+  "properties": {
+    "schemaVersion": { "type": "integer", "minimum": 1 },
+    "runId": { "type": "string" },
+    "productId": { "type": "string" },
+    "targetUrl": { "type": "string" },
+    "timestamp": { "type": "string" },
+    "coverage": { "type": "object" },
+    "results": { "type": "array" },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "severity",
+          "checker",
+          "title",
+          "where",
+          "expectedVsActual",
+          "stepsToReproduce",
+          "evidence",
+          "resolution",
+          "fingerprint"
+        ],
+        "properties": {
+          "id": { "type": "string" },
+          "severity": { "enum": ["Blocker", "Major", "Minor", "Suggestion"] },
+          "checker": { "type": "string" },
+          "title": { "type": "string" },
+          "where": {
+            "type": "object",
+            "required": ["urlPath", "role", "breakpoint"],
+            "properties": {
+              "urlPath": { "type": "string" },
+              "role": { "type": "string" },
+              "breakpoint": { "type": "string" }
+            }
+          },
+          "expectedVsActual": { "type": "object" },
+          "stepsToReproduce": { "type": "array", "items": { "type": "string" } },
+          "evidence": { "type": "object" },
+          "resolution": { "type": "string" },
+          "fingerprint": { "type": "string", "pattern": "^fp_[0-9a-f]{16}$" }
+        }
+      }
+    }
+  }
+}

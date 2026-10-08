@@ -2,6 +2,9 @@ import type { BrowserContext } from 'playwright';
 import type { DiscoveredFlow, DiscoveryDraft, PageInventoryItem } from '@qa/types';
 import { isPrivateHost } from './competitive/safe-crawler.js';
 import { SafetyFilter } from './discovery/safety-filter.js';
+import { isIpLiteral, isPrivateTextHost } from './address-class.js';
+import { decideTestCopy, type TestCopyReason } from './domain-verification.js';
+import { defaultNetDeps } from './safe-net.js';
 
 /**
  * The rules that keep a live site unchanged. Full testing (sending forms, pressing buttons that
@@ -14,6 +17,9 @@ export const MUTATING_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
 /**
  * Hosts that are test copies by nature: this machine, private networks, Docker's name for the host,
  * Microsoft dev tunnels, and hosts the owner marked as staging. Anything uncertain is live.
+ *
+ * Local mode only: it reads the name and does no DNS lookup. A shared machine (RUNNER_BETA=1) uses
+ * resolveTestHost, which needs a Verified Domain proof (ADR 0014).
  */
 export function isTestHost(hostname: string, stagingHosts: string[] = []): boolean {
   const h = hostname.replace(/^\[|\]$/g, '').toLowerCase();
@@ -24,6 +30,60 @@ export function isTestHost(hostname: string, stagingHosts: string[] = []): boole
   if (/^169\.254\./.test(h)) return true;
   if (h.endsWith('.devtunnels.ms')) return true;
   return stagingHosts.some((s) => s.trim().toLowerCase() === h);
+}
+
+/**
+ * Whether an address is a Test Copy, for a shared machine (ADR 0014) or local mode. Local mode is the
+ * text-only rule with no lookup. On a shared machine the host must be marked by the owner, every
+ * address its name resolves to must be public, and the Verified Domain proof must pass; the proof is
+ * fetched only when the first two hold and the address is https. A failed or slow lookup is not a test copy.
+ */
+export async function resolveTestHost(
+  hostname: string,
+  opts: {
+    shared: boolean;
+    marked: boolean;
+    origin: string;
+    proof?: () => Promise<boolean>;
+    lookup?: (host: string) => Promise<string[]>;
+  }
+): Promise<{ testCopy: boolean; reason: TestCopyReason; addresses: string[] }> {
+  if (!opts.shared) {
+    const textTestHost = isTestHost(hostname, opts.marked ? [hostname] : []);
+    return {
+      ...decideTestCopy({ shared: false, textTestHost, marked: opts.marked, addresses: [], proofOk: false }),
+      addresses: [],
+    };
+  }
+  const decide = (addresses: string[], proofOk: boolean) => ({
+    ...decideTestCopy({ shared: true, textTestHost: false, marked: opts.marked, addresses, proofOk }),
+    addresses,
+  });
+  if (!opts.marked) return decide([], false);
+  const h = hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  let addresses: string[] = [];
+  if (isPrivateTextHost(h)) {
+    addresses = ['127.0.0.1'];
+  } else if (isIpLiteral(h)) {
+    addresses = [h];
+  } else {
+    try {
+      const found = await (opts.lookup ?? defaultNetDeps.lookup)(h);
+      addresses = Array.isArray(found) ? found : [];
+    } catch {
+      addresses = [];
+    }
+  }
+  const first = decide(addresses, false);
+  if (first.reason !== 'not-verified') return first;
+  if (!opts.origin.toLowerCase().startsWith('https://') || !opts.proof) return first;
+  let ok = false;
+  try {
+    ok = await opts.proof();
+  } catch {
+    ok = false;
+  }
+  return decide(addresses, ok);
 }
 
 /**
@@ -40,7 +100,8 @@ export async function blockChanges(context: BrowserContext): Promise<string[]> {
       blocked.push(`${method} ${request.url()}`);
       return route.abort('blockedbyclient');
     }
-    return route.continue();
+    // Hand on to any other route (the shared-machine guard), which continues the request when it is fine.
+    return route.fallback();
   });
   return blocked;
 }

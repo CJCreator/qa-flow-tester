@@ -26,7 +26,7 @@ none
 
 ## Verification commands
 ```
-pnpm exec vitest run packages/runner -t "template"
+pnpm exec vitest run packages/wizard/tests/workflow.test.ts packages/runner/tests/release-workflow.test.ts
 ```
 Test runs are deferred (DEFER_TESTS): they happen in the wave's /verify-all, not during build.
 
@@ -34,4 +34,4 @@ Test runs are deferred (DEFER_TESTS): they happen in the wave's /verify-all, not
 Template change affects users; test it.
 
 ## Status
-todo (wave 3)
+built (wave 3). Verification waits on T-01 and /verify-all.

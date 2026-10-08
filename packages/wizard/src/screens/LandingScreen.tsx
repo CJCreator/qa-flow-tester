@@ -1,15 +1,18 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { contactLinks } from '../lib/contact';
+import { COUNTER_EVENTS, sendCounterEvent, sendCounterEventOnce } from '../lib/counter';
 import { HOME_FAQ, HOME_STEPS } from '../lib/faq';
 import { Mark } from '../components/TopBar';
 import { WakeNote } from '../components/WakeNote';
 import { useWakeOnline } from '../hooks/useWakeOnline';
 import { startAddress } from '../lib/online';
+import { applyTheme, readTheme, saveTheme, toggled, type Theme } from '../lib/theme';
 import { LANDING_TITLE, useDocumentTitle } from '../lib/title';
 
 export const REPO_URL = 'https://github.com/CJCreator/qa-flow-tester';
 export const SAMPLE_REPORT_URL = '/sample-report.html';
 
-const AREAS: Array<{ name: string; text: string }> = [
+export const AREAS: Array<{ name: string; text: string }> = [
   { name: 'It works', text: 'Sign-ups, forms and the journeys people take across pages.' },
   { name: 'Everyone can use it', text: 'Contrast, labels, keyboard use and structure.' },
   { name: 'It’s fast enough', text: 'Load timing and heavy pages.' },
@@ -34,9 +37,32 @@ const PROMISES: Array<{ title: string; text: string }> = [
  */
 function StartButton({ className, children }: { className: string; children: ReactNode }) {
   return (
-    <a href={startAddress()} className={className}>
+    <a href={startAddress()} className={className} onClick={() => sendCounterEvent(COUNTER_EVENTS.startCheckup)}>
       {children}
     </a>
+  );
+}
+
+/**
+ * Light or dark, for this page only. A plain token swap (see tailwind.config.js); the app's working
+ * screens stay dark, so the attribute is removed when this page goes away.
+ */
+function ThemeToggle({ className }: { className: string }) {
+  const [theme, setTheme] = useState<Theme>(() => readTheme());
+  useEffect(() => {
+    applyTheme(theme, document.documentElement);
+    saveTheme(theme);
+    return () => applyTheme('dark', document.documentElement);
+  }, [theme]);
+  return (
+    <button
+      type="button"
+      aria-pressed={theme === 'light'}
+      className={className}
+      onClick={() => setTheme(toggled(theme))}
+    >
+      Light theme
+    </button>
   );
 }
 
@@ -71,7 +97,12 @@ function SampleReportFrame() {
 /** The one action: a real form that navigates to the new check-up screen with the address, so it needs no script and loads no app code. */
 function AddressForm() {
   return (
-    <form action={startAddress()} method="get" className="flex flex-col gap-3 sm:flex-row">
+    <form
+      action={startAddress()}
+      method="get"
+      className="flex flex-col gap-3 sm:flex-row"
+      onSubmit={() => sendCounterEvent(COUNTER_EVENTS.startCheckup)}
+    >
       <label htmlFor="hero-url" className="sr-only">
         Your site’s address
       </label>
@@ -107,6 +138,10 @@ const SECTION = 'mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20';
 export function LandingScreen() {
   useDocumentTitle(LANDING_TITLE);
   const wake = useWakeOnline();
+  useEffect(() => {
+    sendCounterEventOnce(COUNTER_EVENTS.landingView);
+  }, []);
+  const contact = contactLinks();
   const link =
     'inline-flex min-h-[44px] items-center rounded px-2 text-sm font-bold text-ink-soft transition-colors hover:text-ink';
 
@@ -128,6 +163,7 @@ export function LandingScreen() {
             <a href="#pricing" className={`${link} hidden sm:inline-flex`}>
               Pricing
             </a>
+            <ThemeToggle className={`${link} rounded border border-rule`} />
             <StartButton className="btn-primary min-h-[44px] whitespace-nowrap px-4 text-sm">
               <span className="sm:hidden">Run a check-up</span>
               <span className="hidden sm:inline">Run a free check-up</span>
@@ -209,7 +245,12 @@ export function LandingScreen() {
           <ul className="mt-8 grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
             {AREAS.map((a) => (
               <li key={a.name} className="border-l-4 border-stamp pl-4">
-                <p className="font-bold text-ink">{a.name}</p>
+                <p className="font-bold text-ink">
+                  <a href={SAMPLE_REPORT_URL} className="btn-link min-h-0 font-bold text-ink">
+                    {a.name}
+                    <span className="sr-only">, in the sample report</span>
+                  </a>
+                </p>
                 <p className="text-ink-soft">{a.text}</p>
               </li>
             ))}
@@ -274,6 +315,48 @@ export function LandingScreen() {
         </div>
       </section>
 
+      <section aria-labelledby="updates-title" className="border-t border-rule bg-panel">
+        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+          <h2 id="updates-title" className="text-lg font-bold text-ink">
+            Get Release check-up news by email
+          </h2>
+          <p className="mt-1 max-w-prose text-sm text-ink-soft">Optional; running a check-up never needs it.</p>
+          {contact.signupAction ? (
+            <form
+              action={contact.signupAction}
+              method="post"
+              target="_blank"
+              className="mt-3 flex max-w-xl flex-col gap-3 sm:flex-row"
+            >
+              <label htmlFor="updates-email" className="sr-only">
+                Your email address
+              </label>
+              <input
+                id="updates-email"
+                name="email"
+                type="email"
+                required
+                autoComplete="email"
+                placeholder="you@example.com"
+                className="field min-h-[44px] flex-1"
+              />
+              <button type="submit" className="btn-quiet min-h-[44px] whitespace-nowrap px-6">
+                Send me updates
+              </button>
+            </form>
+          ) : (
+            <p className="mt-3">
+              <a href={contact.feedbackHref} className="btn-link text-sm" rel="noreferrer">
+                Send feedback
+              </a>
+            </p>
+          )}
+          {contact.signupAction && (
+            <p className="mt-2 text-sm text-ink-soft">Used only to send Release check-up news.</p>
+          )}
+        </div>
+      </section>
+
       <footer className="border-t border-rule bg-surface">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-6 text-sm text-ink-soft sm:px-6">
           <span className="inline-flex items-center gap-2 font-bold text-ink">
@@ -288,7 +371,7 @@ export function LandingScreen() {
             <a href={`${REPO_URL}/blob/main/LICENSE`} className="btn-link text-sm" rel="noreferrer">
               License
             </a>
-            <a href={`${REPO_URL}/issues`} className="btn-link text-sm" rel="noreferrer">
+            <a href={contact.contactHref} className="btn-link text-sm" rel="noreferrer">
               Contact & Support
             </a>
             <a href={`${REPO_URL}/blob/main/PRIVACY.md`} className="btn-link text-sm" rel="noreferrer">

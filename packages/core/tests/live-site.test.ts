@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { DiscoveredFlow, PageInventoryItem } from '@qa/types';
-import { isTestHost, needsTestCopy } from '../src/live-site.js';
+import { isTestHost, needsTestCopy, resolveTestHost } from '../src/live-site.js';
 import { buildPageSweep } from '../src/discovery/page-sweep.js';
 
 describe('Test hosts (Task 1.5 / D3)', () => {
@@ -28,6 +28,164 @@ describe('Test hosts (Task 1.5 / D3)', () => {
     }
     expect(isTestHost('staging.example.com', ['staging.example.com'])).toBe(true);
     expect(isTestHost('www.example.com', ['staging.example.com'])).toBe(false);
+  });
+});
+
+describe('isTestHost on a shared machine (resolveTestHost, ADR 0014)', () => {
+  const pub = async () => ['93.184.216.34'];
+  const shared = (over: Partial<Parameters<typeof resolveTestHost>[1]> = {}) => ({
+    shared: true,
+    marked: true,
+    origin: 'https://preview.example.com',
+    lookup: pub,
+    proof: async () => true,
+    ...over,
+  });
+
+  it('isTestHost: a marked host without proof is not a Test Copy on a shared machine', async () => {
+    const r = await resolveTestHost('preview.example.com', shared({ proof: async () => false }));
+    expect(r).toMatchObject({ testCopy: false, reason: 'not-verified' });
+  });
+
+  it('isTestHost: marked, public and proven is a Test Copy; proven but not marked is not', async () => {
+    expect(await resolveTestHost('preview.example.com', shared())).toMatchObject({
+      testCopy: true,
+      reason: 'verified-marked',
+    });
+    let fetched = 0;
+    const r = await resolveTestHost(
+      'preview.example.com',
+      shared({
+        marked: false,
+        proof: async () => {
+          fetched++;
+          return true;
+        },
+      })
+    );
+    expect(r).toMatchObject({ testCopy: false, reason: 'not-marked' });
+    expect(fetched).toBe(0);
+  });
+
+  it('isTestHost refuses a name that resolves to loopback (127.0.0.1) and (::1)', async () => {
+    for (const address of ['127.0.0.1', '::1']) {
+      const r = await resolveTestHost('preview.example.com', shared({ lookup: async () => [address] }));
+      expect(r, address).toMatchObject({ testCopy: false, reason: 'bad-address' });
+    }
+  });
+
+  it('isTestHost refuses a name that resolves to 10.0.0.4, 172.16.0.1, 192.168.1.1, link-local, metadata, mapped and 0.0.0.0', async () => {
+    for (const address of [
+      '10.0.0.4',
+      '172.16.0.1',
+      '192.168.1.1',
+      '169.254.1.1',
+      'fe80::1',
+      '169.254.169.254',
+      'fd00:ec2::254',
+      '::ffff:127.0.0.1',
+      '::ffff:7f00:1',
+      '::ffff:a9fe:a9fe',
+      '0.0.0.0',
+      '::',
+    ]) {
+      const r = await resolveTestHost('preview.example.com', shared({ lookup: async () => [address] }));
+      expect(r, address).toMatchObject({ testCopy: false, reason: 'bad-address' });
+    }
+  });
+
+  it('isTestHost fails closed on a mixed, empty, failed or slow lookup, and never fetches the proof then', async () => {
+    let fetched = 0;
+    const proof = async () => {
+      fetched++;
+      return true;
+    };
+    const cases: Array<() => Promise<string[]>> = [
+      async () => ['8.8.8.8', '10.0.0.1'],
+      async () => [],
+      async () => {
+        throw new Error('SERVFAIL');
+      },
+      () => Promise.reject(new Error('timeout')),
+    ];
+    for (const lookup of cases) {
+      const r = await resolveTestHost('preview.example.com', shared({ lookup, proof }));
+      expect(r.testCopy).toBe(false);
+    }
+    expect(fetched).toBe(0);
+  });
+
+  it('isTestHost: this machine’s names, private literals, dev tunnels and plain http are not Test Copies there', async () => {
+    for (const [host, origin] of [
+      ['localhost', 'https://localhost'],
+      ['app.localhost', 'https://app.localhost'],
+      ['127.0.0.1', 'https://127.0.0.1'],
+      ['10.0.0.4', 'https://10.0.0.4'],
+      ['abc-3050.uks1.devtunnels.ms', 'http://abc-3050.uks1.devtunnels.ms'],
+      ['host.docker.internal', 'https://host.docker.internal'],
+    ]) {
+      const r = await resolveTestHost(host, shared({ origin, lookup: pub }));
+      expect(r.testCopy, host).toBe(false);
+    }
+    // https is required: an http origin can never be verified, and is not even fetched.
+    let fetched = 0;
+    const r = await resolveTestHost(
+      'preview.example.com',
+      shared({
+        origin: 'http://preview.example.com',
+        proof: async () => {
+          fetched++;
+          return true;
+        },
+      })
+    );
+    expect(r).toMatchObject({ testCopy: false, reason: 'not-verified' });
+    expect(fetched).toBe(0);
+  });
+
+  it('a proof that throws is not a Test Copy', async () => {
+    const r = await resolveTestHost(
+      'preview.example.com',
+      shared({
+        proof: async () => {
+          throw new Error('boom');
+        },
+      })
+    );
+    expect(r.testCopy).toBe(false);
+  });
+
+  it('isTestHost in local mode keeps the text-only rule and makes no lookup', async () => {
+    let looked = 0;
+    const lookup = async () => {
+      looked++;
+      return ['127.0.0.1'];
+    };
+    for (const host of ['localhost', '10.0.0.4', 'abc-3050.uks1.devtunnels.ms', 'host.docker.internal']) {
+      const r = await resolveTestHost(host, { shared: false, marked: false, origin: `http://${host}`, lookup });
+      expect(r.testCopy, host).toBe(true);
+    }
+    expect(
+      (
+        await resolveTestHost('www.example.com', {
+          shared: false,
+          marked: true,
+          origin: 'http://www.example.com',
+          lookup,
+        })
+      ).testCopy
+    ).toBe(true);
+    expect(
+      (
+        await resolveTestHost('www.example.com', {
+          shared: false,
+          marked: false,
+          origin: 'http://www.example.com',
+          lookup,
+        })
+      ).testCopy
+    ).toBe(false);
+    expect(looked).toBe(0);
   });
 });
 

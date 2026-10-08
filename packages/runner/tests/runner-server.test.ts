@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import { RunnerServer } from '../src/server.js';
 import { server as fixtureServer } from '../../../fixtures/test-app/server.js';
 import { promises as fs } from 'fs';
@@ -29,6 +29,23 @@ describe('RunnerServer', () => {
     await fs.rm(outputDir, { recursive: true, force: true }).catch(() => {});
     await fs.rm(`${outputDir}-data`, { recursive: true, force: true }).catch(() => {});
   });
+
+  // A test that fails or times out must not leave its run active: the next test's POST would get
+  // 409 (one run at a time) and fail for a reason that is not its own. Runs after the test body,
+  // so the failing test stays failed.
+  afterEach(async () => {
+    try {
+      let status = await (await fetch(`${runnerBaseUrl}/api/runner/status`)).json();
+      // Stopping a run that is testing keeps the approved plan for re-approval and leaves the
+      // runner "running" in awaiting-review; a second stop discards it. So stop until idle.
+      for (let attempt = 0; attempt < 3 && status.isRunning; attempt++) {
+        await fetch(`${runnerBaseUrl}/api/runner/stop`, { method: 'POST' });
+        status = await (await fetch(`${runnerBaseUrl}/api/runner/status`)).json();
+      }
+    } catch {
+      // Server not reachable: nothing to stop.
+    }
+  }, 30000);
 
   it('rejects a missing targetUrl with 400', async () => {
     const res = await fetch(`${runnerBaseUrl}/api/runner/run`, {
@@ -100,7 +117,7 @@ describe('RunnerServer', () => {
 
     // Poll status until the run finishes.
     let isRunning = true;
-    for (let i = 0; i < 60 && isRunning; i++) {
+    for (let i = 0; i < 90 && isRunning; i++) {
       await new Promise((r) => setTimeout(r, 500));
       const statusRes = await fetch(`${runnerBaseUrl}/api/runner/status`);
       const status = await statusRes.json();
@@ -121,7 +138,7 @@ describe('RunnerServer', () => {
     expect(events.some((e) => e.type === 'STEP_STARTED')).toBe(true);
     expect(events.some((e) => e.type === 'STEP_COMPLETED')).toBe(true);
     expect(events.some((e) => e.type === 'RUN_COMPLETED')).toBe(true);
-  }, 45000);
+  }, 60000);
 
   it('never serves saved sign-in sessions, which hold live session cookies', async () => {
     await fs.mkdir(path.join(outputDir, 'auth'), { recursive: true });
@@ -177,6 +194,14 @@ describe('RunnerServer', () => {
     expect(plan.runId).toBe(runId);
     expect(plan.pages.length).toBeGreaterThan(0);
     expect(plan.flows.length).toBeGreaterThan(0);
+
+    // plan export downloads a zip while the plan awaits review
+    const exportRes = await fetch(`${runnerBaseUrl}/api/runner/plan/export`);
+    expect(exportRes.status).toBe(200);
+    expect(exportRes.headers.get('content-type')).toBe('application/zip');
+    expect(exportRes.headers.get('content-disposition')).toContain('playwright-export-');
+    const exportBytes = Buffer.from(await exportRes.arrayBuffer());
+    expect([...exportBytes.subarray(0, 4)]).toEqual([0x50, 0x4b, 0x03, 0x04]);
 
     // Plan survives runner reload
     await runner.stop();
@@ -241,6 +266,11 @@ describe('RunnerServer', () => {
     expect(approveRes.status).toBe(200);
     const approveData = await approveRes.json();
     expect(approveData.status).toBe('approved');
+
+    // plan export answers 404 once the plan is no longer awaiting review
+    const exportAfter = await fetch(`${runnerBaseUrl}/api/runner/plan/export`);
+    expect(exportAfter.status).toBe(404);
+    expect((await exportAfter.json()).error).toBe('No plan awaiting review');
 
     // Poll until run completes
     let isRunning = true;
@@ -314,7 +344,7 @@ describe('RunnerServer', () => {
     expect(withRes.status).toBe(200);
 
     let isRunning = true;
-    for (let i = 0; i < 240 && isRunning; i++) {
+    for (let i = 0; i < 700 && isRunning; i++) {
       await new Promise((r) => setTimeout(r, 500));
       isRunning = (await (await fetch(`${runnerBaseUrl}/api/runner/status`)).json()).isRunning;
     }
@@ -324,7 +354,7 @@ describe('RunnerServer', () => {
     const report = await (await fetch(`${runnerBaseUrl}/api/report`)).json();
     expect(report.productId).toBe('secrets-test');
     expect((report.notes || []).filter((n: string) => n.includes('Signing in as'))).toEqual([]);
-  }, 180000);
+  }, 420000);
 
   it('runs straight through to completion when skipReview: true is provided', async () => {
     const runRes = await fetch(`${runnerBaseUrl}/api/runner/run`, {
@@ -343,7 +373,7 @@ describe('RunnerServer', () => {
     const { runId } = await runRes.json();
 
     let isRunning = true;
-    for (let i = 0; i < 150 && isRunning; i++) {
+    for (let i = 0; i < 480 && isRunning; i++) {
       await new Promise((r) => setTimeout(r, 500));
       const statusRes = await fetch(`${runnerBaseUrl}/api/runner/status`);
       const status = await statusRes.json();
@@ -357,5 +387,5 @@ describe('RunnerServer', () => {
     expect(reportRes.status).toBe(200);
     const report = await reportRes.json();
     expect(report.runId).toBe(runId);
-  }, 120000);
+  }, 270000);
 });

@@ -34,4 +34,4 @@ Test runs are deferred (DEFER_TESTS): they happen in the wave's /verify-all, not
 Generated code quality; keep selectors from the Plan.
 
 ## Status
-todo (wave 3)
+built (wave 3, tests deferred)

@@ -125,7 +125,7 @@ A copy of an App that is safe to fill in and send forms on: an address on this c
 _Avoid_: Staging, test host (in UI text), sandbox
 
 **Verified Domain**:
-A domain whose owner has proved control once, with a file, a meta tag or a DNS record. Addresses under it, such as preview URLs, can be marked as Test Copies on shared machines.
+A domain whose owner has proved control once, with a file served on its exact address. Addresses under it, such as preview URLs, can be marked as Test Copies on shared machines.
 _Avoid_: Claimed site, owned domain
 
 **Security Probe**:

@@ -242,6 +242,12 @@ describe('Release check-up end to end, on the one server', () => {
     // No key yet: connecting the AI comes first, on this screen.
     await page.getByRole('heading', { name: 'Connect the AI for a smarter plan' }).waitFor();
     expectPlain(await plainText(page), 'the new check-up');
+    // A first-time visitor sees the address and one button; extra options and developer shortcuts wait.
+    expect(
+      await page.locator('details[data-testid="more-options"]').evaluate((d) => (d as HTMLDetailsElement).open)
+    ).toBe(false);
+    expect(await page.getByRole('button', { name: 'Keyboard shortcuts' }).count()).toBe(0);
+    expect(await page.getByRole('button', { name: /^Commands/ }).count()).toBe(0);
     await screenshot('new-checkup-first-visit');
 
     // Studio's old address leads to Past check-ups, which is empty.
@@ -274,6 +280,11 @@ describe('Release check-up end to end, on the one server', () => {
     // A local address is a test copy already: there's no live-site answer to give.
     expect(await page.getByRole('radio', { name: /my live site/ }).count()).toBe(0);
 
+    // The extra options sit behind "More options", closed until something in them is used.
+    expect(
+      await page.locator('details[data-testid="more-options"]').evaluate((d) => (d as HTMLDetailsElement).open)
+    ).toBe(false);
+    await page.locator('summary', { hasText: 'More options' }).click();
     await page.getByText('Add specs, design notes or journeys').click();
     await page.getByLabel('Specs', { exact: true }).fill(SPECS);
     // This copy isn't the shared one, so there is no shared-copy warning.

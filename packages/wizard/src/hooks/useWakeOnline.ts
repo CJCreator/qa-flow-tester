@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { wakeAddress } from '../lib/online';
+import { wakeAddress, wakeLimitMs } from '../lib/online';
 
-/** The free online copy sleeps when idle and takes about a minute to wake. */
-const WAKE_TIMEOUT_MS = 90_000;
+/** The free online copy sleeps when idle and takes about a minute to wake. 90 s unless `VITE_WAKE_LIMIT_SECONDS` says otherwise. */
+const WAKE_TIMEOUT_MS = wakeLimitMs();
 
 export type WakeState = 'none' | 'waking' | 'ready' | 'failed';
 

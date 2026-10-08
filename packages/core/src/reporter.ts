@@ -2,6 +2,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import type { Finding, ReleaseReport, RunCoverage } from '@qa/types';
 import { releaseVerdict } from '@qa/types';
+import { AGENTS_SNIPPET, buildFixThese, buildKnownFindings, withFindingsContract } from './findings-contract.js';
 
 /**
  * A copy of the report whose file paths inside the report folder are relative to it
@@ -30,21 +31,37 @@ export class ReportGenerator {
     this.outputDir = outputDir;
   }
 
-  async generate(fullReport: ReleaseReport): Promise<{ jsonPath: string; mdPath: string }> {
+  async generate(fullReport: ReleaseReport): Promise<{
+    jsonPath: string;
+    mdPath: string;
+    fixThesePath: string;
+    knownFindingsPath: string;
+    agentsSnippetPath: string;
+  }> {
     await fs.mkdir(this.outputDir, { recursive: true });
     const report = withPortablePaths(fullReport, this.outputDir);
+    // The contract (ADR 0017): schemaVersion and a fingerprint per finding, in findings.json only.
+    const out = withFindingsContract(report);
 
     const jsonPath = path.join(this.outputDir, 'findings.json');
     const mdPath = path.join(this.outputDir, 'report.md');
+    const fixThesePath = path.join(this.outputDir, 'fix-these.md');
+    const knownFindingsPath = path.join(this.outputDir, 'known-findings.json');
+    const agentsSnippetPath = path.join(this.outputDir, 'AGENTS.snippet.md');
 
     // 1. Write findings.json
-    await fs.writeFile(jsonPath, JSON.stringify(report, null, 2), 'utf8');
+    await fs.writeFile(jsonPath, JSON.stringify(out, null, 2), 'utf8');
 
     // 2. Generate and write report.md
     const mdContent = this.renderMarkdown(report);
     await fs.writeFile(mdPath, mdContent, 'utf8');
 
-    return { jsonPath, mdPath };
+    // 3. The small files beside findings.json
+    await fs.writeFile(fixThesePath, buildFixThese(out), 'utf8');
+    await fs.writeFile(knownFindingsPath, JSON.stringify(buildKnownFindings(out), null, 2), 'utf8');
+    await fs.writeFile(agentsSnippetPath, AGENTS_SNIPPET, 'utf8');
+
+    return { jsonPath, mdPath, fixThesePath, knownFindingsPath, agentsSnippetPath };
   }
 
   private renderMarkdown(report: ReleaseReport): string {
@@ -123,6 +140,16 @@ export class ReportGenerator {
       lines.push(`- **Fixed Findings:** ${report.delta.fixedFindings}`);
       lines.push(`- **Open Findings:** ${report.delta.openFindings}`);
       lines.push(`- **Suppressed:** ${report.delta.suppressedFindings}`);
+      lines.push(``);
+    }
+
+    // Pages slower than the last check-up: a note beside the findings, never counted in them.
+    if (report.slowerThanLastTime && report.slowerThanLastTime.length > 0) {
+      lines.push(`## Slower than the last check-up`);
+      lines.push(``);
+      for (const s of report.slowerThanLastTime) {
+        lines.push(`- \`${s.urlPath}\` (${s.role}, ${s.breakpoint}): ${s.summary}`);
+      }
       lines.push(``);
     }
 

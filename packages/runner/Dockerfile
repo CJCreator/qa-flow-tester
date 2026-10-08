@@ -21,6 +21,13 @@ COPY packages/runner packages/runner
 COPY packages/wizard packages/wizard
 # The Wizard builds the workflow file people copy from its start screen into its page, so the file must be here.
 COPY templates templates
+# Optional public landing values, read by Vite at build time. Empty means off.
+ARG VITE_COUNTER_URL=
+ARG VITE_CONTACT_EMAIL=
+ARG VITE_SIGNUP_URL=
+ENV VITE_COUNTER_URL=$VITE_COUNTER_URL \
+    VITE_CONTACT_EMAIL=$VITE_CONTACT_EMAIL \
+    VITE_SIGNUP_URL=$VITE_SIGNUP_URL
 RUN pnpm --filter "@qa/runner..." run build && pnpm --filter @qa/wizard run build
 
 ENV NODE_ENV=production \

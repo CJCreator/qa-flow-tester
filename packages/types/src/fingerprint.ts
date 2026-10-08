@@ -1,3 +1,5 @@
+import type { Finding } from './index.js';
+
 export interface FingerprintParams {
   productId: string;
   route: string;
@@ -100,4 +102,19 @@ export function computeStructuralFingerprint(params: FingerprintParams): string 
   const hash = hashString16(payload);
 
   return `fp_${hash}`;
+}
+
+/**
+ * The Structural Fingerprint of a finding (ADR 0004, ADR 0017). One definition, used by the
+ * site history and by findings.json, so the two cannot drift. Not unique per finding: the same
+ * problem at several breakpoints or roles shares it.
+ */
+export function findingFingerprint(f: Pick<Finding, 'checker' | 'title' | 'where'>, productId: string): string {
+  return computeStructuralFingerprint({
+    productId,
+    route: f.where.urlPath,
+    checkerId: f.checker,
+    ruleCode: f.title,
+    selector: f.where.cssSelector || f.where.dataTestId,
+  });
 }

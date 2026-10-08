@@ -113,6 +113,22 @@ export async function generateSingleFileHtmlReport(
     `;
   }
 
+  // Pages slower than the last check-up. A note, not a finding: grades ignore it.
+  const slowerHtml =
+    report.slowerThanLastTime && report.slowerThanLastTime.length > 0
+      ? `
+      <section class="section card slower-than-last-time">
+        <h2>Slower than the last check-up</h2>
+        <ul>${report.slowerThanLastTime
+          .map(
+            (s) =>
+              `<li><code>${escapeHtml(s.urlPath)}</code> (${escapeHtml(s.role)}, ${escapeHtml(s.breakpoint)}): ${escapeHtml(s.summary)}</li>`
+          )
+          .join('')}</ul>
+      </section>
+    `
+      : '';
+
   // Recommendations HTML
   const marketingHtml = report.marketing
     ? `
@@ -504,6 +520,7 @@ export async function generateSingleFileHtmlReport(
     </div>
 
     ${historyBannerHtml}
+    ${slowerHtml}
     ${marketingHtml}
     ${recommendationsHtml}
 

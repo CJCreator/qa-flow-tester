@@ -1,5 +1,5 @@
 import type { Page } from 'playwright';
-import type { Breakpoint, Finding, FindingSeverity } from '@qa/types';
+import type { Breakpoint, Finding, FindingSeverity, PageSpeedSample } from '@qa/types';
 
 export interface PerformanceContext {
   testCaseId?: string;
@@ -13,6 +13,11 @@ export interface PerformanceContext {
    * are read once from the page as it already loaded, and are only indicative.
    */
   repeatLoads?: number;
+  /**
+   * Called with the page's speed number (LCP, else page-ready time) when it came from the
+   * throttled repeat loads. Never called for a single un-slowed load. Does not change findings.
+   */
+  onSpeed?: (sample: PageSpeedSample) => void;
 }
 
 /** What the page's own performance observers reported. */
@@ -55,6 +60,9 @@ export const LAB_THROTTLING = {
   uploadKbps: 750,
   cpuSlowdown: 4,
 };
+
+/** Id of `LAB_THROTTLING`, stored with each speed sample so a changed profile is never compared. */
+export const LAB_PROFILE_ID = `lat${LAB_THROTTLING.latencyMs}-dl${LAB_THROTTLING.downloadKbps}-ul${LAB_THROTTLING.uploadKbps}-cpu${LAB_THROTTLING.cpuSlowdown}`;
 
 const TEST_BROWSER_NOTE = 'Measured in a test browser, not by real visitors.';
 const LAB_PROFILE_NOTE = 'a simulated mid-range phone on slow 4G';
@@ -136,6 +144,18 @@ export class PerformanceChecker {
             measurements: { loads: 1, throttled: false },
           }
         : null);
+    if (repeated && context.onSpeed) {
+      const speed = repeated.lcpMs ?? repeated.domReadyMs;
+      if (speed !== undefined && speed > 0) {
+        context.onSpeed({
+          metric: repeated.lcpMs !== undefined ? 'lcp' : 'domReady',
+          ms: Math.round(speed),
+          loads: repeated.loads,
+          throttled: repeated.throttled,
+          profile: LAB_PROFILE_ID,
+        });
+      }
+    }
     const basis = vitals?.throttled
       ? `median of ${vitals.loads} loads on ${LAB_PROFILE_NOTE}`
       : 'one load in a test browser, not slowed down';

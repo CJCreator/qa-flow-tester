@@ -40,8 +40,12 @@ Run: `docker run -p 3001:3001 -e RUNNER_ACCESS_TOKEN=<key> -v qa-data:/data qa-c
 - [ ] CI green on the PR; `pnpm test` and `pnpm build` pass locally
 - [ ] `wizard-e2e` run once with Chromium installed
 - [ ] `CHANGELOG.md` updated
+- [ ] Tag `vX.Y.Z` equal to the `package.json` version; "Release build" workflow green (builds only, publishes nothing)
 - [ ] After merge: deploy workflow green, both sites answer, open the Render app and run one check-up on the fixture or a public site
 - [ ] Rotate anything that was exposed during development
+
+Bumping the version means updating every `package.json`, `TOOL_REF` in `packages/wizard/src/lib/workflow.ts`, and
+`CHANGELOG.md`; a test fails on drift. Tag before deploying a wizard that pins the new ref.
 
 ## Rollback
 
@@ -51,4 +55,5 @@ from its dashboard.
 ## Known risks
 
 - The Render free plan sleeps and has little memory; large scans may be killed. The wizard shows a wake note.
+- Beta limits (per visitor and per day) are in memory: a Render restart, redeploy or sleep and wake resets all counters. Set `RUNNER_BETA_RUNS_PER_VISITOR` (default 5) and `RUNNER_BETA_RUNS_PER_DAY` (default 40) in the Render dashboard. Clearing the cookie gives a visitor a fresh count (and loses their AI key); the daily cap is the backstop.
 - The mirror push depends on one token; if it expires, the Vercel site stops updating while Render continues.

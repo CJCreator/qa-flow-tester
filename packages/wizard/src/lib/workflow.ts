@@ -2,8 +2,8 @@
 // and the one in the repo can't drift apart.
 import template from '../../../../templates/qa-check.yml?raw';
 
-/** The branch or tag of the QA Tool the workflow gets. Pinned releases can replace this later. */
-export const TOOL_REF = 'main';
+/** Pinned release tag of the QA Tool the workflow gets. Bump with the version; a test guards it. */
+export const TOOL_REF = 'v0.1.0';
 
 /**
  * The shared online copy (the full app on a free host), when one is published. Set VITE_ONLINE_APP_URL

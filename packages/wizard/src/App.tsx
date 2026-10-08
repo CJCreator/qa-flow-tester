@@ -25,6 +25,7 @@ import { NothingInProgress } from './components/RunStates';
 import { StepBar, type Step } from './components/StepBar';
 import { Spinner } from './components/text';
 import { TopBar } from './components/TopBar';
+import { hasFinishedCheckup } from './lib/onboarding';
 import { CommandPalette } from './components/CommandPalette';
 import { useRunnerConnection } from './hooks/useRunnerConnection';
 import { useRunnerStream } from './hooks/useRunnerStream';
@@ -37,6 +38,7 @@ import {
   type CheckupForm,
 } from './lib/form';
 import { isCheckRoute, matchRoute, navigate, PATHS, usePathname, type Route } from './lib/router';
+import { COUNTER_EVENTS, sendCounterEvent } from './lib/counter';
 import { useDocumentTitle } from './lib/title';
 import { initialFeed, plainFailure, reduceFeed, type FeedState, type RunnerEvent } from './lib/translate';
 import { count } from './lib/format';
@@ -290,6 +292,7 @@ export default function App() {
         case 'RUN_COMPLETED': {
           setFeed((f) => reduceFeed(f, event, 'product'));
           if (!live) return;
+          sendCounterEvent(COUNTER_EVENTS.completedCheckup);
           const runId = typeof event.runId === 'string' ? event.runId : null;
           setStatus((s) => (s ? { ...s, phase: 'done', isRunning: false, reportRunId: runId } : s));
           refreshRecent();
@@ -755,7 +758,9 @@ export default function App() {
       >
         Skip to the content
       </a>
-      {!landing && <TopBar route={route} checkupInProgress={inProgress} />}
+      {!landing && (
+        <TopBar route={route} checkupInProgress={inProgress} showDeveloperShortcuts={hasFinishedCheckup(recent)} />
+      )}
       {step && <StepBar current={step} links={{ address: PATHS.new }} />}
       <main id="main">{body}</main>
       {!landing && <CommandPalette route={route} />}

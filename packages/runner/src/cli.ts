@@ -24,6 +24,8 @@ const allowedOrigins = originList
   : undefined;
 const accessToken = process.env.RUNNER_ACCESS_TOKEN || undefined;
 const beta = process.env.RUNNER_BETA === '1';
+// Invalid or non-positive values fall back to the default inside the orchestrator.
+const stepTimeoutMs = process.env.RUNNER_STEP_TIMEOUT_MS ? Number(process.env.RUNNER_STEP_TIMEOUT_MS) : undefined;
 
 if (beta && !accessToken) {
   console.warn(
@@ -46,6 +48,7 @@ const server = new RunnerServer({
   allowedOrigins,
   accessToken,
   beta,
+  stepTimeoutMs,
   ui: defaultUiApps(),
 });
 

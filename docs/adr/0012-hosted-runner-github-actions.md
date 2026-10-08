@@ -13,7 +13,7 @@ Why this one first:
 - **$0 for us.** There is no server of ours: no shared machine, no run queue, no abuse limits. Free minutes belong to the user: unlimited for public repos, 2,000 a month for private repos on the free plan (GitHub's billing page, checked 2026-10-05).
 - **Private previews work.** The user's CI can already reach their preview or staging address.
 - **Keys stay with the user.** The AI key is a repo secret. It is not stored by us.
-- **No Verified Domains yet.** A run only ever tests what its owner's own CI points at, so proving domain ownership (ADR 0014, not yet written) is needed only for a shared runner or for Security Probes.
+- **No Verified Domains yet.** A run only ever tests what its owner's own CI points at, so proving domain ownership ([ADR 0014](0014-verified-domains-and-safe-host-classification.md), now written) is needed only for a shared runner or for Security Probes.
 
 Safety rules carried over: a preview or staging address is a test copy (`QA_STAGING`), and anything else is checked read-only, so nothing is sent to a live site. The runner's data folder is outside the uploaded report folder, so a key held while it works can never ride along with the report.
 
@@ -35,10 +35,16 @@ Free hosts, checked 2026-10-05, for a container that runs Chromium and needs no 
 - **Fly.io:** no free tier for new accounts. Rejected.
 - **Koyeb:** the card-free plan was removed in February 2026. Rejected.
 
-The online copy has no accounts and no usage limits, so anyone with the link can use it. It stays a beta until the abuse and memory limits are known.
+The online copy has no accounts, and its usage limits are set out in the amendment below, so anyone with the link can use it within them. It stays a beta until the abuse and memory limits are known.
+
+Amendment, 2026-10-07: on this shared copy a Test Copy needs a Verified Domain proof, and redirects and DNS answers that point at private addresses are refused. See [0014](0014-verified-domains-and-safe-host-classification.md) (Proposed until the owner accepts it).
 
 ## Consequences
 - The user needs a GitHub repo, and a CI minute budget. A run takes a few minutes to install and build the tool before testing starts, which is part of the 15-minute target to measure.
 - The workflow checks out this repo's `main`. Until releases are pinned, a change here reaches every workflow on its next run. Pin a tag once there is one.
 - The repo must be public, or the workflow must be given a token, for the user's job to fetch the tool.
 - Run time and memory on the Actions machine are not yet measured. The spike's remaining steps are: publish Pages, run the workflow on a clean repo, and record minutes and memory.
+
+## Amendment, 2026-10-07: usage limits on the online copy
+
+The online copy now limits how many check-ups and comparisons can be started: per visitor session (default 5) and for the whole copy (default 40), each per UTC day, set by `RUNNER_BETA_RUNS_PER_VISITOR` and `RUNNER_BETA_RUNS_PER_DAY`. Over a limit the start answers 429 `ERR_BETA_LIMIT`. Counts are in memory, so a restart resets them. A visitor who clears their cookie gets a fresh visitor count (and loses their AI key); the daily cap is the backstop. A persistent store and a second host are out of scope.

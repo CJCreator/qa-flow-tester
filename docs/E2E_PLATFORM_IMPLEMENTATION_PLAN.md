@@ -113,7 +113,7 @@ To prevent breaking existing functionality or violating safety and legal boundar
 | 0013 | Opt-in AI explorer and AI-proposed selector fixes (saved as Plans)           | Amends [0009](adr/0009-ai-plans-every-plan-item.md)                      | Phase 6                                     |
 | 0014 | Verified Domains and safe host classification                                | New                                                                      | Any shared runner, and Phase 6 Probes       |
 | 0015 | Live-site request rules: GraphQL `query` POSTs, GET/HEAD replay, pacing      | Amends [0003](adr/0003-deterministic-safety-filters-for-ai-discovery.md) | Phase 3                                     |
-| 0016 | Evidence and redaction: store shapes not bodies, strip secrets, no raw HAR   | New                                                                      | Phase 3 (and Phase 1 if reports are stored) |
+| 0016 | Evidence and redaction: store shapes not bodies, strip secrets, no raw HAR   | New. **Written** for shipped redaction; shapes and HAR still planned     | Phase 3 (and Phase 1 if reports are stored) |
 | 0017 | Findings schema and Playwright export contract                               | New                                                                      | Phase 2                                     |
 | 0018 | Claim wording ("never compliant, never secure", list what was not checked)   | New                                                                      | Phase 0 (one page). **Written.**            |
 
@@ -644,7 +644,7 @@ _Reference: Roadmap Gap Table Rows 21-23, Cluster 05, 07 (ADRs 0012, 0014)_
 
 - **Implementation Spec:**
   1. **Domain Verification Workflow (ADR 0014):**
-     - Require domain proof before permitting Test Copy status or Security Probes on shared runners:
+     - Require domain proof before permitting Test Copy status or Security Probes on shared runners (narrowed to file only by ADR 0014):
        - File verification: `https://<domain>/.well-known/qa-verify.txt` matching tenant token.
        - HTML meta tag: `<meta name="qa-verify" content="<token>">` on homepage.
        - DNS TXT record: `qa-verify=<token>` at domain root.

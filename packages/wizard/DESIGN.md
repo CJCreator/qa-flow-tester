@@ -106,8 +106,8 @@ One rule is fixed: everything stops under `prefers-reduced-motion`, with no exce
 
 ## Theming
 
-- **Landing page:** follows the system colour scheme (`prefers-color-scheme`). Dark is the default look.
-  There is no toggle.
+- **Landing page:** dark by default, with a "Light theme" toggle (saved in `localStorage`); it does not follow the
+  system scheme yet (see HUMAN_TODO). The toggle applies on the landing page only.
 - **App working screens:** stay dark.
 - **The report:** stays light-capable, so it can be read and printed on paper.
 
