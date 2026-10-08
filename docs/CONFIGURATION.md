@@ -22,6 +22,16 @@ Settings can go in the shell or in a `.env` file at the repo root (never commit 
 
 The same limit is the `stepTimeoutMs` option when running the orchestrator from code.
 
+## Visual baselines (Perceptual Visual Diff)
+
+Profile fields (code and `ProductProfile` JSON; there are no environment variables):
+
+- `visualBaselineDir`: where baselines are kept (default `.qa-baselines`).
+- `visualDiffMaxPercent`: fraction of pixels allowed to differ (default `0.01`).
+- `visualMaskSelectors`: extra CSS selectors painted over in newly recorded baselines. Stored in the baseline's `.visual.json` file beside the PNG. Invalid selectors are skipped.
+
+New baselines automatically mask dates and times, well-known ad slots and password fields. Baselines recorded before this (no `.visual.json`, or a PNG replaced since) keep comparing unmasked, exactly as before. Re-record with update mode to adopt masking. See ADR 0019.
+
 ## AI providers
 
 Bring your own key. Supported providers: OpenRouter (default in CI), Gemini, OpenAI, Anthropic, and a mock for tests.

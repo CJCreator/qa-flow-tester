@@ -82,5 +82,18 @@ After T-11 is merged and deployed:
 1. Confirm the sign-in env var names (`QA_<ROLE>_USERNAME`, `QA_<ROLE>_PASSWORD`, `QA_<ROLE>_LOGIN_PATH`) and the generic email/password/submit selectors in the generated `global-setup.ts`.
 2. Decide whether to publish a stable Playwright version pin for the export (today: core's `playwright` range).
 
+## G16: a11y and security depth (T-22)
+1. Decide whether to wire the existing response-header checks (CSP missing, HSTS, nosniff, clickjacking, referrer) into the orchestrator. Today they never run in real Check-ups; wiring them changes the fixture verdict and the benchmark. Needs its own ticket and an ADR note.
+2. After /verify-all, run the fixture benchmark (`pnpm benchmark --sites fixture --no-ai`), review false positives from the new checks, calibrate `fixtures/benchmarks/thresholds.json`.
+3. CrUX panel stays out (external API); file as a separate ticket.
+4. Review the "What this did not check" report section (ADR 0018 consequence; not built here).
+
+## G15: visual baseline polish (T-21)
+1. Re-record baselines with update mode to get masking; older baselines keep comparing unmasked (no sidecar). Nothing was rewritten.
+2. A baseline taken mid-load (fallback font, unloaded lazy image) may now differ because pages are stabilised before capture; review any new Visual regression findings.
+3. After /verify-all, run the benchmark (`pnpm benchmark --sites fixture --no-ai`) as the ticket asks.
+4. Look at one real-site report: file size with three images per visual finding, and whether the date/ad rules hid anything real. Add `visualMaskSelectors` or ask for an opt-out if needed.
+5. Ticket status (T-21) and the G15 gap row are yours to close.
+
 ## Merge and deploy
 The agent never pushes, merges or opens a PR. After each wave you review `ship/wave-<n>`, open the PR and merge when satisfied.

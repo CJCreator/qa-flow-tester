@@ -102,6 +102,7 @@ Paste a row after each run.
 - **Safety changes need a test that fails without them**: a destructive button is skipped, a token is redacted, a private address is refused in beta.
 - Name tests after behavior a person would recognize, using glossary terms (`CONTEXT.md`).
 - A bug fix starts with a test that reproduces it.
+- Visual diff (ADR 0019): `packages/core/tests/visual-capture.test.ts` (stabilise and mask, browser), `visual-baseline-compat.test.ts` (old baselines, sidecar, evidence images; fixture app on port 3087), `html-report-visual.test.ts` (old/new/difference in the Report), `visual-redaction.test.ts`, and `packages/checkers/tests/visual-diff-finding.test.ts`. Select them with the title filter "visual" on the core package.
 
 ## Known fragile areas
 

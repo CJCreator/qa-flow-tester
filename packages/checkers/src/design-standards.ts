@@ -208,7 +208,15 @@ export class DesignStandardsChecker {
 
   visualDiffFinding(
     result: VisualDiffResult,
-    context: { testCaseId: string; role: string; breakpoint: Breakpoint; urlPath: string; baselinePath: string }
+    context: {
+      testCaseId: string;
+      role: string;
+      breakpoint: Breakpoint;
+      urlPath: string;
+      baselinePath: string;
+      baselineImagePath?: string;
+      currentImagePath?: string;
+    }
   ): Finding {
     const id = `F-VISUAL-${context.testCaseId}-${context.breakpoint}`;
     const actual = result.sizeMismatch
@@ -226,7 +234,11 @@ export class DesignStandardsChecker {
         `Run test case ${context.testCaseId} as ${context.role} at ${context.breakpoint}`,
         `Compare the final screen against ${context.baselinePath}`,
       ],
-      evidence: { screenshotPath: result.diffImagePath },
+      evidence: {
+        screenshotPath: result.diffImagePath,
+        ...(context.baselineImagePath ? { baselineScreenshotPath: context.baselineImagePath } : {}),
+        ...(context.currentImagePath ? { currentScreenshotPath: context.currentImagePath } : {}),
+      },
       resolution:
         'If the change is intended, approve the new look under Visual Baselines in the app; otherwise fix the regressed styles.',
     };

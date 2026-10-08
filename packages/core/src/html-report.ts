@@ -206,9 +206,17 @@ export async function generateSingleFileHtmlReport(
     `;
   }
 
+  // Old / new / difference images for Perceptual Visual Diff findings (async, so before the sync map).
+  const imageBudget = { remaining: options?.maxSizeBytes ?? DEFAULT_IMAGE_BUDGET_BYTES };
+  const visualBlocks: string[] = [];
+  for (const f of report.findings) {
+    visualBlocks.push(await renderVisualCompare(f, outputDir, imageBudget));
+  }
+  const hasVisual = visualBlocks.some((b) => b !== '');
+
   // Findings List HTML
   const findingsHtml = report.findings
-    .map((f) => {
+    .map((f, idx) => {
       const sev = SEVERITY_COLORS[f.severity] || SEVERITY_COLORS.Minor;
       return `
         <details class="finding-card">
@@ -237,6 +245,7 @@ export async function generateSingleFileHtmlReport(
               <span class="finding-label">After you fix it:</span>
               <span class="finding-val">Run the check-up again on the same address. This finding should no longer appear.</span>
             </div>
+            ${visualBlocks[idx]}
             ${
               f.stepsToReproduce && f.stepsToReproduce.length > 0
                 ? `
@@ -494,6 +503,7 @@ export async function generateSingleFileHtmlReport(
       font-size: 0.8rem;
       margin-top: 2rem;
     }
+    ${hasVisual ? VISUAL_COMPARE_CSS : ''}
     /* Printed or saved as PDF: plain paper, no dotted board, nothing cut across pages. */
     @media print {
       body { background: #FFFFFF; background-image: none; padding: 0; }
@@ -543,6 +553,73 @@ export async function generateSingleFileHtmlReport(
   await fs.writeFile(targetFile, fullHtml, 'utf8');
 
   return targetFile;
+}
+
+/** Total bytes of images embedded per report (base64 inflates by about a third); beyond it, relative links. */
+const DEFAULT_IMAGE_BUDGET_BYTES = 6 * 1024 * 1024;
+
+const VISUAL_COMPARE_CSS = `
+    .visual-compare { margin-top: 0.75rem; }
+    .visual-compare h5 { margin: 0 0 0.5rem; font-size: 0.9rem; }
+    .visual-compare .visual-row { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+    .visual-compare figure { margin: 0; flex: 1 1 220px; max-width: 100%; }
+    .visual-compare img { max-width: 100%; height: auto; border: 1px solid #CBD5E1; }
+    .visual-compare figcaption { font-size: 0.8rem; margin-top: 0.25rem; }
+    .visual-compare .visual-note { font-size: 0.8rem; }`;
+
+/**
+ * Source for one evidence image: embedded as base64 while the budget lasts, else a relative link.
+ * Only existing .png files inside the report folder qualify; anything else is not shown.
+ */
+async function imageSrc(
+  rel: string | undefined,
+  outputDir: string,
+  budget: { remaining: number }
+): Promise<string | null> {
+  if (!rel || !/\.png$/i.test(rel)) return null;
+  const root = path.resolve(outputDir);
+  const abs = path.resolve(root, rel);
+  const within = path.relative(root, abs);
+  if (!within || within.startsWith('..') || path.isAbsolute(within)) return null;
+  try {
+    const bytes = await fs.readFile(abs);
+    if (bytes.length <= budget.remaining) {
+      budget.remaining -= bytes.length;
+      return `data:image/png;base64,${bytes.toString('base64')}`;
+    }
+    return within
+      .split(/[\\/]/)
+      .map((seg) => encodeURIComponent(seg))
+      .join('/');
+  } catch {
+    return null;
+  }
+}
+
+async function renderVisualCompare(
+  f: ReleaseReport['findings'][number],
+  outputDir: string,
+  budget: { remaining: number }
+): Promise<string> {
+  if (f.checker !== 'design-standards' || !f.evidence?.baselineScreenshotPath) return '';
+  const figure = async (rel: string | undefined, caption: string) => {
+    const src = await imageSrc(rel, outputDir, budget);
+    return src
+      ? `<figure><img src="${escapeHtml(src)}" alt="${escapeHtml(caption)}"><figcaption>${escapeHtml(caption)}</figcaption></figure>`
+      : `<figure><figcaption>${escapeHtml(caption)}: Image not available</figcaption></figure>`;
+  };
+  const diffFigure = f.evidence.screenshotPath
+    ? await figure(f.evidence.screenshotPath, 'Difference')
+    : `<p class="visual-note">There is no difference image: the screen size changed, so the old and new images cannot be laid over each other.</p>`;
+  return `
+            <div class="visual-compare">
+              <h5>Perceptual Visual Diff: old, new and difference</h5>
+              <div class="visual-row">
+                ${await figure(f.evidence.baselineScreenshotPath, 'Old (approved baseline)')}
+                ${await figure(f.evidence.currentScreenshotPath, 'New (this check-up)')}
+                ${diffFigure}
+              </div>
+            </div>`;
 }
 
 function escapeHtml(text?: string): string {

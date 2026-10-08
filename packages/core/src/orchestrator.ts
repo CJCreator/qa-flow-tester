@@ -17,6 +17,7 @@ import type {
 import { normalizeRoute } from '@qa/types';
 import { BrowserManager, BREAKPOINT_VIEWPORTS, locateElement } from './browser.js';
 import { EvidenceCollector } from './evidence.js';
+import { captureVisualShot, readBaselineMode, writeVisualBaseline } from './visual-capture.js';
 import { PreFlightChecker } from './preflight.js';
 import { SourceLocator } from './source-locator.js';
 import { ReproScriptGenerator } from './repro-generator.js';
@@ -36,6 +37,8 @@ import {
   PermissionMatrixChecker,
   DesignStandardsChecker,
   SecurityChecker,
+  SecurityDepthChecker,
+  KeyboardA11yChecker,
   PerformanceChecker,
   SeoChecker,
   newMarketingLog,
@@ -304,6 +307,8 @@ export class FlowTestOrchestrator {
   private uxChecker = new UXQualityChecker();
   private designChecker = new DesignStandardsChecker();
   private securityChecker = new SecurityChecker();
+  private securityDepth = new SecurityDepthChecker();
+  private keyboardA11y = new KeyboardA11yChecker();
   private performanceChecker = new PerformanceChecker();
   private seoChecker = new SeoChecker();
 
@@ -411,6 +416,9 @@ export class FlowTestOrchestrator {
     const vitalsMeasured = new Set<string>();
     // Speed numbers from those repeat loads, kept in site history for the next check-up.
     const speedSamples: PageSpeedMap = {};
+    // Pages whose keyboard walk and 320 px reflow check already ran in this run (one size is enough).
+    const keyboardChecked = new Set<string>();
+    const reflowChecked = new Set<string>();
     const wantsRepeatLoads = (urlPath: string, bp: Breakpoint, sizes: Breakpoint[]) => {
       if (bp !== (sizes.includes('375px') ? '375px' : sizes[0]) || vitalsMeasured.has(urlPath)) return false;
       vitalsMeasured.add(urlPath);
@@ -455,6 +463,8 @@ export class FlowTestOrchestrator {
         let pointResult: TestPointResult | undefined;
         let flakyRetry: RetryTelemetryEntry | undefined;
         let blockedChanges: string[] = [];
+        // Content-Security-Policy of the page's main response; read only by the weak-policy check.
+        let cspHeader: string | undefined;
         /** Lists where the planned option wasn't there, and what was picked instead. */
         const substitutes: Array<{ step: string; planned: string; chosen: string }> = [];
         // Test Copy only: one token per Test point, shared by both attempts, and a memory of any form sent.
@@ -490,6 +500,12 @@ export class FlowTestOrchestrator {
             blockedChanges = options.readOnly ? await blockChanges(context) : [];
             if (sendGuard) watchSends(context, sendGuard);
             evidenceCollector.attach(page);
+            const attachedPage = page;
+            page.on('response', (r) => {
+              if (r.request().isNavigationRequest() && r.frame() === attachedPage.mainFrame()) {
+                cspHeader = r.headers()['content-security-policy'];
+              }
+            });
 
             const startUrl = new URL(testCase.startPage, options.targetUrl).toString();
             await page.goto(startUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
@@ -765,6 +781,16 @@ export class FlowTestOrchestrator {
                     urlPath: new URL(page.url(), options.targetUrl).pathname,
                     baseUrl: options.targetUrl,
                   })),
+                  ...(await this.securityDepth.checkPage(page, {
+                    testCaseId: testCase.id,
+                    flowId: testCase.flowId,
+                    role: testCase.role,
+                    breakpoint: bp,
+                    urlPath: new URL(page.url(), options.targetUrl).pathname,
+                    baseUrl: options.targetUrl,
+                    siteWide,
+                    cspHeader,
+                  })),
                 ];
 
           // 3c. Performance (Speed, Web Vitals, Mobile Overflow & Overlap)
@@ -837,28 +863,66 @@ export class FlowTestOrchestrator {
           const baselinePath = path.join(baselineDir, `${testCase.id}-${bp}.png`);
           if (testPointPassed && pageLevelChecks) {
             if (options.updateBaselines) {
-              await fs.mkdir(baselineDir, { recursive: true });
-              await page.screenshot({ path: baselinePath, animations: 'disabled', caret: 'hide' });
+              const extraSelectors = options.profile?.visualMaskSelectors;
+              const shot = await captureVisualShot(page, { masked: true, extraSelectors });
+              await writeVisualBaseline(baselinePath, shot, { extraSelectors });
             } else {
               const baseline = await fs.readFile(baselinePath).catch(() => null);
               if (baseline) {
-                const current = await page.screenshot({ animations: 'disabled', caret: 'hide' });
+                const mode = await readBaselineMode(baselinePath, baseline);
+                const current = await captureVisualShot(page, {
+                  masked: mode.masked,
+                  extraSelectors: mode.masked ? mode.extraSelectors : undefined,
+                });
                 const diff = await this.designChecker.checkVisualDiff(current, baseline, {
                   maxDiffPercent: options.profile?.visualDiffMaxPercent,
                   diffOutputPath: path.join(testCaseEvidenceDir, 'visual-diff.png'),
                 });
                 if (!diff.match) {
+                  await fs.mkdir(testCaseEvidenceDir, { recursive: true });
+                  const baselineCopy = path.join(testCaseEvidenceDir, 'visual-baseline.png');
+                  const currentCopy = path.join(testCaseEvidenceDir, 'visual-current.png');
+                  await fs.writeFile(baselineCopy, baseline);
+                  await fs.writeFile(currentCopy, current);
                   designFindings.push(
                     this.designChecker.visualDiffFinding(diff, {
                       testCaseId: testCase.id,
                       role: testCase.role,
                       breakpoint: bp,
                       urlPath,
+                      baselineImagePath: path.join(testCaseEvidenceDir, 'visual-baseline.png'),
+                      currentImagePath: path.join(testCaseEvidenceDir, 'visual-current.png'),
                       baselinePath: path.relative(process.cwd(), baselinePath).replace(/\\/g, '/'),
                     })
                   );
                 }
               }
+            }
+          }
+
+          // Keyboard and 320 px reflow checks: after screenshots, visual diff and speed checks, because
+          // they move focus and resize the window. Once per page, at one size.
+          const a11yDepth: Finding[] = [];
+          if (pageLevelChecks && options.enableA11y !== false && bp === searchSize && !page.isClosed()) {
+            const a11yContext = {
+              testCaseId: testCase.id,
+              flowId: testCase.flowId,
+              role: testCase.role,
+              breakpoint: bp,
+              urlPath,
+            };
+            if (!keyboardChecked.has(urlPath)) {
+              keyboardChecked.add(urlPath);
+              a11yDepth.push(...(await this.keyboardA11y.checkKeyboard(page, a11yContext)));
+            }
+            if (!reflowChecked.has(urlPath)) {
+              reflowChecked.add(urlPath);
+              a11yDepth.push(
+                ...(await this.keyboardA11y.checkReflow(page, {
+                  ...a11yContext,
+                  restoreViewport: BREAKPOINT_VIEWPORTS[bp],
+                }))
+              );
             }
           }
 
@@ -905,6 +969,7 @@ export class FlowTestOrchestrator {
             ...seoFindings,
             ...permFindings,
             ...designFindings,
+            ...a11yDepth,
           ].filter((f) => !sentData || (f.checker !== 'spec-conformance' && !f.id.startsWith('F-STEP-')));
 
           // Enrich findings with Source Code Locator and Repro Script

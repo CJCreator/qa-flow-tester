@@ -33,4 +33,4 @@ Test runs are deferred (DEFER_TESTS): they happen in the wave's /verify-all, not
 Benchmark after; false positives.
 
 ## Status
-todo (wave 4)
+built

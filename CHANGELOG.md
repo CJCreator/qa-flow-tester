@@ -7,12 +7,15 @@ All notable changes. Format follows [Keep a Changelog](https://keepachangelog.co
 
 ### Added
 
+- Perceptual Visual Diff steadier and visible: page stabilised before capture, dates, ads and password fields masked in new baselines, old/new/difference images in the single-file HTML report; existing baselines compare as before (T-21, ADR 0019)
 - Export the approved Plan as a Playwright project (zip) from Plan Review (`GET /api/runner/plan/export`); read-only Plans export no submits or Sensitive Actions; sign-in state by path only (T-17)
 - `findings.json` contract: `schemaVersion` 1, per-finding `fingerprint`, JSON Schema (`docs/findings.schema.json`), `fix-these.md`, `known-findings.json`, `AGENTS.snippet.md`, and GitHub annotations from the CI command (T-16, ADR 0017)
+- Keyboard checks (Tab reach, focus not obscured, focus trap) and a 320 px reflow check; security depth: missing integrity attribute on other-site scripts and styles, reachable source maps, `security.txt`, weaker Content-Security-Policy settings. All passive, same site only (T-22)
 
 ### Changed
 
 - Sign-in test now names why it failed (wrong details, no sign-in form found, site unreachable or timed out, needs more than a password) and handles two-step and modal sign-ins (T-18)
+- Internal: split packages/types/src/index.ts into area files; exports unchanged (T-23a)
 
 ## [0.1.0] - 2026-10-08
 

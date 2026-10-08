@@ -24,9 +24,9 @@ Source: `docs/GAP_ANALYSIS.md`. Status: todo, planned, approved, built, done, bl
 | [T-18](T-18-signin-robustness.md) | Sign-in robustness | G17 | P2 | M | 3 | done | - |
 | [T-19](T-19-versioned-releases.md) | Version 0.1.0 and a release workflow | G31 | P2 | S | 3 | built | T-01 |
 | [T-20](T-20-adr-0016-redaction.md) | ADR 0016: redaction | G27 | P2 | S | 3 | done | - |
-| [T-21](T-21-visual-baseline-polish.md) | Visual baseline polish | G15 | P3 | M | 4 | todo | - |
-| [T-22](T-22-a11y-security-depth.md) | Accessibility and security depth | G16 | P3 | M | 4 | todo | - |
-| [T-23](T-23-split-large-files.md) | Split large files by area | G35 | P3 | L | 4 | todo | T-01 |
+| [T-21](T-21-visual-baseline-polish.md) | Visual baseline polish | G15 | P3 | M | 4 | built | - |
+| [T-22](T-22-a11y-security-depth.md) | Accessibility and security depth | G16 | P3 | M | 4 | built | - |
+| [T-23](T-23-split-large-files.md) | Split large files by area | G35 | P3 | L | 4 | built (23a only) | T-01 |
 | [T-24](T-24-suite-failures.md) | Diagnose and fix the 5 failing suite tests | G1 (remaining) | P0 | S-M | 1 | todo | - |
 
 Later (no ticket yet): G6, G14, G18-G22, G23-G26, G45, G48.
