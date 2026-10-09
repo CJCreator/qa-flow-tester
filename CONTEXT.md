@@ -9,7 +9,7 @@ Anything the tool tests that its team releases on its own: a website, a phone ap
 _Avoid_: Product, project, target; "site" only for web-only ideas such as the Domain Allowlist
 
 **Discovery Agent**:
-The component that runs a scan: it drives the Deterministic Spider for each role, then hands the facts to the AI Planner.
+The component that runs a scan: it drives the Deterministic Spider for each role and hands the facts to the AI Planner while the Spider is still crawling.
 _Avoid_: Web scraper, spider, bot
 
 **Deterministic Spider**:
@@ -44,6 +44,10 @@ _Avoid_: Spec, documentation, requirements doc
 A verified functional or non-functional capability that the application must fulfill, sourced from Product Context or confirmed during review.
 _Avoid_: Feature request, acceptance criteria
 
+**Source**:
+The part of the Product Context a Plan Item was planned from: the document name, the section, and the Requirement it describes. A Plan Item with no Source came from live exploration only. The AI Planner proposes which roles a Source applies to; the person confirms in Plan Review.
+_Avoid_: Test case, trace link, doc reference
+
 **Discovered Flow**:
 A user or application flow identified by the Discovery Agent through live exploration.
 _Avoid_: Tested flow (until executed)
@@ -63,6 +67,18 @@ _Avoid_: Test case matrix, test suite, spec
 **Plan Item**:
 One entry in the Plan: a page visit, a Navigation Check, a journey or a check. Each one can be switched off or re-planned, and a page from a Layout Group can be promoted to be tested on its own.
 _Avoid_: Test (for the unexpanded entry), step
+
+**Denial Plan Item**:
+A Plan Item that checks a role is blocked from something its Source describes for another role, such as a Viewer being unable to create a user. It passes when the action is hidden or refused.
+_Avoid_: Negative test, permission test
+
+**Not found in app**:
+A Plan Item whose Source describes something the Spider could not find in the app as that role. It does not run, is not a failure, and counts only in the report's "N of M documented items reached". The person removes it, fixes the document, or points to the page.
+_Avoid_: Missing feature, failed requirement
+
+**Needs your judgement**:
+The report section, per role, for Inferred Business Rules that only the AI judged to be wrong. Each shows its evidence and stays out of the verdict and grades until the person accepts it.
+_Avoid_: AI bugs, suspected bugs, low-confidence findings
 
 **Test**:
 One Plan Item run as one role at one screen size. It is the unit the approval summary counts ("412 tests").
@@ -89,7 +105,7 @@ A Plan Item planned by fixed rules because the AI couldn't plan it: the AI Reque
 _Avoid_: Default plan, template plan, heuristic plan
 
 **AI Request Budget**:
-The number of AI requests a Plan needs, compared with what the AI key has left today. OpenRouter's free models allow 20 a minute, and 50 a day until the account has bought 10 credits (then 1,000). It is estimated on the new check-up screen before the scan starts (repairs and the visual review included), and items past it use the Fixed-Rule Fallback.
+The number of AI requests a Plan needs, compared with what the AI key has left today, as the provider reports it. The person can also set a cap per check-up, in requests or dollars. It is estimated on the new check-up screen before the scan starts (repairs and the visual review included), and items past the budget or the cap use the Fixed-Rule Fallback.
 _Avoid_: Quota, token budget
 
 **Waiting Plan**:

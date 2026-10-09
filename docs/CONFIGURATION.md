@@ -44,6 +44,9 @@ Bring your own key. Supported providers: OpenRouter (default in CI), Gemini, Ope
 Key order (see `core/ai/key-resolver.ts`): command line, then the OS keychain, then the legacy `.qa-keys.json`
 file, then the environment. With no key at all, the Plan is written by fixed rules and no AI is used.
 
+Provider limits worth knowing (they change; the tool reads what the key reports): OpenRouter's free models allow 20
+requests a minute, and 50 a day until the account has bought 10 credits (then 1,000). Paid keys have higher limits.
+
 ## One check-up from CI (`packages/runner/src/checkup.ts`)
 
 | Variable         | Default      | Meaning                                                                                                                                                   |
