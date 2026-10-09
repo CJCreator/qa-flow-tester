@@ -11,6 +11,8 @@ T-18 reasons chosen by planner: wrong details / no sign-in form found / site unr
 4. Check the provider's usage page for calls you do not recognise since the exposure.
 5. Record: date rotated, provider, "old key revoked: yes" in `SECURITY.md` or CHANGELOG (no key text).
 
+Status 2026-10-09: repo, `.claude/settings.json` and tracked files hold no real key (SECURITY.md Secrets updated). Render details are in GitHub secrets. AI key is entered by the owner at test time. Still open: confirm the old key is revoked at the provider and record the date.
+
 ## G4: prove the free-hosting path
 1. Start from a fresh clone and a new account with no card on file.
 2. Follow only the README: time from "open the site" to a verdict. Target under 15 minutes.

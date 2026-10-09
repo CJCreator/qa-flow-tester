@@ -1,523 +1,348 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Example report · Release check-up</title>
-    <meta
-      name="description"
-      content="A real Release check-up report on a small demo site with a few known problems: the verdict, the problems in priority order and the evidence."
-    />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="canonical" href="http://localhost:3001/sample-report.html" />
-    <meta property="og:title" content="Example report · Release check-up" />
-    <meta
-      property="og:description"
-      content="A real Release check-up report on a small demo site with a few known problems: the verdict, the problems in priority order and the evidence."
-    />
-    <meta property="og:image" content="/favicon.svg" />
-    <meta property="og:url" content="http://localhost:3001/sample-report.html" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Example report · Release check-up" />
-    <meta
-      name="twitter:description"
-      content="A real Release check-up report on a small demo site with a few known problems: the verdict, the problems in priority order and the evidence."
-    />
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "BreadcrumbList",
-        "itemListElement": [
-          {
-            "@type": "ListItem",
-            "position": 1,
-            "name": "Home",
-            "item": "http://localhost:3001/"
-          },
-          {
-            "@type": "ListItem",
-            "position": 2,
-            "name": "Sample report",
-            "item": "http://localhost:3001/sample-report.html"
-          }
-        ]
-      }
-    </script>
-    <style>
-      :root {
-        --bg: #0d1322;
-        --card-bg: #ffffff;
-        --navy-900: #0b1120;
-        --navy-800: #1e293b;
-        --navy-700: #334155;
-        --text-main: #0f172a;
-        --text-muted: #64748b;
-        --blueprint-line: #1e3a8a;
-        --blueprint-bg: #0d1322;
-      }
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        background: var(--bg);
-        color: var(--text-main);
-        padding: 2rem 1rem;
-        background-image: radial-gradient(rgba(30, 58, 138, 0.25) 1px, transparent 1px);
-        background-size: 24px 24px;
-      }
-      .container {
-        max-width: 1100px;
-        margin: 0 auto;
-      }
-      .header-banner {
-        background: var(--card-bg);
-        border-radius: 12px;
-        padding: 2rem;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.5rem;
-        border-left: 8px solid #dc2626;
-      }
-      .header-left h1 {
-        font-size: 1.75rem;
-        font-weight: 700;
-        color: var(--text-main);
-      }
-      .header-left p {
-        color: var(--text-muted);
-        margin-top: 0.25rem;
-        font-size: 0.95rem;
-      }
-      .overall-badge {
-        text-align: center;
-        padding: 1rem 1.5rem;
-        border-radius: 12px;
-        background: #fef2f2;
-        border: 2px solid #dc2626;
-      }
-      .overall-grade {
-        font-size: 1.6rem;
-        font-weight: 800;
-        text-transform: uppercase;
-        color: #991b1b;
-        line-height: 1.1;
-        transform: rotate(-3deg);
-      }
-      .overall-label {
-        font-size: 0.85rem;
-        font-weight: 600;
-        color: #991b1b;
-        margin-top: 0.4rem;
-        max-width: 16rem;
-      }
-      .card {
-        background: var(--card-bg);
-        border-radius: 12px;
-        padding: 1.75rem;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
-        margin-bottom: 1.5rem;
-      }
-      .section-title {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: var(--text-main);
-      }
-      .section-desc {
-        color: var(--text-muted);
-        font-size: 0.9rem;
-        margin-top: 0.25rem;
-        margin-bottom: 1.25rem;
-      }
-      .aspects-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-      }
-      .aspect-card {
-        background: var(--card-bg);
-        border-radius: 8px;
-        padding: 1.25rem;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-      }
-      .aspect-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 0.75rem;
-      }
-      .aspect-title {
-        font-weight: 600;
-        font-size: 1rem;
-      }
-      .aspect-grade {
-        font-weight: 700;
-        font-size: 0.85rem;
-        padding: 0.2rem 0.6rem;
-        border-radius: 9999px;
-      }
-      .aspect-score-bar {
-        height: 6px;
-        background: #e2e8f0;
-        border-radius: 9999px;
-        overflow: hidden;
-        margin-bottom: 0.75rem;
-      }
-      .aspect-score-fill {
-        height: 100%;
-        border-radius: 9999px;
-      }
-      .aspect-footer {
-        display: flex;
-        justify-content: space-between;
-        font-size: 0.8rem;
-        color: var(--text-muted);
-      }
-      .history-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 1rem;
-        text-align: center;
-        margin-top: 1rem;
-      }
-      .history-stat {
-        padding: 1rem;
-        border-radius: 8px;
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-      }
-      .history-stat.fixed .history-num {
-        color: #059669;
-      }
-      .history-stat.new .history-num {
-        color: #dc2626;
-      }
-      .history-stat.open .history-num {
-        color: #d97706;
-      }
-      .history-num {
-        font-size: 2rem;
-        font-weight: 800;
-        display: block;
-      }
-      .history-label {
-        font-size: 0.85rem;
-        color: var(--text-muted);
-        font-weight: 500;
-      }
-      .group-heading {
-        font-size: 1rem;
-        font-weight: 700;
-        color: var(--navy-800);
-        margin-bottom: 0.75rem;
-      }
-      .rec-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-      }
-      .rec-item {
-        padding: 1rem;
-        border-radius: 8px;
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-      }
-      .rec-top {
-        display: flex;
-        gap: 0.5rem;
-        align-items: center;
-        font-size: 0.8rem;
-        margin-bottom: 0.5rem;
-      }
-      .rec-aspect {
-        font-weight: 600;
-        color: #1e3a8a;
-      }
-      .rec-title {
-        font-size: 1rem;
-        font-weight: 600;
-        margin-bottom: 0.25rem;
-      }
-      .rec-summary {
-        font-size: 0.9rem;
-        color: #475569;
-        margin-bottom: 0.5rem;
-      }
-      .rec-fix {
-        font-size: 0.85rem;
-        background: #eff6ff;
-        border-left: 3px solid #2563eb;
-        padding: 0.5rem 0.75rem;
-        border-radius: 0 4px 4px 0;
-        margin-bottom: 0.5rem;
-      }
-      .rec-meta {
-        font-size: 0.8rem;
-        color: var(--text-muted);
-      }
-      .rec-meta code {
-        color: #0f172a;
-        background: #e2e8f0;
-        padding: 0.1rem 0.3rem;
-        border-radius: 3px;
-      }
-      .badge {
-        font-size: 0.75rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        padding: 0.15rem 0.5rem;
-        border-radius: 4px;
-      }
-      .badge.blocker {
-        background: #fee2e2;
-        color: #991b1b;
-      }
-      .badge.major {
-        background: #ffedd5;
-        color: #9a3412;
-      }
-      .badge.minor {
-        background: #fef3c7;
-        color: #92400e;
-      }
-      .badge.suggestion {
-        background: #e0e7ff;
-        color: #3730a3;
-      }
-      details.finding-card {
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        margin-bottom: 0.5rem;
-        background: #ffffff;
-        overflow: hidden;
-      }
-      summary.finding-summary {
-        padding: 1rem;
-        cursor: pointer;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 0.95rem;
-        user-select: none;
-        background: #ffffff;
-      }
-      summary.finding-summary:hover {
-        background: #f8fafc;
-      }
-      .finding-summary-left {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-      }
-      .finding-checker {
-        font-size: 0.75rem;
-        color: var(--text-muted);
-        text-transform: uppercase;
-        font-weight: 600;
-      }
-      .finding-title-text {
-        font-weight: 600;
-      }
-      .finding-route {
-        font-size: 0.8rem;
-        color: var(--text-muted);
-        font-family: monospace;
-      }
-      .finding-details {
-        padding: 1rem;
-        background: #f8fafc;
-        border-top: 1px solid #e2e8f0;
-        font-size: 0.9rem;
-      }
-      .finding-row {
-        margin-bottom: 0.5rem;
-      }
-      .finding-label {
-        font-weight: 600;
-        color: #334155;
-        margin-right: 0.5rem;
-      }
-      .resolve-text {
-        color: #059669;
-        font-weight: 500;
-      }
-      .finding-steps {
-        margin-top: 0.75rem;
-      }
-      .finding-steps ol {
-        margin-left: 1.5rem;
-        margin-top: 0.25rem;
-      }
-      .footer-note {
-        text-align: center;
-        color: #94a3b8;
-        font-size: 0.8rem;
-        margin-top: 2rem;
-      }
-      /* Printed or saved as PDF: plain paper, no dotted board, nothing cut across pages. */
-      @media print {
-        body {
-          background: #ffffff;
-          background-image: none;
-          padding: 0;
-        }
-        .header-banner,
-        section,
-        .card {
-          box-shadow: none !important;
-          break-inside: avoid;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <div
-      style="
-        max-width: 1100px;
-        margin: 0 auto 1rem;
-        padding: 0.9rem 1.25rem;
-        border-radius: 8px;
-        background: #1e2a3b;
-        color: #e8edf5;
-        font:
-          16px/1.5 -apple-system,
-          BlinkMacSystemFont,
-          'Segoe UI',
-          Roboto,
-          sans-serif;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem 1.5rem;
-        align-items: center;
-        justify-content: space-between;
-      "
-      role="note"
-    >
-      <span
-        ><strong>Example report.</strong> A real check-up of a small demo site we built with a few known problems. It is
-        not your site.</span
-      ><span
-        ><a href="/" style="color: #9dbdf7; font-weight: 700">About Release check-up</a> &nbsp;
-        <a href="/check" style="color: #9dbdf7; font-weight: 700">Run a free check-up</a></span
-      >
-    </div>
-    <nav aria-label="Breadcrumb" style="max-width: 1100px; margin: 0 auto 1rem; font-size: 0.875rem; color: #94a3b8">
-      <a href="/" style="color: #60a5fa; text-decoration: none; font-weight: 600">Home</a>
-      <span aria-hidden="true">&gt;</span> <span style="color: #f1f5f9">Sample report</span>
-    </nav>
-    <main class="container">
-      <header class="header-banner">
-        <div class="header-left">
-          <h1>Release check-up</h1>
-          <p>Site: <strong>http://localhost:3050/</strong> | Checked on: 6/10/2026, 9:48:12 am</p>
-          <div style="margin-top: 0.35rem; font-size: 0.85rem; color: #475569">
-            Report compiled by <span rel="author" style="font-weight: 600">QA Release Inspector</span> &middot;
-            Published on <time datetime="2026-10-06T09:48:12Z">October 6, 2026</time>
-          </div>
-          <p style="margin-top: 0.25rem; font-size: 0.85rem">
-            Run ID: <code>run-1791260049798</code> | Problems found: 23
-          </p>
-        </div>
-        <div class="overall-badge">
-          <div class="overall-grade">Not ready yet</div>
-          <div class="overall-label">5 problems must be fixed first.</div>
-        </div>
-      </header>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QA Readiness Report — ci</title>
+  <style>
+    :root {
+      --bg: #0D1322;
+      --card-bg: #FFFFFF;
+      --navy-900: #0B1120;
+      --navy-800: #1E293B;
+      --navy-700: #334155;
+      --text-main: #0F172A;
+      --text-muted: #64748B;
+      --blueprint-line: #1E3A8A;
+      --blueprint-bg: #0D1322;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      padding: 2rem 1rem;
+      background-image: radial-gradient(rgba(30, 58, 138, 0.25) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .header-banner {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      border-left: 8px solid #DC2626;
+    }
+    .header-left h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+    .header-left p {
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+      font-size: 0.95rem;
+    }
+    .overall-badge {
+      text-align: center;
+      padding: 1rem 1.5rem;
+      border-radius: 12px;
+      background: #FEF2F2;
+      border: 2px solid #DC2626;
+    }
+    .overall-grade {
+      font-size: 1.6rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: #991B1B;
+      line-height: 1.1;
+      transform: rotate(-3deg);
+    }
+    .overall-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #991B1B;
+      margin-top: 0.4rem;
+      max-width: 16rem;
+    }
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 1.75rem;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+      margin-bottom: 1.5rem;
+    }
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+    .section-desc {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-top: 0.25rem;
+      margin-bottom: 1.25rem;
+    }
+    .aspects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .aspect-card {
+      background: var(--card-bg);
+      border-radius: 8px;
+      padding: 1.25rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .aspect-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+    .aspect-title {
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    .aspect-grade {
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+    }
+    .aspect-score-bar {
+      height: 6px;
+      background: #E2E8F0;
+      border-radius: 9999px;
+      overflow: hidden;
+      margin-bottom: 0.75rem;
+    }
+    .aspect-score-fill {
+      height: 100%;
+      border-radius: 9999px;
+    }
+    .aspect-footer {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .history-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      text-align: center;
+      margin-top: 1rem;
+    }
+    .history-stat {
+      padding: 1rem;
+      border-radius: 8px;
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+    }
+    .history-stat.fixed .history-num { color: #059669; }
+    .history-stat.new .history-num { color: #DC2626; }
+    .history-stat.open .history-num { color: #D97706; }
+    .history-num { font-size: 2rem; font-weight: 800; display: block; }
+    .history-label { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
+    .group-heading {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--navy-800);
+      margin-bottom: 0.75rem;
+    }
+    .rec-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .rec-item {
+      padding: 1rem;
+      border-radius: 8px;
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+    }
+    .rec-top {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      font-size: 0.8rem;
+      margin-bottom: 0.5rem;
+    }
+    .rec-aspect { font-weight: 600; color: #1E3A8A; }
+    .rec-title { font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem; }
+    .rec-summary { font-size: 0.9rem; color: #475569; margin-bottom: 0.5rem; }
+    .rec-fix { font-size: 0.85rem; background: #EFF6FF; border-left: 3px solid #2563EB; padding: 0.5rem 0.75rem; border-radius: 0 4px 4px 0; margin-bottom: 0.5rem; }
+    .rec-meta { font-size: 0.8rem; color: var(--text-muted); }
+    .rec-meta code { color: #0F172A; background: #E2E8F0; padding: 0.1rem 0.3rem; border-radius: 3px; }
+    .badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+    }
+    .badge.blocker { background: #FEE2E2; color: #991B1B; }
+    .badge.major { background: #FFEDD5; color: #9A3412; }
+    .badge.minor { background: #FEF3C7; color: #92400E; }
+    .badge.suggestion { background: #E0E7FF; color: #3730A3; }
+    details.finding-card {
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+      background: #FFFFFF;
+      overflow: hidden;
+    }
+    summary.finding-summary {
+      padding: 1rem;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.95rem;
+      user-select: none;
+      background: #FFFFFF;
+    }
+    summary.finding-summary:hover { background: #F8FAFC; }
+    .finding-summary-left { display: flex; align-items: center; gap: 0.75rem; }
+    .finding-checker { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
+    .finding-title-text { font-weight: 600; }
+    .finding-route { font-size: 0.8rem; color: var(--text-muted); font-family: monospace; }
+    .finding-details {
+      padding: 1rem;
+      background: #F8FAFC;
+      border-top: 1px solid #E2E8F0;
+      font-size: 0.9rem;
+    }
+    .finding-row { margin-bottom: 0.5rem; }
+    .finding-label { font-weight: 600; color: #334155; margin-right: 0.5rem; }
+    .resolve-text { color: #059669; font-weight: 500; }
+    .finding-steps { margin-top: 0.75rem; }
+    .finding-steps ol { margin-left: 1.5rem; margin-top: 0.25rem; }
+    .footer-note {
+      text-align: center;
+      color: #94A3B8;
+      font-size: 0.8rem;
+      margin-top: 2rem;
+    }
+    
+    /* Printed or saved as PDF: plain paper, no dotted board, nothing cut across pages. */
+    @media print {
+      body { background: #FFFFFF; background-image: none; padding: 0; }
+      .header-banner, section, .card { box-shadow: none !important; break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <header class="header-banner">
+      <div class="header-left">
+        <h1>Release check-up</h1>
+        <p>Site: <strong>http://localhost:3050</strong> | Checked on: 9/10/2026, 12:45:58 pm</p>
+        <p style="margin-top: 0.25rem; font-size: 0.85rem;">Run ID: <code>run-1791529896066</code> | Problems found: 23</p>
+      </div>
+      <div class="overall-badge">
+        <div class="overall-grade">Not ready yet</div>
+        <div class="overall-label">5 problems must be fixed first.</div>
+      </div>
+    </header>
 
-      <div class="aspects-grid">
-        <div class="aspect-card" style="border-top: 4px solid #dc2626">
+    <div class="aspects-grid">
+      
+        <div class="aspect-card" style="border-top: 4px solid #DC2626;">
           <div class="aspect-header">
             <span class="aspect-title">Works</span>
-            <span class="aspect-grade" style="background: #fef2f2; color: #991b1b; border: 1px solid #dc2626">
+            <span class="aspect-grade" style="background: #FEF2F2; color: #991B1B; border: 1px solid #DC2626;">
               Grade F
             </span>
           </div>
           <div class="aspect-score-bar">
-            <div class="aspect-score-fill" style="width: 55%; background: #dc2626"></div>
+            <div class="aspect-score-fill" style="width: 55%; background: #DC2626;"></div>
           </div>
           <div class="aspect-footer">
             <span>Score: 55/100</span>
             <span>2 problems</span>
           </div>
         </div>
-
-        <div class="aspect-card" style="border-top: 4px solid #d97706">
+      
+        <div class="aspect-card" style="border-top: 4px solid #D97706;">
           <div class="aspect-header">
             <span class="aspect-title">Accessible</span>
-            <span class="aspect-grade" style="background: #fffbeb; color: #92400e; border: 1px solid #d97706">
+            <span class="aspect-grade" style="background: #FFFBEB; color: #92400E; border: 1px solid #D97706;">
               Grade C
             </span>
           </div>
           <div class="aspect-score-bar">
-            <div class="aspect-score-fill" style="width: 70%; background: #d97706"></div>
+            <div class="aspect-score-fill" style="width: 70%; background: #D97706;"></div>
           </div>
           <div class="aspect-footer">
             <span>Score: 70/100</span>
             <span>2 problems</span>
           </div>
         </div>
-
-        <div class="aspect-card" style="border-top: 4px solid #dc2626">
+      
+        <div class="aspect-card" style="border-top: 4px solid #DC2626;">
           <div class="aspect-header">
             <span class="aspect-title">Fast and mobile</span>
-            <span class="aspect-grade" style="background: #fef2f2; color: #991b1b; border: 1px solid #dc2626">
+            <span class="aspect-grade" style="background: #FEF2F2; color: #991B1B; border: 1px solid #DC2626;">
               Grade F
             </span>
           </div>
           <div class="aspect-score-bar">
-            <div class="aspect-score-fill" style="width: 10%; background: #dc2626"></div>
+            <div class="aspect-score-fill" style="width: 10%; background: #DC2626;"></div>
           </div>
           <div class="aspect-footer">
             <span>Score: 10/100</span>
             <span>18 problems</span>
           </div>
         </div>
-
-        <div class="aspect-card" style="border-top: 4px solid #94a3b8">
+      
+        <div class="aspect-card" style="border-top: 4px solid #94A3B8;">
           <div class="aspect-header">
             <span class="aspect-title">Findable</span>
-            <span class="aspect-grade" style="background: #f1f5f9; color: #475569; border: 1px solid #94a3b8"
-              >Not checked</span
-            >
+            <span class="aspect-grade" style="background: #F1F5F9; color: #475569; border: 1px solid #94A3B8;">Not checked</span>
           </div>
           <div class="aspect-footer"><span>Nothing in this run checked it, so it isn’t graded.</span></div>
         </div>
-
-        <div class="aspect-card" style="border-top: 4px solid #0284c7">
+      
+        <div class="aspect-card" style="border-top: 4px solid #0284C7;">
           <div class="aspect-header">
             <span class="aspect-title">Secure</span>
-            <span class="aspect-grade" style="background: #f0f9ff; color: #0369a1; border: 1px solid #0284c7">
+            <span class="aspect-grade" style="background: #F0F9FF; color: #0369A1; border: 1px solid #0284C7;">
               Grade B
             </span>
           </div>
           <div class="aspect-score-bar">
-            <div class="aspect-score-fill" style="width: 85%; background: #0284c7"></div>
+            <div class="aspect-score-fill" style="width: 85%; background: #0284C7;"></div>
           </div>
           <div class="aspect-footer">
             <span>Score: 85/100</span>
             <span>1 problem</span>
           </div>
         </div>
-
-        <div class="aspect-card" style="border-top: 4px solid #94a3b8">
+      
+        <div class="aspect-card" style="border-top: 4px solid #94A3B8;">
           <div class="aspect-header">
             <span class="aspect-title">Looks and reads well</span>
-            <span class="aspect-grade" style="background: #f1f5f9; color: #475569; border: 1px solid #94a3b8"
-              >Not checked</span
-            >
+            <span class="aspect-grade" style="background: #F1F5F9; color: #475569; border: 1px solid #94A3B8;">Not checked</span>
           </div>
           <div class="aspect-footer"><span>Nothing in this run checked it, so it isn’t graded.</span></div>
         </div>
-      </div>
+      
+    </div>
 
+    
       <section class="section card history-banner">
         <h2>Changes Since Last Run</h2>
         <div class="history-grid">
@@ -535,23 +360,17 @@
           </div>
         </div>
       </section>
-
+    
+    
+    
+    
       <section class="section card">
         <h2 class="section-title">Prioritized Improvement Recommendations</h2>
-        <p class="section-desc">
-          Sorted deterministically by impact, severity, and implementation return on investment. Evaluated according to
-          <a
-            href="https://www.w3.org/WAI/standards-guidelines/wcag/"
-            target="_blank"
-            rel="noopener noreferrer"
-            style="color: #2563eb"
-            >W3C WCAG 2.2 accessibility</a
-          >
-          standards.
-        </p>
-
-        <h4 class="group-heading">⚡ Quick Wins (High Return, Low Effort)</h4>
-        <div class="rec-list">
+        <p class="section-desc">Sorted deterministically by impact, severity, and implementation return on investment.</p>
+        
+        
+          <h4 class="group-heading">⚡ Quick Wins (High Return, Low Effort)</h4>
+          <div class="rec-list">
           <div class="rec-item">
             <div class="rec-top">
               <span class="badge major">Major</span>
@@ -562,14 +381,13 @@
             <h4 class="rec-title">Dead End Page: No back button or header navigation detected</h4>
             <p class="rec-summary">Page lacks back link, header, or primary navigation</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Add a persistent top navigation bar or back-button link to the page
-              layout.
+              <strong>Suggested Fix:</strong> Add a persistent top navigation bar or back-button link to the page layout.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/deadend</code></span>
             </div>
           </div>
-
+        
           <div class="rec-item">
             <div class="rec-top">
               <span class="badge minor">Minor</span>
@@ -580,14 +398,13 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: About (40x17px)</h4>
             <p class="rec-summary">Element measures 40x17px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for
-              mobile viewports.
+              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/</code></span>
             </div>
           </div>
-
+        
           <div class="rec-item">
             <div class="rec-top">
               <span class="badge minor">Minor</span>
@@ -598,14 +415,13 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: About (40x17px)</h4>
             <p class="rec-summary">Element measures 40x17px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for
-              mobile viewports.
+              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/reports</code></span>
             </div>
           </div>
-
+        
           <div class="rec-item">
             <div class="rec-top">
               <span class="badge minor">Minor</span>
@@ -616,14 +432,13 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: Dashboard (69x17px)</h4>
             <p class="rec-summary">Element measures 69x17px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for
-              mobile viewports.
+              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/invoices/new</code></span>
             </div>
           </div>
-
+        
           <div class="rec-item">
             <div class="rec-top">
               <span class="badge minor">Minor</span>
@@ -634,14 +449,13 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: Home (39x17px)</h4>
             <p class="rec-summary">Element measures 39x17px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for
-              mobile viewports.
+              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/</code></span>
             </div>
           </div>
-
+        
           <div class="rec-item">
             <div class="rec-top">
               <span class="badge minor">Minor</span>
@@ -652,14 +466,13 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: Home (39x17px)</h4>
             <p class="rec-summary">Element measures 39x17px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for
-              mobile viewports.
+              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/login</code></span>
             </div>
           </div>
-
+        
           <div class="rec-item">
             <div class="rec-top">
               <span class="badge minor">Minor</span>
@@ -670,14 +483,13 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: Invoices (54x17px)</h4>
             <p class="rec-summary">Element measures 54x17px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for
-              mobile viewports.
+              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/dashboard</code></span>
             </div>
           </div>
-
+        
           <div class="rec-item">
             <div class="rec-top">
               <span class="badge minor">Minor</span>
@@ -688,14 +500,13 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: My account (76x17px)</h4>
             <p class="rec-summary">Element measures 76x17px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for
-              mobile viewports.
+              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/</code></span>
             </div>
           </div>
-
+        
           <div class="rec-item">
             <div class="rec-top">
               <span class="badge minor">Minor</span>
@@ -706,14 +517,13 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: My account (76x17px)</h4>
             <p class="rec-summary">Element measures 76x17px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for
-              mobile viewports.
+              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/reports</code></span>
             </div>
           </div>
-
+        
           <div class="rec-item">
             <div class="rec-top">
               <span class="badge minor">Minor</span>
@@ -724,14 +534,13 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: New Invoice (82x17px)</h4>
             <p class="rec-summary">Element measures 82x17px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for
-              mobile viewports.
+              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/</code></span>
             </div>
           </div>
-
+        
           <div class="rec-item">
             <div class="rec-top">
               <span class="badge minor">Minor</span>
@@ -742,14 +551,13 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: Orphaned Page (98x17px)</h4>
             <p class="rec-summary">Element measures 98x17px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for
-              mobile viewports.
+              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/dashboard</code></span>
             </div>
           </div>
-
+        
           <div class="rec-item">
             <div class="rec-top">
               <span class="badge minor">Minor</span>
@@ -760,14 +568,13 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: Reports (50x17px)</h4>
             <p class="rec-summary">Element measures 50x17px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for
-              mobile viewports.
+              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/</code></span>
             </div>
           </div>
-
+        
           <div class="rec-item">
             <div class="rec-top">
               <span class="badge minor">Minor</span>
@@ -778,14 +585,13 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: Save (46x21px)</h4>
             <p class="rec-summary">Element measures 46x21px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for
-              mobile viewports.
+              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/invoices/new</code></span>
             </div>
           </div>
-
+        
           <div class="rec-item">
             <div class="rec-top">
               <span class="badge minor">Minor</span>
@@ -796,14 +602,13 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: Sign In (47x17px)</h4>
             <p class="rec-summary">Element measures 47x17px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for
-              mobile viewports.
+              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/</code></span>
             </div>
           </div>
-
+        
           <div class="rec-item">
             <div class="rec-top">
               <span class="badge minor">Minor</span>
@@ -814,14 +619,13 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: Sign in (57x21px)</h4>
             <p class="rec-summary">Element measures 57x21px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for
-              mobile viewports.
+              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/signin</code></span>
             </div>
           </div>
-
+        
           <div class="rec-item">
             <div class="rec-top">
               <span class="badge minor">Minor</span>
@@ -832,14 +636,13 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: Sign In (58x21px)</h4>
             <p class="rec-summary">Element measures 58x21px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for
-              mobile viewports.
+              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/login</code></span>
             </div>
           </div>
-
+        
           <div class="rec-item">
             <div class="rec-top">
               <span class="badge minor">Minor</span>
@@ -850,14 +653,13 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: Trigger 500 API Failure (153x21px)</h4>
             <p class="rec-summary">Element measures 153x21px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for
-              mobile viewports.
+              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/dashboard</code></span>
             </div>
           </div>
-
+        
           <div class="rec-item">
             <div class="rec-top">
               <span class="badge minor">Minor</span>
@@ -868,14 +670,13 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: Trigger Console Error (144x21px)</h4>
             <p class="rec-summary">Element measures 144x21px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for
-              mobile viewports.
+              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/dashboard</code></span>
             </div>
           </div>
-
+        
           <div class="rec-item">
             <div class="rec-top">
               <span class="badge minor">Minor</span>
@@ -886,17 +687,18 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: X (20x20px)</h4>
             <p class="rec-summary">Element measures 20x20px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for
-              mobile viewports.
+              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/dashboard</code></span>
             </div>
           </div>
         </div>
+        
 
-        <h4 class="group-heading" style="margin-top: 1.5rem">🏗️ Bigger Changes (Architectural / High Effort)</h4>
-        <div class="rec-list">
+        
+          <h4 class="group-heading" style="margin-top: 1.5rem;">🏗️ Bigger Changes (Architectural / High Effort)</h4>
+          <div class="rec-list">
           <div class="rec-item">
             <div class="rec-top">
               <span class="badge blocker">Blocker</span>
@@ -905,19 +707,16 @@
               <span class="rec-impact">Impact: <strong>High</strong></span>
             </div>
             <h4 class="rec-title">HTTP 500 on GET http://localhost:3050/api/failing-endpoint</h4>
-            <p class="rec-summary">
-              Request failed with status 500 Console: Failed to load resource: the server responded with a status of 500
-              (Internal Server Error)
-            </p>
+            <p class="rec-summary">Request failed with status 500
+Console: Failed to load resource: the server responded with a status of 500 (Internal Server Error)</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Backend API error (5xx). Check server endpoint logs and database
-              connections.
+              <strong>Suggested Fix:</strong> Backend API error (5xx). Check server endpoint logs and database connections.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/dashboard</code></span>
             </div>
           </div>
-
+        
           <div class="rec-item">
             <div class="rec-top">
               <span class="badge major">Major</span>
@@ -928,14 +727,13 @@
             <h4 class="rec-title">Console Error in step &quot;Try “Trigger Console Error”&quot;</h4>
             <p class="rec-summary">Simulated Unhandled Runtime Bug in Dashboard</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Inspect the stack trace in console logs, ensure null checks and error
-              boundaries are configured.
+              <strong>Suggested Fix:</strong> Inspect the stack trace in console logs, ensure null checks and error boundaries are configured.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/dashboard</code></span>
             </div>
           </div>
-
+        
           <div class="rec-item">
             <div class="rec-top">
               <span class="badge major">Major</span>
@@ -944,20 +742,15 @@
               <span class="rec-impact">Impact: <strong>High</strong></span>
             </div>
             <h4 class="rec-title">The sign-in form sends passwords in the page address</h4>
-            <p class="rec-summary">
-              The form uses GET (or names a page to send to with no method, which means GET), so the password goes into
-              the address
-            </p>
+            <p class="rec-summary">The form uses GET (or names a page to send to with no method, which means GET), so the password goes into the address</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Send the form with method=&quot;post&quot;. A password in the address is
-              kept in browser history, server and proxy logs, and analytics, and can leak to other sites through the
-              Referer header.
+              <strong>Suggested Fix:</strong> Send the form with method=&quot;post&quot;. A password in the address is kept in browser history, server and proxy logs, and analytics, and can leak to other sites through the Referer header.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/login</code></span>
             </div>
           </div>
-
+        
           <div class="rec-item">
             <div class="rec-top">
               <span class="badge major">Major</span>
@@ -965,1032 +758,908 @@
               <span class="rec-effort">Effort: <strong>Medium</strong></span>
               <span class="rec-impact">Impact: <strong>High</strong></span>
             </div>
-            <h4 class="rec-title">
-              WCAG 2.4.2 Page Titled violation: Documents must have &lt;title&gt; element to aid in navigation
-              (document-title)
-            </h4>
-            <p class="rec-summary">
-              Fix any of the following: Document does not have a non-empty &lt;title&gt; element
-            </p>
+            <h4 class="rec-title">WCAG 2.4.2 Page Titled violation: Documents must have &lt;title&gt; element to aid in navigation (document-title)</h4>
+            <p class="rec-summary">Fix any of the following:
+  Document does not have a non-empty &lt;title&gt; element</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> See
-              https://dequeuniversity.com/rules/axe/4.13/document-title?application=playwright. Remediation: Documents
-              must have &lt;title&gt; element to aid in navigation.
+              <strong>Suggested Fix:</strong> See https://dequeuniversity.com/rules/axe/4.13/document-title?application=playwright. Remediation: Documents must have &lt;title&gt; element to aid in navigation.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/about</code></span>
             </div>
           </div>
         </div>
+        
       </section>
+    
 
-      <section class="section card">
-        <h3 class="section-title">Every finding behind the 23 problems (23)</h3>
-        <p class="section-desc">
-          Click any finding to inspect expected vs actual behavior, steps to reproduce, and recommended fix.
-        </p>
-        <div class="findings-list">
-          <details class="finding-card">
-            <summary class="finding-summary">
-              <div class="finding-summary-left">
-                <span class="badge" style="background: #fef3c7; color: #92400e">Minor</span>
-                <span class="finding-checker">ux-quality</span>
-                <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: Home (39x17px)</span>
-              </div>
-              <span class="finding-route">/ (375px)</span>
-            </summary>
-            <div class="finding-details">
-              <div class="finding-row">
-                <span class="finding-label">Expected:</span>
-                <span class="finding-val"
-                  >WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have
-                  enough space around them or sit inside a sentence</span
-                >
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Actual:</span>
-                <span class="finding-val">Element measures 39x17px</span>
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Resolution:</span>
-                <span class="finding-val resolve-text"
-                  >Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span
-                >
-              </div>
-
-              <div class="finding-row">
-                <span class="finding-label">Verify:</span>
-                <code>qa-test verify F-UX-TARGET-PAGE-001-1</code>
-              </div>
-
+    <section class="section card">
+      <h2 class="section-title">Every finding behind the 23 problems (23)</h2>
+      <p class="section-desc">Click any finding to inspect expected vs actual behavior, steps to reproduce, and recommended fix.</p>
+      <div class="findings-list">
+        
+        <details class="finding-card">
+          <summary class="finding-summary">
+            <div class="finding-summary-left">
+              <span class="badge" style="background: #FEF3C7; color: #92400E;">Minor</span>
+              <span class="finding-checker">ux-quality</span>
+              <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: Home (39x17px)</span>
+            </div>
+            <span class="finding-route">/ (375px)</span>
+          </summary>
+          <div class="finding-details">
+            <div class="finding-row">
+              <span class="finding-label">Expected:</span>
+              <span class="finding-val">WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have enough space around them or sit inside a sentence</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Actual:</span>
+              <span class="finding-val">Element measures 39x17px</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Resolution:</span>
+              <span class="finding-val resolve-text">Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">After you fix it:</span>
+              <span class="finding-val">Run the check-up again on the same address. This finding should no longer appear.</span>
+            </div>
+            
+            
               <div class="finding-steps">
                 <span class="finding-label">Steps to reproduce:</span>
                 <ol>
-                  <li>Navigate to / on 375px mobile viewport</li>
-                  <li>Inspect button or link &quot;Home&quot;</li>
+                  <li>Navigate to / on 375px mobile viewport</li><li>Inspect button or link &quot;Home&quot;</li>
                 </ol>
               </div>
+            
+          </div>
+        </details>
+      
+        <details class="finding-card">
+          <summary class="finding-summary">
+            <div class="finding-summary-left">
+              <span class="badge" style="background: #FEF3C7; color: #92400E;">Minor</span>
+              <span class="finding-checker">ux-quality</span>
+              <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: About (40x17px)</span>
             </div>
-          </details>
-
-          <details class="finding-card">
-            <summary class="finding-summary">
-              <div class="finding-summary-left">
-                <span class="badge" style="background: #fef3c7; color: #92400e">Minor</span>
-                <span class="finding-checker">ux-quality</span>
-                <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: About (40x17px)</span>
-              </div>
-              <span class="finding-route">/ (375px)</span>
-            </summary>
-            <div class="finding-details">
-              <div class="finding-row">
-                <span class="finding-label">Expected:</span>
-                <span class="finding-val"
-                  >WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have
-                  enough space around them or sit inside a sentence</span
-                >
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Actual:</span>
-                <span class="finding-val">Element measures 40x17px</span>
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Resolution:</span>
-                <span class="finding-val resolve-text"
-                  >Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span
-                >
-              </div>
-
-              <div class="finding-row">
-                <span class="finding-label">Verify:</span>
-                <code>qa-test verify F-UX-TARGET-PAGE-001-2</code>
-              </div>
-
+            <span class="finding-route">/ (375px)</span>
+          </summary>
+          <div class="finding-details">
+            <div class="finding-row">
+              <span class="finding-label">Expected:</span>
+              <span class="finding-val">WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have enough space around them or sit inside a sentence</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Actual:</span>
+              <span class="finding-val">Element measures 40x17px</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Resolution:</span>
+              <span class="finding-val resolve-text">Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">After you fix it:</span>
+              <span class="finding-val">Run the check-up again on the same address. This finding should no longer appear.</span>
+            </div>
+            
+            
               <div class="finding-steps">
                 <span class="finding-label">Steps to reproduce:</span>
                 <ol>
-                  <li>Navigate to / on 375px mobile viewport</li>
-                  <li>Inspect button or link &quot;About&quot;</li>
+                  <li>Navigate to / on 375px mobile viewport</li><li>Inspect button or link &quot;About&quot;</li>
                 </ol>
               </div>
+            
+          </div>
+        </details>
+      
+        <details class="finding-card">
+          <summary class="finding-summary">
+            <div class="finding-summary-left">
+              <span class="badge" style="background: #FEF3C7; color: #92400E;">Minor</span>
+              <span class="finding-checker">ux-quality</span>
+              <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: Sign In (47x17px)</span>
             </div>
-          </details>
-
-          <details class="finding-card">
-            <summary class="finding-summary">
-              <div class="finding-summary-left">
-                <span class="badge" style="background: #fef3c7; color: #92400e">Minor</span>
-                <span class="finding-checker">ux-quality</span>
-                <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: Sign In (47x17px)</span>
-              </div>
-              <span class="finding-route">/ (375px)</span>
-            </summary>
-            <div class="finding-details">
-              <div class="finding-row">
-                <span class="finding-label">Expected:</span>
-                <span class="finding-val"
-                  >WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have
-                  enough space around them or sit inside a sentence</span
-                >
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Actual:</span>
-                <span class="finding-val">Element measures 47x17px</span>
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Resolution:</span>
-                <span class="finding-val resolve-text"
-                  >Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span
-                >
-              </div>
-
-              <div class="finding-row">
-                <span class="finding-label">Verify:</span>
-                <code>qa-test verify F-UX-TARGET-PAGE-001-3</code>
-              </div>
-
+            <span class="finding-route">/ (375px)</span>
+          </summary>
+          <div class="finding-details">
+            <div class="finding-row">
+              <span class="finding-label">Expected:</span>
+              <span class="finding-val">WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have enough space around them or sit inside a sentence</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Actual:</span>
+              <span class="finding-val">Element measures 47x17px</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Resolution:</span>
+              <span class="finding-val resolve-text">Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">After you fix it:</span>
+              <span class="finding-val">Run the check-up again on the same address. This finding should no longer appear.</span>
+            </div>
+            
+            
               <div class="finding-steps">
                 <span class="finding-label">Steps to reproduce:</span>
                 <ol>
-                  <li>Navigate to / on 375px mobile viewport</li>
-                  <li>Inspect button or link &quot;Sign In&quot;</li>
+                  <li>Navigate to / on 375px mobile viewport</li><li>Inspect button or link &quot;Sign In&quot;</li>
                 </ol>
               </div>
+            
+          </div>
+        </details>
+      
+        <details class="finding-card">
+          <summary class="finding-summary">
+            <div class="finding-summary-left">
+              <span class="badge" style="background: #FEF3C7; color: #92400E;">Minor</span>
+              <span class="finding-checker">ux-quality</span>
+              <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: Reports (50x17px)</span>
             </div>
-          </details>
-
-          <details class="finding-card">
-            <summary class="finding-summary">
-              <div class="finding-summary-left">
-                <span class="badge" style="background: #fef3c7; color: #92400e">Minor</span>
-                <span class="finding-checker">ux-quality</span>
-                <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: Reports (50x17px)</span>
-              </div>
-              <span class="finding-route">/ (375px)</span>
-            </summary>
-            <div class="finding-details">
-              <div class="finding-row">
-                <span class="finding-label">Expected:</span>
-                <span class="finding-val"
-                  >WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have
-                  enough space around them or sit inside a sentence</span
-                >
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Actual:</span>
-                <span class="finding-val">Element measures 50x17px</span>
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Resolution:</span>
-                <span class="finding-val resolve-text"
-                  >Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span
-                >
-              </div>
-
-              <div class="finding-row">
-                <span class="finding-label">Verify:</span>
-                <code>qa-test verify F-UX-TARGET-PAGE-001-4</code>
-              </div>
-
+            <span class="finding-route">/ (375px)</span>
+          </summary>
+          <div class="finding-details">
+            <div class="finding-row">
+              <span class="finding-label">Expected:</span>
+              <span class="finding-val">WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have enough space around them or sit inside a sentence</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Actual:</span>
+              <span class="finding-val">Element measures 50x17px</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Resolution:</span>
+              <span class="finding-val resolve-text">Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">After you fix it:</span>
+              <span class="finding-val">Run the check-up again on the same address. This finding should no longer appear.</span>
+            </div>
+            
+            
               <div class="finding-steps">
                 <span class="finding-label">Steps to reproduce:</span>
                 <ol>
-                  <li>Navigate to / on 375px mobile viewport</li>
-                  <li>Inspect button or link &quot;Reports&quot;</li>
+                  <li>Navigate to / on 375px mobile viewport</li><li>Inspect button or link &quot;Reports&quot;</li>
                 </ol>
               </div>
+            
+          </div>
+        </details>
+      
+        <details class="finding-card">
+          <summary class="finding-summary">
+            <div class="finding-summary-left">
+              <span class="badge" style="background: #FEF3C7; color: #92400E;">Minor</span>
+              <span class="finding-checker">ux-quality</span>
+              <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: My account (76x17px)</span>
             </div>
-          </details>
-
-          <details class="finding-card">
-            <summary class="finding-summary">
-              <div class="finding-summary-left">
-                <span class="badge" style="background: #fef3c7; color: #92400e">Minor</span>
-                <span class="finding-checker">ux-quality</span>
-                <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: My account (76x17px)</span>
-              </div>
-              <span class="finding-route">/ (375px)</span>
-            </summary>
-            <div class="finding-details">
-              <div class="finding-row">
-                <span class="finding-label">Expected:</span>
-                <span class="finding-val"
-                  >WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have
-                  enough space around them or sit inside a sentence</span
-                >
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Actual:</span>
-                <span class="finding-val">Element measures 76x17px</span>
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Resolution:</span>
-                <span class="finding-val resolve-text"
-                  >Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span
-                >
-              </div>
-
-              <div class="finding-row">
-                <span class="finding-label">Verify:</span>
-                <code>qa-test verify F-UX-TARGET-PAGE-001-5</code>
-              </div>
-
+            <span class="finding-route">/ (375px)</span>
+          </summary>
+          <div class="finding-details">
+            <div class="finding-row">
+              <span class="finding-label">Expected:</span>
+              <span class="finding-val">WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have enough space around them or sit inside a sentence</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Actual:</span>
+              <span class="finding-val">Element measures 76x17px</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Resolution:</span>
+              <span class="finding-val resolve-text">Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">After you fix it:</span>
+              <span class="finding-val">Run the check-up again on the same address. This finding should no longer appear.</span>
+            </div>
+            
+            
               <div class="finding-steps">
                 <span class="finding-label">Steps to reproduce:</span>
                 <ol>
-                  <li>Navigate to / on 375px mobile viewport</li>
-                  <li>Inspect button or link &quot;My account&quot;</li>
+                  <li>Navigate to / on 375px mobile viewport</li><li>Inspect button or link &quot;My account&quot;</li>
                 </ol>
               </div>
+            
+          </div>
+        </details>
+      
+        <details class="finding-card">
+          <summary class="finding-summary">
+            <div class="finding-summary-left">
+              <span class="badge" style="background: #FEF3C7; color: #92400E;">Minor</span>
+              <span class="finding-checker">ux-quality</span>
+              <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: New Invoice (82x17px)</span>
             </div>
-          </details>
-
-          <details class="finding-card">
-            <summary class="finding-summary">
-              <div class="finding-summary-left">
-                <span class="badge" style="background: #fef3c7; color: #92400e">Minor</span>
-                <span class="finding-checker">ux-quality</span>
-                <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: New Invoice (82x17px)</span>
-              </div>
-              <span class="finding-route">/ (375px)</span>
-            </summary>
-            <div class="finding-details">
-              <div class="finding-row">
-                <span class="finding-label">Expected:</span>
-                <span class="finding-val"
-                  >WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have
-                  enough space around them or sit inside a sentence</span
-                >
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Actual:</span>
-                <span class="finding-val">Element measures 82x17px</span>
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Resolution:</span>
-                <span class="finding-val resolve-text"
-                  >Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span
-                >
-              </div>
-
-              <div class="finding-row">
-                <span class="finding-label">Verify:</span>
-                <code>qa-test verify F-UX-TARGET-PAGE-001-6</code>
-              </div>
-
+            <span class="finding-route">/ (375px)</span>
+          </summary>
+          <div class="finding-details">
+            <div class="finding-row">
+              <span class="finding-label">Expected:</span>
+              <span class="finding-val">WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have enough space around them or sit inside a sentence</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Actual:</span>
+              <span class="finding-val">Element measures 82x17px</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Resolution:</span>
+              <span class="finding-val resolve-text">Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">After you fix it:</span>
+              <span class="finding-val">Run the check-up again on the same address. This finding should no longer appear.</span>
+            </div>
+            
+            
               <div class="finding-steps">
                 <span class="finding-label">Steps to reproduce:</span>
                 <ol>
-                  <li>Navigate to / on 375px mobile viewport</li>
-                  <li>Inspect button or link &quot;New Invoice&quot;</li>
+                  <li>Navigate to / on 375px mobile viewport</li><li>Inspect button or link &quot;New Invoice&quot;</li>
                 </ol>
               </div>
+            
+          </div>
+        </details>
+      
+        <details class="finding-card">
+          <summary class="finding-summary">
+            <div class="finding-summary-left">
+              <span class="badge" style="background: #FEF3C7; color: #92400E;">Minor</span>
+              <span class="finding-checker">ux-quality</span>
+              <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: Home (39x17px)</span>
             </div>
-          </details>
-
-          <details class="finding-card">
-            <summary class="finding-summary">
-              <div class="finding-summary-left">
-                <span class="badge" style="background: #fef3c7; color: #92400e">Minor</span>
-                <span class="finding-checker">ux-quality</span>
-                <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: Home (39x17px)</span>
-              </div>
-              <span class="finding-route">/login (375px)</span>
-            </summary>
-            <div class="finding-details">
-              <div class="finding-row">
-                <span class="finding-label">Expected:</span>
-                <span class="finding-val"
-                  >WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have
-                  enough space around them or sit inside a sentence</span
-                >
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Actual:</span>
-                <span class="finding-val">Element measures 39x17px</span>
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Resolution:</span>
-                <span class="finding-val resolve-text"
-                  >Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span
-                >
-              </div>
-
-              <div class="finding-row">
-                <span class="finding-label">Verify:</span>
-                <code>qa-test verify F-UX-TARGET-PAGE-002-1</code>
-              </div>
-
+            <span class="finding-route">/login (375px)</span>
+          </summary>
+          <div class="finding-details">
+            <div class="finding-row">
+              <span class="finding-label">Expected:</span>
+              <span class="finding-val">WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have enough space around them or sit inside a sentence</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Actual:</span>
+              <span class="finding-val">Element measures 39x17px</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Resolution:</span>
+              <span class="finding-val resolve-text">Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">After you fix it:</span>
+              <span class="finding-val">Run the check-up again on the same address. This finding should no longer appear.</span>
+            </div>
+            
+            
               <div class="finding-steps">
                 <span class="finding-label">Steps to reproduce:</span>
                 <ol>
-                  <li>Navigate to /login on 375px mobile viewport</li>
-                  <li>Inspect button or link &quot;Home&quot;</li>
+                  <li>Navigate to /login on 375px mobile viewport</li><li>Inspect button or link &quot;Home&quot;</li>
                 </ol>
               </div>
+            
+          </div>
+        </details>
+      
+        <details class="finding-card">
+          <summary class="finding-summary">
+            <div class="finding-summary-left">
+              <span class="badge" style="background: #FEF3C7; color: #92400E;">Minor</span>
+              <span class="finding-checker">ux-quality</span>
+              <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: Sign In (58x21px)</span>
             </div>
-          </details>
-
-          <details class="finding-card">
-            <summary class="finding-summary">
-              <div class="finding-summary-left">
-                <span class="badge" style="background: #fef3c7; color: #92400e">Minor</span>
-                <span class="finding-checker">ux-quality</span>
-                <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: Sign In (58x21px)</span>
-              </div>
-              <span class="finding-route">/login (375px)</span>
-            </summary>
-            <div class="finding-details">
-              <div class="finding-row">
-                <span class="finding-label">Expected:</span>
-                <span class="finding-val"
-                  >WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have
-                  enough space around them or sit inside a sentence</span
-                >
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Actual:</span>
-                <span class="finding-val">Element measures 58x21px</span>
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Resolution:</span>
-                <span class="finding-val resolve-text"
-                  >Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span
-                >
-              </div>
-
-              <div class="finding-row">
-                <span class="finding-label">Verify:</span>
-                <code>qa-test verify F-UX-TARGET-PAGE-002-2</code>
-              </div>
-
+            <span class="finding-route">/login (375px)</span>
+          </summary>
+          <div class="finding-details">
+            <div class="finding-row">
+              <span class="finding-label">Expected:</span>
+              <span class="finding-val">WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have enough space around them or sit inside a sentence</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Actual:</span>
+              <span class="finding-val">Element measures 58x21px</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Resolution:</span>
+              <span class="finding-val resolve-text">Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">After you fix it:</span>
+              <span class="finding-val">Run the check-up again on the same address. This finding should no longer appear.</span>
+            </div>
+            
+            
               <div class="finding-steps">
                 <span class="finding-label">Steps to reproduce:</span>
                 <ol>
-                  <li>Navigate to /login on 375px mobile viewport</li>
-                  <li>Inspect button or link &quot;Sign In&quot;</li>
+                  <li>Navigate to /login on 375px mobile viewport</li><li>Inspect button or link &quot;Sign In&quot;</li>
                 </ol>
               </div>
+            
+          </div>
+        </details>
+      
+        <details class="finding-card">
+          <summary class="finding-summary">
+            <div class="finding-summary-left">
+              <span class="badge" style="background: #FFEDD5; color: #9A3412;">Major</span>
+              <span class="finding-checker">security</span>
+              <span class="finding-title-text">The sign-in form sends passwords in the page address</span>
             </div>
-          </details>
-
-          <details class="finding-card">
-            <summary class="finding-summary">
-              <div class="finding-summary-left">
-                <span class="badge" style="background: #ffedd5; color: #9a3412">Major</span>
-                <span class="finding-checker">security</span>
-                <span class="finding-title-text">The sign-in form sends passwords in the page address</span>
-              </div>
-              <span class="finding-route">/login (375px)</span>
-            </summary>
-            <div class="finding-details">
-              <div class="finding-row">
-                <span class="finding-label">Expected:</span>
-                <span class="finding-val">A form with a password field is sent with method=&quot;post&quot;</span>
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Actual:</span>
-                <span class="finding-val"
-                  >The form uses GET (or names a page to send to with no method, which means GET), so the password goes
-                  into the address</span
-                >
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Resolution:</span>
-                <span class="finding-val resolve-text"
-                  >Send the form with method=&quot;post&quot;. A password in the address is kept in browser history,
-                  server and proxy logs, and analytics, and can leak to other sites through the Referer header.</span
-                >
-              </div>
-
-              <div class="finding-row">
-                <span class="finding-label">Verify:</span>
-                <code>qa-test verify F-SEC-PAGE-002-FORM</code>
-              </div>
-
+            <span class="finding-route">/login (375px)</span>
+          </summary>
+          <div class="finding-details">
+            <div class="finding-row">
+              <span class="finding-label">Expected:</span>
+              <span class="finding-val">A form with a password field is sent with method=&quot;post&quot;</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Actual:</span>
+              <span class="finding-val">The form uses GET (or names a page to send to with no method, which means GET), so the password goes into the address</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Resolution:</span>
+              <span class="finding-val resolve-text">Send the form with method=&quot;post&quot;. A password in the address is kept in browser history, server and proxy logs, and analytics, and can leak to other sites through the Referer header.</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">After you fix it:</span>
+              <span class="finding-val">Run the check-up again on the same address. This finding should no longer appear.</span>
+            </div>
+            
+            
               <div class="finding-steps">
                 <span class="finding-label">Steps to reproduce:</span>
                 <ol>
-                  <li>Go to /login</li>
-                  <li>Inspect the sign-in form: it has no method=&quot;post&quot;</li>
+                  <li>Go to /login</li><li>Inspect the sign-in form: it has no method=&quot;post&quot;</li>
                 </ol>
               </div>
+            
+          </div>
+        </details>
+      
+        <details class="finding-card">
+          <summary class="finding-summary">
+            <div class="finding-summary-left">
+              <span class="badge" style="background: #FEF3C7; color: #92400E;">Minor</span>
+              <span class="finding-checker">ux-quality</span>
+              <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: Save (46x21px)</span>
             </div>
-          </details>
-
-          <details class="finding-card">
-            <summary class="finding-summary">
-              <div class="finding-summary-left">
-                <span class="badge" style="background: #fef3c7; color: #92400e">Minor</span>
-                <span class="finding-checker">ux-quality</span>
-                <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: Save (46x21px)</span>
-              </div>
-              <span class="finding-route">/invoices/new (375px)</span>
-            </summary>
-            <div class="finding-details">
-              <div class="finding-row">
-                <span class="finding-label">Expected:</span>
-                <span class="finding-val"
-                  >WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have
-                  enough space around them or sit inside a sentence</span
-                >
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Actual:</span>
-                <span class="finding-val">Element measures 46x21px</span>
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Resolution:</span>
-                <span class="finding-val resolve-text"
-                  >Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span
-                >
-              </div>
-
-              <div class="finding-row">
-                <span class="finding-label">Verify:</span>
-                <code>qa-test verify F-UX-TARGET-PAGE-003-1</code>
-              </div>
-
+            <span class="finding-route">/invoices/new (375px)</span>
+          </summary>
+          <div class="finding-details">
+            <div class="finding-row">
+              <span class="finding-label">Expected:</span>
+              <span class="finding-val">WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have enough space around them or sit inside a sentence</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Actual:</span>
+              <span class="finding-val">Element measures 46x21px</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Resolution:</span>
+              <span class="finding-val resolve-text">Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">After you fix it:</span>
+              <span class="finding-val">Run the check-up again on the same address. This finding should no longer appear.</span>
+            </div>
+            
+            
               <div class="finding-steps">
                 <span class="finding-label">Steps to reproduce:</span>
                 <ol>
-                  <li>Navigate to /invoices/new on 375px mobile viewport</li>
-                  <li>Inspect button or link &quot;Save&quot;</li>
+                  <li>Navigate to /invoices/new on 375px mobile viewport</li><li>Inspect button or link &quot;Save&quot;</li>
                 </ol>
               </div>
+            
+          </div>
+        </details>
+      
+        <details class="finding-card">
+          <summary class="finding-summary">
+            <div class="finding-summary-left">
+              <span class="badge" style="background: #FEF3C7; color: #92400E;">Minor</span>
+              <span class="finding-checker">ux-quality</span>
+              <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: Dashboard (69x17px)</span>
             </div>
-          </details>
-
-          <details class="finding-card">
-            <summary class="finding-summary">
-              <div class="finding-summary-left">
-                <span class="badge" style="background: #fef3c7; color: #92400e">Minor</span>
-                <span class="finding-checker">ux-quality</span>
-                <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: Dashboard (69x17px)</span>
-              </div>
-              <span class="finding-route">/invoices/new (375px)</span>
-            </summary>
-            <div class="finding-details">
-              <div class="finding-row">
-                <span class="finding-label">Expected:</span>
-                <span class="finding-val"
-                  >WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have
-                  enough space around them or sit inside a sentence</span
-                >
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Actual:</span>
-                <span class="finding-val">Element measures 69x17px</span>
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Resolution:</span>
-                <span class="finding-val resolve-text"
-                  >Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span
-                >
-              </div>
-
-              <div class="finding-row">
-                <span class="finding-label">Verify:</span>
-                <code>qa-test verify F-UX-TARGET-PAGE-003-2</code>
-              </div>
-
+            <span class="finding-route">/invoices/new (375px)</span>
+          </summary>
+          <div class="finding-details">
+            <div class="finding-row">
+              <span class="finding-label">Expected:</span>
+              <span class="finding-val">WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have enough space around them or sit inside a sentence</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Actual:</span>
+              <span class="finding-val">Element measures 69x17px</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Resolution:</span>
+              <span class="finding-val resolve-text">Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">After you fix it:</span>
+              <span class="finding-val">Run the check-up again on the same address. This finding should no longer appear.</span>
+            </div>
+            
+            
               <div class="finding-steps">
                 <span class="finding-label">Steps to reproduce:</span>
                 <ol>
-                  <li>Navigate to /invoices/new on 375px mobile viewport</li>
-                  <li>Inspect button or link &quot;Dashboard&quot;</li>
+                  <li>Navigate to /invoices/new on 375px mobile viewport</li><li>Inspect button or link &quot;Dashboard&quot;</li>
                 </ol>
               </div>
+            
+          </div>
+        </details>
+      
+        <details class="finding-card">
+          <summary class="finding-summary">
+            <div class="finding-summary-left">
+              <span class="badge" style="background: #FFEDD5; color: #9A3412;">Major</span>
+              <span class="finding-checker">ux-quality</span>
+              <span class="finding-title-text">WCAG 2.4.2 Page Titled violation: Documents must have &lt;title&gt; element to aid in navigation (document-title)</span>
             </div>
-          </details>
-
-          <details class="finding-card">
-            <summary class="finding-summary">
-              <div class="finding-summary-left">
-                <span class="badge" style="background: #ffedd5; color: #9a3412">Major</span>
-                <span class="finding-checker">ux-quality</span>
-                <span class="finding-title-text"
-                  >WCAG 2.4.2 Page Titled violation: Documents must have &lt;title&gt; element to aid in navigation
-                  (document-title)</span
-                >
-              </div>
-              <span class="finding-route">/about (375px)</span>
-            </summary>
-            <div class="finding-details">
-              <div class="finding-row">
-                <span class="finding-label">Expected:</span>
-                <span class="finding-val"
-                  >Meets WCAG 2.2 AA [WCAG 2.4.2 Page Titled]: Ensure each HTML document contains a non-empty
-                  &lt;title&gt; element</span
-                >
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Actual:</span>
-                <span class="finding-val"
-                  >Fix any of the following: Document does not have a non-empty &lt;title&gt; element</span
-                >
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Resolution:</span>
-                <span class="finding-val resolve-text"
-                  >See https://dequeuniversity.com/rules/axe/4.13/document-title?application=playwright. Remediation:
-                  Documents must have &lt;title&gt; element to aid in navigation.</span
-                >
-              </div>
-
-              <div class="finding-row">
-                <span class="finding-label">Verify:</span>
-                <code>qa-test verify F-A11Y-PAGE-004-1</code>
-              </div>
-
+            <span class="finding-route">/about (375px)</span>
+          </summary>
+          <div class="finding-details">
+            <div class="finding-row">
+              <span class="finding-label">Expected:</span>
+              <span class="finding-val">Meets WCAG 2.2 AA [WCAG 2.4.2 Page Titled]: Ensure each HTML document contains a non-empty &lt;title&gt; element</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Actual:</span>
+              <span class="finding-val">Fix any of the following:
+  Document does not have a non-empty &lt;title&gt; element</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Resolution:</span>
+              <span class="finding-val resolve-text">See https://dequeuniversity.com/rules/axe/4.13/document-title?application=playwright. Remediation: Documents must have &lt;title&gt; element to aid in navigation.</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">After you fix it:</span>
+              <span class="finding-val">Run the check-up again on the same address. This finding should no longer appear.</span>
+            </div>
+            
+            
               <div class="finding-steps">
                 <span class="finding-label">Steps to reproduce:</span>
                 <ol>
-                  <li>Navigate to /about at breakpoint 375px</li>
-                  <li>Inspect element: html</li>
+                  <li>Navigate to /about at breakpoint 375px</li><li>Inspect element: html</li>
                 </ol>
               </div>
+            
+          </div>
+        </details>
+      
+        <details class="finding-card">
+          <summary class="finding-summary">
+            <div class="finding-summary-left">
+              <span class="badge" style="background: #FEF3C7; color: #92400E;">Minor</span>
+              <span class="finding-checker">ux-quality</span>
+              <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: About (40x17px)</span>
             </div>
-          </details>
-
-          <details class="finding-card">
-            <summary class="finding-summary">
-              <div class="finding-summary-left">
-                <span class="badge" style="background: #fef3c7; color: #92400e">Minor</span>
-                <span class="finding-checker">ux-quality</span>
-                <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: About (40x17px)</span>
-              </div>
-              <span class="finding-route">/reports (375px)</span>
-            </summary>
-            <div class="finding-details">
-              <div class="finding-row">
-                <span class="finding-label">Expected:</span>
-                <span class="finding-val"
-                  >WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have
-                  enough space around them or sit inside a sentence</span
-                >
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Actual:</span>
-                <span class="finding-val">Element measures 40x17px</span>
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Resolution:</span>
-                <span class="finding-val resolve-text"
-                  >Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span
-                >
-              </div>
-
-              <div class="finding-row">
-                <span class="finding-label">Verify:</span>
-                <code>qa-test verify F-UX-TARGET-PAGE-005-2</code>
-              </div>
-
+            <span class="finding-route">/reports (375px)</span>
+          </summary>
+          <div class="finding-details">
+            <div class="finding-row">
+              <span class="finding-label">Expected:</span>
+              <span class="finding-val">WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have enough space around them or sit inside a sentence</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Actual:</span>
+              <span class="finding-val">Element measures 40x17px</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Resolution:</span>
+              <span class="finding-val resolve-text">Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">After you fix it:</span>
+              <span class="finding-val">Run the check-up again on the same address. This finding should no longer appear.</span>
+            </div>
+            
+            
               <div class="finding-steps">
                 <span class="finding-label">Steps to reproduce:</span>
                 <ol>
-                  <li>Navigate to /reports on 375px mobile viewport</li>
-                  <li>Inspect button or link &quot;About&quot;</li>
+                  <li>Navigate to /reports on 375px mobile viewport</li><li>Inspect button or link &quot;About&quot;</li>
                 </ol>
               </div>
+            
+          </div>
+        </details>
+      
+        <details class="finding-card">
+          <summary class="finding-summary">
+            <div class="finding-summary-left">
+              <span class="badge" style="background: #FEF3C7; color: #92400E;">Minor</span>
+              <span class="finding-checker">ux-quality</span>
+              <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: My account (76x17px)</span>
             </div>
-          </details>
-
-          <details class="finding-card">
-            <summary class="finding-summary">
-              <div class="finding-summary-left">
-                <span class="badge" style="background: #fef3c7; color: #92400e">Minor</span>
-                <span class="finding-checker">ux-quality</span>
-                <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: My account (76x17px)</span>
-              </div>
-              <span class="finding-route">/reports (375px)</span>
-            </summary>
-            <div class="finding-details">
-              <div class="finding-row">
-                <span class="finding-label">Expected:</span>
-                <span class="finding-val"
-                  >WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have
-                  enough space around them or sit inside a sentence</span
-                >
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Actual:</span>
-                <span class="finding-val">Element measures 76x17px</span>
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Resolution:</span>
-                <span class="finding-val resolve-text"
-                  >Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span
-                >
-              </div>
-
-              <div class="finding-row">
-                <span class="finding-label">Verify:</span>
-                <code>qa-test verify F-UX-TARGET-PAGE-005-3</code>
-              </div>
-
+            <span class="finding-route">/reports (375px)</span>
+          </summary>
+          <div class="finding-details">
+            <div class="finding-row">
+              <span class="finding-label">Expected:</span>
+              <span class="finding-val">WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have enough space around them or sit inside a sentence</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Actual:</span>
+              <span class="finding-val">Element measures 76x17px</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Resolution:</span>
+              <span class="finding-val resolve-text">Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">After you fix it:</span>
+              <span class="finding-val">Run the check-up again on the same address. This finding should no longer appear.</span>
+            </div>
+            
+            
               <div class="finding-steps">
                 <span class="finding-label">Steps to reproduce:</span>
                 <ol>
-                  <li>Navigate to /reports on 375px mobile viewport</li>
-                  <li>Inspect button or link &quot;My account&quot;</li>
+                  <li>Navigate to /reports on 375px mobile viewport</li><li>Inspect button or link &quot;My account&quot;</li>
                 </ol>
               </div>
+            
+          </div>
+        </details>
+      
+        <details class="finding-card">
+          <summary class="finding-summary">
+            <div class="finding-summary-left">
+              <span class="badge" style="background: #FEF3C7; color: #92400E;">Minor</span>
+              <span class="finding-checker">ux-quality</span>
+              <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: X (20x20px)</span>
             </div>
-          </details>
-
-          <details class="finding-card">
-            <summary class="finding-summary">
-              <div class="finding-summary-left">
-                <span class="badge" style="background: #fef3c7; color: #92400e">Minor</span>
-                <span class="finding-checker">ux-quality</span>
-                <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: X (20x20px)</span>
-              </div>
-              <span class="finding-route">/dashboard (375px)</span>
-            </summary>
-            <div class="finding-details">
-              <div class="finding-row">
-                <span class="finding-label">Expected:</span>
-                <span class="finding-val"
-                  >WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have
-                  enough space around them or sit inside a sentence</span
-                >
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Actual:</span>
-                <span class="finding-val">Element measures 20x20px</span>
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Resolution:</span>
-                <span class="finding-val resolve-text"
-                  >Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span
-                >
-              </div>
-
-              <div class="finding-row">
-                <span class="finding-label">Verify:</span>
-                <code>qa-test verify F-UX-TARGET-PAGE-006-1</code>
-              </div>
-
+            <span class="finding-route">/dashboard (375px)</span>
+          </summary>
+          <div class="finding-details">
+            <div class="finding-row">
+              <span class="finding-label">Expected:</span>
+              <span class="finding-val">WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have enough space around them or sit inside a sentence</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Actual:</span>
+              <span class="finding-val">Element measures 20x20px</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Resolution:</span>
+              <span class="finding-val resolve-text">Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">After you fix it:</span>
+              <span class="finding-val">Run the check-up again on the same address. This finding should no longer appear.</span>
+            </div>
+            
+            
               <div class="finding-steps">
                 <span class="finding-label">Steps to reproduce:</span>
                 <ol>
-                  <li>Navigate to /dashboard on 375px mobile viewport</li>
-                  <li>Inspect button or link &quot;X&quot;</li>
+                  <li>Navigate to /dashboard on 375px mobile viewport</li><li>Inspect button or link &quot;X&quot;</li>
                 </ol>
               </div>
+            
+          </div>
+        </details>
+      
+        <details class="finding-card">
+          <summary class="finding-summary">
+            <div class="finding-summary-left">
+              <span class="badge" style="background: #FEF3C7; color: #92400E;">Minor</span>
+              <span class="finding-checker">ux-quality</span>
+              <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: Invoices (54x17px)</span>
             </div>
-          </details>
-
-          <details class="finding-card">
-            <summary class="finding-summary">
-              <div class="finding-summary-left">
-                <span class="badge" style="background: #fef3c7; color: #92400e">Minor</span>
-                <span class="finding-checker">ux-quality</span>
-                <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: Invoices (54x17px)</span>
-              </div>
-              <span class="finding-route">/dashboard (375px)</span>
-            </summary>
-            <div class="finding-details">
-              <div class="finding-row">
-                <span class="finding-label">Expected:</span>
-                <span class="finding-val"
-                  >WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have
-                  enough space around them or sit inside a sentence</span
-                >
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Actual:</span>
-                <span class="finding-val">Element measures 54x17px</span>
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Resolution:</span>
-                <span class="finding-val resolve-text"
-                  >Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span
-                >
-              </div>
-
-              <div class="finding-row">
-                <span class="finding-label">Verify:</span>
-                <code>qa-test verify F-UX-TARGET-PAGE-006-3</code>
-              </div>
-
+            <span class="finding-route">/dashboard (375px)</span>
+          </summary>
+          <div class="finding-details">
+            <div class="finding-row">
+              <span class="finding-label">Expected:</span>
+              <span class="finding-val">WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have enough space around them or sit inside a sentence</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Actual:</span>
+              <span class="finding-val">Element measures 54x17px</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Resolution:</span>
+              <span class="finding-val resolve-text">Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">After you fix it:</span>
+              <span class="finding-val">Run the check-up again on the same address. This finding should no longer appear.</span>
+            </div>
+            
+            
               <div class="finding-steps">
                 <span class="finding-label">Steps to reproduce:</span>
                 <ol>
-                  <li>Navigate to /dashboard on 375px mobile viewport</li>
-                  <li>Inspect button or link &quot;Invoices&quot;</li>
+                  <li>Navigate to /dashboard on 375px mobile viewport</li><li>Inspect button or link &quot;Invoices&quot;</li>
                 </ol>
               </div>
+            
+          </div>
+        </details>
+      
+        <details class="finding-card">
+          <summary class="finding-summary">
+            <div class="finding-summary-left">
+              <span class="badge" style="background: #FEF3C7; color: #92400E;">Minor</span>
+              <span class="finding-checker">ux-quality</span>
+              <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: Orphaned Page (98x17px)</span>
             </div>
-          </details>
-
-          <details class="finding-card">
-            <summary class="finding-summary">
-              <div class="finding-summary-left">
-                <span class="badge" style="background: #fef3c7; color: #92400e">Minor</span>
-                <span class="finding-checker">ux-quality</span>
-                <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: Orphaned Page (98x17px)</span>
-              </div>
-              <span class="finding-route">/dashboard (375px)</span>
-            </summary>
-            <div class="finding-details">
-              <div class="finding-row">
-                <span class="finding-label">Expected:</span>
-                <span class="finding-val"
-                  >WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have
-                  enough space around them or sit inside a sentence</span
-                >
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Actual:</span>
-                <span class="finding-val">Element measures 98x17px</span>
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Resolution:</span>
-                <span class="finding-val resolve-text"
-                  >Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span
-                >
-              </div>
-
-              <div class="finding-row">
-                <span class="finding-label">Verify:</span>
-                <code>qa-test verify F-UX-TARGET-PAGE-006-4</code>
-              </div>
-
+            <span class="finding-route">/dashboard (375px)</span>
+          </summary>
+          <div class="finding-details">
+            <div class="finding-row">
+              <span class="finding-label">Expected:</span>
+              <span class="finding-val">WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have enough space around them or sit inside a sentence</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Actual:</span>
+              <span class="finding-val">Element measures 98x17px</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Resolution:</span>
+              <span class="finding-val resolve-text">Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">After you fix it:</span>
+              <span class="finding-val">Run the check-up again on the same address. This finding should no longer appear.</span>
+            </div>
+            
+            
               <div class="finding-steps">
                 <span class="finding-label">Steps to reproduce:</span>
                 <ol>
-                  <li>Navigate to /dashboard on 375px mobile viewport</li>
-                  <li>Inspect button or link &quot;Orphaned Page&quot;</li>
+                  <li>Navigate to /dashboard on 375px mobile viewport</li><li>Inspect button or link &quot;Orphaned Page&quot;</li>
                 </ol>
               </div>
+            
+          </div>
+        </details>
+      
+        <details class="finding-card">
+          <summary class="finding-summary">
+            <div class="finding-summary-left">
+              <span class="badge" style="background: #FEF3C7; color: #92400E;">Minor</span>
+              <span class="finding-checker">ux-quality</span>
+              <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: Trigger Console Error (144x21px)</span>
             </div>
-          </details>
-
-          <details class="finding-card">
-            <summary class="finding-summary">
-              <div class="finding-summary-left">
-                <span class="badge" style="background: #fef3c7; color: #92400e">Minor</span>
-                <span class="finding-checker">ux-quality</span>
-                <span class="finding-title-text"
-                  >Touch target below WCAG 2.5.8 minimum: Trigger Console Error (144x21px)</span
-                >
-              </div>
-              <span class="finding-route">/dashboard (375px)</span>
-            </summary>
-            <div class="finding-details">
-              <div class="finding-row">
-                <span class="finding-label">Expected:</span>
-                <span class="finding-val"
-                  >WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have
-                  enough space around them or sit inside a sentence</span
-                >
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Actual:</span>
-                <span class="finding-val">Element measures 144x21px</span>
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Resolution:</span>
-                <span class="finding-val resolve-text"
-                  >Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span
-                >
-              </div>
-
-              <div class="finding-row">
-                <span class="finding-label">Verify:</span>
-                <code>qa-test verify F-UX-TARGET-PAGE-006-5</code>
-              </div>
-
+            <span class="finding-route">/dashboard (375px)</span>
+          </summary>
+          <div class="finding-details">
+            <div class="finding-row">
+              <span class="finding-label">Expected:</span>
+              <span class="finding-val">WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have enough space around them or sit inside a sentence</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Actual:</span>
+              <span class="finding-val">Element measures 144x21px</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Resolution:</span>
+              <span class="finding-val resolve-text">Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">After you fix it:</span>
+              <span class="finding-val">Run the check-up again on the same address. This finding should no longer appear.</span>
+            </div>
+            
+            
               <div class="finding-steps">
                 <span class="finding-label">Steps to reproduce:</span>
                 <ol>
-                  <li>Navigate to /dashboard on 375px mobile viewport</li>
-                  <li>Inspect button or link &quot;Trigger Console Error&quot;</li>
+                  <li>Navigate to /dashboard on 375px mobile viewport</li><li>Inspect button or link &quot;Trigger Console Error&quot;</li>
                 </ol>
               </div>
+            
+          </div>
+        </details>
+      
+        <details class="finding-card">
+          <summary class="finding-summary">
+            <div class="finding-summary-left">
+              <span class="badge" style="background: #FEF3C7; color: #92400E;">Minor</span>
+              <span class="finding-checker">ux-quality</span>
+              <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: Trigger 500 API Failure (153x21px)</span>
             </div>
-          </details>
-
-          <details class="finding-card">
-            <summary class="finding-summary">
-              <div class="finding-summary-left">
-                <span class="badge" style="background: #fef3c7; color: #92400e">Minor</span>
-                <span class="finding-checker">ux-quality</span>
-                <span class="finding-title-text"
-                  >Touch target below WCAG 2.5.8 minimum: Trigger 500 API Failure (153x21px)</span
-                >
-              </div>
-              <span class="finding-route">/dashboard (375px)</span>
-            </summary>
-            <div class="finding-details">
-              <div class="finding-row">
-                <span class="finding-label">Expected:</span>
-                <span class="finding-val"
-                  >WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have
-                  enough space around them or sit inside a sentence</span
-                >
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Actual:</span>
-                <span class="finding-val">Element measures 153x21px</span>
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Resolution:</span>
-                <span class="finding-val resolve-text"
-                  >Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span
-                >
-              </div>
-
-              <div class="finding-row">
-                <span class="finding-label">Verify:</span>
-                <code>qa-test verify F-UX-TARGET-PAGE-006-6</code>
-              </div>
-
+            <span class="finding-route">/dashboard (375px)</span>
+          </summary>
+          <div class="finding-details">
+            <div class="finding-row">
+              <span class="finding-label">Expected:</span>
+              <span class="finding-val">WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have enough space around them or sit inside a sentence</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Actual:</span>
+              <span class="finding-val">Element measures 153x21px</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Resolution:</span>
+              <span class="finding-val resolve-text">Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">After you fix it:</span>
+              <span class="finding-val">Run the check-up again on the same address. This finding should no longer appear.</span>
+            </div>
+            
+            
               <div class="finding-steps">
                 <span class="finding-label">Steps to reproduce:</span>
                 <ol>
-                  <li>Navigate to /dashboard on 375px mobile viewport</li>
-                  <li>Inspect button or link &quot;Trigger 500 API Failure&quot;</li>
+                  <li>Navigate to /dashboard on 375px mobile viewport</li><li>Inspect button or link &quot;Trigger 500 API Failure&quot;</li>
                 </ol>
               </div>
+            
+          </div>
+        </details>
+      
+        <details class="finding-card">
+          <summary class="finding-summary">
+            <div class="finding-summary-left">
+              <span class="badge" style="background: #FFEDD5; color: #9A3412;">Major</span>
+              <span class="finding-checker">bug-detection</span>
+              <span class="finding-title-text">Console Error in step &quot;Try “Trigger Console Error”&quot;</span>
             </div>
-          </details>
-
-          <details class="finding-card">
-            <summary class="finding-summary">
-              <div class="finding-summary-left">
-                <span class="badge" style="background: #ffedd5; color: #9a3412">Major</span>
-                <span class="finding-checker">bug-detection</span>
-                <span class="finding-title-text">Console Error in step &quot;Try “Trigger Console Error”&quot;</span>
-              </div>
-              <span class="finding-route">/dashboard (375px)</span>
-            </summary>
-            <div class="finding-details">
-              <div class="finding-row">
-                <span class="finding-label">Expected:</span>
-                <span class="finding-val">Zero unhandled errors or console exceptions in production builds</span>
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Actual:</span>
-                <span class="finding-val">Simulated Unhandled Runtime Bug in Dashboard</span>
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Resolution:</span>
-                <span class="finding-val resolve-text"
-                  >Inspect the stack trace in console logs, ensure null checks and error boundaries are
-                  configured.</span
-                >
-              </div>
-
-              <div class="finding-row">
-                <span class="finding-label">Verify:</span>
-                <code>qa-test verify F-BUG-TEST-001-1</code>
-              </div>
-
+            <span class="finding-route">/dashboard (375px)</span>
+          </summary>
+          <div class="finding-details">
+            <div class="finding-row">
+              <span class="finding-label">Expected:</span>
+              <span class="finding-val">Zero unhandled errors or console exceptions in production builds</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Actual:</span>
+              <span class="finding-val">Simulated Unhandled Runtime Bug in Dashboard</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Resolution:</span>
+              <span class="finding-val resolve-text">Inspect the stack trace in console logs, ensure null checks and error boundaries are configured.</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">After you fix it:</span>
+              <span class="finding-val">Run the check-up again on the same address. This finding should no longer appear.</span>
+            </div>
+            
+            
               <div class="finding-steps">
                 <span class="finding-label">Steps to reproduce:</span>
                 <ol>
-                  <li>Navigate to http://localhost:3050/dashboard</li>
-                  <li>Perform action: click on &quot;Try “Trigger Console Error”&quot;</li>
-                  <li>Check browser developer console logs</li>
+                  <li>Navigate to http://localhost:3050/dashboard</li><li>Perform action: click on &quot;Try “Trigger Console Error”&quot;</li><li>Check browser developer console logs</li>
                 </ol>
               </div>
+            
+          </div>
+        </details>
+      
+        <details class="finding-card">
+          <summary class="finding-summary">
+            <div class="finding-summary-left">
+              <span class="badge" style="background: #FEE2E2; color: #991B1B;">Blocker</span>
+              <span class="finding-checker">bug-detection</span>
+              <span class="finding-title-text">HTTP 500 on GET http://localhost:3050/api/failing-endpoint</span>
             </div>
-          </details>
-
-          <details class="finding-card">
-            <summary class="finding-summary">
-              <div class="finding-summary-left">
-                <span class="badge" style="background: #fee2e2; color: #991b1b">Blocker</span>
-                <span class="finding-checker">bug-detection</span>
-                <span class="finding-title-text">HTTP 500 on GET http://localhost:3050/api/failing-endpoint</span>
-              </div>
-              <span class="finding-route">/dashboard (375px)</span>
-            </summary>
-            <div class="finding-details">
-              <div class="finding-row">
-                <span class="finding-label">Expected:</span>
-                <span class="finding-val"
-                  >HTTP 2xx or expected status response for GET http://localhost:3050/api/failing-endpoint</span
-                >
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Actual:</span>
-                <span class="finding-val"
-                  >Request failed with status 500 Console: Failed to load resource: the server responded with a status
-                  of 500 (Internal Server Error)</span
-                >
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Resolution:</span>
-                <span class="finding-val resolve-text"
-                  >Backend API error (5xx). Check server endpoint logs and database connections.</span
-                >
-              </div>
-
-              <div class="finding-row">
-                <span class="finding-label">Verify:</span>
-                <code>qa-test verify F-HTTP-TEST-001-2</code>
-              </div>
-
+            <span class="finding-route">/dashboard (375px)</span>
+          </summary>
+          <div class="finding-details">
+            <div class="finding-row">
+              <span class="finding-label">Expected:</span>
+              <span class="finding-val">HTTP 2xx or expected status response for GET http://localhost:3050/api/failing-endpoint</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Actual:</span>
+              <span class="finding-val">Request failed with status 500
+Console: Failed to load resource: the server responded with a status of 500 (Internal Server Error)</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Resolution:</span>
+              <span class="finding-val resolve-text">Backend API error (5xx). Check server endpoint logs and database connections.</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">After you fix it:</span>
+              <span class="finding-val">Run the check-up again on the same address. This finding should no longer appear.</span>
+            </div>
+            
+            
               <div class="finding-steps">
                 <span class="finding-label">Steps to reproduce:</span>
                 <ol>
-                  <li>Execute step &quot;Try “Trigger 500 API Failure”&quot; on http://localhost:3050/dashboard</li>
-                  <li>Inspect network activity for GET http://localhost:3050/api/failing-endpoint</li>
+                  <li>Execute step &quot;Try “Trigger 500 API Failure”&quot; on http://localhost:3050/dashboard</li><li>Inspect network activity for GET http://localhost:3050/api/failing-endpoint</li>
                 </ol>
               </div>
+            
+          </div>
+        </details>
+      
+        <details class="finding-card">
+          <summary class="finding-summary">
+            <div class="finding-summary-left">
+              <span class="badge" style="background: #FEF3C7; color: #92400E;">Minor</span>
+              <span class="finding-checker">ux-quality</span>
+              <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: Sign in (57x21px)</span>
             </div>
-          </details>
-
-          <details class="finding-card">
-            <summary class="finding-summary">
-              <div class="finding-summary-left">
-                <span class="badge" style="background: #fef3c7; color: #92400e">Minor</span>
-                <span class="finding-checker">ux-quality</span>
-                <span class="finding-title-text">Touch target below WCAG 2.5.8 minimum: Sign in (57x21px)</span>
-              </div>
-              <span class="finding-route">/signin (375px)</span>
-            </summary>
-            <div class="finding-details">
-              <div class="finding-row">
-                <span class="finding-label">Expected:</span>
-                <span class="finding-val"
-                  >WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have
-                  enough space around them or sit inside a sentence</span
-                >
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Actual:</span>
-                <span class="finding-val">Element measures 57x21px</span>
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Resolution:</span>
-                <span class="finding-val resolve-text"
-                  >Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span
-                >
-              </div>
-
-              <div class="finding-row">
-                <span class="finding-label">Verify:</span>
-                <code>qa-test verify F-UX-TARGET-PAGE-007-3</code>
-              </div>
-
+            <span class="finding-route">/signin (375px)</span>
+          </summary>
+          <div class="finding-details">
+            <div class="finding-row">
+              <span class="finding-label">Expected:</span>
+              <span class="finding-val">WCAG 2.2 AA (2.5.8 Target Size, Minimum) asks for targets of at least 24x24px, unless they have enough space around them or sit inside a sentence</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Actual:</span>
+              <span class="finding-val">Element measures 57x21px</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Resolution:</span>
+              <span class="finding-val resolve-text">Increase min-height and min-width to at least 44px or add padding for mobile viewports.</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">After you fix it:</span>
+              <span class="finding-val">Run the check-up again on the same address. This finding should no longer appear.</span>
+            </div>
+            
+            
               <div class="finding-steps">
                 <span class="finding-label">Steps to reproduce:</span>
                 <ol>
-                  <li>Navigate to /signin on 375px mobile viewport</li>
-                  <li>Inspect button or link &quot;Sign in&quot;</li>
+                  <li>Navigate to /signin on 375px mobile viewport</li><li>Inspect button or link &quot;Sign in&quot;</li>
                 </ol>
               </div>
+            
+          </div>
+        </details>
+      
+        <details class="finding-card">
+          <summary class="finding-summary">
+            <div class="finding-summary-left">
+              <span class="badge" style="background: #FFEDD5; color: #9A3412;">Major</span>
+              <span class="finding-checker">ux-quality</span>
+              <span class="finding-title-text">Dead End Page: No back button or header navigation detected</span>
             </div>
-          </details>
-
-          <details class="finding-card">
-            <summary class="finding-summary">
-              <div class="finding-summary-left">
-                <span class="badge" style="background: #ffedd5; color: #9a3412">Major</span>
-                <span class="finding-checker">ux-quality</span>
-                <span class="finding-title-text">Dead End Page: No back button or header navigation detected</span>
-              </div>
-              <span class="finding-route">/deadend (375px)</span>
-            </summary>
-            <div class="finding-details">
-              <div class="finding-row">
-                <span class="finding-label">Expected:</span>
-                <span class="finding-val">Every page should provide a clear path back or breadcrumbs/navigation</span>
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Actual:</span>
-                <span class="finding-val">Page lacks back link, header, or primary navigation</span>
-              </div>
-              <div class="finding-row">
-                <span class="finding-label">Resolution:</span>
-                <span class="finding-val resolve-text"
-                  >Add a persistent top navigation bar or back-button link to the page layout.</span
-                >
-              </div>
-
-              <div class="finding-row">
-                <span class="finding-label">Verify:</span>
-                <code>qa-test verify F-UX-DEADEND-PAGE-008-1</code>
-              </div>
-
+            <span class="finding-route">/deadend (375px)</span>
+          </summary>
+          <div class="finding-details">
+            <div class="finding-row">
+              <span class="finding-label">Expected:</span>
+              <span class="finding-val">Every page should provide a clear path back or breadcrumbs/navigation</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Actual:</span>
+              <span class="finding-val">Page lacks back link, header, or primary navigation</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">Resolution:</span>
+              <span class="finding-val resolve-text">Add a persistent top navigation bar or back-button link to the page layout.</span>
+            </div>
+            <div class="finding-row">
+              <span class="finding-label">After you fix it:</span>
+              <span class="finding-val">Run the check-up again on the same address. This finding should no longer appear.</span>
+            </div>
+            
+            
               <div class="finding-steps">
                 <span class="finding-label">Steps to reproduce:</span>
                 <ol>
-                  <li>Navigate directly to /deadend</li>
-                  <li>Observe lack of navigation options</li>
+                  <li>Navigate directly to /deadend</li><li>Observe lack of navigation options</li>
                 </ol>
               </div>
-            </div>
-          </details>
-        </div>
-      </section>
+            
+          </div>
+        </details>
+      
+      </div>
+    </section>
 
-      <div class="footer-note">Made by Release check-up &bull; One file that works offline</div>
-    </main>
-  </body>
+    <div class="footer-note">
+      Made by Release check-up &bull; One file that works offline
+    </div>
+  </main>
+</body>
 </html>

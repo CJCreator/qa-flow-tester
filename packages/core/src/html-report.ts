@@ -608,6 +608,9 @@ async function renderVisualCompare(
       ? `<figure><img src="${escapeHtml(src)}" alt="${escapeHtml(caption)}"><figcaption>${escapeHtml(caption)}</figcaption></figure>`
       : `<figure><figcaption>${escapeHtml(caption)}: Image not available</figcaption></figure>`;
   };
+  // Display order (old, new, difference) is also the order the image budget is spent in.
+  const oldFigure = await figure(f.evidence.baselineScreenshotPath, 'Old (approved baseline)');
+  const newFigure = await figure(f.evidence.currentScreenshotPath, 'New (this check-up)');
   const diffFigure = f.evidence.screenshotPath
     ? await figure(f.evidence.screenshotPath, 'Difference')
     : `<p class="visual-note">There is no difference image: the screen size changed, so the old and new images cannot be laid over each other.</p>`;
@@ -615,8 +618,8 @@ async function renderVisualCompare(
             <div class="visual-compare">
               <h5>Perceptual Visual Diff: old, new and difference</h5>
               <div class="visual-row">
-                ${await figure(f.evidence.baselineScreenshotPath, 'Old (approved baseline)')}
-                ${await figure(f.evidence.currentScreenshotPath, 'New (this check-up)')}
+                ${oldFigure}
+                ${newFigure}
                 ${diffFigure}
               </div>
             </div>`;

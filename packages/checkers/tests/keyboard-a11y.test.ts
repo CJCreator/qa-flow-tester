@@ -33,7 +33,7 @@ describe('KeyboardA11yChecker (browser)', () => {
   const checker = new KeyboardA11yChecker();
   beforeAll(async () => {
     browser = await chromium.launch();
-  });
+  }, 60_000);
   afterAll(async () => {
     await browser.close();
   });

@@ -36,6 +36,12 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (url.pathname === '/.well-known/security.txt') {
+    res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('Contact: mailto:security@example.com\nExpires: 2099-01-01T00:00:00.000Z\n');
+    return;
+  }
+
   if (url.pathname === '/favicon.ico') {
     res.writeHead(200, { 'Content-Type': 'image/x-icon' });
     res.end();

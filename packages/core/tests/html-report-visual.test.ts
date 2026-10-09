@@ -130,14 +130,15 @@ describe('visual finding report', () => {
   });
 
   it('visual finding: path and caption text is HTML-escaped', async () => {
-    await fs.writeFile(path.join(dir, 'evidence', 'a"b.png'), PNG_BYTES);
+    // ' and & are valid in Windows file names (" is not); they still must not reach the HTML raw.
+    await fs.writeFile(path.join(dir, 'evidence', "a'b&c.png"), PNG_BYTES);
     const html = await render(
-      [visualFinding({ baselineScreenshotPath: 'evidence/a"b.png' }, { title: '<script>alert(1)</script>' })],
+      [visualFinding({ baselineScreenshotPath: "evidence/a'b&c.png" }, { title: '<script>alert(1)</script>' })],
       1
     );
     expect(html).not.toContain('<script>alert(1)</script>');
     expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
-    expect(html).toContain('evidence/a%22b.png');
-    expect(html).not.toContain('a"b.png');
+    expect(html).toContain('src="evidence/a&#039;b%26c.png"');
+    expect(html).not.toContain("a'b&c.png");
   });
 });

@@ -30,6 +30,8 @@ The tool drives real browsers against real sites, so safety is enforced in code,
 - `.env`, `.qa-keys.json`, `.qa-ai-models.json` and `.qa-plan.json` are git-ignored. Never commit them, never paste keys into commands or chat (Claude Code saves approved commands into its permission rules, which is how a key once ended up in `.claude/settings.json`).
 - In CI the key is a repository secret (`QA_AI_API_KEY`), never a workflow input.
 - If a key is exposed, rotate it at the provider first, then clean up.
+- No AI key is stored in the repo, in `.claude/settings.json` or in any tracked file (checked 2026-10-09; the `sk-...` strings in `packages/*/tests` are fake test values). The owner enters an AI key in the wizard at test time; it is not kept in files or commands.
+- Hosting credentials (Render and Vercel deploy details) live only in GitHub repository secrets, used by `.github/workflows/deploy.yml`. They are never in the repo, a workflow input, or a command. Rotate them in the provider console and update the GitHub secret; do not paste the value anywhere else.
 
 ## Verified Domains (shared machines)
 

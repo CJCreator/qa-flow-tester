@@ -17,7 +17,7 @@ Source: `docs/GAP_ANALYSIS.md`. Status: todo, planned, approved, built, done, bl
 | [T-11](T-11-beta-usage-limits.md) | Per-visitor and daily limits on the hosted beta | G10 | P1 | M | 1 | done | - |
 | [T-12](T-12-verified-domains.md) | Verified Domains and hardened isTestHost | G11, G27 (ADR 0014) | P1 | M | 1 | done | - |
 | [T-13](T-13-landing-measurement-and-contact.md) | Analytics counter, PNG share image, contact and sign-up | G29, G40, G41, G42 | P1 | S-M | 2 | done | - |
-| [T-14](T-14-landing-audit-items.md) | Close remaining landing audit items | G46 | P1 | S-M | 2 | blocked (sample report stale) | T-13 |
+| [T-14](T-14-landing-audit-items.md) | Close remaining landing audit items | G46 | P1 | S-M | 2 | built (sample report regenerated 2026-10-09; owner items remain) | T-13 |
 | [T-15](T-15-self-checkup-landing.md) | Run our own check-up on our landing page | G47 | P1 | S | 2 | built | T-13, T-14 |
 | [T-16](T-16-findings-contract.md) | Findings contract and its outputs | G12, G27 (ADR 0017) | P2 | M | 3 | done | - |
 | [T-17](T-17-playwright-export.md) | Export the approved Plan as Playwright tests | G13 | P2 | M | 3 | built | T-16 (soft) |
