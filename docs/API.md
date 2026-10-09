@@ -27,6 +27,19 @@ routes and what they are for; **request and response bodies are defined by the h
 | `POST /api/runner/abort` (alias `/stop`) | Stop the current run                                                                                                                                                                                                                                                                                                                        |
 | `POST /api/runner/ai/finish`             | Finish AI work for the current run                                                                                                                                                                                                                                                                                                          |
 
+### Sources, saved sessions and caps (ADR 0020, 0021)
+
+All additive; no new route. Wizard types: `StartRunRequest`, `PatchPlanBody`, `AiEstimate` in `packages/wizard/src/api.ts`.
+
+- `POST /api/runner/run` body: `contextDocuments: [{ name, text }]` (`.md`/`.txt`, at most 10, 500 KB each), `contextUrl` (docs address, at most 20 same-host pages; a failure is a plan note), `savedSessions: { <role>: { cookies, origins } }` (at most 256 KB, cookie domains must match the target; held in runner memory only, never saved, returned or logged; after a restart approval asks again), `aiCap: { requests?, dollars? }` (positive numbers; dollars only act when the provider reports a price).
+- `GET /api/runner/plan` may carry `plannedWhileCrawling`, `notFound`, `documentedItems`, `rolesNotTested`, `contextDocuments` (names only); Plan Items may carry `docSource`, `proposedRoles`, `rolesConfirmed`, `kind: 'denial'`, `origin`.
+- `PATCH /api/runner/plan` accepts `sourceEdits: [{ itemId, roles?, severity?, stale?, confirm? }]` and `notFoundEdits: [{ id, remove? }]`.
+- `POST /api/runner/ai-estimate` response adds `estimatedUsd` (only with a reported price), `concurrency` and the `cap` echo.
+- `GET /api/report/download/<file>` also serves `issues.md` and `issues.html`.
+- `POST /api/runs/<runId>/accept-judgement` body `{ titles: string[], accept?: boolean }`: counts the named "Needs your judgement" findings as problems (`accept: false` puts them back); grades, recommendations and the issues files are recomputed; responds with the report. `400` without titles, `404` when the report is gone.
+- Plan approval (`POST /api/runner/plan/approve`) accepts `savedSessions` again after a restart. If a role's saved session is missing it answers `409` with `code: 'ERR_SESSION_NOT_SAVED'` and `needsSession: [<role>, ...]`; send the sessions and approve again.
+- The `crawling` progress event adds `plannedSoFar`; the planning total can grow while the scan runs.
+
 ## Plan Review
 
 | Route                                | Purpose                                                                                                                            |

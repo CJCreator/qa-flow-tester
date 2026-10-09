@@ -123,7 +123,7 @@ export function summarizeReport(report: ReleaseReport): ReportSummary {
 }
 
 /** Where a problem goes in the report: what to fix first. */
-export type Bucket = 'must-fix' | 'should-fix' | 'suggestion' | 'to-confirm';
+export type Bucket = 'must-fix' | 'should-fix' | 'suggestion' | 'to-confirm' | 'judgement';
 
 export const BUCKETS: Array<{ id: Bucket; title: string; intro: string }> = [
   {
@@ -138,9 +138,18 @@ export const BUCKETS: Array<{ id: Bucket; title: string; intro: string }> = [
     title: 'To confirm',
     intro: 'The AI expected something the site didn’t do. They aren’t counted as problems until someone confirms them.',
   },
+  {
+    id: 'judgement',
+    title: 'Needs your judgement',
+    intro:
+      'The site did something other than the AI guessed. Only you can say if it is wrong. They aren’t counted until you accept them.',
+  },
 ];
 
-export function bucketOf(f: Pick<Finding, 'severity' | 'needsConfirmation'>): Bucket {
+export function bucketOf(
+  f: Pick<Finding, 'severity' | 'needsConfirmation'> & Partial<Pick<Finding, 'needsJudgement' | 'judgementAccepted'>>
+): Bucket {
+  if (f.needsJudgement && !f.judgementAccepted) return 'judgement';
   if (f.needsConfirmation) return 'to-confirm';
   if (f.severity === 'Blocker' || f.severity === 'Major') return 'must-fix';
   return f.severity === 'Minor' ? 'should-fix' : 'suggestion';
@@ -169,9 +178,16 @@ export interface ProblemGroup {
  * marked as intended or false positives are left out.
  */
 export function groupProblems(findings: Finding[]): Record<Bucket, ProblemGroup[]> {
-  const result: Record<Bucket, ProblemGroup[]> = { 'must-fix': [], 'should-fix': [], suggestion: [], 'to-confirm': [] };
+  const result: Record<Bucket, ProblemGroup[]> = { 'must-fix': [], 'should-fix': [], suggestion: [],
+    'to-confirm': [],
+    judgement: [],
+  };
   for (const p of groupIntoProblems(findings)) {
-    const bucket = bucketOf({ severity: p.severity, needsConfirmation: p.toConfirm });
+    const bucket = bucketOf({
+      severity: p.severity,
+      needsConfirmation: p.toConfirm,
+      needsJudgement: p.findings.some((f) => f.needsJudgement && !f.judgementAccepted),
+    });
     result[bucket].push({
       key: p.key,
       title: p.title,
@@ -191,6 +207,17 @@ export function groupProblems(findings: Finding[]): Record<Bucket, ProblemGroup[
     );
   }
   return result;
+}
+
+/** "Needs your judgement" problems under the role they were seen as, in the order roles first appear. */
+export function judgementByRole(groups: ProblemGroup[]): Array<{ role: string; groups: ProblemGroup[] }> {
+  const byRole = new Map<string, ProblemGroup[]>();
+  for (const g of groups) {
+    const role = g.findings[0]?.where.role;
+    const name = !role || role === 'anonymous' ? 'visitor' : role;
+    byRole.set(name, [...(byRole.get(name) ?? []), g]);
+  }
+  return [...byRole].map(([role, list]) => ({ role, groups: list }));
 }
 
 /** The path of an address ("/cart" from "http://localhost:3050/cart?x=1"), or null when it isn't one. */

@@ -3,6 +3,8 @@ import path from 'path';
 import type { Finding, ReleaseReport, RunCoverage } from '@qa/types';
 import { releaseVerdict } from '@qa/types';
 import { AGENTS_SNIPPET, buildFixThese, buildKnownFindings, withFindingsContract } from './findings-contract.js';
+import { buildIssuesModel, documentedItemsLine, renderIssuesMarkdown, rolesNotTestedLines } from './issues-document.js';
+import { renderIssuesHtml } from './issues-html.js';
 
 /**
  * A copy of the report whose file paths inside the report folder are relative to it
@@ -37,6 +39,8 @@ export class ReportGenerator {
     fixThesePath: string;
     knownFindingsPath: string;
     agentsSnippetPath: string;
+    issuesMdPath: string;
+    issuesHtmlPath: string;
   }> {
     await fs.mkdir(this.outputDir, { recursive: true });
     const report = withPortablePaths(fullReport, this.outputDir);
@@ -61,7 +65,14 @@ export class ReportGenerator {
     await fs.writeFile(knownFindingsPath, JSON.stringify(buildKnownFindings(out), null, 2), 'utf8');
     await fs.writeFile(agentsSnippetPath, AGENTS_SNIPPET, 'utf8');
 
-    return { jsonPath, mdPath, fixThesePath, knownFindingsPath, agentsSnippetPath };
+    // 4. The issues document, from the same (already redacted) report; screenshots are the existing evidence files.
+    const issuesMdPath = path.join(this.outputDir, 'issues.md');
+    const issuesHtmlPath = path.join(this.outputDir, 'issues.html');
+    const model = buildIssuesModel(report);
+    await fs.writeFile(issuesMdPath, renderIssuesMarkdown(model), 'utf8');
+    await fs.writeFile(issuesHtmlPath, await renderIssuesHtml(model, this.outputDir), 'utf8');
+
+    return { jsonPath, mdPath, fixThesePath, knownFindingsPath, agentsSnippetPath, issuesMdPath, issuesHtmlPath };
   }
 
   private renderMarkdown(report: ReleaseReport): string {
@@ -131,6 +142,15 @@ export class ReportGenerator {
         `> **AI discovery did not run for this release.** Test cases below came from the generic template fallback, not real AI-driven flow analysis. This verdict may not reflect the app's actual behavior — check your AI provider/API key and re-run.`
       );
       lines.push(``);
+    }
+
+    // Which roles were not tested, and how much of the document was reached (only when there is something to say).
+    const documentedLine = documentedItemsLine(report.documentedItems);
+    if ((report.rolesNotTested?.length ?? 0) > 0 || documentedLine) {
+      lines.push(`## Roles not tested and why`);
+      lines.push(``);
+      lines.push(...rolesNotTestedLines(report.rolesNotTested ?? []));
+      if (documentedLine) lines.push(documentedLine, ``);
     }
 
     // Delta summary if available

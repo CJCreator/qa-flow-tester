@@ -1,9 +1,9 @@
 import type { FindingSeverity, CheckerType, Breakpoint, TestPointStatus } from './test-case.js';
-import type { StepEvidence, Finding } from './evidence-finding.js';
+import type { StepEvidence, Finding, RoleNotTested } from './evidence-finding.js';
 import type { MarketingReview, SiteAspectGrades, RankedRecommendation, SiteHistoryDiff, SlowerThanLastTime, SiteMapSummary, VisitedPage } from './aspects.js';
 import type { AIStage } from './ai.js';
 import type { RetryTelemetryEntry } from './hub.js';
-import type { AIStageUsage } from './plan.js';
+import type { AIStageUsage, DocSource } from './plan.js';
 
 export interface TestPointResult {
   testCaseId: string;
@@ -74,6 +74,10 @@ export interface RunDelta {
 export interface ReleaseReport {
   /** Contract version of the written findings.json (ADR 0017). Absent in files from before the contract. */
   schemaVersion?: number;
+  /** Roles that could not sign in, and why. They were not tested. */
+  rolesNotTested?: RoleNotTested[];
+  /** Documented items reached, of all documented, and the ones not found in the app. */
+  documentedItems?: { reached: number; total: number; notFound: Array<{ docSource: DocSource; reason: string }> };
   runId: string;
   productId: string;
   targetUrl: string;

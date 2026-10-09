@@ -123,6 +123,9 @@ export function expandPlan(
         startPage: page.urlPath,
         steps: test.steps.map((s) => ({ ...s })),
         expectations: test.expectations ?? {},
+        ...(test.docSource ? { docSource: test.docSource } : {}),
+        ...(test.docSeverity ? { docSeverity: test.docSeverity } : {}),
+        ...(test.docStale ? { docStale: true } : {}),
       });
     }
   }

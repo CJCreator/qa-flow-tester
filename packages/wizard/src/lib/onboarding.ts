@@ -12,6 +12,11 @@ export function hasNonDefaultOptions(form: CheckupForm): boolean {
     form.specs.trim() !== '' ||
     form.designNotes.trim() !== '' ||
     form.journeys.trim() !== '' ||
+    form.contextFiles.length > 0 ||
+    form.contextUrl.trim() !== '' ||
+    form.savedSessions.length > 0 ||
+    form.capRequests.trim() !== '' ||
+    form.capDollars.trim() !== '' ||
     form.searchChecks !== null ||
     (form.visibility ?? null) !== null
   );

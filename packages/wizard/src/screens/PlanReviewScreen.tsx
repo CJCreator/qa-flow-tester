@@ -258,6 +258,8 @@ export function PlanReviewScreen({
       }
     },
     quickCheck: () => void edit(() => patchPlan({ preset: 'quick' })),
+    editSource: (edits) => void edit(() => patchPlan({ sourceEdits: edits })),
+    editNotFound: (edits) => void edit(() => patchPlan({ notFoundEdits: edits })),
   };
 
   // The site's real links, for the map.

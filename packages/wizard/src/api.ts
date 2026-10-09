@@ -8,7 +8,10 @@ import type {
   BenchmarkJob,
   ReleaseGateCriteria,
   SignInFailureReason,
+  RunCap,
+  FindingSeverity,
 } from '@qa/types';
+import type { StorageStateData } from '@qa/types/src/evidence-finding.js';
 import { isSignInFailureReason, signInReasonText } from '@qa/types/src/signin.js';
 
 /**
@@ -173,6 +176,12 @@ export interface AiEstimate {
   free: boolean;
   left: number | null;
   limit: number | null;
+  /** About what the scan costs in dollars; only when the provider reports a price. */
+  estimatedUsd?: number;
+  /** Requests that may run at once (1 for a free key). */
+  concurrency?: number;
+  /** The cap that was sent, echoed back. */
+  cap?: RunCap;
 }
 
 export async function estimateAi(targetUrl: string, maxPages: number): Promise<AiEstimate | null> {
@@ -351,6 +360,14 @@ export interface StartRunRequest {
   rememberSignIns?: boolean;
   /** Sign in with the ones saved for the site. */
   useSavedSignIns?: boolean;
+  /** Product Context files (.md / .txt), kept apart so each Source keeps its document name. */
+  contextDocuments?: Array<{ name: string; text: string }>;
+  /** A docs address; same-site pages are read (at most 20). */
+  contextUrl?: string;
+  /** Saved sessions per role. Held in the runner's memory only, never saved. */
+  savedSessions?: Record<string, StorageStateData>;
+  /** Optional limit on AI requests and/or dollars for this check-up. */
+  aiCap?: RunCap;
 }
 
 /** Starts a check-up: the scan, then the plan waits for review. Returns the run id. */
@@ -441,6 +458,16 @@ export interface PatchPlanBody {
   expectations?: Array<{ id: string; text?: string }>;
   /** 'quick': desktop only, and only the shared menus' links. */
   preset?: 'quick';
+  /** Plan Review edits on a Source: confirm or correct roles, set severity, mark the document out of date. */
+  sourceEdits?: Array<{
+    itemId: string;
+    roles?: string[];
+    severity?: FindingSeverity;
+    stale?: boolean;
+    confirm?: boolean;
+  }>;
+  /** "Not found in app" entries: remove one from the list. */
+  notFoundEdits?: Array<{ id: string; remove?: boolean }>;
 }
 
 /** What a small change (a switch, an answer, the sizes) changed: merged into the plan on screen. */
@@ -598,10 +625,10 @@ export async function deleteRun(runId: string): Promise<void> {
   }
 }
 
-/** Saves one of a check-up's files: report.html, report.md or findings.json. */
+/** Saves one of a check-up's files: the report, the findings, or the issues document (issues.md, issues.html). */
 export async function downloadRunFile(
   runId: string,
-  file: 'report.html' | 'report.md' | 'findings.json'
+  file: 'report.html' | 'report.md' | 'findings.json' | 'issues.md' | 'issues.html'
 ): Promise<void> {
   const res = await call(`/api/runs/${encodeURIComponent(runId)}/download/${file}`);
   if (!res.ok) throw new RunnerError('That file couldn’t be downloaded. Try again.');
@@ -736,6 +763,22 @@ export async function triageProblem(
   const res = await call(`/api/runs/${encodeURIComponent(runId)}/triage`, {
     method: 'POST',
     body: JSON.stringify({ titles, status, reason }),
+  });
+  if (!res.ok) {
+    const err = await json<{ error?: string }>(res).catch((): { error?: string } => ({}));
+    throw new RunnerError(err.error || 'That couldn’t be saved. Try again.');
+  }
+  return json<ReleaseReport>(res);
+}
+
+/**
+ * Counts "Needs your judgement" items as problems (accept) or puts them back. The verdict, grades
+ * and the issues files follow. Returns the updated report.
+ */
+export async function acceptJudgement(runId: string, titles: string[], accept = true): Promise<ReleaseReport> {
+  const res = await call(`/api/runs/${encodeURIComponent(runId)}/accept-judgement`, {
+    method: 'POST',
+    body: JSON.stringify({ titles, accept }),
   });
   if (!res.ok) {
     const err = await json<{ error?: string }>(res).catch((): { error?: string } => ({}));

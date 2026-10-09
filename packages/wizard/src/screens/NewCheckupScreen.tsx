@@ -14,8 +14,10 @@ import {
 } from '../api';
 import { KeyField } from '../components/KeyField';
 import { ErrorMessage, Notice, Question, Spinner } from '../components/text';
-import { rejectReason } from '../lib/context';
-import { clampMaxPages, EMPTY_SIGN_IN, MAX_PAGES_LIMIT, type CheckupForm } from '../lib/form';
+import { capLine } from '../lib/cap';
+import { MAX_CONTEXT_FILES, readContextFiles, rejectReason } from '../lib/context';
+import { parseSessionFile } from '../lib/session-file';
+import { capOf, clampMaxPages, EMPTY_SIGN_IN, MAX_PAGES_LIMIT, type CheckupForm } from '../lib/form';
 import { formatWhen } from '../lib/format';
 import { hasNonDefaultOptions } from '../lib/onboarding';
 import { Link, PATHS } from '../lib/router';
@@ -198,7 +200,9 @@ export function NewCheckupScreen({
     });
   };
 
-  const added = [form.specs, form.designNotes, form.journeys].filter((t) => t.trim()).length;
+  const added =
+    [form.specs, form.designNotes, form.journeys, form.contextUrl].filter((t) => t.trim()).length +
+    (form.contextFiles.length > 0 ? 1 : 0);
 
   return (
     <div className="mx-auto max-w-[44rem] px-4 py-10 sm:px-6 sm:py-14">
@@ -567,6 +571,7 @@ export function NewCheckupScreen({
                   value={form.journeys}
                   onChange={(value) => onFormChange((f) => ({ ...f, journeys: value }))}
                 />
+                <ReferenceDocuments form={form} onFormChange={onFormChange} />
               </div>
             </details>
           </div>
@@ -710,6 +715,98 @@ function MaterialField({
           {fileError}
         </p>
       )}
+    </div>
+  );
+}
+
+/**
+ * Documents the plan is checked against: several .md / .txt files and/or a docs address. Each file
+ * keeps its own name so a Source in the plan can say which document it came from.
+ */
+function ReferenceDocuments({
+  form,
+  onFormChange,
+}: {
+  form: CheckupForm;
+  onFormChange: (update: (form: CheckupForm) => CheckupForm) => void;
+}) {
+  const [rejected, setRejected] = useState<string[]>([]);
+  return (
+    <div className="space-y-3 border-t border-rule pt-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <span className="font-bold">Documents (Sources)</span>
+        <label className="cursor-pointer text-sm font-bold text-stamp underline underline-offset-4 hover:text-stamp-dark focus-within:outline focus-within:outline-2 focus-within:outline-stamp">
+          Add files
+          <input
+            type="file"
+            multiple
+            accept=".md,.markdown,.txt"
+            className="hidden"
+            aria-label="Add documents (.md or .txt)"
+            onChange={async (e) => {
+              const input = e.currentTarget;
+              const picked = Array.from(input.files ?? []);
+              input.value = '';
+              if (picked.length === 0) return;
+              const result = await readContextFiles(picked, form.contextFiles.length);
+              setRejected(result.rejected);
+              if (result.accepted.length > 0) {
+                onFormChange((f) => ({
+                  ...f,
+                  contextFiles: [
+                    ...f.contextFiles.filter((old) => !result.accepted.some((a) => a.name === old.name)),
+                    ...result.accepted,
+                  ].slice(0, MAX_CONTEXT_FILES),
+                }));
+              }
+            }}
+          />
+        </label>
+      </div>
+      <p className="text-sm text-ink-soft">
+        Markdown or text files, up to {MAX_CONTEXT_FILES}. Plan Items link back to the document and section they came
+        from.
+      </p>
+      {form.contextFiles.length > 0 && (
+        <ul className="space-y-1 text-sm">
+          {form.contextFiles.map((file) => (
+            <li key={file.name} className="flex flex-wrap items-center gap-x-3">
+              <span className="font-mono text-ink">{file.name}</span>
+              <button
+                type="button"
+                className="btn-link text-sm"
+                aria-label={`Remove ${file.name}`}
+                onClick={() =>
+                  onFormChange((f) => ({ ...f, contextFiles: f.contextFiles.filter((c) => c.name !== file.name) }))
+                }
+              >
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {rejected.length > 0 && (
+        <ul role="alert" className="space-y-1 text-sm text-fail">
+          {rejected.map((message, i) => (
+            <li key={i}>{message}</li>
+          ))}
+        </ul>
+      )}
+      <label className="block text-sm">
+        <span className="mb-1 block font-bold">Docs address (optional)</span>
+        <input
+          type="url"
+          className="field py-2 text-sm"
+          placeholder="https://docs.example.com/guide"
+          value={form.contextUrl}
+          onChange={(e) => onFormChange((f) => ({ ...f, contextUrl: e.target.value }))}
+          aria-describedby="context-url-hint"
+        />
+        <span id="context-url-hint" className="mt-1 block text-ink-soft">
+          Up to 20 pages on that site are read. Pages that need a sign-in are skipped.
+        </span>
+      </label>
     </div>
   );
 }
@@ -947,6 +1044,7 @@ function SignInsSection({
         >
           {form.signIns.length === 0 ? 'Add a sign-in' : 'Add another sign-in'}
         </button>
+        <SavedSessions form={form} onFormChange={onFormChange} />
         {form.signIns.length > 0 && (
           <label className="flex cursor-pointer items-start gap-3 text-sm">
             <input
@@ -960,6 +1058,88 @@ function SignInsSection({
         )}
       </div>
     </details>
+  );
+}
+
+/**
+ * "Use a saved session" for a role: the file is read into this screen's state only, shown as
+ * "Saved session added" (never its contents), sent once and then dropped.
+ */
+function SavedSessions({
+  form,
+  onFormChange,
+}: {
+  form: CheckupForm;
+  onFormChange: (update: (form: CheckupForm) => CheckupForm) => void;
+}) {
+  const [role, setRole] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <div className="space-y-2 border-t border-rule pt-3">
+      <p className="text-sm font-bold">Use a saved session instead of a password (optional)</p>
+      <p className="text-sm text-ink-soft">
+        For sites with two-step sign-in. The file is used for this check-up only and is never saved.
+      </p>
+      {form.savedSessions.map((s, i) => (
+        <p key={i} className="flex flex-wrap items-center gap-x-3 text-sm">
+          <span className="font-bold">{s.role || 'member'}:</span>
+          <span className="text-pass">Saved session added</span>
+          <button
+            type="button"
+            className="btn-link text-sm"
+            onClick={() => onFormChange((f) => ({ ...f, savedSessions: f.savedSessions.filter((_, n) => n !== i) }))}
+          >
+            Remove
+          </button>
+        </p>
+      ))}
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="text-sm">
+          <span className="mb-1 block font-bold">Role name</span>
+          <input
+            className="field py-2 text-sm"
+            value={role}
+            placeholder="admin"
+            onChange={(e) => setRole(e.target.value)}
+          />
+        </label>
+        <label className="cursor-pointer text-sm font-bold text-stamp underline underline-offset-4">
+          Add a saved session
+          <input
+            type="file"
+            accept=".json,application/json"
+            className="hidden"
+            aria-label="Add a saved session file"
+            onChange={async (e) => {
+              const input = e.currentTarget;
+              const file = input.files?.[0];
+              input.value = '';
+              if (!file) return;
+              const result = parseSessionFile(file.name, file.size, await file.text());
+              if (!result.ok) {
+                setError(result.message);
+                return;
+              }
+              setError(null);
+              const name = role.trim();
+              onFormChange((f) => ({
+                ...f,
+                savedSessions: [
+                  ...f.savedSessions.filter((s) => s.role !== name),
+                  { role: name, fileName: file.name, state: result.state },
+                ],
+              }));
+              setRole('');
+            }}
+          />
+        </label>
+      </div>
+      {error && (
+        <p role="alert" className="text-sm text-fail">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -1013,6 +1193,32 @@ function AiEstimateLine({
           Past that, fixed rules plan the rest. You can re-plan any part with the AI once requests are available again.
         </p>
       )}
+      <div className="mt-2 flex flex-wrap items-end gap-3">
+        <label>
+          <span className="mb-1 block font-bold">Limit AI requests (optional)</span>
+          <input
+            type="number"
+            min={1}
+            className="field w-28 py-1.5 text-sm"
+            value={form.capRequests}
+            onChange={(e) => onFormChange((f) => ({ ...f, capRequests: e.target.value }))}
+          />
+        </label>
+        {estimate.estimatedUsd !== undefined && (
+          <label>
+            <span className="mb-1 block font-bold">Limit spend in dollars (optional)</span>
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              className="field w-28 py-1.5 text-sm"
+              value={form.capDollars}
+              onChange={(e) => onFormChange((f) => ({ ...f, capDollars: e.target.value }))}
+            />
+          </label>
+        )}
+      </div>
+      <p className="mt-1 text-ink">{capLine(estimate, capOf(form))}</p>
       <label className="mt-2 flex cursor-pointer items-start gap-3">
         <input
           type="checkbox"

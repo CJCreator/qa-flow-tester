@@ -33,8 +33,12 @@ import {
   DEFAULT_MAX_PAGES,
   EMPTY_FORM,
   addressFromSearch,
+  capOf,
+  contextDocumentsOf,
+  contextUrlOf,
   productContextOf,
   rolesOf,
+  savedSessionsOf,
   type CheckupForm,
 } from './lib/form';
 import { isCheckRoute, matchRoute, navigate, PATHS, usePathname, type Route } from './lib/router';
@@ -56,6 +60,7 @@ import { SettingsScreen } from './screens/SettingsScreen';
 import { TestingScreen } from './screens/TestingScreen';
 import { VisualBaselinesScreen } from './screens/VisualBaselinesScreen';
 import { BenchmarkScreen } from './screens/BenchmarkScreen';
+import { splitStoredContext } from './lib/context';
 
 /** How often the runner's state is read while a check-up is in progress, besides its events. */
 const POLL_MS = 5000;
@@ -349,7 +354,7 @@ export default function App() {
    * Starts a check-up: from the new check-up screen, Test again or Go deeper, all the same way. A
    * plan waiting for review is only thrown away once the person says so.
    */
-  const start = async (request: StartRunRequest): Promise<void> => {
+  const start = async (request: StartRunRequest): Promise<boolean> => {
     setStarting(true);
     setStartError(null);
     try {
@@ -371,7 +376,7 @@ export default function App() {
           cancelLabel: 'Keep the plan',
           danger: true,
         });
-        if (!ok) return;
+        if (!ok) return false;
         runId = await startRun({ aiProvider: ai?.provider, ...request, replacePlan: true });
       }
       epoch.current++;
@@ -387,6 +392,7 @@ export default function App() {
         targetUrl: request.targetUrl,
       }));
       navigate(PATHS.scan);
+      return true;
     } catch (err) {
       if (err instanceof RunnerError && err.code === 'ERR_NO_AI_KEY') {
         setAi((a) => ({ model: a?.model ?? null, configured: false }));
@@ -398,6 +404,7 @@ export default function App() {
       } else {
         setStartError(err instanceof RunnerError ? err.message : 'The check-up couldn’t be started. Try again.');
       }
+      return false;
     } finally {
       setStarting(false);
     }
@@ -419,6 +426,14 @@ export default function App() {
       useSavedSignIns: roles.length === 0 && form.useSavedSignIns,
       planWithoutAI: form.planWithoutAI || undefined,
       useAI: facts.noAI ? false : undefined,
+      contextDocuments: contextDocumentsOf(form),
+      contextUrl: contextUrlOf(form),
+      savedSessions: savedSessionsOf(form),
+      aiCap: capOf(form),
+    }).then((started) => {
+      // Saved sessions are sent once and dropped from the screen once the check-up has started; they are never kept.
+      // If the start failed they stay, so the person does not have to choose the file again.
+      if (started) setForm((f) => (f.savedSessions.length > 0 ? { ...f, savedSessions: [] } : f));
     });
   };
 
@@ -441,12 +456,14 @@ export default function App() {
     }));
     // The specs go along, so anything new is planned with them and the next Go deeper has them too.
     const productContext = await readRunText(runId, 'product-context.md').catch(() => undefined);
+    const stored = splitStoredContext(productContext);
     await start({
       targetUrl,
       owner: remembered?.owner ?? false,
       stagingHost: remembered?.markedTestCopy,
       testAgain: true,
-      productContext,
+      productContext: stored.productContext,
+      contextDocuments: stored.documents,
       useSavedSignIns: true,
     });
   };
@@ -474,12 +491,14 @@ export default function App() {
         specs,
       };
     });
+    const stored = splitStoredContext(productContext || undefined);
     await start({
       targetUrl,
       owner: remembered?.owner ?? false,
       stagingHost: remembered?.markedTestCopy,
       roles: [{ role: 'member', username: signIn.username, password: signIn.password }],
-      productContext: productContext || undefined,
+      productContext: stored.productContext,
+      contextDocuments: stored.documents,
       designNotes: sameSite ? form.designNotes.trim() || undefined : undefined,
       maxPages: sameSite && form.maxPages !== DEFAULT_MAX_PAGES ? form.maxPages : undefined,
     });

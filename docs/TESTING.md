@@ -90,7 +90,7 @@ Paste a row after each run.
 
 | Date | Commit | Site      | Detection rate | False positive rate | Notes |
 | ---- | ------ | --------- | -------------- | ------------------- | ----- |
-|      |        | fixture   |                |                     |       |
+| 2026-10-09 | working tree (ADR 0020, S11) | fixture   | 6 of 6 | 46% (29 of 54 real) | After fixture additions (admin role, Create user, /slow, docs, saved-session mint). Passed; thresholds unchanged. |
 |      |        | saucedemo |                |                     |       |
 |      |        | todomvc   |                |                     |       |
 
@@ -103,6 +103,8 @@ Paste a row after each run.
 - Name tests after behavior a person would recognize, using glossary terms (`CONTEXT.md`).
 - A bug fix starts with a test that reproduces it.
 - Visual diff (ADR 0019): `packages/core/tests/visual-capture.test.ts` (stabilise and mask, browser), `visual-baseline-compat.test.ts` (old baselines, sidecar, evidence images; fixture app on port 3087), `html-report-visual.test.ts` (old/new/difference in the Report), `visual-redaction.test.ts`, and `packages/checkers/tests/visual-diff-finding.test.ts`. Select them with the title filter "visual" on the core package.
+
+- Sources, saved sessions and pipelined planning (ADR 0020, 0021): types `judgement-verdict`, `issue-type`; core `context-parser-multi`, `docs-fetch` (local servers), `ai-budget-pacing`, `openrouter-limits`, `preflight-session` and `role-failure-run` (browser, local login server), `ai-planner-sources`, `plan-sources-live-site`, `issues-document`, `issues-html-selfcontained`, `judgement-flow`, `mismatch-wording`, `plan-pipeline`, `group-tracker`, `pipelined-discovery` (browser), `sources-e2e` (browser); runner `sources-endpoints`, `saved-session-secrecy`, `docs-url-beta`, `ai-estimate-cap`, `issues-download`; wizard `context-files`, `session-file`, `cap-estimate`, `plan-sources-view`. Only the files marked browser need Chromium. Sentinel tests plant a fake cookie value and scan every output for it.
 
 ## Known fragile areas
 

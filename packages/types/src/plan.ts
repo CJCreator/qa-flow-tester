@@ -3,7 +3,7 @@
  * crawler gathers the facts, the AI Planner writes the Plan Items, and the Plan is exactly what runs.
  * Terms are defined in CONTEXT.md.
  */
-import type { AIStage, Breakpoint, TestCaseExpectations, TestCaseStep } from './index.js';
+import type { AIStage, Breakpoint, FindingSeverity, TestCaseExpectations, TestCaseStep } from './index.js';
 
 /** Who planned a Plan Item: the AI, the Fixed-Rule Fallback when the AI couldn't, or the person. */
 export type PlanItemSource = 'ai' | 'fallback' | 'person';
@@ -12,7 +12,52 @@ export type PlanItemSource = 'ai' | 'fallback' | 'person';
  * Why the Fixed-Rule Fallback planned an item: the AI Request Budget ran out, the model stopped
  * before it answered, the AI service didn't answer, its answer couldn't be used, or there's no AI.
  */
-export type FallbackReason = 'budget' | 'truncated' | 'no-answer' | 'unusable' | 'no-ai' | 'stopped';
+export type FallbackReason = 'budget' | 'truncated' | 'no-answer' | 'unusable' | 'no-ai' | 'stopped' | 'cap';
+
+/** Kinds of Plan Item beyond the ordinary test: a Denial Plan Item asserts a control is hidden from a role. */
+export type PlanItemKind = 'denial';
+
+/** Where a Plan Item was planned: while the Spider was still crawling, or after the crawl finished. */
+export type PlanItemOrigin = 'while-crawling' | 'after-crawl';
+
+/**
+ * The Source of a Plan Item (ADR 0020): the Product Context document, section and requirement it came from.
+ * Named `DocSource` because `source` already says who planned an item (`PlanItemSource`).
+ */
+export interface DocSource {
+  document: string;
+  /** Heading path inside the document, e.g. "4 > 4.1". */
+  section?: string;
+  requirementId?: string;
+}
+
+/** A documented item with no matching page or control in the app: reported as "Not found in app", not a failure. */
+export interface PlanNotFound {
+  id: string;
+  docSource: DocSource;
+  /** Roles the document says should have it. */
+  roles: string[];
+  /** Plain words: what was searched for and not found. */
+  reason: string;
+  skipped?: boolean;
+}
+
+/** A cap the person set on a Check-up's AI work. Either or both. */
+export interface RunCap {
+  requests?: number;
+  dollars?: number;
+}
+
+/** What the AI service reports about its own limits. Every field optional: absent means not reported. */
+export interface ProviderLimits {
+  remainingRequests?: number;
+  limitRequests?: number;
+  requestsPerInterval?: number;
+  intervalMs?: number;
+  creditRemainingUsd?: number;
+  /** Price per million tokens of the model in use. */
+  pricePerMTokUsd?: { prompt: number; completion: number };
+}
 
 /** A link or navigation button on a page, as the crawler saw it. */
 export interface PageLink {
@@ -69,6 +114,18 @@ export interface PlanPageTest {
   needsHelp?: string[];
   /** It sends a form or changes data: on a live site it stays in the Plan but isn't run. */
   needsTestCopy?: boolean;
+  /** The document section this item came from. */
+  docSource?: DocSource;
+  /** 'denial': asserts the control is not visible to this role. */
+  kind?: PlanItemKind;
+  /** Roles the AI proposed for the Source; the person confirms them in Plan Review. */
+  proposedRoles?: string[];
+  rolesConfirmed?: boolean;
+  /** Severity the person chose for a mismatch with the Source. */
+  docSeverity?: FindingSeverity;
+  /** The person said the document is out of date: a mismatch becomes "Could not verify". */
+  docStale?: boolean;
+  origin?: PlanItemOrigin;
 }
 
 /** A page in the Plan. Every page the crawler found is listed. */
@@ -97,6 +154,8 @@ export interface PlanPage {
   /** The person added it by its address. */
   added?: boolean;
   isNew?: boolean;
+  docSource?: DocSource;
+  origin?: PlanItemOrigin;
 }
 
 /** A Navigation Check: click one link as a person would and land on a working page. */
@@ -167,6 +226,14 @@ export interface AIRequestBudget {
   tokens?: Partial<Record<AIStage, AIStageUsage>>;
   /** How each model did: a model that keeps stopping before it answers is avoided next time. */
   models?: Record<string, AIModelOutcome>;
+  /** The person's cap for this Check-up. */
+  cap?: RunCap;
+  /** About what the Plan will cost in dollars, only when the AI service reports a price. */
+  estimatedUsd?: number;
+  /** Dollars spent so far, from tokens used times the reported price. */
+  spentUsd?: number;
+  /** Requests allowed in flight at once, from the AI service's reported limits. */
+  concurrency?: number;
 }
 
 /** Tokens one stage of AI work used, added up over its requests. */
@@ -221,4 +288,9 @@ export interface DraftPlan {
   layoutGroups: PlanLayoutGroup[];
   otherHosts: PlanOtherHost[];
   budget?: AIRequestBudget;
+  /** Some Plan Items were planned while the scan was still running. */
+  plannedWhileCrawling?: boolean;
+  /** Documented items with no page or control in the app. */
+  notFound?: PlanNotFound[];
+  documentedItems?: { reached: number; total: number };
 }

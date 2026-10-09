@@ -13,8 +13,11 @@ import type {
   RetryTelemetryEntry,
   PageSpeedMap,
   SlowerThanLastTime,
+  RoleNotTested,
+  StorageStateData,
+  DocSource,
 } from '@qa/types';
-import { normalizeRoute } from '@qa/types';
+import { normalizeRoute, signInReasonText } from '@qa/types';
 import { BrowserManager, BREAKPOINT_VIEWPORTS, locateElement } from './browser.js';
 import { EvidenceCollector } from './evidence.js';
 import { captureVisualShot, readBaselineMode, writeVisualBaseline } from './visual-capture.js';
@@ -22,6 +25,7 @@ import { PreFlightChecker } from './preflight.js';
 import { SourceLocator } from './source-locator.js';
 import { ReproScriptGenerator } from './repro-generator.js';
 import { ReportGenerator, withPortablePaths } from './reporter.js';
+import { withSourceWording } from './source-wording.js';
 import { expandValidationTestCases } from './validator-expander.js';
 import { SuppressionsManager } from './suppressions.js';
 import { Redactor } from './redact.js';
@@ -270,6 +274,8 @@ export interface RunOptions {
   runId?: string;
   /** Sentences to show in the report about coverage, e.g. from discovery ("pages behind the sign-in were not reached"). */
   reportNotes?: string[];
+  /** Documented items the Plan could not match to anything in the app (shown as "Not found in app", never a failure). */
+  documentedNotFound?: Array<{ docSource: DocSource; reason: string }>;
   /** The AI models that planned this run, named in the report. */
   aiModels?: { text?: string; vision?: string };
   /**
@@ -287,6 +293,8 @@ export interface RunOptions {
   finishSignal?: AbortSignal;
   /** Where sign-in sessions are saved. Default `<outputDir>/auth`. Keep it out of any folder that's served. */
   authDir?: string;
+  /** Sessions the person saved, by role. Memory only: used instead of signing in, never written or logged. */
+  suppliedSessions?: Record<string, StorageStateData>;
   /** Where suppressions and the previous run's findings (for the delta) live. Default outputDir. */
   stateDir?: string;
   /** How screenshots are addressed in STEP_COMPLETED: this prefix plus the path inside outputDir. Default `/api/evidence/`. */
@@ -347,6 +355,7 @@ export class FlowTestOrchestrator {
     const preflight = await this.preflightChecker.runPreFlight(options.targetUrl, options.profile, options.tunnelAuth, {
       browserManager: this.browserManager,
       authDir,
+      suppliedSessions: options.suppliedSessions,
     });
 
     if (!preflight.ok) {
@@ -364,10 +373,16 @@ export class FlowTestOrchestrator {
 
     const roleStorageStates = preflight.roleStorageStates || {};
     const notes = [...(options.reportNotes || [])];
+    // A role that could not sign in is not tested (never run signed out), and the report says why.
+    const rolesNotTested: RoleNotTested[] = [];
     for (const [role, ok] of Object.entries(preflight.roleAuthResults)) {
-      const note = `Signing in as "${role}" didn't work, so tests for that role ran signed out.`;
-      if (!ok && !notes.includes(note)) notes.push(note);
+      if (ok) continue;
+      const reason = preflight.roleFailures?.[role] ?? 'no-form';
+      rolesNotTested.push({ role, reason, text: signInReasonText(reason) });
+      const note = `Signing in as "${role}" didn't work, so that role was not tested.`;
+      if (!notes.includes(note)) notes.push(note);
     }
+    const notTestedRoles = new Set(rolesNotTested.map((r) => r.role));
 
     // Initialize Permission Matrix Checker if available in profile
     let permChecker: PermissionMatrixChecker | undefined;
@@ -431,6 +446,20 @@ export class FlowTestOrchestrator {
       const pageLevelChecks = !kind || kind === 'page' || kind === 'journey';
       // A page's search checks look at its markup, which is the same at every width: one width is enough.
       const sizes = sizesFor(testCase);
+      if (notTestedRoles.has(testCase.role)) {
+        const why = rolesNotTested.find((r) => r.role === testCase.role)!;
+        results.push({
+          testCaseId: testCase.id,
+          flowId: testCase.flowId,
+          role: testCase.role,
+          status: 'Skipped',
+          durationMs: 0,
+          findings: [],
+          stepEvidence: [],
+          skipReason: `Not tested: ${why.text}`,
+        });
+        continue;
+      }
       const searchSize = sizes.includes('1440px') ? '1440px' : sizes[sizes.length - 1];
       for (const bp of sizesFor(testCase)) {
         await stopHere();
@@ -970,7 +999,9 @@ export class FlowTestOrchestrator {
             ...permFindings,
             ...designFindings,
             ...a11yDepth,
-          ].filter((f) => !sentData || (f.checker !== 'spec-conformance' && !f.id.startsWith('F-STEP-')));
+          ]
+            .filter((f) => !sentData || (f.checker !== 'spec-conformance' && !f.id.startsWith('F-STEP-')))
+            .map((f) => withSourceWording(f, testCase));
 
           // Enrich findings with Source Code Locator and Repro Script
           for (const f of keptFindings) {
@@ -1200,6 +1231,20 @@ export class FlowTestOrchestrator {
       // Ignore URL parsing or storage errors in test mode
     }
 
+    // "N of M documented items reached": a documented item is reached when its test actually ran.
+    const documented = testCasesToRun.filter((tc) => tc.docSource);
+    const notFoundDocs = options.documentedNotFound ?? [];
+    const documentedItems =
+      documented.length + notFoundDocs.length > 0
+        ? {
+            reached: documented.filter((tc) =>
+              results.some((r) => r.testCaseId === tc.id && r.status !== 'Skipped')
+            ).length,
+            total: documented.length + notFoundDocs.length,
+            notFound: notFoundDocs,
+          }
+        : undefined;
+
     const fullReport: ReleaseReport = {
       runId,
       productId: options.productId,
@@ -1218,6 +1263,8 @@ export class FlowTestOrchestrator {
       suppressions: activeSuppressions,
       delta,
       notes: notes.length > 0 ? notes : undefined,
+      ...(rolesNotTested.length > 0 ? { rolesNotTested } : {}),
+      ...(documentedItems ? { documentedItems } : {}),
       partial: options.finishSignal?.aborted
         ? { done: results.filter((r) => r.status !== 'Skipped' || !r.skipReason).length, planned: plannedTestPoints }
         : undefined,

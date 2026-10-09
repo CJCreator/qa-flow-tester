@@ -179,14 +179,37 @@ describe('Discovery explores signed in', () => {
       profile: {
         name: 'Gated',
         productId: 'gated',
-        roles: [{ role: 'member', username: 'member@example.com', password: 'wrong', loginPath: '/login' }],
+        roles: [{ role: 'member', username: 'member@example.com', password: 'badpass', loginPath: '/login' }],
       },
     });
     warn.mockRestore();
 
     expect(draft.exploration?.signInFailed).toEqual(['member']);
+    expect(draft.exploration?.signInFailures).toEqual({ member: 'wrong-details' });
     expect(draft.exploration?.notes).toContain(
-      'Signing in as "member" didn\'t work, so nothing was explored as that role. Check its username, password and sign-in page.'
+      'Signing in as "member" didn\'t work, so nothing was explored as that role. The username or password was not accepted. Check them and try again.'
     );
   }, 60000);
+
+  it('records the reason per role and still explores the visitor and the role that works', async () => {
+    const draft = await new DiscoveryAgent().discover({
+      targetUrl: baseUrl,
+      productId: 'gated',
+      outputDir: path.join(outputDir, 'one-fails'),
+      aiProvider: new EmptyPlanAI(),
+      profile: {
+        name: 'Gated',
+        productId: 'gated',
+        roles: [
+          { role: 'member', username: 'member@example.com', password: 'badpass', loginPath: '/login' },
+          { role: 'admin', username: 'admin@example.com', password: 'admin-pass', loginPath: '/login' },
+        ],
+      },
+    });
+    expect(draft.exploration?.signInFailures).toEqual({ member: 'wrong-details' });
+    expect(draft.exploration?.signedInAs).toEqual(['admin']);
+    const reachedBy = Object.fromEntries(draft.pages.map((p) => [p.urlPath, p.reachedBy]));
+    expect(reachedBy['/']).toContain('visitor');
+    expect(reachedBy['/admin']).toEqual(['admin']);
+  }, 90000);
 });

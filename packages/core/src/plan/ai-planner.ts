@@ -7,7 +7,9 @@ import type {
   NavigationCheck,
   PageInventoryItem,
   PageLink,
+  PlanItemOrigin,
   PlanItemSource,
+  PlanNotFound,
   PlanPage,
   PlanPageTest,
   TestCaseExpectations,
@@ -17,9 +19,21 @@ import { AITruncatedError, completeWith, type AIProvider } from '../ai/ai-provid
 import { SafetyFilter } from '../discovery/safety-filter.js';
 import { RISKY_TO_CLICK, SESSION_ENDING } from '../discovery/deterministic-spider.js';
 import { needsTestCopy } from '../live-site.js';
-import { BudgetSpentError, StoppedEarlyError } from './ai-budget.js';
+import { BudgetSpentError, CapSpentError, StoppedEarlyError } from './ai-budget.js';
 import { linkKey, pathOf, type SharedLink, type SiteGraph } from './site-graph.js';
 import type { PageCoverageInfo } from './sampling.js';
+import type { ParsedRequirementHint } from '../discovery/context-parser.js';
+import {
+  BIND_BATCH,
+  defaultBinding,
+  deriveDenials,
+  deriveNotFound,
+  docSourceOf,
+  documentedItems,
+  readBinding,
+  reachedRequirementIds,
+  type RoleBinding,
+} from './sources.js';
 
 /** A form the crawler found, as the planner needs it. */
 export interface PlannerForm {
@@ -38,6 +52,15 @@ export interface PagePlannerInput {
   targetUrl: string;
   siteType: string;
   productContext?: string;
+  /** Requirements parsed from the Product Context documents: each can become a Source on a Plan Item. */
+  requirements?: ParsedRequirementHint[];
+  /** The roles of this Check-up (names only, never credentials). Role binding needs two or more. */
+  roles?: string[];
+  /**
+   * Whether the role's own view of the page still shows the control: a Denial Plan Item that would
+   * be trying a working control needs a Test Copy.
+   */
+  controlShownTo?: (role: string, urlPath: string, selector: string) => boolean;
   /** The live site: nothing that sends a form or changes data runs. */
   readOnly: boolean;
   forbiddenActions?: string[];
@@ -106,6 +129,12 @@ export interface PagePlannerOutput {
   notes: string[];
   /** Plan Items planned by fixed rules because the model stopped before it answered. */
   truncated: number;
+  /** Documented items with no page or control in the app. Never failures. */
+  notFound?: PlanNotFound[];
+  /** How many documented items the Plan reaches. Only when the AI could map them. */
+  documentedItems?: { reached: number; total: number };
+  /** Some Plan Items were planned while the crawl was still running (the pipeline). */
+  plannedWhileCrawling?: boolean;
 }
 
 export interface PlannerProgress {
@@ -119,16 +148,17 @@ export interface PlannerProgress {
   attempt?: number;
 }
 
-const PAGES_PER_REQUEST = 3;
+export const PAGES_PER_REQUEST = 3;
 /** Controls sent per request across its pages: keeps prompt and answer within a small free model's reach. */
-const CONTROLS_PER_REQUEST = 120;
-const CONTROLS_PER_PAGE = 60;
+export const CONTROLS_PER_REQUEST = 120;
+export const CONTROLS_PER_PAGE = 60;
 const LINKS_PER_PAGE = 40;
 const SHARED_LINKS_PER_REQUEST = 60;
 /** Room for the answer: small free models that think first need more than the usual 4,096 tokens. */
 export const PLANNING_MAX_TOKENS = 8192;
 /** Product notes repeat in every request, so long ones are cut to this many characters. */
 const CONTEXT_CHARS_PER_REQUEST = 2000;
+const REQUIREMENT_TEXT_CHARS = 120;
 const MAX_TESTS_PER_PAGE = 6;
 const MAX_STEPS_PER_TEST = 8;
 const TESTED: Array<PageCoverageInfo['coverage']> = ['tested', 'sample', 'promoted'];
@@ -162,7 +192,7 @@ export function pageBatches(pages: PageInventoryItem[]): PageInventoryItem[][] {
  * menus. Pages and links the site's memory already has don't count.
  */
 export function estimatePageRequests(
-  input: Pick<PagePlannerInput, 'pages' | 'coverage' | 'graph' | 'remembered'>
+  input: Pick<PagePlannerInput, 'pages' | 'coverage' | 'graph' | 'remembered' | 'requirements' | 'roles'>
 ): number {
   const toPlan = testedPages(input).filter((p) => !rememberedFor(p, input));
   // Links that delete, pay or sign out are never checked, so they're never asked about either.
@@ -171,7 +201,8 @@ export function estimatePageRequests(
     input,
     input.graph.shared.filter((s) => clickable(s.link, safety))
   ).length;
-  return pageBatches(toPlan).length + Math.ceil(shared / SHARED_LINKS_PER_REQUEST);
+  const binding = bindsRoles(input) ? Math.ceil((input.requirements?.length ?? 0) / BIND_BATCH) : 0;
+  return binding + pageBatches(toPlan).length + Math.ceil(shared / SHARED_LINKS_PER_REQUEST);
 }
 
 /**
@@ -409,9 +440,27 @@ function siteIntro(input: PagePlannerInput): string {
   ].join('\n');
 }
 
-function pagesPrompt(input: PagePlannerInput, facts: PageFacts[]): string {
-  return `${siteIntro(input)}
+/** The documented requirements as ids and short text, cut to the same size as the product notes. */
+function requirementsForPrompt(input: PagePlannerInput): string {
+  const lines: string[] = [];
+  let size = 0;
+  for (const r of input.requirements ?? []) {
+    const text = `${r.name}${r.description ? `: ${r.description}` : ''}`.replace(/\s+/g, ' ').trim();
+    const line = JSON.stringify({ id: r.id, text: text.slice(0, REQUIREMENT_TEXT_CHARS) });
+    if (size + line.length > CONTEXT_CHARS_PER_REQUEST) break;
+    lines.push(line);
+    size += line.length;
+  }
+  return lines.join('\n');
+}
 
+function pagesPrompt(input: PagePlannerInput, facts: PageFacts[]): string {
+  const reqs = requirementsForPrompt(input);
+  const reqBlock = reqs
+    ? `\nDocumented requirements (id and text). When a test checks one of them, add "requirementId": "<its id>" to the test. Leave it out otherwise.\n${reqs}\n`
+    : '';
+  return `${siteIntro(input)}
+${reqBlock}
 For EVERY page below, plan "tests": what a person does on the page and what should happen, as 1 to 5 small tests (more for busy pages, none for a page with nothing to do). Each test:
    {"name": "plain words, e.g. Switching to yearly billing shows yearly prices",
     "steps": [{"action": "click" | "fill" | "select" | "check", "selector": "copied exactly from THIS page's controls or form fields", "value": "text to type or option to pick, for fill and select", "name": "plain words"}],
@@ -450,7 +499,7 @@ function originOf(wording: string | undefined, notes: string): 'user' | 'ai-gues
 }
 
 /** What the AI said a link's destination should show. */
-interface PlannedLink {
+export interface PlannedLink {
   expectation?: string;
 }
 
@@ -461,7 +510,13 @@ interface PageAnswer {
 }
 
 /** Turns one page's part of the AI's answer into Plan Items, keeping only what can run as written. */
-function readPageAnswer(raw: any, page: PageInventoryItem, input: PagePlannerInput, safety: SafetyFilter): PageAnswer {
+function readPageAnswer(
+  raw: any,
+  page: PageInventoryItem,
+  input: PagePlannerInput,
+  safety: SafetyFilter,
+  binding?: RoleBinding
+): PageAnswer {
   const answer: PageAnswer = { tests: [], links: new Map(), problems: [] };
   const byTarget = new Map<string, { name: string; element?: ElementInventoryItem }>();
   for (const el of page.elements || []) byTarget.set(el.selector, { name: el.name, element: el });
@@ -533,6 +588,14 @@ function readPageAnswer(raw: any, page: PageInventoryItem, input: PagePlannerInp
       expectations,
       source: 'ai',
     };
+    // A requirement id the documents don't have is dropped silently: the test stays, without a Source.
+    const reqId = typeof t?.requirementId === 'string' ? t.requirementId : undefined;
+    const req = reqId ? input.requirements?.find((r) => r.id === reqId) : undefined;
+    if (req) {
+      test.docSource = docSourceOf(req);
+      test.proposedRoles = [...(binding?.get(req.id)?.roles ?? input.roles ?? [])];
+      test.rolesConfirmed = false;
+    }
     const asFlow = { id: test.id, name, role, description: '', startPage: page.urlPath, steps } as DiscoveredFlow;
     if (needsTestCopy(asFlow, [page], forms)) test.needsTestCopy = true;
     answer.tests.push(test);
@@ -617,6 +680,7 @@ export async function askWithOneRepair(ai: AIProvider, prompt: string, options: 
 /** Why a request failed, as the Plan records it on the items fixed rules planned instead. */
 export function fallbackReasonOf(err: unknown): FallbackReason {
   if (err instanceof StoppedEarlyError) return 'stopped';
+  if (err instanceof CapSpentError) return 'cap';
   if (err instanceof BudgetSpentError) return 'budget';
   if (err instanceof AITruncatedError) return 'truncated';
   return 'no-answer';
@@ -643,6 +707,12 @@ export function fallbackNotes(items: Array<{ source?: string; fallbackReason?: F
       `The AI Request Budget ran out: ${n(overBudget)} ${overBudget === 1 ? 'was' : 'were'} planned by fixed rules. Re-plan them with the AI when requests are available again.`
     );
   }
+  const overCap = count('cap');
+  if (overCap > 0) {
+    notes.push(
+      `The cap you set for this Check-up was reached, so fixed rules planned ${n(overCap)}. Raise the cap, then re-plan them with the AI.`
+    );
+  }
   const stopped = count('stopped');
   if (stopped > 0)
     notes.push(
@@ -665,6 +735,61 @@ export function fallbackNotes(items: Array<{ source?: string; fallbackReason?: F
  * checked: real selectors only, nothing that deletes, pays or signs out. What's still unusable after
  * one repair, cut off, or past the AI Request Budget, is planned by fixed rules and labeled so.
  */
+/** Whether role binding asks the AI at all: documents with requirements and two or more roles. */
+function bindsRoles(input: Pick<PagePlannerInput, 'requirements' | 'roles'>): boolean {
+  return (input.requirements?.length ?? 0) > 0 && (input.roles?.length ?? 0) >= 2;
+}
+
+function bindPrompt(input: PagePlannerInput, batch: ParsedRequirementHint[]): string {
+  const list = batch.map((r) => ({
+    id: r.id,
+    document: r.document,
+    section: r.section,
+    text: `${r.name}${r.description ? `: ${r.description}` : ''}${r.rules.length ? ` (${r.rules.join('; ')})` : ''}`
+      .replace(/\s+/g, ' ')
+      .slice(0, 600),
+  }));
+  return `${siteIntro(input)}
+
+The app has these roles: ${JSON.stringify(input.roles)}.
+For each documented requirement below, say which roles the document says have it ("roles") and which it says do NOT ("deniedRoles"). Only use the role names above. If the document doesn't say, leave both lists empty.
+
+Requirements:
+${JSON.stringify(list)}
+
+Answer with ONLY this JSON: {"requirements": [{"id": "...", "roles": ["..."], "deniedRoles": ["..."]}]}`;
+}
+
+/**
+ * Which roles each documented requirement is for (one AI request per 25 requirements). Anything the
+ * AI doesn't settle, or any failure, means every role is allowed and nothing is denied.
+ */
+export async function bindRoles(
+  input: PagePlannerInput,
+  ai: AIProvider | undefined,
+  onTry?: (attempt: number) => void
+): Promise<{ binding: RoleBinding; asked: boolean; failed: boolean }> {
+  const requirements = input.requirements ?? [];
+  const roles = input.roles ?? [];
+  const binding = defaultBinding(requirements, roles);
+  if (!ai || !bindsRoles(input)) return { binding, asked: false, failed: false };
+  let failed = false;
+  for (let i = 0; i < requirements.length; i += BIND_BATCH) {
+    const batch = requirements.slice(i, i + BIND_BATCH);
+    try {
+      const parsed = await askWithOneRepair(ai, bindPrompt(input, batch), {
+        redact: input.redact,
+        problemsIn: (p) => readBinding(p, batch, roles).problems,
+        onTry,
+      });
+      for (const [id, entry] of readBinding(parsed, batch, roles).binding) binding.set(id, entry);
+    } catch {
+      failed = true;
+    }
+  }
+  return { binding, asked: true, failed };
+}
+
 export async function planPagesAndMenus(
   input: PagePlannerInput,
   ai: AIProvider | undefined,
@@ -677,7 +802,8 @@ export async function planPagesAndMenus(
   const batches = pageBatches(tested.filter((p) => !rememberedFor(p, input)));
   const sharedToPlan = input.graph.shared.filter((s) => clickable(s.link, safety));
   const sharedToAsk = unknownSharedLinks(input, sharedToPlan);
-  const total = batches.length + Math.ceil(sharedToAsk.length / SHARED_LINKS_PER_REQUEST);
+  const bindRequests = ai && bindsRoles(input) ? Math.ceil((input.requirements?.length ?? 0) / BIND_BATCH) : 0;
+  const total = bindRequests + batches.length + Math.ceil(sharedToAsk.length / SHARED_LINKS_PER_REQUEST);
   let done = 0;
   const asking = (what: string) => (attempt: number) =>
     onProgress?.({
@@ -688,11 +814,13 @@ export async function planPagesAndMenus(
       attempt,
     });
 
+  const bound = await bindRoles(input, ai, asking('which roles the documents are for'));
+  const binding = bound.binding;
+  done += bindRequests;
+  if (bindRequests) onProgress?.({ done, total, what: 'Worked out which roles the documents are for' });
+
   /** Pages' tests, who planned them, and what the AI said about their links' destinations. */
-  const planned = new Map<
-    string,
-    { tests: PlanPageTest[]; source: PlanItemSource; reason?: FallbackReason; links: Map<string, PlannedLink> }
-  >();
+  const planned = new Map<string, PlannedPage>();
   for (const page of tested) {
     const before = rememberedFor(page, input);
     if (before)
@@ -704,58 +832,128 @@ export async function planPagesAndMenus(
   }
 
   for (const batch of batches) {
-    const facts = batch.map((p) => pageFacts(p, input, safety, titles));
-    const answers = new Map<string, PageAnswer>();
-    let failure: FallbackReason | undefined = ai ? undefined : 'no-ai';
-    if (ai) {
-      try {
-        const readAll = (parsed: any) => {
-          answers.clear();
-          const problems: string[] = [];
-          const byPath = new Map<string, any>(
-            (Array.isArray(parsed?.pages) ? parsed.pages : []).map((p: any) => [pathOf(String(p?.urlPath ?? '')), p])
-          );
-          for (const page of batch) {
-            const raw = byPath.get(pathOf(page.urlPath));
-            if (!raw) {
-              problems.push(`The page ${page.urlPath} is missing.`);
-              continue;
-            }
-            const answer = readPageAnswer(raw, page, input, safety);
-            answers.set(page.urlPath, answer);
-            problems.push(...answer.problems);
-          }
-          return problems;
-        };
-        const paths = batch.map((p) => p.urlPath);
-        const what =
-          paths.length > 2 ? `${paths.slice(0, 2).join(', ')} and ${paths.length - 2} more` : paths.join(', ');
-        readAll(
-          await askWithOneRepair(ai, pagesPrompt(input, facts), {
-            redact: input.redact,
-            problemsIn: readAll,
-            onTry: asking(what),
-          })
-        );
-      } catch (err) {
-        failure = fallbackReasonOf(err);
-      }
-    }
-    for (const page of batch) {
-      const answer = answers.get(page.urlPath);
-      const aiTests = answer?.tests ?? [];
-      // A page the AI planned nothing usable for gets the fixed rules; a page the AI said has nothing to do stays empty.
-      const usedAi = !!answer && (aiTests.length > 0 || answer.problems.length === 0);
-      planned.set(page.urlPath, {
-        tests: usedAi ? aiTests : fallbackPageTests(page, safety),
-        source: usedAi ? 'ai' : 'fallback',
-        reason: usedAi ? undefined : (failure ?? 'unusable'),
-        links: answer?.links ?? new Map<string, PlannedLink>(),
-      });
+    for (const [urlPath, entry] of await planBatch(batch, input, ai, { safety, titles, binding, asking })) {
+      planned.set(urlPath, entry);
     }
     done++;
     onProgress?.({ done, total, what: `Planned ${batch.map((p) => p.urlPath).join(', ')}` });
   }
+
+  return assemblePlan(input, ai, planned, {
+    binding,
+    boundFailed: bound.failed,
+    asking,
+    step: (what) => {
+      done++;
+      onProgress?.({ done, total, what });
+    },
+  });
+}
+
+/** One page's plan: its tests, who planned them, and what the AI said about its links' destinations. */
+export interface PlannedPage {
+  tests: PlanPageTest[];
+  source: PlanItemSource;
+  reason?: FallbackReason;
+  links: Map<string, PlannedLink>;
+  /** Set when the plan was made while the crawl was still running, or after it. */
+  origin?: PlanItemOrigin;
+}
+
+/**
+ * Plans one batch of pages with one request (and one repair at most). Nothing here throws: a failed
+ * request leaves the batch to the fixed rules, with the reason. Pages with no AI get 'no-ai'.
+ */
+export async function planBatch(
+  batch: PageInventoryItem[],
+  input: PagePlannerInput,
+  ai: AIProvider | undefined,
+  ctx: {
+    safety: SafetyFilter;
+    titles: Map<string, string>;
+    binding?: RoleBinding;
+    asking?: (what: string) => (attempt: number) => void;
+  }
+): Promise<Map<string, PlannedPage>> {
+  const { safety, titles, binding } = ctx;
+  const out = new Map<string, PlannedPage>();
+  const facts = batch.map((p) => pageFacts(p, input, safety, titles));
+  const answers = new Map<string, PageAnswer>();
+  let failure: FallbackReason | undefined = ai ? undefined : 'no-ai';
+  if (ai) {
+    try {
+      const readAll = (parsed: any) => {
+        answers.clear();
+        const problems: string[] = [];
+        const byPath = new Map<string, any>(
+          (Array.isArray(parsed?.pages) ? parsed.pages : []).map((p: any) => [pathOf(String(p?.urlPath ?? '')), p])
+        );
+        for (const page of batch) {
+          const raw = byPath.get(pathOf(page.urlPath));
+          if (!raw) {
+            problems.push(`The page ${page.urlPath} is missing.`);
+            continue;
+          }
+          const answer = readPageAnswer(raw, page, input, safety, binding);
+          answers.set(page.urlPath, answer);
+          problems.push(...answer.problems);
+        }
+        return problems;
+      };
+      const paths = batch.map((p) => p.urlPath);
+      const what =
+        paths.length > 2 ? `${paths.slice(0, 2).join(', ')} and ${paths.length - 2} more` : paths.join(', ');
+      readAll(
+        await askWithOneRepair(ai, pagesPrompt(input, facts), {
+          redact: input.redact,
+          problemsIn: readAll,
+          onTry: ctx.asking?.(what),
+        })
+      );
+    } catch (err) {
+      failure = fallbackReasonOf(err);
+    }
+  }
+  for (const page of batch) {
+    const answer = answers.get(page.urlPath);
+    const aiTests = answer?.tests ?? [];
+    // A page the AI planned nothing usable for gets the fixed rules; a page the AI said has nothing to do stays empty.
+    const usedAi = !!answer && (aiTests.length > 0 || answer.problems.length === 0);
+    out.set(page.urlPath, {
+      tests: usedAi ? aiTests : fallbackPageTests(page, safety),
+      source: usedAi ? 'ai' : 'fallback',
+      reason: usedAi ? undefined : (failure ?? 'unusable'),
+      links: answer?.links ?? new Map<string, PlannedLink>(),
+    });
+  }
+  return out;
+}
+
+/**
+ * Everything after the pages' tests are planned: the shared menus (one request per 60 unknown
+ * links), Navigation Checks, Denial items and documented items not found. Used by the sequential
+ * planner and, from the full site graph, by the pipeline.
+ */
+export async function assemblePlan(
+  input: PagePlannerInput,
+  ai: AIProvider | undefined,
+  planned: Map<string, PlannedPage>,
+  ctx: {
+    binding: RoleBinding;
+    boundFailed: boolean;
+    asking: (what: string) => (attempt: number) => void;
+    /** One more request is done. */
+    step: (what: string) => void;
+  }
+): Promise<PagePlannerOutput> {
+  const safety = new SafetyFilter(input.forbiddenActions || []);
+  const titles = titlesOf(input.pages);
+  const tested = testedPages(input);
+  const sharedToPlan = input.graph.shared.filter((s) => clickable(s.link, safety));
+  const sharedToAsk = unknownSharedLinks(input, sharedToPlan);
+  const requirements = input.requirements ?? [];
+  const { binding, asking } = ctx;
+  const bound = { failed: ctx.boundFailed };
 
   // The shared menus: what the destinations the crawl didn't see should show, for links in many
   // pages' headers, menus and footers that the site's memory doesn't know yet.
@@ -794,8 +992,7 @@ export async function planPagesAndMenus(
     } catch (err) {
       for (const s of chunk) sharedUnplanned.set(s.link.selector, fallbackReasonOf(err));
     }
-    done++;
-    onProgress?.({ done, total, what: 'Planned the shared menus' });
+    ctx.step('Planned the shared menus');
   }
 
   // Plan Items: every page listed; checks for every shared link once and every tested page's own links.
@@ -818,6 +1015,7 @@ export async function planPagesAndMenus(
       source: plan?.source ?? 'ai',
       fallbackReason: plan?.reason,
       isNew: page.isNew,
+      ...(plan?.origin ? { origin: plan.origin } : {}),
     };
   });
 
@@ -897,8 +1095,40 @@ export async function planPagesAndMenus(
     }
   }
 
+  // Sources: Denial Plan Items for roles the documents exclude, and documented items with nothing in the app.
+  for (const { urlPath, test } of deriveDenials(pages, binding, { safety, controlShownTo: input.controlShownTo })) {
+    pages.find((p) => p.urlPath === urlPath)?.tests.push(test);
+  }
+  const notes: string[] = [];
+  let notFound: PlanNotFound[] | undefined;
+  let documented: { reached: number; total: number } | undefined;
+  if (requirements.length > 0) {
+    // Mapping needs the AI to have planned every page; fixed rules know nothing of the documents.
+    const mapped = !!ai && pages.every((p) => p.coverage === 'covered' || p.tests.length === 0 || p.source === 'ai');
+    if (mapped) {
+      notFound = deriveNotFound(requirements, pages, binding, input.roles ?? []);
+      const named = requirements.filter((r) => r.name?.trim()).length;
+      documented = documentedItems(named, reachedRequirementIds(pages).size);
+    } else {
+      notes.push('The documents could not be matched to the app because fixed rules planned some pages, so nothing is listed as not found.');
+    }
+    if (bound.failed)
+      notes.push('The AI could not work out which roles the documents are for, so every role is allowed and no Denial items were added.');
+  }
+
   const items = [...pages.filter((p) => p.coverage !== 'covered'), ...navigation];
   const count = (reason: FallbackReason) =>
     items.filter((i) => i.source === 'fallback' && i.fallbackReason === reason).length;
-  return { pages, navigation, overBudget: count('budget'), truncated: count('truncated'), notes: fallbackNotes(items) };
+  return {
+    pages,
+    navigation,
+    overBudget: count('budget'),
+    truncated: count('truncated'),
+    notes: [...fallbackNotes(items), ...notes],
+    notFound,
+    documentedItems: documented,
+    ...(pages.some((p) => p.origin === 'while-crawling' || p.tests.some((t) => t.origin === 'while-crawling'))
+      ? { plannedWhileCrawling: true }
+      : {}),
+  };
 }

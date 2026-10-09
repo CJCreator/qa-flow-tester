@@ -1,3 +1,8 @@
+import type { RunCap } from '@qa/types';
+import type { StorageStateData } from '@qa/types/src/evidence-finding.js';
+import { capFromInputs } from './cap';
+import { toContextDocuments, type ReferenceFile } from './context';
+
 /**
  * What the person types on the new check-up screen. It lives in App, above every screen, so going
  * to Settings, adding the AI key or looking at a past report never loses it.
@@ -29,6 +34,23 @@ export interface CheckupForm {
   visibility?: VisibilityChoice | null;
   /** Plan with fixed rules now, spending no AI requests; re-plan with the AI later. */
   planWithoutAI: boolean;
+  /** Product Context files (.md / .txt), each kept as its own document. */
+  contextFiles: ReferenceFile[];
+  /** A docs address; same-site pages are read. */
+  contextUrl: string;
+  /** Saved sessions per role. In memory only; cleared as soon as the check-up starts. */
+  savedSessions: SavedSessionEntry[];
+  /** Optional cap on AI requests, as typed. */
+  capRequests: string;
+  /** Optional cap on dollars, as typed (only offered when the provider reports a price). */
+  capDollars: string;
+}
+
+export interface SavedSessionEntry {
+  role: string;
+  /** Shown instead of the contents. */
+  fileName: string;
+  state: StorageStateData;
 }
 
 export interface VisibilityChoice {
@@ -79,7 +101,38 @@ export const EMPTY_FORM: CheckupForm = {
   searchChecks: null,
   visibility: null,
   planWithoutAI: false,
+  contextFiles: [],
+  contextUrl: '',
+  savedSessions: [],
+  capRequests: '',
+  capDollars: '',
 };
+
+/** The Product Context files as the run body takes them; undefined when none were added. */
+export function contextDocumentsOf(form: Pick<CheckupForm, 'contextFiles'>) {
+  const docs = toContextDocuments(form.contextFiles);
+  return docs.length > 0 ? docs : undefined;
+}
+
+/** The docs address, trimmed; undefined when empty. */
+export function contextUrlOf(form: Pick<CheckupForm, 'contextUrl'>): string | undefined {
+  return form.contextUrl.trim() || undefined;
+}
+
+/** The saved sessions keyed by role (a role name is made up when none was given); undefined when none. */
+export function savedSessionsOf(form: Pick<CheckupForm, 'savedSessions'>): Record<string, StorageStateData> | undefined {
+  if (form.savedSessions.length === 0) return undefined;
+  const sessions: Record<string, StorageStateData> = {};
+  form.savedSessions.forEach((s, i) => {
+    sessions[s.role.trim().toLowerCase() || (i === 0 ? 'member' : `member-${i + 1}`)] = s.state;
+  });
+  return sessions;
+}
+
+/** The cap the person typed, or undefined. */
+export function capOf(form: Pick<CheckupForm, 'capRequests' | 'capDollars'>): RunCap | undefined {
+  return capFromInputs(form.capRequests, form.capDollars);
+}
 
 /** The sign-ins filled in, as the runner takes them: a role name is made up when none was given. */
 export function rolesOf(

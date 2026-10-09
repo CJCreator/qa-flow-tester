@@ -1,5 +1,6 @@
 import type { TestCaseStep, RuleOrigin, TestCaseExpectations, ValidationRule } from './test-case.js';
 import type { FallbackReason, PageLink, NarrowMenu, DraftPlan } from './plan.js';
+import type { SignInFailureReason } from './signin.js';
 
 export interface SensitiveAction {
   type: 'deletion' | 'payment' | 'external_communication' | 'admin_setting';
@@ -134,6 +135,8 @@ export interface DiscoveryDraft {
     signedInAs: string[];
     /** Roles whose sign-in didn't work. */
     signInFailed: string[];
+    /** Why each of those roles could not sign in (a fixed reason, never page text). */
+    signInFailures?: Record<string, SignInFailureReason>;
     /** Pages with a sign-in form. */
     signInPages: string[];
     /** Pages that asked for a sign-in nobody could get past. */

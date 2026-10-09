@@ -33,7 +33,7 @@ Requires Node 22 and pnpm 11 (the exact version is pinned in `package.json`).
 ## Decision records
 
 `docs/adr/NNNN-short-title.md` with `# NNNN: Title`, `## Context and Decision`, `## Consequences`. Use the next unused
-number (the latest is 0018; 0013, 0015 and 0017 are reserved and not written yet, so check before numbering). Superseded records
+number (the latest is 0021; 0013 and 0015 are reserved and not written yet, so check before numbering). Superseded records
 get a note at the top rather than being deleted.
 
 ## Code conventions

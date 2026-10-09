@@ -1,7 +1,13 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import type { BrowserContext, Locator, Page } from 'playwright';
-import type { PreFlightResult, ProductProfile, RoleCredential, SignInFailureReason } from '@qa/types';
+import type {
+  PreFlightResult,
+  ProductProfile,
+  RoleCredential,
+  SignInFailureReason,
+  StorageStateData,
+} from '@qa/types';
 import type { BrowserManager } from './browser.js';
 
 const USERNAME_SELECTOR =
@@ -261,6 +267,8 @@ export class PreFlightChecker {
     options?: {
       browserManager?: BrowserManager;
       authDir?: string;
+      /** Sessions the person saved, by role. Held in memory only: never written to disk or logged. */
+      suppliedSessions?: Record<string, StorageStateData>;
     }
   ): Promise<PreFlightResult> {
     const urlCheck = await this.checkUrlReachable(targetUrl, tunnelAuth);
@@ -276,8 +284,9 @@ export class PreFlightChecker {
     }
 
     const roleResults: Record<string, boolean> = {};
-    const roleStorageStates: Record<string, string> = {};
+    const roleStorageStates: Record<string, string | StorageStateData> = {};
     const roleLandingPaths: Record<string, string> = {};
+    const roleFailures: Record<string, SignInFailureReason> = {};
 
     if (profile?.roles && profile.roles.length > 0) {
       if (options?.authDir) {
@@ -287,7 +296,19 @@ export class PreFlightChecker {
       for (const role of profile.roles) {
         if (options?.browserManager && options?.authDir) {
           const statePath = path.join(options.authDir, `${role.role}.json`);
+          const supplied = options.suppliedSessions?.[role.role];
           try {
+            if (supplied) {
+              const checked = await this.checkSuppliedSession(options.browserManager, targetUrl, tunnelAuth, supplied);
+              roleResults[role.role] = checked.ok;
+              if (checked.ok) {
+                roleStorageStates[role.role] = supplied;
+                if (checked.landingPath) roleLandingPaths[role.role] = checked.landingPath;
+              } else {
+                roleFailures[role.role] = checked.reason;
+              }
+              continue;
+            }
             const context = await options.browserManager.createContext({
               baseUrl: targetUrl,
               tunnelAuth,
@@ -297,10 +318,13 @@ export class PreFlightChecker {
             if (signedIn.ok) {
               roleStorageStates[role.role] = statePath;
               if (signedIn.landingPath) roleLandingPaths[role.role] = signedIn.landingPath;
+            } else {
+              roleFailures[role.role] = signedIn.reason ?? 'no-form';
             }
             await context.close();
           } catch {
             roleResults[role.role] = false;
+            roleFailures[role.role] = 'unreachable';
           }
         } else {
           roleResults[role.role] = true;
@@ -315,7 +339,38 @@ export class PreFlightChecker {
       loginReachable: true,
       roleAuthResults: roleResults,
       roleStorageStates,
+      ...(Object.keys(roleFailures).length > 0 ? { roleFailures } : {}),
       roleLandingPaths,
     };
+  }
+
+  /**
+   * Opens the site with a saved session and looks at where it lands. A password field on screen means the
+   * site did not accept it (`session-expired`). The session object is only handed to the browser; nothing
+   * about it is logged or written.
+   */
+  private async checkSuppliedSession(
+    browserManager: BrowserManager,
+    targetUrl: string,
+    tunnelAuth: string | undefined,
+    session: StorageStateData
+  ): Promise<{ ok: true; landingPath: string } | { ok: false; reason: SignInFailureReason }> {
+    let context: BrowserContext | undefined;
+    try {
+      context = await browserManager.createContext({ baseUrl: targetUrl, tunnelAuth, storageState: session });
+      const page = await context.newPage();
+      const opened = await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 12000 });
+      if (opened && opened.status() >= 500) return { ok: false, reason: 'unreachable' };
+      await page.waitForTimeout(300);
+      if (new URL(page.url()).origin !== new URL(targetUrl).origin) return { ok: false, reason: 'session-expired' };
+      if (await anyVisible(page.locator(PASSWORD_SELECTOR))) return { ok: false, reason: 'session-expired' };
+      const landed = new URL(page.url());
+      return { ok: true, landingPath: landed.pathname + landed.search };
+    } catch (err: unknown) {
+      const kind = err instanceof Error ? `${err.name} ${err.message}` : '';
+      return { ok: false, reason: /TimeoutError|net::ERR_/.test(kind) ? 'unreachable' : 'session-expired' };
+    } finally {
+      await context?.close().catch(() => {});
+    }
   }
 }

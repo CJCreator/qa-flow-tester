@@ -556,7 +556,7 @@ export async function generateSingleFileHtmlReport(
 }
 
 /** Total bytes of images embedded per report (base64 inflates by about a third); beyond it, relative links. */
-const DEFAULT_IMAGE_BUDGET_BYTES = 6 * 1024 * 1024;
+export const DEFAULT_IMAGE_BUDGET_BYTES = 6 * 1024 * 1024;
 
 const VISUAL_COMPARE_CSS = `
     .visual-compare { margin-top: 0.75rem; }
@@ -571,7 +571,7 @@ const VISUAL_COMPARE_CSS = `
  * Source for one evidence image: embedded as base64 while the budget lasts, else a relative link.
  * Only existing .png files inside the report folder qualify; anything else is not shown.
  */
-async function imageSrc(
+export async function imageSrc(
   rel: string | undefined,
   outputDir: string,
   budget: { remaining: number }
@@ -625,7 +625,7 @@ async function renderVisualCompare(
             </div>`;
 }
 
-function escapeHtml(text?: string): string {
+export function escapeHtml(text?: string): string {
   if (!text) return '';
   return text
     .replace(/&/g, '&amp;')

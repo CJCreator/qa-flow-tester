@@ -1,4 +1,4 @@
-import type { AIModelOutcome } from '@qa/types';
+import type { AIModelOutcome, ProviderLimits } from '@qa/types';
 
 /**
  * OpenRouter account helpers used by the non-technical wizard: key validation and
@@ -31,6 +31,25 @@ interface RawModel {
   architecture?: { input_modalities?: string[]; output_modalities?: string[] };
   supported_parameters?: string[];
   reasoning?: { mandatory?: boolean };
+}
+
+interface RawKeyData {
+  free_model_daily_requests?: { remaining?: number; limit?: number };
+  limit_remaining?: number | null;
+  rate_limit?: { requests?: number; interval?: string };
+}
+
+function isCount(n: unknown): n is number {
+  return typeof n === 'number' && Number.isFinite(n) && n >= 0;
+}
+
+/** "10s", "1m", "2h" or "1d" in milliseconds; null when not understood. */
+function intervalToMs(interval: string): number | null {
+  const m = /^(\d+)\s*(ms|s|m|h|d)$/i.exec(interval.trim());
+  if (!m) return null;
+  const unit = { ms: 1, s: 1000, m: 60000, h: 3600000, d: 86400000 }[m[2].toLowerCase() as 'ms'];
+  const ms = Number(m[1]) * unit;
+  return ms > 0 ? ms : null;
 }
 
 /** Classifier / moderation models are priced at zero but cannot write test plans. */
@@ -99,6 +118,60 @@ export class OpenRouterClient {
       const today = body.data?.free_model_daily_requests;
       if (typeof today?.remaining !== 'number' || typeof today.limit !== 'number') return null;
       return { used: today.used ?? today.limit - today.remaining, limit: today.limit, remaining: today.remaining };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * What the service reports about the key's limits, or null when it can't be read. Every field is
+   * optional: absent means "not reported". Field names follow OpenRouter's `/key` response
+   * (`free_model_daily_requests`, `limit_remaining`, `rate_limit`); not yet checked against a live key.
+   */
+  async keyLimits(apiKey: string | undefined): Promise<ProviderLimits | null> {
+    const key = apiKey?.trim();
+    if (!key) return null;
+    try {
+      const res = await this.fetchImpl(`${OPENROUTER_API}/key`, {
+        headers: { Authorization: `Bearer ${key}` },
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+      if (!res.ok) return null;
+      const body = (await res.json()) as { data?: RawKeyData } | null;
+      const data = body?.data;
+      if (!data || typeof data !== 'object') return null;
+      const limits: ProviderLimits = {};
+      const today = data.free_model_daily_requests;
+      if (isCount(today?.remaining)) limits.remainingRequests = today.remaining;
+      if (isCount(today?.limit)) limits.limitRequests = today.limit;
+      if (isCount(data.limit_remaining)) limits.creditRemainingUsd = data.limit_remaining;
+      const rate = data.rate_limit;
+      const interval = typeof rate?.interval === 'string' ? intervalToMs(rate.interval) : null;
+      if (isCount(rate?.requests) && rate.requests > 0 && interval) {
+        limits.requestsPerInterval = rate.requests;
+        limits.intervalMs = interval;
+      }
+      return limits;
+    } catch {
+      return null;
+    }
+  }
+
+  /** The model's price per million tokens (free models: 0), or null when it can't be found. */
+  async modelPrice(modelId: string): Promise<{ prompt: number; completion: number } | null> {
+    try {
+      const res = await this.fetchImpl(`${OPENROUTER_API}/models`, {
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+      if (!res.ok) return null;
+      const { data } = (await res.json()) as { data?: RawModel[] };
+      const model = (data ?? []).find((m) => m.id === modelId);
+      if (!model) return null;
+      if (isFree(model)) return { prompt: 0, completion: 0 };
+      const prompt = Number(model.pricing?.prompt);
+      const completion = Number(model.pricing?.completion);
+      if (!Number.isFinite(prompt) || !Number.isFinite(completion) || prompt < 0 || completion < 0) return null;
+      return { prompt: prompt * 1e6, completion: completion * 1e6 };
     } catch {
       return null;
     }

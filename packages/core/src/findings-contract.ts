@@ -43,7 +43,7 @@ export function sanitizeInline(s: string, max: number = MAX_INLINE): string {
 }
 
 /** Sanitized text in a markdown code span. Backticks inside become quotes so the span cannot be closed early. */
-function codeSpan(s: string, max: number = MAX_INLINE): string {
+export function codeSpan(s: string, max: number = MAX_INLINE): string {
   return `\`${sanitizeInline(s, max).replace(/`/g, "'")}\``;
 }
 

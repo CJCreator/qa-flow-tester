@@ -1,4 +1,6 @@
 import http from 'http';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
 
 const port = process.env.PORT || 3050;
 
@@ -55,7 +57,7 @@ const server = http.createServer((req, res) => {
   }
 
   // A real signed-in area: POST sign-in sets a session cookie; /account pages need it.
-  const session = (req.headers.cookie || '').match(/fixture_session=(manager|viewer)/)?.[1];
+  const session = (req.headers.cookie || '').match(/fixture_session=(admin|manager|viewer)/)?.[1];
   const html = (
     title,
     body,
@@ -75,6 +77,7 @@ const server = http.createServer((req, res) => {
   const ACCOUNTS = {
     'manager@example.com': ['manager-password', 'manager'],
     'viewer@example.com': ['viewer-password', 'viewer'],
+    'admin@example.com': ['admin-password', 'admin'],
     'two-step@example.com': ['two-step-password', 'manager'],
   };
 
@@ -214,6 +217,7 @@ const server = http.createServer((req, res) => {
         'My account',
         `<h1>My account</h1><p>Signed in as ${session}.</p>
          <a href="/account/orders">Orders</a> <a href="/account/profile">Profile</a> <a href="/account/team">Team</a>
+         ${session === 'admin' ? '<a href="/account/users/new">Create user</a>' : ''}
          <a href="/signout">Sign out</a>`
       );
     }
@@ -239,13 +243,84 @@ const server = http.createServer((req, res) => {
          </script>`
       );
     }
-    // Only managers may see the team page.
+    // Only admins may create users. Everyone else gets no link and a 403 on the address.
+    if (url.pathname === '/account/users/new') {
+      return session === 'admin'
+        ? html(
+            'Create user',
+            `<h1>Create user</h1>
+             <form id="create-user-form"><label for="new-user-email">Email</label><input id="new-user-email" name="email" type="email">
+             <button type="submit" data-testid="create-user-btn">Create user</button></form>`
+          )
+        : html('No access', '<h1>You don’t have access to this page</h1>', 403);
+    }
+    // Only managers (and admins) may see the team page.
     if (url.pathname === '/account/team') {
-      return session === 'manager'
+      return session === 'manager' || session === 'admin'
         ? html('Team', '<h1>Team</h1><p>2 people</p>')
         : html('No access', '<h1>You don’t have access to this page</h1>', 403);
     }
   }
+  // Slow-crawl pages: /slow/1../slow/N answer after ?delay ms (default 1500, at most 10000) and link to the next
+  // one. Linked from nowhere else, so the normal crawls and the benchmark never see them.
+  const slow = url.pathname.match(/^\/slow\/(\d{1,3})$/);
+  if (slow) {
+    const n = Number(slow[1]);
+    const delay = Math.min(Math.max(Number(url.searchParams.get('delay') ?? 1500) || 0, 0), 10000);
+    setTimeout(
+      () =>
+        html(
+          `Slow page ${n}`,
+          `<h1>Slow page ${n}</h1><p>This page answers after ${delay} ms.</p><a href="/slow/${n + 1}?delay=${delay}">Next slow page</a>`,
+          200,
+          `Slow page ${n} of the fixture app: it answers after ${delay} milliseconds, to test a crawl that takes a while.`
+        ),
+      delay
+    );
+    return;
+  }
+  // Product documents for Sources tests. The guide files also live in fixtures/test-app/docs/.
+  if (url.pathname === '/docs' || url.pathname === '/docs/') {
+    return html(
+      'Docs',
+      '<h1>Docs</h1><a href="/docs/admin-guide.md">Admin guide</a> <a href="/docs/product-guide.md">Product guide</a>'
+    );
+  }
+  const docFile = url.pathname.match(/^\/docs\/(admin-guide|product-guide)\.md$/);
+  if (docFile) {
+    try {
+      const text = readFileSync(fileURLToPath(new URL(`./docs/${docFile[1]}.md`, import.meta.url)), 'utf8');
+      res.writeHead(200, { 'Content-Type': 'text/markdown; charset=utf-8' });
+      res.end(text);
+    } catch {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('Not found');
+    }
+    return;
+  }
+  // Mock saved-session login: hands back a browser storage state for a role, the way a person's saved session
+  // would look. role=expired gives a cookie the app no longer accepts. The value is the role name (not a secret).
+  if (url.pathname === '/saved-session/mint') {
+    const role = url.searchParams.get('role') || 'viewer';
+    const known = ['admin', 'manager', 'viewer', 'expired'].includes(role);
+    if (!known) return json(400, { error: 'unknown role' });
+    return json(200, {
+      cookies: [
+        {
+          name: 'fixture_session',
+          value: role,
+          domain: 'localhost',
+          path: '/',
+          expires: -1,
+          httpOnly: true,
+          secure: false,
+          sameSite: 'Lax',
+        },
+      ],
+      origins: [],
+    });
+  }
+
   // Planted: a page with no title for search engines to show.
   if (url.pathname === '/about') {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });

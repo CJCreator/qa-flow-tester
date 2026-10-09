@@ -7,6 +7,13 @@ All notable changes. Format follows [Keep a Changelog](https://keepachangelog.co
 
 ### Added
 
+- Sources: Plan Items link to the document they came from (name, section); roles are proposed and confirmed in Plan Review; Product Context takes several .md/.txt files and a docs URL (ADR 0020)
+- Denial Plan Items (a role that should not see a control is checked read-only) and "Not found in app" with a reason; the report says "N of M documented items reached" (ADR 0020)
+- "Needs your judgement" section: logical-flow guesses by the AI sit apart and do not change the verdict or grades until accepted (ADR 0020)
+- Issues document (`issues.md`, `issues.html`): per role, by issue type, self-contained, screenshots embedded (ADR 0020, ADR 0021)
+- Per-role sign-in failure with a plain reason ("Roles not tested and why"; a failed role no longer runs signed out) and saved sessions held in memory only (ADR 0021)
+- Planning starts while the scan runs; items planned early are never changed, later ones are marked as added after the scan (ADR 0020)
+- The AI Request Budget follows the provider's reported limits, runs requests in parallel only when allowed, and takes an optional request or dollar cap per Check-up (dollars only when the provider reports a price)
 - Perceptual Visual Diff steadier and visible: page stabilised before capture, dates, ads and password fields masked in new baselines, old/new/difference images in the single-file HTML report; existing baselines compare as before (T-21, ADR 0019)
 - Export the approved Plan as a Playwright project (zip) from Plan Review (`GET /api/runner/plan/export`); read-only Plans export no submits or Sensitive Actions; sign-in state by path only (T-17)
 - `findings.json` contract: `schemaVersion` 1, per-finding `fingerprint`, JSON Schema (`docs/findings.schema.json`), `fix-these.md`, `known-findings.json`, `AGENTS.snippet.md`, and GitHub annotations from the CI command (T-16, ADR 0017)
@@ -14,8 +21,9 @@ All notable changes. Format follows [Keep a Changelog](https://keepachangelog.co
 
 ### Changed
 
-- Sign-in test now names why it failed (wrong details, no sign-in form found, site unreachable or timed out, needs more than a password) and handles two-step and modal sign-ins (T-18)
+- Known gap: the CI command (`checkup.ts`) has no `--context` option yet, so multi-file Product Context and a docs URL work in the wizard and runner only
 
+- Sign-in test now names why it failed (wrong details, no sign-in form found, site unreachable or timed out, needs more than a password) and handles two-step and modal sign-ins (T-18)
 - Internal: split packages/types/src/index.ts into area files; exports unchanged (T-23a)
 - Fixture benchmark: every finding is labelled in the answer key (real, or known noise), fixture pages got a viewport, icon, description and h1, the fixture's sitemap address follows its port, and thresholds are calibrated
 
@@ -52,7 +60,7 @@ All notable changes. Format follows [Keep a Changelog](https://keepachangelog.co
 - One-off Prettier format pass over the repo (no behavior change)
 - `.env.example`, `docs/PRODUCT_GUIDE.md`, README and the plan status docs rewritten to match the current app (no CLI, Report Hub, PostgreSQL/S3 or dashboard)
 - `pnpm/action-setup` pinned to a verified commit SHA (v4.4.0) in `ci.yml`, `deploy.yml`, `qa-check.yml`; `benchmark.yml` and `templates/qa-check.yml` still use `@v4`
-- `.gitignore` now shares `.claude/` settings and commands, and ignores only worktrees and local overrides
+- `.gitignore` ignores `.claude/` (local only) and all `.tmp-*` files
 - CI and the deploy test job now run every package test except `wizard-e2e` (and install Chromium for the browser-driven ones); was a wizard-and-beta subset
 
 ### Fixed

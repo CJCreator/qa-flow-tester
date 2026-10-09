@@ -10,7 +10,7 @@ import path from 'path';
 import { RunnerServer } from '../src/server.js';
 import type { OpenRouterClient } from '@qa/core';
 
-const PORT = 3572;
+const PORT = 3732;
 const scratch = path.join(process.cwd(), '.tmp-beta-privacy');
 
 interface Answer {

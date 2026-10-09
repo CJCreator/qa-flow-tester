@@ -84,3 +84,64 @@ describe('fixture app planted defects', () => {
     expect(Date.now() - t).toBeGreaterThan(1500);
   });
 });
+
+describe('fixture app roles, slow pages, docs and saved sessions', () => {
+  const as = (role: string, p: string) =>
+    fetch(base + p, { headers: { cookie: `fixture_session=${role}` }, redirect: 'manual' }).then(async (r) => ({
+      status: r.status,
+      text: await r.text(),
+    }));
+
+  it('Create user is admin-only: link and page hidden from viewer and manager', async () => {
+    const admin = await as('admin', '/account');
+    expect(admin.text).toContain('/account/users/new');
+    expect((await as('admin', '/account/users/new')).status).toBe(200);
+    for (const role of ['viewer', 'manager']) {
+      expect((await as(role, '/account')).text, role).not.toContain('/account/users/new');
+      expect((await as(role, '/account/users/new')).status, role).toBe(403);
+    }
+    expect((await as('expired', '/account/users/new')).status).toBe(302);
+  });
+
+  it('the admin account signs in, and the Team page still works for manager and admin', async () => {
+    const res = await fetch(base + '/signin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'email=admin%40example.com&password=admin-password',
+      redirect: 'manual',
+    });
+    expect(res.headers.get('set-cookie')).toContain('fixture_session=admin');
+    expect((await as('manager', '/account/team')).status).toBe(200);
+    expect((await as('viewer', '/account/team')).status).toBe(403);
+  });
+
+  it('/slow/:n answers after ?delay and links to the next; delay is capped', async () => {
+    const t = Date.now();
+    const { text } = await get('/slow/2?delay=300');
+    expect(Date.now() - t).toBeGreaterThanOrEqual(250);
+    expect(text).toContain('/slow/3?delay=300');
+    expect((await get('/slow/abc')).status).toBe(404);
+  });
+
+  it('the home page does not link to the slow, docs or saved-session routes', async () => {
+    const home = (await get('/')).text;
+    for (const p of ['/slow/', '/docs', '/saved-session']) expect(home).not.toContain(p);
+  });
+
+  it('serves both guides; the admin guide names a feature the app does not have', async () => {
+    const admin = await get('/docs/admin-guide.md');
+    expect(admin.status).toBe(200);
+    expect(admin.text).toContain('Create user');
+    expect(admin.text).toContain('Export all to PDF');
+    expect((await get('/invoices')).text).not.toContain('Export all to PDF');
+    expect((await get('/docs/product-guide.md')).status).toBe(200);
+    expect((await get('/docs/other.md')).status).toBe(404);
+  });
+
+  it('mock saved session hands back a storage state; unknown roles are refused', async () => {
+    const ok = JSON.parse((await get('/saved-session/mint?role=admin')).text);
+    expect(ok.cookies[0]).toMatchObject({ name: 'fixture_session', value: 'admin', domain: 'localhost' });
+    expect(ok.origins).toEqual([]);
+    expect((await get('/saved-session/mint?role=root')).status).toBe(400);
+  });
+});

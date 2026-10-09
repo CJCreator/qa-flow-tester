@@ -17,7 +17,7 @@ The CLI, Report Hub and Dashboard were retired. Mentions of them in the history 
 
 | Phase                              | Status                                                                                                                                       |
 | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| **0: Stop misleading people**      | **Code complete. Full suite run 2026-10-09: 915/920** (see below)                                                                               |
+| **0: Stop misleading people**      | **Code complete. Full suite run 2026-10-09: 915/920** (see below)                                                                            |
 | **1: Free hosting, first version** | **Code complete, wired to automatic deploys (Vercel front end, Render beta app). First live end-to-end result not yet recorded** (see below) |
 | 2 to 7                             | Not started                                                                                                                                  |
 

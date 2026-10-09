@@ -6,6 +6,8 @@ import type {
   AIProviderType,
   AIStage,
   AIStageUsage,
+  ProviderLimits,
+  RunCap,
 } from '@qa/types';
 import { completeWith, type AIProvider } from '../ai/ai-provider.js';
 import { stopIfAborted } from '../abort.js';
@@ -26,8 +28,57 @@ export class StoppedEarlyError extends BudgetSpentError {
   }
 }
 
-/** OpenRouter's free models allow 20 requests a minute, so requests start at least this far apart. */
-export const FREE_TIER_REQUEST_GAP_MS = 3100;
+/** The person's own cap on a Check-up's AI use is spent: fixed rules plan the rest. */
+export class CapSpentError extends BudgetSpentError {
+  constructor(kind: 'requests' | 'dollars' = 'requests') {
+    super(
+      kind === 'dollars'
+        ? 'The dollar cap you set for this Check-up is reached.'
+        : 'The request cap you set for this Check-up is reached.'
+    );
+    this.name = 'CapSpentError';
+  }
+}
+
+/**
+ * Gap between requests when the service reports no per-interval limit on OpenRouter. It matches the
+ * 20 requests a minute its free models have allowed; it makes no claim about the key's tier.
+ */
+export const UNREPORTED_LIMIT_GAP_MS = 3100;
+/** @deprecated Old name of `UNREPORTED_LIMIT_GAP_MS`. */
+export const FREE_TIER_REQUEST_GAP_MS = UNREPORTED_LIMIT_GAP_MS;
+/** Most requests in flight at once, however much the service allows. */
+export const MAX_CONCURRENCY = 4;
+
+/**
+ * How fast to send requests, from what the service reports. Reported requests per interval give the
+ * gap and (with the headroom) how many may run at once. Nothing reported: OpenRouter goes one at a
+ * time at the old default gap; other providers send without a gap, one at a time.
+ */
+export function pacingFor(
+  limits: ProviderLimits | null | undefined,
+  providerType: AIProviderType
+): { gapMs: number; concurrency: number } {
+  const perInterval = limits?.requestsPerInterval;
+  const interval = limits?.intervalMs;
+  if (perInterval && perInterval > 0 && interval && interval > 0) {
+    const headroom = Math.min(perInterval, limits?.remainingRequests ?? Infinity);
+    return {
+      gapMs: Math.ceil(interval / perInterval),
+      concurrency: Math.max(1, Math.min(MAX_CONCURRENCY, Math.floor(headroom))),
+    };
+  }
+  return { gapMs: providerType === 'openrouter' ? UNREPORTED_LIMIT_GAP_MS : 0, concurrency: 1 };
+}
+
+/** Average tokens one planning request uses: for the "about" figure shown before a Check-up only. */
+const ESTIMATE_PROMPT_TOKENS = 3000;
+const ESTIMATE_COMPLETION_TOKENS = 1500;
+
+/** About what `requests` cost in dollars at a price per million tokens. An estimate, not a promise. */
+export function estimateUsd(requests: number, price: { prompt: number; completion: number }): number {
+  return (requests * (ESTIMATE_PROMPT_TOKENS * price.prompt + ESTIMATE_COMPLETION_TOKENS * price.completion)) / 1e6;
+}
 /** Waits before retrying a request the service turned away for going too fast. */
 const RATE_LIMIT_WAITS_MS = [20000, 45000];
 
@@ -54,7 +105,16 @@ export class PacedAI implements AIProvider {
   readonly tokens: Partial<Record<AIStage, AIStageUsage>> = {};
   /** How each model did. */
   readonly models: Record<string, AIModelOutcome> = {};
-  private lastStart = 0;
+  /** Dollars spent so far, from the tokens used and the model's price; 0 when no price is known. */
+  spentUsd = 0;
+  /** Requests that may be in flight at once. */
+  readonly concurrency: number;
+  /** Earliest start of the next request; reserved synchronously so gaps hold under concurrency. */
+  private nextSlot = 0;
+  private inFlight = 0;
+  private waiting: Array<() => void> = [];
+  private cap?: RunCap;
+  private price?: { prompt: number; completion: number };
   private gapMs: number;
   private signal?: AbortSignal;
   private finishSignal?: AbortSignal;
@@ -79,10 +139,19 @@ export class PacedAI implements AIProvider {
       finishSignal?: AbortSignal;
       model?: string;
       fallbackModels?: string[];
+      /** Requests in flight at once (default 1); see `pacingFor`. */
+      concurrency?: number;
+      /** The person's cap for this Check-up. */
+      cap?: RunCap;
+      /** Price per million tokens; with it the dollar cap is enforced. Without it dollars are ignored. */
+      price?: { prompt: number; completion: number };
     } = {}
   ) {
     this.providerType = inner.providerType;
-    this.gapMs = options.gapMs ?? (inner.providerType === 'openrouter' ? FREE_TIER_REQUEST_GAP_MS : 0);
+    this.gapMs = options.gapMs ?? (inner.providerType === 'openrouter' ? UNREPORTED_LIMIT_GAP_MS : 0);
+    this.concurrency = Math.max(1, Math.floor(options.concurrency ?? 1));
+    this.cap = options.cap;
+    this.price = options.price;
     if (options.sleep) this.sleep = options.sleep;
     this.signal = options.signal;
     this.finishSignal = options.finishSignal;
@@ -94,7 +163,31 @@ export class PacedAI implements AIProvider {
 
   /** Requests still allowed. */
   get left(): number {
-    return Math.max(0, this.allowance - this.used);
+    return Math.max(0, Math.min(this.allowance, this.cap?.requests ?? Infinity) - this.used);
+  }
+
+  /** Throws when nothing more may be requested: the provider's allowance or the person's cap. */
+  private checkAllowed(): void {
+    const capRequests = this.cap?.requests;
+    if (this.used >= this.allowance) throw new BudgetSpentError();
+    if (capRequests !== undefined && this.used >= capRequests) throw new CapSpentError('requests');
+    const dollars = this.cap?.dollars;
+    if (dollars !== undefined && this.price && this.spentUsd >= dollars) throw new CapSpentError('dollars');
+  }
+
+  private async acquire(): Promise<void> {
+    if (this.inFlight < this.concurrency) {
+      this.inFlight++;
+      return;
+    }
+    await new Promise<void>((resolve) => this.waiting.push(resolve));
+  }
+
+  private release(): void {
+    const next = this.waiting.shift();
+    if (next)
+      next(); // the permit passes straight on
+    else this.inFlight--;
   }
 
   /** The model answering now. */
@@ -107,16 +200,36 @@ export class PacedAI implements AIProvider {
   }
 
   async complete(messages: AIMessage[], options: AICompletionOptions = {}): Promise<AICompletion> {
+    stopIfAborted(this.signal);
+    if (this.finishSignal?.aborted) throw new StoppedEarlyError();
+    await this.acquire();
+    try {
+      return await this.completeHolding(messages, options);
+    } finally {
+      this.release();
+    }
+  }
+
+  private async completeHolding(messages: AIMessage[], options: AICompletionOptions): Promise<AICompletion> {
     let rateLimited = 0;
     for (;;) {
       stopIfAborted(this.signal);
       if (this.finishSignal?.aborted) throw new StoppedEarlyError();
-      if (this.used >= this.allowance) throw new BudgetSpentError();
-      const wait = this.lastStart + this.gapMs - Date.now();
-      if (wait > 0) await this.sleep(wait);
-      stopIfAborted(this.signal);
-      this.lastStart = Date.now();
+      this.checkAllowed();
+      // Reserve the request and its start time in one synchronous step, so parallel calls neither
+      // overspend the allowance nor start closer together than the gap.
+      const now = Date.now();
+      const start = Math.max(now, this.nextSlot);
+      this.nextSlot = start + this.gapMs;
       this.used++;
+      const wait = start - now;
+      try {
+        if (wait > 0) await this.sleep(wait);
+        stopIfAborted(this.signal);
+      } catch (err) {
+        this.used--; // stopped before the request was sent
+        throw err;
+      }
       const model = options.model ?? this.model;
       let result: AICompletion;
       try {
@@ -175,6 +288,11 @@ export class PacedAI implements AIProvider {
     s.completionTokens += result.usage?.completionTokens ?? 0;
     s.reasoningTokens += result.usage?.reasoningTokens ?? 0;
     if (result.finishReason === 'length') s.truncated++;
+    if (this.price) {
+      const prompt = result.usage?.promptTokens ?? 0;
+      const completion = result.usage?.completionTokens ?? 0;
+      this.spentUsd += (prompt * this.price.prompt + completion * this.price.completion) / 1e6;
+    }
   }
 
   private outcome(model: string | undefined, how: keyof AIModelOutcome): void {

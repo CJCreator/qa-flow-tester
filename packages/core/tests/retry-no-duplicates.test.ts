@@ -29,6 +29,24 @@ describe('namespacing: retried flow cannot create duplicates', () => {
       return;
     }
     res.setHeader('content-type', 'text/html');
+    // A working sign-in: a role whose sign-in fails is not tested (ADR 0020), so TC-NS-5 needs one that succeeds.
+    if (url.startsWith('/login')) {
+      if (req.method === 'POST') {
+        req.resume();
+        req.on('end', () => {
+          res.writeHead(302, { 'Set-Cookie': 'session=ok; Path=/', Location: '/' });
+          res.end();
+        });
+        return;
+      }
+      res.end(
+        `<html lang="en"><head><title>Sign in</title></head><body><main><h1>Sign in</h1><form method="post" action="/login">
+<label for="email">Email</label><input id="email" name="email" type="email">
+<label for="password">Password</label><input id="password" name="password" type="password">
+<button type="submit">Sign in</button></form></main></body></html>`
+      );
+      return;
+    }
     if (url.startsWith('/form')) {
       formLoads++;
       const hide = hideSubmitFirstLoad && formLoads === 1 ? 'style="display:none"' : '';
@@ -70,11 +88,11 @@ document.querySelector('[data-testid="submit"]').addEventListener('click', () =>
   ];
   const submit: TestCaseStep = { action: 'click', selector: '[data-testid="submit"]', name: 'Press Send' };
 
-  const makeCase = (id: string, steps: TestCaseStep[]): TestCase => ({
+  const makeCase = (id: string, steps: TestCaseStep[], role = 'anonymous'): TestCase => ({
     id,
     flowId: `${id}-flow`,
     name: id,
-    role: 'anonymous',
+    role,
     startPage: '/form',
     steps,
     expectations: {},
@@ -144,12 +162,12 @@ document.querySelector('[data-testid="submit"]').addEventListener('click', () =>
       makeCase('TC-NS-5', [
         { action: 'fill', selector: '[data-testid="secret"]', name: 'Type secret', value: '{{password}}' },
         submit,
-      ]),
+      ], 'member'),
       {
         profile: {
           name: 'p',
           productId: 'retry-no-dupes',
-          roles: [{ role: 'anonymous', username: 'u', password: PASSWORD }],
+          roles: [{ role: 'member', username: 'u@example.com', password: PASSWORD, loginPath: '/login' }],
         },
       }
     );

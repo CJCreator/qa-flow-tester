@@ -9,6 +9,7 @@ export * from './plan.js';
 export * from './verdict.js';
 export * from './problems.js';
 export * from './signin.js';
+export * from './issue-type.js';
 export * from './test-case.js';
 export * from './evidence-finding.js';
 export * from './run-report.js';

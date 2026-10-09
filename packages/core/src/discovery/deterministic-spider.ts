@@ -54,7 +54,7 @@ export interface CrawlOptions {
   /** Start of each screenshot's file name, so crawls as different roles don't overwrite each other. */
   screenshotPrefix?: string;
   /** Told about each page as it's recorded, for progress. */
-  onPage?: (page: PageInventoryItem, pagesSoFar: number) => void;
+  onPage?: (page: PageInventoryItem, pagesSoFar: number, forms: SpiderResult['forms']) => void;
   /** Once aborted, no more pages are opened: the crawl returns what it found so far. */
   signal?: AbortSignal;
 }
@@ -345,7 +345,7 @@ export class DeterministicSpider {
           links,
           contentKey: contentKeyOf(elements, pageForms.length),
         });
-        options.onPage?.(pages[pages.length - 1], pages.length);
+        options.onPage?.(pages[pages.length - 1], pages.length, forms.slice(forms.length - pageForms.length));
 
         // 4. Single-page apps navigate by script: try the controls that look like navigation.
         if (exploreClicks && clickBudget > 0) {

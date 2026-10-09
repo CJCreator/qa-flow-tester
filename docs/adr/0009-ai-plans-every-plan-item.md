@@ -1,6 +1,6 @@
 # 0009: The AI Plans Every Plan Item from the Crawl's Facts
 
-Supersedes [0001](0001-hybrid-ai-discovery.md).
+Supersedes [0001](0001-hybrid-ai-discovery.md). Amended by [0020](0020-sources-role-binding-and-pipelined-planning.md) (sequencing, batching, cost).
 
 ## Context and Decision
 ADR 0001 used the AI selectively to save tokens:

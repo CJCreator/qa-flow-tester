@@ -1,12 +1,14 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import type { ProductProfile, DiscoveryDraft, DiscoveredFlow, AmbiguityQuestion, PageInventoryItem } from '@qa/types';
+import type { ProductProfile, DiscoveryDraft, DiscoveredFlow, AmbiguityQuestion, PageInventoryItem, StorageStateData, SignInFailureReason, RunCap } from '@qa/types';
+import { signInReasonText } from '@qa/types';
 import { PlanValidator } from './plan-validator.js';
 import { BrowserManager, BREAKPOINT_VIEWPORTS } from '../browser.js';
 import { PreFlightChecker } from '../preflight.js';
 import { DeterministicSpider, DEFAULT_MAX_PAGES, type SpiderResult } from './deterministic-spider.js';
 import { buildSiteGraph, pathOf } from '../plan/site-graph.js';
 import { sampleLayoutGroups } from '../plan/sampling.js';
+import { PlanPipeline } from '../plan/pipeline.js';
 import { lookAtNarrowScreens } from '../plan/narrow-look.js';
 import { estimatePageRequests, planPagesAndMenus, testedPages } from '../plan/ai-planner.js';
 import { PacedAI } from '../plan/ai-budget.js';
@@ -29,6 +31,11 @@ export interface DiscoveryOptions {
   productId: string;
   profile?: ProductProfile;
   contextFilePath?: string;
+  /**
+   * Product Context as several documents (files and docs-URL pages). Used instead of `contextFilePath`
+   * so each requirement keeps its document and section.
+   */
+  contextDocuments?: Array<{ name: string; text: string }>;
   outputDir?: string;
   /** Plans the journeys. Without one (no AI key), fixed rules pick them instead. */
   aiProvider?: AIProvider;
@@ -44,6 +51,13 @@ export interface DiscoveryOptions {
    * past `left`, and the rest is planned by fixed rules.
    */
   aiBudget?: { left?: number; limit?: number; visualReview?: number };
+  /** How fast to ask the AI, from what the provider reports, and the person's own cap. See `pacingFor`. */
+  aiPacing?: {
+    gapMs?: number;
+    concurrency?: number;
+    cap?: RunCap;
+    price?: { prompt: number; completion: number };
+  };
   /** The model the provider uses, and others to switch to when it stops before answering. */
   aiModels?: { model?: string; fallbacks?: string[] };
   /** Told how the scan is going, for the progress screen. */
@@ -62,11 +76,18 @@ export interface DiscoveryOptions {
   finishSignal?: AbortSignal;
   /** Where sign-in sessions are saved. Default `<outputDir>/auth`. Keep it out of any folder that's served. */
   authDir?: string;
+  /** Sessions the person saved, by role. Memory only: used instead of signing in, never written or logged. */
+  suppliedSessions?: Record<string, StorageStateData>;
+  /**
+   * Rollback: plan only after the whole crawl, as before the pipeline. Default: with an AI provider,
+   * pages are planned while the Spider is still crawling.
+   */
+  sequentialPlanning?: boolean;
 }
 
 /** How a scan is going. */
 export type DiscoveryProgress =
-  | { stage: 'crawling'; pagesFound: number; urlPath: string; who: string }
+  | { stage: 'crawling'; pagesFound: number; urlPath: string; who: string; plannedSoFar?: number }
   | { stage: 'narrow-screens' }
   | {
       stage: 'planning';
@@ -143,7 +164,8 @@ export function mergeCrawls(crawls: Array<{ who: string; result: SpiderResult }>
 function describeExploration(
   crawls: Array<{ who: string; result: SpiderResult }>,
   merged: SpiderResult,
-  signInFailed: string[]
+  signInFailed: string[],
+  signInFailures: Record<string, SignInFailureReason> = {}
 ): NonNullable<DiscoveryDraft['exploration']> {
   const signedInAs = crawls.map((c) => c.who).filter((who) => who !== 'visitor');
   const signInPages = merged.pages.filter((p) => p.hasSignInForm).map((p) => p.urlPath);
@@ -156,8 +178,11 @@ function describeExploration(
     notes.push(`These pages ask for a sign-in that no role could get past: ${merged.signInWalls.join(', ')}.`);
   }
   for (const role of signInFailed) {
+    const reason = signInFailures[role];
     notes.push(
-      `Signing in as "${role}" didn't work, so nothing was explored as that role. Check its username, password and sign-in page.`
+      reason
+        ? `Signing in as "${role}" didn't work, so nothing was explored as that role. ${signInReasonText(reason)}`
+        : `Signing in as "${role}" didn't work, so nothing was explored as that role. Check its username, password and sign-in page.`
     );
   }
   const robotsSkipped = merged.skippedByRobots || [];
@@ -166,7 +191,14 @@ function describeExploration(
       `Skipped ${robotsSkipped.length} ${robotsSkipped.length === 1 ? 'page' : 'pages'} the site's robots.txt asks crawlers to leave alone: ${robotsSkipped.slice(0, 5).join(', ')}${robotsSkipped.length > 5 ? ', …' : ''}.`
     );
   }
-  return { signedInAs, signInFailed, signInPages, notReached: merged.signInWalls, notes };
+  return {
+    signedInAs,
+    signInFailed,
+    ...(Object.keys(signInFailures).length > 0 ? { signInFailures } : {}),
+    signInPages,
+    notReached: merged.signInWalls,
+    notes,
+  };
 }
 
 export class DiscoveryAgent {
@@ -189,7 +221,9 @@ export class DiscoveryAgent {
     stopIfAborted(signal);
 
     // 1. Ingest Product Context
-    const parsedContext = await this.contextParser.parseFile(options.contextFilePath);
+    const parsedContext = options.contextDocuments?.length
+      ? this.contextParser.parseDocuments(options.contextDocuments)
+      : await this.contextParser.parseFile(options.contextFilePath);
 
     // 2. Explore: signed out first, then once per role that can sign in, starting where it landed.
     const spider = new DeterministicSpider(
@@ -204,9 +238,60 @@ export class DiscoveryAgent {
         ? await new PreFlightChecker().runPreFlight(options.targetUrl, options.profile, undefined, {
             browserManager: this.browserManager,
             authDir: options.authDir || path.join(outputDir, 'auth'),
+            suppliedSessions: options.suppliedSessions,
           })
         : undefined;
     stopIfAborted(signal);
+
+    // The AI Request Budget: set up before the crawl, because planning starts while it runs.
+    const requestsLeft = options.aiBudget?.left;
+    const paced = options.aiProvider
+      ? new PacedAI(options.aiProvider, requestsLeft ?? Infinity, {
+          signal,
+          finishSignal: options.finishSignal,
+          model: options.aiModels?.model,
+          fallbackModels: options.aiModels?.fallbacks,
+          gapMs: options.aiPacing?.gapMs,
+          concurrency: options.aiPacing?.concurrency,
+          cap: options.aiPacing?.cap,
+          price: options.aiPacing?.price,
+        })
+      : undefined;
+    const roleNames = roles.map((r) => r.role);
+    const crawls: Array<{ who: string; result: SpiderResult }> = [];
+    /** Whether a role's own view of the page still shows the control (a Denial item would be trying it). */
+    const controlShownTo = (role: string, urlPath: string, selector: string) =>
+      !!crawls
+        .find((c) => c.who === role)
+        ?.result.pages.find((p) => pathOf(p.urlPath) === pathOf(urlPath))
+        ?.elements?.some((el) => el.selector === selector && el.visible);
+    const planningBase = {
+      targetUrl: options.targetUrl,
+      productContext: parsedContext.rawContent,
+      requirements: parsedContext.requirements,
+      roles: roleNames,
+      controlShownTo,
+      readOnly: !!options.readOnly,
+      forbiddenActions: options.profile?.forbiddenActions,
+      redact: (text: string) => redactor.text(text),
+      remembered: options.remembered,
+    };
+    // Pages are planned while the Spider crawls, when there is an AI to ask.
+    let crawling = true;
+    let planningProgress: (done: number, what: string, asking?: { attempt?: number }, total?: number) => void = () => {};
+    const pipeline =
+      paced && !options.sequentialPlanning
+        ? new PlanPipeline({
+            input: planningBase,
+            ai: paced,
+            concurrency: paced.concurrency,
+            siteTypeOf: (pages) => detectSiteType(pages, options.targetUrl),
+            startPath: new URL(options.targetUrl).pathname,
+            onProgress: (p) => {
+              if (!crawling) planningProgress(p.done, p.what, p.asking ? { attempt: p.attempt } : undefined, p.total);
+            },
+          })
+        : undefined;
 
     // A site we don't own: honour its robots.txt and pause between pages. A live site: send nothing.
     const targetOrigin = new URL(options.targetUrl);
@@ -221,18 +306,25 @@ export class DiscoveryAgent {
           ? AbortSignal.any([signal, options.finishSignal])
           : (options.finishSignal ?? signal),
     };
-    const newContext = async (storageState?: string) => {
+    const newContext = async (storageState?: string | StorageStateData) => {
       const context = await this.browserManager.createContext({ baseUrl: options.targetUrl, storageState });
       if (options.readOnly) await blockChanges(context);
       return context;
     };
 
     console.log(`[DiscoveryAgent] Crawling routes and interactive forms on ${options.targetUrl}...`);
-    const crawls: Array<{ who: string; result: SpiderResult }> = [];
     // Pages found so far across every explorer, for the progress screen.
     let pagesFound = 0;
-    const onPage = (who: string) => (page: PageInventoryItem) =>
-      options.onProgress?.({ stage: 'crawling', pagesFound: ++pagesFound, urlPath: page.urlPath, who });
+    const onPage = (who: string) => (page: PageInventoryItem, _n: number, forms: SpiderResult['forms'] = []) => {
+      pipeline?.push(page, who, forms);
+      options.onProgress?.({
+        stage: 'crawling',
+        pagesFound: ++pagesFound,
+        urlPath: page.urlPath,
+        who,
+        plannedSoFar: pipeline?.plannedSoFar,
+      });
+    };
     // Pages the person added by address last time: no link leads there, so they're visited directly.
     const addedBefore = Object.entries(options.remembered?.pages || {})
       .filter(([, page]) => page.added)
@@ -251,10 +343,12 @@ export class DiscoveryAgent {
     stopIfAborted(signal);
 
     const signInFailed: string[] = [];
+    const signInFailures: Record<string, SignInFailureReason> = {};
     for (const role of roles) {
       const storageState = preflight?.roleStorageStates?.[role.role];
       if (!storageState) {
         signInFailed.push(role.role);
+        signInFailures[role.role] = preflight?.roleFailures?.[role.role] ?? 'no-form';
         continue;
       }
       const landing = preflight?.roleLandingPaths?.[role.role];
@@ -276,7 +370,7 @@ export class DiscoveryAgent {
     }
 
     const spiderResult = mergeCrawls(crawls);
-    const exploration = describeExploration(crawls, spiderResult, signInFailed);
+    const exploration = describeExploration(crawls, spiderResult, signInFailed, signInFailures);
     if (options.finishSignal?.aborted) {
       exploration.notes.push(
         `You stopped the scan after ${spiderResult.pages.length} ${spiderResult.pages.length === 1 ? 'page' : 'pages'}, so pages it hadn’t reached yet aren’t in the plan.`
@@ -324,7 +418,8 @@ export class DiscoveryAgent {
       ? targetOrigin.pathname
       : spiderResult.pages[0]?.urlPath || '/';
     const graph = buildSiteGraph(spiderResult.pages, startPath);
-    const { groups: layoutGroups, coverage } = sampleLayoutGroups(spiderResult.pages);
+    // Planned while crawling: the groups were tracked as pages arrived, and their samples are kept.
+    const { groups: layoutGroups, coverage } = pipeline ? pipeline.layout() : sampleLayoutGroups(spiderResult.pages);
     // Pages the person promoted or added last time are still tested on their own.
     for (const [urlPath, before] of Object.entries(options.remembered?.pages || {})) {
       const info = coverage.get(urlPath);
@@ -360,22 +455,21 @@ export class DiscoveryAgent {
       remembered.journeysFrom === journeysFrom &&
       remembered.flows.every((f) => f.source !== 'fallback');
     const requestsNeeded =
-      estimatePageRequests({ pages: spiderResult.pages, coverage, graph, remembered: options.remembered }) +
+      estimatePageRequests({
+        pages: spiderResult.pages,
+        coverage,
+        graph,
+        remembered: options.remembered,
+        requirements: parsedContext.requirements,
+        roles: roleNames,
+      }) +
       (reuseJourneys ? 0 : 1);
-    const requestsLeft = options.aiBudget?.left;
-    const paced = options.aiProvider
-      ? new PacedAI(options.aiProvider, requestsLeft ?? Infinity, {
-          signal,
-          finishSignal: options.finishSignal,
-          model: options.aiModels?.model,
-          fallbackModels: options.aiModels?.fallbacks,
-        })
-      : undefined;
-    const planningProgress = (done: number, what: string, asking?: { attempt?: number }) =>
+    crawling = false;
+    planningProgress = (done: number, what: string, asking?: { attempt?: number }, total = requestsNeeded) =>
       options.onProgress?.({
         stage: 'planning',
         done,
-        total: requestsNeeded,
+        total: Math.max(total, requestsNeeded),
         requestsUsed: paced?.used ?? 0,
         requestsNeeded,
         requestsLeft,
@@ -386,23 +480,19 @@ export class DiscoveryAgent {
         attempt: asking?.attempt,
       });
     planningProgress(0, `Found ${spiderResult.pages.length} pages; planning them`);
-    const pagePlan = await planPagesAndMenus(
-      {
-        pages: spiderResult.pages,
-        forms: spiderResult.forms,
-        coverage,
-        graph,
-        targetUrl: options.targetUrl,
-        siteType,
-        productContext: parsedContext.rawContent,
-        readOnly: !!options.readOnly,
-        forbiddenActions: options.profile?.forbiddenActions,
-        redact: (text) => redactor.text(text),
-        remembered: options.remembered,
-      },
-      paced,
-      (p) => planningProgress(p.done, p.what, p.asking ? { attempt: p.attempt } : undefined)
-    );
+    const plannerInput = {
+      ...planningBase,
+      pages: spiderResult.pages,
+      forms: spiderResult.forms,
+      coverage,
+      graph,
+      siteType,
+    };
+    const pagePlan = pipeline
+      ? await pipeline.finish(plannerInput)
+      : await planPagesAndMenus(plannerInput, paced, (p) =>
+          planningProgress(p.done, p.what, p.asking ? { attempt: p.attempt } : undefined)
+        );
     stopIfAborted(signal);
     exploration.notes.push(...pagePlan.notes);
     for (const page of pagePlan.pages) if (options.remembered?.pages[page.urlPath]?.added) page.added = true;
@@ -471,6 +561,9 @@ export class DiscoveryAgent {
         navigation: pagePlan.navigation,
         layoutGroups,
         otherHosts: graph.otherHosts,
+        ...(pagePlan.plannedWhileCrawling ? { plannedWhileCrawling: true } : {}),
+        ...(pagePlan.notFound ? { notFound: pagePlan.notFound } : {}),
+        ...(pagePlan.documentedItems ? { documentedItems: pagePlan.documentedItems } : {}),
         budget: {
           needed: requestsNeeded,
           used: paced?.used ?? 0,
@@ -482,6 +575,9 @@ export class DiscoveryAgent {
             pagePlan.overBudget +
               synthesizedFlows.filter((f) => f.source === 'fallback' && f.fallbackReason === 'budget').length ||
             undefined,
+          ...(options.aiPacing?.cap ? { cap: options.aiPacing.cap } : {}),
+          ...(paced && paced.concurrency > 1 ? { concurrency: paced.concurrency } : {}),
+          ...(paced && options.aiPacing?.price ? { spentUsd: paced.spentUsd } : {}),
           tokens: paced && Object.keys(paced.tokens).length > 0 ? paced.tokens : undefined,
           models: paced && Object.keys(paced.models).length > 0 ? paced.models : undefined,
         },

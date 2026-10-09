@@ -67,7 +67,7 @@ describe('Page sweep', () => {
     expect(titles.some((t) => t.startsWith('375px') && /touch target/i.test(t))).toBe(true);
     // Controls that aren't there at some width are skipped, never reported as broken steps.
     expect(report.findings.some((f) => f.title.startsWith('Step failed'))).toBe(false);
-  // Measured 2026-10-08 on an idle machine with T-22's Tab walk and reflow check on: 118 s and 120.08 s
-  // (limit was 120 s). 240 s is about 2x. The cost T-22 adds was not measured separately.
+    // Measured 2026-10-08 on an idle machine with T-22's Tab walk and reflow check on: 118 s and 120.08 s
+    // (limit was 120 s). 240 s is about 2x. The cost T-22 adds was not measured separately.
   }, 240000);
 });

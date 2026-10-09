@@ -1,12 +1,13 @@
 import { chromium, type Browser, type BrowserContext, type Page, type Locator } from 'playwright';
-import type { Breakpoint } from '@qa/types';
+import type { Breakpoint, StorageStateData } from '@qa/types';
 
 export interface BrowserOptions {
   headless?: boolean;
   viewport?: { width: number; height: number };
   tunnelAuth?: string;
   baseUrl?: string;
-  storageState?: string;
+  /** A file path, or the state itself (kept in memory so a saved session never touches disk). */
+  storageState?: string | StorageStateData;
   /** When set, Playwright records a .webm of every page in the context into this directory. */
   recordVideoDir?: string;
 }
@@ -99,7 +100,7 @@ export class BrowserManager {
       extraHTTPHeaders,
       baseURL: options.baseUrl,
       ignoreHTTPSErrors: true,
-      storageState: options.storageState,
+      storageState: options.storageState as NonNullable<Parameters<Browser['newContext']>[0]>['storageState'],
     };
 
     const guarded = async (context: BrowserContext): Promise<BrowserContext> => {

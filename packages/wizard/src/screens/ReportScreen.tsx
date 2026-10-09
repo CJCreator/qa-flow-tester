@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { releaseVerdict, type AspectType, type Finding, type ReleaseReport } from '@qa/types';
-import { downloadRunFile, finishAiReview, getRun, getStoredReleaseGates, RunnerError, triageProblem } from '../api';
+import {
+  acceptJudgement,
+  downloadRunFile,
+  finishAiReview,
+  getRun,
+  getStoredReleaseGates,
+  RunnerError,
+  triageProblem,
+} from '../api';
 import { DeveloperDetails } from '../components/DeveloperDetails';
 import { SiteMap } from '../components/SiteMap';
 import { ErrorMessage, FocusHeading, Notice, Spinner } from '../components/text';
@@ -14,6 +22,7 @@ import {
   category,
   groupProblems,
   howToFix,
+  judgementByRole,
   pageResults,
   plainTitle,
   plainTitleText,
@@ -26,6 +35,7 @@ import {
 import { useDocumentTitle } from '../lib/title';
 import { looksTechnical } from '../lib/translate';
 import { hostOf } from '../lib/url';
+import { documentedLine } from '../lib/plan-sources';
 
 /** Reports with more problems than this get filters and a search box. */
 const FILTER_ABOVE = 10;
@@ -112,7 +122,7 @@ function useLightReport(): [boolean, (on: boolean) => void] {
   return [light, set];
 }
 
-function Report({
+export function Report({
   report,
   actions,
   onReportChanged,
@@ -297,6 +307,8 @@ function Report({
 
       <VisualReview report={report} onReportChanged={onReportChanged} />
 
+      <SourcesSummary report={report} />
+
       <Problems
         report={report}
         pageFilter={pageFilter}
@@ -378,6 +390,20 @@ function Report({
               onClick={() => void downloadRunFile(report.runId, 'findings.json')}
             >
               Download findings.json
+            </button>
+            <button
+              type="button"
+              className="btn-quiet min-h-[44px] px-3 text-sm"
+              onClick={() => void downloadRunFile(report.runId, 'issues.md')}
+            >
+              Download issues.md
+            </button>
+            <button
+              type="button"
+              className="btn-quiet min-h-[44px] px-3 text-sm"
+              onClick={() => void downloadRunFile(report.runId, 'issues.html')}
+            >
+              Download issues.html
             </button>
           </div>
           <dl className="grid gap-x-4 gap-y-1 font-mono text-sm sm:grid-cols-[12rem_1fr]">
@@ -855,6 +881,9 @@ function Problems({
   const triage = async (titles: string[], status: 'Intended' | 'False Positive' | null, reason?: string) => {
     onReportChanged(await triageProblem(report.runId, titles, status, reason));
   };
+  const accept = async (titles: string[]) => {
+    onReportChanged(await acceptJudgement(report.runId, titles, true));
+  };
 
   return (
     <section ref={sectionRef} aria-labelledby="problems-title" className="scroll-mt-20">
@@ -966,11 +995,24 @@ function Problems({
                 {bucket.title} <span className="font-normal text-ink-soft">({shown[bucket.id].length})</span>
               </h3>
               <p className="mb-3 text-sm text-ink-soft">{bucket.intro}</p>
-              <ul className="space-y-2">
-                {shown[bucket.id].map((group) => (
-                  <ProblemItem key={group.key} group={group} report={report} onTriage={triage} />
-                ))}
-              </ul>
+              {bucket.id === 'judgement' ? (
+                judgementByRole(shown.judgement).map((byRole) => (
+                  <div key={byRole.role} className="mb-3">
+                    <h4 className="mb-1 font-bold text-ink">As {byRole.role}</h4>
+                    <ul className="space-y-2">
+                      {byRole.groups.map((group) => (
+                        <ProblemItem key={group.key} group={group} report={report} onTriage={triage} onAccept={accept} />
+                      ))}
+                    </ul>
+                  </div>
+                ))
+              ) : (
+                <ul className="space-y-2">
+                  {shown[bucket.id].map((group) => (
+                    <ProblemItem key={group.key} group={group} report={report} onTriage={triage} />
+                  ))}
+                </ul>
+              )}
             </section>
           ))}
         </div>
@@ -1020,7 +1062,49 @@ const BUCKET_BORDER: Record<Bucket, string> = {
   'should-fix': 'border-l-warn',
   suggestion: 'border-l-stamp',
   'to-confirm': 'border-l-edge',
+  judgement: 'border-l-edge',
 };
+
+/**
+ * What the documents added to this report: roles that were not tested and why, and how many
+ * documented items the scan reached (the rest are listed as not found in the app).
+ */
+function SourcesSummary({ report }: { report: ReleaseReport }) {
+  const roles = report.rolesNotTested ?? [];
+  const line = documentedLine(report.documentedItems);
+  const notFound = report.documentedItems?.notFound ?? [];
+  if (roles.length === 0 && !line) return null;
+  return (
+    <section aria-labelledby="sources-title" className="space-y-3">
+      <h2 id="sources-title" className="text-2xl font-bold">
+        What the documents and sign-ins covered
+      </h2>
+      {line && <p className="text-ink">{line}.</p>}
+      {notFound.length > 0 && (
+        <ul className="list-disc space-y-1 pl-5 text-ink">
+          {notFound.map((item, i) => (
+            <li key={i}>
+              <strong>{item.docSource.section ?? item.docSource.document}</strong> in {item.docSource.document}:{' '}
+              <span className="text-ink-soft">{item.reason}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {roles.length > 0 && (
+        <div>
+          <h3 className="text-lg font-bold">Roles not tested and why</h3>
+          <ul className="list-disc space-y-1 pl-5 text-ink">
+            {roles.map((r) => (
+              <li key={r.role}>
+                <strong>{r.role}:</strong> <span className="text-ink-soft">{r.text}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
 
 /**
  * One problem: why it matters and how to fix it, where it was found, the details for developers,
@@ -1030,10 +1114,13 @@ function ProblemItem({
   group,
   report,
   onTriage,
+  onAccept,
 }: {
   group: ProblemGroup;
   report: ReleaseReport;
   onTriage: (titles: string[], status: 'Intended' | 'False Positive' | null, reason?: string) => Promise<void>;
+  /** Only on "Needs your judgement": counts the item as a problem. */
+  onAccept?: (titles: string[]) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
   const [marking, setMarking] = useState<'Intended' | 'False Positive' | null>(null);
@@ -1187,6 +1274,25 @@ function ProblemItem({
                   <button type="button" className="btn-link text-sm" onClick={() => setMarking('Intended')}>
                     It’s intended
                   </button>
+                  {onAccept && (
+                    <button
+                      type="button"
+                      className="btn-link text-sm font-bold"
+                      disabled={saving}
+                      onClick={async () => {
+                        setSaving(true);
+                        setError(null);
+                        try {
+                          await onAccept(titles);
+                        } catch (err) {
+                          setError(err instanceof Error ? err.message : 'That couldn’t be saved.');
+                          setSaving(false);
+                        }
+                      }}
+                    >
+                      Accept as a problem
+                    </button>
+                  )}
                 </p>
                 <button
                   type="button"

@@ -1,3 +1,5 @@
+import type { PlanNotFound } from './plan.js';
+import type { RoleNotTested } from './evidence-finding.js';
 import type { Breakpoint, RuleOrigin, TestCase } from './test-case.js';
 import type { AmbiguityQuestion, PageInventoryItem, DiscoveredFlow } from './discovery.js';
 import type { PlanPage, NavigationCheck, PlanGradedCheck, PlanLayoutGroup, AIRequestBudget, PlanWontRun, PlanSummary, PlanOtherHost } from './plan.js';
@@ -115,4 +117,14 @@ export interface ReviewPlan {
   summary?: PlanSummary;
   /** Other hosts the site links to. */
   otherHosts?: PlanOtherHost[];
+  /** Some Plan Items were planned while the Spider was still crawling (ADR 0020). */
+  plannedWhileCrawling?: boolean;
+  /** Documented items with no matching page or control. */
+  notFound?: PlanNotFound[];
+  /** How many documented items the Check-up reached, of all documented items. */
+  documentedItems?: { reached: number; total: number };
+  /** Roles that could not sign in, and why. */
+  rolesNotTested?: RoleNotTested[];
+  /** Product Context documents used: names and sizes only, never the text. */
+  contextDocuments?: Array<{ name: string; chars: number }>;
 }

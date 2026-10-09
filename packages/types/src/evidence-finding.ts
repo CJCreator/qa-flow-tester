@@ -1,5 +1,7 @@
 import type { FindingSeverity, CheckerType, TriageStatus, Breakpoint } from './test-case.js';
 import type { AspectType } from './aspects.js';
+import type { DocSource } from './plan.js';
+import type { SignInFailureReason } from './signin.js';
 
 export interface ConsoleEntry {
   type: 'error' | 'warning' | 'log' | 'info';
@@ -99,6 +101,12 @@ export interface Finding {
   /** How many times the same problem was seen in this run, when more than once. */
   occurrences?: number;
   /** Where else the same problem was seen: pages, widths, roles and test points. */
+  /** The document section the expectation came from, when the Plan Item had a Source. */
+  docSource?: DocSource;
+  /** An AI-judged logical-flow call: held out of the verdict until the person accepts it. Set with `needsConfirmation`. */
+  needsJudgement?: boolean;
+  /** The person accepted a judgement item: it now counts (`needsConfirmation` is cleared). */
+  judgementAccepted?: boolean;
   seenAt?: { pages: string[]; breakpoints: Breakpoint[]; roles: string[]; testCaseIds: string[] };
 }
 
@@ -137,13 +145,28 @@ export interface ProductProfile {
   permissionMatrixFile?: string;
 }
 
+/** A Playwright storage state held as an object, so it never has to touch disk. */
+export interface StorageStateData {
+  cookies: unknown[];
+  origins: unknown[];
+}
+
+/** A role the Check-up could not sign in as, and why. `text` is fixed plain words. */
+export interface RoleNotTested {
+  role: string;
+  reason: SignInFailureReason;
+  text: string;
+}
+
 export interface PreFlightResult {
   ok: boolean;
   url: string;
   statusCode?: number;
   loginReachable?: boolean;
   roleAuthResults: Record<string, boolean>;
-  roleStorageStates?: Record<string, string>;
+  roleStorageStates?: Record<string, string | StorageStateData>;
+  /** Why a role could not sign in; that role is not tested. */
+  roleFailures?: Record<string, SignInFailureReason>;
   /** The page each role landed on after signing in; exploring as that role starts there. */
   roleLandingPaths?: Record<string, string>;
   error?: string;

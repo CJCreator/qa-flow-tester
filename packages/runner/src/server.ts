@@ -2,7 +2,7 @@ import http from 'http';
 import { timingSafeEqual } from 'crypto';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { journeyPages, releaseVerdict, signInReasonText } from '@qa/types';
+import { journeyPages, releaseVerdict, signInReasonText, type StorageStateData } from '@qa/types';
 import { serveUi, type UiApp } from './ui-static.js';
 import type {
   RunSummary,
@@ -23,6 +23,9 @@ import type {
   AIRequestBudget,
   BenchmarkJob,
   SignInFailureReason,
+  RunCap,
+  ProviderLimits,
+  FindingSeverity,
 } from '@qa/types';
 import {
   FlowTestOrchestrator,
@@ -81,6 +84,14 @@ import {
   zipFiles,
   PacedAI,
   BudgetSpentError,
+  pacingFor,
+  estimateUsd,
+  fetchDocsPages,
+  makeGuardedDocsGet,
+  localDocsGet,
+  buildIssuesModel,
+  renderIssuesMarkdown,
+  renderIssuesHtml,
   estimateScanRequests,
   SuppressionsManager,
   replanPage,
@@ -121,6 +132,7 @@ import {
   type BetaLimits,
 } from './beta.js';
 import { testCopyFor } from './host-policy.js';
+import { checkAiCap, checkContextDocuments, checkContextUrl, checkSavedSessions } from './run-inputs.js';
 
 function isInside(dir: string, file: string): boolean {
   const rel = path.relative(dir, file);
@@ -258,6 +270,8 @@ const DOWNLOADABLE_REPORT_FILES: Record<string, string> = {
   'report.html': 'text/html; charset=utf-8',
   'report.md': 'text/markdown; charset=utf-8',
   'findings.json': 'application/json; charset=utf-8',
+  'issues.md': 'text/markdown; charset=utf-8',
+  'issues.html': 'text/html; charset=utf-8',
 };
 
 export interface RunnerServerOptions {
@@ -378,6 +392,20 @@ export interface TriggerRunBody {
    * nothing is new. Anything new pauses for review, with only the new items flagged.
    */
   testAgain?: boolean;
+  /**
+   * Product Context as several .md/.txt documents (at most 10, 500 KB each). Each requirement keeps
+   * its document and section as its Source. Used with or instead of `productContext`.
+   */
+  contextDocuments?: Array<{ name: string; text: string }>;
+  /** A docs page to read for Product Context: it and the same-site pages it links to (at most 20). */
+  contextUrl?: string;
+  /**
+   * Saved sessions by role (Playwright storage state). Kept in the runner's memory for this Check-up
+   * only: never written to disk, never sent back, never logged. Cookies must belong to the target host.
+   */
+  savedSessions?: Record<string, StorageStateData>;
+  /** The person's cap on this Check-up's AI use: requests, and dollars when the model has a price. */
+  aiCap?: RunCap;
 }
 
 interface StoredPlanRecord {
@@ -398,6 +426,15 @@ interface StoredPlanRecord {
      * from disk: the details have to be sent again with the approval.
      */
     signInNotSaved?: string[];
+    /**
+     * Roles whose saved session was left out of the saved file (sessions live in memory only): sent
+     * again with the approval. Set only on a plan read back from disk.
+     */
+    sessionNotSaved?: string[];
+    /** Names of the Product Context documents, with their text (a document is not a secret). */
+    contextDocuments?: Array<{ name: string; text: string }>;
+    /** The person's AI cap; the provider's limits are asked again whenever the plan is changed. */
+    aiCap?: RunCap;
     /** Nothing that could change data is sent: the site isn't a test copy. */
     readOnly?: boolean;
     /** The site as the person typed it, e.g. "localhost:3050": the key for what is remembered about it. */
@@ -533,6 +570,11 @@ export class RunnerServer {
   /** Plans kept aside for other sites while one is reviewed or tested, by site. Also on disk. */
   private parkedPlans = new Map<string, StoredPlanRecord>();
   private currentPlanRecord: StoredPlanRecord | null = null;
+  /**
+   * Saved sessions by run, then role. Memory only (ADR 0021): never in the plan file, the plan sent to
+   * the screen, events, logs or reports. Dropped when the run ends, is stopped, or its plan is cleared.
+   */
+  private savedSessions = new Map<string, Record<string, StorageStateData>>();
   /** The run in progress or paused, so a reopened page can pick it up again. */
   private currentRunId: string | null = null;
   /** The site the run in progress or paused is for, as typed: the Resume card names it. */
@@ -1659,7 +1701,7 @@ export class RunnerServer {
    * visual review after the run), and how many the key has left today, before anything starts.
    */
   private async handleAiEstimate(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
-    let body: { targetUrl?: string; maxPages?: number } = {};
+    let body: { targetUrl?: string; maxPages?: number; aiCap?: unknown } = {};
     try {
       body = await this.readJsonBody(req);
     } catch {
@@ -1686,6 +1728,19 @@ export class RunnerServer {
       setup.provider === 'openrouter' && setup.key
         ? await this.openRouter.freeRequestsToday(setup.key).catch(() => null)
         : null;
+    // Pacing and price come from what the provider reports; dollars only when the model has a price.
+    const cap = checkAiCap(body.aiCap);
+    const capValue = cap.ok ? cap.value : undefined;
+    const budget =
+      setup.provider === 'openrouter' && setup.key
+        ? await this.aiBudgetFor({ provider: setup.provider, model: setup.text }, setup.key, capValue).catch(() => null)
+        : null;
+    const price =
+      budget?.pacing.price ??
+      (setup.provider === 'openrouter' && setup.key && setup.text
+        ? await this.openRouter.modelPrice(setup.text).catch(() => null)
+        : null);
+    const requests = estimate.high + estimate.visualReview;
     this.sendJson(res, 200, {
       ...estimate,
       seenBefore: !!memory,
@@ -1693,6 +1748,14 @@ export class RunnerServer {
       free: setup.provider === 'openrouter',
       left: today?.remaining ?? null,
       limit: today?.limit ?? null,
+      concurrency: budget?.pacing.concurrency ?? 1,
+      cap: capValue ?? null,
+      // Dollars are shown only when the model has a price above zero: a free key shows requests only.
+      price: price && (price.prompt > 0 || price.completion > 0) ? price : null,
+      estimatedUsd:
+        price && (price.prompt > 0 || price.completion > 0) && typeof requests === 'number'
+          ? estimateUsd(requests, price)
+          : null,
     });
   }
 
@@ -1866,6 +1929,40 @@ export class RunnerServer {
         await suppressions.removeSuppressions(titles, host);
       }
       // The grades, what to improve and the verdict follow.
+      const ran = report.results.flatMap((r) => (r.checks || []).map((c) => c.checker));
+      report.grades = calculateSiteAspectGrades(report.findings, { checkersRun: ran });
+      report.recommendations = generateRankedRecommendations(report.findings);
+      await this.saveReviewedReport(report);
+      if (this.lastReport?.runId === runId) this.lastReport = report;
+      this.sendJson(res, 200, report);
+      return;
+    }
+
+    // POST accept-judgement { titles, accept? }: the person has judged these "Needs your judgement"
+    // items and counts them as problems (accept: false puts them back). The verdict, grades and
+    // recommendations follow from the findings; the issues files are written again.
+    if (action === 'accept-judgement' && req.method === 'POST') {
+      let body: { titles?: string[]; accept?: boolean };
+      try {
+        body = await this.readJsonBody(req);
+      } catch {
+        this.sendJson(res, 400, { error: 'Invalid JSON body' });
+        return;
+      }
+      const report = await this.readRunReport(runId);
+      const titles = Array.isArray(body.titles) ? body.titles.filter((t) => typeof t === 'string') : [];
+      if (!report || titles.length === 0) {
+        this.sendJson(res, report ? 400 : 404, {
+          error: report ? 'Say which item.' : 'That check-up’s report isn’t there any more.',
+        });
+        return;
+      }
+      const accept = body.accept !== false;
+      for (const f of report.findings) {
+        if (!f.needsJudgement || !titles.includes(f.title)) continue;
+        f.judgementAccepted = accept || undefined;
+        f.needsConfirmation = accept ? undefined : true;
+      }
       const ran = report.results.flatMap((r) => (r.checks || []).map((c) => c.checker));
       report.grades = calculateSiteAspectGrades(report.findings, { checkersRun: ran });
       report.recommendations = generateRankedRecommendations(report.findings);
@@ -2101,6 +2198,14 @@ export class RunnerServer {
   private async saveReviewedReport(report: ReleaseReport): Promise<void> {
     const dir = this.runDir(report.runId);
     await generateSingleFileHtmlReport(report, { outputDir: dir }).catch(() => {});
+    // The issues files follow the report (an accepted judgement item now counts).
+    try {
+      const model = buildIssuesModel(report);
+      await fs.writeFile(path.join(dir, 'issues.md'), renderIssuesMarkdown(model), 'utf8');
+      await fs.writeFile(path.join(dir, 'issues.html'), await renderIssuesHtml(model, dir), 'utf8');
+    } catch {
+      // the report's own files are what matter
+    }
     await fs.writeFile(path.join(dir, 'report.json'), JSON.stringify(report), 'utf8').catch(() => {});
     const summaryFile = path.join(dir, 'summary.json');
     const summary = JSON.parse(await fs.readFile(summaryFile, 'utf8').catch(() => 'null')) as RunSummary | null;
@@ -2483,6 +2588,25 @@ export class RunnerServer {
     }
 
     if (await this.refuseTarget(res, body.targetUrl)) return;
+
+    // The new Source inputs are checked before anything starts. Messages never repeat what was sent.
+    let typedHostname = '';
+    try {
+      typedHostname = new URL(body.targetUrl).hostname;
+    } catch {
+      // refuseTarget has already judged the address
+    }
+    for (const checked of [
+      checkContextDocuments(body.contextDocuments),
+      checkContextUrl(body.contextUrl),
+      checkSavedSessions(body.savedSessions, typedHostname),
+      checkAiCap(body.aiCap),
+    ]) {
+      if (!checked.ok) {
+        this.sendJson(res, 400, { error: checked.problem.error, code: checked.problem.code });
+        return;
+      }
+    }
     if (this.beta && body.useAI && body.aiProvider === 'mock') {
       this.sendJson(res, 400, {
         error: 'The test AI is not available here.',
@@ -2552,6 +2676,10 @@ export class RunnerServer {
     this.currentTargetUrl = body.targetUrl;
     this.runEvents = [];
     const generation = ++this.runGeneration;
+    // Saved sessions go to memory and nowhere else; the body is not kept past this point.
+    const sessions = checkSavedSessions(body.savedSessions, typedHostname);
+    if (sessions.ok && sessions.value) this.savedSessions.set(runId, sessions.value);
+    delete body.savedSessions;
 
     this.isRunning = true;
     this.phase = 'scanning';
@@ -2568,6 +2696,7 @@ export class RunnerServer {
     this.executeRun(body, productId, runId, generation).catch((err: unknown) => {
       // Stopped or replaced: whatever stopped it has already said so.
       if (generation !== this.runGeneration || isAbortError(err)) return;
+      this.savedSessions.delete(runId);
       const msg = err instanceof Error ? err.message : String(err);
       const code = (err as { code?: string } | undefined)?.code || 'ERR_DISCOVERY_FAILED';
       this.lastRunError = msg;
@@ -2698,8 +2827,14 @@ export class RunnerServer {
         memory = signIns.memory;
         await saveSiteMemory(this.siteDir(), memory);
       }
-      const profile: ProductProfile | undefined = signIns.roles?.length
-        ? { name: productId, productId, roles: signIns.roles }
+      // A role given only as a saved session still needs a role entry (no details to sign in with).
+      const sessionRoles = Object.keys(this.savedSessions.get(runId) ?? {});
+      const allRoles: RoleCredential[] = [
+        ...(signIns.roles ?? []),
+        ...sessionRoles.filter((r) => !signIns.roles?.some((x) => x.role === r)).map((r) => ({ role: r, username: '' })),
+      ];
+      const profile: ProductProfile | undefined = allRoles.length
+        ? { name: productId, productId, roles: allRoles }
         : undefined;
       // Test again tests at the screen sizes the plan was approved with, unless told otherwise; a
       // new check-up at the sizes chosen in Settings.
@@ -2728,6 +2863,7 @@ export class RunnerServer {
           ? { search: true, answers: true, aiSearch: true, marketing: true }
           : { search: false, answers: false, aiSearch: false, marketing: false });
 
+      const aiCap = checkAiCap(body.aiCap);
       const context: StoredPlanRecord['context'] = {
         targetUrl,
         productId,
@@ -2743,6 +2879,7 @@ export class RunnerServer {
         designNotes: body.designNotes,
         searchChecks,
         visibility,
+        aiCap: aiCap.ok ? aiCap.value : undefined,
       };
 
       if (body.specTestCases && body.specTestCases.length > 0) {
@@ -2770,15 +2907,51 @@ export class RunnerServer {
       context.aiModels = ai.models;
       context.ai = ai.settings;
       if (body.planWithoutAI) ai.provider = undefined;
-      const aiBudget = ai.provider ? await this.aiBudgetFor(ai.settings, ai.key) : undefined;
+      const aiBudget = ai.provider ? await this.aiBudgetFor(ai.settings, ai.key, context.aiCap) : undefined;
       if (!current()) return;
 
       // Everything this run writes lives in its own folder.
       await fs.mkdir(runDir, { recursive: true });
+
+      // Product Context: the files sent, then the docs-URL pages. A fetch problem becomes a note.
+      const docsNotes: string[] = [];
+      const documents: Array<{ name: string; text: string }> = [];
+      const checkedDocs = checkContextDocuments(body.contextDocuments);
+      if (checkedDocs.ok && checkedDocs.value) documents.push(...checkedDocs.value);
+      const docsUrl = checkContextUrl(body.contextUrl);
+      if (docsUrl.ok && docsUrl.value) {
+        // On the owner's own machine a private docs address is allowed only when the site is private too.
+        const guarded = this.beta || !isPrivateHost(typed.hostname);
+        const fetched = await fetchDocsPages(docsUrl.value, {
+          get: guarded ? makeGuardedDocsGet(this.hostChecks) : localDocsGet,
+        }).catch(() => null);
+        if (!fetched) {
+          docsNotes.push('The docs address couldn’t be read, so the Product Context comes from your files only.');
+        } else {
+          documents.push(...fetched.docs);
+          if (fetched.docs.length === 0) {
+            docsNotes.push(
+              `No pages could be read from the docs address${fetched.skipped[0] ? ` (${fetched.skipped[0].why})` : ''}.`
+            );
+          } else if (fetched.skipped.length > 0) {
+            docsNotes.push(`${fetched.skipped.length} docs page(s) were left out (for example: ${fetched.skipped[0].why}).`);
+          }
+        }
+      }
+      if (!current()) return;
       let contextFilePath: string | undefined;
-      if (body.productContext?.trim()) {
+      const contextText = documents.length
+        ? [body.productContext?.trim(), ...documents.map((d) => `# Document: ${d.name}\n${d.text}`)]
+            .filter(Boolean)
+            .join('\n\n')
+        : body.productContext;
+      if (documents.length) {
+        context.contextDocuments = documents;
+        context.productContext = contextText;
+      }
+      if (contextText?.trim()) {
         contextFilePath = path.join(runDir, 'product-context.md');
-        await fs.writeFile(contextFilePath, body.productContext, 'utf8');
+        await fs.writeFile(contextFilePath, contextText, 'utf8');
         context.contextFilePath = contextFilePath;
       }
 
@@ -2789,6 +2962,9 @@ export class RunnerServer {
         productId,
         profile,
         contextFilePath,
+        contextDocuments: documents.length ? documents : undefined,
+        suppliedSessions: this.savedSessions.get(runId),
+        aiPacing: aiBudget?.pacing,
         outputDir: runDir,
         authDir: this.authDir,
         signal,
@@ -2818,6 +2994,7 @@ export class RunnerServer {
           ...draft.exploration.notes.filter((n) => !n.startsWith('No AI key is set up')),
         ];
       }
+      if (docsNotes.length && draft.exploration) draft.exploration.notes = [...draft.exploration.notes, ...docsNotes];
       context.reportNotes = [...(draft.exploration?.notes || []), ...(signIns.note ? [signIns.note] : [])];
       this.broadcastRunnerEvent({
         type: 'DISCOVERY_COMPLETED',
@@ -2952,13 +3129,40 @@ export class RunnerServer {
   /** What the key has left of today's free AI requests, when OpenRouter says (ADR 0009's AI Request Budget). */
   private async aiBudgetFor(
     settings: StoredPlanRecord['context']['ai'],
-    key?: string
-  ): Promise<{ left?: number; limit?: number; visualReview: number }> {
-    const today =
-      settings?.provider === 'openrouter'
-        ? await this.openRouter.freeRequestsToday(key ?? (await this.storedOpenRouterKey()))
-        : null;
-    return { left: today?.remaining, limit: today?.limit, visualReview: VISUAL_REVIEW_CALLS };
+    key?: string,
+    cap?: RunCap
+  ): Promise<{
+    left?: number;
+    limit?: number;
+    visualReview: number;
+    /** How to pace the AI: from what the provider reports, with the person's cap and the model's price. */
+    pacing: { gapMs: number; concurrency: number; cap?: RunCap; price?: { prompt: number; completion: number } };
+    limits: ProviderLimits | null;
+  }> {
+    const openrouter = settings?.provider === 'openrouter';
+    const apiKey = openrouter ? (key ?? (await this.storedOpenRouterKey())) : undefined;
+    const today = openrouter ? await this.openRouter.freeRequestsToday(apiKey) : null;
+    let limits: ProviderLimits | null = null;
+    let price: { prompt: number; completion: number } | null = null;
+    if (openrouter) {
+      try {
+        limits = await this.openRouter.keyLimits(apiKey);
+        // The price matters only for a dollar cap.
+        if (cap?.dollars !== undefined && settings?.model) price = await this.openRouter.modelPrice(settings.model);
+      } catch {
+        // nothing reported: today's pacing
+      }
+    }
+    const reported: ProviderLimits | null =
+      limits || today ? { ...(limits ?? {}), remainingRequests: limits?.remainingRequests ?? today?.remaining } : null;
+    const { gapMs, concurrency } = pacingFor(reported, settings?.provider ?? 'openrouter');
+    return {
+      left: today?.remaining,
+      limit: today?.limit,
+      visualReview: VISUAL_REVIEW_CALLS,
+      pacing: { gapMs, concurrency, cap, price: price ?? undefined },
+      limits: reported,
+    };
   }
 
   /** The text model again, for turning a sentence into a test during the review. */
@@ -3026,6 +3230,17 @@ export class RunnerServer {
       budget: draft.plan?.budget,
       summary,
       otherHosts: draft.plan?.otherHosts,
+      plannedWhileCrawling: draft.plan?.plannedWhileCrawling || undefined,
+      notFound: draft.plan?.notFound?.length ? draft.plan.notFound : undefined,
+      documentedItems: draft.plan?.documentedItems,
+      rolesNotTested: draft.exploration?.signInFailures
+        ? Object.entries(draft.exploration.signInFailures).map(([role, reason]) => ({
+            role,
+            reason,
+            text: signInReasonText(reason),
+          }))
+        : undefined,
+      contextDocuments: record.context.contextDocuments?.map((d) => ({ name: d.name, chars: d.text.length })),
     };
   }
 
@@ -3176,6 +3391,8 @@ export class RunnerServer {
         aiModels: context.aiModels,
         readOnly: context.readOnly,
         notRun,
+        suppliedSessions: this.savedSessions.get(context.runId),
+        documentedNotFound: context.draft?.plan?.notFound?.map((n) => ({ docSource: n.docSource, reason: n.reason })),
         siteMap: context.draft ? this.siteMapOf(context.draft, context.runId) : undefined,
         testedWithApprovedPlan: extra.testedWithApprovedPlan,
         searchChecks: context.searchChecks,
@@ -3265,6 +3482,7 @@ export class RunnerServer {
       console.warn('[Release check-up] Couldn’t keep the run’s report:', err instanceof Error ? err.message : err)
     );
     this.lastReport = report;
+    this.savedSessions.delete(context.runId);
     this.phase = 'done';
     this.isRunning = false;
     this.currentTargetUrl = null;
@@ -3404,10 +3622,21 @@ export class RunnerServer {
     const { profile, ai, ...context } = record.context;
     const roles = profile?.roles || [];
     const notSaved = [...new Set([...(context.signInNotSaved || []), ...roles.map((r) => r.role)])];
-    return new Redactor(roles).deep({
+    // Saved sessions are never written either: the file only says which roles need theirs sent again.
+    const sessions = this.savedSessions.get(context.runId) ?? {};
+    const sessionNotSaved = [...new Set([...(context.sessionNotSaved || []), ...Object.keys(sessions)])];
+    // A session's cookie values are masked too, should one ever reach the plan's text.
+    const sessionSecrets = Object.values(sessions).flatMap((s) =>
+      s.cookies.flatMap((c) => {
+        const value = (c as { value?: unknown } | null)?.value;
+        return typeof value === 'string' && value.length >= 8 ? [{ token: value }] : [];
+      })
+    );
+    return new Redactor([...roles, ...sessionSecrets]).deep({
       plan: record.plan,
       context: {
         ...context,
+        sessionNotSaved: sessionNotSaved.length > 0 ? sessionNotSaved : undefined,
         profile: profile && {
           ...profile,
           roles: roles.map(({ role, loginPath }) => ({ role, username: '', loginPath })),
@@ -3421,6 +3650,11 @@ export class RunnerServer {
 
   /** Forgets the paused plan; with a runId, only while it is still that run's plan (a newer run may have replaced it). */
   private async clearPlan(runId?: string): Promise<void> {
+    // The run's saved sessions go with its plan (a plan kept aside for later keeps its own).
+    if (runId) this.savedSessions.delete(runId);
+    else if (this.currentPlanRecord && ![...this.parkedPlans.values()].includes(this.currentPlanRecord)) {
+      this.savedSessions.delete(this.currentPlanRecord.plan.runId);
+    }
     if (runId && this.currentPlanRecord && this.currentPlanRecord.plan.runId !== runId) return;
     this.currentPlanRecord = null;
     await fs.rm(this.planFile, { force: true }).catch(() => {});
@@ -3461,6 +3695,20 @@ export class RunnerServer {
       expectations?: Array<{ id: string; text?: string }>;
       /** 'quick': desktop only, and only the shared menus' links. */
       preset?: 'quick';
+      /**
+       * What the person decided about an item that came from a document (its Source): the roles it
+       * applies to, how serious a difference is, that the document is out of date, or that the
+       * proposed roles are right as they are.
+       */
+      sourceEdits?: Array<{
+        itemId: string;
+        roles?: string[];
+        severity?: FindingSeverity;
+        stale?: boolean;
+        confirm?: boolean;
+      }>;
+      /** "Not found in app" entries the person removed from the list. */
+      notFoundEdits?: Array<{ id: string; remove?: boolean }>;
     }
 
     let body: PatchPlanBody;
@@ -3585,6 +3833,30 @@ export class RunnerServer {
           : { ...(test.expectations || {}), origin: 'user' };
     }
 
+    // Source decisions: roles, severity, "document is out of date". Ours alone; nothing is re-planned.
+    for (const edit of Array.isArray(body.sourceEdits) ? body.sourceEdits : []) {
+      const test = draft?.plan?.pages.flatMap((pg) => pg.tests).find((t) => t.id === edit.itemId);
+      if (!test) continue;
+      touched.add(edit.itemId);
+      if (Array.isArray(edit.roles)) {
+        test.proposedRoles = edit.roles.filter((r) => typeof r === 'string' && r.trim());
+        test.rolesConfirmed = true;
+      }
+      if (edit.confirm) test.rolesConfirmed = true;
+      if (edit.severity && ['Blocker', 'Major', 'Minor', 'Suggestion'].includes(edit.severity)) {
+        test.docSeverity = edit.severity;
+      }
+      if (typeof edit.stale === 'boolean') test.docStale = edit.stale || undefined;
+    }
+    let notFoundChanged = false;
+    if (draft?.plan?.notFound && Array.isArray(body.notFoundEdits)) {
+      const gone = new Set(body.notFoundEdits.filter((e) => e.remove).map((e) => e.id));
+      if (gone.size > 0) {
+        draft.plan.notFound = draft.plan.notFound.filter((n) => !gone.has(n.id));
+        notFoundChanged = true;
+      }
+    }
+
     // A quick check: desktop only, and each page's own links left out (the shared menus stay).
     if (body.preset === 'quick' && draft?.plan) {
       record.context.breakpoints = ['1440px'];
@@ -3599,7 +3871,8 @@ export class RunnerServer {
     if (draft) this.refreshPlan(record);
     await this.savePlan(record);
     // Only switches, answers and sizes changed: the answer is what changed, not the whole plan.
-    const small = !body.flows && !body.testCases && body.productContext === undefined && body.designNotes === undefined;
+    const small =
+      !body.flows && !body.testCases && body.productContext === undefined && body.designNotes === undefined && !notFoundChanged;
     this.sendJson(res, 200, small ? planDelta(record.plan, touched) : planForClient(record.plan));
   }
 
@@ -3696,9 +3969,9 @@ export class RunnerServer {
     this.planUpdate = (async () => {
       try {
         const provider = await this.aiFor(record.context);
-        const budget = provider ? await this.aiBudgetFor(record.context.ai) : undefined;
+        const budget = provider ? await this.aiBudgetFor(record.context.ai, undefined, record.context.aiCap) : undefined;
         const paced = provider
-          ? new PacedAI(provider, budget?.left ?? Infinity, { model: record.context.ai?.model })
+          ? new PacedAI(provider, budget?.left ?? Infinity, { model: record.context.ai?.model, ...budget?.pacing })
           : undefined;
         const notes = await work(record, paced, (step) =>
           this.broadcastRunnerEvent({
@@ -3985,7 +4258,7 @@ export class RunnerServer {
       maxPages: number;
       exploreClicks: boolean;
       onPage?: (page: PageInventoryItem, n: number) => void;
-      storageState?: string;
+      storageState?: string | StorageStateData;
       who?: string;
     }
   ): Promise<{ pages: PageInventoryItem[]; forms: NonNullable<DiscoveryDraft['forms']> }> {
@@ -4107,12 +4380,47 @@ export class RunnerServer {
       return;
     }
 
-    const body: { breakpoints?: string[]; roles?: RoleCredential[] } = await this.readJsonBody<{
+    const body: { breakpoints?: string[]; roles?: RoleCredential[]; savedSessions?: unknown } = await this.readJsonBody<{
       breakpoints?: string[];
       roles?: RoleCredential[];
+      savedSessions?: unknown;
     }>(req).catch(() => ({}));
     if (body?.breakpoints) {
       record.context.breakpoints = body.breakpoints as Breakpoint[];
+    }
+
+    // Saved sessions are never saved to disk either: a plan read back after a restart needs them again.
+    if (body?.savedSessions !== undefined) {
+      let hostname = '';
+      try {
+        hostname = new URL(record.context.targetUrl).hostname;
+      } catch {
+        // checked by the session rules
+      }
+      const checked = checkSavedSessions(body.savedSessions, hostname);
+      if (!checked.ok) {
+        this.sendJson(res, 400, { error: checked.problem.error, code: checked.problem.code });
+        return;
+      }
+      if (checked.value) {
+        const runId = record.plan.runId;
+        this.savedSessions.set(runId, { ...(this.savedSessions.get(runId) ?? {}), ...checked.value });
+        const sentRoles = new Set(Object.keys(checked.value));
+        record.context.sessionNotSaved = (record.context.sessionNotSaved || []).filter((r) => !sentRoles.has(r));
+        // A session stands in for the sign-in details of its role.
+        record.context.signInNotSaved = (record.context.signInNotSaved || []).filter((r) => !sentRoles.has(r));
+      }
+    }
+    const sessionsMissing = (record.context.sessionNotSaved || []).filter(
+      (r) => !this.savedSessions.get(record.plan.runId)?.[r]
+    );
+    if (sessionsMissing.length > 0) {
+      this.sendJson(res, 409, {
+        error: `Release check-up restarted since this plan was made, and saved sessions are never saved to disk. Send them again for: ${sessionsMissing.join(', ')}.`,
+        code: 'ERR_SESSION_NOT_SAVED',
+        needsSession: sessionsMissing,
+      });
+      return;
     }
 
     // Sign-in details are never saved to disk, so a plan read back after a restart needs them again.

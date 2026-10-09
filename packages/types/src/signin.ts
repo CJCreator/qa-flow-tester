@@ -1,5 +1,5 @@
 /** Why a sign-in test failed. Browser-safe: the runner and the wizard both import this. */
-export const SIGN_IN_FAILURE_REASONS = ['wrong-details', 'no-form', 'unreachable', 'needs-more'] as const;
+export const SIGN_IN_FAILURE_REASONS = ['wrong-details', 'no-form', 'unreachable', 'needs-more', 'session-expired'] as const;
 
 export type SignInFailureReason = (typeof SIGN_IN_FAILURE_REASONS)[number];
 
@@ -10,6 +10,7 @@ export const SIGN_IN_REASON_TEXT: Record<SignInFailureReason, string> = {
   unreachable: 'The site could not be reached, or took too long to answer. Check it is up and try again.',
   'needs-more':
     'This sign-in needs more than a password (a code, a CAPTCHA or a single sign-on). That is not supported yet.',
+  'session-expired': 'The saved session is no longer signed in. Save a fresh one and try again.',
 };
 
 export function signInReasonText(reason: SignInFailureReason): string {

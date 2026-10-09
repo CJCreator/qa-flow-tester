@@ -1,4 +1,6 @@
-export type FindingSeverity = 'Blocker' | 'Major' | 'Minor' | 'Suggestion';
+import type { DocSource } from './plan.js';
+
+export type FindingSeverity ='Blocker' | 'Major' | 'Minor' | 'Suggestion';
 
 export type CheckerType =
   | 'bug-detection'
@@ -114,6 +116,12 @@ export interface TestCase {
   breakpoints?: Breakpoint[];
   /** The Plan Item this test runs, so a report can be matched back to the plan. */
   planItemId?: string;
+  /** The document section this test came from (ADR 0020). A mismatch is then reported against it. */
+  docSource?: DocSource;
+  /** Severity the person chose for a mismatch with the Source. */
+  docSeverity?: FindingSeverity;
+  /** The person said the document is out of date: a mismatch is "Could not verify". */
+  docStale?: boolean;
 }
 
 export interface SpecFile {

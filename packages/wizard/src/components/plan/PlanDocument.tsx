@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 import type {
   Breakpoint,
   DiscoveredFlow,
+  FindingSeverity,
   NavigationCheck,
   PlanPage,
   PlanPageTest,
@@ -10,7 +11,21 @@ import type {
   TestCaseExpectations,
 } from '@qa/types';
 import { stepToSentence, expectationsToChecks } from '../../lib/plan-translate';
-import type { InterpretResult } from '../../api';
+import type { InterpretResult, PatchPlanBody } from '../../api';
+import {
+  confirmRolesEdit,
+  docSourceLabel,
+  documentedLine,
+  isDenial,
+  notFoundByDocument,
+  originLabel,
+  parseRoles,
+  plannedWhileScanningLine,
+  removeNotFoundEdit,
+  rolesLine,
+  severityEdit,
+  staleEdit,
+} from '../../lib/plan-sources';
 import { Badge, ItemToggle, ReplanControl, SourceBadge, itemDomId, showItem } from './parts';
 import {
   DndContext,
@@ -57,6 +72,10 @@ export interface PlanActions {
   addSignIn: (signIn: RoleCredential) => Promise<void>;
   /** Desktop only, and only the shared menus' links. */
   quickCheck: () => void;
+  /** Plan Review edits on an item's Source: roles, severity, "document is out of date". */
+  editSource: (edits: NonNullable<PatchPlanBody['sourceEdits']>) => void;
+  /** Removes an entry from "Not found in app". */
+  editNotFound: (edits: NonNullable<PatchPlanBody['notFoundEdits']>) => void;
 }
 
 const SIZES: Breakpoint[] = ['375px', '768px', '1440px'];
@@ -748,6 +767,96 @@ function QuestionsSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAc
   );
 }
 
+const SEVERITIES: FindingSeverity[] = ['Blocker', 'Major', 'Minor', 'Suggestion'];
+
+/** Where a Plan Item came from: the Source chip, the roles the AI proposed, severity, out-of-date switch. */
+function SourceDetails({ test, actions }: { test: PlanPageTest; actions: PlanActions }) {
+  const [correcting, setCorrecting] = useState(false);
+  const [typed, setTyped] = useState((test.proposedRoles ?? []).join(', '));
+  if (!test.docSource) return null;
+  const roles = rolesLine(test);
+  return (
+    <div className="mt-2 space-y-1.5 rounded border border-rule bg-surface/60 p-2 text-sm" data-source-for={test.id}>
+      <p className="text-ink">
+        <span className="rounded border border-stamp/50 px-1.5 py-0.5 text-xs font-bold text-stamp">Source</span>{' '}
+        {docSourceLabel(test.docSource)}
+      </p>
+      {roles && (
+        <p className="text-ink-soft">
+          {roles}
+          {!test.rolesConfirmed && !correcting && (
+            <>
+              {' '}
+              <button
+                type="button"
+                className="btn-link text-sm"
+                disabled={actions.busy}
+                onClick={() => actions.editSource(confirmRolesEdit(test.id))}
+              >
+                Confirm roles
+              </button>{' '}
+              <button
+                type="button"
+                className="btn-link text-sm"
+                disabled={actions.busy}
+                onClick={() => setCorrecting(true)}
+              >
+                Correct roles
+              </button>
+            </>
+          )}
+        </p>
+      )}
+      {correcting && (
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="text-sm">
+            <span className="mb-1 block font-bold">Roles, separated by commas</span>
+            <input className="field py-1.5 text-sm" value={typed} onChange={(e) => setTyped(e.target.value)} />
+          </label>
+          <button
+            type="button"
+            className="btn-quiet min-h-[36px] px-3 text-sm"
+            disabled={actions.busy || parseRoles(typed).length === 0}
+            onClick={() => {
+              actions.editSource(confirmRolesEdit(test.id, parseRoles(typed)));
+              setCorrecting(false);
+            }}
+          >
+            Save roles
+          </button>
+        </div>
+      )}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        <label className="flex items-center gap-2">
+          <span className="font-bold">Severity if it differs</span>
+          <select
+            className="field py-1 text-sm"
+            value={test.docSeverity ?? 'Major'}
+            disabled={actions.busy}
+            onChange={(e) => actions.editSource(severityEdit(test.id, e.target.value as FindingSeverity))}
+          >
+            {SEVERITIES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex cursor-pointer items-center gap-2">
+          <input
+            type="checkbox"
+            className="h-4 w-4 accent-[#6C9BF2]"
+            checked={!!test.docStale}
+            disabled={actions.busy}
+            onChange={(e) => actions.editSource(staleEdit(test.id, e.target.checked))}
+          />
+          Document is out of date
+        </label>
+      </div>
+    </div>
+  );
+}
+
 function TestRow({ test, page, actions }: { test: PlanPageTest; page: PlanPage; actions: PlanActions }) {
   return (
     <li
@@ -771,12 +880,25 @@ function TestRow({ test, page, actions }: { test: PlanPageTest; page: PlanPage; 
                 Needs a test copy
               </Badge>
             )}
+            {isDenial(test) && (
+              <Badge tone="stamp" title="Checks that this role cannot see or use something it should not">
+                Denial check
+              </Badge>
+            )}
+            {originLabel(test.origin) && <Badge>{originLabel(test.origin)}</Badge>}
           </div>
-          <ol className="mt-1 list-decimal pl-5 text-sm text-ink-soft">
-            {test.steps.map((step, i) => (
-              <li key={i}>{stepToSentence(step)}</li>
-            ))}
-          </ol>
+          {isDenial(test) ? (
+            <p className="mt-1 text-sm text-ink-soft">
+              Passes when {roleName(test.role)} cannot see this on the page. It only looks; it does not try to use it.
+            </p>
+          ) : (
+            <ol className="mt-1 list-decimal pl-5 text-sm text-ink-soft">
+              {test.steps.map((step, i) => (
+                <li key={i}>{stepToSentence(step)}</li>
+              ))}
+            </ol>
+          )}
+          <SourceDetails test={test} actions={actions} />
           <Expected itemId={test.id} expectations={test.expectations} actions={actions} />
         </div>
       </div>
@@ -809,6 +931,7 @@ function PageRow({ page, actions }: { page: PlanPage; actions: PlanActions }) {
             {page.coverage === 'promoted' && !page.added && <Badge tone="stamp">Tested on its own</Badge>}
             {page.added && <Badge tone="stamp">Added by you</Badge>}
             {page.isNew && <Badge tone="stamp">New</Badge>}
+            {originLabel(page.origin) && <Badge>{originLabel(page.origin)}</Badge>}
             {page.unlinked && !page.added && <Badge tone="warn">No link leads here</Badge>}
             {!covered && <SourceBadge source={page.source} />}
           </div>
@@ -1417,6 +1540,69 @@ function WontRunSection({ plan }: { plan: ReviewPlan }) {
   );
 }
 
+/** Documented items with no matching page or control in the app: listed, never counted as failures. */
+function NotFoundSection({ plan, actions }: { plan: ReviewPlan; actions: PlanActions }) {
+  const groups = notFoundByDocument(plan.notFound);
+  const line = documentedLine(plan.documentedItems);
+  if (groups.length === 0 && !line) return null;
+  return (
+    <Section
+      id="plan-notfound"
+      title="Not found in app"
+      count={groups.reduce((n, g) => n + g.items.length, 0)}
+      intro={`${line ? `${line}. ` : ''}These are in your documents but the scan found no matching page or control. They are not counted as failures. Remove one if it is not meant to exist, or add the page and scan again.`}
+      collapsible
+    >
+      {groups.map((group) => (
+        <div key={group.document} className="mb-3">
+          <h4 className="mb-1 text-base font-bold text-ink">{group.document}</h4>
+          <ul className="space-y-1.5 text-base">
+            {group.items.map((item) => (
+              <li key={item.id} id={itemDomId(item.id)} className="flex items-start justify-between gap-3">
+                <span>
+                  <strong className="text-ink">{item.docSource.section ?? item.docSource.document}</strong>{' '}
+                  <span className="text-ink-soft">— {item.reason}</span>
+                </span>
+                <button
+                  type="button"
+                  className="btn-link shrink-0 text-sm"
+                  disabled={actions.busy}
+                  onClick={() => actions.editNotFound(removeNotFoundEdit(item.id))}
+                >
+                  Remove from the list
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </Section>
+  );
+}
+
+/** A role the scan could not sign in as: it is not tested, and why. */
+function RolesNotTestedSection({ plan }: { plan: ReviewPlan }) {
+  const items = plan.rolesNotTested ?? [];
+  if (items.length === 0) return null;
+  return (
+    <Section
+      id="plan-roles-not-tested"
+      title="Roles not tested and why"
+      count={items.length}
+      intro="These roles are left out of the check-up. The other roles and the visitor are still tested."
+    >
+      <ul className="space-y-1.5 text-base">
+        {items.map((item) => (
+          <li key={item.role}>
+            <strong className="text-ink">{roleName(item.role)}:</strong>{' '}
+            <span className="text-ink-soft">{item.text}</span>
+          </li>
+        ))}
+      </ul>
+    </Section>
+  );
+}
+
 function DocsSection({ plan, actions }: { plan: ReviewPlan; actions: PlanActions }) {
   const [productContext, setProductContext] = useState(plan.productContext || '');
   const [designNotes, setDesignNotes] = useState(plan.designNotes || '');
@@ -1494,6 +1680,7 @@ function Overview({ plan, view, setView }: { plan: ReviewPlan; view: View; setVi
           </a>
         ))}
       </nav>
+      {plannedWhileScanningLine(plan) && <p className="text-sm text-ink-soft">{plannedWhileScanningLine(plan)}</p>}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <label className="sr-only" htmlFor="plan-filter">
           Find in the plan
@@ -1718,6 +1905,8 @@ export function PlanDocument({ plan, actions }: { plan: ReviewPlan; actions: Pla
         <JourneysSection plan={plan} actions={actions} />
         <ChecksSection plan={plan} />
         <WontRunSection plan={plan} />
+        <RolesNotTestedSection plan={plan} />
+        <NotFoundSection plan={plan} actions={actions} />
         <DocsSection plan={plan} actions={actions} />
       </div>
     </ViewContext.Provider>

@@ -10,6 +10,8 @@ export interface ScanProgress {
   urlPath?: string;
   pagesFound?: number;
   layoutGroups?: number;
+  /** Plan Items already written while the site is still being explored. */
+  plannedSoFar?: number;
   done?: number;
   total?: number;
   requestsUsed?: number;
@@ -163,6 +165,12 @@ export function ScanningScreen({
                 <dt className="text-ink-soft">Pages found</dt>
                 <dd className="font-mono text-xl font-bold text-ink">{progress?.pagesFound ?? 0}</dd>
               </div>
+              {!!progress?.plannedSoFar && (
+                <div>
+                  <dt className="text-ink-soft">Planned while scanning</dt>
+                  <dd className="font-mono text-xl font-bold text-ink">{progress.plannedSoFar}</dd>
+                </div>
+              )}
               {progress?.stage === 'planning' && !!progress.layoutGroups && (
                 <div>
                   <dt className="text-ink-soft">Layouts</dt>
