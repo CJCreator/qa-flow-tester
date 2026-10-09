@@ -193,8 +193,8 @@ Rated against the decisions above. P0 blocks the goal (a visitor completing a fr
 
 ### P1
 
-1. **No measurement.** Nothing records visits or button clicks, so the conversion goal can't be judged. Needs a cookie-free, free counter (your decision).
-2. **The share image is an SVG** (`public/og-image.svg`). LinkedIn, X and Slack don't show SVG previews. Fix: a 1200 × 630 PNG.
+1. ~~**No measurement.** Nothing records visits or button clicks, so the conversion goal can't be judged. Needs a cookie-free, free counter (your decision).~~ Done 2026-10-09 (T-13): GoatCounter via `VITE_COUNTER_URL`; owner sets the value.
+2. ~~**The share image is an SVG** (`public/og-image.svg`). LinkedIn, X and Slack don't show SVG previews. Fix: a 1200 × 630 PNG.~~ Done 2026-10-09 (T-13): PNG added; owner replaces the placeholder art.
 3. ~~**The sample report is only as fresh as its run.** It must be regenerated when the report's format changes.~~ Done 2026-10-07: `tests/sample-report-format.test.ts` fails when the sample's structure differs from what the generator writes.
 4. ~~**Home form is long above the fold for a first scan.** The address box is first, but "Explore up to N pages", sign-ins and the optional specs sit right under it. Collapse them behind one "More options" for first-time visitors.~~ Done 2026-10-07: one "More options" (opens by itself when something in it is set).
 5. ~~**The command palette and the keyboard-shortcuts button** in the app's top bar are developer features on the screen a founder lands on. Hide them until a first check-up is done.~~ Done 2026-10-07 (keys still work).

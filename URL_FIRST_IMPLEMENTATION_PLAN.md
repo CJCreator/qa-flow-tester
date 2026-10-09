@@ -9,7 +9,7 @@ This plan turns those decisions into tasks. It builds on the wizard (`packages/w
 ## Status (as of 2026-10-07)
 
 **Built.** Checked on 2026-10-07 against the code and test files; the full test suite has not been re-run
-for this check (that happens in `/verify-all`). The go-ahead for Phase 0 was given and it is built. Task 2.9
+for this check; the suite itself ran on 2026-10-09 (915/920, see docs/tickets/INDEX.md). The go-ahead for Phase 0 was given and it is built. Task 2.9
 is the one task not built.
 
 | Phase                     | What it delivers                                                                      | Tasks | Estimate (one engineer) | Status                                                                                                                                                         |
