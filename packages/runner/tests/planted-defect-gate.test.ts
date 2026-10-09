@@ -92,6 +92,33 @@ describe('thresholds', () => {
       expect(v).toBeGreaterThanOrEqual(0);
       expect(v).toBeLessThanOrEqual(1);
     }
+    expect((JSON.parse(read('fixtures/benchmarks/thresholds.json')) as { note: string }).note).not.toMatch(
+      /uncalibrated/i
+    );
+    expect(fixture.maxFalsePositiveRate).toBeLessThan(0.9);
+    expect(fixture.minDetectionRate).toBeGreaterThanOrEqual(0.85);
+  });
+});
+
+describe('fixture answer key', () => {
+  type M = { checker?: string; titleIncludes?: string; actualIncludes?: string; urlIncludes?: string };
+  const key = JSON.parse(read('fixtures/benchmarks/fixture.json')) as {
+    notProblems?: Array<{ why: string; match: M[] }>;
+  };
+  it('each notProblems entry has a why and every matcher has a checker plus a title, url or actual field', () => {
+    expect(key.notProblems?.length).toBeGreaterThan(0);
+    for (const n of key.notProblems ?? []) {
+      expect(n.why.length).toBeGreaterThan(10);
+      expect(n.match.length).toBeGreaterThan(0);
+      for (const m of n.match) {
+        expect(m.checker).toBeTruthy();
+        expect(m.titleIncludes || m.urlIncludes || m.actualIncludes).toBeTruthy();
+      }
+    }
+  });
+  it('no notProblems matcher is title-only', () => {
+    const titleOnly = (key.notProblems ?? []).flatMap((n) => n.match).filter((m) => !m.checker);
+    expect(titleOnly).toEqual([]);
   });
 });
 

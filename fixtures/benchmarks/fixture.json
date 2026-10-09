@@ -3,66 +3,293 @@
   "url": "fixture",
   "mode": "product",
   "roles": [
-    { "role": "manager", "username": "manager@example.com", "password": "manager-password", "loginPath": "/signin" }
+    {
+      "role": "manager",
+      "username": "manager@example.com",
+      "password": "manager-password",
+      "loginPath": "/signin"
+    }
   ],
   "issues": [
     {
       "id": "console-error",
       "what": "The dashboard's “Trigger Console Error” button logs an error",
       "planted": true,
-      "match": [{ "checker": "bug-detection", "actualIncludes": "Simulated Unhandled Runtime Bug" }]
+      "match": [
+        {
+          "checker": "bug-detection",
+          "actualIncludes": "Simulated Unhandled Runtime Bug"
+        }
+      ]
     },
     {
       "id": "api-500",
       "what": "The dashboard's “Trigger 500 API Failure” button calls an API that fails",
       "planted": true,
-      "match": [{ "checker": "bug-detection", "titleIncludes": "/api/failing-endpoint" }]
+      "match": [
+        {
+          "checker": "bug-detection",
+          "titleIncludes": "/api/failing-endpoint"
+        }
+      ]
     },
     {
       "id": "tiny-target",
       "what": "A 20 × 20 px button on the dashboard",
       "planted": true,
       "match": [
-        { "titleIncludes": "Touch target below WCAG 2.5.8 minimum: X " },
-        { "titleIncludes": "(target-size)", "urlIncludes": "/dashboard" }
+        {
+          "titleIncludes": "Touch target below WCAG 2.5.8 minimum: X "
+        },
+        {
+          "titleIncludes": "(target-size)",
+          "urlIncludes": "/dashboard"
+        }
       ]
     },
     {
       "id": "small-text-links",
       "what": "Plain text links (the header menu, a Save button) are under 44 px tall on a phone",
-      "match": [{ "titleIncludes": "Touch target" }]
+      "match": [
+        {
+          "titleIncludes": "Touch target"
+        }
+      ]
     },
     {
       "id": "dead-end",
       "what": "/deadend has no way back",
       "planted": true,
-      "match": [{ "titleIncludes": "Dead End Page", "urlIncludes": "/deadend" }]
+      "match": [
+        {
+          "titleIncludes": "Dead End Page",
+          "urlIncludes": "/deadend"
+        }
+      ]
     },
     {
       "id": "password-in-address",
       "what": "The /login form uses GET, so the password goes into the page address",
       "planted": true,
-      "match": [{ "checker": "security", "titleIncludes": "passwords in the page address" }]
+      "match": [
+        {
+          "checker": "security",
+          "titleIncludes": "passwords in the page address"
+        }
+      ]
     },
     {
       "id": "about-no-title",
       "what": "/about has no title",
       "planted": true,
-      "match": [{ "titleIncludes": "(document-title)" }]
+      "match": [
+        {
+          "titleIncludes": "(document-title)"
+        },
+        {
+          "checker": "seo",
+          "titleIncludes": "missing a title tag",
+          "urlIncludes": "/about"
+        }
+      ]
+    },
+    {
+      "id": "seo-no-meta-description",
+      "what": "Fixed in the fixture; kept so a regression counts as real. A page has no meta description",
+      "match": [
+        {
+          "checker": "seo",
+          "titleIncludes": "missing a meta description"
+        }
+      ]
+    },
+    {
+      "id": "seo-no-h1",
+      "what": "Fixed in the fixture; kept so a regression counts as real. A page has no primary h1",
+      "match": [
+        {
+          "checker": "seo",
+          "titleIncludes": "no primary <h1>"
+        }
+      ]
+    },
+    {
+      "id": "seo-no-viewport",
+      "what": "Fixed in the fixture; kept so a regression counts as real. A page has no mobile viewport tag",
+      "match": [
+        {
+          "checker": "seo",
+          "titleIncludes": "missing a mobile viewport"
+        }
+      ]
+    },
+    {
+      "id": "seo-no-favicon-link",
+      "what": "Fixed in the fixture; kept so a regression counts as real. A page has no favicon link tag",
+      "match": [
+        {
+          "checker": "seo",
+          "titleIncludes": "missing a favicon link"
+        }
+      ]
+    },
+    {
+      "id": "sitemap-unreachable",
+      "what": "Fixed in the fixture; kept so a regression counts as real. The sitemap named in robots.txt could not be fetched (the fixture named a different port)",
+      "match": [
+        {
+          "checker": "seo",
+          "titleIncludes": "missing a sitemap.xml",
+          "urlIncludes": "/sitemap.xml"
+        }
+      ]
     },
     {
       "id": "slow-reports",
       "what": "/reports takes 2 seconds to answer",
       "planted": true,
       "expectedBy": "phase-2",
-      "match": [{ "checker": "performance", "urlIncludes": "/reports" }]
+      "match": [
+        {
+          "checker": "performance",
+          "urlIncludes": "/reports"
+        }
+      ]
     },
     {
       "id": "no-security-headers",
       "what": "No page sends security headers such as Content-Security-Policy",
       "planted": true,
       "expectedBy": "phase-2",
-      "match": [{ "checker": "security", "titleIncludes": "header" }]
+      "match": [
+        {
+          "checker": "security",
+          "titleIncludes": "header"
+        }
+      ]
+    }
+  ],
+  "notProblems": [
+    {
+      "why": "The fixture is a product app, not indexed content, so a canonical URL tag is not expected.",
+      "match": [
+        {
+          "checker": "seo",
+          "titleIncludes": "missing a canonical URL tag"
+        }
+      ]
+    },
+    {
+      "why": "The fixture is a flat app with no page hierarchy, so breadcrumbs are not expected.",
+      "match": [
+        {
+          "checker": "seo",
+          "titleIncludes": "missing breadcrumb",
+          "urlIncludes": "/login"
+        },
+        {
+          "checker": "seo",
+          "titleIncludes": "missing breadcrumb",
+          "urlIncludes": "/invoices/new"
+        },
+        {
+          "checker": "seo",
+          "titleIncludes": "missing breadcrumb",
+          "urlIncludes": "/reports"
+        },
+        {
+          "checker": "seo",
+          "titleIncludes": "missing breadcrumb",
+          "urlIncludes": "/dashboard"
+        },
+        {
+          "checker": "seo",
+          "titleIncludes": "missing breadcrumb",
+          "urlIncludes": "/signin"
+        },
+        {
+          "checker": "seo",
+          "titleIncludes": "missing breadcrumb",
+          "urlIncludes": "/deadend"
+        }
+      ]
+    },
+    {
+      "why": "The fixture is not a marketing site, so these sales and trust checks do not apply.",
+      "match": [
+        {
+          "checker": "seo",
+          "titleIncludes": "no clear call to action",
+          "urlIncludes": "/"
+        },
+        {
+          "checker": "seo",
+          "titleIncludes": "no way to get in touch",
+          "urlIncludes": "/"
+        },
+        {
+          "checker": "seo",
+          "titleIncludes": "no privacy or terms link",
+          "urlIncludes": "/"
+        },
+        {
+          "checker": "seo",
+          "titleIncludes": "No visitor analytics",
+          "urlIncludes": "/"
+        },
+        {
+          "checker": "seo",
+          "titleIncludes": "No links to social media",
+          "urlIncludes": "/"
+        },
+        {
+          "checker": "seo",
+          "titleIncludes": "No pricing or plans",
+          "urlIncludes": "/"
+        },
+        {
+          "checker": "seo",
+          "titleIncludes": "No reviews, testimonials",
+          "urlIncludes": "/"
+        },
+        {
+          "checker": "seo",
+          "titleIncludes": "leave an email address",
+          "urlIncludes": "/"
+        }
+      ]
+    },
+    {
+      "why": "The fixture is not shared on social media, so link preview tags are not expected.",
+      "match": [
+        {
+          "checker": "seo",
+          "titleIncludes": "OpenGraph social preview tags"
+        },
+        {
+          "checker": "seo",
+          "titleIncludes": "rich preview card"
+        }
+      ]
+    },
+    {
+      "why": "The fixture is not a business site, so Organization or WebSite structured data is not expected.",
+      "match": [
+        {
+          "checker": "seo",
+          "titleIncludes": "Organization or WebSite structured data"
+        }
+      ]
+    },
+    {
+      "why": "Click timing measured in a lab browser on a busy local machine varies from run to run (336 ms seen once on the dashboard); the fixture has no slow click handler.",
+      "match": [
+        {
+          "checker": "performance",
+          "titleIncludes": "Slow response to clicks",
+          "urlIncludes": "/dashboard"
+        }
+      ]
     }
   ]
 }

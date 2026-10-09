@@ -4,6 +4,8 @@ const port = process.env.PORT || 3050;
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url || '/', `http://localhost:${port}`);
+  // Name the port this socket is on (not PORT), so robots/sitemap/llms point at the running fixture.
+  const origin = `http://localhost:${req.socket.localPort}`;
 
   // API endpoints
   if (url.pathname === '/api/failing-endpoint') {
@@ -14,16 +16,14 @@ const server = http.createServer((req, res) => {
 
   if (url.pathname === '/robots.txt') {
     res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
-    res.end(
-      `User-agent: *\nAllow: /\n\nUser-agent: GPTBot\nAllow: /\n\nSitemap: http://localhost:${port}/sitemap.xml\n`
-    );
+    res.end(`User-agent: *\nAllow: /\n\nUser-agent: GPTBot\nAllow: /\n\nSitemap: ${origin}/sitemap.xml\n`);
     return;
   }
 
   if (url.pathname === '/sitemap.xml') {
     res.writeHead(200, { 'Content-Type': 'application/xml; charset=utf-8' });
     res.end(
-      `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>http://localhost:${port}/</loc></url></urlset>`
+      `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${origin}/</loc></url></urlset>`
     );
     return;
   }
@@ -31,7 +31,7 @@ const server = http.createServer((req, res) => {
   if (url.pathname === '/llms.txt') {
     res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
     res.end(
-      `# Fixture QA App\n\n> Test application for verifying QA Flow Tester checks.\n\n- [About](http://localhost:${port}/about): Overview of invoice features.\n`
+      `# Fixture QA App\n\n> Test application for verifying QA Flow Tester checks.\n\n- [About](${origin}/about): Overview of invoice features.\n`
     );
     return;
   }
@@ -56,9 +56,14 @@ const server = http.createServer((req, res) => {
 
   // A real signed-in area: POST sign-in sets a session cookie; /account pages need it.
   const session = (req.headers.cookie || '').match(/fixture_session=(manager|viewer)/)?.[1];
-  const html = (title, body, status = 200) => {
+  const html = (
+    title,
+    body,
+    status = 200,
+    description = `${title}: a page of the fixture invoicing app, used to check QA Flow Tester.`
+  ) => {
     res.writeHead(status, { 'Content-Type': 'text/html; charset=utf-8' });
-    res.end(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>${title}</title></head><body>
+    res.end(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>${title}</title><meta name="description" content="${description}"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" href="/favicon.ico"></head><body>
       <header><nav><a href="/">Home</a> <a href="/account">My account</a> <a href="/about">About</a></nav></header>
       <main>${body}</main></body></html>`);
   };
@@ -241,10 +246,10 @@ const server = http.createServer((req, res) => {
         : html('No access', '<h1>You don’t have access to this page</h1>', 403);
     }
   }
-  // Planted: a page with no title (and no description) for search engines to show.
+  // Planted: a page with no title for search engines to show.
   if (url.pathname === '/about') {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    res.end(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"></head><body>
+    res.end(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="description" content="About the fixture invoicing app: what it does and who makes it."><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" href="/favicon.ico"></head><body>
       <header><nav><a href="/">Home</a></nav></header><main><h1>About Fixture</h1><p>We make invoices.</p></main></body></html>`);
     return;
   }
@@ -265,6 +270,9 @@ const server = http.createServer((req, res) => {
       <head>
         <meta charset="utf-8">
         <title>Fixture App - Home</title>
+        <meta name="description" content="Home of the fixture invoicing app: sign in, create invoices and view reports.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="icon" href="/favicon.ico">
       </head>
       <body>
         <header>
@@ -294,11 +302,14 @@ const server = http.createServer((req, res) => {
       <head>
         <meta charset="utf-8">
         <title>Fixture App - Login</title>
+        <meta name="description" content="Sign in to the fixture invoicing app with your email and password.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="icon" href="/favicon.ico">
       </head>
       <body>
         <header><nav><a href="/">Home</a></nav></header>
         <main>
-          <h2>Sign In</h2>
+          <h1>Sign In</h1>
           <form action="/dashboard" method="GET">
             <div>
               <label for="email">Email</label>
@@ -324,6 +335,9 @@ const server = http.createServer((req, res) => {
       <head>
         <meta charset="utf-8">
         <title>Fixture App - Dashboard</title>
+        <meta name="description" content="Dashboard of the fixture invoicing app with shortcuts to invoices and test actions.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="icon" href="/favicon.ico">
       </head>
       <body>
         <header>
@@ -334,7 +348,7 @@ const server = http.createServer((req, res) => {
           </nav>
         </header>
         <main>
-          <h2>Dashboard</h2>
+          <h1>Dashboard</h1>
           <p>Welcome back, Manager!</p>
 
           <!-- Intentional defect 1: Console Error -->
@@ -368,6 +382,9 @@ const server = http.createServer((req, res) => {
       <head>
         <meta charset="utf-8">
         <title>Dead End Page</title>
+        <meta name="description" content="A page of the fixture invoicing app that has no way back, used to test dead ends.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="icon" href="/favicon.ico">
       </head>
       <body>
         <div>
@@ -387,6 +404,9 @@ const server = http.createServer((req, res) => {
       <head>
         <meta charset="utf-8">
         <title>Create Invoice</title>
+        <meta name="description" content="Create a new invoice in the fixture invoicing app by entering a customer and an amount.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="icon" href="/favicon.ico">
         <script>
           async function handleSave(e) {
             e.preventDefault();
@@ -406,7 +426,7 @@ const server = http.createServer((req, res) => {
       <body>
         <header><nav><a href="/dashboard">Dashboard</a></nav></header>
         <main>
-          <h2>Create Invoice</h2>
+          <h1>Create Invoice</h1>
           <form onsubmit="handleSave(event)">
             <div>
               <label for="customer">Customer</label>
@@ -433,6 +453,8 @@ const server = http.createServer((req, res) => {
         <meta charset="utf-8">
         <title>Invoice Details</title>
         <meta name="description" content="Details of invoice INV-101 for Acme Corp, including the customer, the amount and the current status.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="icon" href="/favicon.ico">
         <meta property="og:title" content="Invoice Details">
         <meta property="og:description" content="Details of invoice INV-101 for Acme Corp.">
         <meta property="og:image" content="https://example.com/invoice-preview.png">

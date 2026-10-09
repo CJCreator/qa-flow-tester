@@ -86,7 +86,7 @@ After T-11 is merged and deployed:
 
 ## G16: a11y and security depth (T-22)
 1. Decide whether to wire the existing response-header checks (CSP missing, HSTS, nosniff, clickjacking, referrer) into the orchestrator. Today they never run in real Check-ups; wiring them changes the fixture verdict and the benchmark. Needs its own ticket and an ADR note.
-2. After /verify-all, run the fixture benchmark (`pnpm benchmark --sites fixture --no-ai`), review false positives from the new checks, calibrate `fixtures/benchmarks/thresholds.json`.
+2. After /verify-all, run the fixture benchmark (`pnpm benchmark --sites fixture --no-ai`), review false positives from the new checks, calibrate `fixtures/benchmarks/thresholds.json`. (Done 2026-10-09 for the fixture site; response-header checks are still not wired.)
 3. CrUX panel stays out (external API); file as a separate ticket.
 4. Review the "What this did not check" report section (ADR 0018 consequence; not built here).
 

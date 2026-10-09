@@ -15,7 +15,9 @@ All notable changes. Format follows [Keep a Changelog](https://keepachangelog.co
 ### Changed
 
 - Sign-in test now names why it failed (wrong details, no sign-in form found, site unreachable or timed out, needs more than a password) and handles two-step and modal sign-ins (T-18)
-- Internal: split packages/types/src/index.ts into area files; exports unchanged (T-23a)
+
+- Internal: split packages/types/src/index.ts into area files; exports unchanged (T-23a)
+- Fixture benchmark: every finding is labelled in the answer key (real, or known noise), fixture pages got a viewport, icon, description and h1, the fixture's sitemap address follows its port, and thresholds are calibrated
 
 ## [0.1.0] - 2026-10-08
 

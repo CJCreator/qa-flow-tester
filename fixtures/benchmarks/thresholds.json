@@ -1,6 +1,6 @@
 {
-  "note": "Uncalibrated, set conservatively. Recalibrate from the first real run at /verify-all. Only sites listed here gate the run; live sites are reported, never gated.",
+  "note": "Calibrated 2026-10-09 from a fixture run (55 reported, 29 real, false positive rate 0.47, planted 6 of 6). Known-false findings count as false positives, so the floor is known noise over reported (about 0.46); the limit adds about 0.08 for run-to-run drift. Recalibrate when the answer key or the checks change. Only sites listed here gate the run; live sites are reported, never gated.",
   "sites": {
-    "fixture": { "minDetectionRate": 0.85, "maxFalsePositiveRate": 0.9 }
+    "fixture": { "minDetectionRate": 1, "maxFalsePositiveRate": 0.55 }
   }
 }
