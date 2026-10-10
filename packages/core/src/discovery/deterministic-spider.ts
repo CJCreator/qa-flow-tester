@@ -38,6 +38,13 @@ export interface SpiderResult {
   signInWalls: string[];
   /** Same-site pages robots.txt asked crawlers to leave alone. */
   skippedByRobots?: string[];
+  /** Pages found but not reached, and why. Paths only, never a query string. */
+  skipped?: SkippedPage[];
+}
+
+export interface SkippedPage {
+  urlPath: string;
+  why: 'page-limit' | 'did-not-load' | 'robots' | 'sign-in';
 }
 
 export interface CrawlOptions {
@@ -154,6 +161,7 @@ export class DeterministicSpider {
     const ambiguityQuestions: AmbiguityQuestion[] = [];
     const signInWalls: string[] = [];
     const skippedByRobots: string[] = [];
+    const skipped: SkippedPage[] = [];
     /** Addresses the site redirected elsewhere on the site, so a link to one is expected to land on the other. */
     const redirects = new Map<string, string>();
     let questionCounter = 1;
@@ -172,6 +180,7 @@ export class DeterministicSpider {
       const fullUrl = new URL(requested, site).toString();
       if (options.robots && !options.robots.isAllowed(requested)) {
         skippedByRobots.push(requestedPath);
+        skipped.push({ urlPath: requestedPath, why: 'robots' });
         continue;
       }
 
@@ -187,6 +196,7 @@ export class DeterministicSpider {
         // that lands on another host's sign-in form (a company sign-in service) doesn't move the site.
         if (landed.pathname !== requestedPath && hasSignInForm) {
           signInWalls.push(requestedPath);
+          skipped.push({ urlPath: requestedPath, why: 'sign-in' });
           if (onSite(landed)) {
             // A link there lands on the sign-in page for whoever is exploring.
             redirects.set(requestedPath, landed.pathname);
@@ -388,10 +398,19 @@ export class DeterministicSpider {
         }
       } catch {
         // Skip page on navigation failure
+        skipped.push({ urlPath: requestedPath, why: 'did-not-load' });
       }
     }
 
     await page.close();
+
+    // Still queued when the page limit ended the crawl: found, never opened.
+    if (visited.size >= this.maxPages && !options.signal?.aborted) {
+      for (const left of queue) {
+        const leftPath = new URL(left, targetUrl).pathname;
+        if (!visited.has(leftPath)) skipped.push({ urlPath: leftPath, why: 'page-limit' });
+      }
+    }
 
     // A link to an address the site redirects is expected to land where the redirect goes.
     for (const recorded of pages) {
@@ -408,6 +427,7 @@ export class DeterministicSpider {
       ambiguityQuestions,
       signInWalls,
       skippedByRobots: skippedByRobots.length > 0 ? skippedByRobots : undefined,
+      skipped: skipped.length > 0 ? skipped : undefined,
     };
   }
 

@@ -193,9 +193,24 @@ function describeExploration(
       `Skipped ${robotsSkipped.length} ${robotsSkipped.length === 1 ? 'page' : 'pages'} the site's robots.txt asks crawlers to leave alone: ${robotsSkipped.slice(0, 5).join(', ')}${robotsSkipped.length > 5 ? ', …' : ''}.`
     );
   }
+  // Pages found by any crawl: reached ones are the site map's pages; the rest keep the first reason given.
+  const reachedPaths = new Set(merged.pages.map((p) => new URL(p.urlPath, 'http://x').pathname));
+  const skippedPages = new Map<string, NonNullable<SpiderResult['skipped']>[number]>();
+  for (const { result } of crawls) {
+    for (const s of result.skipped || []) {
+      const urlPath = new URL(s.urlPath, 'http://x').pathname;
+      if (!reachedPaths.has(urlPath) && !skippedPages.has(urlPath)) skippedPages.set(urlPath, { urlPath, why: s.why });
+    }
+  }
+  const pageCoverage = {
+    found: reachedPaths.size + skippedPages.size,
+    reached: reachedPaths.size,
+    skipped: [...skippedPages.values()],
+  };
   return {
     signedInAs,
     signInFailed,
+    pageCoverage,
     ...(Object.keys(signInFailures).length > 0 ? { signInFailures } : {}),
     signInPages,
     notReached: merged.signInWalls,
