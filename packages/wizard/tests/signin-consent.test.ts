@@ -114,3 +114,38 @@ describe('a failed sign-in in the live feed', () => {
     expect(next.failure).toMatch(/couldn’t be reached/);
   });
 });
+
+describe('approving a saved consent plan after a restart', () => {
+  it('uses fixed wording and builds the role from typed details only', async () => {
+    const { SIGN_IN_AGAIN_TEXT, approveRolesOf } = await import('../src/lib/form');
+    expect(SIGN_IN_AGAIN_TEXT).toBe('Type the sign-in details again to approve this plan.');
+    expect(approveRolesOf('', 'pw')).toEqual([]);
+    expect(approveRolesOf('me', '')).toEqual([]);
+    expect(approveRolesOf(' me ', 'pw')).toEqual([{ role: 'member', username: 'me', password: 'pw' }]);
+  });
+
+  it('api surfaces ERR_SIGN_IN_REQUIRED as a RunnerError code and resends roles', async () => {
+    const { vi } = await import('vitest');
+    const { approvePlan, RunnerError } = await import('../src/api');
+    const bodies: string[] = [];
+    const fetchMock = vi
+      .fn()
+      .mockImplementationOnce(async (_u: string, init: RequestInit) => {
+        bodies.push(String(init.body));
+        return new Response(JSON.stringify({ error: 'x', code: 'ERR_SIGN_IN_REQUIRED' }), { status: 409 });
+      })
+      .mockImplementationOnce(async (_u: string, init: RequestInit) => {
+        bodies.push(String(init.body));
+        return new Response('{}', { status: 200 });
+      });
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      await expect(approvePlan()).rejects.toMatchObject({ code: 'ERR_SIGN_IN_REQUIRED' });
+      await approvePlan({ roles: [{ role: 'member', username: 'me', password: 'pw' }] });
+      expect(JSON.parse(bodies[1]).roles[0].username).toBe('me');
+      expect(RunnerError).toBeDefined();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});

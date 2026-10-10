@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import type { ReleaseReport, ReviewPlan, RunSummary } from '@qa/types';
+import type { ReleaseReport, ReviewPlan, RoleCredential, RunSummary } from '@qa/types';
 import {
   abortRun,
   approvePlan,
@@ -40,6 +40,7 @@ import {
   contextUrlOf,
   productContextOf,
   rolesOf,
+  SIGN_IN_AGAIN_TEXT,
   savedSessionsOf,
   type CheckupForm,
 } from './lib/form';
@@ -135,6 +136,7 @@ export default function App() {
   const [planNotice, setPlanNotice] = useState<PlanNotice | null>(null);
   const [planUpdate, setPlanUpdate] = useState<PlanUpdateState>({ running: false });
   const [approveError, setApproveError] = useState<string | null>(null);
+  const [approveNeedsSignIn, setApproveNeedsSignIn] = useState(false);
   const [approving, setApproving] = useState(false);
   const [scan, setScan] = useState<ScanProgress | null>(null);
   const [feed, setFeed] = useState<FeedState>(() => initialFeed('product'));
@@ -607,12 +609,13 @@ export default function App() {
     }
   };
 
-  const approve = async () => {
+  const approve = async (roles?: RoleCredential[]) => {
     setApproveError(null);
+    setApproveNeedsSignIn(false);
     setApproving(true);
     const asked = epoch.current;
     try {
-      await approvePlan();
+      await approvePlan(roles && roles.length > 0 ? { roles } : undefined);
       // Testing can fail before this answer arrives (the site is down): then the plan is back already.
       if (asked !== epoch.current) return;
       epoch.current++;
@@ -621,6 +624,11 @@ export default function App() {
       setStatus((s) => (s ? { ...s, phase: 'testing' } : s));
       navigate(PATHS.testing);
     } catch (err) {
+      if (err instanceof RunnerError && err.code === 'ERR_SIGN_IN_REQUIRED') {
+        setApproveNeedsSignIn(true);
+        setApproveError(SIGN_IN_AGAIN_TEXT);
+        return;
+      }
       setApproveError(err instanceof RunnerError ? err.message : 'The plan couldn’t be approved. Try again.');
     } finally {
       setApproving(false);
@@ -697,7 +705,8 @@ export default function App() {
           status?.phase === 'awaiting-review' && plan ? (
             <PlanReviewScreen
               plan={plan}
-              onApprove={() => void approve()}
+              onApprove={(roles) => void approve(roles)}
+              needsSignIn={approveNeedsSignIn}
               onPlanUpdated={setPlan}
               update={planUpdate}
               approveError={approveError}

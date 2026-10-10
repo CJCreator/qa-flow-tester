@@ -196,6 +196,14 @@ export function withoutConsent(form: CheckupForm): CheckupForm {
   return form.signInConsent || form.reviewFirst ? { ...form, signInConsent: false, reviewFirst: false } : form;
 }
 
+/** Shown when a plan saved with sign-in consent is approved after the details were forgotten (a restart). */
+export const SIGN_IN_AGAIN_TEXT = 'Type the sign-in details again to approve this plan.';
+
+/** The one sign-in typed again at approval, or none while a field is empty. Consent stays the saved plan's. */
+export function approveRolesOf(username: string, password: string): Array<{ role: string; username: string; password: string }> {
+  return username.trim() && password ? [{ role: 'member', username: username.trim(), password }] : [];
+}
+
 /** Consent never outlives the details it was given for. */
 export function settleConsent(form: CheckupForm): CheckupForm {
   return hasSignInDetails(form) ? form : withoutConsent(form);

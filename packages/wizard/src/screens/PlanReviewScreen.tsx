@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { Breakpoint, ReviewPlan } from '@qa/types';
+import type { Breakpoint, ReviewPlan, RoleCredential } from '@qa/types';
 import { SiteMap } from '../components/SiteMap';
 import { FocusHeading, Notice, Spinner } from '../components/text';
 import { count } from '../lib/format';
+import { approveRolesOf } from '../lib/form';
 import { useDocumentTitle } from '../lib/title';
 import { PlanDocument, type PlanActions } from '../components/plan/PlanDocument';
 import { showItem } from '../components/plan/parts';
@@ -39,7 +40,10 @@ export interface PlanNotice {
 
 export interface PlanReviewScreenProps {
   plan: ReviewPlan;
-  onApprove: () => void;
+  /** Roles are the sign-in typed again, when the saved plan's details were forgotten. */
+  onApprove: (roles?: RoleCredential[]) => void;
+  /** The plan was saved with test sign-in consent but the details are gone: ask for them again. */
+  needsSignIn?: boolean;
   onPlanUpdated: (plan: ReviewPlan) => void;
   update: PlanUpdateState;
   approveError?: string | null;
@@ -80,6 +84,7 @@ const TABS = [
 export function PlanReviewScreen({
   plan,
   onApprove,
+  needsSignIn = false,
   onPlanUpdated,
   update,
   approveError,
@@ -283,7 +288,7 @@ export function PlanReviewScreen({
   useDocumentTitle(`Plan for ${host}`);
 
   const approveButton = (
-    <button type="button" className="btn-primary shrink-0" disabled={busy || approving} onClick={onApprove}>
+    <button type="button" className="btn-primary shrink-0" disabled={busy || approving} onClick={() => onApprove()}>
       {approving ? <Spinner label="Starting the tests…" /> : 'Approve the plan and start testing'}
     </button>
   );
@@ -432,7 +437,7 @@ export function PlanReviewScreen({
             type="button"
             className="btn-primary min-h-[44px] shrink-0 px-4"
             disabled={busy || approving}
-            onClick={onApprove}
+            onClick={() => onApprove()}
           >
             {approving ? <Spinner label="Starting…" /> : 'Approve'}
           </button>
@@ -469,7 +474,49 @@ export function PlanReviewScreen({
             {approveError}
           </p>
         )}
+        {needsSignIn && <SignInAgain busy={busy || approving} onSubmit={(roles) => onApprove(roles)} />}
       </div>
     </div>
+  );
+}
+
+/** The sign-in fields shown again at approval. Typed values live here only and are cleared once sent. */
+function SignInAgain({ busy, onSubmit }: { busy: boolean; onSubmit: (roles: RoleCredential[]) => void }) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const roles = approveRolesOf(username, password);
+  return (
+    <form
+      className="mx-auto mt-2 flex max-w-6xl flex-wrap items-end gap-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (roles.length === 0) return;
+        onSubmit(roles);
+        setPassword('');
+      }}
+    >
+      <label className="text-sm font-bold text-ink">
+        Sign-in username
+        <input
+          className="input mt-1 block"
+          autoComplete="off"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+        />
+      </label>
+      <label className="text-sm font-bold text-ink">
+        Sign-in password
+        <input
+          className="input mt-1 block"
+          type="password"
+          autoComplete="off"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+      </label>
+      <button type="submit" className="btn-primary" disabled={busy || roles.length === 0}>
+        Approve with these details
+      </button>
+    </form>
   );
 }
