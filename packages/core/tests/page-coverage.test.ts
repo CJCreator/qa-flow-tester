@@ -55,6 +55,16 @@ describe('page coverage: found = reached + skipped', () => {
       expect(coverage).toBeTruthy();
       expect(coverage!.found).toBe(coverage!.reached + coverage!.skipped.length);
       expect(coverage!.reached).toBeLessThanOrEqual(3);
+      // Independent of the coverage arithmetic: reached is the draft site map's page count, and the
+      // skipped count is every page that was queued but never opened (links found on reached pages).
+      expect(coverage!.reached).toBe(draft.pages.length);
+      const reachedPaths = new Set(draft.pages.map((p) => p.urlPath));
+      const linked = new Set<string>();
+      for (const p of draft.pages)
+        for (const l of p.links || []) if (!l.leavesSite) linked.add(new URL(l.to, 'http://x').pathname);
+      const unvisited = [...linked].filter((l) => !reachedPaths.has(l));
+      expect(coverage!.skipped.length).toBe(unvisited.length);
+      expect(new Set(coverage!.skipped.map((s) => s.urlPath))).toEqual(new Set(unvisited));
       expect(coverage!.skipped.length).toBeGreaterThan(0);
       expect(coverage!.skipped.some((s) => s.why === 'page-limit')).toBe(true);
       expect(JSON.stringify(coverage)).not.toContain('?');

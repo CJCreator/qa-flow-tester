@@ -107,6 +107,43 @@ describe('requireSignIn', () => {
     expect(draft).toBeTruthy();
   }, 90000);
 
+  describe.each([
+    ['home page returns 500', 3548, (res: http.ServerResponse) => { res.writeHead(500); res.end('boom'); }],
+    ['connection dropped', 3549, (res: http.ServerResponse) => { res.socket?.destroy(); }],
+  ] as const)('unreachable home page: %s', (_name, port, respond) => {
+    it('requireSignIn: throws reason unreachable, no crawl', async () => {
+      const down = http.createServer((_req, res) => respond(res));
+      await new Promise<void>((resolve) => down.listen(port, resolve));
+      const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const events: string[] = [];
+      try {
+        const err = await new DiscoveryAgent()
+          .discover({
+            targetUrl: `http://localhost:${port}`,
+            productId: 'down',
+            outputDir: path.join(outputDir, `down-${port}`),
+            requireSignIn: true,
+            profile: {
+              name: 'Down',
+              productId: 'down',
+              roles: [{ role: 'member', username: USER, password: PASS, loginPath: '/login' }],
+            },
+            onProgress: (p: { stage: string }) => events.push(p.stage),
+          } as never)
+          .then(
+            () => undefined,
+            (e: unknown) => e
+          );
+        expect(err).toBeInstanceOf(SignInFailedError);
+        expect((err as SignInFailedError).reason).toBe('unreachable');
+        expect(events).not.toContain('crawling');
+      } finally {
+        log.mockRestore();
+        await new Promise<void>((resolve) => down.close(() => resolve()));
+      }
+    }, 90000);
+  });
+
   it('requireSignIn false with a wrong password: no throw, crawl runs', async () => {
     const events: string[] = [];
     const draft = await run(BAD, false, 'optional', events);

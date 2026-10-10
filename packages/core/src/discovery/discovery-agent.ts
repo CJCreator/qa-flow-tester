@@ -259,9 +259,15 @@ export class DiscoveryAgent {
           })
         : undefined;
     stopIfAborted(signal);
-    if (options.requireSignIn && preflight?.roleFailures) {
-      const [role, reason] = Object.entries(preflight.roleFailures)[0] ?? [];
-      if (role) throw new SignInFailedError(reason, role);
+    if (options.requireSignIn && preflight) {
+      // Fail closed: a role is signed in only if it has a session. An unreachable home page has no
+      // roleFailures at all, so that case is 'unreachable' rather than a silent signed-out crawl.
+      const unsigned = roles.find((r) => !preflight.roleStorageStates?.[r.role]);
+      if (!preflight.ok || unsigned) {
+        const failed = Object.entries(preflight.roleFailures ?? {})[0];
+        if (failed) throw new SignInFailedError(failed[1], failed[0]);
+        throw new SignInFailedError('unreachable', unsigned?.role ?? roles[0].role);
+      }
     }
 
     // The AI Request Budget: set up before the crawl, because planning starts while it runs.

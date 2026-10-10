@@ -209,7 +209,10 @@ export class DeterministicSpider {
           if (/^https?:$/.test(landed.protocol)) site = new URL(landed.origin);
         }
         // Redirected off the site: not one of its pages.
-        if (!onSite(landed)) continue;
+        if (!onSite(landed)) {
+          skipped.push({ urlPath: requestedPath, why: 'did-not-load' });
+          continue;
+        }
         // Redirected within the site: the page is recorded once, under the address it really has.
         if (landed.pathname !== requestedPath) {
           redirects.set(requestedPath, landed.pathname);
@@ -404,6 +407,8 @@ export class DeterministicSpider {
 
     await page.close();
 
+    // When the person stops the scan (abort), the queue left over is not listed as skipped on purpose:
+    // 'page-limit' would be inaccurate, and the report carries a "you stopped the scan" note instead.
     // Still queued when the page limit ended the crawl: found, never opened.
     if (visited.size >= this.maxPages && !options.signal?.aborted) {
       for (const left of queue) {
