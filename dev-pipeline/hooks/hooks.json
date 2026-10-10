@@ -1,0 +1,4 @@
+{
+  "description": "Registers /build, which turns a rough idea into a full development pipeline prompt.",
+  "modules": ["./register.js"]
+}

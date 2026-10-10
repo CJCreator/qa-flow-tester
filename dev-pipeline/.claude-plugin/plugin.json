@@ -1,0 +1,6 @@
+{
+  "name": "dev-pipeline",
+  "version": "0.2.0",
+  "description": "/build <rough idea>: enhance, plan, build, test, verify regressions, and report.",
+  "author": { "name": "AdamCole" }
+}
