@@ -108,8 +108,21 @@ describe('requireSignIn', () => {
   }, 90000);
 
   describe.each([
-    ['home page returns 500', 3548, (res: http.ServerResponse) => { res.writeHead(500); res.end('boom'); }],
-    ['connection dropped', 3549, (res: http.ServerResponse) => { res.socket?.destroy(); }],
+    [
+      'home page returns 500',
+      3548,
+      (res: http.ServerResponse) => {
+        res.writeHead(500);
+        res.end('boom');
+      },
+    ],
+    [
+      'connection dropped',
+      3549,
+      (res: http.ServerResponse) => {
+        res.socket?.destroy();
+      },
+    ],
   ] as const)('unreachable home page: %s', (_name, port, respond) => {
     it('requireSignIn: throws reason unreachable, no crawl', async () => {
       const down = http.createServer((_req, res) => respond(res));

@@ -1184,13 +1184,7 @@ function ConsentNotice({
           />
           <span>Show me the plan first</span>
         </label>
-        <button
-          type="button"
-          className="btn-link mt-3 text-sm"
-          onClick={() =>
-            onFormChange(lookOnly)
-          }
-        >
+        <button type="button" className="btn-link mt-3 text-sm" onClick={() => onFormChange(lookOnly)}>
           Only look at it instead
         </button>
       </Notice>

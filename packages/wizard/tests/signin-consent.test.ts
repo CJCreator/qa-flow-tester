@@ -54,7 +54,9 @@ describe('consent cannot go stale or leak', () => {
     expect(settleConsent(consented()).signInConsent).toBe(true);
   });
   it('a second role alone does not keep the notice or the consent', () => {
-    const second = consented({ signIns: [{ ...EMPTY_SIGN_IN }, { ...EMPTY_SIGN_IN, role: 'admin', username: 'x', password: 'y' }] });
+    const second = consented({
+      signIns: [{ ...EMPTY_SIGN_IN }, { ...EMPTY_SIGN_IN, role: 'admin', username: 'x', password: 'y' }],
+    });
     expect(hasSignInDetails(second)).toBe(false);
     expect(settleConsent(second).signInConsent).toBe(false);
   });
@@ -84,7 +86,9 @@ describe('consent cannot go stale or leak', () => {
   it('stores the password in the keychain under consent only when remember was ticked', () => {
     expect(consentRequestOf(consented(), undefined).rememberSignIns).toBe(false);
     expect(consentRequestOf(consented({ rememberTouched: true }), undefined).rememberSignIns).toBe(true);
-    expect(consentRequestOf(consented({ rememberTouched: true, rememberSignIns: false }), undefined).rememberSignIns).toBe(false);
+    expect(
+      consentRequestOf(consented({ rememberTouched: true, rememberSignIns: false }), undefined).rememberSignIns
+    ).toBe(false);
     expect(consentRequestOf(filled(), undefined).rememberSignIns).toBe(true);
   });
 });
@@ -102,7 +106,11 @@ describe('a failed sign-in in the live feed', () => {
     }
   });
   it('falls back to the usual wording without a known reason', () => {
-    const next = reduceFeed(initialFeed('product'), { type: 'RUN_FAILED', error: 'ECONNREFUSED', signInReason: 'bogus' }, 'product');
+    const next = reduceFeed(
+      initialFeed('product'),
+      { type: 'RUN_FAILED', error: 'ECONNREFUSED', signInReason: 'bogus' },
+      'product'
+    );
     expect(next.failure).toMatch(/couldn’t be reached/);
   });
 });

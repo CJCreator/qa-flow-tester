@@ -3,7 +3,14 @@ import { describe, it, expect } from 'vitest';
 import { resolveReadOnly } from '../src/server.js';
 
 const good = [{ username: 'a@b.test', password: 'pw' }];
-const base = { beta: false, owner: true, ownerExplicit: true, testHost: false, signInConsent: true as unknown, roles: good };
+const base = {
+  beta: false,
+  owner: true,
+  ownerExplicit: true,
+  testHost: false,
+  signInConsent: true as unknown,
+  roles: good,
+};
 
 describe('resolveReadOnly', () => {
   it('consent + owner + good details: full testing', () => {

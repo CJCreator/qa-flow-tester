@@ -71,9 +71,10 @@ export function parseArgs(argv: string[], env: NodeJS.ProcessEnv = process.env):
     maxPages: Number.isFinite(maxPages) && maxPages > 0 ? Math.min(Math.floor(maxPages), 1000) : 50,
     provider,
     apiKey: env.QA_AI_API_KEY?.trim() || undefined,
-    signIn: env.QA_USERNAME && env.QA_PASSWORD
-      ? { username: env.QA_USERNAME, password: env.QA_PASSWORD, loginPath: env.QA_LOGIN_PATH?.trim() || undefined }
-      : undefined,
+    signIn:
+      env.QA_USERNAME && env.QA_PASSWORD
+        ? { username: env.QA_USERNAME, password: env.QA_PASSWORD, loginPath: env.QA_LOGIN_PATH?.trim() || undefined }
+        : undefined,
   };
 }
 
@@ -95,7 +96,14 @@ export function buildRunBody(args: CheckupArgs): Record<string, unknown> {
     skipReview: true,
     ...(args.signIn
       ? {
-          roles: [{ role: 'member', username: args.signIn.username, password: args.signIn.password, loginPath: args.signIn.loginPath }],
+          roles: [
+            {
+              role: 'member',
+              username: args.signIn.username,
+              password: args.signIn.password,
+              loginPath: args.signIn.loginPath,
+            },
+          ],
           signInConsent: true,
         }
       : {}),
@@ -197,7 +205,10 @@ export async function runCheckup(args: CheckupArgs): Promise<number> {
     }
 
     const deadline = Date.now() + RUN_TIMEOUT_MS;
-    let status: { isRunning: boolean; lastRunError: string | null; lastErrorCode?: string | null } = { isRunning: true, lastRunError: null };
+    let status: { isRunning: boolean; lastRunError: string | null; lastErrorCode?: string | null } = {
+      isRunning: true,
+      lastRunError: null,
+    };
     while (status.isRunning && Date.now() < deadline) {
       await new Promise((r) => setTimeout(r, 3000));
       status = (await (await fetch(`${base}/api/runner/status`)).json()) as typeof status;

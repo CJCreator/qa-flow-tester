@@ -253,8 +253,9 @@ describe('test sign-in as consent (ADR 0022)', () => {
       // the read-only branch can't be reached over HTTP here. The rule itself is pinned by
       // resolveReadOnly (beta ignores consent) and by consent-rule.test.ts; here we assert the refusal
       // and that nothing at all reached the shop.
-      expect(resolveReadOnly({ beta: true, owner: true, ownerExplicit: true, testHost: false, signInConsent: true, roles }))
-        .toEqual({ consent: false, readOnly: true });
+      expect(
+        resolveReadOnly({ beta: true, owner: true, ownerExplicit: true, testHost: false, signInConsent: true, roles })
+      ).toEqual({ consent: false, readOnly: true });
       expect(res.status).toBeGreaterThanOrEqual(400);
       expect(sent).toEqual([]);
     } finally {
