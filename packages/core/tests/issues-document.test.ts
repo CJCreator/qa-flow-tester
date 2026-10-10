@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildIssuesModel, renderIssuesMarkdown } from '../src/issues-document.js';
+import { renderIssuesHtml } from '../src/issues-html.js';
 import { finding, report } from './helpers/issues-fixtures.js';
 
 const rep = report(
@@ -90,6 +91,36 @@ describe('issues document', () => {
     const model = buildIssuesModel(report([accepted]));
     expect(model.judgement).toEqual({});
     expect(model.roles[0].byType['Logical flow']).toHaveLength(1);
+  });
+
+  it('shows page coverage in markdown and html, and omits it when absent', async () => {
+    const withCov = report([finding({})], {
+      pageCoverage: {
+        found: 5,
+        reached: 2,
+        skipped: [
+          { urlPath: '/a', why: 'page-limit' },
+          { urlPath: '/b', why: 'did-not-load' },
+          { urlPath: '/c', why: 'robots' },
+          { urlPath: '/<img src=x>', why: 'sign-in' },
+        ],
+      },
+    });
+    const md = renderIssuesMarkdown(buildIssuesModel(withCov));
+    expect(md).toContain('## Page coverage');
+    expect(md).toContain('Pages found 5, reached 2, skipped 4.');
+    expect(md).toContain('`/a`: stopped at the page limit');
+    expect(md).toContain('`/b`: did not load');
+    expect(md).toContain('`/c`: blocked by robots rules');
+    expect(md).toContain('behind a sign-in');
+    const html = await renderIssuesHtml(buildIssuesModel(withCov), process.cwd());
+    expect(html).toContain('Pages found 5, reached 2, skipped 4.');
+    expect(html).toContain('stopped at the page limit');
+    expect(html).toContain('&lt;img src=x&gt;');
+    expect(html).not.toContain('<img src=x>');
+    const none = buildIssuesModel(report([finding({})]));
+    expect(renderIssuesMarkdown(none)).not.toContain('Page coverage');
+    expect(await renderIssuesHtml(none, process.cwd())).not.toContain('Page coverage');
   });
 
   it('cleans control characters and pipes from page text', () => {

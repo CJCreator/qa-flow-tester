@@ -1,7 +1,7 @@
 import { ISSUE_TYPES } from '@qa/types';
 import { sanitizeInline } from './findings-contract.js';
 import { DEFAULT_IMAGE_BUDGET_BYTES, escapeHtml, imageSrc } from './html-report.js';
-import { documentedItemsLine, type Issue, type IssuesModel } from './issues-document.js';
+import { documentedItemsLine, pageCoverageEntries, type Issue, type IssuesModel } from './issues-document.js';
 import { describeSource } from './source-wording.js';
 
 const CSS = `
@@ -52,6 +52,13 @@ export async function renderIssuesHtml(
   else body.push(`<ul>${model.rolesNotTested.map((r) => `<li><code>${t(r.role)}</code>: ${t(r.text)}</li>`).join('')}</ul>`);
   const documented = documentedItemsLine(model.documentedItems);
   if (documented) body.push(`<p>${escapeHtml(documented)}</p>`);
+  const coverage = pageCoverageEntries(model.pageCoverage);
+  if (coverage) {
+    body.push(`<h2>Page coverage</h2>`, `<p>${escapeHtml(coverage.summary)}.</p>`);
+    if (coverage.skipped.length > 0) {
+      body.push(`<ul>${coverage.skipped.map((s) => `<li><code>${t(s.urlPath)}</code>: ${escapeHtml(s.why)}</li>`).join('')}</ul>`);
+    }
+  }
 
   for (const { role, byType } of model.roles) {
     body.push(`<h2>Role: ${t(role)}</h2>`);

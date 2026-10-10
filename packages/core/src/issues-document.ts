@@ -30,6 +30,7 @@ export interface IssuesModel {
   /** Allowed versus denied roles for pages with an access issue. */
   accessTables: AccessTable[];
   documentedItems?: ReleaseReport['documentedItems'];
+  pageCoverage?: ReleaseReport['pageCoverage'];
 }
 
 const SEVERITY_ORDER: FindingSeverity[] = ['Blocker', 'Major', 'Minor', 'Suggestion'];
@@ -104,6 +105,7 @@ export function buildIssuesModel(report: ReleaseReport): IssuesModel {
     judgement,
     accessTables,
     ...(report.documentedItems ? { documentedItems: report.documentedItems } : {}),
+    ...(report.pageCoverage ? { pageCoverage: report.pageCoverage } : {}),
   };
 }
 
@@ -120,6 +122,38 @@ export function documentedItemsLine(d: ReleaseReport['documentedItems']): string
 export function rolesNotTestedLines(roles: RoleNotTested[]): string[] {
   if (roles.length === 0) return ['All roles were tested.', ''];
   return [...roles.map((r) => `- ${codeSpan(r.role)}: ${sanitizeInline(r.text, 300)}`), ''];
+}
+
+const SKIP_WHY: Record<NonNullable<ReleaseReport['pageCoverage']>['skipped'][number]['why'], string> = {
+  'page-limit': 'stopped at the page limit',
+  'did-not-load': 'did not load',
+  robots: 'blocked by robots rules',
+  'sign-in': 'behind a sign-in',
+};
+
+/** Plain-text coverage: the summary line, then one entry per skipped page. Empty when the run has no coverage. */
+export function pageCoverageEntries(
+  c: ReleaseReport['pageCoverage']
+): { summary: string; skipped: Array<{ urlPath: string; why: string }> } | null {
+  if (!c) return null;
+  return {
+    summary: `Pages found ${c.found}, reached ${c.reached}, skipped ${c.skipped.length}`,
+    skipped: c.skipped.map((s) => ({ urlPath: s.urlPath, why: SKIP_WHY[s.why] ?? 'was not reached' })),
+  };
+}
+
+/** The "Page coverage" block for issues.md; no lines when the run has no coverage. */
+export function pageCoverageLines(c: ReleaseReport['pageCoverage']): string[] {
+  const e = pageCoverageEntries(c);
+  if (!e) return [];
+  return [
+    '## Page coverage',
+    '',
+    `${e.summary}.`,
+    '',
+    ...e.skipped.map((s) => `- ${codeSpan(s.urlPath)}: ${s.why}`),
+    ...(e.skipped.length > 0 ? [''] : []),
+  ];
 }
 
 function renderIssue(i: Issue, lines: string[]): void {
@@ -141,6 +175,7 @@ export function renderIssuesMarkdown(model: IssuesModel): string {
   lines.push(...rolesNotTestedLines(model.rolesNotTested));
   const documented = documentedItemsLine(model.documentedItems);
   if (documented) lines.push(documented, '');
+  lines.push(...pageCoverageLines(model.pageCoverage));
 
   for (const { role, byType } of model.roles) {
     lines.push(`## Role: ${codeSpan(role)}`, '');
