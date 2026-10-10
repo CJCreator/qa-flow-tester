@@ -1,0 +1,17 @@
+packages/checkers/tests/keyboard-a11y.test.ts 1
+packages/checkers/tests/performance.test.ts 0
+packages/checkers/tests/security.test.ts 0
+packages/core/tests/browser-guard.test.ts 1
+packages/core/tests/e2e-discovery.test.ts 1
+packages/core/tests/e2e-orchestrator.test.ts 2
+packages/core/tests/narrow-look.test.ts 0
+packages/core/tests/page-coverage.test.ts 0
+packages/core/tests/plan-validator.test.ts 1
+packages/core/tests/signin.test.ts 0
+packages/core/tests/spider-site-edge.test.ts 0
+packages/runner/tests/consent-enforcement.test.ts 1
+packages/runner/tests/runner-server.test.ts 2
+packages/runner/tests/saved-session-secrecy.test.ts 1
+packages/runner/tests/url-first.test.ts 3
+packages/runner/tests/wizard-endpoints.test.ts 2
+packages/wizard/tests/wizard-e2e.test.ts 9

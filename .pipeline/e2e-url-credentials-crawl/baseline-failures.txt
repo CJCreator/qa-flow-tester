@@ -1,0 +1,6 @@
+packages/checkers/tests/keyboard-a11y.test.ts 0
+packages/checkers/tests/security.test.ts 0
+packages/core/tests/e2e-discovery.test.ts 1
+packages/runner/tests/saved-session-secrecy.test.ts 1
+packages/runner/tests/url-first.test.ts 2
+packages/wizard/tests/wizard-e2e.test.ts 9
