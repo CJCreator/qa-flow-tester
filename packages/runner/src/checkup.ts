@@ -44,7 +44,7 @@ export interface CheckupArgs {
 
 const PROVIDERS: AIProviderType[] = ['openrouter', 'gemini', 'openai', 'anthropic'];
 const RUN_TIMEOUT_MS = 40 * 60 * 1000;
-const PORT = Number(process.env.QA_CHECKUP_PORT) || 3601;
+const DEFAULT_PORT = 3601;
 
 export function parseArgs(argv: string[], env: NodeJS.ProcessEnv = process.env): CheckupArgs {
   const flag = (name: string) => {
@@ -166,9 +166,10 @@ export async function runCheckup(args: CheckupArgs): Promise<number> {
   await fs.mkdir(args.outputDir, { recursive: true });
   // Outside the report folder: what the runner keeps while it works must never be uploaded with the report.
   // That includes the sign-in sessions (cookies), so they live here too and are deleted when the run ends.
+  const port = Number(process.env.QA_CHECKUP_PORT) || DEFAULT_PORT;
   const workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'qa-checkup-'));
   const server = new RunnerServer({
-    port: PORT,
+    port,
     outputDir: args.outputDir,
     dataDir: workDir,
     authDir: path.join(workDir, 'auth'),
@@ -179,7 +180,7 @@ export async function runCheckup(args: CheckupArgs): Promise<number> {
     await fs.rm(workDir, { recursive: true, force: true }).catch(() => {});
     throw err;
   }
-  const base = `http://localhost:${PORT}`;
+  const base = `http://localhost:${port}`;
 
   try {
     const hasKey = !!args.apiKey;
