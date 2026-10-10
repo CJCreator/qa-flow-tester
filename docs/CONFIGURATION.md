@@ -64,7 +64,9 @@ requests a minute, and 50 a day until the account has bought 10 credits (then 1,
 
 Setting both `QA_USERNAME` and `QA_PASSWORD` is the consent to sign in and test fully ([ADR 0022](adr/0022-test-sign-in-as-consent.md)): the run is sent with `owner: true` and `signInConsent: true`. Use a test account on a test copy. Without them the check-up is unchanged. A failed sign-in prints a fixed reason and exits with code 2. The password and username are never printed or written to the summary. The signed-in session lives in a temporary folder outside `QA_OUTPUT_DIR` (so it is not in the uploaded artifact) and is deleted when the run ends. `QA_CHECKUP_PORT` (default 3601) changes the local port the check-up's runner listens on.
 
-The CI check-up uses port 3601 internally. When `GITHUB_ACTIONS=true` it also prints annotations for active Blockers (error) and Majors (warning); there is no setting for it.
+**Sign-in in GitHub Actions is a manual step.** `.github/workflows/qa-check.yml` does not pass `QA_USERNAME`, `QA_PASSWORD` or `QA_LOGIN_PATH`, so a CI Check-up there is unchanged. To use them, add the values as repository secrets (Settings, Secrets and variables, Actions), then add them to the `env:` block of the check-up job yourself (for example `QA_USERNAME: ${{ secrets.QA_USERNAME }}`). Adding them is your consent to sign in and send forms on that address for every run of the workflow, per [ADR 0022](adr/0022-test-sign-in-as-consent.md). Use a test account only. Never write the values into the workflow file.
+
+The CI check-up listens on port 3601 unless `QA_CHECKUP_PORT` is set. When `GITHUB_ACTIONS=true` it also prints annotations for active Blockers (error) and Majors (warning); there is no setting for it.
 
 ## Wizard (front end)
 
@@ -97,5 +99,5 @@ No new variable. This applies only when the Check-up runs against a Test Copy (s
 ## Ports
 
 - `3001`: the QA Tool (wizard at `/`, API under `/api`)
-- `3601`: internal, CI check-up only
+- `3601`: CI check-up only (default; change with `QA_CHECKUP_PORT`)
 - `3050`: the fixture test app (`pnpm fixture`; set `PORT` to change)

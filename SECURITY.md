@@ -12,7 +12,7 @@ The tool drives real browsers against real sites, so safety is enforced in code,
 
 - **The AI plans; it never acts.** It writes Plan Items from facts the crawler collected. It does not drive the browser and does not decide pass or fail (ADR 0001, 0009).
 - **Deterministic safety filters.** Destructive or side-effecting actions (deletes, payments, outbound notifications) are skipped by keyword and pattern rules and queued as questions for a person (`core/discovery/safety-filter.ts`, ADR 0003).
-- **Read-only by default.** Unless an address is marked a test copy (`QA_STAGING=true`, or the staging switch in the UI), it is checked read-only: no sign-in, no form submitted, no mutating request (`core/safe-scan.ts`). Previews and staging are test copies; production is not. On a shared machine (beta mode) a test copy also needs a Verified Domain (below).
+- **Read-only by default.** Unless an address is marked a test copy (`QA_STAGING=true`, or the staging switch in the UI), it is checked read-only: no sign-in, no form submitted, no mutating request (`core/safe-scan.ts`). One exception: test sign-in details given with explicit consent count as consent to full testing for that one run, on your own computer or in GitHub Actions only, never on a shared machine (ADR 0022; see Headless sign-in below). Previews and staging are test copies; production is not. On a shared machine (beta mode) a test copy also needs a Verified Domain (below).
 - **Stay on the host.** Runs are confined to the target host and its allow-listed hosts; robots.txt is honored for public sites; page delays are kept polite.
 - **Nothing runs that is not in the Plan.** The person approves the full Plan first (ADR 0009).
 

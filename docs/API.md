@@ -32,7 +32,10 @@ routes and what they are for; **request and response bodies are defined by the h
 All additive; no new route. Wizard types: `StartRunRequest`, `PatchPlanBody`, `AiEstimate` in `packages/wizard/src/api.ts`.
 
 - `POST /api/runner/run` body: `contextDocuments: [{ name, text }]` (`.md`/`.txt`, at most 10, 500 KB each), `contextUrl` (docs address, at most 20 same-host pages; a failure is a plan note), `savedSessions: { <role>: { cookies, origins } }` (at most 256 KB, cookie domains must match the target; held in runner memory only, never saved, returned or logged; after a restart approval asks again), `aiCap: { requests?, dollars? }` (positive numbers; dollars only act when the provider reports a price).
-- `POST /api/runner/run` takes `roles` (`[{ role, username, password?, loginPath? }]`) and `signInConsent: true`. The headless check-up (`checkup.ts`) sends them when `QA_USERNAME` and `QA_PASSWORD` are set in its environment. Without `signInConsent` the sign-in details do not unlock full testing.
+- `POST /api/runner/run` takes `roles` (`[{ role, username, password?, loginPath? }]`) and `signInConsent: true`. The headless check-up (`checkup.ts`) sends them when `QA_USERNAME` and `QA_PASSWORD` are set in its environment. Without `signInConsent` the sign-in details do not unlock full testing ([ADR 0022](adr/0022-test-sign-in-as-consent.md)).
+  - Consent needs all of: `owner: true` sent explicitly (an omitted `owner` is never consent), `signInConsent: true`, at least one role with both `username` and `password`, and not the shared online copy (beta ignores it). Otherwise the run is read-only unless the address is a Test Copy. Consent is for that run only and is not saved to site memory.
+  - A failed sign-in stops the run before the crawl: `RUN_FAILED` carries `code: 'ERR_SIGN_IN_FAILED'` and `signInReason` (`wrong-details`, `no-form`, `unreachable`, `needs-more` or `session-expired`). `error` is fixed text for the reason and never contains the username or password.
+  - The consent is kept with the saved Plan. `POST /api/runner/plan/approve` answers `409` with `code: 'ERR_SIGN_IN_REQUIRED'` when that Plan was made with consent but no role has both username and password; nothing is sent.
 - `GET /api/runner/plan` may carry `plannedWhileCrawling`, `notFound`, `documentedItems`, `rolesNotTested`, `contextDocuments` (names only); Plan Items may carry `docSource`, `proposedRoles`, `rolesConfirmed`, `kind: 'denial'`, `origin`.
 - `PATCH /api/runner/plan` accepts `sourceEdits: [{ itemId, roles?, severity?, stale?, confirm? }]` and `notFoundEdits: [{ id, remove? }]`.
 - `POST /api/runner/ai-estimate` response adds `estimatedUsd` (only with a reported price), `concurrency` and the `cap` echo.
@@ -69,6 +72,8 @@ All additive; no new route. Wizard types: `StartRunRequest`, `PatchPlanBody`, `A
 | `GET/POST /api/settings/defaults`                                          | Screen sizes a check-up starts with                                                      |
 
 `POST /api/sites/<host>` with `addSignIn` or `testSignIn` signs in to check the details. On failure the response is `{ verified: false, reason, error }` with `reason` one of `wrong-details`, `no-form`, `unreachable`, `needs-more`: status `422` when adding, `200` when testing a saved sign-in. `error` is fixed text for that reason and never contains the username or password. A success has no `reason`. Handles two-step and modal sign-ins; CAPTCHA, one-time codes and single sign-on answer `needs-more`.
+
+The report may carry `pageCoverage: { found, reached, skipped: [{ urlPath, why }] }`: pages found while exploring, how many were reached, and why the rest were skipped (`why` is `page-limit`, `did-not-load`, `robots` or `sign-in`).
 
 `findings.json` (the report) may carry `slowerThanLastTime`: pages whose speed is worse than the last check-up by 20% and 300 ms. It is not part of `findings`, so grades and the verdict ignore it.
 

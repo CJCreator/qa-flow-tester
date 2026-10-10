@@ -28,6 +28,10 @@ Runner: vitest (`vitest.config.ts`), Node environment, tests in `packages/*/test
 | Checking detection quality                     | `pnpm build` then `pnpm benchmark --sites fixture --no-ai` (see Planted-defect benchmark)                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | Touching the landing page                      | see Check-up of our own landing page                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 
+### Verifying a change
+
+Run only the changed or failing files: `pnpm exec vitest run <file> [<file>...]`. For browser tests (Chromium, for example `wizard-e2e.test.ts` and the runner tests that crawl) add `--no-file-parallelism`. A full-suite parallel `pnpm test` can time out under load; if a browser test times out there, re-run that file alone before treating it as a failure.
+
 ### Check-up of our own landing page
 
 Prerequisite: `pnpm bootstrap` (all packages built, Chromium installed, `packages/wizard/dist` present). Same syntax in PowerShell and bash.
