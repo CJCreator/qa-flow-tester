@@ -44,7 +44,7 @@ export interface CheckupArgs {
 
 const PROVIDERS: AIProviderType[] = ['openrouter', 'gemini', 'openai', 'anthropic'];
 const RUN_TIMEOUT_MS = 40 * 60 * 1000;
-const PORT = 3601;
+const PORT = Number(process.env.QA_CHECKUP_PORT) || 3601;
 
 export function parseArgs(argv: string[], env: NodeJS.ProcessEnv = process.env): CheckupArgs {
   const flag = (name: string) => {
@@ -156,13 +156,21 @@ export async function runCheckup(args: CheckupArgs): Promise<number> {
   if (!args.url) throw new Error('Give the address to check, for example: checkup.js https://preview.example.com');
 
   await fs.mkdir(args.outputDir, { recursive: true });
+  // Outside the report folder: what the runner keeps while it works must never be uploaded with the report.
+  // That includes the sign-in sessions (cookies), so they live here too and are deleted when the run ends.
+  const workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'qa-checkup-'));
   const server = new RunnerServer({
     port: PORT,
     outputDir: args.outputDir,
-    // Outside the report folder: what the runner keeps while it works must never be uploaded with the report.
-    dataDir: await fs.mkdtemp(path.join(os.tmpdir(), 'qa-checkup-')),
+    dataDir: workDir,
+    authDir: path.join(workDir, 'auth'),
   });
-  await server.start();
+  try {
+    await server.start();
+  } catch (err) {
+    await fs.rm(workDir, { recursive: true, force: true }).catch(() => {});
+    throw err;
+  }
   const base = `http://localhost:${PORT}`;
 
   try {
@@ -181,7 +189,10 @@ export async function runCheckup(args: CheckupArgs): Promise<number> {
     if (!res.ok) {
       const body = (await res.json().catch(() => ({}))) as { error?: string; suggestion?: string };
       throw new Error(
-        `The check-up could not start: ${body.error ?? `HTTP ${res.status}`}${body.suggestion ? ` ${body.suggestion}` : ''}`
+        scrub(
+          `The check-up could not start: ${body.error ?? `HTTP ${res.status}`}${body.suggestion ? ` ${body.suggestion}` : ''}`,
+          args.signIn
+        )
       );
     }
 
@@ -219,6 +230,8 @@ export async function runCheckup(args: CheckupArgs): Promise<number> {
     return code;
   } finally {
     await server.stop();
+    // Success, failure or stop: the sessions and the rest of the working folder go.
+    await fs.rm(workDir, { recursive: true, force: true }).catch(() => {});
   }
 }
 

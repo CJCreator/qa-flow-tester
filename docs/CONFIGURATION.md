@@ -62,7 +62,7 @@ requests a minute, and 50 a day until the account has bought 10 credits (then 1,
 | `QA_PASSWORD`    | none         | Test sign-in password. Environment only: there is no flag for it. Use a repository secret                                                                 |
 | `QA_LOGIN_PATH`  | none         | Optional sign-in page path, for example `/login`                                                                                                          |
 
-Setting both `QA_USERNAME` and `QA_PASSWORD` is the consent to sign in and test fully ([ADR 0022](adr/0022-test-sign-in-as-consent.md)): the run is sent with `owner: true` and `signInConsent: true`. Use a test account on a test copy. Without them the check-up is unchanged. A failed sign-in prints a fixed reason and exits with code 2. The password and username are never printed or written to the summary, and the session is not saved.
+Setting both `QA_USERNAME` and `QA_PASSWORD` is the consent to sign in and test fully ([ADR 0022](adr/0022-test-sign-in-as-consent.md)): the run is sent with `owner: true` and `signInConsent: true`. Use a test account on a test copy. Without them the check-up is unchanged. A failed sign-in prints a fixed reason and exits with code 2. The password and username are never printed or written to the summary. The signed-in session lives in a temporary folder outside `QA_OUTPUT_DIR` (so it is not in the uploaded artifact) and is deleted when the run ends. `QA_CHECKUP_PORT` (default 3601) changes the local port the check-up's runner listens on.
 
 The CI check-up uses port 3601 internally. When `GITHUB_ACTIONS=true` it also prints annotations for active Blockers (error) and Majors (warning); there is no setting for it.
 

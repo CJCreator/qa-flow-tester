@@ -41,7 +41,7 @@ The tool drives real browsers against real sites, so safety is enforced in code,
 
 ## Headless sign-in (CI)
 
-`QA_USERNAME` and `QA_PASSWORD` (optional `QA_LOGIN_PATH`) are read from the environment only: there is no command-line flag, so the password does not land in shell history or process lists. Setting both is the consent to sign in and test fully (ADR 0022). Use a test account on a test copy, and keep both in repository secrets. The check-up never prints them, never writes them to the job summary or report, and does not save the session.
+`QA_USERNAME` and `QA_PASSWORD` (optional `QA_LOGIN_PATH`) are read from the environment only: there is no command-line flag, so the password does not land in shell history or process lists. Setting both is the consent to sign in and test fully (ADR 0022). Use a test account on a test copy, and keep both in repository secrets. The check-up never prints them, never writes them to the job summary or report. The signed-in session (cookies) is kept only in a temporary folder outside the report folder while the run works, so it is never part of the uploaded `qa-report` artifact, and that folder is deleted when the run ends, however it ends.
 
 ## Verified Domains (shared machines)
 
