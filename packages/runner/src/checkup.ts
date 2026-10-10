@@ -12,6 +12,9 @@
  *   QA_OUTPUT_DIR    where the report goes (default qa-report)
  *   QA_MAX_PAGES     pages to explore at most (default 50, to keep a run inside free Actions minutes)
  *   QA_FAIL_ON       blocker (default), major or none
+ *   QA_USERNAME, QA_PASSWORD  test sign-in details. Environment only, never a flag. Setting both is the
+ *                    consent to sign in and test fully (ADR 0022): use a test account on a test copy.
+ *   QA_LOGIN_PATH    optional sign-in page path (for example /login)
  *
  * On GitHub Actions (GITHUB_ACTIONS=true) it also prints one annotation per active Blocker (error) or
  * Major (warning). The exit code does not depend on them.
@@ -35,6 +38,8 @@ export interface CheckupArgs {
   maxPages: number;
   provider: AIProviderType;
   apiKey?: string;
+  /** Test sign-in details from the environment. Present only when both QA_USERNAME and QA_PASSWORD are set. */
+  signIn?: { username: string; password: string; loginPath?: string };
 }
 
 const PROVIDERS: AIProviderType[] = ['openrouter', 'gemini', 'openai', 'anthropic'];
@@ -66,7 +71,42 @@ export function parseArgs(argv: string[], env: NodeJS.ProcessEnv = process.env):
     maxPages: Number.isFinite(maxPages) && maxPages > 0 ? Math.min(Math.floor(maxPages), 1000) : 50,
     provider,
     apiKey: env.QA_AI_API_KEY?.trim() || undefined,
+    signIn: env.QA_USERNAME && env.QA_PASSWORD
+      ? { username: env.QA_USERNAME, password: env.QA_PASSWORD, loginPath: env.QA_LOGIN_PATH?.trim() || undefined }
+      : undefined,
   };
+}
+
+/** The body for POST /api/runner/run. Test sign-in details, when set, are the consent for a full test. */
+export function buildRunBody(args: CheckupArgs): Record<string, unknown> {
+  const hasKey = !!args.apiKey;
+  return {
+    targetUrl: args.url,
+    productId: 'ci',
+    // A test copy, or a test sign-in, is tested fully. Anything else is read-only: nothing is sent to it.
+    owner: args.staging || !!args.signIn,
+    stagingHost: args.staging || undefined,
+    useAI: hasKey,
+    planWithoutAI: !hasKey,
+    // With no key there is no AI to ask for: the fixed-rule plan needs no provider.
+    aiProvider: hasKey ? args.provider : 'mock',
+    apiKey: args.apiKey,
+    maxPages: args.maxPages,
+    skipReview: true,
+    ...(args.signIn
+      ? {
+          roles: [{ role: 'member', username: args.signIn.username, password: args.signIn.password, loginPath: args.signIn.loginPath }],
+          signInConsent: true,
+        }
+      : {}),
+  };
+}
+
+/** Removes the sign-in details from any text before it is printed. */
+export function scrub(text: string, signIn?: CheckupArgs['signIn']): string {
+  let out = text;
+  for (const v of [signIn?.password, signIn?.username]) if (v) out = out.split(v).join('[hidden]');
+  return out;
 }
 
 /** Findings that count against the release: confirmed, and not marked intended or not a problem. */
@@ -136,20 +176,7 @@ export async function runCheckup(args: CheckupArgs): Promise<number> {
     const res = await fetch(`${base}/api/runner/run`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        targetUrl: args.url,
-        productId: 'ci',
-        // A test copy is tested fully. Anything else is read-only: nothing is sent to it.
-        owner: args.staging,
-        stagingHost: args.staging || undefined,
-        useAI: hasKey,
-        planWithoutAI: !hasKey,
-        // With no key there is no AI to ask for: the fixed-rule plan needs no provider.
-        aiProvider: hasKey ? args.provider : 'mock',
-        apiKey: args.apiKey,
-        maxPages: args.maxPages,
-        skipReview: true,
-      }),
+      body: JSON.stringify(buildRunBody(args)),
     });
     if (!res.ok) {
       const body = (await res.json().catch(() => ({}))) as { error?: string; suggestion?: string };
@@ -159,13 +186,17 @@ export async function runCheckup(args: CheckupArgs): Promise<number> {
     }
 
     const deadline = Date.now() + RUN_TIMEOUT_MS;
-    let status: { isRunning: boolean; lastRunError: string | null } = { isRunning: true, lastRunError: null };
+    let status: { isRunning: boolean; lastRunError: string | null; lastErrorCode?: string | null } = { isRunning: true, lastRunError: null };
     while (status.isRunning && Date.now() < deadline) {
       await new Promise((r) => setTimeout(r, 3000));
       status = (await (await fetch(`${base}/api/runner/status`)).json()) as typeof status;
     }
     if (status.isRunning) throw new Error('The check-up took longer than 40 minutes and was stopped.');
-    if (status.lastRunError) throw new Error(status.lastRunError);
+    if (status.lastErrorCode === 'ERR_SIGN_IN_FAILED' && status.lastRunError) {
+      // The fixed reason text only, never built from the typed details.
+      throw new Error(`Sign-in failed. ${scrub(status.lastRunError, args.signIn)}`);
+    }
+    if (status.lastRunError) throw new Error(scrub(status.lastRunError, args.signIn));
 
     const report = (await (await fetch(`${base}/api/report`)).json()) as ReleaseReport;
     const verdict = releaseVerdict(report.findings);

@@ -32,6 +32,7 @@ routes and what they are for; **request and response bodies are defined by the h
 All additive; no new route. Wizard types: `StartRunRequest`, `PatchPlanBody`, `AiEstimate` in `packages/wizard/src/api.ts`.
 
 - `POST /api/runner/run` body: `contextDocuments: [{ name, text }]` (`.md`/`.txt`, at most 10, 500 KB each), `contextUrl` (docs address, at most 20 same-host pages; a failure is a plan note), `savedSessions: { <role>: { cookies, origins } }` (at most 256 KB, cookie domains must match the target; held in runner memory only, never saved, returned or logged; after a restart approval asks again), `aiCap: { requests?, dollars? }` (positive numbers; dollars only act when the provider reports a price).
+- `POST /api/runner/run` takes `roles` (`[{ role, username, password?, loginPath? }]`) and `signInConsent: true`. The headless check-up (`checkup.ts`) sends them when `QA_USERNAME` and `QA_PASSWORD` are set in its environment. Without `signInConsent` the sign-in details do not unlock full testing.
 - `GET /api/runner/plan` may carry `plannedWhileCrawling`, `notFound`, `documentedItems`, `rolesNotTested`, `contextDocuments` (names only); Plan Items may carry `docSource`, `proposedRoles`, `rolesConfirmed`, `kind: 'denial'`, `origin`.
 - `PATCH /api/runner/plan` accepts `sourceEdits: [{ itemId, roles?, severity?, stale?, confirm? }]` and `notFoundEdits: [{ id, remove? }]`.
 - `POST /api/runner/ai-estimate` response adds `estimatedUsd` (only with a reported price), `concurrency` and the `cap` echo.

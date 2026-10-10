@@ -39,6 +39,10 @@ The tool drives real browsers against real sites, so safety is enforced in code,
 - A docs URL is read with the same host checks as the target (same site, robots.txt, public addresses only on a shared machine, redirects re-checked): at most 20 pages of text or Markdown, 1 MB each. A failure becomes a note, never an abort.
 - `issues.html` is one self-contained file: no script, no external address, screenshots embedded from the report folder only, page text escaped.
 
+## Headless sign-in (CI)
+
+`QA_USERNAME` and `QA_PASSWORD` (optional `QA_LOGIN_PATH`) are read from the environment only: there is no command-line flag, so the password does not land in shell history or process lists. Setting both is the consent to sign in and test fully (ADR 0022). Use a test account on a test copy, and keep both in repository secrets. The check-up never prints them, never writes them to the job summary or report, and does not save the session.
+
 ## Verified Domains (shared machines)
 
 On a shared machine (`RUNNER_BETA=1`) the tool only fills in and sends forms on a Test Copy that is marked by the owner, resolves only to public addresses, and passes a Verified Domain proof: the file `https://<exact address>/.well-known/qa-verify.txt` holds one line, `qa-verify=<token>`. The token is random per session and address, kept in memory, and the file is fetched again at the start of every run and when a waiting plan is approved. The proof needs https, follows no redirect, is capped at 4 KB, and the route never returns the fetched file (ADR 0014). A proof shows control of one address at one moment, not that the site is fine. Dev tunnel names, `localhost`, private ranges and the `x-test-copy` header do not make a Test Copy there. Residual: the browser resolves third-party hosts itself, so a name with a TTL of 0 that turns private on a host other than the target can slip through a short gap; those runs only send GET to non-test sites. Own computer and GitHub Actions use are unchanged.
