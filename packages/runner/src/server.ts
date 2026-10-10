@@ -47,6 +47,7 @@ import {
   DEFAULT_MODELS,
   type ModelRecord,
   PreFlightChecker,
+  SignInFailedError,
   PlanValidator,
   Redactor,
   replaceCredentialsWithPlaceholders,
@@ -363,6 +364,12 @@ export interface TriggerRunBody {
    * a live host still stays read-only). Sending it also turns on planning without an AI key.
    */
   owner?: boolean;
+  /**
+   * The person gave test sign-in details and accepts that this run may act on the site (ADR 0022).
+   * Per run only, never remembered. Ignored on a shared machine (beta). Needs a role with both
+   * username and password; a failed sign-in ends the run before the crawl.
+   */
+  signInConsent?: boolean;
   /** The owner says this host is a test copy (staging). Remembered for the site. */
   stagingHost?: boolean;
   /** Attached design system tokens or styling guidelines. */
@@ -416,6 +423,7 @@ interface StoredPlanRecord {
     runId: string;
     profile?: ProductProfile;
     reportNotes?: string[];
+    pageCoverage?: ReleaseReport['pageCoverage'];
     aiModels?: { text?: string; vision?: string };
     breakpoints?: Breakpoint[];
     headless?: boolean;
@@ -2703,7 +2711,15 @@ export class RunnerServer {
       this.lastErrorCode = code;
       this.phase = 'failed';
       this.isRunning = false;
-      this.broadcastRunnerEvent({ type: 'RUN_FAILED', runId, error: msg, code, timestamp: Date.now() });
+      const signInReason = err instanceof SignInFailedError ? err.reason : undefined;
+      this.broadcastRunnerEvent({
+        type: 'RUN_FAILED',
+        runId,
+        error: msg,
+        code,
+        ...(signInReason ? { signInReason } : {}),
+        timestamp: Date.now(),
+      });
     });
   }
 
@@ -2846,7 +2862,12 @@ export class RunnerServer {
       const urlFirst = body.owner !== undefined;
       const owner = body.owner ?? true;
       const testHost = await this.testCopyOf(typed, !!memory?.staging);
-      const readOnly = !(owner && testHost);
+      // Test sign-in details count as consent to full testing on this machine (ADR 0022). Per run: never saved.
+      const consent =
+        !this.beta &&
+        body.signInConsent === true &&
+        (signIns.roles ?? []).some((r) => !!r.username && !!r.password);
+      const readOnly = !(owner && (testHost || consent));
       // On a shared machine the browser reaches the target at the address that was just checked.
       if (this.beta) {
         const checked = await resolvePublic(typed.hostname, this.hostChecks);
@@ -2971,6 +2992,7 @@ export class RunnerServer {
         finishSignal: this.finishController?.signal,
         aiProvider: ai.provider,
         readOnly,
+        requireSignIn: consent ? true : undefined,
         maxPages:
           typeof body.maxPages === 'number' && body.maxPages > 0
             ? Math.min(Math.floor(body.maxPages), 1000)
@@ -2996,6 +3018,12 @@ export class RunnerServer {
       }
       if (docsNotes.length && draft.exploration) draft.exploration.notes = [...draft.exploration.notes, ...docsNotes];
       context.reportNotes = [...(draft.exploration?.notes || []), ...(signIns.note ? [signIns.note] : [])];
+      if (consent && !readOnly) {
+        context.reportNotes.push(
+          'Tested with the sign-in details you gave, as you agreed: forms were filled in and sent. Sensitive Actions (such as deleting or paying) were still skipped.'
+        );
+      }
+      context.pageCoverage = draft.exploration?.pageCoverage;
       this.broadcastRunnerEvent({
         type: 'DISCOVERY_COMPLETED',
         runId,
@@ -3442,6 +3470,8 @@ export class RunnerServer {
     }
 
     report.aiUsage = context.draft?.plan?.budget?.tokens;
+    const coverage = context.pageCoverage ?? context.draft?.exploration?.pageCoverage;
+    if (coverage) report.pageCoverage = coverage;
 
     // The AI's visual review of one screen per layout, within what's left of today's AI requests.
     // What it doesn't get to can be finished from the report.
