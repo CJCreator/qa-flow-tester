@@ -22,9 +22,14 @@ import {
   clampMaxPages,
   EMPTY_SIGN_IN,
   hasSignInDetails,
+  lookOnly,
   MAX_PAGES_LIMIT,
   primarySignInOf,
+  rememberSignInsOf,
+  settleConsent,
   signInConsentGiven,
+  withAddress,
+  withoutConsent,
   type CheckupForm,
 } from '../lib/form';
 import { formatWhen } from '../lib/format';
@@ -154,7 +159,9 @@ export function NewCheckupScreen({
       f.choicesFor === checkedHost
         ? f
         : {
-            ...f,
+            // Consent given for another App never carries over.
+            ...withoutConsent(f),
+            rememberTouched: false,
             owner: remembered?.owner ?? false,
             markedTestCopy: remembered?.markedTestCopy ?? false,
             searchChecks: remembered?.searchChecks ?? null,
@@ -164,6 +171,11 @@ export function NewCheckupScreen({
           }
     );
   }, [checkedHost, remembered?.owner, remembered?.markedTestCopy, remembered?.searchChecks, onFormChange]);
+
+  // Consent lasts only while the sign-in details are there.
+  useEffect(() => {
+    onFormChange(settleConsent);
+  }, [form.signIns, form.signInConsent, form.reviewFirst, onFormChange]);
 
   const hostNow = (() => {
     const normal = normalizeUrl(form.address);
@@ -205,7 +217,8 @@ export function NewCheckupScreen({
     if (check.state !== 'ok' || !kind || !canStart) return;
     onStart({
       url: check.url,
-      stagingHost: kind.showMark ? form.markedTestCopy : undefined,
+      // With the consent notice the Access choice is not shown: its test-copy mark must not be remembered for the site.
+      stagingHost: kind.showMark && !consentFlow ? form.markedTestCopy : undefined,
       searchChecks: searchChecksOn,
       visibility: searchChecksOn ? visibilityOn : { search: false, answers: false, aiSearch: false, marketing: false },
       noAI: ai && !keyReady ? true : undefined,
@@ -316,7 +329,14 @@ export function NewCheckupScreen({
           className="field h-14 text-lg"
           placeholder="shop.example.com or localhost:3050"
           value={form.address}
-          onChange={(e) => onFormChange((f) => ({ ...f, address: e.target.value }))}
+          onChange={(e) => {
+            const address = e.target.value;
+            const hostFor = (a: string) => {
+              const n = normalizeUrl(a);
+              return n.ok ? hostOf(n.url) : null;
+            };
+            onFormChange((f) => withAddress(f, address, hostFor));
+          }}
           aria-describedby="url-status"
           aria-invalid={check.state === 'invalid' || check.state === 'unreachable'}
         />
@@ -421,7 +441,12 @@ export function NewCheckupScreen({
               </span>
             </div>
 
-            <SignInsSection form={form} saved={remembered?.signIns} onFormChange={onFormChange} />
+            <SignInsSection
+              form={form}
+              saved={remembered?.signIns}
+              consentFlow={consentFlow}
+              onFormChange={onFormChange}
+            />
 
             {kind && (
               <div className="mt-4 rounded-lg border border-edge bg-surface p-4">
@@ -969,10 +994,13 @@ function DomainProofPanel({ url }: { url: string }) {
 function SignInsSection({
   form,
   saved,
+  consentFlow,
   onFormChange,
 }: {
   form: CheckupForm;
   saved?: Array<{ role: string; username: string }>;
+  /** The consent notice is shown: the keychain is used only if the person ticks remember. */
+  consentFlow: boolean;
   onFormChange: (update: (form: CheckupForm) => CheckupForm) => void;
 }) {
   const filled = form.signIns.filter((s) => s.username.trim()).length;
@@ -1066,8 +1094,10 @@ function SignInsSection({
             <input
               type="checkbox"
               className="mt-0.5 h-5 w-5 shrink-0 accent-[#6C9BF2]"
-              checked={form.rememberSignIns}
-              onChange={(e) => onFormChange((f) => ({ ...f, rememberSignIns: e.target.checked }))}
+              checked={rememberSignInsOf(form, consentFlow)}
+              onChange={(e) =>
+                onFormChange((f) => ({ ...f, rememberSignIns: e.target.checked, rememberTouched: true }))
+              }
             />
             <span>Remember these sign-ins for this site (passwords are kept in this computer’s keychain)</span>
           </label>
@@ -1158,12 +1188,7 @@ function ConsentNotice({
           type="button"
           className="btn-link mt-3 text-sm"
           onClick={() =>
-            onFormChange((f) => ({
-              ...f,
-              signInConsent: false,
-              reviewFirst: false,
-              signIns: f.signIns.map((s, n) => (n === 0 ? { ...s, username: '', password: '' } : s)),
-            }))
+            onFormChange(lookOnly)
           }
         >
           Only look at it instead

@@ -26,6 +26,8 @@ export interface CheckupForm {
   signIns: SignInEntry[];
   /** Remember the sign-ins for this site (passwords in this computer's keychain). */
   rememberSignIns: boolean;
+  /** The person ticked or unticked remember themselves; with consent the keychain is used only if ticked. */
+  rememberTouched: boolean;
   /** The person accepted that the check-up fills in and sends forms with the typed sign-in details. */
   signInConsent: boolean;
   /** With consent, show the plan for review before testing starts (otherwise testing starts at once). */
@@ -101,6 +103,7 @@ export const EMPTY_FORM: CheckupForm = {
   maxPages: DEFAULT_MAX_PAGES,
   signIns: [],
   rememberSignIns: true,
+  rememberTouched: false,
   useSavedSignIns: true,
   signInConsent: false,
   reviewFirst: false,
@@ -177,12 +180,67 @@ export function primarySignInOf(form: Pick<CheckupForm, 'signIns'>): SignInEntry
   return form.signIns[0] ?? EMPTY_SIGN_IN;
 }
 
-/** Both the username and the password are filled in. */
+/** The first sign-in (the quick fields under the address) has both username and password. Only it triggers the consent notice. */
 export function hasSignInDetails(form: Pick<CheckupForm, 'signIns'>): boolean {
-  return rolesOf(form).length > 0;
+  const first = form.signIns[0];
+  return !!first && !!first.username.trim() && !!first.password;
 }
 
 /** Consent counts only while the details are still there. */
 export function signInConsentGiven(form: Pick<CheckupForm, 'signIns' | 'signInConsent'>): boolean {
   return form.signInConsent && hasSignInDetails(form);
+}
+
+/** Consent and "plan first" dropped. */
+export function withoutConsent(form: CheckupForm): CheckupForm {
+  return form.signInConsent || form.reviewFirst ? { ...form, signInConsent: false, reviewFirst: false } : form;
+}
+
+/** Consent never outlives the details it was given for. */
+export function settleConsent(form: CheckupForm): CheckupForm {
+  return hasSignInDetails(form) ? form : withoutConsent(form);
+}
+
+/** A new address; consent given for another host does not carry over. */
+export function withAddress(form: CheckupForm, address: string, hostOf: (address: string) => string | null): CheckupForm {
+  const next = { ...form, address };
+  return hostOf(form.address) === hostOf(address) ? next : withoutConsent(next);
+}
+
+/** "Only look at it instead": the quick sign-in fields and consent are cleared. */
+export function lookOnly(form: CheckupForm): CheckupForm {
+  return {
+    ...withoutConsent(form),
+    signIns: form.signIns.map((s, n) => (n === 0 ? { ...s, username: '', password: '' } : s)),
+  };
+}
+
+/** After a check-up starts: consent, plan-first and the remember choice are not kept for the next one. */
+export function afterStart(form: CheckupForm): CheckupForm {
+  return {
+    ...withoutConsent(form),
+    rememberTouched: false,
+    savedSessions: form.savedSessions.length > 0 ? [] : form.savedSessions,
+  };
+}
+
+/** Keychain storage: with consent the quick-field password is stored only if the person ticked remember. */
+export function rememberSignInsOf(form: CheckupForm, consentFlow: boolean): boolean {
+  return consentFlow ? form.rememberTouched && form.rememberSignIns : form.rememberSignIns;
+}
+
+/** The consent-related parts of the start request. */
+export function consentRequestOf(
+  form: CheckupForm,
+  stagingHost: boolean | undefined
+): { owner: boolean; signInConsent?: true; skipReview?: boolean; stagingHost: boolean | undefined; rememberSignIns: boolean } {
+  const consent = signInConsentGiven(form);
+  const roles = rolesOf(form);
+  return {
+    owner: consent ? true : form.owner,
+    ...(consent ? { signInConsent: true as const, skipReview: !form.reviewFirst } : {}),
+    // Consent is no proof of a test copy: never let it be remembered as one.
+    stagingHost: consent ? undefined : stagingHost,
+    rememberSignIns: roles.length > 0 && rememberSignInsOf(form, consent),
+  };
 }

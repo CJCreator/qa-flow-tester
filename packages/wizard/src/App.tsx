@@ -34,11 +34,12 @@ import {
   EMPTY_FORM,
   addressFromSearch,
   capOf,
+  afterStart,
+  consentRequestOf,
   contextDocumentsOf,
   contextUrlOf,
   productContextOf,
   rolesOf,
-  signInConsentGiven,
   savedSessionsOf,
   type CheckupForm,
 } from './lib/form';
@@ -413,19 +414,15 @@ export default function App() {
 
   const startFromForm = (facts: StartFacts) => {
     const roles = rolesOf(form);
-    const consent = signInConsentGiven(form);
     void start({
       targetUrl: facts.url,
-      owner: consent ? true : form.owner,
-      ...(consent ? { signInConsent: true, skipReview: !form.reviewFirst } : {}),
-      stagingHost: facts.stagingHost,
+      ...consentRequestOf(form, facts.stagingHost),
       searchChecks: facts.searchChecks,
       visibility: facts.visibility,
       productContext: productContextOf(form),
       designNotes: form.designNotes.trim() || undefined,
       maxPages: form.maxPages !== DEFAULT_MAX_PAGES ? form.maxPages : undefined,
       roles: roles.length > 0 ? roles : undefined,
-      rememberSignIns: roles.length > 0 && form.rememberSignIns,
       useSavedSignIns: roles.length === 0 && form.useSavedSignIns,
       planWithoutAI: form.planWithoutAI || undefined,
       useAI: facts.noAI ? false : undefined,
@@ -436,7 +433,8 @@ export default function App() {
     }).then((started) => {
       // Saved sessions are sent once and dropped from the screen once the check-up has started; they are never kept.
       // If the start failed they stay, so the person does not have to choose the file again.
-      if (started) setForm((f) => (f.savedSessions.length > 0 ? { ...f, savedSessions: [] } : f));
+      // Consent is not kept either: the next check-up asks again.
+      if (started) setForm(afterStart);
     });
   };
 
