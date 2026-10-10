@@ -143,14 +143,24 @@ describe('test sign-in as consent (ADR 0022)', () => {
 
   it('live host + consent + good details: acts after sign-in, never on a Sensitive Action', async () => {
     sent.length = 0;
+    // Pause at Plan Review so the plan can be read, then approve it: the plan is gone once the run ends.
     const res = await post('/api/runner/run', {
       ...base,
+      skipReview: false,
       targetUrl: siteUrl,
       productId: 'consent',
       roles,
       signInConsent: true,
     });
     expect(res.status).toBe(202);
+    expect(await waitForPhase(['awaiting-review', 'failed', 'done'])).toBe('awaiting-review');
+    const planRes = await fetch(`${runnerUrl}/api/runner/plan`);
+    expect(planRes.status).toBe(200);
+    const plan = (await planRes.json()) as ReviewPlan;
+    const planned = (plan.planPages ?? []).filter((p) => !p.skipped);
+    expect(planned.length).toBeGreaterThan(0);
+    const approve = await post('/api/runner/plan/approve', { breakpoints: base.breakpoints });
+    expect(approve.status).toBeLessThan(300);
     expect(await waitForPhase(['done', 'failed'])).toBe('done');
 
     expect(sent).toContain('POST /signin');
@@ -164,12 +174,14 @@ describe('test sign-in as consent (ADR 0022)', () => {
     expect(report.pageCoverage!.reached).toBe(report.siteMap!.pages.length);
     // Every Plan Item has a result.
     expect(report.results.length).toBeGreaterThan(0);
-    const planRes = await fetch(`${runnerUrl}/api/runner/plan`);
-    if (planRes.status === 200) {
-      const plan = (await planRes.json()) as ReviewPlan;
-      const ran = new Set(report.results.map((r) => r.testCaseId));
-      expect((plan.testCases || []).filter((t) => !ran.has(t.id)).map((t) => t.id)).toEqual([]);
-    }
+    const ran = new Set(report.results.map((r) => r.testCaseId));
+    // Each planned page is visited (PAGE-nnn, one per role that reaches it); each of its own tests has a result.
+    const tests = planned.flatMap((p) => p.tests.filter((t) => !t.skipped).map((t) => t.id));
+    const visits = report.results.filter((r) => r.flowId === 'page-visit').length;
+    const wanted = planned.reduce((n, p) => n + Math.max(1, p.reachedBy?.length ?? 0), 0);
+    expect(visits).toBeGreaterThanOrEqual(planned.length);
+    expect(visits).toBe(wanted);
+    expect(tests.filter((id) => !ran.has(id))).toEqual([]);
   }, 240000);
 
   it('no consent flag stays read-only, even after a consented run on the same host', async () => {
@@ -237,11 +249,18 @@ describe('test sign-in as consent (ADR 0022)', () => {
       });
       // A shared machine refuses a private target or runs it read-only; it never acts on it.
       if (res.status === 202) {
+        let phase = '';
         for (let i = 0; i < 120; i++) {
-          const st = (await (await fetch(`${baseUrl}/api/runner/status`)).json()) as { phase: string };
-          if (['done', 'failed'].includes(st.phase)) break;
+          phase = ((await (await fetch(`${baseUrl}/api/runner/status`)).json()) as { phase: string }).phase;
+          if (['done', 'failed'].includes(phase)) break;
           await new Promise((r) => setTimeout(r, 500));
         }
+        if (phase === 'done') {
+          const rep = (await (await fetch(`${baseUrl}/api/report`)).json()) as ReleaseReport;
+          expect(rep.scanMode).toBe('read-only');
+        }
+      } else {
+        expect(res.status).toBeGreaterThanOrEqual(400);
       }
       expect(sent.filter((x) => SENSITIVE.test(x) || x === 'POST /contact')).toEqual([]);
     } finally {

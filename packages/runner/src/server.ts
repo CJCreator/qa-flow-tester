@@ -506,6 +506,22 @@ function hostOfAddress(address: string): string {
   }
 }
 
+/**
+ * Whether a run only looks. Test sign-in details count as consent to full testing on this machine
+ * (ADR 0022), never on a shared machine (beta). Per run: never saved.
+ */
+export function resolveReadOnly(input: {
+  beta: boolean;
+  owner: boolean;
+  testHost: boolean;
+  signInConsent?: unknown;
+  roles?: Array<{ username?: string; password?: string }>;
+}): { readOnly: boolean; consent: boolean } {
+  const consent =
+    !input.beta && input.signInConsent === true && (input.roles ?? []).some((r) => !!r.username && !!r.password);
+  return { consent, readOnly: !(input.owner && (input.testHost || consent)) };
+}
+
 /** Why a run is read-only, in plain words. */
 function readOnlyReason(owner: boolean, testHost: boolean, unverifiedMarked = false): string {
   if (!owner) {
@@ -2863,11 +2879,13 @@ export class RunnerServer {
       const owner = body.owner ?? true;
       const testHost = await this.testCopyOf(typed, !!memory?.staging);
       // Test sign-in details count as consent to full testing on this machine (ADR 0022). Per run: never saved.
-      const consent =
-        !this.beta &&
-        body.signInConsent === true &&
-        (signIns.roles ?? []).some((r) => !!r.username && !!r.password);
-      const readOnly = !(owner && (testHost || consent));
+      const { readOnly, consent } = resolveReadOnly({
+        beta: this.beta,
+        owner,
+        testHost,
+        signInConsent: body.signInConsent,
+        roles: signIns.roles,
+      });
       // On a shared machine the browser reaches the target at the address that was just checked.
       if (this.beta) {
         const checked = await resolvePublic(typed.hostname, this.hostChecks);
