@@ -1,0 +1,4 @@
+{
+  "description": "Registers /dashboard and observes agent and turn events to fill a pane. Changes no prompt, tool call or permission.",
+  "modules": ["./register.js"]
+}

@@ -1,0 +1,7 @@
+{
+  "name": "agent-dashboard",
+  "version": "0.1.0",
+  "description": "/dashboard: a pane showing agents, tokens, timing and /build run steps. Observes only.",
+  "author": { "name": "AdamCole" },
+  "types": "./types/index.d.ts"
+}
