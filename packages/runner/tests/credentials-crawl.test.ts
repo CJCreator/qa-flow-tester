@@ -9,7 +9,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import http from 'http';
 import type { ReleaseReport, ReviewPlan } from '@qa/types';
-import { RunnerServer } from '../src/server.js';
+import { RunnerServer, resolveReadOnly } from '../src/server.js';
 
 const SITE_PORT = 3194;
 const RUNNER_PORT = 3195;
@@ -164,6 +164,8 @@ describe('test sign-in as consent (ADR 0022)', () => {
     expect(await waitForPhase(['done', 'failed'])).toBe('done');
 
     expect(sent).toContain('POST /signin');
+    // Consent sends form posts (ADR 0022): the contact form is submitted. The no-consent test below sends none.
+    expect(sent).toContain('POST /contact');
     expect(sent.filter((s) => SENSITIVE.test(s))).toEqual([]);
 
     const report = (await (await fetch(`${runnerUrl}/api/report`)).json()) as ReleaseReport;
@@ -247,22 +249,14 @@ describe('test sign-in as consent (ADR 0022)', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...base, targetUrl: siteUrl, productId: 'beta', roles, signInConsent: true }),
       });
-      // A shared machine refuses a private target or runs it read-only; it never acts on it.
-      if (res.status === 202) {
-        let phase = '';
-        for (let i = 0; i < 120; i++) {
-          phase = ((await (await fetch(`${baseUrl}/api/runner/status`)).json()) as { phase: string }).phase;
-          if (['done', 'failed'].includes(phase)) break;
-          await new Promise((r) => setTimeout(r, 500));
-        }
-        if (phase === 'done') {
-          const rep = (await (await fetch(`${baseUrl}/api/report`)).json()) as ReleaseReport;
-          expect(rep.scanMode).toBe('read-only');
-        }
-      } else {
-        expect(res.status).toBeGreaterThanOrEqual(400);
-      }
-      expect(sent.filter((x) => SENSITIVE.test(x) || x === 'POST /contact')).toEqual([]);
+      // A shared machine refuses this private target (the shop is reached through a local alias), so
+      // the read-only branch can't be reached over HTTP here. The rule itself is pinned by
+      // resolveReadOnly (beta ignores consent) and by consent-rule.test.ts; here we assert the refusal
+      // and that nothing at all reached the shop.
+      expect(resolveReadOnly({ beta: true, owner: true, ownerExplicit: true, testHost: false, signInConsent: true, roles }))
+        .toEqual({ consent: false, readOnly: true });
+      expect(res.status).toBeGreaterThanOrEqual(400);
+      expect(sent).toEqual([]);
     } finally {
       await beta.stop();
     }

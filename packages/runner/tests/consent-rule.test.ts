@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { resolveReadOnly } from '../src/server.js';
 
 const good = [{ username: 'a@b.test', password: 'pw' }];
-const base = { beta: false, owner: true, testHost: false, signInConsent: true as unknown, roles: good };
+const base = { beta: false, owner: true, ownerExplicit: true, testHost: false, signInConsent: true as unknown, roles: good };
 
 describe('resolveReadOnly', () => {
   it('consent + owner + good details: full testing', () => {
@@ -29,6 +29,13 @@ describe('resolveReadOnly', () => {
   it('not the owner: read-only even with consent or a test host', () => {
     expect(resolveReadOnly({ ...base, owner: false })).toEqual({ consent: true, readOnly: true });
     expect(resolveReadOnly({ ...base, owner: false, testHost: true }).readOnly).toBe(true);
+  });
+  it('an omitted owner (counted as owner elsewhere) is never consent', () => {
+    expect(resolveReadOnly({ ...base, ownerExplicit: false })).toEqual({ consent: false, readOnly: true });
+    // A test host still tests fully for an omitted owner, as before.
+    expect(resolveReadOnly({ ...base, ownerExplicit: false, testHost: true, signInConsent: undefined }).readOnly).toBe(
+      false
+    );
   });
   it('test host: full testing without consent', () => {
     expect(resolveReadOnly({ ...base, testHost: true, signInConsent: undefined, roles: [] })).toEqual({

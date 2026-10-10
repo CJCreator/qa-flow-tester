@@ -285,6 +285,11 @@ export interface RunnerServerOptions {
    */
   dataDir?: string;
   /**
+   * Where sign-in sessions (cookies) are kept while a run works. Default `<outputDir>/auth`. A caller
+   * whose output folder is uploaded or served (the CI check-up) must set a folder outside it.
+   */
+  authDir?: string;
+  /**
    * When the runner runs in a container, `localhost` in a target URL means the user's machine,
    * not the container. Set this (e.g. "host.docker.internal") to rewrite such hosts.
    */
@@ -445,6 +450,11 @@ interface StoredPlanRecord {
     aiCap?: RunCap;
     /** Nothing that could change data is sent: the site isn't a test copy. */
     readOnly?: boolean;
+    /**
+     * Full testing is on because test sign-in details were given as consent (ADR 0022). Kept with the
+     * plan so approving it again checks the details are still there, and a failed sign-in fails the run.
+     */
+    signInConsent?: boolean;
     /** The site as the person typed it, e.g. "localhost:3050": the key for what is remembered about it. */
     siteHost?: string;
     /** How to reach the text model again, e.g. to turn a sentence into a test. A key given in the request stays in memory only. */
@@ -506,6 +516,15 @@ function hostOfAddress(address: string): string {
   }
 }
 
+/** At least one role has both a username and a password. */
+function hasCompleteSignIn(roles?: Array<{ username?: string; password?: string }>): boolean {
+  return (roles ?? []).some((r) => !!r.username && !!r.password);
+}
+
+/** Said when full testing was agreed to but the sign-in details are no longer there. */
+const CONSENT_NEEDS_SIGN_IN =
+  'Full testing needs the test sign-in details you agreed to use, and they are missing, so nothing was sent to the site. Send them again, or start a new check-up that only looks at the site.';
+
 /**
  * Whether a run only looks. Test sign-in details count as consent to full testing on this machine
  * (ADR 0022), never on a shared machine (beta). Per run: never saved.
@@ -513,12 +532,17 @@ function hostOfAddress(address: string): string {
 export function resolveReadOnly(input: {
   beta: boolean;
   owner: boolean;
+  /** The request said `owner: true` itself. An omitted owner counts as an owner elsewhere, but never as consent. */
+  ownerExplicit: boolean;
   testHost: boolean;
   signInConsent?: unknown;
   roles?: Array<{ username?: string; password?: string }>;
 }): { readOnly: boolean; consent: boolean } {
   const consent =
-    !input.beta && input.signInConsent === true && (input.roles ?? []).some((r) => !!r.username && !!r.password);
+    !input.beta &&
+    input.ownerExplicit &&
+    input.signInConsent === true &&
+    hasCompleteSignIn(input.roles);
   return { consent, readOnly: !(input.owner && (input.testHost || consent)) };
 }
 
@@ -639,7 +663,7 @@ export class RunnerServer {
     this.dataDir = path.resolve(options.dataDir || path.join(process.cwd(), '.qa-data'));
     if (!options.dataDir) this.legacyDataDir = process.cwd();
     this.scheduler = new SchedulerManager(this.dataDir);
-    this.authDir = path.join(this.outputDir, 'auth');
+    this.authDir = options.authDir ? path.resolve(options.authDir) : path.join(this.outputDir, 'auth');
     this.planFile = path.join(this.dataDir, '.qa-plan.json');
     this.aiModelsFile = path.join(this.dataDir, '.qa-ai-models.json');
     this.modelRecordFile = path.join(this.dataDir, '.qa-ai-model-record.json');
@@ -2848,7 +2872,8 @@ export class RunnerServer {
         memory = {
           ...(memory ?? emptySiteMemory(siteHost)),
           ...(body.stagingHost !== undefined ? { staging: body.stagingHost || undefined } : {}),
-          ...(body.owner !== undefined ? { owner: body.owner } : {}),
+          // "Owner" forced on by the sign-in consent is for this run only; a later run starts from what the person chose.
+          ...(body.owner !== undefined && !(body.signInConsent === true && !this.beta) ? { owner: body.owner } : {}),
           ...(body.searchChecks !== undefined ? { searchChecks: body.searchChecks } : {}),
         };
         await saveSiteMemory(this.siteDir(), memory);
@@ -2882,6 +2907,7 @@ export class RunnerServer {
       const { readOnly, consent } = resolveReadOnly({
         beta: this.beta,
         owner,
+        ownerExplicit: body.owner === true,
         testHost,
         signInConsent: body.signInConsent,
         roles: signIns.roles,
@@ -2913,6 +2939,7 @@ export class RunnerServer {
         releaseTarget: body.releaseTarget,
         draft: undefined as unknown as DiscoveryDraft,
         readOnly,
+        signInConsent: consent && !readOnly ? true : undefined,
         siteHost,
         productContext: body.productContext,
         designNotes: body.designNotes,
@@ -3038,7 +3065,7 @@ export class RunnerServer {
       context.reportNotes = [...(draft.exploration?.notes || []), ...(signIns.note ? [signIns.note] : [])];
       if (consent && !readOnly) {
         context.reportNotes.push(
-          'Tested with the sign-in details you gave, as you agreed: forms were filled in and sent. Sensitive Actions (such as deleting or paying) were still skipped.'
+          'Tested with the sign-in details you gave, as you agreed: forms were filled in and sent. Pages that need no sign-in (such as sign-up or contact) were tested signed out, after the sign-in succeeded. Sensitive Actions (such as deleting or paying) were still skipped.'
         );
       }
       context.pageCoverage = draft.exploration?.pageCoverage;
@@ -3436,6 +3463,9 @@ export class RunnerServer {
         reportNotes: context.reportNotes,
         aiModels: context.aiModels,
         readOnly: context.readOnly,
+        // Under consent a role that can't sign in fails the run: nothing is sent signed out or half-tested.
+        requireSignIn: context.signInConsent && !context.readOnly ? true : undefined,
+        pageCoverage: context.pageCoverage ?? context.draft?.exploration?.pageCoverage,
         notRun,
         suppliedSessions: this.savedSessions.get(context.runId),
         documentedNotFound: context.draft?.plan?.notFound?.map((n) => ({ docSource: n.docSource, reason: n.reason })),
@@ -4484,6 +4514,13 @@ export class RunnerServer {
         error: `Release check-up restarted since this plan was made, and sign-in details are never saved to disk. Send them again for: ${stillMissing.join(', ')}.`,
         needsSignIn: stillMissing,
       });
+      return;
+    }
+
+    // Full testing was agreed to with test sign-in details (ADR 0022): without them there is no
+    // consent left, so nothing is run (never a look-only or signed-out run in its place).
+    if (record.context.signInConsent && !hasCompleteSignIn(record.context.profile?.roles)) {
+      this.sendJson(res, 409, { error: CONSENT_NEEDS_SIGN_IN, code: 'ERR_SIGN_IN_REQUIRED' });
       return;
     }
 
