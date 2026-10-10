@@ -38,6 +38,7 @@ import {
   contextUrlOf,
   productContextOf,
   rolesOf,
+  signInConsentGiven,
   savedSessionsOf,
   type CheckupForm,
 } from './lib/form';
@@ -412,9 +413,11 @@ export default function App() {
 
   const startFromForm = (facts: StartFacts) => {
     const roles = rolesOf(form);
+    const consent = signInConsentGiven(form);
     void start({
       targetUrl: facts.url,
-      owner: form.owner,
+      owner: consent ? true : form.owner,
+      ...(consent ? { signInConsent: true, skipReview: !form.reviewFirst } : {}),
       stagingHost: facts.stagingHost,
       searchChecks: facts.searchChecks,
       visibility: facts.visibility,

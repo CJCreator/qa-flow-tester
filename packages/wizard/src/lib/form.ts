@@ -26,6 +26,10 @@ export interface CheckupForm {
   signIns: SignInEntry[];
   /** Remember the sign-ins for this site (passwords in this computer's keychain). */
   rememberSignIns: boolean;
+  /** The person accepted that the check-up fills in and sends forms with the typed sign-in details. */
+  signInConsent: boolean;
+  /** With consent, show the plan for review before testing starts (otherwise testing starts at once). */
+  reviewFirst: boolean;
   /** Sign in with the ones saved for this site. */
   useSavedSignIns: boolean;
   /** Check how search engines see the site; null: the usual (a live site yes, a test copy no). */
@@ -98,6 +102,8 @@ export const EMPTY_FORM: CheckupForm = {
   signIns: [],
   rememberSignIns: true,
   useSavedSignIns: true,
+  signInConsent: false,
+  reviewFirst: false,
   searchChecks: null,
   visibility: null,
   planWithoutAI: false,
@@ -164,4 +170,19 @@ export function productContextOf(form: Pick<CheckupForm, 'specs' | 'designNotes'
 export function addressFromSearch(search: string): string {
   const typed = new URLSearchParams(search).get('url')?.trim() ?? '';
   return typed.length > 0 && typed.length <= 2048 ? typed : '';
+}
+
+/** The first sign-in as the address-step fields show it (role `member` unless named). */
+export function primarySignInOf(form: Pick<CheckupForm, 'signIns'>): SignInEntry {
+  return form.signIns[0] ?? EMPTY_SIGN_IN;
+}
+
+/** Both the username and the password are filled in. */
+export function hasSignInDetails(form: Pick<CheckupForm, 'signIns'>): boolean {
+  return rolesOf(form).length > 0;
+}
+
+/** Consent counts only while the details are still there. */
+export function signInConsentGiven(form: Pick<CheckupForm, 'signIns' | 'signInConsent'>): boolean {
+  return form.signInConsent && hasSignInDetails(form);
 }

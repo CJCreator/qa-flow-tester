@@ -368,6 +368,10 @@ export interface StartRunRequest {
   savedSessions?: Record<string, StorageStateData>;
   /** Optional limit on AI requests and/or dollars for this check-up. */
   aiCap?: RunCap;
+  /** The person accepted that forms are filled in and sent with the typed sign-in details. */
+  signInConsent?: boolean;
+  /** Start testing without the plan review step. Only sent with consent. */
+  skipReview?: boolean;
 }
 
 /** Starts a check-up: the scan, then the plan waits for review. Returns the run id. */
@@ -383,7 +387,7 @@ export async function startRun(request: StartRunRequest): Promise<string> {
     targetUrl: request.targetUrl,
     productId,
     owner: request.owner,
-    skipReview: false,
+    skipReview: request.signInConsent ? request.skipReview === true : false,
     mode: 'product',
     useAI: request.useAI ?? true,
     aiProvider: request.aiProvider ?? 'openrouter',
@@ -400,6 +404,7 @@ export async function startRun(request: StartRunRequest): Promise<string> {
   if (request.maxPages) body.maxPages = request.maxPages;
   if (request.replacePlan) body.replacePlan = true;
   if (request.testAgain) body.testAgain = true;
+  if (request.signInConsent) body.signInConsent = true;
 
   interface ApiErrorPayload {
     error?: string;

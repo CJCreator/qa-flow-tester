@@ -4,6 +4,8 @@
  * CSS paths, URLs and internal event names never reach the screen.
  */
 
+import { isSignInFailureReason, signInReasonText } from '@qa/types/src/signin.js';
+
 export type RunMode = 'product' | 'website';
 
 export interface RunnerEvent {
@@ -317,7 +319,14 @@ export function reduceFeed(state: FeedState, event: RunnerEvent, mode: RunMode):
       };
 
     case 'RUN_FAILED':
-      return { ...state, status: 'failed', failure: plainFailure(event.error, mode), planKept: !!event.planKept };
+      return {
+        ...state,
+        status: 'failed',
+        failure: isSignInFailureReason(event.signInReason)
+          ? signInReasonText(event.signInReason)
+          : plainFailure(event.error, mode),
+        planKept: !!event.planKept,
+      };
 
     default:
       return { ...state, current: GENERIC };

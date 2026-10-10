@@ -17,7 +17,16 @@ import { ErrorMessage, Notice, Question, Spinner } from '../components/text';
 import { capLine } from '../lib/cap';
 import { MAX_CONTEXT_FILES, readContextFiles, rejectReason } from '../lib/context';
 import { parseSessionFile } from '../lib/session-file';
-import { capOf, clampMaxPages, EMPTY_SIGN_IN, MAX_PAGES_LIMIT, type CheckupForm } from '../lib/form';
+import {
+  capOf,
+  clampMaxPages,
+  EMPTY_SIGN_IN,
+  hasSignInDetails,
+  MAX_PAGES_LIMIT,
+  primarySignInOf,
+  signInConsentGiven,
+  type CheckupForm,
+} from '../lib/form';
 import { formatWhen } from '../lib/format';
 import { hasNonDefaultOptions } from '../lib/onboarding';
 import { Link, PATHS } from '../lib/router';
@@ -184,11 +193,14 @@ export function NewCheckupScreen({
     /(?:-|\.)(staging|dev|test|preview)(?:\.|$)/i.test(checkedHost || '') ||
     /\.(vercel\.app|netlify\.app|fly\.dev|railway\.app|onrender\.com)$/i.test(checkedHost || '');
 
+  // Typed sign-in details (not on the shared copy) replace the Access choice with a consent notice.
+  const consentFlow = !shared && hasSignInDetails(form);
+  const consentMissing = consentFlow && !signInConsentGiven(form);
   const needsProdConfirmation =
-    !!kind && !kind.natural && form.markedTestCopy && !hasStagingIndicator && !confirmedProd;
+    !consentFlow && !!kind && !kind.natural && form.markedTestCopy && !hasStagingIndicator && !confirmedProd;
   // No key doesn't stop a scan: fixed rules write the plan, and the AI can be connected any time.
   // (Once the AI setup has been read, so the plan knows which way to go.)
-  const canStart = ai !== null && check.state === 'ok' && !starting && !needsProdConfirmation;
+  const canStart = ai !== null && check.state === 'ok' && !starting && !needsProdConfirmation && !consentMissing;
   const start = () => {
     if (check.state !== 'ok' || !kind || !canStart) return;
     onStart({
@@ -337,7 +349,11 @@ export function NewCheckupScreen({
           </ErrorMessage>
         )}
 
-        {kind && <AccessChoice isTestCopyHost={kind.natural} form={form} onChange={setChoice} />}
+        <SignInFields form={form} onFormChange={onFormChange} />
+
+        {consentFlow && <ConsentNotice form={form} onFormChange={onFormChange} />}
+
+        {kind && !consentFlow && <AccessChoice isTestCopyHost={kind.natural} form={form} onChange={setChoice} />}
 
         {shared && check.state === 'ok' && form.owner && form.markedTestCopy && !kind?.natural && (
           <DomainProofPanel url={check.url} />
@@ -1058,6 +1074,102 @@ function SignInsSection({
         )}
       </div>
     </details>
+  );
+}
+
+/** Username and password right under the address: the first sign-in (role `member` unless named in More options). */
+function SignInFields({
+  form,
+  onFormChange,
+}: {
+  form: CheckupForm;
+  onFormChange: (update: (form: CheckupForm) => CheckupForm) => void;
+}) {
+  const first = primarySignInOf(form);
+  const set = (change: Partial<CheckupForm['signIns'][number]>) =>
+    onFormChange((f) => {
+      const signIns = f.signIns.length > 0 ? f.signIns : [{ ...EMPTY_SIGN_IN }];
+      return { ...f, signIns: signIns.map((s, n) => (n === 0 ? { ...s, ...change } : s)) };
+    });
+  return (
+    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      <label className="text-sm">
+        <span className="mb-1 block font-bold">
+          Email or username <span className="font-normal text-ink-soft">(optional)</span>
+        </span>
+        <input
+          className="field py-2 text-sm"
+          autoComplete="off"
+          spellCheck={false}
+          value={first.username}
+          onChange={(e) => set({ username: e.target.value })}
+        />
+      </label>
+      <label className="text-sm">
+        <span className="mb-1 block font-bold">
+          Password <span className="font-normal text-ink-soft">(optional)</span>
+        </span>
+        <input
+          className="field py-2 text-sm"
+          type="password"
+          autoComplete="off"
+          value={first.password}
+          onChange={(e) => set({ password: e.target.value })}
+        />
+      </label>
+    </div>
+  );
+}
+
+/** Shown when sign-in details are typed: the person accepts that forms are filled in and sent as that user. */
+function ConsentNotice({
+  form,
+  onFormChange,
+}: {
+  form: CheckupForm;
+  onFormChange: (update: (form: CheckupForm) => CheckupForm) => void;
+}) {
+  return (
+    <div className="mt-4" data-testid="sign-in-consent">
+      <Notice tone="warn" title="Fill in and send forms with these sign-in details">
+        <p>
+          The check-up will fill in and send forms on this App with these sign-in details. Sensitive Actions, such as
+          deleting or paying, are skipped.
+        </p>
+        <label className="mt-3 flex cursor-pointer items-start gap-3 text-sm">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-5 w-5 shrink-0 accent-[#6C9BF2]"
+            checked={form.signInConsent}
+            onChange={(e) => onFormChange((f) => ({ ...f, signInConsent: e.target.checked }))}
+          />
+          <span className="font-bold">I accept this</span>
+        </label>
+        <label className="mt-2 flex cursor-pointer items-start gap-3 text-sm">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-5 w-5 shrink-0 accent-[#6C9BF2]"
+            checked={form.reviewFirst}
+            onChange={(e) => onFormChange((f) => ({ ...f, reviewFirst: e.target.checked }))}
+          />
+          <span>Show me the plan first</span>
+        </label>
+        <button
+          type="button"
+          className="btn-link mt-3 text-sm"
+          onClick={() =>
+            onFormChange((f) => ({
+              ...f,
+              signInConsent: false,
+              reviewFirst: false,
+              signIns: f.signIns.map((s, n) => (n === 0 ? { ...s, username: '', password: '' } : s)),
+            }))
+          }
+        >
+          Only look at it instead
+        </button>
+      </Notice>
+    </div>
   );
 }
 
