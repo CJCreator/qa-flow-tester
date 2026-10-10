@@ -137,7 +137,7 @@ A deterministic barrier intercepting and pausing actions matching forbidden keyw
 _Avoid_: Guardrail, sandbox
 
 **Test Copy**:
-A copy of an App that is safe to fill in and send forms on: an address on this computer or a private network, a dev tunnel, or an address the person marked as a test copy. When the tool runs on shared machines instead of the person's own computer, only an address under a Verified Domain can be marked. Full testing and Security Probes need a Test Copy and the owner's say-so; any other App is only looked at.
+A copy of an App that is safe to fill in and send forms on: an address on this computer or a private network, a dev tunnel, or an address the person marked as a test copy. When the tool runs on shared machines instead of the person's own computer, only an address under a Verified Domain can be marked. Full testing and Security Probes need a Test Copy and the owner's say-so; any other App is only looked at. Exception (ADR 0022): on the person's own computer, test sign-in details plus an accepted notice allow full testing of that App for that one run.
 _Avoid_: Staging, test host (in UI text), sandbox
 
 **Verified Domain**:

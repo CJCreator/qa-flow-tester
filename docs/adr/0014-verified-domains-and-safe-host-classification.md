@@ -2,6 +2,8 @@
 
 Status: Accepted 2026-10-07 (owner answers recorded under Decisions for owner).
 
+Amended by [0022](0022-test-sign-in-as-consent.md): on the person's own computer, accepted test sign-in details also allow full testing of an App that is not a Test Copy. Shared online copy unchanged.
+
 Builds on [0003](0003-deterministic-safety-filters-for-ai-discovery.md) (Safety Filter, host confinement), [0008](0008-single-local-server.md) and [0012](0012-hosted-runner-github-actions.md) (beta mode, shared online copy). Wording follows [0018](0018-claim-wording.md).
 
 ## Context and Decision
