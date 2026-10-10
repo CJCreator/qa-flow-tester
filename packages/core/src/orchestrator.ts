@@ -21,7 +21,7 @@ import { normalizeRoute, signInReasonText } from '@qa/types';
 import { BrowserManager, BREAKPOINT_VIEWPORTS, locateElement } from './browser.js';
 import { EvidenceCollector } from './evidence.js';
 import { captureVisualShot, readBaselineMode, writeVisualBaseline } from './visual-capture.js';
-import { PreFlightChecker } from './preflight.js';
+import { PreFlightChecker, SignInFailedError } from './preflight.js';
 import { SourceLocator } from './source-locator.js';
 import { ReproScriptGenerator } from './repro-generator.js';
 import { ReportGenerator, withPortablePaths } from './reporter.js';
@@ -287,6 +287,13 @@ export interface RunOptions {
   notRun?: Array<{ id: string; flowId: string; name: string; role: string; reason: string }>;
   /** The site as the plan saw it, kept in the report so it can be drawn as a map. */
   siteMap?: SiteMapSummary;
+  /** Pages found while exploring and why the rest were skipped; shown in the issues document on its first write. */
+  pageCoverage?: ReleaseReport['pageCoverage'];
+  /**
+   * Full testing was agreed to with sign-in details: any role that can't sign in throws a
+   * SignInFailedError before testing, instead of being listed as not tested.
+   */
+  requireSignIn?: boolean;
   /** Stops the run between steps and test points: the browser closes and run() throws an AbortError. */
   signal?: AbortSignal;
   /** Finishes early: no more tests start, and the report is made from what's done, marked as partial. */
@@ -381,6 +388,12 @@ export class FlowTestOrchestrator {
       rolesNotTested.push({ role, reason, text: signInReasonText(reason) });
       const note = `Signing in as "${role}" didn't work, so that role was not tested.`;
       if (!notes.includes(note)) notes.push(note);
+    }
+    // Under consent to full testing, a failed sign-in fails the run before any test starts: nothing is
+    // sent signed out, and no other role's tests run on their own.
+    if (options.requireSignIn && rolesNotTested.length > 0) {
+      await this.browserManager.close().catch(() => {});
+      throw new SignInFailedError(rolesNotTested[0].reason, rolesNotTested[0].role);
     }
     const notTestedRoles = new Set(rolesNotTested.map((r) => r.role));
 
@@ -1271,6 +1284,7 @@ export class FlowTestOrchestrator {
       aiModels: options.aiModels,
       scanMode: options.readOnly ? 'read-only' : undefined,
       siteMap: options.siteMap,
+      ...(options.pageCoverage ? { pageCoverage: options.pageCoverage } : {}),
       testedWithApprovedPlan: options.testedWithApprovedPlan,
     };
 
