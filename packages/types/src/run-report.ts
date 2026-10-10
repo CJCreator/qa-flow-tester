@@ -78,6 +78,12 @@ export interface ReleaseReport {
   rolesNotTested?: RoleNotTested[];
   /** Documented items reached, of all documented, and the ones not found in the app. */
   documentedItems?: { reached: number; total: number; notFound: Array<{ docSource: DocSource; reason: string }> };
+  /** Pages found while exploring, how many were reached, and why the rest were skipped. */
+  pageCoverage?: {
+    found: number;
+    reached: number;
+    skipped: Array<{ urlPath: string; why: 'page-limit' | 'did-not-load' | 'robots' | 'sign-in' }>;
+  };
   runId: string;
   productId: string;
   targetUrl: string;

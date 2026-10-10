@@ -141,6 +141,12 @@ export interface DiscoveryDraft {
     signInPages: string[];
     /** Pages that asked for a sign-in nobody could get past. */
     notReached: string[];
+    /** Pages found, how many were reached, and why the rest were skipped. */
+    pageCoverage?: {
+      found: number;
+      reached: number;
+      skipped: Array<{ urlPath: string; why: 'page-limit' | 'did-not-load' | 'robots' | 'sign-in' }>;
+    };
     /** Plain sentences for the report, e.g. "Pages behind the sign-in were not reached." */
     notes: string[];
   };
