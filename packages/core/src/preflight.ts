@@ -8,7 +8,20 @@ import type {
   SignInFailureReason,
   StorageStateData,
 } from '@qa/types';
+import { signInReasonText } from '@qa/types';
 import type { BrowserManager } from './browser.js';
+
+/** A required sign-in failed. The message is the fixed wording for the reason: never any typed detail. */
+export class SignInFailedError extends Error {
+  readonly code = 'ERR_SIGN_IN_FAILED';
+  constructor(
+    readonly reason: SignInFailureReason,
+    readonly role: string
+  ) {
+    super(signInReasonText(reason));
+    this.name = 'SignInFailedError';
+  }
+}
 
 const USERNAME_SELECTOR =
   'input[type="email"], input[type="text"], input:not([type]), [data-testid="username-input"], [data-testid="email-input"]';

@@ -4,7 +4,7 @@ import type { ProductProfile, DiscoveryDraft, DiscoveredFlow, AmbiguityQuestion,
 import { signInReasonText } from '@qa/types';
 import { PlanValidator } from './plan-validator.js';
 import { BrowserManager, BREAKPOINT_VIEWPORTS } from '../browser.js';
-import { PreFlightChecker } from '../preflight.js';
+import { PreFlightChecker, SignInFailedError } from '../preflight.js';
 import { DeterministicSpider, DEFAULT_MAX_PAGES, type SpiderResult } from './deterministic-spider.js';
 import { buildSiteGraph, pathOf } from '../plan/site-graph.js';
 import { sampleLayoutGroups } from '../plan/sampling.js';
@@ -78,6 +78,8 @@ export interface DiscoveryOptions {
   authDir?: string;
   /** Sessions the person saved, by role. Memory only: used instead of signing in, never written or logged. */
   suppliedSessions?: Record<string, StorageStateData>;
+  /** Throw SignInFailedError before the crawl when any role cannot sign in. Default false: the role is listed as not tested. */
+  requireSignIn?: boolean;
   /**
    * Rollback: plan only after the whole crawl, as before the pipeline. Default: with an AI provider,
    * pages are planned while the Spider is still crawling.
@@ -242,6 +244,10 @@ export class DiscoveryAgent {
           })
         : undefined;
     stopIfAborted(signal);
+    if (options.requireSignIn && preflight?.roleFailures) {
+      const [role, reason] = Object.entries(preflight.roleFailures)[0] ?? [];
+      if (role) throw new SignInFailedError(reason, role);
+    }
 
     // The AI Request Budget: set up before the crawl, because planning starts while it runs.
     const requestsLeft = options.aiBudget?.left;
