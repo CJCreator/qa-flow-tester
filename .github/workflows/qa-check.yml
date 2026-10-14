@@ -43,7 +43,7 @@ jobs:
       QA_FAIL_ON: blocker
     steps:
       - name: Get the check-up tool
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: CJCreator/qa-flow-tester
           ref: main
