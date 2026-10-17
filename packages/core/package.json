@@ -10,10 +10,10 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "@napi-rs/keyring": "^2.1.0",
+    "@napi-rs/keyring": "^2.1.1",
     "@qa/checkers": "workspace:*",
     "@qa/types": "workspace:*",
-    "mammoth": "1.12.3",
+    "mammoth": "1.13.0",
     "playwright": "1.63.0",
     "pngjs": "^7.0.0",
     "yaml": "^2.7.0"
