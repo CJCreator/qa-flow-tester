@@ -102,6 +102,63 @@ jobs:
           fi
           git push "https://x-access-token:${TOKEN}@github.com/CJCreator-New/flowtester.git" HEAD:refs/heads/main
 
+  # The online copy on Google Cloud Run, alongside Render until cutover (docs/DEPLOYMENT.md). Same gate as
+  # publish: only checks that passed reach it. Auth is keyless (Workload Identity Federation), no key in GitHub.
+  cloud-run:
+    needs: [build-and-smoke, test]
+    if: github.repository == 'CJCreator/qa-flow-tester'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      GCP_PROJECT: qa-flow-tester-512310
+      GCP_REGION: us-central1
+      SERVICE: qa-check-up
+      # Cloud Run's address for this project is fixed, so it can be allowed before the first deploy.
+      SERVICE_URL: https://qa-check-up-809804736896.us-central1.run.app
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sign in to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      # The same image Render builds from packages/runner/Dockerfile, tagged with this commit.
+      - name: Build and push the runner image
+        run: |
+          IMAGE="$GCP_REGION-docker.pkg.dev/$GCP_PROJECT/qa/runner:$GITHUB_SHA"
+          gcloud auth configure-docker "$GCP_REGION-docker.pkg.dev" --quiet
+          docker build -f packages/runner/Dockerfile -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      # Cloud Run's root filesystem is read-only except /tmp, so data goes there (the image's /data is not writable).
+      # The access token is read from Secret Manager, never from this file.
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy "$SERVICE" --project "$GCP_PROJECT" --region "$GCP_REGION" \
+            --image "$IMAGE" --port 8080 --memory 2Gi --cpu 1 \
+            --min-instances 0 --max-instances 1 --timeout 3600 \
+            --allow-unauthenticated \
+            --set-env-vars "RUNNER_BETA=1,RUNNER_HOST=0.0.0.0,RUNNER_DATA_DIR=/tmp/qa-data,RUNNER_OUTPUT_DIR=/tmp/qa-data/reports,RUNNER_ALLOWED_ORIGINS=$SERVICE_URL" \
+            --set-secrets "RUNNER_ACCESS_TOKEN=qa-access-token:latest"
+
+      - name: Verify the service answers
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            code=$(curl -s -o /dev/null -m 10 -w '%{http_code}' "$SERVICE_URL/healthz") || code=000
+            echo "attempt $attempt: $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 10
+          done
+          exit 1
+
   verify:
     needs: publish
     runs-on: ubuntu-latest

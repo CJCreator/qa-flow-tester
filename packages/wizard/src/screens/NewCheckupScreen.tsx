@@ -227,7 +227,7 @@ export function NewCheckupScreen({
     !!kind?.natural ||
     /(?:^|\.)(staging|stg|dev|test|preview|qa|uat)(?:\.|$)/i.test(checkedHost || '') ||
     /(?:-|\.)(staging|dev|test|preview)(?:\.|$)/i.test(checkedHost || '') ||
-    /\.(vercel\.app|netlify\.app|fly\.dev|railway\.app|onrender\.com)$/i.test(checkedHost || '');
+    /\.(vercel\.app|netlify\.app|fly\.dev|railway\.app|onrender\.com|run\.app)$/i.test(checkedHost || '');
 
   // Typed sign-in details (not on the shared copy) replace the Access choice with a consent notice.
   const consentFlow = !shared && hasSignInDetails(form);
