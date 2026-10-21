@@ -1,5 +1,35 @@
-| T-23 | Split large files by area | 8 | 19 | P3 | L | T-63 | later (class-size refactor deferred by decision until after /verify-all) |
 # Review remediation plan
+
+## Completion status (2026-10-21)
+
+**Build: done.** 23 of 24 tickets (T-41 to T-64) are `built`; T-52 is `human` (code built, two manual steps left). T-23 is deferred by decision.
+**Verification: 3 fix rounds used, limit reached; not green.** `pnpm build` passes. Source: `.claude/work/verify/summary.md`.
+
+| Run | Files failing | Tests failing | Tests passing |
+|---|---|---|---|
+| Round 0 (as found) | 49 | 77 | 2053 |
+| Round 2 (after round-1 fixes) | 11 | 13 | 2102 |
+| Round 3 (final full run) | 13 of 298 | 16 of 2130 | 2114 |
+
+Browser end-to-end `wizard-e2e` was not run (not requested). Baseline before this plan: 75 files / 141 tests failing (T-41 run 1).
+
+**Open work**
+
+| Item | Count | Cause | Owner |
+|---|---|---|---|
+| T-52 Docker image digest pin; `docker run` non-root check | 2 steps | needs a person with Docker | human |
+| T-23 split large files | 1 ticket | class-size refactor deferred until after verification is green | later |
+| `findings-contract` | 5 tests | `docs/findings.schema.json` deleted in commit 811ab97, before this plan | pre-existing |
+| `sample-report-format` | 1 test | generated `sample-report.html` still says "Secure"; no regen script documented | pre-existing |
+| `url-first` (3), `runner-server` (2), `consent-enforcement` (1) | 6 tests | pass alone, fail in the full suite; load or timing, unconfirmed | needs a look |
+| `auth-crawl-e2e` (1), `discovery-agent-headers` (1) | 2 tests | discovery crawl took 57 s against a 60 s timeout; possible slowdown from the plan's changes | investigate |
+| `crud-facts`, `element-inventory`, `narrow-look`, `plan-validator`, `refusal-parity`, `spider-page-limit` | 6 tests | new in the final run, not in round 2, not investigated | needs a look |
+
+**Fixed during verification:** `/healthz` data-folder mkdir (`server.ts`); `executeTesting` stop path (`checkup-run*.ts`); AI planner Limits/Rejects selector (`ai-planner.ts`); `encodeURIComponent` form in `redact.ts`; wizard copy (`PlanDocument`, `coverage-text`, `ConnectionScreen`, `api.ts`); dead README links. Stale test expectations were updated with a comment naming the ticket or decision. The T-56 parity test got retry 2 for load flakiness.
+
+**Decisions taken in verification:** post-deploy smoke asserts smoke coverage, not `releaseVerdict`. Scheduler: one extra tick before a failed start is recorded. T-56: default stays serial; parity test retries twice.
+
+**Next:** triage the 14 unconfirmed failures (rerun each alone, then read the first error), then run `wizard-e2e` once, then decide on T-23. T-64's per-test triage list below is superseded by `.claude/work/verify/failures-*.md`.
 
 Source: every review run on this repo, combined into one plan. Sources (kept as evidence):
 [APP_REVIEW.md](../APP_REVIEW.md) (correctness, reliability, growth, deployment, wizard UX, docs drift),
@@ -652,4 +682,4 @@ The table gives each ticket's files. Tickets list only the files in their own ro
 | T-61 | Wizard: errors, focus and accessibility | 7 | 16 | P1 | M | T-59, T-36 (built) | built |
 | T-62 | Wizard: copy and small UX | 7 | 17 | P2 | M | T-61, T-37b (built) | built |
 | T-63 | Docs and contracts residual | 8 | 18 | P2 | M | T-60, T-62, T-38 (built) | built |
-| T-23 | Split large files by area | 8 | 19 | P3 | L | T-63 | later |
+| T-23 | Split large files by area | 8 | 19 | P3 | L | T-63 | later (deferred by decision until verification is green) |
