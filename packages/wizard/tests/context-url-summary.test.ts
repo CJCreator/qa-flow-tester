@@ -124,7 +124,24 @@ describe('summarizeReport', () => {
   });
 
   it('gives a clearly positive verdict when nothing was found', () => {
-    const s = summarizeReport(report([]));
+    // T-47: with no areas graded nothing was checked, which is never ready; a clean run has every area graded.
+    const ok = { grade: 'A' as const, score: 100, findings: [] as string[] };
+    const s = summarizeReport(
+      report([], {
+        grades: {
+          aspects: {
+            Works: ok,
+            Accessible: ok,
+            'Fast and mobile': ok,
+            Findable: ok,
+            Secure: ok,
+            'Looks and reads well': ok,
+          },
+          overallGrade: 'A',
+          overallScore: 100,
+        },
+      })
+    );
     expect(s).toMatchObject({
       ready: true,
       stamp: 'Ready to release',

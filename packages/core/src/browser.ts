@@ -93,23 +93,75 @@ function tunnelHeaders(tunnelAuth?: string): Record<string, string> {
   };
 }
 
+/** The host a target URL names, lower-cased; empty when there is no valid URL. */
+function targetHostOf(baseUrl?: string): string {
+  if (!baseUrl) return '';
+  try {
+    return new URL(baseUrl).host.toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
+/** One browser process per engine and target host. */
+function browserKey(engine: BrowserEngine, host: string): string {
+  return `${engine}|${host}`;
+}
+
+/**
+ * A log-safe form of a URL: user name and password removed, so a target written as
+ * `https://user:pass@site` is logged as `https://site/`. Text that is not a URL gets the same cut by pattern.
+ */
+export function urlForLog(url: string): string {
+  try {
+    const parsed = new URL(url);
+    parsed.username = '';
+    parsed.password = '';
+    return parsed.toString();
+  } catch {
+    return url.replace(/\/\/[^/?#\s]*@/, '//');
+  }
+}
+
 export class BrowserManager {
   private browser: Browser | null = null;
-  private browsers = new Map<BrowserEngine, Browser>();
+  private browsers = new Map<string, Browser>();
+  /** Launches still in progress, per key, so concurrent callers share one launch (T-56). */
+  private launching = new Map<string, Promise<Browser>>();
+  /** Pages from openPage that are still open, per key (T-56). */
+  private live = new Map<string, number>();
 
-  async launch(engineOrHeadless: BrowserEngine | boolean = 'chromium', headless = true): Promise<Browser> {
+  /**
+   * `targetHost` is the host the browser serves. Decision 2 (T-52): Chromium keeps `--no-sandbox`, and that
+   * is accepted only because each target host gets its own browser process, so one target's pages never
+   * share a Chromium process with another's. The runner itself runs as the non-root `pwuser` (Dockerfile).
+   * The `--no-sandbox` choice is documented in docs/CONFIGURATION.md, Browser section.
+   */
+  async launch(
+    engineOrHeadless: BrowserEngine | boolean = 'chromium',
+    headless = true,
+    targetHost = ''
+  ): Promise<Browser> {
     const engine: BrowserEngine = typeof engineOrHeadless === 'string' ? engineOrHeadless : 'chromium';
     const isHeadless = typeof engineOrHeadless === 'boolean' ? engineOrHeadless : headless;
+    const key = browserKey(engine, targetHost);
 
-    const existing = this.browsers.get(engine);
+    const existing = this.browsers.get(key);
     if (existing && !existing.isConnected()) {
       await existing.close().catch(() => {});
-      this.browsers.delete(engine);
-      if (engine === 'chromium') this.browser = null;
+      // Identity check: another caller may have replaced the dead browser while the close was awaited.
+      if (this.browsers.get(key) === existing) {
+        this.browsers.delete(key);
+        if (engine === 'chromium') this.browser = null;
+      }
     }
 
-    let b = this.browsers.get(engine);
-    if (!b) {
+    const current = this.browsers.get(key);
+    if (current) return current;
+    const inFlight = this.launching.get(key);
+    if (inFlight) return inFlight;
+
+    const started: Promise<Browser> = (async () => {
       const launcher = engine === 'webkit' ? webkit : engine === 'firefox' ? firefox : chromium;
       const pinned = Object.entries(browserPolicy?.pinned ?? {}).map(
         ([host, ip]) => `MAP ${host} ${ip.includes(':') ? `[${ip.replace(/^\[|\]$/g, '')}]` : ip}`
@@ -125,21 +177,26 @@ export class BrowserManager {
               ...(pinned.length ? [`--host-resolver-rules=${pinned.join(', ')}`] : []),
             ]
           : [];
-      b = await launcher.launch({
+      const b = await launcher.launch({
         headless: isHeadless,
         args,
       });
-      this.browsers.set(engine, b);
+      this.browsers.set(key, b);
       if (engine === 'chromium') {
         this.browser = b;
       }
-    }
-    return b;
+      return b;
+    })().finally(() => {
+      // Cleared on success and on failure, so the next caller can try again.
+      if (this.launching.get(key) === started) this.launching.delete(key);
+    });
+    this.launching.set(key, started);
+    return started;
   }
 
   async createContext(options: BrowserOptions = {}): Promise<BrowserContext> {
     const engine = options.engine ?? 'chromium';
-    const browser = await this.launch(engine, options.headless ?? true);
+    const browser = await this.launch(engine, options.headless ?? true, targetHostOf(options.baseUrl));
 
     const viewport = options.viewport || BREAKPOINT_VIEWPORTS['1440px'];
     const contextOptions = {
@@ -191,14 +248,23 @@ export class BrowserManager {
       return context;
     };
 
+    // A context that fails setup is closed here, so it cannot outlive the call.
+    const openContext = async (opts: Parameters<Browser['newContext']>[0]): Promise<BrowserContext> => {
+      const context = await browser.newContext(opts);
+      try {
+        return await setupContext(context);
+      } catch (err) {
+        await context.close().catch(() => {});
+        throw err;
+      }
+    };
+
     if (options.recordVideoDir) {
       try {
-        return await setupContext(
-          await browser.newContext({
-            ...contextOptions,
-            recordVideo: { dir: options.recordVideoDir, size: viewport },
-          })
-        );
+        return await openContext({
+          ...contextOptions,
+          recordVideo: { dir: options.recordVideoDir, size: viewport },
+        });
       } catch (err) {
         // Missing ffmpeg (`npx playwright install ffmpeg`) must not block the run.
         console.warn(
@@ -206,7 +272,7 @@ export class BrowserManager {
         );
       }
     }
-    return setupContext(await browser.newContext(contextOptions));
+    return openContext(contextOptions);
   }
 
   /**
@@ -215,30 +281,50 @@ export class BrowserManager {
    */
   async openPage(options: BrowserOptions = {}): Promise<{ context: BrowserContext; page: Page }> {
     const engine = options.engine ?? 'chromium';
+    const key = browserKey(engine, targetHostOf(options.baseUrl));
     for (let attempt = 0; ; attempt++) {
       let context: BrowserContext | undefined;
       try {
         context = await this.createContext(options);
-        return { context, page: await context.newPage() };
+        const page = await context.newPage();
+        this.track(key, context);
+        return { context, page };
       } catch (err) {
         await context?.close().catch(() => {});
         if (attempt > 0) throw err;
         const msg = err instanceof Error ? err.message : String(err);
-        const b = this.browsers.get(engine);
+        const b = this.browsers.get(key);
         const isClosed =
           /Target (page, context or browser )?has been closed|Browser has been closed|browser has disconnected/i.test(
             msg
           ) || (b ? !b.isConnected() : false);
         if (!isClosed) throw err;
+        // Other lanes still have live pages in this browser: retry in a new context, do not close it under them.
+        if (b?.isConnected() && this.liveCount(key) > 0) {
+          console.warn(`[Browser] Retrying the context (${engine}), browser shared with live pages`);
+          continue;
+        }
         console.warn(
           `[Browser] Restarting the browser (${engine}): ${err instanceof Error ? err.message.split('\n')[0] : err}`
         );
-        const dead = this.browsers.get(engine);
+        const dead = this.browsers.get(key);
         await dead?.close().catch(() => {});
-        this.browsers.delete(engine);
-        if (engine === 'chromium') this.browser = null;
+        if (this.browsers.get(key) === dead) {
+          this.browsers.delete(key);
+          if (engine === 'chromium') this.browser = null;
+        }
       }
     }
+  }
+
+  private liveCount(key: string): number {
+    return this.live.get(key) ?? 0;
+  }
+
+  /** Counts a page as live until its context closes. */
+  private track(key: string, context: BrowserContext): void {
+    this.live.set(key, this.liveCount(key) + 1);
+    context.once('close', () => this.live.set(key, Math.max(0, this.liveCount(key) - 1)));
   }
 
   async close(): Promise<void> {

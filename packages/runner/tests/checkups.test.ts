@@ -325,12 +325,20 @@ describe('A check-up on the runner', () => {
     const report = await get<ReleaseReport>(`/api/runs/${runId}`);
     expect(report.runId).toBe(runId);
     // Evidence paths are relative to the run's folder, and served from it.
-    const screenshot = report.results.flatMap((r) => r.stepEvidence).find((s) => s.screenshotPath)?.screenshotPath;
+    // Screenshots are taken for failed steps only (docs/CONFIGURATION.md), so a passing check-up has
+    // none; the page thumbnails the plan took (plan-pages/*.jpg) are the images in a run's folder then.
+    let screenshot = report.results.flatMap((r) => r.stepEvidence).find((s) => s.screenshotPath)?.screenshotPath;
+    let imageType = 'image/png';
+    if (!screenshot) {
+      const thumb = (await fs.readdir(path.join(dir, 'plan-pages'))).find((f) => f.endsWith('.jpg'));
+      screenshot = thumb && `plan-pages/${thumb}`;
+      imageType = 'image/jpeg';
+    }
     expect(screenshot).toBeTruthy();
     expect(path.isAbsolute(screenshot!)).toBe(false);
     const image = await fetch(`${runnerUrl}/api/evidence/runs/${runId}/${screenshot}`);
     expect(image.status).toBe(200);
-    expect(image.headers.get('content-type')).toBe('image/png');
+    expect(image.headers.get('content-type')).toBe(imageType);
 
     for (const file of ['report.html', 'report.md', 'findings.json']) {
       const download = await fetch(`${runnerUrl}/api/runs/${runId}/download/${file}`);

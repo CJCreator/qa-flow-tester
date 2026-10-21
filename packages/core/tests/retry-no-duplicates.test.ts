@@ -12,7 +12,7 @@ describe('namespacing: retried flow cannot create duplicates', () => {
   const outputDir = path.join(process.cwd(), '.tmp-retry-no-dupes-report');
   let posts = 0;
   let formLoads = 0;
-  let hideSubmitFirstLoad = false;
+  let dropFirstAttempt = false;
   let seen: string[] = [];
 
   const server = http.createServer((req, res) => {
@@ -47,15 +47,26 @@ describe('namespacing: retried flow cannot create duplicates', () => {
       );
       return;
     }
-    if (url.startsWith('/form')) {
-      formLoads++;
-      const hide = hideSubmitFirstLoad && formLoads === 1 ? 'style="display:none"' : '';
+    // T-57: only a transient failure retries, so the first attempt's /drop loses its connection (net::ERR_).
+    // Each attempt is a fresh context; the cookie set by /form tells the attempts apart.
+    if (url.startsWith('/drop')) {
+      if (dropFirstAttempt && req.headers.cookie?.includes('form=1')) {
+        req.socket.destroy();
+        return;
+      }
+    }
+    // /drop, once reachable, shows the same form.
+    if (url.startsWith('/form') || url.startsWith('/drop')) {
+      if (url.startsWith('/form')) {
+        formLoads++;
+        res.setHeader('set-cookie', `form=${formLoads}; Path=/`);
+      }
       res.end(
         `<html lang="en"><head><title>Form</title></head><body><header><a href="/">Home</a></header><main><h1>Form</h1>
 <label>Name <input data-testid="name" type="text"></label>
 <label>Email <input data-testid="email" type="text"></label>
 <label>Secret <input data-testid="secret" type="text"></label>
-<button data-testid="submit" ${hide}>Send</button>
+<button data-testid="submit">Send</button>
 <script>
 for (const el of document.querySelectorAll('input')) {
   el.addEventListener('input', () => fetch('/seen?v=' + encodeURIComponent(el.value)));
@@ -78,7 +89,7 @@ document.querySelector('[data-testid="submit"]').addEventListener('click', () =>
   beforeEach(() => {
     posts = 0;
     formLoads = 0;
-    hideSubmitFirstLoad = false;
+    dropFirstAttempt = false;
     seen = [];
   });
 
@@ -98,6 +109,7 @@ document.querySelector('[data-testid="submit"]').addEventListener('click', () =>
     expectations: {},
   });
 
+  // Decision 5: three screen sizes by default; one here, so one test point sends the form once.
   const run = (testCase: TestCase, extra: Partial<RunOptions> = {}) =>
     new FlowTestOrchestrator().run({
       targetUrl: `http://localhost:${PORT}`,
@@ -109,6 +121,7 @@ document.querySelector('[data-testid="submit"]').addEventListener('click', () =>
       enablePerformance: false,
       enableSeo: false,
       recordVideo: false,
+      breakpoints: ['1440px'],
       ...extra,
     });
 
@@ -137,8 +150,10 @@ document.querySelector('[data-testid="submit"]').addEventListener('click', () =>
   }, 90000);
 
   it('namespacing: failure before any send still retries whole flow once and is FLAKY_PASSED, POST count 1', async () => {
-    hideSubmitFirstLoad = true;
-    const report = await run(makeCase('TC-NS-3', [...fillSteps, submit]));
+    dropFirstAttempt = true;
+    const report = await run(
+      makeCase('TC-NS-3', [{ action: 'navigate', value: '/drop', name: 'Open Drop' }, ...fillSteps, submit])
+    );
     const point = report.results.find((r) => r.testCaseId === 'TC-NS-3')!;
     expect(point.retry?.status).toBe('FLAKY_PASSED');
     expect(point.retry?.retryCount).toBe(1);

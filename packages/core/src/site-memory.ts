@@ -303,7 +303,11 @@ export function rememberRun(
   next.journeys = journeys;
 
   if (review.reviewed) {
-    next.answers = { ...next.answers, ...(review.answeredByOwner || {}) };
+    // Answers to questions this run no longer asks are dropped, so the memory doesn't grow with every review.
+    const asked = new Set(next.questions);
+    next.answers = Object.fromEntries(
+      Object.entries({ ...next.answers, ...(review.answeredByOwner || {}) }).filter(([key]) => asked.has(key))
+    );
     for (const flow of draft.flows) {
       const key = journeyKey(flow);
       const edit: SiteMemory['edits'][string] = {};

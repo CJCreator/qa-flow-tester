@@ -173,146 +173,147 @@ export class SafePublicCrawler {
       headless: options.headless !== false,
     });
 
-    const context = await browser.newContext({
-      viewport: { width: 1440, height: 900 },
-      userAgent: `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ${USER_AGENT_TOKEN}/1.0`,
-    });
-    await context.addInitScript(BLOCK_FORM_SUBMISSION_SCRIPT);
+    // The browser is closed when anything below throws, as well as at the end of the crawl.
+    try {
+      const context = await browser.newContext({
+        viewport: { width: 1440, height: 900 },
+        userAgent: `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ${USER_AGENT_TOKEN}/1.0`,
+      });
+      await context.addInitScript(BLOCK_FORM_SUBMISSION_SCRIPT);
 
-    const page = await context.newPage();
-    const blockedRequests: string[] = [];
+      const page = await context.newPage();
+      const blockedRequests: string[] = [];
 
-    // 1. Strict Security Interceptor: Block mutating HTTP methods & external domain escapes
-    await page.route('**/*', (route) => {
-      const request = route.request();
-      const method = request.method().toUpperCase();
-      const reqUrl = request.url();
-      const block = () => {
-        blockedRequests.push(`${method} ${reqUrl}`);
-        return route.abort();
-      };
+      // 1. Strict Security Interceptor: Block mutating HTTP methods & external domain escapes
+      await page.route('**/*', (route) => {
+        const request = route.request();
+        const method = request.method().toUpperCase();
+        const reqUrl = request.url();
+        const block = () => {
+          blockedRequests.push(`${method} ${reqUrl}`);
+          return route.abort();
+        };
 
-      // Block all mutating HTTP requests on external websites
-      if (MUTATING_METHODS.includes(method)) {
-        return block();
-      }
-
-      // Block third-party redirects / navigation outside target host
-      try {
-        const u = new URL(reqUrl);
-        if (
-          request.isNavigationRequest() &&
-          !isSameSite(u.hostname, targetHost) &&
-          !u.hostname.endsWith(`.${targetHost}`)
-        ) {
+        // Block all mutating HTTP requests on external websites
+        if (MUTATING_METHODS.includes(method)) {
           return block();
         }
-        if (
-          request.isNavigationRequest() &&
-          isSameSite(u.hostname, targetHost) &&
-          !robots.isAllowed(u.pathname + u.search)
-        ) {
-          return block();
+
+        // Block third-party redirects / navigation outside target host
+        try {
+          const u = new URL(reqUrl);
+          if (
+            request.isNavigationRequest() &&
+            !isSameSite(u.hostname, targetHost) &&
+            !u.hostname.endsWith(`.${targetHost}`)
+          ) {
+            return block();
+          }
+          if (
+            request.isNavigationRequest() &&
+            isSameSite(u.hostname, targetHost) &&
+            !robots.isAllowed(u.pathname + u.search)
+          ) {
+            return block();
+          }
+        } catch {
+          // Continue
         }
-      } catch {
-        // Continue
-      }
 
-      return route.continue();
-    });
-
-    const collector = new EvidenceCollector(evidenceDir);
-    const bugChecker = new BugDetectionChecker();
-    const uxChecker = new UXQualityChecker();
-    if (runChecks) collector.attach(page);
-
-    const steps: ReferenceFlowStep[] = [];
-    const stepEvidence: StepEvidence[] = [];
-    const pages: VisitedPage[] = [];
-    const skippedByRobots: string[] = [];
-    const layoutIds = new Map<string, string>();
-    let findings: Finding[] = [];
-    let stepIndex = 0;
-
-    /** Records the page as it is now: screenshot, reference-flow step, and (when scanning) checks. */
-    const recordStep = async (action: string, stepStartedAt: number): Promise<string> => {
-      const currentUrl = page.url();
-      const pageTitle = await page.title();
-      const pageMetrics = await readPageMetrics(page);
-
-      const screenshotFilePath = path.join(evidenceDir, `step-${stepIndex}-${Date.now()}.png`);
-      try {
-        await page.screenshot({ path: screenshotFilePath, fullPage: false });
-      } catch {
-        // If screenshot fails, continue
-      }
-
-      steps.push({
-        stepIndex,
-        action,
-        url: currentUrl,
-        title: pageTitle,
-        screenshotPath: screenshotFilePath,
-        interactiveControlsFound: pageMetrics.interactiveControls,
-        fieldsCount: pageMetrics.fieldsCount,
-        requiredFieldsCount: pageMetrics.requiredFieldsCount,
+        return route.continue();
       });
 
-      if (runChecks) {
-        findings.push(
-          ...(await this.checkStep(page, collector, bugChecker, uxChecker, blockedRequests, {
-            stepIndex,
-            action,
-            urlBefore: steps[steps.length - 2]?.url ?? entryUrl,
-            screenshotPath: screenshotFilePath,
-            startedAt: stepStartedAt,
-            stepEvidence,
-            entryPath: targetUrlObj.pathname,
-          }))
-        );
-        findings = uxChecker.deduplicateFindings(findings);
-      }
-      options.onStepCompleted?.(stepIndex, findings.length);
-      return screenshotFilePath;
-    };
+      const collector = new EvidenceCollector(evidenceDir);
+      const bugChecker = new BugDetectionChecker();
+      const uxChecker = new UXQualityChecker();
+      if (runChecks) collector.attach(page);
 
-    // A review started below the site root stays in that part of the site: a demo at
-    // /WAI/demos/bad/before/home.html is reviewed, not the rest of w3.org.
-    const scopePrefix = scanScope(entryUrl);
+      const steps: ReferenceFlowStep[] = [];
+      const stepEvidence: StepEvidence[] = [];
+      const pages: VisitedPage[] = [];
+      const skippedByRobots: string[] = [];
+      const layoutIds = new Map<string, string>();
+      let findings: Finding[] = [];
+      let stepIndex = 0;
 
-    // Pages to visit, told apart by path. Addresses of a shape not seen yet go first, so 25 pages
-    // cover a shop's categories, products and pagination rather than 25 categories.
-    const seenPaths = new Set<string>([targetUrlObj.pathname]);
-    const seenShapes = new Set<string>([pathShape(targetUrlObj.pathname)]);
-    const newShapes: string[] = [];
-    const others: string[] = [];
-    const enqueueLinks = (hrefs: string[]) => {
-      for (const href of hrefs) {
-        let u: URL;
+      /** Records the page as it is now: screenshot, reference-flow step, and (when scanning) checks. */
+      const recordStep = async (action: string, stepStartedAt: number): Promise<string> => {
+        const currentUrl = page.url();
+        const pageTitle = await page.title();
+        const pageMetrics = await readPageMetrics(page);
+
+        const screenshotFilePath = path.join(evidenceDir, `step-${stepIndex}-${Date.now()}.png`);
         try {
-          u = new URL(href, page.url());
+          await page.screenshot({ path: screenshotFilePath, fullPage: false });
         } catch {
-          continue;
+          // If screenshot fails, continue
         }
-        u.hash = '';
-        if (!isSameSite(u.hostname, targetHost) || !/^https?:$/.test(u.protocol)) continue;
-        if (!u.pathname.startsWith(scopePrefix)) continue;
-        if (NOT_A_PAGE.test(u.pathname) || SESSION_ENDING.test(u.pathname) || seenPaths.has(u.pathname)) continue;
-        seenPaths.add(u.pathname);
-        if (!robots.isAllowed(u.pathname + u.search)) {
-          skippedByRobots.push(u.pathname);
-          continue;
-        }
-        const shape = pathShape(u.pathname);
-        if (seenShapes.has(shape)) others.push(u.toString());
-        else {
-          seenShapes.add(shape);
-          newShapes.push(u.toString());
-        }
-      }
-    };
 
-    try {
+        steps.push({
+          stepIndex,
+          action,
+          url: currentUrl,
+          title: pageTitle,
+          screenshotPath: screenshotFilePath,
+          interactiveControlsFound: pageMetrics.interactiveControls,
+          fieldsCount: pageMetrics.fieldsCount,
+          requiredFieldsCount: pageMetrics.requiredFieldsCount,
+        });
+
+        if (runChecks) {
+          findings.push(
+            ...(await this.checkStep(page, collector, bugChecker, uxChecker, blockedRequests, {
+              stepIndex,
+              action,
+              urlBefore: steps[steps.length - 2]?.url ?? entryUrl,
+              screenshotPath: screenshotFilePath,
+              startedAt: stepStartedAt,
+              stepEvidence,
+              entryPath: targetUrlObj.pathname,
+            }))
+          );
+          findings = uxChecker.deduplicateFindings(findings);
+        }
+        options.onStepCompleted?.(stepIndex, findings.length);
+        return screenshotFilePath;
+      };
+
+      // A review started below the site root stays in that part of the site: a demo at
+      // /WAI/demos/bad/before/home.html is reviewed, not the rest of w3.org.
+      const scopePrefix = scanScope(entryUrl);
+
+      // Pages to visit, told apart by path. Addresses of a shape not seen yet go first, so 25 pages
+      // cover a shop's categories, products and pagination rather than 25 categories.
+      const seenPaths = new Set<string>([targetUrlObj.pathname]);
+      const seenShapes = new Set<string>([pathShape(targetUrlObj.pathname)]);
+      const newShapes: string[] = [];
+      const others: string[] = [];
+      const enqueueLinks = (hrefs: string[]) => {
+        for (const href of hrefs) {
+          let u: URL;
+          try {
+            u = new URL(href, page.url());
+          } catch {
+            continue;
+          }
+          u.hash = '';
+          if (!isSameSite(u.hostname, targetHost) || !/^https?:$/.test(u.protocol)) continue;
+          if (!u.pathname.startsWith(scopePrefix)) continue;
+          if (NOT_A_PAGE.test(u.pathname) || SESSION_ENDING.test(u.pathname) || seenPaths.has(u.pathname)) continue;
+          seenPaths.add(u.pathname);
+          if (!robots.isAllowed(u.pathname + u.search)) {
+            skippedByRobots.push(u.pathname);
+            continue;
+          }
+          const shape = pathShape(u.pathname);
+          if (seenShapes.has(shape)) others.push(u.toString());
+          else {
+            seenShapes.add(shape);
+            newShapes.push(u.toString());
+          }
+        }
+      };
+
       let nextUrl: string | undefined = entryUrl;
       let lastLoadAt = 0;
       while (nextUrl && pages.length < maxPages) {
@@ -364,25 +365,25 @@ export class SafePublicCrawler {
 
         nextUrl = newShapes.shift() ?? others.shift();
       }
+
+      return {
+        flow: {
+          id: `ref_${targetHost}_${Date.now()}`,
+          targetDomain: targetHost,
+          entryUrl,
+          name: options.flowName || 'reference-flow',
+          steps,
+          timestamp: new Date().toISOString(),
+        },
+        findings,
+        stepEvidence,
+        blockedRequests,
+        pages,
+        skippedByRobots: [...new Set(skippedByRobots)],
+      };
     } finally {
       await browser.close();
     }
-
-    return {
-      flow: {
-        id: `ref_${targetHost}_${Date.now()}`,
-        targetDomain: targetHost,
-        entryUrl,
-        name: options.flowName || 'reference-flow',
-        steps,
-        timestamp: new Date().toISOString(),
-      },
-      findings,
-      stepEvidence,
-      blockedRequests,
-      pages,
-      skippedByRobots: [...new Set(skippedByRobots)],
-    };
   }
 
   private async checkStep(

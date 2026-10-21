@@ -7,8 +7,8 @@ Read in this order when you are new to the project (people and Claude Code alike
 | [`../README.md`](../README.md)                                | What the tool is, quick start, running and publishing it                                                                                           |
 | [`../CONTEXT.md`](../CONTEXT.md)                              | The domain glossary. Use these terms exactly, in code, UI text and docs                                                                            |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md)                          | Packages, how a check-up flows through them, where state lives                                                                                     |
-| [`adr/`](adr/)                                                | Why the big decisions were made. Read the relevant one before changing behavior (note: numbers 0013 and 0015 are reserved/deferred in the roadmap) |
-| [`adr/0028-...`](adr/0028-plan-review-default-with-signin.md) | Latest ADR (0028): plan review is on by default when sign-in details are given (accepted)                                                          |
+| [`adr/`](adr/)                                                | Why the big decisions were made. Read the relevant one before changing behavior (note: 0013 and 0015 are Deferred placeholders, no decision made) |
+| [`adr/0031-...`](adr/0031-every-outbound-request-uses-pinned-resolver.md) | Latest ADR (0031): every outbound request uses the pinned, redirect-checked resolver (accepted)                                                    |
 | [`DEMO.md`](DEMO.md)                                          | The presenter script: setup, the golden path with the on-screen labels, the form journey and what to expect on each fixture page                   |
 | [`TESTING.md`](TESTING.md)                                    | Test layout, what to run when, how to add a test                                                                                                   |
 | [`CONFIGURATION.md`](CONFIGURATION.md)                        | Every environment variable, port and data folder                                                                                                   |
@@ -28,6 +28,6 @@ Product and planning documents that already exist:
 - [`PRODUCT_GUIDE.md`](PRODUCT_GUIDE.md): full product specification
 - [`E2E_PLATFORM_IMPLEMENTATION_PLAN.md`](E2E_PLATFORM_IMPLEMENTATION_PLAN.md) and [`research/e2e-platform-roadmap.md`](research/e2e-platform-roadmap.md): the end-to-end testing expansion
 - [`../PRODUCT_REVIEW.md`](../PRODUCT_REVIEW.md): product review and gap analysis
-- [`SEO_AEO_GEO_STRATEGY.md`](SEO_AEO_GEO_STRATEGY.md), [`design/`](design/)
+- [`SEO_AEO_GEO_STRATEGY.md`](SEO_AEO_GEO_STRATEGY.md)
 
 When a doc and the code disagree, the code wins: fix the doc in the same pull request.

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { navigate, PATHS, type Route } from '../lib/router';
-import { downloadPlanMarkdown } from '../api';
+import { downloadPlanMarkdown, getShortcutsOn, saveShortcutsOn } from '../api';
 
 export interface CommandAction {
   id: string;
@@ -11,12 +11,30 @@ export interface CommandAction {
   run: () => void;
 }
 
+/** The control Tab moves to inside the palette: it wraps at both ends, so focus never leaves it. */
+export function trapTabIndex(count: number, current: number, shift: boolean): number {
+  if (count === 0) return -1;
+  if (shift) return current <= 0 ? count - 1 : current - 1;
+  return current >= count - 1 ? 0 : current + 1;
+}
+
 export function CommandPalette({ route }: { route: Route }) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<'command' | 'shortcuts'>('command');
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [singleKeys, setSingleKeys] = useState(getShortcutsOn);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // Focus goes back to whatever opened the palette when it closes.
+  useEffect(() => {
+    if (!open) return;
+    const opener = document.activeElement;
+    return () => {
+      if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
+    };
+  }, [open]);
 
   // Global keyboard listeners
   useEffect(() => {
@@ -34,8 +52,8 @@ export function CommandPalette({ route }: { route: Route }) {
         return;
       }
 
-      // ? key for shortcut cheatsheet (when not in input)
-      if (e.key === '?' && !isInput && !e.metaKey && !e.ctrlKey) {
+      // ? key for shortcut cheatsheet (when not in input, and only while single-key shortcuts are on)
+      if (e.key === '?' && !isInput && !e.metaKey && !e.ctrlKey && getShortcutsOn()) {
         e.preventDefault();
         setOpen(true);
         setMode('shortcuts');
@@ -282,6 +300,16 @@ export function CommandPalette({ route }: { route: Route }) {
       aria-modal="true"
       aria-label="Command Palette"
       className="fixed inset-0 z-[100] flex items-start justify-center p-4 sm:p-6"
+      onKeyDown={(e) => {
+        // Tab stays inside the palette while it is open.
+        if (e.key !== 'Tab') return;
+        e.preventDefault();
+        const controls = Array.from(
+          dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled])') ?? []
+        );
+        const at = controls.indexOf(document.activeElement as HTMLElement);
+        controls[trapTabIndex(controls.length, at, e.shiftKey)]?.focus();
+      }}
     >
       {/* Backdrop */}
       <div
@@ -291,7 +319,10 @@ export function CommandPalette({ route }: { route: Route }) {
       />
 
       {/* Modal Dialog */}
-      <div className="relative z-10 w-full max-w-2xl overflow-hidden rounded-panel border border-rule bg-panel shadow-level-4 transition-all">
+      <div
+        ref={dialogRef}
+        className="relative z-10 w-full max-w-2xl overflow-hidden rounded-panel border border-rule bg-panel shadow-level-4 transition-all"
+      >
         {/* Header Tabs */}
         <div className="flex border-b border-rule bg-surface/60 px-4 py-2 text-sm">
           <button
@@ -348,7 +379,7 @@ export function CommandPalette({ route }: { route: Route }) {
                     setOpen(false);
                   }
                 }}
-                className="w-full bg-transparent text-lg text-ink placeholder:text-ink-soft focus:outline-none"
+                className="w-full bg-transparent text-lg text-ink placeholder:text-ink-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stamp focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
               />
             </div>
 
@@ -405,6 +436,18 @@ export function CommandPalette({ route }: { route: Route }) {
         ) : (
           /* Keyboard Shortcuts Cheatsheet */
           <div className="max-h-[30rem] overflow-y-auto p-5 space-y-6">
+            <label className="flex items-center justify-between gap-3 rounded border border-rule bg-surface/60 p-2 text-sm">
+              <span>Single-key shortcuts (?, j, k, g, Space, Enter)</span>
+              <input
+                type="checkbox"
+                checked={singleKeys}
+                onChange={(e) => {
+                  setSingleKeys(e.target.checked);
+                  saveShortcutsOn(e.target.checked);
+                }}
+                className="h-4 w-4 accent-stamp"
+              />
+            </label>
             <div>
               <h3 className="mb-2 text-sm font-bold uppercase tracking-wider text-stamp">General Shortcuts</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">

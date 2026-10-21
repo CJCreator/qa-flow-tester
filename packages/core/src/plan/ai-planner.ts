@@ -569,6 +569,8 @@ function readPageAnswer(
       return;
     }
     const steps: TestCaseStep[] = [];
+    // The CSS selector the answer gave for each step: a form is matched on it, not on the preferred role/text form.
+    const givenSelectors: string[] = [];
     for (const s of rawSteps) {
       const action = s?.action;
       const target = typeof s?.selector === 'string' ? byTarget.get(s.selector) : undefined;
@@ -591,6 +593,7 @@ function readPageAnswer(
             : guessFillValue(`${s.selector} ${target.name}`)
           : undefined;
       const chosen = selectorForStep(s.selector, target.element);
+      givenSelectors.push(s.selector);
       steps.push({
         action,
         selector: chosen.selector,
@@ -626,13 +629,14 @@ function readPageAnswer(
     if (wanted === 'works') test.intent = 'works';
     else if (wanted === 'limits' || wanted === 'rejects') {
       const clicked = steps.length > 0 ? steps[steps.length - 1] : undefined;
+      const clickedGiven = givenSelectors[givenSelectors.length - 1];
       const form = forms.find(
         (f) =>
           (f.method || 'GET').toUpperCase() !== 'GET' &&
           !!f.submitButtonSelector &&
           clicked?.action === 'click' &&
-          clicked.selector === f.submitButtonSelector &&
-          steps.some((s) => s.action === 'fill' && f.inputs.some((i) => i.selector === s.selector))
+          clickedGiven === f.submitButtonSelector &&
+          steps.some((s, i) => s.action === 'fill' && f.inputs.some((inp) => inp.selector === givenSelectors[i]))
       );
       if (form) {
         test.intent = wanted;

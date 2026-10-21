@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { AspectGrade, Finding, ReleaseReport } from '@qa/types';
-import { getRun, RunnerError } from '../api';
+import { getRun, plainError } from '../api';
 import { ErrorMessage, FocusHeading, Spinner } from '../components/text';
 import { gradeClasses } from '../lib/grades';
 import { Link, PATHS } from '../lib/router';
@@ -56,7 +56,7 @@ export function VisibilityScreen({ runId }: { runId: string }) {
       .catch(
         (err) =>
           !cancelled &&
-          setError(err instanceof RunnerError ? err.message : 'The report could not be opened. Try again.')
+          setError(plainError(err, 'The report could not be opened. Try again.'))
       );
     return () => {
       cancelled = true;
@@ -218,7 +218,7 @@ export function VisibilityScreen({ runId }: { runId: string }) {
           <div className="rounded-card border border-edge bg-surface p-5 shadow-level-1">
             <h3 className="mb-3 text-base font-bold text-ink">Marketing Basics Checklist</h3>
             <p className="mb-4 text-xs text-ink-soft">
-              Scanned across tested pages to evaluate social reach, user action guidance, and trust factors.
+              Checked across tested pages to evaluate social reach, user action guidance, and trust factors.
             </p>
             <ul className="divide-y divide-rule text-sm">
               {marketingChecks.map((check) => (

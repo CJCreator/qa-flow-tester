@@ -28,7 +28,8 @@ describe('Redactor', () => {
 
   it('hides secret-looking URL parameters even when the secret is unknown', () => {
     expect(redactUrl('https://x.test/cb?code=1&access_token=abc.def&state=2')).toBe(
-      'https://x.test/cb?code=1&access_token=***&state=2'
+      // T-44: code is a secret-looking parameter, so its value is masked too.
+      'https://x.test/cb?code=***&access_token=***&state=2'
     );
     expect(redactUrl('see /reset?token=zzz for details')).toBe('see /reset?token=*** for details');
     expect(redactUrl('/search?q=password')).toBe('/search?q=password');

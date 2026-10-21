@@ -12,7 +12,7 @@ import type {
   TestCaseExpectations,
 } from '@qa/types';
 import { stepToSentence, expectationsToChecks } from '../../lib/plan-translate';
-import type { InterpretResult, PatchPlanBody } from '../../api';
+import { getShortcutsOn, plainError, type InterpretResult, type PatchPlanBody } from '../../api';
 import {
   confirmRolesEdit,
   docSourceLabel,
@@ -79,7 +79,7 @@ export interface PlanActions {
   /** Renames a journey inline. */
   renameJourney?: (flowId: string, newName: string) => Promise<void>;
   /** Confirms the AI's guess of what should happen (no text), or replaces it with the person's own words. */
-  setExpectation: (itemId: string, text?: string) => void;
+  setExpectation: (itemId: string, text?: string) => Promise<boolean>;
   /** Signs in as a role from the review, and adds what it sees to the plan. */
   addSignIn: (signIn: RoleCredential) => Promise<void>;
   /** Desktop only, and only the shared menus' links. */
@@ -456,8 +456,7 @@ function Expected({
           onSubmit={(e) => {
             e.preventDefault();
             if (!text.trim()) return;
-            actions.setExpectation(itemId, text.trim());
-            setEditing(false);
+            void actions.setExpectation(itemId, text.trim()).then((saved) => saved && setEditing(false));
           }}
         >
           <input
@@ -529,7 +528,7 @@ function AddSignIn({ actions }: { actions: PlanActions }) {
           setPasswordSelector('');
           setSubmitSelector('');
         } catch (err) {
-          setError(err instanceof Error ? err.message : 'The sign-in couldn’t be added.');
+          setError(plainError(err, 'The sign-in couldn’t be added.'));
         }
       }}
     >
@@ -1191,7 +1190,7 @@ function PagesSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAction
             await actions.addPage(address.trim());
             setAddress('');
           } catch (err) {
-            setError(err instanceof Error ? err.message : 'The page couldn’t be added.');
+            setError(plainError(err, 'The page couldn’t be added.'));
           }
         }}
       >
@@ -1232,7 +1231,7 @@ function NavRow({ nav, actions }: { nav: NavigationCheck; actions: PlanActions }
     >
       <div className="flex items-start gap-2">
         <ItemToggle
-          label={`Check the link: ${nav.name}`}
+          label={`Navigation Check: ${nav.name}`}
           on={!nav.skipped}
           disabled={actions.busy}
           onChange={(on) => actions.setSkipped(nav.id, !on)}
@@ -1438,7 +1437,7 @@ function DescribeTest({ plan, actions }: { plan: ReviewPlan; actions: PlanAction
               if (r.ok && r.flow) setResult(r);
               else setError(r.message || 'That couldn’t be turned into a test. Try saying it another way.');
             } catch (err) {
-              setError(err instanceof Error ? err.message : 'That couldn’t be turned into a test.');
+              setError(plainError(err, 'That couldn’t be turned into a test.'));
             } finally {
               setWorking(false);
             }
@@ -1675,7 +1674,7 @@ function NotFoundSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAct
       id="plan-notfound"
       title="Not found in app"
       count={groups.reduce((n, g) => n + g.items.length, 0)}
-      intro={`${line ? `${line}. ` : ''}These are in your documents but the scan found no matching page or control. They are not counted as failures. Remove one if it is not meant to exist, or add the page and scan again.`}
+      intro={`${line ? `${line}. ` : ''}These are in your documents but the check-up found no matching page or control. They are not counted as failures. Remove one if it is not meant to exist, or add the page and run the check-up again.`}
       collapsible
     >
       {groups.map((group) => (
@@ -1894,6 +1893,8 @@ function usePlanKeyboardNavigation() {
       }
 
       if (e.metaKey || e.ctrlKey || e.altKey) return;
+      // The person turned single-key shortcuts off (Command Palette, Keyboard Shortcuts tab).
+      if (!getShortcutsOn()) return;
 
       // Handle 'g' chords
       if (chordRef.current === 'g') {

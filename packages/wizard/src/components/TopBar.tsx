@@ -64,9 +64,13 @@ function NavLink({
     <Link to={l.to} aria-current={current} onClick={onNavigate} className={`${ITEM} ${tone(current)} ${extra}`}>
       {l.label}
       {l.to === PATHS.new && checkupInProgress && route.name !== 'new' && (
-        <span className="relative ml-2 flex h-2 w-2" aria-label="(a check-up is in progress)" role="img">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-stamp opacity-75" />
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-stamp" />
+        // The word says it too, so the dot is not the only sign (colour alone does not carry the meaning).
+        <span className="ml-2 inline-flex items-center gap-1.5 text-xs font-bold text-stamp">
+          <span aria-hidden="true" className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-stamp opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-stamp" />
+          </span>
+          In progress
         </span>
       )}
     </Link>
@@ -122,6 +126,7 @@ export function TopBar({
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLLIElement>(null);
   const moreButtonRef = useRef<HTMLButtonElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const close = () => {
     setMenuOpen(false);
     setMoreOpen(false);
@@ -147,6 +152,19 @@ export function TopBar({
       document.removeEventListener('mousedown', onDown);
     };
   }, [moreOpen]);
+
+  // Escape closes the mobile menu and gives focus back to its button.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setMenuOpen(false);
+      setMoreOpen(false);
+      menuButtonRef.current?.focus();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [menuOpen]);
 
   useEffect(() => {
     if (!menuOpen || typeof window.matchMedia !== 'function') return;
@@ -202,6 +220,7 @@ export function TopBar({
           type="button"
           aria-expanded={menuOpen}
           aria-controls={menuOpen ? 'mobile-menu' : undefined}
+          ref={menuButtonRef}
           onClick={() => setMenuOpen((o) => !o)}
           className={`${ITEM} border border-edge/60 text-ink sm:hidden`}
         >
@@ -267,7 +286,7 @@ export function TopBar({
                         : route.name === 'settings'
                           ? 'Settings'
                           : route.name === 'scan'
-                            ? 'Scanning'
+                            ? 'Exploring'
                             : route.name === 'testing'
                               ? 'Testing'
                               : route.name === 'plan'

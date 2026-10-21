@@ -7,7 +7,7 @@ export interface NavigateOptions {
   timeoutMs?: number;
   /** Default 1; the retry uses timeoutMs * 1.5 */
   retries?: number;
-  /** Cap for the idle wait after DOMContentLoaded, default 3000 */
+  /** Cap for the idle wait after DOMContentLoaded, default 1000 (network idle ends it earlier) */
   settleMs?: number;
   /** Wait for at least one a[href] or interactive element (spider), default false */
   needLinks?: boolean;
@@ -33,6 +33,11 @@ export interface NavigateResult {
   /** Kind only, never message text */
   error?: { kind: 'timeout' | 'net' | 'aborted' | 'other' };
 }
+
+/** Default cap for the settle wait. A page that never goes network-idle waits this long, not longer. */
+const DEFAULT_SETTLE_MS = 1000;
+/** How long a link or control may take to appear on a page that has none yet (spider, SPA hydration). */
+const LINK_WAIT_MS = 2000;
 
 /**
  * Classifies a Playwright navigation error into a kind enum without leaking error message text.
@@ -63,10 +68,10 @@ export async function settlePage(
   page: Page,
   options?: { settleMs?: number; needLinks?: boolean }
 ): Promise<{ settled: boolean; linkCount: number }> {
-  const settleMs = options?.settleMs ?? 3000;
+  const settleMs = options?.settleMs ?? DEFAULT_SETTLE_MS;
   const needLinks = options?.needLinks ?? false;
 
-  // Race networkidle with the settle cap
+  // Race networkidle with the settle cap: networkidle is only an early exit
   await Promise.race([page.waitForLoadState('networkidle').catch(() => {}), page.waitForTimeout(settleMs)]);
 
   let linkCount = 0;
@@ -85,16 +90,16 @@ export async function settlePage(
       const candidates = page.locator('a[href], button, [role=link], [role=button]');
       await candidates
         .first()
-        .waitFor({ state: 'visible', timeout: Math.min(settleMs, 2000) })
+        .waitFor({ state: 'visible', timeout: LINK_WAIT_MS })
         .catch(() => {});
       linkCount = await page
         .locator('a[href]')
         .count()
         .catch(() => 0);
 
-      // Zero-link retry: if still zero links, wait once more up to settleMs for SPA hydration
+      // Zero-link retry: if still zero links, wait once more up to LINK_WAIT_MS for SPA hydration
       if (linkCount === 0) {
-        await page.waitForTimeout(Math.min(settleMs, 2000));
+        await page.waitForTimeout(LINK_WAIT_MS);
         linkCount = await page
           .locator('a[href]')
           .count()
@@ -111,8 +116,6 @@ export async function settlePage(
  * Returns true if a visible input[type=password] exists or current path matches loginPaths.
  */
 export async function looksLikeLogin(page: Page, loginPaths?: string[]): Promise<boolean> {
-  await page.waitForTimeout(300).catch(() => {});
-
   try {
     const currentUrl = new URL(page.url());
     if (loginPaths) {
@@ -149,7 +152,7 @@ export async function looksLikeLogin(page: Page, loginPaths?: string[]): Promise
 export async function navigate(page: Page, url: string, options?: NavigateOptions): Promise<NavigateResult> {
   const timeoutMs = options?.timeoutMs ?? 15000;
   const retries = options?.retries ?? 1;
-  const settleMs = options?.settleMs ?? 3000;
+  const settleMs = options?.settleMs ?? DEFAULT_SETTLE_MS;
   const needLinks = options?.needLinks ?? false;
 
   const startTime = Date.now();

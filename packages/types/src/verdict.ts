@@ -8,6 +8,7 @@ export interface ReleaseGateCriteria {
   strictAccessibility?: boolean;
   minAreaScore?: number;
   minAreaGrade?: AspectGrade;
+  /** An area nothing checked fails the gate. Without it, the area is only listed as "not checked". */
   enforceAllAreas?: boolean;
   advisoryAreas?: AspectType[];
 }
@@ -16,12 +17,13 @@ export interface ReleaseGateCriteria {
  * The one definition of "ready to release" (PRD FR-8.2, DEMO-READINESS-PLAN decision 1). It is
  * applied only by `releaseVerdict`; the screens, report.html, report.md, the stamp and the CLI exit
  * code all call it.
- * - standard (the default): 0 Blockers and every checked area at C or better. Majors do not block on
+ * - standard (the default): 0 Blockers and every area checked and at C or better. Majors do not block on
  *   their own, but they lower the area grade (see scoring.ts).
- * - strict: 0 Blockers, 0 Majors, every checked area at A (score 90+), Accessible at A.
+ * - strict: 0 Blockers, 0 Majors, every area checked and at A (score 90+), Accessible at A.
  * - lenient: 0 Blockers; area grades are not checked.
- * An area nothing checked (grade null) is never counted as a pass and never fails a gate; it is listed
- * as "not checked" in the verdict.
+ * An area nothing checked (grade null) is never counted as a pass. Where `enforceAllAreas` is set
+ * (standard and strict) it fails the gate; otherwise it is listed as "not checked" in the verdict.
+ * A run where nothing was checked is never ready.
  */
 export const DEFAULT_RELEASE_GATES: Record<'strict' | 'standard' | 'lenient', ReleaseGateCriteria> = {
   strict: {
@@ -82,6 +84,17 @@ export function countsTowardVerdict(
   return !isDismissed(f) && !f.needsConfirmation && !f.advisory && f.checker !== 'ai-review';
 }
 
+/**
+ * True when no check ran: no findings, and every area is unchecked. With no grades given, only the
+ * findings can say, so no findings means nothing ran.
+ */
+export function nothingWasChecked(findings?: readonly unknown[] | null, grades?: SiteAspectGrades): boolean {
+  if ((findings ?? []).length > 0) return false;
+  if (!grades) return true;
+  const areas: Array<SiteAspectGrades['aspects'][AspectType] | undefined> = Object.values(grades.aspects ?? {});
+  return areas.every((a) => !a || a.checked === false || a.grade === null);
+}
+
 export function releaseVerdict(
   findings?: Array<
     Pick<Finding, 'severity' | 'triageStatus' | 'needsConfirmation' | 'title'> & Partial<Finding>
@@ -92,6 +105,7 @@ export function releaseVerdict(
 ): ReleaseVerdict {
   gate = gate ?? DEFAULT_RELEASE_GATES.standard;
   const customGate = gate !== DEFAULT_RELEASE_GATES.standard;
+  const nothingChecked = nothingWasChecked(findings, grades);
   // AI-written findings are advisory: they never change the verdict (ADR 0009).
   const safeFindings = (findings ?? []).filter((f) => !f.advisory && f.checker !== 'ai-review');
   const problems = groupIntoProblems(
@@ -157,8 +171,14 @@ export function releaseVerdict(
       }
     }
   }
+  if (gate.enforceAllAreas && notChecked.length > 0) {
+    breaches.push(
+      `${notChecked.length} ${notChecked.length === 1 ? 'area' : 'areas'} not checked (every area must be checked)`
+    );
+  }
 
-  const ready = !blockersBreached && !majorsBreached && !minorsBreached && breaches.length === 0;
+  const ready =
+    !nothingChecked && !blockersBreached && !majorsBreached && !minorsBreached && breaches.length === 0;
   const mustFix = counts.Blocker + counts.Major;
   const others = counts.Minor + counts.Suggestion;
 
@@ -170,7 +190,9 @@ export function releaseVerdict(
   const notRunText = notRun.length > 0 ? ` Not checked: ${notRun.join(', ')}.` : '';
 
   let reason = '';
-  if (ready) {
+  if (nothingChecked) {
+    reason = 'No checks ran.';
+  } else if (ready) {
     reason =
       others === 0
         ? 'No problems found.'
@@ -181,7 +203,7 @@ export function releaseVerdict(
         ? `${mustFix} ${mustFix === 1 ? 'problem must' : 'problems must'} be fixed first.`
         : `Quality gate breached: ${breaches.join(' and ')} must be fixed first.`;
   }
-  reason += notRunText;
+  if (!nothingChecked) reason += notRunText;
 
   return {
     ready,

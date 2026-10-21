@@ -197,6 +197,8 @@ export function refreshPlan(record: StoredPlanRecord, session: CheckupSession): 
   if (custom) record.plan.testCases = custom;
 }
 
+const PLAN_SAVE_FAILED = "Couldn't save the plan. Try again.";
+
 function redactError(err: unknown, record: StoredPlanRecord, session: CheckupSession): string {
   const raw = err instanceof Error ? err.message : String(err);
   const secrets: Array<Partial<RoleCredential>> = [...(record.context.profile?.roles || [])];
@@ -237,6 +239,18 @@ export async function getPlan(c: PlanRouteContext): Promise<void> {
   sendJson(res, 200, session.plan.forClient(record.plan));
 }
 
+/** Built once per Plan: the validator indexes the pages and forms, which change only when the Plan is rebuilt. */
+const planValidators = new WeakMap<object, { forms: unknown; validator: PlanValidator }>();
+
+function validatorFor(record: StoredPlanRecord): PlanValidator {
+  const forms = record.context.draft?.forms;
+  const cached = planValidators.get(record.plan);
+  if (cached && cached.forms === forms) return cached.validator;
+  const validator = new PlanValidator(record.plan.pages, forms);
+  planValidators.set(record.plan, { forms, validator });
+  return validator;
+}
+
 export async function patchPlan(c: PlanRouteContext): Promise<void> {
   const { session, req, res } = c;
   const record = await ensurePlanLoaded(session);
@@ -263,7 +277,7 @@ export async function patchPlan(c: PlanRouteContext): Promise<void> {
     intentsOff = checked.value;
   }
 
-  const validator = new PlanValidator(record.plan.pages, record.context.draft?.forms);
+  const validator = validatorFor(record);
   if (Array.isArray(body.testCases)) {
     const issues = validator.check(body.testCases.map(asFlow));
     if (issues.length > 0) {
@@ -405,7 +419,12 @@ export async function patchPlan(c: PlanRouteContext): Promise<void> {
   }
 
   if (draft) refreshPlan(record, session);
-  await session.plan.save(record);
+  try {
+    await session.plan.save(record);
+  } catch {
+    sendJson(res, 500, { error: PLAN_SAVE_FAILED });
+    return;
+  }
   const small =
     body.intentsOff === undefined &&
     !body.flows &&
@@ -538,7 +557,10 @@ export async function startPlanUpdate(
         if (draft.exploration) draft.exploration.notes = [...new Set([...draft.exploration.notes, ...notes])];
         if (c.recordModelOutcomes) await c.recordModelOutcomes(paced?.models);
         refreshPlan(record, session);
-        await session.plan.save(record);
+        // The response was sent before this ran, so a failed save reaches the wizard as PLAN_UPDATE_FAILED.
+        await session.plan.save(record).catch(() => {
+          throw new Error(PLAN_SAVE_FAILED);
+        });
         broadcast({ type: 'PLAN_UPDATED', runId, what, timestamp: Date.now() });
       } catch (err) {
         broadcast({
@@ -1172,7 +1194,16 @@ async function approveOnce(c: PlanRouteContext, idempotencyKey: string | undefin
   }
 
   record.status = 'approved';
-  await session.plan.save(record);
+  // The run claims the slot before the save is awaited, so a start with replacePlan cannot take the plan in between.
+  const waitingPhase = session.run.phase;
+  session.run.setPhase('testing');
+  try {
+    await session.plan.save(record);
+  } catch {
+    session.run.setPhase(waitingPhase);
+    sendJson(res, 500, { error: PLAN_SAVE_FAILED });
+    return;
+  }
 
   sendJson(res, 200, {
     status: 'approved',
@@ -1241,7 +1272,12 @@ export async function waitingPlans(c: PlanRouteContext): Promise<void> {
     return;
   }
   if (waitingNow) await session.plan.park(waitingNow);
-  await session.plan.save(record);
+  try {
+    await session.plan.save(record);
+  } catch {
+    sendJson(res, 500, { error: PLAN_SAVE_FAILED });
+    return;
+  }
   session.run.setPhase('awaiting-review');
   session.run.setIsRunning(true);
   session.run.setRunId(record.plan.runId);

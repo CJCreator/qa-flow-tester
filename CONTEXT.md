@@ -38,7 +38,7 @@ _Avoid_: Requirement, spec rule (when unconfirmed)
 
 **Product Context**:
 External reference material (PRDs, user stories, design documents) provided by QA or product managers to guide discovery and planning. Markdown, text or Word (.docx) files, or a docs URL. With no AI key, fixed rules turn it into Plan Items (User Flows, route access, Denial items), each with its Source; expectations they cannot check go under Needs your judgement.
-_Avoid_: Spec, documentation, requirements doc
+_Avoid_: Documentation, requirements doc
 
 **Requirement**:
 A functional or non-functional capability that the Product Context states the application must fulfill, or that the person confirmed during review. Whether the Spider reached it is an outcome the report counts ("N of M documented items reached"), not part of what a Requirement is.
@@ -188,10 +188,6 @@ _Avoid_: Ignored page, missing page
 One row per route the crawl attempted: the path asked for (redacted), the HTTP status, where it landed, the outcome (`recorded` or `skipped`), the skip reason when skipped, how many attempts, how long it took, and which Role or visitor it was. Route Telemetry is the crawl's own account of itself, so the page count and the Plan's map can be checked against it.
 _Avoid_: Crawl log, request log, trace
 
-**Canonical Finding**:
-A unique, deduplicated defect or non-conformance record maintained by the Report Hub, representing an underlying issue across multiple developer runs and releases.
-_Avoid_: Bug ticket, report item, merged issue
-
 **Structural Fingerprint**:
 A deterministic hash generated from invariant finding attributes (`productId`, `normalizedRoute`, `checkerId`, `ruleCode`, `targetElementSelector`) used to recognize identical issues regardless of run environment, developer, or timestamp.
 _Avoid_: Error hash, bug signature, checksum
@@ -200,29 +196,9 @@ _Avoid_: Error hash, bug signature, checksum
 The concrete occurrence of a finding captured during a single test execution run on an individual machine, preserving raw run-level evidence (screenshots, DOM snapshots, network logs).
 _Avoid_: Local bug, run result, raw failure
 
-**Report Hub**:
-The centralized service and persistent datastore aggregating test executions from distributed developer machines into unified product releases and tracking canonical defects.
-_Avoid_: Central server, test backend, QA portal
-
-**Run Ingestion**:
-The authenticated transmission protocol where a Local Runner uploads an executed run bundle (metadata, results, findings, and evidence references) to the Report Hub.
-_Avoid_: Test sync, upload job, push
-
 **Evidence Bundle**:
 The complete collection of persistent binary and textual artifacts (screenshots, video recordings, Playwright trace files, DOM snapshots, network logs) produced by a test run.
 _Avoid_: Artifact zip, logs folder, media attachments
-
-**Two-Phase Ingestion**:
-The handshake protocol where the runner initializes a run manifest with the Hub, receives pre-signed direct-upload URLs to object storage for the Evidence Bundle, and notifies the Hub upon upload completion to finalize consolidation.
-_Avoid_: Upload flow, chunked push, direct upload
-
-**Targeted Verification**:
-The rule requiring that a Canonical Finding only transitions to `VERIFIED_FIXED` when the specific flow and step associated with its Structural Fingerprint is actively executed in a subsequent run and passes cleanly.
-_Avoid_: Auto-resolve, blind closure, sweep resolution
-
-**Finding Lifecycle State**:
-The discrete status of a Canonical Finding within a release (`OPEN`, `VERIFIED_FIXED`, `REGRESSED`, `ACCEPTED_RISK`).
-_Avoid_: Bug status, ticket workflow
 
 **Design Token Conformance**:
 The deterministic verification of an interactive element's live `getComputedStyle()` attributes (colors, typography, border radii, spacing) against declared design system variables.
@@ -261,24 +237,12 @@ The separation of parallel test runners into independent Playwright `BrowserCont
 _Avoid_: Thread isolation, process sandbox
 
 **Clean Flow Retry**:
-The recovery strategy that aborts a failed flow, preserves failure diagnostics, and restarts execution from the initial step inside a pristine `BrowserContext` to avoid contaminated UI or session state.
+The recovery strategy that aborts a failed flow, preserves failure diagnostics, and restarts execution from the initial step inside a pristine `BrowserContext` to avoid contaminated UI or session state. Used only for transient failures (a navigation timeout, a network error, a browser crash); a real failure is reported once.
 _Avoid_: Step repeat, in-place retry, blind re-click
 
 **Flaky Passed**:
-An execution outcome where an initial attempt failed due to transient conditions but a clean retry succeeded; persisted in the Report Hub as an instability signal without triggering a blocking regression.
+An execution outcome where an initial attempt failed due to transient conditions but a clean retry succeeded. It counts as passed, and the report shows it as an instability signal.
 _Avoid_: Soft pass, intermittent green, pass on retry
-
-**Product-Scoped Ingest Token**:
-An authentication credential restricted to a specific product that authorizes local runners and CI pipelines to transmit run bundles to the Report Hub without cross-product interference.
-_Avoid_: Master API key, runner secret, system token
-
-**Release Target**:
-The designated candidate version, milestone, or deployment branch (e.g. `v1.2.0-rc1`) under which canonical findings are consolidated, verified, and gated.
-_Avoid_: Test environment, build tag, run group
-
-**Outbox Queue**:
-A persistent local SQLite datastore buffering completed run bundles and evidence references when the Report Hub is unreachable, enabling automatic deferred ingestion once network connectivity is restored.
-_Avoid_: Offline cache, sync buffer, pending uploads
 
 **Reference Flow**:
 A sequence of user interactions and states extracted from a public third-party or competitor website, serving as an external benchmark for comparison.

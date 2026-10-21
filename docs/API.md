@@ -15,6 +15,21 @@ routes and what they are for; **request and response bodies are defined by the h
 - Beta mode also limits starts per visitor session and per UTC day (`RUNNER_BETA_RUNS_PER_VISITOR`, `RUNNER_BETA_RUNS_PER_DAY`). Over a limit, `POST /api/runner/run` and `POST /api/runner/benchmark` answer `429 ERR_BETA_LIMIT` with `error`, `suggestion`, `scope` (`visitor` or `day`) and `resetsAt` (ISO time of the next 00:00 UTC). Preflight and the plan routes are not counted.
 - `GET /healthz` needs no token and is used by Render's health check.
 
+### Closed on the shared beta copy
+
+With `RUNNER_BETA=1` these answer `403 { code: 'ERR_BETA' }`. The list is `BETA_CLOSED_ROUTES` in `server.ts`; `beta-closed-routes.test.ts` fails when the two differ.
+
+- `non-GET /api/runner/schedules`
+- `POST /api/runner/spec-override`
+- `GET /api/runner/spec-overrides`
+- `POST /api/settings/defaults`
+- `POST /api/runs/<runId>/triage`
+- `POST /api/runs/<runId>/accept-judgement`
+- `DELETE /api/runs/<runId>`, and any other path under `/api/runs/`
+- `DELETE /api/runner/baselines/<id>`
+
+Everything not listed here stays open on beta. A beta visitor sees only their own comparisons (`/api/runner/benchmarks`, `/api/runner/benchmark/<id>`); `DELETE` of another visitor's comparison answers `404` and removes nothing, and deleting a running one of your own answers `409`.
+
 ## Check-up lifecycle
 
 | Route                                    | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                                 |

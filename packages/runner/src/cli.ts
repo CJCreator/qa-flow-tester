@@ -1,15 +1,22 @@
-import { RunnerServer } from './server.js';
+import { RunnerServer, redactedMessage } from './server.js';
 import { defaultUiApps } from './ui-static.js';
 import { isLoopbackBindHost } from './bind-host.js';
 
-// Render says which port to listen on with PORT. It is only trusted there, so a PORT set in someone's shell can't move a local runner.
-const port = parseInt((process.env.RENDER && process.env.PORT) || process.env.RUNNER_PORT || '3001', 10);
+// Hosted platforms (Render sets RENDER, Cloud Run sets K_SERVICE) specify the port to listen on with PORT.
+// It is only trusted there, so a PORT set in someone's shell can't move a local runner.
+const hostedPort = (process.env.RENDER || process.env.K_SERVICE) ? process.env.PORT : undefined;
+const port = parseInt(hostedPort || process.env.RUNNER_PORT || '3001', 10);
 const host = process.env.RUNNER_HOST || 'localhost';
 const outputDir = process.env.RUNNER_OUTPUT_DIR || undefined;
 const dataDir = process.env.RUNNER_DATA_DIR || undefined;
 const localhostAlias = process.env.RUNNER_LOCALHOST_ALIAS || undefined;
-// On Render the service's own public address is allowed without setting it by hand.
-const originList = [process.env.RUNNER_ALLOWED_ORIGINS, process.env.RENDER_EXTERNAL_URL].filter(Boolean).join(',');
+// On hosted platforms the service's own public address is allowed without setting it by hand.
+const originList = [
+  process.env.RUNNER_ALLOWED_ORIGINS,
+  process.env.RENDER_EXTERNAL_URL,
+  process.env.RUNNER_PUBLIC_URL,
+  process.env.CLOUD_RUN_URL,
+].filter(Boolean).join(',');
 const allowedOrigins = originList
   ? originList
       .split(',')
@@ -71,3 +78,26 @@ server
     console.error('[Release check-up] Failed to start:', err);
     process.exit(1);
   });
+
+// A stop from the host (Render, Docker, Ctrl+C) ends the run cleanly; after 10 s the process exits anyway.
+let shuttingDown = false;
+const shutdown = (signal: NodeJS.Signals): void => {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`[Release check-up] ${signal} received, stopping`);
+  setTimeout(() => process.exit(1), 10000);
+  server.shutdown().then(
+    () => process.exit(0),
+    (err) => {
+      console.error('[Release check-up] Shutdown failed:', err);
+      process.exit(1);
+    }
+  );
+};
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
+
+// A rejected promise is logged and the process keeps serving; the request it belonged to is answered by its own handler.
+process.on('unhandledRejection', (reason) => {
+  console.error('[Release check-up] Unhandled rejection:', redactedMessage(reason));
+});

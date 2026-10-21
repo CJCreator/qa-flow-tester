@@ -72,6 +72,8 @@ async function runSteps(startPage: string, steps: TestStep[], stepTimeoutMs?: nu
     productId: 'missing-test',
     specTestCases: [testCase],
     outputDir,
+    // The default is now three sizes (T-55); this file measures one step, so one size.
+    breakpoints: ['1440px'],
     enableA11y: false,
     enableSecurity: false,
     enablePerformance: false,
@@ -127,9 +129,11 @@ describe('missing element step cap', () => {
       3000
     );
     const failures = completed.filter((e) => !e.passed);
-    expect(failures).toHaveLength(2);
+    // T-57: only transient failures (navigation timeout, closed browser) are retried. A missing element
+    // (locator.click timeout) is a real result, so it fails once, within the cap, with no rerun.
+    expect(failures).toHaveLength(1);
     const total = failures.reduce((sum, e) => sum + e.durationMs, 0);
-    expect(total).toBeLessThanOrEqual(6000 + 2000);
+    expect(total).toBeLessThanOrEqual(3000 + 2000);
     const point = report.results.find((r) => r.testCaseId === 'TC-MISSING-1')!;
     expect(point.status).toBe('Failed');
     expect(point.retry?.status).not.toBe('FLAKY_PASSED');

@@ -22,11 +22,12 @@ async function walk(dir: string): Promise<string[]> {
     if (entry.name === 'node_modules' || entry.name === 'dist') continue;
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) out.push(...(await walk(full)));
-    else if (/\.(ts|tsx)$/.test(entry.name) && !entry.name.endsWith('.d.ts')) out.push(full);
+    else if (/\.(ts|tsx|mjs)$/.test(entry.name) && !entry.name.endsWith('.d.ts')) out.push(full);
   }
   return out;
 }
 
+// The package sources and the scripts (start, smoke, build helpers). The scripts read settings too (T-63).
 async function sourceFiles(): Promise<string[]> {
   const files: string[] = [];
   for (const pkg of await fs.readdir(path.join(root, 'packages'))) {
@@ -37,6 +38,7 @@ async function sourceFiles(): Promise<string[]> {
     );
     if (isDir) files.push(...(await walk(src)));
   }
+  files.push(...(await walk(path.join(root, 'scripts'))));
   return files;
 }
 

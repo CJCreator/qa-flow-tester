@@ -64,7 +64,7 @@ describe('reduceFeed', () => {
       'Exploring your site to learn what people can do on it…',
       'Found 3 things people can do on your site. Planning how to test them…',
       'Getting ready to test 3 things…',
-      'Checking your site is up and signing in as admin and customer…',
+      'Making sure your site is up and signing in as admin and customer…',
       'Testing “Create Invoice” as admin (1 of 3)…',
       'All done. Putting your report together…',
     ]);

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { ReleaseReport, ReviewPlan, RoleCredential, RunSummary } from '@qa/types';
 import {
   abortRun,
@@ -10,6 +10,7 @@ import {
   listRuns,
   listWaitingPlans,
   readRunText,
+  plainError,
   resumeWaitingPlan,
   RunnerError,
   startRun,
@@ -58,19 +59,28 @@ import { NewCheckupScreen, type StartFacts } from './screens/NewCheckupScreen';
 import { NotFoundScreen } from './screens/NotFoundScreen';
 import { LandingScreen } from './screens/LandingScreen';
 import { PastCheckupsScreen } from './screens/PastCheckupsScreen';
-import { PlanReviewScreen, type PlanNotice, type PlanUpdateState } from './screens/PlanReviewScreen';
-import { ReportScreen } from './screens/ReportScreen';
+import type { PlanNotice, PlanUpdateState } from './screens/PlanReviewScreen';
 import { VisibilityScreen } from './screens/VisibilityScreen';
 import { ScanningScreen, isScanProgress, type ScanProgress } from './screens/ScanningScreen';
 import { headersNotice } from './lib/coverage-text';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { TestingScreen } from './screens/TestingScreen';
 import { VisualBaselinesScreen } from './screens/VisualBaselinesScreen';
-import { BenchmarkScreen } from './screens/BenchmarkScreen';
 import { splitStoredContext } from './lib/context';
+
+// Report, Plan Review and Benchmark load on first visit, so the first screen does not ship them.
+const PlanReviewScreen = lazy(() =>
+  import('./screens/PlanReviewScreen').then((m) => ({ default: m.PlanReviewScreen }))
+);
+const ReportScreen = lazy(() => import('./screens/ReportScreen').then((m) => ({ default: m.ReportScreen })));
+const BenchmarkScreen = lazy(() =>
+  import('./screens/BenchmarkScreen').then((m) => ({ default: m.BenchmarkScreen }))
+);
 
 /** How often the runner's state is read while a check-up is in progress, besides its events. */
 const POLL_MS = 5000;
+/** How often it is read on a check-up address while nothing is in progress. */
+const IDLE_POLL_MS = 30000;
 
 const IN_PROGRESS = new Set(['scanning', 'awaiting-review', 'testing']);
 
@@ -216,7 +226,7 @@ export default function App() {
     if (!reachable) return;
     if (checkAddress) void reconcile();
     if (!checkAddress && !inProgress) return;
-    const timer = window.setInterval(() => void reconcile(), POLL_MS);
+    const timer = window.setInterval(() => void reconcile(), inProgress ? POLL_MS : IDLE_POLL_MS);
     return () => window.clearInterval(timer);
   }, [reachable, pathname, checkAddress, inProgress, reconcile]);
 
@@ -306,7 +316,7 @@ export default function App() {
           setPlanUpdate((u) => ({
             running: false,
             seq: (u.seq ?? 0) + 1,
-            error: 'The plan couldn’t be updated. Try again. If it keeps failing, check your AI key in Settings.',
+            error: 'The plan couldn’t be updated. Try again. If it keeps failing, look at your AI key in Settings.',
           }));
           return;
 
@@ -461,7 +471,7 @@ export default function App() {
             : 'An AI key is needed first. Add it in Settings, then try again.'
         );
       } else {
-        setStartError(err instanceof RunnerError ? err.message : 'The check-up couldn’t be started. Try again.');
+        setStartError(plainError(err, 'The check-up couldn’t be started. Try again.'));
       }
       return false;
     } finally {
@@ -599,23 +609,23 @@ export default function App() {
         setStartError(headersNotice(err.needsHeaders));
         return;
       }
-      setStartError(err instanceof RunnerError ? err.message : 'That plan couldn’t be opened. Try again.');
+      setStartError(plainError(err, 'That plan couldn’t be opened. Try again.'));
     }
   };
 
   const stopScan = async () => {
     const choice = await choose({
-      title: 'Stop scanning?',
+      title: 'Stop exploring?',
       body: (
         <p>
           Plan the {scan?.pagesFound ? count(scan.pagesFound, 'page', 'pages') : 'pages'} found so far, and review them,
-          or throw the scan away. AI requests already used stay used.
+          or throw the exploration away. AI requests already used stay used.
         </p>
       ),
       confirmLabel: 'Stop and plan what’s found',
       altLabel: 'Throw it away',
       altDanger: true,
-      cancelLabel: 'Keep scanning',
+      cancelLabel: 'Keep exploring',
     });
     if (choice === 'cancel') return;
     if (choice === 'confirm') {
@@ -705,7 +715,7 @@ export default function App() {
         setApproveError(headersNotice(err.needsHeaders));
         return;
       }
-      setApproveError(err instanceof RunnerError ? err.message : 'The plan couldn’t be approved. Try again.');
+      setApproveError(plainError(err, 'The plan couldn’t be approved. Try again.'));
     } finally {
       setApproving(false);
     }
@@ -720,7 +730,7 @@ export default function App() {
       : route.name === 'new'
         ? 'New check-up'
         : route.name === 'scan'
-          ? `Scanning ${host}`
+          ? `Exploring ${host}`
           : route.name === 'testing'
             ? `Testing ${host}`
             : route.name === 'plan' && !(plan && status?.phase === 'awaiting-review')
@@ -765,7 +775,7 @@ export default function App() {
         break;
       case 'scan':
         body = !status ? (
-          <Loading label="Opening the scan…" />
+          <Loading label="Opening the site…" />
         ) : status.phase === 'scanning' || (status.phase === 'failed' && scanFailure) ? (
           <ScanningScreen
             host={host}
@@ -775,7 +785,7 @@ export default function App() {
             onStop={() => void stopScan()}
           />
         ) : (
-          nothingInProgress('Nothing is being scanned')
+          nothingInProgress('Nothing is being explored')
         );
         break;
       case 'plan':
@@ -893,7 +903,7 @@ export default function App() {
         {lostContact && (
           <div className="mx-auto max-w-prose px-4 pt-4 sm:px-6">
             <Notice tone="warn" title="Lost contact with Release check-up. Retrying…">
-              Check that it’s still running in its terminal (start it with pnpm start). This page keeps trying.
+              Make sure it’s still running in its terminal (start it with pnpm start). This page keeps trying.
             </Notice>
           </div>
         )}
@@ -911,7 +921,7 @@ export default function App() {
             </Notice>
           </div>
         )}
-        {body}
+        <Suspense fallback={<Loading label="Loading…" />}>{body}</Suspense>
       </main>
       {!landing && <CommandPalette route={route} />}
       {dialog}

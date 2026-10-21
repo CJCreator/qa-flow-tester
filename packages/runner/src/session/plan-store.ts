@@ -40,6 +40,7 @@ export interface StoredPlanRecord {
     testCap?: number;
     readOnly?: boolean;
     signInConsent?: boolean;
+    recordVideo?: boolean;
     siteHost?: string;
     ai?: { provider: AIProviderType; model?: string; apiKey?: string };
     customTestCases?: boolean;
@@ -81,6 +82,8 @@ export interface PlanStore {
   waiting(): Promise<Array<{ host: string; record: StoredPlanRecord }>>;
   /** Take a waiting record for a host (today's `unparkPlan`). */
   unpark(host: string): Promise<StoredPlanRecord | null>;
+  /** Removes waiting records not written for longer than `maxAgeMs`; returns the file names removed. */
+  expireWaiting(maxAgeMs: number, now?: number): Promise<string[]>;
   /** The in-flight re-plan, if any (today's `planUpdate`): set it, read it, await it. */
   setUpdate(update: Promise<void> | null): void;
   update(): Promise<void> | null;
@@ -95,6 +98,14 @@ export interface PlanStore {
   forDisk(record: StoredPlanRecord): StoredPlanRecord;
   /** A saved Plan read back into the current shape (today's `normalizeStoredPlan`). */
   normalize(record: StoredPlanRecord): StoredPlanRecord;
+}
+
+export const DEFAULT_WAITING_PLAN_DAYS = 30;
+
+/** How long a waiting Plan is kept, from RUNNER_WAITING_PLAN_DAYS; unset or invalid values use the default. */
+export function waitingPlanMaxAgeMs(env: Record<string, string | undefined> = process.env): number {
+  const days = /^\d+$/.test(env.RUNNER_WAITING_PLAN_DAYS ?? '') ? Number(env.RUNNER_WAITING_PLAN_DAYS) : 0;
+  return (days >= 1 ? days : DEFAULT_WAITING_PLAN_DAYS) * 86_400_000;
 }
 
 export function hostOfAddress(address: string): string {
@@ -141,6 +152,8 @@ export class DefaultPlanStore implements PlanStore {
   private readonly secrets: RunSecrets;
   private currentPlanRecord: StoredPlanRecord | null = null;
   private parkedPlans = new Map<string, StoredPlanRecord>();
+  /** Whether waiting-plans/ has been read into parkedPlans. park, unpark and expireWaiting keep the map current after that. */
+  private waitingLoaded = false;
   private planUpdate: Promise<void> | null = null;
   private recentApprovals = new Map<string, { timestamp: number; runId: string }>();
 
@@ -179,6 +192,11 @@ export class DefaultPlanStore implements PlanStore {
 
   async save(record: StoredPlanRecord): Promise<void> {
     this.currentPlanRecord = record;
+    // A finished plan keeps no sign-in: only one still awaiting review may reuse its session.
+    if (record.status === 'done') {
+      this.secrets.savedSessions.delete(record.plan.runId);
+      await this.secrets.clean(record.plan.runId);
+    }
     await writeJsonAtomic(this.file, this.forDisk(record));
   }
 
@@ -211,22 +229,22 @@ export class DefaultPlanStore implements PlanStore {
     await writeJsonAtomic(file, this.forDisk(record));
   }
 
+  /** The waiting Plans. The folder is read once; after that they come from memory, not from every file. */
   async waiting(): Promise<Array<{ host: string; record: StoredPlanRecord }>> {
-    const dir = path.join(this.dataDir, 'waiting-plans');
-    const result: Array<{ host: string; record: StoredPlanRecord }> = [];
-    const names = await fs.readdir(dir).catch(() => [] as string[]);
-    for (const name of names) {
-      if (!name.endsWith('.json')) continue;
-      const res = await readJsonSafe<StoredPlanRecord>(path.join(dir, name), { currentVersion: 1 });
-      if (res.data?.plan && res.data?.context) {
-        const record = this.normalize(res.data);
-        result.push({
-          host: this.hostOf(record),
-          record,
-        });
+    if (!this.waitingLoaded) {
+      const dir = path.join(this.dataDir, 'waiting-plans');
+      const names = await fs.readdir(dir).catch(() => [] as string[]);
+      for (const name of names) {
+        if (!name.endsWith('.json')) continue;
+        const res = await readJsonSafe<StoredPlanRecord>(path.join(dir, name), { currentVersion: 1 });
+        if (res.data?.plan && res.data?.context) {
+          const record = this.normalize(res.data);
+          this.parkedPlans.set(this.hostOf(record), record);
+        }
       }
+      this.waitingLoaded = true;
     }
-    return result;
+    return [...this.parkedPlans].map(([host, record]) => ({ host, record }));
   }
 
   async unpark(host: string): Promise<StoredPlanRecord | null> {
@@ -240,6 +258,24 @@ export class DefaultPlanStore implements PlanStore {
     this.parkedPlans.delete(host);
     await fs.rm(this.parkedFileFor(host), { force: true }).catch(() => {});
     return record?.plan && record.context ? record : null;
+  }
+
+  async expireWaiting(maxAgeMs: number, now: number = Date.now()): Promise<string[]> {
+    const dir = path.join(this.dataDir, 'waiting-plans');
+    const names = await fs.readdir(dir).catch(() => [] as string[]);
+    const expired: string[] = [];
+    for (const name of names) {
+      if (!name.endsWith('.json')) continue;
+      const file = path.join(dir, name);
+      const stat = await fs.stat(file).catch(() => null);
+      if (!stat || now - stat.mtimeMs <= maxAgeMs) continue;
+      await fs.rm(file, { force: true }).catch(() => {});
+      for (const host of [...this.parkedPlans.keys()]) {
+        if (this.parkedFileFor(host) === file) this.parkedPlans.delete(host);
+      }
+      expired.push(name);
+    }
+    return expired;
   }
 
   setUpdate(update: Promise<void> | null): void {

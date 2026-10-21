@@ -8,6 +8,8 @@ export default defineConfig({
     testTimeout: 30000,
     hookTimeout: 30000,
     include: ['packages/*/tests/**/*.test.{ts,tsx}'],
+    // Creates the `.tmp-*` folders the tests write into, so a clean checkout runs them.
+    globalSetup: ['./vitest.global-setup.ts'],
     // Only active with --coverage (CI). Prints a summary; no thresholds.
     coverage: {
       provider: 'v8',

@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import { releaseVerdict, type AspectType, type Finding, type ReleaseReport } from '@qa/types';
+import { aspectLabel, releaseVerdict, type AspectType, type Finding, type ReleaseReport } from '@qa/types';
 import {
   acceptJudgement,
   downloadRunFile,
   finishAiReview,
   getRun,
   getStoredReleaseGates,
+  plainError,
   recordSpecOverride,
-  RunnerError,
   triageProblem,
 } from '../api';
 import { DeveloperDetails } from '../components/DeveloperDetails';
@@ -66,7 +66,7 @@ export function ReportScreen({ runId, actions }: { runId: string; actions: Repor
       .then((r) => !cancelled && setReport(r))
       .catch(
         (err) =>
-          !cancelled && setError(err instanceof RunnerError ? err.message : 'The report couldn’t be opened. Try again.')
+          !cancelled && setError(plainError(err, 'The report couldn’t be opened. Try again.'))
       );
     return () => {
       cancelled = true;
@@ -476,49 +476,53 @@ function VisualReview({
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState<{ tone: 'pass' | 'fail' | 'warn'; text: string } | null>(null);
   const review = report.visualReview;
-  if (!review || review.remaining === 0) return null;
+  // Once the last screens are looked over, the result message stays up: the report it came from no longer has any left.
+  if (!review || (review.remaining === 0 && !message)) return null;
+  const done = review.remaining === 0;
   return (
     <Notice
-      tone="warn"
-      title={`The AI looked over ${review.reviewed} of ${review.total} screens`}
+      tone={done ? 'pass' : 'warn'}
+      title={done ? 'The AI looked over every screen' : `The AI looked over ${review.reviewed} of ${review.total} screens`}
       actions={
-        <button
-          type="button"
-          className="btn-primary min-h-[44px] px-4 text-sm"
-          disabled={working}
-          onClick={async () => {
-            setWorking(true);
-            setMessage(null);
-            try {
-              const result = await finishAiReview();
-              onReportChanged(await getRun(report.runId));
-              setMessage(
-                result.remainingCount > 0
-                  ? {
-                      tone: 'warn',
-                      text: `${result.reviewedCount} more looked over; ${result.remainingCount} left for another time.`,
-                    }
-                  : { tone: 'pass', text: 'All the screens are looked over now.' }
-              );
-            } catch (err) {
-              setMessage({
-                tone: 'fail',
-                text: err instanceof RunnerError ? err.message : 'That couldn’t be finished. Try again later.',
-              });
-            } finally {
-              setWorking(false);
-            }
-          }}
-        >
-          {working ? (
-            <Spinner label="Looking over the screens…" />
-          ) : (
-            `Look over the other ${count(review.remaining, 'screen', 'screens')}`
-          )}
-        </button>
+        done ? undefined : (
+          <button
+            type="button"
+            className="btn-primary min-h-[44px] px-4 text-sm"
+            disabled={working}
+            onClick={async () => {
+              setWorking(true);
+              setMessage(null);
+              try {
+                const result = await finishAiReview();
+                onReportChanged(await getRun(report.runId));
+                setMessage(
+                  result.remainingCount > 0
+                    ? {
+                        tone: 'warn',
+                        text: `${result.reviewedCount} more looked over; ${result.remainingCount} left for another time.`,
+                      }
+                    : { tone: 'pass', text: 'All the screens are looked over now.' }
+                );
+              } catch (err) {
+                setMessage({
+                  tone: 'fail',
+                  text: plainError(err, 'That couldn’t be finished. Try again later.'),
+                });
+              } finally {
+                setWorking(false);
+              }
+            }}
+          >
+            {working ? (
+              <Spinner label="Looking over the screens…" />
+            ) : (
+              `Look over the other ${count(review.remaining, 'screen', 'screens')}`
+            )}
+          </button>
+        )
       }
     >
-      Today’s AI requests ran out first, so “Looks and reads well” only covers what was looked at.
+      {!done && 'Today’s AI requests ran out first, so “Looks and reads well” only covers what was looked at.'}
       {message && <span className={`mt-1 block font-bold text-${message.tone}`}>{message.text}</span>}
     </Notice>
   );
@@ -550,7 +554,7 @@ function DownloadBar({
             try {
               await downloadRunFile(report.runId, 'report.html');
             } catch (err) {
-              setDownloadError(err instanceof Error ? err.message : 'The report couldn’t be downloaded. Try again.');
+              setDownloadError(plainError(err, 'The report couldn’t be downloaded. Try again.'));
             } finally {
               setDownloading(false);
             }
@@ -615,7 +619,7 @@ function ReportActionsBar({
           <div>
             <h2 className="text-lg font-bold">Test the pages behind a sign-in</h2>
             <p className="text-sm text-ink-soft">
-              A new check-up signs in with these details, then scans and plans the pages it can reach. Use a test
+              A new check-up signs in with these details, then explores and plans the pages it can reach. Use a test
               sign-in, not a real person’s. Next time you can add a sign-in when you start the check-up, or from the
               plan.
             </p>
@@ -647,6 +651,9 @@ function ReportActionsBar({
               />
             </div>
           </div>
+          {(!username.trim() || !password) && (
+            <p className="text-sm text-ink-soft">Enter both the email or username and the password to start.</p>
+          )}
           <button type="submit" className="btn-primary" disabled={actions.starting || !username.trim() || !password}>
             Start with these sign-in details
           </button>
@@ -728,7 +735,7 @@ function AspectGrades({ report }: { report: ReleaseReport }) {
             >
               <div className="flex items-center justify-between gap-3">
                 <span>
-                  <span className="block font-bold text-ink">{aspect}</span>
+                  <span className="block font-bold text-ink">{aspectLabel(aspect)}</span>
                   <span className="block text-sm text-ink-soft">
                     {checked ? count(problemCount, 'problem', 'problems') : 'Nothing here was checked this time'}
                   </span>
@@ -822,7 +829,7 @@ function Improvements({ report }: { report: ReleaseReport }) {
                     : rec.severity === 'Major'
                       ? 'Must fix before release · '
                       : ''}
-                  {rec.aspect} · {rec.effort} effort · {rec.impact} impact
+                  {aspectLabel(rec.aspect)} · {rec.effort} effort · {rec.impact} impact
                   {rec.affectedPages.length > 0 && ` · ${count(rec.affectedPages.length, 'page', 'pages')}`}
                 </span>
               </p>
@@ -999,7 +1006,7 @@ function Problems({
               <option value="all">All areas</option>
               {ASPECTS.map((a) => (
                 <option key={a} value={a}>
-                  {a}
+                  {aspectLabel(a)}
                 </option>
               ))}
             </select>
@@ -1279,7 +1286,7 @@ function SourcesSummary({ report }: { report: ReleaseReport }) {
       setOverrideSelector('');
       setOverrideUrlPath('');
     } catch (err: unknown) {
-      setOverrideError(err instanceof Error ? err.message : 'The override couldn’t be saved. Try again.');
+      setOverrideError(plainError(err, 'The override couldn’t be saved. Try again.'));
     } finally {
       setSavingOverride(false);
     }
@@ -1545,7 +1552,7 @@ function ProblemItem({
             {howToFix(group, looksTechnical)}
           </p>
           {group.aspects.length > 1 && (
-            <p className="text-sm text-ink-soft">It counts toward {group.aspects.join(' and ')}.</p>
+            <p className="text-sm text-ink-soft">It counts toward {group.aspects.map(aspectLabel).join(' and ')}.</p>
           )}
           <div>
             <p className="text-sm text-ink-soft">Found on:</p>
@@ -1572,7 +1579,7 @@ function ProblemItem({
                   try {
                     await onTriage(titles, marking, reason);
                   } catch (err) {
-                    setError(err instanceof Error ? err.message : 'That couldn’t be saved.');
+                    setError(plainError(err, 'That couldn’t be saved.'));
                     setSaving(false);
                   }
                 }}
@@ -1615,7 +1622,7 @@ function ProblemItem({
                         try {
                           await onAccept(titles);
                         } catch (err) {
-                          setError(err instanceof Error ? err.message : 'That couldn’t be saved.');
+                          setError(plainError(err, 'That couldn’t be saved.'));
                           setSaving(false);
                         }
                       }}

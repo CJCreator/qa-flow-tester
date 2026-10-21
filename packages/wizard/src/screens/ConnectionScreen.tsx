@@ -125,7 +125,7 @@ export function ConnectionScreen({ checks }: { checks: number }) {
         When the run ends, its summary page shows the verdict. The full report is in the run&rsquo;s{' '}
         <strong>qa-report</strong> download: open{' '}
         <code className="rounded bg-surface px-1.5 py-0.5 font-bold">report.html</code> with a double-click. It also
-        runs by itself when a preview or staging deployment succeeds.
+        runs by itself when a preview or pre-release deployment succeeds.
       </p>
 
       <h2 className="mb-2 text-lg font-bold">On your computer</h2>
@@ -150,7 +150,7 @@ export function ConnectionScreen({ checks }: { checks: number }) {
         </span>
         {checks === 0
           ? 'Looking for Release check-up on this computer…'
-          : 'Not running on this computer yet. Checking again every 3 seconds.'}
+          : 'Not running on this computer yet. Trying again every 3 seconds.'}
       </p>
     </section>
   );

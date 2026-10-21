@@ -12,7 +12,8 @@ services:
     dockerfilePath: ./packages/runner/Dockerfile
     dockerContext: .
     healthCheckPath: /healthz
-    autoDeploy: true
+    # Build only after the GitHub checks on the commit pass (the Deploy workflow's tests), not on every push.
+    autoDeployTrigger: checksPass
     envVars:
       - key: RUNNER_BETA
         value: '1'

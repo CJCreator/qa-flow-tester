@@ -1,5 +1,7 @@
 # 0010: One App, with Details for Developers on Demand
 
+Status: Accepted, 2026-09-30. Retired feature: QA Flow Studio (`/studio` redirects to Past check-ups).
+
 Partly supersedes [0008](0008-single-local-server.md).
 
 ## Context and Decision

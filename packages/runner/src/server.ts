@@ -1,6 +1,5 @@
 import http from 'http';
-import { timingSafeEqual } from 'crypto';
-import { promises as fs } from 'fs';
+import { promises as fs, constants as fsConstants } from 'fs';
 import path from 'path';
 import {
   journeyPages,
@@ -45,25 +44,19 @@ import type {
   ProductProfile,
   ReleaseReport,
   RoleCredential,
-  TestCase,
   AIProviderType,
   RunnerPhase,
-  ReviewPlan,
   Breakpoint,
   PlanIntent,
   AmbiguityQuestion,
-  DiscoveredFlow,
   DiscoveryDraft,
   PageInventoryItem,
-  PageLink,
-  AIRequestBudget,
   BenchmarkJob,
   SignInFailureReason,
   RunCap,
   ProviderLimits,
   FindingSeverity,
 } from '@qa/types';
-import { normalizePlanIntents, normalizeTestIntents } from '@qa/types';
 import {
   FlowTestOrchestrator,
   DiscoveryAgent,
@@ -172,9 +165,12 @@ import {
 } from '@qa/core';
 import { BenchmarkStore, cleanFlowType, compareSites, siteName } from './benchmarks.js';
 import { SchedulerManager, type CheckupSchedule } from './scheduler.js';
+import { waitingPlanMaxAgeMs } from './session/plan-store.js';
 import {
   SessionKeyResolver,
   betaLimitsFromEnv,
+  keepSessionFoldersIn,
+  sweepSessionFolders,
   claimBetaRun,
   currentSessionId,
   enterSession,
@@ -201,127 +197,25 @@ import {
   checkRoles,
   checkLoginPath,
 } from './run-inputs.js';
-
-function isInside(dir: string, file: string): boolean {
-  const rel = path.relative(dir, file);
-  return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
-}
-
-/**
- * Saved sign-in sessions (auth/<role>.json) hold live session cookies: no folder called "auth" is
- * served, at any depth. Any case: Windows and macOS read "AUTH" as "auth".
- */
-function isSavedSession(dir: string, file: string): boolean {
-  return path
-    .relative(dir, file)
-    .split(path.sep)
-    .some((part) => part.toLowerCase() === 'auth');
-}
-
-/** True when a decoded path has a ".." part, split on either kind of slash. */
-function hasDotDotSegment(rel: string): boolean {
-  return rel.split(/[\\/]/).some((part) => part === '..');
-}
-
-/** Run ids are made here ("run-<time>"); anything else in an address is refused, so it can't leave the runs folder. */
-function isRunId(value: string): boolean {
-  return /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(value) && !value.includes('..');
-}
-
-async function exists(file: string): Promise<boolean> {
-  return fs.stat(file).then(
-    () => true,
-    () => false
-  );
-}
+import {
+  isInside,
+  isSavedSession,
+  hasDotDotSegment,
+  isRunId,
+  exists,
+  sendFileRanged,
+  DOWNLOADABLE_REPORT_FILES,
+} from './server-files.js';
+import { gzipLargeAnswers, isLoopbackHost, ACCESS_COOKIE, cookieValue, matchesSecret } from './server-http.js';
+import { addTokens, AI_PROVIDERS, VISUAL_REVIEW_CALLS, type AiSettings } from './server-ai.js';
+import { BETA_CLOSED_ROUTES } from './server-beta-routes.js';
 
 export { redactedMessage };
+export { BETA_CLOSED_ROUTES };
 
-/** The Host header names this computer. A page that points a name it controls at this port (DNS rebinding) doesn't. */
-function isLoopbackHost(host: string | undefined): boolean {
-  if (!host) return false;
-  try {
-    return LOOPBACK_HOSTS.includes(new URL(`http://${host}`).hostname);
-  } catch {
-    return false;
-  }
-}
-
-/** The cookie that carries the access key once a shared link has been opened. */
-const ACCESS_COOKIE = 'qa_access';
-
-/** One cookie's value from a Cookie header. */
-function cookieValue(header: string | undefined, name: string): string | undefined {
-  for (const part of (header || '').split(';')) {
-    const at = part.indexOf('=');
-    if (at === -1 || part.slice(0, at).trim() !== name) continue;
-    try {
-      return decodeURIComponent(part.slice(at + 1).trim());
-    } catch {
-      return undefined;
-    }
-  }
-  return undefined;
-}
-
-/** Compared in constant time, so how long a refusal takes says nothing about the key. */
-function matchesSecret(given: string | null | undefined, secret: string): boolean {
-  if (!given) return false;
-  const a = Buffer.from(given);
-  const b = Buffer.from(secret);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
-
-const MAX_RUN_EVENTS = 5000;
-
-/** Token use per stage, added together. */
-function addTokens(a: AIRequestBudget['tokens'], b: AIRequestBudget['tokens']): AIRequestBudget['tokens'] {
-  if (!b || Object.keys(b).length === 0) return a;
-  const sum: NonNullable<AIRequestBudget['tokens']> = JSON.parse(JSON.stringify(a ?? {}));
-  for (const [stage, u] of Object.entries(b) as Array<
-    [keyof typeof sum, NonNullable<(typeof sum)[keyof typeof sum]>]
-  >) {
-    const s = (sum[stage] ??= { requests: 0, promptTokens: 0, completionTokens: 0, reasoningTokens: 0, truncated: 0 });
-    s.requests += u.requests;
-    s.promptTokens += u.promptTokens;
-    s.completionTokens += u.completionTokens;
-    s.reasoningTokens += u.reasoningTokens;
-    s.truncated += u.truncated;
-  }
-  return sum;
-}
-
-/** The AI settings kept beside the key (not secret), so every browser gets the same setup. */
-interface AiSettings {
-  provider?: AIProviderType;
-  text?: string | null;
-  vision?: string | null;
-  /** The person picked the models in Settings: they're kept while available, even when they struggle. */
-  chosenBy?: 'person';
-  chosenAt?: string;
-}
-
-/** The AI services a key can be added for. OpenRouter's free models cost nothing; the others are paid. */
-const AI_PROVIDERS: Array<{ id: AIProviderType; name: string; free: boolean }> = [
-  { id: 'openrouter', name: 'OpenRouter (free models)', free: true },
-  { id: 'anthropic', name: 'Anthropic (Claude)', free: false },
-  { id: 'openai', name: 'OpenAI', free: false },
-  { id: 'gemini', name: 'Google Gemini', free: false },
-];
-/** AI requests the visual review of a finished run may use: part of the AI Request Budget estimate. */
-const VISUAL_REVIEW_CALLS = 20;
-/** Pages explored on another host the person includes from the review. */
-const INCLUDED_HOST_PAGES = 30;
-/** Pages explored for a sign-in added from the review. */
-const SIGNED_IN_PAGES = 60;
-const DOWNLOADABLE_REPORT_FILES: Record<string, string> = {
-  'report.html': 'text/html; charset=utf-8',
-  'report.md': 'text/markdown; charset=utf-8',
-  'findings.json': 'application/json; charset=utf-8',
-  'issues.md': 'text/markdown; charset=utf-8',
-  'issues.html': 'text/html; charset=utf-8',
-};
 const RUNS_KEPT_PER_SITE = 10;
+/** Beta: finished runs kept per visitor, across every site. Their oldest are deleted. */
+const RUNS_KEPT_PER_VISITOR = 10;
 
 export interface RunnerServerOptions {
   port?: number;
@@ -381,61 +275,7 @@ export interface RunnerServerOptions {
   stepTimeoutMs?: number;
 }
 
-/** Plans saved before Intent carry the old Denial kind; read them as `intent: 'denied'`. */
-function normalizeStoredPlan(record: StoredPlanRecord): StoredPlanRecord {
-  if (!record?.plan || !record.context) return record;
-  const draftPlan = record.context.draft?.plan;
-  return {
-    ...record,
-    status: record.status ?? 'awaiting-review',
-    plan: normalizePlanIntents(record.plan),
-    context: {
-      ...record.context,
-      draft: draftPlan
-        ? {
-            ...record.context.draft,
-            plan: { ...draftPlan, pages: draftPlan.pages.map((p) => ({ ...p, tests: normalizeTestIntents(p.tests) })) },
-          }
-        : record.context.draft,
-    },
-  };
-}
-
 export type { StoredPlanRecord };
-
-/**
- * The plan as the review screen needs it: without each page's raw inventory of controls, and with
- * its links cut down to where they go (the map's lines). The full plan stays on the server.
- */
-function planForClient(plan: ReviewPlan): ReviewPlan {
-  const { testCases: _testCases, ...rest } = plan;
-  return {
-    ...rest,
-    pages: plan.pages.map(({ elements: _elements, links, ...page }) => ({
-      ...page,
-      links: links?.filter((l) => !l.leavesSite).map((l) => ({ to: l.to, landsOn: l.landsOn }) as PageLink),
-    })),
-  };
-}
-
-/**
- * What a PATCH that only switched items, answered questions or changed sizes changed: the summary,
- * what won't run, the answers, the sizes, and the items touched (a page whole when one of its tests was).
- */
-function planDelta(plan: ReviewPlan, touched: Set<string>) {
-  const pageTouched = (p: NonNullable<ReviewPlan['planPages']>[number]) =>
-    touched.has(p.id) || p.tests.some((t) => touched.has(t.id));
-  return {
-    delta: true as const,
-    summary: plan.summary,
-    wontRun: plan.wontRun,
-    screenSizes: plan.screenSizes,
-    questions: plan.questions,
-    planPages: (plan.planPages || []).filter(pageTouched),
-    navigation: (plan.navigation || []).filter((n) => touched.has(n.id)),
-    flows: plan.flows.filter((f) => touched.has(`journey:${f.id}`)),
-  };
-}
 
 /** An address's host as typed ("localhost:3050"), or the address itself when it isn't one. */
 function hostOfAddress(address: string): string {
@@ -448,25 +288,20 @@ function hostOfAddress(address: string): string {
 
 export { resolveReadOnly };
 
-/** A test case in the shape the plan check reads. */
-function asFlow(testCase: TestCase): DiscoveredFlow {
-  return {
-    id: testCase.id,
-    name: testCase.name || testCase.id,
-    role: testCase.role,
-    description: '',
-    startPage: testCase.startPage,
-    steps: testCase.steps || [],
-  };
-}
-
 /**
  * RunnerServer is the only component that actually invokes FlowTestOrchestrator /
  * DiscoveryAgent on behalf of the Wizard. It is the live, single-flight execution engine
  * for UI-triggered runs.
  */
+/** How long a health result is reused: the browser launch behind /healthz is not repeated on every probe. */
+const HEALTH_CACHE_MS = 5 * 60 * 1000;
+/** How long "no Plan waiting" is reused by status polls: an idle page does not open the Plan file on every poll. */
+const STATUS_NO_PLAN_MS = 10 * 1000;
+
 export class RunnerServer {
   private server: http.Server | null = null;
+  private healthCheck: { at: number; result: Promise<string | null> } | null = null;
+  private noPlanCheckedAt: number | null = null;
   private port: number;
   private host: string;
   private outputDir: string;
@@ -681,6 +516,7 @@ export class RunnerServer {
     this.defaultsFile = path.join(this.dataDir, '.qa-settings.json');
     this.beta = !!options.beta;
     this.betaLimits = options.betaLimits ?? betaLimitsFromEnv();
+    if (this.beta) keepSessionFoldersIn(this.dataDir);
     this.hostChecks = options.hostChecks;
     this.stepTimeoutMs = options.stepTimeoutMs;
     this.keyResolver = options.keyResolver || (this.beta ? new SessionKeyResolver() : new KeyResolver(this.dataDir));
@@ -714,6 +550,9 @@ export class RunnerServer {
       hostChecks: this.hostChecks,
       stepTimeoutMs: this.stepTimeoutMs,
       onEvent: (event) => this.broadcastRunnerEvent(event),
+      afterKeep: (runId) => {
+        void this.pruneVisitorRuns(this.runOwners.get(runId)).catch(() => {});
+      },
       screensForReview: (report, draft) => this.screensForReview(report, draft),
       visualReview: (report, screens, options) => this.visualReview(report, screens, options),
       saveReviewedReport: (report) => this.saveReviewedReport(report),
@@ -828,10 +667,48 @@ export class RunnerServer {
     return false;
   }
 
+  /** What stops this runner working, or null. Cached for HEALTH_CACHE_MS; concurrent probes share one check. */
+  private healthProblem(): Promise<string | null> {
+    if (this.healthCheck && Date.now() - this.healthCheck.at < HEALTH_CACHE_MS) return this.healthCheck.result;
+    const result = this.checkHealth();
+    this.healthCheck = { at: Date.now(), result };
+    return result;
+  }
+
+  /** The data folder must take a write (metadata only, no read), and a headless Chromium must launch. */
+  private async checkHealth(): Promise<string | null> {
+    let problem: string | null = null;
+    try {
+      // A fresh install has no data folder yet; it is created on first write, so create it here (fails if read-only).
+      await fs.mkdir(this.dataDir, { recursive: true });
+      await fs.access(this.dataDir, fsConstants.W_OK);
+    } catch {
+      problem = `Data folder ${this.dataDir} is not writable`;
+    }
+    if (!problem) {
+      const browser = new BrowserManager();
+      try {
+        await browser.launch('chromium', true);
+      } catch (err) {
+        problem = `Chromium does not launch: ${err instanceof Error ? err.message.split('\n')[0] : err}`;
+      } finally {
+        await browser.close();
+      }
+    }
+    if (problem) console.warn(`[Release check-up] Health check failed: ${problem}`);
+    return problem;
+  }
+
   public async start(): Promise<string> {
     // A shared machine checks every browser request: nothing may reach a non-public address (ADR 0014).
     if (this.beta) setBrowserPolicy({ guard: makeRequestGuard(this.hostChecks) });
     await this.moveLegacyData();
+    // Waiting plans not written for the limit (RUNNER_WAITING_PLAN_DAYS) are removed and named in the log.
+    const expired = await this.session.plan.expireWaiting(waitingPlanMaxAgeMs());
+    if (expired.length > 0) {
+      console.warn(`[Release check-up] Removed ${expired.length} expired waiting plan(s): ${expired.join(', ')}`);
+    }
+    if (this.beta) await sweepSessionFolders();
     await this.ensurePlanLoaded();
     await this.loadLatestReport();
     // A schedule does what its screen says: it is checked every minute from the moment the server is up.
@@ -843,10 +720,12 @@ export class RunnerServer {
           const url = new URL(req.url || '/', `http://${this.host}:${this.port}`);
           const pathname = url.pathname;
 
-          // A host's health check asks this and nothing else: it says the server is up and shows no data.
+          // A host's health check asks this and nothing else: it says the server can work and shows no data.
+          // 503 when the data folder cannot be written or Chromium cannot launch (cached, see healthProblem).
           if (pathname === '/healthz') {
-            res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
-            res.end('ok');
+            const problem = await this.healthProblem();
+            res.writeHead(problem ? 503 : 200, { 'Content-Type': 'text/plain; charset=utf-8' });
+            res.end(problem ? 'unhealthy' : 'ok');
             return;
           }
 
@@ -898,6 +777,7 @@ export class RunnerServer {
             return;
           }
 
+          gzipLargeAnswers(req, res);
           if (!this.grantAccess(req, res, url)) return;
 
           if (this.beta) {
@@ -943,8 +823,9 @@ export class RunnerServer {
               'X-Accel-Buffering': 'no',
             });
             res.write(`data: ${JSON.stringify({ type: 'connected', timestamp: Date.now() })}\n\n`);
-            // A page that opens or reconnects mid-run catches up: this run's events so far, in order (beta: only the visitor's own run).
-            if (this.isMine(this.currentRunId))
+            // A page that opens mid-run catches up: this run's events so far, in order (beta: only the visitor's own run).
+            // A reconnect (`?reconnect=1`) gets only the connected snapshot: the page drops its feed and reads the status over REST.
+            if (url.searchParams.get('reconnect') !== '1' && this.isMine(this.currentRunId))
               for (const event of this.session.events.log)
                 res.write(`data: ${JSON.stringify({ ...event, replayed: true })}\n\n`);
             this.streamClients.add(res);
@@ -982,17 +863,19 @@ export class RunnerServer {
 
           // GET /api/runner/status
           if (pathname === '/api/runner/status' && req.method === 'GET') {
-            await this.ensurePlanLoaded();
+            // Read only: a Plan waiting on disk is shown as awaiting review, but the run state is not changed here.
+            const waiting = this.phase === 'idle' ? await this.waitingPlanForStatus() : null;
+            const phase = waiting ? 'awaiting-review' : this.phase;
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(
               JSON.stringify({
-                isRunning: this.isRunning,
+                isRunning: this.isRunning || !!waiting,
                 hasReport: !!this.lastReport,
                 lastRunError: this.lastRunError,
                 lastErrorCode: this.lastErrorCode,
-                phase: this.phase,
+                phase,
                 hasPlan: !!this.session.plan.currentRecord,
-                runId: this.currentRunId,
+                runId: waiting ? waiting.plan.runId : this.currentRunId,
                 // The site the run in progress or paused is for, as typed, for the Resume card.
                 targetUrl: this.session.plan.currentRecord?.plan.targetUrl ?? this.currentTargetUrl,
                 // The finished report, when the last run finished.
@@ -1055,7 +938,7 @@ export class RunnerServer {
 
           // GET /api/report/download/<report.md|findings.json> — the run's files, byte-for-byte
           if (pathname.startsWith('/api/report/download/') && req.method === 'GET') {
-            await this.handleReportDownload(pathname.replace('/api/report/download/', ''), res);
+            await this.handleReportDownload(pathname.replace('/api/report/download/', ''), req, res);
             return;
           }
 
@@ -1075,7 +958,7 @@ export class RunnerServer {
 
           // GET /api/baselines/* — static visual baseline image serving
           if (pathname.startsWith('/api/baselines/') && req.method === 'GET') {
-            await this.handleServeBaseline(decodeURIComponent(pathname.replace('/api/baselines/', '')), res);
+            await this.handleServeBaseline(decodeURIComponent(pathname.replace('/api/baselines/', '')), req, res);
             return;
           }
 
@@ -1102,6 +985,14 @@ export class RunnerServer {
             await this.handleListBenchmarks(res);
             return;
           }
+          // The poll while a comparison runs: its state only, without the result.
+          if (pathname.startsWith('/api/runner/benchmark/') && pathname.endsWith('/progress') && req.method === 'GET') {
+            await this.handleBenchmarkProgress(
+              decodeURIComponent(pathname.slice('/api/runner/benchmark/'.length).replace(/\/progress$/, '')),
+              res
+            );
+            return;
+          }
           if (pathname.startsWith('/api/runner/benchmark/') && (req.method === 'GET' || req.method === 'DELETE')) {
             await this.handleBenchmarkById(
               decodeURIComponent(pathname.slice('/api/runner/benchmark/'.length)),
@@ -1113,8 +1004,11 @@ export class RunnerServer {
 
           // Schedules API
           if (pathname === '/api/runner/schedules' && req.method === 'GET') {
-            const list = await this.scheduler.loadSchedules();
-            this.sendJson(res, 200, list);
+            try {
+              this.sendJson(res, 200, await this.scheduler.loadSchedules());
+            } catch (err: unknown) {
+              this.sendJson(res, 500, { error: this.redactedMessage(err) });
+            }
             return;
           }
           if (pathname === '/api/runner/schedules' && req.method === 'POST') {
@@ -1184,9 +1078,7 @@ export class RunnerServer {
               else if (ext === '.html') mime = 'text/html; charset=utf-8';
               else if (ext === '.json') mime = 'application/json';
               else if (ext === '.webm') mime = 'video/webm';
-              const content = await fs.readFile(targetFile);
-              res.writeHead(200, { 'Content-Type': mime });
-              res.end(content);
+              sendFileRanged(req, res, targetFile, stat, mime, { 'Cache-Control': 'private, max-age=3600' });
             } catch {
               if (relPath.endsWith('product-context.md')) {
                 res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
@@ -1205,6 +1097,11 @@ export class RunnerServer {
           res.writeHead(404, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Not found' }));
         } catch (err: unknown) {
+          // Headers (or a streamed body) may already be out; a second writeHead would throw.
+          if (res.headersSent) {
+            res.end();
+            return;
+          }
           const msg = this.redactedMessage(err);
           res.writeHead(500, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: msg }));
@@ -1250,6 +1147,17 @@ export class RunnerServer {
       this.runStartDone = null;
       finishStart();
     }
+  }
+
+  /**
+   * Shutdown on SIGTERM or SIGINT: a running check-up is stopped (its plan is kept), given up to
+   * `deadlineMs` to close its browsers, then the sign-in folders are removed and the server closes.
+   */
+  public async shutdown(deadlineMs = 8000): Promise<void> {
+    await this.checkupRun.stop().catch(() => {});
+    await this.checkupRun.waitFor(deadlineMs);
+    await this.session.secrets.sweepLeftovers().catch(() => {});
+    await this.stop();
   }
 
   public async stop(): Promise<void> {
@@ -1337,12 +1245,7 @@ export class RunnerServer {
 
   /** Routes that change what every tester sees; shut on a beta copy. */
   private closedInBeta(method: string | undefined, pathname: string): boolean {
-    if (pathname.startsWith('/api/runner/schedules') && method !== 'GET') return true;
-    if (method === 'POST' && pathname === '/api/runner/spec-override') return true;
-    if (method === 'POST' && pathname === '/api/settings/defaults') return true;
-    // Triage is remembered for the whole copy's next check-ups; judgement edits a stored report.
-    if (method === 'POST' && /^\/api\/runs\/[^/]+\/(triage|accept-judgement)$/.test(pathname)) return true;
-    return method === 'DELETE' && (pathname.startsWith('/api/runs/') || pathname.startsWith('/api/runner/baselines/'));
+    return BETA_CLOSED_ROUTES.some((r) => r.closes(method, pathname));
   }
 
   /** Beta only: answers 400 and returns true when a tester asked for an address that isn't on the public internet. */
@@ -2105,6 +2008,21 @@ export class RunnerServer {
     return this.session.report.prune(host);
   }
 
+  /**
+   * Beta: keeps a visitor's newest RUNS_KEPT_PER_VISITOR finished runs and deletes the rest, oldest first.
+   * A run that is running, or waiting for review, is never deleted.
+   */
+  private async pruneVisitorRuns(owner: string | undefined): Promise<void> {
+    if (!this.beta || !owner) return;
+    const protectedIds = new Set([this.currentRunId, this.session.plan.currentRecord?.plan.runId]);
+    const mine = (await this.listRuns()).filter((r) => this.runOwners.get(r.runId) === owner);
+    for (const run of mine.slice(RUNS_KEPT_PER_VISITOR)) {
+      if (protectedIds.has(run.runId)) continue;
+      await fs.rm(this.runDir(run.runId), { recursive: true, force: true }).catch(() => {});
+      this.runOwners.delete(run.runId);
+    }
+  }
+
   /** The newest finished run's report, so a restart still has it. */
   private async loadLatestReport(): Promise<void> {
     return this.session.report.loadLatest();
@@ -2117,6 +2035,7 @@ export class RunnerServer {
 
   private async handleRuns(rest: string, req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
     if ((rest === '' || rest === '/') && req.method === 'GET') {
+      if (this.beta) await this.pruneVisitorRuns(currentSessionId());
       this.sendJson(res, 200, { runs: (await this.listRuns()).filter((r) => this.isMine(r.runId)) });
       return;
     }
@@ -2230,7 +2149,8 @@ export class RunnerServer {
         return;
       }
       try {
-        const content = await fs.readFile(path.join(this.runDir(runId), file));
+        const target = path.join(this.runDir(runId), file);
+        const stat = await fs.stat(target);
         let host = 'site';
         try {
           host =
@@ -2239,11 +2159,9 @@ export class RunnerServer {
           // keep "site"
         }
         const [base, ext] = file.split('.');
-        res.writeHead(200, {
-          'Content-Type': contentType,
+        sendFileRanged(req, res, target, stat, contentType, {
           'Content-Disposition': `attachment; filename="${base}-${host}-${runId}.${ext}"`,
         });
-        res.end(content);
       } catch {
         this.sendJson(res, 404, { error: `${file} isn’t there for that check-up.` });
       }
@@ -2293,7 +2211,11 @@ export class RunnerServer {
     }
   }
 
-  private async handleReportDownload(fileName: string, res: http.ServerResponse): Promise<void> {
+  private async handleReportDownload(
+    fileName: string,
+    req: http.IncomingMessage,
+    res: http.ServerResponse
+  ): Promise<void> {
     const contentType = DOWNLOADABLE_REPORT_FILES[fileName];
     if (!contentType) {
       this.sendJson(res, 404, { error: 'Unknown report file' });
@@ -2306,12 +2228,10 @@ export class RunnerServer {
     try {
       // The latest run's own copy; runs from before per-run folders wrote to the top of the folder.
       const own = path.join(this.runDir(this.lastReport.runId), fileName);
-      const content = await fs.readFile((await exists(own)) ? own : path.join(this.outputDir, fileName));
-      res.writeHead(200, {
-        'Content-Type': contentType,
+      const target = (await exists(own)) ? own : path.join(this.outputDir, fileName);
+      sendFileRanged(req, res, target, await fs.stat(target), contentType, {
         'Content-Disposition': `attachment; filename="${fileName}"`,
       });
-      res.end(content);
     } catch {
       this.sendJson(res, 404, { error: `${fileName} was not written for the last run` });
     }
@@ -2443,6 +2363,7 @@ export class RunnerServer {
         'utf8'
       )
       .catch(() => {});
+    await this.pruneVisitorRuns(this.runOwners.get(report.runId));
   }
 
   /** The key saved on this machine for a provider, if any. Never returned to clients. */
@@ -3223,12 +3144,28 @@ export class RunnerServer {
     return this.session.plan.forDisk(record);
   }
 
+  /**
+   * The Plan waiting for review, for a status poll. With none in memory, the Plan file is checked at most once every
+   * STATUS_NO_PLAN_MS: the runner sets the Plan in memory when it writes one, so the next poll sees it at once.
+   */
+  private async waitingPlanForStatus(): Promise<StoredPlanRecord | null> {
+    if (this.session.plan.currentRecord) return this.session.plan.current();
+    if (this.noPlanCheckedAt !== null && Date.now() - this.noPlanCheckedAt < STATUS_NO_PLAN_MS) return null;
+    const waiting = await this.session.plan.current();
+    this.noPlanCheckedAt = waiting ? null : Date.now();
+    return waiting;
+  }
+
   /** Forgets the paused plan; with a runId, only while it is still that run's plan (a newer run may have replaced it). */
   private async clearPlan(runId?: string): Promise<void> {
     return this.session.plan.clear(runId);
   }
 
-  private async handleServeBaseline(fileName: string, res: http.ServerResponse): Promise<void> {
+  private async handleServeBaseline(
+    fileName: string,
+    req: http.IncomingMessage,
+    res: http.ServerResponse
+  ): Promise<void> {
     const target = path.resolve(this.baselineDir, fileName);
     if (!isInside(this.baselineDir, target)) {
       res.writeHead(403, { 'Content-Type': 'text/plain' });
@@ -3236,9 +3173,9 @@ export class RunnerServer {
       return;
     }
     try {
-      const data = await fs.readFile(target);
-      res.writeHead(200, { 'Content-Type': 'image/png' });
-      res.end(data);
+      sendFileRanged(req, res, target, await fs.stat(target), 'image/png', {
+        'Cache-Control': 'private, max-age=3600',
+      });
     } catch {
       res.writeHead(404, { 'Content-Type': 'text/plain' });
       res.end('Baseline image not found');
@@ -3477,6 +3414,12 @@ export class RunnerServer {
     const live = this.benchmarkJobs.get(id);
     const mine = live && (!this.beta || live.owner === currentSessionId());
     if (method === 'DELETE') {
+      // Beta: another visitor's live comparison is not there for this one, so nothing is removed.
+      // A finished one is kept in the starter's own session folder, so the store lookup below misses it too.
+      if (this.beta && live && !mine) {
+        this.sendJson(res, 404, { error: 'That comparison isn’t here any more.', code: 'ERR_NOT_FOUND' });
+        return;
+      }
       if (mine && live.job.status === 'running') {
         this.sendJson(res, 409, { error: 'That comparison is still running.', code: 'ERR_RUN_IN_PROGRESS' });
         return;
@@ -3492,6 +3435,24 @@ export class RunnerServer {
       return;
     }
     this.sendJson(res, 200, job);
+  }
+
+  /** The state a comparison's poll needs: no result, so the answer stays small while it runs. */
+  private async handleBenchmarkProgress(id: string, res: http.ServerResponse): Promise<void> {
+    const live = this.benchmarkJobs.get(id);
+    const mine = live && (!this.beta || live.owner === currentSessionId());
+    const job = mine ? live.job : await this.benchmarkStore().get(id);
+    if (!job) {
+      this.sendJson(res, 404, { error: 'That comparison isn’t here any more.', code: 'ERR_NOT_FOUND' });
+      return;
+    }
+    this.sendJson(res, 200, {
+      id: job.id,
+      status: job.status,
+      stage: job.stage,
+      aiUsed: job.aiUsed,
+      error: job.error,
+    });
   }
 
   private async handleAddSchedule(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {

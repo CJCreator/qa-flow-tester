@@ -3,11 +3,18 @@ import type { RunnerEvent } from '../lib/translate';
 
 export type StreamConnection = 'connecting' | 'open' | 'reconnecting';
 
-const RECONNECT_DELAY_MS = 3000;
+/** Waits before the 1st, 2nd and 3rd reconnect attempts in a row; every later attempt waits the last value. */
+const RECONNECT_DELAYS_MS = [2000, 4000, 8000, 30000];
+
+/** The wait before reconnect attempt `attempt` (0 for the first), counting failed attempts since the last open. */
+export function reconnectDelayMs(attempt: number): number {
+  return RECONNECT_DELAYS_MS[Math.min(attempt, RECONNECT_DELAYS_MS.length - 1)];
+}
 
 /**
- * Keeps one EventSource open to the runner while `enabled`, reconnecting after drops.
- * After a reconnect, `onReconnected` fires so the caller can catch up on anything it missed.
+ * Keeps one EventSource open to the runner while `enabled`, reconnecting after drops with a growing
+ * wait (2 s, 4 s, 8 s, then 30 s). After a reconnect, `onReconnected` fires so the caller can catch
+ * up on anything it missed.
  */
 export function useRunnerStream(
   url: string,
@@ -25,9 +32,12 @@ export function useRunnerStream(
     let retry: ReturnType<typeof setTimeout> | undefined;
     let disposed = false;
     let dropped = false;
+    let attempt = 0;
+    let opened = false;
 
     const connect = () => {
-      source = new EventSource(url);
+      // After the first open, a reconnect asks for the snapshot only (no replay of the run's events).
+      source = new EventSource(opened ? `${url}?reconnect=1` : url);
       source.onmessage = (message) => {
         let event: RunnerEvent;
         try {
@@ -36,6 +46,8 @@ export function useRunnerStream(
           return;
         }
         if (event.type === 'connected') {
+          attempt = 0;
+          opened = true;
           setConnection('open');
           if (dropped) {
             dropped = false;
@@ -49,7 +61,7 @@ export function useRunnerStream(
         if (disposed) return;
         dropped = true;
         setConnection('reconnecting');
-        retry = setTimeout(connect, RECONNECT_DELAY_MS);
+        retry = setTimeout(connect, reconnectDelayMs(attempt++));
       };
     };
 

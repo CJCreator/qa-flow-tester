@@ -85,8 +85,8 @@ flowchart TD
 
 Before starting, ensure you have:
 
-- **Node.js**: `v20.x` or `v22.x` (`node -v`)
-- **Package Manager**: `pnpm` v9+ (`npm install -g pnpm` or `corepack enable`)
+- **Node.js**: 22 or newer (`node -v`; `engines` in `package.json`)
+- **Package Manager**: `pnpm` 11 (pinned in `package.json`; `corepack enable` installs it)
 - **Browsers**: Playwright browser binaries
 
 ---
@@ -95,7 +95,7 @@ Before starting, ensure you have:
 
 ### 1. Clone and Set Up
 
-You need **Node.js 22.9 or newer** and **pnpm 11** (the pnpm version is pinned in `package.json`).
+You need **Node.js 22 or newer** and **pnpm 11** (the exact pnpm version, 11.10.0, is pinned in `package.json`).
 
 ```bash
 git clone https://github.com/CJCreator/qa-flow-tester.git
@@ -175,7 +175,7 @@ pnpm dev   # http://localhost:3002, API calls passed on to the QA Tool on 3001
 
 ### Publish the front end on Vercel
 
-On [vercel.com](https://vercel.com), choose **Add New, Project**, import this repo, and keep the **Root Directory** as the repo root. `vercel.json` sets the install and build commands and the output folder, so there is nothing else to fill in. Every push to `main` publishes the wizard. Opened there, no runner answers it, so its first screen offers the ways to run a check-up (below). Vercel serves only the page: the runner needs a real browser, which Vercel's short-lived functions can't hold for a check-up.
+On [vercel.com](https://vercel.com), choose **Add New, Project**, import this repo, and keep the **Root Directory** as the repo root. `vercel.json` sets the build command (`pnpm run vercel-build`), the output folder (`public`) and a rewrite of every address to `index.html`, so there is nothing else to fill in. Every push to `main` publishes the wizard. Opened there, no runner answers it, so its first screen offers the ways to run a check-up (below). Vercel serves only the page: the runner needs a real browser, which Vercel's short-lived functions can't hold for a check-up.
 
 ---
 
@@ -187,14 +187,14 @@ On [vercel.com](https://vercel.com), choose **Add New, Project**, import this re
 2. When it is live, copy its address (for example `https://qa-check-up.onrender.com`).
 3. In Vercel, open the project's **Settings, Environment Variables** and add `VITE_ONLINE_APP_URL` with that address, then redeploy: the site now shows an **Open the online app** button.
 
-The free plan has 512 MB of memory, sleeps after 15 minutes idle (the first visit then takes about a minute) and runs one check-up at a time. A big site can run out of memory. There are no accounts, and check-ups are limited per visitor and per day, so treat it as a beta.
+The free plan has 512 MB of memory, sleeps after 15 minutes idle (the first visit then takes about a minute) and runs one check-up at a time. A big site can run out of memory. This is a public beta. Its only protection is the address guard (private addresses are refused); there are no accounts, and check-ups are limited per visitor and per day. Its data is temporary: the free plan has no persistent disk, so check-ups, Plans and comparisons are lost on a restart or redeploy.
 
 ### Automatic deploys
 
 Nobody deploys by hand. Every push to `main` runs [.github/workflows/deploy.yml](.github/workflows/deploy.yml):
 
-1. **Test.** It builds the site as Vercel does, type-checks the runner and runs the unit tests (not the browser-driven end-to-end test, which takes minutes: run `pnpm test` before a release).
-2. **Publish.** Render builds from this repo, so the push itself starts its build (`autoDeploy` in `render.yaml`). Vercel builds from the `CJCreator-New/flowtester` repo, so the workflow copies `main` there once the tests pass, and that starts the Vercel build.
+1. **Test.** It lints, builds the site and the runner, runs a smoke check and the unit tests in four shards, and audits production dependencies and scans the history for secrets. Nothing is published unless all of these pass. The browser-driven end-to-end test is not in this gate: it takes minutes, so run `pnpm test` before a release.
+2. **Publish.** Render builds from this repo and only after the commit's checks pass (`autoDeployTrigger: checksPass` in `render.yaml`). Vercel builds from the `CJCreator-New/flowtester` repo, so the workflow copies `main` there once the checks pass, and that starts the Vercel build.
 3. **Verify.** It waits for the Vercel site and the Render app to answer, and goes red if either does not.
 
 One-time setup: in this repo's **Settings, Secrets and variables, Actions**, add the secret `VERCEL_REPO_TOKEN`, a fine-grained personal access token that can write **Contents** and **Workflows** on `CJCreator-New/flowtester`. If you would rather Vercel built from this repo directly, import this repo in Vercel instead and delete the Publish job.
@@ -233,7 +233,7 @@ It prints a **Public** link. Send each tester that link (it carries a private ac
 
 - Each tester adds **their own AI key** in Settings. It is kept in memory for their session only: never saved to disk, never shared with other testers, gone when you stop the tunnel. Your own saved key and sign-ins are not used.
 - Only **public sites** can be checked. Addresses on your computer or network (`localhost`, `192.168.x.x`) are refused.
-- One check-up runs at a time. Everyone with the link sees the same reports, and deleting check-ups, schedules and comparisons are closed.
+- One check-up runs at a time. Everyone with the link sees the same reports. Deleting check-ups and schedules, and changing shared settings, are closed. You can delete only your own comparisons.
 - Testers should only check sites they own. Do not give the link to strangers: there are no accounts; check-ups are limited per visitor and per day.
 
 Without `--beta`, `pnpm tunnel` shares **your** saved AI key with whoever has the link.

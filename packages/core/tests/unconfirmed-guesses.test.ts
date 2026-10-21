@@ -187,7 +187,10 @@ describe('Unconfirmed guesses never fail a site', () => {
     expect(report.coverage.couldNotVerify).toBe(2);
 
     const md = await fs.readFile(path.join(outputDir, 'invoice', 'report.md'), 'utf8');
-    expect(md).toContain('**Ready to release**');
+    // T-47: this run switches every checker off, so its areas are "not checked" and the standard gate says
+    // "Not ready yet" for that reason only. The guesses themselves block nothing.
+    expect(md).toContain('0 blocking, 0 major');
+    expect(md).toContain('2 areas not checked');
     expect(md).toContain('❓ Could not verify (AI guesses that need your confirmation)');
   }, 60000);
 

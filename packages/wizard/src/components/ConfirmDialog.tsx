@@ -24,13 +24,20 @@ export type Choice = 'confirm' | 'alt' | 'cancel';
 function ConfirmDialog({ options, onClose }: { options: ConfirmOptions; onClose: (choice: Choice) => void }) {
   const ref = useRef<HTMLDialogElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
+  const openerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
+    // The control that asked (Delete, Stop) gets focus back when the dialog closes, if it is still there.
+    openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     if (!dialog.open) dialog.showModal();
     // The safe choice has focus, so Enter on its own never throws anything away.
     cancelRef.current?.focus();
+    return () => {
+      const opener = openerRef.current;
+      if (opener?.isConnected) opener.focus();
+    };
   }, []);
 
   return (

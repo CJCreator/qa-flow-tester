@@ -5,6 +5,7 @@ import { SiteRootAuditor } from './site-root.js';
 import { AeoChecker } from './aeo.js';
 import { GeoChecker } from './geo.js';
 import { MarketingChecker, type MarketingLog } from './marketing.js';
+import type { FetchFn } from './security-depth.js';
 
 export interface SeoContext {
   testCaseId?: string;
@@ -27,7 +28,16 @@ export interface SeoContext {
   siteWide?: Set<string>;
   /** What the marketing basics found over the run, for the report's checklist. */
   marketingLog?: MarketingLog;
+  /** The outbound GET for link and root checks, from the pinned helper (ADR 0031). Without it those checks are skipped. */
+  fetchFn?: FetchFn;
+  /** False when this page's links were already checked this run. Default true. */
+  checkLinks?: boolean;
+  /** Run-wide answers to link requests, keyed by full URL: one URL is requested once per run. */
+  linkCache?: Map<string, Promise<number | null>>;
 }
+
+/** Link targets checked at the same time. */
+const LINK_CHECK_PARALLEL = 4;
 
 export interface SeoPageDetails {
   title?: string;
@@ -80,7 +90,9 @@ export class SeoChecker {
 
     // If all visibility checks are turned off: only check broken links.
     if (!vis.search && !vis.answers && !vis.aiSearch && !vis.marketing) {
-      return details.sameSiteLinks?.length ? this.checkBrokenLinks(page, details.sameSiteLinks, context) : findings;
+      return details.sameSiteLinks?.length && context.checkLinks !== false
+        ? this.checkBrokenLinks(page, details.sameSiteLinks, context)
+        : findings;
     }
 
     if (vis.search) {
@@ -380,28 +392,21 @@ export class SeoChecker {
     } // end if (vis.search)
 
     // 11. Check for broken links on page (limited rate, same-site only)
-    if (details.sameSiteLinks && details.sameSiteLinks.length > 0) {
+    if (context.checkLinks !== false && details.sameSiteLinks && details.sameSiteLinks.length > 0) {
       const linkFindings = await this.checkBrokenLinks(page, details.sameSiteLinks, context);
       findings.push(...linkFindings);
     }
 
     // 12. Site Root Auditor (robots.txt, sitemap.xml, llms.txt, AI crawlers)
-    if (vis.search && context.baseUrl) {
+    if (vis.search && context.baseUrl && context.fetchFn) {
       const isRootPath = context.urlPath === '/' || context.urlPath === '' || context.urlPath === '/index.html';
       if (isRootPath) {
+        const fetchFn = context.fetchFn;
         try {
-          const requestContext = page.context().request;
           const rootResult = await this.siteRootAuditor.audit(
             async (url: string) => {
-              try {
-                const r = await requestContext.fetch(url, { timeout: 3000 });
-                return {
-                  status: () => r.status(),
-                  text: () => r.text(),
-                };
-              } catch {
-                return null;
-              }
+              const r = await fetchFn(url);
+              return r ? { status: () => r.status, text: r.text } : null;
             },
             {
               baseUrl: context.baseUrl,
@@ -546,41 +551,73 @@ export class SeoChecker {
 
   private async checkBrokenLinks(page: Page, paths: string[], context: SeoContext): Promise<Finding[]> {
     const findings: Finding[] = [];
-    const request = page.context().request;
+    const fetchFn = context.fetchFn;
+    if (!fetchFn) return findings;
 
-    // Check up to 5 links asynchronously with a strict timeout
+    // Check up to 5 links, 4 at a time, with a strict timeout each. Findings keep the links' order.
     const toCheck = paths.slice(0, 5);
-    for (const linkPath of toCheck) {
-      try {
-        const fullUrl = context.baseUrl ? new URL(linkPath, context.baseUrl).href : linkPath;
-        const response = await request.fetch(fullUrl, { method: 'HEAD', timeout: 3000 }).catch(async () => {
-          return await request.fetch(fullUrl, { method: 'GET', timeout: 3000 }).catch(() => null);
-        });
+    const statuses: Array<number | null> = toCheck.map(() => null);
+    let next = 0;
+    const worker = async () => {
+      while (next < toCheck.length) {
+        const i = next++;
+        statuses[i] = await this.linkStatus(toCheck[i], fetchFn, context);
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(LINK_CHECK_PARALLEL, toCheck.length) }, worker));
 
-        if (response && response.status() >= 400 && response.status() !== 403 && response.status() !== 401) {
-          findings.push({
-            id: `F-SEO-${context.testCaseId || 'GEN'}-BROKENLINK-${findings.length + 1}`,
-            testCaseId: context.testCaseId,
-            flowId: context.flowId,
-            severity: 'Major',
-            checker: 'seo',
-            // A broken link is something broken, whoever the site is for.
-            aspect: 'Works',
-            title: `Broken link found: ${linkPath} returned HTTP ${response.status()}`,
-            where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
-            expectedVsActual: {
-              expected: `All internal links should resolve to valid pages (HTTP 200/300)`,
-              actual: `Link to ${linkPath} responded with HTTP ${response.status()}`,
-            },
-            stepsToReproduce: [`Visit ${context.urlPath}`, `Click or request link to ${linkPath}`],
-            evidence: {},
-            resolution: `Fix the broken link target or set up a 301 redirect if the page moved.`,
-          });
-        }
+    toCheck.forEach((linkPath, i) => {
+      const status = statuses[i];
+      if (status !== null && status >= 400 && status !== 403 && status !== 401) {
+        findings.push({
+          id: `F-SEO-${context.testCaseId || 'GEN'}-BROKENLINK-${findings.length + 1}`,
+          testCaseId: context.testCaseId,
+          flowId: context.flowId,
+          severity: 'Major',
+          checker: 'seo',
+          // A broken link is something broken, whoever the site is for.
+          aspect: 'Works',
+          title: `Broken link found: ${linkPath} returned HTTP ${status}`,
+          where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
+          expectedVsActual: {
+            expected: `All internal links should resolve to valid pages (HTTP 200/300)`,
+            actual: `Link to ${linkPath} responded with HTTP ${status}`,
+          },
+          stepsToReproduce: [`Visit ${context.urlPath}`, `Click or request link to ${linkPath}`],
+          evidence: {},
+          resolution: `Fix the broken link target or set up a 301 redirect if the page moved.`,
+        });
+      }
+    });
+    return findings;
+  }
+
+  /**
+   * HTTP status of a link target, or null when the request failed. With a linkCache, the request is
+   * made once per full URL for the whole run; later checks (other pages, other sizes) reuse its answer.
+   */
+  private linkStatus(linkPath: string, fetchFn: FetchFn, context: SeoContext): Promise<number | null> {
+    const request = async (fullUrl: string): Promise<number | null> => {
+      try {
+        const response = await fetchFn(fullUrl);
+        return response ? response.status : null;
       } catch {
         // Skip link on network error
+        return null;
       }
+    };
+    let fullUrl: string;
+    try {
+      fullUrl = context.baseUrl ? new URL(linkPath, context.baseUrl).href : linkPath;
+    } catch {
+      return Promise.resolve(null);
     }
-    return findings;
+    if (!context.linkCache) return request(fullUrl);
+    let cached = context.linkCache.get(fullUrl);
+    if (!cached) {
+      cached = request(fullUrl);
+      context.linkCache.set(fullUrl, cached);
+    }
+    return cached;
   }
 }

@@ -384,7 +384,7 @@ describe('T-37b: wizard copy, labels and accessibility', () => {
     expect(settings).toContain("preset === 'standard' ? (");
     expect(settings).toContain('The stamp on every report always uses the Standard rule.');
     expect(settings).toContain('Site address');
-    expect(settings).toContain('Quick check (faster)');
+    expect(settings).toContain('Quick check-up (faster)');
     expect(settings).toContain('Use a test sign-in, not a real person’s.');
     for (const old of ['Target Website URL', 'Quick smoke scan', 'Failed to', 'Use a test account']) {
       expect(settings, old).not.toContain(old);

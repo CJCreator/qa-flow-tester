@@ -464,7 +464,7 @@ _Reference: Roadmap Gap Table Rows 18, 19, 20, Cluster 02 ([02-visual-crossbrows
   - [`packages/core/src/reporter.ts`](../packages/core/src/reporter.ts)
   - [`packages/core/src/html-report.ts`](../packages/core/src/html-report.ts)
   - `packages/cli/src/index.ts`
-  - [`findings.schema.json`](findings.schema.json)
+  - `findings.schema.json` (planned, not generated yet)
   - `.github/workflows/qa-preview.yml`
 - **Acceptance Criteria:**
   - [x] `findings.json` includes `schemaVersion` and `fingerprint`.

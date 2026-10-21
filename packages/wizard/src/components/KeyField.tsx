@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { RunnerError, saveKey, validateKey } from '../api';
+import { plainError, saveKey, validateKey } from '../api';
 import { ErrorMessage, Spinner } from './text';
 
 type KeyStatus = { kind: 'empty' } | { kind: 'checking' } | { kind: 'valid' } | { kind: 'invalid'; reason: string };
@@ -48,7 +48,7 @@ export function KeyField({
         if (checkId !== latestCheck.current) return;
         setStatus({
           kind: 'invalid',
-          reason: err instanceof RunnerError ? err.message : 'The key couldn’t be checked. Try again.',
+          reason: plainError(err, 'The key couldn’t be checked. Try again.'),
         });
       }
     }, VALIDATE_DELAY_MS);
@@ -67,7 +67,7 @@ export function KeyField({
       setKey('');
       onSaved(model);
     } catch (err) {
-      setError(err instanceof RunnerError ? err.message : 'The key couldn’t be saved. Try again.');
+      setError(plainError(err, 'The key couldn’t be saved. Try again.'));
     } finally {
       setSaving(false);
     }
@@ -120,7 +120,7 @@ export function KeyField({
       </div>
 
       <p id="ai-key-status" role="status" className="mt-2 min-h-[1.6em] text-sm">
-        {status.kind === 'checking' && <Spinner label="Checking the key…" />}
+        {status.kind === 'checking' && <Spinner label="Confirming the key…" />}
         {status.kind === 'valid' && <span className="font-bold text-pass">✓ The key works</span>}
         {status.kind === 'invalid' && (
           <span className="font-bold text-fail">✗ The key doesn’t work, or it’s out of credit. {status.reason}</span>
@@ -138,6 +138,15 @@ export function KeyField({
         >
           {saving ? <Spinner label="Saving your key…" /> : saveLabel}
         </button>
+        {status.kind !== 'valid' && !saving && (
+          <p className="text-sm text-ink-soft">
+            {status.kind === 'empty'
+              ? 'Paste your key first.'
+              : status.kind === 'checking'
+                ? 'Wait until the key is checked.'
+                : 'The key has to work before it can be saved.'}
+          </p>
+        )}
         {onCancel && (
           <button type="button" className="btn-link" onClick={onCancel}>
             {cancelLabel ?? 'Cancel'}

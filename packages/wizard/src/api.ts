@@ -41,6 +41,14 @@ export class RunnerError extends Error {
   }
 }
 
+/**
+ * The words to show for a failure. A RunnerError's message is already a plain sentence; any other
+ * error (a raw fetch or parse failure, a bug) gets the `fallback` sentence instead.
+ */
+export function plainError(err: unknown, fallback: string): string {
+  return err instanceof RunnerError ? err.message : fallback;
+}
+
 const NOT_RESPONDING = 'Release check-up isn’t responding. Make sure it’s still running, then try again.';
 
 async function call(path: string, init: RequestInit = {}, timeoutMs = 15000): Promise<Response> {
@@ -54,7 +62,7 @@ async function call(path: string, init: RequestInit = {}, timeoutMs = 15000): Pr
     throw new RunnerError(
       NOT_RESPONDING,
       'ERR_SERVER_UNRESPONSIVE',
-      'Check that it’s still running in its terminal (start it with pnpm start).'
+      'Make sure it’s still running in its terminal (start it with pnpm start).'
     );
   }
 }
@@ -278,12 +286,12 @@ export async function checkDomainProof(targetUrl: string): Promise<DomainProofSt
   const body = await json<Partial<DomainProofStatus> & { error?: string; code?: string }>(res);
   if (res.status === 429) {
     throw new RunnerError(
-      body.error || 'The Verified Domain line was checked a moment ago.',
+      body.error || 'The Verified Domain line was read a moment ago.',
       body.code || 'ERR_RATE',
-      'Wait about 10 seconds, then check again.'
+      'Wait about 10 seconds, then try again.'
     );
   }
-  if (!res.ok) throw new RunnerError(body.error || 'The address couldn’t be checked.', body.code);
+  if (!res.ok) throw new RunnerError(body.error || 'The address couldn’t be looked at.', body.code);
   return {
     required: !!body.required,
     verified: !!body.verified,
@@ -328,7 +336,7 @@ export async function checkReachable(targetUrl: string): Promise<Reachability> {
       ok: false,
       reason: 'That site answered with an error page. It may be down right now.',
       code: body.code || 'ERR_SERVER_ERROR',
-      suggestion: 'Check the site is working, then try again.',
+      suggestion: 'Make sure the site is working, then try again.',
       statusCode: body.statusCode,
       startWarning: body.startWarning,
       ...facts,
@@ -339,7 +347,7 @@ export async function checkReachable(targetUrl: string): Promise<Reachability> {
       ok: false,
       reason: 'That doesn’t look like a valid web address.',
       code: body.code || 'ERR_INVALID_URL',
-      suggestion: 'Check the address, for example shop.example.com or localhost:3050.',
+      suggestion: 'Make sure the address is right, for example shop.example.com or localhost:3050.',
       statusCode: body.statusCode,
       startWarning: body.startWarning,
       ...facts,
@@ -362,7 +370,7 @@ export async function checkReachable(targetUrl: string): Promise<Reachability> {
     // Anything else the runner said went wrong is reported as what failed, never as a refusal.
     return {
       ok: false,
-      reason: body.error || 'Release check-up hit an error while checking that address.',
+      reason: body.error || 'Release check-up hit an error while looking at that address.',
       code: body.code || 'ERR_PREFLIGHT_FAILED',
       suggestion: 'Try again. If it keeps happening, look at the terminal where Release check-up is running.',
       statusCode: res.status,
@@ -455,7 +463,7 @@ export async function abortRun(
     return { aborted: false, error: 'Release check-up couldn’t stop the check-up. Try again.' };
   } catch (err) {
     // runner might be busy or unreachable
-    return { aborted: false, error: err instanceof RunnerError ? err.message : NOT_RESPONDING };
+    return { aborted: false, error: plainError(err, NOT_RESPONDING) };
   }
 }
 
@@ -693,7 +701,7 @@ export async function updateSite(
 }
 
 /**
- * Signs in on the site to check the details work, and keeps them (password in the computer's
+ * Signs in on the site to confirm the details work, and keeps them (password in the computer's
  * keychain) only when they do. Throws with the reason when signing in didn't work.
  */
 export async function addSiteSignIn(
@@ -887,8 +895,20 @@ export async function startBenchmark(params: {
   const res = await call('/api/runner/benchmark', { method: 'POST', body: JSON.stringify(params) });
   const body = await json<{ id?: string; error?: string }>(res);
   if (!res.ok || !body.id)
-    throw new RunnerError(body.error || 'The comparison couldn’t start. Check both addresses and try again.');
+    throw new RunnerError(body.error || 'The comparison couldn’t start. Make sure both addresses are right and try again.');
   return body.id;
+}
+
+/**
+ * The state of a running comparison, from the small progress route: no result, so each poll stays under 1 KB.
+ * Any failure throws a plain Error; the poll turns it into a sentence.
+ */
+export async function getBenchmarkProgress(id: string): Promise<Pick<BenchmarkJob, 'id' | 'status' | 'stage' | 'aiUsed'>> {
+  const res = await fetch(`/api/runner/benchmark/${encodeURIComponent(id)}/progress`, {
+    signal: AbortSignal.timeout(15000),
+  }).catch(() => null);
+  if (!res?.ok) throw new Error('Lost track of the comparison.');
+  return res.json();
 }
 
 export async function getBenchmark(id: string): Promise<BenchmarkJob> {
@@ -983,6 +1003,23 @@ export function saveStoredReleaseGates(gates: ReleaseGateCriteria): void {
   } catch {}
 }
 
+const SHORTCUTS_STORAGE_KEY = 'qa_single_key_shortcuts';
+
+/** Single-key shortcuts (j, k, g, ?) are on unless the person turned them off on this computer. */
+export function getShortcutsOn(): boolean {
+  try {
+    return localStorage.getItem(SHORTCUTS_STORAGE_KEY) !== 'off';
+  } catch {
+    return true;
+  }
+}
+
+export function saveShortcutsOn(on: boolean): void {
+  try {
+    localStorage.setItem(SHORTCUTS_STORAGE_KEY, on ? 'on' : 'off');
+  } catch {}
+}
+
 export interface SpecOverridePayload {
   runId?: string;
   requirementId: string;
@@ -997,6 +1034,6 @@ export async function recordSpecOverride(payload: SpecOverridePayload): Promise<
     method: 'POST',
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new RunnerError('Couldn’t record the spec override.');
+  if (!res.ok) throw new RunnerError('Couldn’t record the override.');
   return json<{ ok: boolean }>(res);
 }

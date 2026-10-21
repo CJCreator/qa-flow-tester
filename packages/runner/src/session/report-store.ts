@@ -2,12 +2,21 @@ import fs from 'fs/promises';
 import path from 'path';
 import type { ReleaseReport, RunSummary } from '@qa/types';
 import { releaseVerdict } from '@qa/types';
+import { writeJsonAtomic } from '@qa/core';
 import type { SessionPaths } from './checkup-session.js';
 
 export const RUNS_KEPT_PER_SITE = 10;
 
 export function isRunId(value: string): boolean {
   return /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(value) && !value.includes('..');
+}
+
+/** Every run folder and the headline of each finished run, in one file, so a list reads one file, not every summary. */
+interface RunIndex {
+  /** The run folders under runs/, sorted (a folder without a summary is a run that never finished). */
+  names: string[];
+  /** The finished runs, newest first. */
+  runs: RunSummary[];
 }
 
 export interface ReportStore {
@@ -78,19 +87,62 @@ export class DefaultReportStore implements ReportStore {
     return path.join(this.paths.dataDir, 'sites');
   }
 
+  /** Newest first. The index is used while the run folders are the ones it lists; otherwise the summaries are read again. */
   async list(): Promise<RunSummary[]> {
     const root = path.join(this.paths.outputDir, 'runs');
-    const names = await fs.readdir(root).catch(() => [] as string[]);
+    const names = (await fs.readdir(root).catch(() => [] as string[])).filter((n) => isRunId(n)).sort();
+    const index = await this.readIndex();
+    if (index && index.names.length === names.length && index.names.every((n, i) => n === names[i])) return index.runs;
     const runs: RunSummary[] = [];
     for (const name of names) {
-      if (!isRunId(name)) continue;
       try {
         runs.push(JSON.parse(await fs.readFile(path.join(root, name, 'summary.json'), 'utf8')) as RunSummary);
       } catch {
         // not finished
       }
     }
-    return runs.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+    runs.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+    if (index || names.length > 0) await this.writeIndex({ names, runs });
+    return runs;
+  }
+
+  private indexFile(): string {
+    return path.join(this.paths.outputDir, 'runs-index.json');
+  }
+
+  private async readIndex(): Promise<RunIndex | null> {
+    try {
+      const index = JSON.parse(await fs.readFile(this.indexFile(), 'utf8')) as RunIndex;
+      return Array.isArray(index.names) && Array.isArray(index.runs) ? index : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private async writeIndex(index: RunIndex): Promise<void> {
+    await writeJsonAtomic(this.indexFile(), index);
+  }
+
+  /** Puts a finished run in the index. With no index yet, the next list builds it. */
+  private async keepInIndex(summary: RunSummary): Promise<void> {
+    const index = await this.readIndex();
+    if (!index) return;
+    const names = [...new Set([...index.names, summary.runId])].sort();
+    const runs = [summary, ...index.runs.filter((r) => r.runId !== summary.runId)].sort((a, b) =>
+      b.timestamp.localeCompare(a.timestamp)
+    );
+    await this.writeIndex({ names, runs });
+  }
+
+  /** Takes deleted run folders out of the index. */
+  private async dropFromIndex(runIds: string[]): Promise<void> {
+    const index = await this.readIndex();
+    if (!index || runIds.length === 0) return;
+    const gone = new Set(runIds);
+    await this.writeIndex({
+      names: index.names.filter((n) => !gone.has(n)),
+      runs: index.runs.filter((r) => !gone.has(r.runId)),
+    });
   }
 
   async keep(report: ReleaseReport, typedTargetUrl: string, siteHost: string | undefined): Promise<void> {
@@ -118,6 +170,7 @@ export class DefaultReportStore implements ReportStore {
       testedWithApprovedPlan: report.testedWithApprovedPlan,
     };
     await fs.writeFile(path.join(dir, 'summary.json'), JSON.stringify(summary, null, 2), 'utf8');
+    await this.keepInIndex(summary);
     for (const name of ['findings.json', 'fix-these.md', 'known-findings.json', 'AGENTS.snippet.md']) {
       await fs.copyFile(path.join(dir, name), path.join(this.paths.outputDir, name)).catch(() => {});
     }
@@ -127,14 +180,20 @@ export class DefaultReportStore implements ReportStore {
   async prune(host: string): Promise<void> {
     const runs = await this.list();
     const old = runs.filter((r) => r.host === host).slice(RUNS_KEPT_PER_SITE);
-    for (const run of old) await fs.rm(this.dirFor(run.runId), { recursive: true, force: true }).catch(() => {});
+    const removed: string[] = [];
+    for (const run of old) {
+      await fs.rm(this.dirFor(run.runId), { recursive: true, force: true }).catch(() => {});
+      removed.push(run.runId);
+    }
     const finished = new Set(runs.map((r) => r.runId));
     const root = path.join(this.paths.outputDir, 'runs');
     const protectedIds = new Set(this.getProtectedRunIds ? this.getProtectedRunIds() : []);
     for (const name of await fs.readdir(root).catch(() => [] as string[])) {
       if (!isRunId(name) || finished.has(name) || protectedIds.has(name)) continue;
       await fs.rm(path.join(root, name), { recursive: true, force: true }).catch(() => {});
+      removed.push(name);
     }
+    await this.dropFromIndex(removed);
   }
 
   async loadLatest(): Promise<void> {

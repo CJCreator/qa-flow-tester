@@ -1,9 +1,12 @@
 import type { Page } from 'playwright';
 import type { Breakpoint, Finding, FindingSeverity, StepEvidence } from '@qa/types';
 
-/** URL parameter names whose values are secrets. Shared with the report redaction. */
+/**
+ * URL parameter names whose values are secrets. The one list: the URL check here and the
+ * redaction in core (redact.ts) both read it.
+ */
 export const SECRET_PARAM_NAMES =
-  'pass|password|passwd|pwd|pin|otp|token|access_token|refresh_token|id_token|auth|secret|client_secret|api_key|apikey|key|session|sessionid|sid|ssn|cvv|card';
+  'p|pass|password|passwd|pwd|pin|otp|token|access_token|refresh_token|id_token|reset_token|auth|secret|client_secret|api_key|apikey|key|session|sessionid|sid|ssn|cvv|card|code|x-amz-signature';
 const SECRET_PARAM_NAME = new RegExp(`^(?:${SECRET_PARAM_NAMES})$`, 'i');
 const PASSWORD_PARAM_NAME = /^(?:pass|password|passwd|pwd|pin)$/i;
 

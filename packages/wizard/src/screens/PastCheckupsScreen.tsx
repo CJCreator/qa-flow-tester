@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FindingSeverity, RunSummary } from '@qa/types';
-import { deleteRun, listRuns, RunnerError } from '../api';
+import { deleteRun, listRuns, plainError } from '../api';
 import type { ConfirmOptions } from '../components/ConfirmDialog';
 import { ErrorMessage, Question, Spinner } from '../components/text';
 import { count, formatDay, formatWhen } from '../lib/format';
@@ -40,6 +40,8 @@ export function PastCheckupsScreen({
   useDocumentTitle('Past check-ups');
   const [runs, setRuns] = useState<RunSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // After a delete, focus goes to the next check-up's Delete (or the new check-up link when none is left).
+  const focusAfterDelete = useRef<string | null>(null);
 
   const load = useCallback(() => {
     listRuns()
@@ -47,11 +49,19 @@ export function PastCheckupsScreen({
         setRuns(list);
         setError(null);
       })
-      .catch((err) =>
-        setError(err instanceof RunnerError ? err.message : 'Couldn’t list your past check-ups. Try again.')
-      );
+      .catch((err) => setError(plainError(err, 'Couldn’t list your past check-ups. Try again.')));
   }, []);
   useEffect(load, [load]);
+
+  useEffect(() => {
+    const target = focusAfterDelete.current;
+    if (target === null) return;
+    focusAfterDelete.current = null;
+    const button = [...document.querySelectorAll<HTMLElement>('[data-delete-run]')].find(
+      (el) => el.dataset.deleteRun === target
+    );
+    (button ?? document.querySelector<HTMLElement>('[data-new-checkup]'))?.focus();
+  }, [runs]);
 
   const remove = async (run: RunSummary) => {
     const ok = await confirm({
@@ -66,11 +76,16 @@ export function PastCheckupsScreen({
       danger: true,
     });
     if (!ok) return;
+    // The next check-up of the same site, else the first one left anywhere.
+    const siblings = (runs ?? []).filter((r) => r.host === run.host);
+    const at = siblings.findIndex((r) => r.runId === run.runId);
+    const next = siblings[at + 1] ?? siblings[at - 1] ?? (runs ?? []).find((r) => r.runId !== run.runId);
     try {
       await deleteRun(run.runId);
+      focusAfterDelete.current = next?.runId ?? '';
       setRuns((list) => list?.filter((r) => r.runId !== run.runId) ?? null);
     } catch (err) {
-      setError(err instanceof RunnerError ? err.message : 'The check-up couldn’t be deleted. Try again.');
+      setError(plainError(err, 'The check-up couldn’t be deleted. Try again.'));
     }
   };
 
@@ -96,7 +111,7 @@ export function PastCheckupsScreen({
       {runs && runs.length === 0 && (
         <div className="rounded-lg border border-rule bg-surface p-6">
           <p className="mb-4 font-bold">No check-ups yet.</p>
-          <Link to={PATHS.new} className="btn-primary">
+          <Link to={PATHS.new} className="btn-primary" data-new-checkup="">
             Start a new check-up
           </Link>
         </div>
@@ -150,6 +165,7 @@ export function PastCheckupsScreen({
                         <button
                           type="button"
                           className="btn-quiet min-h-[44px] border-fail px-4 text-sm text-fail hover:border-fail hover:bg-fail-tint"
+                          data-delete-run={run.runId}
                           onClick={() => void remove(run)}
                           aria-label={`Delete the check-up of ${run.host} from ${formatWhen(run.timestamp)}`}
                         >

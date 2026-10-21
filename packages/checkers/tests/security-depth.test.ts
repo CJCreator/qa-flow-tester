@@ -6,7 +6,6 @@ import {
   findMissingSri,
   parseSecurityTxt,
   sameOriginGet,
-  defaultFetch,
   type FetchFn,
   type SecurityDepthContext,
 } from '../src/security-depth.js';
@@ -137,13 +136,12 @@ describe('source maps', () => {
     expect(fetchFn).not.toHaveBeenCalled();
   });
 
-  it('does not follow redirects and uses a 3 s timeout', async () => {
-    const fetch = vi.fn().mockResolvedValue({ status: () => 200, headers: () => ({}), text: async () => '' });
-    const page = { context: () => ({ request: { fetch } }) } as unknown as Page;
-    await defaultFetch(page)(`${ORIGIN}/a.js`);
-    expect(fetch).toHaveBeenCalledWith(`${ORIGIN}/a.js`, { method: 'GET', timeout: 3000, maxRedirects: 0 });
-    // A page with no request API gives null instead of throwing.
-    expect(await defaultFetch({ context: () => ({}) } as unknown as Page)(`${ORIGIN}/a.js`)).toBeNull();
+  it('makes no request without a fetchFn from the caller', async () => {
+    // T-43: defaultFetch is gone; the checker never reaches for the page's request API.
+    const request = { fetch: vi.fn() };
+    const page = { context: () => ({ request }) } as unknown as Page;
+    expect(await new SecurityDepthChecker().checkSourceMaps(page, ctx())).toEqual([]);
+    expect(request.fetch).not.toHaveBeenCalled();
   });
 });
 

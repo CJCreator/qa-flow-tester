@@ -20,6 +20,8 @@ export interface RunSecrets {
   authDirFor(runId: string): string;
   /** Delete it when the run ends (today's `cleanAuthDir`). */
   clean(runId: string): Promise<void>;
+  /** Delete the auth folders an earlier process left behind. Called once at startup, before any run. */
+  sweepLeftovers(): Promise<void>;
 }
 
 export class DefaultRunSecrets implements RunSecrets {
@@ -75,6 +77,14 @@ export class DefaultRunSecrets implements RunSecrets {
 
   async clean(runId: string): Promise<void> {
     await fs.rm(this.authDirFor(runId), { recursive: true, force: true }).catch(() => {});
+  }
+
+  async sweepLeftovers(): Promise<void> {
+    // A new process has no run or waiting plan in memory, so nothing kept there is still usable.
+    const names = await fs.readdir(this.baseAuthDir).catch(() => [] as string[]);
+    await Promise.all(
+      names.map((name) => fs.rm(path.join(this.baseAuthDir, name), { recursive: true, force: true }).catch(() => {}))
+    );
   }
 
   /**

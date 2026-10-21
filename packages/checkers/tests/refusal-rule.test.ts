@@ -54,7 +54,16 @@ describe('refusal rule in a page', () => {
   });
 
   it('a visible role=alert is a signal', async () => {
-    const { seen } = await run('<html><body><h1>Hi</h1><div role="alert">Email is wrong</div><p>x</p></body></html>');
+    // T-48: an alert already there at baseline is not a signal; one that appears after is.
+    await page.setContent('<html><body><h1>Hi</h1><p>x</p></body></html>');
+    const baseline = await captureRefusalBaseline(page);
+    await page.evaluate(() => {
+      const a = document.createElement('div');
+      a.setAttribute('role', 'alert');
+      a.textContent = 'Email is wrong';
+      document.body.appendChild(a);
+    });
+    const seen = await readRefusal(page, { baseline });
     expect(seen.signals).toContain('alert');
     expect(seen.errorText).toBe('Email is wrong');
   });
@@ -178,8 +187,15 @@ describe('SpecConformanceChecker refusal block', () => {
   });
 
   it('a different message is Major only when a message was stated', async () => {
-    await page.setContent('<html><body><h1>Hi</h1><div role="alert">Something else</div></body></html>');
+    await page.setContent('<html><body><h1>Hi</h1></body></html>');
     const baseline = await captureRefusalBaseline(page);
+    // T-48: the alert appears after the baseline, so it counts as the page's answer.
+    await page.evaluate(() => {
+      const a = document.createElement('div');
+      a.setAttribute('role', 'alert');
+      a.textContent = 'Something else';
+      document.body.appendChild(a);
+    });
     const stated = await new SpecConformanceChecker().check(
       page,
       tc({}, { message: 'valid email' }),

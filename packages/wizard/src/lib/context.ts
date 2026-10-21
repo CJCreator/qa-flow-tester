@@ -1,4 +1,5 @@
 import { summarizeDocument, type DocumentSummary } from '@qa/types/src/browser.js';
+import { plainError } from '../api';
 
 export interface ReferenceFile {
   name: string;
@@ -105,7 +106,7 @@ export function isUnread(summary: DocumentSummary): boolean {
 }
 
 export function unreadMessage(name: string): string {
-  return `Nothing was read from ${name}. Check it has headings, lists or tables.`;
+  return `Nothing was read from ${name}. Make sure it has headings, lists or tables.`;
 }
 
 /** Documents that yielded something; flagged ones are not counted. */
@@ -158,7 +159,7 @@ export async function readContextFiles(
         ...(isUnread(summary) ? { unread: true } : {}),
       });
     } catch (err) {
-      const message = err instanceof Error && err.name === 'RunnerError' ? err.message : '';
+      const message = plainError(err, '');
       rejected.push(message || `“${file.name}” couldn’t be read. Try adding it again.`);
     }
   }

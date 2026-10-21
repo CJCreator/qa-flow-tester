@@ -10,14 +10,15 @@ export function mergeDuplicateFindings(findings: Finding[]): Finding[] {
   const merged = new Map<string, Finding>();
   for (const f of findings) {
     // A failing file (named in the title) is one problem on however many pages load it, and so is
-    // one element that appears on every page (a small link in the shared header). Anything about
-    // a page as a whole (a dead end, a missing title) is one problem per page.
+    // one element that appears on every page (a small link in the shared header). A page-level
+    // finding (a dead end, a missing title) is one problem too: the pages it was seen on are kept in
+    // seenAt, so the key never carries the page.
     const isFailedFile = f.checker === 'bug-detection' && (f.evidence.networkLogs?.length ?? 0) > 0;
     const isConsoleError = f.checker === 'bug-detection' && !isFailedFile && (f.evidence.consoleLogs?.length ?? 0) > 0;
     const rawElement = f.where.dataTestId || f.where.cssSelector;
     const element = rawElement ? normalizeSelector(rawElement) : undefined;
     const normUrlPath = normalizeRoute(f.where.urlPath);
-    const where = isFailedFile ? '' : element ? `element:${element}` : `page:${normUrlPath}`;
+    const where = isFailedFile || !element ? '' : `element:${element}`;
     const what = isConsoleError ? `console:${f.expectedVsActual.actual}` : f.title;
     const issueKey = f.issueKey || `${f.checker}|${what}|${where}`;
     const key = issueKey;

@@ -1,7 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import type { ReleaseReport, AspectType, FindingSeverity, RankedRecommendation } from '@qa/types';
-import { groupIntoProblems, releaseVerdict } from '@qa/types';
+import { aspectLabel, groupIntoProblems, releaseVerdict } from '@qa/types';
 import { notChecked } from './not-checked.js';
 
 export interface HtmlReportOptions {
@@ -61,7 +61,7 @@ export async function generateSingleFileHtmlReport(
         return `
         <div class="aspect-card" style="border-top: 4px solid #94A3B8;">
           <div class="aspect-header">
-            <span class="aspect-title">${escapeHtml(aspect)}</span>
+            <span class="aspect-title">${escapeHtml(aspectLabel(aspect))}</span>
             <span class="aspect-grade" style="background: #F1F5F9; color: #475569; border: 1px solid #94A3B8;">Not checked</span>
           </div>
           <div class="aspect-footer"><span>Nothing in this run checked it, so it isn’t graded.</span></div>
@@ -72,7 +72,7 @@ export async function generateSingleFileHtmlReport(
       return `
         <div class="aspect-card" style="border-top: 4px solid ${style.border};">
           <div class="aspect-header">
-            <span class="aspect-title">${escapeHtml(aspect)}</span>
+            <span class="aspect-title">${escapeHtml(aspectLabel(aspect))}</span>
             <span class="aspect-grade" style="background: ${style.bg}; color: ${style.text}; border: 1px solid ${style.border};">
               Grade ${data.grade}
             </span>
@@ -224,7 +224,7 @@ export async function generateSingleFileHtmlReport(
           <div class="rec-item">
             <div class="rec-top">
               <span class="badge ${rec.severity.toLowerCase()}">${rec.severity}</span>
-              <span class="rec-aspect">${rec.aspect}</span>
+              <span class="rec-aspect">${aspectLabel(rec.aspect)}</span>
               <span class="rec-effort">Effort: <strong>${rec.effort}</strong></span>
               <span class="rec-impact">Impact: <strong>${rec.impact}</strong></span>
             </div>

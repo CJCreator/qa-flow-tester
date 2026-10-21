@@ -96,6 +96,15 @@ describe('Reports explain every failure and travel well', () => {
           expectations: {},
         },
         {
+          // T-54: a screenshot is taken for a failed step only, so this one carries the path to check.
+          id: 'TC-BAD',
+          flowId: 'broken',
+          role: 'visitor',
+          startPage: '/',
+          steps: [{ action: 'click', selector: '#no-such-button', name: 'Press' }],
+          expectations: {},
+        },
+        {
           id: 'TC-DOWN',
           flowId: 'elsewhere',
           name: 'Open the help centre',
@@ -113,7 +122,10 @@ describe('Reports explain every failure and travel well', () => {
     expect(report.findings.some((f) => f.title === 'Couldn’t run “Open the help centre”')).toBe(true);
 
     const ok = report.results.find((r) => r.testCaseId === 'TC-OK');
-    expect(ok?.stepEvidence[0].screenshotPath).toBe('evidence/TC-OK-1440px/step-1-Look.png');
+    // T-54 (failure-only evidence): a passing step has no screenshot.
+    expect(ok?.stepEvidence[0].screenshotPath).toBeUndefined();
+    const bad = report.results.find((r) => r.testCaseId === 'TC-BAD');
+    expect(bad?.stepEvidence[0].screenshotPath).toBe('evidence/TC-BAD-1440px/step-1-Press.png');
 
     for (const file of ['findings.json', 'report.md']) {
       const content = await fs.readFile(path.join(outputDir, file), 'utf8');

@@ -4,7 +4,7 @@ const SITE = 'Release check-up';
 /** The landing page's title: the one public screen. */
 export const LANDING_TITLE = 'Release check-up';
 const HOME_DESCRIPTION =
-  'QA without a QA team. Paste your site address and Release check-up scans it, tests it in a real browser and tells you in plain words whether it is ready to release. Free during the beta.';
+  'QA without a QA team. Paste your site address and Release check-up explores it, tests it in a real browser and tells you in plain words whether it is ready to release. Free during the beta.';
 
 function setMeta(selector: string, create: () => HTMLElement, attr: string, value: string): void {
   let el = document.head.querySelector<HTMLElement>(selector);

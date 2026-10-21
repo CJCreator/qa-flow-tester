@@ -6,7 +6,7 @@
 export const HOME_FAQ: Array<{ q: string; a: string }> = [
   {
     q: 'What is Release check-up?',
-    a: 'Release check-up is QA for teams without a QA person. It scans a web app, drafts a test plan, runs real-browser tests and tells you in plain words whether the app is ready to release, covering functionality, accessibility, performance, security and search readiness.',
+    a: 'Release check-up is QA for teams without a QA person. It explores a web app, drafts a Plan, runs real-browser tests and tells you in plain words whether the app is ready to release, covering functionality, accessibility, performance, security and search readiness.',
   },
   {
     q: 'Will it change or break my site?',

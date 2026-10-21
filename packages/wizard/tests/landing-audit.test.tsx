@@ -72,7 +72,7 @@ describe('new check-up screen', () => {
     expect(open).not.toMatch(/\sopen(=|\s|>)/);
     expect(inside).toContain('More options');
     expect(inside).toContain('Explore up to');
-    expect(inside).toContain('Add notes, design rules or journeys');
+    expect(inside).toContain('Add notes, design rules or user flows');
     expect(outside).toContain('id="url-input"');
     expect(outside).toContain('Start the check-up');
     expect(outside).not.toContain('Explore up to');

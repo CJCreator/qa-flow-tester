@@ -21,6 +21,17 @@ export interface RetryExecutionResult<T> {
   error?: Error;
 }
 
+/**
+ * Transient failures only: a navigation that timed out or failed at the network, or a browser that closed under
+ * the test. A failed step, a missing element or a failed assertion is a real result and is not retried.
+ */
+const TRANSIENT_FAILURE =
+  /page\.(goto|reload|goBack|goForward|waitForURL|waitForNavigation): Timeout \d+ms exceeded|page\.goto: net::ERR_|Target (page, context or browser has been closed|closed|crashed)|Page crashed|Browser has been closed/i;
+
+export function isTransientFailure(error: Error): boolean {
+  return TRANSIENT_FAILURE.test(error.message);
+}
+
 export class RetryRunner {
   /**
    * Executes a flow with Clean Whole-Flow Retry semantics.

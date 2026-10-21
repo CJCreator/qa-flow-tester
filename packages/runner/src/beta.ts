@@ -3,6 +3,8 @@ import dns from 'dns';
 import net from 'net';
 import { randomBytes } from 'crypto';
 import { AsyncLocalStorage } from 'async_hooks';
+import fs from 'fs/promises';
+import path from 'path';
 import type { AIProviderType } from '@qa/types';
 import { KeyResolver, classifyAddress, isPrivateHost, type ResolvedKeyInfo, type SecretStore } from '@qa/core';
 
@@ -50,9 +52,48 @@ export function pinSession(sessionId: string | undefined): void {
   if (s) s.pinned = true;
 }
 
+/** Beta: the folder that holds each visitor's remembered sites (`<dataDir>/sessions`); unset outside beta. */
+let sessionFolderRoot: string | null = null;
+
+/** Beta: keeps each visitor's folder under `<dataDir>/sessions`, removed when the session ends. */
+export function keepSessionFoldersIn(dataDir: string): void {
+  sessionFolderRoot = path.join(dataDir, 'sessions');
+}
+
+/** The folder name for a session. Session ids are base64url, so the name is the id itself. */
+export function sessionFolderName(sessionId: string): string {
+  return sessionId.replace(/[^\w-]/g, '_');
+}
+
+/** Removes a visitor's folder, in the background. Nothing is removed outside beta. */
+function removeSessionFolder(sessionId: string): void {
+  if (!sessionFolderRoot) return;
+  fs.rm(path.join(sessionFolderRoot, sessionFolderName(sessionId)), { recursive: true, force: true }).catch(() => {});
+}
+
+function forgetSession(id: string): void {
+  sessions.delete(id);
+  removeSessionFolder(id);
+}
+
+/**
+ * Beta: removes visitor folders that were not written for a session's lifetime and have no session in memory
+ * (a restart forgets every session). Called once when the server starts.
+ */
+export async function sweepSessionFolders(now: number = Date.now()): Promise<void> {
+  if (!sessionFolderRoot) return;
+  const names = await fs.readdir(sessionFolderRoot).catch(() => [] as string[]);
+  for (const name of names) {
+    const dir = path.join(sessionFolderRoot, name);
+    const stat = await fs.stat(dir).catch(() => null);
+    if (!stat || sessions.has(name) || now - stat.mtimeMs < SESSION_HOURS * 3_600_000) continue;
+    await fs.rm(dir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
 function forgetOldSessions(): void {
   const cutoff = Date.now() - SESSION_HOURS * 3_600_000;
-  for (const [id, s] of sessions) if (s.lastSeen < cutoff) sessions.delete(id);
+  for (const [id, s] of sessions) if (s.lastSeen < cutoff) forgetSession(id);
   // Over the cap, the least recently seen go first, but never one that owns a run, plan or sign-in.
   const extra = sessions.size - MAX_SESSIONS;
   if (extra > 0) {
@@ -60,7 +101,7 @@ function forgetOldSessions(): void {
       .filter(([, s]) => !ownsSomething(s))
       .sort((a, b) => a[1].lastSeen - b[1].lastSeen)
       .slice(0, extra);
-    for (const [id] of oldest) sessions.delete(id);
+    for (const [id] of oldest) forgetSession(id);
   }
 }
 

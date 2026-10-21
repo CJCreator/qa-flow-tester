@@ -10,13 +10,25 @@ describe('Clean flow retry', () => {
   const PORT = 3091;
   const outputDir = path.join(process.cwd(), '.tmp-flaky-report');
   let loads = 0;
+  let starts = 0;
   const server = http.createServer((req, res) => {
     res.setHeader('content-type', 'text/html');
+    if (req.url?.startsWith('/start')) {
+      // Each flow attempt opens a fresh browser context, so the cookie tells the attempts apart.
+      res.setHeader('set-cookie', `attempt=${++starts}; Path=/`);
+      res.end('<html lang="en"><head><title>Start</title></head><body><main>start</main></body></html>');
+      return;
+    }
     if (req.url?.startsWith('/flaky')) {
       loads++;
-      // The button is hidden the first time the page loads, as when a slow script loses a race.
+      // T-57: only transient failures retry. The first attempt's loads drop the connection (net::ERR_), as a network
+      // blip would, so the whole flow is retried in a clean context.
+      if (req.headers.cookie?.includes('attempt=1')) {
+        req.socket.destroy();
+        return;
+      }
       res.end(
-        `<html lang="en"><head><title>Flaky</title></head><body><header><a href="/">Home</a></header><main><h1>Flaky</h1><button data-testid="go" ${loads > 1 ? '' : 'style="display:none"'}>Go</button></main></body></html>`
+        `<html lang="en"><head><title>Flaky</title></head><body><header><a href="/" style="display:inline-block;min-width:48px;min-height:48px">Home</a></header><main><h1>Flaky</h1><button data-testid="go" style="min-width:48px;min-height:48px">Go</button></main></body></html>`
       );
       return;
     }
@@ -37,8 +49,11 @@ describe('Clean flow retry', () => {
       flowId: 'flaky-flow',
       name: 'Flaky flow',
       role: 'anonymous',
-      startPage: '/flaky',
-      steps: [{ action: 'click', selector: '[data-testid="go"]', name: 'Press Go' }],
+      startPage: '/start',
+      steps: [
+        { action: 'navigate', value: '/flaky', name: 'Open Flaky' },
+        { action: 'click', selector: '[data-testid="go"]', name: 'Press Go' },
+      ],
       expectations: {},
     };
     const report = await new FlowTestOrchestrator().run({
@@ -59,7 +74,7 @@ describe('Clean flow retry', () => {
     expect(point.retry?.errorMessage).toBeTruthy();
     expect(point.status).not.toBe('Failed');
     expect(report.coverage.flakyFlows).toBe(1);
-    expect(loads).toBe(2);
+    expect(loads).toBeGreaterThan(1);
   }, 60000);
 
   it('does not retry an error the caller says must stop the run', async () => {

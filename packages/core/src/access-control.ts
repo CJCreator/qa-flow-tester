@@ -1,5 +1,6 @@
-import type { BrowserContext } from 'playwright';
-import type { Finding } from '@qa/types';
+import { promises as fs } from 'fs';
+import type { Finding, StorageStateData } from '@qa/types';
+import { makeOutboundFetch, type SafeCookie } from './safe-net.js';
 
 /**
  * Passive access checks (ADR 0030): plain GETs, no payloads, no Origin header, no redirects followed.
@@ -169,12 +170,47 @@ export async function runAccessChecks(input: AccessCheckInput): Promise<AccessCh
   return { findings, notes, checkedPaths: paths.length };
 }
 
-/** A GET through a browser context's request client: its own cookies, no redirects followed. */
-export function contextFetcher(context: BrowserContext): AccessFetcher {
+/** The GET from the pinned helper (ADR 0031; built by `makeOutboundFetch`). */
+export type GuardedFetch = ReturnType<typeof makeOutboundFetch>;
+
+/**
+ * A signed-out GET through the shared pinned guard. It sends no cookies, so it fits the signed-out request.
+ * With no fetchFn the request is skipped and never sent directly: the access check gets no answer for that page.
+ */
+export function guardedFetcher(fetchFn?: GuardedFetch): AccessFetcher {
   return async (url) => {
-    const res = await context.request.get(url, { maxRedirects: 0, timeout: 15000, failOnStatusCode: false });
-    const headers = res.headers();
+    if (!fetchFn) return undefined;
+    const res = await fetchFn(url);
+    if (!res) return undefined;
     const body = (await res.text().catch(() => '')).slice(0, 200_000);
-    return { status: res.status(), location: headers['location'], body };
+    return { status: res.status, location: res.headers['location'], body };
   };
+}
+
+const isCookie = (c: unknown): c is SafeCookie => {
+  const o = c as Partial<SafeCookie> | null;
+  return !!o && typeof o.name === 'string' && typeof o.value === 'string' && typeof o.domain === 'string';
+};
+
+/**
+ * A signed-in role's GET through the pinned helper, sending that role's cookies from its storage state
+ * (a file path or the object). Cookies go only to hops they match; no redirects are followed. A state with
+ * no readable cookies gets no request (fail closed), so the access check gets no answer for that role.
+ */
+export async function roleFetcher(
+  state: string | StorageStateData | undefined,
+  opts: { allowPrivate: boolean; timeoutMs: number }
+): Promise<AccessFetcher> {
+  const data: Partial<StorageStateData> | null =
+    typeof state === 'string'
+      ? await fs
+          .readFile(state, 'utf8')
+          .then((text) => JSON.parse(text) as Partial<StorageStateData>)
+          .catch(() => null)
+      : state ?? null;
+  const cookies = (data?.cookies ?? []).filter(isCookie);
+  if (cookies.length === 0) return guardedFetcher();
+  return guardedFetcher(
+    makeOutboundFetch({ allowPrivate: opts.allowPrivate, timeoutMs: opts.timeoutMs, maxRedirects: 0, cookies })
+  );
 }

@@ -2,7 +2,8 @@
 # (the shared online copy) both rebuild without anyone running a command.
 #
 # How each one gets the new code:
-#   - Render builds from this repo (render.yaml sets autoDeploy), so the push itself starts its build.
+#   - Render builds from this repo (render.yaml sets autoDeployTrigger: checksPass), so it builds a commit only
+#     after that commit's checks, including the tests below, have passed.
 #   - Vercel builds from the CJCreator-New/flowtester repo, so this workflow copies main there once the
 #     tests pass. That push is what starts the Vercel build.
 #
@@ -80,8 +81,44 @@ jobs:
     with:
       shard: ${{ matrix.shard }}
 
+  # The same audit and secret scan as ci.yml (a workflow cannot `needs` a job in another workflow).
+  audit:
+    if: github.repository == 'CJCreator/qa-flow-tester'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Audit production dependencies
+        run: pnpm audit --prod --audit-level high
+
+  secret-scan:
+    if: github.repository == 'CJCreator/qa-flow-tester'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install gitleaks
+        env:
+          GITLEAKS_VERSION: 8.30.1
+        run: |
+          base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+          tarball="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          cd "$RUNNER_TEMP"
+          curl -sSfL -O "${base}/${tarball}"
+          curl -sSfL -O "${base}/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          sha256sum --ignore-missing -c "gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          tar -xzf "$tarball" gitleaks
+      - name: Scan history
+        run: '"$RUNNER_TEMP/gitleaks" git --config .gitleaks.toml --redact --no-banner --exit-code 1 .'
+
   publish:
-    needs: [build-and-smoke, test]
+    needs: [build-and-smoke, test, audit, secret-scan]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -115,22 +152,27 @@ jobs:
       # Vercel must serve version.json naming this commit, so an old build cannot pass. Render answers
       # /healthz only, so for Render this step shows the service is up, not which commit it runs.
       - name: Verify Vercel serves this commit and Render is up
+        # The loop stops by the clock (10 minutes); this step limit is a backstop below the job's 15 minutes.
+        timeout-minutes: 11
         run: |
           echo "Verifying Vercel ($VERCEL_SITE_URL, commit $COMMIT) and Render ($RENDER_APP_URL)..."
           vercel_ready=0
           render_ready=0
-          for i in $(seq 1 60); do
+          deadline=$(( $(date +%s) + 600 ))
+          attempt=0
+          while [ "$(date +%s)" -lt "$deadline" ]; do
+            attempt=$((attempt + 1))
             if [ "$vercel_ready" -eq 0 ]; then
               body=$(curl -s -m 10 "$VERCEL_SITE_URL/version.json") || body=""
               if echo "$body" | grep -q "\"commit\":\"$COMMIT\""; then
-                echo "Vercel serves this commit on attempt $i"
+                echo "Vercel serves this commit on attempt $attempt"
                 vercel_ready=1
               fi
             fi
             if [ "$render_ready" -eq 0 ]; then
               code=$(curl -s -o /dev/null -m 10 -w '%{http_code}' "$RENDER_APP_URL/healthz") || code="000"
               if [ "$code" = "200" ]; then
-                echo "Render ready (200 OK) on attempt $i"
+                echo "Render ready (200 OK) on attempt $attempt"
                 render_ready=1
               fi
             fi
@@ -138,9 +180,10 @@ jobs:
               echo "Deployment verification PASSED."
               exit 0
             fi
-            echo "Attempt $i: Vercel ready=$vercel_ready, Render ready=$render_ready. Waiting 10s..."
+            echo "Attempt $attempt: Vercel ready=$vercel_ready, Render ready=$render_ready. Waiting 10s..."
             sleep 10
           done
+          echo "Gave up after $attempt attempts (10 minutes)."
           if [ "$vercel_ready" -ne 1 ]; then
             echo "::error::Vercel site ($VERCEL_SITE_URL) does not serve commit $COMMIT in time."
           fi

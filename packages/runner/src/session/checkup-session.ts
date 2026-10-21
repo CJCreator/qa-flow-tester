@@ -75,7 +75,10 @@ export function createCheckupSession(input: {
     legacyDataDir,
   };
 
-  return new DefaultCheckupSession(paths);
+  const session = new DefaultCheckupSession(paths);
+  // Startup only: runs start on a later request, so the sweep does not normally race a live run's folder.
+  void session.secrets.sweepLeftovers().catch(() => {});
+  return session;
 }
 
 export * from './plan-store.js';

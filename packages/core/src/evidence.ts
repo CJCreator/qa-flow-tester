@@ -3,6 +3,16 @@ import path from 'path';
 import type { Page, Response } from 'playwright';
 import type { ConsoleEntry, NetworkEntry, StepEvidence } from '@qa/types';
 
+/**
+ * Sign-in fields painted over in every screenshot (a stated decision, not a setting): the password,
+ * and the username or email box a sign-in form uses.
+ */
+export const SIGN_IN_FIELD_SELECTORS: readonly string[] = [
+  'input[type="password"]',
+  'input[autocomplete="username"]',
+  'input[type="email"]',
+];
+
 export class EvidenceCollector {
   private consoleLogs: ConsoleEntry[] = [];
   private networkLogs: NetworkEntry[] = [];
@@ -11,9 +21,12 @@ export class EvidenceCollector {
   /** How much of each log earlier steps already reported, so each step reports only its own. */
   private consoleReported = 0;
   private networkReported = 0;
+  /** Hides secrets from text evidence as it is written, so a run that stops early leaves none. */
+  private redact: (text: string) => string;
 
-  constructor(evidenceDir: string) {
+  constructor(evidenceDir: string, redact: (text: string) => string = (text) => text) {
     this.evidenceDir = evidenceDir;
+    this.redact = redact;
   }
 
   attach(page: Page): void {
@@ -93,22 +106,31 @@ export class EvidenceCollector {
     await fs.mkdir(this.evidenceDir, { recursive: true });
 
     const safeName = stepName.replace(/[^a-zA-Z0-9_\-]/g, '_');
-    const screenshotFilename = `step-${stepIndex}-${safeName}.png`;
-    const screenshotPath = path.join(this.evidenceDir, screenshotFilename);
 
-    try {
-      await page.screenshot({ path: screenshotPath, fullPage: true });
-    } catch {
-      // If page is closed or unresponsive, ignore screenshot error
-    }
+    // Screenshot and DOM dump only for a failed step: a passing step's evidence is rarely read, and taking it costs time.
+    let screenshotPath: string | undefined;
+    let domSnapshotPath: string | undefined;
+    if (!passed) {
+      const screenshotFilename = `step-${stepIndex}-${safeName}.png`;
+      screenshotPath = path.join(this.evidenceDir, screenshotFilename);
+      try {
+        await page.screenshot({
+          path: screenshotPath,
+          fullPage: true,
+          mask: SIGN_IN_FIELD_SELECTORS.map((s) => page.locator(s)),
+        });
+      } catch {
+        // If page is closed or unresponsive, ignore screenshot error
+      }
 
-    const domFilename = `step-${stepIndex}-${safeName}.html`;
-    const domSnapshotPath = path.join(this.evidenceDir, domFilename);
-    try {
-      const content = await page.content();
-      await fs.writeFile(domSnapshotPath, content, 'utf8');
-    } catch {
-      // Ignore content failure
+      const domFilename = `step-${stepIndex}-${safeName}.html`;
+      domSnapshotPath = path.join(this.evidenceDir, domFilename);
+      try {
+        const content = await page.content();
+        await fs.writeFile(domSnapshotPath, this.redact(content), 'utf8');
+      } catch {
+        // Ignore content failure
+      }
     }
 
     // Only what happened since the previous step: otherwise one console error is reported again

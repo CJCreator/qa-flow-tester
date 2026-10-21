@@ -18,6 +18,7 @@ import {
   includeHostInPlan,
   interpretSentence,
   patchPlan,
+  plainError,
   replanEverything,
   replanItem,
   type PlanDelta,
@@ -142,7 +143,7 @@ export function PlanReviewScreen({
     if (!pending) return;
     const timer = window.setTimeout(() => {
       setPending(false);
-      setError('The plan update is taking too long. Check the plan, then try again.');
+      setError('The plan update is taking too long. Look over the plan, then try again.');
     }, PENDING_TIMEOUT_MS);
     return () => window.clearTimeout(timer);
   }, [pending]);
@@ -155,7 +156,7 @@ export function PlanReviewScreen({
       onPlanUpdated(applyPlanChange(latest.current, result));
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'The plan couldn’t be changed. Try again.');
+      setError(plainError(err, 'The plan couldn’t be changed. Try again.'));
       return false;
     }
   };
@@ -166,7 +167,7 @@ export function PlanReviewScreen({
       await start();
     } catch (err) {
       setPending(false);
-      setError(err instanceof Error ? err.message : 'The plan couldn’t be updated. Try again.');
+      setError(plainError(err, 'The plan couldn’t be updated. Try again.'));
     }
   };
 
@@ -268,7 +269,8 @@ export function PlanReviewScreen({
       const updated = currentFlows.map((f) => (f.id === flowId ? { ...f, name: newName } : f));
       await edit(() => patchPlan({ flows: updated }));
     },
-    setExpectation: (itemId, text) => void edit(() => patchPlan({ expectations: [{ id: itemId, text }] })),
+    // Resolves to false when the change failed, so the wording being typed is kept for another try.
+    setExpectation: (itemId, text) => edit(() => patchPlan({ expectations: [{ id: itemId, text }] })),
     addSignIn: async (signIn) => {
       setError(null);
       setPending(true);
@@ -397,7 +399,7 @@ export function PlanReviewScreen({
             <button
               type="button"
               className="btn-quiet min-h-[44px] px-3 text-sm"
-              onClick={() => downloadPlanMarkdown().catch((err: Error) => setError(err.message))}
+              onClick={() => downloadPlanMarkdown().catch((err: unknown) => setError(plainError(err, 'The plan couldn’t be downloaded. Try again.')))}
             >
               Download the plan
             </button>
@@ -405,7 +407,7 @@ export function PlanReviewScreen({
               type="button"
               className="btn-quiet min-h-[44px] px-3 text-sm"
               title="Download the Plan as a Playwright project"
-              onClick={() => downloadPlaywrightExport().catch((err: Error) => setError(err.message))}
+              onClick={() => downloadPlaywrightExport().catch((err: unknown) => setError(plainError(err, 'The Playwright export couldn’t be downloaded. Try again.')))}
             >
               Export as Playwright tests
             </button>

@@ -90,7 +90,8 @@ describe('Single-File Offline HTML Report (html-report.ts)', () => {
     expect(content).toContain('Accessible');
     expect(content).toContain('Fast and mobile');
     expect(content).toContain('Findable');
-    expect(content).toContain('Secure');
+    // The stored key stays 'Secure'; it displays as "Security" (T-46/T-61 label decision).
+    expect(content).toContain('Security');
     expect(content).toContain('Looks and reads well');
 
     // Recommendations present
@@ -161,7 +162,7 @@ describe('Single-File Offline HTML Report (html-report.ts)', () => {
       },
     };
     const content = await fs.readFile(await generateSingleFileHtmlReport(report, { outputDir: tempDir }), 'utf8');
-    const findable = content.slice(content.indexOf('>Findable<'), content.indexOf('>Secure<'));
+    const findable = content.slice(content.indexOf('>Findable<'), content.indexOf('>Security<'));
     expect(findable).toContain('Not checked');
     expect(findable).not.toContain('Grade A');
   });

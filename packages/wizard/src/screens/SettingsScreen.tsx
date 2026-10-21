@@ -10,7 +10,7 @@ import {
   listFreeModels,
   listSchedules,
   listSites,
-  RunnerError,
+  plainError,
   saveAiSettings,
   saveDefaults,
   saveStoredReleaseGates,
@@ -78,7 +78,7 @@ export function SettingsScreen({ onKeySaved }: { onKeySaved: (model: string) => 
         setSetup(s);
         setError(null);
       })
-      .catch((err) => setError(err instanceof RunnerError ? err.message : 'The settings couldn’t be read. Try again.'));
+      .catch((err) => setError(plainError(err, 'The settings couldn’t be read. Try again.')));
   }, []);
   useEffect(load, [load]);
 
@@ -263,7 +263,7 @@ function PaidKey({
           onSaved(await saveAiSettings({ provider, apiKey: key.trim() || undefined }));
           setKey('');
         } catch (err) {
-          setError(err instanceof RunnerError ? err.message : 'The key couldn’t be saved. Try again.');
+          setError(plainError(err, 'The key couldn’t be saved. Try again.'));
         } finally {
           setSaving(false);
         }
@@ -309,7 +309,7 @@ function ModelChoice({ setup, onSaved }: { setup: AiSetup; onSaved: () => void }
     if (!openRouter || !setup.configured) return;
     listFreeModels()
       .then(setModels)
-      .catch((err) => setListError(err instanceof RunnerError ? err.message : 'The model list couldn’t be read.'));
+      .catch((err) => setListError(plainError(err, 'The model list couldn’t be read.')));
   }, [openRouter, setup.configured]);
 
   const save = async () => {
@@ -323,7 +323,7 @@ function ModelChoice({ setup, onSaved }: { setup: AiSetup; onSaved: () => void }
       });
       onSaved();
     } catch (err) {
-      setError(err instanceof RunnerError ? err.message : 'The model couldn’t be saved. Try again.');
+      setError(plainError(err, 'The model couldn’t be saved. Try again.'));
     } finally {
       setSaving(false);
     }
@@ -333,7 +333,7 @@ function ModelChoice({ setup, onSaved }: { setup: AiSetup; onSaved: () => void }
     try {
       setTest({ running: false, result: await testModel(text || setup.model || undefined) });
     } catch (err) {
-      setTest({ running: false, error: err instanceof RunnerError ? err.message : 'The model couldn’t be tested.' });
+      setTest({ running: false, error: plainError(err, 'The model couldn’t be tested.') });
     }
   };
   const describe = (m: FreeModel) =>
@@ -476,7 +476,7 @@ function Defaults() {
       setSizes((await saveDefaults({ screenSizes: next })).screenSizes);
       setMessage({ ok: true, text: 'Saved.' });
     } catch (err) {
-      setMessage({ ok: false, text: err instanceof RunnerError ? err.message : 'That couldn’t be saved.' });
+      setMessage({ ok: false, text: plainError(err, 'That couldn’t be saved.') });
     }
   };
   return (
@@ -695,7 +695,7 @@ function CheckupSchedules() {
       setSchedules(items);
       setError(null);
     } catch (err) {
-      setError(err instanceof RunnerError ? err.message : 'Could not load recurring schedules.');
+      setError(plainError(err, 'Could not load recurring schedules.'));
     } finally {
       setLoading(false);
     }
@@ -723,7 +723,7 @@ function CheckupSchedules() {
       setNotice('New automated check-up schedule activated.');
       await loadSchedules();
     } catch (err) {
-      setError(err instanceof RunnerError ? err.message : 'The schedule couldn’t be created. Try again.');
+      setError(plainError(err, 'The schedule couldn’t be created. Try again.'));
     } finally {
       setSaving(false);
     }
@@ -734,7 +734,7 @@ function CheckupSchedules() {
       await toggleSchedule(schedule.id, !schedule.enabled);
       await loadSchedules();
     } catch (err) {
-      setError(err instanceof RunnerError ? err.message : 'The schedule couldn’t be updated. Try again.');
+      setError(plainError(err, 'The schedule couldn’t be updated. Try again.'));
     }
   };
 
@@ -744,7 +744,7 @@ function CheckupSchedules() {
       await deleteSchedule(id);
       await loadSchedules();
     } catch (err) {
-      setError(err instanceof RunnerError ? err.message : 'The schedule couldn’t be deleted. Try again.');
+      setError(plainError(err, 'The schedule couldn’t be deleted. Try again.'));
     }
   };
 
@@ -855,7 +855,7 @@ function CheckupSchedules() {
 
             <div>
               <label htmlFor="sched-preset" className="label">
-                Run Preset
+                Check-up preset
               </label>
               <select
                 id="sched-preset"
@@ -864,7 +864,7 @@ function CheckupSchedules() {
                 className="field"
               >
                 <option value="full">Full check-up (standard breadth)</option>
-                <option value="quick">Quick check (faster)</option>
+                <option value="quick">Quick check-up (faster)</option>
               </select>
             </div>
           </div>
@@ -892,7 +892,7 @@ function CheckupSchedules() {
 
       {schedules && schedules.length === 0 && !showAddForm && (
         <p className="text-sm text-ink-soft py-2">
-          No automated schedules configured yet. Click "+ New Schedule" to set up recurring test runs.
+          No automated schedules configured yet. Click "+ New Schedule" to set up recurring check-ups.
         </p>
       )}
 
@@ -911,8 +911,8 @@ function CheckupSchedules() {
                   </span>
                 </div>
                 <div className="mt-1 text-xs text-ink-soft flex flex-wrap gap-x-3">
-                  <span>Next run: {formatWhen(s.nextRunAt)}</span>
-                  {s.lastRunAt && <span>Last run: {formatWhen(s.lastRunAt)}</span>}
+                  <span>Next check-up: {formatWhen(s.nextRunAt)}</span>
+                  {s.lastRunAt && <span>Last check-up: {formatWhen(s.lastRunAt)}</span>}
                   {s.preset && <span>Preset: {s.preset}</span>}
                 </div>
               </div>
@@ -988,7 +988,7 @@ function AddSignIn({ host, onSaved }: { host: string; onSaved: () => void }) {
       setShowAdvanced(false);
       onSaved();
     } catch (err) {
-      setError(err instanceof RunnerError ? err.message : 'That couldn’t be saved.');
+      setError(plainError(err, 'That couldn’t be saved.'));
     } finally {
       setBusy(false);
     }
@@ -1000,7 +1000,7 @@ function AddSignIn({ host, onSaved }: { host: string; onSaved: () => void }) {
       aria-label={'Add a sign-in for ' + host}
     >
       <p className="text-sm text-ink-soft sm:col-span-2">
-        Use a test sign-in, not a real person’s. It signs in once to check the details work, then keeps the password in
+        Use a test sign-in, not a real person’s. It signs in once to make sure the details work, then keeps the password in
         this computer’s keychain.
       </p>
       <label className="text-sm">
@@ -1115,7 +1115,7 @@ function Sites() {
   const load = useCallback(() => {
     listSites()
       .then(setSites)
-      .catch((err) => setError(err instanceof RunnerError ? err.message : 'The sites couldn’t be read.'));
+      .catch((err) => setError(plainError(err, 'The sites couldn’t be read.')));
   }, []);
   useEffect(load, [load]);
   const [tested, setTested] = useState<Record<string, { ok: boolean; text: string }>>({});
@@ -1136,7 +1136,7 @@ function Sites() {
     } catch (err) {
       setTested((t) => ({
         ...t,
-        [key]: { ok: false, text: err instanceof RunnerError ? err.message : 'Couldn’t test it.' },
+        [key]: { ok: false, text: plainError(err, 'Couldn’t test it.') },
       }));
     }
   };
@@ -1145,7 +1145,7 @@ function Sites() {
       await updateSite(host, update);
       load();
     } catch (err) {
-      setError(err instanceof RunnerError ? err.message : 'That couldn’t be saved.');
+      setError(plainError(err, 'That couldn’t be saved.'));
     }
   };
   return (
@@ -1154,7 +1154,7 @@ function Sites() {
         Sites
       </h2>
       <p className="mb-4 text-sm text-ink-soft">
-        What’s remembered for each site you’ve checked. Saved passwords stay in this computer’s keychain.
+        What’s remembered for each site you’ve had a check-up on. Saved passwords stay in this computer’s keychain.
       </p>
       {error && <ErrorMessage>{error}</ErrorMessage>}
       {!sites && !error && <Spinner label="Reading the sites…" />}

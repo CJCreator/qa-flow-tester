@@ -107,18 +107,17 @@ describe('FlowTestOrchestrator E2E', () => {
     const apiFinding = report.findings.find((f) => f.title.includes('HTTP 500') && f.testCaseId === 'TC-E2E-002');
     expect(apiFinding).toBeDefined();
 
-    // Video is retained only for the failed test point, and linked from its findings
+    // T-54: a run that signs in records no video (Playwright cannot mask the sign-in fields in a video).
+    // Video retention for a failed point is covered by a run without sign-in.
     expect(invoiceResult?.videoPath).toBeUndefined();
-    expect(telemetryResult?.videoPath).toMatch(/\.webm$/);
-    // Report paths are relative to the report folder, so the report still works when moved.
-    expect(path.isAbsolute(telemetryResult!.videoPath!)).toBe(false);
-    expect((await fs.stat(path.join(outputDir, telemetryResult!.videoPath!))).size).toBeGreaterThan(0);
-    expect(apiFinding?.evidence.videoPath).toBe(telemetryResult?.videoPath);
+    expect(telemetryResult?.videoPath).toBeUndefined();
+    expect(apiFinding?.evidence.videoPath).toBeUndefined();
     // Each problem shows the screen it was found on: here, its test's latest screenshot.
     const lastScreen = [...telemetryResult!.stepEvidence].reverse().find((s) => s.screenshotPath)?.screenshotPath;
-    expect(lastScreen).toBeTruthy();
+    // T-54: screenshots are for failed steps only. Both steps of this test pass (the problems are found by
+    // the console and network watchers), so there is no screenshot; the finding must not point at a missing one.
+    expect(lastScreen).toBeUndefined();
     expect(apiFinding?.evidence.screenshotPath).toBe(lastScreen);
-    expect(path.isAbsolute(apiFinding!.evidence.screenshotPath!)).toBe(false);
     const passedPointFiles = await fs.readdir(path.join(outputDir, 'evidence', 'TC-E2E-001-1440px'));
     expect(passedPointFiles.some((f) => f.endsWith('.webm'))).toBe(false);
 

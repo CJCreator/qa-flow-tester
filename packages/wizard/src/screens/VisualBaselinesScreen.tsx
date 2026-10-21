@@ -3,7 +3,7 @@ import {
   acceptVisualBaseline,
   deleteVisualBaseline,
   listVisualBaselines,
-  RunnerError,
+  plainError,
   type VisualBaselineItem,
 } from '../api';
 import { ErrorMessage, FocusHeading, Notice, Spinner } from '../components/text';
@@ -44,7 +44,7 @@ export function VisualBaselinesScreen() {
       setBaselines(items);
       setError(null);
     } catch (err) {
-      setError(err instanceof RunnerError ? err.message : 'Could not load visual baselines.');
+      setError(plainError(err, 'Could not load visual baselines.'));
     } finally {
       setLoading(false);
     }
@@ -90,7 +90,7 @@ export function VisualBaselinesScreen() {
       });
       await loadBaselines();
     } catch (err) {
-      setActionMessage({ tone: 'fail', text: err instanceof RunnerError ? err.message : 'Failed to update baseline.' });
+      setActionMessage({ tone: 'fail', text: plainError(err, 'Failed to update baseline.') });
     } finally {
       setProcessingId(null);
     }
@@ -108,7 +108,7 @@ export function VisualBaselinesScreen() {
       if (activeItem?.id === item.id) setActiveItem(null);
       await loadBaselines();
     } catch (err) {
-      setActionMessage({ tone: 'fail', text: err instanceof RunnerError ? err.message : 'Failed to delete baseline.' });
+      setActionMessage({ tone: 'fail', text: plainError(err, 'Failed to delete baseline.') });
     } finally {
       setProcessingId(null);
     }
@@ -183,10 +183,10 @@ export function VisualBaselinesScreen() {
         <div className="w-full sm:w-72">
           <input
             type="search"
-            placeholder="Search test case or file…"
+            placeholder="Search by name or file…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-control border border-edge/80 bg-panel px-3 py-1.5 text-sm text-ink placeholder:text-ink-soft focus:border-stamp focus:outline-none"
+            className="w-full rounded-control border border-edge/80 bg-panel px-3 py-1.5 text-sm text-ink placeholder:text-ink-soft focus:border-stamp focus-visible:ring-2 focus-visible:ring-stamp"
           />
         </div>
       </div>
@@ -202,7 +202,7 @@ export function VisualBaselinesScreen() {
           <p className="mx-auto mt-1 max-w-md text-sm text-ink-soft">
             {baselines && baselines.length > 0
               ? 'No baselines match the current breakpoint or search filter.'
-              : 'Baselines are saved by a check-up that includes visual checks. Run a check-up, and its screenshots are kept here to compare with the next one.'}
+              : 'Baselines are saved by a check-up that takes screenshots. Start a check-up, and its screenshots are kept here to compare with the next one.'}
           </p>
           {!(baselines && baselines.length > 0) && (
             <Link to={PATHS.new} className="btn-primary mt-4 inline-flex">
@@ -424,6 +424,7 @@ export function VisualBaselinesScreen() {
                           min="0"
                           max="100"
                           value={sliderPosition}
+                          aria-label="Compare position, from the baseline to the current run"
                           onChange={(e) => setSliderPosition(Number(e.target.value))}
                           className="flex-1 accent-[#6C9BF2]"
                         />
@@ -450,7 +451,7 @@ export function VisualBaselinesScreen() {
               </div>
             ) : (
               <div className="rounded-card border border-edge/60 bg-surface/30 p-12 text-center text-ink-soft">
-                <p>Select a baseline from the list to inspect pixel comparisons and approve changes.</p>
+                <p>Select a baseline from the list to see it next to the current run, and approve changes.</p>
               </div>
             )}
           </div>

@@ -54,7 +54,9 @@ describe('releaseVerdict gate matrix', () => {
   });
 
   it('an area nothing checked is listed, never counted as a pass or a failure', () => {
-    const v = releaseVerdict([], undefined, grades(null), { skipped: 2, blocked: 1 });
+    // T-47: standard now requires every area checked (enforceAllAreas); lenient only lists it.
+    expect(releaseVerdict([], undefined, grades(null), { skipped: 2, blocked: 1 }).ready).toBe(false);
+    const v = releaseVerdict([], DEFAULT_RELEASE_GATES.lenient, grades(null), { skipped: 2, blocked: 1 });
     expect(v.ready).toBe(true);
     expect(v.notChecked).toEqual(['Works']);
     expect(v.skippedTests).toBe(3);

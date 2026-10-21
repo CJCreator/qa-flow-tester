@@ -40,15 +40,14 @@ jobs:
         run: pnpm format:check
 
       - name: Typecheck
-        continue-on-error: true
+        run: pnpm typecheck
+
+      # Deploy gate wiring: publish waits for every check, and Render builds a commit only after its checks pass.
+      # A plain grep, so a removed line fails this PR check.
+      - name: Deploy gate is wired
         run: |
-          out=$(pnpm typecheck 2>&1) || true
-          echo "$out"
-          count=$(echo "$out" | grep -c "error TS" || echo "0")
-          if [ -n "$GITHUB_STEP_SUMMARY" ]; then
-            echo "### TypeScript Check" >> "$GITHUB_STEP_SUMMARY"
-            echo "Typecheck found **$count** error(s)." >> "$GITHUB_STEP_SUMMARY"
-          fi
+          grep -qx '    needs: \[build-and-smoke, test, audit, secret-scan\]' .github/workflows/deploy.yml
+          grep -qx '    autoDeployTrigger: checksPass' render.yaml
 
   # Full test suite, sharded across 4 parallel runners (see tests.yml). Deploy runs the same shards on push to main.
   build-and-test:

@@ -111,16 +111,22 @@ export const defaultNetDeps: NetDeps = { lookup: defaultLookup, connect: default
 export type ResolveResult =
   { ok: true; address: string; all: string[] } | { ok: false; reason: 'dns-failed' | 'private-address' };
 
-/** Resolves a host once and requires every address to be public. A literal IP skips DNS but is classified. */
+/**
+ * Resolves a host once and requires every address to be public. A literal IP skips DNS but is classified.
+ * `allowPrivate` is for a local run only (ADR 0031): the address is still resolved once and pinned.
+ */
 export async function resolvePublic(
   host: string,
-  deps: Pick<NetDeps, 'lookup'> = defaultNetDeps
+  deps: Pick<NetDeps, 'lookup'> = defaultNetDeps,
+  allowPrivate = false
 ): Promise<ResolveResult> {
   const h = host.replace(/^\[|\]$/g, '').toLowerCase();
   if (!h) return { ok: false, reason: 'dns-failed' };
-  if (isPrivateTextHost(h)) return { ok: false, reason: 'private-address' };
+  if (!allowPrivate && isPrivateTextHost(h)) return { ok: false, reason: 'private-address' };
   if (isIpLiteral(h)) {
-    return isPublicAddress(h) ? { ok: true, address: h, all: [h] } : { ok: false, reason: 'private-address' };
+    return allowPrivate || isPublicAddress(h)
+      ? { ok: true, address: h, all: [h] }
+      : { ok: false, reason: 'private-address' };
   }
   let all: string[];
   try {
@@ -130,7 +136,9 @@ export async function resolvePublic(
   }
   if (!Array.isArray(all) || all.length === 0) return { ok: false, reason: 'dns-failed' };
   // One bad address in a mixed answer fails the whole name.
-  if (!all.every((a) => typeof a === 'string' && isPublicAddress(a))) return { ok: false, reason: 'private-address' };
+  if (!allowPrivate && !all.every((a) => typeof a === 'string' && isPublicAddress(a))) {
+    return { ok: false, reason: 'private-address' };
+  }
   const address = all.find((a) => !a.includes(':')) ?? all[0];
   return { ok: true, address, all };
 }
@@ -142,10 +150,48 @@ export type SafeGetResult =
   | { ok: true; status: number; finalUrl: string; headers: Record<string, string | string[] | undefined>; body: string }
   | { ok: false; reason: SafeGetFailure; status?: number };
 
-/** GET with the checks above on every hop. `maxRedirects` 0 means any 3xx fails as 'redirected'. */
+/** A cookie from a Playwright storage state (ADR 0031). It is sent only to a hop it matches. */
+export interface SafeCookie {
+  name: string;
+  value: string;
+  domain: string;
+  path?: string;
+  secure?: boolean;
+  /** Unix seconds; absent or -1 means a session cookie. */
+  expires?: number;
+}
+
+/** The Cookie header for one hop, or undefined when no cookie matches it (host, path, scheme, expiry). */
+export function cookieHeaderFor(url: URL, cookies: SafeCookie[] | undefined): string | undefined {
+  const host = url.hostname.toLowerCase();
+  const parts = (cookies ?? [])
+    .filter((c) => {
+      const domain = c.domain.replace(/^\./, '').toLowerCase();
+      if (!domain || (host !== domain && !host.endsWith(`.${domain}`))) return false;
+      if (c.secure && url.protocol !== 'https:') return false;
+      if (c.expires !== undefined && c.expires > 0 && c.expires * 1000 <= Date.now()) return false;
+      const p = c.path || '/';
+      return url.pathname === p || url.pathname.startsWith(p.endsWith('/') ? p : `${p}/`);
+    })
+    .map((c) => `${c.name}=${c.value}`);
+  return parts.length > 0 ? parts.join('; ') : undefined;
+}
+
+/**
+ * GET with the checks above on every hop. `maxRedirects` 0 means any 3xx fails as 'redirected'.
+ * `allowPrivate` is set only when no browser guard is active (a local run, ADR 0014 and 0031).
+ * `cookies` are matched per hop, so a redirect to another host never carries them.
+ */
 export async function safeGet(
   url: string,
-  opts: { maxRedirects?: number; maxBytes?: number; headers?: Record<string, string>; timeoutMs?: number } = {},
+  opts: {
+    maxRedirects?: number;
+    maxBytes?: number;
+    headers?: Record<string, string>;
+    timeoutMs?: number;
+    allowPrivate?: boolean;
+    cookies?: SafeCookie[];
+  } = {},
   deps: NetDeps = defaultNetDeps
 ): Promise<SafeGetResult> {
   const maxRedirects = opts.maxRedirects ?? DEFAULT_MAX_REDIRECTS;
@@ -158,14 +204,15 @@ export async function safeGet(
   }
   for (let hop = 0; ; hop++) {
     if (current.protocol !== 'http:' && current.protocol !== 'https:') return { ok: false, reason: 'bad-scheme' };
-    const resolved = await resolvePublic(current.hostname, deps);
+    const resolved = await resolvePublic(current.hostname, deps, opts.allowPrivate);
     if (!resolved.ok) return { ok: false, reason: resolved.reason };
+    const cookie = cookieHeaderFor(current, opts.cookies);
     let raw: RawResponse;
     try {
       raw = await deps.connect({
         url: current,
         address: resolved.address,
-        headers: { ...(opts.headers || {}) },
+        headers: { ...(opts.headers || {}), ...(cookie ? { Cookie: cookie } : {}) },
         timeoutMs: opts.timeoutMs ?? CONNECT_TIMEOUT_MS,
         maxBytes,
       });
@@ -186,6 +233,33 @@ export async function safeGet(
     }
     return { ok: true, status: raw.status, finalUrl: current.toString(), headers: raw.headers, body: raw.body };
   }
+}
+
+/**
+ * The GET the checkers use (they cannot import this file, so core passes this in). Same pinned,
+ * redirect-checked request as safeGet; null when the request is refused or fails. Checkers only read
+ * the body and headers they are given, so the shape is kept small. `cookies` is for a signed-in role.
+ */
+export function makeOutboundFetch(
+  opts: { allowPrivate: boolean; timeoutMs: number; maxRedirects?: number; cookies?: SafeCookie[] },
+  deps: NetDeps = defaultNetDeps
+): (url: string) => Promise<{ status: number; headers: Record<string, string>; text: () => Promise<string> } | null> {
+  return async (url: string) => {
+    const got = await safeGet(
+      url,
+      {
+        allowPrivate: opts.allowPrivate,
+        timeoutMs: opts.timeoutMs,
+        maxRedirects: opts.maxRedirects,
+        cookies: opts.cookies,
+      },
+      deps
+    );
+    if (!got.ok) return null;
+    const headers: Record<string, string> = {};
+    for (const [k, v] of Object.entries(got.headers)) headers[k] = Array.isArray(v) ? v.join(', ') : (v ?? '');
+    return { status: got.status, headers, text: async () => got.body };
+  };
 }
 
 export type ProofFailure =

@@ -256,7 +256,7 @@ export function LandingScreen() {
   return (
     <>
       <header className="sticky top-0 z-50 border-b border-rule bg-surface/95 backdrop-blur-md">
-        <div className="relative mx-auto flex max-w-6xl items-center justify-between gap-x-2 px-3 py-1 sm:gap-x-4 sm:px-6">
+        <div className="relative mx-auto flex max-w-6xl items-center justify-between gap-x-2 px-4 py-1 sm:gap-x-4 sm:px-6">
           <span className="inline-flex min-h-[44px] items-center gap-2 whitespace-nowrap text-sm font-bold text-ink sm:text-base">
             <Mark />
             Release check-up
@@ -285,7 +285,7 @@ export function LandingScreen() {
         </div>
       </header>
 
-      <main className="overflow-x-clip">
+      <div className="overflow-x-clip">
         <section
           aria-labelledby="hero-title"
           className="border-b border-rule/80 bg-canvas bg-blueprint-grid relative overflow-hidden"
@@ -304,11 +304,12 @@ export function LandingScreen() {
                 QA without a QA team.
               </h1>
               <p className="mb-8 mt-5 max-w-prose text-xl text-ink-soft leading-relaxed">
-                Find out whether your site is ready to release before your users do. Paste its address and get a
-                plain-words verdict, with the problems in priority order.
+                Paste your site's address. Release check-up opens it in a real browser and tells you in plain words
+                whether it is ready to release, with the problems listed in priority order.
               </p>
               <AddressForm />
-              <div className="mt-3 flex flex-wrap items-center gap-4">
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-ink-soft">
+                <span>Not ready to try it on your site?</span>
                 <a href={SAMPLE_REPORT_URL} className="btn-link text-sm">
                   See a sample report
                 </a>
@@ -419,7 +420,7 @@ export function LandingScreen() {
             tabIndex={0}
             role="region"
             aria-label="Where it runs"
-            className="mt-10 max-w-full overflow-x-auto rounded-panel border border-rule/80 bg-surface/80 shadow-level-2 focus:outline-none"
+            className="mt-10 max-w-full overflow-x-auto rounded-panel border border-rule/80 bg-surface/80 shadow-level-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stamp focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
           >
             <table className="w-full min-w-[40rem] border-collapse text-left text-sm">
               <caption className="border-b border-rule/80 bg-panel/50 px-5 py-3 text-left font-bold text-ink">
@@ -505,7 +506,7 @@ export function LandingScreen() {
             </p>
           </div>
         </section>
-      </main>
+      </div>
 
       <footer className="border-t border-rule bg-surface">
         <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 text-sm text-ink-soft sm:px-6 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">

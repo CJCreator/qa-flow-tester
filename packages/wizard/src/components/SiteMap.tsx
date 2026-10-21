@@ -207,7 +207,7 @@ export function SiteMap({
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rule bg-panel/80 px-4 py-2 text-xs">
         <p className="text-ink-soft">
           {pageCount} {pageCount === 1 ? 'page' : 'pages'} · {journeys.length}{' '}
-          {journeys.length === 1 ? 'journey' : 'journeys'}
+          {journeys.length === 1 ? 'user flow' : 'user flows'}
         </p>
         <div className="flex items-center gap-1" role="group" aria-label="How to show the map">
           {(
@@ -375,13 +375,16 @@ export function SiteMap({
                       {showStatus && node.status !== 'pending' && node.status !== 'running' ? (
                         <PageStatusLabel node={node} compact />
                       ) : (
+                        // Each user flow shows its number, so the colour is not the only sign of which one it is.
                         node.journeys.map((j) => (
                           <span
                             key={j.id}
                             aria-hidden="true"
-                            className="inline-block h-2 w-2 rounded-full"
+                            className="inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full px-1 text-[10px] font-bold text-surface"
                             style={{ backgroundColor: colorOf(j.index) }}
-                          />
+                          >
+                            {j.index + 1}
+                          </span>
                         ))
                       )}
                     </span>

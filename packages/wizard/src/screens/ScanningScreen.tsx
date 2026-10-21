@@ -122,7 +122,7 @@ export function ScanningScreen({
                     {stage.label}
                   </span>
                   {state === 'current' && (
-                    <span className="badge-tech-stamp text-[10px] py-0 px-1.5 ml-auto">RUNNING</span>
+                    <span className="badge-tech-stamp text-[10px] py-0 px-1.5 ml-auto">NOW</span>
                   )}
                   {state === 'done' && <span className="badge-tech-pass text-[10px] py-0 px-1.5 ml-auto">DONE</span>}
                   <span className="sr-only">
@@ -134,7 +134,7 @@ export function ScanningScreen({
           </ol>
 
           <section
-            aria-label="Scan progress"
+            aria-label="Check-up progress"
             className="blueprint-card p-6 bg-surface/90 border border-rule/80 relative overflow-hidden shadow-level-3"
           >
             <div className="absolute top-0 inset-x-0 h-1 bg-panel overflow-hidden">
@@ -235,7 +235,7 @@ export function ScanningScreen({
               )}
               {!!progress?.plannedSoFar && (
                 <div>
-                  <dt className="text-ink-soft">Planned while scanning</dt>
+                  <dt className="text-ink-soft">Planned while exploring</dt>
                   <dd className="font-mono text-xl font-bold text-ink">{progress.plannedSoFar}</dd>
                 </div>
               )}
@@ -265,7 +265,7 @@ export function ScanningScreen({
               className="btn-quiet border-fail text-fail hover:border-fail hover:bg-fail-tint"
               onClick={onStop}
             >
-              Stop scanning
+              Stop exploring
             </button>
           </div>
         </>

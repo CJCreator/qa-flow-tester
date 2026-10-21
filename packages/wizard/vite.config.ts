@@ -10,6 +10,14 @@ const proxy = { '/api': { target: process.env.VITE_RUNNER_URL || 'http://localho
 export default defineConfig({
   base: process.env.VITE_BASE || '/',
   plugins: [react()],
+  // Packages go to their own file, so an app change does not invalidate the cached vendor code.
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => (/[\\/]node_modules[\\/]/.test(id) ? 'vendor' : undefined),
+      },
+    },
+  },
   server: { port: 3002, strictPort: true, proxy },
   preview: { port: 3002, strictPort: true, proxy },
 });

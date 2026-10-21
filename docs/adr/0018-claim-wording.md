@@ -1,5 +1,7 @@
 # 0018: Claim Wording: Never "Compliant", Never "Secure"
 
+Status: Accepted. Known gap (2026-10-21, T-63): the score in `packages/core/src/scoring.ts` still names one of the six quality areas "Secure". It is an area label, not a claim of security, but this record says the word is not used. Renaming the area is a code change that this record does not make.
+
 ## Context and Decision
 A check-up looks at a small part of a site and says what it found. People read a clean report as "this site is fine". Two words cause the most harm when the tool is wrong:
 - **"Compliant"** (with WCAG, the ADA, GDPR and so on). Automated checks find only a part of the accessibility problems, and the tool cannot judge law.

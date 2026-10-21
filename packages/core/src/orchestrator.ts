@@ -4,7 +4,6 @@ import type {
   TestCase,
   ProductProfile,
   ReleaseReport,
-  SiteMapSummary,
   TestPointResult,
   Finding,
   Breakpoint,
@@ -14,33 +13,37 @@ import type {
   PageSpeedMap,
   SlowerThanLastTime,
   RoleNotTested,
-  StorageStateData,
-  DocSource,
   WcagCoverageEntry,
 } from '@qa/types';
-import { normalizeRoute, signInReasonText } from '@qa/types';
+import { signInReasonText } from '@qa/types';
 import {
   BrowserManager,
   BREAKPOINT_VIEWPORTS,
   locateElement,
   getBrowserPolicy,
-  type BrowserEngine,
+  urlForLog,
 } from './browser.js';
-import { runAccessChecks, contextFetcher, type AccessFetcher } from './access-control.js';
+import type { OrchestratorEvent } from './run/events.js';
+import type { RunOptions } from './run/options.js';
+import { StepsFailed, removeVideosExcept } from './run/helpers.js';
+import { pathOf, siteHostOf, sitePathOf } from './run/urls.js';
+import { checkLink, checksRun } from './run/checks.js';
+import { runAccessChecks, roleFetcher, guardedFetcher, type AccessFetcher } from './access-control.js';
 import { EvidenceCollector } from './evidence.js';
 import { captureVisualShot, readBaselineMode, writeVisualBaseline } from './visual-capture.js';
 import { PreFlightChecker, SignInFailedError, type PreFlightResult } from './preflight.js';
-import { restoreSession } from './discovery/discovery-agent.js';
+import { restoreSession, RunTimer } from './discovery/discovery-agent.js';
 import { navigate, looksLikeLogin } from './navigate.js';
 import { isSignInOnlyForm, readPageForms } from './discovery/deterministic-spider.js';
 import { debugLog } from './debug-log.js';
+import { makeOutboundFetch } from './safe-net.js';
 import { SourceLocator } from './source-locator.js';
 import { ReproScriptGenerator } from './repro-generator.js';
 import { ReportGenerator, withPortablePaths } from './reporter.js';
 import { withSourceWording } from './source-wording.js';
 import { expandValidationTestCases } from './validator-expander.js';
 import { SuppressionsManager } from './suppressions.js';
-import { Redactor } from './redact.js';
+import { Redactor, runSecrets, sessionCookies } from './redact.js';
 import { mergeDuplicateFindings } from './finding-groups.js';
 import { resolveCredentialPlaceholders } from './credentials.js';
 import { blockChanges, NEEDS_TEST_COPY } from './live-site.js';
@@ -69,276 +72,14 @@ import { SiteHistoryManager } from './site-history.js';
 import { findSlowerPages, pageSpeedKey } from './speed-change.js';
 import { generateSingleFileHtmlReport } from './html-report.js';
 import { abortError, isAbortError } from './abort.js';
-import { RetryRunner } from './retry-runner.js';
+import { RetryRunner, isTransientFailure } from './retry-runner.js';
 import { createStepBudget, resolveStepTimeoutMs } from './step-budget.js';
-
-/** The steps of a test point failed. Thrown inside a retry attempt so the runner can try again. */
-class StepsFailed extends Error {
-  constructor(message?: string) {
-    super(message ?? 'A step failed');
-  }
-}
 import { promises as fs } from 'fs';
 
-export type OrchestratorEvent =
-  | {
-      type: 'RUN_STARTED';
-      runId: string;
-      targetUrl: string;
-      productId: string;
-      testCaseCount: number;
-      /** 'safe-public' for a read-only website scan; absent for a full product run. */
-      mode?: 'safe-public';
-    }
-  | { type: 'PREFLIGHT_STARTED'; roles: string[] }
-  | {
-      type: 'TEST_POINT_STARTED';
-      testCaseId: string;
-      testCaseName: string;
-      role: string;
-      breakpoint: Breakpoint;
-      /** 0-based position among all test points in this run. */
-      index: number;
-      total: number;
-      /** The page the test point opens first. */
-      startPage?: string;
-      /** The journey it belongs to ('page-sweep' for a page visit). */
-      flowId?: string;
-    }
-  | { type: 'STEP_STARTED'; stepIndex: number; stepName: string; action: string; target?: string; testCaseId: string }
-  | {
-      type: 'STEP_COMPLETED';
-      stepIndex: number;
-      passed: boolean;
-      durationMs: number;
-      error?: string;
-      screenshotUrl?: string;
-      /** The page the browser is on after the step. */
-      urlPath?: string;
-      testCaseId?: string;
-    }
-  | {
-      type: 'FINDINGS_UPDATED';
-      totalFindings: number;
-      /** The issues this test point found, so a live view can pin them to their page. */
-      latest?: Array<{
-        id: string;
-        title: string;
-        severity: Finding['severity'];
-        checker: Finding['checker'];
-        urlPath: string;
-        breakpoint: Breakpoint;
-      }>;
-    }
-  | { type: 'RUN_COMPLETED'; runId: string; report: ReleaseReport }
-  /**
-   * Emitted after discovery completes in a run that pauses for review (i.e. skipReview was not
-   * true). The wizard can open /api/runner/plan and show the map. Testing will not start until
-   * POST /api/runner/plan/approve arrives.
-   */
-  | {
-      type: 'PLAN_READY';
-      runId: string;
-      pageCount: number;
-      flowCount: number;
-      questionCount: number;
-      timestamp: number;
-    }
-  /**
-   * Emitted when the user approves (or skipReview bypasses) the plan and the runner moves from
-   * awaiting-review into the testing phase.
-   */
-  | { type: 'TESTING_STARTED'; runId: string; testCaseCount: number; timestamp: number };
-
-function pathOf(url: string): string {
-  try {
-    return new URL(url).pathname;
-  } catch {
-    return url;
-  }
-}
-
-/**
- * Deletes every `.webm` in one test point's folder except `keep`. The speed check opens an extra
- * tab in the same recorded context, so a point can hold more than one clip. Best effort: never throws.
- */
-export async function removeVideosExcept(dir: string, keep?: string): Promise<void> {
-  try {
-    const keepPath = keep ? path.resolve(keep) : undefined;
-    const names = await fs.readdir(dir);
-    for (const name of names) {
-      if (!name.toLowerCase().endsWith('.webm')) continue;
-      const full = path.resolve(dir, name);
-      if (full === keepPath) continue;
-      await fs.rm(full, { force: true }).catch(() => {});
-    }
-  } catch {
-    // Missing folder or unreadable: nothing to clean.
-  }
-}
-
-/** The site a run is for, as rules about it are kept: "localhost:3050". */
-function siteHostOf(targetUrl: string): string | undefined {
-  try {
-    return new URL(targetUrl).host;
-  } catch {
-    return undefined;
-  }
-}
-
-/**
- * Where a finding was, as a path on the site: "/dashboard", never "http://localhost:3050/dashboard",
- * so one page is never counted as two. A page on another host keeps its full address.
- */
-export function sitePathOf(urlPath: string, targetUrl: string): string {
-  try {
-    const target = new URL(targetUrl);
-    const url = new URL(urlPath, target);
-    const route = normalizeRoute(url.pathname);
-    return url.host === target.host ? route : url.origin + route;
-  } catch {
-    return normalizeRoute(urlPath);
-  }
-}
-
-/**
- * Opens a link's address with one request and fails only when the link is broken: the page is
- * gone (404, 410), the server fails (5xx), or nothing answers. Sites that turn automated requests
- * away (401, 403, 429, 999) can't be judged this way, so they pass.
- */
-async function checkLink(page: Page, address: string): Promise<void> {
-  let status: number;
-  try {
-    const res = await page.request.get(address, { timeout: 10000, maxRedirects: 10, failOnStatusCode: false });
-    status = res.status();
-  } catch (err) {
-    throw new Error(
-      `The link doesn’t open: ${address} (${(err instanceof Error ? err.message : String(err)).split('\n')[0]})`
-    );
-  }
-  if (status === 404 || status === 410 || status >= 500)
-    throw new Error(`The link is broken: ${address} answered ${status}`);
-}
-
-/** The checks a test point runs, in plain words, and how each went. */
-function checksRun(
-  findings: Finding[],
-  ran: { spec: boolean; permissions: boolean; design: boolean; ux: boolean; pageLevel: boolean; search: boolean }
-): NonNullable<TestPointResult['checks']> {
-  const outcome = (checker: Finding['checker']) => {
-    const own = findings.filter((f) => f.checker === checker);
-    if (own.some((f) => !f.needsConfirmation)) return 'failed' as const;
-    return own.length > 0 ? ('could-not-verify' as const) : ('passed' as const);
-  };
-  const checks: NonNullable<TestPointResult['checks']> = [
-    { checker: 'bug-detection', name: 'Works without errors', outcome: outcome('bug-detection') },
-  ];
-  if (ran.ux)
-    checks.push({ checker: 'ux-quality', name: 'Accessible and easy to use', outcome: outcome('ux-quality') });
-  if (ran.pageLevel) {
-    checks.push(
-      { checker: 'security', name: 'Secure connections and headers', outcome: outcome('security') },
-      { checker: 'performance', name: 'Fast and mobile-ready', outcome: outcome('performance') }
-    );
-    if (ran.search) checks.push({ checker: 'seo', name: 'Search and link health', outcome: outcome('seo') });
-  }
-  if (ran.spec)
-    checks.splice(1, 0, {
-      checker: 'spec-conformance',
-      name: 'Does what was expected',
-      outcome: outcome('spec-conformance'),
-    });
-  if (ran.permissions)
-    checks.push({
-      checker: 'permission-matrix',
-      name: 'Only the right people can see it',
-      outcome: outcome('permission-matrix'),
-    });
-  if (ran.design)
-    checks.push({ checker: 'design-standards', name: 'Matches the design', outcome: outcome('design-standards') });
-  return checks;
-}
-
-export interface RunOptions {
-  targetUrl: string;
-  productId: string;
-  specTestCases: TestCase[];
-  profile?: ProductProfile;
-  /** Multi-browser engine to run tests against: 'chromium' (default), 'webkit', or 'firefox' (FR-1.4). */
-  browserEngine?: BrowserEngine;
-  /** Custom HTTP headers sent with every request (e.g. bypass headers). */
-  customHeaders?: Record<string, string>;
-  /** Custom user-agent string. */
-  userAgent?: string;
-  /** Pre-flight sign-in result from discovery (T-113); never persisted */
-  preflight?: PreFlightResult;
-  /** Hostnames to which customHeaders should be scoped (T-103) */
-  headerHosts?: string[];
-  headless?: boolean;
-  tunnelAuth?: string;
-  outputDir?: string;
-  breakpoints?: Breakpoint[];
-  repoRoot?: string;
-  enableA11y?: boolean;
-  enableSeo?: boolean;
-  /**
-   * Check how search engines and AI assistants see the site (default true). Off for a site that
-   * isn't public, such as a test copy: then only link health is checked.
-   */
-  searchChecks?: boolean;
-  visibility?: { search: boolean; answers: boolean; aiSearch: boolean; marketing: boolean };
-  enablePerformance?: boolean;
-  enableSecurity?: boolean;
-  /** Record a video per test point; kept only when the point fails. Default true. */
-  recordVideo?: boolean;
-  /** Reruns of a failing test, each in a clean context, stopping at the first pass. Default 3. Link tests never rerun. */
-  flakyReruns?: number;
-  /** Overwrite visual baselines with this run's screenshots instead of comparing against them. */
-  updateBaselines?: boolean;
-  onEvent?: (event: OrchestratorEvent) => void;
-  /** Override the generated runId (e.g. so a caller can respond with an id before the run starts and have RUN_STARTED/RUN_COMPLETED carry the same id). Defaults to an internally generated `run-<timestamp>`. */
-  runId?: string;
-  /** Sentences to show in the report about coverage, e.g. from discovery ("pages behind the sign-in were not reached"). */
-  reportNotes?: string[];
-  /** Documented items the Plan could not match to anything in the app (shown as "Not found in app", never a failure). */
-  documentedNotFound?: Array<{ docSource: DocSource; reason: string }>;
-  /** The AI models that planned this run, named in the report. */
-  aiModels?: { text?: string; vision?: string };
-  /**
-   * The site isn't a test copy: every request that could change data is blocked, and a journey that
-   * tries to send data is reported as needing a test copy rather than as broken.
-   */
-  readOnly?: boolean;
-  /** Planned tests that won't run, and why, e.g. a journey that needs a test copy on a live site. */
-  notRun?: Array<{ id: string; flowId: string; name: string; role: string; reason: string }>;
-  /** The site as the plan saw it, kept in the report so it can be drawn as a map. */
-  siteMap?: SiteMapSummary;
-  /** Pages found while exploring and why the rest were skipped; shown in the issues document on its first write. */
-  pageCoverage?: ReleaseReport['pageCoverage'];
-  /**
-   * Full testing was agreed to with sign-in details: any role that can't sign in throws a
-   * SignInFailedError before testing, instead of being listed as not tested.
-   */
-  requireSignIn?: boolean;
-  /** Stops the run between steps and test points: the browser closes and run() throws an AbortError. */
-  signal?: AbortSignal;
-  /** Finishes early: no more tests start, and the report is made from what's done, marked as partial. */
-  finishSignal?: AbortSignal;
-  /** Where sign-in sessions are saved. Default `<outputDir>/auth`. Keep it out of any folder that's served. */
-  authDir?: string;
-  /** Sessions the person saved, by role. Memory only: used instead of signing in, never written or logged. */
-  suppliedSessions?: Record<string, StorageStateData>;
-  /** Where suppressions and the previous run's findings (for the delta) live. Default outputDir. */
-  stateDir?: string;
-  /** How screenshots are addressed in STEP_COMPLETED: this prefix plus the path inside outputDir. Default `/api/evidence/`. */
-  evidenceUrlPrefix?: string;
-  /** The data folder that holds each site's grade history (`<dataDir>/sites`). Default `.qa-data` in the working folder. */
-  dataDir?: string;
-  /** Recorded in the report when "Test again" skipped the review: when the plan it used was approved. */
-  testedWithApprovedPlan?: string;
-  /** Most time one test step may spend finding and acting on its element, in ms, across retries. Default 10000. */
-  stepTimeoutMs?: number;
-}
+export type { OrchestratorEvent } from './run/events.js';
+export type { RunOptions } from './run/options.js';
+export { removeVideosExcept } from './run/helpers.js';
+export { sitePathOf } from './run/urls.js';
 
 export class FlowTestOrchestrator {
   private browserManager = new BrowserManager();
@@ -354,10 +95,30 @@ export class FlowTestOrchestrator {
   private seoChecker = new SeoChecker();
 
   async run(options: RunOptions): Promise<ReleaseReport> {
+    // Every exit (report, stop, pre-flight failure, thrown error) closes this run's browsers.
+    try {
+      return await this.runChecks(options);
+    } finally {
+      await this.browserManager.close().catch(() => {});
+    }
+  }
+
+  private async runChecks(options: RunOptions): Promise<ReleaseReport> {
     const startTime = Date.now();
+    const timer = new RunTimer(options.timing);
+    if (options.discoveryTiming) timer.entries.push(...options.discoveryTiming);
     const runId = options.runId || `run-${Date.now()}`;
-    // Nothing the run streams or writes may carry a sign-in detail.
-    const redactor = new Redactor(options.profile?.roles || []);
+    // Nothing the run streams or writes may carry a sign-in detail or a secret header, tunnel token or cookie.
+    const redactor = new Redactor(
+      runSecrets({
+        roles: options.profile?.roles,
+        customHeaders: options.customHeaders,
+        tunnelAuth: options.tunnelAuth,
+        targetUrl: options.targetUrl,
+      })
+    );
+    // Network checks outside the browser (security depth, SEO) use the same pinned, redirect-checked GET as links.
+    const outboundFetch = makeOutboundFetch({ allowPrivate: !getBrowserPolicy()?.guard, timeoutMs: 10000 });
     const emitEvent = options.onEvent || (() => {});
     const onEvent = (event: OrchestratorEvent) => emitEvent(redactor.deep(event));
     const outputDir = options.outputDir || path.join(process.cwd(), '.qa-report');
@@ -384,7 +145,7 @@ export class FlowTestOrchestrator {
     });
 
     onEvent({ type: 'PREFLIGHT_STARTED', roles: (options.profile?.roles || []).map((r) => r.role) });
-    console.log(`[QA Orchestrator] Running Pre-flight health check on ${options.targetUrl}...`);
+    console.log(`[QA Orchestrator] Running Pre-flight health check on ${urlForLog(options.targetUrl)}...`);
 
     let preflight: PreFlightResult;
     const neededRoles = options.profile?.roles || [];
@@ -502,6 +263,8 @@ export class FlowTestOrchestrator {
     await stopHere();
 
     const roleStorageStates = preflight.roleStorageStates || {};
+    // Session cookies exist only once the roles have signed in, so they join the list here.
+    redactor.add(runSecrets({ cookies: await sessionCookies(roleStorageStates) }));
     const notes = [...(options.reportNotes || [])];
     // A role that could not sign in is not tested (never run signed out), and the report says why.
     const rolesNotTested: RoleNotTested[] = [];
@@ -548,9 +311,10 @@ export class FlowTestOrchestrator {
       }
     }
     const baselineDir = path.resolve(options.profile?.visualBaselineDir || '.qa-baselines');
-    const recordVideo = options.recordVideo ?? true;
+    // A run that signs in records no video: Playwright cannot mask the sign-in fields in a video.
+    const recordVideo = (options.recordVideo ?? true) && (options.profile?.roles ?? []).length === 0;
 
-    const breakpoints: Breakpoint[] = options.breakpoints || ['1440px'];
+    const breakpoints: Breakpoint[] = options.breakpoints || ['375px', '768px', '1440px'];
     const results: TestPointResult[] = [];
     const allFindings: Finding[] = [];
     // WCAG coverage per criterion, merged across pages by worst status (never one percentage).
@@ -590,12 +354,26 @@ export class FlowTestOrchestrator {
     // Pages whose keyboard walk and 320 px reflow check already ran in this run (one size is enough).
     const keyboardChecked = new Set<string>();
     const reflowChecked = new Set<string>();
+    // Pages whose links and passive security checks already ran in this run. Both are the same at every width.
+    const linkChecked = new Set<string>();
+    const securityChecked = new Set<string>();
+    // Link answers for the whole run, so a URL linked from several pages is requested once.
+    const linkCache = new Map<string, Promise<number | null>>();
     const wantsRepeatLoads = (urlPath: string, bp: Breakpoint, sizes: Breakpoint[]) => {
       if (bp !== (sizes.includes('375px') ? '375px' : sizes[0]) || vitalsMeasured.has(urlPath)) return false;
       vitalsMeasured.add(urlPath);
       return true;
     };
-    tests: for (const testCase of testCasesToRun) {
+    // What one Plan Item produced. Its points write here, and the run's lists take them in plan order (see below).
+    type PointOutput = {
+      results: TestPointResult[];
+      findings: Finding[];
+      notes: string[];
+      marketing: ReturnType<typeof newMarketingLog>;
+    };
+    // Runs every screen size of one Plan Item. It shares the run's once-per-page sets, which are claimed
+    // synchronously, so a page's checks still run once per run.
+    const runTestCase = async (testCase: TestCase, out: PointOutput): Promise<void> => {
       // Which checkers run afterwards depends on the kind of Plan Item (see TestCase.kind).
       const kind = testCase.kind;
       const lightChecks = kind === 'navigation' || kind === 'link';
@@ -604,7 +382,7 @@ export class FlowTestOrchestrator {
       const sizes = sizesFor(testCase);
       if (notTestedRoles.has(testCase.role)) {
         const why = rolesNotTested.find((r) => r.role === testCase.role)!;
-        results.push({
+        out.results.push({
           testCaseId: testCase.id,
           flowId: testCase.flowId,
           role: testCase.role,
@@ -614,11 +392,11 @@ export class FlowTestOrchestrator {
           stepEvidence: [],
           skipReason: `Not tested: ${why.text}`,
         });
-        continue;
+        return;
       }
       if (sessionLostRoles.has(testCase.role)) {
         for (const bp of sizesFor(testCase)) {
-          results.push({
+          out.results.push({
             testCaseId: testCase.id,
             flowId: testCase.flowId,
             role: testCase.role,
@@ -629,19 +407,19 @@ export class FlowTestOrchestrator {
             skipReason: 'Signed out part-way: the session stopped working',
           });
         }
-        continue;
+        return;
       }
       const searchSize = sizes.includes('1440px') ? '1440px' : sizes[sizes.length - 1];
       for (const bp of sizesFor(testCase)) {
         await stopHere();
-        if (options.finishSignal?.aborted) break tests;
+        if (options.finishSignal?.aborted) return;
         onEvent({
           type: 'TEST_POINT_STARTED',
           testCaseId: testCase.id,
           testCaseName: testCase.name || testCase.flowId,
           role: testCase.role,
           breakpoint: bp,
-          index: results.length,
+          index: results.length + out.results.length,
           total: plannedTestPoints,
           startPage: testCase.startPage,
           flowId: testCase.flowId,
@@ -650,8 +428,15 @@ export class FlowTestOrchestrator {
           `[QA Orchestrator] Executing ${testCase.id} ("${testCase.flowId}") on ${bp} as ${testCase.role}...`
         );
         const pointStartTime = Date.now();
+        // Names one checker's time in the report's timing, for this test point.
+        const timedAs = (name: string) => ({
+          phase: 'checker' as const,
+          name,
+          testCaseId: testCase.id,
+          breakpoint: bp,
+        });
         const testCaseEvidenceDir = path.join(evidenceDir, `${testCase.id}-${bp}`);
-        let evidenceCollector = new EvidenceCollector(testCaseEvidenceDir);
+        let evidenceCollector = new EvidenceCollector(testCaseEvidenceDir, (text) => redactor.text(text));
 
         const storageState = roleStorageStates[testCase.role];
 
@@ -692,7 +477,7 @@ export class FlowTestOrchestrator {
               if (discardedPath) await fs.rm(discardedPath, { force: true }).catch(() => {});
               // Also the extra tab's clip from the speed check.
               await removeVideosExcept(testCaseEvidenceDir);
-              evidenceCollector = new EvidenceCollector(testCaseEvidenceDir);
+              evidenceCollector = new EvidenceCollector(testCaseEvidenceDir, (text) => redactor.text(text));
               testPointPassed = true;
               stepError = undefined;
               refusalBaseline = undefined;
@@ -725,10 +510,20 @@ export class FlowTestOrchestrator {
             });
 
             const startUrl = new URL(testCase.startPage, options.targetUrl).toString();
+            const navStarted = Date.now();
             const navRes = await navigate(page, startUrl, {
               timeoutMs: 15000,
               who: testCase.role,
             });
+            timer.add(
+              {
+                phase: 'navigation',
+                name: sitePathOf(startUrl, options.targetUrl),
+                testCaseId: testCase.id,
+                breakpoint: bp,
+              },
+              navStarted
+            );
             startPageNavResult = navRes;
             if (!navRes.ok) {
               throw new Error(`Failed to load ${testCase.startPage} (${navRes.error?.kind || 'net error'})`);
@@ -772,12 +567,13 @@ export class FlowTestOrchestrator {
                   });
                   const slug = credential.role.replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 40);
                   const statePath = path.join(authDir, `${slug}.json`);
-                  const reloginRes = await this.preflightChecker.signIn(
-                    reloginContext,
-                    options.targetUrl,
-                    credential,
-                    statePath
-                  );
+                  const reloginRes = await this.preflightChecker
+                    .signIn(reloginContext, options.targetUrl, credential, statePath)
+                    .catch(async (err: unknown) => {
+                      // A throw here would strand the context; close it before the error goes on.
+                      await reloginContext.close().catch(() => {});
+                      throw err;
+                    });
                   // The whole session, not only its cookies: the one restore helper (LC-004). The retry still
                   // starts from the state file on disk, so a failure here cannot strand the run.
                   const reloginState = reloginRes.ok ? await reloginContext.storageState().catch(() => null) : null;
@@ -801,7 +597,7 @@ export class FlowTestOrchestrator {
                 roleStates.set(testCase.role, roleState);
 
                 const lostNote = `The session for "${testCase.role}" stopped working part-way through testing.`;
-                if (!notes.includes(lostNote)) notes.push(lostNote);
+                if (!out.notes.includes(lostNote)) out.notes.push(lostNote);
 
                 if (options.requireSignIn) {
                   await this.browserManager.close().catch(() => {});
@@ -914,7 +710,7 @@ export class FlowTestOrchestrator {
                     await checkLink(page, step.value || '');
                   }
 
-                  await page.waitForTimeout(300);
+                  // No fixed wait here: the next step waits for its own element.
                   stepSuccess = true;
                   currentStepError = undefined;
                   break;
@@ -1008,8 +804,13 @@ export class FlowTestOrchestrator {
             // A link check is one request, never repeated at a site we don't own.
             maxRetries: testCase.kind === 'link' ? 0 : Math.max(0, Math.floor(options.flakyReruns ?? 3)),
             sentAny: () => sendGuard?.hasSentAny() === true,
+            // Only a transient failure is tried again (navigation timeout or network error, browser crash).
+            // A session refreshed mid-point is retried too: that retry is the recovery, not a flaky rerun.
             // Once a form was sent, a second try would send it twice: decline the retry.
-            shouldRetry: (err) => !isAbortError(err) && !sendGuard?.hasSentAny(),
+            shouldRetry: (err) =>
+              (isTransientFailure(err) || err.message === 'Session refreshed, retrying point') &&
+              !isAbortError(err) &&
+              !sendGuard?.hasSentAny(),
           });
           if (
             attemptResult.outcome === 'FAILED' &&
@@ -1030,7 +831,7 @@ export class FlowTestOrchestrator {
           if (attemptResult.outcome === 'FLAKY_PASSED') flakyRetry = attemptResult.telemetry;
 
           if (pointSkippedReason) {
-            results.push({
+            out.results.push({
               testCaseId: testCase.id,
               flowId: testCase.flowId,
               role: testCase.role,
@@ -1056,41 +857,58 @@ export class FlowTestOrchestrator {
           }
 
           // 1. Bug Detection
-          const bugFindings = this.bugChecker.check(stepEvidenceList, {
-            testCaseId: testCase.id,
-            flowId: testCase.flowId,
-            role: testCase.role,
-            breakpoint: bp,
-            urlPath: page.url(),
-            planIsGuess: testCase.expectations?.origin === 'ai-guess',
-          });
+          const bugFindings = timer.sync(timedAs('bug-detection'), () =>
+            this.bugChecker.check(stepEvidenceList, {
+              testCaseId: testCase.id,
+              flowId: testCase.flowId,
+              role: testCase.role,
+              breakpoint: bp,
+              urlPath: page.url(),
+              planIsGuess: testCase.expectations?.origin === 'ai-guess',
+            })
+          );
+
+          // A probe-only refusal test sends nothing, so no submit click captured a baseline: the page as the
+          // steps left it is the baseline. Not taken after a failed step, which the step failure already reports.
+          if (testCase.expectations?.refusal?.probeOnly && testPointPassed && !refusalBaseline) {
+            refusalBaseline = await captureRefusalBaseline(page).catch(() => undefined);
+          }
 
           // 2. Spec Conformance
           const observations: string[] = [];
-          const specFindings = await this.specChecker.check(page, testCase, stepEvidenceList, {
-            role: testCase.role,
-            breakpoint: bp,
-            baseUrl: options.targetUrl,
-            refusalBaseline,
-            onObservation: (o) => observations.push(o),
-          });
+          const specFindings = await timer.span(timedAs('spec-conformance'), () =>
+            this.specChecker.check(page, testCase, stepEvidenceList, {
+              role: testCase.role,
+              breakpoint: bp,
+              baseUrl: options.targetUrl,
+              refusalBaseline,
+              onObservation: (o) => observations.push(o),
+            })
+          );
 
           // 3. UX Quality (accessibility of the state the steps left): not for a Navigation Check,
           // whose destination page is checked by its own visit.
           const uxFindings = lightChecks
             ? []
-            : await this.uxChecker.check(page, {
-                testCaseId: testCase.id,
-                role: testCase.role,
-                breakpoint: bp,
-                urlPath: new URL(page.url(), options.targetUrl).pathname,
-                enableAxe: options.enableA11y ?? true,
-                entryPath: new URL(options.targetUrl).pathname,
-                onCoverage,
-              });
+            : await timer.span(timedAs('ux-quality'), () =>
+                this.uxChecker.check(page, {
+                  testCaseId: testCase.id,
+                  role: testCase.role,
+                  breakpoint: bp,
+                  urlPath: new URL(page.url(), options.targetUrl).pathname,
+                  enableAxe: options.enableA11y ?? true,
+                  entryPath: new URL(options.targetUrl).pathname,
+                  onCoverage,
+                })
+              );
 
           // 3b. Security (passive): passwords in page addresses. Page-level checks (security, speed,
           // findability, design) run on page visits and journeys, not on every test on a page.
+          // Headers and the site's own files don't change with the width: they run once per page per run.
+          const securityPath = new URL(page.url(), options.targetUrl).pathname;
+          const securityHere =
+            options.enableSecurity !== false && pageLevelChecks && !securityChecked.has(securityPath);
+          if (securityHere) securityChecked.add(securityPath);
           const securityFindings =
             options.enableSecurity === false || !pageLevelChecks
               ? []
@@ -1101,68 +919,92 @@ export class FlowTestOrchestrator {
                     role: testCase.role,
                     breakpoint: bp,
                   }),
-                  ...(await this.securityChecker.checkPage(page, {
-                    testCaseId: testCase.id,
-                    flowId: testCase.flowId,
-                    role: testCase.role,
-                    breakpoint: bp,
-                    urlPath: new URL(page.url(), options.targetUrl).pathname,
-                    baseUrl: options.targetUrl,
-                    responseHeaders: mainResponseHeaders,
-                  })),
-                  ...(await this.securityDepth.checkPage(page, {
-                    testCaseId: testCase.id,
-                    flowId: testCase.flowId,
-                    role: testCase.role,
-                    breakpoint: bp,
-                    urlPath: new URL(page.url(), options.targetUrl).pathname,
-                    baseUrl: options.targetUrl,
-                    siteWide,
-                    cspHeader,
-                  })),
+                  ...(securityHere
+                    ? await timer.span(timedAs('security'), () =>
+                        this.securityChecker.checkPage(page, {
+                          testCaseId: testCase.id,
+                          flowId: testCase.flowId,
+                          role: testCase.role,
+                          breakpoint: bp,
+                          urlPath: securityPath,
+                          baseUrl: options.targetUrl,
+                          responseHeaders: mainResponseHeaders,
+                        })
+                      )
+                    : []),
+                  ...(securityHere
+                    ? await timer.span(timedAs('security-depth'), () =>
+                        this.securityDepth.checkPage(
+                          page,
+                          {
+                            testCaseId: testCase.id,
+                            flowId: testCase.flowId,
+                            role: testCase.role,
+                            breakpoint: bp,
+                            urlPath: securityPath,
+                            baseUrl: options.targetUrl,
+                            siteWide,
+                            cspHeader,
+                          },
+                          outboundFetch
+                        )
+                      )
+                    : []),
                 ];
 
           // 3c. Performance (Speed, Web Vitals, Mobile Overflow & Overlap)
           const perfFindings =
             options.enablePerformance === false || !pageLevelChecks
               ? []
-              : await this.performanceChecker.checkPage(page, {
+              : await timer.span(timedAs('performance'), () =>
+                  this.performanceChecker.checkPage(page, {
+                    testCaseId: testCase.id,
+                    flowId: testCase.flowId,
+                    role: testCase.role,
+                    breakpoint: bp,
+                    urlPath: new URL(page.url(), options.targetUrl).pathname,
+                    onSpeed: (s) => {
+                      speedSamples[pageSpeedKey(testCase.role, bp, new URL(page.url(), options.targetUrl).pathname)] = s;
+                    },
+                    // Throttled repeat loads cost minutes, so each page gets them once per run, at the
+                    // phone width when there is one. Other widths read the vitals the page already had.
+                    repeatLoads: wantsRepeatLoads(new URL(page.url(), options.targetUrl).pathname, bp, sizes)
+                      ? 3
+                      : undefined,
+                  })
+                );
+
+          // 3d. SEO & Link Health
+          const searchHere = options.enableSeo !== false && pageLevelChecks && bp === searchSize;
+          // A page's links are checked once per run; the link cache answers any URL already requested.
+          const seoPath = new URL(page.url(), options.targetUrl).pathname;
+          const seoLinks = searchHere && !linkChecked.has(seoPath);
+          if (seoLinks) linkChecked.add(seoPath);
+          const seoFindings = !searchHere
+            ? []
+            : await timer.span(timedAs('seo'), () =>
+                this.seoChecker.checkPage(page, {
                   testCaseId: testCase.id,
                   flowId: testCase.flowId,
                   role: testCase.role,
                   breakpoint: bp,
-                  urlPath: new URL(page.url(), options.targetUrl).pathname,
-                  onSpeed: (s) => {
-                    speedSamples[pageSpeedKey(testCase.role, bp, new URL(page.url(), options.targetUrl).pathname)] = s;
-                  },
-                  // Throttled repeat loads cost minutes, so each page gets them once per run, at the
-                  // phone width when there is one. Other widths read the vitals the page already had.
-                  repeatLoads: wantsRepeatLoads(new URL(page.url(), options.targetUrl).pathname, bp, sizes)
-                    ? 3
-                    : undefined,
-                });
-
-          // 3d. SEO & Link Health
-          const searchHere = options.enableSeo !== false && pageLevelChecks && bp === searchSize;
-          const seoFindings = !searchHere
-            ? []
-            : await this.seoChecker.checkPage(page, {
-                testCaseId: testCase.id,
-                flowId: testCase.flowId,
-                role: testCase.role,
-                breakpoint: bp,
-                urlPath: new URL(page.url(), options.targetUrl).pathname,
-                baseUrl: options.targetUrl,
-                searchChecks: options.searchChecks,
-                visibility: options.visibility,
-                siteWide,
-                marketingLog,
-              });
+                  urlPath: seoPath,
+                  baseUrl: options.targetUrl,
+                  searchChecks: options.searchChecks,
+                  visibility: options.visibility,
+                  siteWide,
+                  marketingLog: out.marketing,
+                  fetchFn: outboundFetch,
+                  checkLinks: seoLinks,
+                  linkCache,
+                })
+              );
 
           // 4. Permission Matrix Check
           const permFindings: Finding[] = [];
           if (permChecker && startPageNavResult?.status !== undefined) {
             const currentPath = new URL(page.url(), options.targetUrl).pathname;
+            const permStarted = Date.now();
             const permFinding = permChecker.checkAccess({
               target: currentPath,
               role: testCase.role,
@@ -1171,6 +1013,7 @@ export class FlowTestOrchestrator {
               redirectedToLogin: startPageBounced,
               testCaseId: testCase.id,
             });
+            timer.add(timedAs('permission-matrix'), permStarted);
             if (permFinding) {
               permFindings.push(permFinding);
             }
@@ -1180,6 +1023,7 @@ export class FlowTestOrchestrator {
           const designFindings: Finding[] = [];
           const urlPath = new URL(page.url(), options.targetUrl).pathname;
           if (designTokens && pageLevelChecks) {
+            const designStarted = Date.now();
             designFindings.push(
               ...(await this.designChecker.check(page, designTokens, {
                 testCaseId: testCase.id,
@@ -1188,6 +1032,7 @@ export class FlowTestOrchestrator {
                 urlPath,
               }))
             );
+            timer.add(timedAs('design-standards'), designStarted);
           }
           // Only a flow that completed reaches the screen the baseline was taken of.
           const baselinePath = path.join(baselineDir, `${testCase.id}-${bp}.png`);
@@ -1204,10 +1049,12 @@ export class FlowTestOrchestrator {
                   masked: mode.masked,
                   extraSelectors: mode.masked ? mode.extraSelectors : undefined,
                 });
-                const diff = await this.designChecker.checkVisualDiff(current, baseline, {
-                  maxDiffPercent: options.profile?.visualDiffMaxPercent,
-                  diffOutputPath: path.join(testCaseEvidenceDir, 'visual-diff.png'),
-                });
+                const diff = await timer.span(timedAs('visual-diff'), () =>
+                  this.designChecker.checkVisualDiff(current, baseline, {
+                    maxDiffPercent: options.profile?.visualDiffMaxPercent,
+                    diffOutputPath: path.join(testCaseEvidenceDir, 'visual-diff.png'),
+                  })
+                );
                 if (!diff.match) {
                   await fs.mkdir(testCaseEvidenceDir, { recursive: true });
                   const baselineCopy = path.join(testCaseEvidenceDir, 'visual-baseline.png');
@@ -1244,15 +1091,19 @@ export class FlowTestOrchestrator {
             };
             if (!keyboardChecked.has(urlPath)) {
               keyboardChecked.add(urlPath);
-              a11yDepth.push(...(await this.keyboardA11y.checkKeyboard(page, a11yContext)));
+              a11yDepth.push(
+                ...(await timer.span(timedAs('keyboard-a11y'), () => this.keyboardA11y.checkKeyboard(page, a11yContext)))
+              );
             }
             if (!reflowChecked.has(urlPath)) {
               reflowChecked.add(urlPath);
               a11yDepth.push(
-                ...(await this.keyboardA11y.checkReflow(page, {
-                  ...a11yContext,
-                  restoreViewport: BREAKPOINT_VIEWPORTS[bp],
-                }))
+                ...(await timer.span(timedAs('reflow'), () =>
+                  this.keyboardA11y.checkReflow(page, {
+                    ...a11yContext,
+                    restoreViewport: BREAKPOINT_VIEWPORTS[bp],
+                  })
+                ))
               );
             }
           }
@@ -1319,7 +1170,7 @@ export class FlowTestOrchestrator {
 
             // Absolute here; the report makes it relative to the report folder, like every evidence path.
             f.reproScriptPath = await reproGenerator.generate(f, testCase, options.targetUrl);
-            allFindings.push(f);
+            out.findings.push(f);
           }
 
           // Unconfirmed AI guesses never fail a test point on their own.
@@ -1390,7 +1241,7 @@ export class FlowTestOrchestrator {
             resolution:
               'Check the page loads at this address for this role; a timeout usually means the page is slow or the server stopped.',
           };
-          allFindings.push(couldNotRun);
+          out.findings.push(couldNotRun);
           pointResult = {
             testCaseId: testCase.id,
             flowId: testCase.flowId,
@@ -1423,10 +1274,14 @@ export class FlowTestOrchestrator {
         // A problem shows the screen it was found on: its own screenshot, or its test's latest one.
         const lastScreen = [...pointResult!.stepEvidence].reverse().find((s) => s.screenshotPath)?.screenshotPath;
         if (lastScreen) for (const f of pointResult!.findings) f.evidence.screenshotPath ??= lastScreen;
-        results.push(pointResult!);
+        timer.add(
+          { phase: 'test-point', name: testCase.flowId, testCaseId: testCase.id, breakpoint: bp },
+          pointStartTime
+        );
+        out.results.push(pointResult!);
         onEvent({
           type: 'FINDINGS_UPDATED',
-          totalFindings: allFindings.length,
+          totalFindings: allFindings.length + out.findings.length,
           latest: pointResult!.findings.map((f) => ({
             id: f.id,
             title: f.title,
@@ -1437,36 +1292,81 @@ export class FlowTestOrchestrator {
           })),
         });
       }
-    }
+    };
+
+    // Test cases run in lanes, one per role, so one role's points stay in plan order on its own session. A
+    // read-only run runs up to `testPointWorkers` lanes at once; a test-copy run runs one lane, in plan order.
+    // A finished test case is committed to the run's lists only after every test case before it, so the
+    // report keeps plan order whichever finishes first.
+    // Default 1 (serial) until the once-per-page check ownership decision is made; see T-56 notes in the plan.
+    const workerCount = options.readOnly ? Math.max(1, Math.min(5, Math.floor(options.testPointWorkers ?? 1))) : 1;
+    const lanes = new Map<string, number[]>();
+    testCasesToRun.forEach((testCase, slot) => {
+      const lane = workerCount > 1 ? testCase.role : '';
+      lanes.set(lane, [...(lanes.get(lane) ?? []), slot]);
+    });
+    const pendingLanes = [...lanes.values()];
+    const pointOutputs: Array<PointOutput | undefined> = [];
+    let committed = 0;
+    const mergeMarketingLog = (into: PointOutput['marketing'], from: PointOutput['marketing']) => {
+      for (const p of from.readPages) if (!into.readPages.includes(p)) into.readPages.push(p);
+      into.homeRead = into.homeRead || from.homeRead;
+      // The checker's own rule (marketing.ts remember): a gap stays a gap, and a later pass replaces an earlier one.
+      const rank = { 'not-checked': 0, ok: 1, gap: 2 } as const;
+      for (const [key, r] of from.results) {
+        const before = into.results.get(key);
+        if (!before || rank[r.status] > rank[before.status] || (r.status === 'ok' && before.status === 'ok'))
+          into.results.set(key, r);
+      }
+    };
+    const commitInOrder = () => {
+      for (let out = pointOutputs[committed]; out; out = pointOutputs[++committed]) {
+        results.push(...out.results);
+        allFindings.push(...out.findings);
+        for (const n of out.notes) if (!notes.includes(n)) notes.push(n);
+        mergeMarketingLog(marketingLog, out.marketing);
+      }
+    };
+    const halt: { failed: boolean; error?: unknown } = { failed: false };
+    const runLanes = async (): Promise<void> => {
+      for (let lane = pendingLanes.shift(); lane && !halt.failed; lane = pendingLanes.shift()) {
+        for (const slot of lane) {
+          const out: PointOutput = { results: [], findings: [], notes: [], marketing: newMarketingLog() };
+          // Once the run is asked to finish, no more test cases start (as before, nothing is recorded for them).
+          if (!halt.failed && !options.finishSignal?.aborted) {
+            try {
+              await runTestCase(testCasesToRun[slot], out);
+            } catch (err) {
+              halt.failed = true;
+              halt.error = err;
+            }
+          }
+          pointOutputs[slot] = out;
+          commitInOrder();
+          if (halt.failed) return;
+        }
+      }
+    };
+    // The first error stops the lanes that have not started, and is the run's error, as it was when serial.
+    await Promise.all(Array.from({ length: workerCount }, () => runLanes()));
+    if (halt.failed) throw halt.error;
 
     // Access checks (ADR 0030): plain GETs only. A failure here never fails the run.
     const accessPages = options.siteMap?.pages ?? [];
     const accessRoles = Object.keys(roleStorageStates).filter((r) => !notTestedRoles.has(r));
     if (accessPages.length > 0 && accessRoles.length > 0 && !options.finishSignal?.aborted) {
-      const accessContexts: BrowserContext[] = [];
       try {
-        const base = {
-          engine: options.browserEngine ?? ('chromium' as BrowserEngine),
-          headless: options.headless ?? true,
-          baseUrl: options.targetUrl,
-          customHeaders: options.customHeaders,
-          userAgent: options.userAgent,
-          tunnelAuth: options.tunnelAuth,
-          headerHosts: options.headerHosts,
-        };
-        const signedOutContext = await this.browserManager.createContext(base);
-        accessContexts.push(signedOutContext);
+        const guard = getBrowserPolicy()?.guard;
         const roleFetchers: Record<string, AccessFetcher> = {};
         for (const role of accessRoles) {
-          const ctx = await this.browserManager.createContext({ ...base, storageState: roleStorageStates[role] });
-          accessContexts.push(ctx);
-          roleFetchers[role] = contextFetcher(ctx);
+          roleFetchers[role] = await roleFetcher(roleStorageStates[role], { allowPrivate: !guard, timeoutMs: 15000 });
         }
-        const guard = getBrowserPolicy()?.guard;
         const access = await runAccessChecks({
           targetUrl: options.targetUrl,
           pages: accessPages,
-          signedOut: contextFetcher(signedOutContext),
+          signedOut: guardedFetcher(
+            makeOutboundFetch({ allowPrivate: !guard, timeoutMs: 15000, maxRedirects: 0 })
+          ),
           roles: roleFetchers,
           markers: Object.fromEntries((options.profile?.roles ?? []).map((r) => [r.role, r.username])),
           allow: guard ? (url) => guard(url, false) : undefined,
@@ -1475,8 +1375,6 @@ export class FlowTestOrchestrator {
         for (const n of access.notes) if (!notes.includes(n)) notes.push(n);
       } catch (err) {
         console.warn('[QA Orchestrator] Access checks did not run:', err instanceof Error ? err.message : err);
-      } finally {
-        for (const c of accessContexts) await c.close().catch(() => {});
       }
     }
 
@@ -1635,6 +1533,7 @@ export class FlowTestOrchestrator {
       siteMap: options.siteMap,
       ...(options.pageCoverage ? { pageCoverage: options.pageCoverage } : {}),
       testedWithApprovedPlan: options.testedWithApprovedPlan,
+      ...(timer.enabled ? { timing: timer.entries } : {}),
     };
 
     // Hide sign-in details (and secret-looking URL parameters) everywhere before anything is kept.

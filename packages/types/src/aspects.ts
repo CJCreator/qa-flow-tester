@@ -2,6 +2,11 @@ import type { FindingSeverity, Breakpoint } from './test-case.js';
 
 export type AspectType = 'Works' | 'Accessible' | 'Fast and mobile' | 'Findable' | 'Secure' | 'Looks and reads well';
 
+/** The name shown to people. The stored key stays 'Secure' (ADR 0018); only the label reads "Security". */
+export function aspectLabel(aspect: AspectType): string {
+  return aspect === 'Secure' ? 'Security' : aspect;
+}
+
 export type AspectGrade = 'A' | 'B' | 'C' | 'D' | 'F';
 
 export interface AspectSubBreakdown {

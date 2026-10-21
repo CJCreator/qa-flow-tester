@@ -91,7 +91,21 @@ export interface WcagCoverageEntry {
   pages?: number;
 }
 
+/**
+ * One timed phase of a run, in ms. Written only when timing is on (QA_DEBUG is set, or the run asked for timing).
+ * `name` is a role, a checker, or a page path (never a full address).
+ */
+export interface TimingEntry {
+  phase: 'crawl' | 'plan' | 'navigation' | 'test-point' | 'checker';
+  name: string;
+  testCaseId?: string;
+  breakpoint?: Breakpoint;
+  durationMs: number;
+}
+
 export interface ReleaseReport {
+  /** Where the run's time went, phase by phase. Absent unless timing was on (QA_DEBUG or the run's timing option). */
+  timing?: TimingEntry[];
   /** WCAG criteria the automated checks looked at, by status. Absent in older reports. */
   wcagCoverage?: WcagCoverageEntry[];
   /** WCAG tags on violations that matched no known criterion; the findings are still reported. */

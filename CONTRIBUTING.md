@@ -9,7 +9,7 @@ pnpm bootstrap     # install, Playwright Chromium, build everything
 pnpm start         # http://localhost:3001
 ```
 
-Requires Node 22.9 or newer and pnpm 11 (the exact version is pinned in `package.json`).
+Requires Node 22 or newer and pnpm 11 (the exact version, 11.10.0, is pinned in `package.json`).
 
 ## Workflow
 
@@ -35,8 +35,8 @@ Requires Node 22.9 or newer and pnpm 11 (the exact version is pinned in `package
 ## Decision records
 
 `docs/adr/NNNN-short-title.md` with `# NNNN: Title`, `## Context and Decision`, `## Consequences`. Use the next unused
-number (the latest is 0023; 0013 and 0015 are reserved and not written yet, so check before numbering). Superseded records
-get a note at the top rather than being deleted.
+number (the latest is 0031; 0013 and 0015 are deferred placeholders with no decision yet, so check before numbering).
+Superseded or retired records get a `Status:` line at the top rather than being deleted.
 
 ## Code conventions
 
@@ -45,7 +45,7 @@ get a note at the top rather than being deleted.
 - Wording is part of the product. Plain words on top, developer detail underneath (ADR 0010, 0018).
 - Lint with `pnpm lint` (ESLint) and format with `pnpm format` (Prettier writes files; `pnpm format:check` only checks). CI runs both. Warnings are allowed, errors fail. Fix the line, or disable one rule on one line with a reason (`// eslint-disable-next-line rule -- reason`); never disable a whole file.
 - `TODO` comments are written `TODO(T-nn): text`, where `T-nn` is a ticket id in `docs/tickets/INDEX.md`. No bare `TODO`. Applies to new TODOs; if no ticket fits, add one first.
-- Open work is tracked in `docs/tickets/INDEX.md`. Its status column (todo, planned, approved, built, done, blocked) is the committed record and wins over `.claude/work/backlog.md`, which is git-ignored local scratch.
+- Open work is tracked in `docs/tickets/INDEX.md`. Its status column (todo, planned, approved, built, done, blocked) is the committed record.
 
 ## License
 

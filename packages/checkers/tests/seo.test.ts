@@ -177,13 +177,13 @@ describe('SeoChecker and Search/AI Suite', () => {
         hasFavicon: true,
         imagesWithoutAltCount: 0,
       },
-      async (url: string) => {
-        if (url.includes('/dead-link')) {
-          return { status: () => 404 };
-        }
-        return { status: () => 200, text: async () => '' };
-      }
     );
+    // T-43: link checks use an injected fetchFn (the pinned helper), not the page's request API.
+    const fetchFn = async (url: string) => ({
+      status: url.includes('/dead-link') ? 404 : 200,
+      headers: {},
+      text: async () => '',
+    });
 
     const findings = await checker.checkPage(pageWithLinks, {
       testCaseId: 'TC-LINKS',
@@ -191,6 +191,7 @@ describe('SeoChecker and Search/AI Suite', () => {
       breakpoint: '1440px',
       urlPath: '/',
       baseUrl: 'http://localhost:3050',
+      fetchFn,
     });
 
     const brokenLinkFinding = findings.find((f) => f.title.includes('Broken link found'));

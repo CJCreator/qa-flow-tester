@@ -22,6 +22,8 @@ import { exploreInteractiveStates, type ReadForm } from './interactive-states.js
 import { inferCrud, readCrudStructure, probeDeleteConfirm } from './crud-facts.js';
 import { navigate, toTelemetry, looksLikeLogin } from '../navigate.js';
 import { debugLog } from '../debug-log.js';
+import { safeGet } from '../safe-net.js';
+import { getBrowserPolicy } from '../browser.js';
 import { normalizeRoute, CrawlFrontier } from './frontier.js';
 import { dismissOverlays } from './overlay.js';
 
@@ -404,17 +406,30 @@ export class DeterministicSpider {
 
     // Sitemap seeding (crawls /sitemap.xml and robots.txt Sitemap: lines)
     if (options.seedSitemap !== false) {
+      // Only a shared machine checks addresses; a local run may read its own sitemap (ADR 0031).
+      const allowPrivate = !getBrowserPolicy()?.guard;
       try {
         const sitemapUrls = [new URL('/sitemap.xml', site).toString()];
         try {
-          const robotsRes = await context.request.get(new URL('/robots.txt', site).toString(), { timeout: 5000 });
-          if (robotsRes.ok()) {
-            const robotsText = await robotsRes.text();
-            for (const line of robotsText.split(/\r?\n/)) {
+          const robotsRes = await safeGet(new URL('/robots.txt', site).toString(), { timeoutMs: 5000, allowPrivate });
+          if (robotsRes.ok && robotsRes.status >= 200 && robotsRes.status < 300) {
+            for (const line of robotsRes.body.split(/\r?\n/)) {
               const m = line.match(/^\s*sitemap:\s*(.+)$/i);
               if (m && m[1]) {
                 const sm = m[1].trim();
-                if (sm && !sitemapUrls.includes(sm)) sitemapUrls.push(sm);
+                if (!sm) continue;
+                let smTarget: URL;
+                try {
+                  smTarget = new URL(sm, site);
+                } catch {
+                  continue;
+                }
+                // A Sitemap line for another host is not read: the crawl stays on the target's site.
+                if (!onSite(smTarget)) {
+                  debugLog('crawl', 'sitemap line ignored: other host', { host: smTarget.host });
+                  continue;
+                }
+                if (!sitemapUrls.includes(smTarget.toString())) sitemapUrls.push(smTarget.toString());
               }
             }
           }
@@ -426,9 +441,9 @@ export class DeterministicSpider {
         for (const smUrl of sitemapUrls) {
           if (locCount >= 200) break;
           try {
-            const res = await context.request.get(smUrl, { timeout: 10000 });
-            if (!res.ok()) continue;
-            const text = await res.text();
+            const res = await safeGet(smUrl, { timeoutMs: 10000, allowPrivate });
+            if (!res.ok || res.status < 200 || res.status >= 300) continue;
+            const text = res.body;
             const isIndex = /<sitemapindex/i.test(text);
             const matches = text.matchAll(/<loc>\s*([^<]+?)\s*<\/loc>/gi);
             for (const m of matches) {

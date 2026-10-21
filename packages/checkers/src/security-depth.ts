@@ -37,21 +37,6 @@ export interface ResourceTag {
 
 const MAX_SRI = 10;
 const MAX_MAP_SCRIPTS = 5;
-const FETCH_TIMEOUT_MS = 3000;
-
-/** GET through the browser context's request API: no redirects, short timeout, body not kept. */
-export function defaultFetch(page: Page): FetchFn {
-  return async (url) => {
-    try {
-      const request = page.context()?.request;
-      if (!request) return null;
-      const res = await request.fetch(url, { method: 'GET', timeout: FETCH_TIMEOUT_MS, maxRedirects: 0 });
-      return { status: res.status(), headers: res.headers(), text: () => res.text() };
-    } catch {
-      return null;
-    }
-  };
-}
 
 /** Refuses (returns null without calling fetchFn) any URL whose origin differs from `origin`. */
 export async function sameOriginGet(fetchFn: FetchFn, url: string, origin: string): Promise<FetchedResponse | null> {
@@ -143,15 +128,15 @@ export class SecurityDepthChecker {
         onTarget = false;
       }
     }
-    const get = fetchFn ?? defaultFetch(page);
     const steps: Array<() => Promise<Finding[]> | Finding[]> = [
       () => this.checkSri(page, context),
       () => this.checkCsp(context.cspHeader, context),
     ];
-    if (onTarget) {
+    // Without a fetch from the caller (the pinned helper, ADR 0031) the network checks do not run.
+    if (onTarget && fetchFn) {
       steps.push(
-        () => this.checkSourceMaps(page, context, get),
-        () => this.checkSecurityTxt(get, context, pageOrigin)
+        () => this.checkSourceMaps(page, context, fetchFn),
+        () => this.checkSecurityTxt(fetchFn, context, pageOrigin)
       );
     }
     for (const step of steps) {
@@ -198,8 +183,8 @@ export class SecurityDepthChecker {
 
   async checkSourceMaps(page: Page, context: SecurityDepthContext, fetchFn?: FetchFn): Promise<Finding[]> {
     const pageOrigin = pageOriginOf(page);
-    if (!pageOrigin) return [];
-    const get = fetchFn ?? defaultFetch(page);
+    if (!pageOrigin || !fetchFn) return [];
+    const get = fetchFn;
     const tags = await collectResources(page);
     const scripts: string[] = [];
     for (const t of tags) {

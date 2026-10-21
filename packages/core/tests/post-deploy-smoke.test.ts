@@ -55,7 +55,11 @@ describe('post-deploy smoke', () => {
     expect(hits.slice(1, 5)).toEqual(['/', '/pricing', '/robots.txt', '/sitemap.xml']);
     expect(r.findings).toEqual([]);
     expect(r.healthGateFailed).toBe(false);
-    expect(releaseVerdict(r.findings).ready).toBe(true);
+    // Decision (T-47): a smoke run is not a release verdict. With no findings and no grades,
+    // releaseVerdict reads "not ready: nothing checked", so assert the smoke report's own outcome.
+    const report = smokeReport(r, url);
+    expect(report.coverage.passed).toBeGreaterThan(0);
+    expect(report.coverage.failed).toBe(0);
   });
 
   it('stops after a failing health endpoint and lists what it skipped', async () => {

@@ -10,7 +10,8 @@ export interface SafeReadResult<T = unknown> {
 
 /**
  * Atomically writes a JSON value to disk:
- * Writes to a temporary file in the same directory, then renames over the target path.
+ * Writes to a temporary file in the same directory, flushes it to the disk, then renames over the target path,
+ * then flushes the directory so the rename survives a power loss.
  * Cleans up temp file on failure.
  */
 export async function writeJsonAtomic(filePath: string, value: unknown): Promise<void> {
@@ -18,12 +19,30 @@ export async function writeJsonAtomic(filePath: string, value: unknown): Promise
   await fs.mkdir(dir, { recursive: true });
   const tmpFile = `${filePath}.tmp-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   try {
-    await fs.writeFile(tmpFile, JSON.stringify(value, null, 2), 'utf8');
+    const handle = await fs.open(tmpFile, 'w');
+    try {
+      await handle.writeFile(JSON.stringify(value, null, 2), 'utf8');
+      await handle.sync();
+    } finally {
+      await handle.close();
+    }
     await fs.rename(tmpFile, filePath);
   } catch (err) {
     await fs.rm(tmpFile, { force: true }).catch(() => {});
     throw err;
   }
+  await syncDir(dir);
+}
+
+/**
+ * Flushes a directory entry to disk. Some platforms (Windows) cannot open a directory, so a directory
+ * that cannot be opened or synced is skipped: the file itself was already synced.
+ */
+async function syncDir(dir: string): Promise<void> {
+  const handle = await fs.open(dir, 'r').catch(() => null);
+  if (!handle) return;
+  await handle.sync().catch(() => {});
+  await handle.close().catch(() => {});
 }
 
 /**

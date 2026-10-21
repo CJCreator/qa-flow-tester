@@ -1,6 +1,8 @@
 # 0008: One Local Server for the Runner, Wizard and Studio
 
-**Partly superseded by [0010](0010-one-app-with-details-on-demand.md) on 2026-09-30:** Studio is being retired, and `/studio` will redirect to Past check-ups. The single server, port and loopback rules stand.
+**Partly superseded by [0010](0010-one-app-with-details-on-demand.md) on 2026-09-30:** Studio is retired, and `/studio` redirects to Past check-ups. The single server, port and loopback rules stand.
+
+**Status note (2026-10-21, T-63):** the `HUB_API_URL` forwarding of `/api/v1/*` described under Decision was never built. No code reads `HUB_API_URL`, and the Hub is retired ([ADR 0005](0005-report-hub-typescript-monorepo-service.md)).
 
 ## Context and Decision
 Running the tool took three processes on three ports:

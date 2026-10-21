@@ -37,7 +37,7 @@ describe('per-document read report', () => {
     expect(rejected).toEqual([]);
     const notes = accepted.find((f) => f.name === 'notes.txt')!;
     expect(notes.unread).toBe(true);
-    expect(unreadMessage(notes.name)).toBe('Nothing was read from notes.txt. Check it has headings, lists or tables.');
+    expect(unreadMessage(notes.name)).toBe('Nothing was read from notes.txt. Make sure it has headings, lists or tables.');
     expect(readCount(accepted)).toBe(accepted.filter((f) => f.name !== 'notes.txt').length);
   });
 });

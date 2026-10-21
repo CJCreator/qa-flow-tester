@@ -138,7 +138,12 @@ export function expandPlan(
           continue;
         }
         if (answer === INTENT_ANSWERS.probe) {
-          steps = steps.filter((s) => !(s.action === 'click' && s.selector === submit));
+          // Nothing is sent: the form is looked at as the steps left it, and the run judges that (probe-only).
+          steps = steps.map((s) =>
+            s.action === 'click' && s.selector === submit
+              ? { action: 'wait' as const, name: 'Look at the form without sending it' }
+              : s
+          );
           expectations = { ...expectations, refusal: { ...expectations.refusal!, probeOnly: true } };
         }
       }

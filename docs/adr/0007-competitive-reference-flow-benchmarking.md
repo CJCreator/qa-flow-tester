@@ -1,5 +1,7 @@
 # 0007: Competitive and Reference Public Flow Benchmarking
 
+Status: Accepted. The benchmark is built (`packages/core/src/competitive`, `packages/runner/src/benchmarks.ts`). Item 4 below (the Hub gallery and the push to the Report Hub) is retired with the Hub ([ADR 0005](0005-report-hub-typescript-monorepo-service.md)).
+
 ## Context and Decision
 While Phases 1 through 3 focused on internal pre-release quality assurance (functional correctness, Figma design conformance, WCAG accessibility, and multi-developer consolidation), product managers and design leads frequently need to benchmark core user experiences (onboarding wizards, checkout funnels, pricing tiers) against industry leaders and competitors.
 

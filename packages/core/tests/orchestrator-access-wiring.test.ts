@@ -1,5 +1,7 @@
 import { describe, it, expect, afterAll } from 'vitest';
 import path from 'path';
+import http from 'http';
+import type { AddressInfo } from 'net';
 import { promises as fs } from 'fs';
 import { FlowTestOrchestrator } from '../src/orchestrator.js';
 import type { PreFlightResult } from '../src/preflight.js';
@@ -21,58 +23,59 @@ describe('orchestrator runs the access checks (ADR 0030)', () => {
     ],
   };
 
+  // T-43: the access checks use the pinned, guarded GET (ADR 0031), not the browser, so the test serves
+  // the page from a local server and gives each role a cookie state for that host.
+  const cookieState = (value: string) => ({
+    cookies: [{ name: 'sid', value, domain: '127.0.0.1', path: '/' }],
+    origins: [],
+  });
   const preflight = {
     ok: true,
     roleAuthResults: { alice: true, bob: true },
-    roleStorageStates: { alice: 'state-alice', bob: 'state-bob' },
+    roleStorageStates: { alice: cookieState('a'), bob: cookieState('b') },
     roleLandingPaths: { alice: '/account', bob: '/account' },
     roleFailures: {},
     roleDiagnostics: {},
   } as unknown as PreFlightResult;
 
   it('finds a page that opens signed out and one that leaks another role name', async () => {
-    const requests: Array<{ state: string; url: string }> = [];
-    const makeContext = (state: string) => ({
-      newPage: async () => {
-        throw new Error('no browser in this test');
-      },
-      close: async () => {},
-      request: {
-        get: async (url: string) => {
-          requests.push({ state, url });
-          // Every state is served the same page, which names alice: signed out sees it (open page),
-          // and bob sees alice's name (isolation).
-          return {
-            headers: () => ({}),
-            status: () => 200,
-            text: async () => '<main>Account for alice-user</main>',
-          };
-        },
-      },
+    const requests: Array<{ url: string; cookie?: string }> = [];
+    // Every visitor is served the same page, which names alice: signed out sees it (open page),
+    // and bob sees alice's name (isolation).
+    const server = http.createServer((req, res) => {
+      requests.push({ url: req.url ?? '', cookie: req.headers.cookie });
+      res.setHeader('content-type', 'text/html');
+      res.end('<main>Account for alice-user</main>');
     });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 
     const orchestrator = new FlowTestOrchestrator();
     (orchestrator as any).browserManager = {
-      createContext: async (o: { storageState?: string }) => makeContext(o.storageState ?? 'signed-out'),
       close: async () => {},
     };
     (orchestrator as any).preflightChecker = { runPreFlight: async () => preflight };
 
-    const report = await orchestrator.run({
-      targetUrl: 'http://stub.test',
-      productId: 'stub',
-      specTestCases: [],
-      profile,
-      preflight,
-      outputDir,
-      authDir: path.join(outputDir, 'auth'),
-      breakpoints: ['1440px'],
-      enableA11y: false,
-      recordVideo: false,
-      siteMap: { pages: [{ urlPath: '/account', reachedBy: ['alice'] }] } as any,
-    });
+    let report: Awaited<ReturnType<typeof orchestrator.run>>;
+    try {
+      report = await orchestrator.run({
+        targetUrl: base,
+        productId: 'stub',
+        specTestCases: [],
+        profile,
+        preflight,
+        outputDir,
+        authDir: path.join(outputDir, 'auth'),
+        breakpoints: ['1440px'],
+        enableA11y: false,
+        recordVideo: false,
+        siteMap: { pages: [{ urlPath: '/account', reachedBy: ['alice'] }] } as any,
+      });
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
 
-    expect(requests.some((r) => r.state === 'signed-out' && r.url.endsWith('/account'))).toBe(true);
+    expect(requests.some((r) => !r.cookie && r.url.endsWith('/account'))).toBe(true);
     const ids = report.findings.map((f) => f.id);
     expect(ids.some((i) => i.startsWith('F-ACCESS-OPEN-'))).toBe(true);
     expect(ids.some((i) => i.startsWith('F-ACCESS-ISOLATION-alice-bob-'))).toBe(true);

@@ -13,10 +13,11 @@ import type {
   RouteTelemetry,
   SkippedPageInfo,
   PageCoverage,
+  TimingEntry,
 } from '@qa/types';
 import { signInReasonText } from '@qa/types';
 import { PlanValidator } from './plan-validator.js';
-import { BrowserManager, BREAKPOINT_VIEWPORTS } from '../browser.js';
+import { BrowserManager, BREAKPOINT_VIEWPORTS, urlForLog } from '../browser.js';
 import { PreFlightChecker, SignInFailedError, type PreFlightResult } from '../preflight.js';
 import { debugLog } from '../debug-log.js';
 import { DeterministicSpider, DEFAULT_MAX_PAGES, type SpiderResult } from './deterministic-spider.js';
@@ -117,11 +118,62 @@ export interface DiscoveryOptions {
    * pages are planned while the Spider is still crawling.
    */
   sequentialPlanning?: boolean;
+  /** Record how long each crawl and the planning took (also on when QA_DEBUG is set). See TimingEntry. */
+  timing?: boolean;
 }
 
 export interface DiscoveryOutcome {
   draft: DiscoveryDraft;
   preflight?: PreFlightResult;
+  /** Crawl and planning times. Present only when timing is on. */
+  timing?: TimingEntry[];
+}
+
+/**
+ * Times the phases of a run into TimingEntry rows. Off unless the run asked for timing or QA_DEBUG is set:
+ * then nothing is kept and nothing is logged.
+ */
+export class RunTimer {
+  readonly enabled: boolean;
+  readonly entries: TimingEntry[] = [];
+
+  constructor(requested?: boolean) {
+    this.enabled = !!requested || !!process.env.QA_DEBUG?.trim();
+  }
+
+  /** Records a phase that started at `startedAt` (Date.now()). */
+  add(entry: Omit<TimingEntry, 'durationMs'>, startedAt: number): void {
+    if (!this.enabled) return;
+    const durationMs = Date.now() - startedAt;
+    this.entries.push({ ...entry, durationMs });
+    debugLog(entry.phase === 'crawl' || entry.phase === 'plan' ? 'crawl' : 'nav', 'timing', {
+      phase: entry.phase,
+      name: entry.name,
+      testCaseId: entry.testCaseId,
+      breakpoint: entry.breakpoint,
+      ms: durationMs,
+    });
+  }
+
+  /** Times an async step. Its result and any error pass through unchanged. */
+  async span<T>(entry: Omit<TimingEntry, 'durationMs'>, step: () => Promise<T>): Promise<T> {
+    const startedAt = Date.now();
+    try {
+      return await step();
+    } finally {
+      this.add(entry, startedAt);
+    }
+  }
+
+  /** Times a synchronous step. Its result and any error pass through unchanged. */
+  sync<T>(entry: Omit<TimingEntry, 'durationMs'>, step: () => T): T {
+    const startedAt = Date.now();
+    try {
+      return step();
+    } finally {
+      this.add(entry, startedAt);
+    }
+  }
 }
 
 /** How a scan is going. */
@@ -362,6 +414,7 @@ export class DiscoveryAgent {
     await fs.mkdir(outputDir, { recursive: true });
     const signal = options.signal;
     stopIfAborted(signal);
+    const timer = new RunTimer(options.timing);
 
     // 1. Ingest Product Context
     const parsedContext = options.contextDocuments?.length
@@ -500,7 +553,7 @@ export class DiscoveryAgent {
       return context;
     };
 
-    console.log(`[DiscoveryAgent] Crawling routes and interactive forms on ${options.targetUrl}...`);
+    console.log(`[DiscoveryAgent] Crawling routes and interactive forms on ${urlForLog(options.targetUrl)}...`);
     // Pages found so far across every explorer, for the progress screen.
     let pagesFound = 0;
     const signInFailed: string[] = [];
@@ -529,19 +582,23 @@ export class DiscoveryAgent {
     const totalMaxPages = options.maxPages ?? DEFAULT_MAX_PAGES;
     const visitorSpider = new DeterministicSpider(options.profile?.forbiddenActions || [], totalMaxPages);
     const visitorContext = await newContext();
+    const visitorStarted = Date.now();
     crawls.push({
       who: 'visitor',
-      result: await visitorSpider.crawl(visitorContext, options.targetUrl, {
-        ...crawlOptions,
-        startPaths: addedBefore,
-        screenshotPrefix: 'visitor',
-        onPage: onPage('visitor'),
-        role: 'visitor',
-        isSignedIn: false,
-        deadlineAt,
-      }),
+      // Closed when the crawl throws too, not only when it returns.
+      result: await visitorSpider
+        .crawl(visitorContext, options.targetUrl, {
+          ...crawlOptions,
+          startPaths: addedBefore,
+          screenshotPrefix: 'visitor',
+          onPage: onPage('visitor'),
+          role: 'visitor',
+          isSignedIn: false,
+          deadlineAt,
+        })
+        .finally(() => visitorContext.close().catch(() => {})),
     });
-    await visitorContext.close();
+    timer.add({ phase: 'crawl', name: 'visitor' }, visitorStarted);
     stopIfAborted(signal);
 
     for (const role of roles) {
@@ -561,7 +618,12 @@ export class DiscoveryAgent {
       const reloginHandler = async (): Promise<boolean> => {
         try {
           const freshContext = await newContext();
-          const outcome = await new PreFlightChecker().signIn(freshContext, options.targetUrl, role);
+          const outcome = await new PreFlightChecker()
+            .signIn(freshContext, options.targetUrl, role)
+            .catch(async (err: unknown) => {
+              await freshContext.close().catch(() => {});
+              throw err;
+            });
           const freshState = outcome.ok ? await freshContext.storageState().catch(() => null) : null;
           await freshContext.close().catch(() => {});
           if (!freshState) return false;
@@ -572,22 +634,26 @@ export class DiscoveryAgent {
           return false;
         }
       };
-      const roleResult = await roleSpider.crawl(roleContext, options.targetUrl, {
-        ...crawlOptions,
-        startPaths: [...(landing ? [landing] : []), ...addedBefore],
-        screenshotPrefix: `role-${crawls.length}`,
-        onPage: onPage(role.role),
-        role: role.role,
-        isSignedIn: true,
-        knownLoginPaths: [role.loginPath || '/login'],
-        reloginHandler,
-        deadlineAt,
-      });
+      const roleStarted = Date.now();
+      // Closed when the crawl throws too, not only when it returns.
+      const roleResult = await roleSpider
+        .crawl(roleContext, options.targetUrl, {
+          ...crawlOptions,
+          startPaths: [...(landing ? [landing] : []), ...addedBefore],
+          screenshotPrefix: `role-${crawls.length}`,
+          onPage: onPage(role.role),
+          role: role.role,
+          isSignedIn: true,
+          knownLoginPaths: [role.loginPath || '/login'],
+          reloginHandler,
+          deadlineAt,
+        })
+        .finally(() => roleContext.close().catch(() => {}));
+      timer.add({ phase: 'crawl', name: role.role }, roleStarted);
       crawls.push({
         who: role.role,
         result: roleResult,
       });
-      await roleContext.close();
       stopIfAborted(signal);
 
       if (roleResult.sessionLost || (roleResult.signInWalls && roleResult.signInWalls.length >= 3)) {
@@ -719,6 +785,7 @@ export class DiscoveryAgent {
         asking: asking ? true : undefined,
         attempt: asking?.attempt,
       });
+    const planStarted = Date.now();
     planningProgress(0, `Found ${spiderResult.pages.length} pages; planning them`);
     const plannerInput = {
       ...planningBase,
@@ -776,6 +843,7 @@ export class DiscoveryAgent {
     exploration.notes.push(...journeyPlan.notes);
     ambiguityQuestions.push(...journeyPlan.questions);
     planningProgress(requestsNeeded, 'Planned the journeys');
+    timer.add({ phase: 'plan', name: 'pages and journeys' }, planStarted);
 
     // Fixed rules read the documents: User Flows, route access and Denial items, each with its Source.
     // With an AI, only units it did not reach are filled in here.
@@ -906,6 +974,6 @@ export class DiscoveryAgent {
     await fs.writeFile(draftPath, JSON.stringify(safeDraft, null, 2), 'utf8');
     console.log(`[DiscoveryAgent] Discovery draft saved to ${draftPath}`);
 
-    return { draft: safeDraft, preflight };
+    return { draft: safeDraft, preflight, timing: timer.enabled ? timer.entries : undefined };
   }
 }

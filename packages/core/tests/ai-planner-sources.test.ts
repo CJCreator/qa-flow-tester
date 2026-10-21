@@ -114,7 +114,11 @@ describe('Sources in the planner', () => {
     const denial = out.pages[0].tests.find((x) => x.intent === 'denied')!;
     expect(denial.role).toBe('Viewer');
     expect(denial.docSource?.requirementId).toBe('REQ-1');
-    expect(denial.expectations?.elementState).toEqual({ selector: '[data-testid="create-user"]', visible: false });
+    expect(denial.expectations?.elementState).toEqual({
+      // Steps prefer the role and name over the test id (selector-order.ts), and the Denial reuses the step's selector.
+      selector: 'role=button[name="Create user"]',
+      visible: false,
+    });
     expect(out.pages[0].tests.filter((x) => x.intent === 'denied')).toHaveLength(1);
   });
 

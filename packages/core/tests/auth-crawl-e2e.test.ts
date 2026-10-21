@@ -125,6 +125,8 @@ describe('T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts)', () => {
         specTestCases: [testCase],
         outputDir,
         authDir,
+        // The default is now three sizes (T-55); this test is about sign-in and headers, so one size.
+        breakpoints: ['1440px'],
         profile,
         preflight: outcome.preflight,
         suppliedSessions: outcome.preflight?.roleStorageStates,

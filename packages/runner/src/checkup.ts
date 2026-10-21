@@ -10,12 +10,13 @@
  *   QA_AI_API_KEY    the AI key. Without one the plan is written by fixed rules, with no AI.
  *   QA_AI_PROVIDER   openrouter (default), gemini, openai or anthropic
  *   QA_OUTPUT_DIR    where the report goes (default qa-report)
- *   QA_MAX_PAGES     pages to explore at most (default 50, to keep a run inside free Actions minutes)
+ *   QA_MAX_PAGES     pages to explore at most (default 50, to keep a run inside free Actions minutes; 0 means no cap)
  *   QA_FAIL_ON       standard (default), blocker, major or none
  *   QA_CONCURRENCY   spider concurrency 1..5 (default 2)
- *   QA_DELAY_MS      pacing delay in ms 0..2000 (default 100)
+ *   QA_DELAY_MS      pacing delay in ms 0..2000 (default 100; 0 means no delay)
  *   QA_CUSTOM_HEADERS custom HTTP headers JSON, e.g. {"X-QA-Bypass-Token":"..."} (or --header "Name: value")
  *   QA_DEBUG         comma list of debug areas (crawl, auth, nav), or "all" (or --debug [areas])
+ *   QA_RECORD_VIDEO  true or false: a video of each failed test point. Off on CI by default, on elsewhere.
  *   QA_USERNAME, QA_PASSWORD  test sign-in details. Environment only, never a flag. Setting both is the
  *                    consent to sign in and test fully (ADR 0022): use a test account on a test copy.
  *   QA_LOGIN_PATH    optional sign-in page path (for example /login)
@@ -37,6 +38,7 @@ import {
   isSupportedContextName,
   summarizeDocument,
   parseHeaderText,
+  nothingWasChecked,
 } from '@qa/types';
 import { githubAnnotations, docxToMarkdown, runPostDeploySmoke, smokeReport, ReportGenerator } from '@qa/core';
 import type { AIProviderType, Finding, ReleaseReport, SiteAspectGrades, RunStartBody } from '@qa/types';
@@ -68,6 +70,8 @@ export interface CheckupArgs {
   customHeaders?: Record<string, string>;
   /** Debug areas to trace to stderr (--debug or QA_DEBUG). */
   debug?: string;
+  /** Record a video per test point (QA_RECORD_VIDEO). Absent: the run's default, which is off on CI. */
+  recordVideo?: boolean;
   /** `--preset smoke`: Smoke Check-up, GET-only reads of a few known paths. */
   preset?: 'smoke';
   /** Smoke: `--health-path /health`. */
@@ -169,7 +173,8 @@ export function parseArgs(argv: string[], env: NodeJS.ProcessEnv = process.env):
   if (!PROVIDERS.includes(provider)) {
     throw new Error(`The AI provider must be one of ${PROVIDERS.join(', ')}, not "${provider}"`);
   }
-  const maxPages = Number(flag('--max-pages') ?? env.QA_MAX_PAGES ?? 50);
+  const rawMaxPages = flag('--max-pages') ?? env.QA_MAX_PAGES;
+  const maxPages = rawMaxPages === undefined || rawMaxPages === '' ? 50 : Number(rawMaxPages);
   // --docs takes every following argument up to the next --flag.
   const docsAt = argv.indexOf('--docs');
   const flagDocs: string[] = [];
@@ -200,7 +205,9 @@ export function parseArgs(argv: string[], env: NodeJS.ProcessEnv = process.env):
   const rawConcurrency = flag('--concurrency') ?? env.QA_CONCURRENCY;
   const crawlConcurrency = rawConcurrency ? Math.max(1, Math.min(5, Number(rawConcurrency) || 2)) : undefined;
   const rawDelay = flag('--delay') ?? env.QA_DELAY_MS;
-  const crawlDelayMs = rawDelay ? Math.max(0, Math.min(2000, Number(rawDelay) || 100)) : undefined;
+  const delayMs = Number(rawDelay);
+  const crawlDelayMs =
+    rawDelay === undefined || rawDelay === '' ? undefined : Math.max(0, Math.min(2000, Number.isFinite(delayMs) ? delayMs : 100));
   const customHeaders: Record<string, string> = {};
   if (env.QA_CUSTOM_HEADERS) {
     try {
@@ -269,7 +276,8 @@ export function parseArgs(argv: string[], env: NodeJS.ProcessEnv = process.env):
     staging: argv.includes('--staging') || env.QA_STAGING === 'true',
     failOn: failOn as FailOn,
     outputDir: path.resolve(flag('--output') ?? env.QA_OUTPUT_DIR ?? 'qa-report'),
-    maxPages: Number.isFinite(maxPages) && maxPages > 0 ? Math.min(Math.floor(maxPages), 1000) : 50,
+    // 0 means no page cap: the largest value the run accepts (1000).
+    maxPages: !Number.isFinite(maxPages) || maxPages < 0 ? 50 : maxPages === 0 ? 1000 : Math.min(Math.max(1, Math.floor(maxPages)), 1000),
     provider,
     apiKey: env.QA_AI_API_KEY?.trim() || undefined,
     signIn: signIns[0]
@@ -282,7 +290,15 @@ export function parseArgs(argv: string[], env: NodeJS.ProcessEnv = process.env):
     crawlDelayMs,
     customHeaders: Object.keys(customHeaders).length > 0 ? customHeaders : undefined,
     debug: debugValue,
+    recordVideo: parseRecordVideo(env),
   };
+}
+
+/** QA_RECORD_VIDEO=true or false. Unset: off on GitHub Actions or CI (video costs time), otherwise absent (the default). */
+function parseRecordVideo(env: NodeJS.ProcessEnv): boolean | undefined {
+  const raw = env.QA_RECORD_VIDEO?.trim().toLowerCase();
+  if (raw === 'true' || raw === 'false') return raw === 'true';
+  return env.CI === 'true' || env.GITHUB_ACTIONS === 'true' ? false : undefined;
 }
 
 /** --test-cap <n>: a positive whole number, clamped to 1..100000; anything else uses the default. */
@@ -313,6 +329,7 @@ export function buildRunBody(args: CheckupArgs, documents: CheckupDocument[] = [
     ...(args.crawlDelayMs !== undefined ? { crawlDelayMs: args.crawlDelayMs } : {}),
     ...(args.customHeaders ? { customHeaders: args.customHeaders } : {}),
     ...(args.testCap ? { testCap: args.testCap } : {}),
+    ...(args.recordVideo !== undefined ? { recordVideo: args.recordVideo } : {}),
     ...(documents.length ? { contextDocuments: documents } : {}),
     ...(signIns.length
       ? {
@@ -390,6 +407,9 @@ function active(findings: Finding[]): Finding[] {
 
 /** The process exit code: 1 when something at or above the chosen level was found. */
 export function exitCodeFor(findings: Finding[], failOn: FailOn, grades?: SiteAspectGrades): number {
+  // A run where no check ran is never a pass, whatever the failure level. Needs grades: without them
+  // the caller says nothing about what ran.
+  if (grades && nothingWasChecked(findings, grades)) return 1;
   if (failOn === 'none') return 0;
   if (failOn === 'major') {
     return active(findings).some((f) => f.severity === 'Blocker' || f.severity === 'Major') ? 1 : 0;

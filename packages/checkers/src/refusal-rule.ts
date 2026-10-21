@@ -17,7 +17,7 @@ export interface RefusalBaseline {
   path: string;
   /** Rows / list items / cards on the page before the click. */
   records: number;
-  /** Visible error texts already on the page before the click. */
+  /** Visible error texts (alerts included) already on the page before the click. Not a signal after it. */
   errorTexts: string[];
 }
 
@@ -80,16 +80,16 @@ export const REFUSAL_RULE_SOURCE = String.raw`(input) => {
 
   const controls = Array.from(document.querySelectorAll('input, select, textarea'));
   const invalidControl = controls.find((c) => c.matches(':invalid') && visible(c));
-  if (invalidControl) {
-    signals.push('invalid');
-    note(invalidControl.validationMessage || '');
-  }
+  if (invalidControl) signals.push('invalid');
   const ariaInvalid = Array.from(document.querySelectorAll('[aria-invalid="true"]')).find(visible);
   if (ariaInvalid) signals.push('aria-invalid');
 
   if (!probeOnly) {
-    const alert = Array.from(document.querySelectorAll('[role="alert"]')).find((el) => visible(el) && textOf(el));
-    if (alert) { signals.push('alert'); note(textOf(alert)); }
+    // An alert that was already on the page before the submit is not a refusal of this send.
+    const alert = Array.from(document.querySelectorAll('[role="alert"]'))
+      .map((el) => (visible(el) ? textOf(el) : ''))
+      .find((t) => t && !baseline.errorTexts.includes(t));
+    if (alert) { signals.push('alert'); note(alert); }
     const sel = '[class*="error" i], [class*="invalid" i], [data-test*="error" i], [data-testid*="error" i]';
     const fresh = [];
     for (const el of Array.from(document.querySelectorAll(sel))) {
@@ -99,6 +99,8 @@ export const REFUSAL_RULE_SOURCE = String.raw`(input) => {
     }
     if (fresh.length > 0) { signals.push('error-text'); note(fresh[0]); }
   }
+  // The browser's own wording comes last, so the text the page shows is what a Source's sentence is compared with.
+  if (invalidControl) note(invalidControl.validationMessage || '');
 
   const nav = performance.getEntriesByType('navigation')[0];
   const status = (nav && nav.responseStatus) || 0;

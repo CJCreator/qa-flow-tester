@@ -5,7 +5,7 @@ import {
   checkReachable,
   convertDocx,
   estimateAi,
-  RunnerError,
+  plainError,
   type AiEstimate,
   type AiSetup,
   type DomainProofStatus,
@@ -126,6 +126,20 @@ export function NewCheckupScreen({
   const [keyJustSaved, setKeyJustSaved] = useState(false);
   const [maxPagesText, setMaxPagesText] = useState(String(form.maxPages));
   useEffect(() => setMaxPagesText(String(form.maxPages)), [form.maxPages]);
+  // The exploring numbers are kept as typed too, so a field can be cleared; they are checked on leaving the box.
+  const [crawlText, setCrawlText] = useState({ pages: String(form.crawlConcurrency), delay: String(form.crawlDelayMs) });
+  useEffect(
+    () => setCrawlText({ pages: String(form.crawlConcurrency), delay: String(form.crawlDelayMs) }),
+    [form.crawlConcurrency, form.crawlDelayMs]
+  );
+  // A typed number is used at once (so Enter starts with it); an empty box is set to the clamped value on leaving.
+  const clampTo = (typed: string, min: number, max: number, fallback: number) =>
+    Math.max(min, Math.min(max, Number(typed) || fallback));
+  const commitMaxPages = () => {
+    const n = clampMaxPages(maxPagesText);
+    setMaxPagesText(String(n));
+    onFormChange((f) => ({ ...f, maxPages: n }));
+  };
 
   // The address is checked a moment after typing stops, like the key.
   useEffect(() => {
@@ -165,7 +179,7 @@ export function NewCheckupScreen({
         setCheck({
           state: 'unreachable',
           url: normal.url,
-          reason: err instanceof RunnerError ? err.message : 'The address couldn’t be checked. Try again.',
+          reason: plainError(err, 'The address couldn’t be looked at. Try again.'),
           facts: {},
         });
       }
@@ -237,9 +251,12 @@ export function NewCheckupScreen({
     !consentFlow && !!kind && !kind.natural && form.markedTestCopy && !hasStagingIndicator && !confirmedProd;
   // No key doesn't stop a scan: fixed rules write the plan, and the AI can be connected any time.
   // (Once the AI setup has been read, so the plan knows which way to go.)
+  // The check must be for the address as it is now: a check of an older address never starts a run.
+  const addressNow = normalizeUrl(form.address);
+  const checkIsCurrent = addressNow.ok && check.state === 'ok' && check.url === addressNow.url;
   const canStart =
     ai !== null &&
-    check.state === 'ok' &&
+    checkIsCurrent &&
     !starting &&
     !needsProdConfirmation &&
     !blockedHint &&
@@ -251,8 +268,8 @@ export function NewCheckupScreen({
       ? 'Waiting for Release check-up to answer. Start is on as soon as it does.'
       : check.state === 'empty'
         ? 'Enter the address of the site first.'
-        : check.state === 'checking'
-          ? 'Checking the address…'
+        : check.state === 'checking' || !checkIsCurrent
+          ? 'Looking at the address…'
           : check.state !== 'ok'
             ? 'Start is off until the address can be reached.'
             : needsProdConfirmation
@@ -295,7 +312,7 @@ export function NewCheckupScreen({
                 <span className="text-ink">
                   <span className="font-bold">{w.host}</span>{' '}
                   <span className="text-sm text-ink-soft">
-                    · {w.pages} pages · scanned {formatWhen(w.discoveredAt)}
+                    · {w.pages} pages · explored {formatWhen(w.discoveredAt)}
                   </span>
                 </span>
                 <button type="button" className="btn-link" onClick={() => onResumePlan?.(w.host)}>
@@ -307,7 +324,7 @@ export function NewCheckupScreen({
         </aside>
       )}
 
-      <Question>Enter the address of the site to check</Question>
+      <Question>Enter the address of the site for a check-up</Question>
       <p className="mb-8 max-w-prose text-ink-soft">
         The site is explored and a plan is written for you to review. Nothing is tested until you approve the plan.
       </p>
@@ -317,7 +334,7 @@ export function NewCheckupScreen({
           <Notice tone="warn" title="This is a shared copy">
             <p>
               Other people use this copy too, but you only see your own check-ups and reports. They share one server, so
-              only one check-up runs at a time. Only public sites can be checked.
+              only one check-up runs at a time. Only public sites can get a check-up.
             </p>
             {busy && (
               <p className="mt-2 font-bold">
@@ -393,7 +410,7 @@ export function NewCheckupScreen({
           </p>
         )}
         <div id="url-status" role="status" className="mt-2 min-h-[1.6em] text-sm">
-          {check.state === 'checking' && <Spinner label="Checking the address…" />}
+          {check.state === 'checking' && <Spinner label="Looking at the address…" />}
           {check.state === 'invalid' && <span className="text-fail font-medium">{check.reason}</span>}
           {check.state === 'ok' && kind && (
             <div className="flex flex-wrap items-center gap-2 pt-1">
@@ -416,8 +433,8 @@ export function NewCheckupScreen({
           {check.state === 'ok' && check.startWarning && (
             <p className="mt-1 text-warn">
               {check.statusCode
-                ? `This address answered with a ${check.statusCode}. There may be nothing here to check.`
-                : 'This address answered, but not with a page. There may be nothing here to check.'}
+                ? `This address answered with a ${check.statusCode}. There may be nothing here to look at.`
+                : 'This address answered, but not with a page. There may be nothing here to look at.'}
             </p>
           )}
         </div>
@@ -426,7 +443,7 @@ export function NewCheckupScreen({
             <span className="block font-bold">{check.reason}</span>
             {check.suggestion && <span className="block text-ink">{check.suggestion}</span>}
             <button type="button" className="btn-link mt-1 text-sm" onClick={() => setRecheck((n) => n + 1)}>
-              Check again
+              Look again
             </button>
           </ErrorMessage>
         )}
@@ -486,12 +503,13 @@ export function NewCheckupScreen({
                 max={MAX_PAGES_LIMIT}
                 className="field w-24 py-1.5 text-sm"
                 value={maxPagesText}
-                // The number is kept as typed, so it can be cleared and retyped; it's checked on leaving the box.
+                // The number is kept as typed, so it can be cleared and retyped; it's checked on leaving the box or on Enter.
                 onChange={(e) => setMaxPagesText(e.target.value)}
-                onBlur={() => {
-                  const n = clampMaxPages(maxPagesText);
-                  setMaxPagesText(String(n));
-                  onFormChange((f) => ({ ...f, maxPages: n }));
+                onBlur={commitMaxPages}
+                onKeyDown={(e) => {
+                  if (e.key !== 'Enter') return;
+                  e.preventDefault();
+                  commitMaxPages();
                 }}
                 aria-describedby="max-pages-hint"
               />
@@ -643,7 +661,7 @@ export function NewCheckupScreen({
               open={added > 0 || undefined}
             >
               <summary className="flex min-h-[48px] cursor-pointer flex-wrap items-center gap-x-2 px-5 py-3 font-bold hover:bg-panel/40 transition-colors">
-                <span>Add notes, design rules or journeys</span>
+                <span>Add notes, design rules or user flows</span>
                 <span className="font-normal text-xs text-ink-soft font-mono">(optional)</span>
                 {added > 0 && <span className="badge-tech-pass text-[10px] py-0 px-2">Added</span>}
               </summary>
@@ -671,10 +689,10 @@ export function NewCheckupScreen({
                 />
                 <MaterialField
                   id="journeys"
-                  label="Journeys to test"
+                  label="User flows to test"
                   hint="Things people do across pages that matter most."
                   placeholder={
-                    'For example:\nSign in as a manager, open Reports and check the open invoices are listed.'
+                    'For example:\nSign in as a manager, open Reports and confirm the open invoices are listed.'
                   }
                   value={form.journeys}
                   onChange={(value) => onFormChange((f) => ({ ...f, journeys: value }))}
@@ -722,9 +740,17 @@ export function NewCheckupScreen({
                         min={1}
                         max={5}
                         className="field w-20 py-1.5 text-sm"
-                        value={form.crawlConcurrency}
+                        value={crawlText.pages}
                         onChange={(e) => {
-                          const val = Math.max(1, Math.min(5, Number(e.target.value) || 2));
+                          setCrawlText((t) => ({ ...t, pages: e.target.value }));
+                          if (e.target.value.trim()) {
+                            const val = clampTo(e.target.value, 1, 5, 2);
+                            onFormChange((f) => ({ ...f, crawlConcurrency: val }));
+                          }
+                        }}
+                        onBlur={() => {
+                          const val = clampTo(crawlText.pages, 1, 5, 2);
+                          setCrawlText((t) => ({ ...t, pages: String(val) }));
                           onFormChange((f) => ({ ...f, crawlConcurrency: val }));
                         }}
                       />
@@ -739,9 +765,17 @@ export function NewCheckupScreen({
                         max={2000}
                         step={50}
                         className="field w-24 py-1.5 text-sm"
-                        value={form.crawlDelayMs}
+                        value={crawlText.delay}
                         onChange={(e) => {
-                          const val = Math.max(0, Math.min(2000, Number(e.target.value) || 0));
+                          setCrawlText((t) => ({ ...t, delay: e.target.value }));
+                          if (e.target.value.trim()) {
+                            const val = clampTo(e.target.value, 0, 2000, 0);
+                            onFormChange((f) => ({ ...f, crawlDelayMs: val }));
+                          }
+                        }}
+                        onBlur={() => {
+                          const val = clampTo(crawlText.delay, 0, 2000, 0);
+                          setCrawlText((t) => ({ ...t, delay: String(val) }));
                           onFormChange((f) => ({ ...f, crawlDelayMs: val }));
                         }}
                       />
@@ -878,7 +912,7 @@ function ResumeCard({ status }: { status: RunnerStatus }) {
   const host = status.targetUrl ? hostOf(status.targetUrl) : 'your site';
   const card =
     status.phase === 'scanning'
-      ? { text: `Your check-up of ${host} is scanning the site.`, to: PATHS.scan, action: 'Watch the scan' }
+      ? { text: `Your check-up of ${host} is exploring the site.`, to: PATHS.scan, action: 'Watch the progress' }
       : status.phase === 'awaiting-review'
         ? { text: `Your check-up of ${host} is waiting for your review.`, to: PATHS.plan, action: 'Open the plan' }
         : status.phase === 'testing'
@@ -1175,15 +1209,20 @@ function DomainProofPanel({ url }: { url: string }) {
   const [status, setStatus] = useState<DomainProofStatus | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // A reply for an address the person has since changed is dropped, so it never shows against the new one.
+  const urlNow = useRef(url);
+  urlNow.current = url;
   const run = async () => {
+    const asked = url;
     setBusy(true);
     setProblem(null);
     try {
-      setStatus(await checkDomainProof(url));
+      const result = await checkDomainProof(asked);
+      if (asked === urlNow.current) setStatus(result);
     } catch (err) {
-      setProblem(err instanceof RunnerError ? err.message : 'The Verified Domain line couldn’t be checked.');
+      if (asked === urlNow.current) setProblem(plainError(err, 'The Verified Domain line couldn’t be looked at.'));
     } finally {
-      setBusy(false);
+      if (asked === urlNow.current) setBusy(false);
     }
   };
   useEffect(() => {
@@ -1220,7 +1259,7 @@ function DomainProofPanel({ url }: { url: string }) {
       )}
       {problem && <p className="mt-2 text-sm text-fail">{problem}</p>}
       <button type="button" className="btn-link mt-2 text-sm" disabled={busy} onClick={() => void run()}>
-        {busy ? 'Checking…' : 'Check again'}
+        {busy ? 'Looking…' : 'Look again'}
       </button>
     </div>
   );

@@ -65,6 +65,8 @@ describe('The scheduler', () => {
 
   it('records a run that could not start as failed and still moves on', async () => {
     await dueSchedule();
+    // T-50 (REL-5): a run that cannot start is tried once more on the next tick; it is recorded failed when that try fails too.
+    await scheduler.tick(async () => false);
     await scheduler.tick(async () => false);
     const [saved] = await scheduler.loadSchedules();
     expect(saved.lastRunStatus).toBe('failed');

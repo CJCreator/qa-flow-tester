@@ -31,6 +31,8 @@ export interface RunStartBody {
   releaseTarget?: string;
   breakpoints?: string[];
   headless?: boolean;
+  /** Record videos and keep those of failed test points. Omitted: the orchestrator default (on). */
+  recordVideo?: boolean;
   /** Login credentials per role, used for pre-flight auth against the target site. */
   roles?: RoleCredential[];
   /** Remember the sign-ins for the site: names and usernames in its memory, passwords in the OS keychain. */

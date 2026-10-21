@@ -3,6 +3,17 @@ import path from 'path';
 import type { AspectGradeDelta, AspectType, Finding, PageSpeedMap, SiteAspectGrades, SiteHistoryDiff } from '@qa/types';
 import { findingFingerprint } from '@qa/types';
 
+/**
+ * Bounds on site-history.json. After 50 check-ups the file holds at most 50 entries of at most 200
+ * fingerprints each (about 25 bytes a fingerprint, so roughly 300 KB at the very most). Older runs drop off the front.
+ */
+export const MAX_HISTORY_RUNS = 50;
+/**
+ * Only the first fingerprints of a run are stored. This run's diff uses all of them; the next run's
+ * fixed and new lists are compared with the stored (cut) set, so a finding past the cap can show as new.
+ */
+export const MAX_FINGERPRINTS_PER_RUN = 200;
+
 export interface SiteHistoryEntry {
   runId: string;
   timestamp: string;
@@ -110,9 +121,10 @@ export class SiteHistoryManager {
       runId,
       timestamp: new Date().toISOString(),
       grades,
-      findingFingerprints: currentFpList,
+      findingFingerprints: currentFpList.slice(0, MAX_FINGERPRINTS_PER_RUN),
       ...(pageSpeeds && Object.keys(pageSpeeds).length > 0 ? { pageSpeeds } : {}),
     });
+    history.runs = history.runs.slice(-MAX_HISTORY_RUNS);
 
     await fs.mkdir(this.dataDir, { recursive: true });
     await fs.writeFile(this.historyFilePath(host), JSON.stringify(history, null, 2), 'utf8');

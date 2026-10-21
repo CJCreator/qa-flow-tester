@@ -33,15 +33,21 @@ describe('mergeDuplicateFindings', () => {
       }),
       finding({ urlPath: '/about', testCaseId: 'TC-3' }),
     ]);
-    expect(merged).toHaveLength(2);
+    // T-47: the problem key carries no page, so the same finding on /about is the same problem; the pages
+    // it was seen on are kept in seenAt.
+    expect(merged).toHaveLength(1);
     expect(merged[0]).toMatchObject({
-      occurrences: 2,
-      seenAt: { breakpoints: ['1440px', '375px'], roles: ['visitor', 'admin'], testCaseIds: ['TC-1', 'TC-2'] },
+      occurrences: 3,
+      seenAt: {
+        pages: ['/', '/about'],
+        breakpoints: ['1440px', '375px'],
+        roles: ['visitor', 'admin'],
+        testCaseIds: ['TC-1', 'TC-2', 'TC-3'],
+      },
     });
-    expect(merged[1].occurrences).toBeUndefined();
   });
 
-  it('reports one element that appears on every page once, but page-wide problems once per page', () => {
+  it('reports one element that appears on every page once, and a page-wide problem once with its pages (T-47)', () => {
     const smallLink = (page: string, id: string) =>
       finding({
         urlPath: page,
@@ -58,8 +64,9 @@ describe('mergeDuplicateFindings', () => {
       deadEnd('/a', 'P3'),
       deadEnd('/b', 'P4'),
     ]);
-    expect(merged).toHaveLength(3);
+    expect(merged).toHaveLength(2);
     expect(merged[0].seenAt?.pages).toEqual(['/', '/about']);
+    expect(merged[1].seenAt?.pages).toEqual(['/a', '/b']);
   });
 
   it('reports a file that fails on every page once', () => {

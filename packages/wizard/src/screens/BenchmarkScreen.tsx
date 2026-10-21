@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { BenchmarkJob } from '@qa/types';
-import { deleteBenchmark, getBenchmark, listBenchmarks, RunnerError, startBenchmark } from '../api';
+import {
+  deleteBenchmark,
+  getBenchmark,
+  getBenchmarkProgress,
+  listBenchmarks,
+  plainError,
+  startBenchmark,
+} from '../api';
 import { ErrorMessage, FocusHeading, Spinner } from '../components/text';
 import { useDocumentTitle } from '../lib/title';
 
@@ -63,20 +70,21 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
     let cancelled = false;
     const tick = async () => {
       try {
-        const next = await getBenchmark(runningId);
+        const progress = await getBenchmarkProgress(runningId);
         if (cancelled) return;
-        setJob(next);
-        if (next.status !== 'running') {
+        if (progress.status === 'running') {
+          setJob((j) => (j && j.id === progress.id ? { ...j, stage: progress.stage, aiUsed: progress.aiUsed } : j));
+        } else {
+          // Finished: the full comparison, with its result, is read once.
+          const next = await getBenchmark(runningId);
+          if (cancelled) return;
+          setJob(next);
           void refreshHistory();
           return;
         }
       } catch (err) {
         if (cancelled) return;
-        setError(
-          err instanceof RunnerError
-            ? err.message
-            : 'Lost track of the comparison. Retry, or open it from the list below.'
-        );
+        setError(plainError(err, 'Lost track of the comparison. Retry, or open it from the list below.'));
         setPollFailed(true);
         return;
       }
@@ -112,9 +120,7 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
         startedAt: new Date().toISOString(),
       });
     } catch (err) {
-      setError(
-        err instanceof RunnerError ? err.message : 'The comparison couldn’t start. Check both addresses and try again.'
-      );
+      setError(plainError(err, 'The comparison couldn’t start. Make sure both addresses are right and try again.'));
     } finally {
       setStarting(false);
     }
@@ -126,7 +132,7 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
     try {
       setJob(await getBenchmark(id));
     } catch (err) {
-      setError(err instanceof RunnerError ? err.message : 'That comparison couldn’t be opened.');
+      setError(plainError(err, 'That comparison couldn’t be opened.'));
     }
   };
 
@@ -136,7 +142,7 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
       if (job?.id === id) setJob(null);
       await refreshHistory();
     } catch (err) {
-      setError(err instanceof RunnerError ? err.message : 'That comparison couldn’t be removed.');
+      setError(plainError(err, 'That comparison couldn’t be removed.'));
     }
   };
 
@@ -152,7 +158,7 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
       <header>
         <FocusHeading className="text-3xl font-bold tracking-tight">Compare with another site</FocusHeading>
         <p className="mt-1 max-w-prose text-ink-soft">
-          See how your journey stacks up against another site, or one you admire: how many steps and form fields a
+          See how your user flow stacks up against another site, or one you admire: how many steps and form fields a
           visitor meets, which helpful patterns each has, and what you could try. It only looks: nothing is typed, sent
           or changed on either site, and the other site’s robots.txt is respected. It takes about a minute.
         </p>
@@ -164,7 +170,7 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
       >
         <h2 className="text-lg font-bold text-ink">Which two sites?</h2>
         <p className="max-w-prose text-sm text-ink-soft">
-          Enter the address where the journey starts on each, such as the pricing page or the sign-up page.
+          Enter the address where the user flow starts on each, such as the pricing page or the sign-up page.
         </p>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -236,7 +242,7 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
           </button>
         )}
 
-        <div className="pt-2">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-2">
           <button
             type="submit"
             disabled={running || !ourUrl.trim() || !refUrl.trim()}
@@ -244,6 +250,9 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
           >
             {running ? <Spinner label={job?.stage || 'Starting…'} /> : 'Compare the two sites'}
           </button>
+          {!running && (!ourUrl.trim() || !refUrl.trim()) && (
+            <p className="text-sm text-ink-soft">Enter both addresses to compare them.</p>
+          )}
         </div>
       </form>
 

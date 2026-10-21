@@ -17,7 +17,8 @@ Three ways the tool reaches people (ADR 0012), all at $0 until there is revenue.
    - **publish**: needs both above. Pushes `main` to `CJCreator-New/flowtester` (this starts the Vercel build). Needs the `VERCEL_REPO_TOKEN` secret
    - **verify**: waits up to 10 minutes for the Vercel site to serve `version.json` with this commit, and Render `/healthz` to answer 200.
      Render's `/healthz` says only that the service is up, not which commit it runs.
-   - Render builds from this repo itself (`autoDeploy: true`), so the push starts its build.
+   - Render builds from this repo itself (`autoDeployTrigger: checksPass` in `render.yaml`): it starts a build only after
+     the commit's GitHub checks pass, so a failing test keeps the commit off Render.
 3. A newer push to `main` cancels an older deploy that is still running (`concurrency: deploy`).
 
 Settings (Settings > Secrets and variables > Actions): secret `VERCEL_REPO_TOKEN`; optional variables
@@ -28,7 +29,10 @@ Settings (Settings > Secrets and variables > Actions): secret `VERCEL_REPO_TOKEN
 `packages/runner/Dockerfile` builds on Playwright's image. **Its version (`v1.63.0-noble`) must match the
 `playwright` version in `pnpm-lock.yaml`**; bump both together. It installs only the runner and wizard chains,
 copies `templates/` (the wizard embeds the workflow file), and runs `node packages/runner/dist/cli.js` on port 3001
-with data in `/data`.
+with data in `/data`. The build stops if the base image's Node major differs from `.nvmrc`. The runner runs as the
+image's non-root `pwuser`, and Docker's `HEALTHCHECK` calls `/healthz`, which answers 503 when `/data` is not writable
+or Chromium does not launch. Chromium runs with `--no-sandbox` (flag in `packages/core/src/browser.ts`, `launch()`),
+each target host in its own browser process.
 
 `node scripts/check-playwright-version.mjs` compares the Dockerfile tag with every `playwright@` version in
 `pnpm-lock.yaml`. It exits 1 on a mismatch or if either version is missing. CI runs it right after Install; run it
@@ -65,3 +69,5 @@ from its dashboard.
 - The Render free plan sleeps and has little memory; large scans may be killed. The wizard shows a wake note.
 - Beta limits (per visitor and per day) are in memory: a Render restart, redeploy or sleep and wake resets all counters. Set `RUNNER_BETA_RUNS_PER_VISITOR` (default 5) and `RUNNER_BETA_RUNS_PER_DAY` (default 40) in the Render dashboard. Clearing the cookie gives a visitor a fresh count (and loses their AI key); the daily cap is the backstop.
 - The mirror push depends on one token; if it expires, the Vercel site stops updating while Render continues.
+- Beta data is temporary. No persistent disk is attached (the free plan has none), so `/data` is wiped on every
+  redeploy, restart or spin-down. Do not store anything there that must survive; a paid plan with a disk is the fix.
