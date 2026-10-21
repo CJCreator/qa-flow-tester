@@ -103,9 +103,10 @@ jobs:
           git push "https://x-access-token:${TOKEN}@github.com/CJCreator-New/flowtester.git" HEAD:refs/heads/main
 
   # The online copy on Google Cloud Run, alongside Render until cutover (docs/DEPLOYMENT.md). Same gate as
-  # publish: only checks that passed reach it. Auth is keyless (Workload Identity Federation), no key in GitHub.
+  # Gated by the build and the smoke check only, not the test shards (kept out of the deploy on purpose).
+  # Auth is keyless (Workload Identity Federation), no key in GitHub.
   cloud-run:
-    needs: [build-and-smoke, test]
+    needs: [build-and-smoke]
     if: github.repository == 'CJCreator/qa-flow-tester'
     runs-on: ubuntu-latest
     timeout-minutes: 30
