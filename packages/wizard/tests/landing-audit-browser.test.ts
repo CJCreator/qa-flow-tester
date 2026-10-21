@@ -53,6 +53,14 @@ describe('landing page in a browser', () => {
 
   /** Serious and critical axe findings, as readable lines. The sample report is its own page, so its frame is left out. */
   async function seriousViolations(on: Page = page): Promise<string[]> {
+    // Switching theme fades colours over a CSS transition. Let the fade finish, so axe reads the colours a reader
+    // sees, not the middle of the fade (dark text on a light background). Capped, since some animations never end.
+    await on.evaluate(() =>
+      Promise.race([
+        Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))),
+        new Promise((done) => setTimeout(done, 1000)),
+      ])
+    );
     await on.addScriptTag({ path: axePath });
     const found = await on.evaluate(async () => {
       const axe = (
