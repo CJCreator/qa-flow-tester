@@ -625,14 +625,16 @@ function readPageAnswer(
     const wanted = typeof t?.intent === 'string' ? t.intent.trim().toLowerCase() : undefined;
     if (wanted === 'works') test.intent = 'works';
     else if (wanted === 'limits' || wanted === 'rejects') {
-      const clicked = steps.length > 0 ? steps[steps.length - 1] : undefined;
+      // Match the selectors the AI wrote: selectorForStep may rewrite them (e.g. #go to a role selector),
+      // and the form's submitButtonSelector and inputs are the page's own selectors.
+      const clicked = rawSteps.length > 0 ? rawSteps[rawSteps.length - 1] : undefined;
       const form = forms.find(
         (f) =>
           (f.method || 'GET').toUpperCase() !== 'GET' &&
           !!f.submitButtonSelector &&
           clicked?.action === 'click' &&
           clicked.selector === f.submitButtonSelector &&
-          steps.some((s) => s.action === 'fill' && f.inputs.some((i) => i.selector === s.selector))
+          rawSteps.some((s) => s?.action === 'fill' && f.inputs.some((i) => i.selector === s.selector))
       );
       if (form) {
         test.intent = wanted;
