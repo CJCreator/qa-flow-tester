@@ -2,8 +2,9 @@ import { RunnerServer } from './server.js';
 import { defaultUiApps } from './ui-static.js';
 import { isLoopbackBindHost } from './bind-host.js';
 
-// Render says which port to listen on with PORT. It is only trusted there, so a PORT set in someone's shell can't move a local runner.
-const port = parseInt((process.env.RENDER && process.env.PORT) || process.env.RUNNER_PORT || '3001', 10);
+// Render and Cloud Run say which port to listen on with PORT (Cloud Run sets K_SERVICE). It is only trusted there,
+// so a PORT set in someone's shell can't move a local runner.
+const port = parseInt(((process.env.RENDER || process.env.K_SERVICE) && process.env.PORT) || process.env.RUNNER_PORT || '3001', 10);
 const host = process.env.RUNNER_HOST || 'localhost';
 const outputDir = process.env.RUNNER_OUTPUT_DIR || undefined;
 const dataDir = process.env.RUNNER_DATA_DIR || undefined;
