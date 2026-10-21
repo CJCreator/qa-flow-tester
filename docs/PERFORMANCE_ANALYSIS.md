@@ -38,15 +38,15 @@ A check-up does a lot of work that is serial, repeated, or waiting for no reason
 
 A single **test point** on a typical page, no failures, before any checker finds anything:
 
-| Part                                               | Time              | Source                                        |
-| -------------------------------------------------- | ----------------- | --------------------------------------------- |
-| New context and page, navigate                     | 0.5–1 s           | `browser.ts:216`, `navigate.ts`              |
-| Settle: `networkidle` raced with 3 s cap           | ~3 s              | `navigate.ts:66-70`                          |
-| Login probe after load                             | 0.3 s             | `navigate.ts:114`                            |
-| Each step: 300 ms wait, plus screenshot and DOM    | 0.5–1.5 s / step  | `orchestrator.ts:892`, `evidence.ts:100`     |
-| Performance probe                                  | 1–2 s             | `performance.ts:412-414`                     |
-| axe (UX), security, SEO (headless evaluate)        | 1–3 s             | `ux-quality.ts`, `seo.ts`                    |
-| Broken links, worst case (5 × 3 s)                 | up to 15 s        | `seo.ts:556`                                 |
+| Part                                            | Time             | Source                                   |
+| ----------------------------------------------- | ---------------- | ---------------------------------------- |
+| New context and page, navigate                  | 0.5–1 s          | `browser.ts:216`, `navigate.ts`          |
+| Settle: `networkidle` raced with 3 s cap        | ~3 s             | `navigate.ts:66-70`                      |
+| Login probe after load                          | 0.3 s            | `navigate.ts:114`                        |
+| Each step: 300 ms wait, plus screenshot and DOM | 0.5–1.5 s / step | `orchestrator.ts:892`, `evidence.ts:100` |
+| Performance probe                               | 1–2 s            | `performance.ts:412-414`                 |
+| axe (UX), security, SEO (headless evaluate)     | 1–3 s            | `ux-quality.ts`, `seo.ts`                |
+| Broken links, worst case (5 × 3 s)              | up to 15 s       | `seo.ts:556`                             |
 
 So roughly **5–10 s per test point** on a fast site and **20+ s** when links are slow. Multiply by Plan Items ×
 roles × 3 screen sizes, then double for any failing point (retry). A 40-item plan for two roles is about
@@ -153,22 +153,22 @@ estimate, confirm in Phase 0. Sizes are per response unless noted. Nothing here 
 
 ### Findings
 
-| # | Where | What is slow | Why it scales |
-| - | ----- | ------------ | ------------- |
-| R1 | `packages/wizard/src/screens/BenchmarkScreen.tsx:7`, `:83` | Comparison polls every 1.5 s, and each poll returns the whole job | Each response carries the full `result`, not a progress summary |
-| R2 | `packages/runner/src/benchmarks.ts:46-56` | Benchmark list parses every saved job file (results included), then drops the results | Cost grows with comparison history, on every list call |
-| R3 | `packages/runner/src/session/report-store.ts:83-93` | Past check-ups list reads `summary.json` of every run folder | No index; a directory scan plus one file read per run |
-| R4 | `packages/runner/src/session/report-store.ts:154` | Report fetch parses the whole `report.json` each time | Only the latest report is cached in memory |
-| R5 | `packages/runner/src/server.ts:1181`, `:2227`, `:2303`, `:3204` | Evidence files (screenshots, videos) are read fully into memory and sent without streaming, `Range` or caching headers | A video of a test point can be several MB; the browser cannot seek, and the whole file is held in memory per request |
-| R6 | `packages/runner/src/server.ts` (no compression anywhere) | No gzip on JSON, HTML or text responses | `report.html` embeds up to 6 MB of base64 screenshots (`packages/core/src/html-report.ts:621`); plan and report JSON go uncompressed |
-| R7 | `packages/runner/src/server.ts:979`, `packages/runner/src/session/plan-store.ts:161-175` | Status is polled every 3 s and 5 s; each poll awaits `plan.current()`, which reads the plan file from disk when none is cached | Cheap when there is no plan; a file read per poll otherwise |
-| R8 | `packages/runner/src/session/plan-store.ts:214-230` | New check-up screen parses every parked plan file in full | Cost grows with the number of parked plans, and each file holds every page |
-| R9 | `packages/wizard/src/App.tsx:219`, `hooks/useRunnerConnection.ts:4` (3 s), `hooks/useRunnerStream.ts:6` | Fixed-interval polling with no backoff; the stream reconnects every 3 s on failure | Constant background load on the runner, even when idle or down |
-| R10 | `packages/runner/src/server.ts:939-943`, `session/run-events.ts` (cap 200) | A reconnecting page gets up to 200 replayed events, each with its full payload | Every reload or reconnect mid-run re-sends the run so far |
-| R11 | `packages/wizard/src/**` (single `App-*.js`, about 398 KB minified), `vite.config.ts` (no `manualChunks`, no lazy routes) | Report, plan review and benchmark code ship in the first load | Every screen pays for every other screen's code on the first visit |
-| R12 | `packages/core/src/preflight.ts:187` | A fixed 4 s wait before the second try of the address check | Every first attempt that fails pays 4 s, even on a transient error |
-| R13 | `packages/core/src/ai/openrouter.ts:184-190`, `runner/src/server.ts:2610`, `:2728`, `:3059` | Saving the key or changing the model runs key validation, then the model list, one after the other, with no cache | Two sequential network round-trips on every AI settings change |
-| R14 | `packages/runner/src/routes/plan.ts:266` | Every plan edit builds a `PlanValidator` over all pages | Cost grows with the number of pages in the plan |
+| #   | Where                                                                                                                     | What is slow                                                                                                                   | Why it scales                                                                                                                        |
+| --- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| R1  | `packages/wizard/src/screens/BenchmarkScreen.tsx:7`, `:83`                                                                | Comparison polls every 1.5 s, and each poll returns the whole job                                                              | Each response carries the full `result`, not a progress summary                                                                      |
+| R2  | `packages/runner/src/benchmarks.ts:46-56`                                                                                 | Benchmark list parses every saved job file (results included), then drops the results                                          | Cost grows with comparison history, on every list call                                                                               |
+| R3  | `packages/runner/src/session/report-store.ts:83-93`                                                                       | Past check-ups list reads `summary.json` of every run folder                                                                   | No index; a directory scan plus one file read per run                                                                                |
+| R4  | `packages/runner/src/session/report-store.ts:154`                                                                         | Report fetch parses the whole `report.json` each time                                                                          | Only the latest report is cached in memory                                                                                           |
+| R5  | `packages/runner/src/server.ts:1181`, `:2227`, `:2303`, `:3204`                                                           | Evidence files (screenshots, videos) are read fully into memory and sent without streaming, `Range` or caching headers         | A video of a test point can be several MB; the browser cannot seek, and the whole file is held in memory per request                 |
+| R6  | `packages/runner/src/server.ts` (no compression anywhere)                                                                 | No gzip on JSON, HTML or text responses                                                                                        | `report.html` embeds up to 6 MB of base64 screenshots (`packages/core/src/html-report.ts:621`); plan and report JSON go uncompressed |
+| R7  | `packages/runner/src/server.ts:979`, `packages/runner/src/session/plan-store.ts:161-175`                                  | Status is polled every 3 s and 5 s; each poll awaits `plan.current()`, which reads the plan file from disk when none is cached | Cheap when there is no plan; a file read per poll otherwise                                                                          |
+| R8  | `packages/runner/src/session/plan-store.ts:214-230`                                                                       | New check-up screen parses every parked plan file in full                                                                      | Cost grows with the number of parked plans, and each file holds every page                                                           |
+| R9  | `packages/wizard/src/App.tsx:219`, `hooks/useRunnerConnection.ts:4` (3 s), `hooks/useRunnerStream.ts:6`                   | Fixed-interval polling with no backoff; the stream reconnects every 3 s on failure                                             | Constant background load on the runner, even when idle or down                                                                       |
+| R10 | `packages/runner/src/server.ts:939-943`, `session/run-events.ts` (cap 200)                                                | A reconnecting page gets up to 200 replayed events, each with its full payload                                                 | Every reload or reconnect mid-run re-sends the run so far                                                                            |
+| R11 | `packages/wizard/src/**` (single `App-*.js`, about 398 KB minified), `vite.config.ts` (no `manualChunks`, no lazy routes) | Report, plan review and benchmark code ship in the first load                                                                  | Every screen pays for every other screen's code on the first visit                                                                   |
+| R12 | `packages/core/src/preflight.ts:187`                                                                                      | A fixed 4 s wait before the second try of the address check                                                                    | Every first attempt that fails pays 4 s, even on a transient error                                                                   |
+| R13 | `packages/core/src/ai/openrouter.ts:184-190`, `runner/src/server.ts:2610`, `:2728`, `:3059`                               | Saving the key or changing the model runs key validation, then the model list, one after the other, with no cache              | Two sequential network round-trips on every AI settings change                                                                       |
+| R14 | `packages/runner/src/routes/plan.ts:266`                                                                                  | Every plan edit builds a `PlanValidator` over all pages                                                                        | Cost grows with the number of pages in the plan                                                                                      |
 
 Checked and fine: no synchronous file I/O on request paths (the one `existsSync` is in export code,
 `plan/playwright-export.ts:422`); the SSE event log is capped (`MAX_RUN_EVENTS = 200`); plan toggles are

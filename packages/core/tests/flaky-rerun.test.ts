@@ -53,7 +53,7 @@ describe('RetryRunner reruns', () => {
       },
       { ...ids, maxRetries: 1 }
     );
-    const keys = JSON.stringify(Object.keys(out.telemetry ?? {}) .concat(Object.keys(out)));
+    const keys = JSON.stringify(Object.keys(out.telemetry ?? {}).concat(Object.keys(out)));
     expect(keys).not.toMatch(/quarantine|skip|timeout/i);
     const src = await fs.readFile(path.resolve(__dirname, '../src/retry-runner.ts'), 'utf8');
     expect(src).not.toMatch(/quarantine/i);

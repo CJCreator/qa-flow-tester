@@ -61,7 +61,8 @@ function deref(spec: Obj, node: unknown, depth = 0): unknown {
   const o = node as Obj;
   if (typeof o.$ref === 'string' && o.$ref.startsWith('#/')) {
     let cur: unknown = spec;
-    for (const part of o.$ref.slice(2).split('/')) cur = (cur as Obj | undefined)?.[part.replace(/~1/g, '/').replace(/~0/g, '~')];
+    for (const part of o.$ref.slice(2).split('/'))
+      cur = (cur as Obj | undefined)?.[part.replace(/~1/g, '/').replace(/~0/g, '~')];
     return deref(spec, cur, depth + 1);
   }
   return o;
@@ -89,7 +90,8 @@ export function toLiteSchema(spec: Obj, raw: unknown, depth = 0): Obj {
     }
   }
   if (typeof s.minimum === 'number') out.minimum = s.minimum;
-  if (Array.isArray(s.required)) out.required = [...new Set([...((out.required as string[]) ?? []), ...(s.required as string[])])];
+  if (Array.isArray(s.required))
+    out.required = [...new Set([...((out.required as string[]) ?? []), ...(s.required as string[])])];
   if (s.properties && typeof s.properties === 'object') {
     out.properties = {
       ...(out.properties as Obj),
@@ -166,7 +168,9 @@ export function generateApiChecks(spec: Obj | undefined): ApiCheckPlan {
       const pathParams = params.filter((p) => p.in === 'path');
       const query = params.filter((p) => p.in === 'query' && p.required);
       const qs = (omit?: string) => {
-        const parts = query.filter((q) => q.name !== omit).map((q) => `${encodeURIComponent(q.name)}=${encodeURIComponent(String(sample(q.schema)))}`);
+        const parts = query
+          .filter((q) => q.name !== omit)
+          .map((q) => `${encodeURIComponent(q.name)}=${encodeURIComponent(String(sample(q.schema)))}`);
         return parts.length ? `?${parts.join('&')}` : '';
       };
       const bodyRaw = (deref(spec, op.requestBody) as Obj | undefined)?.content as Obj | undefined;
@@ -174,7 +178,9 @@ export function generateApiChecks(spec: Obj | undefined): ApiCheckPlan {
         ? toLiteSchema(spec, (bodyRaw['application/json'] as Obj).schema)
         : undefined;
       const ok = Object.entries((op.responses as Obj) ?? {}).find(([code]) => /^2\d\d$/.test(code));
-      const okContent = ok ? ((deref(spec, ok[1]) as Obj)?.content as Obj | undefined)?.['application/json'] : undefined;
+      const okContent = ok
+        ? ((deref(spec, ok[1]) as Obj)?.content as Obj | undefined)?.['application/json']
+        : undefined;
       const responseSchema = okContent ? toLiteSchema(spec, (okContent as Obj).schema) : undefined;
       const base = { method: M, path, sends };
       const goodBody = bodySchema ? sample(bodySchema) : undefined;
@@ -208,17 +214,23 @@ export function generateApiChecks(spec: Obj | undefined): ApiCheckPlan {
           delete b[req];
           err(`required field "${req}" left out`, { body: b });
         }
-        const typed = props.find((k) => (bodySchema.properties as Obj)[k] && ((bodySchema.properties as Obj)[k] as Obj).type);
+        const typed = props.find(
+          (k) => (bodySchema.properties as Obj)[k] && ((bodySchema.properties as Obj)[k] as Obj).type
+        );
         if (typed) {
           err(`field "${typed}" has the wrong type`, {
             body: { ...(goodBody as Obj), [typed]: wrongTypeOf((bodySchema.properties as Obj)[typed] as Obj) },
           });
         }
         const enumKey = props.find((k) => Array.isArray(((bodySchema.properties as Obj)[k] as Obj).enum));
-        if (enumKey) err(`field "${enumKey}" is not an allowed value`, { body: { ...(goodBody as Obj), [enumKey]: '__not_allowed__' } });
+        if (enumKey)
+          err(`field "${enumKey}" is not an allowed value`, {
+            body: { ...(goodBody as Obj), [enumKey]: '__not_allowed__' },
+          });
         err('body is not valid JSON', { rawBody: '{"broken": ' });
       }
-      if (query[0]) err(`required query "${query[0].name}" left out`, { url: fill(path, pathParams) + qs(query[0].name) });
+      if (query[0])
+        err(`required query "${query[0].name}" left out`, { url: fill(path, pathParams) + qs(query[0].name) });
       if (pathParams.length) err('id does not exist', { url: fill(path, pathParams, true) + qs(), body: goodBody });
       const secured = hasGlobalSecurity || (Array.isArray(op.security) && op.security.length > 0);
       if (secured) err('sent without sign-in', { omitAuth: true, body: goodBody });
@@ -238,7 +250,10 @@ export function generateApiChecks(spec: Obj | undefined): ApiCheckPlan {
 
   const notChecked: string[] = [];
   const hasWrites = checks.some((c) => c.sends);
-  if (hasWrites) notChecked.push('Operations that change data (POST, PUT, PATCH, DELETE) are only sent to a Test Copy with the owner\'s consent.');
+  if (hasWrites)
+    notChecked.push(
+      "Operations that change data (POST, PUT, PATCH, DELETE) are only sent to a Test Copy with the owner's consent."
+    );
   for (const f of fallbacks) {
     const share = checks.filter((c) => c.kind === 'error').length / Math.max(1, checks.length);
     if (share >= MIN_ERROR_SHARE) break;
@@ -247,7 +262,9 @@ export function generateApiChecks(spec: Obj | undefined): ApiCheckPlan {
   const errorShare = checks.filter((c) => c.kind === 'error').length / Math.max(1, checks.length);
   if (checks.length === 0) notChecked.push('The API spec lists no operations; API checks not generated.');
   else if (errorShare < MIN_ERROR_SHARE) {
-    notChecked.push(`Only ${Math.round(errorShare * 100)}% of the API checks are error cases; the spec gave too little to build more.`);
+    notChecked.push(
+      `Only ${Math.round(errorShare * 100)}% of the API checks are error cases; the spec gave too little to build more.`
+    );
   }
   return { checks, errorShare, notChecked };
 }
@@ -271,7 +288,14 @@ export interface ApiChecksResult {
   notes: string[];
 }
 
-function findingFor(n: number, severity: FindingSeverity, c: ApiCheck, title: string, actual: string, errors: string[] = []): Finding {
+function findingFor(
+  n: number,
+  severity: FindingSeverity,
+  c: ApiCheck,
+  title: string,
+  actual: string,
+  errors: string[] = []
+): Finding {
   return {
     id: `API-F-${String(n).padStart(3, '0')}`,
     testCaseId: c.id,
@@ -281,7 +305,8 @@ function findingFor(n: number, severity: FindingSeverity, c: ApiCheck, title: st
     title,
     where: { urlPath: c.path, role: 'visitor', breakpoint: '1440px' },
     expectedVsActual: {
-      expected: c.expect === 'success' ? 'A 2xx answer matching the documented shape' : 'A 4xx answer that refuses the request',
+      expected:
+        c.expect === 'success' ? 'A 2xx answer matching the documented shape' : 'A 4xx answer that refuses the request',
       actual: [actual, ...errors.slice(0, 3)].join('; '),
     },
     stepsToReproduce: [`Send ${c.method} ${c.url} (${c.description}).`],
@@ -292,7 +317,9 @@ function findingFor(n: number, severity: FindingSeverity, c: ApiCheck, title: st
 
 export async function runApiChecks(plan: ApiCheckPlan, options: RunApiChecksOptions): Promise<ApiChecksResult> {
   const doFetch = options.fetchImpl ?? fetch;
-  const redactor = new Redactor(options.authHeader ? [{ token: options.authHeader.replace(/^\w+\s+/, '') }, { token: options.authHeader }] : []);
+  const redactor = new Redactor(
+    options.authHeader ? [{ token: options.authHeader.replace(/^\w+\s+/, '') }, { token: options.authHeader }] : []
+  );
   const result: ApiChecksResult = {
     findings: [],
     ran: 0,
@@ -335,7 +362,8 @@ export async function runApiChecks(plan: ApiCheckPlan, options: RunApiChecksOpti
     const text = await res.text().catch(() => '');
     if (c.expect === 'client-error') {
       if (res.status >= 500) add('Major', c, `Server error on bad input: ${c.description}`, `Answered ${res.status}`);
-      else if (res.status >= 200 && res.status < 300) add('Major', c, `Bad input accepted: ${c.description}`, `Answered ${res.status}`);
+      else if (res.status >= 200 && res.status < 300)
+        add('Major', c, `Bad input accepted: ${c.description}`, `Answered ${res.status}`);
     } else if (res.status < 200 || res.status >= 300) {
       add('Major', c, `Valid request refused: ${c.description}`, `Answered ${res.status}`);
     } else if (c.responseSchema) {
@@ -347,13 +375,22 @@ export async function runApiChecks(plan: ApiCheckPlan, options: RunApiChecksOpti
         continue;
       }
       const errors = validate(c.responseSchema, parsed);
-      if (errors.length > 0) add('Major', c, `Answer does not match the documented shape: ${c.description}`, `Answered ${res.status}`, errors);
+      if (errors.length > 0)
+        add(
+          'Major',
+          c,
+          `Answer does not match the documented shape: ${c.description}`,
+          `Answered ${res.status}`,
+          errors
+        );
     }
   }
   if (result.skippedWrites > 0) {
     result.notChecked.push(`${result.skippedWrites} API checks that change data were not sent (no Test Copy consent).`);
   }
-  result.notes.push(`Ran ${result.ran} API checks; ${Math.round(plan.errorShare * 100)}% of the planned checks send input the API should refuse.`);
+  result.notes.push(
+    `Ran ${result.ran} API checks; ${Math.round(plan.errorShare * 100)}% of the planned checks send input the API should refuse.`
+  );
   result.findings = redactor.deep(result.findings).map((f) => ({ ...f, title: redactUrl(f.title) }));
   result.notChecked = result.notChecked.map(redactUrl);
   return result;

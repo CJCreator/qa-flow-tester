@@ -201,16 +201,24 @@ export class ReportGenerator {
     // WCAG criteria the automated checks looked at. Per criterion, never one score: automation
     // cannot show a page meets WCAG, so a criterion with nothing found is not called a pass.
     if (report.wcagCoverage && report.wcagCoverage.length > 0) {
-      const label = { violated: 'Violated', 'needs-human-judgment': 'Needs human judgment', 'none-found': 'No violation found by automation' } as const;
+      const label = {
+        violated: 'Violated',
+        'needs-human-judgment': 'Needs human judgment',
+        'none-found': 'No violation found by automation',
+      } as const;
       lines.push(`## WCAG criteria checked`);
       lines.push(``);
       lines.push(`| Criterion | Status | Pages |`);
       lines.push(`| :--- | :--- | :---: |`);
       for (const e of report.wcagCoverage) lines.push(`| ${e.criterion} | ${label[e.status]} | ${e.pages ?? 1} |`);
       lines.push(``);
-      lines.push(`Automated checks cannot show that a page meets WCAG. Criteria marked "Needs human judgment" need a person to look.`);
+      lines.push(
+        `Automated checks cannot show that a page meets WCAG. Criteria marked "Needs human judgment" need a person to look.`
+      );
       if (report.wcagUnmappedTags && report.wcagUnmappedTags.length > 0) {
-        lines.push(`Tags that matched no known criterion (their findings are still listed): ${report.wcagUnmappedTags.join(', ')}.`);
+        lines.push(
+          `Tags that matched no known criterion (their findings are still listed): ${report.wcagUnmappedTags.join(', ')}.`
+        );
       }
       lines.push(``);
     }

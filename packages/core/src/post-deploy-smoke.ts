@@ -50,7 +50,14 @@ interface Got {
 
 class Unreachable extends Error {}
 
-function finding(n: number, severity: FindingSeverity, title: string, urlPath: string, expected: string, actual: string): Finding {
+function finding(
+  n: number,
+  severity: FindingSeverity,
+  title: string,
+  urlPath: string,
+  expected: string,
+  actual: string
+): Finding {
   return {
     id: `SMOKE-${String(n).padStart(3, '0')}`,
     testCaseId: 'SMOKE',
@@ -165,7 +172,9 @@ export async function runPostDeploySmoke(options: SmokeOptions): Promise<SmokeRe
       break;
     }
     if (!healthFound && !out.healthGateFailed) {
-      out.notChecked.push(`Health endpoint not found (tried ${candidates.join(', ')}). The App's health was not checked.`);
+      out.notChecked.push(
+        `Health endpoint not found (tried ${candidates.join(', ')}). The App's health was not checked.`
+      );
     }
     if (out.healthGateFailed) {
       out.notChecked.push(...remaining([...PAGE_PATHS, 'version']));
@@ -181,7 +190,11 @@ export async function runPostDeploySmoke(options: SmokeOptions): Promise<SmokeRe
         out.notChecked.push(`${p}: not checked (${(e as Error).message})`);
         if (budget.signal.aborted) {
           const at = PAGE_PATHS.indexOf(p);
-          out.notChecked.push(...remaining(PAGE_PATHS.slice(at + 1)).map((l) => l.replace(', the health check failed first', ', the time budget ran out')));
+          out.notChecked.push(
+            ...remaining(PAGE_PATHS.slice(at + 1)).map((l) =>
+              l.replace(', the health check failed first', ', the time budget ran out')
+            )
+          );
           out.notChecked.push('version: not checked, the time budget ran out');
           return done();
         }
@@ -196,10 +209,22 @@ export async function runPostDeploySmoke(options: SmokeOptions): Promise<SmokeRe
       } else if (p === '/sitemap.xml') {
         if (!ok) add('Minor', 'sitemap.xml not found', p, 'A 2xx answer', `Answered ${r.status}`);
         else if (!/<urlset|<sitemapindex/i.test(r.body)) {
-          add('Minor', 'sitemap.xml could not be read as a sitemap', p, 'A <urlset> or <sitemapindex> document', 'Neither found');
+          add(
+            'Minor',
+            'sitemap.xml could not be read as a sitemap',
+            p,
+            'A <urlset> or <sitemapindex> document',
+            'Neither found'
+          );
         }
       } else if (!ok) {
-        add(r.status === 404 ? 'Minor' : 'Major', r.status === 404 ? `${p} not found` : `${p} did not load`, p, 'A 2xx answer', `Answered ${r.status}`);
+        add(
+          r.status === 404 ? 'Minor' : 'Major',
+          r.status === 404 ? `${p} not found` : `${p} did not load`,
+          p,
+          'A 2xx answer',
+          `Answered ${r.status}`
+        );
       }
     }
 
@@ -224,7 +249,13 @@ export async function runPostDeploySmoke(options: SmokeOptions): Promise<SmokeRe
     } else if (options.expectedVersion === undefined) {
       out.notes.push(`Version found: ${redactUrl(version)}. Not compared, no expected version was given.`);
     } else if (version !== options.expectedVersion) {
-      add('Major', 'Version does not match the expected one', '/version.json', redactUrl(options.expectedVersion), redactUrl(version));
+      add(
+        'Major',
+        'Version does not match the expected one',
+        '/version.json',
+        redactUrl(options.expectedVersion),
+        redactUrl(version)
+      );
     }
     return done();
   } finally {

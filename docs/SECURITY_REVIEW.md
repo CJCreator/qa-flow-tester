@@ -10,20 +10,20 @@ the AI provider adapters, and the scheduler.
 
 ## Severity summary
 
-| ID  | Severity | Area                  | One line                                                                   | Status   |
-| --- | -------- | --------------------- | -------------------------------------------------------------------------- | -------- |
-| S1  | High     | SSRF (hosted beta)    | API-level requests skip the address guard                                  | verified |
-| S2  | High     | SSRF (hosted beta)    | Sitemap URLs from `robots.txt` are fetched with no host check              | read     |
-| S3  | Medium   | Redaction             | URL secrets in the fragment or path are not hidden                         | verified |
-| S4  | Medium   | Redaction             | Some secret parameter names are missing from the list                      | verified |
-| S5  | Medium   | Redaction             | Literal matching misses HTML-, JSON- and form-escaped forms                | verified |
-| S6  | Medium   | Redaction             | Secrets under 3 characters are never redacted                              | read     |
-| S7  | Medium   | Redaction             | Screenshots and videos are not scrubbed                                    | read     |
-| S8  | Medium   | Redaction             | Text scrub runs only at the end of a run                                   | read     |
-| S9  | Medium   | Redaction             | Live events and report use role credentials only, not headers or tunnel    | read     |
-| S10 | Medium   | Data at rest          | Sign-in sessions stay on disk after a UI run                               | read     |
-| S11 | Low      | Access control        | Some GET routes change run state                                           | read     |
-| S12 | Low      | Redaction             | Text-evidence list omits common formats (csv, xml, yaml, svg)              | read     |
+| ID  | Severity | Area               | One line                                                                | Status   |
+| --- | -------- | ------------------ | ----------------------------------------------------------------------- | -------- |
+| S1  | High     | SSRF (hosted beta) | API-level requests skip the address guard                               | verified |
+| S2  | High     | SSRF (hosted beta) | Sitemap URLs from `robots.txt` are fetched with no host check           | read     |
+| S3  | Medium   | Redaction          | URL secrets in the fragment or path are not hidden                      | verified |
+| S4  | Medium   | Redaction          | Some secret parameter names are missing from the list                   | verified |
+| S5  | Medium   | Redaction          | Literal matching misses HTML-, JSON- and form-escaped forms             | verified |
+| S6  | Medium   | Redaction          | Secrets under 3 characters are never redacted                           | read     |
+| S7  | Medium   | Redaction          | Screenshots and videos are not scrubbed                                 | read     |
+| S8  | Medium   | Redaction          | Text scrub runs only at the end of a run                                | read     |
+| S9  | Medium   | Redaction          | Live events and report use role credentials only, not headers or tunnel | read     |
+| S10 | Medium   | Data at rest       | Sign-in sessions stay on disk after a UI run                            | read     |
+| S11 | Low      | Access control     | Some GET routes change run state                                        | read     |
+| S12 | Low      | Redaction          | Text-evidence list omits common formats (csv, xml, yaml, svg)           | read     |
 
 ## High
 

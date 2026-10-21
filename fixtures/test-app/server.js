@@ -668,7 +668,9 @@ const server = http.createServer((req, res) => {
     }
     if (labPath === '/lab/401') {
       res.writeHead(401, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end('<!DOCTYPE html><html lang="en"><head><title>Unauthorized</title></head><body><h1>Unauthorized 401</h1></body></html>');
+      res.end(
+        '<!DOCTYPE html><html lang="en"><head><title>Unauthorized</title></head><body><h1>Unauthorized 401</h1></body></html>'
+      );
       return;
     }
     if (labPath === '/lab/mirror') {

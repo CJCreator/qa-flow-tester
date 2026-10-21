@@ -109,7 +109,8 @@ export function summariseWcag(
 }
 
 /** Alt texts that are present but say nothing: file names, "image", "photo", "untitled". */
-export const MEANINGLESS_ALT = /^(?:(?:img|image|photo|picture|pic|graphic|untitled|dsc|screenshot|icon|banner|spacer)[\s_-]*\d*|.*\.(?:png|jpe?g|gif|svg|webp|avif|bmp))$/i;
+export const MEANINGLESS_ALT =
+  /^(?:(?:img|image|photo|picture|pic|graphic|untitled|dsc|screenshot|icon|banner|spacer)[\s_-]*\d*|.*\.(?:png|jpe?g|gif|svg|webp|avif|bmp))$/i;
 
 export class UXQualityChecker {
   async check(
@@ -190,11 +191,12 @@ export class UXQualityChecker {
           }, MEANINGLESS_ALT.source);
           imagesPresent = alt.count > 0;
           if (alt.bad.length) {
-            const base = couldNotVerifyFinding(
-              'ux-quality',
-              'whether image descriptions (alt text) are meaningful',
-              { testCaseId: context.testCaseId, role: context.role, breakpoint: context.breakpoint, urlPath: context.urlPath }
-            );
+            const base = couldNotVerifyFinding('ux-quality', 'whether image descriptions (alt text) are meaningful', {
+              testCaseId: context.testCaseId,
+              role: context.role,
+              breakpoint: context.breakpoint,
+              urlPath: context.urlPath,
+            });
             findings.push({
               ...base,
               expectedVsActual: {
@@ -204,7 +206,8 @@ export class UXQualityChecker {
                   .map((a) => `"${a.slice(0, 40)}"`)
                   .join(', ')}). Automation cannot judge this`,
               },
-              resolution: 'Check these images by hand and describe what they show, or use an empty alt for decorative images.',
+              resolution:
+                'Check these images by hand and describe what they show, or use an empty alt for decorative images.',
             });
           }
         } catch {

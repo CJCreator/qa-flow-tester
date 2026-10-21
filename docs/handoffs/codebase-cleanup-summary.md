@@ -4,11 +4,11 @@ Branch work, no commits made. Package `src/` dead-code removals are done by per-
 
 ## Removed
 
-| Path | Reason | Evidence |
-|---|---|---|
-| `.pipeline/` (8 files, `e2e-url-credentials-crawl`) | Finished work record ("Status: DONE") | Not linked from docs/ADRs; `scripts/clean.mjs` only names it in a protected set; recoverable from git history |
-| `yaml` dep in `packages/core/package.json` (+ `pnpm-lock.yaml`, -3 lines) | Unused in core | 0 imports in core src/tests; `@qa/checkers` declares its own |
-| Duplicate `.vscode/`, `.review-shots/` lines in `.gitignore` | Duplicates | No ignore-set change |
+| Path                                                                      | Reason                                | Evidence                                                                                                      |
+| ------------------------------------------------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `.pipeline/` (8 files, `e2e-url-credentials-crawl`)                       | Finished work record ("Status: DONE") | Not linked from docs/ADRs; `scripts/clean.mjs` only names it in a protected set; recoverable from git history |
+| `yaml` dep in `packages/core/package.json` (+ `pnpm-lock.yaml`, -3 lines) | Unused in core                        | 0 imports in core src/tests; `@qa/checkers` declares its own                                                  |
+| Duplicate `.vscode/`, `.review-shots/` lines in `.gitignore`              | Duplicates                            | No ignore-set change                                                                                          |
 
 ## Doc fixes
 

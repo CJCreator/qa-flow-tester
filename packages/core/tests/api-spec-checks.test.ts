@@ -87,7 +87,9 @@ describe('api spec checks', () => {
   it('is negative-first: at least 40% error cases, writes marked', () => {
     const plan = generateApiChecks(spec);
     expect(plan.errorShare).toBeGreaterThanOrEqual(MIN_ERROR_SHARE);
-    expect(plan.checks.filter((c) => c.kind === 'error').length).toBeGreaterThan(plan.checks.filter((c) => c.kind === 'happy').length - 1);
+    expect(plan.checks.filter((c) => c.kind === 'error').length).toBeGreaterThan(
+      plan.checks.filter((c) => c.kind === 'happy').length - 1
+    );
     expect(plan.checks.filter((c) => c.method === 'POST').every((c) => c.sends)).toBe(true);
     expect(plan.checks.some((c) => c.description.includes('sent without sign-in'))).toBe(true);
     expect(plan.checks.some((c) => c.description.includes('required field "name" left out'))).toBe(true);

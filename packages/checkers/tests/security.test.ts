@@ -345,7 +345,9 @@ describe('SecurityChecker', () => {
     });
 
     it('leaves a form with a hidden token, a meta token, a GET form or a sign-in form alone', async () => {
-      expect(await csrfOn('<form method="post"><input type="hidden" name="csrf_token" value="v"></form>')).toHaveLength(0);
+      expect(await csrfOn('<form method="post"><input type="hidden" name="csrf_token" value="v"></form>')).toHaveLength(
+        0
+      );
       expect(await csrfOn(`<head><meta name="csrf-token" content="v"></head>${FORM}`)).toHaveLength(0);
       expect(await csrfOn('<form method="get" action="/s"><input name="q"></form>')).toHaveLength(0);
       expect(await csrfOn('<form method="post"><input type="password" name="p"></form>')).toHaveLength(0);

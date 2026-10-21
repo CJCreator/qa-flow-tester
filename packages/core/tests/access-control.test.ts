@@ -63,14 +63,25 @@ const page = (urlPath: string, reachedBy = ['alice']) => ({ urlPath, reachedBy }
 
 describe('pure checks', () => {
   it('200 with content is a Blocker; redirect to sign-in, 401, 403 are none', () => {
-    expect(checkSignedOutAccess({ target: '/a', status: 200, redirectedToSignIn: false, hasProtectedContent: true })?.severity).toBe('Blocker');
-    expect(checkSignedOutAccess({ target: '/a', status: 302, redirectedToSignIn: true, hasProtectedContent: false })).toBeUndefined();
-    expect(checkSignedOutAccess({ target: '/a', status: 401, redirectedToSignIn: false, hasProtectedContent: true })).toBeUndefined();
-    expect(checkSignedOutAccess({ target: '/a', status: 403, redirectedToSignIn: false, hasProtectedContent: true })).toBeUndefined();
+    expect(
+      checkSignedOutAccess({ target: '/a', status: 200, redirectedToSignIn: false, hasProtectedContent: true })
+        ?.severity
+    ).toBe('Blocker');
+    expect(
+      checkSignedOutAccess({ target: '/a', status: 302, redirectedToSignIn: true, hasProtectedContent: false })
+    ).toBeUndefined();
+    expect(
+      checkSignedOutAccess({ target: '/a', status: 401, redirectedToSignIn: false, hasProtectedContent: true })
+    ).toBeUndefined();
+    expect(
+      checkSignedOutAccess({ target: '/a', status: 403, redirectedToSignIn: false, hasProtectedContent: true })
+    ).toBeUndefined();
   });
   it('isolation needs the marker in role B', () => {
     expect(checkSessionIsolation({ target: '/a', roleA: 'a', roleB: 'b', markerSeenByB: false })).toBeUndefined();
-    expect(checkSessionIsolation({ target: '/a', roleA: 'a', roleB: 'b', markerSeenByB: true })?.severity).toBe('Blocker');
+    expect(checkSessionIsolation({ target: '/a', roleA: 'a', roleB: 'b', markerSeenByB: true })?.severity).toBe(
+      'Blocker'
+    );
   });
 });
 

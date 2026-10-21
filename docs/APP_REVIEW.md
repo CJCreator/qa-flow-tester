@@ -4,6 +4,7 @@ Status: review complete across all areas. Nothing fixed yet. Items are for later
 a status, and a fix direction.
 
 Status key:
+
 - **verified**: reproduced by a run, a test, or a direct script.
 - **read**: traced by reading the code path end to end. Not executed.
 - **reported**: found by a reviewer and not yet checked by a second read or a test. Confirm before fixing.
@@ -18,7 +19,7 @@ are in [PERFORMANCE_ANALYSIS.md](PERFORMANCE_ANALYSIS.md). Items here cross-refe
 - **Test suite, first run:** 75 of 234 files failed; 141 of 1736 tests failed; 1475 passed; 120 skipped.
 - **Cause, verified:** the repo's Playwright expects Chromium build 1243 (`chromium_headless_shell-1243`), but the
   environment has build 1194 installed. Most failures are browser-launch errors (`browserType.launch: Executable
-  doesn't exist`), with knock-on failures: sign-in reports "unreachable", and tests read `close` or `title` of an
+doesn't exist`), with knock-on failures: sign-in reports "unreachable", and tests read `close` or `title` of an
   undefined browser or page.
 - **Status:** a rerun with the expected browser paths linked to the installed binaries is in progress. The result
   decides whether the remaining failures are real. Record the outcome here before resolving anything.
@@ -267,7 +268,7 @@ Source review only. Nothing was run in a browser, so 375 px layout and focus beh
   redacted exception (`server.ts:1204`), and `RunnerError.message` renders as is (`App.tsx:464, 602, 708`,
   `NewCheckupScreen.tsx:168`). A benchmark failure renders `job.error` ("The comparison couldn't finish: …",
   `BenchmarkScreen.tsx:251`, `server.ts:3414`). Non-`RunnerError` messages render raw at `PlanReviewScreen.tsx:158,
-  169`, `PlanDocument.tsx:1441`, `ReportScreen.tsx:553, 1575, 1618`. **read**.
+169`, `PlanDocument.tsx:1441`, `ReportScreen.tsx:553, 1575, 1618`. **read**.
 - **W2. Focus is lost after dialogs.** `ConfirmDialog.tsx:24-34, 93-101` unmounts on close, and nothing returns focus
   to the opener (`App.tsx:606-633`, stop scan and stop testing). After Delete in `PastCheckupsScreen.tsx:69-73` the
   row is removed and focus drops to `body`. Keyboard and screen-reader users lose their place. **read**.
@@ -344,7 +345,7 @@ Source review only. Nothing was run in a browser, so 375 px layout and focus beh
 ### API (`docs/API.md`)
 
 - **Beta closed routes are under-documented.** `server.ts:1333-1340` closes more than the doc lists: `POST
-  /api/runner/spec-override`, `POST /api/settings/defaults`, and `POST /api/runs/<id>/triage` and
+/api/runner/spec-override`, `POST /api/settings/defaults`, and `POST /api/runs/<id>/triage` and
   `/accept-judgement`.
 - **Missing routes:** `POST /api/runner/spec-override` (`server.ts:1133`) and `GET /api/runner/spec-overrides`
   (`:1137`).

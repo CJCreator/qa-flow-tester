@@ -20,10 +20,7 @@ export interface KeyboardA11yContext {
   onCoverage?: (entries: WcagCoverageEntry[], unmappedTags: string[]) => void;
 }
 
-function reportCriteria(
-  context: KeyboardA11yContext,
-  list: Array<{ tag: string; violated: boolean }>
-): void {
+function reportCriteria(context: KeyboardA11yContext, list: Array<{ tag: string; violated: boolean }>): void {
   if (!context.onCoverage) return;
   const entries: WcagCoverageEntry[] = list.map(({ tag, violated }) => ({
     criterion: wcagCriteria([tag])[0] ?? tag,

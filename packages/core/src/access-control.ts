@@ -162,7 +162,10 @@ export async function runAccessChecks(input: AccessCheckInput): Promise<AccessCh
   }
 
   if (paths.length > 0) notes.push(ACCESS_CHECKS_NOTE);
-  if (skippedOver > 0) notes.push(`Access checks covered the first ${ACCESS_CHECK_PATH_CAP} role-only pages; ${skippedOver} more were not checked.`);
+  if (skippedOver > 0)
+    notes.push(
+      `Access checks covered the first ${ACCESS_CHECK_PATH_CAP} role-only pages; ${skippedOver} more were not checked.`
+    );
   if (roleNames.length === 1 && paths.length > 0) {
     notes.push('Only one role signed in, so the two-role isolation check was not run.');
   }
