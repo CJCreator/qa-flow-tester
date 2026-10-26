@@ -38,19 +38,7 @@ in the allow rules is denied rather than hanging.)
 
 Ticket files live in `docs/tickets/T-nn-*.md`; `docs/tickets/INDEX.md` is the tracker and the committed record. Update its status column when a ticket changes state. `.claude/work/backlog.md` is local scratch, git-ignored (`.claude/work/` in `.gitignore`); if the two disagree, INDEX wins. In code, new TODOs are `TODO(T-nn)` (see `CONTRIBUTING.md`).
 
-Status: todo -> planned (`/ship plan`) -> approved (approve) -> built (build) -> done (`/verify-all`, which also closes gap rows; see Deferred verification). Or blocked.
-
-## Deferred verification (tests only at the very end)
-
-For a large program of tickets you can hold all test runs until every ticket is built. While `.claude/work/DEFER_TESTS` exists (first line `phase: build`):
-
-- A `PreToolUse` hook (`.claude/hooks/defer-tests.mjs`, registered in `.claude/settings.json`) blocks any Bash command that runs tests: vitest, jest, `pnpm test`, `test:url-first`, `smoke`, `benchmark`, Playwright tests. Builds, type-checks and git commands still work. It applies to the main session, every subagent and the headless loop.
-- Developers write the tests the plan names but do not run them. The tester does a static review (reads the diff and the tests; verdict `REVIEWED` or `FAIL`, never `PASS`).
-- Tickets end as `built`, not `done`. `/pr-ready` and `/check` cannot run their test steps.
-- `/verify-all` is the one test run: it refuses unless every ticket is built (or blocked, human, later), unlocks tests (`phase: verify`), runs build and the full suite once, fixes failures per ticket (max 3 rounds), then marks tickets `done` and closes gap rows. `node scripts/ship-loop.mjs --verify-at-end` can run it for you when the queue is empty.
-- Turn it off by deleting the file.
-
-Trade-off, so you choose knowingly: every bug waits until the end, failures from many tickets arrive together and are harder to attribute (the dev notes list each ticket's files to help), and a type error in an early ticket can sit unnoticed unless you keep building. The build step is still allowed on purpose. If you want even builds held, add `build` to the hook's pattern list.
+Status: todo -> planned (`/ship plan`) -> approved (approve) -> built (build) -> done (`/verify-all`, which also closes gap rows). Or blocked.
 
 ## Where the tokens go, and what is done about it
 

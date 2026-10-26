@@ -6,7 +6,6 @@
 //   --max-iterations  most items to try
 //   --verify-budget USD cap for the verification phase (default 8)
 //   --verify-at-end   when nothing is left to build, run the one verification phase (.claude/commands/verify-all.md). Without it, run /verify-all yourself.
-// While .claude/work/DEFER_TESTS exists, items are built but NOT tested (hook-enforced); only the verification phase runs tests.
 // Never commits or pushes. Review with: git diff, /pr-ready.
 import { spawn } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
@@ -113,14 +112,11 @@ if (verifyAtEnd && pending() === 0 && !dryRun) {
     readFileSync(verifyFile, 'utf8')
       .replace(/^---[\s\S]*?---\s*/, '')
       .replace('$ARGUMENTS', '') +
-    '\n\nUnattended run: the user pre-approved verification by passing --verify-at-end. Skip the confirmation question and the final re-lock question (leave DEFER_TESTS as phase: verify).';
+    '\n\nUnattended run: the user pre-approved verification by passing --verify-at-end. Skip the confirmation question.';
   const { code } = await runOnce(verifyText, verifyBudget);
   if (code !== 0) {
     console.error(`verification exited with code ${code}`);
     process.exit(code ?? 1);
   }
 }
-console.log(
-  '\nLoop finished. Review: git status, git diff, then /pr-ready. Nothing was pushed.' +
-    (verifyAtEnd ? '' : ' Tests have not been run: use /verify-all when every ticket is built.')
-);
+console.log('\nLoop finished. Review: git status, git diff, then /pr-ready. Nothing was pushed.');

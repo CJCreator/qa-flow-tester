@@ -43,11 +43,6 @@ my approval before any code is written. Use `/ship resume <slug>` to continue. S
 the main session orchestrates. Batch mode: `/ship plan`, `/ship approve <slug>`, then `node scripts/ship-loop.mjs`
 (see `docs/AGENT_WORKFLOW.md`).
 
-## Deferred tests
-
-While `.claude/work/DEFER_TESTS` exists, do not run any tests (a hook blocks them). Write the tests, review by reading, builds are fine.
-Tickets end `built`. Only `/verify-all`, after every ticket is built, runs tests. Delete the file to turn this off.
-
 ## Output style
 
 Terse. Fragments fine. No filler or recaps. Exact code, paths, commands, errors. Full sentences for safety warnings,
