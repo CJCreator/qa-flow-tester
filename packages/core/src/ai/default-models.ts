@@ -4,6 +4,6 @@ import type { AIProviderType } from '@qa/types';
 export const DEFAULT_MODELS: Record<Exclude<AIProviderType, 'mock'>, string> = {
   anthropic: 'claude-sonnet-5-5',
   openai: 'gpt-4o',
-  gemini: 'gemini-1.5-flash',
+  gemini: 'gemini-3.8-flash',
   openrouter: 'openrouter/free',
 };

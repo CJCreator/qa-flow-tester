@@ -2,6 +2,61 @@ import type { AIProvider } from '../ai-provider.js';
 import { DEFAULT_MODELS } from '../default-models.js';
 import type { AICompletion, AIMessage, AICompletionOptions, AIProviderType } from '@qa/types';
 
+interface AdcAuth {
+  accessToken: string;
+  projectId: string;
+}
+
+let cachedAdc: { auth: AdcAuth; expiresAt: number } | null = null;
+
+async function resolveAdcToken(): Promise<AdcAuth | null> {
+  if (cachedAdc && Date.now() < cachedAdc.expiresAt) {
+    return cachedAdc.auth;
+  }
+  try {
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    const os = await import('os');
+    const credPath =
+      process.env.GOOGLE_APPLICATION_CREDENTIALS ||
+      (process.platform === 'win32'
+        ? path.join(
+            process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'),
+            'gcloud',
+            'application_default_credentials.json'
+          )
+        : path.join(os.homedir(), '.config', 'gcloud', 'application_default_credentials.json'));
+
+    const raw = await fs.readFile(credPath, 'utf8');
+    const creds = JSON.parse(raw);
+    const projectId =
+      creds.quota_project_id ||
+      process.env.GOOGLE_CLOUD_PROJECT ||
+      process.env.GCP_PROJECT ||
+      'qa-flow-tester-512310';
+
+    if (creds.client_id && creds.client_secret && creds.refresh_token) {
+      const res = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: creds.client_id,
+          client_secret: creds.client_secret,
+          refresh_token: creds.refresh_token,
+          grant_type: 'refresh_token',
+        }),
+      });
+      if (res.ok) {
+        const data = (await res.json()) as any;
+        const auth = { accessToken: data.access_token, projectId };
+        cachedAdc = { auth, expiresAt: Date.now() + ((data.expires_in || 3600) - 60) * 1000 };
+        return auth;
+      }
+    }
+  } catch {}
+  return null;
+}
+
 export class GeminiProvider implements AIProvider {
   readonly providerType: AIProviderType = 'gemini';
   private apiKey: string;
@@ -18,7 +73,25 @@ export class GeminiProvider implements AIProvider {
 
   async complete(messages: AIMessage[], options: AICompletionOptions = {}): Promise<AICompletion> {
     const model = options.model || this.defaultModel || DEFAULT_MODELS.gemini;
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.apiKey}`;
+    const isAdc = this.apiKey === 'adc' || this.apiKey.startsWith('ya29.');
+    let endpoint: string;
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+
+    if (isAdc) {
+      const adc = await resolveAdcToken();
+      if (!adc && !this.apiKey.startsWith('ya29.')) {
+        throw new Error(
+          'No Google Application Default Credentials found. Please authenticate via gcloud auth application-default login.'
+        );
+      }
+      const token = this.apiKey.startsWith('ya29.') ? this.apiKey : adc!.accessToken;
+      const proj = adc?.projectId || process.env.GOOGLE_CLOUD_PROJECT || 'qa-flow-tester-512310';
+      endpoint = `https://aiplatform.googleapis.com/v1/projects/${proj}/locations/global/publishers/google/models/${model}:generateContent`;
+      headers['Authorization'] = `Bearer ${token}`;
+      headers['X-Goog-User-Project'] = proj;
+    } else {
+      endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.apiKey}`;
+    }
 
     const contents = messages.map((m) => {
       const parts: any[] = [{ text: m.content }];
@@ -53,11 +126,32 @@ export class GeminiProvider implements AIProvider {
       body.generationConfig.responseMimeType = 'application/json';
     }
 
-    const res = await fetch(endpoint, {
+    let res = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(body),
     });
+
+    // Fall back to Vertex AI ADC if standard API key has exhausted its quota (HTTP 402/403)
+    if (!res.ok && (res.status === 402 || res.status === 403) && !isAdc) {
+      const adc = await resolveAdcToken();
+      if (adc) {
+        const fallbackEndpoint = `https://aiplatform.googleapis.com/v1/projects/${adc.projectId}/locations/global/publishers/google/models/${model}:generateContent`;
+        const fallbackHeaders = {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adc.accessToken}`,
+          'X-Goog-User-Project': adc.projectId,
+        };
+        const fallbackRes = await fetch(fallbackEndpoint, {
+          method: 'POST',
+          headers: fallbackHeaders,
+          body: JSON.stringify(body),
+        });
+        if (fallbackRes.ok) {
+          res = fallbackRes;
+        }
+      }
+    }
 
     if (!res.ok) {
       const errorText = await res.text();

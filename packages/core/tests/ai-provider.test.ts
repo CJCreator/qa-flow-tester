@@ -112,4 +112,32 @@ describe('AIProvider and KeyResolver', () => {
       globalThis.fetch = realFetch;
     }
   });
+
+  it('GeminiProvider uses default model gemini-3.8-flash and includes generationConfig', async () => {
+    const realFetch = globalThis.fetch;
+    let requestedUrl = '';
+    let parsedBody: any = null;
+    globalThis.fetch = (async (url: string, init: RequestInit) => {
+      requestedUrl = url;
+      parsedBody = JSON.parse(String(init.body));
+      return new Response(
+        JSON.stringify({
+          candidates: [{ content: { parts: [{ text: 'Gemini says hi' }] }, finishReason: 'STOP' }],
+        }),
+        { status: 200 }
+      );
+    }) as typeof fetch;
+
+    try {
+      const gemini = createAIProvider('gemini', 'my-gemini-key');
+      const text = await gemini.generateText([{ role: 'user', content: 'hello' }]);
+      expect(text).toBe('Gemini says hi');
+      expect(requestedUrl).toContain('gemini-3.8-flash:generateContent?key=my-gemini-key');
+      expect(parsedBody.contents[0].parts[0].text).toBe('hello');
+      expect(parsedBody.generationConfig.temperature).toBe(0.2);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
 });
+

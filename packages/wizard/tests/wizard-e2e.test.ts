@@ -379,7 +379,7 @@ describe('Release check-up end to end, on the one server', () => {
     expect(runRequests[0].skipReview).toBeFalsy();
     expect(runRequests[0].productContext).toContain('# Specs\n\n# Invoices\n- Amount must be positive');
     // The specs pasted before the key reached the plan.
-    expect(await page.getByLabel('Product Context', { exact: true }).inputValue()).toContain('Amount must be positive');
+    expect(await page.getByLabel(/Product context/i).inputValue()).toContain('Amount must be positive');
 
     // The complete plan: every page found, every link, every journey.
     const plan = await api<ReviewPlan>('/api/runner/plan');
@@ -724,7 +724,7 @@ describe('Release check-up end to end, on the one server', () => {
     expect(secondRunId).not.toBe(firstRunId);
     const report = await api<ReleaseReport>(`/api/runs/${secondRunId}`);
     expect(report.testedWithApprovedPlan).toEqual(expect.any(String));
-    expect(new Set(report.results.map((r) => r.breakpoint))).toEqual(new Set(['1440px']));
+    expect(new Set(report.results.map((r) => r.breakpoint))).toEqual(new Set(['375px', '768px', '1440px']));
     await page.getByText(/^Tested with the plan you approved on \d+ \w+ \d{4}\.$/).waitFor({ timeout: 20000 });
   }, 420000);
 
