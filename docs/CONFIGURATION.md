@@ -63,6 +63,8 @@ Bring your own key. Supported providers: OpenRouter (default in CI), Gemini, Ope
 | `OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` | Provider keys read from the environment |
 | `TEST_MOCK_AI`                                                                | Use the mock provider (tests)           |
 
+Gemini can also authenticate with Google Application Default Credentials. `GOOGLE_APPLICATION_CREDENTIALS` gives the path to the credentials file. `GOOGLE_CLOUD_PROJECT` or `GCP_PROJECT` gives the project ID. `APPDATA` is set by Windows and locates the default gcloud folder.
+
 Key order (see `packages/core/src/ai/key-resolver.ts`): a key given for the run comes first (command line, or `QA_AI_API_KEY` in
 a check-up from CI). Then, for the preferred provider: the OS keychain, the legacy `.qa-keys.json` file, then the environment
 variable. If that provider has no key, the others are tried in the order Anthropic, OpenAI, Gemini, OpenRouter, each with the
