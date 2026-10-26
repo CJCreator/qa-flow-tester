@@ -7,7 +7,7 @@ import { actionsPageFor, ONLINE_APP_URL, workflowFor, WORKFLOW_PATH } from '../l
 
 /**
  * Shown when no QA Tool answers this page. Opened from the QA Tool itself that is rare. Opened from
- * a static host (Vercel), it is the first screen, so it offers the route with nothing to
+ * the static site, it is the first screen, so it offers the route with nothing to
  * install: a workflow file that runs the check-up in the person's own GitHub repo.
  */
 export function ConnectionScreen({ checks }: { checks: number }) {

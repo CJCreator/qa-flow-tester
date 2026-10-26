@@ -45,7 +45,7 @@ jobs:
         run: pnpm audit --prod --audit-level high
 
       - name: Build the site
-        run: pnpm run vercel-build
+        run: pnpm run site-build
 
       - name: Build the runner and the packages it uses
         run: pnpm --filter "@qa/runner..." run build

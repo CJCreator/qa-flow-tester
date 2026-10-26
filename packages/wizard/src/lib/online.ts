@@ -3,7 +3,7 @@ import { PATHS } from './router';
 
 /**
  * Where "Run a free check-up" leads. When this page is served by the app itself that is its own
- * address. When it is served from a static host (Vercel) and an online copy is published, it is that
+ * address. When it is served from the static site and an online copy is published, it is that
  * copy's new check-up screen, which is on another origin.
  */
 export function startAddress(
@@ -32,7 +32,10 @@ export function wakeLimitMs(
   return Math.min(600, Math.max(5, seconds)) * 1000;
 }
 
-/** The online copy's health address, to wake it while a visitor is still reading; null when it is this page's own origin. */
+/**
+ * The online copy's address to ping, to wake it while a visitor is still reading; null when it is this page's
+ * own origin. Its root, not /healthz: Cloud Run's front end answers /healthz itself and never wakes the container.
+ */
 export function wakeAddress(
   onlineAppUrl: string | null = ONLINE_APP_URL,
   here: string = window.location.origin
@@ -40,7 +43,7 @@ export function wakeAddress(
   if (!onlineAppUrl) return null;
   try {
     const online = new URL(onlineAppUrl);
-    return online.origin === here ? null : new URL('/healthz', online).toString();
+    return online.origin === here ? null : new URL('/', online).toString();
   } catch {
     return null;
   }

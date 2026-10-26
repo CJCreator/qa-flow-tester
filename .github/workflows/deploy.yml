@@ -1,16 +1,11 @@
-# Every push to main is tested, then published: the Vercel site (the landing page) and the Render app
-# (the shared online copy) both rebuild without anyone running a command.
+# Every push to main is tested, then published to Google Cloud Run: the runner (the full app, shared online
+# copy) and the static site (landing page and wizard). Render and Vercel are retired (docs/adr/0032).
 #
-# How each one gets the new code:
-#   - Render builds from this repo (render.yaml sets autoDeploy), so the push itself starts its build.
-#   - Vercel builds from the CJCreator-New/flowtester repo, so this workflow copies main there once the
-#     tests pass. That push is what starts the Vercel build.
+# Auth is keyless (Workload Identity Federation): no key lives in GitHub.
 #
-# Set up once (Settings > Secrets and variables > Actions):
-#   Secret    VERCEL_REPO_TOKEN   a fine-grained personal access token that can write contents and
-#                                 workflows on CJCreator-New/flowtester (made by an account that can push there).
-#   Variable  VERCEL_SITE_URL     optional, the Vercel address to check (default https://flowtester.vercel.app)
-#   Variable  RENDER_APP_URL      optional, the Render address to check (default https://qa-check-up-2q68.onrender.com)
+# Set once (Settings > Secrets and variables > Actions > Variables), already done:
+#   GCP_WORKLOAD_IDENTITY_PROVIDER, GCP_DEPLOY_SERVICE_ACCOUNT
+# The runner's access token is in Secret Manager as qa-access-token.
 name: Deploy
 
 on:
@@ -30,10 +25,14 @@ permissions:
 env:
   # Run JavaScript actions on Node 24 now, ahead of GitHub retiring Node 20 for them.
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  GCP_PROJECT: qa-flow-tester-512310
+  GCP_REGION: us-central1
+  # Cloud Run's address is fixed per service: <service>-<project number>.<region>.run.app.
+  RUNNER_URL: https://qa-check-up-809804736896.us-central1.run.app
+  SITE_URL: https://qa-check-up-site-809804736896.us-central1.run.app
 
 jobs:
   build-and-smoke:
-    # The copy of this workflow in the mirror repo does nothing: only the source repo publishes.
     if: github.repository == 'CJCreator/qa-flow-tester'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -56,11 +55,13 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      # The same build Vercel runs, and the one Render's image runs for the wizard.
+      # The static site. The wizard's "Open the online app" button points at the runner.
       - name: Build the site
-        run: pnpm run vercel-build
+        env:
+          VITE_ONLINE_APP_URL: ${{ env.RUNNER_URL }}
+        run: pnpm run site-build
 
-      # The same build Render's image runs. It compiles the runner and the packages it uses, which also type-checks them.
+      # The same build the runner's image runs. It compiles the runner and the packages it uses, which also type-checks them.
       - name: Build the runner
         run: pnpm --filter "@qa/runner..." run build
 
@@ -68,8 +69,15 @@ jobs:
       - name: Smoke check
         run: pnpm run smoke
 
-  # The full test suite, the same shards a pull request runs (see tests.yml). Nothing reaches main's
-  # publish step without passing them.
+      - name: Keep the built site for the site job
+        uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: public
+          retention-days: 1
+
+  # The full test suite, the same shards a pull request runs (see tests.yml). Nothing reaches the
+  # Cloud Run deploys without passing them.
   test:
     if: github.repository == 'CJCreator/qa-flow-tester'
     strategy:
@@ -80,33 +88,9 @@ jobs:
     with:
       shard: ${{ matrix.shard }}
 
-  publish:
-    needs: [build-and-smoke, test]
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          # Without this, checkout leaves the built-in github-actions[bot] login in git's config, and it
-          # wins over the token below: the push is then made as the bot, which cannot write to the other repo (403).
-          persist-credentials: false
-
-      - name: Copy main to the Vercel repo
-        env:
-          TOKEN: ${{ secrets.VERCEL_REPO_TOKEN }}
-        run: |
-          if [ -z "$TOKEN" ]; then
-            echo "::error::Add the VERCEL_REPO_TOKEN secret (see the top of this file)."
-            exit 1
-          fi
-          git push "https://x-access-token:${TOKEN}@github.com/CJCreator-New/flowtester.git" HEAD:refs/heads/main
-
-  # The online copy on Google Cloud Run, alongside Render until cutover (docs/DEPLOYMENT.md). Same gate as
-  # Gated by the build and the smoke check only, not the test shards (kept out of the deploy on purpose).
-  # Auth is keyless (Workload Identity Federation), no key in GitHub.
+  # The runner: the full app, behind its access key (RUNNER_ACCESS_TOKEN from Secret Manager).
   cloud-run:
-    needs: [build-and-smoke]
+    needs: [build-and-smoke, test]
     if: github.repository == 'CJCreator/qa-flow-tester'
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -114,11 +98,7 @@ jobs:
       contents: read
       id-token: write
     env:
-      GCP_PROJECT: qa-flow-tester-512310
-      GCP_REGION: us-central1
       SERVICE: qa-check-up
-      # Cloud Run's address for this project is fixed, so it can be allowed before the first deploy.
-      SERVICE_URL: https://qa-check-up-809804736896.us-central1.run.app
     steps:
       - uses: actions/checkout@v4
 
@@ -130,7 +110,7 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
 
-      # The same image Render builds from packages/runner/Dockerfile, tagged with this commit.
+      # packages/runner/Dockerfile, tagged with this commit.
       - name: Build and push the runner image
         run: |
           IMAGE="$GCP_REGION-docker.pkg.dev/$GCP_PROJECT/qa/runner:$GITHUB_SHA"
@@ -147,62 +127,72 @@ jobs:
             --image "$IMAGE" --port 8080 --memory 2Gi --cpu 1 \
             --min-instances 0 --max-instances 1 --timeout 3600 \
             --allow-unauthenticated \
-            --set-env-vars "RUNNER_BETA=1,RUNNER_HOST=0.0.0.0,RUNNER_DATA_DIR=/tmp/qa-data,RUNNER_OUTPUT_DIR=/tmp/qa-data/reports,RUNNER_ALLOWED_ORIGINS=$SERVICE_URL" \
+            --set-env-vars "RUNNER_BETA=1,RUNNER_HOST=0.0.0.0,RUNNER_DATA_DIR=/tmp/qa-data,RUNNER_OUTPUT_DIR=/tmp/qa-data/reports,RUNNER_ALLOWED_ORIGINS=$RUNNER_URL" \
             --set-secrets "RUNNER_ACCESS_TOKEN=qa-access-token:latest"
 
-      - name: Verify the service answers
+      # Cloud Run's front end answers /healthz with its own 404 and never reaches the container, so this
+      # checks the root instead. The runner answers it with 401 (its access-key gate), which proves the
+      # container is serving. A 404 or 503 means the request did not reach a running runner.
+      - name: Verify the runner answers
         run: |
           for attempt in 1 2 3 4 5 6; do
-            code=$(curl -s -o /dev/null -m 10 -w '%{http_code}' "$SERVICE_URL/healthz") || code=000
+            code=$(curl -s -o /dev/null -m 10 -w '%{http_code}' "$RUNNER_URL/") || code=000
             echo "attempt $attempt: $code"
-            [ "$code" = "200" ] && exit 0
+            { [ "$code" = "401" ] || [ "$code" = "200" ]; } && exit 0
             sleep 10
           done
           exit 1
 
-  verify:
-    needs: publish
+  # The static site: the landing page and the wizard, public, served by nginx (site/Dockerfile).
+  site:
+    needs: [build-and-smoke, test]
+    if: github.repository == 'CJCreator/qa-flow-tester'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
     env:
-      VERCEL_SITE_URL: ${{ vars.VERCEL_SITE_URL || 'https://flowtester.vercel.app' }}
-      RENDER_APP_URL: ${{ vars.RENDER_APP_URL || 'https://qa-check-up-2q68.onrender.com' }}
-      COMMIT: ${{ github.sha }}
+      SERVICE: qa-check-up-site
     steps:
-      # The Vercel build takes a few minutes, and a free Render service sleeps: poll both for up to 10 minutes.
-      # Vercel must serve version.json naming this commit, so an old build cannot pass. Render answers
-      # /healthz only, so for Render this step shows the service is up, not which commit it runs.
-      - name: Verify Vercel serves this commit and Render is up
+      - uses: actions/checkout@v4
+
+      - name: Get the built site
+        uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: public
+
+      - name: Sign in to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Build and push the site image
         run: |
-          echo "Verifying Vercel ($VERCEL_SITE_URL, commit $COMMIT) and Render ($RENDER_APP_URL)..."
-          vercel_ready=0
-          render_ready=0
-          for i in $(seq 1 60); do
-            if [ "$vercel_ready" -eq 0 ]; then
-              body=$(curl -s -m 10 "$VERCEL_SITE_URL/version.json") || body=""
-              if echo "$body" | grep -q "\"commit\":\"$COMMIT\""; then
-                echo "Vercel serves this commit on attempt $i"
-                vercel_ready=1
-              fi
-            fi
-            if [ "$render_ready" -eq 0 ]; then
-              code=$(curl -s -o /dev/null -m 10 -w '%{http_code}' "$RENDER_APP_URL/healthz") || code="000"
-              if [ "$code" = "200" ]; then
-                echo "Render ready (200 OK) on attempt $i"
-                render_ready=1
-              fi
-            fi
-            if [ "$vercel_ready" -eq 1 ] && [ "$render_ready" -eq 1 ]; then
-              echo "Deployment verification PASSED."
-              exit 0
-            fi
-            echo "Attempt $i: Vercel ready=$vercel_ready, Render ready=$render_ready. Waiting 10s..."
+          IMAGE="$GCP_REGION-docker.pkg.dev/$GCP_PROJECT/qa/site:$GITHUB_SHA"
+          gcloud auth configure-docker "$GCP_REGION-docker.pkg.dev" --quiet
+          docker build -f site/Dockerfile -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy "$SERVICE" --project "$GCP_PROJECT" --region "$GCP_REGION" \
+            --image "$IMAGE" --port 8080 --memory 256Mi --cpu 1 \
+            --min-instances 0 --max-instances 2 \
+            --allow-unauthenticated
+
+      # version.json names the commit the site was built from, so an old image cannot pass.
+      - name: Verify the site serves this commit
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            body=$(curl -s -m 10 "$SITE_URL/version.json") || body=""
+            echo "attempt $attempt: $body"
+            echo "$body" | grep -q "\"commit\":\"$GITHUB_SHA\"" && exit 0
             sleep 10
           done
-          if [ "$vercel_ready" -ne 1 ]; then
-            echo "::error::Vercel site ($VERCEL_SITE_URL) does not serve commit $COMMIT in time."
-          fi
-          if [ "$render_ready" -ne 1 ]; then
-            echo "::error::Render app ($RENDER_APP_URL) did not answer /healthz in time."
-          fi
           exit 1

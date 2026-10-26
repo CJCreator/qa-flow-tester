@@ -32,7 +32,7 @@ jobs:
         run: node scripts/check-playwright-version.mjs
 
       - name: Build the site
-        run: pnpm run vercel-build
+        run: pnpm run site-build
 
       - name: Build the runner and the packages it uses
         run: pnpm --filter "@qa/runner..." run build

@@ -321,8 +321,8 @@ RUNNER_HOST=localhost
 ### Deployment
 
 - **Docker**: `packages/runner/Dockerfile` builds the QA Tool as one container.
-- **Render (free, shared beta)**: `render.yaml` publishes the runner and wizard together.
-- **Vercel**: publishes the front end only (`vercel.json`).
+- **Google Cloud Run, `qa-check-up` (shared beta)**: the runner and wizard together.
+- **Google Cloud Run, `qa-check-up-site`**: publishes the landing page and wizard only (`site/Dockerfile`).
 - **GitHub Actions**: `templates/qa-check.yml` runs one check-up in your own repo.
 
 Details, secrets and the automatic deploy workflow are in [DEPLOYMENT.md](DEPLOYMENT.md).
@@ -376,7 +376,7 @@ sequenceDiagram
 
 ### Workflow B: A Check-up from GitHub Actions
 
-Open the wizard where it is published on Vercel and choose **In your GitHub repo**. It gives you a workflow file (the same one as [templates/qa-check.yml](../templates/qa-check.yml)) to save as `.github/workflows/qa-check.yml`. Then:
+Open the wizard where it is published (the static site on Google Cloud Run) and choose **In your GitHub repo**. It gives you a workflow file (the same one as [templates/qa-check.yml](../templates/qa-check.yml)) to save as `.github/workflows/qa-check.yml`. Then:
 
 1. Add your AI key as a repo secret named `QA_AI_API_KEY` (optional: without it the plan is written by fixed rules).
 2. Run **QA check-up** from the Actions tab and type the address. It also runs when a preview or staging deployment succeeds.

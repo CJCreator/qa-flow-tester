@@ -17,7 +17,7 @@
     "fixture": "node fixtures/test-app/server.js",
     "runner": "node packages/runner/dist/cli.js",
     "build": "pnpm -r run build",
-    "vercel-build": "pnpm --filter @qa/types run build && pnpm --filter @qa/wizard run build && node scripts/vercel-output.mjs",
+    "site-build": "pnpm --filter @qa/types run build && pnpm --filter @qa/wizard run build && node scripts/site-output.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:plugin": "node plugins/repo-orchestrator/scripts/validate.mjs && node --test plugins/repo-orchestrator/test/*.test.mjs",

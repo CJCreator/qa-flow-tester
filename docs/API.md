@@ -13,7 +13,7 @@ routes and what they are for; **request and response bodies are defined by the h
 - `POST /api/runner/context/docx` stays open in beta mode (stateless; the size and ZIP caps bound the work).
 - `POST /api/runner/domain-proof` stays open in beta mode (it changes nothing shared; the token and the throttle are per session). In beta mode a Test Copy needs a passing Verified Domain proof, checked at `POST /api/runner/run` and again when a waiting plan is approved (ADR 0014).
 - Beta mode also limits starts per visitor session and per UTC day (`RUNNER_BETA_RUNS_PER_VISITOR`, `RUNNER_BETA_RUNS_PER_DAY`). Over a limit, `POST /api/runner/run` and `POST /api/runner/benchmark` answer `429 ERR_BETA_LIMIT` with `error`, `suggestion`, `scope` (`visitor` or `day`) and `resetsAt` (ISO time of the next 00:00 UTC). Preflight and the plan routes are not counted.
-- `GET /healthz` needs no token and is used by Render and Google Cloud Run health checks.
+- `GET /healthz` needs no token and is used by the Docker `HEALTHCHECK`. Cloud Run's front end does not forward it, so the deploy checks `/` instead (ADR 0032).
 
 ### Closed on the shared beta copy
 

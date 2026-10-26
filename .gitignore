@@ -40,7 +40,7 @@ coverage/
 # Benchmark runs (scripts/benchmark.ts)
 .benchmark/
 
-# built for Vercel (scripts/vercel-output.mjs)
+# built static site (scripts/site-output.mjs)
 /public
 
 # Local design review screenshots and editor settings

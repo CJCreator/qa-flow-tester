@@ -32,7 +32,7 @@ The success target is chosen in `docs/research/success-criteria.md`.
 ## Turning it off
 
 Unset `VITE_COUNTER_URL` and rebuild. Then no code path sends anything. Self-hosted copies are off unless you set it.
-Values are build-time: set them in the Vercel project and in Render (Docker build arg), then redeploy.
+Values are build-time: set them in the deploy workflow's site build (`.github/workflows/deploy.yml`) and as the runner image's build args, then redeploy.
 
 ## CSP
 

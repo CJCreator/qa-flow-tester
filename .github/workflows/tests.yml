@@ -29,7 +29,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build the site (also type-checks types and the wizard)
-        run: pnpm run vercel-build
+        run: pnpm run site-build
 
       - name: Build the runner and the packages it uses
         run: pnpm --filter "@qa/runner..." run build
