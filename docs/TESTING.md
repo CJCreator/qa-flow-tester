@@ -125,6 +125,13 @@ Paste a row after each run.
 
 - Sources, saved sessions and pipelined planning (ADR 0020, 0021): types `judgement-verdict`, `issue-type`; core `context-parser-multi`, `docs-fetch` (local servers), `ai-budget-pacing`, `openrouter-limits`, `preflight-session` and `role-failure-run` (browser, local login server), `ai-planner-sources`, `plan-sources-live-site`, `issues-document`, `issues-html-selfcontained`, `judgement-flow`, `mismatch-wording`, `plan-pipeline`, `group-tracker`, `pipelined-discovery` (browser), `sources-e2e` (browser); runner `sources-endpoints`, `saved-session-secrecy`, `docs-url-beta`, `ai-estimate-cap`, `issues-download`; wizard `context-files`, `session-file`, `cap-estimate`, `plan-sources-view`. Word and document-driven fixed-rule planning (ADR 0023): types `context-parse`; core `context-parser-structures`, `docx-to-markdown`, `spec-plan`, `spec-fixtures-sources`, `spec-fixtures-no-secrets`, `spec-plan-integration`; runner `context-docx-route`, `run-inputs-docx`, `checkup-docs`; wizard `context-read-report`, `import-roles`. Only the files marked browser need Chromium. Sentinel tests plant a fake cookie value and scan every output for it.
 
+## Browser requirement and baseline
+
+- `pnpm bootstrap` installs the Chromium build the installed Playwright expects (`playwright install chromium`, run from `@qa/core`), then `scripts/check-browser.mjs` fails if the launch path is not that build (`chromium_headless_shell-<rev>`, the revision in Playwright's `browsers.json`). Playwright stays pinned (1.63.0, see the Docker image); do not bump it to fix a browser error.
+- Browser tests need that build on the machine. An `Executable doesn't exist` error means the build is missing or `PLAYWRIGHT_BROWSERS_PATH` points elsewhere: run `pnpm --filter @qa/core exec playwright install chromium`, then `node scripts/check-browser.mjs`.
+- `vitest.global-setup.ts` creates every `.tmp-*` folder a test names, before the run, so tests pass with the folders absent.
+- Baseline (2026-10-21, sandbox): 234 files, 1736 tests at baseline. Before the browser build was linked, 75 of 234 files and 141 of 1736 tests failed, almost all with browser launch errors (Playwright expected `chromium_headless_shell-1243`, the sandbox had `-1194`). With the browser paths linked to the installed build: 9 of 234 files and 20 of 1736 tests failed, 1716 passed, 120 skipped. The 20 failures are not environment problems; they are listed in T-64.
+
 ## Known fragile areas
 
 - Browser tests depend on the installed Playwright browser; the Playwright version must match the Docker image (`packages/runner/Dockerfile`).

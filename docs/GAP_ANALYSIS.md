@@ -73,7 +73,7 @@ Size: S = a day or two, M = about a week, L = several weeks (the plan's scale).
 | G24 | Phone apps via Maestro (4.1 to 4.4)                                                                                                                                                                                                                                           | P4  | L      |
 | G25 | Public API as its own App (5.1)                                                                                                                                                                                                                                               | P4  | M      |
 | G26 | Desktop via Electron (5.2), only when asked                                                                                                                                                                                                                                   | P4  | L      |
-| G27 | ADRs the plan needs: 0014 (verified domains) and 0016 (redaction) are written; 0013 (self-healing), 0015 (GraphQL), 0017 (findings contract) are not                                                                                                                          | P2  | S each |
+| G27 | **Closed (2026-10-21).** ADRs written: 0014 (verified domains), 0016 (redaction), 0017 (findings contract), 0031 (pinned resolver); 0013 and 0015 added as deferred placeholders                                                                                              | P2  | S each |
 
 ### D. Users, adoption and business (P1-P2)
 

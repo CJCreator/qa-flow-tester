@@ -51,7 +51,7 @@ These are the behaviour today. None is a bug report; each closure is a change to
 Platform plan item 1.3 (gap G14) adds API traffic capture. Its intended rules: keep the shape of API responses instead of raw bodies, strip the `Cookie`, `Set-Cookie`, `Authorization` and `Proxy-Authorization` headers, detect JWT and API-key patterns, and never store a raw HAR. None of this exists in code: the evidence capture has no response capture. The plan says redaction ships in the same commit as the capture, so that work must extend or supersede this record and add tests first. This paragraph is intent, not a decision.
 
 ### Other ADR numbers
-0014 is written (Accepted 2026-10-07, with T-12, built in wave 1). 0013 (opt-in AI explorer, selector fixes) and 0015 (live-site GraphQL and GET/HEAD replay rules) are not written; they come with G22 (self-healing, item 3.1) and G14 (API traffic, item 1.3). 0017 (findings contract) comes with T-16 and is not written. The numbers 0013, 0015 and 0017 stay reserved.
+0014 is written (Accepted 2026-10-07, with T-12, built in wave 1). 0013 (opt-in AI explorer, selector fixes) and 0015 (live-site GraphQL and GET/HEAD replay rules) are deferred records with no decision yet (2026-10-21, T-63); they come with G22 (self-healing, item 3.1) and G14 (API traffic, item 1.3). 0017 (findings contract) is written and accepted.
 
 ## Consequences
 - A new field that can hold a sign-in value needs a test in `packages/core/tests/redaction.test.ts` (SECURITY.md).

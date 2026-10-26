@@ -26,3 +26,9 @@ ADR 0020 adds three things that touch secrets or outbound requests: a role can u
 - Safer than a stored session; costs the person a re-upload after a restart.
 - Tests: sentinel cookie value absent from plan, SSE, files and logs; foreign-domain cookie refused; private and redirected docs URLs refused under beta; HTML scanned for external addresses.
 - Loosening any of these needs a new ADR.
+
+## Amendment, 2026-10-21 (T-63): where a runner's own sign-in is kept
+The memory-only rule above covers saved sessions sent in the request. It did not describe a sign-in the runner performs itself, and this record is corrected to match the code:
+- **UI check-up.** The session the runner gets from its own sign-in is written under an `auth` folder in the run's output folder while the Plan waits. It is removed when the run ends, and a startup sweep removes leftovers. The runner never serves an `auth` folder over HTTP.
+- **CI check-up.** The session is written under a temporary folder outside the report folder (`qa-checkup-*` in the OS temp folder, so it is not uploaded with the report). The folder is deleted when the run ends.
+Neither copy is in a report, an event or an API response. Both are cookie-bearing files on disk, so the person's computer or the CI runner is trusted for them.

@@ -4,9 +4,12 @@
 While the original specification assumed Claude exclusively, development teams use various LLM providers (Claude, OpenAI, Google Gemini, OpenRouter) with different cost and quota arrangements. We decided to implement a generic `AIProvider` interface with a multi-layer credential resolution system supporting Bring Your Own Key (BYOK).
 
 ## Credential Resolution Hierarchy
-1. Explicit per-run CLI flag (`--api-key`, `--ai-provider`)
-2. Local BYOK configuration stored in dashboard settings (`.qa-keys.json`, strictly ignored in git)
-3. Standard environment variables (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `OPENROUTER_API_KEY`)
+As built (`packages/core/src/ai/key-resolver.ts`; amended 2026-10-21 by T-63, which found the keychain tier already in code and this record out of date):
+1. An explicit key for the run (passed to the resolver, or `QA_AI_API_KEY` in a check-up from CI).
+2. For the preferred provider, in order: the OS keychain (when the computer has one), the legacy `.qa-keys.json` file (strictly ignored in git; written only when no keychain exists), then the standard environment variable (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `OPENROUTER_API_KEY`).
+3. If the preferred provider has no key, the other providers are tried in the order Anthropic, OpenAI, Gemini, OpenRouter, each with the same three steps.
+
+A beta copy keeps keys in the visitor's session only: never in the keychain, a file or the environment.
 
 ## Consequences
 - The discovery and planning engine is decoupled from any single proprietary AI model.

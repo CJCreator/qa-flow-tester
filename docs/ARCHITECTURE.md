@@ -42,8 +42,8 @@ Build order follows the dependency chain: `types` → `checkers` and `core` → 
 
 ## State and storage
 
-- **Data folder** (`RUNNER_DATA_DIR`, default `.qa-data/`): per-site memory and history, waiting plans, saved model choices. Git-ignored.
-- **Report output** (`RUNNER_OUTPUT_DIR`, default `.qa-runner-report`; CI default `qa-report`). Git-ignored.
+- **Data folder** (`RUNNER_DATA_DIR`, default `.qa-data/`, or `/tmp/qa-data` on Google Cloud Run where the root filesystem is read-only): per-site memory and history, waiting plans, saved model choices. Git-ignored.
+- **Report output** (`RUNNER_OUTPUT_DIR`, default `.qa-runner-report`; CI default `qa-report`; Cloud Run `/tmp/qa-data/reports`). Git-ignored.
 - **Baselines** (`.qa-baselines/`): approved visual baselines. These are committed on purpose.
 - **Secrets:** a saved AI key goes to the OS keychain through `core/ai/key-resolver.ts`. Only when no keychain exists (e.g. headless Linux) does it fall back to the plaintext `.qa-keys.json` (git-ignored). Site sign-ins go through `core/credentials.ts`. In beta mode both live only in process memory per session (`runner/src/beta.ts`).
 - **Sessions and custom headers:** test sign-in sessions in headless CI live in an ephemeral per-run auth directory outside the report folder and are deleted when the run ends. Custom headers (`customHeaders`, `QA_CUSTOM_HEADERS`) are held in runner memory, never saved to disk plans or reports, and scoped strictly to the target origin and allowlisted hosts.

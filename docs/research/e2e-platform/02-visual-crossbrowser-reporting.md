@@ -173,7 +173,7 @@ The brief says target teams track work in docs or nowhere, so there is no Jira o
   - Pull requests from forks get no secrets other than a read-only `GITHUB_TOKEN` ([docs](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows)). An AI key in a fork's check-up won't be available.
 - **What the vendors do:** Argos, Chromatic and Percy publish a pull-request status check that stays "pending" until a person approves the visual changes ([Argos](https://argos-ci.com/pricing), [Chromatic](https://www.chromatic.com/pricing)).
 - **QA Tool today:**
-  - The CLI prints "BLOCKERS FOUND! Release is NOT recommended" or "Release ready!" ([`cli/src/index.ts`](../../../packages/cli/src/index.ts) lines 170 to 175). I did not find a non-zero exit code tied to that verdict in the lines I read *(unverified)*.
+  - The CLI prints "BLOCKERS FOUND! Release is NOT recommended" or "Release ready!" (historical `packages/cli/src/index.ts` lines 170 to 175, replaced by `packages/runner/src/checkup.ts`). I did not find a non-zero exit code tied to that verdict in the lines I read *(unverified)*.
   - The brief mentions an example GitHub Actions workflow. I did not find one in this worktree *(unverified)*.
   - Every run emits `report.md`.
 - **Gap:** an explicit `--fail-on blocker|major` exit code, a step-summary writer, a preview-URL workflow template, and a pull-request comment that shows only what changed since the base branch.

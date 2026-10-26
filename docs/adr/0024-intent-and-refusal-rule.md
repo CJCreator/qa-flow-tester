@@ -29,3 +29,10 @@ The plan wants positive and negative coverage: valid input, validation errors, b
 - The Test cap trims only Rejects and Limits, last planned first. Works, Denied, page visits and Navigation Checks are never dropped. Tests are counted as test cases times screen sizes, the same as the approval summary.
 - GET forms (search) get no Rejects or Limits, since nothing is sent. A number input gets a Rejects item only when it has a `min` or `max`.
 - Loosening the refusal rule or the Test Copy gating needs a new ADR.
+
+## Amendment: alerts count only after the submit (2026-10-21, T-48)
+- A `role="alert"` is a refusal signal only when its text is new since the baseline taken right before the submit click. An alert that was already on the page (a permanent banner) is not a signal, so a form that accepts the value is not "refused".
+- A probe-only Rejects item (the person chose "probe only") sends nothing. Its baseline is the page as the steps left it, taken before the probe is read. A failed step is reported as the step failure, not as a refusal.
+- The Source's sentence is compared with the alert text the page shows first, then new error text, then the browser's native `validationMessage`. A `novalidate` form that shows the Source's sentence in an alert is therefore not a "different wording" finding.
+- `:invalid` and `aria-invalid` stay state signals and are not diffed against the baseline. The baseline is taken after the fills, so a value the test typed that the browser marks invalid is already in it. Diffing would turn every native refusal into "accepted".
+- Known gap: a success message with `role="alert"` that appears after the submit and where the page does not move on still counts as a refusal. Tightening this needs a new ADR.
