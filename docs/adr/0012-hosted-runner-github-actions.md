@@ -2,6 +2,8 @@
 
 Replaces the "each person runs a server on their own machine" rule of [0008](0008-single-local-server.md) as the only way to run. The single-server design itself still stands: it is what runs inside the job.
 
+> **Superseded in part by [0032](0032-google-cloud-only-hosting.md) (2026-10-26):** Render and Vercel are retired. The front end and the online copy now run on Google Cloud Run. The Vercel and Render amendments below are history.
+
 ## Context and Decision
 "Nothing to install" is the product's promise, and hosting must cost $0 until there is revenue. A check-up needs a real browser, so a static host (GitHub Pages, Cloudflare Pages, Netlify) cannot run one. Something with a machine has to.
 

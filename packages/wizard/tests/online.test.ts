@@ -6,25 +6,25 @@ describe('where "Start a free check-up" leads', () => {
     expect(startAddress(null, 'https://app.example.com')).toBe('/check');
   });
   it('stays on this site when this page is the online copy', () => {
-    expect(startAddress('https://qa.onrender.com', 'https://qa.onrender.com')).toBe('/check');
+    expect(startAddress('https://qa.run.app', 'https://qa.run.app')).toBe('/check');
   });
-  it('goes to the online copy from a static host', () => {
-    expect(startAddress('https://qa.onrender.com', 'https://site.vercel.app')).toBe('https://qa.onrender.com/check');
-    expect(startAddress('https://qa.onrender.com/', 'https://site.vercel.app')).toBe('https://qa.onrender.com/check');
+  it('goes to the online copy from the static site', () => {
+    expect(startAddress('https://qa.run.app', 'https://site.run.app')).toBe('https://qa.run.app/check');
+    expect(startAddress('https://qa.run.app/', 'https://site.run.app')).toBe('https://qa.run.app/check');
   });
   it('falls back to this site when the published address cannot be read', () => {
-    expect(startAddress('not a url', 'https://site.vercel.app')).toBe('/check');
+    expect(startAddress('not a url', 'https://site.run.app')).toBe('/check');
   });
 });
 
 describe('waking the online copy', () => {
-  it('pings its health address from a static host', () => {
-    expect(wakeAddress('https://qa.onrender.com', 'https://site.vercel.app')).toBe('https://qa.onrender.com/healthz');
+  it('pings its root from the static site, so the container wakes', () => {
+    expect(wakeAddress('https://qa.run.app', 'https://site.run.app')).toBe('https://qa.run.app/');
   });
   it('has nothing to wake on its own origin, or with no online copy', () => {
-    expect(wakeAddress('https://qa.onrender.com', 'https://qa.onrender.com')).toBeNull();
-    expect(wakeAddress(null, 'https://site.vercel.app')).toBeNull();
-    expect(wakeAddress('nope', 'https://site.vercel.app')).toBeNull();
+    expect(wakeAddress('https://qa.run.app', 'https://qa.run.app')).toBeNull();
+    expect(wakeAddress(null, 'https://site.run.app')).toBeNull();
+    expect(wakeAddress('nope', 'https://site.run.app')).toBeNull();
   });
 });
 

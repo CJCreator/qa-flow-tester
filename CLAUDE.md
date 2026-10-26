@@ -62,7 +62,7 @@ destructive actions and questions to me. Never dump whole logs: grep or tail the
   for names of variables. Do not paste keys into commands (they get saved into permission rules).
 - `.qa-*`, `.tmp-*`, `.benchmark/`, `/public` are generated output: do not edit or commit them
   (approved `.qa-baselines/` are committed on purpose).
-- Deploys: pushing to `main` runs `.github/workflows/deploy.yml` (tests, then Vercel and Render). Work on
+- Deploys: pushing to `main` runs `.github/workflows/deploy.yml` (tests, then Google Cloud Run: the runner and the static site). Work on
   a branch and open a PR; do not push to `main` directly.
 - Use a git worktree (`.claude/worktrees/`) for parallel work.
 

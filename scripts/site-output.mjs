@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Copies the built wizard into ./public, the folder Vercel serves when nothing else is configured,
- * so the deploy works whether or not Vercel reads vercel.json.
+ * Copies the built wizard into ./public. The deploy job puts that folder into the static site image
+ * (site/Dockerfile), which nginx serves on Cloud Run.
  */
 import { cpSync, existsSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -18,8 +18,5 @@ if (!existsSync(path.join(from, 'index.html'))) {
 rmSync(to, { recursive: true, force: true });
 cpSync(from, to, { recursive: true });
 // The deploy's verify step reads this to confirm the site serves the commit it was built from.
-writeFileSync(
-  path.join(to, 'version.json'),
-  JSON.stringify({ commit: process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || 'unknown' }) + '\n'
-);
+writeFileSync(path.join(to, 'version.json'), JSON.stringify({ commit: process.env.GITHUB_SHA || 'unknown' }) + '\n');
 console.log(`Copied the wizard build to ${to}`);
