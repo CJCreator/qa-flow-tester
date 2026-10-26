@@ -15,11 +15,11 @@ _Last updated 2026-10-07._
 
 The CLI, Report Hub and Dashboard were retired. Mentions of them in the history below describe what was done at the time.
 
-| Phase                              | Status                                                                                                                                       |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| **0: Stop misleading people**      | **Code complete. Full suite run 2026-10-09: 915/920** (see below)                                                                            |
+| Phase                              | Status                                                                                                                                     |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| **0: Stop misleading people**      | **Code complete. Full suite run 2026-10-09: 915/920** (see below)                                                                          |
 | **1: Free hosting, first version** | **Superseded 2026-10-26: Render and Vercel retired; everything runs on Google Cloud Run (ADR 0032). The hosting notes below are history.** |
-| 2 to 7                             | Not started                                                                                                                                  |
+| 2 to 7                             | Not started                                                                                                                                |
 
 ### Phase 0: what was done
 

@@ -3,11 +3,11 @@
 Ways the tool reaches people (ADR 0012, and ADR 0032 for hosting). Everything runs on Google Cloud, on the project
 `qa-flow-tester-512310`, region `us-central1`. Render and Vercel are retired.
 
-| Surface                                                           | What                                                                                                                         | Where it is defined                                                  |
-| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| **Cloud Run `qa-check-up-site`**: landing page and wizard         | Static files behind nginx (`nginxinc/nginx-unprivileged`), public, 256 MiB, scales to zero                                  | `site/Dockerfile`, `site/nginx.conf`, `scripts/site-output.mjs`, `pnpm site-build` |
-| **Cloud Run `qa-check-up`**: the full app as a shared online copy | Runner image, 2 GiB, 1 CPU, scales to zero, `RUNNER_BETA=1`, behind the access key (Secret Manager `qa-access-token`)      | `packages/runner/Dockerfile`, `.github/workflows/deploy.yml`         |
-| **The user's own GitHub Actions**: the main way to run a check-up | The wizard generates a workflow from `templates/qa-check.yml`; the job builds the tool and runs `packages/runner/dist/checkup.js` | `templates/qa-check.yml`, `.github/workflows/qa-check.yml`           |
+| Surface                                                           | What                                                                                                                              | Where it is defined                                                                |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| **Cloud Run `qa-check-up-site`**: landing page and wizard         | Static files behind nginx (`nginxinc/nginx-unprivileged`), public, 256 MiB, scales to zero                                        | `site/Dockerfile`, `site/nginx.conf`, `scripts/site-output.mjs`, `pnpm site-build` |
+| **Cloud Run `qa-check-up`**: the full app as a shared online copy | Runner image, 2 GiB, 1 CPU, scales to zero, `RUNNER_BETA=1`, behind the access key (Secret Manager `qa-access-token`)             | `packages/runner/Dockerfile`, `.github/workflows/deploy.yml`                       |
+| **The user's own GitHub Actions**: the main way to run a check-up | The wizard generates a workflow from `templates/qa-check.yml`; the job builds the tool and runs `packages/runner/dist/checkup.js` | `templates/qa-check.yml`, `.github/workflows/qa-check.yml`                         |
 
 Both Cloud Run services get their address from the project number, so it is fixed before the first deploy:
 `https://qa-check-up-809804736896.us-central1.run.app` (runner) and `https://qa-check-up-site-809804736896.us-central1.run.app` (site).
