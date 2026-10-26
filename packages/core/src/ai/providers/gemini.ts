@@ -30,10 +30,7 @@ async function resolveAdcToken(): Promise<AdcAuth | null> {
     const raw = await fs.readFile(credPath, 'utf8');
     const creds = JSON.parse(raw);
     const projectId =
-      creds.quota_project_id ||
-      process.env.GOOGLE_CLOUD_PROJECT ||
-      process.env.GCP_PROJECT ||
-      'qa-flow-tester-512310';
+      creds.quota_project_id || process.env.GOOGLE_CLOUD_PROJECT || process.env.GCP_PROJECT || 'qa-flow-tester-512310';
 
     if (creds.client_id && creds.client_secret && creds.refresh_token) {
       const res = await fetch('https://oauth2.googleapis.com/token', {
@@ -139,7 +136,7 @@ export class GeminiProvider implements AIProvider {
         const fallbackEndpoint = `https://aiplatform.googleapis.com/v1/projects/${adc.projectId}/locations/global/publishers/google/models/${model}:generateContent`;
         const fallbackHeaders = {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adc.accessToken}`,
+          Authorization: `Bearer ${adc.accessToken}`,
           'X-Goog-User-Project': adc.projectId,
         };
         const fallbackRes = await fetch(fallbackEndpoint, {
