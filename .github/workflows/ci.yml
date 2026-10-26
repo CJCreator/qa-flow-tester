@@ -105,13 +105,9 @@ jobs:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('**/pnpm-lock.yaml') }}
 
-      - name: Install Chromium
-        if: (steps.filter.outputs.relevant == 'true' || github.event_name == 'workflow_dispatch') && steps.playwright-cache.outputs.cache-hit != 'true'
-        run: pnpm --filter @qa/core exec playwright install --with-deps chromium
-
-      - name: Install Playwright system dependencies
-        if: (steps.filter.outputs.relevant == 'true' || github.event_name == 'workflow_dispatch') && steps.playwright-cache.outputs.cache-hit == 'true'
-        run: pnpm --filter @qa/core exec playwright install-deps chromium
+      - name: Install Chromium and its system libraries
+        if: steps.filter.outputs.relevant == 'true' || github.event_name == 'workflow_dispatch'
+        run: bash scripts/ci-install-browsers.sh
 
       - name: Auth and crawl integration tests
         if: steps.filter.outputs.relevant == 'true' || github.event_name == 'workflow_dispatch'

@@ -57,13 +57,8 @@ jobs:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('**/pnpm-lock.yaml') }}
 
-      - name: Install Chromium (the browser tests drive it)
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: pnpm --filter @qa/core exec playwright install --with-deps chromium
-
-      - name: Install Playwright system dependencies
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: pnpm --filter @qa/core exec playwright install-deps chromium
+      - name: Install Chromium and its system libraries
+        run: bash scripts/ci-install-browsers.sh
 
       - name: Tests
         run: pnpm exec vitest run --exclude "**/wizard-e2e.test.ts"

@@ -37,8 +37,8 @@ jobs:
       - name: Build the runner and the packages it uses
         run: pnpm --filter "@qa/runner..." run build
 
-      - name: Install Chromium (the browser tests drive it)
-        run: pnpm --filter @qa/core exec playwright install --with-deps chromium
+      - name: Install Chromium and its system libraries
+        run: bash scripts/ci-install-browsers.sh
 
       - name: Run wizard end-to-end tests
         run: pnpm exec vitest run packages/wizard/tests/wizard-e2e.test.ts

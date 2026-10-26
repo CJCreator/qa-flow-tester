@@ -31,8 +31,8 @@ jobs:
       - name: Build the runner and the packages it uses
         run: pnpm --filter "@qa/runner..." run build
 
-      - name: Install Chromium
-        run: pnpm --filter @qa/core exec playwright install --with-deps chromium
+      - name: Install Chromium and its system libraries
+        run: bash scripts/ci-install-browsers.sh
 
       # Exits 1 when a threshold in fixtures/benchmarks/thresholds.json is missed.
       - name: Run the fixture benchmark
