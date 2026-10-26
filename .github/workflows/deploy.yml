@@ -127,7 +127,7 @@ jobs:
             --image "$IMAGE" --port 8080 --memory 2Gi --cpu 1 \
             --min-instances 0 --max-instances 1 --timeout 3600 \
             --allow-unauthenticated \
-            --set-env-vars "RUNNER_BETA=1,RUNNER_HOST=0.0.0.0,RUNNER_DATA_DIR=/tmp/qa-data,RUNNER_OUTPUT_DIR=/tmp/qa-data/reports,RUNNER_ALLOWED_ORIGINS=$RUNNER_URL" \
+            --set-env-vars "RUNNER_BETA=1,RUNNER_HOST=0.0.0.0,RUNNER_DATA_DIR=/tmp/qa-data,RUNNER_OUTPUT_DIR=/tmp/qa-data/reports,RUNNER_ALLOWED_ORIGINS=$RUNNER_URL,https://qa-check-up-cnhl7suwnq-uc.a.run.app" \
             --set-secrets "RUNNER_ACCESS_TOKEN=qa-access-token:latest"
 
       # Cloud Run's front end answers /healthz with its own 404 and never reaches the container, so this

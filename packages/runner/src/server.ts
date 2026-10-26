@@ -267,8 +267,8 @@ function cookieValue(header: string | undefined, name: string): string | undefin
 /** Compared in constant time, so how long a refusal takes says nothing about the key. */
 function matchesSecret(given: string | null | undefined, secret: string): boolean {
   if (!given) return false;
-  const a = Buffer.from(given);
-  const b = Buffer.from(secret);
+  const a = Buffer.from(given.trim());
+  const b = Buffer.from(secret.trim());
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
@@ -701,7 +701,7 @@ export class RunnerServer {
         }
       })
     );
-    this.accessToken = options.accessToken || undefined;
+    this.accessToken = options.accessToken?.trim() || undefined;
     this.checkupRun = createCheckupRun(this.session, {
       prepareAI: (body) => this.prepareAI(body),
       aiBudgetFor: (settings, key, cap) => this.aiBudgetFor(settings, key, cap),
@@ -862,7 +862,8 @@ export class RunnerServer {
                 } catch {
                   return false;
                 }
-              }));
+              })) ||
+            (!!process.env.K_SERVICE && !!hostHeader && hostHeader.split(':')[0].toLowerCase().endsWith('.run.app'));
 
           if (!isAllowedHost) {
             res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });

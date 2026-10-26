@@ -17,6 +17,7 @@
     "fixture": "node fixtures/test-app/server.js",
     "runner": "node packages/runner/dist/cli.js",
     "build": "pnpm -r run build",
+    "deploy:cloud": "node scripts/deploy-cloud-run.mjs",
     "site-build": "pnpm --filter @qa/types run build && pnpm --filter @qa/wizard run build && node scripts/site-output.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
