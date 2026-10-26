@@ -23,7 +23,7 @@ on:
         description: This is a test copy of the site (so forms may be filled in and sent)
         type: boolean
         default: false
-  # A preview or staging deployment (Vercel, Netlify, Render and others report it this way).
+  # A preview or staging deployment (Netlify and other hosts report it this way).
   deployment_status:
 
 permissions:

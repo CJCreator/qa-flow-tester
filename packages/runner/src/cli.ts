@@ -2,18 +2,14 @@ import { RunnerServer } from './server.js';
 import { defaultUiApps } from './ui-static.js';
 import { isLoopbackBindHost } from './bind-host.js';
 
-// Render and Cloud Run say which port to listen on with PORT (Cloud Run sets K_SERVICE). It is only trusted there,
+// Cloud Run says which port to listen on with PORT (it sets K_SERVICE). It is only trusted there,
 // so a PORT set in someone's shell can't move a local runner.
-const port = parseInt(
-  ((process.env.RENDER || process.env.K_SERVICE) && process.env.PORT) || process.env.RUNNER_PORT || '3001',
-  10
-);
+const port = parseInt((process.env.K_SERVICE && process.env.PORT) || process.env.RUNNER_PORT || '3001', 10);
 const host = process.env.RUNNER_HOST || 'localhost';
 const outputDir = process.env.RUNNER_OUTPUT_DIR || undefined;
 const dataDir = process.env.RUNNER_DATA_DIR || undefined;
 const localhostAlias = process.env.RUNNER_LOCALHOST_ALIAS || undefined;
-// On Render the service's own public address is allowed without setting it by hand.
-const originList = [process.env.RUNNER_ALLOWED_ORIGINS, process.env.RENDER_EXTERNAL_URL].filter(Boolean).join(',');
+const originList = process.env.RUNNER_ALLOWED_ORIGINS || '';
 const allowedOrigins = originList
   ? originList
       .split(',')

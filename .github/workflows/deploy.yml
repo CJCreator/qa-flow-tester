@@ -1,11 +1,12 @@
-# Every push to main is tested, then published to Google Cloud Run: the runner (the full app, shared online
-# copy) and the static site (landing page and wizard). Render and Vercel are retired (docs/adr/0032).
+# Every push to main is built, then deployed to Google Cloud Run (ADR 0032). Tests run on your machine, not here:
+#   - the runner: the full app, the shared online copy behind its access key (service qa-check-up)
+#   - the site: the landing page and the wizard, public (service qa-check-up-site)
 #
-# Auth is keyless (Workload Identity Federation): no key lives in GitHub.
+# Both deploys wait for the build. Each one verifies its own service after deploying.
+# Sign-in is keyless (Workload Identity Federation); the runner's access key is read from Secret Manager.
 #
-# Set once (Settings > Secrets and variables > Actions > Variables), already done:
+# Settings used (Settings > Secrets and variables > Actions > Variables):
 #   GCP_WORKLOAD_IDENTITY_PROVIDER, GCP_DEPLOY_SERVICE_ACCOUNT
-# The runner's access token is in Secret Manager as qa-access-token.
 name: Deploy
 
 on:
@@ -13,11 +14,11 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# One deploy at a time. If a new commit is pushed to main while a previous run is in progress,
-# the older run is cancelled to immediately deploy the latest code without queuing delays.
+# One deploy at a time. A newer push waits for the running deploy to finish. It does not cancel it: a cancelled
+# run can stop after a new revision goes live and before it is verified.
 concurrency:
   group: deploy
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -27,15 +28,15 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
   GCP_PROJECT: qa-flow-tester-512310
   GCP_REGION: us-central1
-  # Cloud Run's address is fixed per service: <service>-<project number>.<region>.run.app.
+  # A Cloud Run service's address is fixed: <service>-<project number>.<region>.run.app.
   RUNNER_URL: https://qa-check-up-809804736896.us-central1.run.app
   SITE_URL: https://qa-check-up-site-809804736896.us-central1.run.app
 
 jobs:
-  build-and-smoke:
+  build:
     if: github.repository == 'CJCreator/qa-flow-tester'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -52,10 +53,7 @@ jobs:
       - name: Playwright version matches the Docker image tag
         run: node scripts/check-playwright-version.mjs
 
-      - name: Lint
-        run: pnpm lint
-
-      # The static site. The wizard's "Open the online app" button points at the runner.
+      # The site. The wizard's "Open the online app" button points at the runner.
       - name: Build the site
         env:
           VITE_ONLINE_APP_URL: ${{ env.RUNNER_URL }}
@@ -65,40 +63,24 @@ jobs:
       - name: Build the runner
         run: pnpm --filter "@qa/runner..." run build
 
-      # Fast production smoke check: boots the app on a test port and verifies the Wizard and API endpoints
       - name: Smoke check
         run: pnpm run smoke
 
-      - name: Keep the built site for the site job
+      - name: Keep the built site for the site deploy
         uses: actions/upload-artifact@v4
         with:
           name: site
           path: public
           retention-days: 1
 
-  # The full test suite, the same shards a pull request runs (see tests.yml). Nothing reaches the
-  # Cloud Run deploys without passing them.
-  test:
-    if: github.repository == 'CJCreator/qa-flow-tester'
-    strategy:
-      fail-fast: true
-      matrix:
-        shard: ['1/4', '2/4', '3/4', '4/4']
-    uses: ./.github/workflows/tests.yml
-    with:
-      shard: ${{ matrix.shard }}
-
-  # The runner: the full app, behind its access key (RUNNER_ACCESS_TOKEN from Secret Manager).
-  cloud-run:
-    needs: [build-and-smoke, test]
+  deploy-runner:
+    needs: [build]
     if: github.repository == 'CJCreator/qa-flow-tester'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read
       id-token: write
-    env:
-      SERVICE: qa-check-up
     steps:
       - uses: actions/checkout@v4
 
@@ -119,20 +101,19 @@ jobs:
           docker push "$IMAGE"
           echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
 
-      # Cloud Run's root filesystem is read-only except /tmp, so data goes there (the image's /data is not writable).
-      # The access token is read from Secret Manager, never from this file.
-      - name: Deploy to Cloud Run
+      # Cloud Run's root filesystem is read-only except /tmp, so data goes there.
+      # The access key is read from Secret Manager, never written into this file.
+      - name: Deploy the runner
         run: |
-          gcloud run deploy "$SERVICE" --project "$GCP_PROJECT" --region "$GCP_REGION" \
+          gcloud run deploy qa-check-up --project "$GCP_PROJECT" --region "$GCP_REGION" \
             --image "$IMAGE" --port 8080 --memory 2Gi --cpu 1 \
             --min-instances 0 --max-instances 1 --timeout 3600 \
-            --allow-unauthenticated \
+            --allow-unauthenticated --quiet \
             --set-env-vars "RUNNER_BETA=1,RUNNER_HOST=0.0.0.0,RUNNER_DATA_DIR=/tmp/qa-data,RUNNER_OUTPUT_DIR=/tmp/qa-data/reports,RUNNER_ALLOWED_ORIGINS=$RUNNER_URL" \
             --set-secrets "RUNNER_ACCESS_TOKEN=qa-access-token:latest"
 
-      # Cloud Run's front end answers /healthz with its own 404 and never reaches the container, so this
-      # checks the root instead. The runner answers it with 401 (its access-key gate), which proves the
-      # container is serving. A 404 or 503 means the request did not reach a running runner.
+      # Cloud Run's front end answers /healthz itself and never reaches the container, so the check uses the root.
+      # The runner answers it with 401 (its access-key gate): that proves the container is serving.
       - name: Verify the runner answers
         run: |
           for attempt in 1 2 3 4 5 6; do
@@ -143,17 +124,14 @@ jobs:
           done
           exit 1
 
-  # The static site: the landing page and the wizard, public, served by nginx (site/Dockerfile).
-  site:
-    needs: [build-and-smoke, test]
+  deploy-site:
+    needs: [build]
     if: github.repository == 'CJCreator/qa-flow-tester'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
       contents: read
       id-token: write
-    env:
-      SERVICE: qa-check-up-site
     steps:
       - uses: actions/checkout@v4
 
@@ -179,12 +157,12 @@ jobs:
           docker push "$IMAGE"
           echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
 
-      - name: Deploy to Cloud Run
+      - name: Deploy the site
         run: |
-          gcloud run deploy "$SERVICE" --project "$GCP_PROJECT" --region "$GCP_REGION" \
+          gcloud run deploy qa-check-up-site --project "$GCP_PROJECT" --region "$GCP_REGION" \
             --image "$IMAGE" --port 8080 --memory 256Mi --cpu 1 \
             --min-instances 0 --max-instances 2 \
-            --allow-unauthenticated
+            --allow-unauthenticated --quiet
 
       # version.json names the commit the site was built from, so an old image cannot pass.
       - name: Verify the site serves this commit

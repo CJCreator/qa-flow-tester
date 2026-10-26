@@ -15,11 +15,11 @@ _Last updated 2026-10-07._
 
 The CLI, Report Hub and Dashboard were retired. Mentions of them in the history below describe what was done at the time.
 
-| Phase                              | Status                                                                                                                                     |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| **0: Stop misleading people**      | **Code complete. Full suite run 2026-10-09: 915/920** (see below)                                                                          |
-| **1: Free hosting, first version** | **Superseded 2026-10-26: Render and Vercel retired; everything runs on Google Cloud Run (ADR 0032). The hosting notes below are history.** |
-| 2 to 7                             | Not started                                                                                                                                |
+| Phase                              | Status                                                                     |
+| ---------------------------------- | -------------------------------------------------------------------------- |
+| **0: Stop misleading people**      | **Code complete. Full suite run 2026-10-09: 915/920** (see below)          |
+| **1: Free hosting, first version** | **Superseded 2026-10-26: everything runs on Google Cloud Run (ADR 0032).** |
+| 2 to 7                             | Not started                                                                |
 
 ### Phase 0: what was done
 
@@ -43,29 +43,26 @@ The CLI, Report Hub and Dashboard were retired. Mentions of them in the history 
 - **ADR 0012** written: [adr/0012-hosted-runner-github-actions.md](adr/0012-hosted-runner-github-actions.md). It replaces 0008's "one server on each person's machine" as the only way to run.
 - **One-shot check-up command** `packages/runner/src/checkup.ts` (`node packages/runner/dist/checkup.js <url>`): starts the runner in-process, tests one address, writes the report, writes the verdict to the Actions job summary, and exits with `--fail-on blocker|major|none`. A preview or staging address (`--staging`) is a test copy; anything else is read-only, except when test sign-in details are given with consent (local only, per run, ADR 0022). Its data folder is outside the report folder so a held key is never uploaded.
 - **Workflow template** [templates/qa-check.yml](../templates/qa-check.yml): manual run with an address, plus automatic runs when a preview deployment succeeds. The wizard's first screen (shown when no runner answers, as on Pages) generates it with the typed address, with copy button, secret setup and a link to the repo's Actions page.
-- **Front-end publishing:** first GitHub Pages, moved on 2026-10-06 to Vercel (`vercel.json`; the wizard only, the runner stays on Render or the user's Actions). The Pages workflow was removed.
+- **Front-end publishing:** first GitHub Pages, then hosted elsewhere; since 2026-10-26 the landing page and wizard run on Google Cloud Run (ADR 0032).
 - **Report viewer:** the existing single-file `report.html` is the viewer: it opens offline with a double-click from the downloaded artifact. No separate viewer app was built.
 - **Item 1.7 part 4:** the free-key privacy warning is in Settings (OpenRouter free models and Gemini free tier) and printed by the check-up command. The AI Request Budget display already existed on the new check-up screen.
 - **`pnpm tunnel`** documented as local-only sharing, not hosting (README, ADR 0012).
 
 ### Phase 1 exit gate
 
-- [ ] A new user on a clean repo gets a verdict in under 15 minutes with no local install, using only the Vercel site plus Actions. _Not tried: needs the workflow pushed and a run._
-- [ ] Hosting cost is $0, with no card on file. _By design (Vercel and Render free plans); confirm in the Vercel and Render accounts._
+- [ ] A new user on a clean repo gets a verdict in under 15 minutes with no local install, using only the landing site plus Actions. _Not tried: needs the workflow pushed and a run._
+- [ ] Hosting cost is within the Google Cloud credit. _Cloud Run, scale to zero; check the billing account._
 - [ ] A run on a private preview URL works. _Not tried._
 
 ### Phase 1: the online copy (added after the first Pages review)
 
 The published wizard showed setup instructions instead of the app. The full app is now also set up to run online (Option B, beta), alongside the Actions route:
 
-- `render.yaml` (Render free plan, beta mode), a `/healthz` check for the host, `PORT` and `RENDER_EXTERNAL_URL` support in the runner, and lighter Chromium flags for small hosts.
-- The landing screen on the Vercel site shows **Open the online app** when `VITE_ONLINE_APP_URL` is set in the Vercel project (see README).
-- Free-host research is in ADR 0012: only Render's free plan fits (512 MB, sleeps when idle). Hugging Face Docker Spaces, Fly.io and Koyeb no longer have a free option without paying or a card.
-- The Render service `qa-check-up` is defined in `render.yaml` (free plan, `RUNNER_BETA=1`, `autoDeploy`) and checked by `.github/workflows/deploy.yml` at its default URL. Still unknown: whether Chromium fits in 512 MB on a real site.
+- The online copy now runs on Google Cloud Run (service `qa-check-up`, `RUNNER_BETA=1`, deployed by `.github/workflows/deploy.yml`). The landing site (`qa-check-up-site`) shows **Open the online app** when `VITE_ONLINE_APP_URL` is set for its build. See ADR 0032.
 
 ### Phase 1: open items
 
-- **To do by hand:** set the repo secrets (`VERCEL_REPO_TOKEN`, and `QA_AI_API_KEY` in the repo that runs the check-up), and run the workflow once on a real site. Record the minutes and memory it uses here, and in ADR 0012.
+- **To do by hand:** set `QA_AI_API_KEY` in the repo that runs the check-up, and run the workflow once on a real site. Record the minutes and memory it uses here, and in ADR 0012.
 - **The repo must be public** (or the workflow given a token) for another user's job to download the tool. Decide this before sharing the template.
 - **The tool is fetched from `main`.** Pin a release tag once one exists.
 - **The check-up workflow has not been run end to end.** The command and wizard were only built, not run on a real site.

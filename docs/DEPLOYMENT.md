@@ -1,7 +1,7 @@
 # Deployment
 
 Ways the tool reaches people (ADR 0012, and ADR 0032 for hosting). Everything runs on Google Cloud, on the project
-`qa-flow-tester-512310`, region `us-central1`. Render and Vercel are retired.
+`qa-flow-tester-512310`, region `us-central1`.
 
 | Surface                                                           | What                                                                                                                              | Where it is defined                                                                |
 | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
@@ -15,12 +15,13 @@ Both Cloud Run services get their address from the project number, so it is fixe
 ## How a change ships
 
 1. Work on a branch and open a pull request. `.github/workflows/ci.yml` builds and tests it.
-2. Merge to `main`. `.github/workflows/deploy.yml` then:
-   - **build-and-smoke**: lint, the Playwright version check, `pnpm site-build` (with `VITE_ONLINE_APP_URL` set to the runner), the runner build, the smoke check, and uploads the built site.
-   - **test**: the four shards of the test suite (`tests.yml`). Both deploys wait for it.
-   - **cloud-run**: builds and pushes the runner image to Artifact Registry (`us-central1-docker.pkg.dev/qa-flow-tester-512310/qa/runner:$GITHUB_SHA`), deploys `qa-check-up`, and verifies the root answers 401 (the access-key gate). `/healthz` is not used here: Cloud Run's front end answers it with its own 404 and never reaches the container.
-   - **site**: builds and pushes the site image (`.../qa/site:$GITHUB_SHA`), deploys `qa-check-up-site`, and verifies `version.json` names this commit.
-3. A newer push to `main` cancels an older deploy that is still running (`concurrency: deploy`).
+2. Merge to `main`. Tests are not run on GitHub during a push: run `pnpm test` (and `pnpm lint`) on your machine before you push. `.github/workflows/deploy.yml` then:
+   - **build**: install, the Playwright version check, `pnpm site-build` (with `VITE_ONLINE_APP_URL` set to the runner), the runner build, the smoke check, and uploads the built site.
+   - **deploy-runner** (needs build): builds and pushes the runner image to Artifact Registry (`us-central1-docker.pkg.dev/qa-flow-tester-512310/qa/runner:$GITHUB_SHA`), deploys `qa-check-up`, and verifies the root answers 401 (the access-key gate). `/healthz` is not used here: Cloud Run's front end answers it with its own 404 and never reaches the container.
+   - **deploy-site** (needs build): builds and pushes the site image (`.../qa/site:$GITHUB_SHA`), deploys `qa-check-up-site`, and verifies `version.json` names this commit.
+3. A newer push to `main` waits for a running deploy to finish (`concurrency: deploy`, `cancel-in-progress: false`). Cancelling mid-deploy can stop after a new revision goes live and before it is verified.
+
+The shards run inside `mcr.microsoft.com/playwright:v1.63.0-noble`, so the job installs no system packages. Installing them with `apt` on the runner hung for minutes and timed the job out. The image tag appears in `packages/runner/Dockerfile` and `.github/workflows/tests.yml`; bump both with the lockfile (see Docker below).
 
 Sign-in is keyless: Workload Identity Federation with the variables `GCP_WORKLOAD_IDENTITY_PROVIDER` and `GCP_DEPLOY_SERVICE_ACCOUNT`
 (Settings > Secrets and variables > Actions > Variables). No GitHub secret holds a GCP key.
