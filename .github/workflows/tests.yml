@@ -1,9 +1,5 @@
 # One shard of the test suite. CI calls it for every pull request, and Deploy calls it before publishing
 # main, so a push to main is tested the same way as the pull request it came from.
-#
-# The shard runs inside Playwright's image, the one the runner image is built on. It already has Chromium and
-# the system libraries Chromium needs. Installing those libraries with apt on the runner stalled for minutes and
-# timed out the job, so this file does not install anything system-level.
 name: Tests
 
 on:
@@ -20,15 +16,14 @@ permissions:
 jobs:
   shard:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    container:
-      # Keep this tag equal to the Playwright version in pnpm-lock.yaml (scripts/check-playwright-version.mjs).
-      image: mcr.microsoft.com/playwright:v1.63.0-noble
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
-
-      - name: Use the pnpm version the runner image uses
-        run: corepack enable && corepack prepare pnpm@11.10.0 --activate
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
 
       - name: Install
         run: pnpm install --frozen-lockfile
@@ -38,6 +33,21 @@ jobs:
 
       - name: Build the runner and the packages it uses
         run: pnpm --filter "@qa/runner..." run build
+
+      - name: Cache Playwright browser
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Install Chromium (the browser tests drive it)
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @qa/core exec playwright install --with-deps chromium
+
+      - name: Install Playwright system dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm --filter @qa/core exec playwright install-deps chromium
 
       # wizard-e2e and auth-crawl run in their own jobs in ci.yml; every other test runs here.
       - name: Tests (shard ${{ inputs.shard }})
