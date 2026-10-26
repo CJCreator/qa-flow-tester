@@ -150,12 +150,15 @@ jobs:
             --set-env-vars "RUNNER_BETA=1,RUNNER_HOST=0.0.0.0,RUNNER_DATA_DIR=/tmp/qa-data,RUNNER_OUTPUT_DIR=/tmp/qa-data/reports,RUNNER_ALLOWED_ORIGINS=$SERVICE_URL" \
             --set-secrets "RUNNER_ACCESS_TOKEN=qa-access-token:latest"
 
+      # Cloud Run's front end answers /healthz with its own 404 and never reaches the container, so this
+      # checks the root instead. The runner answers it with 401 (its access-key gate), which proves the
+      # container is serving. A 404 or 503 means the request did not reach a running runner.
       - name: Verify the service answers
         run: |
           for attempt in 1 2 3 4 5 6; do
-            code=$(curl -s -o /dev/null -m 10 -w '%{http_code}' "$SERVICE_URL/healthz") || code=000
+            code=$(curl -s -o /dev/null -m 10 -w '%{http_code}' "$SERVICE_URL/") || code=000
             echo "attempt $attempt: $code"
-            [ "$code" = "200" ] && exit 0
+            { [ "$code" = "401" ] || [ "$code" = "200" ]; } && exit 0
             sleep 10
           done
           exit 1

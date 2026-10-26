@@ -16,7 +16,8 @@ Ways the tool reaches people (ADR 0012), all at $0 until there is revenue.
    - **build-and-smoke**: lint, the Playwright version check, `vercel-build`, the runner build and the smoke check.
    - **test**: the four shards of the test suite (`tests.yml`, the same shards a pull request runs), in parallel with build-and-smoke.
    - **publish**: needs both above. Pushes `main` to `CJCreator-New/flowtester` (this starts the Vercel build). Needs the `VERCEL_REPO_TOKEN` secret.
-   - **cloud-run**: needs build-and-smoke. Uses keyless Workload Identity Federation to authenticate with GCP, builds and pushes the container image to Artifact Registry (`us-central1-docker.pkg.dev/qa-flow-tester-512310/qa/runner:$GITHUB_SHA`), deploys to Cloud Run service `qa-check-up` (port 8080, 2 GiB memory, 1 CPU, data dir `/tmp/qa-data`), binds the access token from Secret Manager, and verifies `/healthz`.
+   - **cloud-run**: needs build-and-smoke. Uses keyless Workload Identity Federation to authenticate with GCP, builds and pushes the container image to Artifact Registry (`us-central1-docker.pkg.dev/qa-flow-tester-512310/qa/runner:$GITHUB_SHA`), deploys to Cloud Run service `qa-check-up` (port 8080, 2 GiB memory, 1 CPU, data dir `/tmp/qa-data`), binds the access token from Secret Manager, and verifies the root answers 401 (the access-key gate). Cloud Run's front end
+     intercepts `/healthz` (it returns its own 404), so that path cannot be used there.
    - **verify**: waits up to 10 minutes for the Vercel site to serve `version.json` with this commit, and Render `/healthz` to answer 200.
      Render's `/healthz` says only that the service is up, not which commit it runs.
    - Render builds from this repo itself (`autoDeployTrigger: checksPass` in `render.yaml`): it starts a build only after
