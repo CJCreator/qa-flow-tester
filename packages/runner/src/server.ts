@@ -301,12 +301,10 @@ interface AiSettings {
   chosenAt?: string;
 }
 
-/** The AI services a key can be added for. OpenRouter's free models cost nothing; the others are paid. */
+/** The AI services a key can be added for: Google Gemini and OpenRouter for the BYOK model. */
 const AI_PROVIDERS: Array<{ id: AIProviderType; name: string; free: boolean }> = [
-  { id: 'openrouter', name: 'OpenRouter (free models)', free: true },
-  { id: 'anthropic', name: 'Anthropic (Claude)', free: false },
-  { id: 'openai', name: 'OpenAI', free: false },
   { id: 'gemini', name: 'Google Gemini', free: false },
+  { id: 'openrouter', name: 'OpenRouter (free models)', free: true },
 ];
 /** AI requests the visual review of a finished run may use: part of the AI Request Budget estimate. */
 const VISUAL_REVIEW_CALLS = 20;

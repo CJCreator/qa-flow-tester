@@ -15,11 +15,9 @@ Both Cloud Run services get their address from the project number, so it is fixe
 ## How a change ships
 
 1. Work on a branch and open a pull request. `.github/workflows/ci.yml` builds and tests it.
-2. Merge to `main`. `.github/workflows/deploy.yml` then:
-   - **build-and-smoke**: lint, the Playwright version check, `pnpm site-build` (with `VITE_ONLINE_APP_URL` set to the runner), the runner build, the smoke check, and uploads the built site.
-   - **test**: the four shards of the test suite (`tests.yml`). Both deploys wait for it.
-   - **cloud-run**: builds and pushes the runner image to Artifact Registry (`us-central1-docker.pkg.dev/qa-flow-tester-512310/qa/runner:$GITHUB_SHA`), deploys `qa-check-up`, and verifies the root answers 401 (the access-key gate). `/healthz` is not used here: Cloud Run's front end answers it with its own 404 and never reaches the container.
-   - **site**: builds and pushes the site image (`.../qa/site:$GITHUB_SHA`), deploys `qa-check-up-site`, and verifies `version.json` names this commit.
+2. Merge to `main`. `.github/workflows/deploy.yml` directly builds and publishes in parallel (tests run on pull requests via `ci.yml`):
+   - **cloud-run**: builds and pushes the pruned runner image to Artifact Registry (`us-central1-docker.pkg.dev/qa-flow-tester-512310/qa/runner:$GITHUB_SHA`), deploys `qa-check-up` (1GiB memory, scale-to-zero), and verifies the root answers 401 (the access-key gate).
+   - **site**: builds the static site assets, builds and pushes the nginx site image (`.../qa/site:$GITHUB_SHA`), deploys `qa-check-up-site`, and verifies `version.json` names this commit.
 3. A newer push to `main` cancels an older deploy that is still running (`concurrency: deploy`).
 
 Sign-in is keyless: Workload Identity Federation with the variables `GCP_WORKLOAD_IDENTITY_PROVIDER` and `GCP_DEPLOY_SERVICE_ACCOUNT`

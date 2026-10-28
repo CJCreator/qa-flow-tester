@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { KeyResolver, MockAIProvider, createAIProvider } from '../src/ai/ai-provider.js';
+import { KeyResolver, MockAIProvider, createAIProvider, DEFAULT_MODELS } from '../src/ai/ai-provider.js';
 import type { SecretStore } from '../src/ai/key-resolver.js';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -113,7 +113,7 @@ describe('AIProvider and KeyResolver', () => {
     }
   });
 
-  it('GeminiProvider uses default model gemini-3.8-flash and includes generationConfig', async () => {
+  it('GeminiProvider uses default model and includes generationConfig', async () => {
     const realFetch = globalThis.fetch;
     let requestedUrl = '';
     let parsedBody: any = null;
@@ -132,7 +132,7 @@ describe('AIProvider and KeyResolver', () => {
       const gemini = createAIProvider('gemini', 'my-gemini-key');
       const text = await gemini.generateText([{ role: 'user', content: 'hello' }]);
       expect(text).toBe('Gemini says hi');
-      expect(requestedUrl).toContain('gemini-3.8-flash:generateContent?key=my-gemini-key');
+      expect(requestedUrl).toContain(`${DEFAULT_MODELS.gemini}:generateContent?key=my-gemini-key`);
       expect(parsedBody.contents[0].parts[0].text).toBe('hello');
       expect(parsedBody.generationConfig.temperature).toBe(0.2);
     } finally {
