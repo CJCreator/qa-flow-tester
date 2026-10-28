@@ -1,0 +1,8 @@
+{
+  "buildCommand": "pnpm run site-build",
+  "outputDirectory": "public",
+  "framework": "vite",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

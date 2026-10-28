@@ -47,3 +47,6 @@ coverage/
 .review-shots/
 .vscode/
 .claude/
+
+.vercel
+.env*
