@@ -67,8 +67,8 @@ Gemini can also authenticate with Google Application Default Credentials. `GOOGL
 
 Key order (see `packages/core/src/ai/key-resolver.ts`): a key given for the run comes first (command line, or `QA_AI_API_KEY` in
 a check-up from CI). Then, for the preferred provider: the OS keychain, the legacy `.qa-keys.json` file, then the environment
-variable. If that provider has no key, the others are tried in the order Gemini, OpenRouter, OpenAI, Anthropic, each with the
-same three steps (prioritizing cost-effective BYOK options). The keychain is used when the computer has one. `.qa-keys.json` is written only when it does not. With no key
+variable. If that provider has no key, the others are tried in the order Anthropic, OpenAI, Gemini, OpenRouter, each with the
+same three steps. The keychain is used when the computer has one. `.qa-keys.json` is written only when it does not. With no key
 at all, the Plan is written by fixed rules and no AI is used. In a beta copy keys live in the visitor's session only.
 
 Provider limits worth knowing (they change; the tool reads what the key reports): OpenRouter's free models allow 20

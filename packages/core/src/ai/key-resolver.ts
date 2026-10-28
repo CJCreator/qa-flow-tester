@@ -123,8 +123,8 @@ export class KeyResolver {
       if (found) return found;
     }
 
-    // 3. Fallback search order across providers: prioritize Gemini and OpenRouter for the BYOK model
-    const providers: AIProviderType[] = ['gemini', 'openrouter', 'openai', 'anthropic'];
+    // 3. Fallback search order across providers
+    const providers: AIProviderType[] = ['anthropic', 'openai', 'gemini', 'openrouter'];
     for (const p of providers) {
       const found = await lookup(p);
       if (found) return found;

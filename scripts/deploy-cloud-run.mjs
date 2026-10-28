@@ -57,13 +57,12 @@ async function main() {
 
   // Deploy qa-check-up (the runner)
   console.log('\n--- Step 4: Deploying qa-check-up (Runner) ---');
-  const runnerMemory = process.env.RUNNER_MEMORY || '1Gi';
   sh(
     `gcloud run deploy qa-check-up --project "${PROJECT}" --region "${REGION}" ` +
-      `--image "${runnerImage}" --port 8080 --memory ${runnerMemory} --cpu 1 ` +
+      `--image "${runnerImage}" --port 8080 --memory 2Gi --cpu 1 ` +
       `--min-instances 0 --max-instances 1 --timeout 3600 ` +
       `--allow-unauthenticated ` +
-      `--set-env-vars "RUNNER_BETA=1,RUNNER_HOST=0.0.0.0,RUNNER_DATA_DIR=/tmp/qa-data,RUNNER_OUTPUT_DIR=/tmp/qa-data/reports,NODE_OPTIONS=--max-old-space-size=384,RUNNER_ALLOWED_ORIGINS=${RUNNER_URL},${RUNNER_HASH_URL}" ` +
+      `--set-env-vars "RUNNER_BETA=1,RUNNER_HOST=0.0.0.0,RUNNER_DATA_DIR=/tmp/qa-data,RUNNER_OUTPUT_DIR=/tmp/qa-data/reports,RUNNER_ALLOWED_ORIGINS=${RUNNER_URL},${RUNNER_HASH_URL}" ` +
       `--set-secrets "RUNNER_ACCESS_TOKEN=qa-access-token:latest"`
   );
 

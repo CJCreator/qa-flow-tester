@@ -33,15 +33,13 @@ import { PRESET_META, presetOf, type GatePreset } from '../lib/release-rule';
 import { useDocumentTitle } from '../lib/title';
 
 const PROVIDERS: Array<{ id: AiProviderId; name: string; hint: string }> = [
+  { id: 'openrouter', name: 'OpenRouter’s free models', hint: 'Costs nothing. Free models allow 50 requests a day.' },
+  { id: 'anthropic', name: 'Anthropic (Claude)', hint: 'Paid: your Anthropic account is charged for each request.' },
+  { id: 'openai', name: 'OpenAI', hint: 'Paid: your OpenAI account is charged for each request.' },
   {
     id: 'gemini',
     name: 'Google Gemini',
-    hint: 'Recommended for BYOK. 1,500 requests/day free via Google AI Studio; ultra-low-cost token pricing on paid tier.',
-  },
-  {
-    id: 'openrouter',
-    name: 'OpenRouter’s free models',
-    hint: 'Costs nothing. Free community models allow 50 requests a day.',
+    hint: 'Paid or free, depending on your Google account. A free key may be used for training.',
   },
 ];
 
