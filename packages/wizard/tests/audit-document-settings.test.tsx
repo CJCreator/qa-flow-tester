@@ -9,6 +9,8 @@ import {
   isUpdateEmpty,
   loadSettings,
   optOutInEffect,
+  overlapWordsValue,
+  removePagespeedKey,
   resetOptOutText,
   resetProposalTemplate,
   saveSettings,
@@ -278,7 +280,7 @@ describe('accessible markup and wording', () => {
   it('gives every input and textarea a label', () => {
     const html = views.view;
     const fields = [...html.matchAll(/<(input|textarea|select)\b[^>]*>/g)].map((m) => m[0]);
-    expect(fields.length).toBe(1 + 2 + 6);
+    expect(fields.length).toBe(1 + 2 + 6 + 2);
     for (const field of fields) {
       const id = field.match(/\sid="([^"]+)"/)?.[1];
       expect(id && html.includes(`<label for="${id}"`), field).toBe(true);
@@ -309,6 +311,65 @@ describe('accessible markup and wording', () => {
       expect(text).toContain(term);
     expect(views.screen).toContain('<h1');
     expect(views.screen).toContain('Loading the document settings');
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------
+// T-75: Website Audit settings, PageSpeed key, rewriteOverlapWords
+// ---------------------------------------------------------------------------------------------------
+
+describe('Website Audit settings (T-75)', () => {
+  it('names the screen, with Audit Documents as a section and a Back link', () => {
+    const screen = renderToStaticMarkup(createElement(DocumentSettingsScreen, { fetchImpl: fakeFetch().impl }));
+    expect(screen).toMatch(/<h1[^>]*>Website Audit settings<\/h1>/);
+    expect(screen).toMatch(/<a[^>]*href="\/audits"[^>]*>Back to Saved Website Audits<\/a>/);
+    expect(view()).toMatch(/<h2[^>]*>Audit Documents<\/h2>/);
+    expect((view().match(/<h1/g) ?? []).length).toBe(0);
+  });
+
+  it('says whether a PageSpeed key is saved and never renders one back', () => {
+    const saved = view({ reply: settingsReply({ pagespeedKeySaved: true }) });
+    expect(textOf(saved)).toContain('A PageSpeed key is saved.');
+    expect(saved).toContain('Remove the saved PageSpeed key');
+    expect(textOf(view())).toContain('No PageSpeed key is saved.');
+    expect(view()).not.toContain('Remove the saved PageSpeed key');
+    // The input is a password field, empty from the reply; even a stray key in a reply is not shown.
+    const stray = settingsReply({ pagespeedKeySaved: true });
+    (stray.settings as unknown as Record<string, unknown>).pagespeedKey = 'AIzaSECRET-VALUE';
+    const html = view({ reply: stray });
+    expect(html).not.toContain('AIzaSECRET-VALUE');
+    expect(html).toMatch(/<input id="settings-pagespeed-key" type="password"[^>]*value=""/);
+    expect(draftFrom(stray).pagespeedKey).toBe('');
+  });
+
+  it('sends the typed PageSpeed key on save, and null to remove it', async () => {
+    const reply = settingsReply();
+    const update = settingsUpdate(reply, { ...draftFrom(reply), pagespeedKey: ' AIza-typed ' });
+    expect(update).toEqual({ pagespeedKey: 'AIza-typed' });
+    const { impl, calls } = fakeFetch({ status: 200, body: settingsReply({ pagespeedKeySaved: true }) });
+    const outcome = await saveSettings(update, impl);
+    expect(JSON.parse(String(calls[0].init?.body))).toEqual({ pagespeedKey: 'AIza-typed' });
+    expect(outcome.ok && outcome.value.settings.pagespeedKeySaved).toBe(true);
+    expect(JSON.stringify(outcome)).not.toContain('AIza-typed');
+    expect(removePagespeedKey()).toEqual({ pagespeedKey: null });
+    expect(isUpdateEmpty(settingsUpdate(reply, draftFrom(reply)))).toBe(true);
+  });
+
+  it('saves rewriteOverlapWords as a number, and only when it is a whole number from 1 to 100', () => {
+    const reply = settingsReply();
+    expect(draftFrom(reply).rewriteOverlapWords).toBe('6');
+    expect(settingsUpdate(reply, { ...draftFrom(reply), rewriteOverlapWords: '9' })).toEqual({
+      rewriteOverlapWords: 9,
+    });
+    for (const bad of ['', '0', '101', '2.5', '-3', 'abc']) {
+      expect(settingsUpdate(reply, { ...draftFrom(reply), rewriteOverlapWords: bad }), bad).toEqual({});
+      expect(overlapWordsValue(bad), bad).toBeNull();
+    }
+    const html = view({ draft: { ...draftFrom(reply), rewriteOverlapWords: '9' } });
+    expect(html).toMatch(/<input id="settings-rewrite-overlap" type="number"[^>]*value="9"/);
+    expect(view({ draft: { ...draftFrom(reply), rewriteOverlapWords: '0' } })).toContain(
+      'Enter a whole number from 1 to 100.'
+    );
   });
 });
 

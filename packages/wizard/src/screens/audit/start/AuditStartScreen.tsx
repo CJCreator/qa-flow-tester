@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { AuditStartErrors, AuditStartReply } from '@qa/types/src/browser.js';
-import { FocusHeading, Spinner } from '../../../components/text';
+import { ErrorMessage, FocusHeading, Spinner } from '../../../components/text';
 import { Link, PATHS } from '../../../lib/router';
+import { useDocumentTitle } from '../../../lib/title';
 import {
   AUDIT_FIELD_HINTS,
   AUDIT_LIMIT_BOUNDS,
@@ -180,19 +181,15 @@ export function AuditStartFields({
       </div>
 
       {message && (
-        <p
-          id="audit-start-message"
-          role="alert"
-          className="mt-6 max-w-prose rounded-md border-l-4 border-fail bg-fail-tint px-4 py-3 text-fail"
-        >
-          {message}
-        </p>
+        <div id="audit-start-message">
+          <ErrorMessage>{message}</ErrorMessage>
+        </div>
       )}
 
       <div className="mt-8">
         <button
           type="submit"
-          className="btn-primary min-h-[50px] px-8 font-bold"
+          className="btn-primary min-h-[44px] px-8 font-bold"
           disabled={starting}
           aria-describedby={message ? 'audit-start-message' : undefined}
         >
@@ -203,10 +200,11 @@ export function AuditStartFields({
   );
 }
 
-/** A link to the audit's own page: its results when it is done, its history otherwise. */
-export function AuditFollowUpLink({ auditId, done }: { auditId: string; done: boolean }) {
+/** A link to the audit's own page: the results of `version` when it is done, its history otherwise. */
+export function AuditFollowUpLink({ auditId, done, version }: { auditId: string; done: boolean; version?: number }) {
+  const to = done && version !== undefined ? PATHS.auditVersion(auditId, version) : PATHS.audit(auditId);
   return (
-    <Link to={PATHS.audit(auditId)} className="font-semibold text-stamp underline">
+    <Link to={to} className="font-semibold text-stamp underline">
       {done ? 'Open the results of this Website Audit' : "Open this Website Audit's history"}
     </Link>
   );
@@ -231,6 +229,8 @@ export function AuditStartScreen({ submit = submitAuditStart, openSource }: Audi
   const [progress, setProgress] = useState<AuditProgressState>({ status: 'starting' });
   const [reconnecting, setReconnecting] = useState(false);
   const [streamEnded, setStreamEnded] = useState(false);
+  const [doneVersion, setDoneVersion] = useState<number | null>(null);
+  useDocumentTitle('New Website Audit');
   const focusAfterRefusal = useRef<AuditFormField | null>(null);
 
   useEffect(() => {
@@ -245,7 +245,10 @@ export function AuditStartScreen({ submit = submitAuditStart, openSource }: Audi
     return watchAudit(
       started.reply,
       {
-        onEvent: (event) => setProgress((state) => applyAuditEvent(state, event, auditStoppedText)),
+        onEvent: (event) => {
+          if (event.type === 'done') setDoneVersion(event.version);
+          setProgress((state) => applyAuditEvent(state, event, auditStoppedText));
+        },
         onDrop: () => setReconnecting(true),
         onOpen: () => setReconnecting(false),
         onEnd: () => {
@@ -265,6 +268,7 @@ export function AuditStartScreen({ submit = submitAuditStart, openSource }: Audi
     if (outcome.kind === 'started') {
       setErrors({});
       setProgress({ status: 'starting' });
+      setDoneVersion(null);
       setStarted({ reply: outcome.reply, address: form.address.trim() });
       return;
     }
@@ -277,7 +281,7 @@ export function AuditStartScreen({ submit = submitAuditStart, openSource }: Audi
   const finished = progress.status === 'done' || progress.status === 'stopped';
 
   return (
-    <div className="mx-auto max-w-[44rem] px-4 py-10 sm:px-6 sm:py-14">
+    <div className="mx-auto max-w-prose px-4 py-10 sm:px-6 sm:py-14">
       <FocusHeading className="mb-2 break-words text-question font-bold">Start a Website Audit</FocusHeading>
       <p className="mb-6 max-w-prose text-ink-soft">
         A Website Audit reads a public website, page by page, to find what could be repaired or redesigned. It never
@@ -294,7 +298,11 @@ export function AuditStartScreen({ submit = submitAuditStart, openSource }: Audi
           />
           {(finished || streamEnded) && (
             <div className="mt-6 flex flex-wrap items-center gap-4">
-              <AuditFollowUpLink auditId={started.reply.auditId} done={progress.status === 'done'} />
+              <AuditFollowUpLink
+                auditId={started.reply.auditId}
+                done={progress.status === 'done'}
+                version={doneVersion ?? started.reply.version}
+              />
               <button
                 type="button"
                 className="btn-primary"

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { HelperSession } from '@qa/types/src/browser.js';
 import { ErrorMessage, FocusHeading, Spinner } from '../../../components/text';
+import { Link, PATHS } from '../../../lib/router';
+import { useDocumentTitle } from '../../../lib/title';
 import { signInWithGoogle, type GoogleSignInResult } from './firebase-sign-in';
 import {
   HELPERS_OFF_MESSAGE,
@@ -14,6 +16,7 @@ import {
   type FirebaseWebConfig,
 } from './helper-api';
 import { HelperRules } from './HelpersScreen';
+import { loadVersion } from './saved-api';
 
 /** The Firebase web settings baked in at build time (public values), used when the runner sends none. */
 export function buildTimeFirebaseConfig(
@@ -59,12 +62,22 @@ export interface HelperSignInViewProps {
   onSignOut: () => void;
   /** Opens one of the Helper's Website Audits; the list shows ids only when not given. */
   onOpenAudit?: (auditId: string) => void;
+  /** The site host of each Website Audit by id; the list shows the id for one that is missing. */
+  hosts?: Readonly<Record<string, string>>;
 }
 
 /** The Helper sign-in panel without state. */
-export function HelperSignInView({ state, onSignIn, onSignOut, onOpenAudit }: HelperSignInViewProps) {
+export function HelperSignInView({ state, onSignIn, onSignOut, onOpenAudit, hosts = {} }: HelperSignInViewProps) {
   if (state.status === 'loading') return <Spinner label="Checking Helper sign-in…" />;
-  if (state.status === 'off') return <p className="max-w-prose text-ink-soft">{HELPERS_OFF_MESSAGE}</p>;
+  if (state.status === 'off')
+    return (
+      <div className="max-w-prose space-y-4">
+        <p className="text-ink-soft">{HELPERS_OFF_MESSAGE}</p>
+        <Link to={PATHS.landing} className="btn-link">
+          Back to the home page
+        </Link>
+      </div>
+    );
   if (state.status === 'failed') return <ErrorMessage>{state.message}</ErrorMessage>;
   if (state.status === 'signed-in') {
     const { session } = state;
@@ -77,7 +90,7 @@ export function HelperSignInView({ state, onSignIn, onSignOut, onOpenAudit }: He
           </button>
         </div>
         {state.message && <ErrorMessage>{state.message}</ErrorMessage>}
-        <section aria-labelledby="helper-audits-title" className="rounded border border-rule p-4">
+        <section aria-labelledby="helper-audits-title" className="card-1 bg-surface p-4">
           <h2 id="helper-audits-title" className="text-xl font-bold">
             Website Audits given to you
           </h2>
@@ -90,11 +103,15 @@ export function HelperSignInView({ state, onSignIn, onSignOut, onOpenAudit }: He
               {session.grants.map((grant) => (
                 <li key={grant.auditId} className="flex flex-wrap items-center justify-between gap-3 py-3">
                   <div className="min-w-0">
-                    <p className="break-words font-semibold">{`Website Audit ${grant.auditId}`}</p>
+                    <p className="break-words font-semibold">
+                      {hosts[grant.auditId]
+                        ? `Website Audit of ${hosts[grant.auditId]}`
+                        : `Website Audit ${grant.auditId}`}
+                    </p>
                     <p className="text-sm text-ink-soft">{`You can: ${permissionText(grant.permissions)}`}</p>
                   </div>
                   {onOpenAudit && (
-                    <button type="button" className="btn-secondary" onClick={() => onOpenAudit(grant.auditId)}>
+                    <button type="button" className="btn-quiet min-h-[44px]" onClick={() => onOpenAudit(grant.auditId)}>
                       Open
                     </button>
                   )}
@@ -136,6 +153,8 @@ export function HelperSignInScreen({
 }: HelperSignInScreenProps) {
   const [state, setState] = useState<HelperSignInState>({ status: 'loading' });
   const [config, setConfig] = useState<FirebaseWebConfig | null>(null);
+  const [hosts, setHosts] = useState<Record<string, string>>({});
+  useDocumentTitle('Helper sign-in');
 
   useEffect(() => {
     let live = true;
@@ -160,6 +179,21 @@ export function HelperSignInScreen({
     };
   }, [fetchImpl, fallbackConfig]);
 
+  // The grants hold no host, so each Website Audit's host is read from the audit itself.
+  const grantIds = state.status === 'signed-in' ? state.session.grants.map((grant) => grant.auditId).join(',') : '';
+  useEffect(() => {
+    if (grantIds === '') return;
+    let live = true;
+    for (const auditId of grantIds.split(',')) {
+      void loadVersion(auditId, undefined, fetchImpl).then((outcome) => {
+        if (live && outcome.ok) setHosts((now) => ({ ...now, [auditId]: outcome.value.summary.host }));
+      });
+    }
+    return () => {
+      live = false;
+    };
+  }, [grantIds, fetchImpl]);
+
   const start = useCallback(async () => {
     if (config === null) return;
     setState({ status: 'signing-in' });
@@ -178,7 +212,7 @@ export function HelperSignInScreen({
   }, [fetchImpl]);
 
   return (
-    <div className="mx-auto max-w-[64rem] px-4 py-10 sm:px-6 sm:py-14">
+    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
       <FocusHeading className="mb-2 break-words text-question font-bold">Helper sign-in</FocusHeading>
       {state.status !== 'off' && (
         <div className="mb-6">
@@ -190,6 +224,7 @@ export function HelperSignInScreen({
         onSignIn={() => void start()}
         onSignOut={() => void stop()}
         onOpenAudit={onOpenAudit}
+        hosts={hosts}
       />
     </div>
   );

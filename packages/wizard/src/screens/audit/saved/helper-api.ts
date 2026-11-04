@@ -18,6 +18,8 @@ import {
  * of one POST and nowhere else.
  */
 
+export { loadCallerIsHelper } from './caller-access';
+
 export type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 export type HelperOutcome<T> = { ok: true; value: T } | { ok: false; message: string; code?: AuditErrorCode };

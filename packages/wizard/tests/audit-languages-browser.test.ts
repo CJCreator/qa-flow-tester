@@ -211,12 +211,17 @@ describe('Website Audit screens: Tamil content and export (browser)', () => {
       const radio = group.getByRole('radio', { name });
       expect(await radio.count(), `${name} is offered on the documents screen`).toBeGreaterThan(0);
       await radio.check();
-      const link = page.getByRole('link', { name: /^Download the Audit Documents/ });
-      const href = await link.getAttribute('href');
-      expect(href).toContain('language=ta');
-      const res = await context.request.get(new URL(href!, toolUrl).toString());
-      expect(res.status()).toBe(200);
-      return await res.text();
+      // T-70: the download is a button that fetches the file, so a refusal can be shown instead of saved.
+      const button = page.getByRole('button', { name: /^Download the Audit Documents/ });
+      const [response, download] = await Promise.all([
+        page.waitForResponse((r) => r.url().includes('/export') && r.request().method() === 'GET'),
+        page.waitForEvent('download'),
+        button.click(),
+      ]);
+      expect(response.url()).toContain('language=ta');
+      expect(response.status()).toBe(200);
+      const file = await download.path();
+      return await fs.readFile(file, 'utf8');
     }
 
     it('exporting in Tamil downloads documents whose headings come from the Tamil table', async () => {

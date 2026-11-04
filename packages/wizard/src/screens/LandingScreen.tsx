@@ -1,15 +1,21 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { contactLinks } from '../lib/contact';
+import { contactLinks, REPO_URL } from '../lib/contact';
 import { COUNTER_EVENTS, sendCounterEvent, sendCounterEventOnce } from '../lib/counter';
 import { HOME_FAQ, HOME_STEPS } from '../lib/faq';
 import { Mark } from '../components/TopBar';
 import { WakeNote } from '../components/WakeNote';
 import { useWakeOnline } from '../hooks/useWakeOnline';
 import { startAddress } from '../lib/online';
+import { PATHS } from '../lib/router';
 import { applyTheme, readTheme, saveTheme, toggled, type Theme } from '../lib/theme';
 import { LANDING_TITLE, useDocumentTitle } from '../lib/title';
 
-export const REPO_URL = 'https://github.com/CJCreator/qa-flow-tester';
+/** Where the Website Audit link leads: on the static site, the online copy's origin, like the check-up call to action. */
+function auditAddress(): string {
+  const start = startAddress();
+  return start.startsWith('/') ? PATHS.auditNew : new URL(PATHS.auditNew, start).toString();
+}
+
 export const SAMPLE_REPORT_URL = '/sample-report.html';
 
 export const AREAS: Array<{ name: string; text: string }> = [
@@ -412,8 +418,8 @@ export function LandingScreen() {
             Free while we’re in beta
           </SectionTitle>
           <p className="mt-3 max-w-prose text-ink-soft leading-relaxed">
-            The AI that writes your plan uses your own key (OpenRouter’s free models work), or you can skip AI and let
-            fixed rules write the plan.
+            The AI that writes your plan uses your own AI key (a free one works, or a paid one from the service you
+            pick), or you can skip AI and let fixed rules write the plan.
           </p>
           <div
             tabIndex={0}
@@ -502,6 +508,23 @@ export function LandingScreen() {
               <StartButton className="btn-primary px-10 shadow-level-3 hover:shadow-level-4 font-bold">
                 Start a free check-up
               </StartButton>
+            </p>
+          </div>
+        </section>
+
+        <section aria-labelledby="audit-title" className="border-t border-rule/80 bg-panel/60">
+          <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12">
+            <h2 id="audit-title" className="text-xl font-bold text-ink">
+              Looking at someone else’s website?
+            </h2>
+            <p className="mt-2 max-w-prose text-ink-soft">
+              The Website Audit reads a public website only and never fills in forms. It writes Audit Documents in
+              English or Tamil. It is free for now.
+            </p>
+            <p className="mt-4">
+              <a href={auditAddress()} className="btn-link font-bold">
+                Open the Website Audit
+              </a>
             </p>
           </div>
         </section>

@@ -16,6 +16,7 @@ import { ErrorMessage, FocusHeading, Notice, Spinner } from '../components/text'
 import { skipReasonText } from '../lib/coverage-text';
 import { count, formatDay, formatDuration, formatWhen, scrollBehavior } from '../lib/format';
 import { gradeClasses } from '../lib/grades';
+import { slowerNote } from '../lib/slower-note';
 import { Link, PATHS } from '../lib/router';
 import {
   ASPECTS,
@@ -336,6 +337,22 @@ export function Report({
 
       {/* Only once there's an earlier check-up to compare with. */}
       {report.history?.previousTimestamp && <Changes report={report} />}
+
+      {(report.slowerThanLastTime?.length ?? 0) > 0 && (
+        <section aria-labelledby="slower-title">
+          <h2 id="slower-title" className="mb-1 text-2xl font-bold">
+            Slower than last time
+          </h2>
+          <p className="mb-3 max-w-prose text-sm text-ink-soft">
+            A note beside the findings. It does not change the grades or the release answer.
+          </p>
+          <ul className="max-w-prose list-disc space-y-1 pl-5 text-ink">
+            {report.slowerThanLastTime!.map((item, i) => (
+              <li key={`${item.urlPath}-${item.role}-${item.breakpoint}-${i}`}>{slowerNote(item)}</li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <Improvements report={report} />
 
@@ -781,7 +798,7 @@ function AspectGrades({ report }: { report: ReleaseReport }) {
                   <div className="mt-2 border-t border-rule pt-2">
                     <Link
                       to={PATHS.visibility(report.runId)}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-stamp hover:underline"
                     >
                       See search, AI & marketing visibility →
                     </Link>
@@ -1187,7 +1204,7 @@ function PageCoverageSection({ report }: { report: ReleaseReport }) {
         <h3 id="coverage-title" className="text-xl font-bold">
           Pages checked
         </h3>
-        <span className="rounded-full bg-accent/10 px-3 py-1 text-sm font-semibold text-accent">
+        <span className="rounded-full bg-stamp-tint px-3 py-1 text-sm font-semibold text-stamp">
           Pages reached {coverage.reached} of {coverage.found}
         </span>
       </div>
@@ -1294,7 +1311,7 @@ function SourcesSummary({ report }: { report: ReleaseReport }) {
         <h3 id="sources-title" className="text-xl font-bold">
           How the site matches its requirements
         </h3>
-        {line && <span className="rounded-full bg-accent/10 px-3 py-1 text-sm font-semibold text-accent">{line}</span>}
+        {line && <span className="rounded-full bg-stamp-tint px-3 py-1 text-sm font-semibold text-stamp">{line}</span>}
       </div>
 
       {notFound.length > 0 && (
@@ -1323,7 +1340,7 @@ function SourcesSummary({ report }: { report: ReleaseReport }) {
                           </span>
                         )}
                         {isOverridden && (
-                          <span className="rounded bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                          <span className="rounded bg-pass-tint px-2 py-0.5 text-xs font-semibold text-pass">
                             Intentional Deviation (Overridden)
                           </span>
                         )}
@@ -1338,7 +1355,7 @@ function SourcesSummary({ report }: { report: ReleaseReport }) {
                           setActiveOverride(reqId);
                           setOverrideError(null);
                         }}
-                        className="rounded-md border border-rule px-2.5 py-1 text-xs font-medium text-accent hover:border-accent hover:bg-accent/5"
+                        className="rounded-md border border-rule px-2.5 py-1 text-xs font-medium text-stamp hover:border-stamp hover:bg-stamp-tint"
                       >
                         Did this feature change or move? Record a requirement override
                       </button>
@@ -1346,7 +1363,7 @@ function SourcesSummary({ report }: { report: ReleaseReport }) {
                   </div>
 
                   {isEditing && (
-                    <div className="mt-4 rounded-md border border-rule bg-page/50 p-3 space-y-3">
+                    <div className="mt-4 rounded-md border border-rule bg-paper/50 p-3 space-y-3">
                       <div className="font-medium text-ink">Record a requirement override</div>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         <div>
@@ -1404,7 +1421,7 @@ function SourcesSummary({ report }: { report: ReleaseReport }) {
                           className="w-full rounded border border-rule bg-surface px-2 py-1 text-xs text-ink"
                         />
                       </div>
-                      {overrideError && <p className="text-xs text-danger">{overrideError}</p>}
+                      {overrideError && <p className="text-xs text-fail">{overrideError}</p>}
                       <div className="flex items-center gap-2 justify-end pt-1">
                         <button
                           type="button"
@@ -1417,7 +1434,7 @@ function SourcesSummary({ report }: { report: ReleaseReport }) {
                           type="button"
                           disabled={savingOverride}
                           onClick={() => handleSaveOverride(reqId)}
-                          className="rounded bg-accent px-3 py-1 text-xs font-medium text-white hover:bg-accent/90 disabled:opacity-50"
+                          className="rounded bg-stamp px-3 py-1 text-xs font-medium text-surface hover:bg-stamp-dark disabled:opacity-50"
                         >
                           {savingOverride ? 'Saving...' : 'Save Override'}
                         </button>

@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { AuditGetReply, EditOverlay, PageAction, PageContent } from '@qa/types/src/browser.js';
-import { ErrorMessage, FocusHeading, Spinner } from '../../../components/text';
+import { getAiSetup } from '../../../api';
+import { ErrorMessage, FocusHeading, Notice, Spinner } from '../../../components/text';
+import { count } from '../../../lib/format';
+import { Link, PATHS } from '../../../lib/router';
+import { useDocumentTitle } from '../../../lib/title';
+import { RewriteReview } from '../ai/RewriteReview';
 import {
   ADVISORY_LABEL,
   PLACED_BY_LABEL,
@@ -253,6 +258,10 @@ export interface ReviewDocumentsViewProps {
   onSelectPage: (urlPath: string) => void;
   onSave: () => void;
   onDiscard: () => void;
+  /** An AI key is set up: true shows the Section rewrite, false shows how to add a key, null (not known yet) shows neither. */
+  aiConfigured?: boolean | null;
+  /** For tests: the requests of the Section rewrite. */
+  fetchImpl?: Fetch;
 }
 
 /**
@@ -272,6 +281,8 @@ export function ReviewDocumentsView({
   onSelectPage,
   onSave,
   onDiscard,
+  aiConfigured = null,
+  fetchImpl,
 }: ReviewDocumentsViewProps) {
   const result = reply.result;
   if (!result) {
@@ -290,7 +301,12 @@ export function ReviewDocumentsView({
   return (
     <div className="space-y-10">
       <div className="sticky top-0 z-10 flex flex-wrap items-center gap-3 border-b border-rule bg-canvas py-3">
-        <button type="button" className="btn-primary px-6 font-bold" disabled={!pending || saving} onClick={onSave}>
+        <button
+          type="button"
+          className="btn-primary min-h-[44px] px-6 font-bold"
+          disabled={!pending || saving}
+          onClick={onSave}
+        >
           {saving ? <Spinner label="Saving…" /> : 'Save changes'}
         </button>
         <button type="button" className="btn-quiet" disabled={!pending || saving} onClick={onDiscard}>
@@ -328,12 +344,33 @@ export function ReviewDocumentsView({
 
       <SectionsEditor urlPath={selectedPage} state={content} edits={edits} draft={draft} onDraft={onDraft} />
 
+      {content?.status === 'loaded' &&
+        (aiConfigured === true ? (
+          <RewriteReview
+            key={content.content.urlPath}
+            auditId={reply.summary.auditId}
+            version={reply.version.version}
+            content={content.content}
+            fetchImpl={fetchImpl}
+          />
+        ) : aiConfigured === false ? (
+          <Notice
+            tone="stamp"
+            title="Rewriting a Section needs an AI key"
+            actions={
+              <Link to={PATHS.settings} className="btn-link min-h-[44px]">
+                Add an AI key in Settings
+              </Link>
+            }
+          />
+        ) : null)}
+
       <section aria-labelledby="review-findings-title" className="space-y-3">
         <h2 id="review-findings-title" className="text-xl font-bold">
           Findings
         </h2>
         <p className="max-w-prose text-sm text-ink-soft">
-          The Findings document and the Improvement Roadmap use the text below.
+          {`${count(findings.length, 'finding', 'findings')}. The Findings document and the Improvement Roadmap use the text below.`}
         </p>
         {findings.length === 0 ? (
           <p className="text-sm text-ink-soft">No findings were recorded.</p>
@@ -349,7 +386,7 @@ export function ReviewDocumentsView({
                     <UnsavedTag show={row.unsaved} />
                   </h3>
                   {isAi && (
-                    <p className="mt-1 inline-flex rounded-full bg-accent/10 px-2 text-xs font-semibold text-accent">
+                    <p className="mt-1 inline-flex rounded-full bg-stamp-tint px-2 text-xs font-semibold text-stamp">
                       {ADVISORY_LABEL}
                     </p>
                   )}
@@ -488,13 +525,22 @@ export interface ReviewDocumentsScreenProps {
   version?: number;
   /** For tests: the requests. */
   fetchImpl?: Fetch;
+  /** For tests: reads whether an AI key is set up. */
+  aiSetup?: () => Promise<{ configured: boolean }>;
 }
 
 type Loaded =
   { status: 'loading' } | { status: 'failed'; message: string } | { status: 'loaded'; reply: AuditGetReply };
 
 /** Review and edit a Website Audit version's Audit Documents before export (REQ-020). */
-export function ReviewDocumentsScreen({ auditId, version, fetchImpl }: ReviewDocumentsScreenProps) {
+export function ReviewDocumentsScreen({
+  auditId,
+  version,
+  fetchImpl,
+  aiSetup = getAiSetup,
+}: ReviewDocumentsScreenProps) {
+  useDocumentTitle('Review Audit Documents');
+  const [aiConfigured, setAiConfigured] = useState<boolean | null>(null);
   const [loaded, setLoaded] = useState<Loaded>({ status: 'loading' });
   const [edits, setEdits] = useState<EditOverlay | null>(null);
   const [draft, setDraft] = useState<ReviewDraft>(emptyDraft);
@@ -519,6 +565,18 @@ export function ReviewDocumentsScreen({ auditId, version, fetchImpl }: ReviewDoc
       live = false;
     };
   }, [auditId, version, fetchImpl]);
+
+  // Whether an AI key is set up decides if the Section rewrite shows. Unknown (a failed read) shows neither.
+  useEffect(() => {
+    let live = true;
+    void aiSetup().then(
+      (setup) => live && setAiConfigured(setup.configured),
+      () => undefined
+    );
+    return () => {
+      live = false;
+    };
+  }, [aiSetup]);
 
   const reply = loaded.status === 'loaded' ? loaded.reply : null;
   const versionNumber = reply?.version.version ?? version;
@@ -556,7 +614,17 @@ export function ReviewDocumentsScreen({ auditId, version, fetchImpl }: ReviewDoc
   };
 
   return (
-    <div className="mx-auto max-w-[64rem] px-4 py-10 sm:px-6 sm:py-14">
+    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
+      <p className="mb-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+        <Link to={PATHS.audit(auditId)} className="btn-link min-h-[44px]">
+          Back to this Website Audit
+        </Link>
+        {versionNumber !== undefined && (
+          <Link to={PATHS.auditExport(auditId, versionNumber)} className="btn-link min-h-[44px]">
+            Export the Audit Documents
+          </Link>
+        )}
+      </p>
       <FocusHeading className="mb-2 break-words text-question font-bold">Review the Audit Documents</FocusHeading>
       <p className="mb-6 max-w-prose text-ink-soft">
         Change the text of Sections and findings, remove pages, and pick redesign or repair before you export. Edits
@@ -581,6 +649,8 @@ export function ReviewDocumentsScreen({ auditId, version, fetchImpl }: ReviewDoc
             setDraft(next);
             setMessage(null);
           }}
+          aiConfigured={aiConfigured}
+          fetchImpl={fetchImpl}
           onSelectPage={selectPage}
           onSave={() => void save()}
           onDiscard={() => {

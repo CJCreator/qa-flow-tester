@@ -4,6 +4,7 @@ import {
   auditPath,
   type AuditDocumentKind,
   type AuditExportQuery,
+  type AuditStatus,
   type ExportFormat,
   type OwnerAuditQuery,
   type PitchQuery,
@@ -96,4 +97,94 @@ export function pitchUrl(auditId: string, choice: PitchChoice, version?: number)
 export function ownerAuditUrl(auditId: string, choice: OwnerAuditChoice, version?: number): string {
   const query: OwnerAuditQuery = { format: choice.format, language: choice.language, version };
   return withQuery(auditPath(AUDIT_API.owner.path, { id: auditId }), { ...query });
+}
+
+// ---------------------------------------------------------------------------------------------------
+// Saving a file (T-70)
+// ---------------------------------------------------------------------------------------------------
+
+export type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
+
+export type DownloadOutcome = { ok: true; fileName: string; blob: Blob } | { ok: false; message: string };
+
+const NOT_ANSWERING = 'The tool is not answering. Make sure it is still open in its terminal, then try again.';
+const DOWNLOAD_FAILED = 'The file could not be made. Try again.';
+
+/** Which of the three downloads. */
+export type DownloadKind = 'documents' | 'pitch' | 'owner';
+
+/** A sensible file name for when the reply names none. */
+export function fallbackFileName(kind: DownloadKind, format: ExportFormat): string {
+  const base = kind === 'documents' ? 'audit-documents' : kind === 'pitch' ? 'pitch-glimpse' : 'owner-audit';
+  return `${base}.${format === 'bundle' ? 'zip' : format}`;
+}
+
+/** The file name of a Content-Disposition header, with no folder part; the fallback when it has none. */
+export function fileNameFrom(disposition: string | null, fallback: string): string {
+  if (!disposition) return fallback;
+  let name: string | undefined;
+  const star = disposition.match(/filename\*\s*=\s*(?:UTF-8|utf-8)?''([^;]+)/);
+  if (star) {
+    try {
+      name = decodeURIComponent(star[1]!.trim());
+    } catch {
+      name = undefined;
+    }
+  }
+  if (!name) {
+    const plain = disposition.match(/filename\s*=\s*(?:"([^"]*)"|([^;]+))/);
+    name = (plain?.[1] ?? plain?.[2])?.trim();
+  }
+  const clean = name?.split(/[\\/]/).pop()?.trim();
+  return clean ? clean : fallback;
+}
+
+/** The reason an export cannot start for a version with this status; null when it can. */
+export function exportBlockedReason(status: AuditStatus | undefined): string | null {
+  if (status === 'running') return 'This version is still running. Download it when it has finished.';
+  if (status === 'failed') return 'This version did not finish, so there is nothing to download.';
+  return null;
+}
+
+/** Fetches one download. A non-OK JSON reply becomes the runner's own message; nothing is saved then. */
+export async function fetchDownload(
+  url: string,
+  fallbackName: string,
+  fetchImpl: Fetch = fetch
+): Promise<DownloadOutcome> {
+  let res: Response;
+  try {
+    res = await fetchImpl(url, { method: 'GET' });
+  } catch {
+    return { ok: false, message: NOT_ANSWERING };
+  }
+  if (!res.ok) {
+    let message = DOWNLOAD_FAILED;
+    try {
+      const body: unknown = await res.json();
+      const text = body !== null && typeof body === 'object' ? (body as { error?: unknown }).error : undefined;
+      if (typeof text === 'string' && text.trim() !== '') message = text.trim();
+    } catch {
+      // not JSON: the fixed sentence
+    }
+    return { ok: false, message };
+  }
+  try {
+    const blob = await res.blob();
+    return { ok: true, blob, fileName: fileNameFrom(res.headers.get('Content-Disposition'), fallbackName) };
+  } catch {
+    return { ok: false, message: DOWNLOAD_FAILED };
+  }
+}
+
+/** Saves a blob through a temporary link, then frees the object URL. */
+export function saveBlob(blob: Blob, fileName: string): void {
+  const href = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = href;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(href);
 }

@@ -68,6 +68,7 @@ import type {
   RunCap,
   ProviderLimits,
   FindingSeverity,
+  AiKeySource,
 } from '@qa/types';
 import { normalizePlanIntents, normalizeTestIntents } from '@qa/types';
 import {
@@ -957,6 +958,26 @@ export class RunnerServer {
     }
   }
 
+  /**
+   * T-68: a request with a verified Helper session and no access key may GET/HEAD the wizard page and assets
+   * (any non-`/api/` path; serveUi answers only files in its build, else 404) and GET /api/runner/status.
+   * A cookie that is merely present is not enough: `session` checks its signature, expiry and account id.
+   */
+  private helperMayLoadWizard(req: http.IncomingMessage, pathname: string): boolean {
+    const method = req.method ?? 'GET';
+    const wizardPath =
+      (pathname === '/api/runner/status' && method === 'GET') ||
+      (!pathname.startsWith('/api/') && (method === 'GET' || method === 'HEAD'));
+    // The path is checked first, so the session cookie is only verified for requests that could pass.
+    return wizardPath && this.isKeylessHelper(req);
+  }
+
+  /** A verified Helper session on a copy with an access key, and the request does not carry that key. */
+  private isKeylessHelper(req: http.IncomingMessage): boolean {
+    if (!this.accessToken || !this.helperAccess || this.carriesAccessKey(req)) return false;
+    return !!this.helperAccess.session(req);
+  }
+
   private grantAccess(req: http.IncomingMessage, res: http.ServerResponse, url: URL): boolean {
     const key = this.accessToken;
     if (!key) return true;
@@ -1075,7 +1096,12 @@ export class RunnerServer {
               return;
             }
           }
-          if ((!matched || matched.route.access === 'owner') && !this.grantAccess(req, res, url)) return;
+          // A verified Helper session (T-68, ADR 0037 D-005) may load the wizard page and its assets and ask the
+          // reduced status; it passes nothing else here, so every other unmatched or owner path keeps the gate.
+          const helperLoadsWizard =
+            !matched && !url.searchParams.has('access') && this.helperMayLoadWizard(req, pathname);
+          if ((!matched || matched.route.access === 'owner') && !helperLoadsWizard && !this.grantAccess(req, res, url))
+            return;
           if (matched) {
             // Closed by default: a row without an access level, or one this caller doesn't meet, is refused.
             const granted = await this.helperPermissionsFor(req, matched.route, matched.params);
@@ -1198,6 +1224,23 @@ export class RunnerServer {
 
           // GET /api/runner/status
           if (pathname === '/api/runner/status' && req.method === 'GET') {
+            // A Helper without the access key learns only that the copy is up: nothing about any run (T-68).
+            if (this.isKeylessHelper(req)) {
+              this.sendJson(res, 200, {
+                isRunning: false,
+                hasReport: false,
+                lastRunError: null,
+                lastErrorCode: null,
+                phase: 'idle',
+                hasPlan: false,
+                runId: null,
+                targetUrl: null,
+                reportRunId: null,
+                beta: this.beta,
+                helper: true,
+              });
+              return;
+            }
             await this.ensurePlanLoaded();
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(
@@ -1473,7 +1516,8 @@ export class RunnerServer {
   private async betaScope(req: http.IncomingMessage, res: http.ServerResponse, pathname: string): Promise<boolean> {
     const method = req.method;
     if (pathname === '/api/runner/status' && method === 'GET') {
-      if (this.isMine(this.currentRunId)) return false;
+      // A Helper's reduced status is answered by the status handler (it carries `helper: true`).
+      if (this.isKeylessHelper(req) || this.isMine(this.currentRunId)) return false;
       const busy = this.checkupStartRefused;
       this.sendJson(res, 200, {
         isRunning: false,
@@ -2723,16 +2767,32 @@ export class RunnerServer {
     text?: string;
     vision?: string;
     chosenBy?: 'person';
+    keySource?: AiKeySource;
   }> {
     const settings = await this.readAiModels();
     const provider = settings.provider ?? 'openrouter';
     const key = await this.storedKey(provider);
+    // Where that key is kept (never the key): the resolver's own answer for the same provider.
+    const keySource = key && provider !== 'mock' ? await this.storedKeySource(provider) : undefined;
     // Paid providers' models all read screenshots: the text model does the visual review too.
     const text =
       settings.text ??
       (provider === 'openrouter' ? undefined : DEFAULT_MODELS[provider as Exclude<AIProviderType, 'mock'>]);
     const vision = settings.vision ?? (provider === 'openrouter' ? undefined : text);
-    return { provider, key, text: text ?? undefined, vision: vision ?? undefined, chosenBy: settings.chosenBy };
+    return {
+      provider,
+      key,
+      text: text ?? undefined,
+      vision: vision ?? undefined,
+      chosenBy: settings.chosenBy,
+      keySource,
+    };
+  }
+
+  /** Where the saved key for a provider is kept, or undefined. */
+  private async storedKeySource(provider: AIProviderType): Promise<AiKeySource | undefined> {
+    const resolved = await this.keyResolver.resolveKey(provider);
+    return resolved?.provider === provider ? resolved.source : undefined;
   }
 
   private async handleAiSettings(route: string, req: http.IncomingMessage, res: http.ServerResponse): Promise<boolean> {
@@ -2746,6 +2806,7 @@ export class RunnerServer {
         visionModel: setup.vision ?? null,
         chosenBy: setup.chosenBy ?? 'auto',
         providers: AI_PROVIDERS,
+        ...(setup.keySource ? { keySource: setup.keySource } : {}),
       });
       return true;
     }

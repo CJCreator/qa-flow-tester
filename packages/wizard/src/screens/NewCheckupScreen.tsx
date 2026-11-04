@@ -541,7 +541,7 @@ export function NewCheckupScreen({
 
                 {searchChecksOn && (
                   <details className="mt-3 border-t border-rule pt-3 text-sm" open>
-                    <summary className="cursor-pointer text-xs font-semibold text-accent hover:underline">
+                    <summary className="cursor-pointer text-xs font-semibold text-stamp hover:underline">
                       Choose which to check
                     </summary>
                     <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -830,8 +830,9 @@ export function NewCheckupScreen({
           <div className="border-t border-rule p-5">
             <p className="mb-4 text-sm text-ink-soft">
               Without it, fixed rules write the plan and you can start now. With it, the AI writes a plan that fits your
-              site. It runs on OpenRouter’s free models. What you send may be kept and used to learn (Settings
-              explains). You only do this once, and anything you typed above is kept.
+              site. It uses your own AI key, and Settings lets you pick the service.
+              {' What you send may be kept and used to learn when the key is a free one (Settings explains). '}
+              You only do this once, and anything you typed above is kept.
             </p>
             <KeyField
               onSaved={(model) => {

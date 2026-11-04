@@ -1,4 +1,5 @@
 import type { AuditProgressEvent, AuditStage } from '@qa/types/src/browser.js';
+import { count } from '../../../lib/format';
 
 export type AuditProgressSnapshot = Extract<AuditProgressEvent, { type: 'progress' }>;
 
@@ -46,10 +47,6 @@ export function applyAuditEvent(
   if (event.type === 'progress') return { status: 'working', progress: event };
   if (event.type === 'done') return { status: 'done', progress: last };
   return { status: 'stopped', progress: last, message: stoppedText(event) };
-}
-
-function plural(n: number, one: string, many: string): string {
-  return `${n} ${n === 1 ? one : many}`;
 }
 
 /**
@@ -142,8 +139,8 @@ export function AuditProgress({
 
       {state.status === 'done' && (
         <p className="mt-6 rounded-md border-l-4 border-stamp bg-panel px-4 py-3 font-semibold text-ink">
-          The Website Audit is done: {plural(progress?.pagesRecorded ?? 0, 'page', 'pages')} recorded,{' '}
-          {plural(progress?.pagesSkipped ?? 0, 'Skipped Page', 'Skipped Pages')}. A Skipped Page was not checked.
+          The Website Audit is done: {count(progress?.pagesRecorded ?? 0, 'page', 'pages')} recorded,{' '}
+          {count(progress?.pagesSkipped ?? 0, 'Skipped Page', 'Skipped Pages')}. A Skipped Page was not checked.
         </p>
       )}
 

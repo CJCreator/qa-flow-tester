@@ -169,6 +169,9 @@ export interface PlanPatchBody {
   intentsOff?: PlanIntent[];
 }
 
+/** Where the AI key in use is kept (ADR 0034); mirrors `ResolvedKey['source']` in core. */
+export type AiKeySource = 'cli' | 'keychain' | 'byok_file' | 'env';
+
 /**
  * `GET /api/runner/status` reply: exactly the fields the status branch writes. A copy shared with other
  * people adds its own fields on top of this (the wizard's `busy`).
@@ -184,6 +187,11 @@ export interface RunnerStatusReply {
   targetUrl: string | null;
   reportRunId: string | null;
   beta: boolean;
+  /**
+   * True when the caller is a signed-in Helper without the access key (ADR 0037, D-005). A Helper's reply
+   * carries no run details: phase 'idle', every run field null or false.
+   */
+  helper?: boolean;
 }
 
 /**

@@ -37,6 +37,7 @@ How the product works and how to use it. For exact settings see [CONFIGURATION.m
    - [Workflow A: The Release Check-up Wizard](#workflow-a-the-release-check-up-wizard)
    - [Workflow B: A Check-up from GitHub Actions](#workflow-b-a-check-up-from-github-actions)
    - [Workflow C: Competitive Flow Benchmarking](#workflow-c-competitive-flow-benchmarking)
+   - [Workflow D: The Website Audit](#workflow-d-the-website-audit)
 7. [Best Practices & Operational Excellence](#7-best-practices--operational-excellence)
 8. [Troubleshooting & Frequently Asked Questions (FAQ)](#8-troubleshooting--frequently-asked-questions-faq)
 9. [Glossary of Terms](#9-glossary-of-terms)
@@ -397,6 +398,15 @@ Open the Benchmark screen, enter your own address and a competitor's public addr
 - A friction comparison table.
 - A scorecard with the Friction Index and pattern parity results.
 - AI recommendations for closing the gaps.
+
+### Workflow D: The Website Audit
+
+The Website Audit is a separate entry point beside the Check-up, for looking at someone else's public website (decision: [ADR 0033](adr/0033-website-audit-entry-point.md)). The home page links to it (`/audits/new`).
+
+- It reads a public website only. It never fills in forms, never signs in, and leaves payment areas alone. Local and private addresses are refused.
+- It has no Plan and no Plan Review, and it never gives a release answer: there is no "Ready to release" for a site that is not yours.
+- It writes Audit Documents in English or Tamil, picked per export. Wording names what was checked, how each number was measured, and what was not checked.
+- It is free for now. It uses your own AI key, set in Settings. The audit's own settings are under Settings, "Website Audit settings".
 
 ---
 
