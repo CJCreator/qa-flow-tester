@@ -1,0 +1,40 @@
+{
+  "evidence_id": "EV-0297",
+  "check_id": "CHK-QA-702-TYPECHECK",
+  "name": "typecheck runner tests",
+  "category": "typecheck",
+  "requirement_ids": [
+    "REQ-051"
+  ],
+  "task_ids": [
+    "QA-702"
+  ],
+  "command": "pnpm exec tsc -p packages/runner/tests/tsconfig.typecheck.json --noEmit",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "FAIL",
+  "exit_code": 2,
+  "timed_out": false,
+  "actual_result": "exit code 2; packages/runner/tests/audit-documents-flow.test.ts(211,30): error TS7006: Parameter 'r' implicitly has an 'any' type. · packages/runner/tests/website-audit-e2e.test.ts(33,20): error TS2307: Cannot find module 'playwright' or its corresponding type declarations.",
+  "failure_details": "packages/runner/tests/audit-documents-flow.test.ts(31,116): error TS2307: Cannot find module 'playwright' or its corresponding type declarations.\npackages/runner/tests/audit-documents-flow.test.ts(211,30): error TS7006: Parameter 'r' implicitly has an 'any' type.\npackages/runner/tests/website-audit-e2e.test.ts(33,20): error TS2307: Cannot find module 'playwright' or its corresponding type declarations.",
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0297.log",
+  "log_sha256": "9f2428630c4c09efa98173a8279a845113918b7a2c86d38ca2b04a6cb79bf433",
+  "started_at": "2026-11-04T03:45:24.428Z",
+  "finished_at": "2026-11-04T03:47:13.246Z",
+  "duration_ms": 108818,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:ae82113bc98d63de43d0954c20f89115c91c08a1222d3d6fc058ccbe621d2823",
+  "concurrent_tasks": [],
+  "paths": [
+    "fixtures/test-app/server.d.ts",
+    "packages/checkers/src/**",
+    "packages/core/src/**",
+    "packages/runner/src/**",
+    "packages/runner/tests/**",
+    "packages/types/src/**",
+    "tsconfig.base.json",
+    "tsconfig.test.json"
+  ],
+  "paths_fingerprint": "git-paths:2175f056ac5e80d6f451a37e4e00dcda111757c0cca382d3126217174a9e0fad"
+}

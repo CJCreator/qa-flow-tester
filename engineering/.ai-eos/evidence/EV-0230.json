@@ -1,0 +1,57 @@
+{
+  "evidence_id": "EV-0230",
+  "check_id": "CHK-QA-500-FLOW",
+  "name": "Audit Documents end-to-end flow (runner + Chromium)",
+  "category": "integration",
+  "requirement_ids": [
+    "REQ-018",
+    "REQ-019",
+    "REQ-020",
+    "REQ-021",
+    "REQ-022",
+    "REQ-025",
+    "REQ-026",
+    "REQ-027"
+  ],
+  "task_ids": [
+    "QA-500"
+  ],
+  "command": "pnpm exec vitest run packages/runner/tests/audit-documents-flow.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0230.log",
+  "log_sha256": "66b7bf43e79f846baee31fe3cd2ddf214648ab841a2e1f8b4bf5fb6eab5d35b1",
+  "started_at": "2026-11-03T18:27:08.578Z",
+  "finished_at": "2026-11-03T18:27:48.324Z",
+  "duration_ms": 39746,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:61bbf8d49871e08f1e9340121795fe12d667325ac97df535c4163229b004529e",
+  "concurrent_tasks": [
+    "QA-195",
+    "QA-600"
+  ],
+  "paths": [
+    "packages/core/src/audit/**",
+    "packages/core/tests/helpers/audit-doc-fixture.ts",
+    "packages/runner/src/routes/audit-documents.ts",
+    "packages/runner/src/routes/audit-export.ts",
+    "packages/runner/src/routes/audit-settings.ts",
+    "packages/runner/src/routes/index.ts",
+    "packages/runner/src/server.ts",
+    "packages/runner/tests/audit-documents-flow.test.ts",
+    "packages/types/src/website-audit.ts"
+  ],
+  "paths_fingerprint": "git-paths:5c9d60fbba80d537429b48a0cc77a931e6329883de21ebfb8ddd0135d1eaaba8",
+  "scoped_fingerprint": "git:490ad3b84f8de0aad9e4dc79a43b47553e7c34d91ef127a4c2bbf5c84a01a11a",
+  "excluded_owned": [
+    "packages/runner/tests/audit-persistence-integration.test.ts",
+    "packages/runner/tests/audit-preview-browser.test.ts",
+    "packages/runner/tests/website-audit-e2e.test.ts"
+  ]
+}

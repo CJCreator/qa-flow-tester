@@ -1,0 +1,39 @@
+{
+  "evidence_id": "EV-0224",
+  "check_id": "CHK-BE-102-SERVER",
+  "name": "runner dispatch enforces access and beta policy (RunnerServer)",
+  "category": "integration",
+  "requirement_ids": [
+    "REQ-048"
+  ],
+  "task_ids": [
+    "BE-102"
+  ],
+  "command": "pnpm exec vitest run packages/runner/tests/route-access-server.test.ts packages/runner/tests/access-token.test.ts packages/runner/tests/beta.test.ts packages/runner/tests/route-inventory.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  4 passed (4)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0224.log",
+  "log_sha256": "f71706cf6bb47180c06e95364b7ae8b25d66d1947e4ffae09f18c021e1f6d6df",
+  "started_at": "2026-11-03T18:10:58.795Z",
+  "finished_at": "2026-11-03T18:11:35.273Z",
+  "duration_ms": 36478,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:cc29640ed067fd362189f09316ca48db2ef3586308d299d14390fb5afb835156",
+  "concurrent_tasks": [],
+  "paths": [
+    "packages/runner/src/beta.ts",
+    "packages/runner/src/routes/**",
+    "packages/runner/src/server.ts",
+    "packages/runner/tests/access-token.test.ts",
+    "packages/runner/tests/beta.test.ts",
+    "packages/runner/tests/route-access-server.test.ts",
+    "packages/runner/tests/route-inventory.test.ts"
+  ],
+  "paths_fingerprint": "git-paths:04a344ddbd36497a4a04fcc81d6d9da1383a6965877412491b4b4bf21b691fb6"
+}

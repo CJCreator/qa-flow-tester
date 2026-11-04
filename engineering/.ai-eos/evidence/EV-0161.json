@@ -1,0 +1,46 @@
+{
+  "evidence_id": "EV-0161",
+  "check_id": "CHK-BE-604-UNIT",
+  "name": "Shared Link route tests",
+  "category": "security",
+  "requirement_ids": [
+    "REQ-024",
+    "REQ-023"
+  ],
+  "task_ids": [
+    "BE-604"
+  ],
+  "command": "pnpm exec vitest run packages/runner/tests/audit-share-routes.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0161.log",
+  "log_sha256": "ebba537a12e4eb0f0f9a70c5ec9249c97a412562745de03757aaf3d706c2a584",
+  "started_at": "2026-11-03T12:03:50.212Z",
+  "finished_at": "2026-11-03T12:04:10.818Z",
+  "duration_ms": 20606,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:203d716ed53f8279ceae496ad6b7e7b0ce590977f14d46b6adf2761043ff9e40",
+  "concurrent_tasks": [
+    "BE-607"
+  ],
+  "paths": [
+    "packages/core/src/audit/store/**",
+    "packages/runner/src/routes/audit-share.ts",
+    "packages/runner/src/routes/route.ts",
+    "packages/runner/tests/audit-share-routes.test.ts",
+    "packages/types/src/website-audit.ts"
+  ],
+  "paths_fingerprint": "git-paths:ea81a3119a96c4cc056b3b459e9171a0a3b9e854fb23e021376f9c6edaaca2b5",
+  "scoped_fingerprint": "git:203d716ed53f8279ceae496ad6b7e7b0ce590977f14d46b6adf2761043ff9e40",
+  "excluded_owned": [
+    ".github/workflows/deploy.yml",
+    "docs/DEPLOYMENT.md",
+    "packages/runner/tests/deploy-audit-store.test.ts"
+  ]
+}

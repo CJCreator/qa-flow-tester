@@ -1,0 +1,87 @@
+{
+  "task_id": "DOC-001",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-018",
+    "REQ-026",
+    "REQ-002",
+    "REQ-036"
+  ],
+  "files_inspected": [
+    "CONTEXT.md",
+    "engineering/requirements.md",
+    "engineering/decisions.md",
+    "engineering/plan.md",
+    "engineering/architecture.md",
+    "engineering/risks.md",
+    "docs/adr/0007-competitive-reference-flow-benchmarking.md",
+    "docs/adr/0010-one-app-with-details-on-demand.md",
+    "docs/adr/0015-live-site-request-rules.md",
+    "docs/adr/0018-claim-wording.md",
+    "docs/adr/0029-one-ready-to-release-rule.md",
+    "docs/adr/0030-passive-vs-active-security-boundary.md",
+    "docs/adr/0031-every-outbound-request-uses-pinned-resolver.md",
+    "docs/adr/0032-google-cloud-only-hosting.md",
+    "docs/README.md"
+  ],
+  "files_created": [
+    "docs/adr/0033-website-audit-entry-point.md"
+  ],
+  "files_modified": [
+    "CONTEXT.md"
+  ],
+  "implementation_summary": "CONTEXT.md: Skipped Page gains depth-limit, excluded and payment with one-line meanings (and 'never a clean result'); ten new terms with _Avoid_ lists (Website Audit, Page Content, Section, Audit Document naming Structure/Content/Findings/Improvement Roadmap/Proposal, Improvement Roadmap explicitly never a Plan, Pitch Glimpse, Shared Link, Owner Audit, Shortlist, Helper), grounded in DEC-001/005/006/007/009 and answers Q-01, Q-05, Q-09, Q-10, Q-11, Q-13, Q-14, Q-15, Q-17, Q-19, Q-22, Q-23, Q-30, Q-31, Q-34, Q-35, Q-37. New ADR 0033 (Accepted, 2026-10-30) records DEC-001: separate entry point on the shared engine beside the Check-up, read-only by construction, no release verdict, ADR 0018 wording, India-wide market, free tier; alternatives and consequences; links ADRs 0007, 0010, 0018, 0029, 0030 (plus 0015, 0027, 0031, 0032).",
+  "tests_executed": [
+    {
+      "name": "Each new term has an _Avoid_ line before the next term",
+      "command": "grep/awk loop over the ten new term headings in CONTEXT.md",
+      "result": "passed",
+      "output_excerpt": "all 10 new terms: avoid line = def+2 < next term; Skipped Page def@183 avoid@189 next@191"
+    },
+    {
+      "name": "Skipped Page reasons, five Audit Document names, roadmap never called a Plan",
+      "command": "Grep tool on CONTEXT.md for the reason bullets, document names and Plan",
+      "result": "passed",
+      "output_excerpt": "185-187 depth-limit/excluded/payment bullets; line 332 has Structure, Content, Findings, Improvement Roadmap, Proposal; roadmap line 336 uses Plan only in 'It is never called a Plan', 337 is _Avoid_"
+    },
+    {
+      "name": "ADR 0033 status, DEC-001, required links resolve",
+      "command": "grep Status, DEC-001 and link targets in docs/adr/0033-website-audit-entry-point.md",
+      "result": "passed",
+      "output_excerpt": "Status: Accepted, 2026-10-30; 9 link targets ok; 0007 0010 0018 0029 0030 linked"
+    },
+    {
+      "name": "ADR 0018 forbidden words in new text",
+      "command": "grep -i compliant|compliance|certified|secure|safe|passes wcag|fully accessible on ADR 0033 and the CONTEXT.md additions",
+      "result": "passed",
+      "output_excerpt": "ADR: only 'Safe Interaction Mode' (glossary term) and 'claims no compliance' (denial); CONTEXT additions: no hits"
+    }
+  ],
+  "tests_proposed": [
+    "Developer read-through of the CONTEXT.md diff and ADR 0033 against DEC-001 and engineering/requirements.md (the approved waiver)",
+    "BE-002: assert RouteSkipReason contains exactly 'depth-limit', 'excluded', 'payment' as named in CONTEXT.md"
+  ],
+  "evidence": [
+    "CONTEXT.md:183-189 Skipped Page with depth-limit, excluded, payment meanings",
+    "CONTEXT.md:319-357 new Website Audit terms with _Avoid_ lists",
+    "CONTEXT.md:332 Audit Document names Structure, Content, Findings, Improvement Roadmap, Proposal",
+    "CONTEXT.md:336-337 Improvement Roadmap: 'It is never called a Plan'; _Avoid_: Plan, enhancement plan",
+    "docs/adr/0033-website-audit-entry-point.md:3 Status: Accepted, DEC-001, links 0007/0010/0018/0029/0030",
+    "git diff --stat CONTEXT.md: 45 insertions, 1 deletion"
+  ],
+  "blockers": [],
+  "risks": [
+    "Glossary choice: audited sites are 'website'/'Website Audit', not 'App'; REQ-023/028/033 wording says 'saved App'/'per-App'. Helper access is defined per Website Audit (Q-15, FE-008). Reviewer to confirm.",
+    "ADR 0033 states constraints taken from answered questions, not DEC-001's literal text: no releaseVerdict call, Active check consent never read on the audit path, run slot shared both ways, public-only addresses, language and market details.",
+    "'excluded' covers both an exclude-path match and missing every include path; BE-002/BE-003 must implement the same single reason.",
+    "Skipped Page entry now contains a bullet list with a blank line before _Avoid_; no code parses CONTEXT.md.",
+    "docs/README.md:11 ADR index is stale (says latest is 0031); outside ownership."
+  ],
+  "handoff": "Terms for later tasks: Website Audit, Page Content, Section, Audit Document (Structure, Content, Findings, Improvement Roadmap, Proposal), Improvement Roadmap (never 'Plan'), Pitch Glimpse, Shared Link, Owner Audit, Shortlist, Helper. Skipped Page reason strings are exactly depth-limit, excluded, payment (BE-002 RouteSkipReason, BE-003 spider). Findings groups are technical/marketing/content and are not Sections. DOC-002 should update docs/README.md's ADR index to include 0032 and 0033.",
+  "_captured": {
+    "at": "2026-10-31T10:17:58.152Z",
+    "agent_id": "afb81ef630d294fd4",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

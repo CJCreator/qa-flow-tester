@@ -1,0 +1,26 @@
+# AI-EOS evidence EV-0009
+check: CHK-BE-010-UNIT (key encryption tests)
+command: pnpm exec vitest run packages/core/tests/key-resolver-encryption.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-10-31T12:21:47.130Z
+finished: 2026-10-31T12:21:55.309Z (8179 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ packages/core/tests/key-resolver-encryption.test.ts (16 tests) 1074ms
+   ✓ KeyResolver encrypted fallback file and service keys > with QA_KEYS_ENCRYPTION_KEY set, encrypts with that secret and needs it to read 370ms
+
+ Test Files  1 passed (1)
+      Tests  16 passed (16)
+   Start at  17:51:52
+   Duration  2.56s (transform 260ms, setup 0ms, collect 307ms, tests 1.07s, environment 1ms, prepare 528ms)
+
+
+
+## stderr
+

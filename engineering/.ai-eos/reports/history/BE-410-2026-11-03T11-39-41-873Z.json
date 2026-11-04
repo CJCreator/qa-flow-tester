@@ -1,0 +1,78 @@
+{
+  "task_id": "BE-410",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-030",
+    "REQ-039",
+    "REQ-011"
+  ],
+  "files_inspected": [
+    "packages/runner/src/routes/route.ts",
+    "packages/runner/src/routes/body.ts",
+    "packages/runner/src/routes/index.ts",
+    "packages/runner/src/routes/plan.ts",
+    "packages/types/src/ai.ts",
+    "packages/types/src/website-audit.ts",
+    "packages/core/src/audit/ai/rewrite-store.ts",
+    "packages/core/src/audit/ai/rewrite.ts",
+    "packages/core/src/audit/ai/stage-ai.ts",
+    "packages/core/src/ai/timeout.ts",
+    "packages/runner/tests/route-access.test.ts",
+    "vitest.config.ts"
+  ],
+  "files_created": [
+    "packages/runner/src/routes/audit-ai.ts",
+    "packages/runner/tests/audit-ai-routes.test.ts"
+  ],
+  "files_modified": [],
+  "implementation_summary": "Added createAuditAiRoutes(deps): Route[] with six rows (AUDIT_AI_API.getModels/putModels; AUDIT_API.listRewrites/approveRewrite/runRewrite/acceptRewrite), each declaring its contract access level. All dependencies are injected (readModels, writeModels, aiDefaults, hasAiKey, findVersion, rewrites, loadSection, applyRewriteEdit, overlapWords); the module imports only @qa/types and the route helpers. PUT models validates with validateAuditAiModelsUpdate (400 ERR_INVALID_REQUEST with per-stage `errors`), merges with null resets over known stages only, and replies with AuditAiModelsReply using modelForStage. runRewrite checks body, then version (404/409 running), then approval (409 ERR_NOT_APPROVED), then hasAiKey (409 ERR_NO_AI_KEY) before any AI call, and passes an abort signal tied to the caller disconnecting. acceptRewrite answers 422 ERR_OVERLAP with overlaps and applies no edit, or applies clean copy as a SectionEdit by:'rewrite'. Errors are fixed wording; unexpected errors give a plain 500.",
+  "tests_executed": [
+    {
+      "name": "audit AI runner routes",
+      "command": "pnpm exec vitest run packages/runner/tests/audit-ai-routes.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 14 passed (14)"
+    },
+    {
+      "name": "runner source type-check",
+      "command": "pnpm exec tsc -p packages/runner/tsconfig.json --noEmit",
+      "result": "passed",
+      "output_excerpt": "no errors reported"
+    },
+    {
+      "name": "runner tests type-check (audit-ai filter)",
+      "command": "pnpm exec tsc -p packages/runner/tests/tsconfig.typecheck.json --noEmit | grep audit-ai",
+      "result": "passed",
+      "output_excerpt": "no audit-ai errors"
+    }
+  ],
+  "tests_proposed": [
+    "After BE-190 registers the rows: a server-level test that a Helper with only 'edit' gets 401 on POST /api/audits/:id/rewrite and that GET/PUT /api/audit-ai/models need the access key.",
+    "A test that a client disconnect during runRewrite aborts the AI request."
+  ],
+  "evidence": [
+    "packages/runner/src/routes/audit-ai.ts: createAuditAiRoutes",
+    "packages/runner/tests/audit-ai-routes.test.ts: 14/14 passed",
+    "test 'refuses a Section with no recorded approval with 409 ERR_NOT_APPROVED and calls no AI; runs after approve' (REQ-030 AC-1)",
+    "test 'without a saved AI key answers 409 ERR_NO_AI_KEY and calls no AI' (REQ-011 AC-2)",
+    "test 'copy sharing a run of rewriteOverlapWords words answers 422 ERR_OVERLAP...' and \"clean copy is applied as an edit marked 'rewrite'\" (REQ-030 AC-2)",
+    "tests 'PUT saves a model per stage...' and 'an invalid body answers 400 ERR_INVALID_REQUEST...' (REQ-039)",
+    "test 'each row carries the access of its AUDIT_API / AUDIT_AI_API entry'",
+    "tests 'a provider failure answers without the key or the provider error text' and 'an unexpected error answers a plain 500 with no internals'"
+  ],
+  "blockers": [],
+  "risks": [
+    "Contract: AI failures (budget spent, provider failure, claim words) answer 502 with code 'ERR_AI_FAILED', which is not in AUDIT_ERROR_CODES; consider adding it to @qa/types or choose another mapping.",
+    "Field messages for rewrite and models bodies go under `errors` (as FE-400 reads), not AuditErrorReply.fields, which is typed for audit-start errors only.",
+    "Extra injected dependency findVersion(auditId, version?) -> {version,status,language}|null beyond the task's list; BE-190 must supply it.",
+    "Accept: the store saves acceptedAt before applyRewriteEdit runs; if the overlay write fails, the state says accepted without an edit. Accepting again is safe.",
+    "No-key refusal comes only after the approval check: a Section that is not approved gets ERR_NOT_APPROVED even when no key is saved."
+  ],
+  "handoff": "BE-190: register the rows by adding ...createAuditAiRoutes(deps) to the route table (shared registration line in packages/runner/src/routes/index.ts or server.ts). Wire rewrites(auditId, version) to the version's RewriteStore with run bound to the AI: run: (i, d) => store.run(i, { ...d, resolveAi }); list/approve/accept delegate directly. AuditRewriteOps uses property syntax so a bare RewriteStore will not compile in its place. Also supply findVersion (null when the audit or version does not exist), loadSection (PageContent|null), applyRewriteEdit (returns the EditOverlay), overlapWords (AuditSettings.rewriteOverlapWords), hasAiKey (boolean only), readModels/writeModels and aiDefaults ({text, vision}).",
+  "_captured": {
+    "at": "2026-11-03T11:39:41.873Z",
+    "agent_id": "af2eac09bc9064ac1",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

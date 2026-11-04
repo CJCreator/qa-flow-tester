@@ -1,0 +1,57 @@
+{
+  "task_id": "BE-400",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-039",
+    "REQ-011"
+  ],
+  "files_inspected": [
+    "packages/types/src/ai.ts",
+    "packages/types/src/website-audit.ts",
+    "packages/types/src/browser.ts",
+    "packages/types/src/index.ts",
+    "packages/types/tests/browser-entry.test.ts"
+  ],
+  "files_created": [
+    "packages/types/tests/audit-ai-contract.test.ts"
+  ],
+  "files_modified": [
+    "packages/types/src/ai.ts"
+  ],
+  "implementation_summary": "Added signal and timeoutMs to AICompletionOptions. Added AUDIT_AI_STAGES (satisfies readonly AIStage[]), AuditAiStage, AuditAiModels, AuditAiModelsReply, AuditAiModelsUpdate, AuditAiModelsErrors, AuditAiModelsCheck, AUDIT_AI_MODEL_ID_MAX=200, isAuditAiStage, validateAuditAiModelsUpdate (ok/errors shape like validateAuditStartBody; refuses unknown stages, empty or non-string ids, ids over 200 chars, C0/DEL/C1 control characters; null resets a stage; a __proto__ key is stored as a plain field) and AUDIT_AI_API (GET/PUT /api/audit-ai/models, access owner, satisfies AuditEndpoint via a type-only import from ./website-audit.js). No Node built-in imports.",
+  "tests_executed": [
+    {
+      "name": "CHK-BE-400-UNIT",
+      "command": "pnpm exec vitest run packages/types/tests/audit-ai-contract.test.ts packages/types/tests/browser-entry.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 2 passed (2); Tests 16 passed (16)"
+    },
+    {
+      "name": "types type-check",
+      "command": "pnpm exec tsc --noEmit -p packages/types",
+      "result": "passed",
+      "output_excerpt": "no diagnostics"
+    }
+  ],
+  "tests_proposed": [
+    "Runner integration test: PUT /api/audit-ai/models refuses Helpers and requests without the access key, and returns validator errors as a 400."
+  ],
+  "evidence": [
+    "packages/types/src/ai.ts (AICompletionOptions signal/timeoutMs, AUDIT_AI_STAGES, validateAuditAiModelsUpdate, AUDIT_AI_API)",
+    "packages/types/tests/audit-ai-contract.test.ts",
+    "vitest: 16 passed"
+  ],
+  "blockers": [],
+  "risks": [
+    "AUDIT_AI_API is separate from AUDIT_API, so the typed AuditApi route map in website-audit.ts does not cover these routes; the runner must register them and enforce owner access when it reads or writes the settings.",
+    "AI Providers do not use signal/timeoutMs yet; until they do, RISK-005 is not mitigated.",
+    "The validator has no cap on the number of keys; it relies on the runner's request-size limit."
+  ],
+  "handoff": "Import from @qa/types (or @qa/types/src/ai.js in the wizard; ai.ts is not re-exported from browser.ts). Runner: serve AUDIT_AI_API.getModels/putModels as owner only, validate PUT bodies with validateAuditAiModelsUpdate (on failure return 400 with errors per field; on success a null value resets that stage to its default), and build the reply's effective map with modelForStage(stage, models, defaults). Providers: pass options.signal and options.timeoutMs to fetch, combining them, for example with AbortSignal.any plus AbortSignal.timeout.",
+  "_captured": {
+    "at": "2026-11-03T07:05:12.789Z",
+    "agent_id": "aa3ebfd074e5deab4",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

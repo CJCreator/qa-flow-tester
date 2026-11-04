@@ -1,0 +1,44 @@
+# AI-EOS evidence EV-0010
+check: CHK-BE-011-UNIT (secret scanner tests)
+command: pnpm exec vitest run packages/runner/tests/scan-build-secrets.test.ts packages/runner/tests/scan-commit-secrets.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-10-31T12:21:56.313Z
+finished: 2026-10-31T12:22:19.000Z (22687 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ packages/runner/tests/scan-build-secrets.test.ts (9 tests) 1824ms
+   ✓ build secret scan: command line > scans every folder given and fails when any has a key 490ms
+   ✓ build secret scan: command line > exits 2 without a folder, on a missing folder and on an empty one, so a wrong path never passes 808ms
+ ✓ packages/runner/tests/scan-commit-secrets.test.ts (20 tests) 15841ms
+   ✓ commit secret scan: helpers > lists tracked and new files, never git-ignored ones 491ms
+   ✓ commit secret scan: command line > exits 2 without --aieos, with a missing scanner, and when the scanner fails 1268ms
+   ✓ commit secret scan: command line > copies only the commit set to the scanner, without allowlisted paths, and removes the copy 789ms
+   ✓ commit secret scan: command line > fails on fixtures when the repository has no gitleaks allowlist 861ms
+   ✓ commit secret scan: command line > with the stand-in scanner > passes a clean repository 759ms
+   ✓ commit secret scan: command line > with the stand-in scanner > fails on a planted key in a tracked file and prints rule, file and line, never the value 808ms
+   ✓ commit secret scan: command line > with the stand-in scanner > fails on a planted key in a new file git does not ignore 802ms
+   ✓ commit secret scan: command line > with the stand-in scanner > never reads git-ignored files and leaves out allowlisted paths 892ms
+   ✓ commit secret scan: command line > with the stand-in scanner > ignores {{...}} placeholders but not a real value for the same rule 1224ms
+   ✓ commit secret scan: command line > with the stand-in scanner > fails on an env file that would be committed 1364ms
+   ✓ commit secret scan: command line > with the AI-EOS scanner > passes a clean repository 875ms
+   ✓ commit secret scan: command line > with the AI-EOS scanner > fails on a planted key in a tracked file and prints rule, file and line, never the value 1038ms
+   ✓ commit secret scan: command line > with the AI-EOS scanner > fails on a planted key in a new file git does not ignore 945ms
+   ✓ commit secret scan: command line > with the AI-EOS scanner > never reads git-ignored files and leaves out allowlisted paths 979ms
+   ✓ commit secret scan: command line > with the AI-EOS scanner > ignores {{...}} placeholders but not a real value for the same rule 1776ms
+   ✓ commit secret scan: command line > with the AI-EOS scanner > fails on an env file that would be committed 932ms
+
+ Test Files  2 passed (2)
+      Tests  29 passed (29)
+   Start at  17:52:01
+   Duration  17.49s (transform 225ms, setup 0ms, collect 389ms, tests 17.66s, environment 2ms, prepare 1.09s)
+
+
+
+## stderr
+

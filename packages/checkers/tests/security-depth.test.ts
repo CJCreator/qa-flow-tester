@@ -6,7 +6,6 @@ import {
   findMissingSri,
   parseSecurityTxt,
   sameOriginGet,
-  defaultFetch,
   type FetchFn,
   type SecurityDepthContext,
 } from '../src/security-depth.js';
@@ -135,15 +134,6 @@ describe('source maps', () => {
     expect(await sameOriginGet(fetchFn, 'https://other.example/x', ORIGIN)).toBeNull();
     expect(await sameOriginGet(fetchFn, 'not a url', ORIGIN)).toBeNull();
     expect(fetchFn).not.toHaveBeenCalled();
-  });
-
-  it('does not follow redirects and uses a 3 s timeout', async () => {
-    const fetch = vi.fn().mockResolvedValue({ status: () => 200, headers: () => ({}), text: async () => '' });
-    const page = { context: () => ({ request: { fetch } }) } as unknown as Page;
-    await defaultFetch(page)(`${ORIGIN}/a.js`);
-    expect(fetch).toHaveBeenCalledWith(`${ORIGIN}/a.js`, { method: 'GET', timeout: 3000, maxRedirects: 0 });
-    // A page with no request API gives null instead of throwing.
-    expect(await defaultFetch({ context: () => ({}) } as unknown as Page)(`${ORIGIN}/a.js`)).toBeNull();
   });
 });
 
@@ -316,5 +306,36 @@ describe('checkPage', () => {
     const page = mockPage([], 'https://elsewhere.example/');
     expect(await new SecurityDepthChecker().checkPage(page, ctx(), fetchFn)).toEqual([]);
     expect(fetchFn).not.toHaveBeenCalled();
+  });
+
+  it('AC-5: with no FetchFn makes no request and reports security.txt and source maps as not checked, once per site', async () => {
+    // A page whose Playwright request API would be used throws, so any request attempt fails the test.
+    const page = {
+      url: () => `${ORIGIN}/`,
+      evaluate: vi.fn().mockResolvedValue([{ tag: 'script', url: `${ORIGIN}/app.js`, hasIntegrity: false }]),
+      context: () => {
+        throw new Error('Playwright request API used');
+      },
+      request: {
+        get: () => {
+          throw new Error('Playwright request API used');
+        },
+      },
+    } as unknown as Page;
+    const c = ctx();
+    const f = await new SecurityDepthChecker().checkPage(page, c);
+    expect(f.map((x) => x.title)).toEqual(['security.txt was not checked', 'Source maps were not checked']);
+    for (const x of f) {
+      expect(x.needsConfirmation).toBe(true);
+      expect(x.severity).toBe('Suggestion');
+    }
+    expectClaimWording(f);
+    // Once per site: a second page adds nothing.
+    expect(await new SecurityDepthChecker().checkPage(page, c)).toEqual([]);
+  });
+
+  it('AC-5: defaultFetch no longer exists', async () => {
+    const mod: Record<string, unknown> = await import('../src/security-depth.js');
+    expect(mod.defaultFetch).toBeUndefined();
   });
 });

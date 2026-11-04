@@ -1,0 +1,67 @@
+{
+  "evidence_id": "EV-0024",
+  "check_id": "CHK-BE-502-UNIT",
+  "name": "Improvement Roadmap unit tests",
+  "category": "unit",
+  "requirement_ids": [
+    "REQ-026"
+  ],
+  "task_ids": [
+    "BE-502"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/audit-doc-roadmap.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0024.log",
+  "log_sha256": "8f52dff19ce8a889db0afa15cc72bd3379bdd07eb63ca35be8fa45627a0a7434",
+  "started_at": "2026-11-03T07:21:12.345Z",
+  "finished_at": "2026-11-03T07:21:20.454Z",
+  "duration_ms": 8109,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:ed3e52fa6f728d9132e6d3268ebb62dfbfe9fd7d12b0211ad2a65aee324871aa",
+  "concurrent_tasks": [
+    "BE-301",
+    "BE-303",
+    "BE-304",
+    "BE-306",
+    "BE-307",
+    "BE-406",
+    "BE-504"
+  ],
+  "paths": [
+    "packages/core/src/audit/documents/**",
+    "packages/core/tests/audit-doc-roadmap.test.ts",
+    "packages/core/tests/helpers/audit-doc-fixture.ts",
+    "packages/types/src/website-audit.ts"
+  ],
+  "paths_fingerprint": "git-paths:65aff5ed2ca76762b039619e3ed2f72a94bbc7cb00ade856016b76814ff264dd",
+  "scoped_fingerprint": "git:f9e86ee26c4a39c2052ab26e582c97f96768a73f4592f1eb76b8edad2b144592",
+  "excluded_owned": [
+    "packages/core/src/audit/ai/assessment.ts",
+    "packages/core/src/audit/analysis/accessibility-basics.ts",
+    "packages/core/src/audit/analysis/hierarchy.ts",
+    "packages/core/src/audit/analysis/marketing-signals.ts",
+    "packages/core/src/audit/analysis/nap.ts",
+    "packages/core/src/audit/analysis/read-page.ts",
+    "packages/core/src/audit/analysis/technology.ts",
+    "packages/core/src/audit/documents/proposal.ts",
+    "packages/core/src/audit/documents/settings.ts",
+    "packages/core/src/audit/documents/templates/opt-out.ts",
+    "packages/core/src/audit/documents/templates/proposal-en.ts",
+    "packages/core/src/audit/documents/templates/proposal-ta.ts",
+    "packages/core/tests/audit-accessibility-basics.test.ts",
+    "packages/core/tests/audit-assessment.test.ts",
+    "packages/core/tests/audit-doc-proposal.test.ts",
+    "packages/core/tests/audit-doc-settings.test.ts",
+    "packages/core/tests/audit-hierarchy.test.ts",
+    "packages/core/tests/audit-marketing-signals.test.ts",
+    "packages/core/tests/audit-read-page.test.ts",
+    "packages/core/tests/audit-technology.test.ts"
+  ]
+}

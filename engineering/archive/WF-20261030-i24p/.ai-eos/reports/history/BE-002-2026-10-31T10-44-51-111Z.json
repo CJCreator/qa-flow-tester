@@ -1,0 +1,93 @@
+{
+  "task_id": "BE-002",
+  "agent": "backend-engineer",
+  "status": "partial",
+  "requirements_addressed": [
+    "REQ-001",
+    "REQ-002",
+    "REQ-008",
+    "REQ-009",
+    "REQ-018",
+    "REQ-023",
+    "REQ-036",
+    "REQ-039"
+  ],
+  "files_inspected": [
+    "engineering/architecture.md",
+    "engineering/requirements.md",
+    "CONTEXT.md",
+    "packages/types/src/checkup-api.ts",
+    "packages/types/tests/browser-entry.test.ts",
+    "packages/core/src/issues-document.ts",
+    "packages/runner/src/routes/route.ts",
+    "packages/checkers/src/marketing.ts",
+    "packages/wizard/src/lib/coverage-text.ts"
+  ],
+  "files_created": [
+    "packages/types/src/website-audit.ts",
+    "packages/types/tests/website-audit.test.ts"
+  ],
+  "files_modified": [
+    "packages/types/src/route-telemetry.ts",
+    "packages/types/src/ai.ts",
+    "packages/types/src/aspects.ts",
+    "packages/types/src/discovery.ts",
+    "packages/types/src/index.ts",
+    "packages/types/src/browser.ts"
+  ],
+  "implementation_summary": "Wrote the Website Audit contract in @qa/types/src/website-audit.ts (validateAuditStartBody, PageContent with Section ranges, TechnologyResult, PageHierarchy, AuditFinding, RoadmapItem, AreaAssessment, PageRecommendation, ExternalSpeed, AuditResult without verdict, document kinds, 12 languages with beta flags, export formats, EditOverlay, versions, Shortlist outcomes, ShareLink, HelperGrant, RewriteState, AuditSettings, progress events, error codes, AUDIT_API with 35 routes, AuditApi, auditPath, matchAuditPath). Extended ROUTE_SKIP_REASONS (depth-limit, excluded, payment), AI_STAGES (assessment, documents, preview, rewrite) with ModelsByStage and modelForStage, MarketingReview.signals (ten FR-15 signals), CrawlLimits. Exported through index.ts and browser.ts. Partial: two one-line changes outside ownership are needed.",
+  "tests_executed": [
+    {
+      "name": "CHK-BE-002-UNIT audit contract tests",
+      "command": "pnpm exec vitest run packages/types/tests/website-audit.test.ts",
+      "result": "passed",
+      "output_excerpt": "Tests 103 passed (103)"
+    },
+    {
+      "name": "CHK-BE-002-BUILD types package build",
+      "command": "pnpm --filter @qa/types run build",
+      "result": "passed",
+      "output_excerpt": "tsc exit 0"
+    },
+    {
+      "name": "all @qa/types tests",
+      "command": "pnpm exec vitest run packages/types/tests",
+      "result": "failed",
+      "output_excerpt": "1 failed | 162 passed: browser-entry.test.ts pinned re-export list lacks 'website-audit.js'"
+    },
+    {
+      "name": "dependent package type-check: core",
+      "command": "pnpm --filter @qa/core exec tsc --noEmit -p tsconfig.json",
+      "result": "failed",
+      "output_excerpt": "src/issues-document.ts(127,7): TS2739 missing \"depth-limit\", excluded, payment"
+    }
+  ],
+  "tests_proposed": [
+    "Append 'website-audit.js' to packages/types/tests/browser-entry.test.ts",
+    "After issues-document.ts gains three SKIP_WHY entries: pnpm run build and per-package tsc --noEmit",
+    "Wizard coverage text for depth-limit, excluded and payment"
+  ],
+  "evidence": [
+    "packages/types/src/website-audit.ts:178 validateAuditStartBody; :797 SHORTLIST_OUTCOMES; :1035 AUDIT_API; :1110 matchAuditPath",
+    "packages/types/src/route-telemetry.ts:14-18 ROUTE_SKIP_REASONS",
+    "packages/types/src/ai.ts:15 AI_STAGES; :54 modelForStage",
+    "core tsc: src/issues-document.ts(127,7) TS2739"
+  ],
+  "blockers": [
+    "packages/core/src/issues-document.ts:127 SKIP_WHY is an exhaustive Record over RouteSkipReason; it needs entries for depth-limit, excluded and payment or @qa/core no longer builds. Outside BE-002 ownership.",
+    "packages/types/tests/browser-entry.test.ts pins browser.ts re-exports; it needs 'website-audit.js' appended. Outside BE-002 ownership."
+  ],
+  "risks": [
+    "packages/types/dist was rebuilt: any agent that builds @qa/core hits TS2739 until the follow-up lands.",
+    "validateAuditStartBody is syntax-only; public-only and reachability must be enforced in BE-015 and BE-027.",
+    "AUDIT_API access lets Helpers view and edit Shortlist notes, which may hold personal data.",
+    "STAGE_MODEL_SLOT sends 'assessment' to the vision default.",
+    "Wizard coverage-text.ts falls back to 'Skipped' for the new reasons."
+  ],
+  "handoff": "Two one-line follow-ups outside ownership: three SKIP_WHY entries in packages/core/src/issues-document.ts and 'website-audit.js' in packages/types/tests/browser-entry.test.ts. Dependants use AUDIT_API, AuditApi, auditPath, matchAuditPath, CrawlLimits, ROUTE_SKIP_REASONS, ModelsByStage and modelForStage.",
+  "_captured": {
+    "at": "2026-10-31T10:44:51.111Z",
+    "agent_id": "a38cc9d8e3952fa7e",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

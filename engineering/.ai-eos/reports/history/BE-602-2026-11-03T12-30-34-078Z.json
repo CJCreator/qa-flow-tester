@@ -1,0 +1,52 @@
+{
+  "task_id": "BE-602",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-028",
+    "REQ-023"
+  ],
+  "files_inspected": [
+    "packages/runner/src/routes/audit-store.ts",
+    "packages/runner/src/routes/audit-shortlist.ts",
+    "packages/runner/tests/audit-store-routes.test.ts",
+    "packages/runner/tests/audit-shortlist-routes.test.ts",
+    "packages/runner/src/helpers/helper-access.ts",
+    "packages/runner/src/helpers/index.ts",
+    "packages/runner/src/routes/audit-helpers.ts"
+  ],
+  "files_created": [],
+  "files_modified": [
+    "packages/runner/src/routes/audit-store.ts",
+    "packages/runner/tests/audit-store-routes.test.ts",
+    "packages/runner/tests/audit-shortlist-routes.test.ts"
+  ],
+  "implementation_summary": "grantedAuditIds now filters with allows(g, permission) from ../helpers/index.js (edit and export include view). mayUseAudit inherits this. audit-shortlist.ts has no direct permission reads and is unchanged. Updated the stale Helper list expectation (edit-only grant now listed). Added tests: edit-only and export-only grants use view rows; view-only grant cannot use an edit row (PUT shortlist 403); export-only cannot PUT.",
+  "tests_executed": [
+    {
+      "name": "audit-store-routes.test.ts + audit-shortlist-routes.test.ts (23 tests)",
+      "command": "CI=1 pnpm exec vitest run packages/runner/tests/audit-store-routes.test.ts packages/runner/tests/audit-shortlist-routes.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files  2 passed (2); Tests  23 passed (23)"
+    }
+  ],
+  "tests_proposed": [],
+  "evidence": [
+    "packages/runner/src/routes/audit-store.ts: grantedAuditIds uses allows(g, permission)",
+    "packages/runner/src/helpers/helper-access.ts:76 allows(grant, needed) with edit/export including view",
+    "packages/runner/tests/audit-store-routes.test.ts: 'mayUseAudit: a view-only grant cannot use an edit row...' passed",
+    "packages/runner/tests/audit-shortlist-routes.test.ts: 'Helper permissions: ...' passed"
+  ],
+  "blockers": [],
+  "risks": [
+    "Reviewer: the existing Helper list test expectation changed from [a] to [a, b] because edit now includes view. This follows the correction, but it is a changed assertion.",
+    "Reviewer: grantedAuditIds uses the permission argument rather than a literal 'view'; behaviour is identical for current callers.",
+    "audit-share.ts and audit-preview.ts also call mayUseAudit with 'view'; they inherit the new semantics and their tests were not run (outside ownership)."
+  ],
+  "handoff": "mayUseAudit and grantedAuditIds now follow the allows() rule: edit and export grants include view. Any new edit or export row must call mayUseAudit with 'edit' or 'export'. No API shape changed.",
+  "_captured": {
+    "at": "2026-11-03T12:30:34.078Z",
+    "agent_id": "a2fe269d24dcb228a",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

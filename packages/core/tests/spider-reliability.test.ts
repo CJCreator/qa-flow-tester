@@ -114,7 +114,8 @@ describe('DeterministicSpider reliability core (T-111)', () => {
       expect(paths).toContain('/lab/spa-late/b');
 
       // Check routes telemetry
-      const r = result.routes.find((route) => route.requestedPath === '/lab/spa-late');
+      expect(result.routes).toBeDefined();
+      const r = (result.routes ?? []).find((route) => route.requestedPath === '/lab/spa-late');
       expect(r).toBeDefined();
       expect(r?.outcome).toBe('recorded');
     } finally {
@@ -134,14 +135,16 @@ describe('DeterministicSpider reliability core (T-111)', () => {
       expect(pagePaths).not.toContain('/lab/always-500');
       expect(pagePaths).not.toContain('/lab/forbidden');
 
-      const route500 = result.routes.find((r) => r.requestedPath === '/lab/always-500');
+      expect(result.routes).toBeDefined();
+      const routes = result.routes ?? [];
+      const route500 = routes.find((r) => r.requestedPath === '/lab/always-500');
       expect(route500).toMatchObject({
         status: 500,
         outcome: 'skipped',
         skipReason: 'http-error',
       });
 
-      const route403 = result.routes.find((r) => r.requestedPath === '/lab/forbidden');
+      const route403 = routes.find((r) => r.requestedPath === '/lab/forbidden');
       expect(route403).toMatchObject({
         status: 403,
         outcome: 'skipped',
@@ -195,7 +198,8 @@ describe('DeterministicSpider reliability core (T-111)', () => {
       });
 
       expect(result.pages.map((p) => p.urlPath)).toContain('/retry-page');
-      const r = result.routes.find((route) => route.requestedPath === '/retry-page');
+      expect(result.routes).toBeDefined();
+      const r = (result.routes ?? []).find((route) => route.requestedPath === '/retry-page');
       expect(r?.attempts).toBe(2);
       expect(r?.outcome).toBe('recorded');
     } finally {
@@ -250,8 +254,10 @@ describe('DeterministicSpider reliability core (T-111)', () => {
       expect(result.sessionLost).toBe(false);
       expect(result.pages.length).toBe(0);
 
-      const r = result.routes[0];
-      expect(r.skipReason).toBe('off-site-redirect');
+      expect(result.routes).toBeDefined();
+      const r = (result.routes ?? [])[0];
+      expect(r).toBeDefined();
+      expect(r?.skipReason).toBe('off-site-redirect');
     } finally {
       await context.close();
     }

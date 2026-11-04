@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { StepEvidence } from '@qa/types';
-import { BugDetectionChecker } from '../src/bug-detection';
+import { BugDetectionChecker } from '../src/bug-detection.js';
 
 const step = (overrides: Partial<StepEvidence>): StepEvidence => ({
   stepIndex: 1,

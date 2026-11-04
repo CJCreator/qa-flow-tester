@@ -33,12 +33,18 @@ import {
 } from './session/checkup-session.js';
 import {
   allRoutes,
-  matchRoute,
+  resolveRoute,
+  authorizeRoute,
+  isLoopbackAddress,
+  type Route,
+  type RouteParams,
+  type HelperPermission,
   readJsonBody,
   sendJson,
   MAX_BODY_CHARS,
   type PlanRouteContext,
 } from './routes/index.js';
+import { allows, createHelperAccess, helperSettingsFromEnv, type HelperAccess } from './helpers/index.js';
 import type {
   RunSummary,
   SiteMapSummary,
@@ -169,6 +175,10 @@ import {
   runApiChecks,
   apiChecksSection,
   ReportGenerator,
+  createAuditStore,
+  selectAuditStoreBackend,
+  type AuditStore,
+  type AuditAiSetup,
 } from '@qa/core';
 import { BenchmarkStore, cleanFlowType, compareSites, siteName } from './benchmarks.js';
 import { SchedulerManager, type CheckupSchedule } from './scheduler.js';
@@ -379,6 +389,43 @@ export interface RunnerServerOptions {
   betaLimits?: BetaLimits;
   /** Most time one test step may spend finding and acting on its element, in ms (env RUNNER_STEP_TIMEOUT_MS). Default 10000. */
   stepTimeoutMs?: number;
+  /** Test seam: the route table dispatch matches. Default `allRoutes`. */
+  routes?: readonly Route[];
+  /**
+   * The permissions a signed-in Helper holds on the audit a request names (its `params`). Default: the Helper
+   * access's own hook when Helper sign-in is on, else no Helper. Dispatch does not change when it is given.
+   */
+  helperGrants?: (
+    req: http.IncomingMessage,
+    params: RouteParams
+  ) => Iterable<HelperPermission> | Promise<Iterable<HelperPermission>>;
+  /**
+   * Helper sign-in and per-audit access (REQ-033). Default (BE-612): built from the environment
+   * (helperSettingsFromEnv, with this runner's own access key) over this runner's audit store, and used by
+   * dispatch only when Helper sign-in is on. Supplies the `helperGrants` hook when that option is not given,
+   * answers refused Helpers in the audit error model, and lets a Helper with any grant reach the id-less 'view'
+   * list rows (handlers filter per Helper). A test seam when given: it brings its own grant store.
+   */
+  helperAccess?: HelperAccess;
+}
+
+/**
+ * The read-only parts of a runner the Website Audit routes use (BE-612), built once per runner, so no route
+ * reaches private RunnerServer members.
+ */
+export interface AuditWiring {
+  /** The runner's data folder, resolved. */
+  readonly dataDir: string;
+  /** The one audit store of this runner (createAuditStore(selectAuditStoreBackend({ dataDir }))), shared with Helper access. */
+  readonly store: AuditStore;
+  /** Where saved keys are read (a per-visitor resolver on a beta copy). */
+  readonly keys: KeyResolver;
+  /** Helper sign-in and per-audit access; `enabled` is false when Helper sign-in is not set up. */
+  readonly helperAccess: HelperAccess;
+  /** The saved AI setup (provider, text and vision models; not secret, never a key). */
+  readAiModels(): Promise<AuditAiSetup>;
+  /** The request is the owner's: it carries the access key, or, with none set, comes from this computer (DEC-004). */
+  isOwnerRequest(req: http.IncomingMessage): boolean;
 }
 
 /** Plans saved before Intent carry the old Denial kind; read them as `intent: 'denied'`. */
@@ -478,7 +525,6 @@ export class RunnerServer {
   private runOwners = new Map<string, string>();
   /** Comparisons of two sites, running or just finished; the finished ones are also kept on disk. */
   private benchmarkJobs = new Map<string, { job: BenchmarkJob; owner?: string }>();
-  private benchmarkBusy = false;
 
   private localhostAlias?: string;
   private hostAliases: Record<string, string>;
@@ -493,6 +539,11 @@ export class RunnerServer {
   private uiApps: UiApp[];
   private allowedOrigins: Set<string>;
   private accessToken?: string;
+  private routes: readonly Route[];
+  private helperGrants: RunnerServerOptions['helperGrants'];
+  /** The Helper access dispatch uses: given, or this runner's own when Helper sign-in is on. */
+  private helperAccess: HelperAccess | undefined;
+  private readonly wiring: AuditWiring;
 
   public readonly session: CheckupSession;
   /** The chosen free models (not secret), kept beside the key so every browser gets the same setup. */
@@ -514,6 +565,12 @@ export class RunnerServer {
 
   private get phase(): RunnerPhase {
     return this.session.run.phase;
+  }
+
+  /** The run slot refuses a new Check-up: one is scanning or testing, or a benchmark or audit holds it. */
+  private get checkupStartRefused(): boolean {
+    const kind = this.session.run.kind;
+    return kind === 'benchmark' || kind === 'audit' || this.phase === 'scanning' || this.phase === 'testing';
   }
   private set phase(p: RunnerPhase) {
     this.session.run.setPhase(p);
@@ -639,6 +696,11 @@ export class RunnerServer {
     return this.session.secrets.savedSessions;
   }
 
+  /** What the Website Audit routes use (BE-612): read-only, the same object on every read. */
+  public get auditWiring(): AuditWiring {
+    return this.wiring;
+  }
+
   public runAuthDir(runId: string): string {
     return this.session.secrets.authDirFor(runId);
   }
@@ -702,6 +764,29 @@ export class RunnerServer {
       })
     );
     this.accessToken = options.accessToken?.trim() || undefined;
+    this.routes = options.routes ?? allRoutes;
+    // One audit store per runner (ADR 0036), shared by Helper access and the audit routes. No I/O here.
+    const auditStore = createAuditStore(selectAuditStoreBackend({ dataDir: this.dataDir }));
+    // Helper sign-in takes this runner's own access key: with none, every local caller is the owner (DEC-004).
+    const ownHelperAccess = createHelperAccess({
+      ...helperSettingsFromEnv(),
+      accessToken: this.accessToken,
+      store: auditStore,
+    });
+    this.helperAccess = options.helperAccess ?? (ownHelperAccess.enabled ? ownHelperAccess : undefined);
+    this.helperGrants = options.helperGrants ?? this.helperAccess?.helperGrants;
+    const wiring: AuditWiring = {
+      dataDir: this.dataDir,
+      store: auditStore,
+      keys: this.keyResolver,
+      helperAccess: options.helperAccess ?? ownHelperAccess,
+      readAiModels: async () => {
+        const { provider, text, vision } = await this.readAiModels();
+        return { provider, text, vision };
+      },
+      isOwnerRequest: (req) => this.carriesAccessKey(req),
+    };
+    this.wiring = Object.freeze(wiring);
     this.checkupRun = createCheckupRun(this.session, {
       prepareAI: (body) => this.prepareAI(body),
       aiBudgetFor: (settings, key, cap) => this.aiBudgetFor(settings, key, cap),
@@ -791,12 +876,66 @@ export class RunnerServer {
    * a cookie and the page reloaded without it, so the key doesn't stay in the address bar or history.
    * False once the request has been answered here.
    */
+  /**
+   * The request carries the access key (cookie or X-QA-Access header). With none set, only a request from
+   * this computer (loopback socket address) counts as the owner (DEC-004). Answers nothing.
+   */
+  private carriesAccessKey(req: http.IncomingMessage): boolean {
+    const key = this.accessToken;
+    if (!key) return isLoopbackAddress(req.socket?.remoteAddress);
+    if (matchesSecret(cookieValue(req.headers.cookie, ACCESS_COOKIE), key)) return true;
+    const header = req.headers['x-qa-access'];
+    return matchesSecret(Array.isArray(header) ? header[0] : header, key);
+  }
+
+  /** The Helper permissions this request holds on the audit its params name; none without the hook. */
+  private async helperPermissionsFor(
+    req: http.IncomingMessage,
+    route: Route,
+    params: RouteParams
+  ): Promise<ReadonlySet<HelperPermission>> {
+    const access = route.access;
+    if (access !== 'view' && access !== 'edit' && access !== 'export') return new Set();
+    try {
+      // An id-less 'view' row (the audit list, the shortlist) names no audit: a signed-in Helper holding any
+      // view-or-higher grant may reach it, and its handler shows only that Helper's audits.
+      if (access === 'view' && !params.id && this.helperAccess) {
+        return (await this.helperHoldsAnyView(req)) ? new Set<HelperPermission>(['view']) : new Set();
+      }
+      if (!this.helperGrants) return new Set();
+      return new Set(await this.helperGrants(req, params));
+    } catch {
+      // A resolver that fails grants nothing: closed, never open.
+      return new Set();
+    }
+  }
+
+  /** The signed-in Helper holds at least one grant that allows 'view', read from the store now. */
+  private async helperHoldsAnyView(req: http.IncomingMessage): Promise<boolean> {
+    const session = this.helperAccess?.session(req);
+    if (!session) return false;
+    const grants = await this.helperAccess!.store.grantsFor(session.email);
+    return grants.some((grant) => grant.email === session.email && allows(grant, 'view'));
+  }
+
+  /** A refused request without the access key from a signed-in Helper: the audit error model's answer, or null. */
+  private async helperRefusal(
+    req: http.IncomingMessage,
+    route: Route,
+    params: RouteParams
+  ): Promise<{ status: number; error: string; code: string } | null> {
+    if (!this.helperAccess || this.carriesAccessKey(req)) return null;
+    try {
+      return await this.helperAccess.refusal(req, route.access, params);
+    } catch {
+      return null;
+    }
+  }
+
   private grantAccess(req: http.IncomingMessage, res: http.ServerResponse, url: URL): boolean {
     const key = this.accessToken;
     if (!key) return true;
-    if (matchesSecret(cookieValue(req.headers.cookie, ACCESS_COOKIE), key)) return true;
-    const header = req.headers['x-qa-access'];
-    if (matchesSecret(Array.isArray(header) ? header[0] : header, key)) return true;
+    if (this.carriesAccessKey(req)) return true;
 
     if (req.method === 'GET' && matchesSecret(url.searchParams.get('access'), key)) {
       url.searchParams.delete('access');
@@ -899,7 +1038,37 @@ export class RunnerServer {
             return;
           }
 
-          if (!this.grantAccess(req, res, url)) return;
+          // The route table is matched before the access-key gate, so 'public' and 'sign-in' rows are served
+          // without the key and Helper rows can be reached with a Helper grant. Rows for the tool user and
+          // everything not in the table keep the gate as before (it also moves ?access= into a cookie).
+          const matched = resolveRoute(this.routes, req.method ?? 'GET', pathname);
+          if (matched?.route.access === 'owner' && !url.searchParams.has('access')) {
+            // A signed-in Helper without the key on an owner row gets the audit error model (403 ERR_FORBIDDEN).
+            const refusal = await this.helperRefusal(req, matched.route, matched.params);
+            if (refusal) {
+              this.sendJson(res, refusal.status, { error: refusal.error, code: refusal.code });
+              return;
+            }
+          }
+          if ((!matched || matched.route.access === 'owner') && !this.grantAccess(req, res, url)) return;
+          if (matched) {
+            // Closed by default: a row without an access level, or one this caller doesn't meet, is refused.
+            const granted = await this.helperPermissionsFor(req, matched.route, matched.params);
+            const decision = authorizeRoute(matched.route, {
+              hasAccessKey: this.carriesAccessKey(req),
+              beta: this.beta,
+              helper: (permission) => granted.has(permission),
+            });
+            if (!decision.allow) {
+              const refusal = await this.helperRefusal(req, matched.route, matched.params);
+              if (refusal) {
+                this.sendJson(res, refusal.status, { error: refusal.error, code: refusal.code });
+                return;
+              }
+              this.sendJson(res, decision.status, { error: decision.error, code: decision.code });
+              return;
+            }
+          }
 
           if (this.beta) {
             const proto = req.headers['x-forwarded-proto'];
@@ -919,6 +1088,17 @@ export class RunnerServer {
               return;
             }
             if (await this.betaScope(req, res, pathname)) return;
+          }
+
+          // A table row is served here, before the inline handlers below, so no inline handler can answer a
+          // path the table authorized under a weaker access level.
+          if (matched) {
+            await matched.route.handle({
+              server: this,
+              ...this.planRouteContext(req, res, url),
+              params: matched.params,
+            });
+            return;
           }
 
           // QA Flow Studio is retired (ADR 0010): its old addresses lead to Past check-ups.
@@ -1002,15 +1182,6 @@ export class RunnerServer {
                 beta: this.beta,
               })
             );
-            return;
-          }
-
-          const route = matchRoute(allRoutes, req.method ?? 'GET', pathname);
-          if (route) {
-            await route.handle({
-              server: this,
-              ...this.planRouteContext(req, res, url),
-            });
             return;
           }
 
@@ -1224,7 +1395,7 @@ export class RunnerServer {
    * is spent). False when it could not start, for instance because a check-up is already running.
    */
   private async runSchedule(schedule: CheckupSchedule): Promise<boolean> {
-    if (this.phase === 'scanning' || this.phase === 'testing' || this.benchmarkBusy || this.runStartDone) return false;
+    if (this.checkupStartRefused || this.runStartDone) return false;
     let finishStart!: () => void;
     this.runStartDone = new Promise<void>((resolve) => (finishStart = resolve));
     try {
@@ -1281,7 +1452,7 @@ export class RunnerServer {
     const method = req.method;
     if (pathname === '/api/runner/status' && method === 'GET') {
       if (this.isMine(this.currentRunId)) return false;
-      const busy = this.phase === 'scanning' || this.phase === 'testing' || this.benchmarkBusy;
+      const busy = this.checkupStartRefused;
       this.sendJson(res, 200, {
         isRunning: false,
         hasReport: false,
@@ -2778,9 +2949,7 @@ export class RunnerServer {
 
   private async handleTriggerRun(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
     if (
-      this.phase === 'scanning' ||
-      this.phase === 'testing' ||
-      this.benchmarkBusy ||
+      this.checkupStartRefused ||
       this.runStartDone // a second start while the first is still starting
     ) {
       this.sendJson(res, 409, {
@@ -2806,7 +2975,7 @@ export class RunnerServer {
   }
 
   private async startRunFromRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
-    if (this.phase === 'scanning' || this.phase === 'testing' || this.benchmarkBusy) {
+    if (this.checkupStartRefused) {
       this.sendJson(res, 409, {
         error: this.beta
           ? 'Someone else is running a check-up on this shared copy. Try again in a few minutes.'
@@ -3172,8 +3341,8 @@ export class RunnerServer {
 
   private async ensurePlanLoaded(): Promise<StoredPlanRecord | null> {
     const record = await this.session.plan.current();
-    if (record && this.phase === 'idle') {
-      this.session.run.begin(record.plan.runId, record.plan.targetUrl);
+    // Never marked awaiting review while an audit or benchmark holds the slot (DEC-002): begin() refuses then.
+    if (record && this.phase === 'idle' && this.session.run.begin(record.plan.runId, record.plan.targetUrl)) {
       this.session.run.setPhase('awaiting-review');
     }
     return record;
@@ -3393,7 +3562,10 @@ export class RunnerServer {
       return;
     }
     if ((await this.refuseTarget(res, ourUrl)) || (await this.refuseTarget(res, refUrl))) return;
-    if (this.phase === 'scanning' || this.phase === 'testing' || this.benchmarkBusy) {
+    const id = `bench-${Date.now()}`;
+    // Claimed synchronously, no await since the check: a Check-up, audit or benchmark started together loses.
+    // A Check-up still starting (runStartDone) or awaiting Plan Review keeps the slot.
+    if (this.runStartDone || !this.session.run.begin(id, ourUrl, 'benchmark')) {
       this.sendJson(res, 409, {
         error: this.beta
           ? 'Someone else is using this shared copy right now. Try again in a few minutes.'
@@ -3402,9 +3574,11 @@ export class RunnerServer {
       });
       return;
     }
-    if (this.betaLimitHit(res)) return;
+    if (this.betaLimitHit(res)) {
+      this.session.run.release();
+      return;
+    }
 
-    const id = `bench-${Date.now()}`;
     const flowType = cleanFlowType(body.flowType);
     const ourName = siteName(ourUrl, body.ourName);
     const refName = siteName(refUrl, body.refName);
@@ -3418,7 +3592,6 @@ export class RunnerServer {
       startedAt: new Date().toISOString(),
     };
     this.benchmarkJobs.set(id, { job, owner: this.beta ? currentSessionId() : undefined });
-    this.benchmarkBusy = true;
     const store = this.benchmarkStore();
     const shots = path.join(this.dataDir, 'benchmark-shots', id);
     this.sendJson(res, 202, { id });
@@ -3450,7 +3623,8 @@ export class RunnerServer {
         job.stage = 'Stopped';
         job.error = `The comparison couldn’t finish: ${this.redactedMessage(err)}`;
       } finally {
-        this.benchmarkBusy = false;
+        // Only this benchmark can hold a 'benchmark' slot; the check keeps a Check-up's state safe regardless.
+        if (this.session.run.kind === 'benchmark') this.session.run.release();
         await store.save(job).catch(() => undefined);
         await fs.rm(shots, { recursive: true, force: true }).catch(() => undefined);
         // Kept on disk now; the copy in memory only serves the screen that is waiting on it.

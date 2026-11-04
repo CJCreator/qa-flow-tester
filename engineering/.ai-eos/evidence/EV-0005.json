@@ -1,0 +1,33 @@
+{
+  "evidence_id": "EV-0005",
+  "check_id": "CHK-UNIT",
+  "name": "vitest unit project",
+  "category": "unit",
+  "requirement_ids": [],
+  "task_ids": [],
+  "command": "pnpm exec vitest run --project unit",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "FAIL",
+  "exit_code": 1,
+  "timed_out": false,
+  "actual_result": "exit code 1; Test Files  1 failed | 150 passed (151)",
+  "failure_details": " ✓ |unit| packages/types/tests/signin.test.ts (2 tests) 14ms\n ✓ |unit| packages/wizard/tests/no-banned-words.test.ts (1 test) 8ms\n ✓ |unit| packages/wizard/tests/review-first-default.test.ts (2 tests) 13ms\n ✓ |unit| packages/runner/tests/smoke-preset.test.ts (3 tests) 13ms\n ✓ |unit| packages/wizard/tests/landing-prefill.test.ts (2 tests) 6ms\n\n Test Files  1 failed | 150 passed (151)\n      Tests  1 failed | 1311 passed (1312)\n   Start at  10:55:14\n   Duration  160.59s (transform 28.27s, setup 0ms, collect 172.71s, tests 88.73s, environment 99ms, prepare 103.66s)\n\n\nstderr | packages/core/tests/complete-plan.test.ts > PacedAI > asks for fewer, shorter journeys when the answer is cut off, instead of repeating the same request\n[JourneyPlanner] The answer was cut off; asking for fewer, shorter journeys...\n\nstderr | packages/core/tests/ai-provider.test.ts > AIProvider and KeyResolver > should fall back to the local key file when no keychain is available\n[KeyResolver] OS keychain unavailable (no secret service); storing the key encrypted in C:\\Users\\HP\\OneDrive\\Desktop\\Projects\\AntiGravity - Google - Projects\\QA Tool\\.tmp-ai-keys-test\\.qa-keys.json.\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL |unit|  packages/runner/tests/config-docs.test.ts > .env.example lists every variable the code reads > each name the code reads appears in .env.example exactly once\nAssertionError: read in code but not in .env.example: expected [ 'XDG_CONFIG_HOME' ] to deeply equal []\n\n- Expected\n+ Received\n\n- Array []\n+ Array [\n+   \"XDG_CONFIG_HOME\",\n+ ]\n\n ❯ packages/runner/tests/config-docs.test.ts:81:61\n     79|     expect(reads.size).toBeGreaterThan(30);\n     80|     const missing = [...reads.keys()].filter((name) => !counts.has(nam…\n     81|     expect(missing, 'read in code but not in .env.example').toEqual([]…\n       |                                                             ^\n     82| \n     83|     const repeated = [...counts].filter(([, n]) => n !== 1).map(([name…\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯",
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0005.log",
+  "log_sha256": "e2cd9d52b755ce2860d9be70136ed8afb7e1459d6ca85cbaaa70cf30dc7452da",
+  "started_at": "2026-11-03T05:25:01.533Z",
+  "finished_at": "2026-11-03T05:27:56.033Z",
+  "duration_ms": 174500,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:b33f96fbf4443a50f626813daf494afe025bf96e85df2b1c58614296b9671dff",
+  "concurrent_tasks": [],
+  "paths": [
+    "fixtures/**",
+    "packages/**",
+    "scripts/**",
+    "vitest.config.ts",
+    "vitest.workspace.ts"
+  ],
+  "paths_fingerprint": "git-paths:f000f2c69cf09c36b64a6362299611c9db0e8391a398d830f1bf187e706bd888"
+}

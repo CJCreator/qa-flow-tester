@@ -1,0 +1,54 @@
+{
+  "task_id": "BE-401",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-016",
+    "REQ-011"
+  ],
+  "files_inspected": [
+    "packages/core/src/ai/timeout.ts",
+    "packages/core/src/ai/providers/anthropic.ts",
+    "packages/core/src/ai/providers/openai.ts",
+    "packages/core/src/ai/providers/gemini.ts",
+    "packages/core/tests/ai-provider-timeout.test.ts"
+  ],
+  "files_created": [],
+  "files_modified": [
+    "packages/core/src/ai/timeout.ts",
+    "packages/core/src/ai/providers/anthropic.ts",
+    "packages/core/src/ai/providers/openai.ts",
+    "packages/core/src/ai/providers/gemini.ts",
+    "packages/core/tests/ai-provider-timeout.test.ts"
+  ],
+  "implementation_summary": "requestSignal now returns { signal, release }. release() clears the deadline timer and removes the abort listener from the caller signal. Each provider's complete() calls release() in a finally. Tests narrow provider.complete via the withComplete helper (no non-null assertion, no suppression, no assertion removed) and add listener and timer cleanup tests.",
+  "tests_executed": [
+    {
+      "name": "CHK-BE-401-UNIT",
+      "command": "pnpm exec vitest run packages/core/tests/ai-provider-timeout.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 36 passed (36)"
+    },
+    {
+      "name": "tsc typecheck (filtered to BE-401 files)",
+      "command": "pnpm exec tsc -p packages/core/tests/tsconfig.typecheck.json --noEmit | grep -E 'ai/(timeout|providers)|ai-provider-timeout'",
+      "result": "passed",
+      "output_excerpt": "no matching errors"
+    }
+  ],
+  "tests_proposed": [],
+  "evidence": [
+    "vitest: 1 file, 36 tests passed in packages/core/tests/ai-provider-timeout.test.ts",
+    "tsc with packages/core/tests/tsconfig.typecheck.json: no errors in ai/timeout, ai/providers or ai-provider-timeout"
+  ],
+  "blockers": [],
+  "risks": [
+    "requestSignal's return type changed from AbortSignal to { signal, release }. Only the three providers and the BE-401 test file import it. Any later task that calls it must call release()."
+  ],
+  "handoff": "Use requestSignal(options) as { signal, release } and call release() in a finally. AITimeoutError and requestError are unchanged. There is no barrel change.",
+  "_captured": {
+    "at": "2026-11-03T10:51:44.826Z",
+    "agent_id": "a87efa819da8746f9",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

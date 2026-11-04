@@ -1,0 +1,64 @@
+{
+  "task_id": "FE-191",
+  "agent": "frontend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-001",
+    "REQ-028"
+  ],
+  "files_inspected": [
+    "packages/wizard/src/lib/router.ts",
+    "packages/wizard/src/App.tsx",
+    "packages/wizard/src/screens/audit/saved/saved-api.ts",
+    "packages/wizard/src/screens/audit/saved/HelperSignInScreen.tsx",
+    "packages/wizard/src/components/TopBar.tsx",
+    "packages/wizard/src/lib/title.ts",
+    "packages/wizard/tests/router.test.ts"
+  ],
+  "files_created": [
+    "packages/wizard/tests/audit-routing.test.ts"
+  ],
+  "files_modified": [
+    "packages/wizard/src/lib/router.ts",
+    "packages/wizard/src/App.tsx",
+    "packages/wizard/tests/router.test.ts"
+  ],
+  "implementation_summary": "router.ts: 11 new Route variants (audit-new, audits, audit, audit-version, audit-review, audit-export, audit-share, audit-helpers, audit-settings, audit-shortlist, helper-sign-in) and matching PATHS. The audit paths copy AUDIT_PATHS because screens import the router and a router import of saved-api could make a cycle; a test pins them. New addresses: /audit-settings (the settings screen) and /helper (Helper sign-in). matchRoute decodes ids; an unreadable or empty id, or a version that is not a plain positive integer, is not-found. isCheckRoute and readsAddressParam were not changed, so they are false for every audit route. App.tsx: imports and renders the screens (AuditStartScreen, SavedAuditsScreen, AuditHistoryScreen, AnalysisScreen, ReviewDocumentsScreen, ExportDocumentsScreen, PreviewShareScreen, HelpersScreen, HelperSignInScreen, ShortlistScreen). The audit-settings route shows DocumentSettingsScreen and AuditAiModelsPanel together. Tab titles added for audit routes. No step bar for audit routes.",
+  "tests_executed": [
+    {
+      "name": "CHK-FE-191-UNIT",
+      "command": "node_modules/.bin/vitest run packages/wizard/tests/router.test.ts packages/wizard/tests/audit-routing.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 2 passed (2); Tests 51 passed (51)"
+    },
+    {
+      "name": "wizard type-check",
+      "command": "cd packages/wizard && ../../node_modules/.bin/tsc --noEmit -p .",
+      "result": "passed",
+      "output_excerpt": "no output (no type errors)"
+    }
+  ],
+  "tests_proposed": [
+    "wizard-e2e navigation through /audits/new and /audits once the runner audit routes exist"
+  ],
+  "evidence": [
+    "packages/wizard/src/lib/router.ts (PATHS, matchAuditRoute, matchRoute)",
+    "packages/wizard/src/App.tsx (screen switch, tab titles)",
+    "packages/wizard/tests/audit-routing.test.ts"
+  ],
+  "blockers": [],
+  "risks": [
+    "TopBar.tsx (outside my ownership) ends its breadcrumb chain with 'Visibility' for any route it does not know, so audit routes would show a 'Visibility' breadcrumb. It needs audit labels, or the audit route names added to NO_CRUMBS.",
+    "RewriteReview is not mounted. It needs a PageContent prop, and the only place with one is inside AnalysisScreen's PageContentView, which is not in my files. Whoever owns AnalysisScreen or PageContentView should mount it there.",
+    "No link or nav entry points to /audits, /audit-settings or /helper yet. The routes work by address; TopBar and CommandPalette are not mine.",
+    "The new routes' tab titles are not in PUBLIC_TITLES in title.ts, so the pages are marked noindex, which suits private audit screens.",
+    "/audits/new is matched before /audits/:id, so a Website Audit whose id is literally 'new' cannot be opened by its address.",
+    "The T-211 barrel check covers only screens/audit; ReportScreen and other older screens still import values from '@qa/types'."
+  ],
+  "handoff": "Add Website Audit breadcrumb labels or nav links in TopBar.tsx and CommandPalette.tsx. Mount RewriteReview inside the page content view in the results screens. Dependency changes for FE-191 are added by the orchestrator.",
+  "_captured": {
+    "at": "2026-11-03T10:47:06.212Z",
+    "agent_id": "a374d32d9ef0141a7",
+    "agent_type": "ai-eos:frontend-engineer"
+  }
+}

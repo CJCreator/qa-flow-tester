@@ -1,0 +1,52 @@
+{
+  "task_id": "QA-200",
+  "agent": "qa-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-003",
+    "REQ-006",
+    "REQ-036"
+  ],
+  "files_inspected": [
+    "packages/core/tests/audit-crawl.test.ts",
+    "packages/core/tests/helpers/audit-site-server.ts",
+    "packages/core/src/audit/crawl/crawl.ts",
+    "packages/core/src/audit/crawl/area-detect.ts",
+    "fixtures/audit-site/robots.txt",
+    "fixtures/audit-site/shop/checkout.html",
+    "fixtures/audit-site/account/sign-in.html",
+    "fixtures/audit-site/shop/index.html"
+  ],
+  "files_created": [
+    "packages/core/tests/audit-crawl-read-only.test.ts"
+  ],
+  "files_modified": [],
+  "implementation_summary": "Added a browser integration test that runs runAuditCrawl against fixtures/audit-site (default limits) and an inline server (401 page, sign-in form, card-field page, provider-frame page, click-only button/div, GET form), asserting on server request logs, browser requests, fake-DNS lookups and connects that the crawl only reads: GET/HEAD only, no credentials/body/cookie, sign-in and payment pages skipped with the right reasons and nothing behind them requested, nothing to off-site hosts, click-only and form-action targets unrequested.",
+  "tests_executed": [
+    {
+      "name": "Audit crawl sends only reads",
+      "command": "pnpm exec vitest run packages/core/tests/audit-crawl-read-only.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 9 passed (9); Duration 50.73s"
+    }
+  ],
+  "tests_proposed": [
+    "Same assertions with a Crawl-delay-free fixture variant to cut runtime",
+    "Assert the spider options (exploreClicks false, followFormActions false) directly if a deps seam for the Spider is added"
+  ],
+  "evidence": [
+    "packages/core/tests/audit-crawl-read-only.test.ts: describe 'read-only crawl of fixtures/audit-site' and 'read-only crawl of an inline site'"
+  ],
+  "blockers": [],
+  "risks": [
+    "Runs in the vitest 'unit' project (about 51 s); vitest.workspace.ts (not owned) needs 'audit-crawl-read-only' added to BROWSER_TESTS.core (G7).",
+    "exploreClicks/followFormActions are proven by behaviour (click-only elements and a GET form stay unrequested), not by inspecting spider options, which the deps do not expose.",
+    "Provider-frame detection depends on the browser attempting js.stripe.com; the fake DNS refuses it, so the test checks the verdict and that no connect happens rather than a real frame load."
+  ],
+  "handoff": "Orchestrator: run CHK-QA-200-INTEGRATION. Add the test to BROWSER_TESTS.core in vitest.workspace.ts in G7.",
+  "_captured": {
+    "at": "2026-11-03T10:55:27.849Z",
+    "agent_id": "abd0a33dd37dae542",
+    "agent_type": "ai-eos:qa-engineer"
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "evidence_id": "EV-0158",
+  "check_id": "CHK-BE-510-UNIT",
+  "name": "export, pitch and owner route tests",
+  "category": "unit",
+  "requirement_ids": [
+    "REQ-021",
+    "REQ-022",
+    "REQ-019",
+    "REQ-025",
+    "REQ-018"
+  ],
+  "task_ids": [
+    "BE-510"
+  ],
+  "command": "pnpm exec vitest run packages/runner/tests/audit-export-routes.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0158.log",
+  "log_sha256": "77fbb76f4492f4311402a19075394750cf9502a650c91021862785149bfb4fee",
+  "started_at": "2026-11-03T12:02:48.911Z",
+  "finished_at": "2026-11-03T12:02:59.284Z",
+  "duration_ms": 10373,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:203d716ed53f8279ceae496ad6b7e7b0ce590977f14d46b6adf2761043ff9e40",
+  "concurrent_tasks": [
+    "BE-607"
+  ],
+  "paths": [
+    "packages/core/src/audit/documents/**",
+    "packages/runner/src/routes/audit-export.ts",
+    "packages/runner/src/routes/audit-settings.ts",
+    "packages/runner/src/routes/body.ts",
+    "packages/runner/src/routes/route.ts",
+    "packages/runner/tests/audit-export-routes.test.ts",
+    "packages/types/src/website-audit.ts"
+  ],
+  "paths_fingerprint": "git-paths:916e133218319eba26261eeb6019949920b94c297a6f490c4d90cb6331b9e084",
+  "scoped_fingerprint": "git:203d716ed53f8279ceae496ad6b7e7b0ce590977f14d46b6adf2761043ff9e40",
+  "excluded_owned": [
+    ".github/workflows/deploy.yml",
+    "docs/DEPLOYMENT.md",
+    "packages/runner/tests/deploy-audit-store.test.ts"
+  ]
+}

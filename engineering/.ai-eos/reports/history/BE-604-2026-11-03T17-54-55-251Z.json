@@ -1,0 +1,46 @@
+{
+  "task_id": "BE-604",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-024"
+  ],
+  "files_inspected": [
+    "packages/runner/src/routes/audit-share.ts",
+    "packages/runner/tests/audit-share-routes.test.ts",
+    "packages/runner/src/routes/audit-export.ts",
+    "packages/types/src/website-audit.ts"
+  ],
+  "files_created": [],
+  "files_modified": [
+    "packages/runner/src/routes/audit-share.ts",
+    "packages/runner/tests/audit-share-routes.test.ts"
+  ],
+  "implementation_summary": "Preview link with no stored preview.html: 409 ERR_INVALID_REQUEST changed to 400 ERR_INVALID_REQUEST (request not valid for sharing). Pitch link with no finished result: 409 ERR_INVALID_REQUEST changed to 404 ERR_AUDIT_NOT_FOUND, matching audit-export.ts. Running version 409 ERR_AUDIT_RUNNING unchanged. Corrected the existing preview test assertion from 409 to 400. Added a test for a failed version with no result expecting 404 ERR_AUDIT_NOT_FOUND and no link created.",
+  "tests_executed": [
+    {
+      "name": "packages/runner/tests/audit-share-routes.test.ts (23 tests)",
+      "command": "CI=1 pnpm exec vitest run packages/runner/tests/audit-share-routes.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 23 passed (23)"
+    }
+  ],
+  "tests_proposed": [],
+  "evidence": [
+    "packages/runner/src/routes/audit-share.ts:326",
+    "packages/runner/src/routes/audit-share.ts:330",
+    "packages/runner/tests/audit-share-routes.test.ts:231",
+    "packages/runner/tests/audit-share-routes.test.ts:239"
+  ],
+  "blockers": [],
+  "risks": [
+    "Preview-missing case is a judgment call: 400 ERR_INVALID_REQUEST was chosen over 404 because the version and result exist and only the preview file is absent. Reviewer should confirm this against the intended contract.",
+    "Wizard share-api.ts maps ERR_AUDIT_RUNNING only; the 404 and 400 replies for the share create path will show the server message. Not verified in wizard, which is outside ownership."
+  ],
+  "handoff": "Share create now returns 400 ERR_INVALID_REQUEST for a missing preview and 404 ERR_AUDIT_NOT_FOUND for a version without a finished result. Any client that branched on 409 ERR_INVALID_REQUEST for these cases must use the new status. No contract or types change.",
+  "_captured": {
+    "at": "2026-11-03T17:54:55.251Z",
+    "agent_id": "a2ab3081f6e202aec",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

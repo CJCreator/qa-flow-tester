@@ -1,0 +1,53 @@
+{
+  "evidence_id": "EV-0123",
+  "check_id": "CHK-BE-189-UNIT",
+  "name": "core audit exports contract",
+  "category": "unit",
+  "requirement_ids": [
+    "REQ-048"
+  ],
+  "task_ids": [
+    "BE-189"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/audit-exports.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0123.log",
+  "log_sha256": "a21627b538f32ce7ca245f3d090a235c45d08ce8ac4df61019d58783012863ef",
+  "started_at": "2026-11-03T11:26:28.325Z",
+  "finished_at": "2026-11-03T11:26:47.092Z",
+  "duration_ms": 18767,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:c098a05feb4321e7b0e2fa93c6bb98320c1a09f196fdfbcb97569a4745cd9a97",
+  "concurrent_tasks": [
+    "BE-710",
+    "QA-711"
+  ],
+  "paths": [
+    "packages/core/src/audit/**",
+    "packages/core/src/index.ts",
+    "packages/core/tests/audit-exports.test.ts"
+  ],
+  "paths_fingerprint": "git-paths:1f39ff34c148fc1c2f9f294b8b3c94f33e6fb45c884764dd4aa01bd321f28328",
+  "scoped_fingerprint": "git:be6b26d27c7612e27af5bf3d5964dce26b88ebe96560032dabbe4e57620500e2",
+  "excluded_owned": [
+    "packages/core/src/audit/documents/labels/bn.ts",
+    "packages/core/src/audit/documents/labels/gu.ts",
+    "packages/core/src/audit/documents/labels/index.ts",
+    "packages/core/src/audit/documents/labels/kn.ts",
+    "packages/core/src/audit/documents/labels/ml.ts",
+    "packages/core/src/audit/documents/labels/mr.ts",
+    "packages/core/src/audit/documents/labels/or.ts",
+    "packages/core/src/audit/documents/labels/pa.ts",
+    "packages/core/src/audit/documents/labels/te.ts",
+    "packages/core/src/audit/documents/labels/ur.ts",
+    "packages/core/tests/audit-document-text-languages.test.ts",
+    "packages/core/tests/audit-languages-e2e.test.ts"
+  ]
+}

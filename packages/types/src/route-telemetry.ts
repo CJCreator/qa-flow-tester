@@ -3,18 +3,32 @@
  * Pure, browser-safe module: runner, wizard, and core can import this.
  */
 
-export type RouteSkipReason =
-  | 'page-limit'
-  | 'did-not-load'
-  | 'robots'
-  | 'sign-in'
-  | 'http-error'
-  | 'timeout'
-  | 'off-site-redirect'
-  | 'time-limit'
-  | 'trap-limit'
-  | 'session-lost'
-  | 'duplicate';
+/**
+ * Why the crawl found a page but did not record it (a Skipped Page, CONTEXT.md). One list for the type and
+ * for code that needs the values at run time.
+ * - `depth-limit`: more link steps from the start address than the max depth allows.
+ * - `excluded`: the path starts with an exclude path, or with none of the include paths. Never the start page.
+ * - `payment`: a payment area (card-number field, payment-provider frame or checkout path). Nothing on it is
+ *   clicked or sent, and its links are not followed.
+ */
+export const ROUTE_SKIP_REASONS = [
+  'page-limit',
+  'depth-limit',
+  'excluded',
+  'payment',
+  'did-not-load',
+  'robots',
+  'sign-in',
+  'http-error',
+  'timeout',
+  'off-site-redirect',
+  'time-limit',
+  'trap-limit',
+  'session-lost',
+  'duplicate',
+] as const;
+
+export type RouteSkipReason = (typeof ROUTE_SKIP_REASONS)[number];
 
 export interface RouteTelemetry {
   /** Redacted path + query, never secrets */

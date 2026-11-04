@@ -4,8 +4,9 @@ import type { Breakpoint, Finding, FindingSeverity } from '@qa/types';
 /**
  * Deeper passive security checks (T-22): missing integrity attributes, reachable source maps,
  * security.txt, weaker Content-Security-Policy settings. Plain GETs to the page's own site only,
- * no redirects followed, 3 s timeout. Evidence is origin + path only (ADR 0016); wording follows
- * ADR 0018 (no claim that the site is safe).
+ * through the caller's `FetchFn` (ADR 0031: core builds it on the pinned, redirect-checked path).
+ * With no `FetchFn` the network checks make no request and are reported as not checked.
+ * Evidence is origin + path only (ADR 0016); wording follows ADR 0018 (no claim that the site is safe).
  */
 
 export interface SecurityDepthContext {
@@ -26,7 +27,7 @@ export interface FetchedResponse {
   headers: Record<string, string>;
   text: () => Promise<string>;
 }
-/** Returns null when the request could not be made (network error, timeout, no request API). */
+/** Returns null when the request was refused or could not be made (network error, timeout). */
 export type FetchFn = (url: string) => Promise<FetchedResponse | null>;
 
 export interface ResourceTag {
@@ -37,21 +38,6 @@ export interface ResourceTag {
 
 const MAX_SRI = 10;
 const MAX_MAP_SCRIPTS = 5;
-const FETCH_TIMEOUT_MS = 3000;
-
-/** GET through the browser context's request API: no redirects, short timeout, body not kept. */
-export function defaultFetch(page: Page): FetchFn {
-  return async (url) => {
-    try {
-      const request = page.context()?.request;
-      if (!request) return null;
-      const res = await request.fetch(url, { method: 'GET', timeout: FETCH_TIMEOUT_MS, maxRedirects: 0 });
-      return { status: res.status(), headers: res.headers(), text: () => res.text() };
-    } catch {
-      return null;
-    }
-  };
-}
 
 /** Refuses (returns null without calling fetchFn) any URL whose origin differs from `origin`. */
 export async function sameOriginGet(fetchFn: FetchFn, url: string, origin: string): Promise<FetchedResponse | null> {
@@ -143,16 +129,18 @@ export class SecurityDepthChecker {
         onTarget = false;
       }
     }
-    const get = fetchFn ?? defaultFetch(page);
     const steps: Array<() => Promise<Finding[]> | Finding[]> = [
       () => this.checkSri(page, context),
       () => this.checkCsp(context.cspHeader, context),
     ];
-    if (onTarget) {
+    if (onTarget && fetchFn) {
       steps.push(
-        () => this.checkSourceMaps(page, context, get),
-        () => this.checkSecurityTxt(get, context, pageOrigin)
+        () => this.checkSourceMaps(page, context, fetchFn),
+        () => this.checkSecurityTxt(fetchFn, context, pageOrigin)
       );
+    } else if (onTarget) {
+      // No safe fetch was given (ADR 0031): no request at all, and the checks say so instead of passing.
+      steps.push(() => this.notChecked(context, pageOrigin));
     }
     for (const step of steps) {
       try {
@@ -196,10 +184,9 @@ export class SecurityDepthChecker {
 
   // --- Source maps -----------------------------------------------------------------------
 
-  async checkSourceMaps(page: Page, context: SecurityDepthContext, fetchFn?: FetchFn): Promise<Finding[]> {
+  async checkSourceMaps(page: Page, context: SecurityDepthContext, get: FetchFn): Promise<Finding[]> {
     const pageOrigin = pageOriginOf(page);
     if (!pageOrigin) return [];
-    const get = fetchFn ?? defaultFetch(page);
     const tags = await collectResources(page);
     const scripts: string[] = [];
     for (const t of tags) {
@@ -335,6 +322,43 @@ export class SecurityDepthChecker {
       );
     }
     return findings;
+  }
+
+  // --- Not checked (no FetchFn) ---------------------------------------------------------
+
+  /**
+   * The network checks with no `FetchFn`: nothing is requested, and each is reported once per site as
+   * not checked (a guess-level note, never a pass and never a defect).
+   */
+  notChecked(context: SecurityDepthContext, origin: string): Finding[] {
+    const key = `security-not-checked:${origin}`;
+    if (context.siteWide?.has(key)) return [];
+    context.siteWide?.add(key);
+    const reason = 'The check was given no way to make requests here, so none was made (automatic check only)';
+    return [
+      {
+        ...this.finding('TXT', 1, context, {
+          title: 'security.txt was not checked',
+          severity: 'Suggestion',
+          expected: 'The file at /.well-known/security.txt is read',
+          actual: reason,
+          steps: [`Open ${origin}/.well-known/security.txt`],
+          resolution: 'Run a Check-up, which makes these requests through its checked request path.',
+        }),
+        needsConfirmation: true,
+      },
+      {
+        ...this.finding('SOURCEMAP', 1, context, {
+          title: 'Source maps were not checked',
+          severity: 'Suggestion',
+          expected: "The site's own scripts are read to see if a source map can be reached",
+          actual: reason,
+          steps: [`Open ${context.urlPath}`],
+          resolution: 'Run a Check-up, which makes these requests through its checked request path.',
+        }),
+        needsConfirmation: true,
+      },
+    ];
   }
 
   // --- Content-Security-Policy -----------------------------------------------------------

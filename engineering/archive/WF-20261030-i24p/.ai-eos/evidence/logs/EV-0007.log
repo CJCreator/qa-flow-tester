@@ -1,0 +1,33 @@
+# AI-EOS evidence EV-0007
+check: CHK-SECRETS (secret scan)
+command: node scripts/scan-commit-secrets.mjs --aieos "C:/Users/HP/.claude/plugins/cache/ai-eos-marketplace/ai-eos/1.0.0/scripts/aieos.mjs"
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-10-31T06:35:16.388Z
+finished: 2026-10-31T06:35:21.191Z (4803 ms)
+exit_code: 1
+verdict: FAIL
+
+## stdout
+
+
+## stderr
+node:internal/modules/cjs/loader:1408
+  throw err;
+  ^
+
+Error: Cannot find module 'C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\scripts\scan-commit-secrets.mjs'
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1405:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1061:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1066:22)
+    at Module._load (node:internal/modules/cjs/loader:1215:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:152:5)
+    at node:internal/main/run_main_module:33:47 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v24.1.0
+

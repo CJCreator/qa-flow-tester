@@ -1,0 +1,55 @@
+{
+  "evidence_id": "EV-0206",
+  "check_id": "CHK-BE-603-UNIT",
+  "name": "re-run route tests",
+  "category": "integration",
+  "requirement_ids": [
+    "REQ-028"
+  ],
+  "task_ids": [
+    "BE-603"
+  ],
+  "command": "pnpm exec vitest run packages/runner/tests/audit-rerun-route.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0206.log",
+  "log_sha256": "991b6be7ba8711f373683a9134aeb161117aa5e587ffe905bc21d4db879ef15c",
+  "started_at": "2026-11-03T17:35:22.191Z",
+  "finished_at": "2026-11-03T17:35:39.480Z",
+  "duration_ms": 17289,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:f0c38b3f2aa32a7ce8395df1aeea5929237dccbffbe319dd1b3f9f0389f02d5c",
+  "concurrent_tasks": [
+    "BE-102",
+    "BE-607"
+  ],
+  "paths": [
+    "packages/core/src/audit/store/**",
+    "packages/runner/src/routes/audit-rerun.ts",
+    "packages/runner/src/routes/route.ts",
+    "packages/runner/src/session/run-slot.ts",
+    "packages/runner/tests/audit-rerun-route.test.ts",
+    "packages/types/src/website-audit.ts"
+  ],
+  "paths_fingerprint": "git-paths:b7245ea7be2b975b4da7043535fe798ab46856f8671ce47905bbaff9328ea851",
+  "scoped_fingerprint": "git:a2fbcebf6ae38a885c384bb279eb8c1f05764c5b764bbf4a978f7abe516ae3e0",
+  "excluded_owned": [
+    ".github/workflows/deploy.yml",
+    "docs/DEPLOYMENT.md",
+    "packages/runner/src/routes/index.ts",
+    "packages/runner/src/routes/plan.ts",
+    "packages/runner/src/routes/route.ts",
+    "packages/runner/src/server.ts",
+    "packages/runner/tests/beta.test.ts",
+    "packages/runner/tests/deploy-audit-store.test.ts",
+    "packages/runner/tests/route-access-server.test.ts",
+    "packages/runner/tests/route-access.test.ts",
+    "packages/runner/tests/route-table.test.ts"
+  ]
+}

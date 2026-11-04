@@ -1,0 +1,69 @@
+import { defineWorkspace, configDefaults } from 'vitest/config';
+import { sharedTest, sharedResolve } from './vitest.config';
+
+// Two halves of the suite (REQ-046). `pnpm test` runs both; `--project unit` or `--project browser` runs one.
+// `browser` holds every file that launches Chromium (directly, or through the Spider, a discovery agent or the
+// orchestrator) or starts a runner (a RunnerServer, or the runner's CLI). `unit` is everything else: no browser,
+// no runner. Checked on 2026-11-03 by running `--project unit` with PLAYWRIGHT_BROWSERS_PATH set to an empty
+// folder: no unit file tried to launch Chromium.
+// A new test file lands in `unit` by default. Add it here when it launches Chromium or a runner.
+const BROWSER_TESTS: Record<string, string[]> = {
+  checkers: [
+    'alt-text-quality', 'design-ux-checkers', 'keyboard-a11y', 'marketing', 'marketing-review', 'performance',
+    'refusal-rule', 'security', 'security-depth', 'seo', 'spec-denial',
+  ],
+  core: [
+    'audit-site-fixture', 'auth-crawl-e2e', 'browser-context', 'browser-guard', 'browser-restart', 'crud-facts',
+    'discovery-agent-fill-value', 'discovery-agent-headers', 'e2e-discovery', 'e2e-orchestrator',
+    'element-inventory', 'finding-groups', 'fixture-access-lab', 'fixture-failure-modes', 'flaky-retry',
+    'interactive-states', 'missing-element', 'multi-browser-network', 'narrow-look', 'navigate',
+    'opening-missing', 'orchestrator-access-wiring', 'orchestrator-session', 'page-coverage', 'page-sweep',
+    'pipelined-discovery', 'plan-reuse', 'plan-validator', 'preflight-session', 'redaction', 'refusal-parity',
+    'refusal-run', 'require-sign-in', 'retry-no-duplicates', 'role-failure-run', 'safe-crawl-links', 'safe-scan',
+    'signed-in-discovery', 'signin', 'signin-determinism',
+    'signin-redaction', 'small-fixes', 'sources-e2e', 'spider-concurrency', 'spider-crud', 'spider-form-facts',
+    'spider-links-and-traps', 'spider-page-limit', 'spider-reliability', 'spider-robots',
+    'spider-session-recovery', 'spider-signin-walls', 'spider-site-edge', 'unconfirmed-guesses',
+    'visual-baseline-compat', 'visual-capture',
+    // Website audit (REQ-033, REQ-048...): each launches Chromium through `playwright` or the Spider.
+    'audit-accessibility-basics', 'audit-analysis-fixture', 'audit-crawl', 'audit-crawl-read-only', 'audit-doc-pdf',
+    'audit-languages-e2e', 'audit-phone-layout', 'audit-read-page', 'spider-audit-hooks', 'spider-host-pacing',
+    'spider-sitemap-outbound',
+  ],
+  runner: [
+    'access-token', 'ai-estimate-cap', 'auth-crawl-run', 'baseline-accept', 'benchmark', 'beta', 'beta-privacy',
+    'checkups', 'checkup-vs-api', 'cli-bind-host', 'consent-enforcement', 'context-docx-route', 'credentials-crawl',
+    'docs-url-beta', 'domain-proof', 'error-redaction', 'headers-propagation', 'issues-download',
+    'preflight-route', 'reapproval-roles', 'remembered-signins', 'route-inventory', 'runner-server',
+    'saved-session-secrecy', 'scheduler', 'signin-endpoint', 'single-server', 'sources-endpoints',
+    'sources-reload', 'spec-override-endpoint', 'test-cap-endpoints', 'url-first', 'wizard-endpoints',
+    // Website audit: each starts a RunnerServer, and some drive Chromium.
+    'audit-documents-flow', 'audit-helpers-routes', 'audit-persistence-integration', 'audit-preview-browser',
+    'helper-access', 'route-access-server', 'server-audit-wiring', 'website-audit-e2e',
+  ],
+  wizard: ['audit-languages-browser', 'landing-audit-browser', 'wizard-e2e'],
+};
+
+const browserFiles = Object.entries(BROWSER_TESTS).flatMap(([pkg, names]) =>
+  names.map((name) => `packages/${pkg}/tests/${name}.test.ts`),
+);
+
+export default defineWorkspace([
+  {
+    resolve: sharedResolve,
+    test: {
+      ...sharedTest,
+      name: 'unit',
+      include: ['packages/*/tests/**/*.test.{ts,tsx}'],
+      exclude: [...configDefaults.exclude, ...browserFiles],
+    },
+  },
+  {
+    resolve: sharedResolve,
+    test: {
+      ...sharedTest,
+      name: 'browser',
+      include: browserFiles,
+    },
+  },
+]);

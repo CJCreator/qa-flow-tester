@@ -1,0 +1,50 @@
+{
+  "task_id": "BE-704",
+  "agent": "backend-engineer",
+  "status": "blocked",
+  "requirements_addressed": [
+    "REQ-052"
+  ],
+  "files_inspected": [
+    "packages/runner/tests/config-docs.test.ts",
+    "packages/core/src/ai/key-resolver.ts",
+    "packages/core/src/audit/store/select-backend.ts",
+    "packages/wizard/src/screens/audit/saved/HelperSignInScreen.tsx",
+    "docs/adr/0036-hosted-audit-storage-and-shared-links.md",
+    ".env.example",
+    "docs/CONFIGURATION.md"
+  ],
+  "files_created": [],
+  "files_modified": [
+    "docs/CONFIGURATION.md"
+  ],
+  "implementation_summary": "Documented XDG_CONFIG_HOME in docs/CONFIGURATION.md (AI providers section): optional, sets the folder for qa-flow-tester/key-file.key, default %APPDATA% on Windows else ~/.config, matching defaultKeyDir in key-resolver.ts. Added a section 'Saved Website Audits and Helper sign-in' with rows for AUDIT_STORE_BUCKET, FIREBASE_PROJECT_ID, FIREBASE_WEB_API_KEY and FIREBASE_AUTH_DOMAIN (all optional, empty, public values), plus a note on the wizard's build-time VITE_FIREBASE_* fallbacks. .env.example already has the 5 developer-added lines (112-116). One test still fails because the wizard reads VITE_FIREBASE_* names that .env.example does not list.",
+  "tests_executed": [
+    {
+      "name": "config-docs.test.ts",
+      "command": "CI=1 pnpm exec vitest run packages/runner/tests/config-docs.test.ts",
+      "result": "failed",
+      "output_excerpt": "Tests 1 failed | 6 passed (7). read in code but not in .env.example: expected [ 'VITE_FIREBASE_WEB_API_KEY', 'VITE_FIREBASE_AUTH_DOMAIN', 'VITE_FIREBASE_PROJECT_ID' ] to deeply equal []"
+    }
+  ],
+  "tests_proposed": [],
+  "evidence": [
+    ".env.example:112-116 lists XDG_CONFIG_HOME, AUDIT_STORE_BUCKET, FIREBASE_PROJECT_ID, FIREBASE_WEB_API_KEY, FIREBASE_AUTH_DOMAIN (commented, empty)",
+    "packages/core/src/ai/key-resolver.ts:370-375 defaultKeyDir: XDG_CONFIG_HOME || APPDATA (win32) || ~/.config, joined with 'qa-flow-tester' (KEYCHAIN_SERVICE, line 44); LOCAL_KEY_FILE='key-file.key' (line 48)",
+    "packages/wizard/src/screens/audit/saved/HelperSignInScreen.tsx:22-24 reads env.VITE_FIREBASE_WEB_API_KEY, VITE_FIREBASE_AUTH_DOMAIN, VITE_FIREBASE_PROJECT_ID"
+  ],
+  "blockers": [
+    ".env.example is missing 3 names the wizard reads (HelperSignInScreen.tsx:22-24). Developer must add, each once and empty, after '# VITE_SIGNUP_URL=': '# Firebase web settings for Helper sign-in, baked in at build time (public values only; used when the runner sends none)', '# VITE_FIREBASE_PROJECT_ID=', '# VITE_FIREBASE_WEB_API_KEY=', '# VITE_FIREBASE_AUTH_DOMAIN='. docs/CONFIGURATION.md already documents them."
+  ],
+  "risks": [
+    "AC-1 is not fully met: .env.example line 112 '# XDG_CONFIG_HOME=' has no comment above it saying it is optional. The developer owns that file. Suggested line: '# Optional: folder for the local key file qa-flow-tester/key-file.key (default %APPDATA% on Windows, else ~/.config)'.",
+    "Nothing in packages/*/src reads FIREBASE_PROJECT_ID, FIREBASE_WEB_API_KEY or FIREBASE_AUTH_DOMAIN yet; only the wizard's VITE_FIREBASE_* names are read. Their doc descriptions are based on the wizard code; check them when the runner side lands, or drop the lines if that is not planned.",
+    "CHK-UNIT was not run by this agent (orchestrator runs it after the wave)."
+  ],
+  "handoff": "Once the developer adds the 3 VITE_FIREBASE_* lines (and the optional-comment line for XDG_CONFIG_HOME) to .env.example, config-docs.test.ts should pass with no further doc change (not yet run in that state). Then re-run CHK-BE-704-CONFIG-DOCS and CHK-UNIT.",
+  "_captured": {
+    "at": "2026-11-03T10:42:38.603Z",
+    "agent_id": "add5cedd9412f19b3",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

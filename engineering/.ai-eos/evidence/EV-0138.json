@@ -1,0 +1,68 @@
+{
+  "evidence_id": "EV-0138",
+  "check_id": "CHK-BE-410-UNIT",
+  "name": "audit AI runner routes",
+  "category": "integration",
+  "requirement_ids": [
+    "REQ-030",
+    "REQ-039",
+    "REQ-011"
+  ],
+  "task_ids": [
+    "BE-410"
+  ],
+  "command": "pnpm exec vitest run packages/runner/tests/audit-ai-routes.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0138.log",
+  "log_sha256": "e07bdc10b7f1b31e187367cf2a01c7e7db1be35a419b8a6128dc8823c0006d62",
+  "started_at": "2026-11-03T11:40:15.505Z",
+  "finished_at": "2026-11-03T11:40:30.276Z",
+  "duration_ms": 14771,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:6ae32dd2d14e7d54c14213f0697d968dd30618c9b751aef331098affdbe9d543",
+  "concurrent_tasks": [
+    "BE-506",
+    "BE-604",
+    "BE-605",
+    "BE-606",
+    "QA-711"
+  ],
+  "paths": [
+    "packages/runner/src/routes/audit-ai.ts",
+    "packages/runner/src/routes/body.ts",
+    "packages/runner/src/routes/route.ts",
+    "packages/runner/tests/audit-ai-routes.test.ts",
+    "packages/types/src/ai.ts",
+    "packages/types/src/website-audit.ts"
+  ],
+  "paths_fingerprint": "git-paths:acc64cd516e789eceeaec970cf31dda5cc538c9b1104a2adaa08ea82ec5a21f8",
+  "scoped_fingerprint": "git:ffd5b4f4c1b8c9253fad015a7542bb6ad4ed412193e4fd1a6cf3808b70698025",
+  "excluded_owned": [
+    "packages/core/src/audit/documents/bundle.ts",
+    "packages/core/src/audit/documents/generate.ts",
+    "packages/core/src/audit/documents/index.ts",
+    "packages/core/src/audit/documents/site-json.ts",
+    "packages/core/src/audit/preview/**",
+    "packages/core/tests/audit-doc-export.test.ts",
+    "packages/core/tests/audit-languages-e2e.test.ts",
+    "packages/core/tests/audit-preview-sanitize.test.ts",
+    "packages/core/tests/audit-preview.test.ts",
+    "packages/runner/src/helpers/**",
+    "packages/runner/src/routes/audit-helpers.ts",
+    "packages/runner/src/routes/audit-preview.ts",
+    "packages/runner/src/routes/audit-share.ts",
+    "packages/runner/tests/audit-helpers-routes.test.ts",
+    "packages/runner/tests/audit-preview-routes.test.ts",
+    "packages/runner/tests/audit-share-routes.test.ts",
+    "packages/runner/tests/helper-access.test.ts",
+    "packages/runner/tests/helper-session.test.ts",
+    "packages/runner/tests/helper-token.test.ts"
+  ]
+}

@@ -1,0 +1,15 @@
+# AI-EOS evidence EV-0008
+check: CHK-NODE-TYPECHECK (typecheck (package sources))
+command: for p in types checkers core runner wizard; do npx --no-install tsc --noEmit -p packages/$p/tsconfig.json || exit 1; done
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-10-31T09:59:04.126Z
+finished: 2026-10-31T10:01:04.881Z (120755 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+
+## stderr
+

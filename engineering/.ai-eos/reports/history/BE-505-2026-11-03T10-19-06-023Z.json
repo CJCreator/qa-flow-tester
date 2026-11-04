@@ -1,0 +1,46 @@
+{
+  "task_id": "BE-505",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-019",
+    "REQ-025"
+  ],
+  "files_inspected": [
+    "packages/core/tests/audit-doc-pitch.test.ts",
+    "packages/core/tests/audit-doc-owner.test.ts",
+    "packages/core/src/audit/documents/labels/index.ts",
+    "packages/core/src/audit/documents/templates/opt-out.ts",
+    "packages/core/src/audit/documents/pitch.ts",
+    "packages/core/src/audit/documents/owner-audit.ts",
+    "packages/types/src/website-audit.ts"
+  ],
+  "files_created": [],
+  "files_modified": [
+    "packages/core/tests/audit-doc-pitch.test.ts"
+  ],
+  "implementation_summary": "Correction for CHK-BE-505-UNIT (EV-0084). BE-709 added a Hindi label table, so 'hi' is no longer a language without a table. The test 'a language without a table uses English throughout' now uses 'te', which still has no table (the tables cover en, ta and hi). Both assertions are unchanged: lang=\"en\" and the English opt-out text. audit-doc-owner.test.ts does not make this assumption and was left as is. No source changes.",
+  "tests_executed": [
+    {
+      "name": "CHK-BE-505-UNIT",
+      "command": "CI=1 pnpm exec vitest run packages/core/tests/audit-doc-pitch.test.ts packages/core/tests/audit-doc-owner.test.ts",
+      "result": "passed",
+      "output_excerpt": "audit-doc-pitch.test.ts (23 tests) passed; audit-doc-owner.test.ts (14 tests) passed; Test Files 2 passed (2); Tests 37 passed (37)"
+    }
+  ],
+  "tests_proposed": [],
+  "evidence": [
+    "packages/core/src/audit/documents/labels/index.ts:17 TABLES = { en, ta, hi }; 'te' has no table",
+    "Vitest run: 2 files, 37 tests passed"
+  ],
+  "blockers": [],
+  "risks": [
+    "If a Telugu label table is added later, this test needs another language without a table. Alternatively, pick one that is not a key of TABLES."
+  ],
+  "handoff": "Test-only change. The fallback behaviour (a language without a table falls back to English) is unchanged.",
+  "_captured": {
+    "at": "2026-11-03T10:19:06.023Z",
+    "agent_id": "af02d49cb8671eff9",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

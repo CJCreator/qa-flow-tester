@@ -1,0 +1,41 @@
+{
+  "evidence_id": "EV-0269",
+  "check_id": "CHK-BE-507-BROWSER",
+  "name": "PDF printing tests (Chromium)",
+  "category": "integration",
+  "requirement_ids": [
+    "REQ-022",
+    "REQ-021"
+  ],
+  "task_ids": [
+    "BE-507"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/audit-doc-pdf.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0269.log",
+  "log_sha256": "735bec940ebc70d11c5c51c47d4627c4dd669d6f57e484810673a33b5feb6491",
+  "started_at": "2026-11-04T03:40:42.304Z",
+  "finished_at": "2026-11-04T03:43:23.954Z",
+  "duration_ms": 161650,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:2ce64a620140cdf4195955843b3856bf9919066995f1f20a60dd1e8ac10e2504",
+  "concurrent_tasks": [
+    "QA-712"
+  ],
+  "paths": [
+    "packages/core/src/audit/documents/**",
+    "packages/core/tests/audit-doc-pdf.test.ts"
+  ],
+  "paths_fingerprint": "git-paths:da820cb5347582e8cb1582de8ff8a34c1030c15b03c70b89687bda4c321dcf06",
+  "scoped_fingerprint": "git:d43e252e7725764cb4edf6b0f30f98b29b73dd58767df07b17c5131fb15af7ea",
+  "excluded_owned": [
+    "packages/wizard/tests/audit-languages-browser.test.ts"
+  ]
+}

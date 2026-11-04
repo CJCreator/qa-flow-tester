@@ -1,0 +1,44 @@
+{
+  "evidence_id": "EV-0280",
+  "check_id": "CHK-FE-191-UNIT",
+  "name": "wizard router and audit screen registration",
+  "category": "unit",
+  "requirement_ids": [
+    "REQ-001",
+    "REQ-028"
+  ],
+  "task_ids": [
+    "FE-191"
+  ],
+  "command": "pnpm exec vitest run packages/wizard/tests/router.test.ts packages/wizard/tests/audit-routing.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  2 passed (2)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0280.log",
+  "log_sha256": "9acf0166b9a56c8e13fc5d674c0914306c4295caf4f899e2b48b9e2fd7b6bb76",
+  "started_at": "2026-11-04T03:43:22.182Z",
+  "finished_at": "2026-11-04T03:43:38.272Z",
+  "duration_ms": 16090,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:ae82113bc98d63de43d0954c20f89115c91c08a1222d3d6fc058ccbe621d2823",
+  "concurrent_tasks": [
+    "QA-712"
+  ],
+  "paths": [
+    "packages/wizard/src/App.tsx",
+    "packages/wizard/src/lib/router.ts",
+    "packages/wizard/src/screens/audit/**",
+    "packages/wizard/tests/audit-routing.test.ts",
+    "packages/wizard/tests/router.test.ts"
+  ],
+  "paths_fingerprint": "git-paths:0d6c3c5f11d011bcab32c8269cb41c7d4c34570f02330ebed3c7c9362368076a",
+  "scoped_fingerprint": "git:d43e252e7725764cb4edf6b0f30f98b29b73dd58767df07b17c5131fb15af7ea",
+  "excluded_owned": [
+    "packages/wizard/tests/audit-languages-browser.test.ts"
+  ]
+}

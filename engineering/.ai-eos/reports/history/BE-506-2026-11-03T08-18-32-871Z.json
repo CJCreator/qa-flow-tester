@@ -1,0 +1,83 @@
+{
+  "task_id": "BE-506",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-018",
+    "REQ-021"
+  ],
+  "files_inspected": [
+    "packages/types/src/website-audit.ts",
+    "packages/types/src/route-telemetry.ts",
+    "packages/core/src/audit/documents/model.ts",
+    "packages/core/src/audit/documents/edits.ts",
+    "packages/core/src/audit/documents/structure.ts",
+    "packages/core/src/audit/documents/content.ts",
+    "packages/core/src/audit/documents/findings.ts",
+    "packages/core/src/audit/documents/roadmap-document.ts",
+    "packages/core/src/audit/documents/proposal.ts",
+    "packages/core/src/audit/documents/pitch.ts",
+    "packages/core/src/audit/documents/owner-audit.ts",
+    "packages/core/src/audit/documents/settings.ts",
+    "packages/core/src/audit/documents/render-markdown.ts",
+    "packages/core/src/audit/documents/render-html.ts",
+    "packages/core/src/audit/documents/render-pdf.ts",
+    "packages/core/src/audit/documents/render-docx.ts",
+    "packages/core/src/audit/documents/zip.ts",
+    "packages/core/src/audit/documents/labels/index.ts",
+    "packages/core/src/index.ts",
+    "packages/core/tests/helpers/audit-doc-fixture.ts",
+    "packages/core/tests/audit-doc-owner.test.ts",
+    "packages/core/tests/audit-doc-docx.test.ts"
+  ],
+  "files_created": [
+    "packages/core/src/audit/documents/generate.ts",
+    "packages/core/src/audit/documents/site-json.ts",
+    "packages/core/src/audit/documents/bundle.ts",
+    "packages/core/src/audit/documents/index.ts",
+    "packages/core/tests/audit-doc-export.test.ts"
+  ],
+  "files_modified": [],
+  "implementation_summary": "generate.ts: generateAuditDocuments({result, contents, edits, settings, language?, documents?, now?}) applies the overlay once (editedViewOf) and builds Structure, Content, Findings, Improvement Roadmap and Proposal in the fixed order. A subset comes back in the same fixed order with duplicates removed; an empty or missing list means all five. Also documentsFromView (reused by the exports), selectedDocumentKinds, generatePitchGlimpse -> {doc, html} (wraps pitchGlimpseDoc/buildPitchGlimpse) and generateOwnerAudit -> AuditDoc (takes no settings, so Proposal inputs and company details never reach it). If the saved Proposal template is blank or is still the English default, the default template for the document language is used. site-json.ts: buildSiteJson(view) has schemaVersion 1, site {url, version, language, startedAt, finishedAt}, coverage {found, reached}, pages (urlPath, title, depth, coverage, sampleUrlPath, layoutGroup, language, recommendation, and sections with the edited text exactly as stored), findings (id, rule, group, area, title, detail, suggestion, impact, effort, urlPath, pages, sectionId, target, source, advisory), roadmap and skippedPages {urlPath, why, status}. The audit id, screenshot paths, crawl telemetry and free-text skip details are left out on purpose. bundle.ts: exportAudit(format, input, {renderPdf?}) -> Promise<AuditExportFile {fileName, contentType: EXPORT_CONTENT_TYPES[format], body: Buffer}>. md, html and pdf put the selected documents into one combined AuditDoc: one document is used as-is; several go under a joint title, each under its own h2 and starting on a new page. docx uses renderDocx(docs). bundle uses writeZip to build `<host>-v<version>/` holding 01-05 .md, site.json and README.md. Also buildAuditBundle, exportPitchGlimpse(html|pdf), exportOwnerAudit(md|html|pdf|docx), exportBaseName/exportHostPart (file names use only [a-z0-9.-], fall back to 'website', and use v0 for an invalid version), combineDocuments and BUNDLE_FILE_NAMES. Unknown formats and empty selections throw plain-sentence errors. index.ts: a barrel that re-exports model, edits, roadmap, settings, labels, structure, content, findings, roadmap-document, proposal, pitch, owner-audit, generate, site-json, bundle, the md/html/docx/pdf renderers and zip.",
+  "tests_executed": [
+    {
+      "name": "audit-doc-export.test.ts (30 tests: AC-1 five docs + one Pitch Glimpse, bundle layout, site.json vs Markdown, edits in md/html/pdf/docx/bundle plus a check that the originals are present without edits, Tamil character for character, content types and safe file names, combined documents, barrel)",
+      "command": "pnpm exec vitest run packages/core/tests/audit-doc-export.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 30 passed (30)"
+    },
+    {
+      "name": "core type-check",
+      "command": "node node_modules/typescript/bin/tsc -p packages/core/tsconfig.json --noEmit",
+      "result": "passed",
+      "output_excerpt": "EXIT 0, no diagnostics"
+    }
+  ],
+  "tests_proposed": [
+    "A real Chromium PDF export of exportAudit('pdf') and exportPitchGlimpse('pdf') belongs in the browser project (BROWSER_TESTS). The unit tests inject a fake renderPdf and only check the HTML handed to the printer.",
+    "Runner route tests for audit-export.ts (Content-Disposition built from fileName, 400/404/409 paths)"
+  ],
+  "evidence": [
+    "packages/core/src/audit/documents/generate.ts: generateAuditDocuments, documentsFromView, generatePitchGlimpse, generateOwnerAudit",
+    "packages/core/src/audit/documents/site-json.ts: buildSiteJson, SITE_JSON_SCHEMA_VERSION",
+    "packages/core/src/audit/documents/bundle.ts: exportAudit, buildAuditBundle, exportPitchGlimpse, exportOwnerAudit, exportBaseName",
+    "packages/core/src/audit/documents/index.ts: barrel",
+    "vitest run: 30 passed in packages/core/tests/audit-doc-export.test.ts"
+  ],
+  "blockers": [],
+  "risks": [
+    "Name clashes for BE-190: the result type is AuditExportFile, because the core barrel already exports ExportFile from plan/playwright-export.ts. wording.ts (ADR_0018_CLAIM_WORDS, CLAIM_WORDS, RELEASE_VERDICT_WORDS, findClaimWords) is deliberately not in the barrel, because audit/ai/claim-words.ts exports the same names. I checked that no other documents export collides with a declaration elsewhere in core/src.",
+    "The barrel re-exports render-pdf (Playwright), zip and render-docx (node:zlib). Core is already Node-only (browser.js imports Playwright), but the wizard must never import this barrel.",
+    "The bundle always holds all five Audit Documents and ignores `documents`, following Q-24. The other formats respect the selection.",
+    "Proposal template choice: settings resolve to the English default when nothing is saved, so a saved template equal to the English default is treated as 'not saved' and the default for the document language is used. Someone who deliberately saved the unmodified English template for a Tamil export gets the Tamil one.",
+    "Removed pages: buildEditedView strips them from the hierarchy, navigation links, findings and roadmap. However, CTA targets or Section text on other pages that mention a removed page's path would still appear, because they are other pages' content. The fixture does not have that case.",
+    "The PDF default calls renderPdf, which launches its own Chromium on every call. Callers should run PDF exports one at a time.",
+    "REQ-018 text still says three documents (Q-46). The tests follow the Q-02/D-001 decision: five Audit Documents plus one Pitch Glimpse."
+  ],
+  "handoff": "For the runner's audit-export.ts: call exportAudit(query.format, {result, contents, edits: overlay, settings: resolvedSettings, language, documents, now?}). Then exportPitchGlimpse(format 'html'|'pdf', {result, contents, edits, language, settings: {optOutText}, screenshots: {[screenshotPath]: dataUri}}) and exportOwnerAudit(format, {result, contents, edits, language}). Each returns {fileName, contentType, body: Buffer}; fileName is already limited to [a-z0-9.-] (for example shop.example.in-v1-audit.pdf or shop.example.in-v1.zip), so it can go straight into Content-Disposition. Errors are fixed sentences that are safe to show ('This export format is not available.', 'There is no document to export.', and the renderPdf messages). Tests can inject options.renderPdf to avoid Chromium. For BE-190: add `export * from './audit/documents/index.js'` to the core barrel. Its public type names are AuditExportFile, AuditDocumentsInput, PitchGlimpseInput, OwnerAuditInput, DocumentSettings and SiteJson*.",
+  "_captured": {
+    "at": "2026-11-03T08:18:32.871Z",
+    "agent_id": "a6fb820e6bd381c3c",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

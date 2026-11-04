@@ -1,0 +1,64 @@
+{
+  "task_id": "FE-191",
+  "agent": "frontend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-001",
+    "REQ-028"
+  ],
+  "files_inspected": [
+    "packages/wizard/src/lib/router.ts",
+    "packages/wizard/src/App.tsx",
+    "packages/wizard/src/screens/audit/saved/saved-api.ts",
+    "packages/wizard/src/screens/audit/saved/HelperSignInScreen.tsx",
+    "packages/wizard/src/components/TopBar.tsx",
+    "packages/wizard/src/lib/title.ts",
+    "packages/wizard/tests/router.test.ts"
+  ],
+  "files_created": [
+    "packages/wizard/tests/audit-routing.test.ts"
+  ],
+  "files_modified": [
+    "packages/wizard/src/lib/router.ts",
+    "packages/wizard/src/App.tsx",
+    "packages/wizard/tests/router.test.ts"
+  ],
+  "implementation_summary": "11 audit Route variants and PATHS in router.ts with validated id and version matching; isCheckRoute and readsAddressParam unchanged. App.tsx imports and renders every audit screen, with tab titles. New audit-routing.test.ts pins PATHS to AUDIT_PATHS, covers round-trips, invalid ids and versions, Check-up flags, App.tsx source contract and barrel imports under screens/audit.",
+  "tests_executed": [
+    {
+      "name": "CHK-FE-191-UNIT",
+      "command": "node_modules/.bin/vitest run packages/wizard/tests/router.test.ts packages/wizard/tests/audit-routing.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 2 passed (2); Tests 51 passed (51)"
+    },
+    {
+      "name": "wizard type-check",
+      "command": "cd packages/wizard && ../../node_modules/.bin/tsc --noEmit -p .",
+      "result": "passed",
+      "output_excerpt": "no output"
+    }
+  ],
+  "tests_proposed": [
+    "wizard-e2e navigation through /audits/new and /audits once the runner audit routes exist"
+  ],
+  "evidence": [
+    "packages/wizard/src/lib/router.ts",
+    "packages/wizard/src/App.tsx",
+    "packages/wizard/tests/audit-routing.test.ts"
+  ],
+  "blockers": [],
+  "risks": [
+    "TopBar.tsx (outside ownership) shows a 'Visibility' breadcrumb for unknown routes, so audit routes need labels or NO_CRUMBS entries.",
+    "RewriteReview is not mounted: it needs PageContent, which only exists inside AnalysisScreen's PageContentView (not in my files).",
+    "No link or nav entry points to /audits, /audit-settings or /helper yet.",
+    "Audit tab titles are not in PUBLIC_TITLES, so pages are noindex.",
+    "/audits/new shadows an audit whose id is 'new'.",
+    "Barrel-import check covers only screens/audit; older screens still import values from '@qa/types'."
+  ],
+  "handoff": "Add audit breadcrumb labels and nav links in TopBar.tsx and CommandPalette.tsx. Mount RewriteReview in the results page content view.",
+  "_captured": {
+    "at": "2026-11-03T10:47:40.938Z",
+    "agent_id": "a374d32d9ef0141a7",
+    "agent_type": "ai-eos:frontend-engineer"
+  }
+}

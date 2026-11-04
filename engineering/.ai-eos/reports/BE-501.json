@@ -1,0 +1,38 @@
+{
+  "task_id": "BE-501",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-032"
+  ],
+  "files_inspected": [
+    "packages/core/tests/audit-doc-render.test.ts"
+  ],
+  "files_created": [],
+  "files_modified": [
+    "packages/core/tests/audit-doc-render.test.ts"
+  ],
+  "implementation_summary": "Changed the labelLanguages() expectation from ['en','hi','ta'] to ['bn','en','gu','hi','kn','ml','mr','or','pa','ta','te','ur'] to match the 12 label tables registered by BE-710. Nothing else was changed.",
+  "tests_executed": [
+    {
+      "name": "audit-doc-render",
+      "command": "CI=1 pnpm exec vitest run packages/core/tests/audit-doc-render.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 26 passed (26)"
+    }
+  ],
+  "tests_proposed": [],
+  "evidence": [
+    "packages/core/tests/audit-doc-render.test.ts:345"
+  ],
+  "blockers": [],
+  "risks": [
+    "The test now hard-codes the 12 language codes, so it will fail again whenever a label table is added or removed."
+  ],
+  "handoff": "None.",
+  "_captured": {
+    "at": "2026-11-03T11:25:55.697Z",
+    "agent_id": "aae9b211f4bba5401",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

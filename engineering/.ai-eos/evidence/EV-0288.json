@@ -1,0 +1,50 @@
+{
+  "evidence_id": "EV-0288",
+  "check_id": "CHK-QA-200-INTEGRATION",
+  "name": "Audit crawl sends only reads",
+  "category": "integration",
+  "requirement_ids": [
+    "REQ-003",
+    "REQ-006",
+    "REQ-036"
+  ],
+  "task_ids": [
+    "QA-200"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/audit-crawl-read-only.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0288.log",
+  "log_sha256": "e3fb18001a6768636ce0f3ad9fd6a81e0e1a82c756dd897e95b5b52b7f9c9d8d",
+  "started_at": "2026-11-04T03:44:14.563Z",
+  "finished_at": "2026-11-04T03:45:44.897Z",
+  "duration_ms": 90334,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:ae82113bc98d63de43d0954c20f89115c91c08a1222d3d6fc058ccbe621d2823",
+  "concurrent_tasks": [
+    "QA-712"
+  ],
+  "paths": [
+    "fixtures/audit-site/**",
+    "packages/core/src/audit/crawl/**",
+    "packages/core/src/browser.ts",
+    "packages/core/src/discovery/deterministic-spider.ts",
+    "packages/core/src/discovery/frontier.ts",
+    "packages/core/src/live-site.ts",
+    "packages/core/src/navigate.ts",
+    "packages/core/src/safe-net.ts",
+    "packages/core/tests/audit-crawl-read-only.test.ts",
+    "packages/core/tests/helpers/audit-site-server.ts"
+  ],
+  "paths_fingerprint": "git-paths:ef149641c0f92764328ab0b2d847a836745142fa63cb89cacd6d793c42dcf598",
+  "scoped_fingerprint": "git:d43e252e7725764cb4edf6b0f30f98b29b73dd58767df07b17c5131fb15af7ea",
+  "excluded_owned": [
+    "packages/wizard/tests/audit-languages-browser.test.ts"
+  ]
+}

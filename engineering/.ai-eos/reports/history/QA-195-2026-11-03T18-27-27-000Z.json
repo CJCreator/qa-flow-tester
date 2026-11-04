@@ -1,0 +1,58 @@
+{
+  "task_id": "QA-195",
+  "agent": "qa-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-034",
+    "REQ-035",
+    "REQ-047",
+    "REQ-048",
+    "REQ-049"
+  ],
+  "files_inspected": [
+    "packages/core/tests/helpers/audit-site-server.ts",
+    "packages/runner/src/routes/audit-crawl.ts",
+    "packages/runner/src/routes/index.ts",
+    "packages/runner/src/routes/audit-content.ts",
+    "packages/runner/src/server.ts",
+    "packages/core/src/audit/crawl/crawl.ts",
+    "packages/core/tests/audit-crawl.test.ts",
+    "fixtures/audit-site/robots.txt",
+    "fixtures/audit-site/sitemap.xml"
+  ],
+  "files_created": [
+    "packages/runner/tests/website-audit-e2e.test.ts"
+  ],
+  "files_modified": [],
+  "implementation_summary": "One browser e2e test: RunnerServer (temp dirs, port 3811, access token) plus the audit-site fixture. A custom route table swaps the audit start and stream rows for the same rows built with a fake public DNS and connect, and a Chromium launcher that rewrites the resolver pin to 127.0.0.1. It covers the audit flow, Skipped Pages reasons, robots, off-host sitemap, Crawl-delay and non-overlap, the 409 during the audit, owner and Shared Link access, export, and release-verdict absence.",
+  "tests_executed": [
+    {
+      "name": "Website Audit end to end through the runner (Chromium, audit-site fixture)",
+      "command": "pnpm exec vitest run packages/runner/tests/website-audit-e2e.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1), Tests 8 passed (8), Duration 44.48s"
+    }
+  ],
+  "tests_proposed": [
+    "Assert the Crawl-delay also covers the first pacer turn after robots.txt once the product paces the address check and robots.txt fetch.",
+    "Route-level test that RunnerServer hostChecks reaches the audit start row, so production wiring can be tested without swapping rows."
+  ],
+  "evidence": [
+    "packages/runner/tests/website-audit-e2e.test.ts"
+  ],
+  "blockers": [],
+  "risks": [
+    "The audit start and stream rows ignore RunnerServer.hostChecks; no seam exists to run the real rows on loopback, so the test swaps them through the routes option.",
+    "The address check request (/) and robots.txt fetch are not paced by the Crawl-delay (robots.txt is read first); the test's gap check starts at sitemap.xml.",
+    "vitest.workspace.ts (not owned): 'website-audit-e2e' is missing from BROWSER_TESTS.runner; the file runs in the unit project.",
+    "The 100 ms timing tolerance on the 1 s Crawl-delay gap could be tight on a heavily loaded machine; observed passing.",
+    "Playwright is loaded through createRequire from packages/core because the runner package has no playwright dependency.",
+    "Port 3811 is fixed; another process holding it would fail the suite."
+  ],
+  "handoff": "Orchestrator: add 'website-audit-e2e' to BROWSER_TESTS.runner in vitest.workspace.ts. Run CHK-QA-195-E2E: pnpm exec vitest run packages/runner/tests/website-audit-e2e.test.ts (build types, checkers and core first).",
+  "_captured": {
+    "at": "2026-11-03T18:27:27.000Z",
+    "agent_id": "a8b16c4507486ed70",
+    "agent_type": "ai-eos:qa-engineer"
+  }
+}

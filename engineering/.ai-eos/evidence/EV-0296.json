@@ -1,0 +1,46 @@
+{
+  "evidence_id": "EV-0296",
+  "check_id": "CHK-QA-702-TESTS",
+  "name": "runner tests whose typings changed",
+  "category": "integration",
+  "requirement_ids": [
+    "REQ-051"
+  ],
+  "task_ids": [
+    "QA-702"
+  ],
+  "command": "pnpm exec vitest run packages/runner/tests/auth-crawl-run.test.ts packages/runner/tests/plan-routes.test.ts packages/runner/tests/session-state.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "FAIL",
+  "exit_code": 1,
+  "timed_out": false,
+  "actual_result": "exit code 1; Test Files  1 failed | 2 passed (3)",
+  "failure_details": "stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages\n[QA Orchestrator] Executing NAV-025 (\"navigation\") on 1440px as manager...\n\nstdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages\n[QA Orchestrator] Executing NAV-026 (\"navigation\") on 1440px as manager...\n\nstdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages\n[QA Orchestrator] Executing TC-FLOW-001 (\"FLOW-001\") on 1440px as manager...\n\nstdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages\n[QA Orchestrator] Executing TC-FLOW-002 (\"FLOW-002\") on 1440px as manager...\n\nstdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages\n[QA Orchestrator] Executing TC-FLOW-003 (\"FLOW-003\") on 1440px as manager...\n\nstdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages\n[QA Orchestrator] Generating release readiness report in C:\\Users\\HP\\AppData\\Local\\Temp\\qa-test-auth-crawl-run-P0dO1v\\report\\runs\\run-1793764098336...\n\nstdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages\n[QA Orchestrator] Reports generated: report.md and findings.json\n\n ❯ |browser| packages/runner/tests/auth-crawl-run.test.ts (3 tests | 1 failed) 855142ms\n   × T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > streams DISCOVERY_PROGRESS with optional fields and serves report with pageCoverage 120704ms\n     → Test timed out in 120000ms.\nIf this is a long-running test, pass a timeout value as the last argument or configure it globally with \"testTimeout\".\n   ✓ T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages 718598ms\n   ✓ T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > asserts RUN_FAILED event carries signInReason when credentials fail under consent 11517ms\n\n Test Files  1 failed | 2 passed (3)\n      Tests  1 failed | 16 passed (17)\n   Start at  09:15:28\n   Duration  902.93s (transform 59.16s, setup 0ms, collect 125.96s, tests 857.42s, environment 5ms, prepare 3.08s)\n\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL |browser|  packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > streams DISCOVERY_PROGRESS with optional fields and serves report with pageCoverage\nError: Test timed out in 120000ms.\nIf this is a long-running test, pass a timeout value as the last argument or configure it globally with \"testTimeout\".\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯",
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0296.log",
+  "log_sha256": "601406c1ea327307d6e9e6228a9afec891e7c20fc74d61c2c53aabeddff1d5f5",
+  "started_at": "2026-11-04T03:45:18.067Z",
+  "finished_at": "2026-11-04T04:00:32.654Z",
+  "duration_ms": 914586,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:ae82113bc98d63de43d0954c20f89115c91c08a1222d3d6fc058ccbe621d2823",
+  "concurrent_tasks": [
+    "QA-712"
+  ],
+  "paths": [
+    "fixtures/test-app/**",
+    "packages/core/src/**",
+    "packages/runner/src/**",
+    "packages/runner/tests/auth-crawl-run.test.ts",
+    "packages/runner/tests/plan-routes.test.ts",
+    "packages/runner/tests/session-state.test.ts",
+    "packages/types/src/**"
+  ],
+  "paths_fingerprint": "git-paths:647e875208239ecdebab1f9e3a3ea4eedd1daf25d6755f0fdb83ede0527cc3e3",
+  "scoped_fingerprint": "git:d43e252e7725764cb4edf6b0f30f98b29b73dd58767df07b17c5131fb15af7ea",
+  "excluded_owned": [
+    "packages/wizard/tests/audit-languages-browser.test.ts"
+  ],
+  "concurrent": true
+}

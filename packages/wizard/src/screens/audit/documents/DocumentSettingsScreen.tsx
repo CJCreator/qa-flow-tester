@@ -1,0 +1,287 @@
+import { useEffect, useState } from 'react';
+import type { AuditSettingsReply, AuditSettingsUpdate, CompanyDetails } from '@qa/types/src/browser.js';
+import { ErrorMessage, FocusHeading, Spinner } from '../../../components/text';
+import {
+  COMPANY_FIELDS,
+  OPT_OUT_LANGUAGES,
+  PROPOSAL_PLACEHOLDERS,
+  draftFrom,
+  isUpdateEmpty,
+  loadSettings,
+  resetOptOutText,
+  resetProposalTemplate,
+  saveSettings,
+  settingsUpdate,
+  type Fetch,
+  type OptOutLanguage,
+  type SettingsDraft,
+} from './settings-api';
+
+const LANGUAGE_LABEL: Readonly<Record<OptOutLanguage, string>> = { en: 'English', ta: 'Tamil' };
+
+const COMPANY_LABEL: Readonly<Record<keyof CompanyDetails, string>> = {
+  name: 'Company name',
+  address: 'Address',
+  phone: 'Phone',
+  email: 'Email address',
+  website: 'Website',
+  terms: 'Terms and conditions',
+};
+
+const COMPANY_INPUT_TYPE: Partial<Record<keyof CompanyDetails, string>> = { phone: 'tel', email: 'email', website: 'url' };
+const COMPANY_MULTILINE: ReadonlySet<keyof CompanyDetails> = new Set(['address', 'terms']);
+
+export type SettingsMessage = { tone: 'pass' | 'fail'; text: string } | null;
+
+export interface DocumentSettingsViewProps {
+  reply: AuditSettingsReply;
+  draft: SettingsDraft;
+  saving: boolean;
+  message: SettingsMessage;
+  onDraft: (draft: SettingsDraft) => void;
+  onSave: () => void;
+  onDiscard: () => void;
+  /** Saves a "put the default back" change at once. */
+  onReset: (update: AuditSettingsUpdate) => void;
+}
+
+/** The document settings without state: Proposal template, opt-out text per language, company details. */
+export function DocumentSettingsView({ reply, draft, saving, message, onDraft, onSave, onDiscard, onReset }: DocumentSettingsViewProps) {
+  const pending = !isUpdateEmpty(settingsUpdate(reply, draft));
+  return (
+    <div className="space-y-10">
+      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-3 border-b border-rule bg-canvas py-3">
+        <button type="button" className="btn-primary px-6 font-bold" disabled={!pending || saving} onClick={onSave}>
+          {saving ? <Spinner label="Saving…" /> : 'Save document settings'}
+        </button>
+        <button type="button" className="btn-quiet" disabled={!pending || saving} onClick={onDiscard}>
+          Discard unsaved changes
+        </button>
+        <p className="text-sm text-ink-soft" aria-live="polite">
+          {pending ? 'You have changes that are not saved yet.' : 'Every change is saved.'}
+        </p>
+        {message &&
+          (message.tone === 'fail' ? (
+            <ErrorMessage>{message.text}</ErrorMessage>
+          ) : (
+            <p role="status" className="text-sm font-semibold text-pass">
+              {message.text}
+            </p>
+          ))}
+      </div>
+
+      <section aria-labelledby="settings-proposal-title" className="space-y-3">
+        <h2 id="settings-proposal-title" className="text-xl font-bold">
+          Proposal template
+        </h2>
+        <p className="max-w-prose text-sm text-ink-soft">
+          Every Proposal is filled from this Markdown template. Write a placeholder in double braces, such as{' '}
+          <code>{'{{price}}'}</code>, where its value goes.
+        </p>
+        <div>
+          <label htmlFor="settings-proposal-template" className="label text-ink">
+            Proposal template (Markdown)
+          </label>
+          <textarea
+            id="settings-proposal-template"
+            rows={16}
+            className="field w-full font-mono text-sm"
+            value={draft.proposalTemplate}
+            onChange={(e) => onDraft({ ...draft, proposalTemplate: e.target.value })}
+          />
+        </div>
+        <button
+          type="button"
+          className="btn-quiet text-sm"
+          disabled={saving}
+          aria-label="Put the default Proposal template back"
+          onClick={() => onReset(resetProposalTemplate())}
+        >
+          Put the default back
+        </button>
+        <h3 id="settings-placeholders-title" className="font-bold">
+          Placeholders you can use
+        </h3>
+        <dl aria-labelledby="settings-placeholders-title" className="grid grid-cols-1 gap-x-4 gap-y-1 text-sm sm:grid-cols-[auto_1fr]">
+          {PROPOSAL_PLACEHOLDERS.map((p) => (
+            <div key={p.name} className="contents">
+              <dt>
+                <code>{`{{${p.name}}}`}</code>
+              </dt>
+              <dd className="text-ink-soft">{p.description}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      <section aria-labelledby="settings-optout-title" className="space-y-3">
+        <h2 id="settings-optout-title" className="text-xl font-bold">
+          Opt-out text
+        </h2>
+        <p className="max-w-prose text-sm text-ink-soft">
+          The Pitch Glimpse ends with this text, in its language. The tool ships default text in English and Tamil as a
+          starting point. You own checking it: make sure it is right and true for you before you hand a Pitch Glimpse
+          over.
+        </p>
+        {OPT_OUT_LANGUAGES.map((language) => {
+          const id = `settings-optout-${language}`;
+          const fallback = reply.defaults.optOutText[language] ?? '';
+          return (
+            <div key={language} className="rounded border border-rule p-3" data-language={language}>
+              <label htmlFor={id} className="label text-ink">
+                {`Opt-out text in ${LANGUAGE_LABEL[language]}`}
+              </label>
+              <textarea
+                id={id}
+                rows={4}
+                lang={language}
+                className="field w-full text-sm"
+                value={draft.optOutText[language]}
+                onChange={(e) => onDraft({ ...draft, optOutText: { ...draft.optOutText, [language]: e.target.value } })}
+              />
+              <p className="label mt-2 text-ink">{`Default text in ${LANGUAGE_LABEL[language]}`}</p>
+              <p className="whitespace-pre-wrap text-sm text-ink-soft" lang={language}>
+                {fallback === '' ? 'The tool has no default text for this language.' : fallback}
+              </p>
+              <button
+                type="button"
+                className="btn-quiet mt-2 text-sm"
+                disabled={saving}
+                aria-label={`Put the default ${LANGUAGE_LABEL[language]} opt-out text back`}
+                onClick={() => onReset(resetOptOutText(language))}
+              >
+                Put the default back
+              </button>
+            </div>
+          );
+        })}
+      </section>
+
+      <section aria-labelledby="settings-company-title" className="space-y-3">
+        <h2 id="settings-company-title" className="text-xl font-bold">
+          Company details
+        </h2>
+        <p className="max-w-prose text-sm text-ink-soft">Saved once and put in every Proposal.</p>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {COMPANY_FIELDS.map((field) => {
+            const id = `settings-company-${field}`;
+            const onChange = (value: string) => onDraft({ ...draft, company: { ...draft.company, [field]: value } });
+            return (
+              <div key={field} className={COMPANY_MULTILINE.has(field) ? 'md:col-span-2' : undefined}>
+                <label htmlFor={id} className="label text-ink">
+                  {COMPANY_LABEL[field]}
+                </label>
+                {COMPANY_MULTILINE.has(field) ? (
+                  <textarea
+                    id={id}
+                    rows={field === 'terms' ? 6 : 3}
+                    className="field w-full text-sm"
+                    value={draft.company[field]}
+                    onChange={(e) => onChange(e.target.value)}
+                  />
+                ) : (
+                  <input
+                    id={id}
+                    type={COMPANY_INPUT_TYPE[field] ?? 'text'}
+                    className="field w-full text-sm"
+                    value={draft.company[field]}
+                    onChange={(e) => onChange(e.target.value)}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+export interface DocumentSettingsScreenProps {
+  /** For tests: the requests. */
+  fetchImpl?: Fetch;
+}
+
+type Loaded = { status: 'loading' } | { status: 'failed'; message: string } | { status: 'loaded'; reply: AuditSettingsReply };
+
+/** Edit the Proposal template, the opt-out text and the company details (REQ-027, REQ-019, REQ-018). */
+export function DocumentSettingsScreen({ fetchImpl }: DocumentSettingsScreenProps) {
+  const [loaded, setLoaded] = useState<Loaded>({ status: 'loading' });
+  const [draft, setDraft] = useState<SettingsDraft | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<SettingsMessage>(null);
+
+  useEffect(() => {
+    let live = true;
+    void loadSettings(fetchImpl).then((outcome) => {
+      if (!live) return;
+      if (outcome.ok) {
+        setLoaded({ status: 'loaded', reply: outcome.value });
+        setDraft(draftFrom(outcome.value));
+      } else {
+        setLoaded({ status: 'failed', message: outcome.message });
+      }
+    });
+    return () => {
+      live = false;
+    };
+  }, [fetchImpl]);
+
+  const reply = loaded.status === 'loaded' ? loaded.reply : null;
+
+  const save = async (update: AuditSettingsUpdate, keepOtherChanges: boolean) => {
+    setSaving(true);
+    setMessage(null);
+    const outcome = await saveSettings(update, fetchImpl);
+    if (outcome.ok) {
+      const fresh = draftFrom(outcome.value);
+      setLoaded({ status: 'loaded', reply: outcome.value });
+      setDraft((current) => {
+        if (!keepOtherChanges || !current) return fresh;
+        // A "put the default back" saves one field: the other unsaved changes stay in the fields.
+        return {
+          ...current,
+          ...(update.proposalTemplate !== undefined ? { proposalTemplate: fresh.proposalTemplate } : {}),
+          optOutText: {
+            en: update.optOutText?.en !== undefined ? fresh.optOutText.en : current.optOutText.en,
+            ta: update.optOutText?.ta !== undefined ? fresh.optOutText.ta : current.optOutText.ta,
+          },
+        };
+      });
+      setMessage({ tone: 'pass', text: 'Document settings saved. New exports use them.' });
+    } else {
+      setMessage({ tone: 'fail', text: outcome.message });
+    }
+    setSaving(false);
+  };
+
+  return (
+    <div className="mx-auto max-w-[64rem] px-4 py-10 sm:px-6 sm:py-14">
+      <FocusHeading className="mb-2 break-words text-question font-bold">Document settings</FocusHeading>
+      <p className="mb-6 max-w-prose text-ink-soft">
+        The Proposal template, the opt-out text of the Pitch Glimpse and your company details, used by every Website
+        Audit you export.
+      </p>
+      {loaded.status === 'loading' && <Spinner label="Loading the document settings…" />}
+      {loaded.status === 'failed' && <ErrorMessage>{loaded.message}</ErrorMessage>}
+      {reply && draft && (
+        <DocumentSettingsView
+          reply={reply}
+          draft={draft}
+          saving={saving}
+          message={message}
+          onDraft={(next) => {
+            setDraft(next);
+            setMessage(null);
+          }}
+          onSave={() => void save(settingsUpdate(reply, draft), false)}
+          onDiscard={() => {
+            setDraft(draftFrom(reply));
+            setMessage(null);
+          }}
+          onReset={(update) => void save(update, true)}
+        />
+      )}
+    </div>
+  );
+}

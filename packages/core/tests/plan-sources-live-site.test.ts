@@ -50,17 +50,17 @@ describe('Denial items and the live-site rule', () => {
   it('control still shown to the denied role: needs a Test Copy, so it is in wontRun on a live site', () => {
     const out = expand(true, true);
     expect(out.wontRun.some((w) => w.what.includes('Viewer cannot') && w.reason.length > 0)).toBe(true);
-    expect(out.testCases.some((c) => c.name.startsWith('Viewer cannot'))).toBe(false);
+    expect(out.testCases.some((c) => c.name?.startsWith('Viewer cannot'))).toBe(false);
   });
 
   it('control hidden from the denied role: the check runs even on a live site', () => {
     const out = expand(true, false);
-    expect(out.testCases.some((c) => c.name.startsWith('Viewer cannot'))).toBe(true);
+    expect(out.testCases.some((c) => c.name?.startsWith('Viewer cannot'))).toBe(true);
   });
 
   it('a Test Copy runs it', () => {
     const out = expand(false, true);
-    expect(out.testCases.some((c) => c.name.startsWith('Viewer cannot'))).toBe(true);
+    expect(out.testCases.some((c) => c.name?.startsWith('Viewer cannot'))).toBe(true);
   });
 
   it('a sensitive control (Delete) always needs a Test Copy for its Denial item', () => {

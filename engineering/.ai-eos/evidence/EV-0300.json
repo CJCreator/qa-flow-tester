@@ -1,0 +1,39 @@
+{
+  "evidence_id": "EV-0300",
+  "check_id": "CHK-QA-711-LANGUAGES",
+  "name": "Tamil and Hindi end to end in core",
+  "category": "e2e",
+  "requirement_ids": [
+    "REQ-044",
+    "REQ-032"
+  ],
+  "task_ids": [
+    "QA-711"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/audit-languages-e2e.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0300.log",
+  "log_sha256": "f30bad531c48ea51d0d67aa9432c1a662a6ac645885d3b2a9773872172917950",
+  "started_at": "2026-11-04T03:47:26.080Z",
+  "finished_at": "2026-11-04T03:48:58.667Z",
+  "duration_ms": 92587,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:ae82113bc98d63de43d0954c20f89115c91c08a1222d3d6fc058ccbe621d2823",
+  "concurrent_tasks": [],
+  "paths": [
+    "fixtures/audit-site/**",
+    "packages/checkers/src/**",
+    "packages/core/src/**",
+    "packages/core/tests/audit-languages-e2e.test.ts",
+    "packages/core/tests/helpers/**",
+    "packages/types/src/**"
+  ],
+  "paths_fingerprint": "git-paths:5ccf44002ceeb07bd7fc53cfa97ca228533d8c255d71225eb5047116de5b4eb6"
+}

@@ -1,0 +1,80 @@
+{
+  "task_id": "BE-604",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-024",
+    "REQ-023"
+  ],
+  "files_inspected": [
+    "packages/runner/src/routes/route.ts",
+    "packages/runner/src/routes/index.ts",
+    "packages/runner/src/routes/body.ts",
+    "packages/runner/src/routes/audit-documents.ts",
+    "packages/runner/src/routes/audit-settings.ts",
+    "packages/runner/src/server.ts",
+    "packages/runner/src/beta.ts",
+    "packages/runner/tests/audit-edits-routes.test.ts",
+    "packages/runner/tests/route-access-server.test.ts",
+    "packages/types/src/website-audit.ts",
+    "packages/types/src/aspects.ts",
+    "packages/core/src/audit/store/shares.ts",
+    "packages/core/src/audit/store/audit-store.ts",
+    "packages/core/src/audit/store/keys.ts",
+    "packages/core/src/audit/store/backend.ts",
+    "packages/core/src/audit/documents/generate.ts",
+    "packages/core/src/audit/documents/pitch.ts",
+    "packages/core/src/audit/documents/render-html.ts",
+    "packages/core/tests/helpers/audit-doc-fixture.ts",
+    "packages/wizard/src/screens/audit/saved/share-api.ts",
+    "docs/adr/0036-hosted-audit-storage-and-shared-links.md",
+    "engineering/plan.md"
+  ],
+  "files_created": [
+    "packages/runner/src/routes/audit-share.ts",
+    "packages/runner/tests/audit-share-routes.test.ts"
+  ],
+  "files_modified": [],
+  "implementation_summary": "auditShareRoutes({ store, optOutText }) returns the rows for listShares (view), createShare (owner), revokeShare (owner) and sharedPage (public, beta allow), all taken from AUDIT_API, plus a GET '/s' prefix row (public, beta allow) that gives malformed ids the same 404 body. Create checks the body (kind, optional language and version), returns 404 ERR_AUDIT_NOT_FOUND for an unknown audit or version and 409 ERR_AUDIT_RUNNING for a running version. It makes the snapshot first: a pitch link renders the Pitch Glimpse through G5's generatePitchGlimpse (Page Content, edits, screenshots as data: URIs, opt-out text); a preview link copies the stored preview.html, and a missing preview answers 409 with the fixed NO_PREVIEW_MESSAGE. It then calls store.createShare and writes the snapshot to shareSnapshotKey under the audit lock; if that write fails the link is revoked and the reply is 500. Revoke calls store.revokeShare and returns { link }. /s/:linkId uses resolveShare only for status and the link record, never its AuditSummary (F-009), and serves the stored snapshot with a robots meta tag added. Every /s/ reply carries X-Robots-Tag noindex nofollow, Referrer-Policy no-referrer, Cache-Control no-store, nosniff, X-Frame-Options DENY and the CSP default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none', and clears any Set-Cookie prepared before it. Unknown and malformed ids get one identical 404 page; revoked, expired and deleted-audit links get a small 410 page with data-code=ERR_LINK_GONE.",
+  "tests_executed": [
+    {
+      "name": "Shared Link route tests (CHK-BE-604-UNIT)",
+      "command": "pnpm exec vitest run packages/runner/tests/audit-share-routes.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 20 passed (20)"
+    },
+    {
+      "name": "Runner typecheck filtered to BE-604 files",
+      "command": "pnpm exec tsc --noEmit -p packages/runner/tests/tsconfig.typecheck.json | grep -i audit-share",
+      "result": "passed",
+      "output_excerpt": "no errors in audit-share.ts or audit-share-routes.test.ts (other files not assessed)"
+    }
+  ],
+  "tests_proposed": [
+    "QA-600: /s/:linkId through the real RunnerServer dispatch on a keyed copy and on a beta copy (no Set-Cookie, no 401, beta rate limit behaviour)",
+    "BE-190 registration test: confirm the extra GET '/s' prefix row is accepted and that no inline handler or the wizard static fallback answers /s/*",
+    "BE-605: preview.html cleaning removes meta refresh and external URLs before it can be shared"
+  ],
+  "evidence": [
+    "packages/runner/src/routes/audit-share.ts: auditShareRoutes rows built from AUDIT_API.*.method/path/access",
+    "packages/runner/src/routes/audit-share.ts: SHARED_PAGE_CSP and SHARED_PAGE_HEADERS; sendSharedPage removes Set-Cookie",
+    "packages/runner/tests/audit-share-routes.test.ts: 'is open until 30 days after creation and answers 410 at 30 days plus 1 ms (injected clock)'",
+    "packages/runner/tests/audit-share-routes.test.ts: \"never shows the owner's contact details\" (name, address, phone and email planted in marketing signals, en and ta)",
+    "vitest run: 20 passed (20)"
+  ],
+  "blockers": [],
+  "risks": [
+    "Error code: no stored preview (and no finished result) answers 409 with code ERR_INVALID_REQUEST, which AUDIT_ERROR_CODES documents as a 400. A dedicated code would need a packages/types change (not owned).",
+    "CSP differs from ADR 0036 text: follows the acceptance criterion (img-src data:; style-src 'unsafe-inline') instead of the ADR's img-src 'self' data:; style-src 'self', because the Pitch Glimpse uses inline <style>. The ADR may need updating.",
+    "Extra row: a GET '/s' prefix row (public, beta allow) is not an AUDIT_API entry; BE-190's registration test must accept it.",
+    "Beta copy: server.ts dispatch runs enterSession/sessionFor before the handler, which prepares a cookie; the handler removes it, but the beta rate limit and betaScope still apply to /s/ (server.ts and beta.ts not owned).",
+    "Stored preview.html is served as written. The CSP blocks script, forms, framing and external resources, but not <meta http-equiv=refresh>; BE-605's cleaning step must remove it.",
+    "resolveShare still loads the full AuditSummary internally (store code, not owned); the route never uses it or puts it in a reply."
+  ],
+  "handoff": "BE-190: register auditShareRoutes({ store, optOutText }) from packages/runner/src/routes/audit-share.ts in allRoutes in packages/runner/src/routes/index.ts (this is the shared registration line). optOutText is a required async function returning the saved Partial<Record<DocumentLanguage,string>> from the audit settings. There are five rows, including the GET '/s' prefix row for malformed ids. /s/ is public and matched before the access-key gate. FE-601: create returns 201 { link }; list returns { links } including revoked and expired links; revoke returns 200 { link }; refusals use AuditErrorReply (409 ERR_INVALID_REQUEST with NO_PREVIEW_MESSAGE, 409 ERR_AUDIT_RUNNING, 404 ERR_AUDIT_NOT_FOUND for an unknown audit, version or link). Snapshots live at audits/<id>/shares/<linkId>/snapshot.html, so deleting the audit removes them.",
+  "_captured": {
+    "at": "2026-11-03T11:45:58.387Z",
+    "agent_id": "a4d41f40e9ad3976d",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

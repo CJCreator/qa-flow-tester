@@ -1,0 +1,386 @@
+{
+  "tasks": [
+    {
+      "task_id": "BE-200",
+      "requirement_ids": ["REQ-002", "REQ-003", "REQ-005", "REQ-006", "REQ-036"],
+      "title": "Deterministic Spider: record depth-limit skips and add audit crawl hooks",
+      "description": "Extend packages/core/src/discovery/deterministic-spider.ts with small, opt-in hooks the Website Audit needs, leaving Check-up behaviour unchanged when they are not set. (1) Record `depth-limit` as a Skipped Page: today the frontier returns it (frontier.ts:133-134) but enqueue (deterministic-spider.ts:381-394) only records `trap-limit`. One entry per path. (2) `admitPath?: (url: URL, depth: number) => { why: RouteSkipReason; detail?: string } | undefined`, asked in enqueue before the frontier for every candidate except the start entries; a verdict records a Skipped Page and the URL is never visited (used for `excluded` and checkout-path `payment`). (3) `inspectPage?: (page: Page, landed: URL) => Promise<{ why: RouteSkipReason; detail?: string } | undefined>`, asked after the page has landed and passed the existing classifications, before overlay dismissal, link extraction, element inventory, clicks or screenshot; a verdict records the page as a Skipped Page with that reason, pushes `sign-in` verdicts to `signInWalls`, and follows none of its links. (4) `followFormActions?: boolean` (default true): false stops GET form actions being enqueued as links (deterministic-spider.ts:845-858). (5) `onRecordedPage?: (page: Page, item: SpiderPageInventoryItem) => Promise<void>`, awaited after a page is recorded, on the rendered page (the seam for Page Content extraction, REQ-009, group G3). (6) `onSkipped?: (info: SkippedPageInfo) => void`, called for every Skipped Page, for progress. (7) `depth` (link steps from the start address) on each SpiderPageInventoryItem. Builds on BE-101, which moves this file's robots/sitemap requests to the ADR 0031 outbound fetch.",
+      "agent": "backend-engineer",
+      "priority": "high",
+      "depends_on": ["BE-101"],
+      "files_owned": [
+        "packages/core/src/discovery/deterministic-spider.ts",
+        "packages/core/tests/spider-audit-hooks.test.ts"
+      ],
+      "acceptance_criteria": [
+        "Given maxDepth D and a link D+1 link steps from the start address, when the Spider crawls, then that page is not recorded and appears once in `skipped` with reason `depth-limit` (REQ-002 AC-2); today's silent drop is gone.",
+        "Given an `admitPath` that returns `excluded` for /blog, when the Spider meets /blog/x through a link or sitemap.xml, then /blog/x is never requested (fixture request log) and is listed in `skipped` with reason `excluded`; the start address is never passed to `admitPath`.",
+        "Given an `inspectPage` that returns `payment` for a page, when the Spider lands on it, then the page is not in `pages`, is in `skipped` with reason `payment`, no element on it is clicked, and no link found only on that page is requested (REQ-036 AC-1).",
+        "Given an `inspectPage` that returns `sign-in`, when the Spider lands on that page, then it is in `skipped` with reason `sign-in` and in `signInWalls`, and nothing on it is filled in or clicked (REQ-006 AC-1).",
+        "Given `followFormActions: false` and a page with a GET form, when crawled, then the form action URL is not enqueued and no form is submitted (REQ-003 AC-3).",
+        "Given `onRecordedPage`, when a page is recorded, then the hook receives the live Playwright page after JavaScript has run, so text and links inserted by script after load are present (REQ-005 AC-1 seam), and each recorded item carries its `depth`.",
+        "`onSkipped` is called exactly once for each entry pushed to `skipped`.",
+        "With none of the new options set, existing Spider behaviour is unchanged: spider-links-and-traps, spider-page-limit and spider-signin-walls tests pass unmodified."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-200-INTEGRATION",
+          "name": "Spider audit hooks and existing spider regressions",
+          "command": "pnpm exec vitest run packages/core/tests/spider-audit-hooks.test.ts packages/core/tests/spider-links-and-traps.test.ts packages/core/tests/spider-page-limit.test.ts packages/core/tests/spider-signin-walls.test.ts",
+          "category": "integration",
+          "timeout_s": 900,
+          "paths": [
+            "packages/core/src/discovery/deterministic-spider.ts",
+            "packages/core/src/discovery/frontier.ts",
+            "packages/core/src/navigate.ts",
+            "packages/core/tests/spider-audit-hooks.test.ts",
+            "packages/core/tests/spider-links-and-traps.test.ts",
+            "packages/core/tests/spider-page-limit.test.ts",
+            "packages/core/tests/spider-signin-walls.test.ts"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "CrawlOptions gains admitPath, inspectPage, followFormActions, onRecordedPage, onSkipped; SpiderPageInventoryItem gains depth",
+        "depth-limit recorded as a Skipped Page",
+        "New browser test packages/core/tests/spider-audit-hooks.test.ts (G7 adds `spider-audit-hooks` to BROWSER_TESTS.core)"
+      ],
+      "complexity": "M",
+      "permission_level": "P1",
+      "status": "PENDING",
+      "risks": [
+        "Recording depth-limit for every crawl adds Skipped Page rows to Check-up reports too; the reason and its wording already exist (ROUTE_SKIP_REASONS, issues-document.ts), but a Check-up test that counts `skipped` exactly could change.",
+        "G1's REQ-035 task (one request at a time per host + Crawl-delay) may also edit this file's pacing (deterministic-spider.ts:476-488); one of the two must depend on the other."
+      ],
+      "notes": "Uses tiny inline http servers in the test (ports from the OS), not fixtures/audit-site, so it stays independent of the fixture. Launches Chromium: browser project."
+    },
+    {
+      "task_id": "BE-201",
+      "requirement_ids": ["REQ-006", "REQ-036"],
+      "title": "Audit crawl: payment-area and sign-in-page detection rules",
+      "description": "New module packages/core/src/audit/crawl/area-detect.ts. Pure rules plus one thin page reader. `isCheckoutPath(pathname)`: a path segment such as checkout, payment, pay, billing (path rule of Q-10). `paymentEvidence(facts)`: a card-number field (autocomplete cc-number, or a name/id/label matching card number patterns) or a payment-provider frame (iframe src host of a known provider list, e.g. Stripe, Razorpay, PayPal, Paytm, PayU, Cashfree, PhonePe, CCAvenue, Instamojo, Braintree, Adyen, Square); returns the evidence kind or undefined. `readAreaFacts(page)`: reads inputs (type, name, id, autocomplete, label) and iframe src hosts from the rendered page without touching any element. `pageAreaVerdict(page, landed)`: `payment` (evidence or checkout path), else `sign-in` when the page is nothing but a sign-in form (reuses `isSignInOnlyForm` and `readPageForms` exported by deterministic-spider.ts), else undefined. This is the `inspectPage` implementation BE-204 passes to the Spider; `isCheckoutPath` also feeds `admitPath`.",
+      "agent": "backend-engineer",
+      "priority": "high",
+      "depends_on": [],
+      "files_owned": [
+        "packages/core/src/audit/crawl/area-detect.ts",
+        "packages/core/tests/audit-area-detect.test.ts"
+      ],
+      "acceptance_criteria": [
+        "A page with a field whose autocomplete is cc-number, or whose name, id or label names a card number, is identified as a payment area (Q-10 card-number field).",
+        "A page with an iframe from a payment-provider host is identified as a payment area (Q-10 provider frame); an iframe from any other host (e.g. a map or video embed) is not.",
+        "Paths such as /checkout, /shop/checkout and /cart/checkout/pay are checkout paths; /checkout-guide-blog-post style look-alikes inside a word and ordinary paths (/shop, /about) are not.",
+        "A page that is nothing but a sign-in form (one visible password form whose fields are all sign-in fields) gets verdict `sign-in`; a page with a sign-in form beside other content forms does not (same rule as isSignInOnlyForm, LC-002).",
+        "Reading facts never clicks, focuses, fills in or submits anything (the reader only evaluates DOM properties).",
+        "Each verdict carries a short fixed `detail` (card-field, provider-frame, checkout-path, sign-in-form), never page text."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-201-UNIT",
+          "name": "Payment-area and sign-in page rules",
+          "command": "pnpm exec vitest run packages/core/tests/audit-area-detect.test.ts",
+          "category": "unit",
+          "paths": [
+            "packages/core/src/audit/crawl/area-detect.ts",
+            "packages/core/src/discovery/deterministic-spider.ts",
+            "packages/core/tests/audit-area-detect.test.ts"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "packages/core/src/audit/crawl/area-detect.ts with isCheckoutPath, paymentEvidence, readAreaFacts, pageAreaVerdict",
+        "Unit tests over plain fact objects (no browser)"
+      ],
+      "complexity": "S",
+      "permission_level": "P1",
+      "status": "PENDING",
+      "risks": [
+        "A missed detection lets the crawl into a checkout (REQ-036 risk); a false one hides a public page. The provider list is a starting set and is listed in the module so it can grow."
+      ]
+    },
+    {
+      "task_id": "BE-202",
+      "requirement_ids": ["REQ-002"],
+      "title": "Audit crawl: include/exclude path-prefix filter",
+      "description": "New module packages/core/src/audit/crawl/limits.ts: `pathLimitVerdict(pathname, limits, startPath)` returns `excluded` or undefined per Q-11: include and exclude are path prefixes matched on whole path segments (/blog matches /blog and /blog/x, not /blogger), compared on the decoded, case-preserved path; an exclude match wins; when include paths are set a path matching none is excluded; the start page is always allowed. Input limits are the already-validated `AuditLimits` from `validateAuditStartBody` (packages/types/src/website-audit.ts).",
+      "agent": "backend-engineer",
+      "priority": "high",
+      "depends_on": [],
+      "files_owned": [
+        "packages/core/src/audit/crawl/limits.ts",
+        "packages/core/tests/audit-crawl-limits.test.ts"
+      ],
+      "acceptance_criteria": [
+        "Given an exclude path /blog, /blog and /blog/2025/x get `excluded`; /blogger and /about do not (REQ-002 AC-3).",
+        "Given include paths [/services], /services/catering is allowed and /about gets `excluded`; the start page is allowed whatever the include and exclude paths say (REQ-002 AC-4, Q-11).",
+        "A path matching both an include and an exclude path is `excluded`.",
+        "Percent-encoded paths are compared after decoding (/caf%C3%A9 matches the prefix /café); a path that cannot be decoded is compared as written, never throws.",
+        "No include and no exclude paths: every path is allowed."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-202-UNIT",
+          "name": "Audit include/exclude path filter",
+          "command": "pnpm exec vitest run packages/core/tests/audit-crawl-limits.test.ts",
+          "category": "unit",
+          "paths": [
+            "packages/core/src/audit/crawl/limits.ts",
+            "packages/core/tests/audit-crawl-limits.test.ts"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": ["packages/core/src/audit/crawl/limits.ts with pathLimitVerdict and unit tests"],
+      "complexity": "XS",
+      "permission_level": "P1",
+      "status": "PENDING"
+    },
+    {
+      "task_id": "BE-203",
+      "requirement_ids": ["REQ-001"],
+      "title": "Audit start address check: public-only and reachable (Q-22)",
+      "description": "New module packages/core/src/audit/crawl/reachability.ts: `checkAuditAddress(url, { timeoutMs?, netDeps? })`. Public means the host resolves to public addresses only (`resolvePublic`, packages/core/src/safe-net.ts:115); private and local addresses are refused for a Website Audit only. Reachable means the final response after redirects (each hop re-checked, through the ADR 0031 outbound path from BE-101 / `safeGet`) is below 400 within the existing page timeout. Returns `{ ok: true, finalUrl, status }` or `{ ok: false, code: 'ERR_PRIVATE_ADDRESS' | 'ERR_UNREACHABLE', reason }` with a short message for people (no internals). The Check-up preflight (packages/core/src/preflight.ts) is not touched, so Test Copies on local and private addresses keep working.",
+      "agent": "backend-engineer",
+      "priority": "high",
+      "depends_on": ["BE-101"],
+      "files_owned": [
+        "packages/core/src/audit/crawl/reachability.ts",
+        "packages/core/tests/audit-reachability.test.ts"
+      ],
+      "acceptance_criteria": [
+        "Given a host that resolves to a public address and answers below 400 (after redirects), the check returns ok with the final URL (REQ-001 AC-1).",
+        "Given a host that does not resolve, does not answer within the page timeout, or answers 400 or above, the check returns ERR_UNREACHABLE with a message that says why (REQ-001 AC-2).",
+        "Given a host that resolves to a private, loopback or link-local address, or a redirect hop to one, the check returns ERR_PRIVATE_ADDRESS and no request is sent to that address (Q-22).",
+        "A response cut at the byte cap with a status below 400 counts as reachable (the body is not needed).",
+        "Tests inject NetDeps (no real network or DNS); packages/core/src/preflight.ts and the Check-up reachability path are unchanged."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-203-UNIT",
+          "name": "Audit address public-only and reachability check",
+          "command": "pnpm exec vitest run packages/core/tests/audit-reachability.test.ts",
+          "category": "unit",
+          "paths": [
+            "packages/core/src/audit/crawl/reachability.ts",
+            "packages/core/src/safe-net.ts",
+            "packages/core/tests/audit-reachability.test.ts"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": ["packages/core/src/audit/crawl/reachability.ts with checkAuditAddress and unit tests"],
+      "complexity": "S",
+      "permission_level": "P2",
+      "status": "PENDING",
+      "notes": "P2: outbound-request safety (SSRF boundary, ADR 0031). Depends on BE-101 for the shared outbound helper's final signature."
+    },
+    {
+      "task_id": "BE-204",
+      "requirement_ids": ["REQ-002", "REQ-003", "REQ-004", "REQ-005", "REQ-006", "REQ-036"],
+      "title": "Audit crawl pipeline on the Deterministic Spider, with crawl barrel",
+      "description": "New packages/core/src/audit/crawl/crawl.ts: `runAuditCrawl(request: AuditRequest, opts)` drives the Deterministic Spider for a Website Audit in Safe Interaction Mode and returns an `AuditCrawlResult` { startUrl, finalUrl, pages (urlPath, title, depth, layoutGroup, links, screenshotPath), coverage: PageCoverage (found, reached, skipped with reasons), leavingSite: Array<{ to, from[] }>, signInWalls, paymentAreas }. Settings: maxPages and maxDepth from the request limits; `admitPath` = BE-202 path filter (`excluded`) then BE-201 checkout path (`payment`); `inspectPage` = BE-201 verdict; exploreClicks false, followFormActions false, no Roles, no credentials, no relogin handler, sitemap seeding on; a context with the public-only request guard (`makeRequestGuard`, `installRequestGuard`) and `blockChanges` so no changing request leaves the browser; robots.txt policy and per-host pacing from G1's REQ-034/REQ-035 APIs. Options: signal, `onProgress({ stage: 'crawling', pagesFound, pagesRecorded, pagesSkipped, currentPath })` with redacted paths, `onRenderedPage(page, info)` passed through to the Spider's `onRecordedPage` for Page Content extraction (G3), and an in-process `deps` parameter (browser manager, request guard, NetDeps) that tests use to reach the 127.0.0.1 fixture; nothing in AuditRequest can turn the guard off. New barrel packages/core/src/audit/crawl/index.ts exports runAuditCrawl, checkAuditAddress, pathLimitVerdict, area-detect rules and their types (BE-190 re-exports it from packages/core/src/audit/index.ts).",
+      "agent": "backend-engineer",
+      "priority": "high",
+      "depends_on": ["BE-101", "BE-200", "BE-201", "BE-202", "BE-203"],
+      "files_owned": [
+        "packages/core/src/audit/crawl/crawl.ts",
+        "packages/core/src/audit/crawl/index.ts",
+        "packages/core/tests/audit-crawl.test.ts"
+      ],
+      "acceptance_criteria": [
+        "Given maxPages N and fixtures/audit-site with more than N internal pages, at most N pages are recorded and the rest are Skipped Pages with reason `page-limit` (REQ-002 AC-1).",
+        "Given maxDepth 3, /blog/2025/diwali/sweets (depth 4) and deeper pages are not recorded and are Skipped Pages with reason `depth-limit` (REQ-002 AC-2).",
+        "Given exclude path /blog, no /blog page is recorded or requested and each is a Skipped Page with reason `excluded`; given include path /services, every recorded page except the start page starts with /services (REQ-002 AC-3, AC-4).",
+        "With default limits, the pages the home page links to on the same host are recorded (REQ-003 AC-1); facebook.com and instagram.com links are listed in `leavingSite` with the pages they are on and are never requested (REQ-003 AC-2).",
+        "No form is submitted while crawling: the fixture request log shows no POST and no request to a form action such as /account/sign-in (POST) or /shop/checkout/pay (REQ-003 AC-3).",
+        "/seasonal-offers, listed only in sitemap.xml, is recorded (REQ-004 AC-1); a page both linked and in sitemap.xml appears once in `pages` (REQ-004 AC-2); against a site with no sitemap.xml the crawl completes from links with no error (REQ-004 AC-3).",
+        "/updates/festival-hours, a link inserted by JavaScript after load and linked from nowhere else, is recorded, and `onRenderedPage` for /updates sees the script-inserted text (REQ-005 AC-1, crawl part).",
+        "/account/sign-in (nothing but a sign-in form) and a page answering 401 are flagged in `signInWalls`, listed as Skipped Pages with reason `sign-in`, and no credentials are entered (REQ-006 AC-1).",
+        "/shop/checkout (card-number field) is flagged in `paymentAreas`, listed as a Skipped Page with reason `payment`, nothing on it is clicked or submitted, and /shop/delivery-terms (linked only from the checkout page) is never requested (REQ-036 AC-1).",
+        "robots.txt-disallowed pages (/private/staff-rota, /private/reports) are Skipped Pages with reason `robots`, and the off-site `Sitemap:` line in robots.txt is not requested (behaviour supplied by G1; asserted here end to end).",
+        "Progress events report pagesRecorded and pagesSkipped as they change; paths in them are redacted; an aborted signal returns what was found so far.",
+        "The production default installs the public-only request guard; only the in-process `deps` parameter (tests) replaces it."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-204-INTEGRATION",
+          "name": "Audit crawl against fixtures/audit-site",
+          "command": "pnpm exec vitest run packages/core/tests/audit-crawl.test.ts",
+          "category": "integration",
+          "timeout_s": 1200,
+          "paths": [
+            "packages/core/src/audit/crawl/**",
+            "packages/core/src/discovery/deterministic-spider.ts",
+            "packages/core/src/discovery/frontier.ts",
+            "packages/core/src/competitive/robots.ts",
+            "packages/core/src/safe-net.ts",
+            "packages/core/src/browser.ts",
+            "packages/core/src/live-site.ts",
+            "packages/core/src/navigate.ts",
+            "packages/core/tests/audit-crawl.test.ts",
+            "packages/core/tests/helpers/audit-site-server.ts",
+            "fixtures/audit-site/**"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "packages/core/src/audit/crawl/crawl.ts (runAuditCrawl, AuditCrawlResult)",
+        "packages/core/src/audit/crawl/index.ts barrel",
+        "New browser test packages/core/tests/audit-crawl.test.ts (G7 adds `audit-crawl` to BROWSER_TESTS.core)"
+      ],
+      "complexity": "L",
+      "permission_level": "P1",
+      "status": "PENDING",
+      "risks": [
+        "fixtures/audit-site/robots.txt sets Crawl-delay: 1, so with G1's pacing a full-fixture crawl takes about 25 s or more; keep scenarios few and set the test timeout accordingly.",
+        "Sitemap seeding enqueues sitemap pages at depth 1 (deterministic-spider.ts:445); which pages win the page limit when sitemap.xml is large is not specified (REQ-004 risk)."
+      ],
+      "notes": "Cross-group: needs G1's robots (REQ-034) and per-host rate-limit/Crawl-delay (REQ-035) task IDs in depends_on; the orchestrator wires them at the merge. 401 scenario uses a small inline server (the fixture has no 401 page); no fixture file is changed."
+    },
+    {
+      "task_id": "BE-205",
+      "requirement_ids": ["REQ-001", "REQ-002", "REQ-003"],
+      "title": "Runner route: start a Website Audit and stream its progress",
+      "description": "New packages/runner/src/routes/audit-crawl.ts exporting `auditCrawlRoutes` (and a `createAuditCrawlRoutes(deps)` factory for tests) and packages/runner/src/session/audit-run.ts holding the running audit's state and last progress event. `POST /api/audits` (AUDIT_API.start, access 'owner'): validateAuditStartBody, 400 ERR_INVALID_AUDIT with `fields`; checkAuditAddress, 400 ERR_PRIVATE_ADDRESS or 422 ERR_UNREACHABLE; claim the RunSlot with kind 'audit' (BE-103), 409 ERR_RUN_IN_PROGRESS when a Check-up, benchmark or audit holds it; then 202 `{ auditId, version: 1 }` (auditId matches AUDIT_ID_PATTERN) and the audit runs in the background: stage 'checking-address', then 'crawling' via runAuditCrawl, then an injectable `afterCrawl` pipeline step (default: none) that groups G3/G4/G6 extend for analysis and saving; the slot is released on done, failure or abort. `GET /api/audits/:id/stream` (AUDIT_API.stream, access 'view'): Server-Sent Events of AuditProgressEvent ('progress', 'done', 'failed' with a fixed message and AuditErrorCode), replaying the last event to a late subscriber, 404 ERR_AUDIT_NOT_FOUND for an unknown id. Routes declare their access level and beta policy as BE-102 defines (closed in beta unless the policy lists them, D-004). Not registered here: BE-190 adds `auditCrawlRoutes` to allRoutes.",
+      "agent": "backend-engineer",
+      "priority": "high",
+      "depends_on": ["BE-102", "BE-103", "BE-204"],
+      "files_owned": [
+        "packages/runner/src/routes/audit-crawl.ts",
+        "packages/runner/src/session/audit-run.ts",
+        "packages/runner/tests/audit-crawl-route.test.ts"
+      ],
+      "acceptance_criteria": [
+        "Given a valid body whose address is public and reachable, POST /api/audits answers 202 with an auditId matching AUDIT_ID_PATTERN and version 1, and the crawl starts with the validated limits (REQ-001 AC-1, REQ-002).",
+        "Given an address that does not resolve, does not answer, or answers 400 or above, the reply is 422 ERR_UNREACHABLE with a message saying why, and the crawl function is never called (REQ-001 AC-2).",
+        "Given input that is not a URL (or bad limits), the reply is 400 ERR_INVALID_AUDIT with a message per field, and neither the address check nor the crawl runs (REQ-001 AC-3).",
+        "Given an address that resolves to a private or local address, the reply is 400 ERR_PRIVATE_ADDRESS and no crawl starts (Q-22); the Check-up start path still accepts local and private Test Copy addresses.",
+        "While a Check-up, benchmark or another audit holds the RunSlot, POST /api/audits answers 409 ERR_RUN_IN_PROGRESS; while an audit runs, starting a Check-up is refused through the same slot; the slot is released after done, failure or abort.",
+        "GET /api/audits/:id/stream sends progress events with stage, pagesFound, pagesRecorded, pagesSkipped and a redacted currentPath, then 'done' or 'failed'; a late subscriber first gets the last event; an id that does not match AUDIT_ID_PATTERN or is unknown gets 404.",
+        "Each route declares its AUDIT_API access level ('owner' for start, 'view' for stream); no request field can enable sign-in, Roles, form submission or private addresses.",
+        "Error replies are AuditErrorReply ({ error, code, fields? }) with no stack trace, host internals or page text."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-205-UNIT",
+          "name": "Audit start and stream routes with injected crawl and address check",
+          "command": "pnpm exec vitest run packages/runner/tests/audit-crawl-route.test.ts",
+          "category": "unit",
+          "paths": [
+            "packages/runner/src/routes/audit-crawl.ts",
+            "packages/runner/src/routes/route.ts",
+            "packages/runner/src/routes/body.ts",
+            "packages/runner/src/session/audit-run.ts",
+            "packages/runner/src/session/run-slot.ts",
+            "packages/types/src/website-audit.ts",
+            "packages/runner/tests/audit-crawl-route.test.ts"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "packages/runner/src/routes/audit-crawl.ts (auditCrawlRoutes, createAuditCrawlRoutes)",
+        "packages/runner/src/session/audit-run.ts",
+        "Route test that drives the handlers on a plain http server with a fake crawl, fake address check and a real RunSlot (no Chromium, no RunnerServer: unit project)"
+      ],
+      "complexity": "M",
+      "permission_level": "P2",
+      "status": "PENDING",
+      "notes": "P2: declares access levels on a security-sensitive dispatch path and guards an outbound request to a user-given address. Needs runAuditCrawl/checkAuditAddress exported from `@qa/core` (the barrel wiring in BE-190). If BE-190 also registers this route, BE-190 must be split (barrels before BE-205, registration after) to avoid a cycle; the orchestrator wires it."
+    },
+    {
+      "task_id": "FE-200",
+      "requirement_ids": ["REQ-001", "REQ-002"],
+      "title": "Wizard: Website Audit start screen with address and crawl limits",
+      "description": "New screen under packages/wizard/src/screens/audit/start/: AuditStartScreen.tsx (address field, Max pages, Max depth, Include paths, Exclude paths, Start button), audit-start-form.ts (form state, defaults and bounds from CRAWL_LIMIT_BOUNDS, client-side check with validateAuditStartBody imported as a single module from `@qa/types/src/website-audit.js`, never the barrel), audit-start-api.ts (POST /api/audits and the EventSource on /api/audits/:id/stream, mapping AuditErrorReply codes to plain sentences) and AuditProgress.tsx (stage, pages recorded and Skipped Pages counts). English only (ADR 0033: the wizard's own screens stay in English); CONTEXT.md terms (Website Audit, Skipped Page) and none of their _Avoid_ words, no release verdict wording. Registered in the router by FE-191 (G1).",
+      "agent": "frontend-engineer",
+      "priority": "high",
+      "depends_on": [],
+      "files_owned": [
+        "packages/wizard/src/screens/audit/start/**",
+        "packages/wizard/tests/audit-start-screen.test.tsx",
+        "packages/wizard/tests/audit-start-form.test.ts"
+      ],
+      "acceptance_criteria": [
+        "The form has a labelled address field and labelled Max pages (default 200, 1-1000), Max depth (default 8, 0-100), Include paths and Exclude paths fields, with the bounds shown from CRAWL_LIMIT_BOUNDS (REQ-002).",
+        "Input that is not a URL is refused before any request with the validator's message shown next to the field and announced (role=alert / aria-describedby); no request is sent (REQ-001 AC-3).",
+        "A 422 ERR_UNREACHABLE or 400 ERR_PRIVATE_ADDRESS reply is shown as a plain sentence saying why the address cannot be audited; 400 ERR_INVALID_AUDIT field messages appear next to their fields; 409 ERR_RUN_IN_PROGRESS says another run is in progress (REQ-001 AC-2).",
+        "After a 202 the screen shows the audit's progress from the stream: stage, pages recorded and Skipped Pages so far, and done or failed.",
+        "Every field is reachable and operable by keyboard and has an accessible name; errors are linked to their fields.",
+        "Screen text uses Website Audit and Skipped Page as CONTEXT.md defines them, no _Avoid_ words, and no \"Ready to release\" or pass/fail on the site; the wizard bundle imports only `@qa/types/src/website-audit.js` (and other single modules), not the `@qa/types` barrel."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-FE-200-UNIT",
+          "name": "Website Audit start screen render, form and client tests",
+          "command": "pnpm exec vitest run packages/wizard/tests/audit-start-screen.test.tsx packages/wizard/tests/audit-start-form.test.ts packages/wizard/tests/no-banned-words.test.ts",
+          "category": "unit",
+          "paths": [
+            "packages/wizard/src/screens/audit/start/**",
+            "packages/types/src/website-audit.ts",
+            "packages/types/src/discovery.ts",
+            "packages/wizard/tests/audit-start-screen.test.tsx",
+            "packages/wizard/tests/audit-start-form.test.ts",
+            "packages/wizard/tests/no-banned-words.test.ts"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "validation_waiver": "Visual layout and focus order of the start screen in a real browser are checked by hand once FE-191 routes it: open the Website Audit start screen at http://localhost:3001, tab through every field, submit a bad address and an unreachable one, and confirm the messages read correctly; the end-to-end browser path is covered by QA-195.",
+      "expected_outputs": [
+        "AuditStartScreen.tsx, AuditProgress.tsx, audit-start-form.ts, audit-start-api.ts under packages/wizard/src/screens/audit/start/",
+        "Render tests (renderToStaticMarkup, node) and form/client tests with a mocked fetch and EventSource"
+      ],
+      "complexity": "M",
+      "permission_level": "P1",
+      "status": "PENDING",
+      "notes": "No document-language picker here: the start body's `language` defaults to 'en'; REQ-044 (G7) owns adding a language choice (in its own component, or by asking for this file)."
+    },
+    {
+      "task_id": "QA-200",
+      "requirement_ids": ["REQ-003", "REQ-006", "REQ-036"],
+      "title": "Independent read-only guarantee test for the audit crawl",
+      "description": "Independent verification, written by QA without editing source: packages/core/tests/audit-crawl-read-only.test.ts runs runAuditCrawl against fixtures/audit-site (and a small inline server for a 401 page and a provider-frame payment page) and asserts on the server's request log that the Website Audit only reads: every request is GET or HEAD, no form action is requested, no request carries credentials or a sign-in body, nothing past a payment area is requested, no request goes to a host outside the start host, and no request reaches a private address other than through the test-only deps. Complements BE-204's functional test; it does not re-test limits or sitemap merging.",
+      "agent": "qa-engineer",
+      "priority": "high",
+      "depends_on": ["BE-204"],
+      "files_owned": ["packages/core/tests/audit-crawl-read-only.test.ts"],
+      "acceptance_criteria": [
+        "Across a full default-limits crawl of fixtures/audit-site, the request log holds only GET and HEAD requests and no request to /shop/checkout/pay or a POST to /account/sign-in (REQ-003 AC-3).",
+        "No request in the log carries a password, an Authorization header or a cookie the crawl set itself to sign in; /account/sign-in and the 401 page are Skipped Pages with reason `sign-in` (REQ-006 AC-1).",
+        "/shop/delivery-terms and every link found only on a payment area (card-number field page and provider-frame page) are absent from the log, and the payment pages are Skipped Pages with reason `payment` (REQ-036 AC-1).",
+        "No request in the log goes to facebook.com, instagram.com or the off-site robots.txt `Sitemap:` host (REQ-003 AC-2).",
+        "The test fails if exploreClicks or followFormActions is turned on for the audit crawl (checked by asserting the crawl options passed to the Spider through the test deps, or by a click-only link in the inline fixture that must stay unrequested)."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-QA-200-INTEGRATION",
+          "name": "Audit crawl sends only reads",
+          "command": "pnpm exec vitest run packages/core/tests/audit-crawl-read-only.test.ts",
+          "category": "integration",
+          "timeout_s": 1200,
+          "paths": [
+            "packages/core/src/audit/crawl/**",
+            "packages/core/src/discovery/deterministic-spider.ts",
+            "packages/core/src/discovery/frontier.ts",
+            "packages/core/src/browser.ts",
+            "packages/core/src/live-site.ts",
+            "packages/core/src/navigate.ts",
+            "packages/core/src/safe-net.ts",
+            "packages/core/tests/audit-crawl-read-only.test.ts",
+            "packages/core/tests/helpers/audit-site-server.ts",
+            "fixtures/audit-site/**"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": ["New browser test packages/core/tests/audit-crawl-read-only.test.ts (G7 adds `audit-crawl-read-only` to BROWSER_TESTS.core)"],
+      "complexity": "S",
+      "permission_level": "P1",
+      "status": "PENDING"
+    }
+  ]
+}

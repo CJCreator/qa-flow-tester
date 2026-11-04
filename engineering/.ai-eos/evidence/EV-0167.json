@@ -1,0 +1,62 @@
+{
+  "evidence_id": "EV-0167",
+  "check_id": "CHK-QA-707-AUTH-CRAWL",
+  "name": "auth-crawl end-to-end file",
+  "category": "integration",
+  "requirement_ids": [
+    "REQ-053",
+    "REQ-046"
+  ],
+  "task_ids": [
+    "QA-707"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/auth-crawl-e2e.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0167.log",
+  "log_sha256": "90263301845661d458ead8cac38a2e14125b1ee94b20594a575d0ae4c41addcf",
+  "started_at": "2026-11-03T12:25:58.506Z",
+  "finished_at": "2026-11-03T12:31:31.351Z",
+  "duration_ms": 332845,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:331b93afdee2d4418f549caf2501eb37d58d774abab3f6571445665e69230d1a",
+  "concurrent_tasks": [
+    "BE-204",
+    "BE-604",
+    "BE-605",
+    "BE-606"
+  ],
+  "paths": [
+    "fixtures/test-app/**",
+    "packages/checkers/src/**",
+    "packages/core/src/**",
+    "packages/core/tests/auth-crawl-e2e.test.ts",
+    "packages/types/src/**"
+  ],
+  "paths_fingerprint": "git-paths:85cd5560a53b6738e467fec8aad487643a6afb7bb6376c3f5ce114e858607413",
+  "scoped_fingerprint": "git:d1bf04bc69bedc77ef6f6e7dd2e1a13379b37a505fcff8062f925ceb2b4e8294",
+  "excluded_owned": [
+    "packages/core/src/audit/crawl/crawl.ts",
+    "packages/core/src/audit/crawl/index.ts",
+    "packages/core/src/audit/preview/**",
+    "packages/core/tests/audit-crawl.test.ts",
+    "packages/core/tests/audit-preview-sanitize.test.ts",
+    "packages/core/tests/audit-preview.test.ts",
+    "packages/runner/src/helpers/**",
+    "packages/runner/src/routes/audit-helpers.ts",
+    "packages/runner/src/routes/audit-preview.ts",
+    "packages/runner/src/routes/audit-share.ts",
+    "packages/runner/tests/audit-helpers-routes.test.ts",
+    "packages/runner/tests/audit-preview-routes.test.ts",
+    "packages/runner/tests/audit-share-routes.test.ts",
+    "packages/runner/tests/helper-access.test.ts",
+    "packages/runner/tests/helper-session.test.ts",
+    "packages/runner/tests/helper-token.test.ts"
+  ]
+}

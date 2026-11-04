@@ -4,7 +4,16 @@ import net from 'net';
 import { randomBytes } from 'crypto';
 import { AsyncLocalStorage } from 'async_hooks';
 import type { AIProviderType } from '@qa/types';
-import { KeyResolver, classifyAddress, isPrivateHost, type ResolvedKeyInfo, type SecretStore } from '@qa/core';
+import {
+  KeyResolver,
+  classifyAddress,
+  isPrivateHost,
+  serviceAccount,
+  type ResolvedKeyInfo,
+  type ResolvedServiceKey,
+  type SecretStore,
+  type ServiceKeyName,
+} from '@qa/core';
 
 /**
  * Beta mode (RUNNER_BETA=1): a runner shared with a few outside testers over a tunnel. Each tester
@@ -262,6 +271,25 @@ export class SessionKeyResolver extends KeyResolver {
       if (apiKey) return { provider, apiKey, source: 'keychain' };
     }
     return null;
+  }
+
+  /** Kept in this session only. Throws outside a session rather than falling back to the keychain or a file. */
+  async saveServiceKey(service: ServiceKeyName, apiKey: string): Promise<'keychain' | 'byok_file'> {
+    const key = typeof apiKey === 'string' ? apiKey.trim() : '';
+    if (!key) throw new Error('A service key must not be empty');
+    await this.sessionStore.set(serviceAccount(service), key);
+    return 'keychain';
+  }
+
+  /** This session's key only: never the owner's keychain, file or environment variable (such as PAGESPEED_API_KEY). */
+  async resolveServiceKey(service: ServiceKeyName): Promise<ResolvedServiceKey | null> {
+    const apiKey = await this.sessionStore.get(serviceAccount(service));
+    return apiKey ? { service, apiKey, source: 'keychain' } : null;
+  }
+
+  /** Forgets this session's key. Throws outside a session. */
+  async removeServiceKey(service: ServiceKeyName): Promise<void> {
+    await this.sessionStore.set(serviceAccount(service), '');
   }
 }
 

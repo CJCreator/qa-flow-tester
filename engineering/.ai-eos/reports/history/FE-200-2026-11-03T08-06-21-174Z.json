@@ -1,0 +1,74 @@
+{
+  "task_id": "FE-200",
+  "agent": "frontend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-001",
+    "REQ-002"
+  ],
+  "files_inspected": [
+    "packages/types/src/website-audit.ts",
+    "packages/types/src/discovery.ts",
+    "packages/types/src/browser.ts",
+    "packages/types/tests/browser-entry.test.ts",
+    "packages/wizard/src/api.ts",
+    "packages/wizard/src/hooks/useRunnerStream.ts",
+    "packages/wizard/src/screens/ScanningScreen.tsx",
+    "packages/wizard/src/screens/NewCheckupScreen.tsx",
+    "packages/wizard/src/components/text.tsx",
+    "packages/wizard/src/components/RunStates.tsx",
+    "packages/wizard/tests/no-banned-words.test.ts",
+    "packages/wizard/tests/scanning-progress.test.tsx",
+    "vitest.config.ts",
+    "CONTEXT.md"
+  ],
+  "files_created": [
+    "packages/wizard/src/screens/audit/start/audit-start-form.ts",
+    "packages/wizard/src/screens/audit/start/audit-start-api.ts",
+    "packages/wizard/src/screens/audit/start/AuditProgress.tsx",
+    "packages/wizard/src/screens/audit/start/AuditStartScreen.tsx",
+    "packages/wizard/tests/audit-start-form.test.ts",
+    "packages/wizard/tests/audit-start-screen.test.tsx"
+  ],
+  "files_modified": [],
+  "implementation_summary": "Website Audit start screen. audit-start-form.ts: form state kept as text. Defaults come from validateAuditStartBody's normalised output for a bare address (200 pages, depth 8). The bounds are local constants (AUDIT_LIMIT_BOUNDS: pages 1-1000, depth 0-100, 50 paths) because CRAWL_LIMIT_BOUNDS is not on browser.js; a test pins each one against the validator. The client-side check uses validateAuditStartBody. audit-start-api.ts: submitAuditStart sends nothing when the check fails. startAudit POSTs to /api/audits and turns ERR_UNREACHABLE, ERR_PRIVATE_ADDRESS, ERR_INVALID_AUDIT (field messages go to their fields) and ERR_RUN_IN_PROGRESS into plain sentences. watchAudit follows /api/audits/:id/stream through an injectable EventSource factory, checks each event, ignores other audits and versions, and closes on done or failed. AuditProgress.tsx: stages with aria-current, a polite live region, counts for pages found, pages recorded and Skipped Pages, and done or stopped endings with no verdict wording. AuditStartScreen.tsx: labelled fields with hints, aria-describedby pointing to the hint and the error, aria-invalid, errors in role=alert, focus on the first field with an error, then progress after a 202. Correction applied: every @qa/types import in these files and their tests goes through @qa/types/src/browser.js (the T-211 guard), never the barrel or another module by path.",
+  "tests_executed": [
+    {
+      "name": "CHK-FE-200-UNIT plus the T-211 browser-entry guard",
+      "command": "pnpm exec vitest run packages/wizard/tests/audit-start-screen.test.tsx packages/wizard/tests/audit-start-form.test.ts packages/wizard/tests/no-banned-words.test.ts packages/types/tests/browser-entry.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 4 passed (4); Tests 35 passed (35)"
+    },
+    {
+      "name": "wizard type-check (src)",
+      "command": "cd packages/wizard && npx tsc --noEmit -p tsconfig.json",
+      "result": "passed",
+      "output_excerpt": "exit 0, no errors"
+    }
+  ],
+  "tests_proposed": [
+    "Browser test (wizard-e2e style) after FE-191 registers the route: type a non-URL, press Enter, check focus moves to the address field and no request reaches /api/audits.",
+    "Integration test against the real runner POST /api/audits once the backend lands, to confirm the reply shapes match."
+  ],
+  "evidence": [
+    "packages/wizard/tests/audit-start-form.test.ts: 'keeps its local bounds equal to validateAuditStartBody: pages 1-1000, depth 0-100, 50 paths'",
+    "packages/wizard/tests/audit-start-form.test.ts: 'sends no request when the form fails the check' (fetch mock not called)",
+    "packages/wizard/tests/audit-start-form.test.ts: ERR_UNREACHABLE / ERR_PRIVATE_ADDRESS / ERR_INVALID_AUDIT / ERR_RUN_IN_PROGRESS mapping tests",
+    "packages/wizard/tests/audit-start-screen.test.tsx: labels, defaults 200/8, min/max attributes, aria-describedby hint+error, role=alert, progress counts, Avoid-word check",
+    "packages/wizard/tests/audit-start-screen.test.tsx: 'reaches @qa/types through browser.js only, never the barrel or another module by path (T-211)'",
+    "packages/types/tests/browser-entry.test.ts: 'is the only way the wizard reaches into @qa/types by path' passes"
+  ],
+  "blockers": [],
+  "risks": [
+    "AUDIT_LIMIT_BOUNDS copies the CRAWL_LIMIT_BOUNDS numbers locally. A test catches any drift from validateAuditStartBody. Re-exporting CRAWL_LIMIT_BOUNDS from browser.js (a types-owned change) would remove the copy.",
+    "The task packet and CLAUDE.md still say 'single modules'; the T-211 guard requires browser.js. The docs should be brought in line by whoever owns them.",
+    "ERR_INVALID_AUDIT replies that carry only a 'language' field message show only the general sentence, because this screen has no language field and always sends 'en'.",
+    "After a long stream drop the screen relies on the browser's own EventSource reconnect and does not fetch the audit's state again."
+  ],
+  "handoff": "FE-191 should register AuditStartScreen (named export in packages/wizard/src/screens/audit/start/AuditStartScreen.tsx, no required props). Its optional props submit and openSource exist only for tests. The screen imports @qa/types only through @qa/types/src/browser.js. The 409 ERR_RUN_IN_PROGRESS sentence avoids the word 'run', which CONTEXT.md lists to avoid for Website Audit.",
+  "_captured": {
+    "at": "2026-11-03T08:06:21.174Z",
+    "agent_id": "a72b06cac7daac9d6",
+    "agent_type": "ai-eos:frontend-engineer"
+  }
+}

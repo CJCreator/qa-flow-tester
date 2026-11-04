@@ -3,16 +3,21 @@
  * the plan file, the report files, the log or an error, and the session is gone when the run ends.
  */
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
-import { promises as fs } from 'fs';
+import { promises as fs, mkdtempSync } from 'fs';
+import os from 'os';
 import path from 'path';
 import type { AIMessage, AIProviderType } from '@qa/types';
 import { RunnerServer } from '../src/server.js';
 import { server as fixtureServer } from '../../../fixtures/test-app/server.js';
 
-const FIXTURE_PORT = 3722;
-const RUNNER_PORT = 3723;
+// Their own ports: test-cap-endpoints.test.ts listens on 3722 and 3723, and the two files can run at the same time.
+const FIXTURE_PORT = 3742;
+const RUNNER_PORT = 3743;
 const runnerUrl = `http://localhost:${RUNNER_PORT}`;
-const outputDir = path.join(process.cwd(), '.tmp-session-secrecy');
+// A new folder per run, outside the repository: inside OneDrive the sync client picks up every file a run
+// writes, competes with Chromium for the CPU and holds files open so the clean-up fails.
+const scratch = mkdtempSync(path.join(os.tmpdir(), 'qa-test-session-secrecy-'));
+const outputDir = path.join(scratch, 'report');
 const dataDir = `${outputDir}-data`;
 const SENTINEL = 'SENTINEL-session-cookie-7f3a9c21';
 const target = `http://localhost:${FIXTURE_PORT}/`;
@@ -75,8 +80,7 @@ describe('Saved sessions stay in memory', () => {
     vi.restoreAllMocks();
     await runner.stop();
     await new Promise<void>((resolve) => fixtureServer.close(() => resolve()));
-    await fs.rm(outputDir, { recursive: true, force: true }).catch(() => {});
-    await fs.rm(dataDir, { recursive: true, force: true }).catch(() => {});
+    await fs.rm(scratch, { recursive: true, force: true, maxRetries: 5 }).catch(() => {});
   });
 
   it('refuses a cookie for another site, and an oversize session, without echoing them', async () => {

@@ -1,0 +1,71 @@
+{
+  "task_id": "BE-401",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-016",
+    "REQ-011"
+  ],
+  "files_inspected": [
+    "packages/core/src/ai/providers/anthropic.ts",
+    "packages/core/src/ai/providers/openai.ts",
+    "packages/core/src/ai/providers/gemini.ts",
+    "packages/types/src/ai.ts",
+    "packages/core/tests/ai-provider.test.ts"
+  ],
+  "files_created": [
+    "packages/core/src/ai/timeout.ts",
+    "packages/core/tests/ai-provider-timeout.test.ts"
+  ],
+  "files_modified": [
+    "packages/core/src/ai/providers/anthropic.ts",
+    "packages/core/src/ai/providers/openai.ts",
+    "packages/core/src/ai/providers/gemini.ts"
+  ],
+  "implementation_summary": "Added timeout.ts (AI_REQUEST_TIMEOUT_MS=120000, AITimeoutError, requestSignal combining the caller signal with a deadline via AbortSignal.any, and requestError mapping a passed deadline to AITimeoutError and a caller cancel to a DOMException AbortError with key-free messages). Each provider's complete() now builds the signal, delegates to a private send() holding the unchanged old body, and maps errors. The signal is passed to every fetch: anthropic:73, openai:76, gemini:37 (token), :144 and :161 (fallback). Gemini's resolveAdcToken re-throws when the signal was aborted instead of reporting missing credentials. The deadline uses an unref'd setTimeout instead of AbortSignal.timeout, because vitest fake timers do not control AbortSignal.timeout; behaviour is the same.",
+  "tests_executed": [
+    {
+      "name": "AI provider timeouts",
+      "command": "CI=1 pnpm exec vitest run packages/core/tests/ai-provider-timeout.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 30 passed (30)"
+    },
+    {
+      "name": "Existing AI provider tests (regression)",
+      "command": "CI=1 pnpm exec vitest run packages/core/tests/ai-provider.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 7 passed (7)"
+    },
+    {
+      "name": "Core type-check filtered to changed files",
+      "command": "cd packages/core && npx tsc --noEmit -p . | grep -E 'src/ai/(timeout|providers)'",
+      "result": "passed",
+      "output_excerpt": "no errors reported for timeout.ts or providers/*"
+    }
+  ],
+  "tests_proposed": [
+    "Audit pipeline test: a cancelled audit passes its signal to the provider and frees the run slot (owned by the audit tasks)",
+    "Abort during response body read (res.json()) is mapped to AITimeoutError"
+  ],
+  "evidence": [
+    "packages/core/src/ai/timeout.ts",
+    "packages/core/src/ai/providers/anthropic.ts:24-29,81",
+    "packages/core/src/ai/providers/openai.ts:25-30,83",
+    "packages/core/src/ai/providers/gemini.ts:46,57,77-82,96,148,153,165",
+    "vitest: ai-provider-timeout.test.ts 30 passed; ai-provider.test.ts 7 passed"
+  ],
+  "blockers": [],
+  "risks": [
+    "requestSignal uses an unref'd setTimeout plus AbortController and AbortSignal.any rather than AbortSignal.timeout, so vitest fake timers can drive it; same behaviour, documented in the file.",
+    "A caller abort now rejects with DOMException name AbortError and a deadline with AITimeoutError; callers should match on err.name, not message text.",
+    "A call that answers leaves its unref'd timer pending until the deadline (same cost as AbortSignal.timeout).",
+    "The Gemini ADC tests depend on test order because the token cache is module state.",
+    "MockAIProvider and providers outside the owned files are not wired."
+  ],
+  "handoff": "Pass options.signal and options.timeoutMs (AICompletionOptions) to provider.complete/generateText. Import AITimeoutError from packages/core/src/ai/timeout.ts by relative path (no barrel export). Timeout gives AITimeoutError (name 'AITimeoutError', .timeoutMs); caller cancel gives DOMException name 'AbortError'. Other errors are unchanged. Default deadline is AI_REQUEST_TIMEOUT_MS = 120000.",
+  "_captured": {
+    "at": "2026-11-03T07:12:29.235Z",
+    "agent_id": "ac8cabb5ad4211f53",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

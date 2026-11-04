@@ -62,7 +62,11 @@ describe('Plan building in @qa/core (T-208)', () => {
       {
         urlPath: '/',
         title: 'Home',
-        elements: [{ selector: '#btn', role: 'button', name: 'Click me', visible: true, enabled: true }],
+        interactiveElementsCount: 1,
+        formsCount: 0,
+        elements: [
+          { selector: '#btn', role: 'button', name: 'Click me', tagName: 'button', visible: true, enabled: true },
+        ],
       },
     ];
 
@@ -79,7 +83,6 @@ describe('Plan building in @qa/core (T-208)', () => {
             id: 't-1',
             name: 'Home test',
             role: 'visitor',
-            startPage: '/',
             source: 'fallback',
             steps: [{ action: 'wait', name: 'Wait' }],
           },
@@ -99,6 +102,8 @@ describe('Plan building in @qa/core (T-208)', () => {
       plan: {
         pages: planPages,
         navigation: [],
+        layoutGroups: [],
+        otherHosts: [],
       },
     };
 
@@ -144,7 +149,7 @@ describe('Plan building in @qa/core (T-208)', () => {
       flows: [],
       sensitiveActions: [],
       ambiguityQuestions: [],
-      ...(withPlan ? { plan: { pages: [], navigation: [] } } : {}),
+      ...(withPlan ? { plan: { pages: [], navigation: [], layoutGroups: [], otherHosts: [] } } : {}),
     });
     for (const withPlan of [true, false]) {
       const context: PlanBuildContext = {
@@ -191,7 +196,6 @@ describe('Plan building in @qa/core (T-208)', () => {
                   id: 't-1',
                   name: 'Home test',
                   role: 'visitor',
-                  startPage: '/',
                   source: 'fallback',
                   steps: [{ action: 'wait', name: 'Wait' }],
                 },
@@ -199,6 +203,8 @@ describe('Plan building in @qa/core (T-208)', () => {
             },
           ],
           navigation: [],
+          layoutGroups: [],
+          otherHosts: [],
         },
       },
     };
@@ -217,6 +223,7 @@ describe('Plan building in @qa/core (T-208)', () => {
           id: 'flow-write',
           name: 'Submit Order Form',
           role: 'user',
+          description: 'Fills in and sends the order form',
           startPage: '/order',
           needsTestCopy: true,
           steps: [],
@@ -256,6 +263,8 @@ describe('Plan building in @qa/core (T-208)', () => {
       plan: {
         pages: [],
         navigation: [],
+        layoutGroups: [],
+        otherHosts: [],
       },
     };
 
@@ -267,7 +276,7 @@ describe('Plan building in @qa/core (T-208)', () => {
       searchChecks: false,
     };
 
-    const checks = gradedChecksFor(contextNoAi);
+    const checks = gradedChecksFor(contextNoAi) ?? [];
     expect(checks).toHaveLength(6);
     const looks = checks.find((c) => c.id === 'check:looks');
     expect(looks?.notGraded).toContain('no AI is set up');
@@ -280,6 +289,8 @@ describe('Plan building in @qa/core (T-208)', () => {
       {
         urlPath: '/',
         title: 'Home',
+        interactiveElementsCount: 0,
+        formsCount: 0,
         screenshotPath: 'pages/home.png',
         elements: [],
       },
@@ -310,6 +321,8 @@ describe('Plan building in @qa/core (T-208)', () => {
       plan: {
         pages: planPages,
         navigation: [],
+        layoutGroups: [],
+        otherHosts: [],
       },
     };
 
@@ -345,6 +358,8 @@ describe('Plan building in @qa/core (T-208)', () => {
         {
           urlPath: '/',
           title: 'Home',
+          interactiveElementsCount: 0,
+          formsCount: 0,
           screenshotPath: 'shot.png',
           reachedBy: ['visitor'],
           elements: [],
@@ -355,6 +370,7 @@ describe('Plan building in @qa/core (T-208)', () => {
           id: 'flow-1',
           name: 'Manual check flow',
           role: 'visitor',
+          description: 'A journey with a rule only a person can check',
           startPage: '/',
           steps: [],
           userRules: [

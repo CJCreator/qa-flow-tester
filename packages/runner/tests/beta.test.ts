@@ -79,7 +79,7 @@ describe('A runner shared as a beta', () => {
   afterAll(async () => {
     delete process.env.OPENROUTER_API_KEY;
     await server?.stop();
-    await fs.rm(scratch, { recursive: true, force: true });
+    await fs.rm(scratch, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   });
 
   it('gives each visitor a session, and keeps it for a visitor who sends the cookie back', async () => {
@@ -359,7 +359,7 @@ describe('beta limits over HTTP', () => {
 
   afterAll(async () => {
     await server?.stop();
-    await fs.rm(scratch, { recursive: true, force: true });
+    await fs.rm(scratch, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   });
 
   it('beta limits: an over-cap visitor check-up start answers 429 ERR_BETA_LIMIT', async () => {
@@ -430,7 +430,7 @@ describe('beta limits: a runner that is not a beta', () => {
     } finally {
       await server.stop();
       resetBetaUsage();
-      await fs.rm(scratch, { recursive: true, force: true });
+      await fs.rm(scratch, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }
   });
 });

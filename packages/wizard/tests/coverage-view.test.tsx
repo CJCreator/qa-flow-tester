@@ -100,8 +100,8 @@ describe('T-109: rolesNotTested rendering', () => {
   it('renders rolesNotTested under its own heading "Roles not tested, and why", not inside "Living Spec Conformance"', () => {
     const report = makeReport({
       rolesNotTested: [
-        { role: 'admin', text: 'No sign-in details given' },
-        { role: 'billing', text: 'Sign-in failed' },
+        { role: 'admin', reason: 'no-form', text: 'No sign-in details given' },
+        { role: 'billing', reason: 'wrong-details', text: 'Sign-in failed' },
       ],
     });
 

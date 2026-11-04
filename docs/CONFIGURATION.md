@@ -54,6 +54,24 @@ Profile fields (code and `ProductProfile` JSON; there are no environment variabl
 
 New baselines automatically mask dates and times, well-known ad slots and password fields. Baselines recorded before this (no `.visual.json`, or a PNG replaced since) keep comparing unmasked, exactly as before. Re-record with update mode to adopt masking. See ADR 0019.
 
+## Saved Website Audits and Helper sign-in
+
+All optional and empty in `.env.example`.
+
+| Variable               | Default | Meaning                                                                                                                                                                       |
+| ---------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AUDIT_STORE_BUCKET`   | none    | Cloud Storage bucket for saved Website Audits ([ADR 0036](adr/0036-hosted-audit-storage-and-shared-links.md)). Unset: audits are kept as local files under `RUNNER_DATA_DIR` |
+| `FIREBASE_PROJECT_ID`  | none    | Firebase project ID for Helper sign-in. Public value, not a secret. Helper sign-in turns on only when this and `RUNNER_ACCESS_TOKEN` are both set                            |
+| `FIREBASE_WEB_API_KEY` | none    | Firebase web API key the runner sends to the wizard for Helper sign-in. Optional. A public browser value, not a server secret                                                 |
+| `FIREBASE_AUTH_DOMAIN` | `<FIREBASE_PROJECT_ID>.firebaseapp.com` | Firebase auth domain for Helper sign-in. Optional (for example `PROJECT.firebaseapp.com`)                                                                        |
+
+`FIREBASE_WEB_API_KEY` and `FIREBASE_AUTH_DOMAIN` are optional. The wizard can also take the Firebase values at build
+time as `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_WEB_API_KEY` and `VITE_FIREBASE_AUTH_DOMAIN` (public values only).
+It uses them when the runner sends none.
+
+Per DEC-011 (`engineering/decisions.md`), Helper sessions are signed with a random key made when the runner starts, so a
+Helper signs in with Google again after each runner restart.
+
 ## AI providers
 
 Bring your own key. Supported providers: OpenRouter (default in CI), Gemini, OpenAI, Anthropic, and a mock for tests.
@@ -64,6 +82,10 @@ Bring your own key. Supported providers: OpenRouter (default in CI), Gemini, Ope
 | `TEST_MOCK_AI`                                                                | Use the mock provider (tests)           |
 
 Gemini can also authenticate with Google Application Default Credentials. `GOOGLE_APPLICATION_CREDENTIALS` gives the path to the credentials file. `GOOGLE_CLOUD_PROJECT` or `GCP_PROJECT` gives the project ID. `APPDATA` is set by Windows and locates the default gcloud folder.
+
+| Variable          | Default                                     | Meaning                                                                                                                                                                           |
+| ----------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `XDG_CONFIG_HOME` | `%APPDATA%` on Windows, else `~/.config`    | Optional. Folder that holds `qa-flow-tester/key-file.key`, the local key for the encrypted key file ([ADR 0034](adr/0034-encrypted-key-fallback.md)). Not a secret; holds a path |
 
 Key order (see `packages/core/src/ai/key-resolver.ts`): a key given for the run comes first (command line, or `QA_AI_API_KEY` in
 a check-up from CI). Then, for the preferred provider: the OS keychain, the legacy `.qa-keys.json` file, then the environment

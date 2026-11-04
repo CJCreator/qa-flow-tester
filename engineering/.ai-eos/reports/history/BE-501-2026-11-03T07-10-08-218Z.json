@@ -1,0 +1,73 @@
+{
+  "task_id": "BE-501",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-018",
+    "REQ-021",
+    "REQ-019",
+    "REQ-025"
+  ],
+  "files_inspected": [
+    "docs/adr/0018-claim-wording.md",
+    "docs/adr/0021-saved-sessions-memory-only-and-confined-docs-fetch.md",
+    "CONTEXT.md",
+    "packages/core/src/issues-document.ts",
+    "packages/core/src/html-report.ts",
+    "packages/types/src/website-audit.ts",
+    "packages/types/src/route-telemetry.ts",
+    "packages/types/src/verdict.ts",
+    "vitest.config.ts"
+  ],
+  "files_created": [
+    "packages/core/src/audit/documents/model.ts",
+    "packages/core/src/audit/documents/render-markdown.ts",
+    "packages/core/src/audit/documents/render-html.ts",
+    "packages/core/src/audit/documents/wording.ts",
+    "packages/core/src/audit/documents/labels/en.ts",
+    "packages/core/src/audit/documents/labels/ta.ts",
+    "packages/core/src/audit/documents/labels/index.ts",
+    "packages/core/tests/audit-doc-render.test.ts"
+  ],
+  "files_modified": [],
+  "implementation_summary": "Added the AuditDoc block model (heading, paragraph, list, table, image, note, pagebreak) with a data-URI-only image check. renderMarkdown writes GitHub-flavoured Markdown and escapes all text: inline Markdown characters are backslash-escaped, <, > and & become entities, line-start markers and :// and www. are escaped, newlines inside inline text collapse to spaces, and tables are padded or cut to their column count. renderHtml writes one self-contained HTML file per ADR 0021 (inline CSS, data: images only, a CSP meta tag of default-src 'none', lang and dir from DOCUMENT_LANGUAGE_INFO, the Tamil font stack, A4 @page and print CSS) and escapes all text with the existing escapeHtml. Added typed English and Tamil label tables with identical keys and labelsFor(lang), which falls back to English and reports the fallback, plus flattenLabels, formatLabel and phaseLabel helpers. Added wording.ts with the ADR 0018 word list, the release-verdict words and findClaimWords (whole-word, any case, any spacing).",
+  "tests_executed": [
+    {
+      "name": "document model and renderers unit tests",
+      "command": "pnpm exec vitest run packages/core/tests/audit-doc-render.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 23 passed (23)"
+    },
+    {
+      "name": "core type-check",
+      "command": "cd packages/core && npx tsc --noEmit -p tsconfig.json",
+      "result": "passed",
+      "output_excerpt": "no error TS lines"
+    }
+  ],
+  "tests_proposed": [
+    "Render a real Website Audit document through a GFM parser (for example in the export task) and assert the AST has only the renderer's own block nodes",
+    "Add a Tamil claim-word list to findClaimWords once a person has reviewed the Tamil equivalents"
+  ],
+  "evidence": [
+    "packages/core/tests/audit-doc-render.test.ts: 'Audit Document renderers: content and order' (AC1)",
+    "packages/core/tests/audit-doc-render.test.ts: 'page text cannot add structure or markup' (AC2)",
+    "packages/core/tests/audit-doc-render.test.ts: 'Audit Document renderers: Tamil' (AC3)",
+    "packages/core/tests/audit-doc-render.test.ts: 'Document labels' same keys, no empty value, no claim word, no Avoid term, fallback (AC4, AC5)",
+    "packages/core/tests/audit-doc-render.test.ts: 'Audit Document HTML is self-contained (ADR 0021)' (AC6)",
+    "vitest output: 23 passed"
+  ],
+  "blockers": [],
+  "risks": [
+    "Tamil label wording has not been reviewed by a native speaker (packages/core/src/audit/documents/labels/ta.ts).",
+    "findClaimWords matches English words only; Tamil equivalents of the ADR 0018 words are not detected.",
+    "Label wording chosen here (phase names 'Quick fixes' / 'Main improvements' / 'Larger changes', Pitch Glimpse title 'Top issues found on your website', Owner Audit title 'Website Audit') may need product review.",
+    "render-html.ts imports escapeHtml from packages/core/src/html-report.ts, which imports fs, so the renderer is Node-only and must not be bundled into the wizard."
+  ],
+  "handoff": "Build documents as AuditDoc (packages/core/src/audit/documents/model.ts) and render them with renderMarkdown / renderHtml. Pass plain unescaped text; the renderers escape everything. Heading level 1 is the first level under the title (Markdown ##, HTML h2). Images must be base64 data:image/(png|jpeg|gif|webp) URIs; anything else renders as the 'Image not included' label plus the alt text. Get wording from labelsFor(doc.language).labels; when lookup.fallback is true the language has no table yet (G7 / REQ-032). Use phaseLabel(labels, n) for roadmap phases and formatLabel for {n} placeholders. Later document tests should assert findClaimWords(output) is empty for fixed text, and can reuse flattenLabels to check new label keys. New label keys must be added to the DocumentLabels interface in labels/en.ts and to both tables; TypeScript and the key-equality test enforce this.",
+  "_captured": {
+    "at": "2026-11-03T07:10:08.218Z",
+    "agent_id": "a0b1da19ae173736b",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

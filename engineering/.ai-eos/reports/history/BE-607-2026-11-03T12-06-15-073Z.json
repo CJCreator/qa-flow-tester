@@ -1,0 +1,59 @@
+{
+  "task_id": "BE-607",
+  "agent": "release-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-029",
+    "REQ-028"
+  ],
+  "files_inspected": [
+    ".github/workflows/deploy.yml",
+    "docs/DEPLOYMENT.md",
+    "packages/runner/tests/release-workflow.test.ts",
+    "packages/runner/src/helpers/helper-access.ts",
+    "packages/core/src/audit/store/select-backend.ts",
+    "packages/wizard/src/screens/audit/saved/HelperSignInScreen.tsx",
+    "docs/adr/0036-hosted-audit-storage-and-shared-links.md",
+    "docs/CONFIGURATION.md",
+    ".env.example"
+  ],
+  "files_created": [
+    "packages/runner/tests/deploy-audit-store.test.ts"
+  ],
+  "files_modified": [
+    ".github/workflows/deploy.yml",
+    "docs/DEPLOYMENT.md"
+  ],
+  "implementation_summary": "deploy.yml cloud-run deploy step maps AUDIT_STORE_BUCKET, FIREBASE_PROJECT_ID, FIREBASE_WEB_API_KEY, FIREBASE_AUTH_DOMAIN from GitHub repository variables into step env and appends them to --set-env-vars; existing env vars, the access-token secret and the main-only trigger are unchanged; the site job is untouched. DEPLOYMENT.md gains 'Website Audit storage and Helper sign-in': local runs use <RUNNER_DATA_DIR>/audit-store/ with no cloud account; hosted copy keeps audits and Shared Links in the bucket; gcloud bucket create in us-central1 (Standard, uniform access, public access prevention, soft delete 0); versioning off, no lifecycle rule, verify/clear commands (Q-30); roles/storage.objectAdmin on the bucket only for the runtime service account; Firebase CLI and console setup for Google sign-in in the same project (Q-44); the repository variables; VITE_FIREBASE_* as an optional build-time fallback. New test asserts the wiring and the documented settings.",
+  "tests_executed": [
+    {
+      "name": "deploy wiring and guide test plus release workflow test",
+      "command": "pnpm exec vitest run packages/runner/tests/deploy-audit-store.test.ts packages/runner/tests/release-workflow.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 2 passed (2); Tests 20 passed (20)"
+    }
+  ],
+  "tests_proposed": [
+    "Post-setup check that gcloud storage buckets describe matches the documented settings",
+    "actionlint on .github/workflows/deploy.yml"
+  ],
+  "evidence": [
+    ".github/workflows/deploy.yml: Deploy to Cloud Run step env block and --set-env-vars",
+    "docs/DEPLOYMENT.md: section 'Website Audit storage and Helper sign-in' (lines ~56-122)",
+    "vitest: 2 files, 20 tests passed"
+  ],
+  "blockers": [],
+  "risks": [
+    "Existing --set-env-vars value RUNNER_ALLOWED_ORIGINS=$RUNNER_URL,https://qa-check-up-cnhl7suwnq-uc.a.run.app contains a comma, which gcloud uses as the variable separator; the second origin may be misparsed. Left unchanged per the acceptance criteria; consider the ^@^ delimiter syntax.",
+    "gcloud storage and Firebase CLI flags (--soft-delete-duration=0, --clear-soft-delete, --clear-lifecycle, --no-versioning, describe format fields, firebase projects:addfirebase/apps:create/apps:sdkconfig) were written from knowledge and not checked against current docs.",
+    "Enabling the Google provider and adding authorized domains are documented as Firebase console steps, not CLI commands.",
+    "Always-free tier figures were not checked against current Google pricing.",
+    "Until the four repository variables are set, the hosted copy stores audits in /tmp (lost on redeploy) and Helper sign-in stays off."
+  ],
+  "handoff": "Before setting the four repository variables, the developer runs the one-time setup in docs/DEPLOYMENT.md steps 1-4. Reviewers should check the deploy.yml step (CI, P2) and the existing RUNNER_ALLOWED_ORIGINS comma issue. Nothing was pushed or deployed.",
+  "_captured": {
+    "at": "2026-11-03T12:06:15.073Z",
+    "agent_id": "a6e1209c77ab60bcd",
+    "agent_type": "ai-eos:release-engineer"
+  }
+}

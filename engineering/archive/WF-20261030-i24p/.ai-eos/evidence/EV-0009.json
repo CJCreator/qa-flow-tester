@@ -1,0 +1,29 @@
+{
+  "evidence_id": "EV-0009",
+  "check_id": "CHK-BE-010-UNIT",
+  "name": "key encryption tests",
+  "category": "security",
+  "requirement_ids": [
+    "REQ-040",
+    "REQ-011"
+  ],
+  "task_ids": [
+    "BE-010"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/key-resolver-encryption.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0009.log",
+  "log_sha256": "39dc2503974353528ebc435fda6ed9c25a71fc8224388789251137e369ca4298",
+  "started_at": "2026-10-31T12:21:47.130Z",
+  "finished_at": "2026-10-31T12:21:55.309Z",
+  "duration_ms": 8179,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:497622e4992a55e1cf245ac17bdc5fa1f6334aa917305a802d15a9901d967d85"
+}

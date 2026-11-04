@@ -1,0 +1,86 @@
+{
+  "task_id": "BE-606",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-033"
+  ],
+  "files_inspected": [
+    "packages/runner/src/helpers/helper-session.ts",
+    "packages/runner/src/helpers/helper-access.ts",
+    "packages/runner/src/helpers/firebase-token.ts",
+    "packages/runner/src/helpers/index.ts",
+    "packages/runner/src/routes/audit-helpers.ts",
+    "packages/runner/src/routes/index.ts",
+    "packages/runner/src/server.ts",
+    "packages/runner/tests/server-audit-wiring.test.ts",
+    "packages/runner/tests/route-access-server.test.ts",
+    "packages/runner/tests/helper-token.test.ts",
+    "engineering/decisions.md",
+    ".github/workflows/deploy.yml"
+  ],
+  "files_created": [],
+  "files_modified": [
+    "packages/runner/src/helpers/helper-session.ts",
+    "packages/runner/src/helpers/helper-access.ts",
+    "packages/runner/src/routes/audit-helpers.ts",
+    "packages/runner/tests/helper-session.test.ts",
+    "packages/runner/tests/helper-access.test.ts",
+    "packages/runner/tests/audit-helpers-routes.test.ts"
+  ],
+  "implementation_summary": "Removed helperSessionKey (HKDF of RUNNER_ACCESS_TOKEN). Each HelperAccess now signs qa_helper cookies with randomBytes(32) made in its constructor (newHelperSessionKey), held in memory only; optional sessionKey option is a test seam (>=32 bytes). Claims are {email, sub, exp}: signHelperSession(key, {email, sub}, now, seconds) throws without sub; readHelperSessionValue refuses missing/empty/non-string/>128-char sub; the MAC covers sub. Sign-in route passes the verified Firebase {email, sub}. Grants still looked up by email. HttpOnly, SameSite=Strict, Secure on https, 8 h cap, timingSafeEqual, refusal wording and ERR codes unchanged. HTTP reply bodies unchanged.",
+  "tests_executed": [
+    {
+      "name": "Owned Helper suites (token, session, access, routes)",
+      "command": "CI=1 pnpm exec vitest run packages/runner/tests/helper-token.test.ts packages/runner/tests/helper-session.test.ts packages/runner/tests/helper-access.test.ts packages/runner/tests/audit-helpers-routes.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 4 passed (4); Tests 49 passed (49)"
+    },
+    {
+      "name": "server-audit-wiring (not owned, impact check)",
+      "command": "CI=1 pnpm exec vitest run packages/runner/tests/server-audit-wiring.test.ts",
+      "result": "failed",
+      "output_excerpt": "Tests 1 failed | 5 passed | 4 skipped. beforeAll at :196 throws 'A Helper session needs the Google account id.' (signHelperSession called with a string, no sub); :307 TypeError: helperSessionKey is not a function"
+    },
+    {
+      "name": "Runner tests typecheck",
+      "command": "pnpm exec tsc --noEmit -p packages/runner/tests/tsconfig.typecheck.json",
+      "result": "failed",
+      "output_excerpt": "exit=2; 4 errors, all in non-owned files: route-access-server.test.ts(323,71) TS2345; server-audit-wiring.test.ts(18,25) TS2724 no exported member 'helperSessionKey'; server-audit-wiring.test.ts(196,86) TS2345; server-audit-wiring.test.ts(307,84) TS2345"
+    },
+    {
+      "name": "Runner source typecheck",
+      "command": "pnpm exec tsc --noEmit -p packages/runner/tsconfig.json",
+      "result": "passed",
+      "output_excerpt": "exit=0"
+    }
+  ],
+  "tests_proposed": [
+    "Run the new regression tests against the pre-fix commit to confirm they fail there (not done; by construction the old code accepts HKDF(access key)-signed cookies, shares the key across instances and ignores sub)",
+    "After the 4 non-owned call sites are updated: re-run server-audit-wiring.test.ts, route-access-server.test.ts and the tests typecheck"
+  ],
+  "evidence": [
+    "packages/runner/src/helpers/helper-session.ts:33",
+    "packages/runner/src/helpers/helper-session.ts:52",
+    "packages/runner/src/helpers/helper-session.ts:82",
+    "packages/runner/src/helpers/helper-access.ts:62",
+    "packages/runner/src/helpers/helper-access.ts:115",
+    "packages/runner/src/helpers/helper-access.ts:118",
+    "packages/runner/src/routes/audit-helpers.ts:168",
+    "packages/runner/src/routes/audit-helpers.ts:187",
+    ".github/workflows/deploy.yml:141"
+  ],
+  "blockers": [],
+  "risks": [
+    "Internal runner API change: helperSessionKey removed; signHelperSession(key, email, now, seconds) became signHelperSession(key, { email, sub }, now, seconds); HelperSessionClaims gains sub; new exports newHelperSessionKey and HELPER_SESSION_KEY_BYTES. HTTP contract unchanged except that the cookie payload now has sub.",
+    "server-audit-wiring.test.ts fails (1 failed, 4 skipped) and the runner tests typecheck fails (exit 2) until the 4 non-owned call sites listed in handoff are updated; route-access-server.test.ts Helper block will throw at :323 for the same reason (typecheck shows it; not run, not owned).",
+    "Every existing Helper session is invalidated on deploy and on every runner restart (accepted by DEC-011). Cookies do not work across instances: the runner deploys with --max-instances 1 (deploy.yml:141); raising it would break Helper sessions.",
+    "A second HelperAccess in one runner (routes/index.ts:120 createHelperAccess fallback) would make its own key, so routes and dispatch would disagree on Helper cookies. BE-190 must remove it."
+  ],
+  "handoff": "Non-owned call sites to update (orchestrator: BE-102 for route-access-server, BE-612 for server-audit-wiring), exact replacements: packages/runner/tests/route-access-server.test.ts:323 -> signHelperSession(access.sessionKey(), { email, sub: 'uid-1' }, new Date()); packages/runner/tests/server-audit-wiring.test.ts:18 -> import newHelperSessionKey instead of helperSessionKey; :196 -> signHelperSession(wiring.helperAccess.sessionKey(), { email: HELPER, sub: 'uid-1' }, new Date()); :307 -> signHelperSession(newHelperSessionKey(), { email: HELPER, sub: 'uid-1' }, new Date()). BE-190: routes and dispatch must share the single RunnerServer.auditWiring.helperAccess. With random per-instance keys, the routes/index.ts:120 createHelperAccess fallback is now a correctness bug, not just duplication. Tests that need a Helper cookie should sign with that instance's access.sessionKey() and pass { email, sub }. For a foreign-key cookie, use newHelperSessionKey(). To share a known key between instances in tests, pass sessionKey (>=32 bytes) to createHelperAccess. Reviewer: check helper-session.ts isSub (sub non-empty string, <=128 chars, covered by the MAC), helper-access.ts:115-118 (key only when enabled; injected key copied), and that nothing derives a key from RUNNER_ACCESS_TOKEN. The replaced test in helper-session.test.ts asserted the vulnerable derived-key behaviour and now asserts the opposite. No migration, no dependency change, no new configuration. Rollback = revert these 6 files.",
+  "_captured": {
+    "at": "2026-11-03T18:01:46.781Z",
+    "agent_id": "a4708082dbaa4ef6f",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

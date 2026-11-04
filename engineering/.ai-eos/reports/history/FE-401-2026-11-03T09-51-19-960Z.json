@@ -1,0 +1,56 @@
+{
+  "task_id": "FE-401",
+  "agent": "frontend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-030"
+  ],
+  "files_inspected": [
+    "packages/types/src/website-audit.ts",
+    "packages/core/src/audit/ai/rewrite-store.ts",
+    "packages/core/src/audit/ai/rewrite.ts",
+    "packages/wizard/src/screens/audit/documents/review-api.ts",
+    "packages/wizard/src/screens/audit/documents/ReviewDocumentsScreen.tsx",
+    "packages/wizard/src/screens/audit/results/analysis-text.ts",
+    "packages/wizard/src/components/text.tsx",
+    "packages/wizard/tests/audit-documents-review.test.tsx",
+    "packages/wizard/tests/no-banned-words.test.ts",
+    "CONTEXT.md"
+  ],
+  "files_created": [
+    "packages/wizard/src/screens/audit/ai/RewriteReview.tsx",
+    "packages/wizard/src/screens/audit/ai/rewrite-api.ts",
+    "packages/wizard/tests/audit-rewrite-review.test.tsx"
+  ],
+  "files_modified": [],
+  "implementation_summary": "rewrite-api.ts: listRewrites/approveRewrite/writeNewCopy/acceptNewCopy against AUDIT_API routes, refusals turned into plain sentences (ERR_NO_AI_KEY -> 'Add an AI key in Settings to write new copy.', ERR_OVERLAP -> server message plus validated overlaps, AI failure -> reply sentence or generic AI_UNAVAILABLE). writeNewCopy sends no request unless the RewriteState is approved. markCopiedPhrases matches the normalised OverlapFlag words to word runs in the displayed text (same normalisation as the core overlapWords) and merges them into marked pieces. RewriteReview.tsx: pure RewriteReviewView (original text, Approve rewrite, Write new copy disabled until approved with aria-describedby reason, proposal with <mark aria-label> highlights plus a phrase list with word counts, labelled textarea, Accept, ERR_OVERLAP refusal that keeps the edited text and marks the phrases still copied, Audit Documents only notice) and a stateful RewriteReview that loads the saved rewrites and handles approve/write/accept.",
+  "tests_executed": [
+    {
+      "name": "rewrite review UI + banned words",
+      "command": "CI=1 ./node_modules/.bin/vitest run packages/wizard/tests/audit-rewrite-review.test.tsx packages/wizard/tests/no-banned-words.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 2 passed (2); Tests 25 passed (25)"
+    }
+  ],
+  "tests_proposed": [
+    "Browser-level keyboard walk-through of Approve rewrite -> Write new copy -> Accept once FE-191 mounts the view (vitest env has no DOM)",
+    "Runner integration test once the rewrite routes are wired, confirming the ERR_OVERLAP reply carries `overlaps` and `error`"
+  ],
+  "evidence": [
+    "packages/wizard/tests/audit-rewrite-review.test.tsx: 'sends no rewrite request without an approval' (fetch call count 0)",
+    "packages/wizard/tests/audit-rewrite-review.test.tsx: 'shows the ERR_OVERLAP refusal and keeps the edited text'",
+    "vitest output: Tests 25 passed (25)"
+  ],
+  "blockers": [],
+  "risks": [
+    "`pnpm exec vitest ...` failed before running tests with ERR_PNPM_IGNORED_BUILDS (@firebase/util, protobufjs ignored build scripts; pnpm runs an install check first). The validation command may hit this in the orchestrator's environment; running node_modules/.bin/vitest directly works.",
+    "The wizard type-check was not run: a tsc call was blocked by a deny rule. The tests pass under vitest, but `pnpm build` should confirm the types.",
+    "The rewrite routes are not handled in packages/runner/src yet. The client assumes an error reply of {error|message, code, overlaps}; whoever wires the routes must return `overlaps` with ERR_OVERLAP."
+  ],
+  "handoff": "FE-191 mounts <RewriteReview auditId version? content={PageContent} language? fetchImpl? /> from packages/wizard/src/screens/audit/ai/RewriteReview.tsx in the audit result screen. All @qa/types imports go through @qa/types/src/browser.js (T-211). The view is pure (RewriteReviewView) for static-markup tests.",
+  "_captured": {
+    "at": "2026-11-03T09:51:19.960Z",
+    "agent_id": "a9ed3d510452917c3",
+    "agent_type": "ai-eos:frontend-engineer"
+  }
+}

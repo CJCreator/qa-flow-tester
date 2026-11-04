@@ -9,7 +9,7 @@ const result: VisualDiffResult = {
   sizeMismatch: false,
   diffImagePath: '/out/visual-diff.png',
 };
-const base = { testCaseId: 'TC-1', role: 'guest', breakpoint: 'desktop' as const, urlPath: '/', baselinePath: 'b.png' };
+const base = { testCaseId: 'TC-1', role: 'guest', breakpoint: '1440px' as const, urlPath: '/', baselinePath: 'b.png' };
 
 describe('visual diff finding', () => {
   it('visual finding carries baseline and current paths when given', () => {

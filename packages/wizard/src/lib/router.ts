@@ -18,6 +18,17 @@ export type Route =
   | { name: 'baselines' }
   | { name: 'benchmark' }
   | { name: 'settings' }
+  | { name: 'audit-new' }
+  | { name: 'audits' }
+  | { name: 'audit'; auditId: string }
+  | { name: 'audit-version'; auditId: string; version: number }
+  | { name: 'audit-review'; auditId: string; version: number }
+  | { name: 'audit-export'; auditId: string; version: number }
+  | { name: 'audit-share'; auditId: string }
+  | { name: 'audit-helpers'; auditId: string }
+  | { name: 'audit-settings' }
+  | { name: 'audit-shortlist' }
+  | { name: 'helper-sign-in' }
   | { name: 'not-found'; path: string };
 
 export const PATHS = {
@@ -32,7 +43,49 @@ export const PATHS = {
   baselines: '/baselines',
   benchmark: '/benchmark',
   settings: '/settings',
+  // Website Audit screens. These are not Check-up routes: the Check-up phase never moves the user off them.
+  // The addresses match AUDIT_PATHS in screens/audit/saved/saved-api.ts (a test pins them).
+  auditNew: '/audits/new',
+  audits: '/audits',
+  audit: (auditId: string) => `/audits/${encodeURIComponent(auditId)}`,
+  auditVersion: (auditId: string, version: number) => `/audits/${encodeURIComponent(auditId)}/versions/${version}`,
+  auditReview: (auditId: string, version: number) => `/audits/${encodeURIComponent(auditId)}/versions/${version}/review`,
+  auditExport: (auditId: string, version: number) => `/audits/${encodeURIComponent(auditId)}/versions/${version}/export`,
+  auditShare: (auditId: string) => `/audits/${encodeURIComponent(auditId)}/share`,
+  auditHelpers: (auditId: string) => `/audits/${encodeURIComponent(auditId)}/helpers`,
+  auditSettings: '/audit-settings',
+  auditShortlist: '/shortlist',
+  helperSignIn: '/helper',
 } as const;
+
+/** The id in an address segment, or null when it can't be read or is empty. */
+function readId(segment: string): string | null {
+  try {
+    return decodeURIComponent(segment) || null;
+  } catch {
+    return null;
+  }
+}
+
+/** A version number in an address: a positive whole number written plainly. */
+function readVersion(segment: string): number | null {
+  return /^[1-9]\d{0,8}$/.test(segment) ? Number(segment) : null;
+}
+
+function matchAuditRoute(path: string): Route | null {
+  const match = path.match(/^\/audits\/([^/]+)(?:\/(share|helpers)|\/versions\/([^/]+)(?:\/(review|export))?)?$/);
+  if (!match) return null;
+  const auditId = readId(match[1]);
+  if (auditId === null) return null;
+  if (match[2] === 'share') return { name: 'audit-share', auditId };
+  if (match[2] === 'helpers') return { name: 'audit-helpers', auditId };
+  if (match[3] === undefined) return { name: 'audit', auditId };
+  const version = readVersion(match[3]);
+  if (version === null) return null;
+  if (match[4] === 'review') return { name: 'audit-review', auditId, version };
+  if (match[4] === 'export') return { name: 'audit-export', auditId, version };
+  return { name: 'audit-version', auditId, version };
+}
 
 export function matchRoute(pathname: string): Route {
   const path = pathname.replace(/\/+$/, '') || '/';
@@ -55,7 +108,19 @@ export function matchRoute(pathname: string): Route {
       return { name: 'benchmark' };
     case PATHS.settings:
       return { name: 'settings' };
+    case PATHS.auditNew:
+      return { name: 'audit-new' };
+    case PATHS.audits:
+      return { name: 'audits' };
+    case PATHS.auditSettings:
+      return { name: 'audit-settings' };
+    case PATHS.auditShortlist:
+      return { name: 'audit-shortlist' };
+    case PATHS.helperSignIn:
+      return { name: 'helper-sign-in' };
   }
+  const audit = matchAuditRoute(path);
+  if (audit) return audit;
   const visibilityMatch = path.match(/^\/reports\/([^/]+)\/visibility$/);
   if (visibilityMatch) {
     try {

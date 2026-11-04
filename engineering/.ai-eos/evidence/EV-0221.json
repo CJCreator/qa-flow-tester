@@ -1,0 +1,49 @@
+{
+  "evidence_id": "EV-0221",
+  "check_id": "CHK-BE-606-UNIT",
+  "name": "Helper sign-in, session and access tests",
+  "category": "security",
+  "requirement_ids": [
+    "REQ-033"
+  ],
+  "task_ids": [
+    "BE-606"
+  ],
+  "command": "pnpm exec vitest run packages/runner/tests/helper-token.test.ts packages/runner/tests/helper-session.test.ts packages/runner/tests/helper-access.test.ts packages/runner/tests/audit-helpers-routes.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  4 passed (4)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0221.log",
+  "log_sha256": "6a8a5196f3d5b1b5c7d5cf682b5402c656aad692331383ce1ab96d294427fdf9",
+  "started_at": "2026-11-03T18:02:29.927Z",
+  "finished_at": "2026-11-03T18:02:50.571Z",
+  "duration_ms": 20644,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:0559f34cac776379e26b0c1ee627b22a79c4c61195d89941753c1e00eb6894f2",
+  "concurrent_tasks": [
+    "BE-500"
+  ],
+  "paths": [
+    "packages/core/src/audit/store/**",
+    "packages/runner/src/helpers/**",
+    "packages/runner/src/routes/audit-helpers.ts",
+    "packages/runner/src/routes/route.ts",
+    "packages/runner/tests/audit-helpers-routes.test.ts",
+    "packages/runner/tests/helper-access.test.ts",
+    "packages/runner/tests/helper-session.test.ts",
+    "packages/runner/tests/helper-token.test.ts",
+    "packages/types/src/website-audit.ts"
+  ],
+  "paths_fingerprint": "git-paths:50302ed69468bf4d42c155ddd77ab2aba95f6d1189cce805bcef4574ba1549f3",
+  "scoped_fingerprint": "git:aceb9156465c9fe12eaab8336592b40c64fb8ca259ff7f3d86fc2d314a6d3172",
+  "excluded_owned": [
+    "packages/core/src/audit/documents/edits.ts",
+    "packages/core/tests/audit-doc-edits.test.ts",
+    "packages/core/tests/helpers/audit-doc-fixture.ts"
+  ]
+}

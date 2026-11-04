@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { redactedMessage, RunnerServer } from '../src/server.js';
 import path from 'path';
-import { promises as fs } from 'fs';
+import os from 'os';
+import { promises as fs, mkdtempSync } from 'fs';
 import http from 'http';
 
 describe('error redaction', () => {
@@ -63,10 +64,11 @@ describe('error redaction', () => {
 
   it('redacts query secrets in server RUN_FAILED events when discovery fails to connect', async () => {
     const RUNNER_PORT = 3681;
-    const outputDir = path.join(process.cwd(), '.tmp-error-redaction');
+    // A new folder per run, outside the repository: inside OneDrive the sync client picks up every file a run
+    // writes and holds files open so the clean-up fails.
+    const scratch = mkdtempSync(path.join(os.tmpdir(), 'qa-test-error-redaction-'));
+    const outputDir = path.join(scratch, 'report');
     const dataDir = `${outputDir}-data`;
-    await fs.rm(outputDir, { recursive: true, force: true }).catch(() => {});
-    await fs.rm(dataDir, { recursive: true, force: true }).catch(() => {});
 
     const runner = new RunnerServer({
       port: RUNNER_PORT,
@@ -101,8 +103,9 @@ describe('error redaction', () => {
       });
       expect(res.status).toBe(202);
 
-      // Wait for run to fail
-      for (let i = 0; i < 40; i++) {
+      // Wait for run to fail. Starting Chromium and failing to connect took over 10 s on a busy laptop, so
+      // the wait runs to within the test's own 60 s rather than a fixed 10 s (REQ-046).
+      for (let i = 0; i < 200; i++) {
         const statusRes = await (await fetch(`http://localhost:${RUNNER_PORT}/api/runner/status`)).json();
         if (statusRes.phase === 'failed') break;
         await new Promise((r) => setTimeout(r, 250));
@@ -123,8 +126,7 @@ describe('error redaction', () => {
       }
     } finally {
       await runner.stop();
-      await fs.rm(outputDir, { recursive: true, force: true }).catch(() => {});
-      await fs.rm(dataDir, { recursive: true, force: true }).catch(() => {});
+      await fs.rm(scratch, { recursive: true, force: true, maxRetries: 5 }).catch(() => {});
     }
   }, 60000);
 });

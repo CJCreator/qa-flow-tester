@@ -1,0 +1,77 @@
+{
+  "task_id": "BE-505",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-019",
+    "REQ-025"
+  ],
+  "files_inspected": [
+    "packages/types/src/website-audit.ts",
+    "packages/types/src/route-telemetry.ts",
+    "CONTEXT.md",
+    "engineering/plan.md",
+    "packages/core/src/audit/documents/model.ts",
+    "packages/core/src/audit/documents/render-html.ts",
+    "packages/core/src/audit/documents/render-markdown.ts",
+    "packages/core/src/audit/documents/wording.ts",
+    "packages/core/src/audit/documents/edits.ts",
+    "packages/core/src/audit/documents/findings.ts",
+    "packages/core/src/audit/documents/content.ts",
+    "packages/core/src/audit/documents/roadmap-document.ts",
+    "packages/core/src/audit/documents/settings.ts",
+    "packages/core/src/audit/documents/templates/opt-out.ts",
+    "packages/core/src/audit/documents/labels/en.ts",
+    "packages/core/src/audit/documents/labels/ta.ts",
+    "packages/core/src/audit/documents/labels/index.ts",
+    "packages/core/tests/helpers/audit-doc-fixture.ts",
+    "packages/core/tests/audit-doc-builders.test.ts"
+  ],
+  "files_created": [
+    "packages/core/src/audit/documents/pitch.ts",
+    "packages/core/src/audit/documents/owner-audit.ts",
+    "packages/core/tests/audit-doc-pitch.test.ts",
+    "packages/core/tests/audit-doc-owner.test.ts"
+  ],
+  "files_modified": [],
+  "implementation_summary": "pitch.ts: pitchGlimpseDoc(view, { language?, optOutText?, screenshots? }) builds an AuditDoc of kind 'pitch-glimpse'. It has the site address, the top 3 findings (view.result.findings.slice(0,3), which is ranked order) with edited text, the page(s) cited, an AI-advice marker on AI findings, and one screenshot each as a data: URI. A finding with no screenshot, or whose image is not an embeddable data URI, gets a 'no screenshot' note. Then a line saying how many more issues are in the full audit, 'What was checked' (pages read of pages found, areas graded by fixed checks) and 'What this did not check' (Skipped Pages count and reasons, areas not graded, a fixed limits sentence). The opt-out text comes last: the saved text for the language asked for, else defaultOptOutText. buildPitchGlimpse(view, options) renders it with renderHtml and adds one inline <style> block of A4 print CSS: tighter type, each screenshot floated beside its text at max-height 40mm. clampText cuts the URL, title, pages, detail and suggestion per language (lower limits for Tamil) at a word boundary and adds an ellipsis. Fixed EN/TA wording lives in a local table, as in BE-503. owner-audit.ts: buildOwnerAudit(view, lookup: LabelLookup) returns an AuditDoc of kind 'owner-audit'. It opens with a fixed-rule summary: website, intro, pages read and not read, areas graded and not graded, findings per group in FINDING_GROUP_ORDER, the top 5 findings with their pages, and a limits note. It has no score or grade. After the summary come Structure, Content, Findings (showEffort: false) and the Improvement Roadmap (showEffort: false). Each part starts with a page break and its title, and its own headings move one level down (capped at 4). It reads only view.result and view.contents, never view.proposal or view.overlay, so it never sees the Proposal, price, payment terms or Shortlist data.",
+  "tests_executed": [
+    {
+      "name": "Pitch Glimpse and Owner Audit unit tests (CHK-BE-505-UNIT)",
+      "command": "pnpm exec vitest run packages/core/tests/audit-doc-pitch.test.ts packages/core/tests/audit-doc-owner.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 2 passed (2); Tests 37 passed (37)"
+    },
+    {
+      "name": "core type-check (src)",
+      "command": "npx tsc --noEmit -p . (in packages/core)",
+      "result": "passed",
+      "output_excerpt": "no output, exit 0"
+    }
+  ],
+  "tests_proposed": [
+    "BE-507/QA-500: print buildPitchGlimpse to PDF in EN and TA with 3 real screenshots and maximum-length text, and check the page count is 1 (the actual one-A4-page proof).",
+    "BE-604: shared pitch page test that marketing-signal contact details (NAP) do not appear (findings text could still quote a phone number from page text)."
+  ],
+  "evidence": [
+    "packages/core/tests/audit-doc-pitch.test.ts: 'shows exactly the first three findings in ranking order', 'embeds one screenshot per finding as a data URI', 'shows a no-screenshot note...', Tamil/English language tests (lang attr, fixed text, default opt-out), saved opt-out tests, 'no form, mailto:, tel:, script or external resource, even from page text' (en, ta), clamp tests, claim-wording tests",
+    "packages/core/tests/audit-doc-owner.test.ts: language tests (en/ta), 'starts with the plain-language summary', summary content test, parts-order test, 'no Shortlist mark, notes or outcome, no effort, no price or payment terms' (en, ta, md and html), 'never reads the Proposal inputs or the overlay' (throwing getters), claim-wording tests",
+    "vitest run: Test Files 2 passed, Tests 37 passed"
+  ],
+  "blockers": [],
+  "risks": [
+    "The one-A4-page fit is not proven here. Text is clamped and screenshots are capped at 40mm and floated, but only a PDF page count (BE-507/QA-500) can prove it.",
+    "The opt-out text is deliberately not clamped, because cutting legal wording seemed worse than spilling onto a second page. Saved text can be up to 2000 characters (MAX_OPT_OUT_TEXT_CHARS), so a very long saved text may push the Pitch Glimpse past one page. The settings cap may need to come down, or the UI should warn.",
+    "Contract: buildPitchGlimpse's optOutText takes the per-language record (settings.optOutText), not a single string, and screenshots is a Record keyed by AuditFinding.screenshotPath with base64 data:image values. The caller (BE-506/BE-510) loads the files. Only own keys are read, and anything that is not an embeddable data URI shows the 'no screenshot' note.",
+    "The pitch CSS goes in as a second inline <style> before </head> in renderHtml's output. If render-html.ts changes its head markup, this string replace must still find '</head>'.",
+    "The Tamil wording in pitch.ts and owner-audit.ts has not been reviewed by a native speaker. The fixed EN/TA wording sits in per-file tables, as in BE-503, and should move into DocumentLabels in a follow-up.",
+    "The Pitch Glimpse shows finding detail text. If a finding quotes page text that holds an owner's phone number or email, it appears as plain text (never as a link). The Shared Link no-contact-details check (BE-604) should cover this.",
+    "pitchGlimpseDoc(...).title uses labels.documentTitles['pitch-glimpse'] and the Owner Audit uses documentTitles['owner-audit'] ('Website Audit'). Both come from BE-501's labels."
+  ],
+  "handoff": "BE-506 generatePitchGlimpse: buildPitchGlimpse(buildEditedView(result, contents, overlay), { language, optOutText: settings.optOutText, screenshots: { [finding.screenshotPath]: 'data:image/png;base64,...' } }) returns the HTML string. For PDF, print that HTML (it already has @page A4). pitchGlimpseDoc(...) returns the AuditDoc if Markdown is needed. BE-506 generateOwnerAudit: buildOwnerAudit(view, labelsFor(lang)) returns an AuditDoc; render it with renderMarkdown, renderHtml or the BE-507 renderers. Do not pass Shortlist data or Proposal inputs. The builder ignores them, but they need not be loaded. Also exported: PITCH_TOP_FINDINGS (3), OWNER_SUMMARY_TOP_FINDINGS (5), clampText, pitchLimits, pitchWording, ownerWording.",
+  "_captured": {
+    "at": "2026-11-03T07:36:12.882Z",
+    "agent_id": "aba8d872be9991291",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "evidence_id": "EV-0320",
+  "check_id": "CHK-BE-103-SERVER",
+  "name": "benchmark and Check-up share the run slot (RunnerServer)",
+  "category": "integration",
+  "requirement_ids": [
+    "REQ-049"
+  ],
+  "task_ids": [
+    "BE-103"
+  ],
+  "command": "pnpm exec vitest run packages/runner/tests/benchmark.test.ts packages/runner/tests/scheduler.test.ts packages/runner/tests/runner-server.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  3 passed (3)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0320.log",
+  "log_sha256": "a1ceff01d9b72793026e3247dde3d9fbf990879730c56559c8264b6aadb73d76",
+  "started_at": "2026-11-04T04:58:30.317Z",
+  "finished_at": "2026-11-04T05:11:16.558Z",
+  "duration_ms": 766241,
+  "recorded_by": "aieos check run",
+  "recovery_id": "REC-011",
+  "attempt": 1,
+  "tree_fingerprint": "git:8556698e2ef8057822c6c7866644d3f554eaf8436d961f5930cd7c248c675fa9",
+  "concurrent_tasks": [
+    "QA-713"
+  ],
+  "paths": [
+    "packages/runner/src/scheduler.ts",
+    "packages/runner/src/server.ts",
+    "packages/runner/src/session/**",
+    "packages/runner/tests/benchmark.test.ts",
+    "packages/runner/tests/runner-server.test.ts",
+    "packages/runner/tests/scheduler.test.ts"
+  ],
+  "paths_fingerprint": "git-paths:def3594d2e368e443c4a5a6047f62fecfbe732e672d2aa0b635f0559173e4354",
+  "scoped_fingerprint": "git:7f7e60a45fe8c8c3f772499d1d20b0dfc6100c872ea69ffdcff3a68fe2ee1898",
+  "excluded_owned": [
+    "docs/CONFIGURATION.md",
+    "vitest.config.ts",
+    "vitest.workspace.ts"
+  ]
+}

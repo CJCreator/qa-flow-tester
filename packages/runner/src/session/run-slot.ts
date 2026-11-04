@@ -1,14 +1,23 @@
 import type { RunnerPhase } from '@qa/types';
 
+/** What holds the run slot: a Check-up, a Competitive Benchmark or a Website Audit. One at a time (DEC-002). */
+export type RunKind = 'checkup' | 'benchmark' | 'audit';
+
 export interface RunSlot {
+  /** Which kind of run holds the slot; null when it is free. */
+  readonly kind: RunKind | null;
+  /** The Check-up's state: a benchmark or an audit holding the slot leaves it untouched. */
   readonly isRunning: boolean;
   readonly phase: RunnerPhase;
   readonly runId: string | null;
   readonly targetUrl: string | null;
   /** Bumped by every start; guards events that belong to a run that is over (today's `runGeneration`). */
   readonly generation: number;
-  /** Claim the slot for a run. False when one is already running. */
-  begin(runId: string, targetUrl: string): boolean;
+  /**
+   * Claim the slot for a run, synchronously. False when any run holds it; the one exception is a Check-up
+   * awaiting Plan Review, which a new Check-up (and only a Check-up) may replace.
+   */
+  begin(runId: string, targetUrl: string, kind?: RunKind): boolean;
   /** Give the slot back. */
   release(): void;
   setPhase(phase: RunnerPhase): void;
@@ -30,6 +39,8 @@ export class DefaultRunSlot implements RunSlot {
   private _generation = 0;
   private _abortController: AbortController | null = null;
   private _finishController: AbortController | null = null;
+  /** A benchmark or audit holding the slot. */
+  private _other: { kind: Exclude<RunKind, 'checkup'>; runId: string; targetUrl: string } | null = null;
 
   get isRunning(): boolean {
     return this._isRunning;
@@ -51,8 +62,18 @@ export class DefaultRunSlot implements RunSlot {
     return this._generation;
   }
 
-  begin(runId: string, targetUrl: string): boolean {
-    if (this._isRunning && this._phase !== 'awaiting-review') return false;
+  get kind(): RunKind | null {
+    return this._other?.kind ?? (this._isRunning ? 'checkup' : null);
+  }
+
+  begin(runId: string, targetUrl: string, kind: RunKind = 'checkup'): boolean {
+    if (this._other) return false;
+    if (this._isRunning && (kind !== 'checkup' || this._phase !== 'awaiting-review')) return false;
+    if (kind !== 'checkup') {
+      // The Check-up's phase, run id and report stay as they are: status keeps describing the last Check-up.
+      this._other = { kind, runId, targetUrl };
+      return true;
+    }
     this._isRunning = true;
     this._phase = 'scanning';
     this._runId = runId;
@@ -64,6 +85,10 @@ export class DefaultRunSlot implements RunSlot {
   }
 
   release(): void {
+    if (this._other) {
+      this._other = null;
+      return;
+    }
     this._isRunning = false;
     this._phase = 'idle';
     this._runId = null;

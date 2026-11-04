@@ -1,0 +1,42 @@
+{
+  "evidence_id": "EV-0358",
+  "check_id": "CHK-QA-706-RUNNER-BROWSER",
+  "name": "runner-server and url-first files",
+  "category": "integration",
+  "requirement_ids": [
+    "REQ-053",
+    "REQ-046"
+  ],
+  "task_ids": [
+    "QA-706"
+  ],
+  "command": "pnpm exec vitest run packages/runner/tests/runner-server.test.ts packages/runner/tests/url-first.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  2 passed (2)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0358.log",
+  "log_sha256": "0a418a004c5219f922cd86691acf6a0811e83189405ce717848e1986061da313",
+  "started_at": "2026-11-04T07:10:15.230Z",
+  "finished_at": "2026-11-04T07:23:50.901Z",
+  "duration_ms": 815671,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:a106b3aa880f48fb3fccd478c4e7bbc2b0039a0fd1ac734eacd1960d53185922",
+  "concurrent_tasks": [],
+  "paths": [
+    "fixtures/test-app/**",
+    "packages/checkers/src/**",
+    "packages/core/src/**",
+    "packages/runner/src/**",
+    "packages/runner/tests/runner-server.test.ts",
+    "packages/runner/tests/url-first.test.ts",
+    "packages/types/src/**",
+    "vitest.config.ts",
+    "vitest.workspace.ts"
+  ],
+  "paths_fingerprint": "git-paths:70ab36c4a55af4be2cce8c03a1acc8b1eb45b799276076cdb5ce59a476cf2246"
+}

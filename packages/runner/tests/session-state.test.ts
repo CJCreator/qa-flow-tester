@@ -3,7 +3,7 @@ import fs from 'fs/promises';
 import os from 'os';
 import path from 'path';
 import { createCheckupSession, MAX_RUN_EVENTS, type StoredPlanRecord } from '../src/session/checkup-session.js';
-import type { ReviewPlan } from '@qa/types';
+import type { DraftPlan, ReviewPlan } from '@qa/types';
 
 describe('CheckupSession state and operations (T-204)', () => {
   let tmpDir: string;
@@ -101,13 +101,14 @@ describe('CheckupSession state and operations (T-204)', () => {
     const mockPlan: ReviewPlan = {
       runId: 'run-park-test',
       targetUrl: 'http://example.com',
-      createdAt: new Date().toISOString(),
-      summary: { totalRoutes: 1, readyRoutes: 1, needsWorkRoutes: 0 },
+      discoveredAt: new Date().toISOString(),
+      summary: { tests: 0, pages: 0, pagesListed: 0, screenSizes: [], lines: [] },
       pages: [],
       flows: [],
       screenSizes: [],
       questions: [],
     };
+    const draftPlan: DraftPlan = { pages: [], navigation: [], layoutGroups: [], otherHosts: [] };
     const record: StoredPlanRecord = {
       plan: mockPlan,
       status: 'awaiting-review',
@@ -117,8 +118,13 @@ describe('CheckupSession state and operations (T-204)', () => {
         productId: 'park-test',
         siteHost: 'example.com',
         draft: {
-          plan: mockPlan,
+          version: '1.0',
+          productId: 'park-test',
+          targetUrl: 'http://example.com',
+          timestamp: new Date().toISOString(),
+          plan: draftPlan,
           pages: [],
+          flows: [],
           forms: [],
           sensitiveActions: [],
           ambiguityQuestions: [],
@@ -147,13 +153,14 @@ describe('CheckupSession state and operations (T-204)', () => {
     const mockPlan: ReviewPlan = {
       runId: 'run-save-clear',
       targetUrl: 'http://example.com',
-      createdAt: new Date().toISOString(),
-      summary: { totalRoutes: 1, readyRoutes: 1, needsWorkRoutes: 0 },
+      discoveredAt: new Date().toISOString(),
+      summary: { tests: 0, pages: 0, pagesListed: 0, screenSizes: [], lines: [] },
       pages: [],
       flows: [],
       screenSizes: [],
       questions: [],
     };
+    const draftPlan: DraftPlan = { pages: [], navigation: [], layoutGroups: [], otherHosts: [] };
     const record: StoredPlanRecord = {
       plan: mockPlan,
       status: 'awaiting-review',
@@ -163,8 +170,13 @@ describe('CheckupSession state and operations (T-204)', () => {
         productId: 'save-clear-test',
         siteHost: 'example.com',
         draft: {
-          plan: mockPlan,
+          version: '1.0',
+          productId: 'save-clear-test',
+          targetUrl: 'http://example.com',
+          timestamp: new Date().toISOString(),
+          plan: draftPlan,
           pages: [],
+          flows: [],
           forms: [],
           sensitiveActions: [],
           ambiguityQuestions: [],

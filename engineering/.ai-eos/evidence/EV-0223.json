@@ -1,0 +1,37 @@
+{
+  "evidence_id": "EV-0223",
+  "check_id": "CHK-BE-102-UNIT",
+  "name": "route table access, beta policy and param matching (unit)",
+  "category": "security",
+  "requirement_ids": [
+    "REQ-048"
+  ],
+  "task_ids": [
+    "BE-102"
+  ],
+  "command": "pnpm exec vitest run packages/runner/tests/route-table.test.ts packages/runner/tests/route-access.test.ts packages/runner/tests/plan-routes.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  3 passed (3)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0223.log",
+  "log_sha256": "6a11f556d8b9b18bd1ee2b6d34df99ea5a1a0a8f3b1279d6e3f38c66d45c2ba7",
+  "started_at": "2026-11-03T18:10:58.781Z",
+  "finished_at": "2026-11-03T18:11:20.628Z",
+  "duration_ms": 21846,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:cc29640ed067fd362189f09316ca48db2ef3586308d299d14390fb5afb835156",
+  "concurrent_tasks": [],
+  "paths": [
+    "packages/runner/src/routes/**",
+    "packages/runner/tests/plan-routes.test.ts",
+    "packages/runner/tests/route-access.test.ts",
+    "packages/runner/tests/route-table.test.ts",
+    "packages/types/src/website-audit.ts"
+  ],
+  "paths_fingerprint": "git-paths:91eeb291751f17b1e3576cf5786fca9a6f6ce2c8824c2dd2eb6d6f04578a9af0"
+}

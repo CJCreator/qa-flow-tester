@@ -1,0 +1,55 @@
+{
+  "evidence_id": "EV-0155",
+  "check_id": "CHK-BE-605-UNIT",
+  "name": "preview generator, sanitiser and route tests",
+  "category": "security",
+  "requirement_ids": [
+    "REQ-024"
+  ],
+  "task_ids": [
+    "BE-605"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/audit-preview.test.ts packages/core/tests/audit-preview-sanitize.test.ts packages/runner/tests/audit-preview-routes.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  3 passed (3)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0155.log",
+  "log_sha256": "3489d491dba0b7e5ccfd50a03ffe1dc0bb5bc0756c88aaecb308fba2e942963f",
+  "started_at": "2026-11-03T12:01:17.304Z",
+  "finished_at": "2026-11-03T12:01:34.182Z",
+  "duration_ms": 16878,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:a9417774da64d9d370cdbafc1143e1f57edfb6217656af70228539f55d8ddee6",
+  "concurrent_tasks": [
+    "BE-510",
+    "BE-605"
+  ],
+  "paths": [
+    "packages/core/src/audit/preview/**",
+    "packages/core/src/audit/store/**",
+    "packages/core/src/safe-net.ts",
+    "packages/core/tests/audit-preview-sanitize.test.ts",
+    "packages/core/tests/audit-preview.test.ts",
+    "packages/runner/src/routes/audit-preview.ts",
+    "packages/runner/src/routes/route.ts",
+    "packages/runner/tests/audit-preview-routes.test.ts",
+    "packages/types/src/ai.ts",
+    "packages/types/src/website-audit.ts"
+  ],
+  "paths_fingerprint": "git-paths:897d868b3a68e8553830f1943ae4b076925340ac3dcdba1debf707bddd672ed5",
+  "scoped_fingerprint": "git:1ed2901c0fc7eb197efbe5a6c3eae321b3a6c00cb6bc94e7a935e8730ba1b4de",
+  "excluded_owned": [
+    "packages/core/src/audit/preview/**",
+    "packages/core/tests/audit-preview-sanitize.test.ts",
+    "packages/core/tests/audit-preview.test.ts",
+    "packages/runner/src/routes/audit-export.ts",
+    "packages/runner/src/routes/audit-preview.ts",
+    "packages/runner/tests/audit-export-routes.test.ts",
+    "packages/runner/tests/audit-preview-routes.test.ts"
+  ]
+}

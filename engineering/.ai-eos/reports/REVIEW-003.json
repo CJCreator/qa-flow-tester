@@ -1,0 +1,123 @@
+{
+  "task_id": "REVIEW-003",
+  "agent": "code-reviewer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-003",
+    "REQ-016",
+    "REQ-017",
+    "REQ-024",
+    "REQ-033"
+  ],
+  "files_inspected": [
+    "packages/core/src/audit/pipeline/pipeline.ts",
+    "packages/core/src/audit/crawl/crawl.ts",
+    "packages/core/src/audit/crawl/limits.ts",
+    "packages/core/src/audit/index.ts",
+    "packages/runner/src/routes/audit-helpers.ts",
+    "packages/runner/src/routes/audit-preview.ts",
+    "packages/runner/src/routes/audit-share.ts",
+    "packages/runner/src/routes/audit-export.ts",
+    "packages/runner/src/routes/audit-store.ts",
+    "packages/runner/src/routes/route.ts",
+    "packages/runner/src/server.ts",
+    "packages/types/src/website-audit.ts",
+    "packages/wizard/src/lib/router.ts"
+  ],
+  "files_created": [],
+  "files_modified": [],
+  "implementation_summary": "Reviewed pipeline, crawl, barrel, audit route files and wizard router. No blockers; 3 majors (pacer/Crawl-delay not handed from crawl to pipeline, version never marked failed on pipeline error, Helper dispatch on id-less list routes), 4 minors (duplicated screenshot embedding and constants, inconsistent invalid-key mapping, 500 replies without a code).",
+  "tests_executed": [],
+  "evidence": [
+    "packages/core/src/audit/crawl/crawl.ts:51",
+    "packages/core/src/audit/pipeline/pipeline.ts:343",
+    "packages/core/src/audit/pipeline/pipeline.ts:640",
+    "packages/runner/src/server.ts:827",
+    "packages/runner/src/routes/audit-export.ts:190",
+    "packages/runner/src/routes/audit-share.ts:158",
+    "packages/runner/src/routes/audit-helpers.ts:78"
+  ],
+  "findings": [
+    {
+      "severity": "major",
+      "title": "Crawl result carries neither the HostPacer nor robots Crawl-delay, so pipeline checks ignore it",
+      "file": "packages/core/src/audit/crawl/crawl.ts",
+      "line": 51,
+      "requirement_ids": [
+        "REQ-003"
+      ],
+      "recommendation": "Return pacer or crawlDelayMs from runAuditCrawl and pass it to runAuditPipeline (pipeline.ts:343 fallback builds a new pacer without Crawl-delay)."
+    },
+    {
+      "severity": "major",
+      "title": "Pipeline leaves the version 'running' on save failure; updateVersion failure after a stored result throws the same save error",
+      "file": "packages/core/src/audit/pipeline/pipeline.ts",
+      "line": 640,
+      "requirement_ids": [
+        "REQ-016"
+      ],
+      "recommendation": "BE-190 must set status 'failed' on AuditPipelineError, crawl error and abort. Separate or retry the post-save updateVersion failure so a stored result is not reported as unsaved."
+    },
+    {
+      "severity": "major",
+      "title": "helperGrants gets no audit id for id-less view routes (/api/audits, /api/shortlist); HelperRouteStore does not match AuditStore",
+      "file": "packages/runner/src/server.ts",
+      "line": 827,
+      "requirement_ids": [
+        "REQ-033"
+      ],
+      "recommendation": "BE-190: grant 'view' on id-less list routes when the Helper holds any view grant (handlers already filter via grantedAuditIds), and adapt AuditStore to HelperRouteStore (getAudit vs readAuditRecord)."
+    },
+    {
+      "severity": "minor",
+      "title": "Duplicated pitchScreenshots, IMAGE_TYPES and MAX_SCREENSHOT_BYTES in export and share",
+      "file": "packages/runner/src/routes/audit-share.ts",
+      "line": 158,
+      "requirement_ids": [
+        "REQ-024"
+      ],
+      "recommendation": "Extract one helper (audit-helpers.ts or core) used by both audit-export.ts:190 and audit-share.ts:158."
+    },
+    {
+      "severity": "minor",
+      "title": "Preview file name defined three times and preview image cap duplicates core's PREVIEW_IMAGE_MAX_BYTES",
+      "file": "packages/runner/src/routes/audit-preview.ts",
+      "line": 50,
+      "requirement_ids": [
+        "REQ-024"
+      ],
+      "recommendation": "Import PREVIEW_FILE_NAME and PREVIEW_IMAGE_MAX_BYTES from @qa/core instead of PREVIEW_FILE (audit-preview.ts:33), PREVIEW_FILE_NAME (audit-share.ts:70) and IMAGE_MAX_BYTES."
+    },
+    {
+      "severity": "minor",
+      "title": "invalid-key store error maps to 404 in helper rows but 400 elsewhere; not-found wording differs",
+      "file": "packages/runner/src/routes/audit-helpers.ts",
+      "line": 78,
+      "requirement_ids": [
+        "REQ-033"
+      ],
+      "recommendation": "Use one mapping and one not-found sentence across all audit routes (404 preferred)."
+    },
+    {
+      "severity": "minor",
+      "title": "500 replies lack a code field, unlike every other audit refusal",
+      "file": "packages/runner/src/routes/audit-store.ts",
+      "line": 50,
+      "requirement_ids": [
+        "REQ-028"
+      ],
+      "recommendation": "Add a generic AuditErrorCode for store failures and use it in all route files' 500 paths."
+    }
+  ],
+  "blockers": [],
+  "risks": [
+    "createPreview has no in-flight guard, so concurrent POSTs spend the AI key twice",
+    "BE-190 wiring is untested end to end; the audit route files are not yet registered in allRoutes"
+  ],
+  "handoff": "Corrections: BE-204 (return pacer/crawl-delay), BE-192/BE-190 (mark version failed on error), BE-190 (helperGrants on list routes, store adapter, register rows), route-file owner (extract shared screenshot helper, unify error mapping).",
+  "_captured": {
+    "at": "2026-11-03T12:18:55.943Z",
+    "agent_id": "a0f5d88b08392e155",
+    "agent_type": "ai-eos:code-reviewer"
+  }
+}

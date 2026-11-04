@@ -1,0 +1,60 @@
+{
+  "task_id": "BE-710",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-032"
+  ],
+  "files_inspected": [
+    "packages/core/src/audit/documents/labels/index.ts",
+    "packages/core/src/audit/documents/labels/hi.ts",
+    "packages/core/tests/audit-document-text.test.ts",
+    "packages/types/src/website-audit.ts"
+  ],
+  "files_created": [
+    "packages/core/src/audit/documents/labels/te.ts",
+    "packages/core/src/audit/documents/labels/kn.ts",
+    "packages/core/src/audit/documents/labels/ml.ts",
+    "packages/core/src/audit/documents/labels/mr.ts",
+    "packages/core/src/audit/documents/labels/gu.ts",
+    "packages/core/src/audit/documents/labels/bn.ts",
+    "packages/core/src/audit/documents/labels/or.ts",
+    "packages/core/src/audit/documents/labels/pa.ts",
+    "packages/core/src/audit/documents/labels/ur.ts",
+    "packages/core/tests/audit-document-text-languages.test.ts"
+  ],
+  "files_modified": [
+    "packages/core/src/audit/documents/labels/index.ts"
+  ],
+  "implementation_summary": "Added nine beta label tables (te, kn, ml, mr, gu, bn, or, pa, ur) with every key of en.ts and registered them in TABLES in labels/index.ts, so documentText covers all 12 DocumentLanguage values. DOCUMENT_READY is unchanged, so labelsFor still falls back to English for the nine (DEC-005). Added a 21-test language coverage test. Urdu is the only right-to-left language and all nine have a beta label.",
+  "tests_executed": [
+    {
+      "name": "document text tables, language coverage and render",
+      "command": "CI=1 pnpm exec vitest run packages/core/tests/audit-document-text.test.ts packages/core/tests/audit-document-text-languages.test.ts packages/core/tests/audit-doc-render.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 3 passed (3); Tests 58 passed (58)"
+    },
+    {
+      "name": "core build",
+      "command": "pnpm --filter \"@qa/core...\" run build",
+      "result": "passed",
+      "output_excerpt": "types, checkers and core: tsc Done (run earlier in this task)"
+    }
+  ],
+  "tests_proposed": [],
+  "evidence": [
+    "packages/core/src/audit/documents/labels/index.ts:17-27 TABLES registers all 12 languages",
+    "Vitest re-run after the coordinator updated the labelLanguages() assertions: 3 files, 58 tests, all passed"
+  ],
+  "blockers": [],
+  "risks": [
+    "The tables are machine translations with no native-speaker review. The documents carry the beta note.",
+    "labelsFor still returns English for the nine languages (DEC-005), so no document renders in them until each is added to DOCUMENT_READY."
+  ],
+  "handoff": "Add a language to DOCUMENT_READY in labels/index.ts once every builder's own wording table covers it. Until then documents in the nine languages render in English with the beta note.",
+  "_captured": {
+    "at": "2026-11-03T11:26:50.633Z",
+    "agent_id": "affd63b9f59bb20e6",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

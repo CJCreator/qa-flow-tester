@@ -1,5 +1,6 @@
 import type { AIProvider } from '../ai-provider.js';
 import { DEFAULT_MODELS } from '../default-models.js';
+import { requestError, requestSignal } from '../timeout.js';
 import type { AICompletion, AIMessage, AICompletionOptions, AIProviderType } from '@qa/types';
 
 export class AnthropicProvider implements AIProvider {
@@ -20,6 +21,21 @@ export class AnthropicProvider implements AIProvider {
   }
 
   async complete(messages: AIMessage[], options: AICompletionOptions = {}): Promise<AICompletion> {
+    const { signal, release } = requestSignal(options);
+    try {
+      return await this.send(messages, options, signal);
+    } catch (err) {
+      throw requestError(err, signal, 'Anthropic');
+    } finally {
+      release();
+    }
+  }
+
+  private async send(
+    messages: AIMessage[],
+    options: AICompletionOptions,
+    signal: AbortSignal
+  ): Promise<AICompletion> {
     const systemMessage = messages.find((m) => m.role === 'system');
     const nonSystemMessages = messages.filter((m) => m.role !== 'system');
 
@@ -64,6 +80,7 @@ export class AnthropicProvider implements AIProvider {
         'content-type': 'application/json',
       },
       body: JSON.stringify(body),
+      signal,
     });
 
     if (!res.ok) {

@@ -1,0 +1,56 @@
+{
+  "task_id": "BE-605",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-024"
+  ],
+  "files_inspected": [
+    "packages/core/src/audit/preview/generate.ts",
+    "packages/core/src/audit/preview/sanitize.ts",
+    "packages/core/src/audit/preview/index.ts",
+    "packages/core/src/safe-net.ts",
+    "packages/runner/src/routes/audit-preview.ts",
+    "packages/core/tests/audit-preview.test.ts",
+    "packages/core/tests/audit-preview-sanitize.test.ts",
+    "packages/core/tests/outbound-fetch.test.ts",
+    "packages/core/tests/helpers/audit-doc-fixture.ts"
+  ],
+  "files_created": [],
+  "files_modified": [
+    "packages/core/tests/audit-preview.test.ts"
+  ],
+  "implementation_summary": "Finished BE-605 after BE-101 and BE-189 were resolved. Earlier preview code (generator, prompt, sanitiser, routes) left as built. Added four tests that run generatePreview through the real makeOutboundFetch with NetDeps faked (connect cuts and flags tooLarge over req.maxBytes, like defaultConnect): a same-site PNG with non-UTF-8 bytes is inlined as data:image/png;base64 with exact bytes; an image over the fetch cap is not inlined and keeps its alt text; an image over PREVIEW_IMAGE_MAX_BYTES is left out even when the fetch cap allows it; a host that does not resolve makes no connection and keeps the alt text. Confirmed the sanitiser removes meta http-equiv=refresh (existing hostile-input test, plus a check that only the 5 fixed frame meta tags remain). The route still requires generate to be injected (BE-190 wires it).",
+  "tests_executed": [
+    {
+      "name": "CHK-BE-605-UNIT preview generator, sanitiser and route tests",
+      "command": "pnpm exec vitest run packages/core/tests/audit-preview.test.ts packages/core/tests/audit-preview-sanitize.test.ts packages/runner/tests/audit-preview-routes.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 3 passed (3); Tests 62 passed (62) (sanitize 35, preview 15, routes 12)"
+    }
+  ],
+  "tests_proposed": [
+    "Total image budget (2.5 MB across images) through the default makeOutboundFetch with several listed homepage images",
+    "Redirect of an image to another host through makeOutboundFetch (re-checked hop) leaves the alt text"
+  ],
+  "evidence": [
+    "packages/core/tests/audit-preview.test.ts: describe 'preview images through the real makeOutboundFetch (BE-101), network faked at NetDeps'",
+    "packages/core/src/audit/preview/generate.ts:173-190 inlineImages: same-site and listed check, bytes(), sniffImageType, PREVIEW_IMAGE_MAX_BYTES",
+    "packages/core/src/safe-net.ts:303-340 makeOutboundFetch: an over-cap response gives empty bytes",
+    "packages/core/tests/audit-preview-sanitize.test.ts:37,46-48,58 meta refresh removed; only the 5 frame meta tags remain",
+    "packages/runner/src/routes/audit-preview.ts:148-149 default fetchImage = makeOutboundFetch({maxBytes: 400000, timeoutMs: 8000, maxRedirects: 3})",
+    "vitest: 3 files passed, 62 tests passed"
+  ],
+  "blockers": [],
+  "risks": [
+    "pnpm build not run in this pass; vitest does not type-check, so whether OutboundFetchFn fits PreviewImageFetch is shown at run time only.",
+    "The route's IMAGE_MAX_BYTES (400000) is a separate constant equal to PREVIEW_IMAGE_MAX_BYTES; they can drift apart if one changes.",
+    "The route still requires deps.generate; until BE-190 wires generatePreview in, the routes are not reachable in the server."
+  ],
+  "handoff": "BE-190: register auditPreviewRoutes({ store, caller, keys/ai deps, generate: generatePreview }) from @qa/core; leave fetchImage unset so the default makeOutboundFetch (400 KB cap, 8 s timeout, 3 redirects) is used. BE-604: preview.html is stored in the version folder; the sanitiser guarantees no meta refresh, base, script, on* attribute, iframe, object, embed or external CSS, and adds its own meta CSP (default-src 'none'; img-src data:), plus noindex and no-referrer meta tags.",
+  "_captured": {
+    "at": "2026-11-03T12:01:25.613Z",
+    "agent_id": "aca360cca7e298d56",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

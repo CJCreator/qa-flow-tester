@@ -57,6 +57,9 @@ const plan = async (): Promise<ReviewPlan> => (await fetch(`${runnerUrl}/api/run
 describe('Docs address', () => {
   let runner: RunnerServer;
   beforeAll(async () => {
+    // Fixed folders: an interrupted run skips afterAll and can leave a plan awaiting review (409 ERR_PLAN_WAITING).
+    await fs.rm(outputDir, { recursive: true, force: true }).catch(() => {});
+    await fs.rm(dataDir, { recursive: true, force: true }).catch(() => {});
     await new Promise<void>((resolve) => fixtureServer.listen(FIXTURE_PORT, () => resolve()));
     await new Promise<void>((resolve) => docsServer.listen(DOCS_PORT, () => resolve()));
     runner = new RunnerServer({

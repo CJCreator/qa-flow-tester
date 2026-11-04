@@ -1,0 +1,49 @@
+{
+  "evidence_id": "EV-0204",
+  "check_id": "CHK-BE-612-UNIT",
+  "name": "runner audit wiring and Helper access",
+  "category": "integration",
+  "requirement_ids": [
+    "REQ-033",
+    "REQ-048"
+  ],
+  "task_ids": [
+    "BE-612"
+  ],
+  "command": "pnpm exec vitest run packages/runner/tests/server-audit-wiring.test.ts packages/runner/tests/helper-access.test.ts packages/runner/tests/audit-helpers-routes.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  3 passed (3)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0204.log",
+  "log_sha256": "aef27669093a7206b40acecf8e247efe2890f45614e36012442f4f18ce349606",
+  "started_at": "2026-11-03T17:30:56.655Z",
+  "finished_at": "2026-11-03T17:31:14.257Z",
+  "duration_ms": 17602,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:4e9a31e8d22a67684cf6a2f420914483a91560b20a609157357a6bc22cffb0f3",
+  "concurrent_tasks": [
+    "BE-612"
+  ],
+  "paths": [
+    "packages/core/src/audit/store/**",
+    "packages/runner/src/cli.ts",
+    "packages/runner/src/helpers/**",
+    "packages/runner/src/routes/route.ts",
+    "packages/runner/src/server.ts",
+    "packages/runner/tests/audit-helpers-routes.test.ts",
+    "packages/runner/tests/helper-access.test.ts",
+    "packages/runner/tests/server-audit-wiring.test.ts"
+  ],
+  "paths_fingerprint": "git-paths:7947a1933815010a838b6d6fc90abe9fb40e307d4383c04035aa924f9b16f2b3",
+  "scoped_fingerprint": "git:b3d92404ba5f36bcc35804cdd9b1b90915a0aa0ddba4d78d007d9e901ab1af2e",
+  "excluded_owned": [
+    "packages/runner/src/cli.ts",
+    "packages/runner/src/server.ts",
+    "packages/runner/tests/server-audit-wiring.test.ts"
+  ]
+}

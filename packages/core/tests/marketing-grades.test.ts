@@ -13,15 +13,19 @@ describe('The Marketing score of the Findable area', () => {
     const grades = calculateSiteAspectGrades([], { ...searchRan, marketingChecked: false });
     expect(grades.aspects.Findable.subBreakdown?.marketing).toMatchObject({ score: 100, checked: false });
     // The other parts of the area are unaffected.
-    expect(grades.aspects.Findable.subBreakdown?.seo.checked).toBeUndefined();
+    const seo = grades.aspects.Findable.subBreakdown?.seo;
+    expect(seo).toBeDefined();
+    expect(seo?.checked).toBeUndefined();
   });
 
   it('is an ordinary score when it was checked, or when nobody says (older callers)', () => {
-    expect(
-      calculateSiteAspectGrades([], { ...searchRan, marketingChecked: true }).aspects.Findable.subBreakdown?.marketing
-        .checked
-    ).toBeUndefined();
-    expect(calculateSiteAspectGrades([], searchRan).aspects.Findable.subBreakdown?.marketing.checked).toBeUndefined();
+    const checked = calculateSiteAspectGrades([], { ...searchRan, marketingChecked: true }).aspects.Findable
+      .subBreakdown?.marketing;
+    expect(checked).toBeDefined();
+    expect(checked?.checked).toBeUndefined();
+    const unsaid = calculateSiteAspectGrades([], searchRan).aspects.Findable.subBreakdown?.marketing;
+    expect(unsaid).toBeDefined();
+    expect(unsaid?.checked).toBeUndefined();
   });
 
   it('counts a marketing finding against it', () => {

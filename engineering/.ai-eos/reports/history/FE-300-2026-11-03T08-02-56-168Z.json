@@ -1,0 +1,75 @@
+{
+  "task_id": "FE-300",
+  "agent": "frontend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-007",
+    "REQ-008",
+    "REQ-009",
+    "REQ-010",
+    "REQ-013",
+    "REQ-014",
+    "REQ-015",
+    "REQ-038"
+  ],
+  "files_inspected": [
+    "packages/types/src/browser.ts",
+    "packages/types/src/website-audit.ts",
+    "packages/types/src/aspects.ts",
+    "packages/types/tests/browser-entry.test.ts",
+    "packages/wizard/src/components/SiteMap.tsx",
+    "packages/wizard/src/screens/ReportScreen.tsx",
+    "packages/wizard/tests/coverage-view.test.tsx",
+    "packages/wizard/tests/no-banned-words.test.ts",
+    "packages/wizard/tsconfig.json",
+    "CONTEXT.md"
+  ],
+  "files_created": [
+    "packages/wizard/src/screens/audit/results/analysis-text.ts",
+    "packages/wizard/src/screens/audit/results/HierarchyView.tsx",
+    "packages/wizard/src/screens/audit/results/PageContentView.tsx",
+    "packages/wizard/src/screens/audit/results/PageFactsView.tsx",
+    "packages/wizard/src/screens/audit/results/FindingsList.tsx",
+    "packages/wizard/tests/audit-analysis-views.test.tsx"
+  ],
+  "files_modified": [],
+  "implementation_summary": "Added four presentational components. They take props only and do no fetching, and they use Tailwind classes like the rest of the wizard. HierarchyView({hierarchy}) shows the page tree as a nested ul with title (or path plus 'No title') and how each page was placed. A repeated page is listed only once. Its navigation map is grouped Menu, Footer, Breadcrumb, Internal link; each group has a table of On page, Link text, Goes to and Where it sits. PageContentView({content}) shows title, description and language (detected, others, lang attribute as written), then Sections in page order (heading or kind label, own text via sectionText) and tables for headings with H-levels, images, links with where they sit plus 'Leaves the site', and CTAs. Image alt reads 'Alt text missing' for null alt and 'Empty alt (decorative image)' for an empty one. Forms show their fields and a note that they are read and never sent. PageFactsView({page, technology, signals}) shows language, SEO basics as Found/Not found facts, and accessibility basics as 'WCAG 2.2 level AA, automatic checks only' with the violation count; a non-Sample Page says it was not checked. It also shows the site's technology or 'Not identified', and a table of the marketing signals with Found/Not found/Not checked, pages and NAP. FindingsList({findings}) keeps the given order and shows title, page, Section (or 'Whole page'), all pages of a cross-page finding, impact, effort and source. AI findings get an advisory label. analysis-text.ts holds all the fixed wording and the empty-value fallbacks. It also has textLangAttrs, which sets lang (and dir=rtl for Urdu) on elements with text in the listed Indic or Arabic scripts, so Tamil text gets lang=\"ta\" and is kept character for character. The UI text avoids 'region' and 'run'. All @qa/types imports go through @qa/types/src/browser.js. MarketingSignal comes from AuditMarketing['signals'][number] because aspects.ts is not re-exported there.",
+  "tests_executed": [
+    {
+      "name": "audit analysis views render tests",
+      "command": "CI=1 pnpm exec vitest run packages/wizard/tests/audit-analysis-views.test.tsx",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 21 passed (21) (re-run after prettier --write)"
+    },
+    {
+      "name": "wizard type-check",
+      "command": "node node_modules/typescript/bin/tsc -p . --noEmit (in packages/wizard)",
+      "result": "passed",
+      "output_excerpt": "no errors, exit 0"
+    },
+    {
+      "name": "browser-entry guard",
+      "command": "CI=1 pnpm exec vitest run packages/types/tests/browser-entry.test.ts",
+      "result": "failed",
+      "output_excerpt": "1 failed: offenders are only under packages/wizard/src/screens/audit/start/* and tests/audit-start-*.test.ts(x) (imports of @qa/types/src/website-audit.js and discovery.js); none of the FE-300 files"
+    }
+  ],
+  "tests_proposed": [
+    "Browser (Playwright) check that Tamil Section text renders with the right font and lang in the built wizard"
+  ],
+  "evidence": [
+    "packages/wizard/tests/audit-analysis-views.test.tsx: 21 tests covering every acceptance criterion (hierarchy once-only, navigation map labels, Section order and own text, lang=\"ta\" exact markup, missing-value wording, SEO and accessibility facts, ten signals with NAP, findings order, advisory label, Avoid-word and banned-claim regexes over markup, heading order and th cells, import specifier check)",
+    "vitest: 21 passed"
+  ],
+  "blockers": [],
+  "risks": [
+    "packages/types/tests/browser-entry.test.ts fails because another task's files import @qa/types/src/website-audit.js and discovery.js directly instead of browser.js: packages/wizard/src/screens/audit/start/audit-start-api.ts, audit-start-form.ts, AuditProgress.tsx, AuditStartScreen.tsx, and the tests audit-start-form.test.ts and audit-start-screen.test.tsx. Not FE-300 files; the owner of the start screen must switch those imports.",
+    "textLangAttrs labels text by Unicode script. Hindi and Marathi share Devanagari and are told apart by the page's primary language; Latin text inherits the UI's English."
+  ],
+  "handoff": "The components are not wired into any screen yet. Pass them a PageHierarchy, a PageContent (fetched separately via AUDIT_API.content), an AuditPage with result.technology and result.marketing.signals, and result.findings. FindingsList shows a Section as 'Section s2' (by id); showing Section headings would need the page's sections passed in. Each view starts at h2, so place them under an h1.",
+  "_captured": {
+    "at": "2026-11-03T08:02:56.168Z",
+    "agent_id": "ad74d49747f7f9dd0",
+    "agent_type": "ai-eos:frontend-engineer"
+  }
+}

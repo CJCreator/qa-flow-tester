@@ -1,0 +1,69 @@
+{
+  "task_id": "BE-103",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-049"
+  ],
+  "files_inspected": [
+    "packages/runner/src/session/run-slot.ts",
+    "packages/runner/src/server.ts",
+    "packages/runner/src/routes/plan.ts",
+    "packages/runner/src/session/checkup-run.ts",
+    "packages/runner/tests/benchmark.test.ts",
+    "packages/runner/tests/runner-server.test.ts",
+    "packages/runner/tests/session-state.test.ts"
+  ],
+  "files_created": [
+    "packages/runner/tests/run-slot.test.ts"
+  ],
+  "files_modified": [
+    "packages/runner/src/session/run-slot.ts",
+    "packages/runner/src/server.ts",
+    "packages/runner/tests/benchmark.test.ts"
+  ],
+  "implementation_summary": "run-slot.ts: exported RunKind ('checkup'|'benchmark'|'audit'), added RunSlot.kind and begin(runId, targetUrl, kind = 'checkup'). A begin of any kind is refused while the slot is held; the awaiting-review replacement exception applies to kind 'checkup' only. A benchmark or audit is held in a separate field (_other), so the Check-up's phase, runId and generation stay unchanged; release() clears only _other when one is held. The kind getter returns _other.kind, else 'checkup' when isRunning, else null. server.ts: removed benchmarkBusy (field and every check/set). Added a private getter checkupStartRefused (a benchmark or audit holds the slot, or the phase is scanning/testing), used by handleTriggerRun, startRunFromRequest, runSchedule and the beta status busy flag. The benchmark start now runs `if (this.runStartDone || !this.session.run.begin(id, ourUrl, 'benchmark'))` -> 409 ERR_RUN_IN_PROGRESS, synchronously after the last await; it releases the slot when the beta limit is hit, and in the job's finally block (guarded by kind === 'benchmark'). Route-table dispatch from BE-102 is unchanged.",
+  "tests_executed": [
+    {
+      "name": "run-slot, benchmark and session-state tests",
+      "command": "CI=1 pnpm exec vitest run packages/runner/tests/run-slot.test.ts packages/runner/tests/benchmark.test.ts packages/runner/tests/session-state.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 3 passed (3); Tests 22 passed (22)"
+    },
+    {
+      "name": "scheduler and runner-server tests",
+      "command": "CI=1 pnpm exec vitest run packages/runner/tests/scheduler.test.ts packages/runner/tests/runner-server.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 2 passed (2); Tests 13 passed (13); exit code 0"
+    },
+    {
+      "name": "runner type-check filtered to changed files",
+      "command": "cd packages/runner && npx tsc --noEmit -p . | grep -E \"server.ts|run-slot\"",
+      "result": "passed",
+      "output_excerpt": "no type errors reported for server.ts or run-slot.ts"
+    }
+  ],
+  "tests_proposed": [
+    "Regression test: GET plan during a benchmark must not mark the Check-up as awaiting review (needs a routes/plan.ts change)"
+  ],
+  "evidence": [
+    "packages/runner/src/session/run-slot.ts: RunKind, kind getter, begin(runId, targetUrl, kind = 'checkup'), release()",
+    "packages/runner/src/server.ts: checkupStartRefused getter next to the phase getter; benchmark start claims the slot with begin(id, ourUrl, 'benchmark')",
+    "packages/runner/tests/run-slot.test.ts: AC-1..AC-5 cases (8 tests passed)",
+    "packages/runner/tests/benchmark.test.ts: AC-2, AC-3, AC-4 server tests and slot released after the benchmark (8 tests passed)",
+    "scheduler.test.ts 4 passed, runner-server.test.ts 9 passed (background task bjfe34qdq, exit 0)"
+  ],
+  "blockers": [],
+  "risks": [
+    "Behaviour change: a benchmark is now refused while a Check-up is awaiting Plan Review (previously allowed).",
+    "ensurePlanLoaded (server.ts and routes/plan.ts) ignores begin()'s result and calls setPhase('awaiting-review'); during a benchmark with a stored plan this marks the Check-up as awaiting review, so plan approval could start testing during the benchmark. Pre-existing gap (benchmarkBusy was not checked there either); routes/plan.ts is outside my ownership.",
+    "Race: a Check-up start that passes handleTriggerRun's guard just before a benchmark claims the slot runs plan park/unpark/clear in session/checkup-run.ts before begin() refuses it with 409. Narrowed by the benchmark's runStartDone check; checkup-run.ts is outside my ownership.",
+    "The AC-4 server test accepts either winner (202/409 in either order) and cleans up whichever run started."
+  ],
+  "handoff": "Website Audit start (G2): call session.run.begin(id, url, 'audit') synchronously before the first await after your checks; when it returns false answer 409 { code: 'ERR_RUN_IN_PROGRESS' }. In your finally block call release() only when session.run.kind === 'audit'. While an audit or benchmark holds the slot, session.run.isRunning/phase/runId keep describing the last Check-up; use session.run.kind to see which run holds the slot. Existing begin() callers keep the default kind 'checkup'.",
+  "_captured": {
+    "at": "2026-11-03T08:21:35.908Z",
+    "agent_id": "aadaf97dc6b5d4e48",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "require_plan_approval": true,
+  "max_recovery_attempts": 3,
+  "max_parallel_agents": 5,
+  "regulated": false,
+  "mandatory_categories": [
+    "build",
+    "lint",
+    "typecheck",
+    "unit"
+  ],
+  "checks": [
+    {
+      "check_id": "CHK-NODE-BUILD",
+      "name": "full build",
+      "command": "pnpm run build",
+      "category": "build",
+      "mandatory": true
+    },
+    {
+      "check_id": "CHK-NODE-LINT",
+      "name": "eslint",
+      "command": "pnpm run lint",
+      "category": "lint",
+      "mandatory": true
+    },
+    {
+      "check_id": "CHK-NODE-TYPECHECK",
+      "name": "typecheck (package sources)",
+      "command": "for p in types checkers core runner wizard; do npx --no-install tsc --noEmit -p packages/$p/tsconfig.json || exit 1; done",
+      "category": "typecheck",
+      "mandatory": true
+    },
+    {
+      "check_id": "CHK-NODE-UNIT",
+      "name": "vitest unit project",
+      "command": "pnpm exec vitest run --project unit",
+      "category": "unit",
+      "mandatory": true,
+      "timeout_s": 3600
+    },
+    {
+      "check_id": "CHK-NODE-BROWSER",
+      "name": "vitest browser project",
+      "command": "pnpm exec vitest run --project browser",
+      "category": "integration",
+      "mandatory": true,
+      "timeout_s": 3600
+    },
+    {
+      "check_id": "CHK-SECRETS",
+      "name": "secret scan",
+      "command": "node scripts/scan-commit-secrets.mjs --aieos \"C:/Users/HP/.claude/plugins/cache/ai-eos-marketplace/ai-eos/1.0.0/scripts/aieos.mjs\"",
+      "category": "security",
+      "mandatory": true
+    }
+  ],
+  "guards": {
+    "extra_protected_paths": [],
+    "extra_secret_paths": [],
+    "extra_sensitive_paths": [],
+    "exempt_paths": [],
+    "extra_blocked_commands": [],
+    "extra_sensitive_commands": [],
+    "extra_deploy_commands": [],
+    "allow_commands": [],
+    "protected_branches": []
+  },
+  "format": {
+    "enabled": false,
+    "commands": {},
+    "timeout_s": 15
+  },
+  "syntax_checks": true,
+  "deploy": {
+    "commands": [],
+    "post_deploy_checks": []
+  }
+}

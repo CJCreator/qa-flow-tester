@@ -1,0 +1,48 @@
+{
+  "evidence_id": "EV-0263",
+  "check_id": "CHK-BE-501-UNIT",
+  "name": "document model and renderers unit tests",
+  "category": "unit",
+  "requirement_ids": [
+    "REQ-018",
+    "REQ-021",
+    "REQ-019",
+    "REQ-025"
+  ],
+  "task_ids": [
+    "BE-501"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/audit-doc-render.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0263.log",
+  "log_sha256": "92ad7e79ca92ba333f6c2800197cfc093880bf86ff668a9e68bf20c5efc644be",
+  "started_at": "2026-11-04T03:39:52.826Z",
+  "finished_at": "2026-11-04T03:40:09.506Z",
+  "duration_ms": 16680,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:4aefa937450552108ba70afa3103b87f87908284522b356378fba9284a2b5d84",
+  "concurrent_tasks": [
+    "QA-712"
+  ],
+  "paths": [
+    "packages/core/src/audit/documents/labels/**",
+    "packages/core/src/audit/documents/model.ts",
+    "packages/core/src/audit/documents/render-html.ts",
+    "packages/core/src/audit/documents/render-markdown.ts",
+    "packages/core/src/audit/documents/wording.ts",
+    "packages/core/tests/audit-doc-render.test.ts",
+    "packages/types/src/website-audit.ts"
+  ],
+  "paths_fingerprint": "git-paths:4eef679ae7bda227f264eb0872dc8e1c49ccca56093ce15944e01f74b4535f2b",
+  "scoped_fingerprint": "git:d43e252e7725764cb4edf6b0f30f98b29b73dd58767df07b17c5131fb15af7ea",
+  "excluded_owned": [
+    "packages/wizard/tests/audit-languages-browser.test.ts"
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "task_id": "BE-409",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-011",
+    "REQ-012",
+    "REQ-016",
+    "REQ-017",
+    "REQ-030",
+    "REQ-039",
+    "REQ-045"
+  ],
+  "files_inspected": [
+    "packages/core/src/index.ts",
+    "packages/core/src/ai/timeout.ts",
+    "packages/core/src/audit/ai/stage-ai.ts",
+    "packages/core/src/audit/ai/stage-models-store.ts",
+    "packages/core/src/audit/ai/claim-words.ts",
+    "packages/core/src/audit/ai/ranking.ts",
+    "packages/core/src/audit/ai/pagespeed.ts",
+    "packages/core/src/audit/ai/assessment.ts",
+    "packages/core/src/audit/ai/page-recommendation.ts",
+    "packages/core/src/audit/ai/rewrite.ts",
+    "packages/core/src/audit/ai/rewrite-store.ts",
+    "packages/core/tests/audit-claim-words.test.ts"
+  ],
+  "files_created": [
+    "packages/core/src/audit/ai/index.ts",
+    "packages/core/tests/audit-ai-barrel.test.ts"
+  ],
+  "files_modified": [],
+  "implementation_summary": "Added a barrel with named exports only (no export *). Values: AITimeoutError (from ../../ai/timeout.js); resolveAuditAi, auditAiRequestBudget; AuditAiModelsStore, AUDIT_AI_MODELS_FILE; findClaimWords, hasClaimWords; IMPACT_EFFORT_BY_RULE, IMPACT_EFFORT_BY_SEVERITY, DEFAULT_IMPACT_EFFORT, WHOLE_PAGE_RULES, defaultImpactEffort, scoreFindings, rankFindings, rankFindingsWithIdMap, checkCitations; measurePageSpeed, measureSampleSpeeds, mapPsiResponse, isQuotaAnswer, psiRequestUrl, PSI_ENDPOINT, PSI_TIMEOUT_MS, PSI_MAX_BYTES; assessPages, assessSite; recommendPages, recommendationFor, ruleRecommendation, REDESIGN_MIN_HIGH_IMPACT, REDESIGN_MIN_GROUPS, REDESIGN_LOW_AREAS, NO_FINDINGS_REASON; findOverlaps, overlapThreshold, overlapWords, writeRewrite, rewriteMessages; RewriteStore, REWRITES_FILE. Also exports each module's public types. The ADR 0018 word-list constants are deliberately not re-exported (they belong to documents/wording.ts) to avoid ambiguous star exports later. The test checks every expected export exists, that re-exports are the same objects as their source modules, and that no name collides with the core barrel. Before BE-190 no barrel name may exist in core; after BE-190 every name must reach core as the same object.",
+  "tests_executed": [
+    {
+      "name": "audit AI barrel",
+      "command": "pnpm exec vitest run packages/core/tests/audit-ai-barrel.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 42 passed (42)"
+    },
+    {
+      "name": "core type-check filtered to barrel files",
+      "command": "pnpm exec tsc --noEmit -p tsconfig.json (in packages/core) | grep audit/ai/index|audit-ai-barrel",
+      "result": "passed",
+      "output_excerpt": "no diagnostics for packages/core/src/audit/ai/index.ts or the barrel test"
+    }
+  ],
+  "tests_proposed": [
+    "After BE-190, run pnpm build to confirm the core barrel's export * of audit/ai has no TS2308 ambiguity."
+  ],
+  "evidence": [
+    "packages/core/src/audit/ai/index.ts:6 export { AITimeoutError } from '../../ai/timeout.js'",
+    "packages/core/tests/audit-ai-barrel.test.ts collision test: 'has no runtime export that collides with the core barrel'",
+    "vitest: 42 passed"
+  ],
+  "blockers": [],
+  "risks": [
+    "The collision test imports the whole core barrel (src/index.ts), so a load-time error anywhere in core would make it fail.",
+    "The ADR 0018 word lists (ADR_0018_CLAIM_WORDS, CLAIM_WORDS, RELEASE_VERDICT_WORDS) are not in the barrel; callers needing them import claim-words.ts or documents/wording.ts directly.",
+    "overlapWords and rewriteMessages are exported because they are module exports of rewrite.ts; a reviewer may consider them internal."
+  ],
+  "handoff": "BE-190: add `export * from './audit/ai/index.js'` to packages/core/src/index.ts. The barrel test then switches mode and requires every barrel name to reach core as the same object. If a name clashes, the test lists it and the build reports TS2308; rename or narrow the export in the audit barrel. Import AITimeoutError from the core barrel or from audit/ai/index.ts.",
+  "_captured": {
+    "at": "2026-11-03T08:14:23.008Z",
+    "agent_id": "a27e9182bdfa12aa3",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

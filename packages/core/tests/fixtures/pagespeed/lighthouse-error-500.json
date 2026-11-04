@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": 500,
+    "message": "Lighthouse returned error: FAILED_DOCUMENT_REQUEST. Lighthouse was unable to reliably load the page you requested. (Details: net::ERR_CONNECTION_FAILED)",
+    "errors": [{ "message": "Lighthouse returned error: FAILED_DOCUMENT_REQUEST.", "domain": "lighthouse", "reason": "lighthouseError" }]
+  }
+}

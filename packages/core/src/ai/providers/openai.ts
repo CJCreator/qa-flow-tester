@@ -1,5 +1,6 @@
 import type { AIProvider } from '../ai-provider.js';
 import { DEFAULT_MODELS } from '../default-models.js';
+import { requestError, requestSignal } from '../timeout.js';
 import type { AICompletion, AIMessage, AICompletionOptions, AIProviderType } from '@qa/types';
 
 export class OpenAIProvider implements AIProvider {
@@ -21,6 +22,21 @@ export class OpenAIProvider implements AIProvider {
   }
 
   async complete(messages: AIMessage[], options: AICompletionOptions = {}): Promise<AICompletion> {
+    const { signal, release } = requestSignal(options);
+    try {
+      return await this.send(messages, options, signal);
+    } catch (err) {
+      throw requestError(err, signal, this.providerType === 'openrouter' ? 'OpenRouter' : 'OpenAI');
+    } finally {
+      release();
+    }
+  }
+
+  private async send(
+    messages: AIMessage[],
+    options: AICompletionOptions,
+    signal: AbortSignal
+  ): Promise<AICompletion> {
     const formattedMessages = messages.map((m) => {
       if (m.images && m.images.length > 0) {
         const contentParts: any[] = [{ type: 'text', text: m.content }];
@@ -66,6 +82,7 @@ export class OpenAIProvider implements AIProvider {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(body),
+        signal,
       });
     } catch (err) {
       // fetch only says "fetch failed"; the reason is in its cause.

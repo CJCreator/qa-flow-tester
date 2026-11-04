@@ -1,0 +1,42 @@
+{
+  "evidence_id": "EV-0355",
+  "check_id": "CHK-QA-705-WIZARD-E2E",
+  "name": "wizard end-to-end file",
+  "category": "e2e",
+  "requirement_ids": [
+    "REQ-053",
+    "REQ-046"
+  ],
+  "task_ids": [
+    "QA-705"
+  ],
+  "command": "pnpm exec vitest run packages/wizard/tests/wizard-e2e.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0355.log",
+  "log_sha256": "b5968926d82e0202276f29a059d969539d0c5b1252495d65735bd08cb966da1d",
+  "started_at": "2026-11-04T06:46:46.582Z",
+  "finished_at": "2026-11-04T06:55:29.117Z",
+  "duration_ms": 522535,
+  "recorded_by": "aieos check run",
+  "recovery_id": "REC-015",
+  "attempt": 1,
+  "tree_fingerprint": "git:69fb226175839158083b8bd4d47e58c478a2d7d5c1e3bc5d15c27fbe743460cc",
+  "concurrent_tasks": [],
+  "paths": [
+    "fixtures/test-app/**",
+    "packages/checkers/src/**",
+    "packages/core/src/**",
+    "packages/runner/src/**",
+    "packages/types/src/**",
+    "packages/wizard/src/**",
+    "packages/wizard/tests/wizard-e2e.test.ts",
+    "vitest.config.ts",
+    "vitest.workspace.ts"
+  ],
+  "paths_fingerprint": "git-paths:6c28dbdb7ccf3f1c7749cbbbe2c8daa6274b5c24da7dbc981116a9304c49da19"
+}

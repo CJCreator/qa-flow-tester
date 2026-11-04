@@ -1,5 +1,6 @@
 import type { BrowserContext } from 'playwright';
 import type { Finding } from '@qa/types';
+import { makeOutboundFetch, type NetDeps } from './safe-net.js';
 
 /**
  * Passive access checks (ADR 0030): plain GETs, no payloads, no Origin header, no redirects followed.
@@ -172,12 +173,27 @@ export async function runAccessChecks(input: AccessCheckInput): Promise<AccessCh
   return { findings, notes, checkedPaths: paths.length };
 }
 
-/** A GET through a browser context's request client: its own cookies, no redirects followed. */
-export function contextFetcher(context: BrowserContext): AccessFetcher {
+/** Bytes read per access-check page; a page over it still counts by its status, with an empty body. */
+const ACCESS_MAX_BYTES = 2_000_000;
+
+/**
+ * A GET with a browser context's own cookies for that address, through the pinned outbound path
+ * (ADR 0031): no redirects followed, so a 3xx comes back with its Location.
+ */
+export function contextFetcher(context: BrowserContext, deps?: NetDeps): AccessFetcher {
   return async (url) => {
-    const res = await context.request.get(url, { maxRedirects: 0, timeout: 15000, failOnStatusCode: false });
-    const headers = res.headers();
+    const cookies = await context.cookies(url).catch(() => []);
+    const cookie = cookies.map((c) => `${c.name}=${c.value}`).join('; ');
+    const fetchFn = makeOutboundFetch({
+      maxRedirects: 0,
+      timeoutMs: 15000,
+      maxBytes: ACCESS_MAX_BYTES,
+      headers: cookie ? { Cookie: cookie } : {},
+      deps,
+    });
+    const res = await fetchFn(url);
+    if (!res) return undefined;
     const body = (await res.text().catch(() => '')).slice(0, 200_000);
-    return { status: res.status(), location: headers['location'], body };
+    return { status: res.status, location: res.headers['location'], body };
   };
 }

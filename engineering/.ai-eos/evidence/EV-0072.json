@@ -1,0 +1,38 @@
+{
+  "evidence_id": "EV-0072",
+  "check_id": "CHK-BE-103-SERVER",
+  "name": "benchmark and Check-up share the run slot (RunnerServer)",
+  "category": "integration",
+  "requirement_ids": [
+    "REQ-049"
+  ],
+  "task_ids": [
+    "BE-103"
+  ],
+  "command": "pnpm exec vitest run packages/runner/tests/benchmark.test.ts packages/runner/tests/scheduler.test.ts packages/runner/tests/runner-server.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "FAIL",
+  "exit_code": 1,
+  "timed_out": false,
+  "actual_result": "exit code 1; ------^ · For help, run: pnpm help exec",
+  "failure_details": "[ERROR] unexpected end of the stream within a single quoted scalar (12:1)\n\n  9 | overrides:\n 10 |   playwright: '1.63.0'\n 11 |   playwright-core: '1.63.0\n 12 | \n------^\nFor help, run: pnpm help exec",
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0072.log",
+  "log_sha256": "5444ab1cff34c82fe374dfdc70de6da700e3a11679951b137b66c310bf817b2d",
+  "started_at": "2026-11-03T09:52:11.867Z",
+  "finished_at": "2026-11-03T09:52:15.051Z",
+  "duration_ms": 3184,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:ab919f613a692c1ad14f2e7591d66ceff976b221a0f585f16dc472c06eb1cff5",
+  "concurrent_tasks": [],
+  "paths": [
+    "packages/runner/src/scheduler.ts",
+    "packages/runner/src/server.ts",
+    "packages/runner/src/session/**",
+    "packages/runner/tests/benchmark.test.ts",
+    "packages/runner/tests/runner-server.test.ts",
+    "packages/runner/tests/scheduler.test.ts"
+  ],
+  "paths_fingerprint": "git-paths:9252daa37ccafea6fb47bf3f4953874044c033685e135df044f5f2880376538c"
+}

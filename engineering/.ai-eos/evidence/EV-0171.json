@@ -1,0 +1,51 @@
+{
+  "evidence_id": "EV-0171",
+  "check_id": "CHK-BE-605-UNIT",
+  "name": "preview generator, sanitiser and route tests",
+  "category": "security",
+  "requirement_ids": [
+    "REQ-024"
+  ],
+  "task_ids": [
+    "BE-605"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/audit-preview.test.ts packages/core/tests/audit-preview-sanitize.test.ts packages/runner/tests/audit-preview-routes.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  3 passed (3)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0171.log",
+  "log_sha256": "4018d99c4cda9800e9168a5106ae1c8d9839dcdc66f9532df690325328937b11",
+  "started_at": "2026-11-03T12:29:46.340Z",
+  "finished_at": "2026-11-03T12:30:14.679Z",
+  "duration_ms": 28339,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:b6450a59606e2fa06bc3e435c30e122d7e2c88168844f655fdccbaec8bbe12ce",
+  "concurrent_tasks": [
+    "BE-602"
+  ],
+  "paths": [
+    "packages/core/src/audit/preview/**",
+    "packages/core/src/audit/store/**",
+    "packages/core/src/safe-net.ts",
+    "packages/core/tests/audit-preview-sanitize.test.ts",
+    "packages/core/tests/audit-preview.test.ts",
+    "packages/runner/src/routes/audit-preview.ts",
+    "packages/runner/src/routes/route.ts",
+    "packages/runner/tests/audit-preview-routes.test.ts",
+    "packages/types/src/ai.ts",
+    "packages/types/src/website-audit.ts"
+  ],
+  "paths_fingerprint": "git-paths:c2541e3f4206e622729e97d6cebc75ee7cd4c450712ee751676efeadbf651b26",
+  "scoped_fingerprint": "git:23a771ed919884679ad09a46cd3a7e2f7f09d0daef4063e5841308f1fc283c96",
+  "excluded_owned": [
+    "packages/runner/src/routes/audit-shortlist.ts",
+    "packages/runner/src/routes/audit-store.ts",
+    "packages/runner/tests/audit-shortlist-routes.test.ts",
+    "packages/runner/tests/audit-store-routes.test.ts"
+  ]
+}

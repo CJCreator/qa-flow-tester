@@ -1,0 +1,40 @@
+{
+  "evidence_id": "EV-0148",
+  "check_id": "CHK-BE-101-UNIT",
+  "name": "outbound fetch, robots fetch and access-control unit tests",
+  "category": "security",
+  "requirement_ids": [
+    "REQ-047"
+  ],
+  "task_ids": [
+    "BE-101"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/outbound-fetch.test.ts packages/core/tests/robots.test.ts packages/core/tests/access-control.test.ts packages/core/tests/safe-net.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  4 passed (4)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0148.log",
+  "log_sha256": "e26c1c232ac22eb73931bd1c78e58bd607cc93ec906dbeebafea65c7935f0e12",
+  "started_at": "2026-11-03T11:54:18.803Z",
+  "finished_at": "2026-11-03T11:54:32.087Z",
+  "duration_ms": 13284,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:904766336e6f9fda6ab356969409a5d7c9c6bfa2cefc41d299813220e206d0d8",
+  "concurrent_tasks": [],
+  "paths": [
+    "packages/core/src/access-control.ts",
+    "packages/core/src/browser.ts",
+    "packages/core/src/competitive/robots.ts",
+    "packages/core/src/safe-net.ts",
+    "packages/core/tests/access-control.test.ts",
+    "packages/core/tests/outbound-fetch.test.ts",
+    "packages/core/tests/robots.test.ts",
+    "packages/core/tests/safe-net.test.ts"
+  ],
+  "paths_fingerprint": "git-paths:2893e8c3fdde8c0bd25a2eed60a6b51565f0d90e8e38044452ae0b95d5fff06e"
+}

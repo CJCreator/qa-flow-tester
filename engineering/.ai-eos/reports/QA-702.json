@@ -1,0 +1,62 @@
+{
+  "task_id": "QA-702",
+  "agent": "qa-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-051"
+  ],
+  "files_inspected": [
+    "packages/runner/src/server.ts",
+    "packages/runner/src/session/plan-store.ts",
+    "packages/types/src/discovery.ts",
+    "packages/types/src/plan.ts",
+    "packages/types/src/review-plan.ts",
+    "packages/types/src/test-case.ts",
+    "packages/core/src/discovery/plan-validator.ts"
+  ],
+  "files_created": [],
+  "files_modified": [
+    "packages/runner/tests/auth-crawl-run.test.ts",
+    "packages/runner/tests/plan-routes.test.ts",
+    "packages/runner/tests/session-state.test.ts"
+  ],
+  "implementation_summary": "Brought the runner test data up to the current types (no source change, no assertion removed or weakened, no suppressions). auth-crawl-run: the base URL now comes from the public RunnerServer.start() return value instead of the private port. plan-routes: added the required ElementInventoryItem (tagName/visible/enabled), PageInventoryItem counts, DraftPlan (layoutGroups/otherHosts), DiscoveryDraft (version/productId/targetUrl/timestamp) and exploration fields, plus expectations: {} on TestCases; removed startPage from PlanPageTest; testCases?.[0]. session-state: switched to discoveredAt and the current PlanSummary shape, used a real DraftPlan for draft.plan and added the required DiscoveryDraft fields. Re-check: the previously failing signInReason test now passes after the runner source changes; no files edited in this pass.",
+  "tests_executed": [
+    {
+      "name": "auth-crawl-run signInReason test",
+      "command": "CI=1 pnpm exec vitest run packages/runner/tests/auth-crawl-run.test.ts -t \"signInReason\"",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 1 passed | 2 skipped (3); asserts RUN_FAILED event carries signInReason when credentials fail under consent 12216ms; exit=0"
+    },
+    {
+      "name": "runner tests typecheck",
+      "command": "pnpm exec tsc -p packages/runner/tests/tsconfig.typecheck.json --noEmit",
+      "result": "passed",
+      "output_excerpt": "exit=0, no error TS lines"
+    },
+    {
+      "name": "plan-routes + session-state (earlier pass)",
+      "command": "CI=1 pnpm exec vitest run packages/runner/tests/plan-routes.test.ts packages/runner/tests/session-state.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 2 passed (2); Tests 14 passed (14)"
+    }
+  ],
+  "tests_proposed": [],
+  "evidence": [
+    "packages/runner/tests/auth-crawl-run.test.ts:40-41",
+    "packages/runner/tests/auth-crawl-run.test.ts:282-284",
+    "packages/runner/tests/plan-routes.test.ts:68-152",
+    "packages/runner/tests/session-state.test.ts:99-195",
+    "EV-0187 (CHK-QA-702-TESTS full PASS, per the coordinator)"
+  ],
+  "blockers": [],
+  "risks": [
+    "RunnerServer port 0 falls back to 3001 (options.port || 3001), as before; this can clash with other suites on 3001 when run at the same time."
+  ],
+  "handoff": "Both QA-702 checks should pass: CHK-QA-702-TYPECHECK re-confirmed with exit 0, and CHK-QA-702-TESTS has a full PASS in EV-0187 (per the coordinator). The earlier signInReason failure was fixed by the runner source changes; no test file was edited in this pass.",
+  "_captured": {
+    "at": "2026-11-03T16:56:50.056Z",
+    "agent_id": "ad9101dcf65310b27",
+    "agent_type": "ai-eos:qa-engineer"
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "evidence_id": "EV-0034",
+  "check_id": "CHK-BE-306-UNIT",
+  "name": "marketing signals and NAP unit tests",
+  "category": "unit",
+  "requirement_ids": [
+    "REQ-015"
+  ],
+  "task_ids": [
+    "BE-306"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/audit-marketing-signals.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0034.log",
+  "log_sha256": "a81a01aac2366bf5e17dd62a188ba94fa6eeaa1e82e8c1e8e187c6fd91be00e9",
+  "started_at": "2026-11-03T07:30:43.329Z",
+  "finished_at": "2026-11-03T07:30:51.446Z",
+  "duration_ms": 8117,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:ea4ba9b71577b2694d3df7b7bb6b5e92348f749576442b00961e0980cf6c0512",
+  "concurrent_tasks": [
+    "BE-505",
+    "BE-601"
+  ],
+  "paths": [
+    "packages/core/src/audit/analysis/marketing-signals.ts",
+    "packages/core/src/audit/analysis/nap.ts",
+    "packages/core/src/audit/analysis/raw-page.ts",
+    "packages/core/tests/audit-marketing-signals.test.ts",
+    "packages/types/src/aspects.ts",
+    "packages/types/src/website-audit.ts"
+  ],
+  "paths_fingerprint": "git-paths:862e839f6e0e25d580fead7a1629eb04da98ce469846c33b82c8a53ac884a812",
+  "scoped_fingerprint": "git:98ed64484e1a5f085a9faba1901e545fafa067e0de9bb85f5187a227f8c1cc8a",
+  "excluded_owned": [
+    "packages/core/src/audit/documents/owner-audit.ts",
+    "packages/core/src/audit/documents/pitch.ts",
+    "packages/core/src/audit/store/audit-store.ts",
+    "packages/core/src/audit/store/helper-grants.ts",
+    "packages/core/src/audit/store/index.ts",
+    "packages/core/src/audit/store/keys.ts",
+    "packages/core/src/audit/store/shares.ts",
+    "packages/core/src/audit/store/shortlist.ts",
+    "packages/core/tests/audit-doc-owner.test.ts",
+    "packages/core/tests/audit-doc-pitch.test.ts",
+    "packages/core/tests/audit-store-helper-grants.test.ts",
+    "packages/core/tests/audit-store-shares.test.ts",
+    "packages/core/tests/audit-store-shortlist.test.ts",
+    "packages/core/tests/audit-store.test.ts"
+  ]
+}

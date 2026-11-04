@@ -217,11 +217,25 @@ function redactError(err: unknown, record: StoredPlanRecord, session: CheckupSes
 
 export async function ensurePlanLoaded(session: CheckupSession): Promise<StoredPlanRecord | null> {
   const record = await session.plan.current();
-  if (record && session.run.phase === 'idle') {
-    session.run.begin(record.plan.runId, record.plan.targetUrl);
+  // The stored Plan awaits review only once the Check-up holds the slot: never while an audit or benchmark does (DEC-002).
+  if (record && session.run.phase === 'idle' && session.run.begin(record.plan.runId, record.plan.targetUrl)) {
     session.run.setPhase('awaiting-review');
   }
   return record;
+}
+
+/** The 409 for a Plan action while a Website Audit or Competitive Benchmark holds the run slot; null when none does. */
+function otherRunBusy(session: CheckupSession, isBeta?: boolean): { error: string; code: 'ERR_RUN_IN_PROGRESS' } | null {
+  const kind = session.run.kind;
+  if (kind !== 'audit' && kind !== 'benchmark') return null;
+  return {
+    error: isBeta
+      ? 'Someone else is using this shared copy right now. Try again in a few minutes.'
+      : kind === 'audit'
+        ? 'A Website Audit is in progress. Try again when it has finished.'
+        : 'A Competitive Benchmark is in progress. Try again when it has finished.',
+    code: 'ERR_RUN_IN_PROGRESS',
+  };
 }
 
 export async function getPlan(c: PlanRouteContext): Promise<void> {
@@ -941,6 +955,12 @@ export async function approvePlan(c: PlanRouteContext): Promise<void> {
 
 async function approveOnce(c: PlanRouteContext, idempotencyKey: string | undefined): Promise<void> {
   const { session, req, res } = c;
+  // Approving starts the tests: never while a Website Audit or Competitive Benchmark holds the run slot.
+  const busy = otherRunBusy(session, c.isBeta);
+  if (busy) {
+    sendJson(res, 409, busy);
+    return;
+  }
   const record = await ensurePlanLoaded(session);
   if (!record || session.run.phase !== 'awaiting-review') {
     sendJson(res, 404, { error: 'No plan awaiting review' });
@@ -1212,6 +1232,12 @@ export async function waitingPlans(c: PlanRouteContext): Promise<void> {
   } catch {
     // checked below
   }
+  // A Website Audit or Competitive Benchmark holds the run slot: no Plan is brought back for review meanwhile.
+  const busy = otherRunBusy(session, c.isBeta);
+  if (busy) {
+    sendJson(res, 409, busy);
+    return;
+  }
   if (session.run.phase === 'scanning' || session.run.phase === 'testing') {
     sendJson(res, 409, {
       error: 'A check-up is running. Wait for it to finish, or stop it first.',
@@ -1240,14 +1266,24 @@ export async function waitingPlans(c: PlanRouteContext): Promise<void> {
     sendJson(res, 404, { error: 'There’s no plan kept for that site.' });
     return;
   }
+  // The slot is claimed through begin(), with no await since the plan was taken out of the kept-aside list:
+  // a run that began meanwhile keeps it, and the plan goes back where it was. begin() bumps the generation.
+  if (!session.run.begin(record.plan.runId, record.plan.targetUrl)) {
+    await session.plan.park(record);
+    sendJson(
+      res,
+      409,
+      otherRunBusy(session, c.isBeta) ?? {
+        error: 'A check-up is running. Wait for it to finish, or stop it first.',
+        code: 'ERR_RUN_IN_PROGRESS',
+      }
+    );
+    return;
+  }
+  session.run.setPhase('awaiting-review');
   if (waitingNow) await session.plan.park(waitingNow);
   await session.plan.save(record);
-  session.run.setPhase('awaiting-review');
-  session.run.setIsRunning(true);
-  session.run.setRunId(record.plan.runId);
-  session.run.setTargetUrl(record.plan.targetUrl);
   session.events.clear();
-  session.run.setGeneration(session.run.generation + 1);
   const broadcast = c.broadcastRunnerEvent ?? ((event) => session.events.publish(event));
   broadcast({ type: 'PLAN_READY', runId: record.plan.runId, resumed: true, timestamp: Date.now() });
   sendJson(res, 200, { resumed: true, runId: record.plan.runId, targetUrl: record.plan.targetUrl });
@@ -1279,11 +1315,15 @@ function toPlanContext(c: RouteContext): PlanRouteContext {
   };
 }
 
+// Every Plan row is the tool user's (access key) and open on a beta copy, where betaScope/closedInBeta in
+// server.ts keep each visitor to their own check-up, as before the table declared access.
 export const planRoutes: readonly Route[] = [
   // GET /api/runner/plan
   {
     method: 'GET',
     path: '/api/runner/plan',
+    access: 'owner',
+    beta: 'allow',
     handle: (c) => getPlan(toPlanContext(c)),
   },
 
@@ -1291,6 +1331,8 @@ export const planRoutes: readonly Route[] = [
   {
     method: 'PATCH',
     path: '/api/runner/plan',
+    access: 'owner',
+    beta: 'allow',
     handle: (c) => patchPlan(toPlanContext(c)),
   },
 
@@ -1298,6 +1340,8 @@ export const planRoutes: readonly Route[] = [
   {
     method: 'POST',
     path: '/api/runner/plan/approve',
+    access: 'owner',
+    beta: 'allow',
     handle: (c) => approvePlan(toPlanContext(c)),
   },
 
@@ -1305,6 +1349,8 @@ export const planRoutes: readonly Route[] = [
   {
     method: 'POST',
     path: '/api/runner/plan/interpret',
+    access: 'owner',
+    beta: 'allow',
     handle: (c) => interpret(toPlanContext(c)),
   },
 
@@ -1312,6 +1358,8 @@ export const planRoutes: readonly Route[] = [
   {
     method: 'GET',
     path: '/api/runner/plan/markdown',
+    access: 'owner',
+    beta: 'allow',
     handle: (c) => planMarkdown(toPlanContext(c)),
   },
 
@@ -1319,6 +1367,8 @@ export const planRoutes: readonly Route[] = [
   {
     method: 'GET',
     path: '/api/runner/plan/export',
+    access: 'owner',
+    beta: 'allow',
     handle: (c) => planExport(toPlanContext(c)),
   },
 
@@ -1327,6 +1377,8 @@ export const planRoutes: readonly Route[] = [
   {
     method: 'POST',
     path: '/api/runner/plan/replan',
+    access: 'owner',
+    beta: 'allow',
     handle: (c) => replan(toPlanContext(c)),
   },
 
@@ -1334,6 +1386,8 @@ export const planRoutes: readonly Route[] = [
   {
     method: 'POST',
     path: '/api/runner/plan/add-page',
+    access: 'owner',
+    beta: 'allow',
     handle: (c) => addPage(toPlanContext(c)),
   },
 
@@ -1342,6 +1396,8 @@ export const planRoutes: readonly Route[] = [
     method: '*',
     path: '/api/runner/waiting-plans',
     anyMethod: true,
+    access: 'owner',
+    beta: 'allow',
     handle: (c) => waitingPlans(toPlanContext(c)),
   },
 
@@ -1349,6 +1405,8 @@ export const planRoutes: readonly Route[] = [
   {
     method: 'POST',
     path: '/api/runner/plan/add-sign-in',
+    access: 'owner',
+    beta: 'allow',
     handle: (c) => addSignIn(toPlanContext(c)),
   },
 
@@ -1356,6 +1414,8 @@ export const planRoutes: readonly Route[] = [
   {
     method: 'POST',
     path: '/api/runner/plan/include-host',
+    access: 'owner',
+    beta: 'allow',
     handle: (c) => includeHost(toPlanContext(c)),
   },
 ];

@@ -1,0 +1,42 @@
+{
+  "evidence_id": "EV-0331",
+  "check_id": "CHK-QA-705-WIZARD-E2E",
+  "name": "wizard end-to-end file",
+  "category": "e2e",
+  "requirement_ids": [
+    "REQ-053",
+    "REQ-046"
+  ],
+  "task_ids": [
+    "QA-705"
+  ],
+  "command": "pnpm exec vitest run packages/wizard/tests/wizard-e2e.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "FAIL",
+  "exit_code": 1,
+  "timed_out": false,
+  "actual_result": "exit code 1; Test Files  1 failed (1)",
+  "failure_details": "\n ❯ packages/wizard/tests/wizard-e2e.test.ts:754:79\n    752|     await page.waitForURL(`${toolUrl}/reports`);\n    753|     await expect.poll(() => heading(page)).toBe('Past check-ups');\n    754|     await page.getByRole('heading', { name: `${fixtureHost} (2 check-u…\n       |                                                                               ^\n    755|     expectPlain(await plainText(page), 'past check-ups');\n    756|     await screenshot('past-checkups');\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯\n\n FAIL |browser|  packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > Go deeper starts a clean signed-in scan with the first check-up’s specs, and stopping keeps the form\nTimeoutError: locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for getByRole('button', { name: 'Go deeper: test the signed-in pages' })\n\n ❯ packages/wizard/tests/wizard-e2e.test.ts:787:85\n    785|   it('Go deeper starts a clean signed-in scan with the first check-up’…\n    786|     await page.goto(`${toolUrl}/reports/${secondRunId}`);\n    787|     await page.getByRole('button', { name: 'Go deeper: test the signed…\n       |                                                                                     ^\n    788|     await page.getByLabel('Email or username').fill('manager@example.c…\n    789|     await page.getByLabel('Password').fill('manager-password');\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯\n\n FAIL |browser|  packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > Settings: the key in use, and replacing it\nTimeoutError: page.waitForURL: Timeout 30000ms exceeded.\n=========================== logs ===========================\nwaiting for navigation to \"http://localhost:3486/check\" until \"load\"\n============================================================\n ❯ packages/wizard/tests/wizard-e2e.test.ts:849:16\n    847| \n    848|     await page.goBack();\n    849|     await page.waitForURL(`${toolUrl}/check`);\n       |                ^\n    850|     await page.goForward();\n    851|     await page.waitForURL(`${toolUrl}/settings`);\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯",
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0331.log",
+  "log_sha256": "d54e015eee079ad4899b41c7a5850eaf5647614e79a81722b1cd2c52e52077c9",
+  "started_at": "2026-11-04T05:30:58.860Z",
+  "finished_at": "2026-11-04T05:44:17.645Z",
+  "duration_ms": 798785,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:f528894dacf4fedd369015880a4af778c95afc41d35474ee6ed445e2c620c493",
+  "concurrent_tasks": [],
+  "paths": [
+    "fixtures/test-app/**",
+    "packages/checkers/src/**",
+    "packages/core/src/**",
+    "packages/runner/src/**",
+    "packages/types/src/**",
+    "packages/wizard/src/**",
+    "packages/wizard/tests/wizard-e2e.test.ts",
+    "vitest.config.ts",
+    "vitest.workspace.ts"
+  ],
+  "paths_fingerprint": "git-paths:c097c3583a71b1dd83ac94ab780beaecbf35f753b981154578ee8d25a1dc7b56"
+}

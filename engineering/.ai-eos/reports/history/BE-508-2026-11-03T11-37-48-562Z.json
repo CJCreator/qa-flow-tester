@@ -1,0 +1,68 @@
+{
+  "task_id": "BE-508",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-027",
+    "REQ-019"
+  ],
+  "files_inspected": [
+    "packages/runner/src/routes/route.ts",
+    "packages/runner/src/routes/body.ts",
+    "packages/runner/src/routes/plan.ts",
+    "packages/runner/src/routes/index.ts",
+    "packages/runner/src/server.ts",
+    "packages/types/src/website-audit.ts",
+    "packages/core/src/audit/documents/settings.ts",
+    "packages/core/src/audit/documents/templates/opt-out.ts",
+    "packages/core/src/audit/store/backend.ts",
+    "packages/core/src/audit/store/keys.ts",
+    "packages/core/src/audit/store/audit-store.ts",
+    "packages/core/src/audit/store/local-backend.ts",
+    "packages/runner/tests/plan-routes.test.ts"
+  ],
+  "files_created": [
+    "packages/runner/src/routes/audit-settings.ts",
+    "packages/runner/tests/audit-settings-routes.test.ts"
+  ],
+  "files_modified": [],
+  "implementation_summary": "Added GET and PUT /api/audit-settings as route-table rows (auditSettingsRoutes(deps)). Method, path and access (owner) come from AUDIT_API; neither row sets beta, so both are closed in beta. Dependencies are injected as { settings: AuditSettingsStore, pagespeedKey: PagespeedKeyPort }; auditSettingsStoreOn(backend) keeps the settings at audit-store key settings/audit-settings.json (local atomic file or the GCS bucket, per ADR 0036). GET replies { settings: resolveAuditSettings(stored, await port.saved()), defaults: auditSettingsDefaults() }. PUT runs applySettingsUpdate; if valid, a sent pagespeedKey goes to the port only, the stored settings are saved, and the reply has the GET shape. Invalid fields, bad JSON, a non-object body or one over 200,000 characters give 400 ERR_INVALID_REQUEST (per-field messages for invalid fields) with nothing changed. Store or port failures give a 500 with a fixed message. PUTs run one at a time per settings store. Stored data is re-checked when read, and a stray key in it is dropped.",
+  "tests_executed": [
+    {
+      "name": "audit settings route tests",
+      "command": "pnpm exec vitest run packages/runner/tests/audit-settings-routes.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 12 passed (12)"
+    },
+    {
+      "name": "runner type-check (filtered to my files)",
+      "command": "pnpm exec tsc --noEmit -p packages/runner/tsconfig.json; pnpm exec tsc --noEmit -p packages/runner/tests/tsconfig.typecheck.json",
+      "result": "passed",
+      "output_excerpt": "no errors reported for audit-settings files"
+    }
+  ],
+  "tests_proposed": [
+    "Server-level test once BE-190 registers the rows: owner key required (401 without it), 403 ERR_BETA on a beta copy.",
+    "Contract test for the G4 key port over KeyResolver (saved/save/removeServiceKey('pagespeed'))."
+  ],
+  "evidence": [
+    "packages/runner/src/routes/audit-settings.ts: auditSettingsRoutes rows use AUDIT_API.getSettings/putSettings method, path and access",
+    "packages/runner/tests/audit-settings-routes.test.ts: reopen test (REQ-027 AC-1), opt-out en/ta and null reset, pagespeedKey never in the stored files or replies, 400 per field with stored files byte-identical, owner access via authorizeRoute",
+    "vitest: 12 passed in packages/runner/tests/audit-settings-routes.test.ts"
+  ],
+  "blockers": [],
+  "risks": [
+    "Settings refusals use a local reply type that widens AuditErrorReply.fields (typed for the audit start form) to the settings field keys; the JSON shape is unchanged.",
+    "A damaged stored settings file reads as the defaults, so the next PUT replaces it; earlier saved values in that file are lost and nothing is logged.",
+    "PUT saves the key before the settings: if the settings write then fails, the reply is 500 while the key is already saved.",
+    "500 replies are { error } with no code, because the audit error codes have no 500 code (same as the server's top-level 500).",
+    "The task names 'the audit store's settings object', but the store has no settings method, so settings use backend key settings/audit-settings.json via auditSettingsStoreOn(backend). A store-level method would need a change in core.",
+    "Rows are not registered: packages/runner/src/routes/index.ts is outside my ownership."
+  ],
+  "handoff": "BE-190: in packages/runner/src/routes/index.ts add `export * from './audit-settings.js';` and add `...auditSettingsRoutes(deps)` to the route table. deps = { settings: auditSettingsStoreOn(auditStore.backend), pagespeedKey: port }, where auditStore is the single createAuditStore(selectAuditStoreBackend({ dataDir })). G4 key port: saved() = (await keyResolver.resolveServiceKey('pagespeed')) !== null (this also counts an env PAGESPEED_API_KEY as saved; decide whether that is right); save(key) saves the service key; save(null) calls removeServiceKey('pagespeed'). In beta use the SessionKeyResolver (these owner rows are closed there anyway). FE-501: the PUT reply has the same {settings, defaults} shape as GET; a 400 is { error, code: 'ERR_INVALID_REQUEST', fields: { 'company.email': msg, ... } }. No migration and no dependency change; rollback is deleting the two new files.",
+  "_captured": {
+    "at": "2026-11-03T11:37:48.562Z",
+    "agent_id": "a740ec10f2365cc1b",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

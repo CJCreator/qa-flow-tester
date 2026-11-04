@@ -1,0 +1,615 @@
+{
+  "tasks": [
+    {
+      "task_id": "BE-101",
+      "requirement_ids": ["REQ-047"],
+      "title": "makeOutboundFetch on safeGet; move Spider robots/sitemap, RobotsPolicy.fetch and access-control onto it",
+      "description": "Implements ADR 0031 for the core paths (part 1 of 2; BE-104 does the checkers and the orchestrator). In packages/core/src/safe-net.ts: add an `allowPrivate` option to safeGet (private addresses accepted but still resolved once per hop and pinned; every redirect hop re-checked), and export `makeOutboundFetch(opts)` returning the checkers' `FetchFn` shape (packages/checkers/src/security-depth.ts:30): GET only, body read up to a byte cap (a body over the cap still counts as a response with its status), timeout, optional extra headers (e.g. Cookie). `allowPrivate` is derived from the run, never from request input: private allowed only when no browser guard is set (getBrowserPolicy() === null, packages/core/src/browser.ts:60; RUNNER_BETA=1 sets one). Also export a small `sameSiteUrl(url, site)` helper used for sitemap host checks. Migrate: (1) Deterministic Spider sitemap seeding (deterministic-spider.ts:405-459) from context.request.get to an injectable `outboundFetch` option defaulting to makeOutboundFetch; a robots.txt `Sitemap:` line and a sitemap `<loc>` naming another host are logged (debugLog 'crawl') and skipped (today `Sitemap:` lines are pushed with no host check, :416-418). (2) RobotsPolicy.fetch (competitive/robots.ts:48-56) from Node fetch to a FetchFn parameter defaulting to makeOutboundFetch({ allowPrivate: false }), so callers (discovery-agent.ts:477, safe-crawler.ts:167, runner routes/plan.ts:631) keep their signature; missing/unreachable robots.txt still means allow all. (3) access-control contextFetcher (access-control.ts:176-183) from context.request.get to makeOutboundFetch with the context's cookies as a Cookie header and maxRedirects 0, same AccessFetcher signature so orchestrator.ts is untouched. Unit tests use injected NetDeps (no real network).",
+      "agent": "backend-engineer",
+      "priority": "critical",
+      "depends_on": [],
+      "files_owned": [
+        "packages/core/src/safe-net.ts",
+        "packages/core/src/discovery/deterministic-spider.ts",
+        "packages/core/src/competitive/robots.ts",
+        "packages/core/src/access-control.ts",
+        "packages/core/tests/outbound-fetch.test.ts",
+        "packages/core/tests/robots.test.ts",
+        "packages/core/tests/access-control.test.ts",
+        "packages/core/tests/spider-sitemap-outbound.test.ts"
+      ],
+      "acceptance_criteria": [
+        "REQ-047 AC-1: with a browser guard set (RUNNER_BETA=1 equivalent) and a robots.txt `Sitemap:` line or a URL whose host resolves to 127.0.0.1 or 169.254.169.254, makeOutboundFetch / the Spider sitemap seeding / RobotsPolicy.fetch make no connection to that address (injected NetDeps.connect is never called for it).",
+        "REQ-047 AC-2: with a browser guard set, a public URL that redirects to a private address is refused at the redirect hop.",
+        "REQ-047 AC-3: with no browser guard (local run), the same private-address target is fetched as before (allowPrivate), still pinned to the resolved address.",
+        "REQ-047 AC-4: a sitemap `<loc>` or a robots.txt `Sitemap:` line naming another host is logged and skipped, never fetched (fixtures/audit-site/robots.txt has one: sitemaps.example.invalid).",
+        "makeOutboundFetch sends GET only, caps the body (an over-cap body still returns its status), and never takes allowPrivate from request input.",
+        "access-control contextFetcher sends the context's cookies through makeOutboundFetch with no redirects followed; existing access-control tests still pass unchanged in intent.",
+        "No `context.request`, `page.request` or Node `fetch` call remains in deterministic-spider.ts, competitive/robots.ts or access-control.ts."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-101-UNIT",
+          "name": "outbound fetch, robots fetch and access-control unit tests",
+          "command": "pnpm exec vitest run packages/core/tests/outbound-fetch.test.ts packages/core/tests/robots.test.ts packages/core/tests/access-control.test.ts packages/core/tests/safe-net.test.ts",
+          "category": "security",
+          "paths": [
+            "packages/core/src/safe-net.ts",
+            "packages/core/src/browser.ts",
+            "packages/core/src/competitive/robots.ts",
+            "packages/core/src/access-control.ts",
+            "packages/core/tests/outbound-fetch.test.ts",
+            "packages/core/tests/robots.test.ts",
+            "packages/core/tests/access-control.test.ts",
+            "packages/core/tests/safe-net.test.ts"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        },
+        {
+          "check_id": "CHK-BE-101-SPIDER",
+          "name": "Spider sitemap/robots seeding through the outbound fetch (Chromium)",
+          "command": "pnpm exec vitest run packages/core/tests/spider-sitemap-outbound.test.ts packages/core/tests/spider-robots.test.ts packages/core/tests/spider-links-and-traps.test.ts",
+          "category": "integration",
+          "timeout_s": 600,
+          "paths": [
+            "packages/core/src/discovery/deterministic-spider.ts",
+            "packages/core/src/discovery/frontier.ts",
+            "packages/core/src/safe-net.ts",
+            "packages/core/src/competitive/robots.ts",
+            "packages/core/tests/spider-sitemap-outbound.test.ts",
+            "packages/core/tests/spider-robots.test.ts",
+            "packages/core/tests/spider-links-and-traps.test.ts",
+            "packages/core/tests/helpers/**",
+            "fixtures/audit-site/**"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "makeOutboundFetch and safeGet allowPrivate in packages/core/src/safe-net.ts",
+        "Spider sitemap/robots, RobotsPolicy.fetch and contextFetcher on the pinned path",
+        "New tests outbound-fetch.test.ts (unit) and spider-sitemap-outbound.test.ts (browser)"
+      ],
+      "complexity": "M",
+      "permission_level": "P2",
+      "status": "PENDING",
+      "risks": [
+        "deterministic-spider.ts is also changed by G2 (depth-limit / payment / sign-in skips) and by BE-105; those tasks must depend on BE-101 so they never run in the same wave.",
+        "New browser test spider-sitemap-outbound.test.ts must be added to vitest.workspace.ts BROWSER_TESTS.core by G7."
+      ],
+      "notes": "Other groups' page-derived requests (G2 crawl, G3 analysis, G4 PageSpeed is a fixed external URL and exempt) build their FetchFn with makeOutboundFetch and depend on BE-101; anything calling SeoChecker/SecurityDepthChecker also depends on BE-104."
+    },
+    {
+      "task_id": "BE-104",
+      "requirement_ids": ["REQ-047"],
+      "title": "Checkers take FetchFn only; orchestrator link check and checker fetch on makeOutboundFetch; source-grep guard",
+      "description": "ADR 0031 part 2. In packages/checkers: SeoChecker accepts an optional FetchFn (checkPage context or argument); checkBrokenLinks (seo.ts:547-585) sends exactly one GET per link through it (no HEAD then GET), and the Site Root audit (seo.ts:388-410) uses the same FetchFn instead of page.context().request. SecurityDepthChecker: remove defaultFetch (security-depth.ts:43-52) and its fallbacks (:146, :202); with no FetchFn the network checks (security.txt, source maps) make no request and are reported as not checked. Same for broken links and site-root files in SeoChecker. In packages/core: new packages/core/src/checker-fetch.ts with one shared function that builds the checkers' FetchFn for a run (makeOutboundFetch with the run's allowPrivate rule), used by FlowTestOrchestrator and later by the Website Audit analysis (ADR 0033 drift risk, architecture REC-11); orchestrator.ts passes it to securityDepth.checkPage (:1113) and seoChecker.checkPage (:1149); checkLink (:209-221) uses it (one GET, redirects re-checked by safeGet, same 404/410/5xx rule). Add packages/core/tests/outbound-source-grep.test.ts: scans packages/core/src and packages/checkers/src and fails on `context.request`, `page.request`, `request.fetch`, `request.get`/`.head` on a Playwright APIRequestContext, or a Node `fetch(` outside an explicit exception list (AI provider endpoints, preflight.ts, discovery/docs-fetch.ts localDocsGet with the reason 'user-provided address, not page-derived', plan/playwright-export.ts generated code text).",
+      "agent": "backend-engineer",
+      "priority": "high",
+      "depends_on": ["BE-101"],
+      "files_owned": [
+        "packages/checkers/src/seo.ts",
+        "packages/checkers/src/security-depth.ts",
+        "packages/core/src/checker-fetch.ts",
+        "packages/core/src/orchestrator.ts",
+        "packages/checkers/tests/seo.test.ts",
+        "packages/checkers/tests/security-depth.test.ts",
+        "packages/core/tests/checker-fetch.test.ts",
+        "packages/core/tests/outbound-source-grep.test.ts"
+      ],
+      "acceptance_criteria": [
+        "REQ-047 AC-5: SecurityDepthChecker and SeoChecker called without a FetchFn make no network request and report their network checks (security.txt, source maps, broken links, site-root files) as not checked; defaultFetch no longer exists.",
+        "REQ-047 AC-6: outbound-source-grep.test.ts fails when a Playwright request call (`context.request`, `page.request`, `request.fetch`) or Node `fetch` appears in packages/core/src or packages/checkers/src outside its named exception list, and passes on the migrated tree.",
+        "REQ-047 AC-7: the broken-link check sends exactly one GET per link and no HEAD (asserted against a counting test server or a recording FetchFn).",
+        "REQ-047 AC-1/AC-2 for checker paths: with a browser guard set, a link or security.txt/source-map URL resolving to 127.0.0.1 or 169.254.169.254, or redirecting there, is not requested (checker-fetch.test.ts with injected NetDeps).",
+        "The orchestrator passes the shared checker FetchFn to SecurityDepthChecker and SeoChecker, and checkLink keeps its 404/410/5xx failure rule with one request.",
+        "checkers still import nothing from @qa/core (dependency direction unchanged)."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-104-UNIT",
+          "name": "checker fetch wiring and outbound source-grep guard",
+          "command": "pnpm exec vitest run packages/core/tests/checker-fetch.test.ts packages/core/tests/outbound-source-grep.test.ts",
+          "category": "security",
+          "paths": [
+            "packages/core/src/**",
+            "packages/checkers/src/**",
+            "packages/core/tests/checker-fetch.test.ts",
+            "packages/core/tests/outbound-source-grep.test.ts"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        },
+        {
+          "check_id": "CHK-BE-104-CHECKERS",
+          "name": "SEO and security-depth checkers with injected FetchFn (Chromium)",
+          "command": "pnpm exec vitest run packages/checkers/tests/seo.test.ts packages/checkers/tests/security-depth.test.ts packages/core/tests/orchestrator-access-wiring.test.ts",
+          "category": "integration",
+          "timeout_s": 600,
+          "paths": [
+            "packages/checkers/src/seo.ts",
+            "packages/checkers/src/security-depth.ts",
+            "packages/checkers/src/site-root.ts",
+            "packages/core/src/orchestrator.ts",
+            "packages/core/src/checker-fetch.ts",
+            "packages/core/src/safe-net.ts",
+            "packages/checkers/tests/seo.test.ts",
+            "packages/checkers/tests/security-depth.test.ts",
+            "packages/core/tests/orchestrator-access-wiring.test.ts"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "FetchFn-only network access in seo.ts and security-depth.ts (defaultFetch removed)",
+        "packages/core/src/checker-fetch.ts shared by orchestrator and the Website Audit analysis",
+        "packages/core/tests/outbound-source-grep.test.ts"
+      ],
+      "complexity": "M",
+      "permission_level": "P2",
+      "status": "PENDING",
+      "risks": [
+        "seo.ts and security-depth.ts may also be extended by G3 (REQ-014/REQ-038 SEO and content problems); those G3 tasks must depend on BE-104.",
+        "orchestrator.ts is a 1,661-line hot spot; no other group should own it in the same wave.",
+        "Broken-link and site-root checks on Check-ups report 'not checked' anywhere a caller forgets the FetchFn (fail closed, by ADR 0031)."
+      ]
+    },
+    {
+      "task_id": "BE-105",
+      "requirement_ids": ["REQ-034", "REQ-035"],
+      "title": "robots.txt Crawl-delay and one request at a time per host (host pacer) in Spider and outbound fetch",
+      "description": "REQ-035 per Q-12 (accepted ADR 0015 rule: one request at a time per host, robots.txt Crawl-delay honoured) and REQ-034. (1) RobotsPolicy (competitive/robots.ts) parses `Crawl-delay` for the chosen user-agent group and exposes `crawlDelayMs` (absent = undefined; non-numeric or negative ignored; capped at a sane maximum, e.g. 30 s, logged when capped). (2) New packages/core/src/host-pacer.ts: `HostPacer` with `run(host, task)` that allows one in-flight request per host and spaces request starts by max(minGapMs, crawlDelayMs); clock and timer injectable for unit tests. (3) makeOutboundFetch (safe-net.ts) takes an optional `pacer`, so sitemap, robots and checker requests share the host's turn. (4) Deterministic Spider takes an optional `pacer`: when set, every page load to the host and the sitemap/robots fetches wait for its turn (workers never load two pages of one host at once), replacing the shared `waitForPacing` clock for that crawl; existing callers without a pacer keep today's pageDelayMs behaviour. Robots handling (REQ-034) stays at visit time (deterministic-spider.ts:528-534) so a Disallowed URL found by link or in sitemap.xml becomes a Skipped Page with reason `robots`; a missing robots.txt means a normal crawl. The audit crawl (G2) creates one HostPacer per Website Audit from the fetched RobotsPolicy and passes it to the Spider and to every FetchFn it builds.",
+      "agent": "backend-engineer",
+      "priority": "high",
+      "depends_on": ["BE-101"],
+      "files_owned": [
+        "packages/core/src/host-pacer.ts",
+        "packages/core/src/competitive/robots.ts",
+        "packages/core/src/safe-net.ts",
+        "packages/core/src/discovery/deterministic-spider.ts",
+        "packages/core/tests/host-pacer.test.ts",
+        "packages/core/tests/robots.test.ts",
+        "packages/core/tests/spider-robots.test.ts",
+        "packages/core/tests/spider-host-pacing.test.ts"
+      ],
+      "acceptance_criteria": [
+        "REQ-034 AC-1: given robots.txt disallows a path for all crawlers, a URL under it met by link (fixture /private/staff-rota) or only in sitemap.xml (fixture /private/reports) is not fetched (absent from the fixture server's request log) and is listed as a Skipped Page with reason `robots`.",
+        "REQ-034 AC-2: given no robots.txt (404), the crawl proceeds normally and records no `robots` skips.",
+        "REQ-035 AC-1: given Crawl-delay: 1 (fixtures/audit-site/robots.txt), when the Spider crawls with a HostPacer against the fixture server that logs requests, then no two top-level requests to the host (page documents, robots.txt, sitemap files) overlap in time and consecutive starts are at least the Crawl-delay apart.",
+        "RobotsPolicy exposes the Crawl-delay of the matching group (specific user-agent first, else `*`); malformed values are ignored.",
+        "HostPacer unit tests: one in flight per host, gap respected, different hosts independent, a failing task releases the turn, abort signal stops waiting.",
+        "Spider callers that pass no pacer behave exactly as before (existing spider tests unchanged)."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-105-UNIT",
+          "name": "host pacer and robots Crawl-delay unit tests",
+          "command": "pnpm exec vitest run packages/core/tests/host-pacer.test.ts packages/core/tests/robots.test.ts packages/core/tests/outbound-fetch.test.ts",
+          "category": "unit",
+          "paths": [
+            "packages/core/src/host-pacer.ts",
+            "packages/core/src/competitive/robots.ts",
+            "packages/core/src/safe-net.ts",
+            "packages/core/tests/host-pacer.test.ts",
+            "packages/core/tests/robots.test.ts",
+            "packages/core/tests/outbound-fetch.test.ts"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        },
+        {
+          "check_id": "CHK-BE-105-SPIDER",
+          "name": "Spider honours robots.txt and paces one request per host (Chromium, audit-site fixture)",
+          "command": "pnpm exec vitest run packages/core/tests/spider-robots.test.ts packages/core/tests/spider-host-pacing.test.ts packages/core/tests/spider-concurrency.test.ts",
+          "category": "integration",
+          "timeout_s": 900,
+          "paths": [
+            "packages/core/src/discovery/deterministic-spider.ts",
+            "packages/core/src/discovery/frontier.ts",
+            "packages/core/src/host-pacer.ts",
+            "packages/core/src/competitive/robots.ts",
+            "packages/core/src/safe-net.ts",
+            "packages/core/tests/spider-robots.test.ts",
+            "packages/core/tests/spider-host-pacing.test.ts",
+            "packages/core/tests/spider-concurrency.test.ts",
+            "packages/core/tests/helpers/**",
+            "fixtures/audit-site/**"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "packages/core/src/host-pacer.ts",
+        "RobotsPolicy.crawlDelayMs; pacer option on makeOutboundFetch and the Deterministic Spider",
+        "New tests host-pacer.test.ts (unit) and spider-host-pacing.test.ts (browser)"
+      ],
+      "complexity": "M",
+      "status": "PENDING",
+      "risks": [
+        "'One request at a time' is applied to top-level requests (documents, robots, sitemaps, checker fetches); a page load's own subresources (CSS/JS/images) load in parallel inside that turn. If the developer means every subresource too, the Spider needs a request-level route gate (larger change).",
+        "The crawler's user-agent token for robots group matching is not stated (REQ-034 risk); the existing CRAWLER_TOKEN is kept.",
+        "deterministic-spider.ts is shared with BE-101 and G2 tasks: G2 spider tasks must depend on BE-105 (or BE-105 on them) to avoid one wave owning the file twice.",
+        "New browser test spider-host-pacing.test.ts must be added to vitest.workspace.ts BROWSER_TESTS.core by G7."
+      ]
+    },
+    {
+      "task_id": "BE-102",
+      "requirement_ids": ["REQ-048"],
+      "title": "Route table access levels, beta policy and :param matching; dispatch closed by default",
+      "description": "DEC-001 / REC-06. packages/runner/src/routes/route.ts: `Route` gains required-by-dispatch `access: AuditAccess` (type import from packages/types/src/website-audit.ts: 'owner' | 'view' | 'edit' | 'export' | 'sign-in' | 'public'; no change to the types file) and `beta: 'allow' | 'closed'` (default closed). Paths may contain `:id` / `:linkId` params matched with matchAuditPath (website-audit.ts:1110, which validates AUDIT_ID_PATTERN / SHARE_LINK_ID_PATTERN; a bad id is no match, so a 404); matched params are passed in RouteContext as `params`. Exact rows still beat prefix rows; param rows rank with exact rows in table order. Add a pure `authorizeRoute(route, caller)` returning allow or a refusal (status + code), where caller = { hasAccessKey, beta, helper?: permissions resolver hook }: a route with no access is refused (closed by default); 'owner' needs the access key; 'view'/'edit'/'export' need the access key or a Helper grant with that permission (the Helper resolver is a hook defaulting to 'no Helper'; REQ-033/G6 supplies it); 'sign-in' and 'public' are reachable without the key; in beta (RUNNER_BETA=1) only routes with beta 'allow' are served, and per D-004 (recommended default, parked) audit routes are closed in beta except 'public' Shared Link routes. server.ts dispatch (:902-1015): match the table before grantAccess so 'public'/'sign-in' rows are served without the access key, then apply authorizeRoute; refusals answer JSON `{ error, code }` (401/403) in the existing error model. Existing Plan routes (routes/plan.ts) declare access 'owner' and beta 'allow', keeping today's betaScope/closedInBeta behaviour unchanged. routes/index.ts re-exports authorizeRoute and the new types. Inline endpoints are not migrated in this task (DEC-001 consequence).",
+      "agent": "backend-engineer",
+      "priority": "critical",
+      "depends_on": [],
+      "files_owned": [
+        "packages/runner/src/routes/route.ts",
+        "packages/runner/src/routes/index.ts",
+        "packages/runner/src/routes/plan.ts",
+        "packages/runner/src/server.ts",
+        "packages/runner/tests/route-table.test.ts",
+        "packages/runner/tests/route-access.test.ts",
+        "packages/runner/tests/route-access-server.test.ts"
+      ],
+      "acceptance_criteria": [
+        "REQ-048 AC-1: a route registered without an `access` value is refused at dispatch (unit test on authorizeRoute and a server test with a test-only route table).",
+        "REQ-048 AC-3: a route with access `owner` is refused for a request without the owner's access key when RUNNER_ACCESS_TOKEN is set.",
+        "REQ-048 AC-4: a route with access `public` (e.g. a `/s/:linkId` test row) is served without the access key, and a malformed linkId does not match (404).",
+        "REQ-048 AC-5: with RUNNER_BETA=1, a route whose beta policy is not 'allow' is refused for a beta visitor; a 'public' row with beta 'allow' is served.",
+        "`:id` / `:linkId` params match only values meeting AUDIT_ID_PATTERN / SHARE_LINK_ID_PATTERN and reach the handler decoded in RouteContext.params.",
+        "Every existing Plan route declares access and beta policy; existing route-table, plan-routes, access-token and beta tests pass with unchanged assertions.",
+        "view/edit/export rows accept the owner's access key and consult the Helper resolver hook (default: no Helper), so G6 can add Helper grants without changing dispatch."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-102-UNIT",
+          "name": "route table access, beta policy and param matching (unit)",
+          "command": "pnpm exec vitest run packages/runner/tests/route-table.test.ts packages/runner/tests/route-access.test.ts packages/runner/tests/plan-routes.test.ts",
+          "category": "security",
+          "paths": [
+            "packages/runner/src/routes/**",
+            "packages/types/src/website-audit.ts",
+            "packages/runner/tests/route-table.test.ts",
+            "packages/runner/tests/route-access.test.ts",
+            "packages/runner/tests/plan-routes.test.ts"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        },
+        {
+          "check_id": "CHK-BE-102-SERVER",
+          "name": "runner dispatch enforces access and beta policy (RunnerServer)",
+          "command": "pnpm exec vitest run packages/runner/tests/route-access-server.test.ts packages/runner/tests/access-token.test.ts packages/runner/tests/beta.test.ts packages/runner/tests/route-inventory.test.ts",
+          "category": "integration",
+          "timeout_s": 600,
+          "paths": [
+            "packages/runner/src/server.ts",
+            "packages/runner/src/routes/**",
+            "packages/runner/src/beta.ts",
+            "packages/runner/tests/route-access-server.test.ts",
+            "packages/runner/tests/access-token.test.ts",
+            "packages/runner/tests/beta.test.ts",
+            "packages/runner/tests/route-inventory.test.ts"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "Route.access, Route.beta, :param matching and authorizeRoute in packages/runner/src/routes/route.ts",
+        "server.ts dispatch: table matched before the access-key gate; closed by default",
+        "New tests route-access.test.ts (unit) and route-access-server.test.ts (runner)"
+      ],
+      "complexity": "L",
+      "permission_level": "P2",
+      "status": "PENDING",
+      "risks": [
+        "Security-sensitive refactor of the dispatch order: moving table matching before grantAccess must not expose any non-public row; route-access-server.test.ts asserts every row except 'public'/'sign-in' still needs the key.",
+        "D-004/Q-51 beta policy is parked; planned with the recommended default (closed; only 'public' Shared Link routes open in beta).",
+        "New runner test route-access-server.test.ts must be added to vitest.workspace.ts BROWSER_TESTS.runner by G7.",
+        "server.ts is owned only by BE-102 and BE-103 (serialized: BE-103 depends on BE-102)."
+      ]
+    },
+    {
+      "task_id": "BE-103",
+      "requirement_ids": ["REQ-049"],
+      "title": "RunSlot with run kind (checkup | benchmark | audit) as the only run lock; remove benchmarkBusy",
+      "description": "DEC-002 / REC-07. packages/runner/src/session/run-slot.ts: RunSlot records `kind: 'checkup' | 'benchmark' | 'audit' | null` and `begin(runId, targetUrl, kind = 'checkup')` claims it synchronously; a start of any kind is refused while the slot is held. The existing exception (a Check-up awaiting Plan Review can be replaced by a new Check-up, run-slot.ts:55) applies to kind 'checkup' only; a benchmark or audit start is refused while a Check-up is awaiting review. server.ts: remove `benchmarkBusy` (:481) and its checks/sets (:1227, :1284, :2783, :2809, :3396, :3421, :3453); benchmark start claims the slot with kind 'benchmark' synchronously before its first await after the check and releases it in its finally block; the Check-up start guards (handleTriggerRun, runSchedule, beta status `busy`) read the slot. Existing begin() callers (session/checkup-run.ts:1017, routes/plan.ts:221, server.ts:3176) keep working through the default kind. The Website Audit start route (G2) calls begin(id, url, 'audit') and answers 409 ERR_RUN_IN_PROGRESS when refused (website-audit.ts:1036).",
+      "agent": "backend-engineer",
+      "priority": "high",
+      "depends_on": ["BE-102"],
+      "files_owned": [
+        "packages/runner/src/session/run-slot.ts",
+        "packages/runner/src/server.ts",
+        "packages/runner/tests/run-slot.test.ts",
+        "packages/runner/tests/benchmark.test.ts"
+      ],
+      "acceptance_criteria": [
+        "REQ-049 AC-1: while a Check-up holds the slot, begin(…, 'audit') returns false (and a running Check-up refuses an audit start).",
+        "REQ-049 AC-2: while a Website Audit holds the slot, a Check-up start (begin default kind, and POST /api/runner/run) is refused with 409 ERR_RUN_IN_PROGRESS.",
+        "REQ-049 AC-3: while a Competitive Benchmark holds the slot, a Check-up or Website Audit start is refused; POST /api/runner/run answers 409 during a benchmark.",
+        "REQ-049 AC-4: two start requests of different kinds issued together while the slot is free: exactly one claims it (unit test with interleaved begin calls; server test with concurrent benchmark + Check-up requests).",
+        "REQ-049 AC-5: `benchmarkBusy` does not appear anywhere in packages/runner/src (source assertion in run-slot.test.ts).",
+        "The slot reports which kind holds it and is released after a benchmark finishes or fails."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-103-UNIT",
+          "name": "RunSlot kinds and benchmarkBusy removal (unit)",
+          "command": "pnpm exec vitest run packages/runner/tests/run-slot.test.ts",
+          "category": "unit",
+          "paths": [
+            "packages/runner/src/session/run-slot.ts",
+            "packages/runner/src/server.ts",
+            "packages/runner/tests/run-slot.test.ts"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        },
+        {
+          "check_id": "CHK-BE-103-SERVER",
+          "name": "benchmark and Check-up share the run slot (RunnerServer)",
+          "command": "pnpm exec vitest run packages/runner/tests/benchmark.test.ts packages/runner/tests/scheduler.test.ts packages/runner/tests/runner-server.test.ts",
+          "category": "integration",
+          "timeout_s": 900,
+          "paths": [
+            "packages/runner/src/server.ts",
+            "packages/runner/src/session/**",
+            "packages/runner/src/scheduler.ts",
+            "packages/runner/tests/benchmark.test.ts",
+            "packages/runner/tests/scheduler.test.ts",
+            "packages/runner/tests/runner-server.test.ts"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "RunSlot.kind and begin(runId, targetUrl, kind) in packages/runner/src/session/run-slot.ts",
+        "benchmarkBusy removed from server.ts",
+        "packages/runner/tests/run-slot.test.ts"
+      ],
+      "complexity": "M",
+      "permission_level": "P2",
+      "status": "PENDING",
+      "risks": [
+        "A Check-up paused at Plan Review now blocks benchmarks and audits until it is finished or stopped (planned default; the developer may prefer otherwise).",
+        "runner-server.test.ts is in G7's list of test files with typecheck fixes; if G7 owns it, CHK-BE-103-SERVER only runs it (no edit) and the orchestrator must order the two."
+      ]
+    },
+    {
+      "task_id": "DOC-104",
+      "requirement_ids": ["REQ-050"],
+      "title": "ADR 0036: hosted Website Audit storage and Shared Links (amends ADR 0032)",
+      "description": "DEC-003 / REC-08. Write docs/adr/0036-hosted-audit-storage-and-shared-links.md in the repo's ADR style (Status line, Context, Decision, Consequences, Alternatives). Planned with the recommended default of parked decision D-003/Q-50: hosted Website Audit data lives in a Google Cloud Storage always-free bucket (local runs keep the data folder), accessed only by the runner's service account; retention per Q-30: kept until the tool user deletes the Website Audit, deleting removes every version, edit, file, Shortlist entry, Shared Link and Helper grant; Shared Links expire after 30 days and can be revoked; `/s/:linkId` is served by the runner as a `public` route (route table, BE-102), noindex, strict Content-Security-Policy, 410 when expired or revoked, reading only the shared snapshot. Record the $0 hosting trade-off against /tmp data loss on scale-to-zero (AR-09) and the Q-39 tension named by Q-50. Add one line to docs/adr/0032-google-cloud-only-hosting.md pointing to the amendment. Status is Accepted only with the developer's answer to D-003; if the answer differs, the ADR follows the answer. Add a docs contract test asserting the ADR's required content.",
+      "agent": "backend-engineer",
+      "priority": "high",
+      "depends_on": [],
+      "files_owned": [
+        "docs/adr/0036-hosted-audit-storage-and-shared-links.md",
+        "docs/adr/0032-google-cloud-only-hosting.md",
+        "packages/runner/tests/adr-0036.test.ts"
+      ],
+      "acceptance_criteria": [
+        "REQ-050 AC-1: docs/adr/0036-*.md exists, has Status Accepted (with D-003's answer and date), and states where hosted Website Audit data lives, how it is retained and deleted, and how `/s/:linkId` is served.",
+        "REQ-050 AC-3: its retention and Shared Link rules match Q-30: kept until the tool user deletes the Website Audit, deletion removes all its data, Shared Links expire after 30 days and can be revoked.",
+        "It names ADR 0032 as amended, and ADR 0032 links back to 0036.",
+        "Uses CONTEXT.md terms (Website Audit, Shared Link, Helper, Shortlist) and none of their Avoid words.",
+        "REQ-050 AC-2 (plan inspection): every Website Audit store task in the merged plan depends on DOC-104 (checked by the orchestrator at merge)."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-DOC-104-ADR",
+          "name": "ADR 0036 required content",
+          "command": "pnpm exec vitest run packages/runner/tests/adr-0036.test.ts",
+          "category": "documentation",
+          "paths": [
+            "docs/adr/0036-*.md",
+            "docs/adr/0032-google-cloud-only-hosting.md",
+            "packages/runner/tests/adr-0036.test.ts"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "docs/adr/0036-hosted-audit-storage-and-shared-links.md (Accepted)",
+        "Back-link in docs/adr/0032-google-cloud-only-hosting.md",
+        "packages/runner/tests/adr-0036.test.ts"
+      ],
+      "complexity": "S",
+      "status": "PENDING",
+      "risks": [
+        "D-003 is parked; the storage choice may change after the developer answers, which changes G6's store adapter."
+      ],
+      "notes": "G6 store tasks (REQ-023, REQ-024, REQ-028, REQ-033 persistence, Shared Link REQ-019 serving) must list DOC-104 in depends_on."
+    },
+    {
+      "task_id": "DOC-105",
+      "requirement_ids": ["REQ-048", "REQ-035", "REQ-050"],
+      "title": "ADR 0037 route access model (owner, Helper, public, beta) and ADR 0015 Accepted for pacing",
+      "description": "Records two decisions already taken. (1) docs/adr/0037-route-access-levels.md: the owner / Helper / public authorization model of DEC-001: every runner route declares an access level ('owner', 'view', 'edit', 'export', 'sign-in', 'public', matching AUDIT_API) and a beta policy; dispatch refuses a route with none (closed by default); owner = access key holder; Helpers get view/edit/export per audit (REQ-033) and never owner rows; 'public' rows are Shared Links only; beta visitors reach only rows whose policy allows them, with audit rows closed except 'public' (D-004/Q-51 recommended default, parked). It builds on ADR 0027 (route table) and is where Helper sign-in (ADR 0033 follow-up 0037) is placed: Google ID token verification details stay with the REQ-033 task, which extends this ADR rather than writing another 0037. (2) docs/adr/0015-live-site-request-rules.md: Status moves to Accepted for pacing only, as ADR 0033 and Q-12 say: one request at a time per host and robots.txt Crawl-delay honoured (implemented by BE-105); the GraphQL POST and GET/HEAD replay questions stay undecided and the Safety Filter rules for them are unchanged. Add a docs contract test.",
+      "agent": "backend-engineer",
+      "priority": "medium",
+      "depends_on": [],
+      "files_owned": [
+        "docs/adr/0037-route-access-levels.md",
+        "docs/adr/0015-live-site-request-rules.md",
+        "packages/runner/tests/adr-0037-0015.test.ts"
+      ],
+      "acceptance_criteria": [
+        "REQ-048 AC-7: an ADR (0037) records the owner, Helper and public authorization model, the six access levels, closed by default, and the beta policy.",
+        "ADR 0015 has Status Accepted for pacing (one request at a time per host, Crawl-delay honoured, Q-12), with GraphQL/replay explicitly left undecided.",
+        "ADR 0037 states D-004's answer (or the recommended default pending it) and links ADR 0027, 0033 and 0036.",
+        "CONTEXT.md terms used exactly (Helper, Shared Link, Website Audit)."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-DOC-105-ADR",
+          "name": "ADR 0037 and ADR 0015 required content",
+          "command": "pnpm exec vitest run packages/runner/tests/adr-0037-0015.test.ts",
+          "category": "documentation",
+          "paths": [
+            "docs/adr/0037-*.md",
+            "docs/adr/0015-live-site-request-rules.md",
+            "packages/runner/tests/adr-0037-0015.test.ts"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "docs/adr/0037-route-access-levels.md",
+        "docs/adr/0015-live-site-request-rules.md Status Accepted (pacing)",
+        "packages/runner/tests/adr-0037-0015.test.ts"
+      ],
+      "complexity": "S",
+      "status": "PENDING",
+      "risks": [
+        "G6 (REQ-033 Helper accounts) may also plan an ADR 0037 for Helper sign-in; the orchestrator must keep one 0037 (this one) and have G6 extend it."
+      ]
+    },
+    {
+      "task_id": "BE-190",
+      "requirement_ids": ["REQ-048"],
+      "title": "Integration: core audit barrel, @qa/core export and runner registration of audit-*.ts routes",
+      "description": "Wires the area work together. Creates packages/core/src/audit/index.ts exporting `./crawl/index.js`, `./analysis/index.js`, `./ai/index.js`, `./documents/index.js`, `./store/index.js` (each sub-barrel owned by its group), and adds the single line `export * from './audit/index.js'` to packages/core/src/index.ts (resolving any duplicate export names by asking the owning group, not by renaming in their files). In packages/runner/src/routes/index.ts registers every route array exported by packages/runner/src/routes/audit-*.ts in allRoutes (audit rows before Plan rows only where needed for match order). Adds contract tests: packages/runner/tests/audit-route-registration.test.ts asserts that every AUDIT_API entry has exactly one registered route with the same method, path and access (REQ-048 AC-2), that each audit row declares a beta policy, and that packages/runner/src/server.ts contains no inline Website Audit path (`/api/audits`, `/api/audit-settings`, `/api/shortlist`, `/api/helper`, `/s/`) (REQ-048 AC-6); packages/core/tests/audit-exports.test.ts asserts the audit entry points are reachable from @qa/core and that nothing in packages/core/src/audit imports Node `fetch` or Playwright request APIs directly (complements BE-104's guard). Cross-group depends_on (G2 audit-crawl route and crawl barrel, G3 analysis barrel, G4 ai barrel, G5 documents barrel and export routes, G6 store barrel and store/share/shortlist/helper routes) are added by the orchestrator at merge.",
+      "agent": "backend-engineer",
+      "priority": "high",
+      "depends_on": ["BE-102", "BE-103"],
+      "files_owned": [
+        "packages/core/src/audit/index.ts",
+        "packages/core/src/index.ts",
+        "packages/runner/src/routes/index.ts",
+        "packages/runner/tests/audit-route-registration.test.ts",
+        "packages/core/tests/audit-exports.test.ts"
+      ],
+      "acceptance_criteria": [
+        "REQ-048 AC-2: for each entry of AUDIT_API, exactly one route in allRoutes has the same method and path and its declared access equals the entry's access.",
+        "REQ-048 AC-6: server.ts handles no Website Audit route inline (source assertion).",
+        "Every audit route declares a beta policy; per D-004 default, only 'public' rows have beta 'allow'.",
+        "@qa/core exposes the audit crawl, analysis, AI, documents and store entry points through packages/core/src/audit/index.ts with no duplicate-export build error (pnpm build passes).",
+        "packages/core/src/index.ts gains only the audit export line in this task."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-190-UNIT",
+          "name": "audit route registration and core audit exports contract",
+          "command": "pnpm exec vitest run packages/runner/tests/audit-route-registration.test.ts packages/core/tests/audit-exports.test.ts packages/runner/tests/route-table.test.ts",
+          "category": "integration",
+          "paths": [
+            "packages/runner/src/routes/**",
+            "packages/runner/src/server.ts",
+            "packages/core/src/audit/**",
+            "packages/core/src/index.ts",
+            "packages/types/src/website-audit.ts",
+            "packages/runner/tests/audit-route-registration.test.ts",
+            "packages/core/tests/audit-exports.test.ts",
+            "packages/runner/tests/route-table.test.ts"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "packages/core/src/audit/index.ts and the export line in packages/core/src/index.ts",
+        "Audit routes registered in packages/runner/src/routes/index.ts",
+        "Contract tests audit-route-registration.test.ts and audit-exports.test.ts"
+      ],
+      "complexity": "S",
+      "status": "PENDING",
+      "risks": [
+        "AC-2 requires all 40 AUDIT_API routes to exist; if a group leaves an endpoint unbuilt (e.g. Helper routes, REQ-033), the test fails until it is built or the contract changes.",
+        "routes/index.ts is also owned by BE-102 (earlier wave, explicit dependency)."
+      ]
+    },
+    {
+      "task_id": "FE-191",
+      "requirement_ids": ["REQ-001", "REQ-028"],
+      "title": "Integration: register Website Audit screens in the wizard router and App",
+      "description": "Adds the Website Audit screens built by the other groups under packages/wizard/src/screens/audit/** to the wizard: new Route variants and PATHS in packages/wizard/src/lib/router.ts (e.g. start, list of saved Website Audits, one Website Audit with its sections; exact paths as declared by the screen tasks), matchRoute cases with decoded, validated ids (an unreadable id is not-found, like reports), and the screen switch, tab title and step handling in packages/wizard/src/App.tsx. Website Audit routes are not Check-up routes: isCheckRoute and readsAddressParam stay false for them, so the Check-up phase never moves the user off an audit screen. UI text uses CONTEXT.md terms exactly (Website Audit, Audit Document, Pitch Glimpse, Owner Audit, Shared Link) and none of their Avoid words. Imports stay browser-safe (`@qa/types/src/...` single modules, never the barrel). Cross-group depends_on (each FE screen task of G2-G6) is added by the orchestrator at merge.",
+      "agent": "frontend-engineer",
+      "priority": "medium",
+      "depends_on": [],
+      "files_owned": [
+        "packages/wizard/src/lib/router.ts",
+        "packages/wizard/src/App.tsx",
+        "packages/wizard/tests/router.test.ts",
+        "packages/wizard/tests/audit-routing.test.ts"
+      ],
+      "acceptance_criteria": [
+        "Each Website Audit screen under packages/wizard/src/screens/audit/** has a route: navigating to its path selects it, refresh and Back/Forward keep it (matchRoute round-trips PATHS).",
+        "An audit path with an unreadable or invalid id resolves to not-found.",
+        "isCheckRoute and readsAddressParam are false for every audit route; existing Check-up routes match exactly as before.",
+        "App.tsx renders each audit screen for its route (source contract test: every exported screen in screens/audit is imported and used by App.tsx).",
+        "No wizard file imports the @qa/types barrel for audit values (browser-safe imports)."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-FE-191-UNIT",
+          "name": "wizard router and audit screen registration",
+          "command": "pnpm exec vitest run packages/wizard/tests/router.test.ts packages/wizard/tests/audit-routing.test.ts",
+          "category": "unit",
+          "paths": [
+            "packages/wizard/src/lib/router.ts",
+            "packages/wizard/src/App.tsx",
+            "packages/wizard/src/screens/audit/**",
+            "packages/wizard/tests/router.test.ts",
+            "packages/wizard/tests/audit-routing.test.ts"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "Audit routes in packages/wizard/src/lib/router.ts",
+        "Audit screens wired in packages/wizard/src/App.tsx",
+        "packages/wizard/tests/audit-routing.test.ts"
+      ],
+      "complexity": "S",
+      "status": "PENDING",
+      "risks": [
+        "App.tsx is a 900-line hub; no G2-G6 FE task may own it or router.ts. Navigation entries in the top bar / command palette (other files) are not owned here; if screen tasks need them, the orchestrator assigns them.",
+        "Requirement IDs REQ-001/REQ-028 stand for the screens being registered; the orchestrator may replace them with the exact REQs of the merged screen tasks."
+      ]
+    },
+    {
+      "task_id": "QA-195",
+      "requirement_ids": ["REQ-034", "REQ-035", "REQ-047", "REQ-048", "REQ-049"],
+      "title": "End-to-end Website Audit through the runner against fixtures/audit-site (website-audit-e2e)",
+      "description": "One browser test, packages/runner/tests/website-audit-e2e.test.ts, starting a RunnerServer (temp data dir, OS-chosen port) and the audit-site fixture server (packages/core/tests/helpers/audit-site-server.ts, request log). Because the Website Audit accepts public addresses only, the test uses the runner's test seam for host checks (injected lookup mapping a public-looking test host to 127.0.0.1, as beta refusedTarget uses hostChecks.lookup) provided by the audit start route task (G2). Flow: POST /api/audits (start, 202) -> GET /api/audits/:id/stream until done -> GET /api/audits/:id and /content; assert pages found, Skipped Pages with reasons robots (/private/staff-rota and sitemap-only /private/reports never requested), sign-in, payment, depth-limit; the off-host `Sitemap:` line never fetched; request log shows no overlapping top-level requests and Crawl-delay (1 s) respected; a Check-up start during the audit answers 409 ERR_RUN_IN_PROGRESS; an owner route without the access key (RUNNER_ACCESS_TOKEN set) is refused and a Shared Link `/s/:linkId` (if created through createShare) is served without it; export of the Audit Documents succeeds; no response contains a release verdict. AI steps run without an AI key (assessment 'no-ai-key'), so no external request is made.",
+      "agent": "qa-engineer",
+      "priority": "high",
+      "depends_on": ["BE-190", "FE-191", "BE-104", "BE-105"],
+      "files_owned": [
+        "packages/runner/tests/website-audit-e2e.test.ts"
+      ],
+      "acceptance_criteria": [
+        "A full Website Audit of fixtures/audit-site completes through the runner HTTP API and its result lists the fixture's pages and Skipped Pages with reasons robots, sign-in, payment and depth-limit.",
+        "REQ-034 AC-1 end to end: /private/staff-rota (linked) and /private/reports (sitemap only) are never requested and are Skipped Pages with reason robots.",
+        "REQ-035 AC-1 end to end: in the fixture request log, top-level requests never overlap and starts are at least the 1 s Crawl-delay apart.",
+        "REQ-047 AC-4 end to end: the robots.txt Sitemap: line for sitemaps.example.invalid is not fetched.",
+        "REQ-049 AC-2 end to end: POST /api/runner/run during the audit answers 409 ERR_RUN_IN_PROGRESS.",
+        "REQ-048 end to end: an owner audit route without the access key is refused; the public Shared Link route is served without it.",
+        "No audit reply or export contains a release verdict or 'Ready to release'."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-QA-195-E2E",
+          "name": "Website Audit end to end through the runner (Chromium, audit-site fixture)",
+          "command": "pnpm exec vitest run packages/runner/tests/website-audit-e2e.test.ts",
+          "category": "e2e",
+          "timeout_s": 1200,
+          "paths": [
+            "packages/runner/src/**",
+            "packages/core/src/**",
+            "packages/checkers/src/**",
+            "packages/types/src/**",
+            "fixtures/audit-site/**",
+            "packages/core/tests/helpers/audit-site-server.ts",
+            "packages/runner/tests/website-audit-e2e.test.ts"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "packages/runner/tests/website-audit-e2e.test.ts (browser project)"
+      ],
+      "complexity": "M",
+      "status": "PENDING",
+      "risks": [
+        "Needs a test seam for the public-only audit start (G2): without it the fixture on 127.0.0.1 is refused.",
+        "Crawl-delay 1 s over ~20 fixture pages makes the test take 30-60 s; it belongs in the browser project and a release-time shard.",
+        "Must be added to vitest.workspace.ts BROWSER_TESTS.runner as 'website-audit-e2e' by G7."
+      ]
+    }
+  ]
+}

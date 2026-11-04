@@ -1,0 +1,69 @@
+{
+  "evidence_id": "EV-0090",
+  "check_id": "CHK-QA-700-TYPECHECK-TYPES",
+  "name": "typecheck types tests",
+  "category": "typecheck",
+  "requirement_ids": [
+    "REQ-051"
+  ],
+  "task_ids": [
+    "QA-700"
+  ],
+  "command": "pnpm exec tsc -p packages/types/tests/tsconfig.typecheck.json --noEmit",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0090.log",
+  "log_sha256": "99596c1e3d40b5bf0984297c31b2d0dab24e4d189ccbb8b52aa8e6db0c9a6543",
+  "started_at": "2026-11-03T10:19:16.242Z",
+  "finished_at": "2026-11-03T10:19:33.416Z",
+  "duration_ms": 17174,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:4be707ccc5a760dfa7a641864e8a1cd49c9069af9192eb6c834baf1f7bbe2e14",
+  "concurrent_tasks": [
+    "BE-104",
+    "BE-305",
+    "BE-502",
+    "BE-503",
+    "QA-300",
+    "QA-706"
+  ],
+  "paths": [
+    "packages/types/src/**",
+    "packages/types/tests/**",
+    "tsconfig.base.json",
+    "tsconfig.test.json"
+  ],
+  "paths_fingerprint": "git-paths:f79b8cd2f46e9902bd9a49c34fc53bae4868b4459fee88423b96e28db6c39933",
+  "scoped_fingerprint": "git:6eb16b135749b917e6a01f157c52d147d1c05f63fa6efd4c1f11e51c108fbce4",
+  "excluded_owned": [
+    "packages/checkers/src/security-depth.ts",
+    "packages/checkers/src/seo.ts",
+    "packages/checkers/tests/security-depth.test.ts",
+    "packages/checkers/tests/seo.test.ts",
+    "packages/core/src/audit/analysis/broken-links.ts",
+    "packages/core/src/audit/analysis/content-problems.ts",
+    "packages/core/src/audit/analysis/seo-basics.ts",
+    "packages/core/src/audit/documents/content.ts",
+    "packages/core/src/audit/documents/findings.ts",
+    "packages/core/src/audit/documents/roadmap-document.ts",
+    "packages/core/src/audit/documents/roadmap.ts",
+    "packages/core/src/audit/documents/structure.ts",
+    "packages/core/src/checker-fetch.ts",
+    "packages/core/src/orchestrator.ts",
+    "packages/core/tests/audit-analysis-fixture.test.ts",
+    "packages/core/tests/audit-broken-links.test.ts",
+    "packages/core/tests/audit-content-problems.test.ts",
+    "packages/core/tests/audit-doc-builders.test.ts",
+    "packages/core/tests/audit-doc-roadmap.test.ts",
+    "packages/core/tests/checker-fetch.test.ts",
+    "packages/core/tests/outbound-source-grep.test.ts",
+    "packages/runner/tests/runner-server.test.ts",
+    "packages/runner/tests/url-first.test.ts"
+  ]
+}

@@ -140,7 +140,7 @@ describe('Sources in the planner', () => {
       plan: { pages: out.pages, navigation: out.navigation, layoutGroups: [], otherHosts: [] },
     } as any;
     const expanded = expandPlan(draft, { readOnly: false, screenSizes: [] });
-    expect(expanded.testCases.some((c) => c.name.includes('Export invoices'))).toBe(false);
+    expect(expanded.testCases.some((c) => c.name?.includes('Export invoices'))).toBe(false);
     expect(expanded.wontRun.some((w) => w.what.includes('Export invoices'))).toBe(false);
   });
 

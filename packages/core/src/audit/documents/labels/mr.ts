@@ -1,0 +1,123 @@
+/**
+ * Every fixed piece of document wording, in Marathi. Same keys as en.ts (the type and the label tests enforce it).
+ * Product names and standards (AI, WCAG 2.2 AA, robots.txt) stay as they are. Machine translation, not yet
+ * reviewed by a native speaker, so documents in Marathi carry the "beta translation" label (Q-45).
+ * Nukta letters are avoided: their precomposed forms are not NFC.
+ */
+
+import type { DocumentLabels } from './en.js';
+
+export const mr: DocumentLabels = {
+  documentTitles: {
+    structure: 'रचना',
+    content: 'मजकूर',
+    findings: 'निष्कर्ष',
+    roadmap: 'सुधारणा रोडमॅप',
+    proposal: 'प्रस्ताव',
+    'pitch-glimpse': 'तुमच्या वेबसाइटवर आढळलेल्या मुख्य समस्या',
+    'owner-audit': 'वेबसाइट ऑडिट',
+  },
+  headings: {
+    summary: 'सारांश',
+    pageHierarchy: 'पृष्ठांचा क्रम',
+    navigationLinks: 'नेव्हिगेशन लिंक',
+    leavingSite: 'साइटबाहेर जाणाऱ्या लिंक',
+    technology: 'बांधणीत वापरलेले तंत्रज्ञान',
+    pagesNotChecked: 'तपासले न गेलेली पृष्ठे',
+    whatThisDidNotCheck: 'यात तपासल्या न गेलेल्या गोष्टी',
+    topIssues: 'मुख्य समस्या',
+    scope: 'कामाची व्याप्ती',
+    notIncluded: 'समाविष्ट नाही',
+    price: 'किंमत',
+    paymentTerms: 'पेमेंटच्या अटी',
+    timeline: 'कालावधी',
+    aboutUs: 'आमच्याबद्दल',
+    optOut: 'संपर्क नको असल्याचा पर्याय',
+  },
+  columns: {
+    page: 'पृष्ठ',
+    section: 'विभाग',
+    title: 'शीर्षक',
+    issue: 'समस्या',
+    found: 'काय आढळले',
+    suggestedFix: 'सुचवलेला उपाय',
+    impact: 'परिणाम',
+    effort: 'श्रम',
+    priority: 'प्राधान्य',
+    phase: 'टप्पा',
+    area: 'क्षेत्र',
+    grade: 'ग्रेड',
+    reason: 'कारण',
+    work: 'काम',
+    linksIn: 'या पृष्ठाकडे येणाऱ्या लिंक',
+    linkText: 'लिंकचा मजकूर',
+    goesTo: 'कुठे जाते',
+  },
+  scale: {
+    high: 'जास्त',
+    medium: 'मध्यम',
+    low: 'कमी',
+  },
+  status: {
+    notChecked: 'तपासले नाही',
+    needsHumanReview: 'व्यक्तीकडून तपासणी आवश्यक',
+    notIdentified: 'ओळखले नाही',
+    noneFound: 'काही आढळले नाही',
+    imageNotIncluded: 'चित्र समाविष्ट नाही',
+    aiNote: 'AI टिप्पणी: केवळ सल्ला, यामुळे कोणताही ग्रेड बदलत नाही',
+    ruleBased: 'ठरावीक नियमाने ठरवले',
+    automaticChecksOnly: 'WCAG 2.2 AA, फक्त स्वयंचलित तपासण्या',
+    betaTranslation: 'बीटा भाषांतर',
+  },
+  areas: {
+    'search-ranking': 'सर्च रँकिंग',
+    marketing: 'मार्केटिंग',
+    usability: 'वापरण्याची सोय',
+    content: 'मजकूर',
+    accessibility: 'सुलभता',
+    speed: 'वेग',
+  },
+  groups: {
+    technical: 'तांत्रिक',
+    marketing: 'मार्केटिंग',
+    content: 'मजकूर',
+  },
+  actions: {
+    redesign: 'नवीन रचना',
+    repair: 'दुरुस्ती',
+  },
+  skipReasons: {
+    'page-limit': 'पृष्ठ मर्यादा पूर्ण झाली',
+    'depth-limit': 'पहिल्या पृष्ठापासून खूप लिंक टप्पे',
+    excluded: 'पाथ मर्यादांमुळे वगळले',
+    payment: 'पेमेंट पृष्ठ',
+    'did-not-load': 'लोड झाले नाही',
+    robots: 'robots.txt ने परवानगी दिली नाही',
+    'sign-in': 'साइन-इन आवश्यक आहे',
+    'http-error': 'सर्व्हरने त्रुटी दाखवली',
+    timeout: 'लोड होण्यास खूप वेळ लागला',
+    'off-site-redirect': 'दुसऱ्या साइटवर पाठवले',
+    'time-limit': 'वेळ मर्यादा पूर्ण झाली',
+    'trap-limit': 'सारखे पत्ते खूप जास्त',
+    'session-lost': 'साइन-इन सुटले',
+    duplicate: 'दुसऱ्या पत्त्यावरील तेच पृष्ठ',
+  },
+  aiNotDone: {
+    'no-ai-key': 'AI टिप्पण्यांसाठी AI की आवश्यक आहे',
+    'ai-failed': 'AI ने उत्तर दिले नाही',
+    'budget-spent': 'AI विनंत्यांचे बजेट संपले',
+  },
+  speedNotMeasured: {
+    failed: 'मोजमाप अयशस्वी झाले',
+    timeout: 'मोजमापाला खूप वेळ लागला',
+    quota: 'दैनिक मोजमाप मर्यादा पूर्ण झाली',
+    'no-network': 'नेटवर्क कनेक्शन नाही',
+    'no-field-data': 'प्रत्यक्ष अभ्यागतांचा पुरेसा डेटा नाही',
+  },
+  phases: {
+    numbered: 'टप्पा {n}',
+    first: 'जलद सुधारणा',
+    second: 'मुख्य सुधारणा',
+    third: 'व्यापक बदल',
+  },
+};

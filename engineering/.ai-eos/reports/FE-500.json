@@ -1,0 +1,71 @@
+{
+  "task_id": "FE-500",
+  "agent": "frontend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-020"
+  ],
+  "files_inspected": [
+    "packages/types/src/website-audit.ts",
+    "packages/types/src/browser.ts",
+    "packages/wizard/src/screens/audit/results/HierarchyView.tsx",
+    "packages/wizard/src/screens/audit/results/FindingsList.tsx",
+    "packages/wizard/src/screens/audit/results/analysis-text.ts",
+    "packages/wizard/src/screens/audit/start/audit-start-api.ts",
+    "packages/wizard/src/screens/audit/start/AuditStartScreen.tsx",
+    "packages/wizard/src/components/text.tsx",
+    "packages/wizard/tests/audit-analysis-views.test.tsx",
+    "packages/wizard/tests/audit-start-screen.test.tsx",
+    "vitest.workspace.ts",
+    "CONTEXT.md"
+  ],
+  "files_created": [
+    "packages/wizard/src/screens/audit/documents/ReviewDocumentsScreen.tsx",
+    "packages/wizard/src/screens/audit/documents/review-model.ts",
+    "packages/wizard/src/screens/audit/documents/review-api.ts",
+    "packages/wizard/tests/audit-documents-review.test.tsx"
+  ],
+  "files_modified": [
+    "packages/wizard/tests/audit-documents-review.test.tsx"
+  ],
+  "implementation_summary": "review-model.ts: pure helpers. ReviewDraft holds unsaved changes. Setters cover finding fields, finding reset, Section text and reset, page remove/restore (a change back to the saved state is dropped), and redesign/repair choice and reset. draftToPatch builds the AuditEditsPatch (findings, sections with reset: true, removePages/restorePages, recommendations) and leaves out empty lists. findingRows, sectionRows, hierarchyTree and recommendationRows merge AuditGetReply.result, the saved EditOverlay and the draft for display, with originals kept. review-api.ts: loadAudit, loadEdits, loadPageContent and saveEdits call AUDIT_API get/getEdits/content/patchEdits through auditPath, with version and path as query values; refusals become plain sentences. ReviewDocumentsScreen.tsx: ReviewDocumentsView is presentational. It shows the hierarchy with Remove/Restore and Edit Sections, a Sections editor (labelled textarea, original beside, reset), labelled finding fields (originals beside, reset), and a redesign-or-repair radio fieldset per Sample Page, plus Save and Discard and loading, error and no-result states. ReviewDocumentsScreen is the container: it loads the audit and Page Content, saves, and reloads the stored edits when a save fails. Correction (EV-0065): the imports test now checks my three named files explicitly (each must exist; @qa/types only via '@qa/types/src/browser.js'; no node:, @qa/core, @qa/runner or @qa/checkers) instead of requiring the folder to hold only those files. Every other assertion is unchanged.",
+  "tests_executed": [
+    {
+      "name": "audit-documents-review (review and edit screen tests), after the correction, with FE-501 files present in the folder",
+      "command": "CI=1 pnpm exec vitest run packages/wizard/tests/audit-documents-review.test.tsx",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 18 passed (18)"
+    },
+    {
+      "name": "wizard type-check filtered to the new folder (initial delivery)",
+      "command": "pnpm exec tsc --noEmit -p . (in packages/wizard) | grep documents/",
+      "result": "passed",
+      "output_excerpt": "no errors reported in screens/audit/documents/*"
+    }
+  ],
+  "tests_proposed": [
+    "Interaction test with a DOM environment (typing, clicking Save) once the project adds jsdom or happy-dom",
+    "wizard-e2e browser test of the review screen after FE-191 registers it in the router"
+  ],
+  "evidence": [
+    "packages/wizard/tests/audit-documents-review.test.tsx imports test: explicit three-file list plus existsSync check, replacing the readdirSync equality",
+    "AC-1 finding edit: tests 'sends a patch with only the changed text of that finding' and 'shows the edited text with the original beside it'",
+    "AC-2 page removal: test 'lists the page in removePages and shows it as removed with a restore control'",
+    "AC-3 Section edit/reset: test 'sends the urlPath, sectionId and new text; reset sends reset: true'",
+    "AC-4 markup: tests 'gives every input and textarea a label', 'gives every button an accessible name', 'uses no Avoid word in UI text'",
+    "AC-5 imports: test 'reaches @qa/types through browser.js only, and imports no Node-only module and no @qa/core'"
+  ],
+  "blockers": [],
+  "risks": [
+    "Packet named '@qa/types/src/website-audit.js'; the project T-211 rule requires '@qa/types/src/browser.js', which is what is used",
+    "The screen relies on the PATCH reply carrying every saved edit of the version (AuditEditsReply)",
+    "No DOM test environment in the repo, so event handlers are covered through the pure model, not simulated clicks",
+    "The wizard tsconfig covers only src, so the test file is not type-checked"
+  ],
+  "handoff": "FE-191: register ReviewDocumentsScreen from packages/wizard/src/screens/audit/documents/ReviewDocumentsScreen.tsx with props { auditId: string; version?: number }. The imports test no longer depends on what else is in the documents folder, so FE-501's files do not affect CHK-FE-500-UNIT.",
+  "_captured": {
+    "at": "2026-11-03T08:22:41.266Z",
+    "agent_id": "a901d7d068584f6a1",
+    "agent_type": "ai-eos:frontend-engineer"
+  }
+}

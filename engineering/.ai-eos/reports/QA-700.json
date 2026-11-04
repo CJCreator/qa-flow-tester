@@ -1,0 +1,91 @@
+{
+  "task_id": "QA-700",
+  "agent": "qa-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-051"
+  ],
+  "files_inspected": [
+    "engineering/.ai-eos/evidence/logs/EV-0003.log",
+    "tsconfig.base.json",
+    "packages/wizard/tsconfig.json",
+    "vitest.config.ts",
+    "fixtures/test-app/server.js",
+    "packages/checkers/package.json",
+    "packages/types/src/evidence-finding.ts",
+    "packages/types/src/test-case.ts",
+    "packages/checkers/src/design-standards.ts"
+  ],
+  "files_created": [
+    "fixtures/test-app/server.d.ts",
+    "packages/checkers/tests/tsconfig.typecheck.json",
+    "packages/core/tests/tsconfig.typecheck.json",
+    "packages/runner/tests/tsconfig.typecheck.json",
+    "packages/wizard/tests/tsconfig.typecheck.json",
+    "packages/types/tests/tsconfig.typecheck.json"
+  ],
+  "files_modified": [
+    "tsconfig.test.json",
+    "packages/checkers/tests/bug-detection.test.ts",
+    "packages/checkers/tests/bug-grouping.test.ts",
+    "packages/checkers/tests/visual-diff-finding.test.ts"
+  ],
+  "implementation_summary": "tsconfig.test.json now resolves like vitest (ESNext/Bundler, DOM.Iterable, react-jsx, @qa/* paths to src as in sharedResolve, pngjs path to the @types/pngjs installed by @qa/checkers) and includes vite/client.d.ts so wizard source pulled in by wizard tests typechecks (import.meta.env, ?raw). Added fixtures/test-app/server.d.ts and five per-package tests/tsconfig.typecheck.json configs. Fixed checkers test typings: removed the unused statusText fields from NetworkEntry literals, changed breakpoint 'desktop' to the real Breakpoint '1440px', and added the .js extension to the bug-grouping import. strict is still on; no suppressions; no test or assertion removed. pnpm typecheck errors fell from 216 to 82, all in core/runner/wizard test files.",
+  "tests_executed": [
+    {
+      "name": "typecheck checkers tests",
+      "command": "pnpm exec tsc -p packages/checkers/tests/tsconfig.typecheck.json --noEmit",
+      "result": "passed",
+      "output_excerpt": "exit 0 (one interim run hit a passing TS2305 in security-depth.test.ts while another agent was editing it; re-run exit 0)"
+    },
+    {
+      "name": "typecheck types tests",
+      "command": "pnpm exec tsc -p packages/types/tests/tsconfig.typecheck.json --noEmit",
+      "result": "passed",
+      "output_excerpt": "exit 0"
+    },
+    {
+      "name": "checkers unit tests with changed typings",
+      "command": "pnpm exec vitest run packages/checkers/tests/bug-detection.test.ts packages/checkers/tests/bug-grouping.test.ts packages/checkers/tests/visual-diff-finding.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 3 passed (3), Tests 11 passed (11)"
+    },
+    {
+      "name": "full test typecheck (informational)",
+      "command": "pnpm exec tsc -p tsconfig.test.json --noEmit",
+      "result": "failed",
+      "output_excerpt": "exit 2, 82 errors, all in packages/{core,runner,wizard}/tests; no TS2835, no TS2307 @qa/*, no TS7016 for server.js/pngjs"
+    },
+    {
+      "name": "typecheck wizard tests (informational)",
+      "command": "pnpm exec tsc -p packages/wizard/tests/tsconfig.typecheck.json --noEmit",
+      "result": "failed",
+      "output_excerpt": "10 errors, all in packages/wizard/tests (QA-703)"
+    }
+  ],
+  "tests_proposed": [
+    "Run pnpm test and pnpm build after the wave to confirm vitest file resolution and package builds are unchanged"
+  ],
+  "evidence": [
+    "tsconfig.test.json",
+    "fixtures/test-app/server.d.ts:2",
+    "packages/checkers/tests/visual-diff-finding.test.ts:12",
+    "packages/checkers/tests/bug-detection.test.ts:60-73",
+    "packages/checkers/tests/bug-grouping.test.ts:3"
+  ],
+  "findings": [],
+  "blockers": [],
+  "risks": [
+    "tsconfig.test.json lists packages/wizard/node_modules/vite/client.d.ts in files, so every test project now has Vite's global types (ImportMeta.env, *?raw). Without it, wizard src imported by wizard tests had 8 errors outside QA-701..703 ownership.",
+    "The pngjs path entry depends on the pnpm layout packages/checkers/node_modules/@types/pngjs. If that layout changes, add @types/pngjs to core devDependencies (P2).",
+    "Remaining TS7016 in packages/wizard/tests/contrast.test.ts (untyped ../tailwind.config.js) is for QA-703. Remaining TS2305 TestStep in packages/core/tests/missing-element.test.ts is a real typing error (not exported from @qa/types src) for QA-701.",
+    "Another agent is editing packages/checkers/src/security-depth.ts and its test at the same time. The checkers typecheck result may change with their edits.",
+    "pnpm test and pnpm build were not run (other agents still editing)."
+  ],
+  "handoff": "Remaining pnpm typecheck errors by owner. QA-701 core (58): ai-planner-sources 1, ai-provider-timeout 5, audit-accessibility-basics 2, audit-page-recommendation 1, audit-store-backend 1, auth-crawl-e2e 7, expand-intents-off 2, marketing-grades 3, missing-element 1, orchestrator-session 1, plan-build 13, plan-old-selectors 2, plan-sources-live-site 3, rejects-gating 1, rejects-plan 1, signin 8, spider-reliability 5. QA-702 runner (14): auth-crawl-run 1, plan-routes 9, session-state 4. QA-703 wizard (10): audit-analysis-screen 3, contrast 1, coverage-view 2, intent-view 1, signin-form 3. Scoped check: pnpm exec tsc -p packages/<pkg>/tests/tsconfig.typecheck.json --noEmit.",
+  "_captured": {
+    "at": "2026-11-03T10:17:54.508Z",
+    "agent_id": "ae1df5cf918cc446e",
+    "agent_type": "ai-eos:qa-engineer"
+  }
+}

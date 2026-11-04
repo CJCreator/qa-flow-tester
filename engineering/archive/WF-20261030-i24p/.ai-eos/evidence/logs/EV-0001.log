@@ -1,0 +1,55 @@
+# AI-EOS evidence EV-0001
+check: CHK-NODE-BUILD (full build)
+command: pnpm run build
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-10-31T06:04:26.111Z
+finished: 2026-10-31T06:06:15.427Z (109316 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+Scope: all 7 workspace projects
+? Verifying lockfile against supply-chain policies (458 entries)...
+Lockfile is up to date, resolution step is skipped
+Already up to date
+[WARN] Request took 10646ms: https://registry.npmjs.org/@typescript-eslint%2Feslint-plugin
+✓ Lockfile passes supply-chain policies (458 entries in 16.1s)
+
+Done in 22.3s using pnpm v11.10.0
+Scope: 6 of 7 workspace projects
+packages/types build$ tsc
+packages/types build: Done
+packages/checkers build$ tsc
+packages/wizard build$ tsc && vite build
+packages/checkers build: Done
+packages/wizard build: vite v6.4.3 building for production...
+packages/wizard build: transforming...
+packages/wizard build: ✓ 126 modules transformed.
+packages/wizard build: rendering chunks...
+packages/wizard build: computing gzip size...
+packages/wizard build: dist/assets/big-shoulders-stencil-display-vietnamese-800-normal-DoiNwiQ4.woff2    4.68 kB
+packages/wizard build: dist/assets/big-shoulders-stencil-display-vietnamese-800-normal-BvA7Am0H.woff     6.41 kB
+packages/wizard build: dist/index.html                                                                   9.79 kB │ gzip:   2.74 kB
+packages/wizard build: dist/assets/big-shoulders-stencil-display-latin-ext-800-normal-Bwhrk1Fl.woff2    13.08 kB
+packages/wizard build: dist/assets/big-shoulders-stencil-display-latin-800-normal-DldhClEd.woff2        14.66 kB
+packages/wizard build: dist/assets/big-shoulders-stencil-display-latin-ext-800-normal-BhleyHtn.woff     16.94 kB
+packages/wizard build: dist/assets/big-shoulders-stencil-display-latin-800-normal-COi9-ISJ.woff         18.07 kB
+packages/wizard build: dist/assets/atkinson-hyperlegible-next-latin-ext-wght-normal-C6vrW8VD.woff2      19.09 kB
+packages/wizard build: dist/assets/atkinson-hyperlegible-next-latin-wght-normal-BcXVPD7q.woff2          34.00 kB
+packages/wizard build: dist/assets/index-DKMyzEjk.css                                                   63.64 kB │ gzip:  10.33 kB
+packages/wizard build: dist/assets/LandingRoot-Dh4Vi9PV.js                                               0.50 kB │ gzip:   0.33 kB
+packages/wizard build: dist/assets/LandingScreen-B-fp8xIt.js                                            31.64 kB │ gzip:   9.69 kB
+packages/wizard build: dist/assets/index-BBuOrXxM.js                                                   147.62 kB │ gzip:  47.84 kB
+packages/wizard build: dist/assets/App-CoK72gAZ.js                                                     397.70 kB │ gzip: 113.19 kB
+packages/wizard build: ✓ built in 21.92s
+packages/wizard build: Done
+packages/core build$ tsc
+packages/core build: Done
+packages/runner build$ tsc
+packages/runner build: Done
+
+
+## stderr
+$ pnpm -r run build
+

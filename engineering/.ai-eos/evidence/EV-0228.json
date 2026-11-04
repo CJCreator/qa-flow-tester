@@ -1,0 +1,37 @@
+{
+  "evidence_id": "EV-0228",
+  "check_id": "CHK-BE-190-UNIT",
+  "name": "audit route registration contract",
+  "category": "integration",
+  "requirement_ids": [
+    "REQ-048"
+  ],
+  "task_ids": [
+    "BE-190"
+  ],
+  "command": "pnpm exec vitest run packages/runner/tests/audit-route-registration.test.ts packages/runner/tests/route-table.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  2 passed (2)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0228.log",
+  "log_sha256": "31aaed168ca8c32fbf014502f27f4b4efd98985d76cbad0c4a67198b7112081c",
+  "started_at": "2026-11-03T18:18:03.682Z",
+  "finished_at": "2026-11-03T18:18:12.441Z",
+  "duration_ms": 8759,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:a3e474d2f9c9c9a67049a3609c6a8d37f77d6159d2a2bbf3b79c435944ab37a9",
+  "concurrent_tasks": [],
+  "paths": [
+    "packages/runner/src/routes/**",
+    "packages/runner/src/server.ts",
+    "packages/runner/tests/audit-route-registration.test.ts",
+    "packages/runner/tests/route-table.test.ts",
+    "packages/types/src/website-audit.ts"
+  ],
+  "paths_fingerprint": "git-paths:a82680b5411f72d237c3b5529aec2a117748abdecd9e48c74aee1506f0c862b4"
+}

@@ -1,0 +1,63 @@
+{
+  "task_id": "QA-500",
+  "agent": "qa-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-018",
+    "REQ-019",
+    "REQ-020",
+    "REQ-021",
+    "REQ-022",
+    "REQ-025",
+    "REQ-026",
+    "REQ-027"
+  ],
+  "files_inspected": [
+    "packages/core/tests/helpers/audit-doc-fixture.ts",
+    "packages/runner/src/routes/audit-export.ts",
+    "packages/runner/src/routes/audit-documents.ts",
+    "packages/runner/src/routes/audit-settings.ts",
+    "packages/runner/tests/server-audit-wiring.test.ts",
+    "packages/runner/tests/audit-export-routes.test.ts",
+    "packages/core/src/audit/documents/bundle.ts",
+    "packages/core/src/audit/documents/render-pdf.ts",
+    "packages/core/src/audit/documents/wording.ts",
+    "vitest.workspace.ts"
+  ],
+  "files_created": [
+    "packages/runner/tests/audit-documents-flow.test.ts"
+  ],
+  "files_modified": [],
+  "implementation_summary": "One runner test (24 cases) that starts a RunnerServer on port 3761 over a temp data folder, seeds a finished English and Tamil audit through the store, then drives edits, settings, Shortlist data, a runner restart, every export format, the bundle, the Pitch Glimpse (html and pdf) and the Owner Audit over HTTP with the real Chromium PDF printer. It proves REQ-018..022, 025..027, the ADR 0018 word list and no release verdict across all outputs, Pitch Glimpse PDF page count of 1 on A4, and no outbound network activity (fetch, http(s).request and Chromium requests spied).",
+  "tests_executed": [
+    {
+      "name": "Audit Documents end-to-end flow (runner + Chromium)",
+      "command": "pnpm exec vitest run packages/runner/tests/audit-documents-flow.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 24 passed (24); Duration ~21s (run twice, both green)"
+    }
+  ],
+  "tests_proposed": [
+    "Add a case asserting a third concurrent PDF through the running runner returns 503 with Retry-After (covered only at route level in BE-510)."
+  ],
+  "evidence": [
+    "packages/runner/tests/audit-documents-flow.test.ts",
+    "pnpm exec vitest run packages/runner/tests/audit-documents-flow.test.ts: 24 passed"
+  ],
+  "findings": [],
+  "blockers": [],
+  "risks": [
+    "G7 must add 'audit-documents-flow' to BROWSER_TESTS.runner in vitest.workspace.ts; the test launches Chromium and a runner.",
+    "Tamil glyph rendering and fonts in the PDF are not asserted (page count and A4 size only); the visual part of REQ-022 AC-3 stays under the BE-507 waiver.",
+    "The Chromium request spy may record zero requests (data: URLs may not emit events); the test accepts an empty list and separately asserts the printer was called with HTML identical to the HTML export.",
+    "playwright is loaded via createRequire from packages/core (the runner does not depend on it), to spy on the same chromium object the printer uses.",
+    "REQ-026 phase is checked by label count, not per item; priority and effort are checked per item.",
+    "Fixed port 3761 because RunnerServer treats port 0 as 3001 (F-021); no other test file uses it."
+  ],
+  "handoff": "Add audit-documents-flow to BROWSER_TESTS.runner in vitest.workspace.ts (G7). The orchestrator should run CHK-QA-500-FLOW through aieos check run after the core build.",
+  "_captured": {
+    "at": "2026-11-03T18:26:31.126Z",
+    "agent_id": "a77b372c0c0d7c094",
+    "agent_type": "ai-eos:qa-engineer"
+  }
+}

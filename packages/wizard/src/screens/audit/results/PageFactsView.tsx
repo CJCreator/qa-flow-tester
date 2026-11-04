@@ -1,0 +1,147 @@
+import type { AuditMarketing, AuditPage, TechnologyResult } from '@qa/types/src/browser.js';
+import {
+  ACCESSIBILITY_NOTE,
+  ACCESSIBILITY_STANDARD,
+  NONE,
+  NOT_IDENTIFIED,
+  NOT_SET,
+  SIGNAL_STATUS_LABEL,
+  TECHNOLOGY_KIND_LABEL,
+  declaredLanguageText,
+  foundText,
+  otherLanguagesText,
+  primaryLanguageText,
+} from './analysis-text';
+
+type MarketingSignal = AuditMarketing['signals'][number];
+
+export interface PageFactsViewProps {
+  /** The page whose language, SEO basics and accessibility basics are shown. */
+  page: AuditPage;
+  /** What the whole site is built with. */
+  technology: TechnologyResult;
+  /** The ten marketing signals of the whole site, in report order. */
+  signals: MarketingSignal[];
+}
+
+function NapList({ signal }: { signal: MarketingSignal }) {
+  if (!signal.nap || signal.nap.length === 0) return null;
+  return (
+    <ul className="mt-1 text-xs">
+      {signal.nap.map((nap, i) => (
+        <li key={`${nap.urlPath}-${i}`}>
+          {`Name: ${nap.name ?? 'Not shown'} · Address: ${nap.address ?? 'Not shown'} · Phone: ${nap.phone ?? 'Not shown'} (on ${nap.urlPath})`}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** One page's facts and the site's technology and marketing signals (REQ-010, REQ-013, REQ-015, REQ-038). */
+export function PageFactsView({ page, technology, signals }: PageFactsViewProps) {
+  const { seo, accessibility } = page;
+  return (
+    <section aria-labelledby="page-facts-title" className="space-y-4">
+      <h2 id="page-facts-title" className="text-xl font-bold">
+        Page facts <span className="break-all text-base font-normal text-ink-soft">{page.urlPath}</span>
+      </h2>
+      <p className="text-sm text-ink-soft">
+        {page.coverage === 'sample'
+          ? 'Sample Page: checked itself.'
+          : page.sampleUrlPath
+            ? `Shares its layout with the Sample Page ${page.sampleUrlPath}, which was checked for it.`
+            : 'Shares its layout with a Sample Page, which was checked for it.'}
+      </p>
+
+      <h3 className="text-lg font-bold">Language</h3>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+        <dt className="font-bold">Detected language</dt>
+        <dd>{primaryLanguageText(page.language)}</dd>
+        <dt className="font-bold">Other languages</dt>
+        <dd>{otherLanguagesText(page.language)}</dd>
+        <dt className="font-bold">lang attribute</dt>
+        <dd>{declaredLanguageText(page.language)}</dd>
+      </dl>
+
+      <h3 className="text-lg font-bold">SEO basics</h3>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+        <dt className="font-bold">Title</dt>
+        <dd>{foundText(seo.hasTitle)}</dd>
+        <dt className="font-bold">Description</dt>
+        <dd>{foundText(seo.hasDescription)}</dd>
+        <dt className="font-bold">H1 headings</dt>
+        <dd>{seo.h1Count}</dd>
+        <dt className="font-bold">Heading levels</dt>
+        <dd>{seo.skippedHeadingLevel ? 'A level is skipped' : 'No level is skipped'}</dd>
+        <dt className="font-bold">Images without alt text</dt>
+        <dd>{seo.imagesWithoutAlt}</dd>
+        <dt className="font-bold">lang attribute</dt>
+        <dd>{seo.htmlLang ?? NOT_SET}</dd>
+      </dl>
+
+      <h3 className="text-lg font-bold">Accessibility basics</h3>
+      {accessibility ? (
+        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+          <dt className="font-bold">Standard</dt>
+          <dd>{ACCESSIBILITY_STANDARD}</dd>
+          <dt className="font-bold">Violations found</dt>
+          <dd>{accessibility.violations}</dd>
+          <dt className="sr-only">Note</dt>
+          <dd className="col-span-2 text-ink-soft">{ACCESSIBILITY_NOTE}</dd>
+        </dl>
+      ) : (
+        <p className="text-sm text-ink-soft">
+          {`Not checked on this page: ${ACCESSIBILITY_STANDARD}, made on Sample Pages only.`}
+        </p>
+      )}
+
+      <h3 className="text-lg font-bold">Technology (whole site)</h3>
+      {technology.status === 'not-identified' || technology.technologies.length === 0 ? (
+        <p className="text-sm">{NOT_IDENTIFIED}</p>
+      ) : (
+        <ul className="space-y-1 text-sm">
+          {technology.technologies.map((tech) => (
+            <li key={tech.name}>
+              <span className="font-bold">{tech.name}</span>
+              {` · ${TECHNOLOGY_KIND_LABEL[tech.kind]}`}
+              {tech.evidence.length > 0 && (
+                <span className="text-ink-soft">{` · shown by ${tech.evidence.join(', ')}`}</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <h3 className="text-lg font-bold">Marketing signals (whole site)</h3>
+      {signals.length === 0 ? (
+        <p className="text-sm text-ink-soft">Not checked</p>
+      ) : (
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr>
+              <th scope="col">Signal</th>
+              <th scope="col">Status</th>
+              <th scope="col">Pages</th>
+              <th scope="col">What was seen</th>
+            </tr>
+          </thead>
+          <tbody>
+            {signals.map((signal) => (
+              <tr key={signal.key}>
+                <th scope="row" className="font-bold">
+                  {signal.label}
+                </th>
+                <td>{SIGNAL_STATUS_LABEL[signal.status]}</td>
+                <td className="break-all">{signal.pages.length === 0 ? NONE : signal.pages.join(', ')}</td>
+                <td>
+                  {signal.detail}
+                  <NapList signal={signal} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </section>
+  );
+}

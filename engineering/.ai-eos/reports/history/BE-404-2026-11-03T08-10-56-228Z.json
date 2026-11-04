@@ -1,0 +1,74 @@
+{
+  "task_id": "BE-404",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-012",
+    "REQ-043"
+  ],
+  "files_inspected": [
+    "packages/types/src/website-audit.ts",
+    "packages/core/src/safe-net.ts",
+    "packages/core/src/ai/key-resolver.ts",
+    "packages/checkers/src/security-depth.ts",
+    "packages/core/src/audit/ai/ranking.ts",
+    "packages/core/tests/outbound-fetch.test.ts",
+    "docs/adr/0033-website-audit-entry-point.md",
+    "docs/adr/0034-encrypted-key-fallback.md",
+    "docs/adr/0018-claim-wording.md",
+    "engineering/requirements.md"
+  ],
+  "files_created": [
+    "packages/core/src/audit/ai/pagespeed.ts",
+    "packages/core/tests/audit-pagespeed.test.ts",
+    "packages/core/tests/fixtures/pagespeed/page-field.json",
+    "packages/core/tests/fixtures/pagespeed/origin-fallback.json",
+    "packages/core/tests/fixtures/pagespeed/no-field-data.json",
+    "packages/core/tests/fixtures/pagespeed/quota-429.json",
+    "packages/core/tests/fixtures/pagespeed/quota-403-daily.json",
+    "packages/core/tests/fixtures/pagespeed/lighthouse-error-500.json",
+    "packages/core/tests/fixtures/pagespeed/bad-key-400.json",
+    "docs/adr/0035-pagespeed-data.md"
+  ],
+  "files_modified": [],
+  "implementation_summary": "pagespeed.ts: measurePageSpeed sends one PSI v5 request (strategy=mobile, category=performance) through makeOutboundFetch (allowPrivate false, maxRedirects 0, 90 s timeout, 16 MB cap). The key comes from resolveServiceKey('pagespeed') and goes in the x-goog-api-key header; with no key or a failing resolver the request is keyless. Wrapped NetDeps record the failure cause: timeout -> timeout, other lookup/connect error -> no-network, refused private address -> failed. Quota = HTTP 429 or a Google quota/rate-limit error; any other error, redirect, non-JSON or over-size body -> failed. Lab values from lighthouseResult (performance score x100, lcp, cls, fcp, ttfb from server-response-time, tbt, speed-index; a runtimeError makes lab failed). Field values from loadingExperience (scope page), else origin data (scope origin), else no-field-data; CLS percentile divided by 100. measuredAt = analysisUTCTimestamp, then fetchTime, then the injected clock. measureSampleSpeeds reads the key once, runs one request at a time, returns [{url, speed}] in input order and sends nothing after a quota answer (remaining pages = quota). Nothing throws; not-measured results have no values. ADR 0035 written.",
+  "tests_executed": [
+    {
+      "name": "CHK-BE-404-UNIT PageSpeed Insights client",
+      "command": "pnpm exec vitest run packages/core/tests/audit-pagespeed.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 21 passed (21) (re-run after prettier --write)"
+    },
+    {
+      "name": "core source type-check",
+      "command": "npx tsc --noEmit -p packages/core/tsconfig.json",
+      "result": "passed",
+      "output_excerpt": "0 'error TS' lines (src only; tests are not in the tsconfig include)"
+    }
+  ],
+  "tests_proposed": [
+    "Opt-in manual smoke against the real PSI endpoint (keyless) to confirm the x-goog-api-key header and the current response shape; not automatable without network."
+  ],
+  "evidence": [
+    "packages/core/src/audit/ai/pagespeed.ts:231 allowPrivate: false",
+    "packages/core/src/audit/ai/pagespeed.ts:235 key only in the x-goog-api-key header",
+    "packages/core/src/audit/ai/pagespeed.ts:261 measurePageSpeed",
+    "packages/core/src/audit/ai/pagespeed.ts:271 measureSampleSpeeds",
+    "packages/core/tests/audit-pagespeed.test.ts 'the key never leaks' block",
+    "docs/adr/0035-pagespeed-data.md"
+  ],
+  "blockers": [],
+  "risks": [
+    "The key goes in the x-goog-api-key header, not ?key=. Google APIs document this header, but it has not been checked against the live PSI endpoint (no network in tests).",
+    "The 16 MB cap and 90 s total timeout are chosen values; a larger answer comes back failed. A fields= partial-response parameter was left out because it cannot be verified offline.",
+    "A 400 'API key not valid' answer maps to failed, not quota, so later pages are still requested.",
+    "measureSampleSpeeds takes and returns absolute URLs; the caller maps them to AuditPage.urlPath / speed.",
+    "ADR 0031 still has the stale 'Not covered: RobotsPolicy.fetch' line noted by BE-101; it is outside this task's ownership."
+  ],
+  "handoff": "Exports: measurePageSpeed, measureSampleSpeeds, mapPsiResponse, isQuotaAnswer, psiRequestUrl, PSI_ENDPOINT, PSI_TIMEOUT_MS, PSI_MAX_BYTES. PageSpeedDeps = { resolveServiceKey? (pass KeyResolver.resolveServiceKey bound to its instance), net? (NetDeps test seam), timeoutMs?, now?, log? }. Pass only Sample Page URLs that already passed the crawl's public-address check. Expect 10 to 60 s per page, one at a time. Results never throw; not-measured results have no values and must be shown as not measured. The hosted beta must keep the key in the visitor's session before it offers the key setting (ADR 0034/0035).",
+  "_captured": {
+    "at": "2026-11-03T08:10:56.228Z",
+    "agent_id": "a5f0d0d62d15747af",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

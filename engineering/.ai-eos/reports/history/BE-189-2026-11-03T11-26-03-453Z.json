@@ -1,0 +1,56 @@
+{
+  "task_id": "BE-189",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-048"
+  ],
+  "files_inspected": [
+    "packages/core/src/index.ts",
+    "packages/core/src/audit/ai/index.ts",
+    "packages/core/src/audit/analysis/index.ts",
+    "packages/core/src/audit/crawl/index.ts",
+    "packages/core/src/audit/documents/index.ts",
+    "packages/core/tests/audit-ai-barrel.test.ts"
+  ],
+  "files_created": [
+    "packages/core/src/audit/index.ts",
+    "packages/core/tests/audit-exports.test.ts"
+  ],
+  "files_modified": [
+    "packages/core/src/index.ts"
+  ],
+  "implementation_summary": "Added the audit barrel (crawl, analysis, ai, documents, store, pipeline, phone-layout; preview omitted) and the single export line in the core barrel. Added a contract test for entry-point reachability, identity of group exports in @qa/core, and a source scan for direct fetch and Playwright request APIs.",
+  "tests_executed": [
+    {
+      "name": "CHK-BE-189-UNIT core audit exports contract",
+      "command": "pnpm exec vitest run packages/core/tests/audit-exports.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 18 passed (18)"
+    },
+    {
+      "name": "build types, checkers, core",
+      "command": "pnpm --filter @qa/types --filter @qa/checkers --filter @qa/core run build",
+      "result": "passed",
+      "output_excerpt": "packages/core build: Done (no TS2308)"
+    }
+  ],
+  "tests_proposed": [],
+  "evidence": [
+    "packages/core/src/index.ts:last line export * from './audit/index.js'",
+    "packages/core/src/audit/index.ts",
+    "packages/core/tests/audit-exports.test.ts"
+  ],
+  "blockers": [],
+  "risks": [
+    "The test allow-lists packages/core/src/audit/store/select-backend.ts, which uses globalThis.fetch as the injectable default for the Cloud Storage backend. A reviewer should confirm that is acceptable, or ask BE-601's owner to inject fetch from outside.",
+    "audit/documents re-exports Playwright and node:zlib code through the core barrel, so the wizard must never import it. This was already noted by BE-506.",
+    "phone-layout is exported through the barrel because the task asked for it, although BE-708's handoff said it was not in the barrel."
+  ],
+  "handoff": "BE-190: runner routes can import every audit entry point from @qa/core. The audit barrel needs no further edits. If a later group adds an export whose name clashes with an existing one, the identity test and the TS build will flag it; fix it with the owning group.",
+  "_captured": {
+    "at": "2026-11-03T11:26:03.453Z",
+    "agent_id": "a7019643d9c8371b8",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

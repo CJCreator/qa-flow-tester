@@ -1,0 +1,41 @@
+{
+  "task_id": "BE-709",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-044",
+    "REQ-032"
+  ],
+  "files_inspected": [
+    "packages/core/tests/audit-document-text.test.ts"
+  ],
+  "files_created": [],
+  "files_modified": [
+    "packages/core/tests/audit-document-text.test.ts"
+  ],
+  "implementation_summary": "Applied the BE-710 correction only: line 124 expectation changed from ['en','hi','ta'] to ['bn','en','gu','hi','kn','ml','mr','or','pa','ta','te','ur']. No other edits. labels/hi.ts and labels/index.ts were not touched or inspected in this run.",
+  "tests_executed": [
+    {
+      "name": "audit-document-text.test.ts and audit-document-text-languages.test.ts",
+      "command": "CI=1 pnpm exec vitest run packages/core/tests/audit-document-text.test.ts packages/core/tests/audit-document-text-languages.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 2 passed (2); Tests 32 passed (32)"
+    }
+  ],
+  "tests_proposed": [],
+  "evidence": [
+    "packages/core/tests/audit-document-text.test.ts:124 expect(labelLanguages().sort()).toEqual(['bn','en','gu','hi','kn','ml','mr','or','pa','ta','te','ur'])",
+    "vitest output: audit-document-text.test.ts 11 tests passed; audit-document-text-languages.test.ts 21 tests passed"
+  ],
+  "blockers": [],
+  "risks": [
+    "Scope gap: the original BE-709 packet also required labels/hi.ts, its registration in labels/index.ts with the beta label, and the Tamil/Hindi script and placeholder checks. Not verified here; a reviewer must confirm before marking the task verified.",
+    "Line 124 depends on labelLanguages() returning exactly these 12 codes; any future table change requires updating it again."
+  ],
+  "handoff": "BE-709's test now expects the 12-language set from BE-710. The orchestrator should verify the original hi.ts and index.ts acceptance criteria separately.",
+  "_captured": {
+    "at": "2026-11-03T11:23:01.344Z",
+    "agent_id": "afa16a0d2913894a8",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

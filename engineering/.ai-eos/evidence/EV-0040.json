@@ -1,0 +1,42 @@
+{
+  "evidence_id": "EV-0040",
+  "check_id": "CHK-BE-601-UNIT",
+  "name": "Website Audit store unit tests",
+  "category": "unit",
+  "requirement_ids": [
+    "REQ-028",
+    "REQ-023",
+    "REQ-033",
+    "REQ-024"
+  ],
+  "task_ids": [
+    "BE-601"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/audit-store.test.ts packages/core/tests/audit-store-shortlist.test.ts packages/core/tests/audit-store-shares.test.ts packages/core/tests/audit-store-helper-grants.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  4 passed (4)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0040.log",
+  "log_sha256": "6f29dd650c0f9c346e449f35368b48a1dc0ac24f9f96eafcbbc986ae9f810757",
+  "started_at": "2026-11-03T07:36:42.842Z",
+  "finished_at": "2026-11-03T07:36:52.989Z",
+  "duration_ms": 10147,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:e8f9e3a299fd0a99f997138b56b4ac2a55fc813b45b296a989773980ac841039",
+  "concurrent_tasks": [],
+  "paths": [
+    "packages/core/src/atomic-write.ts",
+    "packages/core/src/audit/store/**",
+    "packages/core/tests/audit-store-helper-grants.test.ts",
+    "packages/core/tests/audit-store-shares.test.ts",
+    "packages/core/tests/audit-store-shortlist.test.ts",
+    "packages/core/tests/audit-store.test.ts",
+    "packages/types/src/website-audit.ts"
+  ],
+  "paths_fingerprint": "git-paths:944d9860fb841953c807e60c62d5c46d935dd64cac9b151b0a1d7b9e0f6c4055"
+}

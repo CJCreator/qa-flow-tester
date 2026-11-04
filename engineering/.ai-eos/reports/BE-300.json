@@ -1,0 +1,62 @@
+{
+  "task_id": "BE-300",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-008",
+    "REQ-009"
+  ],
+  "files_inspected": [
+    "packages/types/src/website-audit.ts",
+    "packages/core/src/redact.ts",
+    "packages/core/src/audit/analysis/language.ts",
+    "packages/core/tests/audit-language.test.ts",
+    "packages/checkers/src/security.ts",
+    "engineering/plan.md"
+  ],
+  "files_created": [
+    "packages/core/src/audit/analysis/raw-page.ts",
+    "packages/core/src/audit/analysis/page-content.ts",
+    "packages/core/src/audit/analysis/finding-ids.ts",
+    "packages/core/tests/audit-page-content.test.ts"
+  ],
+  "files_modified": [],
+  "implementation_summary": "RawPage type: text chunks in page order with optional section boundary {kind, heading}; every element carries `chunk` (index of the last text chunk at or before it, -1 before all text); all facts listed in the task plus `addresses` for NAP; no form field value. buildPageContent joins chunks with newline, makes one Section per boundary (s1..sN, first starts at 0, unbounded text joins the Section before it, kind 'page' only when there are no boundaries), cuts text at maxTextChars without splitting surrogate pairs (later Sections become empty at text end), maps elements to sectionIds, keeps only http(s) links (same host: redacted site path without fragment; other host: full redacted address with leavesSite true), selects CTAs per Q-33 (buttons, role=button or class /button|btn/i links; tel:, mailto: and fragment targets kept), defaults form method to GET, redacts form action, shortens long data: image addresses, keeps heading levels within 1-6 and fills language with detectPageLanguage. createFindingIdAllocator(start=1) gives AF-NNN ids in call order and exposes nextNumber; formatFindingId is exported.",
+  "tests_executed": [
+    {
+      "name": "Page Content builder unit tests",
+      "command": "pnpm exec vitest run packages/core/tests/audit-page-content.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 20 passed (20)"
+    },
+    {
+      "name": "core type-check filtered to own files",
+      "command": "npx tsc -p packages/core --noEmit | grep audit/analysis/(raw-page|page-content|finding-ids)",
+      "result": "passed",
+      "output_excerpt": "no type errors reported for the three new source files"
+    }
+  ],
+  "tests_proposed": [
+    "BE-301 browser test: readPage on fixtures/audit-site emits empty boundary chunks for landmarks that start without text",
+    "pnpm build after the wave, to type-check the new modules with the full build"
+  ],
+  "evidence": [
+    "packages/core/tests/audit-page-content.test.ts: 20 passing tests including the REQ-008 AC-2 property test (400 seeded runs)",
+    "packages/core/src/audit/analysis/raw-page.ts: RawFormField has type, label, name, required and no value field",
+    "packages/core/src/audit/analysis/page-content.ts: buildPageContent, linkTarget, toCta"
+  ],
+  "blockers": [],
+  "risks": [
+    "Same-host check is an exact host match including port: www and bare-domain variants count as leaving the site.",
+    "External link and CTA targets keep the full address with only secret-looking query values redacted (redactUrl); tel:/mailto: CTA targets keep the business phone or email as written.",
+    "Sections past the maxTextChars cut are kept as empty Sections at the end of the text, so elements keep a valid sectionId.",
+    "responseHeaders must not contain set-cookie, cookie or authorization; this is documented on the type and must be enforced by BE-301.",
+    "Not checked with a full pnpm build because of parallel edits; tsc reported no errors in the three new source files."
+  ],
+  "handoff": "BE-301 builds RawPage from packages/core/src/audit/analysis/raw-page.ts. Emit chunks in page order, put boundary on the chunk where a landmark or top-level heading starts, and emit an empty-text boundary chunk when a landmark starts before any text. Element `chunk` is the index of the last chunk at or before it (-1 before all). Pass href attributes as written. Cap JSON-LD raw copies at JSON_LD_RAW_CAP. Fill `addresses` from <address> elements for nap.ts. BE-303, BE-304 and BE-306 read RawPage fields directly. BE-308 uses createFindingIdAllocator(firstFreeNumber) from finding-ids.ts and hands on `nextNumber`.",
+  "_captured": {
+    "at": "2026-11-03T07:15:10.779Z",
+    "agent_id": "a357177f5b66a7629",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

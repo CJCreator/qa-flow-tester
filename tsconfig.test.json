@@ -1,7 +1,24 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "noEmit": true
+    "noEmit": true,
+    // Resolve modules the way vitest does (vitest.config.ts sharedResolve aliases to src).
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@qa/types": ["packages/types/src/index.ts"],
+      "@qa/types/src/*": ["packages/types/src/*"],
+      "@qa/core": ["packages/core/src/index.ts"],
+      "@qa/checkers": ["packages/checkers/src/index.ts"],
+      "@qa/runner": ["packages/runner/src/index.ts"],
+      // Core tests import pngjs; its types are installed by @qa/checkers (devDependency @types/pngjs).
+      "pngjs": ["packages/checkers/node_modules/@types/pngjs/index.d.ts"]
+    }
   },
+  // Wizard tests import wizard source that uses import.meta.env and '?raw' imports (packages/wizard/tsconfig.json types).
+  "files": ["packages/wizard/node_modules/vite/client.d.ts"],
   "include": ["packages/*/tests/**/*", "scripts/**/*"]
 }

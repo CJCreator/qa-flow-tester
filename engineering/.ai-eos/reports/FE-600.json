@@ -1,0 +1,70 @@
+{
+  "task_id": "FE-600",
+  "agent": "frontend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-028",
+    "REQ-023"
+  ],
+  "files_inspected": [
+    "packages/types/src/website-audit.ts",
+    "packages/types/src/browser.ts",
+    "packages/wizard/src/screens/audit/documents/review-api.ts",
+    "packages/wizard/src/screens/audit/documents/settings-api.ts",
+    "packages/wizard/src/screens/audit/documents/ReviewDocumentsScreen.tsx",
+    "packages/wizard/src/screens/audit/documents/ExportDocumentsScreen.tsx",
+    "packages/wizard/src/screens/audit/results/AnalysisScreen.tsx",
+    "packages/wizard/src/screens/PastCheckupsScreen.tsx",
+    "packages/wizard/src/components/text.tsx",
+    "packages/wizard/src/lib/router.ts",
+    "packages/wizard/src/lib/format.ts",
+    "packages/wizard/tests/audit-documents-review.test.tsx",
+    "packages/wizard/tests/no-banned-words.test.ts",
+    "CONTEXT.md",
+    "engineering/plan.md"
+  ],
+  "files_created": [
+    "packages/wizard/src/screens/audit/saved/saved-api.ts",
+    "packages/wizard/src/screens/audit/saved/SavedAuditsScreen.tsx",
+    "packages/wizard/src/screens/audit/saved/AuditHistoryScreen.tsx",
+    "packages/wizard/src/screens/audit/saved/ShortlistPanel.tsx",
+    "packages/wizard/src/screens/audit/saved/ShortlistScreen.tsx",
+    "packages/wizard/tests/audit-saved.test.tsx",
+    "packages/wizard/tests/audit-shortlist.test.tsx"
+  ],
+  "files_modified": [],
+  "implementation_summary": "saved-api.ts is a small client over AUDIT_API, built like review-api.ts: it turns every refusal into a plain sentence. It covers listAudits, loadVersion (GET /api/audits/:id?version=n), rerunAudit, rerunAndReload (POST rerun, then GET so the history lists the new version), deleteAudit, load/saveShortlistEntry (GET/PUT /api/audits/:id/shortlist) and listShortlist (GET /api/shortlist?mark=&outcome=). It also has pure helpers: versionsOldestFirst, latestVersion, versionCounts, STATUS_LABEL (status always in words), shortlistUpdate (sends only changed fields; null clears), filtersToQuery/filterShortlist/readMarkFilter/readOutcomeFilter. It also exports AUDIT_PATHS, the wizard route paths for FE-191 to register. ERR_RUN_IN_PROGRESS shows RUN_IN_PROGRESS_TEXT ('Another run is in progress: ...'). Each screen has a request-free View for server-rendered tests plus a stateful wrapper with an injectable fetchImpl, the same split as AnalysisScreen and ReviewDocumentsScreen. SavedAuditsScreen shows each audit's host, address, version count, latest status and Shortlist mark; an empty list shows a how-to-start line and a start link. AuditHistoryScreen lists versions oldest first with start time, status and counts. Each version's Open button loads it through ?version=n and shows links to its results, review and export. The screen also has Re-run, plus a Delete button with an inline alertdialog confirmation that names every version, edit, Shortlist entry, Shared Link and Helper access. It links to the preview/Shared Link and Helpers screens by plain path and includes ShortlistPanel. ShortlistPanel has Pitch/Skip/No mark radios, Notes, an Outcome select (the six SHORTLIST_OUTCOMES), an Outcome note and Save, and shows the saved values in words. ShortlistScreen has labelled Mark and Outcome filters that query the runner, and different empty messages for an empty Shortlist and no matches.",
+  "tests_executed": [
+    {
+      "name": "FE-600 unit tests + no-banned-words",
+      "command": "CI=1 node node_modules/vitest/vitest.mjs run packages/wizard/tests/audit-saved.test.tsx packages/wizard/tests/audit-shortlist.test.tsx packages/wizard/tests/no-banned-words.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 3 passed (3); Tests 34 passed (34)"
+    },
+    {
+      "name": "wizard typecheck (src)",
+      "command": "cd packages/wizard && node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.json",
+      "result": "passed",
+      "output_excerpt": "0 error TS"
+    }
+  ],
+  "tests_proposed": [
+    "Browser test (QA-712 or the FE-191 routing test) that mounts AuditHistoryScreen and clicks Re-run, Delete -> confirm, and Open version, to exercise the stateful wrappers. The node vitest environment has no DOM, so only Views and the client are covered here."
+  ],
+  "evidence": [
+    "packages/wizard/tests/audit-saved.test.tsx: list fields and empty how-to; versions oldest first with start time, status and counts; GET ?version=2 URL; rerun POST then reload lists version 4; ERR_RUN_IN_PROGRESS message; delete confirmation text; DELETE call; source rules (only '@qa/types/src/browser.js', no node:, no imports of FE-601/FE-602 modules, no Avoid words)",
+    "packages/wizard/tests/audit-shortlist.test.tsx: labelled controls, the six outcomes, saved values shown, only changed fields in the PUT body, PUT path and method, filter query string, mark and outcome filtering, empty and no-match messages"
+  ],
+  "blockers": [],
+  "risks": [
+    "`pnpm exec vitest ...` (the CHK command) first runs pnpm's dependency status check. Here that check started `pnpm install` (it printed 'Packages: -57'), which then failed with ERR_PNPM_IGNORED_BUILDS for @firebase/util and protobufjs. This is likely because FE-602 added firebase to the manifest and lockfile. I ran vitest directly through node_modules instead. The orchestrator's CHK run may hit the same pnpm error until builds are approved or install is settled. I did not change anything to fix this.",
+    "`tsc -p tsconfig.test.json` reports TS2835 (extensionless relative imports) for the new test files. The existing audit-documents-review.test.tsx has the same 6 errors of this kind, so the wizard tests already follow this convention and that config does not cover them cleanly.",
+    "The AUDIT_PATHS route shapes are my proposal; no audit routes existed yet: /audits, /audits/new, /audits/:id, /audits/:id/versions/:n[/review|/export], /audits/:id/share, /audits/:id/helpers, /shortlist. FE-191, FE-601 and FE-602 must use the same paths or change them in saved-api.ts."
+  ],
+  "handoff": "FE-191: register SavedAuditsScreen (AUDIT_PATHS.list), AuditHistoryScreen({auditId}) (AUDIT_PATHS.history), ShortlistScreen (AUDIT_PATHS.shortlist), and the paths these screens link to: AUDIT_PATHS.start, version/review/export(id, n) -> AnalysisScreen/ReviewDocumentsScreen/ExportDocumentsScreen, previewShare(id) -> FE-601, helpers(id) -> FE-602. All of these are exported from packages/wizard/src/screens/audit/saved/saved-api.ts. ShortlistPanel is used inside AuditHistoryScreen and needs no route. Delete confirmation is inline (role=alertdialog), so it does not need the App's ConfirmDialog. After a delete, the screen shows a notice with a link back to the list.",
+  "_captured": {
+    "at": "2026-11-03T09:51:21.999Z",
+    "agent_id": "ab048ad561efc8743",
+    "agent_type": "ai-eos:frontend-engineer"
+  }
+}

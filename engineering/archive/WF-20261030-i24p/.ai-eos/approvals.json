@@ -1,0 +1,32 @@
+{
+  "approvals": [
+    {
+      "id": "APR-001",
+      "type": "plan",
+      "artifact_sha256": "fd06ebd8b5e06eab24f419994761a0cec54d63adb539a8e8b3b6783ad38aeb2c",
+      "approver": "Saravanakumar",
+      "approved_at": "2026-10-31T10:03:13.775Z",
+      "session_id": "0c79d3e4-ae13-46f9-8df0-bbb65d5a654f",
+      "source": "UserPromptExpansion",
+      "status": "superseded",
+      "version": null
+    },
+    {
+      "id": "APR-002",
+      "type": "plan",
+      "artifact_sha256": "1ababe95124c5825b1c56fce03e4b2c0871831ad6941e4d29ba7c589507e2767",
+      "approver": "Saravanakumar",
+      "approved_at": "2026-11-03T04:27:53.647Z",
+      "session_id": "446692fb-a55a-4661-8db1-702761a23e83",
+      "source": "UserPromptExpansion",
+      "status": "active",
+      "version": null
+    }
+  ],
+  "last_attempt": {
+    "at": "2026-11-03T04:27:53.647Z",
+    "type": "plan",
+    "ok": true,
+    "reason": "Recorded APR-002"
+  }
+}

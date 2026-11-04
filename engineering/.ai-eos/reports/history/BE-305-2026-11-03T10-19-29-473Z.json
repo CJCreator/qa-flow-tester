@@ -1,0 +1,53 @@
+{
+  "task_id": "BE-305",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-014",
+    "REQ-038"
+  ],
+  "files_inspected": [
+    "packages/core/src/audit/analysis/broken-links.ts",
+    "packages/core/tests/audit-broken-links.test.ts"
+  ],
+  "files_created": [],
+  "files_modified": [
+    "packages/core/src/audit/analysis/broken-links.ts",
+    "packages/core/tests/audit-broken-links.test.ts"
+  ],
+  "implementation_summary": "Correction for QA-300: checkLinks matched link.to against skippedPaths exactly, so '/shop/checkout?item=...' links were fetched. Added exported skipKey(path), which drops the query and fragment, resolves dot segments the way targetUrl joins the request URL, decodes percent-escapes and ignores trailing slashes and case. It is applied to both skippedPaths and link.to before the skip check. The skip check still runs before any statusByPath lookup, so skippedPaths keeps priority. statusByPath and the recorded-page lookup stay exact-match because they send no request and a pathname fallback could create false broken-link findings. Added two regression unit tests.",
+  "tests_executed": [
+    {
+      "name": "content problems + broken links unit tests",
+      "command": "CI=1 pnpm exec vitest run packages/core/tests/audit-content-problems.test.ts packages/core/tests/audit-broken-links.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 2 passed (2); Tests 28 passed (28)"
+    },
+    {
+      "name": "audit analysis fixture test (read-only, QA-300)",
+      "command": "CI=1 pnpm exec vitest run packages/core/tests/audit-analysis-fixture.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 22 passed (22), incl. 'no request from the analysis reaches a Skipped Page (query strings included)'"
+    }
+  ],
+  "tests_proposed": [
+    "Run the new regression test against the pre-fix broken-links.ts to confirm it fails (not done here; the old code matched only exact strings)"
+  ],
+  "evidence": [
+    "packages/core/src/audit/analysis/broken-links.ts: skipKey() added before parseOrigin; checkLinks builds skipped = new Set([...opts.skippedPaths].map(skipKey)) and checks skipped.has(skipKey(link.to))",
+    "packages/core/tests/audit-broken-links.test.ts: 'a Skipped Page covers its query, fragment, slash, case and dot-segment variants (regression QA-300)' and 'a skipped path given with a query still covers the bare path'",
+    "audit-analysis-fixture.test.ts 22/22 passed"
+  ],
+  "blockers": [],
+  "risks": [
+    "Skip matching ignores case and trailing slashes, so it may skip more than needed (a link left unchecked). Chosen on purpose: the safe side is never requesting a Skipped Page.",
+    "statusByPath and recorded-page lookups stay exact-match on the full path with query. A crawl status for '/a' is not applied to '/a?x', which is then fetched if not skipped.",
+    "New public export skipKey from broken-links.ts; no other contract change."
+  ],
+  "handoff": "Skipped Pages now cover query, fragment, trailing-slash, case, percent-escape and dot-segment variants through skipKey() in packages/core/src/audit/analysis/broken-links.ts. Callers can pass skippedPaths with or without a query. Reuse skipKey wherever else Skipped Page paths must be matched before an outbound request.",
+  "_captured": {
+    "at": "2026-11-03T10:19:29.473Z",
+    "agent_id": "af3b42d475ea297bd",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

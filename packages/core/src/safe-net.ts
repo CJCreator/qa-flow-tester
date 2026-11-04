@@ -3,6 +3,10 @@ import http from 'http';
 import https from 'https';
 import { isIpLiteral, isPrivateTextHost, isPublicAddress } from './address-class.js';
 import { proofMatches, proofUrl } from './domain-verification.js';
+import type { FetchedResponse } from '@qa/checkers';
+import { getBrowserPolicy } from './browser.js';
+import { isSameSite } from './same-site.js';
+import type { HostPacer } from './host-pacer.js';
 
 /**
  * Network checks for shared machines (ADR 0014). Node only: the wizard never imports this file.
@@ -24,6 +28,8 @@ export interface RawResponse {
   status: number;
   headers: Record<string, string | string[] | undefined>;
   body: string;
+  /** The undecoded body bytes. Fakes may omit it; then `body` is taken as UTF-8. */
+  raw?: Buffer;
   /** True when the body went over `maxBytes` (it is cut off). */
   tooLarge?: boolean;
 }
@@ -86,13 +92,10 @@ function defaultConnect(req: PinnedRequest): Promise<RawResponse> {
           chunks.push(chunk);
         });
         res.on('end', () =>
-          done(() =>
-            resolve({
-              status: res.statusCode || 0,
-              headers: res.headers,
-              body: Buffer.concat(chunks).toString('utf8'),
-            })
-          )
+          done(() => {
+            const raw = Buffer.concat(chunks);
+            resolve({ status: res.statusCode || 0, headers: res.headers, body: raw.toString('utf8'), raw });
+          })
         );
         res.on('error', (err) => done(() => reject(err)));
       }
@@ -135,17 +138,71 @@ export async function resolvePublic(
   return { ok: true, address, all };
 }
 
+/**
+ * Whether a host is plainly on this machine or a private network: `localhost`, `*.localhost`,
+ * `host.docker.internal` or a non-public IP literal. A name that merely resolves to a private address is not
+ * matched (no lookup here). The outbound fetch still refuses private addresses on a shared machine.
+ */
+export function isLocalOriginHost(hostname: string): boolean {
+  const h = hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  if (!h) return false;
+  return isPrivateTextHost(h) || (isIpLiteral(h) && !isPublicAddress(h));
+}
+
+/**
+ * Resolves a host once for a local run (ADR 0031 `allowPrivate`): any address is accepted, but the name is
+ * still looked up once and the connection still goes to that one address. A literal IP skips DNS.
+ */
+async function resolveAny(host: string, deps: Pick<NetDeps, 'lookup'>): Promise<ResolveResult> {
+  const h = host.replace(/^\[|\]$/g, '').toLowerCase();
+  if (!h) return { ok: false, reason: 'dns-failed' };
+  if (isIpLiteral(h)) return { ok: true, address: h, all: [h] };
+  let all: string[];
+  try {
+    all = await deps.lookup(h);
+  } catch {
+    return { ok: false, reason: 'dns-failed' };
+  }
+  if (!Array.isArray(all) || all.length === 0 || !all.every((a) => typeof a === 'string' && a)) {
+    return { ok: false, reason: 'dns-failed' };
+  }
+  const address = all.find((a) => !a.includes(':')) ?? all[0];
+  return { ok: true, address, all };
+}
+
+/** Headers that may follow a redirect to another origin; anything else (Cookie, tokens) stays with the first origin. */
+const CROSS_ORIGIN_HEADERS = new Set(['accept', 'accept-language', 'user-agent']);
+
+function headersFor(headers: Record<string, string>, sameOrigin: boolean): Record<string, string> {
+  if (sameOrigin) return { ...headers };
+  return Object.fromEntries(Object.entries(headers).filter(([k]) => CROSS_ORIGIN_HEADERS.has(k.toLowerCase())));
+}
+
 export type SafeGetFailure =
   'dns-failed' | 'private-address' | 'redirected' | 'timeout' | 'too-large' | 'bad-scheme' | 'error';
 
 export type SafeGetResult =
-  | { ok: true; status: number; finalUrl: string; headers: Record<string, string | string[] | undefined>; body: string }
+  | { ok: true; status: number; finalUrl: string; headers: Record<string, string | string[] | undefined>; body: string; bytes: Buffer }
   | { ok: false; reason: SafeGetFailure; status?: number };
+
+export interface SafeGetOptions {
+  maxRedirects?: number;
+  maxBytes?: number;
+  headers?: Record<string, string>;
+  timeoutMs?: number;
+  /**
+   * Local run only (ADR 0031): non-public addresses are accepted, still resolved once per hop and pinned.
+   * Callers derive it from the run (no browser guard), never from request input.
+   */
+  allowPrivate?: boolean;
+  /** When the redirect limit is reached, return the 3xx itself (ok, with its status and headers) instead of failing. */
+  redirectAsResponse?: boolean;
+}
 
 /** GET with the checks above on every hop. `maxRedirects` 0 means any 3xx fails as 'redirected'. */
 export async function safeGet(
   url: string,
-  opts: { maxRedirects?: number; maxBytes?: number; headers?: Record<string, string>; timeoutMs?: number } = {},
+  opts: SafeGetOptions = {},
   deps: NetDeps = defaultNetDeps
 ): Promise<SafeGetResult> {
   const maxRedirects = opts.maxRedirects ?? DEFAULT_MAX_REDIRECTS;
@@ -156,16 +213,19 @@ export async function safeGet(
   } catch {
     return { ok: false, reason: 'bad-scheme' };
   }
+  const firstOrigin = current.origin;
   for (let hop = 0; ; hop++) {
     if (current.protocol !== 'http:' && current.protocol !== 'https:') return { ok: false, reason: 'bad-scheme' };
-    const resolved = await resolvePublic(current.hostname, deps);
+    const resolved = opts.allowPrivate
+      ? await resolveAny(current.hostname, deps)
+      : await resolvePublic(current.hostname, deps);
     if (!resolved.ok) return { ok: false, reason: resolved.reason };
     let raw: RawResponse;
     try {
       raw = await deps.connect({
         url: current,
         address: resolved.address,
-        headers: { ...(opts.headers || {}) },
+        headers: headersFor(opts.headers || {}, current.origin === firstOrigin),
         timeoutMs: opts.timeoutMs ?? CONNECT_TIMEOUT_MS,
         maxBytes,
       });
@@ -176,7 +236,19 @@ export async function safeGet(
     const location = raw.headers.location;
     const target = Array.isArray(location) ? location[0] : location;
     if (raw.status >= 300 && raw.status < 400 && target) {
-      if (hop >= maxRedirects) return { ok: false, reason: 'redirected' };
+      if (hop >= maxRedirects) {
+        if (opts.redirectAsResponse) {
+          return {
+            ok: true,
+            status: raw.status,
+            finalUrl: current.toString(),
+            headers: raw.headers,
+            body: raw.body,
+            bytes: rawBytes(raw),
+          };
+        }
+        return { ok: false, reason: 'redirected' };
+      }
       try {
         current = new URL(target, current);
       } catch {
@@ -184,7 +256,118 @@ export async function safeGet(
       }
       continue;
     }
-    return { ok: true, status: raw.status, finalUrl: current.toString(), headers: raw.headers, body: raw.body };
+    return {
+      ok: true,
+      status: raw.status,
+      finalUrl: current.toString(),
+      headers: raw.headers,
+      body: raw.body,
+      bytes: rawBytes(raw),
+    };
+  }
+}
+
+function rawBytes(raw: RawResponse): Buffer {
+  return raw.raw ?? Buffer.from(raw.body, 'utf8');
+}
+
+export interface OutboundFetchOptions {
+  /**
+   * Narrows the run's rule, never widens it: private addresses are reached only when this is not false AND
+   * no browser guard is set (a local run). A shared machine (RUNNER_BETA=1) is always public only.
+   */
+  allowPrivate?: boolean;
+  /** Redirects followed, each hop re-checked (default 5). 0 returns a 3xx as the response. */
+  maxRedirects?: number;
+  /** Body cap in bytes; a body over it still counts as a response with its status and an empty body. */
+  maxBytes?: number;
+  timeoutMs?: number;
+  /** Extra request headers (e.g. Cookie). Dropped, except Accept/User-Agent, on a redirect to another origin. */
+  headers?: Record<string, string>;
+  /** Network seam for tests. */
+  deps?: NetDeps;
+  /** Shared with the crawl of the same site: each request waits for its host's turn (ADR 0015). */
+  pacer?: HostPacer;
+}
+
+/** The checkers' response plus the raw body bytes (binary bodies such as images are not UTF-8 text). */
+export interface OutboundResponse extends FetchedResponse {
+  bytes: () => Promise<Uint8Array>;
+}
+export type OutboundFetchFn = (url: string) => Promise<OutboundResponse | null>;
+
+function flatHeaders(headers: Record<string, string | string[] | undefined>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(headers)) {
+    if (v === undefined) continue;
+    out[k.toLowerCase()] = Array.isArray(v) ? v.join(', ') : v;
+  }
+  return out;
+}
+
+/**
+ * The one outbound path for page- and site-derived addresses (ADR 0031): GET only, through `safeGet`
+ * (resolved once per hop, pinned, every redirect hop re-checked). Returns the checkers' `FetchFn`:
+ * null when the request was refused or could not be made. Whether private addresses are allowed is read
+ * from the run (the browser guard) at call time; the URL passed in can never change it.
+ */
+export function makeOutboundFetch(opts: OutboundFetchOptions = {}): OutboundFetchFn {
+  const deps = opts.deps ?? defaultNetDeps;
+  const fetchOnce = async (url: string): Promise<OutboundResponse | null> => {
+    const allowPrivate = opts.allowPrivate !== false && getBrowserPolicy() === null;
+    let got: SafeGetResult;
+    try {
+      got = await safeGet(
+        url,
+        {
+          maxRedirects: opts.maxRedirects,
+          maxBytes: opts.maxBytes,
+          timeoutMs: opts.timeoutMs,
+          headers: opts.headers,
+          allowPrivate,
+          redirectAsResponse: true,
+        },
+        deps
+      );
+    } catch {
+      return null;
+    }
+    if (got.ok) {
+      const { body, bytes } = got;
+      return {
+        status: got.status,
+        headers: flatHeaders(got.headers),
+        text: async () => body,
+        bytes: async () => new Uint8Array(bytes),
+      };
+    }
+    if (got.reason === 'too-large' && typeof got.status === 'number') {
+      return { status: got.status, headers: {}, text: async () => '', bytes: async () => new Uint8Array(0) };
+    }
+    return null;
+  };
+  const pacer = opts.pacer;
+  if (!pacer) return fetchOnce;
+  return (url: string) => {
+    let host: string;
+    try {
+      host = new URL(url).host;
+    } catch {
+      return fetchOnce(url); // safeGet refuses it without a request
+    }
+    return pacer.run(host, () => fetchOnce(url));
+  };
+}
+
+/** True when `url` is an http(s) address on the same site as `site` (the crawl's rule: www twin, same port). */
+export function sameSiteUrl(url: string | URL, site: string | URL): boolean {
+  try {
+    const u = typeof url === 'string' ? new URL(url) : url;
+    const s = typeof site === 'string' ? new URL(site) : site;
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return false;
+    return isSameSite(u.host, s.host);
+  } catch {
+    return false;
   }
 }
 

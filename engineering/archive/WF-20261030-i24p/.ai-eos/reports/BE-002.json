@@ -1,0 +1,89 @@
+{
+  "task_id": "BE-002",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-001",
+    "REQ-002",
+    "REQ-008",
+    "REQ-009",
+    "REQ-018",
+    "REQ-023",
+    "REQ-036",
+    "REQ-039"
+  ],
+  "files_inspected": [
+    "packages/core/src/issues-document.ts",
+    "packages/types/tests/browser-entry.test.ts",
+    "packages/types/src/browser.ts",
+    "packages/types/src/route-telemetry.ts",
+    "packages/types/src/website-audit.ts",
+    "packages/types/src/discovery.ts",
+    "packages/types/src/ai.ts"
+  ],
+  "files_created": [
+    "packages/types/src/website-audit.ts",
+    "packages/types/tests/website-audit.test.ts"
+  ],
+  "files_modified": [
+    "packages/types/src/index.ts",
+    "packages/types/src/browser.ts",
+    "packages/types/src/discovery.ts",
+    "packages/types/src/route-telemetry.ts",
+    "packages/types/src/ai.ts",
+    "packages/types/src/aspects.ts",
+    "packages/core/src/issues-document.ts",
+    "packages/types/tests/browser-entry.test.ts"
+  ],
+  "implementation_summary": "Second dispatch. I kept the first run's contract: website-audit.ts with AuditStartBody, validateAuditStartBody, PageContent, findings, assessments, versions, SHORTLIST_OUTCOMES and AUDIT_API, plus extended crawl limits, skip reasons, AI stages with ModelsByStage, and MarketingReview signals. I added plain SKIP_WHY wording for depth-limit, excluded and payment in core/issues-document.ts so @qa/core type-checks again, and added website-audit.js to the expected browser re-exports in browser-entry.test.ts.",
+  "tests_executed": [
+    {
+      "name": "CHK-BE-002-UNIT",
+      "command": "CI=1 pnpm exec vitest run packages/types/tests/website-audit.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 103 passed (103)"
+    },
+    {
+      "name": "CHK-BE-002-TYPES",
+      "command": "CI=1 pnpm exec vitest run packages/types/tests",
+      "result": "passed",
+      "output_excerpt": "Test Files 15 passed (15); Tests 163 passed (163)"
+    },
+    {
+      "name": "CHK-BE-002-BUILD",
+      "command": "pnpm --filter @qa/types run build",
+      "result": "passed",
+      "output_excerpt": "tsc finished with no errors"
+    },
+    {
+      "name": "CHK-NODE-BUILD",
+      "command": "pnpm run build",
+      "result": "passed",
+      "output_excerpt": "types, checkers, wizard, core, runner build: Done; exit 0"
+    }
+  ],
+  "tests_proposed": [
+    "A core test asserting pageCoverageLines renders the new depth-limit, excluded and payment wording"
+  ],
+  "evidence": [
+    "packages/core/src/issues-document.ts:129-131 (new SKIP_WHY entries)",
+    "packages/types/tests/browser-entry.test.ts (website-audit.js in expected re-exports)",
+    "packages/types/src/route-telemetry.ts:16-18 (depth-limit, excluded, payment)",
+    "packages/types/src/ai.ts:21 (assessment stage)",
+    "packages/types/src/discovery.ts:15-17 (maxDepth, includePaths)",
+    "packages/types/src/website-audit.ts:797 (SHORTLIST_OUTCOMES exact list)",
+    "packages/types/src/website-audit.ts:1035 (AUDIT_API)"
+  ],
+  "blockers": [],
+  "risks": [
+    "SKIP_WHY wording is user-facing text in issues.md: check it against the CONTEXT.md Avoid lists",
+    "website-audit.ts imports a runtime value, CRAWL_LIMIT_BOUNDS, from discovery.ts, so discovery.ts is now part of the browser bundle; the browser-entry check that nothing reachable imports a Node built-in passes today but will catch a future regression",
+    "The new skip reasons widen RouteSkipReason; any other exhaustive Record keyed on it outside core would need entries too (the full build found none)"
+  ],
+  "handoff": "Later tasks import the audit contract from @qa/types (or @qa/types/src/browser.js in the wizard): AUDIT_API route constants with typed request and response shapes, validateAuditStartBody (field-keyed error messages), SHORTLIST_OUTCOMES, ModelsByStage, and the extended crawl limits (maxDepth, includePaths, excludePaths). The crawler must emit the depth-limit, excluded and payment skip reasons; issues.md already has plain wording for them.",
+  "_captured": {
+    "at": "2026-11-03T04:52:51.429Z",
+    "agent_id": "a3722511396379afd",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

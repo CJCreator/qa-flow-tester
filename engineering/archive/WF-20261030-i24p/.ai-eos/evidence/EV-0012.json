@@ -1,0 +1,32 @@
+{
+  "evidence_id": "EV-0012",
+  "check_id": "CHK-QA-001-UNIT",
+  "name": "audit fixture sanity",
+  "category": "unit",
+  "requirement_ids": [
+    "REQ-003",
+    "REQ-013",
+    "REQ-034",
+    "REQ-036",
+    "REQ-044"
+  ],
+  "task_ids": [
+    "QA-001"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/audit-site-fixture.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0012.log",
+  "log_sha256": "0f8140648d6612ab112f3b2be58e3343f671f50094272281b83819bb3eae6a85",
+  "started_at": "2026-10-31T12:22:25.412Z",
+  "finished_at": "2026-10-31T12:22:35.901Z",
+  "duration_ms": 10489,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:497622e4992a55e1cf245ac17bdc5fa1f6334aa917305a802d15a9901d967d85"
+}

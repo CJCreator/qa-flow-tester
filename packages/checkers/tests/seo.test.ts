@@ -4,20 +4,42 @@ import { SiteRootAuditor } from '../src/site-root.js';
 import { AeoChecker } from '../src/aeo.js';
 import { GeoChecker } from '../src/geo.js';
 import type { Page } from 'playwright';
+import type { FetchFn } from '../src/security-depth.js';
 
 describe('SeoChecker and Search/AI Suite', () => {
   const checker = new SeoChecker();
 
-  function createMockPage(details: any, fetchHandler?: (url: string) => Promise<any>): Page {
+  // ADR 0031: the checker never uses Playwright's request API, so the mock page has none (using it throws).
+  function createMockPage(details: any): Page {
     return {
       evaluate: async () => details,
-      context: () => ({
-        request: {
-          fetch: fetchHandler || (async () => ({ status: () => 200, text: async () => '' })),
-        },
-      }),
+      context: () => {
+        throw new Error('Playwright request API used');
+      },
     } as unknown as Page;
   }
+  /** A recording FetchFn: every call is kept with its URL. */
+  function recordingFetch(statusFor: (url: string) => number = () => 200) {
+    const calls: string[] = [];
+    const fetchFn: FetchFn = async (url) => {
+      calls.push(url);
+      return { status: statusFor(url), headers: {}, text: async () => '' };
+    };
+    return { fetchFn, calls };
+  }
+  const linkPageDetails = (links: string[]) => ({
+    title: 'Home',
+    metaDescription: 'Home page',
+    h1Count: 1,
+    headings: [{ level: 1, text: 'Home' }],
+    htmlLang: 'en',
+    sameSiteLinks: links,
+    canonicalUrl: 'http://localhost/',
+    canonicalCount: 1,
+    hasViewportMeta: true,
+    hasFavicon: true,
+    imagesWithoutAltCount: 0,
+  });
 
   it('flags missing page title as Major (fixture planted defect)', async () => {
     const pageNoTitle = createMockPage({
@@ -163,35 +185,20 @@ describe('SeoChecker and Search/AI Suite', () => {
   });
 
   it('detects broken internal link returning HTTP 404', async () => {
-    const pageWithLinks = createMockPage(
-      {
-        title: 'Home',
-        metaDescription: 'Home page',
-        h1Count: 1,
-        headings: [{ level: 1, text: 'Home' }],
-        htmlLang: 'en',
-        sameSiteLinks: ['/dead-link'],
-        canonicalUrl: 'http://localhost/',
-        canonicalCount: 1,
-        hasViewportMeta: true,
-        hasFavicon: true,
-        imagesWithoutAltCount: 0,
-      },
-      async (url: string) => {
-        if (url.includes('/dead-link')) {
-          return { status: () => 404 };
-        }
-        return { status: () => 200, text: async () => '' };
-      }
-    );
+    const pageWithLinks = createMockPage(linkPageDetails(['/dead-link']));
+    const { fetchFn } = recordingFetch((url) => (url.includes('/dead-link') ? 404 : 200));
 
-    const findings = await checker.checkPage(pageWithLinks, {
-      testCaseId: 'TC-LINKS',
-      role: 'visitor',
-      breakpoint: '1440px',
-      urlPath: '/',
-      baseUrl: 'http://localhost:3050',
-    });
+    const findings = await checker.checkPage(
+      pageWithLinks,
+      {
+        testCaseId: 'TC-LINKS',
+        role: 'visitor',
+        breakpoint: '1440px',
+        urlPath: '/',
+        baseUrl: 'http://localhost:3050',
+      },
+      fetchFn
+    );
 
     const brokenLinkFinding = findings.find((f) => f.title.includes('Broken link found'));
     expect(brokenLinkFinding).toBeDefined();
@@ -199,6 +206,57 @@ describe('SeoChecker and Search/AI Suite', () => {
     expect(brokenLinkFinding?.expectedVsActual.actual).toContain('404');
     // A broken link is something broken on any site, public or not: it counts under Works.
     expect(brokenLinkFinding?.aspect).toBe('Works');
+  });
+
+  it('AC-7: the broken-link check sends exactly one GET per link (no HEAD), up to 5 links', async () => {
+    const links = ['/a', '/b', '/c', '/d', '/e', '/f'];
+    const { fetchFn, calls } = recordingFetch((url) => (url.endsWith('/c') ? 410 : 200));
+    const findings = await checker.checkPage(
+      createMockPage(linkPageDetails(links)),
+      {
+        testCaseId: 'TC-ONEGET',
+        role: 'visitor',
+        breakpoint: '1440px',
+        urlPath: '/about',
+        baseUrl: 'http://localhost:3050',
+        visibility: { search: false, answers: false, aiSearch: false, marketing: false },
+      },
+      fetchFn
+    );
+    // A FetchFn is GET only by contract; each link is asked once.
+    expect(calls).toEqual(['/a', '/b', '/c', '/d', '/e'].map((p) => `http://localhost:3050${p}`));
+    expect(findings.map((f) => f.title)).toEqual(['Broken link found: /c returned HTTP 410']);
+  });
+
+  it('AC-5: site files go through the same FetchFn at the site root', async () => {
+    const { fetchFn, calls } = recordingFetch(() => 404);
+    await checker.checkPage(
+      createMockPage(linkPageDetails([])),
+      { testCaseId: 'TC-ROOT', role: 'visitor', breakpoint: '1440px', urlPath: '/', baseUrl: 'https://example.com' },
+      fetchFn
+    );
+    expect(calls).toEqual(expect.arrayContaining(['https://example.com/robots.txt']));
+    for (const url of calls) expect(new URL(url).origin).toBe('https://example.com');
+  });
+
+  it('AC-5: with no FetchFn, broken links and site files make no request and are reported as not checked', async () => {
+    const siteWide = new Set<string>();
+    const findings = await checker.checkPage(createMockPage(linkPageDetails(['/dead-link'])), {
+      testCaseId: 'TC-NOFETCH',
+      role: 'visitor',
+      breakpoint: '1440px',
+      urlPath: '/',
+      baseUrl: 'http://localhost:3050',
+      siteWide,
+    });
+    const notChecked = findings.filter((f) => f.title.endsWith('not checked'));
+    expect(notChecked.map((f) => f.title)).toEqual(['Links were not checked', 'Site files were not checked']);
+    for (const f of notChecked) {
+      expect(f.needsConfirmation).toBe(true);
+      expect(f.severity).toBe('Suggestion');
+    }
+    expect(findings.some((f) => f.title.includes('Broken link found'))).toBe(false);
+    expect(findings.some((f) => /robots\.txt|sitemap/i.test(f.title))).toBe(false);
   });
 
   it('audits root assets and detects AI crawler blocks in robots.txt', async () => {

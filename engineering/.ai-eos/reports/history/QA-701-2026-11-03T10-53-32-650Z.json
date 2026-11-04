@@ -1,0 +1,75 @@
+{
+  "task_id": "QA-701",
+  "agent": "qa-engineer",
+  "status": "partial",
+  "requirements_addressed": [
+    "REQ-051"
+  ],
+  "files_inspected": [
+    "packages/types/src/test-case.ts",
+    "packages/types/src/discovery.ts",
+    "packages/types/src/plan.ts",
+    "packages/types/src/aspects.ts",
+    "packages/types/src/evidence-finding.ts",
+    "packages/core/src/discovery/discovery-agent.ts",
+    "packages/core/src/discovery/deterministic-spider.ts",
+    "packages/core/src/preflight.ts",
+    "packages/core/src/orchestrator.ts",
+    "packages/core/src/plan/build.ts",
+    "packages/core/src/plan/expand.ts",
+    "packages/checkers/src/permission-matrix.ts"
+  ],
+  "files_created": [],
+  "files_modified": [
+    "packages/core/tests/ai-planner-sources.test.ts",
+    "packages/core/tests/auth-crawl-e2e.test.ts",
+    "packages/core/tests/expand-intents-off.test.ts",
+    "packages/core/tests/marketing-grades.test.ts",
+    "packages/core/tests/missing-element.test.ts",
+    "packages/core/tests/orchestrator-session.test.ts",
+    "packages/core/tests/plan-build.test.ts",
+    "packages/core/tests/plan-old-selectors.test.ts",
+    "packages/core/tests/plan-sources-live-site.test.ts",
+    "packages/core/tests/rejects-gating.test.ts",
+    "packages/core/tests/rejects-plan.test.ts",
+    "packages/core/tests/signin.test.ts",
+    "packages/core/tests/spider-reliability.test.ts"
+  ],
+  "implementation_summary": "Fixed every TS error in the 13 owned core test files by making test data match current types and narrowing or asserting optional values; no suppressions, no assertions removed. useAI:false removed: AI is used only when an aiProvider is passed, so omitting it keeps rules-only discovery. maxPages removed from CrawlOptions: the budget is already the DeterministicSpider constructor argument (5/20). Pre-flight session paths are read into StorageStateData via a sessionsOf() helper for suppliedSessions. The CSV permission matrix is replaced with its parsed PermissionRule[]. SignInResult is narrowed via reasonOf() and toMatchObject.",
+  "tests_executed": [
+    {
+      "name": "core tests typecheck",
+      "command": "pnpm exec tsc -p packages/core/tests/tsconfig.typecheck.json --noEmit",
+      "result": "failed",
+      "output_excerpt": "Exit 2. No errors in owned files; 9 left outside ownership: ai-provider-timeout 5, audit-accessibility-basics 2, audit-page-recommendation 1, audit-store-backend 1"
+    },
+    {
+      "name": "QA-701 scoped vitest",
+      "command": "pnpm exec vitest run packages/core/tests/ai-planner-sources.test.ts packages/core/tests/expand-intents-off.test.ts packages/core/tests/marketing-grades.test.ts packages/core/tests/missing-element.test.ts packages/core/tests/orchestrator-session.test.ts packages/core/tests/plan-build.test.ts packages/core/tests/plan-old-selectors.test.ts packages/core/tests/plan-sources-live-site.test.ts packages/core/tests/rejects-gating.test.ts packages/core/tests/rejects-plan.test.ts packages/core/tests/signin.test.ts packages/core/tests/spider-reliability.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 12 passed (12); Tests 82 passed (82)"
+    }
+  ],
+  "tests_proposed": [
+    "Run packages/core/tests/auth-crawl-e2e.test.ts under QA-707 to confirm sessionsOf() behaves the same as passing the storage-state paths"
+  ],
+  "evidence": [
+    "packages/core/tests/auth-crawl-e2e.test.ts:15-29 (sessionsOf helper)",
+    "packages/core/tests/orchestrator-session.test.ts:209-213 (parsed permission matrix)",
+    "packages/core/tests/signin.test.ts reasonOf helper",
+    "tsc output: only ai-provider-timeout/audit-* errors remain"
+  ],
+  "blockers": [
+    "AC-1 (core test typecheck exits 0) is unmet: 9 errors in packages/core/tests/ai-provider-timeout.test.ts, audit-accessibility-basics.test.ts, audit-page-recommendation.test.ts, audit-store-backend.test.ts, which are not in QA-701 ownership"
+  ],
+  "risks": [
+    "auth-crawl-e2e was typechecked but not run (excluded under QA-707); sessionsOf() should be equivalent but is unproven",
+    "audit-* typing errors may move while BE-204 edits audit source"
+  ],
+  "handoff": "Assign the 4 remaining files (ai-provider-timeout, audit-accessibility-basics, audit-page-recommendation, audit-store-backend) to a task that owns them, or widen QA-701 ownership, then re-run CHK-QA-701-TYPECHECK. CHK-QA-701-TESTS should pass as it stands.",
+  "_captured": {
+    "at": "2026-11-03T10:53:32.650Z",
+    "agent_id": "af90131a9e0f7f5f6",
+    "agent_type": "ai-eos:qa-engineer"
+  }
+}

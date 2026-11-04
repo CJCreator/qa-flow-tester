@@ -1,0 +1,51 @@
+{
+  "task_id": "FE-200",
+  "agent": "frontend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-001",
+    "REQ-003"
+  ],
+  "files_inspected": [
+    "packages/wizard/src/screens/audit/start/AuditStartScreen.tsx",
+    "packages/wizard/src/screens/audit/start/AuditProgress.tsx",
+    "packages/wizard/src/screens/audit/start/audit-start-api.ts",
+    "packages/wizard/src/lib/router.ts",
+    "packages/wizard/tests/audit-start-screen.test.tsx",
+    "packages/wizard/tests/audit-start-form.test.ts"
+  ],
+  "files_created": [],
+  "files_modified": [
+    "packages/wizard/src/screens/audit/start/AuditStartScreen.tsx",
+    "packages/wizard/src/screens/audit/start/AuditProgress.tsx",
+    "packages/wizard/src/screens/audit/start/audit-start-api.ts",
+    "packages/wizard/tests/audit-start-screen.test.tsx",
+    "packages/wizard/tests/audit-start-form.test.ts"
+  ],
+  "implementation_summary": "Finished audits show a link to /audits/:id (PATHS.audit). A closed EventSource (readyState 2) is final: watchAudit closes the source and calls onEnd; AuditProgress shows a 'progress stream ended' alert instead of 'Reconnecting…', and the screen offers the history link plus Start another.",
+  "tests_executed": [
+    {
+      "name": "audit-start-screen, audit-start-form, no-banned-words",
+      "command": "CI=1 pnpm exec vitest run packages/wizard/tests/audit-start-screen.test.tsx packages/wizard/tests/audit-start-form.test.ts packages/wizard/tests/no-banned-words.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 3 passed (3), Tests 35 passed (35)"
+    }
+  ],
+  "tests_proposed": [],
+  "evidence": [
+    "packages/wizard/src/screens/audit/start/audit-start-api.ts",
+    "packages/wizard/src/screens/audit/start/AuditStartScreen.tsx",
+    "packages/wizard/src/screens/audit/start/AuditProgress.tsx"
+  ],
+  "blockers": [],
+  "risks": [
+    "Results and history share the same /audits/:id route, so both link texts go to one page.",
+    "The full screen's useState/effect wiring for onEnd is not covered by a rendered DOM test, because the existing tests use static markup only."
+  ],
+  "handoff": "No type-check or build was run; run pnpm build for the wizard if needed.",
+  "_captured": {
+    "at": "2026-11-03T17:47:41.939Z",
+    "agent_id": "a0078037dfbaf877b",
+    "agent_type": "ai-eos:frontend-engineer"
+  }
+}

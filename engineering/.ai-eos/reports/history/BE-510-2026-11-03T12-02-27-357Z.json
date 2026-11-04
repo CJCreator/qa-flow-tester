@@ -1,0 +1,66 @@
+{
+  "task_id": "BE-510",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-021",
+    "REQ-022",
+    "REQ-019",
+    "REQ-025",
+    "REQ-018"
+  ],
+  "files_inspected": [
+    "packages/runner/src/routes/route.ts",
+    "packages/runner/src/routes/body.ts",
+    "packages/runner/src/routes/audit-documents.ts",
+    "packages/runner/src/routes/audit-settings.ts",
+    "packages/runner/src/routes/audit-share.ts",
+    "packages/runner/tests/audit-edits-routes.test.ts",
+    "packages/types/src/website-audit.ts",
+    "packages/core/src/audit/documents/bundle.ts",
+    "packages/core/src/audit/documents/generate.ts",
+    "packages/core/src/audit/documents/pitch.ts"
+  ],
+  "files_created": [
+    "packages/runner/src/routes/audit-export.ts",
+    "packages/runner/tests/audit-export-routes.test.ts"
+  ],
+  "files_modified": [],
+  "implementation_summary": "auditExportRoutes({store, settings, exportOptions?}) returns three GET rows (export, pitch, owner) with access 'export' taken from AUDIT_API. Each validates query values (400 ERR_INVALID_REQUEST), loads the finished version's result, Page Content, edits and settings, calls exportAudit / exportPitchGlimpse / exportOwnerAudit, and replies with the file: EXPORT_CONTENT_TYPES content type, attachment with a sanitized name, no-store, nosniff. Running gives 409 ERR_AUDIT_RUNNING, unknown or result-less gives 404 ERR_AUDIT_NOT_FOUND. Store and render failures give fixed sentences. No outbound calls.",
+  "tests_executed": [
+    {
+      "name": "CHK-BE-510-UNIT audit-export-routes",
+      "command": "CI=1 pnpm exec vitest run packages/runner/tests/audit-export-routes.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 21 passed (21)"
+    },
+    {
+      "name": "type-check of runner (filtered to audit-export)",
+      "command": "pnpm exec tsc --noEmit -p . (in packages/runner), grep audit-export",
+      "result": "passed",
+      "output_excerpt": "no errors reported for audit-export.ts"
+    }
+  ],
+  "tests_proposed": [
+    "QA-500: real Chromium PDF and real docx output for the three routes",
+    "BE-190 server-level test: access levels and beta refusal for the three rows through the real dispatcher"
+  ],
+  "evidence": [
+    "packages/runner/src/routes/audit-export.ts: auditExportRoutes, rows at the end of the file",
+    "packages/runner/tests/audit-export-routes.test.ts: 21 tests incl. 'makes no fetch call across all three routes'"
+  ],
+  "blockers": [],
+  "risks": [
+    "A version without a stored result (failed) returns 404 ERR_AUDIT_NOT_FOUND with its own sentence; no dedicated error code exists.",
+    "Screenshot embedding logic is a small copy of audit-share.ts's (that file is outside ownership); consider a shared helper.",
+    "Default PDF printer starts its own Chromium per call; not exercised here (QA-500).",
+    "500 replies are { error } without a code, as in the other audit route files.",
+    "A damaged stored settings object reads as defaults silently."
+  ],
+  "handoff": "BE-190: add `export * from './audit-export.js';` to routes/index.ts and `...auditExportRoutes({ store: auditStore, settings: auditSettingsStoreOn(auditStore.backend) })` to the route table (same settings store object as BE-508; leave exportOptions unset in production). Rows are access 'export' with no beta policy, so closed on a beta copy. FE-501: replies are plain file downloads; errors are JSON { error, code }.",
+  "_captured": {
+    "at": "2026-11-03T12:02:27.357Z",
+    "agent_id": "acf93fea3d9531e8c",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

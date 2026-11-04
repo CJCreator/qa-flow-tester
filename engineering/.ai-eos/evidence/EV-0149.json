@@ -1,0 +1,41 @@
+{
+  "evidence_id": "EV-0149",
+  "check_id": "CHK-BE-101-SPIDER",
+  "name": "Spider sitemap/robots seeding through the outbound fetch (Chromium)",
+  "category": "integration",
+  "requirement_ids": [
+    "REQ-047"
+  ],
+  "task_ids": [
+    "BE-101"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/spider-sitemap-outbound.test.ts packages/core/tests/spider-robots.test.ts packages/core/tests/spider-links-and-traps.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  3 passed (3)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0149.log",
+  "log_sha256": "6f4d4500568cfd5353e701349a8710d5d224318c8bc014334439d28e6e14dc6f",
+  "started_at": "2026-11-03T11:54:18.836Z",
+  "finished_at": "2026-11-03T11:57:30.913Z",
+  "duration_ms": 192077,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:904766336e6f9fda6ab356969409a5d7c9c6bfa2cefc41d299813220e206d0d8",
+  "concurrent_tasks": [],
+  "paths": [
+    "fixtures/audit-site/**",
+    "packages/core/src/competitive/robots.ts",
+    "packages/core/src/discovery/deterministic-spider.ts",
+    "packages/core/src/discovery/frontier.ts",
+    "packages/core/src/safe-net.ts",
+    "packages/core/tests/helpers/**",
+    "packages/core/tests/spider-links-and-traps.test.ts",
+    "packages/core/tests/spider-robots.test.ts",
+    "packages/core/tests/spider-sitemap-outbound.test.ts"
+  ],
+  "paths_fingerprint": "git-paths:f66b0d5cd11e133a2f90164c5ca357c9c0e83ff2ce95235c2e82114941343877"
+}

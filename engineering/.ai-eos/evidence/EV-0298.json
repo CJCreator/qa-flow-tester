@@ -1,0 +1,41 @@
+{
+  "evidence_id": "EV-0298",
+  "check_id": "CHK-QA-703-TYPECHECK",
+  "name": "typecheck wizard tests",
+  "category": "typecheck",
+  "requirement_ids": [
+    "REQ-051"
+  ],
+  "task_ids": [
+    "QA-703"
+  ],
+  "command": "pnpm exec tsc -p packages/wizard/tests/tsconfig.typecheck.json --noEmit",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0298.log",
+  "log_sha256": "f95e6eda2d5a5f2927ebf3203d5a952a23722aea43229f24bbcc68eb0099f43e",
+  "started_at": "2026-11-04T03:45:29.426Z",
+  "finished_at": "2026-11-04T03:48:05.491Z",
+  "duration_ms": 156065,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:ae82113bc98d63de43d0954c20f89115c91c08a1222d3d6fc058ccbe621d2823",
+  "concurrent_tasks": [],
+  "paths": [
+    "fixtures/test-app/server.d.ts",
+    "packages/core/src/**",
+    "packages/runner/src/**",
+    "packages/types/src/**",
+    "packages/wizard/src/**",
+    "packages/wizard/tailwind.config.*",
+    "packages/wizard/tests/**",
+    "tsconfig.base.json",
+    "tsconfig.test.json"
+  ],
+  "paths_fingerprint": "git-paths:33d5992fb74684b86ec74be81fd77dee06dc2d0fb721b5f2d4549aaabd092510"
+}

@@ -1,0 +1,79 @@
+{
+  "task_id": "BE-102",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-049"
+  ],
+  "files_inspected": [
+    "packages/runner/src/session/run-slot.ts",
+    "packages/runner/src/session/plan-store.ts",
+    "packages/runner/src/session/checkup-run.ts",
+    "packages/runner/src/routes/audit-crawl.ts",
+    "packages/runner/tests/plan-routes.test.ts",
+    "CONTEXT.md"
+  ],
+  "files_created": [],
+  "files_modified": [
+    "packages/runner/src/routes/plan.ts",
+    "packages/runner/src/server.ts",
+    "packages/runner/tests/route-access-server.test.ts"
+  ],
+  "implementation_summary": "F-030: ensurePlanLoaded (plan.ts and the private copy in server.ts used by GET /api/runner/status) sets 'awaiting-review' only when begin() succeeds and still returns the record. A new helper otherRunBusy() gives a 409 ERR_RUN_IN_PROGRESS body with a plain sentence while session.run.kind is 'audit' or 'benchmark'. approveOnce checks it first. Waiting-plans POST checks it right after reading the body, then takes the slot through begin() with no await after the plan comes off the kept list; if begin() fails the plan goes back on the list and the answer is 409. Generation (one bump from begin), events clear, PLAN_READY broadcast, beta rules and the awaiting-review replacement for 'checkup' are unchanged.",
+  "tests_executed": [
+    {
+      "name": "scoped route/beta suite",
+      "command": "CI=1 pnpm exec vitest run packages/runner/tests/route-table.test.ts packages/runner/tests/route-access.test.ts packages/runner/tests/route-access-server.test.ts packages/runner/tests/beta.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 4 passed (4); Tests 83 passed (83)"
+    },
+    {
+      "name": "typecheck",
+      "command": "pnpm exec tsc --noEmit -p packages/runner/tests/tsconfig.typecheck.json",
+      "result": "passed",
+      "output_excerpt": "exit=0, no diagnostics"
+    },
+    {
+      "name": "F-030 regression block against the old code (fix temporarily reverted, then restored)",
+      "command": "CI=1 pnpm exec vitest run packages/runner/tests/route-access-server.test.ts -t \"F-030\"",
+      "result": "failed",
+      "output_excerpt": "Tests 4 failed | 1 passed: 'expected { isRunning: true, ... } to match { phase: idle, isRunning: false }' and 'expected 200 to be 409'; failure expected, it confirms the tests catch the bug"
+    },
+    {
+      "name": "related plan/session tests (read-only sanity)",
+      "command": "CI=1 pnpm exec vitest run packages/runner/tests/plan-routes.test.ts packages/runner/tests/beta-privacy.test.ts packages/runner/tests/reapproval-roles.test.ts packages/runner/tests/session-state.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 4 passed (4); Tests 27 passed (27)"
+    },
+    {
+      "name": "build core",
+      "command": "pnpm --filter @qa/types --filter @qa/checkers --filter @qa/core run build",
+      "result": "passed",
+      "output_excerpt": "types/checkers/core build: Done"
+    }
+  ],
+  "tests_proposed": [],
+  "evidence": [
+    "packages/runner/src/routes/plan.ts:218-225 ensurePlanLoaded sets 'awaiting-review' only when begin() succeeds",
+    "packages/runner/src/routes/plan.ts:228-239 otherRunBusy()",
+    "packages/runner/src/routes/plan.ts:959 approveOnce checks otherRunBusy before ensurePlanLoaded",
+    "packages/runner/src/routes/plan.ts:1236 waiting-plans POST checks otherRunBusy",
+    "packages/runner/src/routes/plan.ts:1271-1286 waiting-plans takes the slot with begin(); on failure re-parks and answers 409",
+    "packages/runner/src/server.ts:3342-3348 private ensurePlanLoaded (status poll) gated on begin()",
+    "packages/runner/tests/route-access-server.test.ts:446 F-030 describe block (5 tests)"
+  ],
+  "blockers": [],
+  "risks": [
+    "server.ts changed (one condition in private ensurePlanLoaded, used by GET /api/runner/status); the coordinator accepted it.",
+    "GET /api/runner/plan answers 404 while an audit or benchmark holds the slot and the Check-up was idle (getPlan's phase gate unchanged). The Plan is kept and shows again once the slot is free; changing getPlan would be needed to show it during the audit.",
+    "Waiting-plans now claims the slot before setting the old waiting Plan aside and saving the new one. If those disk writes fail, the slot shows awaiting-review for the new run while the stored current plan can still be the old one. The old code had no error handling here either.",
+    "begin() resets the abort and finish controllers on resume; nothing uses them while a Plan awaits review.",
+    "New 409 ERR_RUN_IN_PROGRESS answers on POST /api/runner/plan/approve and POST /api/runner/waiting-plans while an audit or benchmark runs; no other API shape change."
+  ],
+  "handoff": "routes/index.ts untouched (BE-190 can proceed). otherRunBusy() is local to plan.ts. The new tests use port 3657 and the default route table (allRoutes); if BE-190 changes how plan rows are registered, the F-030 block in route-access-server.test.ts must still reach /api/runner/plan, /plan/approve, /waiting-plans and /status without a key on loopback. Reviewer: decide whether GET plan should show the Plan during an audit.",
+  "_captured": {
+    "at": "2026-11-03T17:46:41.652Z",
+    "agent_id": "a9c764e55d3d4c149",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

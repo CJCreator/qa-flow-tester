@@ -24,11 +24,61 @@ export interface MarketingCheckResult {
   findingId?: string;
 }
 
+/**
+ * The ten marketing signals of a Website Audit (REQ-015, FR-15), in report order. Trust signals are reviews
+ * or ratings, testimonials and certifications; local signals are NAP, a map embed and LocalBusiness schema (Q-27).
+ */
+export const MARKETING_SIGNALS = [
+  { key: 'on-page-seo', label: 'On-page SEO' },
+  { key: 'schema', label: 'Schema (structured data)' },
+  { key: 'internal-linking', label: 'Internal linking' },
+  { key: 'social-tags', label: 'Social tags' },
+  { key: 'analytics', label: 'Analytics and tags' },
+  { key: 'ctas', label: 'Calls to action' },
+  { key: 'lead-forms', label: 'Lead forms' },
+  { key: 'click-to-call', label: 'Click-to-call' },
+  { key: 'trust-signals', label: 'Trust signals' },
+  { key: 'local-signals', label: 'Local signals (NAP and map)' },
+] as const;
+
+export type MarketingSignalKey = (typeof MARKETING_SIGNALS)[number]['key'];
+
+/** The business name, address and phone a page shows, with the page it was read from (REQ-015 AC-4). */
+export interface NapDetails {
+  urlPath: string;
+  name?: string;
+  address?: string;
+  phone?: string;
+}
+
+/**
+ * One marketing signal and what the audit found: 'found' or 'not-found' on the pages read, or
+ * 'not-checked' when no page could say. "Found" says it is there, never that it is good (ADR 0018).
+ */
+export interface MarketingSignal {
+  key: MarketingSignalKey;
+  label: string;
+  status: 'found' | 'not-found' | 'not-checked';
+  /** The pages it was found on (a tel: link's page for click-to-call); empty when not found. */
+  pages: string[];
+  /** What was found or missed, or why it was not looked for, in fixed wording. */
+  detail: string;
+  /** Local signals only: each NAP found, with its page. */
+  nap?: NapDetails[];
+  /** The audit findings behind it, when there are any. */
+  findingIds?: string[];
+}
+
 /** The marketing basics, one line each, so a score is never all there is to read. */
 export interface MarketingReview {
   /** The pages the basics were read from. */
   readPages: string[];
   checks: MarketingCheckResult[];
+  /**
+   * Website Audit: one entry per signal in `MARKETING_SIGNALS`, in that order. Absent in Check-up reports,
+   * which list only `checks`.
+   */
+  signals?: MarketingSignal[];
 }
 
 export interface AspectScore {

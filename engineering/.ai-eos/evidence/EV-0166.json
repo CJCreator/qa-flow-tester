@@ -1,0 +1,50 @@
+{
+  "evidence_id": "EV-0166",
+  "check_id": "CHK-BE-605-UNIT",
+  "name": "preview generator, sanitiser and route tests",
+  "category": "security",
+  "requirement_ids": [
+    "REQ-024"
+  ],
+  "task_ids": [
+    "BE-605"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/audit-preview.test.ts packages/core/tests/audit-preview-sanitize.test.ts packages/runner/tests/audit-preview-routes.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  3 passed (3)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0166.log",
+  "log_sha256": "383afe9cb40d7b893613d1347425673ea608ab2c934d3072679738f030489b8c",
+  "started_at": "2026-11-03T12:24:08.226Z",
+  "finished_at": "2026-11-03T12:24:25.953Z",
+  "duration_ms": 17727,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:f73e55e9003929f24804def1ae310b873e6b347ca37fdf7b473b4c221de0c951",
+  "concurrent_tasks": [
+    "BE-204"
+  ],
+  "paths": [
+    "packages/core/src/audit/preview/**",
+    "packages/core/src/audit/store/**",
+    "packages/core/src/safe-net.ts",
+    "packages/core/tests/audit-preview-sanitize.test.ts",
+    "packages/core/tests/audit-preview.test.ts",
+    "packages/runner/src/routes/audit-preview.ts",
+    "packages/runner/src/routes/route.ts",
+    "packages/runner/tests/audit-preview-routes.test.ts",
+    "packages/types/src/ai.ts",
+    "packages/types/src/website-audit.ts"
+  ],
+  "paths_fingerprint": "git-paths:7d08118e8268928ceb1a70c85628f5987f5842748dc37301b6feb53bc80c440e",
+  "scoped_fingerprint": "git:a7b36e565025d1b9da32356ad14f801b5de32eb4f09297d7c5c7b9c8d265f224",
+  "excluded_owned": [
+    "packages/core/src/audit/crawl/crawl.ts",
+    "packages/core/src/audit/crawl/index.ts",
+    "packages/core/tests/audit-crawl.test.ts"
+  ]
+}

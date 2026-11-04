@@ -1,0 +1,54 @@
+{
+  "evidence_id": "EV-0194",
+  "check_id": "CHK-QA-706-RUNNER-BROWSER",
+  "name": "runner-server and url-first files",
+  "category": "integration",
+  "requirement_ids": [
+    "REQ-053",
+    "REQ-046"
+  ],
+  "task_ids": [
+    "QA-706"
+  ],
+  "command": "pnpm exec vitest run packages/runner/tests/runner-server.test.ts packages/runner/tests/url-first.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "FAIL",
+  "exit_code": 1,
+  "timed_out": false,
+  "actual_result": "exit code 1; stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve · [QA Orchestrator] Executing PAGE-005 (\"page-visit\") on 375px as visitor...",
+  "failure_details": "\nstdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent\n[QA Orchestrator] Executing PAGE-002 (\"page-visit\") on 1440px as visitor...\n\nstdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent\n[QA Orchestrator] Executing PAGE-003 (\"page-visit\") on 1440px as visitor...\n\nstdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve\n[DiscoveryAgent] Spider found 10 pages, 3 forms, 0 sensitive actions.\n\nstdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve\n[DiscoveryAgent] Discovery draft saved to C:\\Users\\HP\\AppData\\Local\\Temp\\qa-test-runner-server-tOHsvy\\report\\runs\\run-1793711994826\\discovery-draft.json\n\nstdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve\n[QA Orchestrator] Running Pre-flight health check on http://localhost:65157...\n\nstdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve\n[QA Orchestrator] Pre-flight check PASSED.\n[QA Orchestrator] Executing PAGE-001 (\"page-visit\") on 375px as visitor...\n\nstdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent\n[QA Orchestrator] Executing PAGE-004 (\"page-visit\") on 1440px as visitor...\n\nstdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve\n[QA Orchestrator] Executing PAGE-002 (\"page-visit\") on 375px as visitor...\n\nstdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent\n[QA Orchestrator] Executing PAGE-005 (\"page-visit\") on 1440px as visitor...\n\nstdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve\n[QA Orchestrator] Executing PAGE-003 (\"page-visit\") on 375px as visitor...\n\nstdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve\n[QA Orchestrator] Executing PAGE-004 (\"page-visit\") on 375px as visitor...\n\nstdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent\n[QA Orchestrator] Executing PAGE-006 (\"page-visit\") on 1440px as visitor...\n\nstdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve\n[QA Orchestrator] Executing PAGE-005 (\"page-visit\") on 375px as visitor...",
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0194.log",
+  "log_sha256": "4b823f887b059f3c8fd611bfdb545bf5d37261308f522b0495974c56916a4e64",
+  "started_at": "2026-11-03T13:18:38.906Z",
+  "finished_at": "2026-11-03T13:21:57.710Z",
+  "duration_ms": 198804,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:117b5f41b54bb296bec651f6fa11e47319c53afefad10dc229e013a603079324",
+  "concurrent_tasks": [
+    "BE-603",
+    "BE-704",
+    "QA-705"
+  ],
+  "paths": [
+    "fixtures/test-app/**",
+    "packages/checkers/src/**",
+    "packages/core/src/**",
+    "packages/runner/src/**",
+    "packages/runner/tests/runner-server.test.ts",
+    "packages/runner/tests/url-first.test.ts",
+    "packages/types/src/**",
+    "vitest.config.ts",
+    "vitest.workspace.ts"
+  ],
+  "paths_fingerprint": "git-paths:23b6becf1035dc74cb4befc089917cc2e67e190acd44cf217a4659387af58b76",
+  "scoped_fingerprint": "git:3a2512c6ccb90e16817bca13925136f2ac10cf168e168ae62dd2b855b6db33f7",
+  "excluded_owned": [
+    "docs/CONFIGURATION.md",
+    "packages/runner/src/routes/audit-rerun.ts",
+    "packages/runner/tests/audit-rerun-route.test.ts",
+    "packages/wizard/tests/wizard-e2e.test.ts"
+  ],
+  "concurrent": true
+}

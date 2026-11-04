@@ -1,0 +1,41 @@
+{
+  "evidence_id": "EV-0340",
+  "check_id": "CHK-BE-104-CHECKERS",
+  "name": "SEO and security-depth checkers with injected FetchFn (Chromium)",
+  "category": "integration",
+  "requirement_ids": [
+    "REQ-047"
+  ],
+  "task_ids": [
+    "BE-104"
+  ],
+  "command": "pnpm exec vitest run packages/checkers/tests/seo.test.ts packages/checkers/tests/security-depth.test.ts packages/core/tests/orchestrator-access-wiring.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  3 passed (3)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0340.log",
+  "log_sha256": "e0a960a7b70b347d0dd9ef6da6834ee56929139dbe9a08c46e0f0ee41bc40de2",
+  "started_at": "2026-11-04T05:59:07.962Z",
+  "finished_at": "2026-11-04T05:59:27.473Z",
+  "duration_ms": 19511,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:69fb226175839158083b8bd4d47e58c478a2d7d5c1e3bc5d15c27fbe743460cc",
+  "concurrent_tasks": [],
+  "paths": [
+    "packages/checkers/src/security-depth.ts",
+    "packages/checkers/src/seo.ts",
+    "packages/checkers/src/site-root.ts",
+    "packages/checkers/tests/security-depth.test.ts",
+    "packages/checkers/tests/seo.test.ts",
+    "packages/core/src/checker-fetch.ts",
+    "packages/core/src/orchestrator.ts",
+    "packages/core/src/safe-net.ts",
+    "packages/core/tests/orchestrator-access-wiring.test.ts"
+  ],
+  "paths_fingerprint": "git-paths:583a7f5477abda73304be527de32a291d656bc0f364345f7a8a6d6af1a97f594"
+}

@@ -1,0 +1,44 @@
+{
+  "evidence_id": "EV-0362",
+  "check_id": "CHK-QA-200-INTEGRATION",
+  "name": "Audit crawl sends only reads",
+  "category": "integration",
+  "requirement_ids": [
+    "REQ-003",
+    "REQ-006",
+    "REQ-036"
+  ],
+  "task_ids": [
+    "QA-200"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/audit-crawl-read-only.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0362.log",
+  "log_sha256": "639cb4cb8a33bbe50f6f3f75c1dcecd4485ba41ff6e70d80c013f6f2211ca04c",
+  "started_at": "2026-11-04T07:32:06.551Z",
+  "finished_at": "2026-11-04T07:32:59.005Z",
+  "duration_ms": 52454,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:a106b3aa880f48fb3fccd478c4e7bbc2b0039a0fd1ac734eacd1960d53185922",
+  "concurrent_tasks": [],
+  "paths": [
+    "fixtures/audit-site/**",
+    "packages/core/src/audit/crawl/**",
+    "packages/core/src/browser.ts",
+    "packages/core/src/discovery/deterministic-spider.ts",
+    "packages/core/src/discovery/frontier.ts",
+    "packages/core/src/live-site.ts",
+    "packages/core/src/navigate.ts",
+    "packages/core/src/safe-net.ts",
+    "packages/core/tests/audit-crawl-read-only.test.ts",
+    "packages/core/tests/helpers/audit-site-server.ts"
+  ],
+  "paths_fingerprint": "git-paths:70836e74bfc96f8a618876ecf02a0890c360694693d456f1e8a1b7372bd4ec21"
+}

@@ -1,0 +1,54 @@
+{
+  "evidence_id": "EV-0208",
+  "check_id": "CHK-BE-607-UNIT",
+  "name": "deploy wiring and guide test",
+  "category": "documentation",
+  "requirement_ids": [
+    "REQ-029",
+    "REQ-028"
+  ],
+  "task_ids": [
+    "BE-607"
+  ],
+  "command": "pnpm exec vitest run packages/runner/tests/deploy-audit-store.test.ts packages/runner/tests/release-workflow.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  2 passed (2)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0208.log",
+  "log_sha256": "87c12401f02b2fbe0e2b5cdee01d47ee5383cde75125406254cce5419ae20e69",
+  "started_at": "2026-11-03T17:38:19.344Z",
+  "finished_at": "2026-11-03T17:38:25.040Z",
+  "duration_ms": 5696,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:d1c8ef94eee56de5a79625bc8849648efe6b608460208ecc82adfbb73dda6524",
+  "concurrent_tasks": [
+    "BE-102",
+    "BE-204"
+  ],
+  "paths": [
+    ".github/workflows/deploy.yml",
+    "docs/DEPLOYMENT.md",
+    "packages/runner/tests/deploy-audit-store.test.ts",
+    "packages/runner/tests/release-workflow.test.ts"
+  ],
+  "paths_fingerprint": "git-paths:0ef022976239e871038b66e1237352fb03b3d73c41716d2652281123bfb4f959",
+  "scoped_fingerprint": "git:006197a06f22e0a1ce41b77a6ec21a1af74b944d5d23f575f3115c43eb50b598",
+  "excluded_owned": [
+    "packages/core/src/audit/crawl/crawl.ts",
+    "packages/core/src/audit/crawl/index.ts",
+    "packages/core/tests/audit-crawl.test.ts",
+    "packages/runner/src/routes/index.ts",
+    "packages/runner/src/routes/plan.ts",
+    "packages/runner/src/routes/route.ts",
+    "packages/runner/src/server.ts",
+    "packages/runner/tests/beta.test.ts",
+    "packages/runner/tests/route-access-server.test.ts",
+    "packages/runner/tests/route-access.test.ts",
+    "packages/runner/tests/route-table.test.ts"
+  ]
+}

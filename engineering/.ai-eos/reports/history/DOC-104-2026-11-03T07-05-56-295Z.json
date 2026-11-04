@@ -1,0 +1,59 @@
+{
+  "task_id": "DOC-104",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-050"
+  ],
+  "files_inspected": [
+    "docs/adr/0032-google-cloud-only-hosting.md",
+    "docs/adr/0033-website-audit-entry-point.md",
+    "CONTEXT.md",
+    "engineering/decisions.md",
+    "engineering/requirements.md",
+    "engineering/plan.md",
+    "engineering/architecture.md",
+    ".github/workflows/deploy.yml",
+    "packages/runner/tests/checkup-docs.test.ts",
+    "packages/runner/tests/scan-commit-secrets.test.ts"
+  ],
+  "files_created": [
+    "docs/adr/0036-hosted-audit-storage-and-shared-links.md",
+    "packages/runner/tests/adr-0036.test.ts"
+  ],
+  "files_modified": [
+    "docs/adr/0032-google-cloud-only-hosting.md"
+  ],
+  "implementation_summary": "Wrote ADR 0036 (Accepted, 2026-11-03, D-003/Q-50 answer 'adopt'). Hosted Website Audit data lives in a Cloud Storage always-free bucket in us-central1, enabled by AUDIT_STORE_BUCKET; local runs keep <RUNNER_DATA_DIR>/audit-store/. One folder per Website Audit and version. Only the runner's service account can reach the bucket (role on that bucket only, uniform bucket-level access, public access prevention, no signed URLs). Q-30 retention: kept until the tool user deletes the Website Audit; deleting removes every version, edit, file, Shortlist entry, Shared Link and snapshot, and Helper grant; versioning and soft delete are off. Shared Links have unguessable IDs, point to a snapshot, expire after 30 days and can be revoked. /s/:linkId is a runner route with access level public in the route table (BE-102), GET only; 404 for unknown or badly formed IDs, 410 when expired, revoked or deleted; reads only the shared snapshot; noindex, no-referrer, no-store, nosniff, strict CSP (default-src 'none', no script). Records the $0 hosting vs /tmp (AR-09) trade-off and the Q-39/Q-50 tension, with alternatives. ADR 0036 names ADR 0032 as amended, and a back-link line was added to ADR 0032. Added a docs contract test for the required content.",
+  "tests_executed": [
+    {
+      "name": "ADR 0036 docs contract",
+      "command": "pnpm exec vitest run packages/runner/tests/adr-0036.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 10 passed (10)"
+    }
+  ],
+  "tests_proposed": [
+    "BE-604 integration: /s/:linkId returns 410 for expired/revoked/deleted links, 404 for malformed IDs, and sets X-Robots-Tag noindex plus the ADR's CSP header",
+    "Store test: deleting a Website Audit removes its Shared Link index entries"
+  ],
+  "evidence": [
+    "docs/adr/0036-hosted-audit-storage-and-shared-links.md:3 (Status line with D-003, Q-50, 2026-11-03, Amends 0032)",
+    "docs/adr/0032-google-cloud-only-hosting.md:4 (Amended by 0036)",
+    "engineering/requirements.md:1624 and :1636 (D-003 answer 'adopt', 2026-11-03)",
+    "vitest: packages/runner/tests/adr-0036.test.ts 10 passed"
+  ],
+  "blockers": [],
+  "risks": [
+    "Free-tier figure (5 GB of Standard storage a month in us-central1) is from my own knowledge, not checked against current Google pricing.",
+    "Details I chose that the task did not name (exact CSP string, header set, soft delete off, Shared Link index outside the audit's folder) bind BE-600/601/604 and the deploy task.",
+    "ADR 0033 names 0037 'helper sign-in' while the plan uses 0037 for route access levels; ADR 0036 does not cite 0037.",
+    "The Avoid-word test checks a chosen subset; generic words (run, user, project) are left out because CONTEXT.md uses them in other senses."
+  ],
+  "handoff": "Website Audit store tasks (BE-600, BE-601, BE-604, the deploy/DEPLOYMENT.md task) should depend on DOC-104 (AC-2, checked by the orchestrator at merge). BE-604 must set the ADR's /s/:linkId headers and status codes (404 unknown or malformed, 410 expired/revoked/deleted, noindex, no-store, no-referrer, nosniff, CSP default-src 'none') and read only the shared snapshot. The deploy task must create the bucket in us-central1 with versioning off, soft delete off (0 days), uniform bucket-level access and public access prevention, grant the runner's service account a role on that bucket only, and pass AUDIT_STORE_BUCKET to Cloud Run.",
+  "_captured": {
+    "at": "2026-11-03T07:05:56.295Z",
+    "agent_id": "ab1a450a1a79d51bc",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

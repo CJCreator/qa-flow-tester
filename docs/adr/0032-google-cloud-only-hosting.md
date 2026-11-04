@@ -1,6 +1,7 @@
 # 0032: Everything Runs on Google Cloud Run; Render and Vercel Are Retired
 
 Status: Accepted, 2026-10-26. Amends the hosting parts of [0012](0012-hosted-runner-github-actions.md).
+Amended by [0036](0036-hosted-audit-storage-and-shared-links.md) (2026-11-03): hosted Website Audit data and Shared Links live in a Cloud Storage always-free bucket, not in `/tmp`.
 
 ## Context
 ADR 0012 put the static front end on Vercel and the online copy on Render's free plan. Render's free plan sleeps,

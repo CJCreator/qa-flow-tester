@@ -1,0 +1,40 @@
+/** The improved-homepage preview (REQ-024): prompt, AI generator and sanitiser. Node only. */
+export {
+  generatePreview,
+  sniffImageType,
+  PREVIEW_FILE_NAME,
+  PREVIEW_AI_TIMEOUT_MS,
+  PREVIEW_IMAGE_MAX_BYTES,
+  PREVIEW_IMAGE_TIMEOUT_MS,
+  type GeneratePreviewOptions,
+  type GeneratedPreview,
+  type PreviewImageFetch,
+  type PreviewImageResponse,
+  type PreviewProblem,
+} from './generate.js';
+export {
+  previewFacts,
+  previewMessages,
+  previewRetryPrompt,
+  MAX_PREVIEW_IMAGES,
+  type PreviewFacts,
+  type PreviewInput,
+  type PreviewMenuLink,
+} from './prompt.js';
+export {
+  sanitizePreviewHtml,
+  renderPreviewDocument,
+  finalizePreviewNodes,
+  previewNodesText,
+  previewNote,
+  cleanStylesheet,
+  cleanDeclarations,
+  cleanHref,
+  styleHashes,
+  previewCspForHtml,
+  MAX_PREVIEW_SOURCE_CHARS,
+  MAX_PREVIEW_CSS_CHARS,
+  type PreviewNode,
+  type SanitizedPreview,
+  type PreviewDocumentInput,
+} from './sanitize.js';

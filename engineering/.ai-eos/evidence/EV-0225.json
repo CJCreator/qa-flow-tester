@@ -1,0 +1,44 @@
+{
+  "evidence_id": "EV-0225",
+  "check_id": "CHK-BE-500-UNIT",
+  "name": "edit overlay unit tests",
+  "category": "unit",
+  "requirement_ids": [
+    "REQ-020"
+  ],
+  "task_ids": [
+    "BE-500"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/audit-doc-edits.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0225.log",
+  "log_sha256": "4cb82ca75a6e68abe5dbeeaae17b55ba1dc0bc8fef00370e71ec7cf8d336c18f",
+  "started_at": "2026-11-03T18:11:58.433Z",
+  "finished_at": "2026-11-03T18:12:06.015Z",
+  "duration_ms": 7582,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:cc29640ed067fd362189f09316ca48db2ef3586308d299d14390fb5afb835156",
+  "concurrent_tasks": [
+    "BE-612"
+  ],
+  "paths": [
+    "packages/core/src/audit/documents/edits.ts",
+    "packages/core/tests/audit-doc-edits.test.ts",
+    "packages/core/tests/helpers/audit-doc-fixture.ts",
+    "packages/types/src/website-audit.ts"
+  ],
+  "paths_fingerprint": "git-paths:5d5f0fdb738931aabedab733e5d8cda0d1a2e8a24a091e1e1d46296bf14753b2",
+  "scoped_fingerprint": "git:5281a536a2f346f24a3d90d56b0ca3a2d630565e270e63d74da26b608d16e951",
+  "excluded_owned": [
+    "packages/runner/src/cli.ts",
+    "packages/runner/src/server.ts",
+    "packages/runner/tests/server-audit-wiring.test.ts"
+  ]
+}

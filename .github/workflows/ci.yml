@@ -151,3 +151,42 @@ jobs:
           tar -xzf "$tarball" gitleaks
       - name: Scan history
         run: '"$RUNNER_TEMP/gitleaks" git --config .gitleaks.toml --redact --no-banner --exit-code 1 .'
+
+  # Scans what ships for AI provider keys (Anthropic, OpenAI, Google AI, OpenRouter): the wizard bundle, and the runner
+  # image's /app folder (everything its Dockerfile copies and builds) with the image's environment and build history.
+  # Prints the file and pattern name only, never a value.
+  build-secret-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the wizard
+        run: pnpm --filter @qa/types run build && pnpm --filter @qa/wizard run build
+
+      - name: Scan the wizard bundle
+        run: node scripts/scan-build-secrets.mjs packages/wizard/dist
+
+      - name: Build the runner image
+        run: docker build -f packages/runner/Dockerfile -t qa-runner:secret-scan .
+
+      - name: Export the runner image's files
+        run: |
+          out="$RUNNER_TEMP/runner-image"
+          mkdir -p "$out"
+          id=$(docker create qa-runner:secret-scan)
+          docker cp "$id:/app" "$out/app"
+          docker rm "$id" > /dev/null
+          docker image inspect qa-runner:secret-scan > "$out/image-config.json"
+          docker history --no-trunc qa-runner:secret-scan > "$out/image-history.txt"
+
+      - name: Scan the runner image
+        run: node scripts/scan-build-secrets.mjs "$RUNNER_TEMP/runner-image"

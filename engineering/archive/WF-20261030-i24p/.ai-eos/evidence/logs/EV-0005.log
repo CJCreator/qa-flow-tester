@@ -1,0 +1,680 @@
+# AI-EOS evidence EV-0005
+check: CHK-NODE-UNIT (full vitest suite)
+command: pnpm test
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-10-31T06:09:33.656Z
+finished: 2026-10-31T06:19:33.975Z (600319 ms)
+exit_code: null (timed out)
+verdict: FAIL
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ packages/wizard/tests/sources-screens.test.tsx (27 tests) 5560ms
+   ✓ new check-up screen: Sources > lists the Product Context files and the docs address under More options 1787ms
+   ✓ Plan Review: Sources > shows the Source, role confirmation, Not found in app and Roles not tested 2069ms
+   ✓ Report: Sources > shows the judgement bucket with Accept, issues downloads, documented count and roles not tested 1385ms
+ ✓ packages/core/tests/playwright-export.test.ts (24 tests) 110ms
+ ✓ packages/core/tests/complete-plan.test.ts (17 tests) 113ms
+stdout | packages/runner/tests/wizard-endpoints.test.ts > Runner endpoints for the wizard > Task 0.1: productContext > writes productContext to a file and hands its path to discovery
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3288/clean/...
+
+stdout | packages/runner/tests/wizard-endpoints.test.ts > Runner endpoints for the wizard > Task 0.1: productContext > writes productContext to a file and hands its path to discovery
+[QA Orchestrator] Pre-flight check PASSED.
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > never throws away a plan waiting for review unless asked to
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3601/...
+
+stdout | packages/runner/tests/wizard-endpoints.test.ts > Runner endpoints for the wizard > Task 0.1: productContext > writes productContext to a file and hands its path to discovery
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-runner-wizard\runs\run-1793427001510...
+
+stdout | packages/runner/tests/wizard-endpoints.test.ts > Runner endpoints for the wizard > Task 0.1: productContext > writes productContext to a file and hands its path to discovery
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > refuses an address that is not http or https
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3186...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > refuses an address that is not http or https
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-DEFAULT-001 ("landing-verification") on 375px as anonymous...
+
+stdout | packages/runner/tests/wizard-endpoints.test.ts > Runner endpoints for the wizard > Task 0.1: productContext > passes no context file when productContext is omitted
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3288/clean/...
+
+stdout | packages/runner/tests/wizard-endpoints.test.ts > Runner endpoints for the wizard > Task 0.1: productContext > passes no context file when productContext is omitted
+[QA Orchestrator] Pre-flight check PASSED.
+
+stdout | packages/runner/tests/beta.test.ts > beta limits: a runner that is not a beta > beta limits: a runner that is not a beta is never limited
+[QA Orchestrator] Running Pre-flight health check on http://127.0.0.1:9/...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3186...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-DEFAULT-001 ("landing-verification") on 375px as anonymous...
+
+stdout | packages/runner/tests/wizard-endpoints.test.ts > Runner endpoints for the wizard > Task 0.1: productContext > passes no context file when productContext is omitted
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-runner-wizard\runs\run-1793427007156...
+
+ ✓ packages/runner/tests/beta.test.ts (24 tests) 4394ms
+   ✓ A runner shared as a beta > keeps a tester’s key to their own session, in memory only 301ms
+   ✓ A runner shared as a beta > never gives a tester the made-up journeys of the test AI 376ms
+   ✓ A runner shared as a beta > turns away a request body that is far too large 325ms
+   ✓ beta limits: a runner that is not a beta > beta limits: a runner that is not a beta is never limited 2110ms
+stdout | packages/runner/tests/wizard-endpoints.test.ts > Runner endpoints for the wizard > Task 0.1: productContext > passes no context file when productContext is omitted
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > never throws away a plan waiting for review unless asked to
+[DiscoveryAgent] Spider found 3 pages, 0 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > never throws away a plan waiting for review unless asked to
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-checkups\report\runs\run-1793427001901\discovery-draft.json
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > never throws away a plan waiting for review unless asked to
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3601/...
+
+ ✓ packages/runner/tests/route-inventory.test.ts (66 tests) 9555ms
+   ✓ route inventory (T-203) > 'POST' '/api/runner/ai-estimate' is matched (not the generic 404) 2052ms
+   ✓ route inventory (T-203) > 'POST' '/api/ai/settings' is matched (not the generic 404) 386ms
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Executing TC-DEFAULT-001 ("landing-verification") on 768px as anonymous...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Executing TC-DEFAULT-001 ("landing-verification") on 768px as anonymous...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > never throws away a plan waiting for review unless asked to
+[DiscoveryAgent] Spider found 3 pages, 0 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > never throws away a plan waiting for review unless asked to
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-checkups\report\runs\run-1793427025924\discovery-draft.json
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > keeps the plan when stop is pressed during review, and runs one approval once
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3601/...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > keeps the plan when stop is pressed during review, and runs one approval once
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > stopping testing keeps the plan, which can be approved again
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3601/...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > stopping testing keeps the plan, which can be approved again
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > stopping testing keeps the plan, which can be approved again
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3601/...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > stopping testing keeps the plan, which can be approved again
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Executing TC-DEFAULT-001 ("landing-verification") on 1440px as anonymous...
+
+ ✓ packages/runner/tests/domain-proof.test.ts (15 tests) 5405ms
+   ✓ POST /api/runner/domain-proof on a shared copy > preflight on a shared copy ignores the x-test-copy header and checks every hop 4299ms
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3186...
+
+ ✓ packages/wizard/tests/translate.test.ts (37 tests) 86ms
+ ✓ packages/checkers/tests/security-depth.test.ts (26 tests) 142ms
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-runner-report\runs\run-1793427006870...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > scans, shows the plan, and keeps it waiting when you leave it
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3485/...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > stopping testing keeps the plan, which can be approved again
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3186...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > stopping testing keeps the plan, which can be approved again
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > stopping testing keeps the plan, which can be approved again
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3186...
+
+ ❯ packages/checkers/tests/security.test.ts (24 tests) 130716ms
+   ✓ SecurityChecker > forms with password fields > flags a sign-in form that is sent with GET, said or implied 7606ms
+   ✓ SecurityChecker > forms with password fields > leaves alone forms sent with POST, and single-page-app forms its own script sends 2936ms
+   ✓ SecurityChecker > mixed content from CSS and scripts > flags an http:// request the page made that no HTML attribute shows 2954ms
+   ✓ SecurityChecker > passive CORS and CSRF checks (QSP-010) > flags a POST form with no token, by action path only 1543ms
+   ✓ SecurityChecker > passive CORS and CSRF checks (QSP-010) > leaves a form with a hidden token, a meta token, a GET form or a sign-in form alone 10712ms
+   ✓ SecurityChecker > passive CORS and CSRF checks (QSP-010) > a SameSite=Lax cookie suppresses the finding 3274ms
+ ❯ packages/runner/tests/wizard-endpoints.test.ts (17 tests | 2 failed) 136167ms
+   ✓ Runner endpoints for the wizard > Task 0.1: productContext > writes productContext to a file and hands its path to discovery 5805ms
+   ✓ Runner endpoints for the wizard > Task 0.1: productContext > passes no context file when productContext is omitted 3156ms
+   ✓ Runner endpoints for the wizard > Pre-flight check > reports reachable, unreachable and invalid URLs 4111ms
+   ✓ Runner endpoints for the wizard > Pre-flight check > rewrites localhost targets when running in a container 4376ms
+   × Runner endpoints for the wizard > Task 5.2: safe-public runs > scans read-only: no discovery, no orchestrator, no mutating requests 49245ms
+     → fetch failed
+   × Runner endpoints for the wizard > Task 5.2: safe-public runs > serves report.md and findings.json byte-for-byte, including for a run with zero findings 10865ms
+     → expected [ …(3) ] to deeply equal []
+   ✓ Runner endpoints for the wizard > Settings, the AI estimate, and marking problems > says the key was not recognised when a run starts with a rejected OpenRouter key 564ms
+   ✓ Runner endpoints for the wizard > Settings, the AI estimate, and marking problems > keeps the screen sizes a check-up starts with 389ms
+   ✓ Runner endpoints for the wizard > Settings, the AI estimate, and marking problems > marks a problem as not a problem: the report hides it, the site remembers it, and it can be undone 53924ms
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > stopping testing keeps the plan, which can be approved again
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 1440px as visitor...
+
+ ✓ packages/core/tests/safe-net.test.ts (21 tests) 50ms
+ ❯ packages/checkers/tests/performance.test.ts (20 tests) 51807ms
+   ✓ PerformanceChecker > in a real browser > reads a real LCP and a real interaction time from the observers 3222ms
+   ✓ PerformanceChecker > in a real browser > loads the page repeatedly in a throttled tab and reports the median with its spread 17591ms
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > stopping testing keeps the plan, which can be approved again
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > stopping testing keeps the plan, which can be approved again
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > scans, shows the plan, and keeps it waiting when you leave it
+[DiscoveryAgent] Spider found 11 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3190/...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > scans, shows the plan, and keeps it waiting when you leave it
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-wizard-e2e\runs\run-1793427095027\discovery-draft.json
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3485/...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3485/...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 375px as visitor...
+
+ ✓ packages/runner/tests/beta-privacy.test.ts (11 tests) 6653ms
+   ✓ On the shared copy, a visitor sees only their own check-up > lists only a visitor’s own past check-ups and opens only those 1194ms
+   ✓ On the shared copy, a visitor sees only their own check-up > sends a run’s progress only to the visitor who started it 425ms
+   ✓ On the shared copy, a visitor sees only their own check-up > never parks another visitor’s waiting plan when a plan is unparked 523ms
+   ✓ On the shared copy, a visitor sees only their own check-up > refuses evidence of another visitor’s run reached through a ".." in the path 611ms
+   ✓ On the shared copy, a visitor sees only their own check-up > keeps what is remembered about a site to the visitor who checked it 758ms
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[DiscoveryAgent] Spider found 10 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3485/...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-runner-report\runs\run-1793427110384\discovery-draft.json
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3186...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 375px as visitor...
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > regression: session expiry mid-run reports session-expired and skips with fixed wording
+[QA Orchestrator] Running Pre-flight health check on http://localhost:54403...
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > regression: session expiry mid-run reports session-expired and skips with fixed wording
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-EXPIRY-1 ("expiring-flow") on 1440px as manager...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > stopping testing keeps the plan, which can be approved again
+[QA Orchestrator] Executing NAV-001 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > stopping testing keeps the plan, which can be approved again
+[QA Orchestrator] Executing NAV-001 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > stopping testing keeps the plan, which can be approved again
+[QA Orchestrator] Executing NAV-002 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > stopping testing keeps the plan, which can be approved again
+[QA Orchestrator] Executing NAV-001 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > stopping testing keeps the plan, which can be approved again
+[QA Orchestrator] Executing NAV-002 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[DiscoveryAgent] Spider found 10 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-url-first\runs\run-1793427149570\discovery-draft.json
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > stopping testing keeps the plan, which can be approved again
+[QA Orchestrator] Executing NAV-003 ("navigation") on 1440px as visitor...
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > regression: session expiry mid-run reports session-expired and skips with fixed wording
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-auth-crawl-e2e\expiry-run...
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > regression: session expiry mid-run reports session-expired and skips with fixed wording
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3190/...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > stopping testing keeps the plan, which can be approved again
+[QA Orchestrator] Executing NAV-002 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > stopping testing keeps the plan, which can be approved again
+[QA Orchestrator] Executing NAV-003 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > stopping testing keeps the plan, which can be approved again
+[QA Orchestrator] Executing NAV-003 ("navigation") on 1440px as visitor...
+
+ ❯ packages/runner/tests/runner-server.test.ts (9 tests | 4 failed) 212133ms
+   ✓ RunnerServer > refuses an address that is not http or https 439ms
+   × RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report 50437ms
+     → expected true to be false // Object.is equality
+   ✓ RunnerServer > never serves saved sign-in sessions, which hold live session cookies 441ms
+   × RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve 32758ms
+     → expected 'scanning' to be 'awaiting-review' // Object.is equality
+   × RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart 19369ms
+     → fetch failed
+   × RunnerServer > runs straight through to completion when skipReview: true is provided 101885ms
+     → fetch failed
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > stopping testing keeps the plan, which can be approved again
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-checkups\report\runs\run-1793427025924...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 768px as visitor...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > stopping testing keeps the plan, which can be approved again
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > stopping testing keeps the plan, which can be approved again
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-checkups\report\runs\run-1793427025924...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > stopping testing keeps the plan, which can be approved again
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > stopping testing keeps the plan, which can be approved again
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-checkups\report\runs\run-1793427025924...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > stopping testing keeps the plan, which can be approved again
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > Test again tests at once with the approved plan when nothing on the site changed
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3601/...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > sign-in consent is enforced beyond discovery > approving a consented plan whose sign-in details are gone is refused and sends nothing
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3291/...
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: an ordinary page with a password field is recorded, not called a sign-in wall (LC-002)
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:54403/account...
+
+ ✓ packages/core/tests/signin-determinism.test.ts (9 tests) 60057ms
+   ✓ PreFlightChecker deterministic sign-in (T-110) > /lab/spa-login: sign-in with fixture credentials succeeds after delayed form injection 10739ms
+   ✓ PreFlightChecker deterministic sign-in (T-110) > wrong password: returns wrong-details in 1 attempt with failedStep post-submit-check (no retry) 13967ms
+   ✓ PreFlightChecker deterministic sign-in (T-110) > server hanging first login request and answering second: ok: true, attempts: 2 6116ms
+   ✓ PreFlightChecker deterministic sign-in (T-110) > login returning 200 but setting no cookie and keeping form: not ok (failedStep post-submit-check) 12372ms
+   ✓ PreFlightChecker deterministic sign-in (T-110) > cross-origin loginPath: returns needs-more and NO request is made to other origin 362ms
+   ✓ PreFlightChecker deterministic sign-in (T-110) > start page that redirects to another origin before form: returns needs-more and password never typed 2279ms
+   ✓ PreFlightChecker deterministic sign-in (T-110) > role ../x: state file is written inside authDir (slugged) and never outside 4312ms
+   ✓ PreFlightChecker deterministic sign-in (T-110) > custom header sent only to target host during sign-in and reachability 5781ms
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > Test again tests at once with the approved plan when nothing on the site changed
+[DiscoveryAgent] Spider found 3 pages, 0 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > Test again tests at once with the approved plan when nothing on the site changed
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-checkups\report\runs\run-1793427232695\discovery-draft.json
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > Test again tests at once with the approved plan when nothing on the site changed
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3601/...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > Test again tests at once with the approved plan when nothing on the site changed
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > sign-in consent is enforced beyond discovery > approving a consented plan whose sign-in details are gone is refused and sends nothing
+[DiscoveryAgent] Exploring signed in as "manager" from /account...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > sign-in consent is enforced beyond discovery > approving a consented plan whose sign-in details are gone is refused and sends nothing
+[DiscoveryAgent] Spider found 3 pages, 1 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > sign-in consent is enforced beyond discovery > approving a consented plan whose sign-in details are gone is refused and sends nothing
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-consent-enforcement\runs\run-1793427244321\discovery-draft.json
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > sign-in consent is enforced beyond discovery > wrong password under consent on the caller-supplied test case path: run fails, nothing interactive is sent
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3291/...
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: an ordinary page with a password field is recorded, not called a sign-in wall (LC-002)
+[DiscoveryAgent] Exploring signed in as "manager" from /account...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 768px as visitor...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > Test again tests at once with the approved plan when nothing on the site changed
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > sign-in consent is enforced beyond discovery > wrong password under consent on the caller-supplied test case path: run fails, nothing interactive is sent
+[QA Orchestrator] Pre-flight check PASSED.
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > sign-in consent is enforced beyond discovery > a no-AI run writes "Pages found" into issues.md on its first write
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3291/...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[checkup] No QA_AI_API_KEY set: the plan is written by fixed rules, with no AI.
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3294...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[DiscoveryAgent] Exploring signed in as "member" from /account...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[DiscoveryAgent] Spider found 1 pages, 0 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-consent-enforcement\runs\run-1793427298409\discovery-draft.json
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3291/...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[DiscoveryAgent] Spider found 2 pages, 0 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-consent-enforcement-ci\runs\run-1793427309657\discovery-draft.json
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3294...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > Test again tests at once with the approved plan when nothing on the site changed
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 375px as visitor...
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: an ordinary page with a password field is recorded, not called a sign-in wall (LC-002)
+[DiscoveryAgent] Spider found 16 pages, 5 forms, 0 sensitive actions.
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: an ordinary page with a password field is recorded, not called a sign-in wall (LC-002)
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-auth-crawl-e2e\security-page\discovery-draft.json
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: the politeness note names the pages robots.txt asks crawlers to leave alone (LC-001)
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:54403/...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 768px as visitor...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 768px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing PAGE-004 ("page-visit") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > Test again tests at once with the approved plan when nothing on the site changed
+[QA Orchestrator] Executing NAV-001 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > Test again tests at once with the approved plan when nothing on the site changed
+[QA Orchestrator] Executing NAV-002 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-004 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > Test again tests at once with the approved plan when nothing on the site changed
+[QA Orchestrator] Executing NAV-003 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 375px as member...
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: the politeness note names the pages robots.txt asks crawlers to leave alone (LC-001)
+[DiscoveryAgent] Spider found 9 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: the politeness note names the pages robots.txt asks crawlers to leave alone (LC-001)
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-auth-crawl-e2e\robots-note\gated\discovery-draft.json
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: the politeness note names the pages robots.txt asks crawlers to leave alone (LC-001)
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:54403/...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing PAGE-005 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > Test again tests at once with the approved plan when nothing on the site changed
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-checkups\report\runs\run-1793427232695...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > Test again tests at once with the approved plan when nothing on the site changed
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 768px as member...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-004 ("page-visit") on 768px as visitor...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > Test again waits for review when a page was added, with only that page flagged
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3601/...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-004 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 1440px as member...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing PAGE-006 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > Test again waits for review when a page was added, with only that page flagged
+[DiscoveryAgent] Spider found 4 pages, 0 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > Test again waits for review when a page was added, with only that page flagged
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-checkups\report\runs\run-1793427401501\discovery-draft.json
+
+ ❯ packages/runner/tests/credentials-crawl.test.ts (5 tests | 3 failed) 268296ms
+   × test sign-in as consent (ADR 0022) > live host + consent + good details: acts after sign-in, never on a Sensitive Action 240136ms
+     → Test timed out in 240000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+   × test sign-in as consent (ADR 0022) > no consent flag stays read-only, even after a consented run on the same host 150ms
+     → expected 409 to be 202 // Object.is equality
+   × test sign-in as consent (ADR 0022) > wrong password: RUN_FAILED with signInReason wrong-details, no crawl 16205ms
+     → expected 'done' to be 'failed' // Object.is equality
+   ✓ test sign-in as consent (ADR 0022) > password is absent from the run folder, data folder, stream and console 8021ms
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > moves site data kept in the working folder into .qa-data on start, copying before it deletes
+[Release check-up] Moved sites into .qa-data
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > moves site data kept in the working folder into .qa-data on start, copying before it deletes
+[Release check-up] Moved .qa-ai-models.json into .qa-data
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > two concurrent CLI check-ups run simultaneously without port collision
+[checkup] No QA_AI_API_KEY set: the plan is written by fixed rules, with no AI.
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > two concurrent CLI check-ups run simultaneously without port collision
+[checkup] No QA_AI_API_KEY set: the plan is written by fixed rules, with no AI.
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > two concurrent CLI check-ups run simultaneously without port collision
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3601/...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > two concurrent CLI check-ups run simultaneously without port collision
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3601/...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-005 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 375px as member...
+
+ ✓ packages/wizard/tests/context-url-summary.test.ts (26 tests) 58ms
+ ✓ packages/checkers/tests/seo.test.ts (10 tests) 45ms
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > two concurrent CLI check-ups run simultaneously without port collision
+[DiscoveryAgent] Spider found 3 pages, 0 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > two concurrent CLI check-ups run simultaneously without port collision
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-checkups\concurrent-cli-2\runs\run-1793427426407\discovery-draft.json
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > two concurrent CLI check-ups run simultaneously without port collision
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3601/...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > two concurrent CLI check-ups run simultaneously without port collision
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > two concurrent CLI check-ups run simultaneously without port collision
+[DiscoveryAgent] Spider found 3 pages, 0 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > two concurrent CLI check-ups run simultaneously without port collision
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-checkups\concurrent-cli-1\runs\run-1793427426406\discovery-draft.json
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > two concurrent CLI check-ups run simultaneously without port collision
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3601/...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > two concurrent CLI check-ups run simultaneously without port collision
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 768px as member...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-005 ("page-visit") on 768px as visitor...
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: the politeness note names the pages robots.txt asks crawlers to leave alone (LC-001)
+[DiscoveryAgent] Spider found 11 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: the politeness note names the pages robots.txt asks crawlers to leave alone (LC-001)
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-auth-crawl-e2e\robots-note\open\discovery-draft.json
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 1440px as member...
+
+ ✓ packages/runner/tests/plan-routes.test.ts (8 tests) 913ms
+   ✓ Plan handlers as functions over CheckupSession (T-207) > 3. step aimed at something not on the page refused (422) with nothing applied 448ms
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-005 ("page-visit") on 1440px as visitor...
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: a Role whose session dies mid-crawl is restored and the crawl continues (LC-003, LC-004)
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:51766...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > two concurrent CLI check-ups run simultaneously without port collision
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 768px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing PAGE-007 ("page-visit") on 1440px as visitor...
+
+ ✓ packages/core/tests/plan-build.test.ts (10 tests) 74ms
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Executing NAV-001 ("navigation") on 1440px as visitor...
+
+ ❯ packages/core/tests/spider-reliability.test.ts (8 tests | 1 failed) 202946ms
+   × DeterministicSpider reliability core (T-111) > /lab/spa-late: finds late-rendered links (/lab/spa-late/a and /b) 60049ms
+     → Test timed out in 60000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+   ✓ DeterministicSpider reliability core (T-111) > /lab/always-500 and /lab/forbidden are not in pages; routes has 500/403 and skipReason: http-error 40738ms
+   ✓ DeterministicSpider reliability core (T-111) > dead links (404) do not eat the maxPages budget; records real pages 17160ms
+   ✓ DeterministicSpider reliability core (T-111) > a page whose first load times out and second succeeds is recorded with attempts: 2 16537ms
+   ✓ DeterministicSpider reliability core (T-111) > /lab/expiring as signed-in role: stops crawl, sessionLost is true, remainder reported session-lost 5094ms
+   ✓ DeterministicSpider reliability core (T-111) > start address that redirects to another host: startRedirectedOffSite is true and site unchanged 6362ms
+   ✓ DeterministicSpider reliability core (T-111) > average gap between page loads with 4 workers and a 300 ms delay is >= 300 ms 14632ms
+   ✓ DeterministicSpider reliability core (T-111) > a recorded page never also appears in skipped 35107ms
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > two concurrent CLI check-ups run simultaneously without port collision
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 768px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-006 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Executing NAV-002 ("navigation") on 1440px as member...
+
+ ✓ packages/core/tests/scoring.test.ts (12 tests) 56ms
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Executing NAV-003 ("navigation") on 1440px as visitor...
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: a Role whose session dies mid-crawl is restored and the crawl continues (LC-003, LC-004)
+[DiscoveryAgent] Exploring signed in as "manager" from /account...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > two concurrent CLI check-ups run simultaneously without port collision
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Executing NAV-004 ("navigation") on 1440px as member...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > two concurrent CLI check-ups run simultaneously without port collision
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 1440px as visitor...
+
+ ✓ packages/runner/tests/context-docx-route.test.ts (8 tests) 15300ms
+   ✓ POST /api/runner/context/docx > returns Markdown, warnings and a read summary for a Word file 14410ms
+   ✓ POST /api/runner/context/docx > logs nothing of the file and stores nothing 383ms
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Executing TC-FLOW-001 ("FLOW-001") on 375px as member...
+
+ ✓ packages/wizard/tests/signin-form.test.ts (16 tests) 605ms
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > two concurrent CLI check-ups run simultaneously without port collision
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 375px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-006 ("page-visit") on 768px as visitor...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Executing TC-FLOW-001 ("FLOW-001") on 768px as member...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing PAGE-008 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > two concurrent CLI check-ups run simultaneously without port collision
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > two concurrent CLI check-ups run simultaneously without port collision
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 768px as visitor...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Executing TC-FLOW-001 ("FLOW-001") on 1440px as member...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing PAGE-006 ("page-visit") on 1440px as visitor...
+
+stdout | packages/core/tests/orchestrator-session.test.ts > Orchestrator session awareness (T-114) > with preflight supplied and valid, stats.signIns stays 0 from the run itself (no second sign-in)
+[QA Orchestrator] Running Pre-flight health check on http://localhost:64910...
+
+stdout | packages/runner/tests/checkups.test.ts > A check-up on the runner > two concurrent CLI check-ups run simultaneously without port collision
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 768px as visitor...
+
+stdout | packages/core/tests/orchestrator-session.test.ts > Orchestrator session awareness (T-114) > with preflight supplied and valid, stats.signIns stays 0 from the run itself (no second sign-in)
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-1 ("flow-TC-1") on 1440px as manager...
+
+
+
+## stderr
+$ vitest run
+stderr | packages/core/tests/complete-plan.test.ts > PacedAI > asks for fewer, shorter journeys when the answer is cut off, instead of repeating the same request
+[JourneyPlanner] The answer was cut off; asking for fewer, shorter journeys...
+
+

@@ -5,9 +5,10 @@
  * last ten per site), and Test again skips the review only when nothing changed. Only the AI is
  * scripted.
  */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import http from 'http';
-import { promises as fs } from 'fs';
+import { promises as fs, mkdtempSync } from 'fs';
+import os from 'os';
 import path from 'path';
 import type { AIMessage, AIProviderType, ReleaseReport, ReviewPlan, RunSummary } from '@qa/types';
 import { RunnerServer } from '../src/server.js';
@@ -18,7 +19,9 @@ const LEGACY_PORT = 3603;
 const runnerUrl = `http://localhost:${RUNNER_PORT}`;
 const siteUrl = `http://localhost:${SITE_PORT}/`;
 const siteHost = `localhost:${SITE_PORT}`;
-const scratch = path.join(process.cwd(), '.tmp-checkups');
+// A new folder per run, outside the repository: inside OneDrive the sync client picks up every file a run
+// writes (screenshots, reports), competes with Chromium for the CPU and holds files open so the clean-up fails.
+const scratch = mkdtempSync(path.join(os.tmpdir(), 'qa-test-checkups-'));
 const outputDir = path.join(scratch, 'report');
 const dataDir = path.join(scratch, 'data');
 
@@ -172,8 +175,22 @@ describe('A check-up on the runner', () => {
   afterAll(async () => {
     await runner?.stop();
     await new Promise<void>((resolve) => site.close(() => resolve()));
-    await fs.rm(scratch, { recursive: true, force: true }).catch(() => {});
+    await fs.rm(scratch, { recursive: true, force: true, maxRetries: 5 }).catch(() => {});
   });
+
+  // A test that fails or times out must not leave its run going: the next test's start would be refused (one
+  // run at a time) and it would fail for a reason that is not its own. Only after a failure, since these
+  // tests follow one check-up through on purpose.
+  afterEach(async ({ task }) => {
+    if (task.result?.state !== 'fail') return;
+    try {
+      for (let attempt = 0; attempt < 3 && (await status()).isRunning; attempt++) {
+        await post('/api/runner/abort', { discard: true });
+      }
+    } catch {
+      // Runner not reachable: nothing to stop.
+    }
+  }, 30000);
 
   it('says before the scan whether the address is a test copy, and what was chosen for it last time', async () => {
     const facts = async (targetUrl: string) => (await post('/api/runner/preflight', { targetUrl })).json();

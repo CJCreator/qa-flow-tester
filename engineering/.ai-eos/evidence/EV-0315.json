@@ -1,0 +1,40 @@
+{
+  "evidence_id": "EV-0315",
+  "check_id": "CHK-QA-702-TYPECHECK",
+  "name": "typecheck runner tests",
+  "category": "typecheck",
+  "requirement_ids": [
+    "REQ-051"
+  ],
+  "task_ids": [
+    "QA-702"
+  ],
+  "command": "pnpm exec tsc -p packages/runner/tests/tsconfig.typecheck.json --noEmit",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Already up to date · Done in 5.1s using pnpm v11.10.0",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0315.log",
+  "log_sha256": "577913a6a8d912df0aa59885b676d9b55f04de4d23d07dc766704452266c04fe",
+  "started_at": "2026-11-04T04:36:45.376Z",
+  "finished_at": "2026-11-04T04:37:32.801Z",
+  "duration_ms": 47425,
+  "recorded_by": "aieos check run",
+  "recovery_id": "REC-013",
+  "attempt": 1,
+  "tree_fingerprint": "git:8556698e2ef8057822c6c7866644d3f554eaf8436d961f5930cd7c248c675fa9",
+  "concurrent_tasks": [],
+  "paths": [
+    "fixtures/test-app/server.d.ts",
+    "packages/checkers/src/**",
+    "packages/core/src/**",
+    "packages/runner/src/**",
+    "packages/runner/tests/**",
+    "packages/types/src/**",
+    "tsconfig.base.json",
+    "tsconfig.test.json"
+  ],
+  "paths_fingerprint": "git-paths:56abd7f1723a7258930e16bfcc5d1c10c15b4a31b028c1661efd9142c273413f"
+}

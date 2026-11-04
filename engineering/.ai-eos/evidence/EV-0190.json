@@ -1,0 +1,51 @@
+{
+  "evidence_id": "EV-0190",
+  "check_id": "CHK-BE-205-UNIT",
+  "name": "Audit start and stream routes with injected crawl and address check",
+  "category": "unit",
+  "requirement_ids": [
+    "REQ-001",
+    "REQ-002",
+    "REQ-003"
+  ],
+  "task_ids": [
+    "BE-205"
+  ],
+  "command": "pnpm exec vitest run packages/runner/tests/audit-crawl-route.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0190.log",
+  "log_sha256": "8eed9a8af4760e8df63c812d5dc3b4f903b8be899892fce414648cbfcaeb85fd",
+  "started_at": "2026-11-03T13:06:29.080Z",
+  "finished_at": "2026-11-03T13:06:44.477Z",
+  "duration_ms": 15397,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:1d80b964dc1592318458fc1c7b5b7249bd1faa61bcb259afe8e53af6774a1d93",
+  "concurrent_tasks": [
+    "BE-205",
+    "QA-705"
+  ],
+  "paths": [
+    "packages/runner/src/routes/audit-crawl.ts",
+    "packages/runner/src/routes/body.ts",
+    "packages/runner/src/routes/route.ts",
+    "packages/runner/src/session/audit-run.ts",
+    "packages/runner/src/session/run-slot.ts",
+    "packages/runner/tests/audit-crawl-route.test.ts",
+    "packages/types/src/website-audit.ts"
+  ],
+  "paths_fingerprint": "git-paths:69abb8f0978aca66f700761535879a5c8bf0665761ae3d54155bd5bba6833031",
+  "scoped_fingerprint": "git:50fd61f215610bc0a7ecc4e23a4100431fc260720d732f2aa6eecd815b7464db",
+  "excluded_owned": [
+    "packages/runner/src/routes/audit-crawl.ts",
+    "packages/runner/src/session/audit-run.ts",
+    "packages/runner/tests/audit-crawl-route.test.ts",
+    "packages/wizard/tests/wizard-e2e.test.ts"
+  ]
+}

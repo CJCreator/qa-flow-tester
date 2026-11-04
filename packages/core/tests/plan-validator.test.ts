@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
-import { promises as fs } from 'fs';
+import { promises as fs, mkdtempSync } from 'fs';
+import os from 'os';
 import path from 'path';
 import type { AIMessage, AICompletionOptions, AIProviderType, DiscoveredFlow, PageInventoryItem } from '@qa/types';
 import type { AIProvider } from '../src/ai/ai-provider.js';
@@ -195,7 +196,9 @@ const repaired = JSON.stringify({
 describe('Discovery grounds the AI plan in the real page', () => {
   const PORT = 3502;
   const baseUrl = `http://localhost:${PORT}`;
-  const outputDir = path.join(process.cwd(), '.tmp-plan-validator');
+  // A new folder per run, outside the repository: inside OneDrive the sync client picks up every file a run
+  // writes, competes with Chromium for the CPU and holds files open so the clean-up fails.
+  const outputDir = mkdtempSync(path.join(os.tmpdir(), 'qa-test-plan-validator-'));
 
   beforeAll(async () => {
     await new Promise<void>((resolve) => server.listen(PORT, () => resolve()));
@@ -203,7 +206,7 @@ describe('Discovery grounds the AI plan in the real page', () => {
 
   afterAll(async () => {
     await new Promise<void>((resolve) => server.close(() => resolve()));
-    await fs.rm(outputDir, { recursive: true, force: true }).catch(() => {});
+    await fs.rm(outputDir, { recursive: true, force: true, maxRetries: 5 }).catch(() => {});
   });
 
   it('shows the AI the real elements, and repairs an invented step with them', async () => {
@@ -260,5 +263,5 @@ describe('Discovery grounds the AI plan in the real page', () => {
       },
     });
     expect(ai.allPrompts.join('\n')).not.toContain('manager-password');
-  }, 60000);
+  }, 180000); // a visitor crawl and a signed-in crawl of the fixture in Chromium: over 60 s alone on a busy 4-core laptop
 });

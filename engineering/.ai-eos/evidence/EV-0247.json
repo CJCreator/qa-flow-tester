@@ -1,0 +1,36 @@
+{
+  "evidence_id": "EV-0247",
+  "check_id": "CHK-BE-201-UNIT",
+  "name": "Payment-area and sign-in page rules",
+  "category": "unit",
+  "requirement_ids": [
+    "REQ-006",
+    "REQ-036"
+  ],
+  "task_ids": [
+    "BE-201"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/audit-area-detect.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0247.log",
+  "log_sha256": "7443780ccaa61bdfe88b378efdec2ddf699654c24c94e9e1e55479a7c5df468d",
+  "started_at": "2026-11-04T03:37:13.809Z",
+  "finished_at": "2026-11-04T03:37:39.018Z",
+  "duration_ms": 25209,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:4aefa937450552108ba70afa3103b87f87908284522b356378fba9284a2b5d84",
+  "concurrent_tasks": [],
+  "paths": [
+    "packages/core/src/audit/crawl/area-detect.ts",
+    "packages/core/src/discovery/deterministic-spider.ts",
+    "packages/core/tests/audit-area-detect.test.ts"
+  ],
+  "paths_fingerprint": "git-paths:4fed0b5dcc4fac8de2fe09a66944608eafbc849e89e49730a53c75c9fccc2c61"
+}

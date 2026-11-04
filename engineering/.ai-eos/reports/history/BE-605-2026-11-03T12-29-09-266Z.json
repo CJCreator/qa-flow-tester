@@ -1,0 +1,45 @@
+{
+  "task_id": "BE-605",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-024"
+  ],
+  "files_inspected": [
+    "packages/core/src/audit/preview/sanitize.ts",
+    "packages/core/tests/audit-preview-sanitize.test.ts",
+    "packages/core/src/audit/preview/generate.ts"
+  ],
+  "files_created": [],
+  "files_modified": [
+    "packages/core/src/audit/preview/sanitize.ts",
+    "packages/core/tests/audit-preview-sanitize.test.ts"
+  ],
+  "implementation_summary": "AI CSS is scoped under .qa-preview-root and rendered in a wrapper div. The note sits outside the wrapper and is pinned with !important at a higher-specificity selector. The wrapper is contained with overflow hidden, contain paint and flow-root. Selectors targeting html, body, :root, [role], a leading * or a leading combinator are refused. position:absolute and z-index are refused. The style hash is computed over the final style text, so DEC-008 still holds.",
+  "tests_executed": [
+    {
+      "name": "audit-preview core and runner suites",
+      "command": "pnpm exec vitest run packages/core/tests/audit-preview.test.ts packages/core/tests/audit-preview-sanitize.test.ts packages/runner/tests/audit-preview-routes.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 3 passed (3); Tests 71 passed (71)"
+    }
+  ],
+  "tests_proposed": [
+    "Optional browser test: render a hostile preview in Chromium and assert the note's bounding box and that elementFromPoint returns the note"
+  ],
+  "evidence": [
+    "packages/core/tests/audit-preview-sanitize.test.ts: describe 'hostile CSS cannot hide or cover the note (SEC-002)'"
+  ],
+  "blockers": [],
+  "risks": [
+    "AI CSS using * at the start of a selector or body/html selectors is now dropped, so some generated previews lose global resets and body backgrounds; this is intended by the correction.",
+    "Inline style attributes are not scoped, but they cannot reach the note: absolute, fixed, sticky and z-index are refused, and the wrapper clips overflow.",
+    "Preview HTML structure changed (extra wrapper div), so any consumer matching on the body markup, such as BE-604 Shared Link pages, should be re-checked."
+  ],
+  "handoff": "Previews and shared pages rendered via renderPreviewDocument now carry the .qa-preview-root wrapper. styleHashes and previewCspForHtml work unchanged. cleanStylesheet(css, scope=false) is backward compatible.",
+  "_captured": {
+    "at": "2026-11-03T12:29:09.266Z",
+    "agent_id": "afa36a38f066ebca2",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

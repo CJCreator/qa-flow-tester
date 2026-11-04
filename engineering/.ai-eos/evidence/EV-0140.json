@@ -1,0 +1,60 @@
+{
+  "evidence_id": "EV-0140",
+  "check_id": "CHK-BE-604-UNIT",
+  "name": "Shared Link route tests",
+  "category": "security",
+  "requirement_ids": [
+    "REQ-024",
+    "REQ-023"
+  ],
+  "task_ids": [
+    "BE-604"
+  ],
+  "command": "pnpm exec vitest run packages/runner/tests/audit-share-routes.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0140.log",
+  "log_sha256": "7cfde999429cc62a6b171ed5f796680061d634957e8d8510be7042f6e01ae33d",
+  "started_at": "2026-11-03T11:45:03.630Z",
+  "finished_at": "2026-11-03T11:45:20.918Z",
+  "duration_ms": 17288,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:0b5caf2963c92226b3163ffd2ae0317c662a265c76f1ef19bb02efe9f2dc38ef",
+  "concurrent_tasks": [
+    "BE-604",
+    "BE-605",
+    "BE-606",
+    "QA-711"
+  ],
+  "paths": [
+    "packages/core/src/audit/store/**",
+    "packages/runner/src/routes/audit-share.ts",
+    "packages/runner/src/routes/route.ts",
+    "packages/runner/tests/audit-share-routes.test.ts",
+    "packages/types/src/website-audit.ts"
+  ],
+  "paths_fingerprint": "git-paths:ea81a3119a96c4cc056b3b459e9171a0a3b9e854fb23e021376f9c6edaaca2b5",
+  "scoped_fingerprint": "git:e6b34559f68e9ee91ef69ee1621533e2bffa5ccff859b54f382d0abae6d6c4f7",
+  "excluded_owned": [
+    "packages/core/src/audit/preview/**",
+    "packages/core/tests/audit-languages-e2e.test.ts",
+    "packages/core/tests/audit-preview-sanitize.test.ts",
+    "packages/core/tests/audit-preview.test.ts",
+    "packages/runner/src/helpers/**",
+    "packages/runner/src/routes/audit-helpers.ts",
+    "packages/runner/src/routes/audit-preview.ts",
+    "packages/runner/src/routes/audit-share.ts",
+    "packages/runner/tests/audit-helpers-routes.test.ts",
+    "packages/runner/tests/audit-preview-routes.test.ts",
+    "packages/runner/tests/audit-share-routes.test.ts",
+    "packages/runner/tests/helper-access.test.ts",
+    "packages/runner/tests/helper-session.test.ts",
+    "packages/runner/tests/helper-token.test.ts"
+  ]
+}

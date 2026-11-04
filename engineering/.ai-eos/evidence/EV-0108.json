@@ -1,0 +1,54 @@
+{
+  "evidence_id": "EV-0108",
+  "check_id": "CHK-BE-600-UNIT",
+  "name": "audit store backends unit tests",
+  "category": "unit",
+  "requirement_ids": [
+    "REQ-028",
+    "REQ-029"
+  ],
+  "task_ids": [
+    "BE-600"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/audit-store-backend.test.ts packages/core/tests/audit-store-gcs.test.ts packages/core/tests/audit-store-select.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  3 passed (3)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0108.log",
+  "log_sha256": "c2061355f194087a4b5d066f331806d618783bfd7744f6556817ed389f33ac52",
+  "started_at": "2026-11-03T10:54:25.373Z",
+  "finished_at": "2026-11-03T10:54:36.924Z",
+  "duration_ms": 11551,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:11da2643340eed06c464a351bd9e7be0a42fa6cdb0879b9b1e51c80ed76d2b85",
+  "concurrent_tasks": [
+    "FE-301",
+    "QA-200",
+    "QA-706"
+  ],
+  "paths": [
+    "packages/core/src/atomic-write.ts",
+    "packages/core/src/audit/store/backend.ts",
+    "packages/core/src/audit/store/gcs-backend.ts",
+    "packages/core/src/audit/store/local-backend.ts",
+    "packages/core/src/audit/store/select-backend.ts",
+    "packages/core/tests/audit-store-backend.test.ts",
+    "packages/core/tests/audit-store-gcs.test.ts",
+    "packages/core/tests/audit-store-select.test.ts"
+  ],
+  "paths_fingerprint": "git-paths:97366b20b0c93c95205cf94ede2aa9320d3878b1298a2d4fa413ccc7dc03fb1e",
+  "scoped_fingerprint": "git:0203c23f2f0c1faee78844371006e835d96d2b86f714441023c22b2c5ca9bc1f",
+  "excluded_owned": [
+    "packages/core/tests/audit-crawl-read-only.test.ts",
+    "packages/runner/tests/runner-server.test.ts",
+    "packages/runner/tests/url-first.test.ts",
+    "packages/wizard/src/screens/audit/results/AnalysisScreen.tsx",
+    "packages/wizard/src/screens/audit/results/analysis-client.ts",
+    "packages/wizard/tests/audit-analysis-screen.test.tsx"
+  ]
+}

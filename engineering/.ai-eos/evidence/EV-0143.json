@@ -1,0 +1,58 @@
+{
+  "evidence_id": "EV-0143",
+  "check_id": "CHK-QA-711-LANGUAGES",
+  "name": "Tamil and Hindi end to end in core",
+  "category": "e2e",
+  "requirement_ids": [
+    "REQ-044",
+    "REQ-032"
+  ],
+  "task_ids": [
+    "QA-711"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/audit-languages-e2e.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0143.log",
+  "log_sha256": "e808fc402c343cbd556cd64098cbc90d93c81a2bfd029c42b2e33587c8a40b4e",
+  "started_at": "2026-11-03T11:49:39.561Z",
+  "finished_at": "2026-11-03T11:50:29.729Z",
+  "duration_ms": 50168,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:dc596fef756f9144f55a1c21d31be4e5323b7375e19e3e6cb4278f1ff0581f9e",
+  "concurrent_tasks": [
+    "BE-605",
+    "BE-606",
+    "QA-711"
+  ],
+  "paths": [
+    "fixtures/audit-site/**",
+    "packages/checkers/src/**",
+    "packages/core/src/**",
+    "packages/core/tests/audit-languages-e2e.test.ts",
+    "packages/core/tests/helpers/**",
+    "packages/types/src/**"
+  ],
+  "paths_fingerprint": "git-paths:4681d32e0a93df3909a46adb8bac5582b05abb583ef1edf73c616526846cfa67",
+  "scoped_fingerprint": "git:22784e48f72a383c80742575238869e9292456574f22afd63b8537ee9c461914",
+  "excluded_owned": [
+    "packages/core/src/audit/preview/**",
+    "packages/core/tests/audit-languages-e2e.test.ts",
+    "packages/core/tests/audit-preview-sanitize.test.ts",
+    "packages/core/tests/audit-preview.test.ts",
+    "packages/runner/src/helpers/**",
+    "packages/runner/src/routes/audit-helpers.ts",
+    "packages/runner/src/routes/audit-preview.ts",
+    "packages/runner/tests/audit-helpers-routes.test.ts",
+    "packages/runner/tests/audit-preview-routes.test.ts",
+    "packages/runner/tests/helper-access.test.ts",
+    "packages/runner/tests/helper-session.test.ts",
+    "packages/runner/tests/helper-token.test.ts"
+  ]
+}

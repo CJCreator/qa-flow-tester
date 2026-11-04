@@ -1,0 +1,38 @@
+{
+  "evidence_id": "EV-0344",
+  "check_id": "CHK-BE-404-UNIT",
+  "name": "PageSpeed Insights client",
+  "category": "unit",
+  "requirement_ids": [
+    "REQ-012",
+    "REQ-043"
+  ],
+  "task_ids": [
+    "BE-404"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/audit-pagespeed.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0344.log",
+  "log_sha256": "8793a9cbf2773b14062ee45da65e6c3c20116f43207c7a6c343ff386ea5f8563",
+  "started_at": "2026-11-04T05:59:32.150Z",
+  "finished_at": "2026-11-04T05:59:44.349Z",
+  "duration_ms": 12199,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:69fb226175839158083b8bd4d47e58c478a2d7d5c1e3bc5d15c27fbe743460cc",
+  "concurrent_tasks": [],
+  "paths": [
+    "packages/core/src/audit/ai/pagespeed.ts",
+    "packages/core/src/safe-net.ts",
+    "packages/core/tests/audit-pagespeed.test.ts",
+    "packages/core/tests/fixtures/pagespeed/**",
+    "packages/types/src/website-audit.ts"
+  ],
+  "paths_fingerprint": "git-paths:97a8231b34ab60172271b93ad493d80cc6abe7181d6afa10641e62e4054e1c93"
+}

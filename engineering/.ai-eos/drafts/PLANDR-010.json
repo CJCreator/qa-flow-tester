@@ -1,0 +1,531 @@
+{
+  "tasks": [
+    {
+      "task_id": "BE-400",
+      "requirement_ids": ["REQ-039", "REQ-011"],
+      "title": "AI contract: completion abort signal, audit AI stages and the per-stage model API types",
+      "description": "Extend packages/types/src/ai.ts (this task is its only owner in the plan). Add to AICompletionOptions an optional `signal?: AbortSignal` and `timeoutMs?: number` so every AI Provider call can be stopped (RISK-005). Add `AUDIT_AI_STAGES = ['assessment','documents','preview','rewrite'] as const` (Q-29: one model setting per AI feature), `AuditAiStage`, `AuditAiModels = Partial<Record<AuditAiStage, string>>`, `AuditAiModelsReply { models: AuditAiModels; defaults: { text: string | null; vision: string | null }; effective: Record<AuditAiStage, string | null> }`, `AuditAiModelsUpdate { models: Partial<Record<AuditAiStage, string | null>> }` (null puts the default back), a validator `validateAuditAiModelsUpdate(body)` (known stages only, model id a non-empty string of at most 200 characters without control characters, or null) and `AUDIT_AI_API = { getModels: GET /api/audit-ai/models, putModels: PUT /api/audit-ai/models }`, both typed `AuditEndpoint` (type-only import from ./website-audit.js) with access 'owner'. Keep the module Node-free: the wizard imports it through @qa/types/src/ai.js and the browser entry.",
+      "agent": "backend-engineer",
+      "priority": "high",
+      "depends_on": [],
+      "files_owned": [
+        "packages/types/src/ai.ts",
+        "packages/types/tests/audit-ai-contract.test.ts"
+      ],
+      "acceptance_criteria": [
+        "AICompletionOptions accepts `signal` and `timeoutMs`; existing callers compile unchanged.",
+        "AUDIT_AI_STAGES lists exactly assessment, documents, preview and rewrite, and each is a member of AI_STAGES.",
+        "validateAuditAiModelsUpdate accepts a model id or null per audit stage and refuses unknown stages, empty strings, ids over 200 characters and control characters, with a message per field.",
+        "AUDIT_AI_API.getModels and putModels declare access 'owner' and paths under /api/audit-ai/.",
+        "packages/types/src/ai.ts imports no Node built-in (browser-entry test still passes)."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-400-UNIT",
+          "name": "audit AI contract types and validator",
+          "command": "pnpm exec vitest run packages/types/tests/audit-ai-contract.test.ts packages/types/tests/browser-entry.test.ts",
+          "category": "unit",
+          "paths": ["packages/types/src/ai.ts", "packages/types/src/browser.ts", "packages/types/src/index.ts", "packages/types/tests/audit-ai-contract.test.ts", "packages/types/tests/browser-entry.test.ts"],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "packages/types/src/ai.ts with signal/timeoutMs options, AUDIT_AI_STAGES, model-per-stage API types, validator and AUDIT_AI_API",
+        "packages/types/tests/audit-ai-contract.test.ts"
+      ],
+      "complexity": "XS",
+      "permission_level": "P1",
+      "status": "PENDING",
+      "notes": "ai.ts is already exported by types/src/index.ts and browser.ts (no barrel edit needed). If G1 prefers the new routes inside AUDIT_API in website-audit.ts, the orchestrator can move AUDIT_AI_API there at merge; the route paths stay the same."
+    },
+    {
+      "task_id": "BE-401",
+      "requirement_ids": ["REQ-016", "REQ-011"],
+      "title": "Timeout and abort signal on Anthropic, OpenAI/OpenRouter and Gemini calls",
+      "description": "RISK-005 / AR-05 / REC-05: a hung AI Provider must not hold the single run slot. Add packages/core/src/ai/timeout.ts with `AI_REQUEST_TIMEOUT_MS = 120_000`, `class AITimeoutError extends Error` (name 'AITimeoutError') and `requestSignal(options)` that combines `options.signal` with `AbortSignal.timeout(options.timeoutMs ?? AI_REQUEST_TIMEOUT_MS)` (AbortSignal.any, Node 22). Pass that signal to every fetch in providers/anthropic.ts (:59), providers/openai.ts (:62) and providers/gemini.ts (:36 token, :126, :142 fallback), and map a timeout abort to AITimeoutError and a caller abort to an AbortError. Error messages must not contain the API key. The audit modules import AITimeoutError by relative path; no core barrel change is needed.",
+      "agent": "backend-engineer",
+      "priority": "high",
+      "depends_on": ["BE-400"],
+      "files_owned": [
+        "packages/core/src/ai/timeout.ts",
+        "packages/core/src/ai/providers/anthropic.ts",
+        "packages/core/src/ai/providers/openai.ts",
+        "packages/core/src/ai/providers/gemini.ts",
+        "packages/core/tests/ai-provider-timeout.test.ts"
+      ],
+      "acceptance_criteria": [
+        "Given a provider whose fetch never answers (stubbed global fetch, fake timers), when generateText/complete runs with timeoutMs set, then it rejects with AITimeoutError after that time, for Anthropic, OpenAI, OpenRouter (OpenAI client) and Gemini.",
+        "Given a caller AbortSignal that is aborted, when a provider call is in flight, then the call rejects promptly and the fetch received an aborted signal.",
+        "Without timeoutMs the default AI_REQUEST_TIMEOUT_MS applies to every provider fetch (asserted on the signal passed to fetch).",
+        "No timeout or abort error message contains the API key.",
+        "Existing provider behaviour (request body, headers, finishReason, usage) is unchanged for answered calls; no real network is used in the tests."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-401-UNIT",
+          "name": "AI provider timeouts",
+          "command": "pnpm exec vitest run packages/core/tests/ai-provider-timeout.test.ts",
+          "category": "unit",
+          "paths": ["packages/core/src/ai/timeout.ts", "packages/core/src/ai/providers/**", "packages/core/src/ai/ai-provider.ts", "packages/core/src/ai/default-models.ts", "packages/types/src/ai.ts", "packages/core/tests/ai-provider-timeout.test.ts"],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "packages/core/src/ai/timeout.ts",
+        "Timeout/abort wiring in anthropic.ts, openai.ts, gemini.ts",
+        "packages/core/tests/ai-provider-timeout.test.ts"
+      ],
+      "complexity": "S",
+      "permission_level": "P1",
+      "status": "PENDING",
+      "risks": ["Check-up AI calls inherit the 120 s default; a slow but working model that needs longer would now fail. The orchestrator's existing retry/fallback paths treat it like any provider error."]
+    },
+    {
+      "task_id": "BE-402",
+      "requirement_ids": ["REQ-011", "REQ-039", "REQ-016"],
+      "title": "Audit AI by stage: BYOK resolution, model per stage store and claim-wording guard",
+      "description": "Create packages/core/src/audit/ai/stage-ai.ts: `resolveAuditAi(deps)` takes the saved AI setup (provider, text and vision default models, as the runner's AI settings hold them), a key lookup (KeyResolver.resolveKey or SessionKeyResolver), the saved models per stage and a provider factory seam (default createAIProvider). It returns `{ ok: false, reason: 'no-ai-key' }` when the tool user has no key, else an `AuditAi` whose `ask(stage, messages, options)` calls the provider built with the tool user's key and passes `model = modelForStage(stage, models, defaults)`, `stage` and the abort signal / timeoutMs (BE-400 types), and counts requests against an optional AI Request Budget (`budget-spent` when exhausted). Create packages/core/src/audit/ai/stage-models-store.ts: read/write the per-stage models (`audit-ai-models.json` in an injected state folder) with writeJsonAtomic, validated by validateAuditAiModelsUpdate; no key is ever written to it. Create packages/core/src/audit/ai/claim-words.ts: the ADR 0018 word list (compliant, certified, secure, fully accessible, passes WCAG, plus 'ready to release') and `findClaimWords(text)` (case-insensitive, whole words and phrases, Unicode-safe), used by every audit AI output in this group and offered to G3/G5.",
+      "agent": "backend-engineer",
+      "priority": "high",
+      "depends_on": ["BE-400"],
+      "files_owned": [
+        "packages/core/src/audit/ai/stage-ai.ts",
+        "packages/core/src/audit/ai/stage-models-store.ts",
+        "packages/core/src/audit/ai/claim-words.ts",
+        "packages/core/tests/audit-ai-stage.test.ts",
+        "packages/core/tests/audit-ai-stage-models-store.test.ts",
+        "packages/core/tests/audit-claim-words.test.ts"
+      ],
+      "acceptance_criteria": [
+        "REQ-011 AC-1: Given the tool user has saved a key for an AI Provider, when an AI step runs, then it calls that provider with that key (asserted through the provider factory seam: provider type and key).",
+        "REQ-011 AC-2: Given the tool user has supplied no key, when an AI step is needed, then the step does not run (no provider is created, no request is made) and the result says a key is needed (reason 'no-ai-key').",
+        "REQ-039 AC-1: Given model A set for the assessment stage and model B for the rewrite stage, when both stages run, then each request carries its own model (A for assessment, B for rewrite); a stage without its own model uses its slot default (vision for assessment, text for the others).",
+        "Saved per-stage models survive a reload of the store, refuse invalid input with the validator's messages, and the stored file contains no key.",
+        "When the AI Request Budget is spent, ask() makes no further request and reports 'budget-spent'.",
+        "findClaimWords finds each ADR 0018 word or phrase (compliant, certified, secure, fully accessible, passes WCAG) in any letter case as a whole word or phrase, and reports none for text without them; the exact treatment of derived forms (such as 'securely', 'non-compliant') is fixed by named test cases."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-402-UNIT",
+          "name": "audit AI stage resolution, model store, claim words",
+          "command": "pnpm exec vitest run packages/core/tests/audit-ai-stage.test.ts packages/core/tests/audit-ai-stage-models-store.test.ts packages/core/tests/audit-claim-words.test.ts",
+          "category": "unit",
+          "paths": ["packages/core/src/audit/ai/stage-ai.ts", "packages/core/src/audit/ai/stage-models-store.ts", "packages/core/src/audit/ai/claim-words.ts", "packages/core/src/ai/ai-provider.ts", "packages/core/src/ai/providers/mock.ts", "packages/core/src/atomic-write.ts", "packages/types/src/ai.ts", "packages/core/tests/audit-ai-stage.test.ts", "packages/core/tests/audit-ai-stage-models-store.test.ts", "packages/core/tests/audit-claim-words.test.ts"],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "packages/core/src/audit/ai/stage-ai.ts",
+        "packages/core/src/audit/ai/stage-models-store.ts",
+        "packages/core/src/audit/ai/claim-words.ts",
+        "Three unit test files"
+      ],
+      "complexity": "M",
+      "permission_level": "P2",
+      "status": "PENDING",
+      "notes": "P2: resolves and uses the tool user's AI keys. Q-07: a server-held key from Secret Manager is allowed on the hosted copy; the key lookup is injected, so the runner decides the source."
+    },
+    {
+      "task_id": "BE-403",
+      "requirement_ids": ["REQ-017"],
+      "title": "Rank audit findings by impact then lower effort, with page and Section citation",
+      "description": "Create packages/core/src/audit/ai/ranking.ts. `IMPACT_EFFORT_BY_RULE`: default impact and effort (AUDIT_SCALE high/medium/low, Q-14) for every rule G3 emits (missing-title, missing-description, missing-alt, broken-link, duplicate-title, duplicate-description, duplicate-content, heading problems, marketing signals...) and a severity-based mapping for checker findings (critical/serious -> high impact, and so on). `scoreFindings(findings)` fills impact/effort where the producer left them unset (never overwrites a set value). `rankFindings(findings)` returns a new list ordered by impact (high first), then lower effort, then a stable tiebreak (page path, Section order, rule), and assigns ids AF-001… in ranked order. `checkCitations(findings, pages)` reports any finding whose urlPath is not an audited page or whose sectionId is not a Section of that page (null is allowed only for whole-page findings: title, description, heading outline). Pure functions; no AI.",
+      "agent": "backend-engineer",
+      "priority": "high",
+      "depends_on": [],
+      "files_owned": [
+        "packages/core/src/audit/ai/ranking.ts",
+        "packages/core/tests/audit-ranking.test.ts"
+      ],
+      "acceptance_criteria": [
+        "REQ-017 AC-1: Given a set of issues, when ranked, then each issue has an impact value and an effort value (high, medium or low) and the list is ordered by impact, then by lower effort (Q-14).",
+        "REQ-017 AC-2: Given an issue found on a page, when reported, then it cites the page URL path and the Section (REQ-008) where it was found; checkCitations flags any finding whose page or Section does not exist.",
+        "Ranking is deterministic: the same input gives the same order and the same AF ids.",
+        "A value the producer already set is never changed by scoreFindings."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-403-UNIT",
+          "name": "audit finding ranking",
+          "command": "pnpm exec vitest run packages/core/tests/audit-ranking.test.ts",
+          "category": "unit",
+          "paths": ["packages/core/src/audit/ai/ranking.ts", "packages/types/src/website-audit.ts", "packages/core/tests/audit-ranking.test.ts"],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": ["packages/core/src/audit/ai/ranking.ts", "packages/core/tests/audit-ranking.test.ts"],
+      "complexity": "S",
+      "permission_level": "P1",
+      "status": "PENDING",
+      "notes": "Rule keys must match those G3 (BE-3xx findings, REQ-014/REQ-015) emits; the orchestrator should align the rule list at merge. G5's Findings document, Improvement Roadmap and Pitch Glimpse (top 3) consume rankFindings output."
+    },
+    {
+      "task_id": "BE-404",
+      "requirement_ids": ["REQ-012", "REQ-043"],
+      "title": "PageSpeed Insights client for Sample Pages (lab and field Core Web Vitals) and ADR 0035",
+      "description": "Create packages/core/src/audit/ai/pagespeed.ts: `measurePageSpeed(url, deps)` calls the Google PageSpeed Insights v5 API (`https://www.googleapis.com/pagespeedonline/v5/runPagespeed`, strategy=mobile, category=performance) through the outbound fetch of ADR 0031 (BE-101 makeOutboundFetch; the request host is the fixed googleapis.com host, the audited page URL is only a query parameter and has already passed the public-address check). The key comes from an injected `resolveServiceKey('pagespeed')`; without a key the call is made keyless (free, lower limit). Map lighthouseResult to lab values (performance-score, lcp, cls, fcp, ttfb, tbt, speed-index) and loadingExperience (page) or originLoadingExperience (origin, scope 'origin') to field values (lcp, inp, cls, fcp, ttfb); return the `PageSpeed` type (source 'pagespeed-insights', method, measuredAt). Failure mapping: HTTP 429 or quota error -> 'quota', timeout -> 'timeout', DNS/connection error -> 'no-network', no field data -> field 'no-field-data', anything else -> 'failed'. `measureSampleSpeeds(pages, deps)` runs one request at a time and, after a quota answer, marks the remaining pages 'quota' without calling. The key is never logged or put in an error message. Write docs/adr/0035-pagespeed-data.md (named in ADR 0033 'Follow-up records'): PSI as the speed source (Q-03), free tier and its limits (Q-32/REQ-043), mobile strategy, lab vs field wording (ADR 0018), not-measured rules, key storage via the key resolver (ADR 0034).",
+      "agent": "backend-engineer",
+      "priority": "high",
+      "depends_on": ["BE-101"],
+      "files_owned": [
+        "packages/core/src/audit/ai/pagespeed.ts",
+        "packages/core/tests/audit-pagespeed.test.ts",
+        "packages/core/tests/fixtures/pagespeed/**",
+        "docs/adr/0035-pagespeed-data.md"
+      ],
+      "acceptance_criteria": [
+        "REQ-012 AC-1: Given a public page, when audited, then the output shows its page speed and Core Web Vitals values from the external API, naming the API (pagespeed-insights) and how the values were measured (lab or field, page or origin scope).",
+        "REQ-012 AC-2: Given the API fails or its free quota is used up, when the page is audited, then the output says the values were not measured (status 'not-measured' with a reason) and carries no values, so it can never read as good.",
+        "After a quota answer no further PageSpeed request is made in that audit; the remaining Sample Pages are 'not-measured' with reason 'quota'.",
+        "REQ-043 AC-1: the only external data API called is the PageSpeed Insights v5 endpoint, which is usable on its free tier without payment (keyless or with a free Google API key); ADR 0035 records this.",
+        "The API key never appears in returned values, thrown errors or log lines (asserted).",
+        "Tests use recorded PSI JSON fixtures and an injected fetch; no real network."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-404-UNIT",
+          "name": "PageSpeed Insights client",
+          "command": "pnpm exec vitest run packages/core/tests/audit-pagespeed.test.ts",
+          "category": "unit",
+          "paths": ["packages/core/src/audit/ai/pagespeed.ts", "packages/core/src/safe-net.ts", "packages/types/src/website-audit.ts", "packages/core/tests/audit-pagespeed.test.ts", "packages/core/tests/fixtures/pagespeed/**"],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "packages/core/src/audit/ai/pagespeed.ts",
+        "packages/core/tests/audit-pagespeed.test.ts with fixtures",
+        "docs/adr/0035-pagespeed-data.md"
+      ],
+      "complexity": "M",
+      "permission_level": "P1",
+      "status": "PENDING",
+      "notes": "BE-101's outbound-source-grep test should not need an exception for this module because it uses makeOutboundFetch. If BE-101's API cannot take a fixed external host, record the exemption in ADR 0035 and BE-101's exception list."
+    },
+    {
+      "task_id": "BE-405",
+      "requirement_ids": ["REQ-012", "REQ-011"],
+      "title": "Service keys: remove the PageSpeed key and keep beta service keys in the session only",
+      "description": "REC-03 / RISK-003 / AR-03 (ADR 0034 requires it before any beta route saves a service key). In packages/core/src/ai/key-resolver.ts add `removeServiceKey(service)` (keychain entry and encrypted-file entry removed; AuditSettingsUpdate.pagespeedKey = null needs it). In packages/runner/src/beta.ts make SessionKeyResolver override `saveServiceKey`, `resolveServiceKey` and `removeServiceKey` to use the session secret store only: no keychain, no file, no environment variable, so a beta visitor never uses the owner's PAGESPEED_API_KEY and an out-of-session save throws instead of writing under process.cwd().",
+      "agent": "backend-engineer",
+      "priority": "high",
+      "depends_on": [],
+      "files_owned": [
+        "packages/core/src/ai/key-resolver.ts",
+        "packages/runner/src/beta.ts",
+        "packages/core/tests/key-resolver-service-key.test.ts",
+        "packages/runner/tests/beta-service-keys.test.ts"
+      ],
+      "acceptance_criteria": [
+        "removeServiceKey('pagespeed') removes the saved key so resolveServiceKey returns the environment value or null; the encrypted file keeps its other entries and is never written in plain text.",
+        "Given a beta session with no PageSpeed key and PAGESPEED_API_KEY set in the environment, when SessionKeyResolver.resolveServiceKey('pagespeed') runs, then it returns null.",
+        "Given a beta session, when a PageSpeed key is saved, then it resolves inside that session only, another session does not see it, and no file is written.",
+        "Outside a session, SessionKeyResolver.saveServiceKey throws and writes nothing to disk.",
+        "Existing key-resolver-encryption tests still pass."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-405-UNIT",
+          "name": "service key removal and beta session isolation",
+          "command": "pnpm exec vitest run packages/core/tests/key-resolver-service-key.test.ts packages/core/tests/key-resolver-encryption.test.ts packages/runner/tests/beta-service-keys.test.ts",
+          "category": "security",
+          "paths": ["packages/core/src/ai/key-resolver.ts", "packages/runner/src/beta.ts", "packages/core/tests/key-resolver-service-key.test.ts", "packages/core/tests/key-resolver-encryption.test.ts", "packages/runner/tests/beta-service-keys.test.ts"],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "KeyResolver.removeServiceKey",
+        "SessionKeyResolver service-key overrides",
+        "Two new unit test files"
+      ],
+      "complexity": "S",
+      "permission_level": "P2",
+      "status": "PENDING",
+      "notes": "beta-service-keys.test.ts must not start a RunnerServer (unit project); it calls SessionKeyResolver inside the session context directly. If G1's BE-102 also needs packages/runner/src/beta.ts (beta route policy), the orchestrator must order the two tasks (make one depend on the other)."
+    },
+    {
+      "task_id": "BE-406",
+      "requirement_ids": ["REQ-016"],
+      "title": "AI assessment of the six areas per Sample Page and for the whole site",
+      "description": "Create packages/core/src/audit/ai/assessment.ts. `assessPages(input, ai)`: for each Sample Page, one 'assessment' stage request (BE-402 AuditAi) with the page's Page Content summary (title, headings, Sections, CTAs), its ranked findings (ids), its area grades and its PageSpeed values; the answer is JSON { areas: [{ area, note, evidence: findingIds[] }] } for all six AUDIT_AREAS (search-ranking, marketing, usability, content, accessibility, speed). `assessSite(input, ai)` does the same once for the whole site. The grade of each AreaAssessment comes from the caller's deterministic grades (null when nothing in the area was checked); the AI writes only the note (Q-04, no AI score). Evidence ids not in the input are dropped. Notes are written in the audit's document language. A note containing an ADR 0018 word (findClaimWords) gets one repair request; if it still contains one, that area is 'not-done' with reason 'ai-failed'. No key -> every area 'not-done' 'no-ai-key'; provider error, timeout (AITimeoutError) or unparsable answer after one repair -> 'ai-failed'; budget spent -> 'budget-spent'. Pages are assessed one request at a time.",
+      "agent": "backend-engineer",
+      "priority": "high",
+      "depends_on": ["BE-402", "BE-401"],
+      "files_owned": [
+        "packages/core/src/audit/ai/assessment.ts",
+        "packages/core/tests/audit-assessment.test.ts"
+      ],
+      "acceptance_criteria": [
+        "REQ-016 AC-1: Given an audited App and a working AI key (MockAIProvider), when the assessment runs, then the output has an assessment of each of the six areas for every audited Sample Page and for the whole site.",
+        "REQ-016 AC-2: Given the assessment output, when read, then it contains none of the words ADR 0018 forbids (compliant, certified, secure, fully accessible, passes WCAG), including when the mock AI answers with them.",
+        "REQ-016 AC-3: Given the AI step did not run or failed for a page (no key, provider error, timeout, unusable answer, budget spent), when the output is produced, then that page's areas are 'not-done' with the reason, never a note or a clean result.",
+        "Grades in the output equal the deterministic grades given as input; the AI answer cannot change them, and no numeric AI score appears.",
+        "Every evidence id in a note refers to a finding of that page (site-wide: of the audit)."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-406-UNIT",
+          "name": "six-area AI assessment",
+          "command": "pnpm exec vitest run packages/core/tests/audit-assessment.test.ts",
+          "category": "unit",
+          "paths": ["packages/core/src/audit/ai/assessment.ts", "packages/core/src/audit/ai/stage-ai.ts", "packages/core/src/audit/ai/claim-words.ts", "packages/core/src/ai/timeout.ts", "packages/core/src/ai/providers/mock.ts", "packages/types/src/website-audit.ts", "packages/types/src/ai.ts", "packages/core/tests/audit-assessment.test.ts"],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": ["packages/core/src/audit/ai/assessment.ts", "packages/core/tests/audit-assessment.test.ts"],
+      "complexity": "M",
+      "permission_level": "P1",
+      "status": "PENDING",
+      "notes": "Input shapes (Page Content summary, findings, Sections) come from G2/G3 types already in packages/types/src/website-audit.ts; the module takes them as arguments, so it does not depend on G3 code. Per-area deterministic grades are an input: see handoff (who computes area grades)."
+    },
+    {
+      "task_id": "BE-407",
+      "requirement_ids": ["REQ-045"],
+      "title": "Redesign or repair recommendation for each Sample Page",
+      "description": "Create packages/core/src/audit/ai/page-recommendation.ts. `recommendPages(input, ai)`: for each Sample Page, one 'assessment' stage request asking the AI to propose redesign or repair with a plain reason and the finding ids behind it (Q-14: AI proposes, editable in review). Validate: action is 'redesign' or 'repair', findingIds are findings of that page (unknown ids dropped; at least one id when the page has findings), reason free of ADR 0018 words (one repair request). When there is no AI key or the AI fails, a fixed rule decides (`decidedBy: 'rule'`): redesign when the page has at least N high-impact findings across at least two groups or its usability/content grades are the two lowest, else repair; the rule and threshold are constants documented in the module and tested. Output: exactly one PageRecommendation per Sample Page; covered pages refer to their Layout Group's Sample Page (no own recommendation).",
+      "agent": "backend-engineer",
+      "priority": "high",
+      "depends_on": ["BE-402"],
+      "files_owned": [
+        "packages/core/src/audit/ai/page-recommendation.ts",
+        "packages/core/tests/audit-page-recommendation.test.ts"
+      ],
+      "acceptance_criteria": [
+        "REQ-045 AC-1: Given an audited page, when analysed, then the output gives it exactly one recommendation, redesign or repair, with the issues (finding ids) that led to it.",
+        "With an AI key the recommendation is marked decidedBy 'ai'; without a key, or after an AI failure, it is decidedBy 'rule' and still exactly one per Sample Page.",
+        "The reason text contains no ADR 0018 word.",
+        "A page with no findings gets 'repair' with a reason saying no issues were found on the checked parts, never a claim about the whole page."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-407-UNIT",
+          "name": "redesign or repair recommendation",
+          "command": "pnpm exec vitest run packages/core/tests/audit-page-recommendation.test.ts",
+          "category": "unit",
+          "paths": ["packages/core/src/audit/ai/page-recommendation.ts", "packages/core/src/audit/ai/stage-ai.ts", "packages/core/src/audit/ai/claim-words.ts", "packages/core/src/ai/providers/mock.ts", "packages/types/src/website-audit.ts", "packages/core/tests/audit-page-recommendation.test.ts"],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": ["packages/core/src/audit/ai/page-recommendation.ts", "packages/core/tests/audit-page-recommendation.test.ts"],
+      "complexity": "M",
+      "permission_level": "P1",
+      "status": "PENDING"
+    },
+    {
+      "task_id": "BE-408",
+      "requirement_ids": ["REQ-030"],
+      "title": "Section rewrite after approval with the word-overlap check",
+      "description": "Create packages/core/src/audit/ai/rewrite.ts and packages/core/src/audit/ai/rewrite-store.ts. Q-08: new copy goes into the Audit Documents only, never onto the live site; the tool user approves each Section; a word-overlap check flags phrases copied from the original. `findOverlaps(original, proposal, minWords)`: normalised (case, punctuation, Unicode letters/marks incl. Tamil) runs of at least `minWords` consecutive words (AuditSettings.rewriteOverlapWords, default DEFAULT_REWRITE_OVERLAP_WORDS = 6) shared with the original, merged into maximal runs, as OverlapFlag[]. RewriteStore keeps RewriteState per (urlPath, sectionId) in `rewrites.json` inside an injected version folder (writeJsonAtomic). Operations: `approve` (sets approvedAt), `run` (refuses with ERR_NOT_APPROVED unless approved; ERR_NO_AI_KEY without a key; one 'rewrite' stage request with the Section text from Page Content, the document language and an instruction not to reuse its wording or invent facts such as prices or phone numbers; if overlaps remain, one retry naming the flagged phrases; stores the proposal with its overlaps and createdAt; proposal text checked with findClaimWords), `accept(text)` (refuses with ERR_NOT_APPROVED if not approved and ERR_OVERLAP if the accepted text still has an overlap; returns the SectionEdit with by: 'rewrite' for the edit overlay). The rewrite uses the Section text captured by the crawl; it opens no browser and sends nothing to the audited site (ADR 0030 read-only).",
+      "agent": "backend-engineer",
+      "priority": "low",
+      "depends_on": ["BE-402"],
+      "files_owned": [
+        "packages/core/src/audit/ai/rewrite.ts",
+        "packages/core/src/audit/ai/rewrite-store.ts",
+        "packages/core/tests/audit-rewrite.test.ts",
+        "packages/core/tests/audit-rewrite-store.test.ts"
+      ],
+      "acceptance_criteria": [
+        "REQ-030 AC-1: Given no approval has been recorded for a Section, when a rewrite is requested, then no rewrite runs (no AI request is made) and the refusal code is ERR_NOT_APPROVED.",
+        "REQ-030 AC-2: Given an approved rewrite, when its output is compared with the original Section, then any run of at least rewriteOverlapWords words shared with the original is flagged, and accepting copy that still has a flagged run is refused with ERR_OVERLAP.",
+        "Overlap detection works on Tamil text (Unicode marks kept) and ignores case and punctuation; runs shorter than the threshold are not flagged.",
+        "Approval and proposals survive a reload of the store; the store never holds a key.",
+        "Accepting copy returns an edit marked by 'rewrite' for the Audit Documents; nothing is sent to the audited site."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-408-UNIT",
+          "name": "rewrite approval gate and overlap check",
+          "command": "pnpm exec vitest run packages/core/tests/audit-rewrite.test.ts packages/core/tests/audit-rewrite-store.test.ts",
+          "category": "unit",
+          "paths": ["packages/core/src/audit/ai/rewrite.ts", "packages/core/src/audit/ai/rewrite-store.ts", "packages/core/src/audit/ai/stage-ai.ts", "packages/core/src/audit/ai/claim-words.ts", "packages/core/src/atomic-write.ts", "packages/core/src/ai/providers/mock.ts", "packages/types/src/website-audit.ts", "packages/core/tests/audit-rewrite.test.ts", "packages/core/tests/audit-rewrite-store.test.ts"],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "packages/core/src/audit/ai/rewrite.ts",
+        "packages/core/src/audit/ai/rewrite-store.ts",
+        "Two unit test files"
+      ],
+      "complexity": "M",
+      "permission_level": "P1",
+      "status": "PENDING",
+      "notes": "Q-08 says 'agents browse the audited site read-only'. This plan rewrites from the Section text the crawl already captured, so no new browser visit is needed; if the developer wants a fresh read-only visit, that is a follow-up through G2's crawl, never a new outbound path."
+    },
+    {
+      "task_id": "BE-409",
+      "requirement_ids": ["REQ-011", "REQ-012", "REQ-016", "REQ-017", "REQ-030", "REQ-039", "REQ-045"],
+      "title": "Barrel for packages/core/src/audit/ai",
+      "description": "Create packages/core/src/audit/ai/index.ts exporting the public API of stage-ai, stage-models-store, claim-words, ranking, pagespeed, assessment, page-recommendation, rewrite and rewrite-store (named exports only, no `export *` collisions with the core barrel), plus AITimeoutError from ../../ai/timeout.js. BE-190 (G1) adds `export * from './audit/ai/index.js'` to packages/core/src/index.ts. A test imports the barrel and asserts each expected export exists.",
+      "agent": "backend-engineer",
+      "priority": "high",
+      "depends_on": ["BE-401", "BE-402", "BE-403", "BE-404", "BE-406", "BE-407", "BE-408"],
+      "files_owned": [
+        "packages/core/src/audit/ai/index.ts",
+        "packages/core/tests/audit-ai-barrel.test.ts"
+      ],
+      "acceptance_criteria": [
+        "Importing packages/core/src/audit/ai/index.ts exposes resolveAuditAi, the stage models store, findClaimWords, rankFindings, scoreFindings, checkCitations, measurePageSpeed, measureSampleSpeeds, assessPages, assessSite, recommendPages, findOverlaps, the rewrite operations and AITimeoutError.",
+        "No exported name collides with an existing export of packages/core/src/index.ts (asserted by importing both)."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-409-UNIT",
+          "name": "audit AI barrel exports",
+          "command": "pnpm exec vitest run packages/core/tests/audit-ai-barrel.test.ts",
+          "category": "unit",
+          "paths": ["packages/core/src/audit/ai/**", "packages/core/src/ai/timeout.ts", "packages/core/src/index.ts", "packages/core/tests/audit-ai-barrel.test.ts"],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": ["packages/core/src/audit/ai/index.ts", "packages/core/tests/audit-ai-barrel.test.ts"],
+      "complexity": "XS",
+      "permission_level": "P1",
+      "status": "PENDING"
+    },
+    {
+      "task_id": "BE-410",
+      "requirement_ids": ["REQ-030", "REQ-039", "REQ-011"],
+      "title": "Runner routes: audit AI models per stage and Section rewrite (approve, run, accept, list)",
+      "description": "Create packages/runner/src/routes/audit-ai.ts exporting `createAuditAiRoutes(deps): Route[]`. Dependencies are injected so the module imports only @qa/types and the route helpers (no @qa/core import, no server.ts edit): `readModels/writeModels` (stage models store), `aiDefaults()` (the saved text and vision models), `hasAiKey()`, and per audit version `rewrites` operations (list/approve/run/accept from BE-408), `loadSection(auditId, version, urlPath, sectionId)` (G6 audit store / G3 Page Content), `applyRewriteEdit` (G5 edit overlay) and `overlapWords()` (audit settings). Routes: AUDIT_AI_API.getModels/putModels (validateAuditAiModelsUpdate, reply AuditAiModelsReply with effective model per stage via modelForStage), AUDIT_API.listRewrites, approveRewrite, runRewrite, acceptRewrite with the access levels declared in AUDIT_API / AUDIT_AI_API (BE-102 Route access field and :id matching). Errors use AuditErrorReply codes: ERR_INVALID_REQUEST (400), ERR_AUDIT_NOT_FOUND (404), ERR_AUDIT_RUNNING (409), ERR_NOT_APPROVED (409), ERR_NO_AI_KEY (409), ERR_OVERLAP (422). Replies never contain a key or a provider error body. BE-190 (G1) registers the routes with real dependencies.",
+      "agent": "backend-engineer",
+      "priority": "medium",
+      "depends_on": ["BE-400", "BE-102"],
+      "files_owned": [
+        "packages/runner/src/routes/audit-ai.ts",
+        "packages/runner/tests/audit-ai-routes.test.ts"
+      ],
+      "acceptance_criteria": [
+        "REQ-030 AC-1 (route): POST /api/audits/:id/rewrite for a Section with no recorded approval answers 409 ERR_NOT_APPROVED and calls no AI; after POST .../rewrite/approve it runs.",
+        "REQ-030 AC-2 (route): POST .../rewrite/accept with text that still shares a run of at least rewriteOverlapWords words with the original answers 422 ERR_OVERLAP and applies no edit; clean text is applied as an edit marked 'rewrite'.",
+        "REQ-011 AC-2 (route): without a saved AI key, POST .../rewrite answers 409 ERR_NO_AI_KEY.",
+        "REQ-039: PUT /api/audit-ai/models saves a model per audit stage and GET returns each stage's own model or its slot default; invalid bodies answer 400 ERR_INVALID_REQUEST with field messages.",
+        "Each route row declares the access level of its AUDIT_API / AUDIT_AI_API entry (owner for runRewrite and models, edit for approve/accept, view for list).",
+        "No reply body contains the AI key or a raw provider error."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-410-UNIT",
+          "name": "audit AI runner routes",
+          "command": "pnpm exec vitest run packages/runner/tests/audit-ai-routes.test.ts",
+          "category": "integration",
+          "paths": ["packages/runner/src/routes/audit-ai.ts", "packages/runner/src/routes/route.ts", "packages/runner/src/routes/body.ts", "packages/types/src/ai.ts", "packages/types/src/website-audit.ts", "packages/runner/tests/audit-ai-routes.test.ts"],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": ["packages/runner/src/routes/audit-ai.ts", "packages/runner/tests/audit-ai-routes.test.ts"],
+      "complexity": "M",
+      "permission_level": "P2",
+      "status": "PENDING",
+      "notes": "P2: declares access levels on routes that spend the tool user's AI key. The test drives handlers with mock req/res like plan-routes.test.ts (no RunnerServer), so it stays in the unit project."
+    },
+    {
+      "task_id": "FE-400",
+      "requirement_ids": ["REQ-039"],
+      "title": "Wizard: AI model per audit stage settings panel",
+      "description": "Create packages/wizard/src/screens/audit/ai/AuditAiModelsPanel.tsx and packages/wizard/src/screens/audit/ai/stage-models-api.ts. The panel lists the four Website Audit AI tasks (assessment notes and redesign or repair; Audit Documents and Pitch Glimpse; homepage preview; Section rewrite) with a model field each, shows the default used when left empty (from AuditAiModelsReply.defaults/effective), saves through PUT /api/audit-ai/models and shows the validator's field messages. Labelled inputs, keyboard reachable, CONTEXT.md terms (AI Provider, Website Audit, Pitch Glimpse, Audit Document; no 'scan', 'quota'). Imports types only from @qa/types/src/ai.js (browser-safe). FE-191 (G1) mounts the panel in the audit settings screen.",
+      "agent": "frontend-engineer",
+      "priority": "high",
+      "depends_on": ["BE-400"],
+      "files_owned": [
+        "packages/wizard/src/screens/audit/ai/AuditAiModelsPanel.tsx",
+        "packages/wizard/src/screens/audit/ai/stage-models-api.ts",
+        "packages/wizard/tests/audit-ai-models-panel.test.tsx"
+      ],
+      "acceptance_criteria": [
+        "REQ-039 AC-1 (UI): the tool user can set a different model for each of the four audit AI tasks; saving sends exactly the changed stages, and clearing a field sends null to put the default back.",
+        "Each field has a visible label tied to its input, and the shown default matches the reply's effective model.",
+        "A 400 reply shows the field messages next to the fields; nothing else is cleared.",
+        "Rendered text passes the wizard's banned-words test and uses CONTEXT.md terms."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-FE-400-UNIT",
+          "name": "audit AI models panel",
+          "command": "pnpm exec vitest run packages/wizard/tests/audit-ai-models-panel.test.tsx packages/wizard/tests/no-banned-words.test.ts",
+          "category": "unit",
+          "paths": ["packages/wizard/src/screens/audit/ai/AuditAiModelsPanel.tsx", "packages/wizard/src/screens/audit/ai/stage-models-api.ts", "packages/types/src/ai.ts", "packages/wizard/tests/audit-ai-models-panel.test.tsx", "packages/wizard/tests/no-banned-words.test.ts"],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "packages/wizard/src/screens/audit/ai/AuditAiModelsPanel.tsx",
+        "packages/wizard/src/screens/audit/ai/stage-models-api.ts",
+        "packages/wizard/tests/audit-ai-models-panel.test.tsx"
+      ],
+      "complexity": "S",
+      "permission_level": "P1",
+      "status": "PENDING"
+    },
+    {
+      "task_id": "FE-401",
+      "requirement_ids": ["REQ-030"],
+      "title": "Wizard: Section rewrite review (approve, write, see copied phrases, edit, accept)",
+      "description": "Create packages/wizard/src/screens/audit/ai/RewriteReview.tsx and packages/wizard/src/screens/audit/ai/rewrite-api.ts. For each Section of a page: the original text, an 'Approve rewrite' control, a 'Write new copy' control that is disabled until approved, the proposal with every OverlapFlag phrase highlighted (and listed with its word count), an editable text area, and 'Accept' that is refused with the server's ERR_OVERLAP message while copied phrases remain. Shows ERR_NO_AI_KEY as 'Add an AI key in Settings to write new copy.' States that new copy goes into the Audit Documents only, never onto the site. Types from @qa/types/src/website-audit.js only. FE-191 (G1) mounts it in the audit result screen.",
+      "agent": "frontend-engineer",
+      "priority": "low",
+      "depends_on": [],
+      "files_owned": [
+        "packages/wizard/src/screens/audit/ai/RewriteReview.tsx",
+        "packages/wizard/src/screens/audit/ai/rewrite-api.ts",
+        "packages/wizard/tests/audit-rewrite-review.test.tsx"
+      ],
+      "acceptance_criteria": [
+        "REQ-030 AC-1 (UI): before approval the write control is disabled and no rewrite request is sent.",
+        "REQ-030 AC-2 (UI): each flagged phrase of the proposal is highlighted and listed; Accept shows the ERR_OVERLAP refusal and keeps the edited text.",
+        "Controls are buttons with accessible names and reachable by keyboard; the highlighted phrases are announced (mark element or aria label), not shown by colour alone.",
+        "Rendered text passes the wizard's banned-words test and uses CONTEXT.md terms (Section, Audit Document, Website Audit)."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-FE-401-UNIT",
+          "name": "rewrite review UI",
+          "command": "pnpm exec vitest run packages/wizard/tests/audit-rewrite-review.test.tsx packages/wizard/tests/no-banned-words.test.ts",
+          "category": "unit",
+          "paths": ["packages/wizard/src/screens/audit/ai/RewriteReview.tsx", "packages/wizard/src/screens/audit/ai/rewrite-api.ts", "packages/types/src/website-audit.ts", "packages/wizard/tests/audit-rewrite-review.test.tsx", "packages/wizard/tests/no-banned-words.test.ts"],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "packages/wizard/src/screens/audit/ai/RewriteReview.tsx",
+        "packages/wizard/src/screens/audit/ai/rewrite-api.ts",
+        "packages/wizard/tests/audit-rewrite-review.test.tsx"
+      ],
+      "complexity": "M",
+      "permission_level": "P1",
+      "status": "PENDING"
+    },
+    {
+      "task_id": "QA-400",
+      "requirement_ids": ["REQ-011", "REQ-016", "REQ-017", "REQ-039", "REQ-043", "REQ-045"],
+      "title": "Audit AI flow contract test and free-tier external API inspection",
+      "description": "Independent verification across the group's core modules through the barrel. packages/core/tests/audit-ai-flow.test.ts: findings from a small hand-built audit (two Layout Groups, Sections, findings with and without impact/effort) go through scoreFindings, rankFindings, assessPages/assessSite and recommendPages with a MockAIProvider recording each request; asserts ranking order and citations, six areas per Sample Page and site-wide, exactly one recommendation per Sample Page, no ADR 0018 word anywhere in the output, model A for 'assessment' and model B for 'rewrite' when set, and the no-key path (every area 'not-done' 'no-ai-key', recommendations decidedBy 'rule'). packages/core/tests/audit-external-apis.test.ts: source inspection of packages/core/src/audit/** finding every absolute https URL; the only external data API is the PageSpeed Insights v5 endpoint, and docs/adr/0035-pagespeed-data.md states it is used on its free tier (REQ-043 AC-1).",
+      "agent": "qa-engineer",
+      "priority": "high",
+      "depends_on": ["BE-409"],
+      "files_owned": [
+        "packages/core/tests/audit-ai-flow.test.ts",
+        "packages/core/tests/audit-external-apis.test.ts"
+      ],
+      "acceptance_criteria": [
+        "REQ-043 AC-1: Given the MVP build, when its external data API calls are reviewed (source inspection test), then each one uses an API usable on a free tier without payment, and ADR 0035 says so.",
+        "REQ-016 AC-1..AC-3, REQ-017 AC-1..AC-2, REQ-039 AC-1 and REQ-045 AC-1 hold end to end across the modules with a mocked AI Provider (no real network, no clock dependence).",
+        "REQ-011 AC-2: with no key, no AI request is recorded and every AI output is marked not done or rule-based."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-QA-400-UNIT",
+          "name": "audit AI flow and free-tier inspection",
+          "command": "pnpm exec vitest run packages/core/tests/audit-ai-flow.test.ts packages/core/tests/audit-external-apis.test.ts",
+          "category": "integration",
+          "paths": ["packages/core/src/audit/**", "packages/core/src/ai/**", "packages/types/src/ai.ts", "packages/types/src/website-audit.ts", "docs/adr/0035-pagespeed-data.md", "packages/core/tests/audit-ai-flow.test.ts", "packages/core/tests/audit-external-apis.test.ts"],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": ["packages/core/tests/audit-ai-flow.test.ts", "packages/core/tests/audit-external-apis.test.ts"],
+      "complexity": "S",
+      "permission_level": "P1",
+      "status": "PENDING",
+      "notes": "audit-external-apis.test.ts scans packages/core/src/audit/** including G2/G3 modules; if they add another external data API it fails until ADR 0035 (or a new ADR) records its free tier."
+    }
+  ]
+}

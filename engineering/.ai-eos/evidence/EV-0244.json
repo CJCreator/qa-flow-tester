@@ -1,0 +1,39 @@
+{
+  "evidence_id": "EV-0244",
+  "check_id": "CHK-BE-105-UNIT",
+  "name": "host pacer and robots Crawl-delay unit tests",
+  "category": "unit",
+  "requirement_ids": [
+    "REQ-034",
+    "REQ-035"
+  ],
+  "task_ids": [
+    "BE-105"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/host-pacer.test.ts packages/core/tests/robots.test.ts packages/core/tests/outbound-fetch.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  3 passed (3)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0244.log",
+  "log_sha256": "d2ef6a856256fc67fe4788f4feca40f9e6aeb989a1976f7baffb4d3289f45994",
+  "started_at": "2026-11-04T03:36:33.328Z",
+  "finished_at": "2026-11-04T03:37:02.195Z",
+  "duration_ms": 28867,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:4aefa937450552108ba70afa3103b87f87908284522b356378fba9284a2b5d84",
+  "concurrent_tasks": [],
+  "paths": [
+    "packages/core/src/competitive/robots.ts",
+    "packages/core/src/host-pacer.ts",
+    "packages/core/src/safe-net.ts",
+    "packages/core/tests/host-pacer.test.ts",
+    "packages/core/tests/outbound-fetch.test.ts",
+    "packages/core/tests/robots.test.ts"
+  ],
+  "paths_fingerprint": "git-paths:5ef3b1735b340c0c8e15063acbd860b423291d8557dd9dc198a41ef51b5bff17"
+}

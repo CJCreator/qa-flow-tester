@@ -1,0 +1,59 @@
+{
+  "task_id": "BE-403",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-017"
+  ],
+  "files_inspected": [
+    "packages/types/src/website-audit.ts",
+    "packages/types/src/aspects.ts",
+    "packages/types/src/test-case.ts",
+    "packages/core/src/audit/analysis/finding-ids.ts",
+    "packages/core/src/audit/analysis/accessibility-basics.ts",
+    "packages/core/src/audit/analysis/marketing-signals.ts",
+    "packages/core/src/audit/phone-layout.ts",
+    "engineering/plan.md"
+  ],
+  "files_created": [
+    "packages/core/src/audit/ai/ranking.ts",
+    "packages/core/tests/audit-ranking.test.ts"
+  ],
+  "files_modified": [],
+  "implementation_summary": "New pure module ranking.ts. IMPACT_EFFORT_BY_RULE gives a default for every BE-305 rule (missing/duplicate title and description, duplicate-content, no-h1, multiple-h1, skipped-heading-level, missing-alt, broken-link), for unlinked-page and for all ten MARKETING_SIGNALS keys. The marketing part is typed as Record<MarketingSignalKey, ...>, so the type check fails if a signal has no entry. IMPACT_EFFORT_BY_SEVERITY maps the tool's severities (Blocker/Major high, Minor medium, Suggestion low) and axe's impact names (critical/serious high, moderate medium). Lookup is case-insensitive and ignores prototype keys such as 'constructor'. DEFAULT_IMPACT_EFFORT is medium/medium. Lookup order is rule, then severity, then default. scoreFindings fills only impact or effort that is undefined or null, returns new objects and never changes a set value. rankFindings sorts by impact (high first), then lower effort, then urlPath (plain code-unit compare, the same in every locale), then Section order ('s1' < 's2' < 's10'; whole-page null first), then rule, target and the old id. It renumbers AF-001… in ranked order using formatFindingId, scores any unset values first and throws TypeError when a value is not on the scale. rankFindingsWithIdMap also returns old id -> new id, with an optional start number. checkCitations(findings, pages) reports 'unknown-page' (urlPath, or any entry in pages[]), 'unknown-section' and 'missing-section' (null sectionId on a rule not in WHOLE_PAGE_RULES). WHOLE_PAGE_RULES lists the title, description and heading-outline rules. pages accepts AuditPage or PageContent shape ({urlPath, sections:[{id}]}).",
+  "tests_executed": [
+    {
+      "name": "audit finding ranking (CHK-BE-403-UNIT)",
+      "command": "pnpm exec vitest run packages/core/tests/audit-ranking.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 16 passed (16)"
+    },
+    {
+      "name": "core type-check filtered to ranking",
+      "command": "cd packages/core && npx tsc --noEmit -p . | grep -i ranking",
+      "result": "passed",
+      "output_excerpt": "no type errors reported for ranking.ts"
+    }
+  ],
+  "tests_proposed": [
+    "BE-192 pipeline test: after rankFindingsWithIdMap, every AuditPage seo/accessibility/phone findingIds and every roadmap findingIds entry resolves to a ranked finding",
+    "QA-195 end-to-end: checkCitations over the fixture audit returns [] once producers cite Sections"
+  ],
+  "evidence": [
+    "packages/core/src/audit/ai/ranking.ts: IMPACT_EFFORT_BY_RULE, IMPACT_EFFORT_BY_SEVERITY, scoreFindings, rankFindingsWithIdMap, rankFindings, checkCitations",
+    "packages/core/tests/audit-ranking.test.ts: 16 tests covering AC-1 ordering, AC-2 citations, determinism across input orders, never changing set values"
+  ],
+  "blockers": [],
+  "risks": [
+    "Renumbering: rankFindings gives new AF ids in ranked order, so ids already cited elsewhere (SeoBasics.findingIds, AccessibilityBasics.findingIds, PhoneLayout.findingIds, marketing evidence, assessment evidence, recommendation findingIds) go stale unless remapped. BE-192 should use rankFindingsWithIdMap and remap them, or rank before anything cites ids. The BE-192 plan text says 'keeping AF ids', which conflicts with this task's 'assigns ids AF-001… in ranked order'; I followed this task.",
+    "Citation strictness: per the spec, null sectionId is allowed only for title, description and heading-outline rules. accessibility-basics.ts (BE-307) emits checker findings with sectionId null, and duplicate-content may also be cited with null, so checkCitations will flag those as 'missing-section' until their producers cite a Section or WHOLE_PAGE_RULES is widened by a planned change.",
+    "Default impact and effort values are product judgement (Q-14). A reviewer should confirm the table, e.g. duplicate-content medium/high and ctas/lead-forms high/medium.",
+    "FindingSeverity in @qa/types is Blocker/Major/Minor/Suggestion. The axe names critical/serious/moderate are mapped too, but no current producer stores them in severity."
+  ],
+  "handoff": "Import from packages/core/src/audit/ai/ranking.ts. BE-409 barrel exports: IMPACT_EFFORT_BY_RULE, IMPACT_EFFORT_BY_SEVERITY, DEFAULT_IMPACT_EFFORT, WHOLE_PAGE_RULES, defaultImpactEffort, scoreFindings, rankFindings, rankFindingsWithIdMap, checkCitations, plus the types ImpactEffort, UnscoredAuditFinding, RankOptions, RankedFindings, CitationProblem, CitationProblemKind, CitablePage. BE-192: call rankFindingsWithIdMap(findings, { start: 1 }) once over all findings (rule, checker and AI), then remap every findingIds list with idMap. Run checkCitations(ranked, result.pages) and record the problems rather than dropping findings. Marketing-signal findings, if any are produced, should use the signal key (e.g. 'schema') as their rule to get the table default.",
+  "_captured": {
+    "at": "2026-11-03T07:50:21.067Z",
+    "agent_id": "a97423b2816ab8be0",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

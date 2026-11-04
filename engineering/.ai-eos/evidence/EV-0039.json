@@ -1,0 +1,58 @@
+{
+  "evidence_id": "EV-0039",
+  "check_id": "CHK-BE-505-UNIT",
+  "name": "Pitch Glimpse and Owner Audit tests",
+  "category": "unit",
+  "requirement_ids": [
+    "REQ-019",
+    "REQ-025"
+  ],
+  "task_ids": [
+    "BE-505"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/audit-doc-pitch.test.ts packages/core/tests/audit-doc-owner.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  2 passed (2)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0039.log",
+  "log_sha256": "4ecc680a70fbb4cfd0ed993469acaa2b75ae537448ee4d603277804160ff2ce6",
+  "started_at": "2026-11-03T07:35:26.887Z",
+  "finished_at": "2026-11-03T07:35:38.044Z",
+  "duration_ms": 11157,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:e8f9e3a299fd0a99f997138b56b4ac2a55fc813b45b296a989773980ac841039",
+  "concurrent_tasks": [
+    "BE-505",
+    "BE-601"
+  ],
+  "paths": [
+    "packages/core/src/audit/documents/**",
+    "packages/core/tests/audit-doc-owner.test.ts",
+    "packages/core/tests/audit-doc-pitch.test.ts",
+    "packages/core/tests/helpers/audit-doc-fixture.ts",
+    "packages/types/src/website-audit.ts"
+  ],
+  "paths_fingerprint": "git-paths:fa168acc221d6f23cac565a325f5f6b8aa34deff6648c14a3fb39feb486d52a6",
+  "scoped_fingerprint": "git:98ed64484e1a5f085a9faba1901e545fafa067e0de9bb85f5187a227f8c1cc8a",
+  "excluded_owned": [
+    "packages/core/src/audit/documents/owner-audit.ts",
+    "packages/core/src/audit/documents/pitch.ts",
+    "packages/core/src/audit/store/audit-store.ts",
+    "packages/core/src/audit/store/helper-grants.ts",
+    "packages/core/src/audit/store/index.ts",
+    "packages/core/src/audit/store/keys.ts",
+    "packages/core/src/audit/store/shares.ts",
+    "packages/core/src/audit/store/shortlist.ts",
+    "packages/core/tests/audit-doc-owner.test.ts",
+    "packages/core/tests/audit-doc-pitch.test.ts",
+    "packages/core/tests/audit-store-helper-grants.test.ts",
+    "packages/core/tests/audit-store-shares.test.ts",
+    "packages/core/tests/audit-store-shortlist.test.ts",
+    "packages/core/tests/audit-store.test.ts"
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "evidence_id": "EV-0295",
+  "check_id": "CHK-QA-701-TYPECHECK",
+  "name": "typecheck core tests",
+  "category": "typecheck",
+  "requirement_ids": [
+    "REQ-051"
+  ],
+  "task_ids": [
+    "QA-701"
+  ],
+  "command": "pnpm exec tsc -p packages/core/tests/tsconfig.typecheck.json --noEmit",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "FAIL",
+  "exit_code": 2,
+  "timed_out": false,
+  "actual_result": "exit code 2;   Types of parameters 'urls' and 'pages' are incompatible. ·     The type 'readonly string[]' is 'readonly' and cannot be assigned to the mutable type 'string[]'.",
+  "failure_details": "packages/core/tests/audit-languages-e2e.test.ts(141,15): error TS2322: Type '(urls: string[]) => Promise<never>' is not assignable to type '(pages: readonly string[], deps?: PageSpeedDeps) => Promise<SampleSpeed[]>'.\n  Types of parameters 'urls' and 'pages' are incompatible.\n    The type 'readonly string[]' is 'readonly' and cannot be assigned to the mutable type 'string[]'.",
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0295.log",
+  "log_sha256": "555673d94604915bd172c7b5c085061cd17f5ac3ba64a968a99a6557aa7c729e",
+  "started_at": "2026-11-04T03:45:15.198Z",
+  "finished_at": "2026-11-04T03:47:06.629Z",
+  "duration_ms": 111431,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:ae82113bc98d63de43d0954c20f89115c91c08a1222d3d6fc058ccbe621d2823",
+  "concurrent_tasks": [
+    "QA-712"
+  ],
+  "paths": [
+    "fixtures/test-app/server.d.ts",
+    "packages/checkers/src/**",
+    "packages/core/src/**",
+    "packages/core/tests/**",
+    "packages/types/src/**",
+    "tsconfig.base.json",
+    "tsconfig.test.json"
+  ],
+  "paths_fingerprint": "git-paths:7b2900274bdedc750cc7f50d581c30af1344ec2823b9c8d184d6d8a00605fcd3",
+  "scoped_fingerprint": "git:d43e252e7725764cb4edf6b0f30f98b29b73dd58767df07b17c5131fb15af7ea",
+  "excluded_owned": [
+    "packages/wizard/tests/audit-languages-browser.test.ts"
+  ],
+  "concurrent": true
+}

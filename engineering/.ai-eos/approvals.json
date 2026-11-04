@@ -1,0 +1,171 @@
+{
+  "approvals": [
+    {
+      "id": "APR-001",
+      "type": "autopilot",
+      "artifact_sha256": "aa8f1c7e7bde7d504c35c9e6cf6d23787d9e6dbd0cd974ad73fa753ef79bf995",
+      "approver": "Saravanakumar",
+      "approved_at": "2026-11-03T05:58:37.923Z",
+      "session_id": "9d283ac8-810f-4aa6-98c5-8b26ba6a1fc1",
+      "source": "UserPromptExpansion",
+      "status": "active",
+      "version": null,
+      "note": "8 allowed, 45 forbidden path(s); max 18 tasks / 270 min",
+      "snapshot": {
+        "enabled": true,
+        "allowed_paths": [
+          "agent-dashboard/**",
+          "dev-pipeline/**",
+          "fixtures/**",
+          "packages/**",
+          "plugins/**",
+          "scripts/**",
+          "*.mjs",
+          "*.ts"
+        ],
+        "forbidden_paths": [
+          ".github/**",
+          ".gitlab-ci.yml",
+          ".circleci/**",
+          "Jenkinsfile",
+          "azure-pipelines.yml",
+          "bitbucket-pipelines.yml",
+          "infra/**",
+          "deploy/**",
+          "terraform/**",
+          "k8s/**",
+          "kubernetes/**",
+          "helm/**",
+          "**/*.tf",
+          "**/Dockerfile*",
+          "**/docker-compose*.yml",
+          "**/docker-compose*.yaml",
+          "**/migrations/**",
+          "**/migrate/**",
+          "**/alembic/**",
+          "**/*.sql",
+          "**/package-lock.json",
+          "**/npm-shrinkwrap.json",
+          "**/yarn.lock",
+          "**/pnpm-lock.yaml",
+          "**/bun.lock",
+          "**/bun.lockb",
+          "**/poetry.lock",
+          "**/Pipfile.lock",
+          "**/uv.lock",
+          "**/Cargo.lock",
+          "**/go.sum",
+          "**/composer.lock",
+          "**/Gemfile.lock",
+          "**/pubspec.lock",
+          "**/Podfile.lock",
+          "**/gradle.lockfile",
+          "vendor/**",
+          "**/vendor/**",
+          "third_party/**",
+          "**/third_party/**",
+          "**/generated/**",
+          "**/__generated__/**",
+          "**/*.generated.*",
+          "**/*.min.js",
+          "**/*.pb.go"
+        ],
+        "p2": {
+          "allow": [
+            "dependency_add"
+          ],
+          "ecosystems": [
+            "npm"
+          ],
+          "dependency_allowlist": []
+        },
+        "max_tasks": 18,
+        "max_estimate_minutes": 270,
+        "recovery": {
+          "auto_reopen": 1,
+          "auto_replan": 1
+        },
+        "commit": true,
+        "questions": {
+          "ask": [
+            "security",
+            "data_loss",
+            "scope_conflict"
+          ]
+        }
+      }
+    },
+    {
+      "id": "APR-002",
+      "type": "plan",
+      "artifact_sha256": "c22898f77739cf8820226632e375f5509398c92ec43a6c9c484d649f07a34c83",
+      "approver": "Saravanakumar",
+      "approved_at": "2026-11-03T06:57:28.541Z",
+      "session_id": "9d283ac8-810f-4aa6-98c5-8b26ba6a1fc1",
+      "source": "UserPromptExpansion",
+      "status": "superseded",
+      "version": null
+    },
+    {
+      "id": "APR-003",
+      "type": "plan",
+      "artifact_sha256": "fac462595c5fe3860ae41d8446fa694de8ef3779912d51af345b769e9e889855",
+      "approver": "Saravanakumar",
+      "approved_at": "2026-11-03T11:58:34.514Z",
+      "session_id": "9d283ac8-810f-4aa6-98c5-8b26ba6a1fc1",
+      "source": "UserPromptExpansion",
+      "status": "superseded",
+      "version": null
+    },
+    {
+      "id": "APR-004",
+      "type": "plan",
+      "artifact_sha256": "91b687d9ca00302c60f8e6775f191aa3430f81dc104bc9167562598df4dd6a04",
+      "approver": "Saravanakumar",
+      "approved_at": "2026-11-03T12:45:51.213Z",
+      "session_id": "9d283ac8-810f-4aa6-98c5-8b26ba6a1fc1",
+      "source": "UserPromptExpansion",
+      "status": "superseded",
+      "version": null
+    },
+    {
+      "id": "APR-005",
+      "type": "plan",
+      "artifact_sha256": "f32fb5a0d72de7d9d1ab8cea550be05a7854a5bfd2135358785cec0327c2725c",
+      "approver": "Saravanakumar",
+      "approved_at": "2026-11-03T17:05:29.540Z",
+      "session_id": "9d283ac8-810f-4aa6-98c5-8b26ba6a1fc1",
+      "source": "UserPromptExpansion",
+      "status": "superseded",
+      "version": null
+    },
+    {
+      "id": "APR-006",
+      "type": "plan",
+      "artifact_sha256": "9ecab9ac8c430feebe58415e665ff49a12c8064603d1202e8f993a6ee27687ea",
+      "approver": "Saravanakumar",
+      "approved_at": "2026-11-04T03:29:55.980Z",
+      "session_id": "9d283ac8-810f-4aa6-98c5-8b26ba6a1fc1",
+      "source": "UserPromptExpansion",
+      "status": "superseded",
+      "version": null
+    },
+    {
+      "id": "APR-007",
+      "type": "plan",
+      "artifact_sha256": "39d3a1abaf95a7e8cc302ae8224cdc66915edbd0655f882fe93308b2d94eb955",
+      "approver": "Saravanakumar",
+      "approved_at": "2026-11-04T07:00:52.069Z",
+      "session_id": "9d283ac8-810f-4aa6-98c5-8b26ba6a1fc1",
+      "source": "UserPromptExpansion",
+      "status": "active",
+      "version": null
+    }
+  ],
+  "last_attempt": {
+    "at": "2026-11-04T07:00:52.069Z",
+    "type": "plan",
+    "ok": true,
+    "reason": "Recorded APR-007"
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "task_id": "BE-408",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-030"
+  ],
+  "files_inspected": [
+    "packages/core/src/audit/ai/stage-ai.ts",
+    "packages/core/src/audit/ai/claim-words.ts",
+    "packages/core/src/audit/ai/stage-models-store.ts",
+    "packages/core/src/audit/ai/page-recommendation.ts",
+    "packages/core/src/audit/documents/edits.ts",
+    "packages/core/src/atomic-write.ts",
+    "packages/core/src/ai/ai-provider.ts",
+    "packages/types/src/website-audit.ts",
+    "packages/core/tests/audit-page-recommendation.test.ts"
+  ],
+  "files_created": [
+    "packages/core/src/audit/ai/rewrite.ts",
+    "packages/core/src/audit/ai/rewrite-store.ts",
+    "packages/core/tests/audit-rewrite.test.ts",
+    "packages/core/tests/audit-rewrite-store.test.ts"
+  ],
+  "files_modified": [],
+  "implementation_summary": "rewrite.ts: findOverlaps(original, proposal, minWords=DEFAULT_REWRITE_OVERLAP_WORDS) prepares both texts the same way. It applies NFC, lower-cases, drops invisible joiners and apostrophes inside words, and treats a word as a run of \\p{L}\\p{M}\\p{N}, so Tamil vowel signs and virama stay inside the word. It then finds every run of at least minWords words that the proposal shares with the original, joins overlapping or touching windows into maximal runs, and returns them as OverlapFlag[] in proposal order, each run once. overlapThreshold() uses the default when the value is not a number of at least 1. writeRewrite(ai, {sectionText, language, overlapWords, signal, timeoutMs}) sends one 'rewrite' stage request. The prompt includes the Section text as JSON data, the document language, an instruction not to reuse the original wording or repeat N or more words in a row, a ban on invented facts such as prices or phone numbers, and the claim-word ban. If the answer has overlaps or claim words (checked with findClaimWords), it sends one retry that names the flagged phrases and words. It keeps the first answer with no claim words, preferring the retry; that answer may still have overlaps. It returns {ok:false, problem:'budget-spent'|'failed'|'claim-words'} without any provider error text, and passes a caller abort on. rewrite-store.ts: RewriteStore(versionDir) keeps RewriteState[] in versionDir/rewrites.json (schemaVersion 1) using readJsonSafe and writeJsonAtomic, with one save at a time through a queue. On read it drops malformed entries. approve(s, now) validates urlPath (editPathProblem) and sectionId, and keeps the first approvedAt. run(input, {resolveAi, content, overlapWords, signal, timeoutMs, now}) checks input, then approval (ERR_NOT_APPROVED before any key lookup or AI request), then that the Section exists in Page Content (ERR_INVALID_REQUEST), then the key (ERR_NO_AI_KEY). It then calls writeRewrite and stores the proposal with language, overlaps and createdAt. AI failures return {ok:false, code:'ai-failed', problem, message} and store nothing. accept(input, {content, overlapWords, now}) validates the text (not empty, at most MAX_SECTION_EDIT_CHARS, no control characters), refuses with ERR_NOT_APPROVED or ERR_OVERLAP (the overlaps are included in the result), sets acceptedAt and returns a SectionEdit with by:'rewrite'. Nothing opens a browser or contacts the audited site.",
+  "tests_executed": [
+    {
+      "name": "CHK-BE-408-UNIT (rewrite approval gate and overlap check)",
+      "command": "pnpm exec vitest run packages/core/tests/audit-rewrite.test.ts packages/core/tests/audit-rewrite-store.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 2 passed (2); Tests 32 passed (32)"
+    },
+    {
+      "name": "core type-check",
+      "command": "npx tsc --noEmit -p packages/core",
+      "result": "passed",
+      "output_excerpt": "0 'error TS' lines"
+    }
+  ],
+  "tests_proposed": [
+    "Runner integration tests for POST /api/audits/:id/rewrite, /rewrite/approve and /rewrite/accept (status codes 409/422 and access levels) once the runner wiring task exists"
+  ],
+  "evidence": [
+    "packages/core/tests/audit-rewrite-store.test.ts: 'refuses to run without approval: ERR_NOT_APPROVED, no key lookup, no AI request' (AC-1)",
+    "packages/core/tests/audit-rewrite-store.test.ts: 'refuses to accept copy that still has a flagged run: ERR_OVERLAP with the runs' (AC-2)",
+    "packages/core/tests/audit-rewrite.test.ts: 'works on Tamil text', 'ignores letter case and punctuation', 'flags a run of exactly the threshold and not one word shorter'",
+    "packages/core/tests/audit-rewrite-store.test.ts: 'approval and proposals survive a reload; the file holds no key'",
+    "packages/core/tests/audit-rewrite-store.test.ts: 'accepting clean copy returns a SectionEdit marked by rewrite'"
+  ],
+  "blockers": [],
+  "risks": [
+    "AUDIT_ERROR_CODES has no code for an AI failure (budget spent, provider error, claim words left after the retry). The store returns code 'ai-failed' plus a problem, outside AuditErrorCode. The runner must map it to a generic reply (for example 502/503 with a plain message), or a types task should add a code.",
+    "accept() does not check the person's accepted text for claim words; only the AI proposal is checked. A reviewer should confirm this matches ADR 0018 for person-edited copy.",
+    "Overlapping or touching windows are joined into one run. A joined run can therefore cover two separate places in the original; every word in it is still part of a shared run of at least the threshold.",
+    "findOverlaps is O(words x threshold) in memory. Section text is capped at MAX_SECTION_EDIT_CHARS (20000) in the prompt but not in findOverlaps itself, which relies on the page text limit set in the crawl.",
+    "The section-id pattern /^[A-Za-z0-9_.:-]{1,64}$/ and the control-character check are copied from edits.ts, which does not export them."
+  ],
+  "handoff": "Runner: create one RewriteStore(versionDir) per audit version. GET list -> store.list(). POST approve -> store.approve({urlPath, sectionId}). POST run -> store.run({urlPath, sectionId, language: body.language ?? audit language}, {resolveAi: () => resolveAuditAi({setup, keys, models, budget}), content: <PageContent for urlPath>, overlapWords: settings.rewriteOverlapWords, signal, timeoutMs}). POST accept -> store.accept({urlPath, sectionId, text}, {content, overlapWords}); on ok, merge result.edit (by:'rewrite') into the EditOverlay sectionEdits and reply {rewrite, edits}. Map codes: ERR_INVALID_REQUEST 400 (with fields), ERR_NOT_APPROVED/ERR_NO_AI_KEY 409, ERR_OVERLAP 422 (include overlaps), 'ai-failed' to a generic AI-unavailable reply. resolveAi is only called after the approval check, so no key is looked up for an unapproved Section. The store file never holds a key. No migration and no dependency change.",
+  "_captured": {
+    "at": "2026-11-03T08:04:59.081Z",
+    "agent_id": "a8303ed036529e0de",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

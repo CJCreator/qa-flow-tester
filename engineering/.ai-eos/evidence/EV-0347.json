@@ -1,0 +1,39 @@
+{
+  "evidence_id": "EV-0347",
+  "check_id": "CHK-QA-701-TYPECHECK",
+  "name": "typecheck core tests",
+  "category": "typecheck",
+  "requirement_ids": [
+    "REQ-051"
+  ],
+  "task_ids": [
+    "QA-701"
+  ],
+  "command": "pnpm exec tsc -p packages/core/tests/tsconfig.typecheck.json --noEmit",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0347.log",
+  "log_sha256": "1ed21cbc59cdbae07398301e0eba5f44660372823f62699631e00b16953f566d",
+  "started_at": "2026-11-04T05:59:48.486Z",
+  "finished_at": "2026-11-04T06:00:49.088Z",
+  "duration_ms": 60602,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:69fb226175839158083b8bd4d47e58c478a2d7d5c1e3bc5d15c27fbe743460cc",
+  "concurrent_tasks": [],
+  "paths": [
+    "fixtures/test-app/server.d.ts",
+    "packages/checkers/src/**",
+    "packages/core/src/**",
+    "packages/core/tests/**",
+    "packages/types/src/**",
+    "tsconfig.base.json",
+    "tsconfig.test.json"
+  ],
+  "paths_fingerprint": "git-paths:c4ce991fe22872c0e0fdceddce1cfa954f0ca71bd89e8ffda8c73a924488d290"
+}

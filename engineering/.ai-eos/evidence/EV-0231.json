@@ -1,0 +1,50 @@
+{
+  "evidence_id": "EV-0231",
+  "check_id": "CHK-QA-195-E2E",
+  "name": "Website Audit end to end through the runner (Chromium, audit-site fixture)",
+  "category": "e2e",
+  "requirement_ids": [
+    "REQ-034",
+    "REQ-035",
+    "REQ-047",
+    "REQ-048",
+    "REQ-049"
+  ],
+  "task_ids": [
+    "QA-195"
+  ],
+  "command": "pnpm exec vitest run packages/runner/tests/website-audit-e2e.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0231.log",
+  "log_sha256": "07bcc75883a0ab93a92d418ee07c2d6c8a436f898b4aee10f0a19b39b34086b6",
+  "started_at": "2026-11-03T18:28:04.851Z",
+  "finished_at": "2026-11-03T18:28:54.182Z",
+  "duration_ms": 49331,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:77118e74bccda46bd0206d1597af54f56abf7b15ea66107253eec80484ac63e5",
+  "concurrent_tasks": [
+    "QA-600"
+  ],
+  "paths": [
+    "fixtures/audit-site/**",
+    "packages/checkers/src/**",
+    "packages/core/src/**",
+    "packages/core/tests/helpers/audit-site-server.ts",
+    "packages/runner/src/**",
+    "packages/runner/tests/website-audit-e2e.test.ts",
+    "packages/types/src/**"
+  ],
+  "paths_fingerprint": "git-paths:536ef9e1b739ed31131419096d737b04d6a6afc1d16ff1faa19f0a061ec758e9",
+  "scoped_fingerprint": "git:bd47c1915078e9fd4494bba659711db38c04f35d4a296b892ea4999d88461e4d",
+  "excluded_owned": [
+    "packages/runner/tests/audit-persistence-integration.test.ts",
+    "packages/runner/tests/audit-preview-browser.test.ts"
+  ]
+}

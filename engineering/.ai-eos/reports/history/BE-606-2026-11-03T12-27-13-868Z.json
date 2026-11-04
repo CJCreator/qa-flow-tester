@@ -1,0 +1,52 @@
+{
+  "task_id": "BE-606",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-033"
+  ],
+  "files_inspected": [
+    "packages/runner/src/helpers/firebase-token.ts",
+    "packages/runner/src/helpers/helper-access.ts",
+    "packages/runner/src/helpers/index.ts",
+    "packages/runner/tests/helper-token.test.ts",
+    "packages/runner/tests/helper-access.test.ts",
+    "packages/runner/tests/audit-helpers-routes.test.ts"
+  ],
+  "files_created": [],
+  "files_modified": [
+    "packages/runner/src/helpers/firebase-token.ts",
+    "packages/runner/src/helpers/helper-access.ts",
+    "packages/runner/tests/helper-token.test.ts",
+    "packages/runner/tests/helper-access.test.ts",
+    "packages/runner/tests/audit-helpers-routes.test.ts"
+  ],
+  "implementation_summary": "Token verification now requires firebase.sign_in_provider === 'google.com' and refuses with the same fixed error otherwise. Added exported allows(grant, needed) in helper-access.ts as the single permission check, where edit and export include view. HelperAccess.refusal uses it. It is reachable via the helpers/index.ts export-star.",
+  "tests_executed": [
+    {
+      "name": "helper token, session, access and audit-helpers routes",
+      "command": "CI=1 pnpm exec vitest run packages/runner/tests/helper-token.test.ts packages/runner/tests/helper-session.test.ts packages/runner/tests/helper-access.test.ts packages/runner/tests/audit-helpers-routes.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 4 passed (4); Tests 41 passed (41)"
+    }
+  ],
+  "tests_proposed": [
+    "In audit-store.ts tests (BE-602): a grant with permissions ['edit'] or ['export'] must pass mayUseAudit for a view row."
+  ],
+  "evidence": [
+    "helper-token.test.ts: 'accepts only the google.com sign-in provider' covers google.com accepted; password, github.com, empty, null and missing firebase refused.",
+    "audit-helpers-routes.test.ts: a password-provider token gets 401 ERR_SIGN_IN_FAILED.",
+    "helper-access.test.ts: allows() covers edit and export including view, and view not allowing edit."
+  ],
+  "blockers": [],
+  "risks": [
+    "Firebase tokens without the firebase.sign_in_provider claim are now refused. Real Google sign-in tokens carry it.",
+    "Until audit-store.ts adopts allows(), the dispatch path (which expands view) and the route handlers (which read stored permissions as-is) still disagree."
+  ],
+  "handoff": "BE-602 / audit-store.ts: import { allows, grantedPermissions } from './helpers/index.js' (path relative to routes/). In grantedAuditIds and mayUseAudit (~line 62), do not read grant.permissions directly. Replace permission checks with allows(grant, needed), for example mayUseAudit => grant !== null && allows(grant, 'view'), and for edit or export rows allows(grant, 'edit') or allows(grant, 'export'). grantedAuditIds should filter grants with allows(g, 'view'). allows takes any object with a permissions array, so a HelperGrant works directly.",
+  "_captured": {
+    "at": "2026-11-03T12:27:13.868Z",
+    "agent_id": "a9ca2685d846066ac",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

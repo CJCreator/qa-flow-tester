@@ -1,0 +1,78 @@
+{
+  "task_id": "BE-102",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-048"
+  ],
+  "files_inspected": [
+    "packages/runner/src/routes/route.ts",
+    "packages/runner/src/routes/index.ts",
+    "packages/runner/src/routes/plan.ts",
+    "packages/runner/src/server.ts",
+    "packages/types/src/website-audit.ts",
+    "packages/runner/tests/route-table.test.ts",
+    "packages/runner/tests/route-inventory.test.ts",
+    "packages/runner/tests/access-token.test.ts",
+    "packages/runner/tests/beta.test.ts",
+    "vitest.config.ts"
+  ],
+  "files_created": [
+    "packages/runner/tests/route-access.test.ts",
+    "packages/runner/tests/route-access-server.test.ts"
+  ],
+  "files_modified": [
+    "packages/runner/src/routes/route.ts",
+    "packages/runner/src/routes/index.ts",
+    "packages/runner/src/routes/plan.ts",
+    "packages/runner/src/server.ts"
+  ],
+  "implementation_summary": "route.ts: Route gains optional access (AuditAccess) and beta ('allow'|'closed', missing = closed); RouteContext gains params. New resolveRoute returns {route, params}: exact and :param rows (via matchAuditPath, so a bad id or linkId does not match) rank in table order and beat prefix rows; matchRoute delegates to it. New pure authorizeRoute(route, {hasAccessKey, beta, helper?}): no or unknown access -> 403 ERR_ROUTE_CLOSED; owner needs the key (401 ERR_ACCESS_KEY); view/edit/export need the key or helper(permission); sign-in and public are open; in beta only beta 'allow' rows are served, plus sign-in rows and Helper-granted rows (D-004/D-005), else 403 ERR_BETA. index.ts re-exports authorizeRoute, resolveRoute and the new types. plan.ts: all 11 rows are access 'owner', beta 'allow'. server.ts: options routes (test seam, default allRoutes) and helperGrants (default no Helper; a throwing resolver grants nothing); the table is matched before grantAccess; owner rows and unmatched paths keep grantAccess unchanged; matched rows are then authorized (refusals answer JSON {error, code}) and dispatched right after the beta block, before the inline handlers, so no inline handler can answer a path the table opened at a weaker level.",
+  "tests_executed": [
+    {
+      "name": "route table, route access unit, plan routes, route access server, access token, route inventory",
+      "command": "CI=1 pnpm exec vitest run packages/runner/tests/route-table.test.ts packages/runner/tests/route-access.test.ts packages/runner/tests/plan-routes.test.ts packages/runner/tests/route-access-server.test.ts packages/runner/tests/access-token.test.ts packages/runner/tests/route-inventory.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 6 passed (6); Tests 123 passed (123)"
+    },
+    {
+      "name": "beta",
+      "command": "CI=1 pnpm exec vitest run packages/runner/tests/beta.test.ts",
+      "result": "failed",
+      "output_excerpt": "23 passed, 1 failed (3 of 3 runs): 'a runner that is not a beta is never limited' fails with ENOTEMPTY rmdir .tmp-beta/plain-report in its finally cleanup; its assertion (202) passed"
+    },
+    {
+      "name": "runner type-check",
+      "command": "npx tsc --noEmit -p packages/runner/tsconfig.json",
+      "result": "failed",
+      "output_excerpt": "one error, in a file not changed here: src/beta.ts(11,3) TS2305 '@qa/core' has no exported member 'serviceAccount'; no errors in BE-102 files"
+    }
+  ],
+  "tests_proposed": [
+    "When G6 lands: a server test with the real Helper session resolver (expired session, revoked grant)",
+    "Run beta.test.ts on HEAD to confirm the ENOTEMPTY cleanup failure is not caused by this change"
+  ],
+  "evidence": [
+    "packages/runner/src/routes/route.ts:67 resolveRoute",
+    "packages/runner/src/routes/route.ts:143 authorizeRoute",
+    "packages/runner/src/server.ts:387 routes option, :392 helperGrants option",
+    "packages/runner/src/server.ts:813 carriesAccessKey, :822 helperPermissionsFor",
+    "packages/runner/src/server.ts:946 table matched before grantAccess; :948 authorizeRoute; :984 dispatch of the matched row before the inline handlers",
+    "packages/runner/tests/route-access-server.test.ts AC-1/AC-3/AC-4/AC-5/D-005 cases against two RunnerServers with a test-only table"
+  ],
+  "blockers": [],
+  "risks": [
+    "Contract/order: matched table rows are now served before the inline handlers. No Plan path overlaps those inline paths; route-inventory passes unchanged.",
+    "D-005 goes beyond AC-5's wording on purpose: in beta, 'sign-in' rows and Helper-granted view/edit/export rows pass even without beta 'allow'. In beta, the owner (access key) is refused on audit rows without beta 'allow' (D-004).",
+    "A Helper without the needed permission gets 401 ERR_ACCESS_KEY, not 403: a yes/no grant can't tell 'no Helper session' from 'no grant'.",
+    "In beta, 'public' rows still start a beta session and count toward its rate limit (429).",
+    "beta.test.ts 'never limited' failed 3 of 3 runs with ENOTEMPTY in its cleanup (aborted run still writing; possibly worse on OneDrive). Its assertion passed; not checked on HEAD; the file is outside this task's ownership.",
+    "Runner type-check reports one error in a file not changed here: src/beta.ts '@qa/core' has no exported member 'serviceAccount' (likely a stale core build). No errors in BE-102 files."
+  ],
+  "handoff": "G6/REQ-033: pass RunnerServerOptions.helperGrants (req, params) => Iterable<'view'|'edit'|'export'> (async is fine); dispatch needs no change. New audit rows must declare access (a row without one is refused) and declare beta 'allow' only for public Shared Link rows (D-004). Handlers read decoded, rule-checked params from RouteContext.params. authorizeRoute, resolveRoute, RouteCaller, RouteDecision and HelperPermission are exported from packages/runner/src/routes/index.ts. Inline endpoints were not moved into the table.",
+  "_captured": {
+    "at": "2026-11-03T08:02:57.907Z",
+    "agent_id": "aa31e59ef06f28037",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

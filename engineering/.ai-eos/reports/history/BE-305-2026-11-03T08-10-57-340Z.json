@@ -1,0 +1,69 @@
+{
+  "task_id": "BE-305",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-014",
+    "REQ-038"
+  ],
+  "files_inspected": [
+    "packages/core/src/audit/analysis/raw-page.ts",
+    "packages/core/src/audit/analysis/page-content.ts",
+    "packages/core/src/audit/analysis/finding-ids.ts",
+    "packages/core/src/audit/analysis/accessibility-basics.ts",
+    "packages/core/src/audit/ai/ranking.ts",
+    "packages/core/src/audit/documents/wording.ts",
+    "packages/core/src/safe-net.ts",
+    "packages/core/src/redact.ts",
+    "packages/checkers/src/security-depth.ts",
+    "packages/types/src/website-audit.ts",
+    "packages/types/src/route-telemetry.ts",
+    "packages/core/tests/audit-hierarchy.test.ts",
+    "engineering/plan.md"
+  ],
+  "files_created": [
+    "packages/core/src/audit/analysis/content-problems.ts",
+    "packages/core/src/audit/analysis/broken-links.ts",
+    "packages/core/src/audit/analysis/seo-basics.ts",
+    "packages/core/tests/audit-content-problems.test.ts",
+    "packages/core/tests/audit-broken-links.test.ts"
+  ],
+  "files_modified": [],
+  "implementation_summary": "content-problems.ts: contentProblems(pages, ids) emits missing-title, missing-description, no-h1, multiple-h1, skipped-heading-level (first skip per page) and missing-alt (one per image with alt === null; empty alt is decorative and not reported) for each page, then cross-page duplicate-title, duplicate-description and duplicate-content findings. Titles and descriptions are compared after trimming and collapsing whitespace, and empty ones are ignored. Duplicate content compares the 'main' Sections, or else the whole text, after whitespace normalisation, across every page; text that may have been shortened by the per-page cut is skipped. Each duplicate finding lists every page in pages, with urlPath first. Impact and effort come from IMPACT_EFFORT_BY_RULE, ids from the BE-300 allocator, source is 'rule'. The module also exports CONTENT_PROBLEM_RULES, normaliseWhitespace, firstSkippedLevel and h1Count. broken-links.ts: async checkLinks(pages, { origin, statusByPath, skippedPaths, fetch, maxRequests }, ids). Internal link targets are de-duplicated in page order. Skipped paths are never requested or reported. A crawl status is used when known; recorded pages are not requested. Otherwise one GET goes through the injected FetchFn, awaited one after another, capped at maxRequests, with the address built as origin plus path and checked to share the origin; paths with a redacted query value are not requested. Statuses 404, 410 and 5xx give one broken-link finding per target, listing every linking page. A null or failed fetch is not reported. seo-basics.ts: seoBasics(content, findings) records hasTitle, hasDescription, h1Count, skippedHeadingLevel, imagesWithoutAlt and htmlLang (language.declared). findingIds holds the ids of content-problem findings whose urlPath or pages include this page.",
+  "tests_executed": [
+    {
+      "name": "CHK-BE-305-UNIT (content problems, broken links, SEO basics)",
+      "command": "CI=1 pnpm exec vitest run packages/core/tests/audit-content-problems.test.ts packages/core/tests/audit-broken-links.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 2 passed (2); Tests 26 passed (26)"
+    },
+    {
+      "name": "core type-check",
+      "command": "npx tsc --noEmit -p packages/core",
+      "result": "passed",
+      "output_excerpt": "0 'error TS' lines"
+    }
+  ],
+  "tests_proposed": [
+    "BE-308 fixture integration: the about page's link to the 404 page gives a broken-link finding through a real makeOutboundFetch against a local server"
+  ],
+  "evidence": [
+    "packages/core/tests/audit-broken-links.test.ts: fake FetchFn records maxInFlight === 1, 5 distinct calls at maxRequests 5, no calls for Skipped Pages, origin kept for '//evil.example/x'",
+    "packages/core/tests/audit-broken-links.test.ts: source check finds no global fetch, Playwright request or http module in broken-links.ts",
+    "packages/core/tests/audit-content-problems.test.ts: every rule emitted, every finding has the required fields and none matches /\\b(compliant|accessible|secure|passes)\\b/i"
+  ],
+  "blockers": [],
+  "risks": [
+    "Contract: checkLinks needs a required 'origin' option that the planned signature does not list, because FetchFn needs a full address. BE-308 must pass the audited origin.",
+    "skippedPaths wins over statusByPath. BE-308 should leave 'http-error' skips out of skippedPaths and give their status in statusByPath, or crawl 404s are lost. page-limit paths may be requested.",
+    "Only 404, 410 and 5xx count as broken. 401, 403 and 3xx are not reported. Targets that could not be checked (null fetch, past maxRequests) are left out with no finding and no unchecked count.",
+    "Duplicate content skips pages whose main text may have been cut at maxTextChars, so duplicates among very long pages can be missed.",
+    "content-problems.ts and broken-links.ts import IMPACT_EFFORT_BY_RULE from audit/ai/ranking.ts (analysis to ai import; there is no cycle today)."
+  ],
+  "handoff": "BE-308: call contentProblems(pages, ids), then await checkLinks(pages, { origin, statusByPath (Map or plain object), skippedPaths (any list of paths: sign-in, payment, robots, excluded, depth-limit), fetch: makeOutboundFetch(...), maxRequests }, ids), then seoBasics(content, allFindings) for each page. Ids come from the shared allocator in emit order, so ids.nextNumber stays valid for the AI findings. Whole-page rules have sectionId null; missing-alt, duplicate-content and broken-link always cite a Section, so checkCitations passes. The barrel should export contentProblems, checkLinks, CheckLinksOptions and seoBasics.",
+  "_captured": {
+    "at": "2026-11-03T08:10:57.340Z",
+    "agent_id": "a48886624f0ec43d3",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

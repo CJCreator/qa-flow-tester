@@ -1,0 +1,57 @@
+{
+  "task_id": "QA-707",
+  "agent": "qa-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-053",
+    "REQ-046"
+  ],
+  "files_inspected": [
+    "packages/core/tests/auth-crawl-e2e.test.ts",
+    "packages/core/src/competitive/robots.ts",
+    "packages/core/src/safe-net.ts",
+    "packages/core/src/discovery/discovery-agent.ts",
+    "fixtures/test-app/server.js",
+    "vitest.config.ts",
+    "engineering/.ai-eos/evidence/logs/EV-0006.log"
+  ],
+  "files_created": [],
+  "files_modified": [
+    "packages/core/tests/auth-crawl-e2e.test.ts"
+  ],
+  "implementation_summary": "EV-0006 dead-links timeout was a full-suite load artefact: standalone the test passes in about 24-25 s (bound unchanged, still 30000 ms), crawl bounded, 500/403 in skipped. The first standalone run exposed a different failure, the LC-001 politeness-note test, caused by RobotsPolicy.fetch now using public-only makeOutboundFetch (ADR 0031) so the localhost fixture's robots.txt is refused and the policy becomes allow-all. Fixed in the test by spying RobotsPolicy.fetch to run the real fetch with an allowPrivate:true outbound fetch (reason commented), plus vi.restoreAllMocks() in finally. No assertion weakened, no test removed or skipped. sessionsOf() confirmed working.",
+  "tests_executed": [
+    {
+      "name": "auth-crawl-e2e before fix",
+      "command": "pnpm exec vitest run packages/core/tests/auth-crawl-e2e.test.ts",
+      "result": "failed",
+      "output_excerpt": "Tests 1 failed | 9 passed (10); LC-001 politeness note: expected [ Array(11) ] to not include '/private/'; dead-links test passed in 24238ms"
+    },
+    {
+      "name": "auth-crawl-e2e after fix",
+      "command": "pnpm exec vitest run packages/core/tests/auth-crawl-e2e.test.ts",
+      "result": "passed",
+      "output_excerpt": "Tests 10 passed (10); Duration 352.41s; dead-links 25034ms, politeness note 65884ms"
+    }
+  ],
+  "tests_proposed": [
+    "Unit test that RobotsPolicy.fetch refuses a private origin by default and returns allow-all (ADR 0031), in packages/core/tests/robots.test.ts"
+  ],
+  "evidence": [
+    "packages/core/tests/auth-crawl-e2e.test.ts:425-445 (LC-001 politeness-note test, spy on RobotsPolicy.fetch)",
+    "packages/core/src/competitive/robots.ts RobotsPolicy.fetch default fetchFn = makeOutboundFetch({ allowPrivate: false })",
+    "vitest run: 10 passed (10), dead-links 25034ms, 24238ms in first run"
+  ],
+  "blockers": [],
+  "risks": [
+    "The dead-links test takes about 24-25 s against a 30000 ms timeout, so only about 5 s of margin. It can time out again on a loaded machine. I did not isolate what makes it take 24 s (per-link timeouts or something else). Decide whether to raise the timeout with a reason or investigate.",
+    "The whole file takes about 350 s, and four tests take more than 60 s each against 60-180 s timeouts, so the check CHK-QA-707-AUTH-CRAWL has a long wall-clock time.",
+    "Run in parallel with the full suite (as in EV-0006), the file may still time out under memory pressure."
+  ],
+  "handoff": "Run CHK-QA-707-AUTH-CRAWL on a quiet tree. It needs about 6 minutes, so give it a timeout above 350 s. If the dead-links test times out under load, decide whether to raise its 30000 ms timeout and name the reason.",
+  "_captured": {
+    "at": "2026-11-03T11:13:08.371Z",
+    "agent_id": "ab25757fdb8536402",
+    "agent_type": "ai-eos:qa-engineer"
+  }
+}

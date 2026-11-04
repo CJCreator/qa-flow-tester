@@ -1,0 +1,95 @@
+{
+  "task_id": "BE-104",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-047"
+  ],
+  "files_inspected": [
+    "packages/checkers/src/seo.ts",
+    "packages/checkers/src/security-depth.ts",
+    "packages/checkers/src/site-root.ts",
+    "packages/checkers/src/could-not-verify.ts",
+    "packages/core/src/safe-net.ts",
+    "packages/core/src/orchestrator.ts",
+    "packages/core/src/access-control.ts",
+    "packages/core/src/preflight.ts",
+    "packages/core/src/discovery/docs-fetch.ts",
+    "packages/core/src/audit/store/select-backend.ts",
+    "packages/core/src/plan/playwright-export.ts",
+    "packages/core/tests/outbound-fetch.test.ts",
+    "packages/core/tests/orchestrator-access-wiring.test.ts",
+    "packages/checkers/tests/seo.test.ts",
+    "packages/checkers/tests/security-depth.test.ts",
+    "docs/adr/0031-every-outbound-request-uses-pinned-resolver.md",
+    "vitest.config.ts"
+  ],
+  "files_created": [
+    "packages/core/src/checker-fetch.ts",
+    "packages/core/tests/checker-fetch.test.ts",
+    "packages/core/tests/outbound-source-grep.test.ts"
+  ],
+  "files_modified": [
+    "packages/checkers/src/seo.ts",
+    "packages/checkers/src/security-depth.ts",
+    "packages/core/src/orchestrator.ts",
+    "packages/checkers/tests/seo.test.ts",
+    "packages/checkers/tests/security-depth.test.ts"
+  ],
+  "implementation_summary": "New checker-fetch.ts: makeCheckerFetch(opts) builds the checkers' FetchFn on makeOutboundFetch (GET only, pinned, every hop re-checked, maxRedirects 0 by default, 3 s timeout, 512 KB cap; allowPrivate only narrows, a browser guard means public only). checkLinkStatus(address, fetchFn) sends one GET and fails on 404/410/500-599 or no answer. The orchestrator builds checkerFetch once per run and passes it to securityDepth.checkPage and seoChecker.checkPage; the check-link step uses linkFetch (makeCheckerFetch maxRedirects 10, 10 s). This removes page.request.get and closes F-001. security-depth.ts: defaultFetch and its fallbacks removed; checkSourceMaps requires a FetchFn; with no FetchFn checkPage makes no request and reports 'security.txt was not checked' and 'Source maps were not checked' once per site (Suggestion, needsConfirmation). seo.ts: checkPage(page, ctx, fetchFn?); checkBrokenLinks sends one GET per link through fetchFn (no HEAD, up to 5); the site-root audit uses the same fetchFn; with none, no request and 'Links were not checked' / 'Site files were not checked' notes. outbound-source-grep.test.ts scans core/src and checkers/src, skipping comment lines, for context.request, page.request, request.fetch/get/head and Node or globalThis fetch( outside a named exception list; stale exceptions also fail.",
+  "tests_executed": [
+    {
+      "name": "CHK-BE-104-UNIT",
+      "command": "CI=1 pnpm exec vitest run packages/core/tests/checker-fetch.test.ts packages/core/tests/outbound-source-grep.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 2 passed (2); Tests 10 passed (10)"
+    },
+    {
+      "name": "CHK-BE-104-CHECKERS",
+      "command": "CI=1 pnpm exec vitest run packages/checkers/tests/seo.test.ts packages/checkers/tests/security-depth.test.ts packages/core/tests/orchestrator-access-wiring.test.ts packages/core/tests/checker-fetch.test.ts packages/core/tests/outbound-source-grep.test.ts",
+      "result": "failed",
+      "output_excerpt": "seo.test.ts 13 passed, security-depth.test.ts 27 passed, checker-fetch 8 passed, outbound-source-grep 2 passed; orchestrator-access-wiring.test.ts 1 failed at :75 (expected a context.request.get stub call that BE-101's contextFetcher change no longer makes)"
+    },
+    {
+      "name": "checkers build and core type-check",
+      "command": "pnpm --filter @qa/checkers build && pnpm --filter @qa/core exec tsc --noEmit",
+      "result": "passed",
+      "output_excerpt": "tsc finished with no errors"
+    },
+    {
+      "name": "prettier on owned files",
+      "command": "pnpm exec prettier --write packages/checkers/src/seo.ts packages/core/src/orchestrator.ts packages/core/tests/checker-fetch.test.ts packages/core/tests/outbound-source-grep.test.ts",
+      "result": "passed",
+      "output_excerpt": "4 files formatted; security-depth.ts, checker-fetch.ts and both checker test files already passed --check"
+    }
+  ],
+  "tests_proposed": [
+    "Update packages/core/tests/orchestrator-access-wiring.test.ts to inject NetDeps into contextFetcher (or stub makeOutboundFetch) instead of stubbing context.request.get",
+    "Orchestrator-level test that a plan check-link step on a guarded run with a link to 169.254.169.254 fails as 'doesn't open' without connecting"
+  ],
+  "evidence": [
+    "packages/core/src/checker-fetch.ts: makeCheckerFetch, checkLinkStatus",
+    "packages/core/src/orchestrator.ts: checkerFetch/linkFetch built next to siteWide; checkLinkStatus(step.value, linkFetch); checkerFetch passed to securityDepth.checkPage and seoChecker.checkPage",
+    "packages/checkers/src/security-depth.ts: defaultFetch removed; notChecked(); checkPage branches on fetchFn",
+    "packages/checkers/src/seo.ts: checkBrokenLinks(paths, context, fetchFn?) with one fetchFn call per link; site-root audit adapts fetchFn",
+    "grep -rn '@qa/core' packages/checkers/src returned nothing",
+    "packages/core/src/access-control.ts:182-197 contextFetcher now uses makeOutboundFetch (BE-101), which causes the orchestrator-access-wiring failure"
+  ],
+  "blockers": [
+    "CHK-BE-104-CHECKERS includes packages/core/tests/orchestrator-access-wiring.test.ts (not owned), which fails at :75: it stubs context.request.get, but BE-101's contextFetcher (packages/core/src/access-control.ts) now uses makeOutboundFetch. The test must inject NetDeps; its owner has to update it."
+  ],
+  "risks": [
+    "Source-grep exception list adds packages/core/src/audit/store/select-backend.ts (globalThis.fetch for Cloud Storage and metadata, fixed endpoints), which the brief does not name; needed for the current tree to pass. Reviewer should confirm.",
+    "checkLinkStatus treats only 500-599 as a server failure; the old code failed every status >= 500, including 999, despite its comment saying 999 passes.",
+    "The checker FetchFn uses maxRedirects 0: a site whose /robots.txt or /sitemap.xml redirects could now get a 'missing' site-file finding, and a redirect to a 404 is not caught as a broken link.",
+    "Checker and link requests no longer carry browser-context cookies, so signed-in-only targets answer as signed out.",
+    "With no FetchFn the checkers add Suggestion/needsConfirmation 'not checked' notes; ADR 0031 currently says such checks 'report nothing' and should be updated.",
+    "Exported API change in @qa/checkers: defaultFetch removed; SecurityDepthChecker.checkSourceMaps third argument is now required; SeoChecker.checkPage gains an optional third argument. The only in-repo caller is the orchestrator."
+  ],
+  "handoff": "Website Audit analysis (ADR 0033, REC-11) should build its fetch with makeCheckerFetch from packages/core/src/checker-fetch.ts so both paths share one rule; packages/core/src/audit/analysis/broken-links.ts still takes an injected opts.fetch. When a call moves onto safeGet, remove its EXCEPTIONS entry in packages/core/tests/outbound-source-grep.test.ts (stale entries fail the test). Docs owner: update ADR 0031's Consequences ('report nothing' to 'reported as not checked') and the stale RobotsPolicy.fetch line. Owner of orchestrator-access-wiring.test.ts: inject NetDeps instead of stubbing context.request.get.",
+  "_captured": {
+    "at": "2026-11-03T10:21:05.987Z",
+    "agent_id": "adbb0e557dae574cc",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

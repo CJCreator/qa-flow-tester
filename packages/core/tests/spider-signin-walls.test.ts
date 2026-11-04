@@ -8,7 +8,8 @@ import http from 'http';
 import { chromium, type Browser } from 'playwright';
 import { DeterministicSpider } from '../src/discovery/deterministic-spider.js';
 
-const PORT = 3538;
+// Own port: spider-concurrency.test.ts uses 3538, and the two clashed when they ran at the same time.
+const PORT = 3543;
 const BASE = `http://localhost:${PORT}`;
 
 const html = (title: string, body: string) =>

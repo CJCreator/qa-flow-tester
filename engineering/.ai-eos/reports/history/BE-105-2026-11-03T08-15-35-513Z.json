@@ -1,0 +1,90 @@
+{
+  "task_id": "BE-105",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-034",
+    "REQ-035"
+  ],
+  "files_inspected": [
+    "packages/core/src/competitive/robots.ts",
+    "packages/core/src/safe-net.ts",
+    "packages/core/src/discovery/deterministic-spider.ts",
+    "packages/core/src/debug-log.ts",
+    "packages/core/tests/helpers/audit-site-server.ts",
+    "packages/core/tests/spider-robots.test.ts",
+    "packages/core/tests/spider-sitemap-outbound.test.ts",
+    "packages/core/tests/robots.test.ts",
+    "fixtures/audit-site/robots.txt",
+    "fixtures/audit-site/sitemap.xml",
+    "fixtures/audit-site/index.html",
+    "vitest.workspace.ts",
+    "vitest.config.ts"
+  ],
+  "files_created": [
+    "packages/core/src/host-pacer.ts",
+    "packages/core/tests/host-pacer.test.ts",
+    "packages/core/tests/spider-host-pacing.test.ts"
+  ],
+  "files_modified": [
+    "packages/core/src/competitive/robots.ts",
+    "packages/core/src/safe-net.ts",
+    "packages/core/src/discovery/deterministic-spider.ts",
+    "packages/core/tests/robots.test.ts",
+    "packages/core/tests/spider-robots.test.ts"
+  ],
+  "implementation_summary": "RobotsPolicy.crawlDelayMs reads the Crawl-delay of the chosen group: the group for our user-agent first, otherwise *. It accepts seconds >= 0 with decimals; non-numeric, negative and exponent values are ignored. Values above 30 s are cut to MAX_CRAWL_DELAY_MS (30000) and a debugLog('crawl') line is written. With no Crawl-delay the field is undefined. New HostPacer (host-pacer.ts): run(host, task, signal?) runs one task per host at a time (host names compared without case). The next task starts at least gapMs = max(minGapMs, crawlDelayMs) after the previous one ends, which is stricter than start-to-start. The clock is read again after each sleep. A task that throws still frees the turn. An abort rejects the waiting task without running it, and the aborted wait does not count as a request. A nested run for the same host passes straight through (AsyncLocalStorage), so it cannot deadlock. The clock and sleep are injectable. makeOutboundFetch takes an optional pacer and makes each call wait for its URL host's turn. DeterministicSpider takes an optional pacer. When it is set, these wait for the host's turn instead of waitForPacing: the main navigate, explore-click reloads, the explore clicks themselves, the exploreInteractiveStates reload and the robots/sitemap seeding fetches. The wait is stopped by a signal that combines the crawl deadline (AbortSignal.timeout) and options.signal. A page whose wait hit the deadline becomes a time-limit Skipped Page and is never requested. Without a pacer the code runs as before. The robots check still happens at visit time.",
+  "tests_executed": [
+    {
+      "name": "host pacer + robots Crawl-delay + outbound fetch unit tests",
+      "command": "CI=1 pnpm exec vitest run packages/core/tests/host-pacer.test.ts packages/core/tests/robots.test.ts packages/core/tests/outbound-fetch.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 3 passed (3); Tests 49 passed (49) (re-run after prettier)"
+    },
+    {
+      "name": "Spider robots + host pacing + concurrency (Chromium)",
+      "command": "CI=1 pnpm exec vitest run packages/core/tests/spider-robots.test.ts packages/core/tests/spider-host-pacing.test.ts packages/core/tests/spider-concurrency.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 3 passed (3); Tests 9 passed (9); pacing AC-1 13668ms, deadline 2241ms (run before a prettier-only reformat)"
+    },
+    {
+      "name": "Existing spider regression (sitemap outbound, page limit)",
+      "command": "CI=1 pnpm exec vitest run packages/core/tests/spider-sitemap-outbound.test.ts packages/core/tests/spider-page-limit.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 2 passed (2); Tests 5 passed (5)"
+    },
+    {
+      "name": "core type-check",
+      "command": "npx tsc --noEmit -p packages/core",
+      "result": "passed",
+      "output_excerpt": "no errors"
+    }
+  ],
+  "tests_proposed": [
+    "Audit crawl (G2) integration test: one HostPacer per Website Audit, shared by the Spider and the checkers' FetchFn; assert from the fixture request log that checker fetches never overlap page loads."
+  ],
+  "evidence": [
+    "packages/core/src/host-pacer.ts (HostPacer.run)",
+    "packages/core/src/competitive/robots.ts (crawlDelayMsOf, MAX_CRAWL_DELAY_MS, RobotsPolicy.crawlDelayMs)",
+    "packages/core/src/safe-net.ts (OutboundFetchOptions.pacer, makeOutboundFetch pacing wrapper)",
+    "packages/core/src/discovery/deterministic-spider.ts (CrawlOptions.pacer, pacerSignal/paced helper, seeding outboundFetch wrapper, navigate/click/reload wrapped)",
+    "packages/core/tests/spider-host-pacing.test.ts: AC-1 no overlap and >=1000ms start gaps against the fixture request log",
+    "packages/core/tests/spider-robots.test.ts: REQ-034 AC-1 (/private/staff-rota, /private/reports never requested, robots Skipped Pages) and AC-2 (404 robots.txt, no robots skips)"
+  ],
+  "blockers": [],
+  "risks": [
+    "vitest.workspace.ts (not owned) must list 'spider-host-pacing' in BROWSER_TESTS.core. The test launches Chromium but currently runs in the 'unit' project (it showed as |unit|). 'spider-sitemap-outbound' from BE-101 is also missing from that list.",
+    "With a pacer, each explore click also takes a turn (a click may load a page). A crawl with exploreClicks on and Crawl-delay 1 can therefore take up to about MAX_EXPLORATION_CLICKS (100) extra seconds. Clicks inside exploreInteractiveStates (not owned) are not paced; only its reload is.",
+    "Only top-level requests take turns. CSS, JS and images a page loads can still be in flight when the next turn starts.",
+    "The pacer keys on the URL host including the port. localhost and 127.0.0.1, and www twins, count as the same site for the crawl but get separate turns.",
+    "The gap is measured from the end of the previous request, not its start. This is stricter than the spec wording; the reviewer should confirm it is acceptable.",
+    "Public API additions only: RobotsPolicy.crawlDelayMs, MAX_CRAWL_DELAY_MS export, OutboundFetchOptions.pacer, CrawlOptions.pacer. host-pacer.ts is not re-exported from packages/core/src/index.ts (not owned).",
+    "prettier --write was run on robots.ts and the four test files, so robots.test.ts may show some reformatting of lines from BE-101's earlier edit."
+  ],
+  "handoff": "Audit crawl (G2): fetch the policy with RobotsPolicy.fetch(origin, token, fetchFn), then create one pacer per Website Audit with new HostPacer({ minGapMs, crawlDelayMs: robots.crawlDelayMs }). Pass { robots, pacer } to DeterministicSpider.crawl and build every FetchFn with makeOutboundFetch({ ..., pacer }). Passing a pacer-wrapped fetch as the Spider's outboundFetch is safe: the nested call for the same host passes through instead of deadlocking. With a pacer set, the Spider ignores pageDelayMs. Import from packages/core/src/host-pacer.js; it is not in the core index. Orchestrator: add 'spider-host-pacing' to BROWSER_TESTS.core in vitest.workspace.ts.",
+  "_captured": {
+    "at": "2026-11-03T08:15:35.513Z",
+    "agent_id": "ac5a6df3c69bfb93b",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

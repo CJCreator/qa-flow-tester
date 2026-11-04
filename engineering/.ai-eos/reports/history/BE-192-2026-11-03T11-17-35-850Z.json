@@ -1,0 +1,98 @@
+{
+  "task_id": "BE-192",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-003",
+    "REQ-016",
+    "REQ-017",
+    "REQ-037"
+  ],
+  "files_inspected": [
+    "packages/core/src/audit/crawl/crawl.ts",
+    "packages/core/src/audit/analysis/analyse-site.ts",
+    "packages/core/src/audit/analysis/read-page.ts",
+    "packages/core/src/audit/analysis/accessibility-basics.ts",
+    "packages/core/src/audit/analysis/finding-ids.ts",
+    "packages/core/src/audit/phone-layout.ts",
+    "packages/core/src/audit/ai/ranking.ts",
+    "packages/core/src/audit/ai/assessment.ts",
+    "packages/core/src/audit/ai/page-recommendation.ts",
+    "packages/core/src/audit/ai/pagespeed.ts",
+    "packages/core/src/audit/ai/stage-ai.ts",
+    "packages/core/src/audit/ai/index.ts",
+    "packages/core/src/audit/documents/roadmap.ts",
+    "packages/core/src/audit/store/audit-store.ts",
+    "packages/core/src/audit/store/keys.ts",
+    "packages/core/src/checker-fetch.ts",
+    "packages/core/src/host-pacer.ts",
+    "packages/core/src/scoring.ts",
+    "packages/core/src/plan/sampling.ts",
+    "packages/core/src/abort.ts",
+    "packages/core/tests/outbound-source-grep.test.ts",
+    "packages/types/src/website-audit.ts",
+    "packages/types/src/aspects.ts",
+    "packages/types/src/evidence-finding.ts"
+  ],
+  "files_created": [
+    "packages/core/src/audit/pipeline/index.ts",
+    "packages/core/src/audit/pipeline/pipeline.ts",
+    "packages/core/src/audit/pipeline/page-recorder.ts",
+    "packages/core/src/audit/pipeline/grades.ts",
+    "packages/core/tests/audit-pipeline.test.ts"
+  ],
+  "files_modified": [],
+  "implementation_summary": "New audit pipeline. Stage 1: AuditPageRecorder.onRenderedPage (passed to runAuditCrawl) reads every page once with readPage, and runs accessibilityBasics then recordPhoneLayout on Sample Pages chosen with GroupTracker (covered pages point to their group's first sample). runAuditPipeline(crawlResult, deps): analyseSite with makeCheckerFetch({allowPrivate:false, pacer}) (maxRedirects stays 0) -> measureSampleSpeeds on Sample Pages -> deterministic per-area grades (calculateSiteAspectGrades per AUDIT_AREA via AREA_ASPECT; speed from the lab performance score through scoreToGrade; null when unchecked) -> assessPages/assessSite/recommendPages with grades forced to the deterministic values -> phone findings take AF ids from nextFindingNumber, then rankFindingsWithIdMap once with every citing list remapped (seo, accessibility, phone, evidence, recommendations, marketing) and checkCitations problems returned -> buildRoadmap -> save via the store (Page Content pages/<slug>-<sha8>, phone PNGs via putVersionFile, saveResult, 'stages' JSON, updateVersion done). Each failed stage is recorded as not-done (steps, onStep, fixed-wording note, not-done areas or not-measured speed or rule recommendation) and later stages still run. Abort rethrows and nothing is saved. A failed save throws AuditPipelineError with a fixed message.",
+  "tests_executed": [
+    {
+      "name": "audit pipeline unit tests (fakes for every stage)",
+      "command": "pnpm exec vitest run packages/core/tests/audit-pipeline.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 13 passed (13)"
+    },
+    {
+      "name": "outbound fetch source guard + audit external API scan",
+      "command": "pnpm exec vitest run packages/core/tests/outbound-source-grep.test.ts packages/core/tests/audit-external-apis.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 2 passed (2); Tests 9 passed (9)"
+    },
+    {
+      "name": "core src type check",
+      "command": "npx tsc --noEmit -p packages/core/tsconfig.json",
+      "result": "passed",
+      "output_excerpt": "no output (0 errors)"
+    },
+    {
+      "name": "core tests type check",
+      "command": "npx tsc --noEmit -p packages/core/tests/tsconfig.typecheck.json",
+      "result": "passed",
+      "output_excerpt": "no output (0 errors)"
+    }
+  ],
+  "tests_proposed": [
+    "Browser integration: runAuditCrawl against fixtures/test-app with recorder.onRenderedPage plus runAuditPipeline into a local-backend AuditStore, then deleteAudit removes pages/*.json, phone/*.png and result.json (QA group, needs Chromium).",
+    "Runner test (BE-190): afterCrawl maps AuditPipelineError to a 'failed' event and sets the version to failed."
+  ],
+  "evidence": [
+    "packages/core/tests/audit-pipeline.test.ts: 'runs the stages in order and builds a ranked, cited, graded and saved AuditResult' checks the stage call order, the progress stage order, makeCheckerFetch called with {allowPrivate:false, pacer} and no maxRedirects, renumbered citations, deterministic grades and the store writes",
+    "packages/core/tests/audit-pipeline.test.ts: the failure tests for analysis, AI, speed and roadmap, reading, save and abort",
+    "packages/core/src/audit/pipeline/pipeline.ts: analyseSite call with makeCheckerFetch({ allowPrivate: false, pacer, deps: deps.netDeps })"
+  ],
+  "blockers": [],
+  "risks": [
+    "runAuditCrawl (crawl.ts, not owned) does not expose its HostPacer or the robots Crawl-delay. The pipeline uses deps.pacer or a new HostPacer(AUDIT_MIN_GAP_MS, deps.crawlDelayMs), so pacing state is not carried over from the crawl and the Crawl-delay is only honoured if the caller passes it. Fix: have runAuditCrawl return its pacer or crawlDelayMs.",
+    "AuditProgressEvent (packages/types, not owned) cannot mark a stage as not done. Not-done is reported through the onStep callback, the returned steps, result.notes and a 'stages' version JSON instead.",
+    "Ranking follows BE-403 (renumber AF-001.. in ranked order, then remap every citing list) rather than the task text's 'keeping AF ids'. The AI sees findings in ranked order under their old ids, and the evidence is remapped afterwards.",
+    "The area-to-aspect mapping and the speed grade (scoreToGrade of the lab performance score, worst Sample Page for the site) are my choices; no ADR fixes them.",
+    "Accessibility and phone findings have sectionId null, so checkCitations reports them as missing-section. They are returned in citationProblems and not added to notes.",
+    "Pages whose readPage failed are left out of result.pages with a note, while crawl coverage.reached still counts them.",
+    "PageSpeed addresses are built from redacted urlPaths, so a page with a redacted query is measured without the real value.",
+    "The caller owns workDir (local phone screenshots) and must delete it after the pipeline, otherwise copies outlive a deleted audit."
+  ],
+  "handoff": "BE-190: re-export packages/core/src/audit/pipeline/index.ts from the core barrel (named exports only). In afterCrawl: create the version first (store.createAudit or addVersion); recorder = createPageRecorder({ workDir: <temp dir> }); crawl = await runAuditCrawl(request, { signal, onProgress, onRenderedPage: recorder.onRenderedPage }); { result, steps, citationProblems } = await runAuditPipeline(crawl, { auditId, version, request, startedAt, recorder, store, workDir, ai: await resolveAuditAi(...), pageSpeed: { resolveServiceKey: keyResolver.resolveServiceKey.bind(keyResolver) }, signal, onProgress }); then remove workDir. The pipeline emits progress stages checking-pages, measuring-speed, assessing, ranking, saving (never 'done') and sets the version to 'done' itself. On AuditPipelineError or AbortError the caller sets the version to failed or stopped and emits the failed event. The content route must read Page Content with pageContentName(urlPath); phone screenshots are stored under phone/<slug>-<hash>.png relative to the version folder.",
+  "_captured": {
+    "at": "2026-11-03T11:17:35.850Z",
+    "agent_id": "a5602e134124fc011",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

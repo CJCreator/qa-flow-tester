@@ -1,16 +1,19 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { RunnerServer } from '../src/server.js';
 import { server as fixtureServer } from '../../../fixtures/test-app/server.js';
-import { promises as fs } from 'fs';
+import { promises as fs, mkdtempSync } from 'fs';
+import os from 'os';
 import path from 'path';
 
 describe('T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts)', () => {
   let fixturePort: number;
-  let runnerPort: number;
   let fixtureBase: string;
   let runnerBase: string;
-  const outputDir = path.join(process.cwd(), '.tmp-auth-crawl-run');
-  const dataDir = path.join(process.cwd(), '.tmp-auth-crawl-run-data');
+  // A new folder per run, outside the repository: inside OneDrive the sync client picks up every file a run
+  // writes (screenshots, videos), competes with Chromium for the CPU and holds files open so the clean-up fails.
+  const scratch = mkdtempSync(path.join(os.tmpdir(), 'qa-test-auth-crawl-run-'));
+  const outputDir = path.join(scratch, 'report');
+  const dataDir = path.join(scratch, 'data');
 
   let runner: RunnerServer;
 
@@ -34,16 +37,14 @@ describe('T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts)', () =
       outputDir,
       dataDir,
     });
-    await runner.start();
-    runnerPort = runner.port;
-    runnerBase = `http://localhost:${runnerPort}`;
+    // start() resolves to the bound address (http://<host>:<port>).
+    runnerBase = await runner.start();
   });
 
   afterAll(async () => {
     await runner.stop();
     await new Promise<void>((resolve) => fixtureServer.close(() => resolve()));
-    await fs.rm(outputDir, { recursive: true, force: true }).catch(() => {});
-    await fs.rm(dataDir, { recursive: true, force: true }).catch(() => {});
+    await fs.rm(scratch, { recursive: true, force: true, maxRetries: 5 }).catch(() => {});
   });
 
   beforeEach(async () => {
@@ -184,10 +185,13 @@ describe('T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts)', () =
     });
     expect(runRes.status).toBe(202);
 
-    // A full run (crawl, then every planned test as the signed-in role) takes about 7 minutes on a shared runner.
-    // The report's page coverage only exists once the whole run has finished.
+    // A full run (crawl, then every planned test as the signed-in role) takes about 7 minutes on a shared runner
+    // and more than 10 minutes on the developer's 4-core laptop with the repository inside OneDrive (EV-0006).
+    // The report's page coverage only exists once the whole run has finished. Budget agreed with the developer
+    // (2026-10-31): about 25 minutes for the run, with no cap on the number of test points.
+    const runDeadline = Date.now() + 24 * 60_000;
     let isRunning = true;
-    for (let i = 0; i < 1200 && isRunning; i++) {
+    while (isRunning && Date.now() < runDeadline) {
       await new Promise((r) => setTimeout(r, 500));
       const status = await (await fetch(`${runnerBase}/api/runner/status`)).json();
       isRunning = status.isRunning;
@@ -199,7 +203,8 @@ describe('T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts)', () =
     const skippedPaths = (report.pageCoverage.skipped ?? []).map((s: { urlPath: string }) => s.urlPath);
     // A page with a password field that is not the sign-in page is reached, not skipped as a wall.
     expect(skippedPaths).not.toContain('/account/security');
-  }, 720000);
+    // 25 minutes: the 24-minute run budget above plus the report fetch (see the comment at the poll loop).
+  }, 25 * 60_000);
 
   it('asserts RUN_FAILED event carries signInReason when credentials fail under consent', async () => {
     const events: any[] = [];

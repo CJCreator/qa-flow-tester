@@ -1,0 +1,57 @@
+{
+  "task_id": "BE-407",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-045"
+  ],
+  "files_inspected": [
+    "packages/types/src/website-audit.ts",
+    "packages/types/src/aspects.ts",
+    "packages/core/src/audit/ai/stage-ai.ts",
+    "packages/core/src/audit/ai/claim-words.ts",
+    "packages/core/src/audit/ai/assessment.ts",
+    "packages/core/src/plan/ai-planner.ts",
+    "packages/core/tests/audit-assessment.test.ts"
+  ],
+  "files_created": [
+    "packages/core/src/audit/ai/page-recommendation.ts",
+    "packages/core/tests/audit-page-recommendation.test.ts"
+  ],
+  "files_modified": [],
+  "implementation_summary": "New recommendPages(input, ai: AuditAiResolution) returns exactly one PageRecommendation per Sample Page, in input order. Covered pages and repeated urlPaths are skipped. recommendationFor(page, recs) finds the recommendation for a covered page through its sampleUrlPath. With a key, each Sample Page gets one 'assessment' stage JSON request. The answer is checked: action must be redesign or repair, the reason must not be empty and must contain no ADR 0018 claim word, and findingIds keeps only this page's ids with duplicates removed and must keep at least one. Any problem gets one repair request. If it fails again, or on an AI error, timeout or spent budget, ruleRecommendation decides (decidedBy 'rule'). A caller abort is passed on, and no error text is kept. Rule constants exported and documented: REDESIGN_MIN_HIGH_IMPACT=3, REDESIGN_MIN_GROUPS=2, REDESIGN_LOW_AREAS=['usability','content']. Redesign at >=3 high-impact findings across >=2 groups, or when usability and content are both graded, at least one other area is graded, and both are strictly worse than every other graded area; otherwise repair. A page with no findings always gets repair with NO_FINDINGS_REASON (checked parts only) and makes no AI request.",
+  "tests_executed": [
+    {
+      "name": "audit-page-recommendation (20 tests)",
+      "command": "pnpm exec vitest run packages/core/tests/audit-page-recommendation.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 20 passed (20)"
+    },
+    {
+      "name": "core type-check limited to the new module",
+      "command": "npx tsc --noEmit -p packages/core | grep page-recommendation",
+      "result": "passed",
+      "output_excerpt": "no errors reported for page-recommendation.ts"
+    }
+  ],
+  "tests_proposed": [
+    "Runner/orchestrator integration: AuditPage.recommendation is set from recommendPages for Sample Pages and from recommendationFor for covered pages"
+  ],
+  "evidence": [
+    "packages/core/src/audit/ai/page-recommendation.ts: recommendPages, recommendationFor, ruleRecommendation, constants",
+    "packages/core/tests/audit-page-recommendation.test.ts: AC-1, decidedBy ai/rule, claim-word repair, no-findings, thresholds"
+  ],
+  "blockers": [],
+  "risks": [
+    "A page with no findings gets no AI request and is marked decidedBy 'rule' even when a key is set, to meet the AC that it gets 'repair' with the checked-parts reason. A reviewer should confirm this reading.",
+    "Rule reasons are fixed English text. They are not written in the audit's document language.",
+    "The reading of 'usability/content grades are the two lowest' is: both graded, at least one other area graded, and both strictly worse than every other graded area, so ties mean repair. A reviewer should confirm.",
+    "Only src/ was type-checked. The test file was not type-checked."
+  ],
+  "handoff": "Call recommendPages({language, pages: [{urlPath, title, coverage, sampleUrlPath?, findings (that page's, ranked), grades}], signal?, timeoutMs?}, await resolveAuditAi(...)). Set AuditPage.recommendation only on Sample Pages. For covered pages, use recommendationFor(page, recs). Each AI-decided page uses one or two requests from the budget. Pages with no findings use none. When the budget runs out, the remaining pages fall back to the rule.",
+  "_captured": {
+    "at": "2026-11-03T07:30:39.553Z",
+    "agent_id": "a0d40681a6ac23c72",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

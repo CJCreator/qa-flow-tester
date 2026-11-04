@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Checkout | Kaveri Sweets</title>
+    <meta name="robots" content="noindex" />
+    <meta name="generator" content="WordPress 6.6.2" />
+    <link rel="stylesheet" href="/wp-content/themes/kaveri/style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="logo" href="/"
+        ><img src="/wp-content/uploads/2025/10/logo.svg" alt="Kaveri Sweets home" width="120" height="40"
+      /></a>
+      <nav class="main-menu" aria-label="Main menu">
+        <ul>
+          <li><a href="/">Home</a></li>
+          <li><a href="/about">About us</a></li>
+          <li>
+            <a href="/services">Services</a>
+            <ul class="sub-menu">
+              <li><a href="/services/catering">Catering</a></li>
+              <li><a href="/services/party-orders">Party orders</a></li>
+            </ul>
+          </li>
+          <li><a href="/gallery">Gallery</a></li>
+          <li><a href="/blog">Blog</a></li>
+          <li><a href="/shop">Shop</a></li>
+        </ul>
+      </nav>
+      <div class="header-tools">
+        <a href="/ta" hreflang="ta" lang="ta">தமிழ்</a>
+        <a href="/hi" hreflang="hi" lang="hi">हिन्दी</a>
+        <a href="/account/sign-in">Sign in</a>
+      </div>
+    </header>
+
+    <main>
+      <h1>Checkout</h1>
+      <form class="checkout" action="/shop/checkout/pay" method="post">
+        <h2>Delivery</h2>
+        <label for="billing-name">Full name</label>
+        <input id="billing-name" name="billing_name" type="text" autocomplete="name" required />
+        <label for="billing-address">Delivery address</label>
+        <textarea
+          id="billing-address"
+          name="billing_address"
+          autocomplete="street-address"
+          rows="3"
+          required
+        ></textarea>
+
+        <h2>Payment</h2>
+        <label for="card-number">Card number</label>
+        <input
+          id="card-number"
+          name="cardnumber"
+          type="text"
+          inputmode="numeric"
+          autocomplete="cc-number"
+          placeholder="1234 5678 9012 3456"
+          required
+        />
+        <label for="card-expiry">Expiry date (MM/YY)</label>
+        <input id="card-expiry" name="exp-date" type="text" autocomplete="cc-exp" required />
+        <label for="card-cvc">Security code</label>
+        <input id="card-cvc" name="cvc" type="text" inputmode="numeric" autocomplete="cc-csc" required />
+        <p><button type="submit">Pay now</button></p>
+      </form>
+      <p>By paying you accept our <a href="/shop/delivery-terms">delivery terms</a>.</p>
+    </main>
+  </body>
+</html>

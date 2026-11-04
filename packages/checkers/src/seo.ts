@@ -5,6 +5,7 @@ import { SiteRootAuditor } from './site-root.js';
 import { AeoChecker } from './aeo.js';
 import { GeoChecker } from './geo.js';
 import { MarketingChecker, type MarketingLog } from './marketing.js';
+import type { FetchFn } from './security-depth.js';
 
 export interface SeoContext {
   testCaseId?: string;
@@ -55,8 +56,10 @@ export class SeoChecker {
 
   /**
    * Check SEO fundamentals, AEO answer patterns, GEO signals, and link health for a page.
+   * Link and site-root requests go only through `fetchFn` (ADR 0031: core builds it on the pinned,
+   * redirect-checked path). With no `fetchFn` they make no request and are reported as not checked.
    */
-  async checkPage(page: Page, context: SeoContext): Promise<Finding[]> {
+  async checkPage(page: Page, context: SeoContext, fetchFn?: FetchFn): Promise<Finding[]> {
     const findings: Finding[] = [];
     const details = await this.collectDetails(page);
     if (!details) return [couldNotVerifyFinding('seo', 'search basics', context)];
@@ -80,7 +83,7 @@ export class SeoChecker {
 
     // If all visibility checks are turned off: only check broken links.
     if (!vis.search && !vis.answers && !vis.aiSearch && !vis.marketing) {
-      return details.sameSiteLinks?.length ? this.checkBrokenLinks(page, details.sameSiteLinks, context) : findings;
+      return details.sameSiteLinks?.length ? this.checkBrokenLinks(details.sameSiteLinks, context, fetchFn) : findings;
     }
 
     if (vis.search) {
@@ -381,24 +384,32 @@ export class SeoChecker {
 
     // 11. Check for broken links on page (limited rate, same-site only)
     if (details.sameSiteLinks && details.sameSiteLinks.length > 0) {
-      const linkFindings = await this.checkBrokenLinks(page, details.sameSiteLinks, context);
+      const linkFindings = await this.checkBrokenLinks(details.sameSiteLinks, context, fetchFn);
       findings.push(...linkFindings);
     }
 
     // 12. Site Root Auditor (robots.txt, sitemap.xml, llms.txt, AI crawlers)
     if (vis.search && context.baseUrl) {
       const isRootPath = context.urlPath === '/' || context.urlPath === '' || context.urlPath === '/index.html';
-      if (isRootPath) {
+      if (isRootPath && !fetchFn) {
+        if (firstTime('seo-not-checked:site-root')) {
+          findings.push(
+            this.notCheckedFinding(
+              context,
+              'SITEROOT',
+              'Site files were not checked',
+              'robots.txt, sitemap.xml and llms.txt are read',
+              [`Open ${context.baseUrl}`]
+            )
+          );
+        }
+      } else if (isRootPath && fetchFn) {
         try {
-          const requestContext = page.context().request;
           const rootResult = await this.siteRootAuditor.audit(
             async (url: string) => {
               try {
-                const r = await requestContext.fetch(url, { timeout: 3000 });
-                return {
-                  status: () => r.status(),
-                  text: () => r.text(),
-                };
+                const r = await fetchFn(url);
+                return r ? { status: () => r.status, text: () => r.text() } : null;
               } catch {
                 return null;
               }
@@ -544,18 +555,55 @@ export class SeoChecker {
     }
   }
 
-  private async checkBrokenLinks(page: Page, paths: string[], context: SeoContext): Promise<Finding[]> {
-    const findings: Finding[] = [];
-    const request = page.context().request;
+  /** A network check that had no `fetchFn`: no request was made, so it says so (never a pass, never a defect). */
+  private notCheckedFinding(
+    context: SeoContext,
+    kind: string,
+    title: string,
+    expected: string,
+    steps: string[]
+  ): Finding {
+    return {
+      id: `F-SEO-${context.testCaseId || 'GEN'}-${kind}-NOTCHECKED`,
+      testCaseId: context.testCaseId,
+      flowId: context.flowId,
+      severity: 'Suggestion',
+      checker: 'seo',
+      title,
+      where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
+      expectedVsActual: {
+        expected,
+        actual: 'The check was given no way to make requests here, so none was made (automatic check only)',
+      },
+      stepsToReproduce: steps,
+      evidence: {},
+      resolution: 'Run a Check-up, which makes these requests through its checked request path.',
+      needsConfirmation: true,
+    };
+  }
 
-    // Check up to 5 links asynchronously with a strict timeout
+  /** One GET per link (no HEAD first), up to 5 links, only through `fetchFn`. */
+  private async checkBrokenLinks(paths: string[], context: SeoContext, fetchFn?: FetchFn): Promise<Finding[]> {
+    const findings: Finding[] = [];
     const toCheck = paths.slice(0, 5);
+    if (!fetchFn) {
+      if (toCheck.length === 0) return findings;
+      return [
+        this.notCheckedFinding(
+          context,
+          'BROKENLINK',
+          'Links were not checked',
+          'Links on this page are opened to see if they work',
+          [`Visit ${context.urlPath}`]
+        ),
+      ];
+    }
+
     for (const linkPath of toCheck) {
       try {
         const fullUrl = context.baseUrl ? new URL(linkPath, context.baseUrl).href : linkPath;
-        const response = await request.fetch(fullUrl, { method: 'HEAD', timeout: 3000 }).catch(async () => {
-          return await request.fetch(fullUrl, { method: 'GET', timeout: 3000 }).catch(() => null);
-        });
+        const res = await fetchFn(fullUrl);
+        const response = res ? { status: () => res.status } : null;
 
         if (response && response.status() >= 400 && response.status() !== 403 && response.status() !== 401) {
           findings.push({

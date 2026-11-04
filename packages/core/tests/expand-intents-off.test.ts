@@ -55,7 +55,8 @@ describe('expandPlan intentsOff', () => {
     expect(out.wontRun).toEqual([
       { itemId: 't-rej', what: '/form: Test t-rej', reason: 'Switched off in the review.' },
     ]);
-    expect(out.summary.intents.rejects.tests).toBe(0);
-    expect(out.summary.intents.limits.tests).toBeGreaterThan(0);
+    expect(out.summary.intents).toBeDefined();
+    expect(out.summary.intents?.rejects.tests).toBe(0);
+    expect(out.summary.intents?.limits.tests).toBeGreaterThan(0);
   });
 });

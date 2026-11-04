@@ -1,0 +1,36 @@
+{
+  "evidence_id": "EV-0299",
+  "check_id": "CHK-QA-703-UNIT",
+  "name": "wizard unit tests",
+  "category": "unit",
+  "requirement_ids": [
+    "REQ-051"
+  ],
+  "task_ids": [
+    "QA-703"
+  ],
+  "command": "pnpm exec vitest run --project unit packages/wizard/tests",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  49 passed (49)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0299.log",
+  "log_sha256": "056bedcdc7077e86a8a46fb65187212a7524bd3a8d3861bb9b5939b7704a57ac",
+  "started_at": "2026-11-04T03:46:02.018Z",
+  "finished_at": "2026-11-04T03:49:19.390Z",
+  "duration_ms": 197372,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:ae82113bc98d63de43d0954c20f89115c91c08a1222d3d6fc058ccbe621d2823",
+  "concurrent_tasks": [],
+  "paths": [
+    "packages/types/src/**",
+    "packages/wizard/src/**",
+    "packages/wizard/tailwind.config.*",
+    "packages/wizard/tests/**"
+  ],
+  "paths_fingerprint": "git-paths:6074be8e3d31d6b2b9ffc71fba320c054563e8be62dbb4876255d96487597a30"
+}

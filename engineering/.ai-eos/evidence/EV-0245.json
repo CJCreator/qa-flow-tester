@@ -1,0 +1,35 @@
+{
+  "evidence_id": "EV-0245",
+  "check_id": "CHK-BE-189-UNIT",
+  "name": "core audit exports contract",
+  "category": "unit",
+  "requirement_ids": [
+    "REQ-048"
+  ],
+  "task_ids": [
+    "BE-189"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/audit-exports.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0245.log",
+  "log_sha256": "9e2bbd6e9c20a7226fab825974c213b6f94bc3e1263f7a94f26b8c060e210bab",
+  "started_at": "2026-11-04T03:36:46.804Z",
+  "finished_at": "2026-11-04T03:37:31.039Z",
+  "duration_ms": 44235,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:4aefa937450552108ba70afa3103b87f87908284522b356378fba9284a2b5d84",
+  "concurrent_tasks": [],
+  "paths": [
+    "packages/core/src/audit/**",
+    "packages/core/src/index.ts",
+    "packages/core/tests/audit-exports.test.ts"
+  ],
+  "paths_fingerprint": "git-paths:51217362404dc52889cd5c7040bba6bfa07a549a212a5dd8d2f35d9255cb874e"
+}

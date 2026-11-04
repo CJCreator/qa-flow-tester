@@ -1,0 +1,33 @@
+{
+  "task_id": "FE-602",
+  "agent": "frontend-engineer",
+  "status": "blocked",
+  "requirements_addressed": [],
+  "files_inspected": [
+    "packages/wizard/package.json"
+  ],
+  "files_created": [],
+  "files_modified": [],
+  "implementation_summary": "No change made. Firebase 13.1.0 (current) and 13.2.0 (latest) depend on @firebase/firestore 4.19.0 and 4.19.1. Every published @firebase/firestore (checked 4.9.0, 4.12.0, 4.18.0, 4.19.0 and latest 4.19.1) depends on @grpc/grpc-js ~1.9.0, which is below 1.13.6. No firebase upgrade can fix GHSA-m9gg-hp2v-232j, or the low-severity advisory on the same package. pnpm audit --prod confirms paths packages__wizard>firebase>@firebase/firestore>@grpc/grpc-js and ...>firestore-compat>@firebase/firestore>@grpc/grpc-js.",
+  "tests_executed": [],
+  "tests_proposed": [
+    "After the fix: pnpm audit --prod; CI=1 pnpm exec vitest run packages/wizard/tests/audit-helpers.test.tsx packages/wizard/tests/no-banned-words.test.ts; cd packages/wizard && pnpm exec tsc --noEmit -p ."
+  ],
+  "evidence": [
+    "pnpm view @firebase/firestore@{4.9.0,4.12.0,4.18.0,4.19.0}: dependencies.@grpc/grpc-js = ~1.9.0",
+    "pnpm view @firebase/firestore@latest dependencies: @grpc/grpc-js ~1.9.0",
+    "pnpm audit --prod: @grpc/grpc-js <1.13.6 high plus low advisory"
+  ],
+  "blockers": [
+    "DEC-009 cannot be met by a firebase version bump. A decision is needed: (a) add a pnpm override '@grpc/grpc-js': '>=1.13.6' (needs pnpm-workspace.yaml or the root package.json, outside FE-602 ownership), or (b) accept the risk with a documented waiver (the wizard imports only firebase/app and firebase/auth, so grpc-js is not bundled or used at runtime)."
+  ],
+  "risks": [
+    "Overriding grpc-js 1.9 to 1.13+ under firestore is untested, but firestore is not used by the wizard."
+  ],
+  "handoff": "Orchestrator: re-plan DEC-009 as an override task with ownership of the file that holds pnpm overrides, or record a waiver.",
+  "_captured": {
+    "at": "2026-11-03T12:27:56.392Z",
+    "agent_id": "a077b877a9f6bb8f4",
+    "agent_type": "ai-eos:frontend-engineer"
+  }
+}

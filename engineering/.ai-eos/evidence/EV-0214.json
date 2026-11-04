@@ -1,0 +1,68 @@
+{
+  "evidence_id": "EV-0214",
+  "check_id": "CHK-BE-509-UNIT",
+  "name": "edits route tests",
+  "category": "unit",
+  "requirement_ids": [
+    "REQ-020"
+  ],
+  "task_ids": [
+    "BE-509"
+  ],
+  "command": "pnpm exec vitest run packages/runner/tests/audit-edits-routes.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0214.log",
+  "log_sha256": "d7532830923c06c89c089d629d597691bb39ac53d3f33a2a9f24933e8821629a",
+  "started_at": "2026-11-03T17:54:28.021Z",
+  "finished_at": "2026-11-03T17:55:05.947Z",
+  "duration_ms": 37926,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:2958eb897fe4eb1ab26daf64270ce92421c3dc9c17130c8bd33221406f26a11f",
+  "concurrent_tasks": [
+    "BE-204",
+    "BE-305",
+    "BE-604",
+    "BE-605",
+    "BE-606"
+  ],
+  "paths": [
+    "packages/core/src/audit/documents/**",
+    "packages/runner/src/routes/audit-documents.ts",
+    "packages/runner/src/routes/body.ts",
+    "packages/runner/src/routes/route.ts",
+    "packages/runner/tests/audit-edits-routes.test.ts",
+    "packages/types/src/website-audit.ts"
+  ],
+  "paths_fingerprint": "git-paths:94d15223bf585819e189d1483d29845f76f03f4612e41b146d3ad00e85a98cb8",
+  "scoped_fingerprint": "git:3a0d8be2370fa514db62ec6b3bc5f0ac3f4e8dbf059fe343197195eab9c5fa5f",
+  "excluded_owned": [
+    "packages/core/src/audit/analysis/broken-links.ts",
+    "packages/core/src/audit/analysis/content-problems.ts",
+    "packages/core/src/audit/analysis/seo-basics.ts",
+    "packages/core/src/audit/crawl/crawl.ts",
+    "packages/core/src/audit/crawl/index.ts",
+    "packages/core/src/audit/preview/**",
+    "packages/core/tests/audit-broken-links.test.ts",
+    "packages/core/tests/audit-content-problems.test.ts",
+    "packages/core/tests/audit-crawl.test.ts",
+    "packages/core/tests/audit-preview-sanitize.test.ts",
+    "packages/core/tests/audit-preview.test.ts",
+    "packages/runner/src/helpers/**",
+    "packages/runner/src/routes/audit-helpers.ts",
+    "packages/runner/src/routes/audit-preview.ts",
+    "packages/runner/src/routes/audit-share.ts",
+    "packages/runner/tests/audit-helpers-routes.test.ts",
+    "packages/runner/tests/audit-preview-routes.test.ts",
+    "packages/runner/tests/audit-share-routes.test.ts",
+    "packages/runner/tests/helper-access.test.ts",
+    "packages/runner/tests/helper-session.test.ts",
+    "packages/runner/tests/helper-token.test.ts"
+  ]
+}

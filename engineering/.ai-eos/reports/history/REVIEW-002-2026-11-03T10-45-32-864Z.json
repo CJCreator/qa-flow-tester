@@ -1,0 +1,166 @@
+{
+  "task_id": "REVIEW-002",
+  "agent": "code-reviewer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-013",
+    "REQ-014",
+    "REQ-018",
+    "REQ-027",
+    "REQ-032",
+    "REQ-039",
+    "REQ-047"
+  ],
+  "files_inspected": [
+    "packages/core/src/audit/documents/labels/index.ts",
+    "packages/core/src/audit/documents/structure.ts",
+    "packages/core/src/audit/documents/proposal.ts",
+    "packages/core/src/audit/analysis/broken-links.ts",
+    "packages/core/src/audit/analysis/analyse-site.ts",
+    "packages/core/src/audit/analysis/language.ts",
+    "packages/core/src/audit/analysis/seo-basics.ts",
+    "packages/core/src/audit/analysis/finding-ids.ts",
+    "packages/core/src/audit/crawl/reachability.ts",
+    "packages/core/src/audit/crawl/crawl.ts",
+    "packages/core/src/checker-fetch.ts",
+    "packages/core/src/host-pacer.ts",
+    "packages/core/src/safe-net.ts",
+    "packages/core/src/ai/timeout.ts",
+    "packages/core/src/ai/providers/anthropic.ts",
+    "packages/core/src/ai/providers/gemini.ts",
+    "packages/core/src/ai/providers/openai.ts",
+    "packages/core/src/audit/store/shares.ts",
+    "packages/core/src/audit/store/backend.ts",
+    "packages/types/src/website-audit.ts",
+    "packages/runner/src/routes/route.ts",
+    "packages/runner/src/routes/index.ts",
+    "packages/runner/src/routes/plan.ts",
+    "packages/runner/src/server.ts",
+    "packages/wizard/src/screens/audit/start/audit-start-form.ts",
+    "packages/wizard/src/screens/audit/results/analysis-text.ts",
+    "packages/wizard/src/screens/audit/documents/settings-api.ts",
+    "packages/wizard/src/screens/audit/ai/stage-models-api.ts",
+    "CONTEXT.md"
+  ],
+  "files_created": [],
+  "files_modified": [],
+  "implementation_summary": "Reviewed the highest-risk files of the verified Website Audit tasks, the cross-task seams and the wizard import rule. No blockers; 1 major (Hindi documents mix Hindi labels with English per-builder wording), 5 minor, 3 info. Not reviewed line by line: the rest of audit/ai, the renderers, edits.ts, the other store modules, key-resolver.ts/beta.ts, the DOC-104/105 ADRs and the QA-700 tsconfigs.",
+  "tests_executed": [
+    {
+      "name": "focused vitest (doc builders/render, broken links, analyse-site, host pacer, AI timeout, route access)",
+      "command": "pnpm exec vitest run packages/core/tests/audit-doc-builders.test.ts packages/core/tests/audit-doc-render.test.ts packages/core/tests/audit-broken-links.test.ts packages/core/tests/audit-analyse-site.test.ts packages/core/tests/host-pacer.test.ts packages/core/tests/ai-provider-timeout.test.ts packages/runner/tests/route-access.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 7 passed (7); Tests 142 passed (142)"
+    }
+  ],
+  "evidence": [
+    "packages/core/src/audit/documents/structure.ts:77",
+    "packages/core/src/audit/documents/labels/index.ts:17",
+    "packages/core/src/audit/documents/labels/index.ts:68",
+    "packages/core/tests/audit-doc-settings.test.ts:56",
+    "packages/core/src/audit/analysis/language.ts:22",
+    "packages/core/src/audit/crawl/crawl.ts:142"
+  ],
+  "findings": [
+    {
+      "severity": "major",
+      "title": "Hindi documents mix Hindi labels with English per-builder wording",
+      "file": "packages/core/src/audit/documents/structure.ts",
+      "line": 77,
+      "requirement_ids": [
+        "REQ-018",
+        "REQ-027",
+        "REQ-032"
+      ],
+      "recommendation": "labelsFor('hi') returns the Hindi table, but the wording tables only have en/ta and fall back to English (structure.ts:77, content.ts:121, findings.ts:48, pitch.ts:61, owner-audit.ts:63, roadmap-document.ts:42, proposal.ts:52, settings.ts:58). Language 'hi' gives a document marked 'hi' with Hindi headings and English body, Proposal and opt-out text. Add hi entries or move this wording into DocumentLabels so the type enforces it; until then report a fallback for hi; add a builder test that renders hi."
+    },
+    {
+      "severity": "minor",
+      "title": "betaLabel is never used; beta-language documents carry no 'Beta translation' label (Q-45)",
+      "file": "packages/core/src/audit/documents/labels/index.ts",
+      "line": 68,
+      "requirement_ids": [
+        "REQ-032"
+      ],
+      "recommendation": "Add a note block from betaLabel(doc.language) in each builder or renderer, and test it for hi."
+    },
+    {
+      "severity": "minor",
+      "title": "Page language detection has no Devanagari; the wizard keeps a separate, different script table",
+      "file": "packages/core/src/audit/analysis/language.ts",
+      "line": 22,
+      "requirement_ids": [
+        "REQ-013",
+        "REQ-032"
+      ],
+      "recommendation": "Add Devanagari to SCRIPT_TABLE (the fixture hi/index.html currently reads as not-identified) and share one script table with packages/wizard/src/screens/audit/results/analysis-text.ts:129."
+    },
+    {
+      "severity": "minor",
+      "title": "Wizard copies values from @qa/types/@qa/core instead of importing them through browser.js",
+      "file": "packages/wizard/src/screens/audit/ai/stage-models-api.ts",
+      "line": 15,
+      "requirement_ids": [
+        "REQ-039",
+        "REQ-027",
+        "REQ-002"
+      ],
+      "recommendation": "Export AUDIT_AI_STAGES, AUDIT_AI_API, STAGE_MODEL_SLOT, PROPOSAL_PLACEHOLDERS (move it into types) and the crawl limit bounds from packages/types/src/browser.ts; delete the copies (stage-models-api.ts:15-42, settings-api.ts:33, audit-start-form.ts:30-38) and their comparison tests, including the regex one."
+    },
+    {
+      "severity": "minor",
+      "title": "Wizard and the Structure document use different link-region order and labels",
+      "file": "packages/wizard/src/screens/audit/results/analysis-text.ts",
+      "line": 40,
+      "requirement_ids": [
+        "REQ-018"
+      ],
+      "recommendation": "Wizard order is menu, footer, breadcrumb, internal; structure.ts:85 is menu, breadcrumb, footer, internal. Labels also differ (Breadcrumb/Breadcrumbs, Internal link/Links in the page content, two placedBy labels). Share one English label set and order through browser.js."
+    },
+    {
+      "severity": "minor",
+      "title": "Broken-link fetch contract allows following redirects into Skipped Pages",
+      "file": "packages/core/src/audit/analysis/analyse-site.ts",
+      "line": 62,
+      "requirement_ids": [
+        "REQ-014",
+        "REQ-047"
+      ],
+      "recommendation": "checkLinks checks only the first address against Skipped Pages. The comments say makeOutboundFetch (5 redirects by default) and the crawl's siteFetch also follows 5 (crawl.ts:142-148). Require makeCheckerFetch() with its default of 0 redirects (3xx returned as the response), say so in AnalysisInput.fetch and broken-links.ts:9,23, and test a redirect into a skipped area."
+    },
+    {
+      "severity": "minor",
+      "title": "requestSignal never clears its timer or abort listener after success",
+      "file": "packages/core/src/ai/timeout.ts",
+      "line": 52,
+      "requirement_ids": [],
+      "recommendation": "Return a cleanup, or clearTimeout and remove the listener in a finally in each provider's complete(); otherwise listeners pile up on a long-lived caller signal shared by many AI calls."
+    },
+    {
+      "severity": "info",
+      "title": "HelperPermission redeclared in the runner",
+      "file": "packages/runner/src/routes/route.ts",
+      "line": 111,
+      "requirement_ids": [],
+      "recommendation": "Import HelperPermission from @qa/types (website-audit.ts:864) instead of redeclaring it."
+    },
+    {
+      "severity": "info",
+      "title": "Outbound pacer covers the first-hop host only",
+      "file": "packages/core/src/safe-net.ts",
+      "line": 316,
+      "requirement_ids": [],
+      "recommendation": "Redirect hops to the www twin or another host are not paced; pace per hop inside safeGet or document the limit."
+    }
+  ],
+  "blockers": [],
+  "risks": [
+    "Only part of the 49-task scope was read line by line; the files listed as not reviewed in implementation_summary may still hold issues."
+  ],
+  "handoff": "BE-501/BE-503/BE-504/BE-505/BE-502 need a correction for the Hindi wording tables and the beta label (findings 1-2). BE-302 for Devanagari. FE-300/FE-400/FE-501/FE-200 for the copied values and wording (after browser.js exports them). BE-305/BE-308 for the fetch contract. BE-401 for timer cleanup.",
+  "_captured": {
+    "at": "2026-11-03T10:45:32.864Z",
+    "agent_id": "abb7ef3c4a2c22b7d",
+    "agent_type": "ai-eos:code-reviewer"
+  }
+}

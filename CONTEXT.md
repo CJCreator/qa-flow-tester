@@ -181,7 +181,11 @@ A page the App will not open without a sign-in: it answered 401, it is the Role'
 _Avoid_: Login page, auth wall, bounce
 
 **Skipped Page**:
-A page the crawl found but did not record, with one reason: `page-limit`, `did-not-load`, `robots`, `sign-in`, `http-error`, `timeout`, `off-site-redirect`, `time-limit`, `trap-limit`, `session-lost` or `duplicate`. The Plan lists them under what was not reached; a Skipped Page is never a failure.
+A page the crawl found but did not record, with one reason: `page-limit`, `depth-limit`, `excluded`, `payment`, `did-not-load`, `robots`, `sign-in`, `http-error`, `timeout`, `off-site-redirect`, `time-limit`, `trap-limit`, `session-lost` or `duplicate`. The Plan lists them under what was not reached, and a Website Audit flags them in its output; a Skipped Page is never a failure, and it is never a clean result either: it was not checked. The crawl-limit and payment reasons mean:
+- `depth-limit`: the page is more link steps from the start address than the max depth allows (8 unless the person sets another number).
+- `excluded`: the path starts with an exclude path, or, when include paths are set, starts with none of them. The start page is never excluded.
+- `payment`: the page is a payment area (a card-number field, a payment-provider frame or a checkout path). Nothing on it is clicked or sent, and its links are not followed.
+
 _Avoid_: Ignored page, missing page
 
 **Route Telemetry**:
@@ -311,3 +315,43 @@ _Avoid_: Pentest mode, attack mode
 **WCAG criterion status**:
 Per WCAG criterion, one of "violated", "no violation found by automation", "needs human judgment". Never "passes" or "compliant".
 _Avoid_: Accessibility score, compliance percentage
+
+**Website Audit**:
+One pass of the tool over a public website, usually one the tool user does not own, to find what could be repaired or redesigned, often to offer that work to its owner. It starts from its own screen beside the Check-up and reuses the same engine: a read-only crawl within the tool user's limits, Page Content from every crawled page, checks and AI notes on Sample Pages, and the Audit Documents, which the tool user edits before export. It has no Plan, no Plan Review and no release verdict. It never signs in, fills in or sends a form, and it refuses private and local addresses. Each re-run is a new version; everything is kept until the tool user deletes the Website Audit. See ADR 0033.
+_Avoid_: Check-up (that is for a team's own App), scan, run, site review, teardown, project
+
+**Page Content**:
+What a Website Audit reads from one crawled page, by fixed rules and without AI: the text, headings with their level, images with their alt text (or a note that it is missing), links, forms and their fields (read, never sent), title and description, calls to action (buttons and button-styled links, with their text and target), the page's language and its Sections. It is read from every crawled page, not only from Sample Pages; browser checks and AI notes run on Sample Pages only.
+_Avoid_: Scrape, scraped content, page dump, page data
+
+**Section**:
+One part of a page, found from its landmark elements and top-level headings, listed in page order with its own content. Every piece of a page's text belongs to exactly one Section. Findings and the Content document cite a page and a Section. The technical, marketing and content groups of the Findings document are not Sections.
+_Avoid_: Block, component, region (a link's region is menu, footer, breadcrumb or internal link), area (one of the quality areas)
+
+**Audit Document**:
+One of the five documents a Website Audit produces, in Markdown and in the language the tool user picks for each export: **Structure** (the page hierarchy and navigation), **Content** (the Page Content of every page, Section by Section), **Findings** (grouped as technical, marketing and content, each citing its page and Section, ranked by impact and then lower effort), **Improvement Roadmap**, and **Proposal** (website-only work filled from the tool user's template: a findings summary, the scope with repair or redesign per page and what is not included, the price and payment terms in INR that the tool user enters, a timeline from the Improvement Roadmap, and the tool user's company details). Grades come from deterministic checks; AI writes notes that cite evidence, never a score. Exports carry the tool user's edits, and the originals are kept. The Pitch Glimpse and the Owner Audit are made from a Website Audit but are not Audit Documents.
+_Avoid_: Report (that is a Check-up's), deliverable, "the three audit documents"
+
+**Improvement Roadmap**:
+The Audit Document that turns a Website Audit's ranked findings into ordered work. Every item has a priority, a phase and an effort; impact and effort are high, medium or low, and items are ordered by impact, then lower effort. The Proposal takes its timeline from it. It is never called a Plan: a Plan is the list of everything a Check-up run does.
+_Avoid_: Plan, enhancement plan, action plan, backlog, to-do list
+
+**Pitch Glimpse**:
+One A4 page made from a Website Audit for the site owner: the top 3 issues in the ranking, one screenshot each, and opt-out text, in English or Tamil. The tool ships default opt-out text in both languages; the tool user edits it and owns checking it. The tool user hands the page over printed or as a Shared Link; the tool never sends it (no email, message or form). It shows no release verdict and follows the claim wording of ADR 0018.
+_Avoid_: Pitch deck, sales sheet, teaser, summary report, cold email
+
+**Shared Link**:
+A link with an unguessable ID to a page the tool hosts for a Pitch Glimpse or an improved-homepage preview, so the tool user can hand it over. Anyone holding the link can open it without the tool's access key. The page asks search engines not to index it and never shows the owner's contact details. The link expires after 30 days, and the tool user can revoke it at any time.
+_Avoid_: Public link, permalink, share URL, published report
+
+**Owner Audit**:
+A cleaned-up version of a Website Audit for the site owner, made when the owner asks for it, in English or Tamil. It leaves out the Shortlist mark, notes and outcome, the effort and the price, and adds a plain-language summary on top. It shows no release verdict and follows the claim wording of ADR 0018.
+_Avoid_: Owner report, owner version, client copy, free audit
+
+**Shortlist**:
+The tool user's list of Website Audits marked pitch or skip, each with notes and an outcome from a fixed list (No reply, Interested, Meeting set, Won, Lost, Opted out) plus a free-text note. It can be filtered by mark and by outcome. Notes can hold an owner's personal details; deleting a Website Audit deletes its Shortlist entry.
+_Avoid_: Leads, pipeline, CRM, prospect list
+
+**Helper**:
+A person the tool user lets into chosen Website Audits on the hosted copy. A Helper signs in with a Google account and can view, edit and export only the Website Audits given to them; they cannot see or use the tool user's AI keys, delete a Website Audit or add Helpers. Access is given and removed per Website Audit. A Helper signs in to the tool, while a Role signs in to the App being tested, so a Helper is never a Role.
+_Avoid_: Role, user, account, team member, collaborator

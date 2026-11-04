@@ -1,0 +1,49 @@
+{
+  "evidence_id": "EV-0360",
+  "check_id": "CHK-QA-701-TESTS",
+  "name": "core tests whose typings changed",
+  "category": "integration",
+  "requirement_ids": [
+    "REQ-051"
+  ],
+  "task_ids": [
+    "QA-701"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/ai-planner-sources.test.ts packages/core/tests/expand-intents-off.test.ts packages/core/tests/marketing-grades.test.ts packages/core/tests/missing-element.test.ts packages/core/tests/orchestrator-session.test.ts packages/core/tests/plan-build.test.ts packages/core/tests/plan-old-selectors.test.ts packages/core/tests/plan-sources-live-site.test.ts packages/core/tests/rejects-gating.test.ts packages/core/tests/rejects-plan.test.ts packages/core/tests/signin.test.ts packages/core/tests/spider-reliability.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  12 passed (12)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0360.log",
+  "log_sha256": "1435b0b481e03ed157be95e78b1ec33cb4b162f301373fca02dbc1b561b4ac72",
+  "started_at": "2026-11-04T07:23:55.137Z",
+  "finished_at": "2026-11-04T07:26:49.790Z",
+  "duration_ms": 174653,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:a106b3aa880f48fb3fccd478c4e7bbc2b0039a0fd1ac734eacd1960d53185922",
+  "concurrent_tasks": [],
+  "paths": [
+    "fixtures/test-app/**",
+    "packages/checkers/src/**",
+    "packages/core/src/**",
+    "packages/core/tests/ai-planner-sources.test.ts",
+    "packages/core/tests/expand-intents-off.test.ts",
+    "packages/core/tests/helpers/**",
+    "packages/core/tests/marketing-grades.test.ts",
+    "packages/core/tests/missing-element.test.ts",
+    "packages/core/tests/orchestrator-session.test.ts",
+    "packages/core/tests/plan-build.test.ts",
+    "packages/core/tests/plan-old-selectors.test.ts",
+    "packages/core/tests/plan-sources-live-site.test.ts",
+    "packages/core/tests/rejects-gating.test.ts",
+    "packages/core/tests/rejects-plan.test.ts",
+    "packages/core/tests/signin.test.ts",
+    "packages/core/tests/spider-reliability.test.ts",
+    "packages/types/src/**"
+  ],
+  "paths_fingerprint": "git-paths:4f8efdb2f6dc4149a57c3af1c28e9b5f2e52ccdd069566068f532dcf31ee0df5"
+}

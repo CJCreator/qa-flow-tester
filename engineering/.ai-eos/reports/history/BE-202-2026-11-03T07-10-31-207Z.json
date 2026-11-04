@@ -1,0 +1,51 @@
+{
+  "task_id": "BE-202",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-002"
+  ],
+  "files_inspected": [
+    "packages/types/src/website-audit.ts",
+    "packages/types/src/index.ts",
+    "packages/core/src/audit/crawl/area-detect.ts",
+    "packages/core/tests/audit-area-detect.test.ts"
+  ],
+  "files_created": [
+    "packages/core/src/audit/crawl/limits.ts",
+    "packages/core/tests/audit-crawl-limits.test.ts"
+  ],
+  "files_modified": [],
+  "implementation_summary": "Added pure pathLimitVerdict(pathname, limits, startPath) returning 'excluded' or undefined per Q-11. Paths and prefixes are split on '/', each segment decoded with decodeURIComponent (an undecodable segment is kept as written, never throws), trailing slashes ignored, case kept. The start page is allowed first, then an exclude match wins, then with include paths set a path matching none of them is excluded. A prefix matches a path when all its segments match the path's leading segments. The prefix '/' matches every path.",
+  "tests_executed": [
+    {
+      "name": "Audit include/exclude path filter",
+      "command": "pnpm exec vitest run packages/core/tests/audit-crawl-limits.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 11 passed (11)"
+    }
+  ],
+  "tests_proposed": [
+    "Integration test in the audit crawl task: excluded links are not queued and the start page is still crawled when the include/exclude paths would leave it out."
+  ],
+  "evidence": [
+    "packages/core/tests/audit-crawl-limits.test.ts: AC-3 'excludes a prefix on whole segments only'",
+    "packages/core/tests/audit-crawl-limits.test.ts: AC-4 'excludes a path matching no include path' and 'always allows the start page'",
+    "packages/core/tests/audit-crawl-limits.test.ts: 'lets an exclude match win over an include match'",
+    "packages/core/tests/audit-crawl-limits.test.ts: 'compares percent-encoded paths after decoding' and 'compares a path that cannot be decoded as written, never throws'",
+    "packages/core/tests/audit-crawl-limits.test.ts: 'allows every path when no include and no exclude paths are set'"
+  ],
+  "blockers": [],
+  "risks": [
+    "Not type-checked: no tsc or pnpm build was run because other agents are editing in parallel. The orchestrator build will be the first type-check.",
+    "An encoded slash (%2F) stays inside its segment, so /blog%2Fx does not match the prefix /blog. This is deliberate but Q-11 does not specify it.",
+    "The prefix '/' matches every path; an exclude of '/' excludes everything except the start page.",
+    "The start-page comparison ignores trailing slashes, so /blog/ is treated as the start page /blog."
+  ],
+  "handoff": "Import { pathLimitVerdict } from packages/core/src/audit/crawl/limits.ts. Pass the raw URL.pathname for both the candidate page and startPath; decoding happens inside. limits can be the AuditLimits from validateAuditStartBody. Only the exact start page is exempt: with start /blog and exclude /blog, /blog/x is excluded.",
+  "_captured": {
+    "at": "2026-11-03T07:10:31.207Z",
+    "agent_id": "af6796c2b86ae68e4",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

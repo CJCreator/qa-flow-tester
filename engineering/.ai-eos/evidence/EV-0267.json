@@ -1,0 +1,44 @@
+{
+  "evidence_id": "EV-0267",
+  "check_id": "CHK-BE-505-UNIT",
+  "name": "Pitch Glimpse and Owner Audit tests",
+  "category": "unit",
+  "requirement_ids": [
+    "REQ-019",
+    "REQ-025"
+  ],
+  "task_ids": [
+    "BE-505"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/audit-doc-pitch.test.ts packages/core/tests/audit-doc-owner.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  2 passed (2)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0267.log",
+  "log_sha256": "4b9f648adbf73b8da76a0c2d420a8889769783224dace94202015bc061814f41",
+  "started_at": "2026-11-04T03:40:25.865Z",
+  "finished_at": "2026-11-04T03:41:11.426Z",
+  "duration_ms": 45561,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:4aefa937450552108ba70afa3103b87f87908284522b356378fba9284a2b5d84",
+  "concurrent_tasks": [
+    "QA-712"
+  ],
+  "paths": [
+    "packages/core/src/audit/documents/**",
+    "packages/core/tests/audit-doc-owner.test.ts",
+    "packages/core/tests/audit-doc-pitch.test.ts",
+    "packages/core/tests/helpers/audit-doc-fixture.ts",
+    "packages/types/src/website-audit.ts"
+  ],
+  "paths_fingerprint": "git-paths:67db60b4f9bc8d21d0e3a78d5679000ebbd13cafb52dc20b7a4a9d5e73923b36",
+  "scoped_fingerprint": "git:d43e252e7725764cb4edf6b0f30f98b29b73dd58767df07b17c5131fb15af7ea",
+  "excluded_owned": [
+    "packages/wizard/tests/audit-languages-browser.test.ts"
+  ]
+}

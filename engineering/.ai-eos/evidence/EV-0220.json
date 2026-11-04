@@ -1,0 +1,65 @@
+{
+  "evidence_id": "EV-0220",
+  "check_id": "CHK-BE-308-UNIT",
+  "name": "analyseSite unit tests",
+  "category": "unit",
+  "requirement_ids": [
+    "REQ-007",
+    "REQ-008",
+    "REQ-009",
+    "REQ-010",
+    "REQ-013",
+    "REQ-014",
+    "REQ-015",
+    "REQ-038"
+  ],
+  "task_ids": [
+    "BE-308"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/audit-analyse-site.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0220.log",
+  "log_sha256": "c7ecb3e8179c68c1c3640974830a4a633d0824f0ab38ffdb7c9667934d884126",
+  "started_at": "2026-11-03T17:59:35.346Z",
+  "finished_at": "2026-11-03T17:59:50.483Z",
+  "duration_ms": 15137,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:0559f34cac776379e26b0c1ee627b22a79c4c61195d89941753c1e00eb6894f2",
+  "concurrent_tasks": [
+    "BE-204",
+    "BE-500",
+    "BE-606"
+  ],
+  "paths": [
+    "packages/checkers/src/security-depth.ts",
+    "packages/checkers/src/ux-quality.ts",
+    "packages/core/src/audit/analysis/**",
+    "packages/core/src/redact.ts",
+    "packages/core/tests/audit-analyse-site.test.ts",
+    "packages/types/src/aspects.ts",
+    "packages/types/src/website-audit.ts"
+  ],
+  "paths_fingerprint": "git-paths:59d8e62a95484fe51b8d5b9a64690fc6d454bc221c4299a964fc75857d97c20a",
+  "scoped_fingerprint": "git:775bbc90dcb7b9812ffa40b5601ab1eecb811597d0966ef9555c842554092f5e",
+  "excluded_owned": [
+    "packages/core/src/audit/crawl/crawl.ts",
+    "packages/core/src/audit/crawl/index.ts",
+    "packages/core/src/audit/documents/edits.ts",
+    "packages/core/tests/audit-crawl.test.ts",
+    "packages/core/tests/audit-doc-edits.test.ts",
+    "packages/core/tests/helpers/audit-doc-fixture.ts",
+    "packages/runner/src/helpers/**",
+    "packages/runner/src/routes/audit-helpers.ts",
+    "packages/runner/tests/audit-helpers-routes.test.ts",
+    "packages/runner/tests/helper-access.test.ts",
+    "packages/runner/tests/helper-session.test.ts",
+    "packages/runner/tests/helper-token.test.ts"
+  ]
+}

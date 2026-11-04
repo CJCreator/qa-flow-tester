@@ -1,0 +1,81 @@
+{
+  "task_id": "QA-600",
+  "agent": "qa-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-028",
+    "REQ-029",
+    "REQ-033",
+    "REQ-024",
+    "REQ-023"
+  ],
+  "files_inspected": [
+    "packages/runner/tests/server-audit-wiring.test.ts",
+    "packages/runner/tests/audit-share-routes.test.ts",
+    "packages/runner/tests/audit-preview-routes.test.ts",
+    "packages/runner/tests/helper-token.test.ts",
+    "packages/runner/src/server.ts",
+    "packages/runner/src/routes/route.ts",
+    "packages/runner/src/routes/audit-store.ts",
+    "packages/runner/src/routes/audit-preview.ts",
+    "packages/runner/src/routes/audit-share.ts",
+    "packages/runner/src/routes/audit-helpers.ts",
+    "packages/runner/src/routes/audit-shortlist.ts",
+    "packages/runner/src/helpers/helper-access.ts",
+    "packages/core/src/audit/store/audit-store.ts",
+    "packages/core/src/audit/store/select-backend.ts",
+    "vitest.workspace.ts"
+  ],
+  "files_created": [
+    "packages/runner/tests/audit-persistence-integration.test.ts",
+    "packages/runner/tests/audit-preview-browser.test.ts"
+  ],
+  "files_modified": [],
+  "implementation_summary": "Integration tests start a RunnerServer with the production route table on temp data folders (ports 3841-3845) and call it over HTTP: persistence across restart (one and two versions), local-files-only with no Google host, Shortlist round trip, delete leaving no file, beta plus access key leaving only Shared Links public, and a Helper signed in with a locally signed token over a fake key download (list, open, 404, 403, grant removal). A Chromium test opens a stored preview via the API and via its Shared Link, clicks a menu link and an in-page link with outbound requests intercepted, and checks the page runs no script.",
+  "tests_executed": [
+    {
+      "name": "audit persistence and access integration tests",
+      "command": "pnpm exec vitest run packages/runner/tests/audit-persistence-integration.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1), Tests 6 passed (6)"
+    },
+    {
+      "name": "preview click-through in Chromium",
+      "command": "pnpm exec vitest run packages/runner/tests/audit-preview-browser.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1), Tests 3 passed (3)"
+    },
+    {
+      "name": "type check of the new files",
+      "command": "npx tsc -p packages/runner/tests/tsconfig.typecheck.json --noEmit | grep audit-persistence/audit-preview-browser",
+      "result": "passed",
+      "output_excerpt": "no errors reported for the two new files"
+    }
+  ],
+  "tests_proposed": [
+    "Helper with an edit grant over HTTP: PUT shortlist succeeds, export row allowed, owner rows still 403",
+    "Stored preview with two style elements: assert both are hashed in the CSP header in the browser",
+    "Restart with an expired Helper cookie and with a cookie from another runner instance (random per-instance key) is refused",
+    "Cloud store backend (AUDIT_STORE_BUCKET) with a fake fetch: same persistence and delete assertions"
+  ],
+  "evidence": [
+    "packages/runner/tests/audit-persistence-integration.test.ts",
+    "packages/runner/tests/audit-preview-browser.test.ts"
+  ],
+  "findings": [],
+  "blockers": [],
+  "risks": [
+    "The runner package has no Playwright dependency; the browser test resolves it from packages/core via createRequire and takes types from ../../core/node_modules/playwright. Adding it to the runner is a P2 change needing a planned task.",
+    "Both new files start a runner (and the browser one launches Chromium) but are not in BROWSER_TESTS in vitest.workspace.ts (outside my ownership), so they run in the 'unit' project.",
+    "On a beta copy, creating a Shared Link answers 403 ERR_BETA even with the access key, so the test creates the link on a non-beta runner, restarts the same folder as beta, and checks /s/:linkId there.",
+    "After a Helper grant is removed, the Helper's list request answers 403 ERR_FORBIDDEN (not 401), because the session cookie is still valid and holds no grants.",
+    "Owner rows refused by the access-key gate answer 401 without a code field (only the message mentions the access key); view rows refused by the route table carry ERR_ACCESS_KEY.",
+    "The no-Google-host check spies on globalThis.fetch and a fetch injected into selectAuditStoreBackend; a call through another transport (raw http or https) would not be seen."
+  ],
+  "handoff": "Both checks (CHK-QA-600-INTEGRATION and CHK-QA-600-BROWSER) can be re-run as given in the packet. Ports used: 3841-3845. Core was built first with pnpm --filter @qa/types --filter @qa/checkers --filter @qa/core run build.",
+  "_captured": {
+    "at": "2026-11-03T18:28:59.675Z",
+    "agent_id": "a3b7a7302c2cae4e9",
+    "agent_type": "ai-eos:qa-engineer"
+  }
+}

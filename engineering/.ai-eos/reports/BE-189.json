@@ -1,0 +1,51 @@
+{
+  "task_id": "BE-189",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-048"
+  ],
+  "files_inspected": [
+    "packages/core/src/audit/index.ts",
+    "packages/core/src/index.ts",
+    "packages/core/tests/audit-exports.test.ts",
+    "packages/core/src/audit/preview/index.ts"
+  ],
+  "files_created": [],
+  "files_modified": [
+    "packages/core/src/audit/index.ts",
+    "packages/core/tests/audit-exports.test.ts"
+  ],
+  "implementation_summary": "Added the preview barrel export to the audit barrel and added the preview entry points (generatePreview, sanitizePreviewHtml) plus the preview group to the audit exports contract test. packages/core/src/index.ts already carried the audit export line, so it was not changed.",
+  "tests_executed": [
+    {
+      "name": "audit exports reach @qa/core (20 tests)",
+      "command": "CI=1 pnpm exec vitest run packages/core/tests/audit-exports.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1), Tests 20 passed (20)"
+    },
+    {
+      "name": "build types, checkers, core",
+      "command": "pnpm --filter @qa/types --filter @qa/checkers --filter @qa/core run build",
+      "result": "passed",
+      "output_excerpt": "packages/core build: Done (exit 0)"
+    }
+  ],
+  "tests_proposed": [],
+  "evidence": [
+    "packages/core/src/audit/index.ts: export * from './preview/index.js';",
+    "packages/core/tests/audit-exports.test.ts: preview: ['generatePreview', 'sanitizePreviewHtml']",
+    "packages/core/src/index.ts:74 export * from './audit/index.js';"
+  ],
+  "blockers": [],
+  "risks": [
+    "Barrel now re-exports the preview group, so any future name clash in preview/index.ts surfaces as a TS2308 build error; the build passed for the current names.",
+    "The reachability test checks that the names are defined on @qa/core, not that they behave correctly."
+  ],
+  "handoff": "BE-189 is complete with the preview group included. Downstream code can import generatePreview, sanitizePreviewHtml and the other preview names from @qa/core. No dependency on the preview module needs a separate import path.",
+  "_captured": {
+    "at": "2026-11-03T11:53:56.102Z",
+    "agent_id": "a87e4244e1be3c163",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

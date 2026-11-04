@@ -18,7 +18,7 @@ const test = (id: string, intent?: PlanPageTest['intent']): PlanPageTest => ({
   name: id,
   role: 'visitor',
   steps: [],
-  source: 'rules',
+  source: 'fallback',
   intent,
 });
 

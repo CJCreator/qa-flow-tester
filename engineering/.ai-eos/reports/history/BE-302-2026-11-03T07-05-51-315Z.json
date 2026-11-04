@@ -1,0 +1,47 @@
+{
+  "task_id": "BE-302",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-013"
+  ],
+  "files_inspected": [
+    "packages/types/src/website-audit.ts",
+    "packages/types/src/index.ts",
+    "packages/core/tests/plan-validator.test.ts"
+  ],
+  "files_created": [
+    "packages/core/src/audit/analysis/language.ts",
+    "packages/core/tests/audit-language.test.ts"
+  ],
+  "files_modified": [],
+  "implementation_summary": "Added detectPageLanguage(text, declared): PageLanguage. Counts letters (plus combining marks inside listed script ranges) per entry of an exported data table SCRIPT_TABLE (Latin->en, Tamil U+0B80-U+0BFF->ta), with one bucket for letters in unlisted scripts. Under MIN_LETTERS=20 letters, or when the unlisted bucket is not strictly beaten, primary is 'not-identified'. Otherwise the listed language with the most letters wins (table order breaks ties). others lists the other listed languages with at least MIN_OTHER_SHARE=0.1 of letters, grouped by language, so there are no duplicates and never the primary. declared is returned as written (null when absent) and never decides primary. Pure function, no dependency added.",
+  "tests_executed": [
+    {
+      "name": "page language detection unit tests",
+      "command": "pnpm exec vitest run packages/core/tests/audit-language.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 15 passed (15)"
+    }
+  ],
+  "tests_proposed": [
+    "Run pnpm build after the wave to type-check packages/core with the new module"
+  ],
+  "evidence": [
+    "packages/core/src/audit/analysis/language.ts: SCRIPT_TABLE, MIN_LETTERS, MIN_OTHER_SHARE, detectPageLanguage",
+    "packages/core/tests/audit-language.test.ts: AC-1, AC-2, others, declared, minimum letters, unlisted script, determinism tests",
+    "vitest output: 15 passed"
+  ],
+  "blockers": [],
+  "risks": [
+    "Unlisted scripts share one bucket and must be beaten strictly: a page split between Latin and several unlisted scripts can come out 'not-identified' even when Latin is the largest single script.",
+    "Thresholds MIN_LETTERS=20 and MIN_OTHER_SHARE=0.1 are judgement calls; both are exported constants.",
+    "Not type-checked with pnpm build because of parallel edits; vitest transform passed."
+  ],
+  "handoff": "Import detectPageLanguage from packages/core/src/audit/analysis/language.ts. REQ-032 (G7) adds scripts by adding rows to SCRIPT_TABLE ({name, ranges, language}); the logic needs no change. Devanagari is shared by hi and mr, but each row maps to one language, so G7 needs its own way to tell them apart. Listed languages still appear in others when primary is 'not-identified'.",
+  "_captured": {
+    "at": "2026-11-03T07:05:51.315Z",
+    "agent_id": "a8a0ca04ba5d4bef1",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

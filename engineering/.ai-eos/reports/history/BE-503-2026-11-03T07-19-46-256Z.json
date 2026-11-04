@@ -1,0 +1,76 @@
+{
+  "task_id": "BE-503",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-018",
+    "REQ-020"
+  ],
+  "files_inspected": [
+    "packages/core/src/audit/documents/edits.ts",
+    "packages/core/src/audit/documents/model.ts",
+    "packages/core/src/audit/documents/render-markdown.ts",
+    "packages/core/src/audit/documents/render-html.ts",
+    "packages/core/src/audit/documents/wording.ts",
+    "packages/core/src/audit/documents/labels/en.ts",
+    "packages/core/src/audit/documents/labels/ta.ts",
+    "packages/core/src/audit/documents/labels/index.ts",
+    "packages/core/tests/helpers/audit-doc-fixture.ts",
+    "packages/core/tests/audit-doc-edits.test.ts",
+    "packages/core/tests/audit-doc-render.test.ts",
+    "packages/types/src/website-audit.ts",
+    "packages/types/src/route-telemetry.ts",
+    "packages/core/src/issues-document.ts",
+    "CONTEXT.md",
+    "engineering/plan.md"
+  ],
+  "files_created": [
+    "packages/core/src/audit/documents/structure.ts",
+    "packages/core/src/audit/documents/content.ts",
+    "packages/core/src/audit/documents/findings.ts",
+    "packages/core/tests/audit-doc-builders.test.ts"
+  ],
+  "files_modified": [],
+  "implementation_summary": "Three pure builders over BE-500's EditedAuditView that return BE-501 AuditDoc blocks (plain text; the renderers escape it). Structure: the hierarchy as a flat list with one depth marker per level and how each place was decided, navigation links as one table per region (menu, breadcrumb, footer, internal), links that leave the site, Skipped Pages with their reason and 'Not checked', and the technology or 'Not identified'. Content: each page in the version's page order with title and description, then each Section with heading/kind, the exact (edited) Section text, and that Section's images (alt text, missing-alt or empty-alt note), calls to action and forms (read-only note); items not tied to a Section are listed under 'Elsewhere on the page'. Findings: groups in the order technical, marketing, content, keeping the stored ranked order; each finding cites its page, the pages it spans, its Section (id and heading or kind, or 'Whole page'), area, impact and effort (left out when showEffort is false), what was found and the suggested fix; AI-written findings get the AI-note advisory; a grades-by-area table covers all six AUDIT_AREAS from deterministic grades, shows 'Not checked' when the grade is null or the area is missing, and marks AI notes as advice. Each builder takes options { language? } (default view.result.language; falls back to English through labelsFor). Wording not in DocumentLabels lives in per-file English/Tamil tables.",
+  "tests_executed": [
+    {
+      "name": "Structure, Content and Findings document tests",
+      "command": "pnpm exec vitest run packages/core/tests/audit-doc-builders.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 29 passed (29)"
+    },
+    {
+      "name": "core type-check",
+      "command": "npx tsc --noEmit -p packages/core/tsconfig.json",
+      "result": "passed",
+      "output_excerpt": "0 'error TS' lines; the three new source files are included (--listFilesOnly)"
+    }
+  ],
+  "tests_proposed": [
+    "Golden Markdown snapshot of each document for the fixture in en and ta once the product wording is approved",
+    "Hostile page text (Markdown/HTML injection in Section text, finding titles, link text) through the three builders and both renderers"
+  ],
+  "evidence": [
+    "packages/core/tests/audit-doc-builders.test.ts: 'Findings document: edits (REQ-020 AC-1)'",
+    "packages/core/tests/audit-doc-builders.test.ts: 'removed pages (REQ-020 AC-2)', checked across all three builders in md and html",
+    "packages/core/tests/audit-doc-builders.test.ts: 'Content document: edited Sections (REQ-020 AC-3)'",
+    "packages/core/tests/audit-doc-builders.test.ts: 'Findings document: groups, ranking and citations (REQ-017 AC-2)'",
+    "packages/core/tests/audit-doc-builders.test.ts: 'not checked is never a clean result (ADR 0018)'",
+    "packages/core/tests/audit-doc-builders.test.ts: 'languages and claim wording' (findClaimWords empty, no verdict/pass/fail, Tamil fixed wording, page text kept character for character)"
+  ],
+  "blockers": [],
+  "risks": [
+    "Wording missing from DocumentLabels (placedBy, link regions, technology kinds, Section kinds, alt notes, form wording, 'Grades by area' and more) is kept in per-file EN/TA tables in structure.ts, content.ts and findings.ts because labels/*.ts were outside this task's ownership; it should move into DocumentLabels in a follow-up. The Tamil has not been checked by a native speaker.",
+    "Builder signature is (view, { language?, showEffort? }), not the (view, labels, opts) form the plan gives BE-502's roadmap builder; BE-505 must call these with an options object.",
+    "Finding detail free text that names a removed page still names it (BE-500 rewrites structured fields only), e.g. AF-001's detail mentions /services.",
+    "The block model has no nested lists: the hierarchy is a flat list with one '↳ ' marker per depth level.",
+    "Technology evidence (English-only detector wording) and crawl found/reached counts (not adjusted for removed pages) are left out; the Structure document shows 'Pages in this document: n' instead.",
+    "Form field type values (text, tel) and section ids (s1, s2) appear as written in Tamil documents."
+  ],
+  "handoff": "Import buildStructureDocument, buildContentDocument and buildFindingsDocument from packages/core/src/audit/documents/{structure,content,findings}.ts; call each with buildEditedView(...) output and { language } (plus { showEffort: false } on findings for the Owner Audit), then renderMarkdown/renderHtml. Heading layout: level 1 = page, group or major heading; level 2 = Section, region or finding; level 3 = images, calls to action or forms. content.ts also exports sectionLabel(language, section) ('s2 · About us' or 's1 · Header') for any other document that cites a Section; findings.ts exports FINDING_GROUP_ORDER.",
+  "_captured": {
+    "at": "2026-11-03T07:19:46.256Z",
+    "agent_id": "a5e51c28245366708",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

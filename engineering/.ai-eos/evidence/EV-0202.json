@@ -1,0 +1,48 @@
+{
+  "evidence_id": "EV-0202",
+  "check_id": "CHK-BE-611-UNIT",
+  "name": "audit content and file routes",
+  "category": "unit",
+  "requirement_ids": [
+    "REQ-048",
+    "REQ-020"
+  ],
+  "task_ids": [
+    "BE-611"
+  ],
+  "command": "pnpm exec vitest run packages/runner/tests/audit-content-routes.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0202.log",
+  "log_sha256": "d75c54f34b5a4195daac44c909035b431b885abf7acbf863b6c172b815bf50ea",
+  "started_at": "2026-11-03T17:15:30.795Z",
+  "finished_at": "2026-11-03T17:16:12.589Z",
+  "duration_ms": 41794,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:59baad4a0467a312f6b85a9abd082685ec01147d97cd552d590f482ebc8bc076",
+  "concurrent_tasks": [
+    "BE-612"
+  ],
+  "paths": [
+    "packages/core/src/audit/store/**",
+    "packages/runner/src/routes/audit-content.ts",
+    "packages/runner/src/routes/audit-store.ts",
+    "packages/runner/src/routes/body.ts",
+    "packages/runner/src/routes/route.ts",
+    "packages/runner/tests/audit-content-routes.test.ts",
+    "packages/types/src/website-audit.ts"
+  ],
+  "paths_fingerprint": "git-paths:c3a5513f4847849a82b96ce09ddf52f5904565ff7969c34aa7c452684ea354f1",
+  "scoped_fingerprint": "git:b3d92404ba5f36bcc35804cdd9b1b90915a0aa0ddba4d78d007d9e901ab1af2e",
+  "excluded_owned": [
+    "packages/runner/src/cli.ts",
+    "packages/runner/src/server.ts",
+    "packages/runner/tests/server-audit-wiring.test.ts"
+  ]
+}

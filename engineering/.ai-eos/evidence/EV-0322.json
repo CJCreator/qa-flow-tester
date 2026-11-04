@@ -1,0 +1,32 @@
+{
+  "evidence_id": "EV-0322",
+  "check_id": "CHK-TYPECHECK",
+  "name": "typecheck incl. tests",
+  "category": "typecheck",
+  "requirement_ids": [
+    "REQ-046",
+    "REQ-053",
+    "REQ-052",
+    "REQ-051"
+  ],
+  "task_ids": [
+    "QA-713"
+  ],
+  "command": "pnpm typecheck",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Done in 15.9s using pnpm v11.10.0 · $ tsc -p tsconfig.test.json --noEmit",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0322.log",
+  "log_sha256": "0813e33aa22ed5d051b0c2b1da84228c36aad7ba9ba78476d815b458ddbff9a1",
+  "started_at": "2026-11-04T05:12:41.092Z",
+  "finished_at": "2026-11-04T05:15:14.359Z",
+  "duration_ms": 153267,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:f528894dacf4fedd369015880a4af778c95afc41d35474ee6ed445e2c620c493",
+  "concurrent_tasks": []
+}

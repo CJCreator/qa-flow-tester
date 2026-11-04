@@ -1,0 +1,70 @@
+{
+  "evidence_id": "EV-0091",
+  "check_id": "CHK-QA-700-UNIT",
+  "name": "checkers tests whose typings changed",
+  "category": "unit",
+  "requirement_ids": [
+    "REQ-051"
+  ],
+  "task_ids": [
+    "QA-700"
+  ],
+  "command": "pnpm exec vitest run packages/checkers/tests/bug-detection.test.ts packages/checkers/tests/bug-grouping.test.ts packages/checkers/tests/visual-diff-finding.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  3 passed (3)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0091.log",
+  "log_sha256": "d18f50f45183a9d36485abcb493aee984161659601ac34c7013e614aa68c45de",
+  "started_at": "2026-11-03T10:19:16.279Z",
+  "finished_at": "2026-11-03T10:19:26.767Z",
+  "duration_ms": 10488,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:4be707ccc5a760dfa7a641864e8a1cd49c9069af9192eb6c834baf1f7bbe2e14",
+  "concurrent_tasks": [
+    "BE-104",
+    "BE-305",
+    "BE-502",
+    "BE-503",
+    "QA-300",
+    "QA-706"
+  ],
+  "paths": [
+    "packages/checkers/src/**",
+    "packages/checkers/tests/bug-detection.test.ts",
+    "packages/checkers/tests/bug-grouping.test.ts",
+    "packages/checkers/tests/visual-diff-finding.test.ts",
+    "packages/types/src/**"
+  ],
+  "paths_fingerprint": "git-paths:fdb84e44754bf8c8ec09534f9ca1374d578c5d996cb23b208738017ae4e34615",
+  "scoped_fingerprint": "git:6eb16b135749b917e6a01f157c52d147d1c05f63fa6efd4c1f11e51c108fbce4",
+  "excluded_owned": [
+    "packages/checkers/src/security-depth.ts",
+    "packages/checkers/src/seo.ts",
+    "packages/checkers/tests/security-depth.test.ts",
+    "packages/checkers/tests/seo.test.ts",
+    "packages/core/src/audit/analysis/broken-links.ts",
+    "packages/core/src/audit/analysis/content-problems.ts",
+    "packages/core/src/audit/analysis/seo-basics.ts",
+    "packages/core/src/audit/documents/content.ts",
+    "packages/core/src/audit/documents/findings.ts",
+    "packages/core/src/audit/documents/roadmap-document.ts",
+    "packages/core/src/audit/documents/roadmap.ts",
+    "packages/core/src/audit/documents/structure.ts",
+    "packages/core/src/checker-fetch.ts",
+    "packages/core/src/orchestrator.ts",
+    "packages/core/tests/audit-analysis-fixture.test.ts",
+    "packages/core/tests/audit-broken-links.test.ts",
+    "packages/core/tests/audit-content-problems.test.ts",
+    "packages/core/tests/audit-doc-builders.test.ts",
+    "packages/core/tests/audit-doc-roadmap.test.ts",
+    "packages/core/tests/checker-fetch.test.ts",
+    "packages/core/tests/outbound-source-grep.test.ts",
+    "packages/runner/tests/runner-server.test.ts",
+    "packages/runner/tests/url-first.test.ts"
+  ]
+}

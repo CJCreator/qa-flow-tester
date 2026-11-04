@@ -1,0 +1,4462 @@
+{
+  "schema_version": 1,
+  "workflow_id": "WF-20261103-hypb",
+  "state": "IN_PROGRESS",
+  "created_at": "2026-11-03T05:02:09.607Z",
+  "updated_at": "2026-11-04T08:07:41.688Z",
+  "history": [
+    {
+      "at": "2026-11-03T05:02:09.607Z",
+      "from": null,
+      "to": "DRAFT",
+      "actor": "engine:init",
+      "reason": "workspace initialized"
+    },
+    {
+      "at": "2026-11-03T05:23:32.330Z",
+      "from": "DRAFT",
+      "to": "ANALYZING",
+      "actor": "orchestrator",
+      "reason": "setup: repository analysis"
+    },
+    {
+      "at": "2026-11-03T05:55:19.763Z",
+      "from": "ANALYZING",
+      "to": "DRAFT",
+      "actor": "orchestrator",
+      "reason": "setup complete (CHK-BROWSER baseline still running; recorded when it finishes)"
+    },
+    {
+      "at": "2026-11-03T06:00:11.643Z",
+      "from": "DRAFT",
+      "to": "ANALYZING",
+      "actor": "orchestrator",
+      "reason": "Redo the Website audit feature (ADR 0033)"
+    },
+    {
+      "at": "2026-11-03T06:08:43.910Z",
+      "from": "ANALYZING",
+      "to": "PLANNING",
+      "actor": "orchestrator",
+      "reason": "analysis complete"
+    },
+    {
+      "at": "2026-11-03T06:29:37.015Z",
+      "from": "PLANNING",
+      "to": "AWAITING_APPROVAL",
+      "actor": "orchestrator",
+      "reason": "plan submitted for approval"
+    },
+    {
+      "at": "2026-11-03T06:57:28.550Z",
+      "from": "AWAITING_APPROVAL",
+      "to": "READY",
+      "actor": "hook:approval",
+      "reason": "Plan approved (APR-002)"
+    },
+    {
+      "at": "2026-11-03T06:58:56.406Z",
+      "from": "READY",
+      "to": "IN_PROGRESS",
+      "actor": "orchestrator",
+      "reason": "BE-302 dispatched"
+    },
+    {
+      "at": "2026-11-03T11:57:18.218Z",
+      "from": "IN_PROGRESS",
+      "to": "AWAITING_APPROVAL",
+      "actor": "autopilot",
+      "reason": "re-plan of BE-104: REC-007: CHK-BE-104-CHECKERS needs packages/core/tests/orchestrator-access-wiring.test.ts, which no task owns; add it to BE-104 ownership"
+    },
+    {
+      "at": "2026-11-03T11:58:34.518Z",
+      "from": "AWAITING_APPROVAL",
+      "to": "READY",
+      "actor": "hook:approval",
+      "reason": "Plan approved (APR-003)"
+    },
+    {
+      "at": "2026-11-03T11:58:55.324Z",
+      "from": "READY",
+      "to": "IN_PROGRESS",
+      "actor": "orchestrator",
+      "reason": "BE-104 dispatched"
+    },
+    {
+      "at": "2026-11-03T12:43:46.388Z",
+      "from": "IN_PROGRESS",
+      "to": "AWAITING_APPROVAL",
+      "actor": "autopilot",
+      "reason": "re-plan of BE-102: REC-008: CHK-BE-102-SERVER needs packages/runner/tests/beta.test.ts (cleanup race), owned by no task"
+    },
+    {
+      "at": "2026-11-03T12:45:51.218Z",
+      "from": "AWAITING_APPROVAL",
+      "to": "READY",
+      "actor": "hook:approval",
+      "reason": "Plan approved (APR-004)"
+    },
+    {
+      "at": "2026-11-03T12:46:53.156Z",
+      "from": "READY",
+      "to": "IN_PROGRESS",
+      "actor": "orchestrator",
+      "reason": "BE-102 dispatched"
+    },
+    {
+      "at": "2026-11-03T17:02:59.887Z",
+      "from": "IN_PROGRESS",
+      "to": "AWAITING_APPROVAL",
+      "actor": "autopilot",
+      "reason": "re-plan of BE-190: BE-190 partial: AUDIT_API.content and AUDIT_API.file have no route implementation and no owner (REQ-048 AC-2 fails); production RunnerServer (cli.ts) never receives helperAccess and routes/index.ts reads private server members. Add BE-611 (content/file routes) and BE-612 (server/cli wiring with public accessors); BE-190 then depends on both."
+    },
+    {
+      "at": "2026-11-03T17:05:29.549Z",
+      "from": "AWAITING_APPROVAL",
+      "to": "READY",
+      "actor": "hook:approval",
+      "reason": "Plan approved (APR-005)"
+    },
+    {
+      "at": "2026-11-03T17:11:14.803Z",
+      "from": "READY",
+      "to": "IN_PROGRESS",
+      "actor": "orchestrator",
+      "reason": "BE-612 dispatched"
+    },
+    {
+      "at": "2026-11-03T18:55:47.917Z",
+      "from": "IN_PROGRESS",
+      "to": "AWAITING_APPROVAL",
+      "actor": "autopilot",
+      "reason": "re-plan of QA-712: QA-712 found three wizard features not built (start-screen document-language choice, phone-layout view on results, Hindi/beta languages on the export screen). Developer chose to defer them to a follow-up (DEC-013): QA-712 narrows to the two passing Tamil tests."
+    },
+    {
+      "at": "2026-11-04T03:29:55.988Z",
+      "from": "AWAITING_APPROVAL",
+      "to": "READY",
+      "actor": "hook:approval",
+      "reason": "Plan approved (APR-006)"
+    },
+    {
+      "at": "2026-11-04T03:38:36.425Z",
+      "from": "READY",
+      "to": "IN_PROGRESS",
+      "actor": "orchestrator",
+      "reason": "QA-712 dispatched"
+    },
+    {
+      "at": "2026-11-04T06:59:39.461Z",
+      "from": "IN_PROGRESS",
+      "to": "AWAITING_APPROVAL",
+      "actor": "engine:approval",
+      "reason": "The plan changed after approval APR-006 (approved 9ecab9ac8c43, now 39d3a1abaf95)"
+    },
+    {
+      "at": "2026-11-04T07:00:52.075Z",
+      "from": "AWAITING_APPROVAL",
+      "to": "READY",
+      "actor": "hook:approval",
+      "reason": "Plan approved (APR-007)"
+    },
+    {
+      "at": "2026-11-04T07:01:13.091Z",
+      "from": "READY",
+      "to": "IN_PROGRESS",
+      "actor": "orchestrator",
+      "reason": "QA-706 dispatched"
+    }
+  ],
+  "tasks": {
+    "BE-302": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T11:36:29.751Z",
+      "history": [
+        {
+          "at": "2026-11-03T06:58:56.189Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T07:05:51.375Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T07:06:39.129Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0010 paths"
+        },
+        {
+          "at": "2026-11-03T11:31:06.508Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T11:34:42.645Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T11:36:29.751Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0132"
+        }
+      ],
+      "report_captured_at": "2026-11-03T11:34:42.556Z",
+      "report_invalid": false
+    },
+    "BE-101": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T11:57:31.407Z",
+      "history": [
+        {
+          "at": "2026-11-03T06:58:56.680Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T07:19:06.019Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T07:41:17.152Z",
+          "from": "REPORTED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T07:50:51.926Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T08:02:46.608Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0049, EV-0048"
+        },
+        {
+          "at": "2026-11-03T11:52:07.659Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T11:53:59.551Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T11:57:31.407Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0148, EV-0149"
+        }
+      ],
+      "report_captured_at": "2026-11-03T11:53:59.508Z",
+      "report_invalid": false
+    },
+    "DOC-104": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T12:22:32.955Z",
+      "history": [
+        {
+          "at": "2026-11-03T06:58:56.994Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T07:05:56.355Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T07:06:41.530Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0012 paths"
+        },
+        {
+          "at": "2026-11-03T12:20:41.438Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T12:21:59.995Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T12:22:32.955Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0165 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T12:21:59.897Z",
+      "report_invalid": false
+    },
+    "BE-500": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T18:12:09.791Z",
+      "history": [
+        {
+          "at": "2026-11-03T06:58:57.553Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T07:08:28.456Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T07:09:09.514Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0013 paths"
+        },
+        {
+          "at": "2026-11-03T17:56:52.822Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T18:10:28.083Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T18:12:09.791Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0225"
+        }
+      ],
+      "report_captured_at": "2026-11-03T18:10:28.035Z",
+      "report_invalid": false
+    },
+    "BE-501": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T11:26:15.819Z",
+      "history": [
+        {
+          "at": "2026-11-03T06:58:57.886Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T07:10:08.274Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T07:10:33.314Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0014 paths"
+        },
+        {
+          "at": "2026-11-03T10:15:38.474Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T10:17:49.308Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T10:18:33.223Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0088 paths"
+        },
+        {
+          "at": "2026-11-03T11:07:48.963Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T11:10:57.307Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T11:11:26.964Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0113"
+        },
+        {
+          "at": "2026-11-03T11:25:11.913Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T11:25:55.750Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T11:26:15.819Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0122"
+        }
+      ],
+      "report_captured_at": "2026-11-03T11:25:55.697Z",
+      "report_invalid": false
+    },
+    "BE-201": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T07:06:40.349Z",
+      "history": [
+        {
+          "at": "2026-11-03T06:58:58.262Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T07:05:54.990Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T07:06:40.349Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0011 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T07:05:54.943Z",
+      "report_invalid": false
+    },
+    "BE-400": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T07:06:10.230Z",
+      "history": [
+        {
+          "at": "2026-11-03T06:58:58.584Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T07:05:12.839Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T07:06:10.230Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0009 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T07:05:12.789Z",
+      "report_invalid": false
+    },
+    "BE-202": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T07:12:08.053Z",
+      "history": [
+        {
+          "at": "2026-11-03T07:06:11.202Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T07:10:31.263Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T07:12:08.053Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0015 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T07:10:31.207Z",
+      "report_invalid": false
+    },
+    "BE-402": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T07:15:08.991Z",
+      "history": [
+        {
+          "at": "2026-11-03T07:06:11.729Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T07:14:20.982Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T07:15:08.991Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0019"
+        }
+      ],
+      "report_captured_at": "2026-11-03T07:14:20.946Z",
+      "report_invalid": false
+    },
+    "BE-401": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T10:53:38.262Z",
+      "history": [
+        {
+          "at": "2026-11-03T07:06:12.238Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T07:12:29.289Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T07:13:56.312Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0018"
+        },
+        {
+          "at": "2026-11-03T10:46:04.829Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T10:51:44.935Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T10:53:38.262Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0105"
+        }
+      ],
+      "report_captured_at": "2026-11-03T10:51:44.826Z",
+      "report_invalid": false
+    },
+    "BE-708": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T07:13:41.160Z",
+      "history": [
+        {
+          "at": "2026-11-03T07:06:12.784Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T07:12:03.737Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T07:13:41.160Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0016 paths, EV-0017 concurrent"
+        }
+      ],
+      "report_captured_at": "2026-11-03T07:12:03.668Z",
+      "report_invalid": false
+    },
+    "BE-300": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T07:16:13.018Z",
+      "history": [
+        {
+          "at": "2026-11-03T07:09:10.867Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T07:15:10.860Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T07:16:13.018Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0020 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T07:15:10.779Z",
+      "report_invalid": false
+    },
+    "BE-600": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T10:54:38.222Z",
+      "history": [
+        {
+          "at": "2026-11-03T07:10:35.216Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T07:16:35.474Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T07:17:12.459Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0021"
+        },
+        {
+          "at": "2026-11-03T10:46:07.960Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T10:53:41.463Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T10:54:38.222Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0108"
+        }
+      ],
+      "report_captured_at": "2026-11-03T10:53:41.405Z",
+      "report_invalid": false
+    },
+    "BE-503": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T11:36:33.852Z",
+      "history": [
+        {
+          "at": "2026-11-03T07:10:35.745Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T07:19:46.312Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T07:21:51.804Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0026"
+        },
+        {
+          "at": "2026-11-03T10:18:37.506Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T10:20:29.641Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T10:21:19.428Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0095"
+        },
+        {
+          "at": "2026-11-03T11:31:07.725Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T11:34:54.475Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T11:36:33.852Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0131"
+        }
+      ],
+      "report_captured_at": "2026-11-03T11:34:54.372Z",
+      "report_invalid": false
+    },
+    "BE-504": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T11:36:35.354Z",
+      "history": [
+        {
+          "at": "2026-11-03T07:12:09.123Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T07:23:09.748Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T07:24:51.444Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0030 paths"
+        },
+        {
+          "at": "2026-11-03T11:31:10.950Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T11:34:54.952Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T11:36:35.354Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0130"
+        }
+      ],
+      "report_captured_at": "2026-11-03T11:34:54.867Z",
+      "report_invalid": false
+    },
+    "BE-502": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T11:34:30.787Z",
+      "history": [
+        {
+          "at": "2026-11-03T07:14:07.413Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T07:19:41.779Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T07:21:22.010Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0024 paths"
+        },
+        {
+          "at": "2026-11-03T10:18:35.442Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T10:20:23.233Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T10:20:54.071Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0094"
+        },
+        {
+          "at": "2026-11-03T11:31:09.268Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T11:33:29.460Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T11:34:30.787Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0128 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T11:33:29.307Z",
+      "report_invalid": false
+    },
+    "BE-406": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T07:23:12.430Z",
+      "history": [
+        {
+          "at": "2026-11-03T07:15:10.388Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T07:22:22.215Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T07:23:12.430Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0028 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T07:22:22.174Z",
+      "report_invalid": false
+    },
+    "BE-301": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T07:31:26.758Z",
+      "history": [
+        {
+          "at": "2026-11-03T07:16:13.933Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T07:30:19.922Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T07:31:26.758Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0036 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T07:30:19.858Z",
+      "report_invalid": false
+    },
+    "BE-304": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T07:23:11.009Z",
+      "history": [
+        {
+          "at": "2026-11-03T07:17:13.495Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T07:22:18.536Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T07:23:11.009Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0027 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T07:22:18.499Z",
+      "report_invalid": false
+    },
+    "BE-306": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T07:30:52.769Z",
+      "history": [
+        {
+          "at": "2026-11-03T07:19:53.278Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T07:30:15.275Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T07:30:52.769Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0034 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T07:30:15.209Z",
+      "report_invalid": false
+    },
+    "BE-303": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T07:30:20.585Z",
+      "history": [
+        {
+          "at": "2026-11-03T07:19:53.698Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T07:25:59.499Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T07:30:20.585Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0032 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T07:25:59.444Z",
+      "report_invalid": false
+    },
+    "BE-307": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T10:54:12.587Z",
+      "history": [
+        {
+          "at": "2026-11-03T07:19:54.231Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T07:26:00.672Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T07:30:21.893Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0033 paths"
+        },
+        {
+          "at": "2026-11-03T10:46:05.902Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T10:53:17.116Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T10:54:12.587Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0107 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T10:53:16.888Z",
+      "report_invalid": false
+    },
+    "BE-601": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T07:36:54.115Z",
+      "history": [
+        {
+          "at": "2026-11-03T07:23:23.454Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T07:36:13.424Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T07:36:54.115Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0040"
+        }
+      ],
+      "report_captured_at": "2026-11-03T07:36:13.356Z",
+      "report_invalid": false
+    },
+    "BE-407": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T10:53:39.817Z",
+      "history": [
+        {
+          "at": "2026-11-03T07:23:23.765Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T07:30:39.612Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T07:31:27.954Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0035 paths"
+        },
+        {
+          "at": "2026-11-03T10:46:07.056Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T10:51:59.285Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T10:53:39.817Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0106"
+        }
+      ],
+      "report_captured_at": "2026-11-03T10:51:59.137Z",
+      "report_invalid": false
+    },
+    "BE-505": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T11:39:46.540Z",
+      "history": [
+        {
+          "at": "2026-11-03T07:24:52.654Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T07:36:12.949Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T07:36:55.211Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0041"
+        },
+        {
+          "at": "2026-11-03T10:15:41.227Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T10:19:06.134Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T10:21:20.669Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0092"
+        },
+        {
+          "at": "2026-11-03T11:37:08.962Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T11:39:23.357Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T11:39:46.540Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0137"
+        }
+      ],
+      "report_captured_at": "2026-11-03T11:39:23.265Z",
+      "report_invalid": false
+    },
+    "BE-507": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T11:48:18.432Z",
+      "history": [
+        {
+          "at": "2026-11-03T07:41:38.311Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T08:05:01.830Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T08:05:56.200Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0055 paths, EV-0054 paths"
+        },
+        {
+          "at": "2026-11-03T11:45:42.072Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T11:47:42.420Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T11:48:18.432Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0141 paths, EV-0142 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T11:47:42.366Z",
+      "report_invalid": false
+    },
+    "BE-403": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T07:50:56.050Z",
+      "history": [
+        {
+          "at": "2026-11-03T07:41:38.630Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T07:50:21.155Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T07:50:56.050Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0046 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T07:50:21.067Z",
+      "report_invalid": false
+    },
+    "BE-102": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T18:11:38.249Z",
+      "history": [
+        {
+          "at": "2026-11-03T07:41:38.947Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T08:02:57.943Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T08:04:27.805Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0052, EV-0051"
+        },
+        {
+          "at": "2026-11-03T12:32:33.612Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T12:42:47.696Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T12:46:53.056Z",
+          "from": "REPORTED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T12:48:43.544Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T12:50:56.455Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0185, EV-0186"
+        },
+        {
+          "at": "2026-11-03T17:33:37.727Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T17:46:41.731Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T17:48:39.556Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0210, EV-0209"
+        },
+        {
+          "at": "2026-11-03T18:08:48.246Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T18:10:41.506Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T18:11:38.249Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0223, EV-0224"
+        }
+      ],
+      "report_captured_at": "2026-11-03T18:10:41.428Z",
+      "report_invalid": false
+    },
+    "BE-408": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T08:05:55.624Z",
+      "history": [
+        {
+          "at": "2026-11-03T07:41:39.253Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T08:04:59.114Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T08:05:55.624Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0053 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T08:04:59.081Z",
+      "report_invalid": false
+    },
+    "BE-405": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T07:48:15.478Z",
+      "history": [
+        {
+          "at": "2026-11-03T07:41:39.518Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T07:47:26.402Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T07:48:15.478Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0044 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T07:47:26.352Z",
+      "report_invalid": false
+    },
+    "DOC-105": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T07:46:49.987Z",
+      "history": [
+        {
+          "at": "2026-11-03T07:41:39.772Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T07:46:10.295Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T07:46:49.987Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0043 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T07:46:10.234Z",
+      "report_invalid": false
+    },
+    "FE-300": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T08:04:27.142Z",
+      "history": [
+        {
+          "at": "2026-11-03T07:46:51.329Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T08:02:56.200Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T08:04:27.142Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0050 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T08:02:56.168Z",
+      "report_invalid": false
+    },
+    "FE-200": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T17:51:34.575Z",
+      "history": [
+        {
+          "at": "2026-11-03T07:48:16.773Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T08:06:21.192Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T08:06:52.416Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0056 paths"
+        },
+        {
+          "at": "2026-11-03T17:44:27.653Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T17:47:42.029Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T17:51:34.575Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0211 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T17:47:41.939Z",
+      "report_invalid": false
+    },
+    "BE-105": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-04T05:58:12.352Z",
+      "history": [
+        {
+          "at": "2026-11-03T08:03:10.473Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T08:15:35.604Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T08:17:54.360Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0062 paths, EV-0063 paths"
+        },
+        {
+          "at": "2026-11-04T05:49:53.797Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-04T05:55:33.880Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-04T05:58:12.352Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0333, EV-0334"
+        }
+      ],
+      "report_captured_at": "2026-11-04T05:55:33.833Z",
+      "report_invalid": false
+    },
+    "BE-305": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T17:56:21.135Z",
+      "history": [
+        {
+          "at": "2026-11-03T08:03:10.595Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T08:10:57.370Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T08:11:51.004Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0060 paths"
+        },
+        {
+          "at": "2026-11-03T10:15:56.404Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T10:19:29.596Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T10:20:55.807Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0093"
+        },
+        {
+          "at": "2026-11-03T17:44:32.895Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T17:54:43.092Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T17:56:21.135Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0216 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T17:54:43.005Z",
+      "report_invalid": false
+    },
+    "BE-203": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T08:08:52.505Z",
+      "history": [
+        {
+          "at": "2026-11-03T08:03:10.696Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T08:07:59.797Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T08:08:52.505Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0058 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T08:07:59.744Z",
+      "report_invalid": false
+    },
+    "BE-404": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T08:11:32.448Z",
+      "history": [
+        {
+          "at": "2026-11-03T08:03:10.840Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T08:10:56.259Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T08:11:32.448Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0059"
+        }
+      ],
+      "report_captured_at": "2026-11-03T08:10:56.228Z",
+      "report_invalid": false
+    },
+    "BE-506": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T11:41:44.838Z",
+      "history": [
+        {
+          "at": "2026-11-03T08:06:05.451Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T08:18:32.895Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T08:19:38.750Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0067 paths"
+        },
+        {
+          "at": "2026-11-03T11:39:48.222Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T11:41:13.128Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T11:41:44.838Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0139"
+        }
+      ],
+      "report_captured_at": "2026-11-03T11:41:13.066Z",
+      "report_invalid": false
+    },
+    "BE-103": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T12:31:33.396Z",
+      "history": [
+        {
+          "at": "2026-11-03T08:06:05.588Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T08:21:09.834Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T12:31:33.396Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0159 paths, EV-0160 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T08:21:09.639Z",
+      "report_invalid": false
+    },
+    "FE-500": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T10:08:26.759Z",
+      "history": [
+        {
+          "at": "2026-11-03T08:08:30.784Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T08:18:23.639Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T08:20:26.765Z",
+          "from": "REPORTED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T08:22:41.384Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T10:08:26.759Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0073 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T08:22:41.266Z",
+      "report_invalid": false
+    },
+    "FE-301": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T11:00:19.000Z",
+      "history": [
+        {
+          "at": "2026-11-03T08:08:30.919Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T08:15:57.974Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T08:18:16.905Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0064"
+        },
+        {
+          "at": "2026-11-03T10:46:09.150Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T10:56:18.959Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T11:00:19.000Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0110"
+        }
+      ],
+      "report_captured_at": "2026-11-03T10:56:18.903Z",
+      "report_invalid": false
+    },
+    "BE-308": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T17:59:51.771Z",
+      "history": [
+        {
+          "at": "2026-11-03T08:11:52.099Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T08:18:24.936Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T08:19:13.606Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0066"
+        },
+        {
+          "at": "2026-11-03T17:56:56.510Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T17:59:20.501Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T17:59:51.771Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0220"
+        }
+      ],
+      "report_captured_at": "2026-11-03T17:59:20.423Z",
+      "report_invalid": false
+    },
+    "BE-409": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T08:15:04.233Z",
+      "history": [
+        {
+          "at": "2026-11-03T08:11:52.341Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T08:14:23.053Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T08:15:04.233Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0061 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T08:14:23.008Z",
+      "report_invalid": false
+    },
+    "FE-501": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T10:13:56.459Z",
+      "history": [
+        {
+          "at": "2026-11-03T08:15:05.045Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T09:51:20.743Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T10:13:56.459Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0079 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T09:51:20.719Z",
+      "report_invalid": false
+    },
+    "BE-200": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T10:13:52.807Z",
+      "history": [
+        {
+          "at": "2026-11-03T08:18:25.787Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T09:51:24.532Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T10:13:52.807Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0078 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T09:51:24.379Z",
+      "report_invalid": false
+    },
+    "FE-600": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T10:13:59.054Z",
+      "history": [
+        {
+          "at": "2026-11-03T08:18:25.896Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T09:51:22.046Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T10:13:59.054Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0075 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T09:51:21.999Z",
+      "report_invalid": false
+    },
+    "FE-401": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T10:13:54.485Z",
+      "history": [
+        {
+          "at": "2026-11-03T08:18:26.014Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T09:51:19.984Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T10:13:54.485Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0076 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T09:51:19.960Z",
+      "report_invalid": false
+    },
+    "FE-602": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T16:58:06.972Z",
+      "history": [
+        {
+          "at": "2026-11-03T08:18:26.111Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T08:37:41.522Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status partial"
+        },
+        {
+          "at": "2026-11-03T10:37:05.034Z",
+          "from": "REPORTED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T10:42:03.404Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T10:42:47.452Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0099"
+        },
+        {
+          "at": "2026-11-03T12:26:17.589Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T12:27:56.460Z",
+          "from": "IN_PROGRESS",
+          "to": "BLOCKED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status blocked"
+        },
+        {
+          "at": "2026-11-03T16:54:36.397Z",
+          "from": "BLOCKED",
+          "to": "READY",
+          "actor": "orchestrator",
+          "reason": "Blocker resolved: DEC-009 applied by the pnpm override (D-010 allowed by developer); pnpm audit --prod reports no known vulnerabilities"
+        },
+        {
+          "at": "2026-11-03T16:54:45.414Z",
+          "from": "READY",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T16:56:43.446Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T16:58:06.972Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0198"
+        }
+      ],
+      "report_captured_at": "2026-11-03T16:56:43.385Z",
+      "report_invalid": false
+    },
+    "FE-400": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T10:17:03.736Z",
+      "history": [
+        {
+          "at": "2026-11-03T10:05:24.138Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T10:15:44.639Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T10:17:03.736Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0085 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T10:15:44.562Z",
+      "report_invalid": false
+    },
+    "QA-700": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T10:19:39.343Z",
+      "history": [
+        {
+          "at": "2026-11-03T10:05:24.430Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T10:17:54.595Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T10:19:39.343Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0089 paths, EV-0090 paths, EV-0091 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T10:17:54.508Z",
+      "report_invalid": false
+    },
+    "FE-601": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T10:17:05.609Z",
+      "history": [
+        {
+          "at": "2026-11-03T10:05:24.685Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T10:14:56.944Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T10:17:05.609Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0086 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T10:14:56.730Z",
+      "report_invalid": false
+    },
+    "BE-104": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T12:01:36.758Z",
+      "history": [
+        {
+          "at": "2026-11-03T10:05:25.002Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T10:21:06.095Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T11:58:55.235Z",
+          "from": "REPORTED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T12:00:59.707Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T12:01:36.758Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0156, EV-0153"
+        }
+      ],
+      "report_captured_at": "2026-11-03T12:00:59.674Z",
+      "report_invalid": false
+    },
+    "BE-709": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T11:25:11.167Z",
+      "history": [
+        {
+          "at": "2026-11-03T10:05:25.316Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T10:13:56.918Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T11:11:28.069Z",
+          "from": "REPORTED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T11:12:26.629Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T11:13:41.040Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0114, EV-0115"
+        },
+        {
+          "at": "2026-11-03T11:21:58.780Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T11:22:41.959Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T11:23:30.571Z",
+          "from": "REPORTED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T11:23:58.811Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T11:25:11.167Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0119, EV-0120"
+        }
+      ],
+      "report_captured_at": "2026-11-03T11:23:58.753Z",
+      "report_invalid": false
+    },
+    "QA-300": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T10:50:11.387Z",
+      "history": [
+        {
+          "at": "2026-11-03T10:05:25.674Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T10:45:47.934Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T10:50:11.387Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0102 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T10:45:47.866Z",
+      "report_invalid": false
+    },
+    "QA-706": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-04T08:07:41.688Z",
+      "history": [
+        {
+          "at": "2026-11-03T10:05:25.991Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T11:21:14.571Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-04T04:50:52.701Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0314"
+        },
+        {
+          "at": "2026-11-04T07:01:12.564Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-04T07:04:00.683Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-04T08:07:41.688Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0358"
+        }
+      ],
+      "report_invalid": false,
+      "report_captured_at": "2026-11-04T07:04:00.651Z"
+    },
+    "BE-204": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T18:05:56.532Z",
+      "history": [
+        {
+          "at": "2026-11-03T10:20:17.286Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T10:46:04.075Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T10:50:14.097Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0101 paths"
+        },
+        {
+          "at": "2026-11-03T12:19:25.225Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T12:29:16.335Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T12:32:25.244Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0172 paths"
+        },
+        {
+          "at": "2026-11-03T17:36:59.945Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T18:01:47.219Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T18:05:56.532Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0222"
+        }
+      ],
+      "report_captured_at": "2026-11-03T18:01:47.140Z",
+      "report_invalid": false
+    },
+    "QA-703": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T12:50:19.571Z",
+      "history": [
+        {
+          "at": "2026-11-03T10:20:17.517Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T10:36:32.434Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status partial"
+        },
+        {
+          "at": "2026-11-03T12:46:53.518Z",
+          "from": "REPORTED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T12:49:16.148Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T12:50:19.571Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0184, EV-0183"
+        }
+      ],
+      "report_captured_at": "2026-11-03T12:49:16.049Z",
+      "report_invalid": false
+    },
+    "QA-701": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T11:00:18.022Z",
+      "history": [
+        {
+          "at": "2026-11-03T10:21:28.817Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T10:53:32.835Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status partial"
+        },
+        {
+          "at": "2026-11-03T11:00:18.022Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0112, EV-0111"
+        }
+      ],
+      "report_captured_at": "2026-11-03T10:53:32.650Z",
+      "report_invalid": false
+    },
+    "QA-400": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T10:41:12.358Z",
+      "history": [
+        {
+          "at": "2026-11-03T10:21:29.046Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T10:39:24.154Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T10:41:12.358Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0098"
+        }
+      ],
+      "report_captured_at": "2026-11-03T10:39:23.956Z",
+      "report_invalid": false
+    },
+    "QA-702": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-04T04:58:09.703Z",
+      "history": [
+        {
+          "at": "2026-11-03T10:21:29.249Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T10:50:49.514Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status partial"
+        },
+        {
+          "at": "2026-11-03T16:54:05.610Z",
+          "from": "REPORTED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T16:56:50.135Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-04T04:58:09.703Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0315, EV-0317"
+        }
+      ],
+      "report_captured_at": "2026-11-03T16:56:50.056Z",
+      "report_invalid": false
+    },
+    "BE-704": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-04T04:56:21.740Z",
+      "history": [
+        {
+          "at": "2026-11-03T10:37:03.802Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T10:42:38.673Z",
+          "from": "IN_PROGRESS",
+          "to": "BLOCKED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status blocked"
+        },
+        {
+          "at": "2026-11-03T11:09:08.751Z",
+          "from": "BLOCKED",
+          "to": "READY",
+          "actor": "orchestrator",
+          "reason": "developer added the .env.example lines the blocker named; config-docs.test.ts now 7/7"
+        },
+        {
+          "at": "2026-11-03T11:09:18.348Z",
+          "from": "READY",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T11:10:11.009Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status partial"
+        },
+        {
+          "at": "2026-11-03T13:06:46.159Z",
+          "from": "REPORTED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T16:51:21.565Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T17:44:25.773Z",
+          "from": "REPORTED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T17:47:12.153Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-04T04:56:21.740Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0313 paths, EV-0318"
+        }
+      ],
+      "report_captured_at": "2026-11-03T17:47:12.007Z",
+      "report_invalid": false
+    },
+    "FE-191": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T11:00:20.050Z",
+      "history": [
+        {
+          "at": "2026-11-03T10:43:03.195Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T10:47:06.403Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T11:00:20.050Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0103 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T10:47:06.212Z",
+      "report_invalid": false
+    },
+    "QA-200": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T10:56:50.066Z",
+      "history": [
+        {
+          "at": "2026-11-03T10:50:38.572Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T10:55:27.905Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T10:56:50.066Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0109 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T10:55:27.849Z",
+      "report_invalid": false
+    },
+    "BE-192": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T12:34:57.231Z",
+      "history": [
+        {
+          "at": "2026-11-03T11:00:27.953Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T11:17:35.915Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T11:18:34.213Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0117 concurrent"
+        },
+        {
+          "at": "2026-11-03T12:32:33.152Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T12:34:29.568Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T12:34:57.231Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0175 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T12:34:29.538Z",
+      "report_invalid": false
+    },
+    "QA-707": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T17:00:14.384Z",
+      "history": [
+        {
+          "at": "2026-11-03T11:00:28.191Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T11:13:08.451Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T17:00:14.384Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0197 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T11:13:08.371Z",
+      "report_invalid": false
+    },
+    "BE-710": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T11:29:52.292Z",
+      "history": [
+        {
+          "at": "2026-11-03T11:17:02.813Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T11:21:58.136Z",
+          "from": "IN_PROGRESS",
+          "to": "READY",
+          "actor": "orchestrator",
+          "reason": "lock released without a report"
+        },
+        {
+          "at": "2026-11-03T11:26:16.623Z",
+          "from": "READY",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T11:26:50.748Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T11:29:52.292Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0124 paths, EV-0125"
+        }
+      ],
+      "report_captured_at": "2026-11-03T11:26:50.633Z",
+      "report_invalid": false
+    },
+    "BE-189": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T11:54:12.776Z",
+      "history": [
+        {
+          "at": "2026-11-03T11:18:41.899Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T11:26:03.512Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T11:26:49.607Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0123 paths"
+        },
+        {
+          "at": "2026-11-03T11:52:07.960Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T11:53:56.134Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T11:54:12.776Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0147"
+        }
+      ],
+      "report_captured_at": "2026-11-03T11:53:56.102Z",
+      "report_invalid": false
+    },
+    "QA-711": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-04T04:32:07.181Z",
+      "history": [
+        {
+          "at": "2026-11-03T11:18:42.205Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T11:41:54.238Z",
+          "from": "IN_PROGRESS",
+          "to": "READY",
+          "actor": "orchestrator",
+          "reason": "blockers fixed: BE-302 Devanagari detection and BE-502..506 requested-language docs (DEC-005) verified"
+        },
+        {
+          "at": "2026-11-03T11:48:26.266Z",
+          "from": "READY",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T11:50:40.768Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T11:51:46.321Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0145"
+        },
+        {
+          "at": "2026-11-04T03:48:15.992Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-04T04:30:04.452Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-04T04:32:07.181Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0309"
+        }
+      ],
+      "report_captured_at": "2026-11-04T04:30:04.403Z",
+      "report_invalid": false
+    },
+    "BE-508": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T11:38:50.456Z",
+      "history": [
+        {
+          "at": "2026-11-03T11:27:01.702Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T11:37:48.682Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T11:38:50.456Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0135"
+        }
+      ],
+      "report_captured_at": "2026-11-03T11:37:48.562Z",
+      "report_invalid": false
+    },
+    "BE-605": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T18:12:32.748Z",
+      "history": [
+        {
+          "at": "2026-11-03T11:27:02.085Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T11:52:07.360Z",
+          "from": "IN_PROGRESS",
+          "to": "READY",
+          "actor": "orchestrator",
+          "reason": "lock released without a report"
+        },
+        {
+          "at": "2026-11-03T11:58:55.705Z",
+          "from": "READY",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T12:01:25.786Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T12:01:55.824Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0157 paths"
+        },
+        {
+          "at": "2026-11-03T12:20:39.748Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T12:23:47.308Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T12:24:27.278Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0166"
+        },
+        {
+          "at": "2026-11-03T12:24:37.485Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T12:29:09.337Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T12:32:22.078Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0171 paths"
+        },
+        {
+          "at": "2026-11-03T17:49:02.791Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T17:56:53.143Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T18:12:32.748Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0226 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T17:56:52.995Z",
+      "report_invalid": false
+    },
+    "BE-606": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T18:02:51.842Z",
+      "history": [
+        {
+          "at": "2026-11-03T11:27:02.512Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T11:50:58.328Z",
+          "from": "IN_PROGRESS",
+          "to": "READY",
+          "actor": "orchestrator",
+          "reason": "lock released without a report"
+        },
+        {
+          "at": "2026-11-03T11:58:55.813Z",
+          "from": "READY",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T12:01:02.152Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T12:01:37.735Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0154"
+        },
+        {
+          "at": "2026-11-03T12:24:38.029Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T12:27:13.914Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T12:27:59.397Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0169 paths"
+        },
+        {
+          "at": "2026-11-03T17:48:58.244Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T18:01:46.838Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T18:02:51.842Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0221"
+        }
+      ],
+      "report_captured_at": "2026-11-03T18:01:46.781Z",
+      "report_invalid": false
+    },
+    "BE-410": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T11:40:31.401Z",
+      "history": [
+        {
+          "at": "2026-11-03T11:27:02.822Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T11:39:41.946Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T11:40:31.401Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0138"
+        }
+      ],
+      "report_captured_at": "2026-11-03T11:39:41.873Z",
+      "report_invalid": false
+    },
+    "BE-602": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T12:32:32.397Z",
+      "history": [
+        {
+          "at": "2026-11-03T11:27:03.090Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T11:35:08.959Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T11:36:38.213Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0133"
+        },
+        {
+          "at": "2026-11-03T12:28:00.390Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T12:30:34.125Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T12:32:32.397Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0174"
+        }
+      ],
+      "report_captured_at": "2026-11-03T12:30:34.078Z",
+      "report_invalid": false
+    },
+    "BE-604": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T17:56:19.596Z",
+      "history": [
+        {
+          "at": "2026-11-03T11:27:03.331Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T11:45:58.556Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T12:20:40.576Z",
+          "from": "REPORTED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T12:21:09.375Z",
+          "from": "IN_PROGRESS",
+          "to": "READY",
+          "actor": "orchestrator",
+          "reason": "lock released without a report"
+        },
+        {
+          "at": "2026-11-03T12:24:27.847Z",
+          "from": "READY",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T12:29:18.491Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T12:31:34.505Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0173 paths"
+        },
+        {
+          "at": "2026-11-03T17:48:59.453Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T17:54:55.334Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T17:56:19.596Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0217 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T17:54:55.251Z",
+      "report_invalid": false
+    },
+    "BE-509": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T17:55:12.207Z",
+      "history": [
+        {
+          "at": "2026-11-03T11:27:03.556Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T11:34:02.135Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T11:35:21.660Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0129 paths"
+        },
+        {
+          "at": "2026-11-03T17:49:00.835Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T17:53:23.581Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T17:55:12.207Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0214 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T17:53:23.513Z",
+      "report_invalid": false
+    },
+    "BE-510": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T17:55:14.071Z",
+      "history": [
+        {
+          "at": "2026-11-03T11:58:55.950Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T12:02:27.390Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T12:03:00.044Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0158"
+        },
+        {
+          "at": "2026-11-03T17:49:04.296Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T17:53:26.657Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T17:55:14.071Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0215 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T17:53:26.544Z",
+      "report_invalid": false
+    },
+    "BE-607": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T17:38:26.558Z",
+      "history": [
+        {
+          "at": "2026-11-03T12:02:02.700Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T12:06:15.115Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T12:06:49.350Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0163"
+        },
+        {
+          "at": "2026-11-03T17:32:16.930Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T17:37:44.938Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T17:38:26.558Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0208 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T17:37:44.883Z",
+      "report_invalid": false
+    },
+    "QA-705": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T17:29:06.138Z",
+      "history": [
+        {
+          "at": "2026-11-03T12:50:20.829Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T16:51:07.791Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T17:29:06.138Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0203 concurrent"
+        }
+      ],
+      "report_captured_at": "2026-11-03T16:51:07.742Z",
+      "report_invalid": false
+    },
+    "BE-205": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T13:08:30.101Z",
+      "history": [
+        {
+          "at": "2026-11-03T12:50:57.583Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T13:07:30.429Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T13:08:30.101Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0192"
+        }
+      ],
+      "report_captured_at": "2026-11-03T13:07:30.055Z",
+      "report_invalid": false
+    },
+    "BE-603": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T17:48:41.199Z",
+      "history": [
+        {
+          "at": "2026-11-03T13:08:32.375Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T16:50:35.891Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T16:51:25.708Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0195"
+        },
+        {
+          "at": "2026-11-03T17:32:15.174Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T17:35:02.731Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T17:48:41.199Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0206 paths"
+        }
+      ],
+      "report_captured_at": "2026-11-03T17:35:02.668Z",
+      "report_invalid": false
+    },
+    "BE-190": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T18:18:13.648Z",
+      "history": [
+        {
+          "at": "2026-11-03T16:51:40.140Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T17:01:09.787Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status partial"
+        },
+        {
+          "at": "2026-11-03T18:14:38.604Z",
+          "from": "REPORTED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T18:16:44.647Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T18:18:13.648Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0228"
+        }
+      ],
+      "report_captured_at": "2026-11-03T18:16:44.625Z",
+      "report_invalid": false
+    },
+    "BE-612": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T18:14:37.634Z",
+      "history": [
+        {
+          "at": "2026-11-03T17:11:14.656Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T17:32:18.203Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T17:33:36.607Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0205"
+        },
+        {
+          "at": "2026-11-03T18:11:39.394Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T18:13:51.907Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T18:14:37.634Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0227"
+        }
+      ],
+      "report_captured_at": "2026-11-03T18:13:51.800Z",
+      "report_invalid": false
+    },
+    "BE-611": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T17:16:15.750Z",
+      "history": [
+        {
+          "at": "2026-11-03T17:11:15.011Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T17:14:43.087Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T17:16:15.750Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0202"
+        }
+      ],
+      "report_captured_at": "2026-11-03T17:14:42.946Z",
+      "report_invalid": false
+    },
+    "QA-195": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-04T04:30:58.648Z",
+      "history": [
+        {
+          "at": "2026-11-03T18:18:27.427Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T18:27:15.032Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T18:28:55.768Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0231"
+        },
+        {
+          "at": "2026-11-04T03:48:06.994Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-04T04:27:23.375Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-04T04:30:58.648Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0308"
+        }
+      ],
+      "report_captured_at": "2026-11-04T04:27:23.314Z",
+      "report_invalid": false
+    },
+    "QA-500": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-04T04:31:00.602Z",
+      "history": [
+        {
+          "at": "2026-11-03T18:18:27.654Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T18:26:31.164Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T18:27:51.074Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0230 paths"
+        },
+        {
+          "at": "2026-11-04T03:48:11.143Z",
+          "from": "VERIFIED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-04T04:27:24.131Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-04T04:31:00.602Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0307"
+        }
+      ],
+      "report_captured_at": "2026-11-04T04:27:24.060Z",
+      "report_invalid": false
+    },
+    "QA-600": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-03T18:29:38.173Z",
+      "history": [
+        {
+          "at": "2026-11-03T18:18:27.870Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-03T18:28:59.701Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-03T18:29:38.173Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0233, EV-0232"
+        }
+      ],
+      "report_captured_at": "2026-11-03T18:28:59.675Z",
+      "report_invalid": false
+    },
+    "QA-712": {
+      "state": "VERIFIED",
+      "updated_at": "2026-11-04T04:33:52.308Z",
+      "history": [
+        {
+          "at": "2026-11-03T18:28:56.431Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-04T03:34:03.027Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-04T03:38:34.851Z",
+          "from": "REPORTED",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-04T03:45:17.018Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        },
+        {
+          "at": "2026-11-04T04:33:52.308Z",
+          "from": "REPORTED",
+          "to": "VERIFIED",
+          "actor": "orchestrator",
+          "reason": "evidence EV-0311"
+        }
+      ],
+      "report_captured_at": "2026-11-04T03:45:16.845Z",
+      "report_invalid": false
+    },
+    "QA-713": {
+      "state": "REPORTED",
+      "updated_at": "2026-11-04T05:11:03.186Z",
+      "history": [
+        {
+          "at": "2026-11-04T04:58:26.542Z",
+          "from": "PENDING",
+          "to": "IN_PROGRESS",
+          "actor": "orchestrator",
+          "reason": "lock acquired"
+        },
+        {
+          "at": "2026-11-04T05:11:03.186Z",
+          "from": "IN_PROGRESS",
+          "to": "REPORTED",
+          "actor": "hook:subagent-stop",
+          "reason": "report status completed"
+        }
+      ],
+      "report_captured_at": "2026-11-04T05:11:03.128Z",
+      "report_invalid": false
+    }
+  },
+  "release": {
+    "status": "NOT_STARTED",
+    "version": null,
+    "updated_at": null
+  },
+  "counters": {},
+  "progress": {
+    "percent": 84.7,
+    "phase": "IN_PROGRESS",
+    "tasks": {
+      "BE-101": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-104": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-105": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-102": {
+        "weight": 5,
+        "progress": 1
+      },
+      "BE-103": {
+        "weight": 3,
+        "progress": 1
+      },
+      "DOC-104": {
+        "weight": 2,
+        "progress": 1
+      },
+      "DOC-105": {
+        "weight": 2,
+        "progress": 1
+      },
+      "BE-611": {
+        "weight": 2,
+        "progress": 1
+      },
+      "BE-612": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-190": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-189": {
+        "weight": 2,
+        "progress": 1
+      },
+      "BE-192": {
+        "weight": 5,
+        "progress": 1
+      },
+      "FE-191": {
+        "weight": 2,
+        "progress": 1
+      },
+      "QA-195": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-200": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-201": {
+        "weight": 2,
+        "progress": 1
+      },
+      "BE-202": {
+        "weight": 1,
+        "progress": 1
+      },
+      "BE-203": {
+        "weight": 2,
+        "progress": 1
+      },
+      "BE-204": {
+        "weight": 5,
+        "progress": 1
+      },
+      "BE-205": {
+        "weight": 3,
+        "progress": 1
+      },
+      "FE-200": {
+        "weight": 3,
+        "progress": 1
+      },
+      "QA-200": {
+        "weight": 2,
+        "progress": 1
+      },
+      "BE-302": {
+        "weight": 2,
+        "progress": 1
+      },
+      "BE-300": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-301": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-303": {
+        "weight": 2,
+        "progress": 1
+      },
+      "BE-304": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-305": {
+        "weight": 5,
+        "progress": 1
+      },
+      "BE-306": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-307": {
+        "weight": 2,
+        "progress": 1
+      },
+      "BE-308": {
+        "weight": 3,
+        "progress": 1
+      },
+      "QA-300": {
+        "weight": 3,
+        "progress": 1
+      },
+      "FE-300": {
+        "weight": 3,
+        "progress": 1
+      },
+      "FE-301": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-400": {
+        "weight": 1,
+        "progress": 1
+      },
+      "BE-401": {
+        "weight": 2,
+        "progress": 1
+      },
+      "BE-402": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-403": {
+        "weight": 2,
+        "progress": 1
+      },
+      "BE-404": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-405": {
+        "weight": 2,
+        "progress": 1
+      },
+      "BE-406": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-407": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-408": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-409": {
+        "weight": 1,
+        "progress": 1
+      },
+      "BE-410": {
+        "weight": 3,
+        "progress": 1
+      },
+      "FE-400": {
+        "weight": 2,
+        "progress": 1
+      },
+      "FE-401": {
+        "weight": 3,
+        "progress": 1
+      },
+      "QA-400": {
+        "weight": 2,
+        "progress": 1
+      },
+      "BE-500": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-501": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-502": {
+        "weight": 2,
+        "progress": 1
+      },
+      "BE-503": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-504": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-505": {
+        "weight": 5,
+        "progress": 1
+      },
+      "BE-507": {
+        "weight": 5,
+        "progress": 1
+      },
+      "BE-506": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-508": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-509": {
+        "weight": 2,
+        "progress": 1
+      },
+      "BE-510": {
+        "weight": 3,
+        "progress": 1
+      },
+      "FE-500": {
+        "weight": 3,
+        "progress": 1
+      },
+      "FE-501": {
+        "weight": 3,
+        "progress": 1
+      },
+      "QA-500": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-600": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-601": {
+        "weight": 5,
+        "progress": 1
+      },
+      "BE-602": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-603": {
+        "weight": 2,
+        "progress": 1
+      },
+      "BE-604": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-605": {
+        "weight": 5,
+        "progress": 1
+      },
+      "BE-606": {
+        "weight": 5,
+        "progress": 1
+      },
+      "BE-607": {
+        "weight": 2,
+        "progress": 1
+      },
+      "FE-600": {
+        "weight": 3,
+        "progress": 1
+      },
+      "FE-601": {
+        "weight": 2,
+        "progress": 1
+      },
+      "FE-602": {
+        "weight": 3,
+        "progress": 1
+      },
+      "QA-600": {
+        "weight": 3,
+        "progress": 1
+      },
+      "QA-700": {
+        "weight": 2,
+        "progress": 1
+      },
+      "QA-701": {
+        "weight": 3,
+        "progress": 1
+      },
+      "QA-702": {
+        "weight": 2,
+        "progress": 1
+      },
+      "QA-703": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-704": {
+        "weight": 1,
+        "progress": 1
+      },
+      "QA-705": {
+        "weight": 5,
+        "progress": 1
+      },
+      "QA-706": {
+        "weight": 3,
+        "progress": 1
+      },
+      "QA-707": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-708": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-709": {
+        "weight": 3,
+        "progress": 1
+      },
+      "BE-710": {
+        "weight": 3,
+        "progress": 1
+      },
+      "QA-711": {
+        "weight": 3,
+        "progress": 1
+      },
+      "QA-712": {
+        "weight": 3,
+        "progress": 1
+      },
+      "QA-713": {
+        "weight": 3,
+        "progress": 0.7
+      }
+    },
+    "at": "2026-11-04T08:25:12.463Z",
+    "eta_ms": 120000
+  }
+}

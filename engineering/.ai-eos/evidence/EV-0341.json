@@ -1,0 +1,41 @@
+{
+  "evidence_id": "EV-0341",
+  "check_id": "CHK-UNIT",
+  "name": "vitest unit project",
+  "category": "unit",
+  "requirement_ids": [
+    "REQ-052",
+    "REQ-046",
+    "REQ-053",
+    "REQ-051"
+  ],
+  "task_ids": [
+    "BE-704",
+    "QA-713"
+  ],
+  "command": "pnpm exec vitest run --project unit",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  238 passed (238)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0341.log",
+  "log_sha256": "012b3a4320d80dbfbce99d93e0cc7b3880785b7e71f589daa397a0d6467b4d42",
+  "started_at": "2026-11-04T05:59:09.455Z",
+  "finished_at": "2026-11-04T06:02:43.529Z",
+  "duration_ms": 214074,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:69fb226175839158083b8bd4d47e58c478a2d7d5c1e3bc5d15c27fbe743460cc",
+  "concurrent_tasks": [],
+  "paths": [
+    "fixtures/**",
+    "packages/**",
+    "scripts/**",
+    "vitest.config.ts",
+    "vitest.workspace.ts"
+  ],
+  "paths_fingerprint": "git-paths:c4f070e7de527228f608b865c7336eb7e6991c2a30c430b88e0e167e440b3af4"
+}

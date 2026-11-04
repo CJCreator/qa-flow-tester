@@ -1,0 +1,613 @@
+{
+  "tasks": [
+    {
+      "task_id": "BE-302",
+      "requirement_ids": ["REQ-013"],
+      "title": "Detect a page's language from its main text by Unicode script share",
+      "description": "Add packages/core/src/audit/analysis/language.ts exporting detectPageLanguage(text, declared): PageLanguage (type in packages/types/src/website-audit.ts:322). Count letters per Unicode script (Tamil U+0B80-U+0BFF, Latin, others), pick the script with the largest share, map it to a DocumentLanguage (Latin -> 'en', Tamil -> 'ta'), list other listed languages above a minimum share in `others`, and keep the lang attribute as `declared` (a hint, never the answer). Pure function, no dependency added (no franc or similar). The script table is a data structure so REQ-032 (group G7) can add Devanagari and other scripts later without rewriting the logic.",
+      "agent": "backend-engineer",
+      "priority": "high",
+      "depends_on": [],
+      "files_owned": [
+        "packages/core/src/audit/analysis/language.ts",
+        "packages/core/tests/audit-language.test.ts"
+      ],
+      "acceptance_criteria": [
+        "REQ-013 AC-1: given text whose letters are mostly Tamil script, detectPageLanguage returns primary 'ta'.",
+        "REQ-013 AC-2: given text whose letters are mostly Latin script, detectPageLanguage returns primary 'en'.",
+        "A Tamil page with English parts above the minimum share lists 'en' in `others`; `others` never contains the primary language and has no duplicates.",
+        "The declared lang attribute is returned as written (null when absent) and does not decide `primary`: Tamil text with lang=\"en\" is still 'ta'.",
+        "Text with fewer letters than the documented minimum, or mostly in a script with no listed language, returns primary 'not-identified' (never an empty value).",
+        "Pure and deterministic: no network, no clock, no new npm dependency."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-302-UNIT",
+          "name": "page language detection unit tests",
+          "command": "pnpm exec vitest run packages/core/tests/audit-language.test.ts",
+          "category": "unit",
+          "paths": [
+            "packages/core/src/audit/analysis/language.ts",
+            "packages/types/src/website-audit.ts",
+            "packages/core/tests/audit-language.test.ts"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "packages/core/src/audit/analysis/language.ts with detectPageLanguage",
+        "packages/core/tests/audit-language.test.ts"
+      ],
+      "complexity": "S",
+      "permission_level": "P1",
+      "status": "PENDING",
+      "notes": "G7 (REQ-032, Hindi and other Indian languages) extends the script table in this file; its task should depend on BE-302 and own the file after it."
+    },
+    {
+      "task_id": "BE-300",
+      "requirement_ids": ["REQ-008", "REQ-009"],
+      "title": "RawPage model and buildPageContent: sections, headings, images, links, forms, CTAs",
+      "description": "Interface task for group G3. Add packages/core/src/audit/analysis/raw-page.ts defining RawPage, the facts read from one rendered page in the browser (title or null, meta description or null, html lang, text chunks in page order each tagged with its section boundary (landmark kind or top-level heading), headings with levels, images with src and alt (null when the attribute is missing), anchors with href, text and link region (menu, footer, breadcrumb, internal), contact links (tel:, mailto:), forms with fields (type, label, name, required; no value field exists), CTA candidates, meta generator, script and stylesheet addresses, iframe addresses, JSON-LD blocks (parsed @type list plus a capped raw copy), og:/twitter: meta keys, in-page framework markers, menu tree with nesting, breadcrumb trail, optional response headers). Add packages/core/src/audit/analysis/page-content.ts with buildPageContent(raw, { origin, maxTextChars }) returning PageContent (packages/types/src/website-audit.ts:335) and packages/core/src/audit/analysis/finding-ids.ts with createFindingIdAllocator (AF-001, AF-002...) shared by every analysis rule. Sections follow Q-23 (landmark elements and top-level headings; kind 'page' only when the page has neither); text outside any landmark joins the preceding Section (the first Section when it comes first). CTAs follow Q-33 (buttons and button-styled links, with text and target). Internal link targets become redacted site paths via redactUrl (packages/core/src/redact.ts:12).",
+      "agent": "backend-engineer",
+      "priority": "high",
+      "depends_on": ["BE-302"],
+      "files_owned": [
+        "packages/core/src/audit/analysis/raw-page.ts",
+        "packages/core/src/audit/analysis/page-content.ts",
+        "packages/core/src/audit/analysis/finding-ids.ts",
+        "packages/core/tests/audit-page-content.test.ts"
+      ],
+      "acceptance_criteria": [
+        "REQ-009 AC-1: given a RawPage containing text, headings, images, links, a form, a title, a description and CTAs, buildPageContent returns PageContent with its text, headings with their levels, images with alt text, links, forms with their fields, title, description and CTAs.",
+        "REQ-009 AC-2: an image with no alt attribute has alt null in the output; an empty alt is kept as '' and is distinct from missing.",
+        "title is null when the page has no title element and '' when it is empty; description is null when there is no meta description.",
+        "REQ-008 AC-1: Sections are listed in page order with ids s1..sN, each with its kind and heading when it has one, and sectionText(content, section) returns that Section's own text.",
+        "REQ-008 AC-2: for any RawPage (including generated ones in a property-style test), Sections are contiguous, start at 0, end at text.length and do not overlap, so every character of the extracted text belongs to exactly one Section.",
+        "Every heading, image, link, form and CTA carries the sectionId of the Section that contains it.",
+        "Links to the same host have `to` as a path on the site with secrets in the query redacted; links to another host keep the full address and have leavesSite true; tel:, mailto:, javascript: and fragment-only links are not ContentLinks.",
+        "CTAs are button elements and button-styled links (role=button, or a class containing button or btn), each with its text, kind and target.",
+        "Text longer than maxTextChars is cut at that limit and textTruncated is true; Tamil text round-trips character for character.",
+        "language is filled by detectPageLanguage (BE-302).",
+        "createFindingIdAllocator returns AF-001, AF-002... in call order, can start from a given number, and reports the next free number.",
+        "The RawPage type has no field for a form field's value."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-300-UNIT",
+          "name": "Page Content builder unit tests",
+          "command": "pnpm exec vitest run packages/core/tests/audit-page-content.test.ts",
+          "category": "unit",
+          "paths": [
+            "packages/core/src/audit/analysis/raw-page.ts",
+            "packages/core/src/audit/analysis/page-content.ts",
+            "packages/core/src/audit/analysis/finding-ids.ts",
+            "packages/core/src/audit/analysis/language.ts",
+            "packages/core/src/redact.ts",
+            "packages/types/src/website-audit.ts",
+            "packages/core/tests/audit-page-content.test.ts"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "RawPage type (raw-page.ts)",
+        "buildPageContent (page-content.ts)",
+        "createFindingIdAllocator (finding-ids.ts)",
+        "packages/core/tests/audit-page-content.test.ts"
+      ],
+      "complexity": "M",
+      "permission_level": "P1",
+      "status": "PENDING",
+      "risks": [
+        "Extracted page text can contain personal data (REQ-009 risk, RISK-008); stored per page by the persistence group, not here."
+      ]
+    },
+    {
+      "task_id": "BE-301",
+      "requirement_ids": ["REQ-007", "REQ-008", "REQ-009"],
+      "title": "readPage: read a rendered page into RawPage in one read-only browser pass",
+      "description": "Add packages/core/src/audit/analysis/read-page.ts exporting readPage(page: Page, { responseHeaders?, maxTextChars? }): Promise<{ raw: RawPage; content: PageContent }>. One page.evaluate walks the DOM in order and collects the RawPage facts of BE-300 (visible text with section boundaries from header/nav/main/aside/footer/role=region landmarks and top-level headings; link region: breadcrumb first (aria-label or class containing breadcrumb, or BreadcrumbList), then menu (inside nav or header, role navigation or banner), then footer (footer or role contentinfo), else internal; nested menu tree; breadcrumb trail; forms and fields without values; meta, scripts, stylesheets, iframes, JSON-LD, framework markers), then calls buildPageContent. Reuses the selectors of the SEO checker's collectDetails (packages/checkers/src/seo.ts:453-545) by copying the logic into the evaluate, without changing the checker. It never clicks, fills, submits, navigates or makes a request. The crawl (group G2) calls it while each recorded page is open, so a page is read once (no second visit, keeping the one-request-at-a-time rule).",
+      "agent": "backend-engineer",
+      "priority": "high",
+      "depends_on": ["BE-300"],
+      "files_owned": [
+        "packages/core/src/audit/analysis/read-page.ts",
+        "packages/core/tests/audit-read-page.test.ts"
+      ],
+      "acceptance_criteria": [
+        "REQ-007 AC-1: on the fixtures/audit-site home page, each internal link is recorded with its target page and one region: header menu links as 'menu', footer links as 'footer', the breadcrumb link as 'breadcrumb' and links in the main content as 'internal'.",
+        "REQ-009 AC-1: on the home page, the output contains its text, its h1 and h2 headings with levels, images with alt text, links, the enquiry form with its four fields (name, phone, email, message) and no values, the title, the description and the CTAs 'Order online' (/shop) and 'Call to order' (tel:).",
+        "REQ-009 AC-2: on the gallery page, the two images without an alt attribute have alt null.",
+        "REQ-008 AC-1/AC-2: on the home page, Sections come in page order (header, breadcrumb nav, the main content split at its top-level headings, footer) and together cover the whole text exactly once.",
+        "The menu tree keeps the Services sub-menu (Catering, Party orders) nested under Services; the breadcrumb trail of a blog page is read in order.",
+        "The meta generator, the /wp-content/ stylesheet and script addresses, the LocalBusiness JSON-LD type and the map iframe address are captured in RawPage.",
+        "The Tamil page's text is kept character for character and its language is 'ta'; the home page's language is 'en'.",
+        "The JavaScript-rendered updates page is read after rendering: its script-written text and link are present.",
+        "Read-only: the fixture server's request log shows no request made during readPage (no form submitted, no navigation, no fetch).",
+        "The test file is a browser test (launches Chromium): listed for vitest.workspace.ts BROWSER_TESTS (core: 'audit-read-page') via group G7."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-301-BROWSER",
+          "name": "readPage against the audit fixture site in Chromium",
+          "command": "pnpm exec vitest run packages/core/tests/audit-read-page.test.ts",
+          "category": "integration",
+          "timeout_s": 600,
+          "paths": [
+            "packages/core/src/audit/analysis/read-page.ts",
+            "packages/core/src/audit/analysis/raw-page.ts",
+            "packages/core/src/audit/analysis/page-content.ts",
+            "packages/core/src/audit/analysis/language.ts",
+            "packages/core/src/redact.ts",
+            "packages/types/src/website-audit.ts",
+            "packages/core/tests/helpers/audit-site-server.ts",
+            "fixtures/audit-site/**",
+            "packages/core/tests/audit-read-page.test.ts"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "packages/core/src/audit/analysis/read-page.ts with readPage",
+        "packages/core/tests/audit-read-page.test.ts (browser test)"
+      ],
+      "complexity": "M",
+      "permission_level": "P1",
+      "status": "PENDING"
+    },
+    {
+      "task_id": "BE-303",
+      "requirement_ids": ["REQ-010"],
+      "title": "Detect the CMS or framework from page facts and response headers",
+      "description": "Add packages/core/src/audit/analysis/technology.ts exporting detectTechnology(pages: RawPage[], headers?): TechnologyResult (packages/types/src/website-audit.ts:360-396). A fixed signature table covers every entry of TECHNOLOGIES (Q-28 list: WordPress, Wix, Shopify, Squarespace, Webflow, Joomla, Drupal, Zoho Sites, Google Sites, Blogger, Dukaan, GoDaddy Website Builder, React, Next.js, Vue/Nuxt, Angular, Gatsby, Hugo, Jekyll, Astro, Eleventy) using meta generator, script/stylesheet address patterns, in-page markers (__NEXT_DATA__, ng-version, astro-island, data-wf-site...) and headers (x-powered-by, platform headers). Evidence uses fixed wording such as 'meta generator', 'stylesheet from /wp-content/', 'x-powered-by header'. Pure, no request of its own.",
+      "agent": "backend-engineer",
+      "priority": "high",
+      "depends_on": ["BE-300"],
+      "files_owned": [
+        "packages/core/src/audit/analysis/technology.ts",
+        "packages/core/tests/audit-technology.test.ts"
+      ],
+      "acceptance_criteria": [
+        "REQ-010 AC-1: given page facts from a site built with a recognised CMS or framework, the result is status 'identified' and names it with its kind and fixed-wording evidence; every one of the 21 TECHNOLOGIES has at least one tested signature.",
+        "Given the fixtures/audit-site home page facts (WordPress generator meta and /wp-content/ addresses), the result names WordPress with evidence 'meta generator' and an address under /wp-content/.",
+        "REQ-010 AC-2: given facts with no known signature, the result is { status: 'not-identified' }; an 'identified' result never has an empty technologies list.",
+        "When a CMS and a framework both match (for example Gatsby and React), both are listed, each once.",
+        "Pure and deterministic: no network, no Playwright import."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-303-UNIT",
+          "name": "CMS and framework detection unit tests",
+          "command": "pnpm exec vitest run packages/core/tests/audit-technology.test.ts",
+          "category": "unit",
+          "paths": [
+            "packages/core/src/audit/analysis/technology.ts",
+            "packages/core/src/audit/analysis/raw-page.ts",
+            "packages/types/src/website-audit.ts",
+            "packages/core/tests/audit-technology.test.ts"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "packages/core/src/audit/analysis/technology.ts with detectTechnology",
+        "packages/core/tests/audit-technology.test.ts"
+      ],
+      "complexity": "S",
+      "permission_level": "P1",
+      "status": "PENDING"
+    },
+    {
+      "task_id": "BE-304",
+      "requirement_ids": ["REQ-007", "REQ-015"],
+      "title": "Build the page hierarchy, the navigation map and the internal-linking figures",
+      "description": "Add packages/core/src/audit/analysis/hierarchy.ts exporting buildPageHierarchy(pages: Array<{ urlPath; title; raw: RawPage; content: PageContent }>, startPath): PageHierarchy and internalLinking(hierarchy, recordedPaths): InternalLinking (types at packages/types/src/website-audit.ts:402-430). Placement follows Q-23: the start page is the root ('start'); then menu nesting from the start page's menu tree ('menu'); then breadcrumbs, the parent being the last breadcrumb link before the current page ('breadcrumb'); then the URL path, the nearest recorded ancestor path or else the root ('path'). A candidate parent that is not a recorded page, or that would make a cycle, falls through to the next rule. The navigation map lists every internal ContentLink of every recorded page with its target and region.",
+      "agent": "backend-engineer",
+      "priority": "high",
+      "depends_on": ["BE-300"],
+      "files_owned": [
+        "packages/core/src/audit/analysis/hierarchy.ts",
+        "packages/core/tests/audit-hierarchy.test.ts"
+      ],
+      "acceptance_criteria": [
+        "REQ-007 AC-2: given a finished crawl's recorded pages, every recorded page appears in the hierarchy exactly once (checked by walking the tree), and the root is the start page with placedBy 'start'.",
+        "REQ-007 AC-1: links lists every internal link of every recorded page with from, to (its target page path), region and text; links that leave the site are not in it.",
+        "Placement order is menu nesting, then breadcrumbs, then URL path: with fixture-shaped input, /services/catering sits under /services placed by 'menu', a blog post with a breadcrumb trail sits under its breadcrumb parent, and a page reachable by neither sits under its nearest recorded ancestor path or the root ('path').",
+        "No cycles: menu or breadcrumb data that would make a page its own ancestor falls back to the next rule.",
+        "internalLinking returns inboundCounts for every recorded page (links from other recorded pages) and unlinkedPages listing recorded pages, other than the start page, that no other recorded page links to (a sitemap-only page appears there).",
+        "Pure and deterministic: the same input gives the same tree and child order."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-304-UNIT",
+          "name": "page hierarchy and navigation map unit tests",
+          "command": "pnpm exec vitest run packages/core/tests/audit-hierarchy.test.ts",
+          "category": "unit",
+          "paths": [
+            "packages/core/src/audit/analysis/hierarchy.ts",
+            "packages/core/src/audit/analysis/raw-page.ts",
+            "packages/types/src/website-audit.ts",
+            "packages/core/tests/audit-hierarchy.test.ts"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "packages/core/src/audit/analysis/hierarchy.ts with buildPageHierarchy and internalLinking",
+        "packages/core/tests/audit-hierarchy.test.ts"
+      ],
+      "complexity": "M",
+      "permission_level": "P1",
+      "status": "PENDING"
+    },
+    {
+      "task_id": "BE-305",
+      "requirement_ids": ["REQ-014", "REQ-038"],
+      "title": "Content problems, broken links through the outbound fetch, and SEO basics",
+      "description": "Add packages/core/src/audit/analysis/content-problems.ts (contentProblems(pages, ids): AuditFinding[] with source 'rule'), packages/core/src/audit/analysis/broken-links.ts (checkLinks(pages, { statusByPath, skippedPaths, fetch: FetchFn, maxRequests }, ids)) and packages/core/src/audit/analysis/seo-basics.ts (seoBasics(content, findings): SeoBasics). Rules (Q-26): missing and duplicate titles, missing and duplicate descriptions, duplicate content (exact match of main text, the 'main' Sections or else the whole text, after whitespace normalisation, across every page), heading problems (no H1, more than one H1, skipped heading level), missing alt (per image; empty alt is decorative and not reported; alt quality is never judged, ADR 0018). Broken links: a target's status comes from the crawl when known; otherwise one request through the injected FetchFn built by makeOutboundFetch (BE-101, ADR 0031), requests made one after another, capped. SeoBasics.findingIds point at the page's content findings instead of repeating them (REQ-038 overlap). Ids come from the BE-300 allocator.",
+      "agent": "backend-engineer",
+      "priority": "high",
+      "depends_on": ["BE-300", "BE-101"],
+      "files_owned": [
+        "packages/core/src/audit/analysis/content-problems.ts",
+        "packages/core/src/audit/analysis/broken-links.ts",
+        "packages/core/src/audit/analysis/seo-basics.ts",
+        "packages/core/tests/audit-content-problems.test.ts",
+        "packages/core/tests/audit-broken-links.test.ts"
+      ],
+      "acceptance_criteria": [
+        "REQ-014 AC-1: given an internal link whose target answers 404 (status from the crawl, or from the injected FetchFn), a 'broken-link' finding names the page and the link target; one finding per broken target lists every page linking to it in `pages`.",
+        "REQ-014 AC-2: given two pages with the same title (after trimming and collapsing whitespace), one 'duplicate-title' finding lists both pages; pages without a title are not counted as duplicates.",
+        "REQ-014 AC-3: given a page with no title (null or empty), a 'missing-title' finding names the page with sectionId null.",
+        "REQ-014 AC-4: given a page with no meta description, a 'missing-description' finding names the page.",
+        "REQ-014 AC-5: given two pages with the same meta description, one 'duplicate-description' finding lists both pages.",
+        "REQ-014 AC-6: given an image with no alt attribute, a 'missing-alt' finding names the page, the image address (target) and its Section; an image with alt '' is not reported.",
+        "Duplicate content: two pages whose main text matches after whitespace normalisation give one 'duplicate-content' finding listing both; two pages sharing title and description but not main text give none.",
+        "Heading problems: a page with no H1, a page with more than one H1, and a page that skips a heading level each give their own finding ('no-h1', 'multiple-h1', 'skipped-heading-level').",
+        "Skipped Pages (sign-in, payment, robots, excluded, depth-limit) are never requested and never reported as broken; a FetchFn returning null is not reported as broken; no target is requested twice; requests stop at maxRequests.",
+        "Requests are made only through the injected FetchFn (no Playwright request API, no global fetch in these modules), one at a time: a fake FetchFn in the test records no overlapping calls.",
+        "REQ-038: seoBasics records hasTitle, hasDescription, h1Count, skippedHeadingLevel, imagesWithoutAlt, htmlLang (the lang attribute as written) and findingIds that exist among the page's findings.",
+        "Every finding has a rule, group, area, title, detail, suggestion, impact, effort, urlPath and sectionId; no finding text uses the ADR 0018 words (compliant, accessible, secure, passes) per a regex check in the test."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-305-UNIT",
+          "name": "content problems, broken links and SEO basics unit tests",
+          "command": "pnpm exec vitest run packages/core/tests/audit-content-problems.test.ts packages/core/tests/audit-broken-links.test.ts",
+          "category": "unit",
+          "paths": [
+            "packages/core/src/audit/analysis/content-problems.ts",
+            "packages/core/src/audit/analysis/broken-links.ts",
+            "packages/core/src/audit/analysis/seo-basics.ts",
+            "packages/core/src/audit/analysis/finding-ids.ts",
+            "packages/core/src/audit/analysis/raw-page.ts",
+            "packages/checkers/src/security-depth.ts",
+            "packages/types/src/website-audit.ts",
+            "packages/core/tests/audit-content-problems.test.ts",
+            "packages/core/tests/audit-broken-links.test.ts"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "content-problems.ts, broken-links.ts, seo-basics.ts under packages/core/src/audit/analysis/",
+        "packages/core/tests/audit-content-problems.test.ts and audit-broken-links.test.ts"
+      ],
+      "complexity": "L",
+      "permission_level": "P1",
+      "status": "PENDING",
+      "notes": "FetchFn type: packages/checkers/src/security-depth.ts:30 (or wherever BE-101 re-exports it). If BE-101's outbound-source-grep guard test lists allowed request sites, broken-links.ts needs no entry because it only calls the injected FetchFn.",
+      "risks": [
+        "Link checks of targets the crawl did not visit add requests to the audited host; they must also respect the per-host pacing of REQ-035 (group G1). If makeOutboundFetch does not pace, the pipeline must pass a paced FetchFn."
+      ]
+    },
+    {
+      "task_id": "BE-306",
+      "requirement_ids": ["REQ-015"],
+      "title": "Report the ten marketing signals per page and site-wide, with NAP",
+      "description": "Add packages/core/src/audit/analysis/marketing-signals.ts exporting marketingSignals({ pages: Array<{ raw: RawPage; content: PageContent }>, internalLinking, findings }): MarketingSignal[] and auditMarketing(readPages, signals): AuditMarketing (types: packages/types/src/aspects.ts:31-82, website-audit.ts:631), and packages/core/src/audit/analysis/nap.ts (NAP from <address> elements, LocalBusiness JSON-LD and tel: links). One entry per MARKETING_SIGNALS key, in that order: on-page SEO (title, description, H1, citing content findings), schema (JSON-LD types), internal linking (InternalLinking from BE-304, passed in), social tags (og:/twitter:), analytics and tags (known tag hosts: Google Tag Manager, Google Analytics, Meta Pixel, Microsoft Clarity, Hotjar...), CTAs (PageContent.ctas), lead forms (forms asking for a name, email or phone; not sign-in forms with a password field, not search forms), click-to-call (tel: links), trust signals (Q-27: reviews or ratings, testimonials, certifications), local signals (Q-27: NAP, map embed, LocalBusiness schema). Pure: forms are only read.",
+      "agent": "backend-engineer",
+      "priority": "high",
+      "depends_on": ["BE-300"],
+      "files_owned": [
+        "packages/core/src/audit/analysis/marketing-signals.ts",
+        "packages/core/src/audit/analysis/nap.ts",
+        "packages/core/tests/audit-marketing-signals.test.ts"
+      ],
+      "acceptance_criteria": [
+        "REQ-015 AC-1: the result has exactly ten entries, one per MARKETING_SIGNALS key in that order with its label, each with status 'found' or 'not-found' and a fixed-wording detail saying what was found or that it was not found; 'not-checked' only when no page was read.",
+        "REQ-015 AC-2: given a page with a tel: link, click-to-call is 'found' and that page is in its pages.",
+        "REQ-015 AC-3: given a page with a lead form, lead forms is 'found' with that page; a sign-in form (password field) and a search form are not lead forms; the module never submits anything (pure function over read facts).",
+        "REQ-015 AC-4: given a page showing a business name, address and phone number (in an address element or LocalBusiness JSON-LD), local signals lists the NAP with the page it was found on; a map embed and LocalBusiness schema are named in its detail.",
+        "Trust signals are found from review or rating markup or text, testimonials, or certifications; social tags, analytics, schema, CTAs, on-page SEO and internal linking each report the pages they were found on.",
+        "auditMarketing returns readPages, checks [] and the ten signals; findingIds reference only ids present in the given findings.",
+        "Details say what was seen, never that it is good: no ADR 0018 words (compliant, accessible, secure, passes) per a regex check in the test."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-306-UNIT",
+          "name": "marketing signals and NAP unit tests",
+          "command": "pnpm exec vitest run packages/core/tests/audit-marketing-signals.test.ts",
+          "category": "unit",
+          "paths": [
+            "packages/core/src/audit/analysis/marketing-signals.ts",
+            "packages/core/src/audit/analysis/nap.ts",
+            "packages/core/src/audit/analysis/raw-page.ts",
+            "packages/types/src/aspects.ts",
+            "packages/types/src/website-audit.ts",
+            "packages/core/tests/audit-marketing-signals.test.ts"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "marketing-signals.ts and nap.ts under packages/core/src/audit/analysis/",
+        "packages/core/tests/audit-marketing-signals.test.ts"
+      ],
+      "complexity": "M",
+      "permission_level": "P1",
+      "status": "PENDING",
+      "risks": [
+        "NAP contact details are personal data of third parties (RISK-008); they are stored with the audit and deleted with it (persistence group)."
+      ]
+    },
+    {
+      "task_id": "BE-307",
+      "requirement_ids": ["REQ-038"],
+      "title": "Accessibility basics on a Sample Page by reusing the axe checker",
+      "description": "Add packages/core/src/audit/analysis/accessibility-basics.ts exporting accessibilityBasics(page: Page, { urlPath, ids }): Promise<{ basics: AccessibilityBasics | null; findings: AuditFinding[]; note?: string }>. It calls the existing UXQualityChecker (packages/checkers/src/ux-quality.ts:115, axe with wcag2a/2aa/21a/21aa/22aa tags; read-only, no interaction) and maps only its axe violations (F-A11Y findings) to AuditFindings (source 'checker', area 'accessibility', group 'technical', severity and findingId kept, rule = the axe rule id, sectionId null). AccessibilityBasics names 'WCAG 2.2', level 'AA', method 'automatic checks only' (packages/types/src/website-audit.ts:539). Tap-target and overflow results are left to REQ-037 (group G7). No change to packages/checkers.",
+      "agent": "backend-engineer",
+      "priority": "high",
+      "depends_on": ["BE-300"],
+      "files_owned": [
+        "packages/core/src/audit/analysis/accessibility-basics.ts",
+        "packages/core/tests/audit-accessibility-basics.test.ts"
+      ],
+      "acceptance_criteria": [
+        "REQ-038 AC-1: for an audited Sample Page, the output records its accessibility basics naming standard 'WCAG 2.2', level 'AA' and method 'automatic checks only', with the violation count and the ids of the findings behind it.",
+        "On the fixtures/audit-site gallery page (two images without alt), the image-alt axe violation is counted and becomes an AuditFinding naming the page.",
+        "When axe cannot run, basics is null and a note says the accessibility checks did not run on that page: never a zero-violation result.",
+        "Nothing in the output (basics, findings, note) calls the page accessible or compliant: a regex check over the serialised output finds none of the ADR 0018 words.",
+        "Only axe findings are mapped; the existing checker and packages/checkers are unchanged; the page is not clicked, filled or navigated.",
+        "The test file is a browser test (launches Chromium): listed for vitest.workspace.ts BROWSER_TESTS (core: 'audit-accessibility-basics') via group G7."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-307-BROWSER",
+          "name": "accessibility basics on the audit fixture site in Chromium",
+          "command": "pnpm exec vitest run packages/core/tests/audit-accessibility-basics.test.ts",
+          "category": "accessibility",
+          "timeout_s": 600,
+          "paths": [
+            "packages/core/src/audit/analysis/accessibility-basics.ts",
+            "packages/core/src/audit/analysis/finding-ids.ts",
+            "packages/checkers/src/ux-quality.ts",
+            "packages/types/src/website-audit.ts",
+            "packages/core/tests/helpers/audit-site-server.ts",
+            "fixtures/audit-site/**",
+            "packages/core/tests/audit-accessibility-basics.test.ts"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "packages/core/src/audit/analysis/accessibility-basics.ts",
+        "packages/core/tests/audit-accessibility-basics.test.ts (browser test)"
+      ],
+      "complexity": "S",
+      "permission_level": "P1",
+      "status": "PENDING"
+    },
+    {
+      "task_id": "BE-308",
+      "requirement_ids": ["REQ-007", "REQ-008", "REQ-009", "REQ-010", "REQ-013", "REQ-014", "REQ-015", "REQ-038"],
+      "title": "analyseSite entry point and the audit/analysis barrel",
+      "description": "Add packages/core/src/audit/analysis/analyse-site.ts exporting analyseSite(input): SiteAnalysis and the barrel packages/core/src/audit/analysis/index.ts. Input (own type AnalysisInput, so the module does not import the crawl): startPath, recorded pages ({ urlPath, depth, raw, content }), statusByPath and skippedPaths from the crawl, per-Sample-Page accessibility results from BE-307, the injected FetchFn (from makeOutboundFetch), and the first free finding number. Output: technology (BE-303), hierarchy and internalLinking (BE-304), per page { urlPath, title, language, sections (SectionSummary), seo (BE-305) }, the ordered findings (content problems, broken links, accessibility) with unique AF-NNN ids, marketing (BE-306) and nextFindingNumber for the AI findings of group G4. The barrel exports the public API of every analysis module (readPage, buildPageContent, detectPageLanguage, detectTechnology, buildPageHierarchy, internalLinking, contentProblems, checkLinks, seoBasics, marketingSignals, auditMarketing, accessibilityBasics, analyseSite, createFindingIdAllocator, RawPage and AnalysisInput types). BE-190 (group G1) re-exports this barrel from the core barrel.",
+      "agent": "backend-engineer",
+      "priority": "high",
+      "depends_on": ["BE-301", "BE-303", "BE-304", "BE-305", "BE-306", "BE-307"],
+      "files_owned": [
+        "packages/core/src/audit/analysis/analyse-site.ts",
+        "packages/core/src/audit/analysis/index.ts",
+        "packages/core/tests/audit-analyse-site.test.ts"
+      ],
+      "acceptance_criteria": [
+        "Every recorded page appears exactly once in the page list and exactly once in the hierarchy (REQ-007 AC-2), with its language (REQ-013), Section summaries in page order (REQ-008) and SEO basics (REQ-038).",
+        "technology is always present: 'identified' with names or 'not-identified' (REQ-010 AC-2).",
+        "Finding ids are unique AF-NNN starting at the given number, in a stable order for the same input; every findingIds entry in seo basics, accessibility basics and marketing signals refers to an existing finding; nextFindingNumber is one past the last id used.",
+        "Content findings (REQ-014) and the ten marketing signals (REQ-015 AC-1) from the sub-modules are passed through unchanged apart from id assignment; nothing is reported twice for the same rule, page and target.",
+        "Same input gives the same output (no clock, no randomness); no request is made except through the injected FetchFn.",
+        "The barrel exports the listed functions and types, and importing it pulls in no runner or wizard module.",
+        "Unit test with hand-built RawPage inputs and a fake FetchFn (no browser)."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-BE-308-UNIT",
+          "name": "analyseSite unit tests",
+          "command": "pnpm exec vitest run packages/core/tests/audit-analyse-site.test.ts",
+          "category": "unit",
+          "paths": [
+            "packages/core/src/audit/analysis/**",
+            "packages/core/src/redact.ts",
+            "packages/checkers/src/security-depth.ts",
+            "packages/checkers/src/ux-quality.ts",
+            "packages/types/src/website-audit.ts",
+            "packages/types/src/aspects.ts",
+            "packages/core/tests/audit-analyse-site.test.ts"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "packages/core/src/audit/analysis/analyse-site.ts with analyseSite",
+        "packages/core/src/audit/analysis/index.ts barrel",
+        "packages/core/tests/audit-analyse-site.test.ts"
+      ],
+      "complexity": "M",
+      "permission_level": "P1",
+      "status": "PENDING",
+      "notes": "Cross-group: BE-190 (G1) re-exports this barrel from packages/core/src/index.ts and should depend on BE-308. The audit pipeline (whichever group assembles AuditResult) maps the crawl output of group G2 to AnalysisInput; the G2 crawl task that visits pages should call readPage (BE-301) while each page is open and depend on BE-301."
+    },
+    {
+      "task_id": "QA-300",
+      "requirement_ids": ["REQ-007", "REQ-008", "REQ-009", "REQ-010", "REQ-013", "REQ-014", "REQ-015", "REQ-038"],
+      "title": "Page analysis on the audit fixture site end to end in Chromium",
+      "description": "Add packages/core/tests/audit-analysis-fixture.test.ts. Serve fixtures/audit-site with startAuditSite (packages/core/tests/helpers/audit-site-server.ts:99), open each public fixture page in Chromium (sign-in, checkout and /private pages passed in as Skipped Pages), call readPage and accessibilityBasics (gallery and home as Sample Pages), then analyseSite with a FetchFn over the local fixture server (makeOutboundFetch with injected NetDeps for 127.0.0.1, per BE-101), and check every acceptance criterion of the group against the fixture's known scenarios. Independent of the crawl of group G2 so it verifies analysis alone.",
+      "agent": "qa-engineer",
+      "priority": "high",
+      "depends_on": ["BE-308"],
+      "files_owned": [
+        "packages/core/tests/audit-analysis-fixture.test.ts"
+      ],
+      "acceptance_criteria": [
+        "REQ-007: every recorded fixture page is in the hierarchy exactly once; the home page's internal links carry the regions menu, footer, breadcrumb and internal with their target pages; /services/catering sits under /services.",
+        "REQ-008: every recorded page's Sections are in page order and cover its text exactly once.",
+        "REQ-009: the home page output has text, headings with levels, images with alt, links, the enquiry form with its fields, title, description and CTAs; the gallery's two images have alt null.",
+        "REQ-010: the site is identified as WordPress with its evidence.",
+        "REQ-013: the Tamil page is recorded as Tamil ('ta') and the home page as English ('en').",
+        "REQ-014: the about page's link to the 404 page gives a broken-link finding naming /about and the target; the fixture's duplicate pair gives one duplicate-title and one duplicate-description finding listing both pages and no duplicate-content finding; the gallery gives two missing-alt findings naming each image; no other page gives a duplicate-title or missing-alt finding.",
+        "REQ-015: the marketing result has ten signals; click-to-call and local signals (NAP with '/', map embed, LocalBusiness schema) are found on the home page; the lead form is reported and the fixture server's request log has no request to the form's action (/enquiry) and no POST at all.",
+        "REQ-038: each page has SEO basics; the Sample Pages' accessibility basics name WCAG 2.2 level AA with automatic checks only, and no output text calls a page accessible or compliant.",
+        "No request reaches a Skipped Page (/account/sign-in, /shop/checkout, /private/*) from the analysis (request log).",
+        "Browser test: listed for vitest.workspace.ts BROWSER_TESTS (core: 'audit-analysis-fixture') via group G7."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-QA-300-BROWSER",
+          "name": "page analysis end to end on the audit fixture site",
+          "command": "pnpm exec vitest run packages/core/tests/audit-analysis-fixture.test.ts",
+          "category": "integration",
+          "timeout_s": 900,
+          "paths": [
+            "packages/core/src/audit/analysis/**",
+            "packages/core/src/safe-net.ts",
+            "packages/core/src/redact.ts",
+            "packages/checkers/src/ux-quality.ts",
+            "packages/checkers/src/security-depth.ts",
+            "packages/types/src/website-audit.ts",
+            "packages/types/src/aspects.ts",
+            "packages/core/tests/helpers/audit-site-server.ts",
+            "fixtures/audit-site/**",
+            "packages/core/tests/audit-analysis-fixture.test.ts"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "packages/core/tests/audit-analysis-fixture.test.ts (browser test)"
+      ],
+      "complexity": "M",
+      "permission_level": "P1",
+      "status": "PENDING",
+      "notes": "If makeOutboundFetch (BE-101) lands in another file than packages/core/src/safe-net.ts, update this check's paths at the merge. The fixture has no page without a title or description; REQ-014 AC-3/AC-4 are proven by BE-305's unit tests."
+    },
+    {
+      "task_id": "FE-300",
+      "requirement_ids": ["REQ-007", "REQ-008", "REQ-009", "REQ-010", "REQ-013", "REQ-014", "REQ-015", "REQ-038"],
+      "title": "Wizard views: page hierarchy, Page Content with Sections, page facts, findings list",
+      "description": "Add presentational React components under packages/wizard/src/screens/audit/results/: HierarchyView.tsx (PageHierarchy tree and the navigation map grouped by link region); PageContentView.tsx (one page's Page Content: title, description, language, Sections in page order with their own text via sectionText, headings with levels, images with alt or 'Alt text missing', links with region, forms with fields marked as read and never sent, CTAs); PageFactsView.tsx (one AuditPage's language, SEO basics and accessibility basics, plus the site's technology and the ten marketing signals); FindingsList.tsx (AuditFinding[] in the given order with page, Section, all pages of cross-page findings, impact, effort, source; AI ones labelled advisory). analysis-text.ts holds the fixed UI wording used by all four. Types come only from @qa/types/src/browser.js. Props only; no fetching.",
+      "agent": "frontend-engineer",
+      "priority": "medium",
+      "depends_on": [],
+      "files_owned": [
+        "packages/wizard/src/screens/audit/results/HierarchyView.tsx",
+        "packages/wizard/src/screens/audit/results/PageContentView.tsx",
+        "packages/wizard/src/screens/audit/results/PageFactsView.tsx",
+        "packages/wizard/src/screens/audit/results/FindingsList.tsx",
+        "packages/wizard/src/screens/audit/results/analysis-text.ts",
+        "packages/wizard/tests/audit-analysis-views.test.tsx"
+      ],
+      "acceptance_criteria": [
+        "HierarchyView renders every page of a PageHierarchy exactly once as a nested list with its title (or path) and how it was placed, and the navigation map with each link's page, target and region labelled Menu, Footer, Breadcrumb or Internal link.",
+        "PageContentView renders the Sections in page order, each with its heading or kind and its own text; headings with levels; images with alt text or 'Alt text missing' when alt is null (an empty alt is shown as decorative); links with region; forms with their fields and a note that forms are read and never sent; CTAs with text and target.",
+        "Missing values are stated, never blank: 'No title', 'No description', language 'Not identified', technology 'Not identified'.",
+        "Language shows the detected language name, other languages present and the page's lang attribute as written; Tamil text is rendered with lang=\"ta\" on its element and kept character for character.",
+        "PageFactsView shows SEO basics as facts, accessibility basics as 'WCAG 2.2 level AA, automatic checks only' with the violation count, the technology, and the ten marketing signals each with found, not found or not checked and its pages and NAP.",
+        "No rendered text calls a page or the site accessible, compliant or secure, and no release verdict or 'Ready to release' appears (ADR 0018, ADR 0033): asserted on the rendered markup.",
+        "FindingsList keeps the given order and shows each finding's title, page, Section (or 'Whole page'), every page of a cross-page finding, impact, effort and source; AI findings are labelled advisory.",
+        "UI text uses CONTEXT.md terms (Website Audit, Page Content, Section, Sample Page, Skipped Page) and none of their Avoid words (scan, scrape, page data, page dump, block, component, region for a Section, plan for the roadmap): asserted by a regex over the rendered markup.",
+        "Semantic markup: headings in order, lists for trees, tables with header cells; asserted in the server-render test.",
+        "Imports from @qa/types use only @qa/types/src/browser.js (the browser-entry guard stays green)."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-FE-300-UNIT",
+          "name": "audit analysis views render tests",
+          "command": "pnpm exec vitest run packages/wizard/tests/audit-analysis-views.test.tsx",
+          "category": "unit",
+          "paths": [
+            "packages/wizard/src/screens/audit/results/HierarchyView.tsx",
+            "packages/wizard/src/screens/audit/results/PageContentView.tsx",
+            "packages/wizard/src/screens/audit/results/PageFactsView.tsx",
+            "packages/wizard/src/screens/audit/results/FindingsList.tsx",
+            "packages/wizard/src/screens/audit/results/analysis-text.ts",
+            "packages/types/src/website-audit.ts",
+            "packages/types/src/aspects.ts",
+            "packages/types/src/browser.ts",
+            "packages/wizard/tests/audit-analysis-views.test.tsx"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "HierarchyView.tsx, PageContentView.tsx, PageFactsView.tsx, FindingsList.tsx, analysis-text.ts under packages/wizard/src/screens/audit/results/",
+        "packages/wizard/tests/audit-analysis-views.test.tsx"
+      ],
+      "complexity": "M",
+      "permission_level": "P1",
+      "status": "PENDING"
+    },
+    {
+      "task_id": "FE-301",
+      "requirement_ids": ["REQ-007", "REQ-009", "REQ-014"],
+      "title": "Wizard analysis screen loading the audit result and Page Content",
+      "description": "Add packages/wizard/src/screens/audit/results/analysis-client.ts (getAuditResult(id, version?) on AUDIT_API.get and getPageContent(id, path, version?) on AUDIT_API.content, paths built from the AUDIT_API constants in packages/types/src/website-audit.ts:1040-1046, using the wizard's existing fetch conventions in packages/wizard/src/api.ts) and AnalysisScreen.tsx (props auditId and optional version) showing Structure (HierarchyView), Pages (page list with PageFactsView; covered pages say 'Checked on its Sample Page <path>'), Page Content of the selected page (loaded on selection) and Findings (FindingsList). FE-191 (group G1) mounts AnalysisScreen in the wizard router; this task does not edit the router.",
+      "agent": "frontend-engineer",
+      "priority": "medium",
+      "depends_on": ["FE-300"],
+      "files_owned": [
+        "packages/wizard/src/screens/audit/results/AnalysisScreen.tsx",
+        "packages/wizard/src/screens/audit/results/analysis-client.ts",
+        "packages/wizard/tests/audit-analysis-screen.test.tsx"
+      ],
+      "acceptance_criteria": [
+        "The client requests the AUDIT_API.get and AUDIT_API.content paths with the audit id, the version when given and the page path as a query value (encoded); error replies are returned as { error, code } and never thrown as raw text.",
+        "AnalysisScreen shows the page hierarchy, the page list, the selected page's Page Content and the findings list from the loaded result, with loading, empty and error states stated in words.",
+        "A covered page (not a Sample Page) says its checks come from its Sample Page with that page's path, instead of showing empty accessibility results.",
+        "Skipped Pages are listed as not checked with their reason, never as clean.",
+        "UI text uses CONTEXT.md terms and none of their Avoid words, and shows no release verdict; asserted on the rendered markup.",
+        "Tests mock fetch (no runner, no browser) and import types only from @qa/types/src/browser.js."
+      ],
+      "validation": [
+        {
+          "check_id": "CHK-FE-301-UNIT",
+          "name": "audit analysis screen and client tests",
+          "command": "pnpm exec vitest run packages/wizard/tests/audit-analysis-screen.test.tsx",
+          "category": "unit",
+          "paths": [
+            "packages/wizard/src/screens/audit/results/AnalysisScreen.tsx",
+            "packages/wizard/src/screens/audit/results/analysis-client.ts",
+            "packages/wizard/src/screens/audit/results/HierarchyView.tsx",
+            "packages/wizard/src/screens/audit/results/PageContentView.tsx",
+            "packages/wizard/src/screens/audit/results/PageFactsView.tsx",
+            "packages/wizard/src/screens/audit/results/FindingsList.tsx",
+            "packages/wizard/src/screens/audit/results/analysis-text.ts",
+            "packages/wizard/src/api.ts",
+            "packages/types/src/website-audit.ts",
+            "packages/types/src/browser.ts",
+            "packages/wizard/tests/audit-analysis-screen.test.tsx"
+          ],
+          "scoped_command": "pnpm exec vitest run {files}"
+        }
+      ],
+      "expected_outputs": [
+        "AnalysisScreen.tsx and analysis-client.ts under packages/wizard/src/screens/audit/results/",
+        "packages/wizard/tests/audit-analysis-screen.test.tsx"
+      ],
+      "complexity": "M",
+      "permission_level": "P1",
+      "status": "PENDING",
+      "notes": "Cross-group: FE-191 (G1) imports AnalysisScreen into the router, so FE-191 (or a later router-wiring step) depends on FE-301, not the other way round. The live data needs the runner routes for AUDIT_API.get and AUDIT_API.content (owner: the persistence/route group, likely G6); tests do not need them. If another group also writes an audit result client (AUDIT_API.get), the orchestrator should keep one and point the other at it."
+    }
+  ]
+}

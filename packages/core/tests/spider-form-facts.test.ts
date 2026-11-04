@@ -4,7 +4,8 @@ import http from 'http';
 import { chromium, type Browser } from 'playwright';
 import { DeterministicSpider } from '../src/discovery/deterministic-spider.js';
 
-const PORT = 3562;
+// Own port: access-token.test.ts uses 3562, and the two clashed when they ran at the same time.
+const PORT = 3563;
 const PAGE = `<!doctype html><html lang="en"><head><title>Sign up</title></head><body><h1>Sign up</h1>
 <form method="post" action="/done">
   <label for="em">Email</label><input id="em" name="email" type="email" required>

@@ -1,0 +1,164 @@
+{
+  "task_id": "SEC-001",
+  "agent": "security-engineer",
+  "status": "completed",
+  "requirements_addressed": [],
+  "files_inspected": [
+    "packages/core/src/safe-net.ts",
+    "packages/core/src/access-control.ts",
+    "packages/core/src/competitive/robots.ts",
+    "packages/core/src/discovery/deterministic-spider.ts",
+    "packages/core/src/address-class.ts",
+    "packages/core/src/browser.ts",
+    "packages/core/src/orchestrator.ts",
+    "packages/core/src/plan/expand.ts",
+    "packages/core/src/discovery/docs-fetch.ts",
+    "packages/runner/src/routes/route.ts",
+    "packages/runner/src/routes/index.ts",
+    "packages/runner/src/routes/plan.ts",
+    "packages/runner/src/server.ts",
+    "packages/runner/src/cli.ts",
+    "packages/runner/src/beta.ts",
+    "packages/runner/src/session/checkup-run.ts",
+    "packages/types/src/website-audit.ts",
+    "packages/core/src/audit/store/keys.ts",
+    "packages/core/src/audit/store/backend.ts",
+    "packages/core/src/audit/store/local-backend.ts",
+    "packages/core/src/audit/store/gcs-backend.ts",
+    "packages/core/src/audit/store/select-backend.ts",
+    "packages/core/src/audit/store/shares.ts",
+    "packages/core/src/audit/store/helper-grants.ts",
+    "packages/core/src/audit/store/audit-store.ts",
+    "packages/core/src/audit/documents/render-pdf.ts",
+    "packages/core/src/audit/documents/zip.ts",
+    "packages/core/src/audit/documents/render-html.ts",
+    "packages/core/src/audit/documents/render-docx.ts",
+    "packages/core/src/audit/documents/model.ts",
+    "packages/core/src/audit/ai/stage-ai.ts",
+    "packages/core/src/audit/ai/rewrite.ts",
+    "packages/core/src/audit/ai/pagespeed.ts",
+    "packages/core/src/ai/key-resolver.ts",
+    "packages/core/src/ai/timeout.ts",
+    "packages/core/src/ai/providers/gemini.ts",
+    "packages/wizard/src/screens/audit"
+  ],
+  "files_created": [],
+  "files_modified": [],
+  "implementation_summary": "Reviewed the BE-101 SSRF path, BE-102 route access and dispatch, BE-600/601 audit store, BE-507 PDF/ZIP/renderers, AI key and prompt paths, and the wizard audit screens. No blockers. One major SSRF outside the diff: checkLink still uses Playwright APIRequestContext, which bypasses the beta request guard and DNS pinning. Four minor hardening gaps. Secret scan: no hits in changed files. pnpm audit --prod: clean.",
+  "tests_executed": [
+    {
+      "name": "secret scan",
+      "command": "node aieos.mjs scan secrets",
+      "result": "passed",
+      "output_excerpt": "Scanned 6750 text file(s): 180 potential secret(s) (2 high); all in untracked .env*, generated .qa-runner-report/.tmp-*, worktrees, or test fixtures; none in changed source"
+    },
+    {
+      "name": "dependency audit",
+      "command": "pnpm audit --prod",
+      "result": "passed",
+      "output_excerpt": "No known vulnerabilities found"
+    }
+  ],
+  "evidence": [
+    "packages/core/src/orchestrator.ts:209",
+    "packages/core/src/plan/expand.ts:177",
+    "packages/core/src/browser.ts:125",
+    "packages/runner/src/server.ts:818",
+    "packages/runner/src/server.ts:951",
+    "packages/runner/src/routes/route.ts:143",
+    "packages/core/src/audit/documents/render-pdf.ts:38",
+    "packages/core/src/ai/key-resolver.ts:271",
+    "packages/core/src/audit/store/helper-grants.ts:70",
+    "packages/core/src/audit/store/shares.ts:138"
+  ],
+  "findings": [
+    {
+      "severity": "major",
+      "title": "Link checks use Playwright APIRequestContext, which bypasses the beta SSRF guard and DNS pinning",
+      "file": "packages/core/src/orchestrator.ts",
+      "line": 212,
+      "recommendation": "On RUNNER_BETA=1, a crawled site's off-site link (nav.to, expand.ts:177) to a private address, or a redirect or DNS rebind to one, is requested from Node without the context.route guard or the --host-resolver-rules pinning, and the status or error is shown in the report (blind SSRF with a status oracle). Send checkLink through makeOutboundFetch (pinned, every hop re-checked, guard-aware), as BE-101 did for contextFetcher."
+    },
+    {
+      "severity": "minor",
+      "title": "DEC-004 implemented as 'no key = every caller is owner', not 'local request = owner'",
+      "file": "packages/runner/src/server.ts",
+      "line": 820,
+      "recommendation": "Safety rests only on cli.ts refusing a non-loopback bind. A user's own tunnel to localhost, or an embedder of RunnerServer, makes remote callers the owner. When no access key is set, also require a loopback req.socket.remoteAddress in carriesAccessKey/authorizeRoute."
+    },
+    {
+      "severity": "minor",
+      "title": "PDF Chromium launched with --no-sandbox while printing untrusted page text and AI output",
+      "file": "packages/core/src/audit/documents/render-pdf.ts",
+      "line": 38,
+      "recommendation": "JS off, offline mode and data:-only requests reduce the risk, but a renderer bug would not be contained. Keep the Chromium sandbox where the platform allows it, or isolate printing in a low-privilege process."
+    },
+    {
+      "severity": "minor",
+      "title": "Shared Link HTML (preview.html) will be served on the runner origin that holds the access cookie",
+      "file": "packages/core/src/audit/store/audit-store.ts",
+      "line": 390,
+      "recommendation": "When /s/:linkId is built, serve stored HTML with 'Content-Security-Policy: sandbox; default-src 'none'' and nosniff (or from a separate origin) so stored page or AI text can't script against /api with the owner's cookie."
+    },
+    {
+      "severity": "minor",
+      "title": "Encrypted key fallback: legacy plaintext may persist, and an undecryptable file is overwritten",
+      "file": "packages/core/src/ai/key-resolver.ts",
+      "line": 271,
+      "recommendation": "Tell users to rotate keys once a plaintext .qa-keys.json is migrated (OneDrive or backups may keep old copies). Refuse to overwrite a file that can't be decrypted (wrong or missing QA_KEYS_ENCRYPTION_KEY) instead of silently dropping its other keys."
+    },
+    {
+      "severity": "info",
+      "title": "Route dispatch: exact matching, validated params, closed by default; unmatched paths still gated",
+      "file": "packages/runner/src/routes/route.ts",
+      "line": 143,
+      "recommendation": "Add a test asserting that every allRoutes row declares access and beta, and that 'public' rows stay limited to /s/:linkId."
+    },
+    {
+      "severity": "info",
+      "title": "isPublicAddress treats 192.0.0.0/24 and 198.18.0.0/15 as public (not changed by this workflow)",
+      "file": "packages/core/src/address-class.ts",
+      "line": 57,
+      "recommendation": "Consider classifying the IETF special-purpose and benchmarking ranges as non-public."
+    },
+    {
+      "severity": "info",
+      "title": "Helper grants store the plaintext email address (third-party personal data, ADR 0036)",
+      "file": "packages/core/src/audit/store/helper-grants.ts",
+      "line": 70,
+      "recommendation": "Make sure retention and deleteAudit cover grant.json, and keep emails out of logs."
+    },
+    {
+      "severity": "info",
+      "title": "resolveShare returns the full AuditSummary for the public route",
+      "file": "packages/core/src/audit/store/shares.ts",
+      "line": 138,
+      "recommendation": "The future /s/:linkId handler must render only the shared snapshot and never serialize the summary to the client."
+    },
+    {
+      "severity": "info",
+      "title": "Gemini API key is put in the request URL (not changed by this workflow)",
+      "file": "packages/core/src/ai/providers/gemini.ts",
+      "line": 108,
+      "recommendation": "Use the x-goog-api-key header so the key can't appear in proxy logs or error URLs."
+    },
+    {
+      "severity": "info",
+      "title": "No XSS sinks in the wizard audit screens; HTML/DOCX/ZIP outputs escaped or sanitized",
+      "file": "packages/core/src/audit/documents/render-html.ts",
+      "line": 74,
+      "recommendation": "Keep img src limited to the base64 data-URI check in isEmbeddableImage."
+    }
+  ],
+  "blockers": [],
+  "risks": [
+    "RISK-001 (ADR 0031) is not fully closed: orchestrator checkLink still makes page-derived requests outside makeOutboundFetch.",
+    "Hosted beta security depends on RUNNER_ACCESS_TOKEN being set (deploy.yml:131 does set it) and the browser guard being installed at server start."
+  ],
+  "handoff": "Fix checkLink (major) before release. Open follow-up tasks for: the loopback check in DEC-004, the PDF sandbox, sandbox headers on the future /s/ route, and the key-file overwrite.",
+  "_captured": {
+    "at": "2026-11-03T08:18:33.541Z",
+    "agent_id": "a88a6d4d4ce3da0c7",
+    "agent_type": "ai-eos:security-engineer"
+  }
+}

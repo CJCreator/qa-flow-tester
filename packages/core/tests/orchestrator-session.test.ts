@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import path from 'path';
-import { promises as fs } from 'fs';
+import os from 'os';
+import { promises as fs, mkdtempSync } from 'fs';
 import { server as fixtureServer } from '../../../fixtures/test-app/server.js';
 import { FlowTestOrchestrator } from '../src/orchestrator.js';
 import { PreFlightChecker, SignInFailedError, type PreFlightResult } from '../src/preflight.js';
@@ -11,7 +12,9 @@ import type { TestCase, ProductProfile } from '@qa/types';
 describe('Orchestrator session awareness (T-114)', () => {
   let port: number;
   let fixtureUrl: string;
-  const outputDir = path.join(process.cwd(), '.tmp-orchestrator-session-test');
+  // A new folder per run, outside the repository: inside OneDrive the sync client picks up every file a run
+  // writes, competes with Chromium for the CPU and holds files open so the clean-up fails.
+  const outputDir = mkdtempSync(path.join(os.tmpdir(), 'qa-test-orchestrator-session-'));
 
   beforeAll(async () => {
     await new Promise<void>((resolve) => {
@@ -29,7 +32,7 @@ describe('Orchestrator session awareness (T-114)', () => {
 
   afterAll(async () => {
     await new Promise<void>((resolve) => fixtureServer.close(() => resolve()));
-    await fs.rm(outputDir, { recursive: true, force: true }).catch(() => {});
+    await fs.rm(outputDir, { recursive: true, force: true, maxRetries: 5 }).catch(() => {});
   });
 
   const testProfile: ProductProfile = {
@@ -203,10 +206,10 @@ describe('Orchestrator session awareness (T-114)', () => {
   it('/lab/forbidden as a role with an expected-denied rule: Permission Matrix receives status 403', async () => {
     await fetch(`${fixtureUrl}/lab/reset`, { method: 'POST' });
 
-    const matrixCSV = `Target,manager\n/lab/forbidden,deny`;
+    // The rule the CSV `Target,manager\n/lab/forbidden,deny` parses to: the profile holds a parsed matrix.
     const profileWithMatrix: ProductProfile = {
       ...testProfile,
-      permissionMatrix: matrixCSV,
+      permissionMatrix: [{ target: '/lab/forbidden', roles: { manager: 'deny' } }],
     };
 
     const spy = vi.spyOn(PermissionMatrixChecker.prototype, 'checkAccess');

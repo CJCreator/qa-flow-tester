@@ -4,7 +4,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { FlowTestOrchestrator } from '../src/orchestrator.js';
 import type { OrchestratorEvent } from '../src/orchestrator.js';
-import type { TestCase, TestStep } from '@qa/types';
+import type { TestCase, TestCaseStep } from '@qa/types';
 
 let port = 0;
 const outputDir = path.join(process.cwd(), '.tmp-missing-element-report');
@@ -56,7 +56,7 @@ afterAll(async () => {
   await fs.rm(outputDir, { recursive: true, force: true }).catch(() => {});
 });
 
-async function runSteps(startPage: string, steps: TestStep[], stepTimeoutMs?: number) {
+async function runSteps(startPage: string, steps: TestCaseStep[], stepTimeoutMs?: number) {
   const testCase: TestCase = {
     id: 'TC-MISSING-1',
     flowId: 'missing-flow',

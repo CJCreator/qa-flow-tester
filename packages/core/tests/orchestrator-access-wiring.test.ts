@@ -1,4 +1,5 @@
-import { describe, it, expect, afterAll } from 'vitest';
+import { describe, it, expect, afterAll, afterEach, vi } from 'vitest';
+import { defaultNetDeps } from '../src/safe-net.js';
 import path from 'path';
 import { promises as fs } from 'fs';
 import { FlowTestOrchestrator } from '../src/orchestrator.js';
@@ -8,6 +9,9 @@ import type { ProductProfile } from '@qa/types';
 // Browser-free: the browser manager and sign-in checker are stubbed; only plain GETs are answered.
 describe('orchestrator runs the access checks (ADR 0030)', () => {
   const outputDir = path.join(process.cwd(), '.tmp-orchestrator-access-wiring');
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
   afterAll(async () => {
     await fs.rm(outputDir, { recursive: true, force: true }).catch(() => {});
   });
@@ -37,18 +41,19 @@ describe('orchestrator runs the access checks (ADR 0030)', () => {
         throw new Error('no browser in this test');
       },
       close: async () => {},
-      request: {
-        get: async (url: string) => {
-          requests.push({ state, url });
-          // Every state is served the same page, which names alice: signed out sees it (open page),
-          // and bob sees alice's name (isolation).
-          return {
-            headers: () => ({}),
-            status: () => 200,
-            text: async () => '<main>Account for alice-user</main>',
-          };
-        },
-      },
+      // The access fetcher sends the context's cookies through the pinned outbound path; the cookie
+      // value tells the fake network which state asked.
+      cookies: async () => (state === 'signed-out' ? [] : [{ name: 'state', value: state }]),
+    });
+
+    // Every state is served the same page, which names alice: signed out sees it (open page),
+    // and bob sees alice's name (isolation).
+    vi.spyOn(defaultNetDeps, 'lookup').mockResolvedValue(['93.184.216.34']);
+    vi.spyOn(defaultNetDeps, 'connect').mockImplementation(async (req) => {
+      const cookie = req.headers['Cookie'] ?? req.headers['cookie'] ?? '';
+      const m = /state=([^;]+)/.exec(cookie);
+      requests.push({ state: m ? m[1] : 'signed-out', url: req.url.toString() });
+      return { status: 200, headers: {}, body: '<main>Account for alice-user</main>' };
     });
 
     const orchestrator = new FlowTestOrchestrator();

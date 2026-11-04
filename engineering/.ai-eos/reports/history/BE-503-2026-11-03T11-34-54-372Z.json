@@ -1,0 +1,46 @@
+{
+  "task_id": "BE-503",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-018",
+    "REQ-020"
+  ],
+  "files_inspected": [
+    "packages/core/src/audit/documents/structure.ts",
+    "packages/core/src/audit/documents/content.ts",
+    "packages/core/src/audit/documents/findings.ts",
+    "packages/core/tests/audit-doc-builders.test.ts"
+  ],
+  "files_created": [],
+  "files_modified": [
+    "packages/core/src/audit/documents/structure.ts",
+    "packages/core/src/audit/documents/content.ts",
+    "packages/core/src/audit/documents/findings.ts",
+    "packages/core/tests/audit-doc-builders.test.ts"
+  ],
+  "implementation_summary": "Structure, Content and Findings builders set AuditDoc.language to lookup.requested ?? lookup.language; wording and labels still come from the fallback lookup. Updated the 'te' fallback test to expect doc.language 'te' with English wording, and added a 'hi' Structure test asserting renderHtml contains lang=\"en\" and 'Beta translation'.",
+  "tests_executed": [
+    {
+      "name": "audit-doc-builders + audit-doc-render",
+      "command": "CI=1 pnpm exec vitest run packages/core/tests/audit-doc-builders.test.ts packages/core/tests/audit-doc-render.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 2 passed (2); Tests 56 passed (56)"
+    }
+  ],
+  "tests_proposed": [],
+  "evidence": [
+    "structure.ts:172, content.ts:229, findings.ts:148 changed",
+    "new test: a fallback request keeps the requested language so the HTML carries the beta note"
+  ],
+  "blockers": [],
+  "risks": [
+    "Any other consumer of AuditDoc.language that assumed the fallback language now receives the requested one; the renderers already handle this."
+  ],
+  "handoff": "AuditDoc.language is now the requested language (e.g. 'hi') while wording stays English on fallback. Renderers derive html lang from labelsFor(doc.language).language and add the beta note. QA-711 can re-verify.",
+  "_captured": {
+    "at": "2026-11-03T11:34:54.372Z",
+    "agent_id": "ab067d0d0a5831fff",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

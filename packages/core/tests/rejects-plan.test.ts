@@ -130,7 +130,7 @@ describe('deriveRejects', () => {
           id: 'pagetest:/lab/signup:1',
           name: 'Sign up',
           role: 'visitor',
-          steps: [{ action: 'click', selector: '#go' }],
+          steps: [{ action: 'click', selector: '#go', name: 'Go' }],
           source: 'ai',
           docSource,
         },

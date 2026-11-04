@@ -1,0 +1,68 @@
+{
+  "task_id": "BE-500",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-020"
+  ],
+  "files_inspected": [
+    "packages/types/src/website-audit.ts",
+    "packages/types/src/route-telemetry.ts",
+    "packages/types/src/aspects.ts",
+    "packages/core/tests/helpers/issues-fixtures.ts",
+    "packages/core/tests/access-control.test.ts",
+    "packages/core/tsconfig.json",
+    "vitest.config.ts",
+    "engineering/plan.md"
+  ],
+  "files_created": [
+    "packages/core/src/audit/documents/edits.ts",
+    "packages/core/tests/helpers/audit-doc-fixture.ts",
+    "packages/core/tests/audit-doc-edits.test.ts"
+  ],
+  "files_modified": [],
+  "implementation_summary": "Pure edit-overlay module. validateAuditEditsPatch checks the AuditEditsPatch shape and returns per-field errors for unknown keys, wrong types, text over the exported caps, control characters, malformed urlPath or ids, misused reset, and a page in both removePages and restorePages. mergeEditsPatch returns a new overlay: finding edits merge field by field, Section and recommendation edits are replaced, reset removes an edit, restorePages brings a page back, Proposal inputs are set or cleared, and editedAt and updatedAt are set. buildEditedView builds EditedAuditView { result, contents, removedPages, proposal, overlay } from copies. Removed pages are dropped from every structured field: pages, hierarchy (children re-parented), links, leavingSite, internalLinking, findings and their pages, roadmap, marketing and area evidence. Roadmap items left without findings are dropped. Finding text, Section text (page text and offsets rebuilt) and recommendation action are replaced by their edits. Shared fixture: an AuditResult and PageContent set with English and Tamil pages.",
+  "tests_executed": [
+    {
+      "name": "edit overlay unit tests",
+      "command": "CI=1 pnpm exec vitest run packages/core/tests/audit-doc-edits.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 23 passed (23)"
+    },
+    {
+      "name": "core type-check",
+      "command": "cd packages/core && pnpm exec tsc --noEmit -p tsconfig.json",
+      "result": "passed",
+      "output_excerpt": "no errors"
+    },
+    {
+      "name": "test and fixture type-check",
+      "command": "cd packages/core && pnpm exec tsc --noEmit --strict --module nodenext --moduleResolution nodenext --target es2022 --skipLibCheck --types node tests/audit-doc-edits.test.ts",
+      "result": "passed",
+      "output_excerpt": "no errors"
+    }
+  ],
+  "tests_proposed": [
+    "Route-level test (runner task): PATCH refuses removing the start page, and refuses ids, pages or Sections not in the version, with 400 ERR_INVALID_REQUEST",
+    "Property test: random Section edits keep every non-edited Section's text identical"
+  ],
+  "evidence": [
+    "packages/core/src/audit/documents/edits.ts: validateAuditEditsPatch, mergeEditsPatch, buildEditedView, emptyOverlay",
+    "packages/core/tests/audit-doc-edits.test.ts: 'REQ-020 AC-1', 'REQ-020 AC-2', 'REQ-020 AC-3', reset/restore and validation tests",
+    "vitest output: Tests 23 passed (23)"
+  ],
+  "blockers": [],
+  "risks": [
+    "The start page (hierarchy root) and paths not in the version are silently left out of removedPages. The PATCH route should refuse them explicitly.",
+    "coverage (found, reached, skipped, routes) and free text (finding detail and target) are not rewritten for removed pages. Only structured fields are.",
+    "internalLinking.inboundCounts are not recalculated. Only the removed page's own entry is deleted; counts that included links from it stay.",
+    "Pages covered by a removed Sample Page lose sampleUrlPath. Document builders must handle a covered page with no sample.",
+    "Validation caps are new contract values: title 300, detail and suggestion 5000, Section 20000, path 2048, 500 entries per list. The wizard should match them."
+  ],
+  "handoff": "Document builders call buildEditedView(result, contents, overlay) and read view.result, view.contents (Section text already edited; read it with sectionText), view.proposal and view.removedPages. The runner PATCH route runs validateAuditEditsPatch, checks ids, pages and Sections against the version (and refuses the start page), then calls mergeEditsPatch(overlay, value, new Date()). Fixture exports: auditDocResult(), auditDocContents(), fixtureSectionText(), PATHS, FIXTURE_AUDIT_ID, FIXTURE_URL; each call returns a fresh copy.",
+  "_captured": {
+    "at": "2026-11-03T07:08:28.413Z",
+    "agent_id": "a7164831c7ee88c86",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

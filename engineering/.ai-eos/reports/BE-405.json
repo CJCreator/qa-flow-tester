@@ -1,0 +1,69 @@
+{
+  "task_id": "BE-405",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-012",
+    "REQ-011"
+  ],
+  "files_inspected": [
+    "packages/core/src/ai/key-resolver.ts",
+    "packages/runner/src/beta.ts",
+    "packages/core/tests/key-resolver-encryption.test.ts",
+    "packages/runner/tests/beta.test.ts",
+    "packages/core/src/index.ts",
+    "vitest.config.ts"
+  ],
+  "files_created": [
+    "packages/core/tests/key-resolver-service-key.test.ts",
+    "packages/runner/tests/beta-service-keys.test.ts"
+  ],
+  "files_modified": [
+    "packages/core/src/ai/key-resolver.ts",
+    "packages/runner/src/beta.ts"
+  ],
+  "implementation_summary": "key-resolver.ts: added KeyResolver.removeServiceKey(service). It checks the service name, removes the keychain entry and ignores errors when no keychain is available. If the encrypted .qa-keys.json holds that account, it drops the entry and rewrites the file through the existing encrypted, serialized updateFallbackFile, so other entries are kept and the file is never written in plain text. If there is no entry, no file is created. SecretStore gained an optional delete(account). OsKeychainStore.delete uses Entry.deleteCredential or deletePassword when present, otherwise setPassword(''). Stores without delete are cleared with set(account, ''). The helper serviceAccount(service) is now exported, so it is also part of the @qa/core public API. beta.ts: SessionKeyResolver now overrides saveServiceKey, resolveServiceKey and removeServiceKey to use only the session secret store. They never touch the keychain, the file or environment variables, so a beta visitor never gets PAGESPEED_API_KEY. Saving or removing outside a session (or in a forgotten one) throws 'No session' and writes nothing. Empty keys and unknown service names are rejected.",
+  "tests_executed": [
+    {
+      "name": "CHK-BE-405-UNIT task scope",
+      "command": "CI=1 pnpm exec vitest run packages/core/tests/key-resolver-service-key.test.ts packages/core/tests/key-resolver-encryption.test.ts packages/runner/tests/beta-service-keys.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 3 passed (3); Tests 26 passed (26)"
+    },
+    {
+      "name": "core type-check",
+      "command": "pnpm exec tsc --noEmit -p packages/core/tsconfig.json",
+      "result": "passed",
+      "output_excerpt": "no errors"
+    },
+    {
+      "name": "runner type-check after rebuilding @qa/core dist",
+      "command": "pnpm --filter @qa/core build && pnpm exec tsc --noEmit -p packages/runner/tsconfig.json",
+      "result": "passed",
+      "output_excerpt": "no errors (before the core rebuild: TS2305 serviceAccount missing from stale dist, plus server.ts(1077) matchRoute not found, which is outside my ownership and was gone after the rebuild)"
+    }
+  ],
+  "tests_proposed": [
+    "Integration: the AuditSettingsUpdate pagespeedKey = null route calls removeServiceKey (owner) and the session-only override (beta), owned by the route task.",
+    "Manual: OsKeychainStore.delete against a real OS keychain to confirm which @napi-rs/keyring delete method is present."
+  ],
+  "evidence": [
+    "packages/core/src/ai/key-resolver.ts: SecretStore.delete?, OsKeychainStore.delete, KeyResolver.removeServiceKey, export function serviceAccount",
+    "packages/runner/src/beta.ts: SessionKeyResolver.saveServiceKey / resolveServiceKey / removeServiceKey",
+    "packages/runner/tests/beta-service-keys.test.ts: spies on fs.promises writeFile/rename/mkdir/appendFile and OsKeychainStore get/set assert none are called; PAGESPEED_API_KEY set in env and resolveServiceKey returns null",
+    "vitest: 3 files, 26 tests passed"
+  ],
+  "blockers": [],
+  "risks": [
+    "OsKeychainStore.delete duck-types the @napi-rs/keyring Entry (deleteCredential, then deletePassword, then setPassword('')) because node_modules could not be read to confirm the API. Errors are ignored in removeServiceKey, so a missing method cannot break removal of the file entry. A reviewer should confirm against the installed keyring version.",
+    "New public export serviceAccount from @qa/core (additive). Runner type-checks only after @qa/core is rebuilt (build order: core before runner). I rebuilt core dist locally.",
+    "SessionKeyResolver.removeServiceKey throws outside a session (consistent with save). Callers in beta routes must run inside enterSession.",
+    "Beta service keys report source 'keychain' (same convention as the existing SessionKeyResolver AI-key methods), even though they are memory-only."
+  ],
+  "handoff": "Use KeyResolver.removeServiceKey('pagespeed') for AuditSettingsUpdate.pagespeedKey = null. After it runs, resolveServiceKey falls back to PAGESPEED_API_KEY or null. In beta mode, use the SessionKeyResolver instance: save, resolve and remove are session-only, never read env or disk, and throw 'No session' outside a request session. That makes it safe for a beta route to save service keys (ADR 0034 precondition). No migration or dependency change was made. Rollback: revert the two source files and delete the two test files.",
+  "_captured": {
+    "at": "2026-11-03T07:47:26.352Z",
+    "agent_id": "a73e5a2b41baf7e70",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

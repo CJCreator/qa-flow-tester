@@ -1,0 +1,42 @@
+{
+  "evidence_id": "EV-0264",
+  "check_id": "CHK-BE-502-UNIT",
+  "name": "Improvement Roadmap unit tests",
+  "category": "unit",
+  "requirement_ids": [
+    "REQ-026"
+  ],
+  "task_ids": [
+    "BE-502"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/audit-doc-roadmap.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0264.log",
+  "log_sha256": "25d9915d755383cdb9fe4d95d536fb0e1e09f3f482e0427020c94204d085c70c",
+  "started_at": "2026-11-04T03:39:54.776Z",
+  "finished_at": "2026-11-04T03:40:13.842Z",
+  "duration_ms": 19044,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:4aefa937450552108ba70afa3103b87f87908284522b356378fba9284a2b5d84",
+  "concurrent_tasks": [
+    "QA-712"
+  ],
+  "paths": [
+    "packages/core/src/audit/documents/**",
+    "packages/core/tests/audit-doc-roadmap.test.ts",
+    "packages/core/tests/helpers/audit-doc-fixture.ts",
+    "packages/types/src/website-audit.ts"
+  ],
+  "paths_fingerprint": "git-paths:04f408f445ad4ea0ec84d4e1f88f18a198ec73432aa53ea189e49d38f884544d",
+  "scoped_fingerprint": "git:d43e252e7725764cb4edf6b0f30f98b29b73dd58767df07b17c5131fb15af7ea",
+  "excluded_owned": [
+    "packages/wizard/tests/audit-languages-browser.test.ts"
+  ]
+}

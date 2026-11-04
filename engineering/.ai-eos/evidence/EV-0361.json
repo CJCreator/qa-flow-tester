@@ -1,0 +1,38 @@
+{
+  "evidence_id": "EV-0361",
+  "check_id": "CHK-QA-707-AUTH-CRAWL",
+  "name": "auth-crawl end-to-end file",
+  "category": "integration",
+  "requirement_ids": [
+    "REQ-053",
+    "REQ-046"
+  ],
+  "task_ids": [
+    "QA-707"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/auth-crawl-e2e.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0361.log",
+  "log_sha256": "633c51a6ef93128eecfb93b162c7fa3a91f8d5bebc233efb3964eec44663fd83",
+  "started_at": "2026-11-04T07:26:54.753Z",
+  "finished_at": "2026-11-04T07:31:56.627Z",
+  "duration_ms": 301874,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:a106b3aa880f48fb3fccd478c4e7bbc2b0039a0fd1ac734eacd1960d53185922",
+  "concurrent_tasks": [],
+  "paths": [
+    "fixtures/test-app/**",
+    "packages/checkers/src/**",
+    "packages/core/src/**",
+    "packages/core/tests/auth-crawl-e2e.test.ts",
+    "packages/types/src/**"
+  ],
+  "paths_fingerprint": "git-paths:1e7f0addb62a5327707cda5290b95d09e1fa04a750571518f1e3a9d7c916a10b"
+}

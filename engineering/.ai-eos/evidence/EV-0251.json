@@ -1,0 +1,35 @@
+{
+  "evidence_id": "EV-0251",
+  "check_id": "CHK-BE-302-UNIT",
+  "name": "page language detection unit tests",
+  "category": "unit",
+  "requirement_ids": [
+    "REQ-013"
+  ],
+  "task_ids": [
+    "BE-302"
+  ],
+  "command": "pnpm exec vitest run packages/core/tests/audit-language.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0251.log",
+  "log_sha256": "8c5d208db07ab4496d4a95f5e322504d5d0e152c77642dd50ef29bc579e0d087",
+  "started_at": "2026-11-04T03:37:50.655Z",
+  "finished_at": "2026-11-04T03:38:01.298Z",
+  "duration_ms": 10643,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:4aefa937450552108ba70afa3103b87f87908284522b356378fba9284a2b5d84",
+  "concurrent_tasks": [],
+  "paths": [
+    "packages/core/src/audit/analysis/language.ts",
+    "packages/core/tests/audit-language.test.ts",
+    "packages/types/src/website-audit.ts"
+  ],
+  "paths_fingerprint": "git-paths:b0ed865c58baa33489582f501a424443d1376f7865b5b2fb5079ef7556be2fee"
+}

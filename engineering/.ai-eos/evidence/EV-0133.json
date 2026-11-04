@@ -1,0 +1,69 @@
+{
+  "evidence_id": "EV-0133",
+  "check_id": "CHK-BE-602-UNIT",
+  "name": "saved audit and Shortlist route tests",
+  "category": "integration",
+  "requirement_ids": [
+    "REQ-028",
+    "REQ-023"
+  ],
+  "task_ids": [
+    "BE-602"
+  ],
+  "command": "pnpm exec vitest run packages/runner/tests/audit-store-routes.test.ts packages/runner/tests/audit-shortlist-routes.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  2 passed (2)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0133.log",
+  "log_sha256": "17ad18888f10dcb344b14c7811ce12db7936c3897e63a82cdc526ac2dc50c388",
+  "started_at": "2026-11-03T11:35:47.369Z",
+  "finished_at": "2026-11-03T11:36:25.893Z",
+  "duration_ms": 38524,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:e1a55a04b71d2cc5c329fd2617505a52695e27acf3531089c7133fa0554e80c6",
+  "concurrent_tasks": [
+    "BE-410",
+    "BE-508",
+    "BE-604",
+    "BE-605",
+    "BE-606",
+    "QA-711"
+  ],
+  "paths": [
+    "packages/core/src/audit/store/**",
+    "packages/runner/src/routes/audit-shortlist.ts",
+    "packages/runner/src/routes/audit-store.ts",
+    "packages/runner/src/routes/body.ts",
+    "packages/runner/src/routes/route.ts",
+    "packages/runner/tests/audit-shortlist-routes.test.ts",
+    "packages/runner/tests/audit-store-routes.test.ts",
+    "packages/types/src/website-audit.ts"
+  ],
+  "paths_fingerprint": "git-paths:6391096fb13e45506256e919b825d9d6d560340b2510f29da0ddcbcd89afcc95",
+  "scoped_fingerprint": "git:ef104783bf5e21c58075438888983fa0e0e84f749bd42ab5cdf889fe722acab3",
+  "excluded_owned": [
+    "packages/core/src/audit/preview/**",
+    "packages/core/tests/audit-languages-e2e.test.ts",
+    "packages/core/tests/audit-preview-sanitize.test.ts",
+    "packages/core/tests/audit-preview.test.ts",
+    "packages/runner/src/helpers/**",
+    "packages/runner/src/routes/audit-ai.ts",
+    "packages/runner/src/routes/audit-helpers.ts",
+    "packages/runner/src/routes/audit-preview.ts",
+    "packages/runner/src/routes/audit-settings.ts",
+    "packages/runner/src/routes/audit-share.ts",
+    "packages/runner/tests/audit-ai-routes.test.ts",
+    "packages/runner/tests/audit-helpers-routes.test.ts",
+    "packages/runner/tests/audit-preview-routes.test.ts",
+    "packages/runner/tests/audit-settings-routes.test.ts",
+    "packages/runner/tests/audit-share-routes.test.ts",
+    "packages/runner/tests/helper-access.test.ts",
+    "packages/runner/tests/helper-session.test.ts",
+    "packages/runner/tests/helper-token.test.ts"
+  ]
+}

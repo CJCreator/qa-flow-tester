@@ -1,0 +1,54 @@
+{
+  "evidence_id": "EV-0307",
+  "check_id": "CHK-QA-500-FLOW",
+  "name": "Audit Documents end-to-end flow (runner + Chromium)",
+  "category": "integration",
+  "requirement_ids": [
+    "REQ-018",
+    "REQ-019",
+    "REQ-020",
+    "REQ-021",
+    "REQ-022",
+    "REQ-025",
+    "REQ-026",
+    "REQ-027"
+  ],
+  "task_ids": [
+    "QA-500"
+  ],
+  "command": "pnpm exec vitest run packages/runner/tests/audit-documents-flow.test.ts",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; Test Files  1 passed (1)",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0307.log",
+  "log_sha256": "fa95d744629764878e6334d689336dba6165cadd0765ffc3326d4cea916af084",
+  "started_at": "2026-11-04T04:27:55.657Z",
+  "finished_at": "2026-11-04T04:28:49.264Z",
+  "duration_ms": 53607,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:e61218db9e8d8c561cea24506b4abf2d4b5610ba1ee63dac042e15d331d74ae4",
+  "concurrent_tasks": [
+    "QA-711"
+  ],
+  "paths": [
+    "packages/core/src/audit/**",
+    "packages/core/tests/helpers/audit-doc-fixture.ts",
+    "packages/runner/src/routes/audit-documents.ts",
+    "packages/runner/src/routes/audit-export.ts",
+    "packages/runner/src/routes/audit-settings.ts",
+    "packages/runner/src/routes/index.ts",
+    "packages/runner/src/server.ts",
+    "packages/runner/tests/audit-documents-flow.test.ts",
+    "packages/types/src/website-audit.ts"
+  ],
+  "paths_fingerprint": "git-paths:3c9e9478a9189f2851d1ed6e8b88d882d8324a09b010234c94a320dd8b5bb7a4",
+  "scoped_fingerprint": "git:edb0d1a07a84360a133b18d824a2735233cca3c9d09549c2515fb656184b7d2f",
+  "excluded_owned": [
+    "packages/core/tests/audit-languages-e2e.test.ts"
+  ]
+}

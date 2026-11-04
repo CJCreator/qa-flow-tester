@@ -1,0 +1,33 @@
+{
+  "evidence_id": "EV-0350",
+  "check_id": "CHK-CORE-BUILD",
+  "name": "build core and its dependencies",
+  "category": "build",
+  "requirement_ids": [
+    "REQ-037",
+    "REQ-044",
+    "REQ-032"
+  ],
+  "task_ids": [
+    "BE-708",
+    "BE-709",
+    "BE-710"
+  ],
+  "command": "pnpm --filter \"@qa/core...\" run build",
+  "cwd": "C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "timed_out": false,
+  "actual_result": "exit code 0; packages/core build$ tsc · packages/core build: Done",
+  "failure_details": null,
+  "log_path": "engineering/.ai-eos/evidence/logs/EV-0350.log",
+  "log_sha256": "d9917dee39a0b0973158d366e642a460c1c1f5ba797eebf53519bb5fb5c6ec15",
+  "started_at": "2026-11-04T06:02:44.879Z",
+  "finished_at": "2026-11-04T06:02:58.973Z",
+  "duration_ms": 14094,
+  "recorded_by": "aieos check run",
+  "recovery_id": null,
+  "attempt": null,
+  "tree_fingerprint": "git:69fb226175839158083b8bd4d47e58c478a2d7d5c1e3bc5d15c27fbe743460cc",
+  "concurrent_tasks": []
+}

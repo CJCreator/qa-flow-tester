@@ -1,0 +1,75 @@
+{
+  "task_id": "BE-601",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-028",
+    "REQ-023",
+    "REQ-033",
+    "REQ-024"
+  ],
+  "files_inspected": [
+    "packages/core/src/audit/store/backend.ts",
+    "packages/core/src/audit/store/local-backend.ts",
+    "packages/core/src/audit/store/gcs-backend.ts",
+    "packages/core/src/audit/store/select-backend.ts",
+    "packages/core/tests/audit-store-backend.test.ts",
+    "packages/types/src/website-audit.ts",
+    "docs/adr/0036-hosted-audit-storage-and-shared-links.md"
+  ],
+  "files_created": [
+    "packages/core/src/audit/store/index.ts",
+    "packages/core/src/audit/store/keys.ts",
+    "packages/core/src/audit/store/audit-store.ts",
+    "packages/core/src/audit/store/shortlist.ts",
+    "packages/core/src/audit/store/shares.ts",
+    "packages/core/src/audit/store/helper-grants.ts",
+    "packages/core/tests/audit-store.test.ts",
+    "packages/core/tests/audit-store-shortlist.test.ts",
+    "packages/core/tests/audit-store-shares.test.ts",
+    "packages/core/tests/audit-store-helper-grants.test.ts"
+  ],
+  "files_modified": [],
+  "implementation_summary": "keys.ts: key layout plus pattern checks that throw AuditStoreError('invalid-key') before any I/O. Each audit is under audits/<id>/ (audit.json, shortlist.json, shares/<linkId>/{link.json,snapshot.html}, helpers/<sha256>/grant.json) and each version under audits/<id>/v<n>/ (version.json, result.json, <name>.json, files). The only cross-audit objects are share-index/<linkId> and helper-index/<sha256>/<auditId>/entry.json. Also new in keys.ts: AuditRecordError, with code 'invalid-input' (400) or 'not-found' (404). audit-store.ts: AuditStore class, which keeps no cache. It provides createAudit (random 128-bit base64url id, v1 running), addVersion (copies url, limits and language), updateVersion, getVersion, getAudit, listAudits (newest first; versions oldest first; includes the Shortlist entry), deleteAudit, saveResult/getResult, readVersionJson/writeVersionJson and putVersionFile/getVersionFile. Writes to one audit run one at a time through a promise queue held per backend and per audit, so two store instances on the same backend share it. Per-version writes run inside that queue and only while the version record exists, so a late write cannot bring back a deleted audit. Inputs are copied field by field, so extra fields such as tokens are dropped. shortlist.ts: ShortlistUpdate is merged so that only the fields sent change, and null clears the mark or outcome. Notes are capped at 4000 characters and the outcome note at 1000; longer text is refused, not cut. listShortlist filters by mark and by outcome. shares.ts: ids are 16 bytes from crypto.randomBytes in base64url; expiresAt is createdAt plus SHARE_LINK_DAYS; revoke sets revokedAt once. resolveShare returns {status:'open',link,audit}, {status:'gone'} or {status:'missing'}. A malformed id returns 'missing' without touching the backend. helper-grants.ts: the email is trimmed, lower-cased and checked against a regex with a 254-character limit. Permissions are a non-empty subset of HELPER_PERMISSIONS, in canonical order. The grant stored in the audit folder is the source of truth, so grantsFor ignores index entries whose grant is gone. index.ts is the barrel for the backends, keys, store, shortlist, shares and helper grants.",
+  "tests_executed": [
+    {
+      "name": "Website Audit store unit tests (CHK-BE-601-UNIT)",
+      "command": "pnpm exec vitest run packages/core/tests/audit-store.test.ts packages/core/tests/audit-store-shortlist.test.ts packages/core/tests/audit-store-shares.test.ts packages/core/tests/audit-store-helper-grants.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 4 passed (4); Tests 35 passed (35)"
+    },
+    {
+      "name": "core type-check (src only)",
+      "command": "cd packages/core && pnpm exec tsc --noEmit -p tsconfig.json",
+      "result": "passed",
+      "output_excerpt": "no output (no errors)"
+    }
+  ],
+  "tests_proposed": [
+    "Run audit-store.test.ts against an in-memory backend that behaves like the Cloud Storage backend (a key can be both an object and a folder; prefix-only deletePrefix) to confirm deletion works the same way there",
+    "Run a type-check that includes the test files (the core tsconfig covers src only)"
+  ],
+  "evidence": [
+    "packages/core/tests/audit-store.test.ts: 'REQ-028 AC-1/AC-2: after a restart ...' (new LocalAuditStoreBackend on the same folder)",
+    "packages/core/tests/audit-store.test.ts: 'deleteAudit (Q-30)' checks backend.list('audits/<id>') is empty, no share-index entry contains the id, no helper-index key contains it",
+    "packages/core/tests/audit-store.test.ts: 'refuses bad ids, versions and names before touching the backend' (spy backend records zero calls across 20 methods)",
+    "packages/core/tests/audit-store.test.ts: 'serialised writes' (Promise.all of version updates, Shortlist saves, addVersion and a grant from two store instances)",
+    "packages/core/tests/audit-store.test.ts: 'no secrets in stored audits' (sets RUNNER_ACCESS_TOKEN, GEMINI_API_KEY and GOOGLE_ID_TOKEN to fake values in env and inputs, then scans every stored object)",
+    "packages/core/tests/audit-store-shares.test.ts: 'is open until 30 days and gone at 30 days plus 1 ms (injected clock)'"
+  ],
+  "blockers": [],
+  "risks": [
+    "Shared Link tombstones: deleteAudit rewrites share-index/<linkId> as {linkId, gone:true}, with no audit id, instead of removing it, so links of a deleted audit answer 410 as ADR 0036 requires. These small entries stay forever. The AC asks that no index entry refers to the audit afterwards; a tombstone names no audit, so it is met.",
+    "Layout choice: the backend only deletes whole folders (deletePrefix, and Cloud Storage lists 'prefix/'), so any record that must be removable on its own has its own folder: shares/<linkId>/link.json, helpers/<hash>/grant.json and helper-index/<hash>/<auditId>/entry.json. The helper index is therefore a folder holding entry.json, not a single object.",
+    "listAudits and listShortlist list every key under audits/, including page files and screenshots. This can be slow on Cloud Storage with many large audits (1000 keys per list page).",
+    "The write queue is per process (in memory). Two runner instances writing to one bucket would not be serialised; ADR 0032 sets max-instances to 1.",
+    "deleteAudit is not atomic on Cloud Storage (BE-600 risk). The order is tombstones, then helper index entries, then the audit folder, so running it again finishes the job and no index ever points at a missing folder.",
+    "Generic name rules: JSON names are lower-case first part plus up to two sub-parts ('version' and 'result' are reserved). File names may not end in .json. Callers should avoid using a JSON name and a file folder with the same path."
+  ],
+  "handoff": "BE-190: export from packages/core/src/audit/store/index.ts. In the runner, call createAuditStore(selectAuditStoreBackend({ dataDir })) once. Map AuditStoreError('invalid-key') to 400 (404 for malformed :id route params, per the route patterns), AuditRecordError 'invalid-input' to 400 and 'not-found' to 404, and the other AuditStoreError codes as in BE-600. BE-604: resolveShare(linkId) gives 'missing' (404), 'gone' (410) or 'open' ({link, audit}). The snapshot key is shareSnapshotKey(auditId, linkId), which sits inside the audit folder, so deletion covers it; write it with backend.putBytes. Other groups: use writeVersionJson(id, v, 'edits'|'rewrites'|'pages/<slug>') and putVersionFile(id, v, 'preview.html'|'screenshots/<name>.png'). These are refused with not-found when the version does not exist. No migration and no new dependency: new files only.",
+  "_captured": {
+    "at": "2026-11-03T07:36:13.356Z",
+    "agent_id": "a5038b0c7056f2ea3",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

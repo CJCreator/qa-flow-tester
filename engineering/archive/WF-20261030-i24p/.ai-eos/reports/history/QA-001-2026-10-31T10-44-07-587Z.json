@@ -1,0 +1,103 @@
+{
+  "task_id": "QA-001",
+  "agent": "qa-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-003",
+    "REQ-013",
+    "REQ-034",
+    "REQ-036",
+    "REQ-044"
+  ],
+  "files_inspected": [
+    "engineering/plan.md",
+    "engineering/requirements.md",
+    "vitest.config.ts",
+    "fixtures/test-app/server.js",
+    "packages/core/tests/helpers/spec-crawl.ts",
+    "packages/core/src/competitive/robots.ts",
+    "packages/core/src/discovery/deterministic-spider.ts",
+    "packages/core/src/discovery/element-inventory.ts"
+  ],
+  "files_created": [
+    "packages/core/tests/helpers/audit-site-server.ts",
+    "packages/core/tests/audit-site-fixture.test.ts",
+    "fixtures/audit-site/index.html",
+    "fixtures/audit-site/about.html",
+    "fixtures/audit-site/gallery.html",
+    "fixtures/audit-site/seasonal-offers.html",
+    "fixtures/audit-site/404.html",
+    "fixtures/audit-site/robots.txt",
+    "fixtures/audit-site/sitemap.xml",
+    "fixtures/audit-site/services/index.html",
+    "fixtures/audit-site/services/catering.html",
+    "fixtures/audit-site/services/party-orders.html",
+    "fixtures/audit-site/updates/index.html",
+    "fixtures/audit-site/updates/festival-hours.html",
+    "fixtures/audit-site/ta/index.html",
+    "fixtures/audit-site/hi/index.html",
+    "fixtures/audit-site/account/sign-in.html",
+    "fixtures/audit-site/shop/index.html",
+    "fixtures/audit-site/shop/checkout.html",
+    "fixtures/audit-site/shop/delivery-terms.html",
+    "fixtures/audit-site/blog/index.html",
+    "fixtures/audit-site/blog/2025/index.html",
+    "fixtures/audit-site/blog/2025/diwali/index.html",
+    "fixtures/audit-site/blog/2025/diwali/sweets/index.html",
+    "fixtures/audit-site/blog/2025/diwali/sweets/kaju-katli.html",
+    "fixtures/audit-site/private/staff-rota.html",
+    "fixtures/audit-site/private/reports.html",
+    "fixtures/audit-site/wp-content/themes/kaveri/style.css",
+    "fixtures/audit-site/wp-content/themes/kaveri/js/updates.js",
+    "fixtures/audit-site/wp-content/uploads/2025/10/logo.svg",
+    "fixtures/audit-site/wp-content/uploads/2025/10/ladoo.svg",
+    "fixtures/audit-site/wp-content/uploads/2025/10/jalebi.svg",
+    "fixtures/audit-site/wp-content/uploads/2025/10/murukku.svg"
+  ],
+  "files_modified": [],
+  "implementation_summary": "Static WordPress-style local business fixture (fixtures/audit-site, 22 pages plus 404) covering every listed scenario, and startAuditSite(): 127.0.0.1 on an OS-chosen port, per-request log with method, path, status, user agent and startedAt/finishedAt, clearRequests(), 404 and 405 handling, traversal guard, no-store caching, {{ORIGIN}} replaced with the request Host, and an AUDIT_SITE_PAGES scenario map. 21 tests prove the helper and every scenario, including Chromium checks of JavaScript-inserted content and Tamil UTF-8, with off-origin requests aborted.",
+  "tests_executed": [
+    {
+      "name": "audit fixture sanity (CHK-QA-001-UNIT)",
+      "command": "pnpm exec vitest run packages/core/tests/audit-site-fixture.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 21 passed (21)"
+    },
+    {
+      "name": "eslint on new files",
+      "command": "pnpm exec eslint packages/core/tests/audit-site-fixture.test.ts packages/core/tests/helpers/audit-site-server.ts fixtures/audit-site",
+      "result": "passed",
+      "output_excerpt": "exit 0"
+    },
+    {
+      "name": "prettier format check on new files",
+      "command": "pnpm exec prettier --check fixtures/audit-site packages/core/tests/audit-site-fixture.test.ts packages/core/tests/helpers/audit-site-server.ts",
+      "result": "passed",
+      "output_excerpt": "All matched files use Prettier code style!"
+    }
+  ],
+  "tests_proposed": [
+    "Fixture variant with no robots.txt for REQ-034 AC-2",
+    "A page answering 401 for REQ-006 AC-1",
+    "A page whose content arrives after a fetch, for REQ-005",
+    "A mixed Tamil/English page for REQ-013"
+  ],
+  "evidence": [
+    "packages/core/tests/helpers/audit-site-server.ts:9 AUDIT_SITE_PAGES; :99 startAuditSite; :147 listen(0, '127.0.0.1')",
+    "packages/core/tests/audit-site-fixture.test.ts:153 robots.txt; :192 sitemap; :226 Tamil and Hindi; :380 JavaScript content"
+  ],
+  "blockers": [],
+  "risks": [
+    "The home page map iframe points at www.google.com; Chromium tests that load it must abort off-origin requests.",
+    "robots.txt names sitemaps.example.invalid; the current spider fetches it without a host check (fails at DNS).",
+    "No page answers 401; REQ-006 AC-1's 401 branch needs another stub.",
+    "The fixture test pins the page count and duplicates; adding pages requires updating it.",
+    "The server binds 127.0.0.1; if BE-001's guard blocks loopback, consumer tests need a test-mode allowance."
+  ],
+  "handoff": "Import { startAuditSite, AUDIT_SITE_PAGES, AUDIT_SITE_ROOT } from packages/core/tests/helpers/audit-site-server.ts; assert pacing on site.requests (startedAt/finishedAt); clearRequests() between crawls; close() in afterAll. Abort off-origin requests in Chromium tests.",
+  "_captured": {
+    "at": "2026-10-31T10:44:07.587Z",
+    "agent_id": "add8a04dcd7544e23",
+    "agent_type": "ai-eos:qa-engineer"
+  }
+}

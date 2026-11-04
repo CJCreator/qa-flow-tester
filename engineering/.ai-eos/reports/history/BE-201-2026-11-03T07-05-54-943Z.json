@@ -1,0 +1,56 @@
+{
+  "task_id": "BE-201",
+  "agent": "backend-engineer",
+  "status": "completed",
+  "requirements_addressed": [
+    "REQ-006",
+    "REQ-036"
+  ],
+  "files_inspected": [
+    "packages/core/src/discovery/deterministic-spider.ts",
+    "packages/core/src/discovery/interactive-states.ts",
+    "packages/types/src/route-telemetry.ts",
+    "packages/core/tests/spider-signin-walls.test.ts",
+    "engineering/plan.md"
+  ],
+  "files_created": [
+    "packages/core/src/audit/crawl/area-detect.ts",
+    "packages/core/tests/audit-area-detect.test.ts"
+  ],
+  "files_modified": [],
+  "implementation_summary": "New module area-detect.ts. isCheckoutPath(pathname) treats a path as checkout only when a whole path segment is checkout/check-out/payment/payments/pay/billing (case-insensitive, URI-decoded, malformed escapes tolerated). paymentEvidence(facts) returns 'card-field' (autocomplete token cc-number, or name/id/label matching card-number wording, with a lookbehind so 'discard number' does not count) or 'provider-frame' (frame host equals, or is a sub-domain of, a fixed provider list: Stripe, Razorpay, PayPal, Paytm, PayU, Cashfree, PhonePe, CCAvenue, Instamojo, Braintree, Adyen, Square), else undefined. areaVerdict(pathname, facts, forms) is the pure rule: checkout path, then evidence, then sign-in via isSignInOnlyForm, else undefined. readAreaFacts(page) uses a single page.evaluate that only reads attributes (type, name, id, autocomplete, label capped at 200 chars) and iframe src, plus page.frames() URLs for frames loaded by script, and keeps only http(s) hostnames. pageAreaVerdict(page, landed) is the inspectPage for BE-204: the path check skips any page read, and forms are read (readPageForms) only when there is no payment evidence. Every verdict detail is one of the fixed words card-field/provider-frame/checkout-path/sign-in-form.",
+  "tests_executed": [
+    {
+      "name": "audit-area-detect unit tests",
+      "command": "pnpm exec vitest run packages/core/tests/audit-area-detect.test.ts",
+      "result": "passed",
+      "output_excerpt": "Test Files 1 passed (1); Tests 63 passed (63)"
+    },
+    {
+      "name": "core type-check",
+      "command": "npx tsc --noEmit -p tsconfig.json (in packages/core)",
+      "result": "passed",
+      "output_excerpt": "0 'error TS' lines"
+    }
+  ],
+  "tests_proposed": [
+    "Real-Chromium test (BE-204 Spider test) that serves a page with a cc-number field, a Stripe iframe and a sign-in-only form and asserts pageAreaVerdict plus no click/fill/submit events in the page"
+  ],
+  "evidence": [
+    "packages/core/src/audit/crawl/area-detect.ts (isCheckoutPath, paymentEvidence, areaVerdict, readAreaFacts, pageAreaVerdict)",
+    "packages/core/tests/audit-area-detect.test.ts: 63 passed via vitest"
+  ],
+  "blockers": [],
+  "risks": [
+    "Path rule includes 'billing' and 'pay' segments, so account /billing pages are skipped as payment areas (follows task wording; broad)",
+    "Card-number wording also matches 'gift card number'; hidden (not type=hidden) fields count as evidence: errs towards skipping",
+    "Provider host list is fixed; a provider not on it is not detected",
+    "The 'touches nothing' criterion is proven with a stand-in page that fails on any page method other than evaluate/frames/$$eval, not with a real browser"
+  ],
+  "handoff": "BE-204: pass pageAreaVerdict as CrawlOptions.inspectPage; its signature (page, landed: URL) => Promise<{why:'payment'|'sign-in', detail}|undefined> fits the plan. For admitPath use isCheckoutPath(url.pathname) -> { why: 'payment', detail: 'checkout-path' }. Two extra exports beyond the planned four: areaVerdict (pure rule) and isPaymentProviderHost/PAYMENT_PROVIDER_HOSTS. detail values are fixed words only.",
+  "_captured": {
+    "at": "2026-11-03T07:05:54.943Z",
+    "agent_id": "aa97419f6f56e9b4b",
+    "agent_type": "ai-eos:backend-engineer"
+  }
+}

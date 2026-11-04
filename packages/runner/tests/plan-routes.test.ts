@@ -13,7 +13,6 @@ import {
   approvePlan,
   planMarkdown,
   waitingPlans,
-  type PlanRouteContext,
 } from '../src/routes/plan.js';
 import { CREDENTIAL_PLACEHOLDERS } from '@qa/core';
 
@@ -71,10 +70,12 @@ function makeStoredPlan(runId = 'run-test-1', targetUrl = 'http://example.com'):
       urlPath: '/',
       title: 'Home',
       elements: [
-        { selector: '#email', role: 'textbox', name: 'Email' },
-        { selector: '#password', role: 'textbox', name: 'Password' },
-        { selector: '#submit', role: 'button', name: 'Submit' },
+        { selector: '#email', role: 'textbox', name: 'Email', tagName: 'input', visible: true, enabled: true },
+        { selector: '#password', role: 'textbox', name: 'Password', tagName: 'input', visible: true, enabled: true },
+        { selector: '#submit', role: 'button', name: 'Submit', tagName: 'button', visible: true, enabled: true },
       ],
+      interactiveElementsCount: 3,
+      formsCount: 1,
     },
   ];
 
@@ -91,7 +92,6 @@ function makeStoredPlan(runId = 'run-test-1', targetUrl = 'http://example.com'):
           id: 'test-item-1',
           name: 'Home test',
           role: 'visitor',
-          startPage: '/',
           source: 'fallback',
           steps: [{ action: 'wait', name: 'Wait for load' }],
         },
@@ -100,9 +100,15 @@ function makeStoredPlan(runId = 'run-test-1', targetUrl = 'http://example.com'):
   ];
 
   const draft: DiscoveryDraft = {
+    version: '1.0',
+    productId: 'test-product',
+    targetUrl,
+    timestamp: new Date().toISOString(),
     plan: {
       pages: planPages,
       navigation: [],
+      layoutGroups: [],
+      otherHosts: [],
       budget: { needed: 0, used: 0, left: 10 },
     },
     pages,
@@ -110,7 +116,7 @@ function makeStoredPlan(runId = 'run-test-1', targetUrl = 'http://example.com'):
     flows: [],
     sensitiveActions: [],
     ambiguityQuestions: [],
-    exploration: { notes: [] },
+    exploration: { signedInAs: [], signInFailed: [], signInPages: [], notReached: [], notes: [] },
   };
 
   const plan: ReviewPlan = {
@@ -224,6 +230,7 @@ describe('Plan handlers as functions over CheckupSession (T-207)', () => {
       role: 'visitor',
       startPage: '/',
       steps: [{ action: 'click', name: 'Click non-existent button', selector: '#non-existent-button' }],
+      expectations: {},
     };
 
     const req = createMockRequest({
@@ -276,6 +283,7 @@ describe('Plan handlers as functions over CheckupSession (T-207)', () => {
       role: 'admin',
       startPage: '/',
       steps: [{ action: 'fill', name: 'Fill password', selector: '#password', value: 'secretPassword123!' }],
+      expectations: {},
     };
 
     const req = createMockRequest({
@@ -293,7 +301,7 @@ describe('Plan handlers as functions over CheckupSession (T-207)', () => {
     expect(res.statusCode).toBe(200);
     const savedRecord = session.plan.currentRecord;
     expect(savedRecord).not.toBeNull();
-    const savedStep = savedRecord?.plan.testCases[0]?.steps?.[0];
+    const savedStep = savedRecord?.plan.testCases?.[0]?.steps?.[0];
     expect(savedStep?.value).toBe(CREDENTIAL_PLACEHOLDERS.password);
     expect(savedStep?.value).toBe('{{password}}');
   });
