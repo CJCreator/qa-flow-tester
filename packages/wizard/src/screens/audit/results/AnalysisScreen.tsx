@@ -10,9 +10,7 @@ import { titleText } from './analysis-text';
 type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 export type AnalysisLoad =
-  | { status: 'loading' }
-  | { status: 'error'; message: string }
-  | { status: 'loaded'; reply: AuditGetReply };
+  { status: 'loading' } | { status: 'error'; message: string } | { status: 'loaded'; reply: AuditGetReply };
 
 export type ContentLoad =
   | { status: 'idle' }
@@ -148,9 +146,7 @@ function SelectedPage({
   const result = reply.result!;
   const page = selectedPath === null ? undefined : result.pages.find((p) => p.urlPath === selectedPath);
   if (!page) {
-    return result.pages.length === 0 ? null : (
-      <p className={`${CARD} text-sm text-ink-soft`}>No page is picked yet.</p>
-    );
+    return result.pages.length === 0 ? null : <p className={`${CARD} text-sm text-ink-soft`}>No page is picked yet.</p>;
   }
   return (
     <div className={`${CARD} space-y-8`}>
@@ -170,9 +166,7 @@ function SelectedPage({
           {`The Page Content of ${content.urlPath} could not be loaded. ${content.message}`}
         </p>
       )}
-      {content.status === 'loaded' && content.urlPath === page.urlPath && (
-        <PageContentView content={content.content} />
-      )}
+      {content.status === 'loaded' && content.urlPath === page.urlPath && <PageContentView content={content.content} />}
     </div>
   );
 }

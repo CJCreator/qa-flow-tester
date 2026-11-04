@@ -1,11 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { isDocumentLanguage } from '@qa/types';
-import {
-  detectPageLanguage,
-  MIN_LETTERS,
-  MIN_OTHER_SHARE,
-  SCRIPT_TABLE,
-} from '../src/audit/analysis/language.js';
+import { detectPageLanguage, MIN_LETTERS, MIN_OTHER_SHARE, SCRIPT_TABLE } from '../src/audit/analysis/language.js';
 
 const TAMIL = 'தமிழ்நாட்டின் சிறந்த உணவகம் எங்கள் சுவையான உணவுகளை இன்றே முயற்சி செய்யுங்கள்';
 const ENGLISH = 'The best restaurant in Chennai, try our delicious dishes today and book a table';

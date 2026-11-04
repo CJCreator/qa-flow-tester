@@ -87,8 +87,7 @@ export interface WriteRewriteInput {
 export type RewriteAiProblem = 'budget-spent' | 'failed' | 'claim-words';
 
 export type WrittenRewrite =
-  | { ok: true; text: string; overlaps: OverlapFlag[] }
-  | { ok: false; problem: RewriteAiProblem };
+  { ok: true; text: string; overlaps: OverlapFlag[] } | { ok: false; problem: RewriteAiProblem };
 
 type Candidate = { text: string; overlaps: OverlapFlag[]; claimWords: string[] };
 

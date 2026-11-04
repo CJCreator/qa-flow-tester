@@ -96,7 +96,12 @@ async function start(): Promise<World> {
     loadSection: (_id, _v, urlPath) => (urlPath === content.urlPath ? content : null),
     applyRewriteEdit: vi.fn(async (_id: string, _v: number, edit: SectionEdit): Promise<EditOverlay> => {
       world.applied.push(edit);
-      return { findings: [], sections: [...world.applied], removedPages: [], recommendations: [] } as unknown as EditOverlay;
+      return {
+        findings: [],
+        sections: [...world.applied],
+        removedPages: [],
+        recommendations: [],
+      } as unknown as EditOverlay;
     }),
     overlapWords: () => 6,
   };
@@ -173,8 +178,13 @@ describe('route rows declare their access level', () => {
   it('a Helper with edit may approve but never run a rewrite (owner only)', () => {
     const rows = createAuditAiRoutes(w.deps);
     const helper = { hasAccessKey: false, beta: false, helper: (p: string) => p === 'edit' };
-    expect(authorizeRoute(resolveRoute(rows, 'POST', `${rewritePath}/approve`)!.route, helper)).toEqual({ allow: true });
-    expect(authorizeRoute(resolveRoute(rows, 'POST', rewritePath)!.route, helper)).toMatchObject({ allow: false, status: 401 });
+    expect(authorizeRoute(resolveRoute(rows, 'POST', `${rewritePath}/approve`)!.route, helper)).toEqual({
+      allow: true,
+    });
+    expect(authorizeRoute(resolveRoute(rows, 'POST', rewritePath)!.route, helper)).toMatchObject({
+      allow: false,
+      status: 401,
+    });
   });
 
   it('a malformed audit id does not match any row', () => {
@@ -189,12 +199,19 @@ describe('GET/PUT /api/audit-ai/models (REQ-039)', () => {
     expect(json).toEqual({
       models: {},
       defaults: { text: 'text-default', vision: 'vision-default' },
-      effective: { assessment: 'vision-default', documents: 'text-default', preview: 'text-default', rewrite: 'text-default' },
+      effective: {
+        assessment: 'vision-default',
+        documents: 'text-default',
+        preview: 'text-default',
+        rewrite: 'text-default',
+      },
     });
   });
 
   it('PUT saves a model per stage; GET returns it; null puts the default back', async () => {
-    const put = await call('PUT', '/api/audit-ai/models', { models: { assessment: 'vision-big', rewrite: ' writer-1 ' } });
+    const put = await call('PUT', '/api/audit-ai/models', {
+      models: { assessment: 'vision-big', rewrite: ' writer-1 ' },
+    });
     expect(put.status).toBe(200);
     expect(put.json.models).toEqual({ assessment: 'vision-big', rewrite: 'writer-1' });
     expect(w.models).toEqual({ assessment: 'vision-big', rewrite: 'writer-1' });

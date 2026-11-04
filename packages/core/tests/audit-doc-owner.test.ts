@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import type { EditOverlay, ShortlistEntry } from '@qa/types';
-import { buildEditedView, emptyOverlay, mergeEditsPatch, validateAuditEditsPatch, type EditedAuditView } from '../src/audit/documents/edits.js';
+import {
+  buildEditedView,
+  emptyOverlay,
+  mergeEditsPatch,
+  validateAuditEditsPatch,
+  type EditedAuditView,
+} from '../src/audit/documents/edits.js';
 import { buildOwnerAudit, ownerWording, OWNER_SUMMARY_TOP_FINDINGS } from '../src/audit/documents/owner-audit.js';
 import type { AuditDoc } from '../src/audit/documents/model.js';
 import { renderMarkdown } from '../src/audit/documents/render-markdown.js';
@@ -37,7 +43,7 @@ function viewWithEverything(patch: Record<string, unknown> = {}): EditedAuditVie
   return buildEditedView(
     result,
     auditDocContents(),
-    overlayOf({ ...patch, proposal: { price: PRICE, paymentTerms: PAYMENT_TERMS, notIncluded: ['Logo design work'] } }),
+    overlayOf({ ...patch, proposal: { price: PRICE, paymentTerms: PAYMENT_TERMS, notIncluded: ['Logo design work'] } })
   );
 }
 
@@ -78,7 +84,12 @@ describe('Owner Audit: language (REQ-025 AC-1)', () => {
     ]) {
       expect(html, s).toContain(s);
     }
-    for (const s of [en.headings.summary, ownerWording('en').intro, ownerWording('en').findingsPerGroup, en.documentTitles.roadmap]) {
+    for (const s of [
+      en.headings.summary,
+      ownerWording('en').intro,
+      ownerWording('en').findingsPerGroup,
+      en.documentTitles.roadmap,
+    ]) {
       expect(html, s).not.toContain(s);
     }
   });
@@ -90,7 +101,11 @@ describe('Owner Audit: summary on top, then the parts', () => {
       const lookup = labelsFor(lang);
       const doc = buildOwnerAudit(viewWithEverything(), lookup);
       expect(doc.blocks[0]).toEqual({ type: 'heading', level: 1, text: lookup.labels.headings.summary });
-      expect(renderMarkdown(doc).startsWith(`# ${lookup.labels.documentTitles['owner-audit']}\n\n## ${lookup.labels.headings.summary}\n`)).toBe(true);
+      expect(
+        renderMarkdown(doc).startsWith(
+          `# ${lookup.labels.documentTitles['owner-audit']}\n\n## ${lookup.labels.headings.summary}\n`
+        )
+      ).toBe(true);
     }
   });
 
@@ -99,7 +114,13 @@ describe('Owner Audit: summary on top, then the parts', () => {
     const firstBreak = doc.blocks.findIndex((b) => b.type === 'pagebreak');
     const summary = doc.blocks.slice(0, firstBreak);
     const text = summary
-      .map((b) => (b.type === 'paragraph' || b.type === 'note' || b.type === 'heading' ? b.text : b.type === 'list' ? b.items.join('\n') : ''))
+      .map((b) =>
+        b.type === 'paragraph' || b.type === 'note' || b.type === 'heading'
+          ? b.text
+          : b.type === 'list'
+            ? b.items.join('\n')
+            : ''
+      )
       .join('\n');
     expect(text).toContain(`Website: ${FIXTURE_URL}`);
     expect(text).toMatch(/Pages read: 5 of \d+ found\./);
@@ -132,9 +153,14 @@ describe('Owner Audit: summary on top, then the parts', () => {
   it('then has Structure, Content, Findings and Improvement Roadmap in that order, and no Proposal', () => {
     const doc = buildOwnerAudit(viewWithEverything(), labelsFor('en'));
     const parts = doc.blocks.flatMap((b, i) =>
-      b.type === 'heading' && b.level === 1 && doc.blocks[i - 1]?.type === 'pagebreak' ? [b.text] : [],
+      b.type === 'heading' && b.level === 1 && doc.blocks[i - 1]?.type === 'pagebreak' ? [b.text] : []
     );
-    expect(parts).toEqual([en.documentTitles.structure, en.documentTitles.content, en.documentTitles.findings, en.documentTitles.roadmap]);
+    expect(parts).toEqual([
+      en.documentTitles.structure,
+      en.documentTitles.content,
+      en.documentTitles.findings,
+      en.documentTitles.roadmap,
+    ]);
     // Each part's own headings sit one level under its title.
     const firstPart = doc.blocks.findIndex((b) => b.type === 'pagebreak');
     for (const b of doc.blocks.slice(firstPart)) {
@@ -148,7 +174,10 @@ describe('Owner Audit: summary on top, then the parts', () => {
 
   it('carries the edits (REQ-020)', () => {
     const md = renderMarkdown(
-      buildOwnerAudit(viewWithEverything({ findings: [{ findingId: 'AF-001', title: 'Edited for the owner' }] }), labelsFor('en')),
+      buildOwnerAudit(
+        viewWithEverything({ findings: [{ findingId: 'AF-001', title: 'Edited for the owner' }] }),
+        labelsFor('en')
+      )
     );
     expect(md).toContain('Edited for the owner');
     expect(md).not.toContain('Two pages share one title');
@@ -186,7 +215,11 @@ describe('Owner Audit: what it leaves out (REQ-025 AC-2, Q-17)', () => {
 
   it('never reads the Proposal inputs or the overlay (where price and terms live)', () => {
     const view = viewWithEverything();
-    const guarded = { result: view.result, contents: view.contents, removedPages: view.removedPages } as EditedAuditView;
+    const guarded = {
+      result: view.result,
+      contents: view.contents,
+      removedPages: view.removedPages,
+    } as EditedAuditView;
     for (const key of ['proposal', 'overlay'] as const) {
       Object.defineProperty(guarded, key, {
         get() {

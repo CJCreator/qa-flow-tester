@@ -95,7 +95,12 @@ describe('KeyResolver encrypted fallback file and service keys', () => {
     expect(await resolver().saveByokKey('openai', apiKey)).toBe('byok_file');
 
     const envelope = await readKeyFile();
-    expect(envelope).toMatchObject({ format: 'qa-keys/encrypted', version: 1, cipher: 'aes-256-gcm', keySource: 'local' });
+    expect(envelope).toMatchObject({
+      format: 'qa-keys/encrypted',
+      version: 1,
+      cipher: 'aes-256-gcm',
+      keySource: 'local',
+    });
     expect(Buffer.from(envelope.iv, 'base64')).toHaveLength(12);
     expect(Buffer.from(envelope.tag, 'base64')).toHaveLength(16);
     await expectNowhereInPlainText(apiKey);
@@ -155,7 +160,7 @@ describe('KeyResolver encrypted fallback file and service keys', () => {
   });
 
   it('migrates a legacy plaintext file to the encrypted form on first read', async () => {
-    const legacyKey = 'sk-ant-LEGACY-PLAINTEXT-0006';
+    const legacyKey = 'sk-ant-legacy-plain-0006';
     await fs.writeFile(keyFilePath(), JSON.stringify({ anthropic: legacyKey }, null, 2));
 
     expect(await resolver().resolveKey('anthropic')).toEqual({
@@ -201,7 +206,10 @@ describe('KeyResolver encrypted fallback file and service keys', () => {
       apiKey: 'sk-openai-keychain-0008',
       source: 'keychain',
     });
-    expect(await keychainResolver.resolveKey('gemini')).toMatchObject({ apiKey: 'sk-gemini-keychain-0008', source: 'keychain' });
+    expect(await keychainResolver.resolveKey('gemini')).toMatchObject({
+      apiKey: 'sk-gemini-keychain-0008',
+      source: 'keychain',
+    });
   });
 
   it('keychain path unchanged: a key saved to the keychain writes no file and no file key', async () => {

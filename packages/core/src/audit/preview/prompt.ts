@@ -51,7 +51,10 @@ const MAX_FINDINGS = 8;
 const MAX_FIELD_CHARS = 300;
 
 function cap(text: string | null | undefined, max = MAX_FIELD_CHARS): string {
-  return String(text ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
+  return String(text ?? '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, max);
 }
 
 function absolute(to: string, siteUrl: string): string | null {
@@ -89,7 +92,12 @@ export function previewFacts(input: PreviewInput): PreviewFacts {
     if (used >= MAX_TEXT_CHARS) break;
     const text = cap(sectionText(home as PageContent, section), Math.min(MAX_SECTION_CHARS, MAX_TEXT_CHARS - used));
     used += text.length;
-    sections.push({ id: section.id, kind: section.kind, heading: section.heading ? cap(section.heading) : undefined, text });
+    sections.push({
+      id: section.id,
+      kind: section.kind,
+      heading: section.heading ? cap(section.heading) : undefined,
+      text,
+    });
   }
 
   const images: PreviewFacts['images'] = [];

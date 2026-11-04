@@ -32,7 +32,8 @@ export type PreviewState =
   | { status: 'made'; createdAt: string }
   | { status: 'failed'; message: string; noAiKey: boolean };
 
-export type LinksState = { status: 'loading' } | { status: 'failed'; message: string } | { status: 'loaded'; links: ShareLink[] };
+export type LinksState =
+  { status: 'loading' } | { status: 'failed'; message: string } | { status: 'loaded'; links: ShareLink[] };
 
 export type ShareMessage = { tone: 'pass' | 'fail'; text: string } | null;
 
@@ -68,13 +69,26 @@ function readLanguage(value: string): ShareLanguage {
   return (SHARE_LANGUAGES as readonly string[]).includes(value) ? (value as ShareLanguage) : 'en';
 }
 
-function LanguageSelect({ id, value, onChange }: { id: string; value: ShareLanguage; onChange: (value: ShareLanguage) => void }) {
+function LanguageSelect({
+  id,
+  value,
+  onChange,
+}: {
+  id: string;
+  value: ShareLanguage;
+  onChange: (value: ShareLanguage) => void;
+}) {
   return (
     <div>
       <label htmlFor={id} className="label text-ink">
         Language
       </label>
-      <select id={id} className="field mt-1 text-sm" value={value} onChange={(e) => onChange(readLanguage(e.target.value))}>
+      <select
+        id={id}
+        className="field mt-1 text-sm"
+        value={value}
+        onChange={(e) => onChange(readLanguage(e.target.value))}
+      >
         {SHARE_LANGUAGES.map((language) => (
           <option key={language} value={language}>
             {languageName(language)}
@@ -86,7 +100,17 @@ function LanguageSelect({ id, value, onChange }: { id: string; value: ShareLangu
 }
 
 /** The Shared Link just made: the full address, a copy button, the expiry and who can open it. */
-function CreatedLink({ link, origin, copied, onCopy }: { link: ShareLink; origin: string; copied: PreviewShareViewProps['copied']; onCopy: (address: string) => void }) {
+function CreatedLink({
+  link,
+  origin,
+  copied,
+  onCopy,
+}: {
+  link: ShareLink;
+  origin: string;
+  copied: PreviewShareViewProps['copied'];
+  onCopy: (address: string) => void;
+}) {
   const address = sharedLinkAddress(origin, link);
   return (
     <div className="mt-4 rounded border border-rule p-3">
@@ -126,20 +150,43 @@ function CreatedLink({ link, origin, copied, onCopy }: { link: ShareLink; origin
   );
 }
 
-function LinkList({ links, busy, now, onRevoke }: { links: ShareLink[]; busy: boolean; now?: Date; onRevoke: (link: ShareLink) => void }) {
-  if (links.length === 0) return <p className="mt-2 text-ink-soft">No Shared Link has been made for this Website Audit yet.</p>;
+function LinkList({
+  links,
+  busy,
+  now,
+  onRevoke,
+}: {
+  links: ShareLink[];
+  busy: boolean;
+  now?: Date;
+  onRevoke: (link: ShareLink) => void;
+}) {
+  if (links.length === 0)
+    return <p className="mt-2 text-ink-soft">No Shared Link has been made for this Website Audit yet.</p>;
   return (
     <div className="mt-3 overflow-x-auto">
       <table className="w-full text-left text-sm">
         <caption className="sr-only">Shared Links of this Website Audit</caption>
         <thead>
           <tr>
-            <th scope="col" className="py-2 pr-3">Kind</th>
-            <th scope="col" className="py-2 pr-3">Version</th>
-            <th scope="col" className="py-2 pr-3">Language</th>
-            <th scope="col" className="py-2 pr-3">Created</th>
-            <th scope="col" className="py-2 pr-3">Expires</th>
-            <th scope="col" className="py-2 pr-3">State</th>
+            <th scope="col" className="py-2 pr-3">
+              Kind
+            </th>
+            <th scope="col" className="py-2 pr-3">
+              Version
+            </th>
+            <th scope="col" className="py-2 pr-3">
+              Language
+            </th>
+            <th scope="col" className="py-2 pr-3">
+              Created
+            </th>
+            <th scope="col" className="py-2 pr-3">
+              Expires
+            </th>
+            <th scope="col" className="py-2 pr-3">
+              State
+            </th>
             <th scope="col" className="py-2">
               <span className="sr-only">Action</span>
             </th>
@@ -157,11 +204,19 @@ function LinkList({ links, busy, now, onRevoke }: { links: ShareLink[]; busy: bo
                 <td className="py-2 pr-3">{formatWhen(link.createdAt)}</td>
                 <td className="py-2 pr-3">{formatDay(link.expiresAt)}</td>
                 <td className="py-2 pr-3">
-                  {state === 'revoked' && link.revokedAt ? `Revoked ${formatWhen(link.revokedAt)}` : LINK_STATE_LABEL[state]}
+                  {state === 'revoked' && link.revokedAt
+                    ? `Revoked ${formatWhen(link.revokedAt)}`
+                    : LINK_STATE_LABEL[state]}
                 </td>
                 <td className="py-2">
                   {state === 'open' && (
-                    <button type="button" className="btn-quiet" disabled={busy} aria-label={`Revoke Shared Link: ${name}`} onClick={() => onRevoke(link)}>
+                    <button
+                      type="button"
+                      className="btn-quiet"
+                      disabled={busy}
+                      aria-label={`Revoke Shared Link: ${name}`}
+                      onClick={() => onRevoke(link)}
+                    >
                       Revoke
                     </button>
                   )}
@@ -179,7 +234,11 @@ function LinkList({ links, busy, now, onRevoke }: { links: ShareLink[]; busy: bo
 export function PreviewShareView(props: PreviewShareViewProps) {
   const { auditId, versions, version, preview, busy, message, links } = props;
   if (versions.length === 0) {
-    return <p className="max-w-prose text-ink-soft">This Website Audit has no finished version yet. Come back when a version has finished.</p>;
+    return (
+      <p className="max-w-prose text-ink-soft">
+        This Website Audit has no finished version yet. Come back when a version has finished.
+      </p>
+    );
   }
   return (
     <div className="space-y-10">
@@ -206,11 +265,17 @@ export function PreviewShareView(props: PreviewShareViewProps) {
           Improved homepage preview
         </h2>
         <p className="mt-1 max-w-prose text-sm text-ink-soft">
-          The AI writes an improved homepage from this version's findings. It is a preview for the site owner: nothing on the site changes.
+          The AI writes an improved homepage from this version's findings. It is a preview for the site owner: nothing
+          on the site changes.
         </p>
         <div className="mt-4 flex flex-wrap items-end gap-3">
           <LanguageSelect id="preview-language" value={props.previewLanguage} onChange={props.onPreviewLanguage} />
-          <button type="button" className="btn-primary px-6 font-bold" disabled={busy || preview.status === 'making'} onClick={props.onMakePreview}>
+          <button
+            type="button"
+            className="btn-primary px-6 font-bold"
+            disabled={busy || preview.status === 'making'}
+            onClick={props.onMakePreview}
+          >
             {preview.status === 'making' ? <Spinner label="Making the preview…" /> : 'Make preview'}
           </button>
           <a
@@ -277,7 +342,9 @@ export function PreviewShareView(props: PreviewShareViewProps) {
             {busy ? <Spinner label="Working…" /> : 'Make Shared Link'}
           </button>
         </div>
-        {props.created && <CreatedLink link={props.created} origin={props.origin} copied={props.copied} onCopy={props.onCopy} />}
+        {props.created && (
+          <CreatedLink link={props.created} origin={props.origin} copied={props.copied} onCopy={props.onCopy} />
+        )}
       </section>
 
       <section aria-labelledby="links-title" className="rounded border border-rule p-4">
@@ -286,7 +353,9 @@ export function PreviewShareView(props: PreviewShareViewProps) {
         </h2>
         {links.status === 'loading' && <Spinner label="Loading the Shared Links…" />}
         {links.status === 'failed' && <ErrorMessage>{links.message}</ErrorMessage>}
-        {links.status === 'loaded' && <LinkList links={links.links} busy={busy} now={props.now} onRevoke={props.onRevoke} />}
+        {links.status === 'loaded' && (
+          <LinkList links={links.links} busy={busy} now={props.now} onRevoke={props.onRevoke} />
+        )}
       </section>
 
       {message &&
@@ -311,14 +380,20 @@ export interface PreviewShareScreenProps {
   origin?: string;
 }
 
-type Versions = { status: 'loading' } | { status: 'failed'; message: string } | { status: 'loaded'; versions: AuditVersion[] };
+type Versions =
+  { status: 'loading' } | { status: 'failed'; message: string } | { status: 'loaded'; versions: AuditVersion[] };
 
 function browserOrigin(): string {
   return typeof window === 'undefined' ? '' : window.location.origin;
 }
 
 /** Make and open the improved-homepage preview, and make, list and revoke Shared Links (REQ-024). */
-export function PreviewShareScreen({ auditId, version: initialVersion, fetchImpl, origin = browserOrigin() }: PreviewShareScreenProps) {
+export function PreviewShareScreen({
+  auditId,
+  version: initialVersion,
+  fetchImpl,
+  origin = browserOrigin(),
+}: PreviewShareScreenProps) {
   const { confirm, dialog } = useConfirm();
   const [versions, setVersions] = useState<Versions>({ status: 'loading' });
   const [version, setVersion] = useState<number>(initialVersion ?? 0);
@@ -335,16 +410,25 @@ export function PreviewShareScreen({ auditId, version: initialVersion, fetchImpl
   useEffect(() => {
     let live = true;
     void (async () => {
-      const [loaded, listed] = await Promise.all([loadVersion(auditId, undefined, fetchImpl), listSharedLinks(auditId, fetchImpl)]);
+      const [loaded, listed] = await Promise.all([
+        loadVersion(auditId, undefined, fetchImpl),
+        listSharedLinks(auditId, fetchImpl),
+      ]);
       if (!live) return;
       if (loaded.ok) {
         const done = versionsOldestFirst(loaded.value.summary).filter((v) => v.status === 'done');
         setVersions({ status: 'loaded', versions: done });
-        setVersion((current) => (done.some((v) => v.version === current) ? current : (done[done.length - 1]?.version ?? 0)));
+        setVersion((current) =>
+          done.some((v) => v.version === current) ? current : (done[done.length - 1]?.version ?? 0)
+        );
       } else {
         setVersions({ status: 'failed', message: loaded.message });
       }
-      setLinks(listed.ok ? { status: 'loaded', links: listed.value.reduce<ShareLink[]>(withLink, []) } : { status: 'failed', message: listed.message });
+      setLinks(
+        listed.ok
+          ? { status: 'loaded', links: listed.value.reduce<ShareLink[]>(withLink, []) }
+          : { status: 'failed', message: listed.message }
+      );
     })();
     return () => {
       live = false;
@@ -368,7 +452,9 @@ export function PreviewShareScreen({ auditId, version: initialVersion, fetchImpl
     const outcome = await createSharedLink(auditId, { version, kind, language: shareLanguage }, fetchImpl);
     if (outcome.ok) {
       setCreated(outcome.value);
-      setLinks((current) => (current.status === 'loaded' ? { status: 'loaded', links: withLink(current.links, outcome.value) } : current));
+      setLinks((current) =>
+        current.status === 'loaded' ? { status: 'loaded', links: withLink(current.links, outcome.value) } : current
+      );
     } else {
       setMessage({ tone: 'fail', text: outcome.message });
     }
@@ -405,7 +491,9 @@ export function PreviewShareScreen({ auditId, version: initialVersion, fetchImpl
       );
       if (outcome === null) return;
       if (outcome.ok) {
-        setLinks((current) => (current.status === 'loaded' ? { status: 'loaded', links: withLink(current.links, outcome.value) } : current));
+        setLinks((current) =>
+          current.status === 'loaded' ? { status: 'loaded', links: withLink(current.links, outcome.value) } : current
+        );
         setCreated((current) => (current?.id === link.id ? null : current));
         setMessage({ tone: 'pass', text: `The Shared Link to the ${KIND_LABEL[link.kind]} is revoked.` });
       } else {

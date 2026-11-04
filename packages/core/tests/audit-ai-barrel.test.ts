@@ -81,7 +81,7 @@ describe('audit AI barrel', () => {
     // silently dropped (ambiguous) or shadowed by a local export, and both show up here.
     const wired = 'resolveAuditAi' in coreExports;
     const collisions = names.filter((name) =>
-      wired ? coreExports[name] !== (auditAi as Record<string, unknown>)[name] : name in coreExports,
+      wired ? coreExports[name] !== (auditAi as Record<string, unknown>)[name] : name in coreExports
     );
     expect(collisions).toEqual([]);
   });

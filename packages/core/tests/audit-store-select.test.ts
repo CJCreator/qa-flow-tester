@@ -39,8 +39,12 @@ describe('selectAuditStoreBackend (REQ-029)', () => {
 
   it('treats an empty or blank AUDIT_STORE_BUCKET as unset', () => {
     const { fetch, calls } = recordingFetch();
-    expect(selectAuditStoreBackend({ dataDir: os.tmpdir(), env: { AUDIT_STORE_BUCKET: '' }, fetch }).kind).toBe('local');
-    expect(selectAuditStoreBackend({ dataDir: os.tmpdir(), env: { AUDIT_STORE_BUCKET: '  ' }, fetch }).kind).toBe('local');
+    expect(selectAuditStoreBackend({ dataDir: os.tmpdir(), env: { AUDIT_STORE_BUCKET: '' }, fetch }).kind).toBe(
+      'local'
+    );
+    expect(selectAuditStoreBackend({ dataDir: os.tmpdir(), env: { AUDIT_STORE_BUCKET: '  ' }, fetch }).kind).toBe(
+      'local'
+    );
     expect(calls).toEqual([]);
   });
 

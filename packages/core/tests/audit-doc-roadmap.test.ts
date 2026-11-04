@@ -14,7 +14,13 @@ import { auditDocContents, auditDocResult, PATHS } from './helpers/audit-doc-fix
 
 const RANK: Record<AuditScale, number> = { high: 0, medium: 1, low: 2 };
 
-function f(id: string, rule: string, impact: AuditScale, effort: AuditScale, extra: Partial<AuditFinding> = {}): AuditFinding {
+function f(
+  id: string,
+  rule: string,
+  impact: AuditScale,
+  effort: AuditScale,
+  extra: Partial<AuditFinding> = {}
+): AuditFinding {
   return {
     id,
     rule,
@@ -153,7 +159,13 @@ describe('buildRoadmap', () => {
 
   it('orders the fixture findings and keeps each item named after its highest ranked finding', () => {
     const items = buildRoadmap(auditDocResult().findings);
-    expect(items.map((i) => i.findingIds)).toEqual([['AF-001'], ['AF-002'], ['AF-003', 'AF-006'], ['AF-004'], ['AF-005']]);
+    expect(items.map((i) => i.findingIds)).toEqual([
+      ['AF-001'],
+      ['AF-002'],
+      ['AF-003', 'AF-006'],
+      ['AF-004'],
+      ['AF-005'],
+    ]);
     expect(items[0]).toMatchObject({ title: 'Two pages share one title', priority: 'high', phase: 1, effort: 'low' });
     expect(items[2].pages).toEqual([PATHS.services, PATHS.team]);
     expect(items[4]).toMatchObject({ priority: 'low', phase: 3 });
@@ -179,21 +191,33 @@ describe('buildRoadmapDocument', () => {
     expect(doc.title).toBe(en.documentTitles.roadmap);
     expect(doc.language).toBe('en');
 
-    const phaseHeadings = doc.blocks.filter((b) => b.type === 'heading' && b.level === 1).map((b) => (b as { text: string }).text);
+    const phaseHeadings = doc.blocks
+      .filter((b) => b.type === 'heading' && b.level === 1)
+      .map((b) => (b as { text: string }).text);
     expect(phaseHeadings).toEqual([phaseLabel(en, 1), phaseLabel(en, 2), phaseLabel(en, 3)]);
 
-    const itemHeadings = doc.blocks.filter((b) => b.type === 'heading' && b.level === 2).map((b) => (b as { text: string }).text);
+    const itemHeadings = doc.blocks
+      .filter((b) => b.type === 'heading' && b.level === 2)
+      .map((b) => (b as { text: string }).text);
     expect(itemHeadings).toEqual(view.result.roadmap.map((i) => i.title));
 
     const lists = doc.blocks.filter((b) => b.type === 'list');
     expect(lists[0]).toEqual({
       type: 'list',
-      items: [`${en.columns.priority}: ${en.scale.high}`, `${en.columns.phase}: ${phaseLabel(en, 1)}`, `${en.columns.effort}: ${en.scale.low}`],
+      items: [
+        `${en.columns.priority}: ${en.scale.high}`,
+        `${en.columns.phase}: ${phaseLabel(en, 1)}`,
+        `${en.columns.effort}: ${en.scale.low}`,
+      ],
     });
 
-    const tables = doc.blocks.filter((b) => b.type === 'table') as Array<Extract<AuditDoc['blocks'][number], { type: 'table' }>>;
+    const tables = doc.blocks.filter((b) => b.type === 'table') as Array<
+      Extract<AuditDoc['blocks'][number], { type: 'table' }>
+    >;
     expect(tables[0].columns).toEqual([en.columns.issue, en.columns.page, en.columns.impact, en.columns.effort]);
-    expect(tables[0].rows).toEqual([['Two pages share one title', `${PATHS.about}, ${PATHS.services}`, en.scale.high, en.scale.low]]);
+    expect(tables[0].rows).toEqual([
+      ['Two pages share one title', `${PATHS.about}, ${PATHS.services}`, en.scale.high, en.scale.low],
+    ]);
     // Every finding in the roadmap shows once.
     expect(tables.flatMap((t) => t.rows).length).toBe(view.result.findings.length);
 
@@ -201,10 +225,13 @@ describe('buildRoadmapDocument', () => {
     expect(md).toContain(`${roadmapWording('en').pagesCovered}: ${PATHS.services}, ${PATHS.team}`);
   });
 
-  it('shows the tool user\'s edited finding titles and leaves out removed pages', () => {
+  it("shows the tool user's edited finding titles and leaves out removed pages", () => {
     const result = auditDocResult();
     result.roadmap = buildRoadmap(result.findings);
-    const overlay = { ...emptyOverlay(), removedPages: [PATHS.team], findings: [{ findingId: 'AF-003', title: 'Edited title', editedAt: '2026-11-03T10:00:00.000Z' }],
+    const overlay = {
+      ...emptyOverlay(),
+      removedPages: [PATHS.team],
+      findings: [{ findingId: 'AF-003', title: 'Edited title', editedAt: '2026-11-03T10:00:00.000Z' }],
     };
     const view = buildEditedView(result, auditDocContents(), overlay);
     const text = allText(buildRoadmapDocument(view, labelsFor('en'), { showEffort: true }));
@@ -245,7 +272,7 @@ describe('buildRoadmapDocument', () => {
     }
   });
 
-  it('takes its fixed wording from the language\'s labels, with no Plan or ADR 0018 word (EN and TA)', () => {
+  it("takes its fixed wording from the language's labels, with no Plan or ADR 0018 word (EN and TA)", () => {
     for (const [lang, labels] of [
       ['en', en],
       ['ta', ta],

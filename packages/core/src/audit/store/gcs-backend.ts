@@ -1,9 +1,4 @@
-import {
-  assertValidKey,
-  AuditStoreError,
-  normalizePrefix,
-  type AuditStoreBackend,
-} from './backend.js';
+import { assertValidKey, AuditStoreError, normalizePrefix, type AuditStoreBackend } from './backend.js';
 
 /**
  * Cloud Storage backend over the JSON REST API (ADR 0036). No SDK: every request goes through the
@@ -52,7 +47,10 @@ function statusError(status: number): AuditStoreError {
     return new AuditStoreError('forbidden', 'Cloud Storage denied access to the audit store bucket (403).');
   }
   if (status === 429) {
-    return new AuditStoreError('rate-limited', 'Cloud Storage is rate limiting the audit store (429). Try again later.');
+    return new AuditStoreError(
+      'rate-limited',
+      'Cloud Storage is rate limiting the audit store (429). Try again later.'
+    );
   }
   if (status >= 500) {
     return new AuditStoreError('unavailable', `Cloud Storage is unavailable (${status}). Try again later.`);
@@ -72,10 +70,7 @@ async function discardBody(res: Response): Promise<void> {
  * Default token provider: reads the Cloud Run metadata server and caches the token until
  * shortly before it expires. Concurrent callers share one request.
  */
-export function createMetadataTokenProvider(options: {
-  fetch: FetchLike;
-  now?: () => number;
-}): AccessTokenProvider {
+export function createMetadataTokenProvider(options: { fetch: FetchLike; now?: () => number }): AccessTokenProvider {
   const now = options.now ?? Date.now;
   let cached: { token: string; expiresAt: number } | null = null;
   let inflight: Promise<string> | null = null;
@@ -89,7 +84,10 @@ export function createMetadataTokenProvider(options: {
     }
     if (!res.ok) {
       await discardBody(res);
-      throw new AuditStoreError('unauthorized', `The audit store could not get a Cloud Storage access token (${res.status}).`);
+      throw new AuditStoreError(
+        'unauthorized',
+        `The audit store could not get a Cloud Storage access token (${res.status}).`
+      );
     }
     let body: { access_token?: unknown; expires_in?: unknown };
     try {

@@ -70,7 +70,7 @@ const findingPages = (f: AuditFinding): string => (f.pages && f.pages.length > 0
 export function buildRoadmapDocument(
   view: EditedAuditView,
   lookup: LabelLookup,
-  options: RoadmapDocumentOptions,
+  options: RoadmapDocumentOptions
 ): AuditDoc {
   const { labels } = lookup;
   // The document is in the requested language even when its labels fall back to English (DEC-005).

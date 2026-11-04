@@ -62,7 +62,13 @@ function send(res: http.ServerResponse, status: number, body: unknown, headers: 
   res.end(JSON.stringify(body));
 }
 
-function refuse(res: http.ServerResponse, status: number, code: AuditErrorCode, error: string, headers?: Record<string, string>): void {
+function refuse(
+  res: http.ServerResponse,
+  status: number,
+  code: AuditErrorCode,
+  error: string,
+  headers?: Record<string, string>
+): void {
   send(res, status, { error, code }, headers);
 }
 
@@ -70,12 +76,14 @@ function refuse(res: http.ServerResponse, status: number, code: AuditErrorCode, 
 function sendStoreError(res: http.ServerResponse, err: unknown): void {
   const name = (err as { name?: unknown } | null)?.name;
   const code = (err as { code?: unknown } | null)?.code;
-  if (name === 'AuditRecordError' && code === 'not-found') return refuse(res, 404, 'ERR_AUDIT_NOT_FOUND', MESSAGES.notFound);
+  if (name === 'AuditRecordError' && code === 'not-found')
+    return refuse(res, 404, 'ERR_AUDIT_NOT_FOUND', MESSAGES.notFound);
   if (name === 'AuditRecordError' && code === 'invalid-input') {
     const message = err instanceof Error && err.message ? err.message : MESSAGES.invalid;
     return refuse(res, 400, 'ERR_INVALID_REQUEST', message);
   }
-  if (name === 'AuditStoreError' && code === 'invalid-key') return refuse(res, 404, 'ERR_AUDIT_NOT_FOUND', MESSAGES.notFound);
+  if (name === 'AuditStoreError' && code === 'invalid-key')
+    return refuse(res, 404, 'ERR_AUDIT_NOT_FOUND', MESSAGES.notFound);
   // Anything else (storage down, bad data): a fixed message, as the runner's other 500s, with no internals.
   send(res, 500, { error: MESSAGES.failed });
 }

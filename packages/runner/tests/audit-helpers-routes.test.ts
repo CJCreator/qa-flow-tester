@@ -62,8 +62,14 @@ interface Answer {
   json: any;
 }
 
-function call(port: number, method: string, pathname: string, opts: { headers?: Record<string, string>; body?: unknown } = {}): Promise<Answer> {
-  const payload = opts.body === undefined ? undefined : typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body);
+function call(
+  port: number,
+  method: string,
+  pathname: string,
+  opts: { headers?: Record<string, string>; body?: unknown } = {}
+): Promise<Answer> {
+  const payload =
+    opts.body === undefined ? undefined : typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body);
   return new Promise((resolve, reject) => {
     const req = http.request(
       {
@@ -162,7 +168,15 @@ beforeEach(async () => {
 describe('Helper rows match AUDIT_API (REQ-033)', () => {
   it("each row's method, path and access equal its AUDIT_API entry", () => {
     const rows = auditHelperRoutes({ store, access });
-    const names = ['listHelpers', 'grantHelper', 'removeHelper', 'helperStatus', 'helperSignIn', 'helperSession', 'helperSignOut'] as const;
+    const names = [
+      'listHelpers',
+      'grantHelper',
+      'removeHelper',
+      'helperStatus',
+      'helperSignIn',
+      'helperSession',
+      'helperSignOut',
+    ] as const;
     expect(rows).toHaveLength(names.length);
     names.forEach((name, i) => {
       const e = AUDIT_API[name];
@@ -183,7 +197,12 @@ describe('Helper sign-in is off without FIREBASE_PROJECT_ID or RUNNER_ACCESS_TOK
       expect(status.status).toBe(200);
       expect(status.json).toEqual({ enabled: false });
       for (const method of ['POST', 'GET', 'DELETE']) {
-        const answer = await call(port, method, '/api/helper/session', method === 'POST' ? { body: { idToken: idToken() } } : {});
+        const answer = await call(
+          port,
+          method,
+          '/api/helper/session',
+          method === 'POST' ? { body: { idToken: idToken() } } : {}
+        );
         expect(answer.status).toBe(404);
         expect(answer.json.code).toBe('ERR_HELPERS_OFF');
         expect(answer.headers['set-cookie']).toBeUndefined();
@@ -221,7 +240,8 @@ describe('Helper sign-in and session (REQ-033)', () => {
       expect(setCookie).not.toContain('Secure');
       expect(setCookie).not.toContain(token);
       expect(answer.headers['cache-control']).toBe('no-store');
-      for (const spy of spies) for (const args of spy.mock.calls) expect(args.map(String).join(' ')).not.toContain(token);
+      for (const spy of spies)
+        for (const args of spy.mock.calls) expect(args.map(String).join(' ')).not.toContain(token);
 
       const viaHttps = await call(ON_PORT, 'POST', '/api/helper/session', {
         body: { idToken: idToken() },
@@ -230,7 +250,11 @@ describe('Helper sign-in and session (REQ-033)', () => {
       expect(viaHttps.headers['set-cookie']?.[0]).toContain('; Secure');
 
       // The cookie is bound to the verified Google account id (DEC-011).
-      expect(cookieClaims(sessionCookie(answer))).toEqual({ email: 'priya@example.com', sub: 'uid-1', exp: expect.any(Number) });
+      expect(cookieClaims(sessionCookie(answer))).toEqual({
+        email: 'priya@example.com',
+        sub: 'uid-1',
+        exp: expect.any(Number),
+      });
 
       // GET /api/helper/session: the signed-in Helper and only their grants.
       const session = await call(ON_PORT, 'GET', '/api/helper/session', { headers: { cookie: sessionCookie(answer) } });
@@ -303,7 +327,9 @@ describe('Helper sign-in and session (REQ-033)', () => {
     const none = await call(ON_PORT, 'GET', '/api/helper/session');
     expect(none.status).toBe(401);
     expect(none.json.code).toBe('ERR_SIGN_IN_FAILED');
-    const forged = await call(ON_PORT, 'GET', '/api/helper/session', { headers: { cookie: `${HELPER_COOKIE}=e30.AAAA` } });
+    const forged = await call(ON_PORT, 'GET', '/api/helper/session', {
+      headers: { cookie: `${HELPER_COOKIE}=e30.AAAA` },
+    });
     expect(forged.status).toBe(401);
 
     const out = await call(ON_PORT, 'DELETE', '/api/helper/session');
@@ -323,7 +349,12 @@ describe('Owner manages Helpers (REQ-033)', () => {
     });
     expect(answer.status).toBe(200);
     expect(answer.json).toEqual({
-      helper: { auditId: auditA, email: 'priya@example.com', permissions: ['view', 'export'], grantedAt: expect.any(String) },
+      helper: {
+        auditId: auditA,
+        email: 'priya@example.com',
+        permissions: ['view', 'export'],
+        grantedAt: expect.any(String),
+      },
     });
 
     for (const body of [
@@ -357,7 +388,12 @@ describe('Owner manages Helpers (REQ-033)', () => {
     expect(list.status).toBe(200);
     expect(list.json.helpers.map((h: { email: string }) => h.email)).toEqual(['arun@example.com', 'priya@example.com']);
 
-    const removed = await call(ON_PORT, 'DELETE', `${helpersPath(auditA)}?email=${encodeURIComponent('Priya@example.com')}`, { headers: owner });
+    const removed = await call(
+      ON_PORT,
+      'DELETE',
+      `${helpersPath(auditA)}?email=${encodeURIComponent('Priya@example.com')}`,
+      { headers: owner }
+    );
     expect(removed.status).toBe(200);
     expect(removed.json).toEqual({ removed: true });
     expect((await store.listHelpers(auditA)).map((h) => h.email)).toEqual(['arun@example.com']);

@@ -52,7 +52,11 @@ function renderBlock(block: DocBlock, doc: AuditDoc): string {
     case 'table': {
       if (block.columns.length === 0) return '';
       const row = (cells: string[]) => `| ${cells.map((c) => escapeMarkdownInline(c) || ' ').join(' | ')} |`;
-      return [row(block.columns), `|${block.columns.map(() => ' --- ').join('|')}|`, ...normalizedRows(block).map(row)].join('\n');
+      return [
+        row(block.columns),
+        `|${block.columns.map(() => ' --- ').join('|')}|`,
+        ...normalizedRows(block).map(row),
+      ].join('\n');
     }
     case 'image': {
       const alt = escapeMarkdownInline(block.alt);

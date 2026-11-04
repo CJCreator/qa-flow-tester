@@ -55,7 +55,14 @@ describe('ADR 0036: hosted Website Audit storage and Shared Links', () => {
     const d = section(adr, 'Decision');
     expect(d).toMatch(/kept until the tool user deletes (that|the) Website Audit/);
     expect(d).toMatch(/Deleting a Website Audit removes all its data/);
-    for (const part of ['every version', 'every edit', 'every file', 'Shortlist entry', 'every Shared Link', 'every Helper grant']) {
+    for (const part of [
+      'every version',
+      'every edit',
+      'every file',
+      'Shortlist entry',
+      'every Shared Link',
+      'every Helper grant',
+    ]) {
       expect(d, part).toContain(part);
     }
     expect(d).toMatch(/soft delete off/);
@@ -103,10 +110,19 @@ describe('ADR 0036: hosted Website Audit storage and Shared Links', () => {
       expect(adr, term).toContain(term);
     }
     const avoid = [
-      'public link', 'permalink', 'share url', 'published report', // Shared Link
-      'leads', 'pipeline', 'crm', 'prospect list', // Shortlist
-      'collaborator', 'team member', // Helper
-      'site review', 'teardown', 'scrape', // Website Audit, Page Content
+      'public link',
+      'permalink',
+      'share url',
+      'published report', // Shared Link
+      'leads',
+      'pipeline',
+      'crm',
+      'prospect list', // Shortlist
+      'collaborator',
+      'team member', // Helper
+      'site review',
+      'teardown',
+      'scrape', // Website Audit, Page Content
     ];
     const lower = adr.toLowerCase();
     for (const word of avoid) {

@@ -40,7 +40,14 @@ export const MAX_REWRITE_OVERLAP_WORDS = 100;
 /** Longest PageSpeed key accepted; its content is the key resolver's concern. */
 export const MAX_PAGESPEED_KEY_CHARS = 512;
 
-const COMPANY_KEYS = ['name', 'address', 'phone', 'email', 'website', 'terms'] as const satisfies readonly (keyof CompanyDetails)[];
+const COMPANY_KEYS = [
+  'name',
+  'address',
+  'phone',
+  'email',
+  'website',
+  'terms',
+] as const satisfies readonly (keyof CompanyDetails)[];
 
 const COMPANY_CAPS: Record<keyof CompanyDetails, number> = {
   name: MAX_COMPANY_FIELD_CHARS,
@@ -55,7 +62,10 @@ const COMPANY_CAPS: Record<keyof CompanyDetails, number> = {
 // Defaults and stored settings
 // ---------------------------------------------------------------------------------------------------
 
-const PROPOSAL_TEMPLATES: Partial<Record<DocumentLanguage, string>> = { en: PROPOSAL_TEMPLATE_EN, ta: PROPOSAL_TEMPLATE_TA };
+const PROPOSAL_TEMPLATES: Partial<Record<DocumentLanguage, string>> = {
+  en: PROPOSAL_TEMPLATE_EN,
+  ta: PROPOSAL_TEMPLATE_TA,
+};
 
 /** The default Proposal template for `lang`, or the English one when `lang` has none. */
 export function defaultProposalTemplate(lang: DocumentLanguage): string {

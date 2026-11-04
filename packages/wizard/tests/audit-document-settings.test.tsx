@@ -46,7 +46,11 @@ function settingsReply(over: Partial<AuditSettingsReply['settings']> = {}): Audi
       pagespeedKeySaved: false,
       ...over,
     },
-    defaults: { optOutText: { en: DEFAULT_EN, ta: DEFAULT_TA }, proposalTemplate: DEFAULT_TEMPLATE, rewriteOverlapWords: 6 },
+    defaults: {
+      optOutText: { en: DEFAULT_EN, ta: DEFAULT_TA },
+      proposalTemplate: DEFAULT_TEMPLATE,
+      rewriteOverlapWords: 6,
+    },
   };
 }
 
@@ -90,7 +94,10 @@ function fakeFetch(...replies: Array<{ status: number; body: unknown } | Error>)
     const next = replies.shift();
     if (!next) throw new Error('no reply queued');
     if (next instanceof Error) throw next;
-    return new Response(JSON.stringify(next.body), { status: next.status, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify(next.body), {
+      status: next.status,
+      headers: { 'Content-Type': 'application/json' },
+    });
   };
   return { impl, calls };
 }
@@ -201,13 +208,19 @@ describe('company details', () => {
   it('enables the save only when something changed, and shows the saved and failed states', () => {
     const reply = settingsReply();
     const clean = view();
-    expect(clean).toMatch(/<button type="button" class="btn-primary[^"]*" disabled="">Save document settings<\/button>/);
+    expect(clean).toMatch(
+      /<button type="button" class="btn-primary[^"]*" disabled="">Save document settings<\/button>/
+    );
     expect(textOf(clean)).toContain('Every change is saved.');
     const changed = view({ draft: { ...draftFrom(reply), proposalTemplate: 'x' } });
     expect(changed).toMatch(/<button type="button" class="btn-primary[^"]*">Save document settings<\/button>/);
     expect(textOf(changed)).toContain('You have changes that are not saved yet.');
-    expect(view({ message: { tone: 'fail', text: 'Only the tool user can change the document settings.' } })).toContain('role="alert"');
-    expect(view({ message: { tone: 'pass', text: 'Document settings saved. New exports use them.' } })).toContain('role="status"');
+    expect(view({ message: { tone: 'fail', text: 'Only the tool user can change the document settings.' } })).toContain(
+      'role="alert"'
+    );
+    expect(view({ message: { tone: 'pass', text: 'Document settings saved. New exports use them.' } })).toContain(
+      'role="status"'
+    );
   });
 });
 
@@ -229,13 +242,20 @@ describe('settings-api', () => {
       { status: 200, body: { nope: true } },
       new Error('offline')
     );
-    expect(await saveSettings({}, impl)).toMatchObject({ ok: false, code: 'ERR_FORBIDDEN', message: expect.stringMatching(/tool user/) });
+    expect(await saveSettings({}, impl)).toMatchObject({
+      ok: false,
+      code: 'ERR_FORBIDDEN',
+      message: expect.stringMatching(/tool user/),
+    });
     expect(await saveSettings({ proposalTemplate: 'x' }, impl)).toEqual({
       ok: false,
       message: 'The Proposal template is too long.',
       code: 'ERR_INVALID_REQUEST',
     });
-    expect(await loadSettings(impl)).toEqual({ ok: false, message: 'The document settings could not be loaded. Try again.' });
+    expect(await loadSettings(impl)).toEqual({
+      ok: false,
+      message: 'The document settings could not be loaded. Try again.',
+    });
     expect(await loadSettings(impl)).toMatchObject({ ok: false, message: expect.stringMatching(/not answering/) });
   });
 });
@@ -285,7 +305,8 @@ describe('accessible markup and wording', () => {
 
   it('uses the CONTEXT.md terms and shows the loading state first', () => {
     const text = textOf(views.view) + textOf(views.screen);
-    for (const term of ['Proposal', 'Pitch Glimpse', 'Improvement Roadmap', 'Website Audit']) expect(text).toContain(term);
+    for (const term of ['Proposal', 'Pitch Glimpse', 'Improvement Roadmap', 'Website Audit'])
+      expect(text).toContain(term);
     expect(views.screen).toContain('<h1');
     expect(views.screen).toContain('Loading the document settings');
   });

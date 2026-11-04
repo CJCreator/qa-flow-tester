@@ -84,11 +84,7 @@ export class GeminiProvider implements AIProvider {
     }
   }
 
-  private async send(
-    messages: AIMessage[],
-    options: AICompletionOptions,
-    signal: AbortSignal
-  ): Promise<AICompletion> {
+  private async send(messages: AIMessage[], options: AICompletionOptions, signal: AbortSignal): Promise<AICompletion> {
     const model = options.model || this.defaultModel || DEFAULT_MODELS.gemini;
     const isAdc = this.apiKey === 'adc' || this.apiKey.startsWith('ya29.');
     let endpoint: string;
@@ -96,7 +92,7 @@ export class GeminiProvider implements AIProvider {
 
     if (isAdc) {
       const adc = await resolveAdcToken(signal);
-      if (!adc &&!this.apiKey.startsWith('ya29.')) {
+      if (!adc && !this.apiKey.startsWith('ya29.')) {
         throw new Error(
           'No Google Application Default Credentials found. Please authenticate via gcloud auth application-default login.'
         );

@@ -87,10 +87,7 @@ function versionQuery(url: URL): number | undefined | 'invalid' {
 }
 
 /** Declared access comes from AUDIT_API, so a row can never drift from the contract. */
-function row(
-  key: 'list' | 'get' | 'remove',
-  handle: Route['handle']
-): Route & { method: string; access: AuditAccess } {
+function row(key: 'list' | 'get' | 'remove', handle: Route['handle']): Route & { method: string; access: AuditAccess } {
   const { method, path, access } = AUDIT_API[key];
   return { method, path, access, handle };
 }
@@ -160,7 +157,12 @@ export function auditStoreRoutes(deps: AuditRouteDeps): Route[] {
         const summary = await store.getAudit(auditId);
         if (!summary) return refuse(res, 404, 'ERR_AUDIT_NOT_FOUND', AUDIT_NOT_FOUND);
         if (await running(auditId, summary)) {
-          return refuse(res, 409, 'ERR_AUDIT_RUNNING', 'This Website Audit is still running. Stop it first, then delete it.');
+          return refuse(
+            res,
+            409,
+            'ERR_AUDIT_RUNNING',
+            'This Website Audit is still running. Stop it first, then delete it.'
+          );
         }
         await store.deleteAudit(auditId);
         sendJson(res, 200, { deleted: true });

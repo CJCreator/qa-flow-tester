@@ -91,7 +91,10 @@ export async function putShortlist(
 }
 
 /** Every Shortlist entry with its audit's address, newest audit first, filtered by mark and outcome. */
-export async function listShortlist(ctx: AuditStoreContext, filter: ShortlistFilter = {}): Promise<ShortlistListItem[]> {
+export async function listShortlist(
+  ctx: AuditStoreContext,
+  filter: ShortlistFilter = {}
+): Promise<ShortlistListItem[]> {
   if (filter.mark !== undefined && filter.mark !== null && !isShortlistMark(filter.mark)) {
     throw invalidInput('The mark must be pitch or skip.');
   }

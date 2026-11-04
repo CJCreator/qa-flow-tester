@@ -169,7 +169,14 @@ function pageStages(over: Partial<PageStages> = {}): Partial<PageStages> {
     accessibilityBasics: vi.fn(async (_page: Page, opts): Promise<AccessibilityBasicsResult> => {
       calls.push(`a11y:${opts.urlPath}`);
       const id = opts.ids.next();
-      const f = finding(id, opts.urlPath, { rule: 'color-contrast', area: 'accessibility', source: 'checker', sectionId: null, severity: 'Major', impact: 'high' });
+      const f = finding(id, opts.urlPath, {
+        rule: 'color-contrast',
+        area: 'accessibility',
+        source: 'checker',
+        sectionId: null,
+        severity: 'Major',
+        impact: 'high',
+      });
       return {
         basics: { standard: 'WCAG 2.2', level: 'AA', method: 'automatic checks only', violations: 1, findingIds: [id] },
         findings: [f],
@@ -211,7 +218,15 @@ function fakeAnalyse(input: AnalysisInput): SiteAnalysis {
       depth: p.depth,
       language: p.content.language,
       sections: p.content.sections.map((s) => ({ id: s.id, kind: s.kind })),
-      seo: { hasTitle: true, hasDescription: false, h1Count: 1, skippedHeadingLevel: false, imagesWithoutAlt: 1, htmlLang: 'en', findingIds: [own.id] },
+      seo: {
+        hasTitle: true,
+        hasDescription: false,
+        h1Count: 1,
+        skippedHeadingLevel: false,
+        imagesWithoutAlt: 1,
+        htmlLang: 'en',
+        findingIds: [own.id],
+      },
       ...(accessibility ? { accessibility } : {}),
     };
   });
@@ -224,7 +239,14 @@ function fakeAnalyse(input: AnalysisInput): SiteAnalysis {
     marketing: {
       readPages: input.pages.map((p) => p.urlPath),
       checks: [],
-      signals: MARKETING_SIGNALS.map((s) => ({ key: s.key, label: s.label, status: 'found', pages: ['/'], detail: 'x', findingIds: [findings[0].id] })),
+      signals: MARKETING_SIGNALS.map((s) => ({
+        key: s.key,
+        label: s.label,
+        status: 'found',
+        pages: ['/'],
+        detail: 'x',
+        findingIds: [findings[0].id],
+      })),
     },
     nextFindingNumber: n,
     notes: [],
@@ -271,7 +293,17 @@ function siteStages(over: Partial<SiteStages> = {}): Partial<SiteStages> {
     }),
     buildRoadmap: vi.fn((findings: readonly AuditFinding[]): RoadmapItem[] => {
       calls.push('roadmap');
-      return [{ id: 'R1', title: 'Fix', priority: 'high', phase: 1, effort: 'low', findingIds: findings.map((f) => f.id), pages: ['/'] }];
+      return [
+        {
+          id: 'R1',
+          title: 'Fix',
+          priority: 'high',
+          phase: 1,
+          effort: 'low',
+          findingIds: findings.map((f) => f.id),
+          pages: ['/'],
+        },
+      ];
     }),
     ...over,
   };
@@ -307,7 +339,7 @@ async function recordCrawl(stages: Partial<PageStages> = pageStages()) {
 async function run(
   over: Partial<AuditPipelineDeps> = {},
   stages: Partial<SiteStages> = siteStages(),
-  crawl: AuditCrawlResult = crawlResult(),
+  crawl: AuditCrawlResult = crawlResult()
 ) {
   const recorder = over.recorder ?? (await recordCrawl());
   const mem = memoryStore();
@@ -402,9 +434,24 @@ describe('audit pipeline: runAuditPipeline', () => {
       'ranking',
       'saving',
     ]);
-    expect(events[0]).toMatchObject({ auditId: AUDIT_ID, version: 1, pagesFound: 8, pagesRecorded: 6, pagesSkipped: 2 });
+    expect(events[0]).toMatchObject({
+      auditId: AUDIT_ID,
+      version: 1,
+      pagesFound: 8,
+      pagesRecorded: 6,
+      pagesSkipped: 2,
+    });
     expect(steps.every((s) => s.status === 'done')).toBe(true);
-    expect(steps.map((s) => s.step)).toEqual(['reading', 'analysis', 'speed', 'assessment', 'recommendation', 'ranking', 'roadmap', 'saving']);
+    expect(steps.map((s) => s.step)).toEqual([
+      'reading',
+      'analysis',
+      'speed',
+      'assessment',
+      'recommendation',
+      'ranking',
+      'roadmap',
+      'saving',
+    ]);
 
     // Analysis requests: makeCheckerFetch, public only, no redirects (default), the audit's pacer.
     expect(makeCheckerFetch).toHaveBeenCalledTimes(1);
@@ -444,7 +491,12 @@ describe('audit pipeline: runAuditPipeline', () => {
     expect([...ranks].sort((a, b) => a - b)).toEqual(ranks);
     const phoneFindings = result.findings.filter((f) => f.area === 'usability');
     expect(phoneFindings).toHaveLength(5);
-    expect(phoneFindings[0]).toMatchObject({ rule: 'tap-target', source: 'checker', severity: 'Major', target: '#buy' });
+    expect(phoneFindings[0]).toMatchObject({
+      rule: 'tap-target',
+      source: 'checker',
+      severity: 'Major',
+      target: '#buy',
+    });
     expect(phoneFindings.every((f) => f.findingId?.startsWith('F-UX-TARGET-'))).toBe(true);
 
     // Every list citing a finding follows the renumbering: each cited id exists and is on that page.
@@ -454,7 +506,8 @@ describe('audit pipeline: runAuditPipeline', () => {
       for (const id of p.accessibility?.findingIds ?? []) expect(byId.get(id)!.area).toBe('accessibility');
       for (const id of p.phone?.findingIds ?? []) expect(byId.get(id)!.area).toBe('usability');
       for (const id of p.recommendation?.findingIds ?? []) expect(byId.get(id)!.urlPath).toBe(p.urlPath);
-      for (const a of p.areas ?? []) if (a.status === 'done') for (const id of a.evidence) expect(byId.get(id)!.urlPath).toBe(p.urlPath);
+      for (const a of p.areas ?? [])
+        if (a.status === 'done') for (const id of a.evidence) expect(byId.get(id)!.urlPath).toBe(p.urlPath);
       expect(p.recommendation?.findingIds.length ?? 0).toBe(p.coverage === 'sample' ? 3 : 0);
     }
     for (const s of result.marketing.signals) for (const id of s.findingIds ?? []) expect(byId.has(id)).toBe(true);
@@ -480,7 +533,12 @@ describe('audit pipeline: runAuditPipeline', () => {
     expect(mem.results[0]).toEqual(JSON.parse(JSON.stringify(result)));
     for (const p of CRAWL_PAGES) expect(mem.json.has(pageContentName(p.urlPath))).toBe(true);
     expect(mem.json.get('stages')).toBeDefined();
-    expect([...mem.files.keys()].sort()).toEqual(result.pages.filter((p) => p.phone).map((p) => p.phone!.screenshotPath).sort());
+    expect([...mem.files.keys()].sort()).toEqual(
+      result.pages
+        .filter((p) => p.phone)
+        .map((p) => p.phone!.screenshotPath)
+        .sort()
+    );
     expect(mem.store.updateVersion).toHaveBeenCalledWith(AUDIT_ID, 1, {
       status: 'done',
       finishedAt: '2026-11-03T00:05:00.000Z',
@@ -633,7 +691,10 @@ describe('audit pipeline: runAuditPipeline', () => {
     crawl.crawlDelayMs = 2000;
     const { outcome } = await run({ pacer: undefined }, siteStages(), crawl);
     await outcome;
-    expect(vi.mocked(makeCheckerFetch).mock.calls.at(-1)![0]).toMatchObject({ allowPrivate: false, pacer: crawl.pacer });
+    expect(vi.mocked(makeCheckerFetch).mock.calls.at(-1)![0]).toMatchObject({
+      allowPrivate: false,
+      pacer: crawl.pacer,
+    });
   });
 
   it('a lost phone screenshot is not cited: the page and its findings drop the path', async () => {
@@ -642,7 +703,9 @@ describe('audit pipeline: runAuditPipeline', () => {
     const { result, steps } = await outcome;
     const home = result.pages[0];
     expect(home.phone!.screenshotPath).toBeNull();
-    expect(result.findings.filter((f) => f.urlPath === '/' && f.area === 'usability').every((f) => !f.screenshotPath)).toBe(true);
+    expect(
+      result.findings.filter((f) => f.urlPath === '/' && f.area === 'usability').every((f) => !f.screenshotPath)
+    ).toBe(true);
     expect(steps.find((s) => s.step === 'saving')!.status).toBe('not-done');
   });
 
@@ -662,7 +725,14 @@ describe('audit pipeline: runAuditPipeline', () => {
 });
 
 describe('audit pipeline: area grades', () => {
-  const none = { 'search-ranking': false, marketing: false, usability: false, content: false, accessibility: false, speed: false };
+  const none = {
+    'search-ranking': false,
+    marketing: false,
+    usability: false,
+    content: false,
+    accessibility: false,
+    speed: false,
+  };
 
   it('leaves an area nothing checked without a grade, never an A', () => {
     expect(Object.values(areaGrades([], none, null))).toEqual(Array(6).fill(null));

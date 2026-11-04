@@ -25,10 +25,21 @@ export interface AuditAiModelsViewProps extends ModelsState {
 }
 
 /** The AI model per Website Audit task without state: one labelled field per task, its default and its message. */
-export function AuditAiModelsView({ reply, draft, errors, message, saving, onDraft, onSave, onDiscard }: AuditAiModelsViewProps) {
+export function AuditAiModelsView({
+  reply,
+  draft,
+  errors,
+  message,
+  saving,
+  onDraft,
+  onSave,
+  onDiscard,
+}: AuditAiModelsViewProps) {
   const pending = !isUpdateEmpty(modelsUpdate(reply, draft));
   // A message the runner gave for no shown field (the body as a whole) is shown with the save.
-  const otherErrors = Object.entries(errors).filter(([field]) => !(AUDIT_AI_STAGES as readonly string[]).includes(field));
+  const otherErrors = Object.entries(errors).filter(
+    ([field]) => !(AUDIT_AI_STAGES as readonly string[]).includes(field)
+  );
   return (
     <section aria-labelledby="audit-ai-models-title" className="space-y-3">
       <h2 id="audit-ai-models-title" className="text-xl font-bold">
@@ -121,7 +132,10 @@ export function AuditAiModelsPanel({ fetchImpl }: AuditAiModelsPanelProps) {
     void loadModels(fetchImpl).then((outcome) => {
       if (!live) return;
       if (outcome.ok) {
-        setLoaded({ status: 'loaded', state: { reply: outcome.value, draft: draftFrom(outcome.value), errors: {}, message: null } });
+        setLoaded({
+          status: 'loaded',
+          state: { reply: outcome.value, draft: draftFrom(outcome.value), errors: {}, message: null },
+        });
       } else {
         setLoaded({ status: 'failed', message: outcome.message });
       }
@@ -141,7 +155,9 @@ export function AuditAiModelsPanel({ fetchImpl }: AuditAiModelsPanelProps) {
     const before = state;
     setSaving(true);
     const outcome = await saveModels(modelsUpdate(before.reply, before.draft), fetchImpl);
-    setLoaded((current) => (current.status === 'loaded' ? { status: 'loaded', state: afterSave(current.state, outcome) } : current));
+    setLoaded((current) =>
+      current.status === 'loaded' ? { status: 'loaded', state: afterSave(current.state, outcome) } : current
+    );
     setSaving(false);
   };
 

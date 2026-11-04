@@ -89,7 +89,8 @@ function own<T>(table: Readonly<Record<string, T>>, key: string | undefined): T 
 export function defaultImpactEffort(finding: Pick<AuditFinding, 'rule' | 'severity'>): ImpactEffort {
   const byRule = own(IMPACT_EFFORT_BY_RULE, finding.rule);
   if (byRule) return { ...byRule };
-  const bySeverity = typeof finding.severity === 'string' ? own(IMPACT_EFFORT_BY_SEVERITY, finding.severity.toLowerCase()) : undefined;
+  const bySeverity =
+    typeof finding.severity === 'string' ? own(IMPACT_EFFORT_BY_SEVERITY, finding.severity.toLowerCase()) : undefined;
   if (bySeverity) return { ...bySeverity };
   return { ...DEFAULT_IMPACT_EFFORT };
 }
@@ -147,7 +148,7 @@ export interface RankedFindings {
 /** `rankFindings`, also returning how each previous id was renumbered. */
 export function rankFindingsWithIdMap(
   findings: ReadonlyArray<UnscoredAuditFinding | AuditFinding>,
-  options: RankOptions = {},
+  options: RankOptions = {}
 ): RankedFindings {
   const start = options.start ?? 1;
   if (!Number.isSafeInteger(start) || start < 1) {
@@ -166,7 +167,7 @@ export function rankFindingsWithIdMap(
       compareSection(a.f.sectionId, b.f.sectionId) ||
       compareText(a.f.rule, b.f.rule) ||
       compareText(a.f.target ?? '', b.f.target ?? '') ||
-      compareText(a.f.id, b.f.id),
+      compareText(a.f.id, b.f.id)
   );
   const idMap = new Map<string, string>();
   const ranked = keyed.map(({ f }, i) => {
@@ -183,7 +184,7 @@ export function rankFindingsWithIdMap(
  */
 export function rankFindings(
   findings: ReadonlyArray<UnscoredAuditFinding | AuditFinding>,
-  options: RankOptions = {},
+  options: RankOptions = {}
 ): AuditFinding[] {
   return rankFindingsWithIdMap(findings, options).findings;
 }
@@ -212,7 +213,7 @@ export interface CitablePage {
  */
 export function checkCitations(
   findings: ReadonlyArray<Pick<AuditFinding, 'id' | 'rule' | 'urlPath' | 'sectionId' | 'pages'>>,
-  pages: ReadonlyArray<CitablePage>,
+  pages: ReadonlyArray<CitablePage>
 ): CitationProblem[] {
   const sectionsByPath = new Map<string, Set<string>>();
   for (const page of pages) sectionsByPath.set(page.urlPath, new Set(page.sections.map((s) => s.id)));

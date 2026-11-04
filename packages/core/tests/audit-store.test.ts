@@ -109,7 +109,13 @@ describe('AuditStore: audits and versions (REQ-028)', () => {
     const other = await store.createAudit(REQUEST);
     expect(v1.auditId).toMatch(AUDIT_ID_PATTERN);
     expect(v1.auditId).not.toBe(other.auditId);
-    expect(v1).toMatchObject({ version: 1, status: 'running', url: REQUEST.url, limits: REQUEST.limits, language: 'ta' });
+    expect(v1).toMatchObject({
+      version: 1,
+      status: 'running',
+      url: REQUEST.url,
+      limits: REQUEST.limits,
+      language: 'ta',
+    });
   });
 
   it('adds the next version with the same url, limits and language (REQ-028 AC-3)', async () => {
@@ -141,9 +147,9 @@ describe('AuditStore: audits and versions (REQ-028)', () => {
     await expect(store.createAudit({ ...REQUEST, url: 'ftp://x.example' })).rejects.toThrow(AuditRecordError);
     await expect(store.createAudit({ ...REQUEST, url: 'https://u:p@x.example/' })).rejects.toThrow(AuditRecordError);
     await expect(store.createAudit({ ...REQUEST, language: 'xx' as never })).rejects.toThrow(AuditRecordError);
-    await expect(
-      store.createAudit({ ...REQUEST, limits: { ...REQUEST.limits, maxPages: 0 } })
-    ).rejects.toThrow(AuditRecordError);
+    await expect(store.createAudit({ ...REQUEST, limits: { ...REQUEST.limits, maxPages: 0 } })).rejects.toThrow(
+      AuditRecordError
+    );
     expect(await backend.list('')).toEqual([]);
   });
 
@@ -342,7 +348,11 @@ describe('no secrets in stored audits', () => {
   });
 
   it('keeps none of the seeded secrets after every store method runs', async () => {
-    const stray = { token: SECRETS.RUNNER_ACCESS_TOKEN, apiKey: SECRETS.GEMINI_API_KEY, idToken: SECRETS.GOOGLE_ID_TOKEN };
+    const stray = {
+      token: SECRETS.RUNNER_ACCESS_TOKEN,
+      apiKey: SECRETS.GEMINI_API_KEY,
+      idToken: SECRETS.GOOGLE_ID_TOKEN,
+    };
     const v1 = await store.createAudit({ ...REQUEST, ...stray, limits: { ...REQUEST.limits, ...stray } } as never);
     const id = v1.auditId;
     await store.addVersion(id);

@@ -40,7 +40,13 @@ function finding(
   };
 }
 
-const MID_GRADES: AreaGrades = { 'search-ranking': 'C', marketing: 'C', usability: 'B', content: 'C', accessibility: 'D' };
+const MID_GRADES: AreaGrades = {
+  'search-ranking': 'C',
+  marketing: 'C',
+  usability: 'B',
+  content: 'C',
+  accessibility: 'D',
+};
 
 function sample(urlPath: string, findings: AuditFinding[], grades: AreaGrades = MID_GRADES): RecommendationPageInput {
   return { urlPath, title: `Title of ${urlPath}`, coverage: 'sample', findings, grades };
@@ -107,7 +113,13 @@ describe('recommendPages with an AI key', () => {
         findingIds: ['AF-001', 'AF-002'],
         decidedBy: 'ai',
       },
-      { urlPath: '/about', action: 'repair', reason: 'One small issue was found.', findingIds: ['AF-003'], decidedBy: 'ai' },
+      {
+        urlPath: '/about',
+        action: 'repair',
+        reason: 'One small issue was found.',
+        findingIds: ['AF-003'],
+        decidedBy: 'ai',
+      },
     ]);
     expect(fake.requests).toHaveLength(2);
   });
@@ -235,7 +247,13 @@ describe('recommendPages with an AI key', () => {
     const worst: AreaGrades = { marketing: 'A', usability: 'F', content: 'F' };
     const [rec] = await recommendPages(input([sample('/clean', [], worst)]), resolution);
     expect(fake.requests).toHaveLength(0);
-    expect(rec).toEqual({ urlPath: '/clean', action: 'repair', reason: NO_FINDINGS_REASON, findingIds: [], decidedBy: 'rule' });
+    expect(rec).toEqual({
+      urlPath: '/clean',
+      action: 'repair',
+      reason: NO_FINDINGS_REASON,
+      findingIds: [],
+      decidedBy: 'rule',
+    });
     expect(rec.reason).toContain('checked parts');
     expect(rec.reason).not.toMatch(/whole page|entire page|no issues on this page/i);
     expect(findClaimWords(rec.reason)).toEqual([]);
@@ -318,7 +336,13 @@ describe('ruleRecommendation', () => {
   });
 
   it('redesign when usability and content have the two lowest grades, citing their findings', () => {
-    const grades: AreaGrades = { 'search-ranking': 'B', marketing: 'C', usability: 'D', content: 'F', accessibility: 'B' };
+    const grades: AreaGrades = {
+      'search-ranking': 'B',
+      marketing: 'C',
+      usability: 'D',
+      content: 'F',
+      accessibility: 'B',
+    };
     const findings = [
       finding('AF-001', '/p', { area: 'accessibility' }),
       finding('AF-002', '/p', { area: 'usability' }),
@@ -335,7 +359,8 @@ describe('ruleRecommendation', () => {
     const tie: AreaGrades = { marketing: 'D', usability: 'D', content: 'F' };
     const notGraded: AreaGrades = { marketing: 'A', usability: 'F' };
     const alone: AreaGrades = { usability: 'F', content: 'F' };
-    for (const grades of [tie, notGraded, alone]) expect(ruleRecommendation(sample('/p', f, grades)).action).toBe('repair');
+    for (const grades of [tie, notGraded, alone])
+      expect(ruleRecommendation(sample('/p', f, grades)).action).toBe('repair');
   });
 
   it('repair with one finding uses singular wording', () => {
@@ -345,6 +370,12 @@ describe('ruleRecommendation', () => {
 
   it('no findings: repair with the checked-parts reason, even when the grades are lowest', () => {
     const rec = ruleRecommendation(sample('/p', [], { marketing: 'A', usability: 'F', content: 'F' }));
-    expect(rec).toEqual({ urlPath: '/p', action: 'repair', reason: NO_FINDINGS_REASON, findingIds: [], decidedBy: 'rule' });
+    expect(rec).toEqual({
+      urlPath: '/p',
+      action: 'repair',
+      reason: NO_FINDINGS_REASON,
+      findingIds: [],
+      decidedBy: 'rule',
+    });
   });
 });

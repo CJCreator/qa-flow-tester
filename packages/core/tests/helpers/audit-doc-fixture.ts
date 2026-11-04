@@ -47,7 +47,12 @@ type SectionSpec = [string, SectionKind, string | undefined, string];
 const SECTION_SPECS: Record<string, SectionSpec[]> = {
   [PATHS.home]: [
     ['s1', 'header', undefined, 'Shop Example\nHome About Services\n'],
-    ['s2', 'main', 'Fresh groceries delivered', 'Fresh groceries delivered\nOrder before 6 pm for same-day delivery.\n'],
+    [
+      's2',
+      'main',
+      'Fresh groceries delivered',
+      'Fresh groceries delivered\nOrder before 6 pm for same-day delivery.\n',
+    ],
     ['s3', 'footer', undefined, 'Call 044 1234 5678\n© Shop Example'],
   ],
   [PATHS.about]: [
@@ -127,7 +132,13 @@ export function auditDocContents(): PageContent[] {
       ctas: [{ text: 'Order now', kind: 'link', to: '/order', sectionId: 's2' }],
       links: [
         ...menu(PATHS.home),
-        { text: 'Instagram', to: 'https://instagram.com/shopexample', region: 'footer', leavesSite: true, sectionId: 's3' },
+        {
+          text: 'Instagram',
+          to: 'https://instagram.com/shopexample',
+          region: 'footer',
+          leavesSite: true,
+          sectionId: 's3',
+        },
       ],
     }),
     content(PATHS.about, {
@@ -155,7 +166,13 @@ export function auditDocContents(): PageContent[] {
     content(PATHS.tamil, {
       links: [
         { text: 'முகப்பு', to: PATHS.home, region: 'menu', sectionId: 's1' },
-        { text: 'Instagram', to: 'https://instagram.com/shopexample', region: 'footer', leavesSite: true, sectionId: 's3' },
+        {
+          text: 'Instagram',
+          to: 'https://instagram.com/shopexample',
+          region: 'footer',
+          leavesSite: true,
+          sectionId: 's3',
+        },
       ],
     }),
   ];
@@ -257,16 +274,16 @@ const seo = (findingIds: string[]): AuditPage['seo'] => ({
 });
 
 function areas(evidence: string[]): AreaAssessment[] {
-  return AUDIT_AREAS.map(
-    (area): AreaAssessment =>
-      area === 'marketing'
-        ? { area, grade: 'C', status: 'done', note: 'The offer is clear; the call to action is late.', evidence }
-        : { area, grade: null, status: 'not-done', reason: 'no-ai-key' },
+  return AUDIT_AREAS.map((area): AreaAssessment =>
+    area === 'marketing'
+      ? { area, grade: 'C', status: 'done', note: 'The offer is clear; the call to action is late.', evidence }
+      : { area, grade: null, status: 'not-done', reason: 'no-ai-key' }
   );
 }
 
 function pages(): AuditPage[] {
-  const summary = (urlPath: string) => sections(urlPath).map(({ id, kind, heading }) => ({ id, kind, ...(heading ? { heading } : {}) }));
+  const summary = (urlPath: string) =>
+    sections(urlPath).map(({ id, kind, heading }) => ({ id, kind, ...(heading ? { heading } : {}) }));
   return [
     {
       urlPath: PATHS.home,

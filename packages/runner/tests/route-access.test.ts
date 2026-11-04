@@ -200,11 +200,21 @@ describe('the route table declares access and beta policy', () => {
 
 describe('isLoopbackAddress: the owner without a key is the local machine (DEC-004)', () => {
   it('accepts the loopback socket addresses', () => {
-    for (const address of ['127.0.0.1', '::1', '::ffff:127.0.0.1']) expect(isLoopbackAddress(address), address).toBe(true);
+    for (const address of ['127.0.0.1', '::1', '::ffff:127.0.0.1'])
+      expect(isLoopbackAddress(address), address).toBe(true);
   });
 
   it('refuses every other address, and a missing one', () => {
-    for (const address of [undefined, '', '10.0.0.5', '192.168.1.20', '::ffff:10.0.0.5', '0.0.0.0', 'localhost', '::']) {
+    for (const address of [
+      undefined,
+      '',
+      '10.0.0.5',
+      '192.168.1.20',
+      '::ffff:10.0.0.5',
+      '0.0.0.0',
+      'localhost',
+      '::',
+    ]) {
       expect(isLoopbackAddress(address), String(address)).toBe(false);
     }
   });

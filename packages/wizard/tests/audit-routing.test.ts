@@ -98,7 +98,9 @@ describe('App.tsx shows every Website Audit screen', () => {
       // A file may also export its stateless view; only the stateful screen or panel is mounted.
       expect(exported.length).toBeGreaterThan(0);
       for (const name of exported) {
-        expect(app, `${name} imported`).toMatch(new RegExp(`import \\{[^}]*\\b${name}\\b[^}]*\\} from '\\./screens/audit/`));
+        expect(app, `${name} imported`).toMatch(
+          new RegExp(`import \\{[^}]*\\b${name}\\b[^}]*\\} from '\\./screens/audit/`)
+        );
         expect(app, `${name} rendered`).toMatch(new RegExp(`<${name}[\\s/>]`));
       }
     }

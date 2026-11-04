@@ -49,7 +49,7 @@ function sameSegments(a: string[], b: string[]): boolean {
 export function pathLimitVerdict(
   pathname: string,
   limits: Pick<AuditLimits, 'includePaths' | 'excludePaths'>,
-  startPath: string,
+  startPath: string
 ): PathLimitVerdict | undefined {
   const path = pathSegments(pathname);
   if (sameSegments(path, pathSegments(startPath))) return undefined;

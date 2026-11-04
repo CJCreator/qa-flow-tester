@@ -47,10 +47,15 @@ describe('isCheckoutPath', () => {
     (p) => expect(isCheckoutPath(p)).toBe(true)
   );
 
-  it.each(['/checkout-guide-blog-post', '/blog/how-checkout-works', '/paypal-review', '/shop', '/about', '/', '/payday'])(
-    '%s is not a checkout path',
-    (p) => expect(isCheckoutPath(p)).toBe(false)
-  );
+  it.each([
+    '/checkout-guide-blog-post',
+    '/blog/how-checkout-works',
+    '/paypal-review',
+    '/shop',
+    '/about',
+    '/',
+    '/payday',
+  ])('%s is not a checkout path', (p) => expect(isCheckoutPath(p)).toBe(false));
 
   it('does not throw on a malformed escape', () => {
     expect(isCheckoutPath('/%E0%A4%A/checkout')).toBe(true);
@@ -109,13 +114,17 @@ describe('paymentEvidence: payment-provider frame', () => {
     expect(paymentEvidence(facts([], [host]))).toBe('provider-frame');
   });
 
-  it.each(['www.google.com', 'www.youtube.com', 'player.vimeo.com', 'maps.google.com', 'notstripe.com', 'stripe.com.evil.test'])(
-    'a frame from %s is not',
-    (host) => {
-      expect(isPaymentProviderHost(host)).toBe(false);
-      expect(paymentEvidence(facts([], [host]))).toBeUndefined();
-    }
-  );
+  it.each([
+    'www.google.com',
+    'www.youtube.com',
+    'player.vimeo.com',
+    'maps.google.com',
+    'notstripe.com',
+    'stripe.com.evil.test',
+  ])('a frame from %s is not', (host) => {
+    expect(isPaymentProviderHost(host)).toBe(false);
+    expect(paymentEvidence(facts([], [host]))).toBeUndefined();
+  });
 
   it('a page with no fields and no frames has no evidence', () => {
     expect(paymentEvidence(facts())).toBeUndefined();

@@ -19,8 +19,7 @@ import {
 export type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 export type RewriteOutcome<T> =
-  | { ok: true; value: T }
-  | { ok: false; message: string; code?: AuditErrorCode; overlaps?: OverlapFlag[] };
+  { ok: true; value: T } | { ok: false; message: string; code?: AuditErrorCode; overlaps?: OverlapFlag[] };
 
 export const NOT_ANSWERING = 'The tool is not answering. Make sure it is still open in its terminal, then try again.';
 export const NO_AI_KEY = 'Add an AI key in Settings to write new copy.';
@@ -64,7 +63,9 @@ function isRewriteState(value: unknown): value is RewriteState {
 
 /** A rewrite with only well-formed overlaps, so the screen can trust them. */
 function cleanRewrite(value: RewriteState): RewriteState {
-  return value.proposal ? { ...value, proposal: { ...value.proposal, overlaps: overlapsOf(value.proposal.overlaps) } } : value;
+  return value.proposal
+    ? { ...value, proposal: { ...value.proposal, overlaps: overlapsOf(value.proposal.overlaps) } }
+    : value;
 }
 
 function acceptRewriteReply(body: unknown): RewriteState | null {
@@ -102,7 +103,12 @@ async function call<T>(
   const refusal = isObject(body) ? body : {};
   const code = isAuditErrorCode(refusal.code) ? refusal.code : undefined;
   if (code === 'ERR_OVERLAP') {
-    return { ok: false, message: refusalText(refusal) ?? OVERLAP_FALLBACK, code, overlaps: overlapsOf(refusal.overlaps) };
+    return {
+      ok: false,
+      message: refusalText(refusal) ?? OVERLAP_FALLBACK,
+      code,
+      overlaps: overlapsOf(refusal.overlaps),
+    };
   }
   if (code && REFUSALS[code]) return { ok: false, message: REFUSALS[code]!, code };
   return { ok: false, message: refusalText(refusal) ?? fallback, code };
@@ -122,13 +128,18 @@ function post(body: unknown): RequestInit {
 }
 
 /** `GET /api/audits/:id/rewrite`: every saved rewrite of the version. */
-export function listRewrites(auditId: string, version?: number, fetchImpl: Fetch = fetch): Promise<RewriteOutcome<RewriteState[]>> {
+export function listRewrites(
+  auditId: string,
+  version?: number,
+  fetchImpl: Fetch = fetch
+): Promise<RewriteOutcome<RewriteState[]>> {
   return call(
     withVersion(auditPath(AUDIT_API.listRewrites.path, { id: auditId }), version),
     { method: AUDIT_API.listRewrites.method },
     fetchImpl,
     'The saved rewrites could not be loaded. Try again.',
-    (body) => (isObject(body) && Array.isArray(body.rewrites) ? body.rewrites.filter(isRewriteState).map(cleanRewrite) : null)
+    (body) =>
+      isObject(body) && Array.isArray(body.rewrites) ? body.rewrites.filter(isRewriteState).map(cleanRewrite) : null
   );
 }
 
@@ -139,7 +150,11 @@ export interface RewriteTarget {
 }
 
 /** `POST /api/audits/:id/rewrite/approve`: approves one Section for a rewrite. */
-export function approveRewrite(auditId: string, target: RewriteTarget, fetchImpl: Fetch = fetch): Promise<RewriteOutcome<RewriteState>> {
+export function approveRewrite(
+  auditId: string,
+  target: RewriteTarget,
+  fetchImpl: Fetch = fetch
+): Promise<RewriteOutcome<RewriteState>> {
   return call(
     auditPath(AUDIT_API.approveRewrite.path, { id: auditId }),
     { method: AUDIT_API.approveRewrite.method, ...post(target) },
@@ -220,7 +235,8 @@ export function markCopiedPhrases(text: string, overlaps: readonly OverlapFlag[]
     const wanted = flag.words.split(' ').filter((w) => w !== '');
     if (wanted.length === 0) continue;
     for (let i = 0; i + wanted.length <= list.length; i++) {
-      if (wanted.every((w, k) => list[i + k]!.word === w)) ranges.push([list[i]!.start, list[i + wanted.length - 1]!.end]);
+      if (wanted.every((w, k) => list[i + k]!.word === w))
+        ranges.push([list[i]!.start, list[i + wanted.length - 1]!.end]);
     }
   }
   ranges.sort((a, b) => a[0] - b[0]);

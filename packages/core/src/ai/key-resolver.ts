@@ -302,7 +302,13 @@ export class KeyResolver {
     const secret = envSecret();
     const salt = secret ? randomBytes(16).toString('base64') : undefined;
     const fileKey = secret ? await deriveKey(secret, salt!) : await this.localFileKey(true);
-    const header = { format: FILE_FORMAT, version: FILE_VERSION, cipher: CIPHER, keySource: secret ? 'env' : 'local', salt } as const;
+    const header = {
+      format: FILE_FORMAT,
+      version: FILE_VERSION,
+      cipher: CIPHER,
+      keySource: secret ? 'env' : 'local',
+      salt,
+    } as const;
     const iv = randomBytes(12);
     const cipher = createCipheriv(CIPHER, fileKey, iv, { authTagLength: 16 });
     cipher.setAAD(additionalData(header));

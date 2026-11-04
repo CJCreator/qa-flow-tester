@@ -82,7 +82,9 @@ describe('Website Audit start form: defaults and bounds (REQ-002)', () => {
   });
 
   it('turns the typed form into a start body', () => {
-    expect(toAuditStartBody(form({ address: '  https://example.com/  ', maxPages: ' 50 ', includePaths: '/a\n/b' }))).toEqual({
+    expect(
+      toAuditStartBody(form({ address: '  https://example.com/  ', maxPages: ' 50 ', includePaths: '/a\n/b' }))
+    ).toEqual({
       url: 'https://example.com/',
       maxPages: 50,
       maxDepth: 8,
@@ -107,12 +109,24 @@ describe('Website Audit start form: the client-side check (REQ-001 AC-3)', () =>
     const ftp = checkAuditStartForm(form({ address: 'ftp://example.com' }));
     expect(ftp.ok || ftp.errors.url).toMatch(/http:\/\/ or https:\/\//);
 
-    for (const [maxPages, ok] of [['0', false], ['1', true], ['1000', true], ['1001', false], ['', false], ['2.5', false]] as const) {
+    for (const [maxPages, ok] of [
+      ['0', false],
+      ['1', true],
+      ['1000', true],
+      ['1001', false],
+      ['', false],
+      ['2.5', false],
+    ] as const) {
       const check = checkAuditStartForm(form({ maxPages }));
       expect(check.ok, `maxPages ${maxPages}`).toBe(ok);
       if (!check.ok) expect(check.errors.maxPages).toBe('Max pages must be a whole number from 1 to 1000.');
     }
-    for (const [maxDepth, ok] of [['-1', false], ['0', true], ['100', true], ['101', false]] as const) {
+    for (const [maxDepth, ok] of [
+      ['-1', false],
+      ['0', true],
+      ['100', true],
+      ['101', false],
+    ] as const) {
       const check = checkAuditStartForm(form({ maxDepth }));
       expect(check.ok, `maxDepth ${maxDepth}`).toBe(ok);
       if (!check.ok) expect(check.errors.maxDepth).toBe('Max depth must be a whole number from 0 to 100.');
@@ -163,9 +177,8 @@ describe('Website Audit start request: POST /api/audits (REQ-001 AC-2)', () => {
   });
 
   it('says why an unreachable address cannot be audited (422 ERR_UNREACHABLE)', async () => {
-    const outcome = await startAudit(
-      toAuditStartBody(form()),
-      async () => reply(422, { error: 'ECONNREFUSED 10.0.0.1:443', code: 'ERR_UNREACHABLE' })
+    const outcome = await startAudit(toAuditStartBody(form()), async () =>
+      reply(422, { error: 'ECONNREFUSED 10.0.0.1:443', code: 'ERR_UNREACHABLE' })
     );
     expect(outcome.kind).toBe('refused');
     if (outcome.kind !== 'refused') return;

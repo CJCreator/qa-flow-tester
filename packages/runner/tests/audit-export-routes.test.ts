@@ -9,12 +9,7 @@ import os from 'os';
 import path from 'path';
 import { promises as fs } from 'fs';
 import { AUDIT_API, EXPORT_CONTENT_TYPES, type AuditRequest } from '@qa/types';
-import {
-  createAuditStore,
-  createLocalAuditStoreBackend,
-  pageContentName,
-  type AuditStore,
-} from '@qa/core';
+import { createAuditStore, createLocalAuditStoreBackend, pageContentName, type AuditStore } from '@qa/core';
 import { resolveRoute, type Route } from '../src/routes/index.js';
 import { auditExportRoutes } from '../src/routes/audit-export.js';
 import { auditSettingsStoreOn } from '../src/routes/audit-settings.js';
@@ -129,7 +124,15 @@ describe('GET export', () => {
     expect(res.headers['cache-control']).toBe('no-store');
     expect(res.body.subarray(0, 2).toString()).toBe('PK');
     const names = res.body.toString('latin1');
-    for (const n of ['01-structure.md', '02-content.md', '03-findings.md', '04-improvement-roadmap.md', '05-proposal.md', 'site.json', 'README.md']) {
+    for (const n of [
+      '01-structure.md',
+      '02-content.md',
+      '03-findings.md',
+      '04-improvement-roadmap.md',
+      '05-proposal.md',
+      'site.json',
+      'README.md',
+    ]) {
       expect(names).toContain(n);
     }
   });
@@ -145,7 +148,9 @@ describe('GET export', () => {
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toBe(EXPORT_CONTENT_TYPES[format as 'md']);
     expect(res.headers['content-type']).toContain(type);
-    expect(res.headers['content-disposition']).toMatch(new RegExp(`^attachment; filename="[A-Za-z0-9._-]+\\.${format}"$`));
+    expect(res.headers['content-disposition']).toMatch(
+      new RegExp(`^attachment; filename="[A-Za-z0-9._-]+\\.${format}"$`)
+    );
     expect(res.headers['cache-control']).toBe('no-store');
     if (format === 'docx') expect(res.body.subarray(0, 2).toString()).toBe('PK');
   });
@@ -256,7 +261,10 @@ describe('GET pitch', () => {
   it('embeds a stored screenshot of a top finding', async () => {
     const id = await seedDone();
     const result = await store.getResult(id, 1);
-    const withShot = { ...result!, findings: result!.findings.map((f, i) => (i === 0 ? { ...f, screenshotPath: 'screenshots/top.png' } : f)) };
+    const withShot = {
+      ...result!,
+      findings: result!.findings.map((f, i) => (i === 0 ? { ...f, screenshotPath: 'screenshots/top.png' } : f)),
+    };
     await store.saveResult(id, 1, withShot);
     await store.putVersionFile(id, 1, 'screenshots/top.png', Buffer.from('fakepng'));
     const res = await get(`/api/audits/${id}/pitch`);
@@ -308,7 +316,9 @@ describe('GET owner', () => {
 
   it('keeps the company details out of the Owner Audit', async () => {
     const id = await seedDone();
-    await store.backend.putJson('settings/audit-settings.json', { company: { name: 'Zeta Agency Pvt', email: 'sales@zeta.example' } });
+    await store.backend.putJson('settings/audit-settings.json', {
+      company: { name: 'Zeta Agency Pvt', email: 'sales@zeta.example' },
+    });
     const res = await get(`/api/audits/${id}/owner?format=md`);
     expect(res.text).not.toContain('Zeta Agency Pvt');
     expect(res.text).not.toContain('sales@zeta.example');
@@ -361,7 +371,10 @@ describe('PDF concurrency limit', () => {
     const third = await get(`/api/audits/${id}/owner?format=pdf`, p);
     expect(third.status).toBe(503);
     expect(third.headers['retry-after']).toMatch(/^[1-9][0-9]*$/);
-    expect(third.json).toEqual({ error: 'Another PDF is being made. Try again in a moment.', code: 'ERR_RUN_IN_PROGRESS' });
+    expect(third.json).toEqual({
+      error: 'Another PDF is being made. Try again in a moment.',
+      code: 'ERR_RUN_IN_PROGRESS',
+    });
     expect(started).toBe(2);
 
     open();

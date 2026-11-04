@@ -106,33 +106,30 @@ export function areaVerdict(pathname: string, facts: AreaFacts, forms: ReadForm[
 /** Reads the fields and frame hosts of the rendered page. Only DOM properties are read; nothing is touched. */
 export async function readAreaFacts(page: Page): Promise<AreaFacts> {
   const read = await page.evaluate(() => {
-    const clean = (s: string | null | undefined) =>
-      (s || '').replace(/\s+/g, ' ').trim().slice(0, 200);
-    const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]), select, textarea')).map(
-      (inp) => {
-        const id = inp.getAttribute('id') || '';
-        let forLabel: Element | null = null;
-        if (id) {
-          try {
-            forLabel = document.querySelector(`label[for="${CSS.escape(id)}"]`);
-          } catch {
-            forLabel = null;
-          }
+    const clean = (s: string | null | undefined) => (s || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+    const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]), select, textarea')).map((inp) => {
+      const id = inp.getAttribute('id') || '';
+      let forLabel: Element | null = null;
+      if (id) {
+        try {
+          forLabel = document.querySelector(`label[for="${CSS.escape(id)}"]`);
+        } catch {
+          forLabel = null;
         }
-        const wrapping = inp.closest('label');
-        return {
-          type: (inp.getAttribute('type') || inp.tagName).toLowerCase(),
-          name: inp.getAttribute('name') || '',
-          id,
-          autocomplete: inp.getAttribute('autocomplete') || '',
-          label:
-            clean(inp.getAttribute('aria-label')) ||
-            clean(forLabel?.textContent) ||
-            clean(wrapping?.textContent) ||
-            clean(inp.getAttribute('placeholder')),
-        };
       }
-    );
+      const wrapping = inp.closest('label');
+      return {
+        type: (inp.getAttribute('type') || inp.tagName).toLowerCase(),
+        name: inp.getAttribute('name') || '',
+        id,
+        autocomplete: inp.getAttribute('autocomplete') || '',
+        label:
+          clean(inp.getAttribute('aria-label')) ||
+          clean(forLabel?.textContent) ||
+          clean(wrapping?.textContent) ||
+          clean(inp.getAttribute('placeholder')),
+      };
+    });
     const frameSrcs = Array.from(document.querySelectorAll('iframe')).map(
       (f) => (f as HTMLIFrameElement).src || f.getAttribute('src') || ''
     );

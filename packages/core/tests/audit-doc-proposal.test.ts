@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import type { CompanyDetails, EditOverlay } from '@qa/types';
-import { buildEditedView, emptyOverlay, mergeEditsPatch, validateAuditEditsPatch } from '../src/audit/documents/edits.js';
+import {
+  buildEditedView,
+  emptyOverlay,
+  mergeEditsPatch,
+  validateAuditEditsPatch,
+} from '../src/audit/documents/edits.js';
 import type { AuditDoc, DocBlock } from '../src/audit/documents/model.js';
 import { fillProposal, PROPOSAL_PLACEHOLDERS } from '../src/audit/documents/proposal.js';
 import { renderMarkdown } from '../src/audit/documents/render-markdown.js';
@@ -9,8 +14,16 @@ import { findClaimWords } from '../src/audit/documents/wording.js';
 import { en } from '../src/audit/documents/labels/en.js';
 import { ta } from '../src/audit/documents/labels/ta.js';
 import { phaseLabel } from '../src/audit/documents/labels/index.js';
-import { PROPOSAL_FILL_IN_EN, PROPOSAL_NOT_INCLUDED_EN, PROPOSAL_TEMPLATE_EN } from '../src/audit/documents/templates/proposal-en.js';
-import { PROPOSAL_FILL_IN_TA, PROPOSAL_NOT_INCLUDED_TA, PROPOSAL_TEMPLATE_TA } from '../src/audit/documents/templates/proposal-ta.js';
+import {
+  PROPOSAL_FILL_IN_EN,
+  PROPOSAL_NOT_INCLUDED_EN,
+  PROPOSAL_TEMPLATE_EN,
+} from '../src/audit/documents/templates/proposal-en.js';
+import {
+  PROPOSAL_FILL_IN_TA,
+  PROPOSAL_NOT_INCLUDED_TA,
+  PROPOSAL_TEMPLATE_TA,
+} from '../src/audit/documents/templates/proposal-ta.js';
 import { auditDocContents, auditDocResult, FIXTURE_URL, PATHS } from './helpers/audit-doc-fixture.js';
 
 const NOW = '2026-11-03T10:00:00.000Z';
@@ -148,7 +161,10 @@ describe('fillProposal: an edited template', () => {
       { type: 'paragraph', text: 'Phase 2: Main improvements' },
       {
         type: 'list',
-        items: ['Write meta descriptions (/services, /about/team)', 'Strengthen calls to action and thin pages (/, /ta)'],
+        items: [
+          'Write meta descriptions (/services, /about/team)',
+          'Strengthen calls to action and thin pages (/, /ta)',
+        ],
       },
     ]);
   });
@@ -222,15 +238,18 @@ describe('fillProposal: placeholders and escaping', () => {
       {},
       COMPANY,
       en,
-      { now: NOW },
+      { now: NOW }
     );
     expect(unknownPlaceholders).toEqual(['{{client_name}}', '{{ client_name }}', '{{nope}}']);
-    expect(doc.blocks[0]).toEqual({ type: 'paragraph', text: 'Hello {{client_name}}, {{ client_name }} and {{client_name}}.' });
+    expect(doc.blocks[0]).toEqual({
+      type: 'paragraph',
+      text: 'Hello {{client_name}}, {{ client_name }} and {{client_name}}.',
+    });
     expect(doc.blocks[1]).toEqual({ type: 'heading', level: 1, text: '{{nope}}' });
     expect(doc.title).toBe(en.documentTitles.proposal);
   });
 
-  it('never expands placeholders found in audit text or the tool user\'s inputs', () => {
+  it("never expands placeholders found in audit text or the tool user's inputs", () => {
     const view = viewOf({
       findings: [{ findingId: 'AF-001', title: 'Fix {{price}} and {{unknown_x}}' }],
       proposal: { price: 'See {{company.terms}}', paymentTerms: '{{date}}' },
@@ -241,7 +260,7 @@ describe('fillProposal: placeholders and escaping', () => {
       view.proposal,
       COMPANY,
       en,
-      { now: NOW },
+      { now: NOW }
     );
     expect(unknownPlaceholders).toEqual([]);
     expect(doc.blocks[0]).toEqual({
@@ -270,7 +289,9 @@ describe('fillProposal: placeholders and escaping', () => {
       type: 'paragraph',
       text: 'Pages: /: Repair; /about: Redesign; /about/team: Redesign; /services: Redesign; /ta: Repair',
     });
-    expect((doc.blocks[1] as { text: string }).text.startsWith('Work: Phase 1: Quick fixes: Give every page')).toBe(true);
+    expect((doc.blocks[1] as { text: string }).text.startsWith('Work: Phase 1: Quick fixes: Give every page')).toBe(
+      true
+    );
   });
 });
 
@@ -284,7 +305,9 @@ describe('default Proposal templates', () => {
     it(`${c.name}: uses every documented placeholder and only those`, () => {
       for (const p of PROPOSAL_PLACEHOLDERS) expect(c.template).toContain(`{{${p.name}}}`);
       const view = viewOf({ proposal: { price: '₹45,000', paymentTerms: 'Advance' } });
-      const { doc, unknownPlaceholders } = fillProposal(c.template, view, view.proposal, COMPANY, c.labels, { now: NOW });
+      const { doc, unknownPlaceholders } = fillProposal(c.template, view, view.proposal, COMPANY, c.labels, {
+        now: NOW,
+      });
       expect(unknownPlaceholders).toEqual([]);
       expect(allText(doc)).not.toMatch(/\{\{/);
       expect(doc.title).toContain(FIXTURE_URL);

@@ -40,12 +40,24 @@ function sectionName(section: Section): string {
 }
 
 /** The text with its copied phrases in mark elements, so they are announced and not shown by colour alone. */
-function MarkedText({ text, overlaps, lang }: { text: string; overlaps: readonly OverlapFlag[]; lang: ReturnType<typeof textLangAttrs> }) {
+function MarkedText({
+  text,
+  overlaps,
+  lang,
+}: {
+  text: string;
+  overlaps: readonly OverlapFlag[];
+  lang: ReturnType<typeof textLangAttrs>;
+}) {
   return (
     <p className="whitespace-pre-wrap text-sm text-ink" {...lang}>
       {markCopiedPhrases(text, overlaps).map((piece, i) =>
         piece.copied ? (
-          <mark key={i} className="rounded bg-warn-tint font-semibold text-ink underline decoration-2" aria-label={`Copied phrase: ${piece.text}`}>
+          <mark
+            key={i}
+            className="rounded bg-warn-tint font-semibold text-ink underline decoration-2"
+            aria-label={`Copied phrase: ${piece.text}`}
+          >
             {piece.text}
           </mark>
         ) : (
@@ -283,9 +295,14 @@ export function RewriteReview({ auditId, version, content, language, fetchImpl }
   }, [auditId, version, content.urlPath, fetchImpl]);
 
   const target = (sectionId: string) => ({ urlPath: content.urlPath, sectionId, version });
-  const writeLanguage = language ?? (isDocumentLanguage(content.language.primary) ? content.language.primary : undefined);
+  const writeLanguage =
+    language ?? (isDocumentLanguage(content.language.primary) ? content.language.primary : undefined);
 
-  const setFor = <T,>(set: (fn: (all: Record<string, T>) => Record<string, T>) => void, sectionId: string, value: T | undefined) =>
+  const setFor = <T,>(
+    set: (fn: (all: Record<string, T>) => Record<string, T>) => void,
+    sectionId: string,
+    value: T | undefined
+  ) =>
     set((all) => {
       const next = { ...all };
       if (value === undefined) delete next[sectionId];
@@ -324,11 +341,18 @@ export function RewriteReview({ auditId, version, content, language, fetchImpl }
     const outcome = await acceptNewCopy(auditId, { ...target(sectionId), text }, fetchImpl);
     if (outcome.ok) {
       setFor(setRewrites, sectionId, outcome.value);
-      setFor<RewriteMessage>(setMessages, sectionId, { tone: 'pass', text: 'Accepted. The new copy is in the Audit Documents.' });
+      setFor<RewriteMessage>(setMessages, sectionId, {
+        tone: 'pass',
+        text: 'Accepted. The new copy is in the Audit Documents.',
+      });
     } else {
       // The edited copy stays as typed, so the marked phrases can be reworded.
       setFor<string>(setDrafts, sectionId, text);
-      setFor<RewriteMessage>(setMessages, sectionId, { tone: 'fail', text: outcome.message, overlaps: outcome.overlaps });
+      setFor<RewriteMessage>(setMessages, sectionId, {
+        tone: 'fail',
+        text: outcome.message,
+        overlaps: outcome.overlaps,
+      });
     }
     setFor<RewriteBusy>(setBusy, sectionId, undefined);
   };

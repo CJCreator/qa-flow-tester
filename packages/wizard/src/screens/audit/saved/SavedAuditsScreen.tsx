@@ -3,16 +3,10 @@ import type { AuditSummary } from '@qa/types/src/browser.js';
 import { ErrorMessage, FocusHeading, Spinner } from '../../../components/text';
 import { count, formatWhen } from '../../../lib/format';
 import { Link } from '../../../lib/router';
-import {
-  AUDIT_PATHS,
-  STATUS_LABEL,
-  latestVersion,
-  listAudits,
-  shortlistMarkText,
-  type Fetch,
-} from './saved-api';
+import { AUDIT_PATHS, STATUS_LABEL, latestVersion, listAudits, shortlistMarkText, type Fetch } from './saved-api';
 
-export type SavedAuditsLoad = { status: 'loading' } | { status: 'failed'; message: string } | { status: 'loaded'; audits: AuditSummary[] };
+export type SavedAuditsLoad =
+  { status: 'loading' } | { status: 'failed'; message: string } | { status: 'loaded'; audits: AuditSummary[] };
 
 export interface SavedAuditsViewProps {
   load: SavedAuditsLoad;

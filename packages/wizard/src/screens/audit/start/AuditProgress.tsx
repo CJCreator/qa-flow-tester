@@ -104,9 +104,7 @@ export function AuditProgress({
               <span className={step === 'todo' ? 'font-medium text-ink-soft' : 'font-bold text-ink'}>
                 {AUDIT_STAGE_LABELS[stage]}
               </span>
-              <span className="sr-only">
-                {step === 'done' ? '(done)' : step === 'current' ? '(now)' : '(to come)'}
-              </span>
+              <span className="sr-only">{step === 'done' ? '(done)' : step === 'current' ? '(now)' : '(to come)'}</span>
             </li>
           );
         })}
@@ -139,9 +137,7 @@ export function AuditProgress({
       ) : (
         reconnecting &&
         state.status !== 'done' &&
-        state.status !== 'stopped' && (
-          <p className="mt-4 text-sm text-warn">The connection dropped. Reconnecting…</p>
-        )
+        state.status !== 'stopped' && <p className="mt-4 text-sm text-warn">The connection dropped. Reconnecting…</p>
       )}
 
       {state.status === 'done' && (

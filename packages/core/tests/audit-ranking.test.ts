@@ -121,7 +121,9 @@ describe('rankFindings', () => {
       const rank = (s: string) => AUDIT_SCALE.indexOf(s as never);
       const prev = ranked[i - 1];
       const cur = ranked[i];
-      expect(rank(prev.impact) < rank(cur.impact) || (prev.impact === cur.impact && rank(prev.effort) >= rank(cur.effort))).toBe(true);
+      expect(
+        rank(prev.impact) < rank(cur.impact) || (prev.impact === cur.impact && rank(prev.effort) >= rank(cur.effort))
+      ).toBe(true);
     }
   });
 
@@ -161,7 +163,9 @@ describe('rankFindings', () => {
     const once = rankFindings(input);
     expect(rankFindings(input)).toEqual(once);
     expect(rankFindings([...input].reverse())).toEqual(once);
-    expect(rankFindings([input[3], input[7], input[0], input[5], input[1], input[6], input[2], input[4]])).toEqual(once);
+    expect(rankFindings([input[3], input[7], input[0], input[5], input[1], input[6], input[2], input[4]])).toEqual(
+      once
+    );
   });
 
   it('can continue numbering and reports how ids were renumbered', () => {
@@ -188,7 +192,10 @@ describe('checkCitations (REQ-017 AC-2)', () => {
     { urlPath: '/about', sections: [{ id: 's1' }] },
   ];
   const cite = (over: Partial<AuditFinding> & { id: string; rule: string }) =>
-    ({ urlPath: '/', sectionId: 's1', ...over }) as Pick<AuditFinding, 'id' | 'rule' | 'urlPath' | 'sectionId' | 'pages'>;
+    ({ urlPath: '/', sectionId: 's1', ...over }) as Pick<
+      AuditFinding,
+      'id' | 'rule' | 'urlPath' | 'sectionId' | 'pages'
+    >;
 
   it('accepts findings citing an audited page and one of its Sections, and whole-page findings with null', () => {
     const ok = [
@@ -209,7 +216,7 @@ describe('checkCitations (REQ-017 AC-2)', () => {
         cite({ id: 'AF-003', rule: 'missing-alt', sectionId: null }),
         cite({ id: 'AF-004', rule: 'duplicate-title', sectionId: null, pages: ['/', '/nowhere'] }),
       ],
-      pages,
+      pages
     );
     expect(problems).toEqual([
       { findingId: 'AF-001', kind: 'unknown-page', urlPath: '/gone', sectionId: 's1' },
@@ -220,7 +227,10 @@ describe('checkCitations (REQ-017 AC-2)', () => {
   });
 
   it('does not take a Section of another page as valid', () => {
-    const problems = checkCitations([cite({ id: 'AF-001', rule: 'missing-alt', urlPath: '/about', sectionId: 's2' })], pages);
+    const problems = checkCitations(
+      [cite({ id: 'AF-001', rule: 'missing-alt', urlPath: '/about', sectionId: 's2' })],
+      pages
+    );
     expect(problems.map((p) => p.kind)).toEqual(['unknown-section']);
   });
 });

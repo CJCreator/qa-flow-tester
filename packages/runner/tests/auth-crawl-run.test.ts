@@ -160,51 +160,55 @@ describe('T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts)', () =
   // T-309: the same crawl through the runner finishes, and the report's page coverage carries the
   // signed-in area — including the page that only shows a password field (LC-002), which must not be
   // dropped as a sign-in wall.
-  it('runs the fixture signed in and reports the covered pages', async () => {
-    const runRes = await fetch(`${runnerBase}/api/runner/run`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        targetUrl: `${fixtureBase}/account`,
-        skipReview: true,
-        // Enough pages to reach /account/security (the seventh the signed-in crawl visits), and no more: every page
-        // adds planned tests, and the run times out on a shared runner otherwise.
-        maxPages: 10,
-        breakpoints: ['1440px'],
-        owner: true,
-        signInConsent: true,
-        roles: [
-          {
-            role: 'manager',
-            username: 'manager@example.com',
-            password: 'manager-password',
-            loginPath: '/signin',
-          },
-        ],
-      }),
-    });
-    expect(runRes.status).toBe(202);
+  it(
+    'runs the fixture signed in and reports the covered pages',
+    async () => {
+      const runRes = await fetch(`${runnerBase}/api/runner/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetUrl: `${fixtureBase}/account`,
+          skipReview: true,
+          // Enough pages to reach /account/security (the seventh the signed-in crawl visits), and no more: every page
+          // adds planned tests, and the run times out on a shared runner otherwise.
+          maxPages: 10,
+          breakpoints: ['1440px'],
+          owner: true,
+          signInConsent: true,
+          roles: [
+            {
+              role: 'manager',
+              username: 'manager@example.com',
+              password: 'manager-password',
+              loginPath: '/signin',
+            },
+          ],
+        }),
+      });
+      expect(runRes.status).toBe(202);
 
-    // A full run (crawl, then every planned test as the signed-in role) takes about 7 minutes on a shared runner
-    // and more than 10 minutes on the developer's 4-core laptop with the repository inside OneDrive (EV-0006).
-    // The report's page coverage only exists once the whole run has finished. Budget agreed with the developer
-    // (2026-10-31): about 25 minutes for the run, with no cap on the number of test points.
-    const runDeadline = Date.now() + 24 * 60_000;
-    let isRunning = true;
-    while (isRunning && Date.now() < runDeadline) {
-      await new Promise((r) => setTimeout(r, 500));
-      const status = await (await fetch(`${runnerBase}/api/runner/status`)).json();
-      isRunning = status.isRunning;
-    }
-    expect(isRunning).toBe(false);
+      // A full run (crawl, then every planned test as the signed-in role) takes about 7 minutes on a shared runner
+      // and more than 10 minutes on the developer's 4-core laptop with the repository inside OneDrive (EV-0006).
+      // The report's page coverage only exists once the whole run has finished. Budget agreed with the developer
+      // (2026-10-31): about 25 minutes for the run, with no cap on the number of test points.
+      const runDeadline = Date.now() + 24 * 60_000;
+      let isRunning = true;
+      while (isRunning && Date.now() < runDeadline) {
+        await new Promise((r) => setTimeout(r, 500));
+        const status = await (await fetch(`${runnerBase}/api/runner/status`)).json();
+        isRunning = status.isRunning;
+      }
+      expect(isRunning).toBe(false);
 
-    const report = await (await fetch(`${runnerBase}/api/report`)).json();
-    expect(report.pageCoverage.reached).toBeGreaterThan(0);
-    const skippedPaths = (report.pageCoverage.skipped ?? []).map((s: { urlPath: string }) => s.urlPath);
-    // A page with a password field that is not the sign-in page is reached, not skipped as a wall.
-    expect(skippedPaths).not.toContain('/account/security');
-    // 25 minutes: the 24-minute run budget above plus the report fetch (see the comment at the poll loop).
-  }, 25 * 60_000);
+      const report = await (await fetch(`${runnerBase}/api/report`)).json();
+      expect(report.pageCoverage.reached).toBeGreaterThan(0);
+      const skippedPaths = (report.pageCoverage.skipped ?? []).map((s: { urlPath: string }) => s.urlPath);
+      // A page with a password field that is not the sign-in page is reached, not skipped as a wall.
+      expect(skippedPaths).not.toContain('/account/security');
+      // 25 minutes: the 24-minute run budget above plus the report fetch (see the comment at the poll loop).
+    },
+    25 * 60_000
+  );
 
   it('asserts RUN_FAILED event carries signInReason when credentials fail under consent', async () => {
     const events: any[] = [];

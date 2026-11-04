@@ -189,7 +189,7 @@ describe('assessPages and assessSite', () => {
     expect(prompt).toContain('"notMeasured":"no-field-data"');
   });
 
-  it('writes notes in the audit\'s document language', async () => {
+  it("writes notes in the audit's document language", async () => {
     const fake = scripted([answer([]), answer([])]);
     const { resolution } = await aiWith(fake.provider);
     await assessPages(pagesInput([page('/pricing', [])], { language: 'ta' }), resolution);
@@ -249,8 +249,14 @@ describe('assessPages and assessSite', () => {
 
       expect(spy).toHaveBeenCalledTimes(4); // one answer and one repair each
       for (const areas of [result.areas, site]) {
-        expect(areas.find((a) => a.area === 'search-ranking')).toMatchObject({ status: 'not-done', reason: 'ai-failed' });
-        expect(areas.find((a) => a.area === 'accessibility')).toMatchObject({ status: 'not-done', reason: 'ai-failed' });
+        expect(areas.find((a) => a.area === 'search-ranking')).toMatchObject({
+          status: 'not-done',
+          reason: 'ai-failed',
+        });
+        expect(areas.find((a) => a.area === 'accessibility')).toMatchObject({
+          status: 'not-done',
+          reason: 'ai-failed',
+        });
         expect(areas.find((a) => a.area === 'content')).toMatchObject({ status: 'done' });
         expectGradesFromInput(areas);
       }
@@ -272,7 +278,8 @@ describe('assessPages and assessSite', () => {
       expect(createProvider).not.toHaveBeenCalled();
       for (const areas of [...pages.map((p) => p.areas), site]) {
         expectGradesFromInput(areas);
-        for (const a of areas) expect(a).toEqual({ area: a.area, grade: a.grade, status: 'not-done', reason: 'no-ai-key' });
+        for (const a of areas)
+          expect(a).toEqual({ area: a.area, grade: a.grade, status: 'not-done', reason: 'no-ai-key' });
       }
     });
 
@@ -283,10 +290,7 @@ describe('assessPages and assessSite', () => {
         answer([]),
       ]);
       const { resolution } = await aiWith(fake.provider);
-      const results = await assessPages(
-        pagesInput([page('/a', []), page('/b', []), page('/c', [])]),
-        resolution
-      );
+      const results = await assessPages(pagesInput([page('/a', []), page('/b', []), page('/c', [])]), resolution);
       for (const areas of [results[0].areas, results[1].areas]) {
         for (const a of areas) expect(a).toMatchObject({ status: 'not-done', reason: 'ai-failed' });
         expect(JSON.stringify(areas)).not.toContain('upstream');

@@ -54,7 +54,11 @@ The work follows the phases of the Improvement Roadmap.
 `;
 
 /** Listed under "Not included" when the tool user has not written their own lines. */
-export const PROPOSAL_NOT_INCLUDED_EN: readonly string[] = ['Hosting or domain', 'Digital marketing or ads', 'Mobile apps'];
+export const PROPOSAL_NOT_INCLUDED_EN: readonly string[] = [
+  'Hosting or domain',
+  'Digital marketing or ads',
+  'Mobile apps',
+];
 
 /** Shown in place of a price or payment terms the tool user has not filled in yet. */
 export const PROPOSAL_FILL_IN_EN = '[To fill in]';

@@ -102,7 +102,9 @@ function dedupeKey(f: AuditFinding): string {
 }
 
 function sectionSummaries(content: PageContent): SectionSummary[] {
-  return content.sections.map((s) => (s.heading === undefined ? { id: s.id, kind: s.kind } : { id: s.id, kind: s.kind, heading: s.heading }));
+  return content.sections.map((s) =>
+    s.heading === undefined ? { id: s.id, kind: s.kind } : { id: s.id, kind: s.kind, heading: s.heading }
+  );
 }
 
 function uniqueIds(ids: string[]): string[] {

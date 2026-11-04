@@ -32,11 +32,7 @@ export class OpenAIProvider implements AIProvider {
     }
   }
 
-  private async send(
-    messages: AIMessage[],
-    options: AICompletionOptions,
-    signal: AbortSignal
-  ): Promise<AICompletion> {
+  private async send(messages: AIMessage[], options: AICompletionOptions, signal: AbortSignal): Promise<AICompletion> {
     const formattedMessages = messages.map((m) => {
       if (m.images && m.images.length > 0) {
         const contentParts: any[] = [{ type: 'text', text: m.content }];

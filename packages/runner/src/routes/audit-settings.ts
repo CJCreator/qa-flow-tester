@@ -10,11 +10,7 @@
  */
 
 import type http from 'http';
-import {
-  AUDIT_API,
-  type AuditErrorReply,
-  type AuditSettingsReply,
-} from '@qa/types';
+import { AUDIT_API, type AuditErrorReply, type AuditSettingsReply } from '@qa/types';
 import {
   applySettingsUpdate,
   auditSettingsDefaults,

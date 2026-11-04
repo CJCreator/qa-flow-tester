@@ -48,7 +48,8 @@ const EN: OwnerWording = {
 
 // Not yet reviewed by a native speaker.
 const TA: OwnerWording = {
-  intro: 'இந்தத் தணிக்கை இணையதளத்தின் பொதுப் பக்கங்களைப் பார்த்தது. கீழே ஒரு சிறு சுருக்கம் உள்ளது; விவரங்கள் அதன் பின் வருகின்றன.',
+  intro:
+    'இந்தத் தணிக்கை இணையதளத்தின் பொதுப் பக்கங்களைப் பார்த்தது. கீழே ஒரு சிறு சுருக்கம் உள்ளது; விவரங்கள் அதன் பின் வருகின்றன.',
   pagesRead: 'படித்த பக்கங்கள்: கண்டறிந்த {found} இல் {n}.',
   pagesNotRead: 'படிக்கப்படாத பக்கங்கள்: {n} ({list}).',
   areasGraded: 'நிலையான சோதனைகளால் தரம் பெற்ற துறைகள்: {list}.',
@@ -80,7 +81,8 @@ function summaryBlocks(view: EditedAuditView, lookup: LabelLookup): DocBlock[] {
   const notGraded = result.siteAreas.filter((a) => a.grade === null).map((a) => labels.areas[a.area] ?? a.area);
 
   const checked = [formatLabel(words.pagesRead, { n: read, found })];
-  if (skipped.length > 0) checked.push(formatLabel(words.pagesNotRead, { n: skipped.length, list: reasons.join(', ') }));
+  if (skipped.length > 0)
+    checked.push(formatLabel(words.pagesNotRead, { n: skipped.length, list: reasons.join(', ') }));
   if (graded.length > 0) checked.push(formatLabel(words.areasGraded, { list: graded.join(', ') }));
   if (notGraded.length > 0) checked.push(formatLabel(words.areasNotGraded, { list: notGraded.join(', ') }));
 
@@ -96,7 +98,7 @@ function summaryBlocks(view: EditedAuditView, lookup: LabelLookup): DocBlock[] {
         formatLabel(words.groupCount, {
           group: labels.groups[group],
           n: result.findings.filter((f) => f.group === group).length,
-        }),
+        })
       ),
     },
     { type: 'heading', level: 2, text: labels.headings.topIssues },
@@ -121,9 +123,8 @@ function summaryBlocks(view: EditedAuditView, lookup: LabelLookup): DocBlock[] {
 
 /** One part of the Owner Audit: a page break, the part's title, then its blocks one heading level lower. */
 function partBlocks(doc: AuditDoc): DocBlock[] {
-  const nested = doc.blocks.map(
-    (block): DocBlock =>
-      block.type === 'heading' ? { ...block, level: Math.min(4, block.level + 1) as HeadingLevel } : block,
+  const nested = doc.blocks.map((block): DocBlock =>
+    block.type === 'heading' ? { ...block, level: Math.min(4, block.level + 1) as HeadingLevel } : block
   );
   return [{ type: 'pagebreak' }, { type: 'heading', level: 1, text: doc.title }, ...nested];
 }

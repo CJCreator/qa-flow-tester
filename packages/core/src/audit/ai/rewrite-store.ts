@@ -218,7 +218,8 @@ export class RewriteStore {
       signal: deps.signal,
       timeoutMs: deps.timeoutMs,
     });
-    if (!written.ok) return { ok: false, code: 'ai-failed', problem: written.problem, message: AI_MESSAGES[written.problem] };
+    if (!written.ok)
+      return { ok: false, code: 'ai-failed', problem: written.problem, message: AI_MESSAGES[written.problem] };
 
     const createdAt = (deps.now ?? (() => new Date()))().toISOString();
     return this.change(input, (state) =>
@@ -258,7 +259,9 @@ export class RewriteStore {
     }
 
     const editedAt = (deps.now ?? (() => new Date()))().toISOString();
-    const saved = await this.change(input, (state) => (state.approvedAt ? { ...state, acceptedAt: editedAt } : undefined));
+    const saved = await this.change(input, (state) =>
+      state.approvedAt ? { ...state, acceptedAt: editedAt } : undefined
+    );
     if (!saved.ok) return saved;
     const edit: SectionEdit = { urlPath: input.urlPath, sectionId: input.sectionId, text, by: 'rewrite', editedAt };
     return { ok: true, rewrite: saved.rewrite, edit };

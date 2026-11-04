@@ -50,11 +50,14 @@ function tableFor(language: DocumentLanguage): DocumentLabels {
 export function documentText(
   language: DocumentLanguage,
   key: DocumentTextKey,
-  vars: Record<string, string | number> = {},
+  vars: Record<string, string | number> = {}
 ): string {
   let node: unknown = tableFor(language);
   for (const part of String(key).split('.')) {
-    node = node !== null && typeof node === 'object' && hasOwn(node, part) ? (node as Record<string, unknown>)[part] : undefined;
+    node =
+      node !== null && typeof node === 'object' && hasOwn(node, part)
+        ? (node as Record<string, unknown>)[part]
+        : undefined;
   }
   if (typeof node !== 'string' || node.trim() === '') {
     throw new Error(`No document text "${String(key)}" for language "${String(language)}".`);

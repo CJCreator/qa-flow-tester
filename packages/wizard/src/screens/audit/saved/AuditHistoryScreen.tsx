@@ -42,7 +42,15 @@ export interface AuditHistoryViewProps {
   shortlist?: ReactNode;
 }
 
-function VersionItem({ version, isOpen, onOpen }: { version: AuditVersion; isOpen: boolean; onOpen: (n: number) => void }) {
+function VersionItem({
+  version,
+  isOpen,
+  onOpen,
+}: {
+  version: AuditVersion;
+  isOpen: boolean;
+  onOpen: (n: number) => void;
+}) {
   return (
     <li className="rounded-lg border border-edge bg-surface p-4" data-version={version.version}>
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
@@ -51,7 +59,9 @@ function VersionItem({ version, isOpen, onOpen }: { version: AuditVersion; isOpe
           <p className="text-sm text-ink">{`Started ${formatWhen(version.startedAt)} · Status: ${STATUS_LABEL[version.status]}`}</p>
           <p className="text-sm text-ink-soft">{versionCounts(version)}</p>
           {version.edited && <p className="text-sm text-ink-soft">Has edits</p>}
-          {version.status === 'failed' && version.error && <p className="text-sm text-fail">{`Failed: ${version.error}`}</p>}
+          {version.status === 'failed' && version.error && (
+            <p className="text-sm text-fail">{`Failed: ${version.error}`}</p>
+          )}
         </div>
         <button
           type="button"
@@ -122,7 +132,12 @@ export function AuditHistoryView({
       <div>
         <p className="break-all text-ink-soft">{summary.url}</p>
         <div className="mt-3 flex flex-wrap items-center gap-3">
-          <button type="button" className="btn-primary min-h-[44px] px-4 text-sm" disabled={rerunning} onClick={onRerun}>
+          <button
+            type="button"
+            className="btn-primary min-h-[44px] px-4 text-sm"
+            disabled={rerunning}
+            onClick={onRerun}
+          >
             {rerunning ? 'Starting…' : 'Re-run'}
           </button>
           <Link to={AUDIT_PATHS.previewShare(summary.auditId)} className="btn-quiet min-h-[44px] px-4 text-sm">
@@ -140,11 +155,18 @@ export function AuditHistoryView({
             Delete
           </button>
         </div>
-        <p className="mt-2 max-w-prose text-sm text-ink-soft">Re-run makes a new version with the same address and limits.</p>
+        <p className="mt-2 max-w-prose text-sm text-ink-soft">
+          Re-run makes a new version with the same address and limits.
+        </p>
       </div>
 
       {confirmingDelete && (
-        <section role="alertdialog" aria-labelledby="delete-audit-title" aria-describedby="delete-audit-body" className="rounded-md border-l-4 border-fail bg-fail-tint px-4 py-3">
+        <section
+          role="alertdialog"
+          aria-labelledby="delete-audit-title"
+          aria-describedby="delete-audit-body"
+          className="rounded-md border-l-4 border-fail bg-fail-tint px-4 py-3"
+        >
           <h2 id="delete-audit-title" className="font-bold text-fail">
             {`Delete the Website Audit of ${summary.host}?`}
           </h2>
@@ -160,7 +182,12 @@ export function AuditHistoryView({
             >
               {deleting ? 'Deleting…' : 'Delete the Website Audit'}
             </button>
-            <button type="button" className="btn-quiet min-h-[44px] px-4 text-sm" disabled={deleting} onClick={onCancelDelete}>
+            <button
+              type="button"
+              className="btn-quiet min-h-[44px] px-4 text-sm"
+              disabled={deleting}
+              onClick={onCancelDelete}
+            >
               Keep it
             </button>
           </div>
@@ -206,7 +233,8 @@ export interface AuditHistoryScreenProps {
   fetchImpl?: Fetch;
 }
 
-type Loaded = { status: 'loading' } | { status: 'failed'; message: string } | { status: 'loaded'; summary: AuditSummary };
+type Loaded =
+  { status: 'loading' } | { status: 'failed'; message: string } | { status: 'loaded'; summary: AuditSummary };
 
 /** One saved Website Audit: every version, re-run, delete and its Shortlist entry (REQ-028, REQ-023). */
 export function AuditHistoryScreen({ auditId, fetchImpl }: AuditHistoryScreenProps) {
@@ -221,7 +249,11 @@ export function AuditHistoryScreen({ auditId, fetchImpl }: AuditHistoryScreenPro
   const refresh = useCallback(() => {
     setLoaded({ status: 'loading' });
     void loadVersion(auditId, undefined, fetchImpl).then((outcome) =>
-      setLoaded(outcome.ok ? { status: 'loaded', summary: outcome.value.summary } : { status: 'failed', message: outcome.message })
+      setLoaded(
+        outcome.ok
+          ? { status: 'loaded', summary: outcome.value.summary }
+          : { status: 'failed', message: outcome.message }
+      )
     );
   }, [auditId, fetchImpl]);
   useEffect(refresh, [refresh]);
@@ -264,7 +296,9 @@ export function AuditHistoryScreen({ auditId, fetchImpl }: AuditHistoryScreenPro
   };
 
   const setShortlist = (entry: ShortlistEntry) =>
-    setLoaded((now) => (now.status === 'loaded' ? { status: 'loaded', summary: { ...now.summary, shortlist: entry } } : now));
+    setLoaded((now) =>
+      now.status === 'loaded' ? { status: 'loaded', summary: { ...now.summary, shortlist: entry } } : now
+    );
 
   const summary = loaded.status === 'loaded' ? loaded.summary : null;
 
@@ -308,7 +342,12 @@ export function AuditHistoryScreen({ auditId, fetchImpl }: AuditHistoryScreenPro
               onCancelDelete={() => setConfirmingDelete(false)}
               onConfirmDelete={() => void remove()}
               shortlist={
-                <ShortlistPanel auditId={auditId} entry={summary.shortlist ?? null} onSaved={setShortlist} fetchImpl={fetchImpl} />
+                <ShortlistPanel
+                  auditId={auditId}
+                  entry={summary.shortlist ?? null}
+                  onSaved={setShortlist}
+                  fetchImpl={fetchImpl}
+                />
               }
             />
           )}

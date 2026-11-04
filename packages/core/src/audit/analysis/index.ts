@@ -11,7 +11,12 @@ export { buildPageHierarchy, internalLinking, type HierarchyPage } from './hiera
 export { contentProblems, CONTENT_PROBLEM_RULES, type ContentProblemRule } from './content-problems.js';
 export { checkLinks, type CheckLinksOptions, type LinkPathLimits } from './broken-links.js';
 export { seoBasics } from './seo-basics.js';
-export { marketingSignals, auditMarketing, type MarketingPage, type MarketingSignalsInput } from './marketing-signals.js';
+export {
+  marketingSignals,
+  auditMarketing,
+  type MarketingPage,
+  type MarketingSignalsInput,
+} from './marketing-signals.js';
 export {
   accessibilityBasics,
   type AccessibilityBasicsOptions,

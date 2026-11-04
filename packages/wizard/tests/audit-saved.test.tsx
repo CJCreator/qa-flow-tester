@@ -49,8 +49,19 @@ const summary: AuditSummary = {
   url: 'https://shop.example.org/',
   host: 'shop.example.org',
   createdAt: '2026-11-01T10:00:00Z',
-  versions: [version(3, { status: 'failed', error: 'The site stopped answering.' }), version(1), version(2, { status: 'running', pagesRecorded: undefined, findings: undefined, pagesSkipped: undefined })],
-  shortlist: { auditId: AUDIT_ID, mark: 'pitch', notes: '', outcome: null, outcomeNote: '', updatedAt: '2026-11-02T00:00:00Z' },
+  versions: [
+    version(3, { status: 'failed', error: 'The site stopped answering.' }),
+    version(1),
+    version(2, { status: 'running', pagesRecorded: undefined, findings: undefined, pagesSkipped: undefined }),
+  ],
+  shortlist: {
+    auditId: AUDIT_ID,
+    mark: 'pitch',
+    notes: '',
+    outcome: null,
+    outcomeNote: '',
+    updatedAt: '2026-11-02T00:00:00Z',
+  },
 };
 
 const other: AuditSummary = {
@@ -82,7 +93,10 @@ function fakeFetch(...replies: Array<{ status: number; body: unknown } | Error>)
     const next = replies.shift();
     if (!next) throw new Error('no reply queued');
     if (next instanceof Error) throw next;
-    return new Response(JSON.stringify(next.body), { status: next.status, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify(next.body), {
+      status: next.status,
+      headers: { 'Content-Type': 'application/json' },
+    });
   };
   return { impl, calls };
 }
@@ -114,7 +128,12 @@ function historyView(props: Partial<AuditHistoryViewProps> = {}): string {
 
 function getReply(n: number) {
   const v = summary.versions.find((x) => x.version === n)!;
-  return { summary, version: v, result: null, edits: { findings: [], sections: [], removedPages: [], recommendations: [], proposal: {}, updatedAt: null } };
+  return {
+    summary,
+    version: v,
+    result: null,
+    edits: { findings: [], sections: [], removedPages: [], recommendations: [], proposal: {}, updatedAt: null },
+  };
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -286,7 +305,10 @@ describe('re-run (REQ-028 AC-3)', () => {
   });
 
   it('shows a plain message when another run is in progress', async () => {
-    const { impl, calls } = fakeFetch({ status: 409, body: { error: 'busy: slot held by checkup', code: 'ERR_RUN_IN_PROGRESS' } });
+    const { impl, calls } = fakeFetch({
+      status: 409,
+      body: { error: 'busy: slot held by checkup', code: 'ERR_RUN_IN_PROGRESS' },
+    });
     const outcome = await rerunAndReload(AUDIT_ID, impl);
     expect(calls).toHaveLength(1);
     expect(outcome).toEqual({ ok: false, code: 'ERR_RUN_IN_PROGRESS', message: RUN_IN_PROGRESS_TEXT });
@@ -330,7 +352,10 @@ describe('delete', () => {
     expect(ok.calls[0]).toMatchObject({ url: `/api/audits/${AUDIT_ID}`, init: { method: 'DELETE' } });
 
     const running = fakeFetch({ status: 409, body: { error: 'x', code: 'ERR_AUDIT_RUNNING' } });
-    expect(await deleteAudit(AUDIT_ID, running.impl)).toMatchObject({ ok: false, message: expect.stringContaining('still running') });
+    expect(await deleteAudit(AUDIT_ID, running.impl)).toMatchObject({
+      ok: false,
+      message: expect.stringContaining('still running'),
+    });
   });
 });
 
@@ -338,28 +363,40 @@ describe('delete', () => {
 // Source rules
 // ---------------------------------------------------------------------------------------------------
 
-const SOURCES = ['SavedAuditsScreen.tsx', 'AuditHistoryScreen.tsx', 'ShortlistPanel.tsx', 'ShortlistScreen.tsx', 'saved-api.ts'].map(
-  (name) => [name, readFileSync(new URL(`../src/screens/audit/saved/${name}`, import.meta.url), 'utf8')] as const
-);
+const SOURCES = [
+  'SavedAuditsScreen.tsx',
+  'AuditHistoryScreen.tsx',
+  'ShortlistPanel.tsx',
+  'ShortlistScreen.tsx',
+  'saved-api.ts',
+].map((name) => [name, readFileSync(new URL(`../src/screens/audit/saved/${name}`, import.meta.url), 'utf8')] as const);
 
 describe('source rules', () => {
   it('imports @qa/types only through the browser entry and no Node built-in', () => {
     for (const [name, source] of SOURCES) {
       const specifiers = [...source.matchAll(/from '([^']+)'/g)].map((m) => m[1]);
-      for (const spec of specifiers.filter((s) => s.startsWith('@qa/'))) expect(spec, name).toBe('@qa/types/src/browser.js');
-      expect(specifiers.some((s) => s.startsWith('node:')), name).toBe(false);
+      for (const spec of specifiers.filter((s) => s.startsWith('@qa/')))
+        expect(spec, name).toBe('@qa/types/src/browser.js');
+      expect(
+        specifiers.some((s) => s.startsWith('node:')),
+        name
+      ).toBe(false);
     }
   });
 
   it('links to other screens by path, never by importing them', () => {
     for (const [name, source] of SOURCES) {
-      expect(source, name).not.toMatch(/from '\.\/(PreviewShareScreen|HelpersScreen|HelperSignInScreen|share-api|helper-api)'/);
+      expect(source, name).not.toMatch(
+        /from '\.\/(PreviewShareScreen|HelpersScreen|HelperSignInScreen|share-api|helper-api)'/
+      );
     }
   });
 
   it('uses none of the Avoid words of Website Audit and Shortlist', () => {
     for (const [name, source] of SOURCES) {
-      expect(source, name).not.toMatch(/\b(scan|scans|scanning|project|projects|leads|pipeline|CRM|prospect list|teardown|site review)\b/i);
+      expect(source, name).not.toMatch(
+        /\b(scan|scans|scanning|project|projects|leads|pipeline|CRM|prospect list|teardown|site review)\b/i
+      );
     }
   });
 });

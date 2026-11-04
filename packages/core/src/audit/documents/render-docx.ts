@@ -80,7 +80,13 @@ function run(ctx: Context, text: string, extra = ''): string {
     .replace(/\r\n?/g, '\n')
     .split(/(\n|\t)/)
     .map((part) =>
-      part === '\n' ? '<w:br/>' : part === '\t' ? '<w:tab/>' : part ? `<w:t xml:space="preserve">${xml(part)}</w:t>` : ''
+      part === '\n'
+        ? '<w:br/>'
+        : part === '\t'
+          ? '<w:tab/>'
+          : part
+            ? `<w:t xml:space="preserve">${xml(part)}</w:t>`
+            : ''
     )
     .join('');
   return `<w:r>${runProps(ctx, extra)}${parts}</w:r>`;

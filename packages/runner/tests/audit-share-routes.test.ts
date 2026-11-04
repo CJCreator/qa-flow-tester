@@ -153,7 +153,15 @@ function expectSharedPageHeaders(res: Answer): void {
   expect(directives.get('frame-ancestors')).toBe("'none'");
   expect(directives.get('base-uri')).toBe("'none'");
   // Nothing loosens script, connections, fonts or frames: they all fall back to default-src 'none'.
-  for (const name of ['script-src', 'script-src-elem', 'connect-src', 'font-src', 'frame-src', 'object-src', 'media-src']) {
+  for (const name of [
+    'script-src',
+    'script-src-elem',
+    'connect-src',
+    'font-src',
+    'frame-src',
+    'object-src',
+    'media-src',
+  ]) {
     expect(directives.has(name)).toBe(false);
   }
   expect(res.text).toMatch(/<meta name="robots" content="noindex, nofollow">/);
@@ -247,7 +255,8 @@ describe('POST /api/audits/:id/share', () => {
 
   it('serves the stored preview.html of that version for a preview link', async () => {
     const id = await seedDone();
-    const preview = '<!DOCTYPE html><html><head><title>Better homepage</title></head><body><h1>Better homepage</h1></body></html>';
+    const preview =
+      '<!DOCTYPE html><html><head><title>Better homepage</title></head><body><h1>Better homepage</h1></body></html>';
     await store.putVersionFile(id, 1, 'preview.html', new TextEncoder().encode(preview));
     const link = await share(id, { kind: 'preview', language: 'en', version: 1 });
     expect(link.kind).toBe('preview');
@@ -271,7 +280,14 @@ describe('POST /api/audits/:id/share', () => {
 
   it('refuses a bad body with 400 ERR_INVALID_REQUEST', async () => {
     const id = await seedDone();
-    for (const body of ['not json', [], { kind: 'report' }, { kind: 'pitch', language: 'zz' }, { kind: 'pitch', version: 0 }, { kind: 'pitch', version: 1.5 }]) {
+    for (const body of [
+      'not json',
+      [],
+      { kind: 'report' },
+      { kind: 'pitch', language: 'zz' },
+      { kind: 'pitch', version: 0 },
+      { kind: 'pitch', version: 1.5 },
+    ]) {
       const res = await call('POST', sharePath(id), body);
       expect(res.status, JSON.stringify(body)).toBe(400);
       expect(res.json.code).toBe('ERR_INVALID_REQUEST');
@@ -379,7 +395,15 @@ describe('GET /s/:linkId', () => {
     expect(unknown.status).toBe(404);
     expect(unknown.text).toBe(SHARED_NOT_FOUND_PAGE);
     expectSharedPageHeaders(unknown);
-    for (const malformed of ['/s/short', `/s/${'U'.repeat(21)}!`, `/s/${'U'.repeat(21)}%2F`, `/s/${'U'.repeat(129)}`,`/s/${'U'.repeat(22)}/extra`, '/s/', '/s']) {
+    for (const malformed of [
+      '/s/short',
+      `/s/${'U'.repeat(21)}!`,
+      `/s/${'U'.repeat(21)}%2F`,
+      `/s/${'U'.repeat(129)}`,
+      `/s/${'U'.repeat(22)}/extra`,
+      '/s/',
+      '/s',
+    ]) {
       const res = await call('GET', malformed);
       expect(res.status, malformed).toBe(404);
       expect(res.text, malformed).toBe(unknown.text);

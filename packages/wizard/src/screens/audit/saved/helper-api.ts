@@ -184,7 +184,11 @@ export function listHelpers(auditId: string, fetchImpl: Fetch = fetch): Promise<
 }
 
 /** `PUT /api/audits/:id/helpers`: gives (or changes) one Helper's access to the Website Audit. */
-export function grantHelper(auditId: string, grant: HelperGrantBody, fetchImpl: Fetch = fetch): Promise<HelperOutcome<HelperGrant>> {
+export function grantHelper(
+  auditId: string,
+  grant: HelperGrantBody,
+  fetchImpl: Fetch = fetch
+): Promise<HelperOutcome<HelperGrant>> {
   const body: HelperGrantBody = { email: grant.email, permissions: withView(grant.permissions) };
   return call(
     auditPath(AUDIT_API.grantHelper.path, { id: auditId }),

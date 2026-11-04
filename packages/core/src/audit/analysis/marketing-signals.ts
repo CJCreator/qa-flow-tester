@@ -149,7 +149,9 @@ function onPageSeo(pages: MarketingPage[], findings: AuditFinding[]): SignalResu
   const withTitle = pages.filter((p) => nonEmpty(p.content.title));
   const withDescription = pages.filter((p) => nonEmpty(p.content.description));
   const withH1 = pages.filter((p) => p.content.headings.some((h) => h.level === 1 && nonEmpty(h.text)));
-  const found = pathsOf(pages.filter((p) => withTitle.includes(p) || withDescription.includes(p) || withH1.includes(p)));
+  const found = pathsOf(
+    pages.filter((p) => withTitle.includes(p) || withDescription.includes(p) || withH1.includes(p))
+  );
   const read = new Set(pathsOf(pages));
   const findingIds = (findings ?? [])
     .filter((f) => ON_PAGE_SEO_RULES.has(f.rule) && [f.urlPath, ...(f.pages ?? [])].some((p) => read.has(p)))
@@ -159,11 +161,17 @@ function onPageSeo(pages: MarketingPage[], findings: AuditFinding[]): SignalResu
     `title on ${withTitle.length} of ${total} ${plural(total, 'page')}, ` +
     `meta description on ${withDescription.length}, H1 on ${withH1.length}`;
   const findingNote =
-    findingIds.length > 0 ? `; ${findingIds.length} title, description or heading ${plural(findingIds.length, 'finding')}` : '';
+    findingIds.length > 0
+      ? `; ${findingIds.length} title, description or heading ${plural(findingIds.length, 'finding')}`
+      : '';
   const result: SignalResult =
     found.length > 0
       ? { status: 'found', pages: found, detail: `Found: ${counts}${findingNote}.` }
-      : { status: 'not-found', pages: [], detail: `Not found: no title, meta description or H1 on the ${total} ${plural(total, 'page')} read${findingNote}.` };
+      : {
+          status: 'not-found',
+          pages: [],
+          detail: `Not found: no title, meta description or H1 on the ${total} ${plural(total, 'page')} read${findingNote}.`,
+        };
   if (findingIds.length > 0) result.findingIds = unique(findingIds);
   return result;
 }
@@ -172,7 +180,9 @@ function schema(pages: MarketingPage[]): SignalResult {
   const types: string[] = [];
   const found: string[] = [];
   for (const page of pages) {
-    const pageTypes = page.raw.jsonLd.flatMap((block) => block.types ?? []).filter((t) => typeof t === 'string' && t.trim());
+    const pageTypes = page.raw.jsonLd
+      .flatMap((block) => block.types ?? [])
+      .filter((t) => typeof t === 'string' && t.trim());
     if (pageTypes.length === 0) continue;
     found.push(page.content.urlPath);
     for (const type of pageTypes) {
@@ -228,7 +238,8 @@ function analytics(pages: MarketingPage[]): SignalResult {
       const url = parse(address, page.raw.url);
       if (!url) continue;
       for (const tool of TAG_TOOLS) {
-        if (hostMatches(url.hostname, tool.host) && (!tool.path || tool.path.test(url.pathname))) pageTools.add(tool.name);
+        if (hostMatches(url.hostname, tool.host) && (!tool.path || tool.path.test(url.pathname)))
+          pageTools.add(tool.name);
       }
     }
     if (pageTools.size === 0) continue;
@@ -242,7 +253,11 @@ function analytics(pages: MarketingPage[]): SignalResult {
       detail: `Not found: no script or frame from a known analytics or tag tool on the ${pages.length} ${plural(pages.length, 'page')} read.`,
     };
   }
-  return { status: 'found', pages: found, detail: `Found: ${nameList(tools)} on ${pageCount(found)}: ${pageList(found)}.` };
+  return {
+    status: 'found',
+    pages: found,
+    detail: `Found: ${nameList(tools)} on ${pageCount(found)}: ${pageList(found)}.`,
+  };
 }
 
 function ctas(pages: MarketingPage[]): SignalResult {
@@ -328,7 +343,8 @@ function trustSignals(pages: MarketingPage[]): SignalResult {
   const parts: string[] = [];
   if (reviews.length > 0) parts.push(`reviews or ratings on ${pageCount(reviews)}: ${pageList(reviews)}`);
   if (testimonials.length > 0) parts.push(`testimonials on ${pageCount(testimonials)}: ${pageList(testimonials)}`);
-  if (certifications.length > 0) parts.push(`certifications on ${pageCount(certifications)}: ${pageList(certifications)}`);
+  if (certifications.length > 0)
+    parts.push(`certifications on ${pageCount(certifications)}: ${pageList(certifications)}`);
   return { status: 'found', pages: found, detail: `Found: ${parts.join('; ')}.` };
 }
 
@@ -346,7 +362,10 @@ function localSignals(pages: MarketingPage[]): SignalResult {
     }
     const map = [...page.raw.iframes, ...page.raw.scripts].some((address) => {
       const url = parse(address, page.raw.url);
-      return url !== null && MAP_EMBEDS.some((m) => hostMatches(url.hostname, m.host) && (!m.path || m.path.test(url.pathname)));
+      return (
+        url !== null &&
+        MAP_EMBEDS.some((m) => hostMatches(url.hostname, m.host) && (!m.path || m.path.test(url.pathname)))
+      );
     });
     if (map) mapPages.push(path);
     if (page.raw.jsonLd.some((block) => (block.types ?? []).some(isLocalBusinessType))) schemaPages.push(path);
@@ -360,7 +379,8 @@ function localSignals(pages: MarketingPage[]): SignalResult {
     };
   }
   const parts: string[] = [];
-  if (napPages.length > 0) parts.push(`business name, address or phone (NAP) on ${pageCount(napPages)}: ${pageList(napPages)}`);
+  if (napPages.length > 0)
+    parts.push(`business name, address or phone (NAP) on ${pageCount(napPages)}: ${pageList(napPages)}`);
   if (mapPages.length > 0) parts.push(`map embed on ${pageCount(mapPages)}: ${pageList(mapPages)}`);
   if (schemaPages.length > 0) parts.push(`LocalBusiness schema on ${pageCount(schemaPages)}: ${pageList(schemaPages)}`);
   const result: SignalResult = { status: 'found', pages: found, detail: `Found: ${parts.join('; ')}.` };
@@ -375,7 +395,8 @@ function localSignals(pages: MarketingPage[]): SignalResult {
 /** Field types that never say what a form asks for. */
 const IGNORED_FIELD_TYPES = new Set(['hidden', 'submit', 'button', 'reset', 'image']);
 /** A field asking for a person's name, email or phone (by its name or label). */
-const LEAD_FIELD_WORDS = /\bname\b|full[\s_-]?name|first[\s_-]?name|last[\s_-]?name|your[\s_-]?name|e-?mail|phone|mobile|whatsapp|\btel\b/;
+const LEAD_FIELD_WORDS =
+  /\bname\b|full[\s_-]?name|first[\s_-]?name|last[\s_-]?name|your[\s_-]?name|e-?mail|phone|mobile|whatsapp|\btel\b/;
 const SEARCH_FIELD_NAMES = new Set(['q', 's', 'query', 'search', 'search_query', 'keyword', 'keywords', 'term']);
 
 function isSearchForm(form: Pick<ContentForm, 'action'>, fields: ContentForm['fields']): boolean {

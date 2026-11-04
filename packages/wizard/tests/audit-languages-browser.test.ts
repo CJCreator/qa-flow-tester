@@ -19,18 +19,8 @@ import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright';
 import { build } from 'vite';
-import {
-  sectionText,
-  type AuditStartReply,
-  type PageContent,
-} from '@qa/types';
-import {
-  checkAuditAddress,
-  defaultNetDeps,
-  runAuditCrawl,
-  type AuditBrowserLauncher,
-  type NetDeps,
-} from '@qa/core';
+import { sectionText, type AuditStartReply, type PageContent } from '@qa/types';
+import { checkAuditAddress, defaultNetDeps, runAuditCrawl, type AuditBrowserLauncher, type NetDeps } from '@qa/core';
 import { RunnerServer } from '../../runner/src/server.js';
 import { allRoutes } from '../../runner/src/routes/index.js';
 import { auditPipelineStep, createAuditCrawlRoutes } from '../../runner/src/routes/audit-crawl.js';
@@ -82,7 +72,10 @@ function auditRowsWithFakeNetwork(): Route[] {
     });
     return rows;
   };
-  const delegate = (index: number): Route['handle'] => (context) => build(context)[index].handle(context);
+  const delegate =
+    (index: number): Route['handle'] =>
+    (context) =>
+      build(context)[index].handle(context);
   const [startRow, streamRow] = createAuditCrawlRoutes({
     store: undefined as never,
     caller: () => ({ owner: false }),
@@ -111,7 +104,7 @@ describe('Website Audit screens: Tamil content and export (browser)', () => {
   // Explicit timeout (300 s): the wizard build plus the fixture audit run slowly under full-suite load, beyond the
   // 30 s hookTimeout of vitest.config.ts (EV-0235).
   beforeAll(async () => {
-    dir =await fs.mkdtemp(path.join(os.tmpdir(), 'audit-languages-browser-'));
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), 'audit-languages-browser-'));
     uiDir = path.join(dir, 'ui');
     await build({
       root: wizardRoot,
@@ -174,7 +167,10 @@ describe('Website Audit screens: Tamil content and export (browser)', () => {
     await page.getByRole('heading', { level: 1, name: 'Website Audit analysis' }).waitFor({ timeout: 20000 });
     const entry = result.pages.find((p) => pathOf(p.urlPath) === urlPath);
     expect(entry, `${urlPath} is in the audit`).toBeTruthy();
-    await page.getByRole('button', { name: new RegExp(entry!.urlPath.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')) }).first().click();
+    await page
+      .getByRole('button', { name: new RegExp(entry!.urlPath.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')) })
+      .first()
+      .click();
     await page.getByRole('heading', { name: /^Page Content/ }).waitFor({ timeout: 20000 });
   }
 

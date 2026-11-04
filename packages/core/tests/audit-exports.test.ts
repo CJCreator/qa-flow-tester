@@ -30,7 +30,7 @@ describe('audit exports reach @qa/core', () => {
     '%s entry point %s is exported by @qa/core',
     (_group, name) => {
       expect(typeof coreExports[name]).not.toBe('undefined');
-    },
+    }
   );
 
   it('every value exported by a group barrel is the same object in @qa/core (no shadowed duplicates)', () => {
@@ -77,7 +77,8 @@ function stripComments(src: string): string {
  */
 const GLOBAL_FETCH_ALLOWED = new Set(['store/select-backend.ts']);
 
-const FETCH_CALL = /(^|[^.\w$])fetch\s*\(|globalThis\.fetch|\bglobal\.fetch|\bwindow\.fetch|from\s+['"](?:undici|node-fetch)['"]/;
+const FETCH_CALL =
+  /(^|[^.\w$])fetch\s*\(|globalThis\.fetch|\bglobal\.fetch|\bwindow\.fetch|from\s+['"](?:undici|node-fetch)['"]/;
 const PLAYWRIGHT_REQUEST_API =
   /\b(?:page|context|ctx|browserContext)\.request\b|\bAPIRequestContext\b|\bAPIRequest\b|\brequest\.newContext\b|\.request\.(?:get|post|put|patch|delete|fetch|head)\s*\(/;
 

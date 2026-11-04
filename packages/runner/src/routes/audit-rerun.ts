@@ -124,7 +124,14 @@ export function createAuditRerunRoutes(deps: AuditRerunRouteDeps): Route[] {
     let version: Awaited<ReturnType<RerunStore['addVersion']>> | undefined;
     let started: Promise<void>;
     let run: AuditRun | undefined;
-    const endRun = () => run?.emit({ type: 'failed', auditId, version: run.version, error: AUDIT_START_FAILED, code: 'ERR_INVALID_REQUEST' });
+    const endRun = () =>
+      run?.emit({
+        type: 'failed',
+        auditId,
+        version: run.version,
+        error: AUDIT_START_FAILED,
+        code: 'ERR_INVALID_REQUEST',
+      });
     try {
       version = await deps.store.addVersion(auditId);
       run = runs.start(auditId, version.version);

@@ -33,7 +33,11 @@ import { createPageRecorder, runAuditPipeline } from '../src/audit/pipeline/inde
 import { readPage } from '../src/audit/analysis/read-page.js';
 import { defaultNetDeps, type NetDeps } from '../src/safe-net.js';
 import { emptyOverlay } from '../src/audit/documents/edits.js';
-import { generateAuditDocuments, generateOwnerAudit, type AuditDocumentsInput } from '../src/audit/documents/generate.js';
+import {
+  generateAuditDocuments,
+  generateOwnerAudit,
+  type AuditDocumentsInput,
+} from '../src/audit/documents/generate.js';
 import { buildSiteJson } from '../src/audit/documents/site-json.js';
 import { editedViewOf } from '../src/audit/documents/generate.js';
 import { exportAudit } from '../src/audit/documents/bundle.js';
@@ -62,7 +66,8 @@ let allContents: PageContent[];
 let zwContent: PageContent;
 
 /** Code points as "U+0B95 U+0BCD ...": a failure names the exact character that differs. */
-const cps = (s: string) => Array.from(s, (c) => 'U+' + c.codePointAt(0)!.toString(16).toUpperCase().padStart(4, '0')).join(' ');
+const cps = (s: string) =>
+  Array.from(s, (c) => 'U+' + c.codePointAt(0)!.toString(16).toUpperCase().padStart(4, '0')).join(' ');
 const sameCodePoints = (actual: string, expected: string) => expect(cps(actual)).toBe(cps(expected));
 
 /** Text blocks of a fixture page, read from the HTML source itself (independent of the extractor). */
@@ -74,7 +79,8 @@ async function fixtureBlocks(file: string) {
       .replace(/<[^>]+>/g, '')
       .replace(/\s+/g, ' ')
       .trim();
-  const all = (tag: string) => [...body.matchAll(new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)</${tag}>`, 'g'))].map((m) => clean(m[1]!));
+  const all = (tag: string) =>
+    [...body.matchAll(new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)</${tag}>`, 'g'))].map((m) => clean(m[1]!));
   return {
     h1: all('h1'),
     h2: all('h2'),
@@ -119,7 +125,10 @@ beforeAll(async () => {
     language: 'en',
   };
   const recorder = createPageRecorder({ workDir });
-  const crawl = await runAuditCrawl(request, { onRenderedPage: recorder.onRenderedPage, deps: { browserManager, netDeps } });
+  const crawl = await runAuditCrawl(request, {
+    onRenderedPage: recorder.onRenderedPage,
+    deps: { browserManager, netDeps },
+  });
   const notMeasured: PageSpeed = {
     lab: { status: 'not-measured', source: 'pagespeed-insights', method: 'lab', reason: 'no-network' },
     field: { status: 'not-measured', source: 'pagespeed-insights', method: 'field', reason: 'no-field-data' },
@@ -162,7 +171,11 @@ beforeAll(async () => {
     ...ta,
     urlPath: '/zw',
     title: zwContent.title,
-    sections: zwContent.sections.map((s) => ({ id: s.id, kind: s.kind, ...(s.heading ? { heading: s.heading } : {}) })) as never,
+    sections: zwContent.sections.map((s) => ({
+      id: s.id,
+      kind: s.kind,
+      ...(s.heading ? { heading: s.heading } : {}),
+    })) as never,
   };
   result = { ...result, pages: [...result.pages, zwPage] };
   contents.set('/zw', zwContent);
@@ -194,7 +207,11 @@ const PAGES = [
 
 describe('language detection (REQ-013, REQ-032 AC-1)', () => {
   it('the audit crawled the English, Tamil and Hindi pages', () => {
-    for (const p of ['/', '/ta', '/hi']) expect(result.pages.some((x) => x.urlPath === p), p).toBe(true);
+    for (const p of ['/', '/ta', '/hi'])
+      expect(
+        result.pages.some((x) => x.urlPath === p),
+        p
+      ).toBe(true);
   });
 
   it('identifies the English page as en and the Tamil page as ta', () => {
@@ -279,14 +296,18 @@ describe('ZWNJ and ZWJ survive extraction and every export (REQ-044 AC-1)', () =
   });
 
   it('Markdown, site.json and Word hold the same code points', async () => {
-    const section = content().sections.map((s) => sectionText(content(), s)).join('');
+    const section = content()
+      .sections.map((s) => sectionText(content(), s))
+      .join('');
     expect(section).toContain(ZWJ);
     const json = buildSiteJson(editedViewOf(input('ta')));
     const page = json.pages.find((p) => p.urlPath === '/zw')!;
     sameCodePoints(page.sections.map((s) => s.text).join(''), section);
 
     const md = renderMarkdown(generateAuditDocuments(input('ta', ['content']))[0]!);
-    const { value } = await mammoth.extractRawText({ buffer: (await exportAudit('docx', input('ta', ['content']))).body });
+    const { value } = await mammoth.extractRawText({
+      buffer: (await exportAudit('docx', input('ta', ['content']))).body,
+    });
     for (const line of content().text.split('\n')) {
       expect(md).toContain(line);
       expect(value).toContain(line);
@@ -300,7 +321,10 @@ describe('findings for Tamil and Hindi pages, as for the English page (REQ-044 A
   it.each(['/ta', '/hi'])('%s ran the same page checks as the English page', (urlPath) => {
     const page = result.pages.find((p) => p.urlPath === urlPath)!;
     expect(page.coverage).toBe(home().coverage);
-    expect(page.accessibility).toMatchObject({ standard: home().accessibility!.standard, method: home().accessibility!.method });
+    expect(page.accessibility).toMatchObject({
+      standard: home().accessibility!.standard,
+      method: home().accessibility!.method,
+    });
     expect(page.phone).toBeDefined();
     expect(page.phone!.widthPx).toBe(home().phone!.widthPx);
     expect(page.seo).toBeDefined();
@@ -320,7 +344,8 @@ describe('findings for Tamil and Hindi pages, as for the English page (REQ-044 A
   });
 
   it('the English page has findings by the same phone check, so the rules match', () => {
-    const rules = (p: string) => new Set(result.findings.filter((f) => f.urlPath === p && f.area === 'usability').map((f) => f.rule));
+    const rules = (p: string) =>
+      new Set(result.findings.filter((f) => f.urlPath === p && f.area === 'usability').map((f) => f.rule));
     for (const rule of rules('/ta')) expect(rules('/')).toContain(rule);
     for (const rule of rules('/hi')) expect(rules('/')).toContain(rule);
   });
@@ -352,7 +377,9 @@ describe('Audit Documents by language (REQ-044 AC-3, REQ-032 AC-1, Q-45, DEC-005
       expect(renderMarkdown(doc)).not.toContain(documentText('ta', 'status.betaTranslation'));
     }
     const structure = docs.find((d) => d.kind === 'structure')!;
-    const structureHeadings = structure.blocks.filter((b) => b.type === 'heading').map((b) => (b as { text: string }).text);
+    const structureHeadings = structure.blocks
+      .filter((b) => b.type === 'heading')
+      .map((b) => (b as { text: string }).text);
     expect(structureHeadings).toContain(labels.labels.headings.pageHierarchy);
     expect(labels.labels.headings.pageHierarchy).toMatch(/[஀-௿]/);
   });

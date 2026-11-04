@@ -107,7 +107,9 @@ export function recommendationFor(
 const GRADE_RANK: Record<AspectGrade, number> = { A: 0, B: 1, C: 2, D: 3, F: 4 };
 
 /** The rule's decision for one page, with the finding ids behind it and a plain reason. */
-export function ruleRecommendation(page: Pick<RecommendationPageInput, 'urlPath' | 'findings' | 'grades'>): PageRecommendation {
+export function ruleRecommendation(
+  page: Pick<RecommendationPageInput, 'urlPath' | 'findings' | 'grades'>
+): PageRecommendation {
   const base = { urlPath: page.urlPath, decidedBy: 'rule' as const };
   if (page.findings.length === 0) {
     return { ...base, action: 'repair', reason: NO_FINDINGS_REASON, findingIds: [] };

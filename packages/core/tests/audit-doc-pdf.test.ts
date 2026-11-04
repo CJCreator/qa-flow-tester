@@ -41,7 +41,9 @@ const latin1 = (pdf: Buffer) => pdf.toString('latin1');
 
 /** Page boxes of every page, in points. */
 function mediaBoxes(pdf: Buffer): number[][] {
-  return [...latin1(pdf).matchAll(/\/MediaBox\s*\[\s*([\d.\s-]+)\]/g)].map((m) => m[1]!.trim().split(/\s+/).map(Number));
+  return [...latin1(pdf).matchAll(/\/MediaBox\s*\[\s*([\d.\s-]+)\]/g)].map((m) =>
+    m[1]!.trim().split(/\s+/).map(Number)
+  );
 }
 
 const pageCount = (pdf: Buffer) => latin1(pdf).match(/\/Type\s*\/Page\b(?!s)/g)?.length ?? 0;

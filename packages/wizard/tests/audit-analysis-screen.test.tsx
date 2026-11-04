@@ -266,7 +266,11 @@ describe('analysis client: refusals come back as { error, code }, never thrown',
   });
 
   it('gives a plain sentence for a known code without a message, and drops an unknown code', async () => {
-    const running = await getAuditResult(AUDIT_ID, undefined, mockFetch(jsonResponse({ code: 'ERR_AUDIT_RUNNING' }, 409)));
+    const running = await getAuditResult(
+      AUDIT_ID,
+      undefined,
+      mockFetch(jsonResponse({ code: 'ERR_AUDIT_RUNNING' }, 409))
+    );
     expect(running).toEqual({
       ok: false,
       error: 'This Website Audit is still in progress. Its analysis shows once it has finished.',
@@ -328,13 +332,21 @@ describe('AnalysisScreen: loading, error and empty states in words', () => {
   });
 
   it('says a version in progress or stopped has no analysis yet', () => {
-    const running = view({ status: 'loaded', reply: reply({ result: null, version: { ...version, status: 'running' } }) });
+    const running = view({
+      status: 'loaded',
+      reply: reply({ result: null, version: { ...version, status: 'running' } }),
+    });
     expect(textOf(running)).toContain('This Website Audit is still in progress.');
     const failed = view({
       status: 'loaded',
-      reply: reply({ result: null, version: { ...version, status: 'failed', error: 'The website stopped answering.' } }),
+      reply: reply({
+        result: null,
+        version: { ...version, status: 'failed', error: 'The website stopped answering.' },
+      }),
     });
-    expect(textOf(failed)).toContain('stopped before it finished, so it has no analysis. The website stopped answering.');
+    expect(textOf(failed)).toContain(
+      'stopped before it finished, so it has no analysis. The website stopped answering.'
+    );
     expect(failed).not.toContain('Findings');
   });
 
@@ -413,7 +425,11 @@ describe('AnalysisScreen: the picked page', () => {
   });
 
   it('says a covered page is checked on its Sample Page instead of showing empty accessibility results', () => {
-    const html = view(loaded, '/services/repair', { status: 'loaded', urlPath: '/services/repair', content: pageContent });
+    const html = view(loaded, '/services/repair', {
+      status: 'loaded',
+      urlPath: '/services/repair',
+      content: pageContent,
+    });
     const text = textOf(html);
     expect(text).toContain(
       'Checked on its Sample Page /services. Its checks, notes and recommendation come from that Sample Page'

@@ -207,10 +207,16 @@ describe('REQ-008 Sections', () => {
         expect(sections[i].end, `${urlPath} ${sections[i].id}`).toBeGreaterThanOrEqual(sections[i].start);
       }
       expect(sections[sections.length - 1].end, urlPath).toBe(content.text.length);
-      expect(sections.map((s) => s.id), urlPath).toEqual(sections.map((_, i) => `s${i + 1}`));
+      expect(
+        sections.map((s) => s.id),
+        urlPath
+      ).toEqual(sections.map((_, i) => `s${i + 1}`));
       expect(sections.map((s) => sectionText(content, s)).join(''), urlPath).toBe(content.text);
       // The analysis lists the same Sections, in the same order.
-      expect(analysed(urlPath).sections.map((s) => s.id), urlPath).toEqual(sections.map((s) => s.id));
+      expect(
+        analysed(urlPath).sections.map((s) => s.id),
+        urlPath
+      ).toEqual(sections.map((s) => s.id));
     }
   });
 });
@@ -218,7 +224,9 @@ describe('REQ-008 Sections', () => {
 describe('REQ-009 Page Content', () => {
   it('the home page has text, headings with levels, images with alt, links, the enquiry form, title, description and CTAs', () => {
     const home = contents.get(P.home)!;
-    expect(home.text).toContain('Kaveri Sweets has made ghee sweets, crisp savouries and festival gift boxes by hand since 1985.');
+    expect(home.text).toContain(
+      'Kaveri Sweets has made ghee sweets, crisp savouries and festival gift boxes by hand since 1985.'
+    );
     expect(home.headings).toContainEqual(
       expect.objectContaining({ level: 1, text: 'Fresh sweets and savouries in T. Nagar, Chennai' })
     );
@@ -329,8 +337,17 @@ describe('REQ-015 marketing signals', () => {
     expect(local.pages).toContain(P.home);
     expect(local.nap?.some((n) => n.urlPath === P.home)).toBe(true);
     const part = (name: string) => local.detail.split('; ').find((s) => s.includes(name)) ?? '';
-    expect(part('map embed').split(': ')[1]?.split(/, | and /)).toContain(P.home);
-    expect(part('LocalBusiness schema').split(': ')[1]?.replace(/\.$/, '').split(/, | and /)).toContain(P.home);
+    expect(
+      part('map embed')
+        .split(': ')[1]
+        ?.split(/, | and /)
+    ).toContain(P.home);
+    expect(
+      part('LocalBusiness schema')
+        .split(': ')[1]
+        ?.replace(/\.$/, '')
+        .split(/, | and /)
+    ).toContain(P.home);
   });
 
   it('reports the lead form, and nothing was sent to its action: no /enquiry request and no POST at all', () => {

@@ -52,7 +52,11 @@ describe('document text in every DocumentLanguage (REQ-032)', () => {
 
   it.each(NINE)('%s is not the English table and has the same {variables} per key', (lang) => {
     for (const [key, enValue] of enEntries) {
-      const raw = documentText(lang, key as DocumentTextKey, Object.fromEntries(placeholders(enValue).map((n) => [n, '{' + n + '}'])));
+      const raw = documentText(
+        lang,
+        key as DocumentTextKey,
+        Object.fromEntries(placeholders(enValue).map((n) => [n, '{' + n + '}']))
+      );
       expect(placeholders(raw), `${lang} ${key}`).toEqual(placeholders(enValue));
       if (/[A-Za-z]{3,}/.test(enValue.replace(KEPT_AS_IS, ''))) {
         expect(raw, `${lang} ${key} is still English`).not.toBe(enValue);

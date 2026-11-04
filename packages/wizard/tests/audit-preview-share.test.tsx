@@ -77,7 +77,10 @@ function fakeFetch(...replies: Array<{ status: number; body: unknown }>): { fetc
       body: typeof init?.body === 'string' ? JSON.parse(init.body) : undefined,
     });
     const reply = replies[Math.min(next++, replies.length - 1)]!;
-    return new Response(JSON.stringify(reply.body), { status: reply.status, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify(reply.body), {
+      status: reply.status,
+      headers: { 'Content-Type': 'application/json' },
+    });
   };
   return { fetchImpl, calls };
 }
@@ -116,7 +119,10 @@ function render(over: Partial<PreviewShareViewProps> = {}): string {
 
 /** The visible text of some markup: tags removed. */
 function textOf(markup: string): string {
-  return markup.replace(/<[^>]+>/g, ' ').replace(/&#x27;/g, "'").replace(/\s+/g, ' ');
+  return markup
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&#x27;/g, "'")
+    .replace(/\s+/g, ' ');
 }
 
 const BANNED_SHARE_WORDS = /public link|permalink|share url|published report/i;
@@ -127,11 +133,18 @@ const BANNED_SHARE_WORDS = /public link|permalink|share url|published report/i;
 
 describe('Improved homepage preview', () => {
   it('Make preview posts AUDIT_API.createPreview with the chosen version and language', async () => {
-    const fake = fakeFetch({ status: 200, body: { preview: { version: 2, language: 'ta', createdAt: '2026-11-03T10:00:00Z' } } });
+    const fake = fakeFetch({
+      status: 200,
+      body: { preview: { version: 2, language: 'ta', createdAt: '2026-11-03T10:00:00Z' } },
+    });
     const outcome = await createPreview(AUDIT_ID, 2, 'ta', fake.fetchImpl);
     expect(outcome).toEqual({ ok: true, value: { version: 2, language: 'ta', createdAt: '2026-11-03T10:00:00Z' } });
     expect(fake.calls).toEqual([
-      { url: `/api/audits/${AUDIT_ID}/preview`, method: AUDIT_API.createPreview.method, body: { version: 2, language: 'ta' } },
+      {
+        url: `/api/audits/${AUDIT_ID}/preview`,
+        method: AUDIT_API.createPreview.method,
+        body: { version: 2, language: 'ta' },
+      },
     ]);
   });
 
@@ -149,7 +162,13 @@ describe('Improved homepage preview', () => {
   });
 
   it('shows other refusals as a plain error without the Settings link', () => {
-    const html = render({ preview: { status: 'failed', message: 'The improved homepage preview could not be made. Try again.', noAiKey: false } });
+    const html = render({
+      preview: {
+        status: 'failed',
+        message: 'The improved homepage preview could not be made. Try again.',
+        noAiKey: false,
+      },
+    });
     expect(textOf(html)).toContain('could not be made');
     expect(html).not.toContain('href="/settings"');
   });
@@ -166,7 +185,9 @@ describe('Improved homepage preview', () => {
   });
 
   it('says when the preview is ready, and shows a spinner while it is made', () => {
-    expect(textOf(render({ preview: { status: 'made', createdAt: '2026-11-03T10:00:00Z' } }))).toMatch(/The preview is ready/);
+    expect(textOf(render({ preview: { status: 'made', createdAt: '2026-11-03T10:00:00Z' } }))).toMatch(
+      /The preview is ready/
+    );
     expect(textOf(render({ preview: { status: 'making' } }))).toMatch(/Making the preview/);
   });
 });
@@ -178,7 +199,10 @@ describe('Improved homepage preview', () => {
 describe('Shared Link calls', () => {
   it('creates a Shared Link to the Pitch Glimpse or the preview, in a language', async () => {
     const fake = fakeFetch({ status: 200, body: { link } });
-    expect(await createSharedLink(AUDIT_ID, { version: 2, kind: 'pitch', language: 'ta' }, fake.fetchImpl)).toEqual({ ok: true, value: link });
+    expect(await createSharedLink(AUDIT_ID, { version: 2, kind: 'pitch', language: 'ta' }, fake.fetchImpl)).toEqual({
+      ok: true,
+      value: link,
+    });
     expect(fake.calls[0]).toEqual({
       url: `/api/audits/${AUDIT_ID}/share`,
       method: 'POST',
@@ -281,17 +305,28 @@ describe('Shared Link screen', () => {
 
   it('gives each Revoke button an accessible name', () => {
     const html = render();
-    expect(html).toMatch(/<button[^>]*aria-label="Revoke Shared Link: Pitch Glimpse, version 2, Tamil, created [^"]+"[^>]*>Revoke<\/button>/);
+    expect(html).toMatch(
+      /<button[^>]*aria-label="Revoke Shared Link: Pitch Glimpse, version 2, Tamil, created [^"]+"[^>]*>Revoke<\/button>/
+    );
   });
 
   it('says when there is no Shared Link yet, and when the list could not load', () => {
     expect(textOf(render({ links: { status: 'loaded', links: [] } }))).toMatch(/No Shared Link has been made/);
-    expect(render({ links: { status: 'failed', message: 'The Shared Links could not be loaded. Try again.' } })).toMatch(/role="alert"/);
+    expect(
+      render({ links: { status: 'failed', message: 'The Shared Links could not be loaded. Try again.' } })
+    ).toMatch(/role="alert"/);
   });
 
   it('labels every control', () => {
     const html = render({ created: link });
-    for (const id of ['share-version', 'preview-language', 'share-language', 'share-kind-pitch', 'share-kind-preview', 'shared-link-address']) {
+    for (const id of [
+      'share-version',
+      'preview-language',
+      'share-language',
+      'share-kind-pitch',
+      'share-kind-preview',
+      'shared-link-address',
+    ]) {
       expect(html, id).toMatch(new RegExp(`<label[^>]*for="${id}"`));
     }
   });

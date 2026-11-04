@@ -91,7 +91,11 @@ function acceptEdits(body: unknown): EditOverlay | null {
 }
 
 /** `GET /api/audits/:id`: the version (the latest when `version` is not given), its result and its edits. */
-export function loadAudit(auditId: string, version?: number, fetchImpl: Fetch = fetch): Promise<ReviewOutcome<AuditGetReply>> {
+export function loadAudit(
+  auditId: string,
+  version?: number,
+  fetchImpl: Fetch = fetch
+): Promise<ReviewOutcome<AuditGetReply>> {
   return call(
     withQuery(auditPath(AUDIT_API.get.path, { id: auditId }), { version }),
     { method: AUDIT_API.get.method },
@@ -106,7 +110,11 @@ export function loadAudit(auditId: string, version?: number, fetchImpl: Fetch = 
 }
 
 /** `GET /api/audits/:id/edits`: the version's saved edits. */
-export function loadEdits(auditId: string, version?: number, fetchImpl: Fetch = fetch): Promise<ReviewOutcome<EditOverlay>> {
+export function loadEdits(
+  auditId: string,
+  version?: number,
+  fetchImpl: Fetch = fetch
+): Promise<ReviewOutcome<EditOverlay>> {
   return call(
     withQuery(auditPath(AUDIT_API.getEdits.path, { id: auditId }), { version }),
     { method: AUDIT_API.getEdits.method },

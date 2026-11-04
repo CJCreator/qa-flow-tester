@@ -88,7 +88,8 @@ function idProblem(value: unknown): string | undefined {
 export function editPathProblem(value: unknown): string | undefined {
   if (typeof value !== 'string' || value === '') return 'must be a page path such as /about.';
   if (value.length > MAX_EDIT_PATH_CHARS) return `is longer than ${MAX_EDIT_PATH_CHARS} characters.`;
-  if (!value.startsWith('/') || value.startsWith('//')) return 'must be a path on the site starting with /, such as /about.';
+  if (!value.startsWith('/') || value.startsWith('//'))
+    return 'must be a path on the site starting with /, such as /about.';
   // eslint-disable-next-line no-control-regex
   if (/[\s\u0000-\u001f\u007f-\u009f]/.test(value)) return 'must not contain spaces or invisible characters.';
   if (value.includes('\\')) return 'must use / and not \\.';
@@ -238,7 +239,7 @@ function validateProposal(input: unknown, errors: AuditEditsErrors): ProposalInp
       errors['proposal.notIncluded'] = `must have at most ${MAX_NOT_INCLUDED_ITEMS} lines.`;
     } else {
       lines.forEach((line, i) =>
-        check(errors, `proposal.notIncluded[${i}]`, textProblem(line, MAX_NOT_INCLUDED_CHARS, false)),
+        check(errors, `proposal.notIncluded[${i}]`, textProblem(line, MAX_NOT_INCLUDED_CHARS, false))
       );
       out.notIncluded = [...(lines as string[])];
     }
@@ -327,7 +328,13 @@ export function mergeEditsPatch(overlay: EditOverlay, patch: AuditEditsPatch, no
       if (at >= 0) next.sections.splice(at, 1);
       continue;
     }
-    const edit: SectionEdit = { urlPath: entry.urlPath, sectionId: entry.sectionId, text: entry.text, by: 'person', editedAt };
+    const edit: SectionEdit = {
+      urlPath: entry.urlPath,
+      sectionId: entry.sectionId,
+      text: entry.text,
+      by: 'person',
+      editedAt,
+    };
     if (at >= 0) next.sections[at] = edit;
     else next.sections.push(edit);
   }
@@ -471,7 +478,7 @@ const highestScale = (a: AuditScale, b: AuditScale): AuditScale => (SCALE_RANK[a
 export function buildEditedView(
   result: AuditResult,
   contents: readonly PageContent[],
-  overlay: EditOverlay,
+  overlay: EditOverlay
 ): EditedAuditView {
   const view = structuredClone(result);
   const known = new Set(result.pages.map((p) => p.urlPath));
@@ -510,7 +517,9 @@ export function buildEditedView(
       }
       if (out.phone) out.phone = { ...out.phone, findingIds: out.phone.findingIds.filter(keepFinding) };
       if (out.areas) {
-        out.areas = out.areas.map((a) => (a.status === 'done' ? { ...a, evidence: a.evidence.filter(keepFinding) } : a));
+        out.areas = out.areas.map((a) =>
+          a.status === 'done' ? { ...a, evidence: a.evidence.filter(keepFinding) } : a
+        );
       }
       return out;
     });
@@ -557,7 +566,9 @@ export function buildEditedView(
       ...(s.findingIds ? { findingIds: s.findingIds.filter(keepFinding) } : {}),
     })),
   };
-  view.siteAreas = view.siteAreas.map((a) => (a.status === 'done' ? { ...a, evidence: a.evidence.filter(keepFinding) } : a));
+  view.siteAreas = view.siteAreas.map((a) =>
+    a.status === 'done' ? { ...a, evidence: a.evidence.filter(keepFinding) } : a
+  );
 
   // Page Content with the Section edits.
   const sectionEdits = new Map<string, Map<string, string>>();

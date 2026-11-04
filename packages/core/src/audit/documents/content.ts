@@ -149,7 +149,7 @@ function ctaItem(cta: ContentCta, words: ContentWording): string {
 function formItems(form: ContentForm, words: ContentWording): string[] {
   const head = `${words.method}: ${form.method}${form.action ? ` · ${words.sendsTo}: ${form.action}` : ''}`;
   const fields = form.fields.map(
-    (f) => `${words.fields}: ${f.label} (${f.type}${f.required ? `, ${words.required}` : ''})`,
+    (f) => `${words.fields}: ${f.label} (${f.type}${f.required ? `, ${words.required}` : ''})`
   );
   return [head, ...fields];
 }
@@ -159,7 +159,7 @@ function elementBlocks(
   images: ContentImage[],
   ctas: ContentCta[],
   forms: ContentForm[],
-  words: ContentWording,
+  words: ContentWording
 ): DocBlock[] {
   const blocks: DocBlock[] = [];
   const level = 3;
@@ -182,7 +182,8 @@ function elementBlocks(
 function pageBlocks(content: PageContent, language: DocumentLanguage, words: ContentWording): DocBlock[] {
   const blocks: DocBlock[] = [];
   const title = content.title && content.title.trim() !== '' ? content.title : words.noTitle;
-  const description = content.description && content.description.trim() !== '' ? content.description : words.noDescription;
+  const description =
+    content.description && content.description.trim() !== '' ? content.description : words.noDescription;
   blocks.push({ type: 'list', items: [`${words.pageTitle}: ${title}`, `${words.description}: ${description}`] });
   if (content.textTruncated) blocks.push({ type: 'note', text: words.textCut });
 
@@ -226,5 +227,10 @@ export function buildContentDocument(view: EditedAuditView, options: ContentDocu
     blocks.push(...pageBlocks(content, lookup.language, words));
   }
 
-  return { kind: 'content', title: labels.documentTitles.content, language: lookup.requested ?? lookup.language, blocks };
+  return {
+    kind: 'content',
+    title: labels.documentTitles.content,
+    language: lookup.requested ?? lookup.language,
+    blocks,
+  };
 }

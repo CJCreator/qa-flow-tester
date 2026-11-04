@@ -140,7 +140,12 @@ function accessibility(): AnalysisAccessibility[] {
         findingIds: ['AF-001', 'AF-002', 'AF-003'],
       },
     },
-    { urlPath: '/blog', findings: [], basics: null, note: 'The accessibility checks did not run on /blog, so this page has not been checked.' },
+    {
+      urlPath: '/blog',
+      findings: [],
+      basics: null,
+      note: 'The accessibility checks did not run on /blog, so this page has not been checked.',
+    },
     { urlPath: '/not-recorded', findings: [a11yFinding('AF-001', 'label', '/not-recorded', '#x')], basics: null },
   ];
 }
@@ -206,7 +211,13 @@ describe('analyseSite', () => {
       { id: 's2', kind: 'main', heading: 'Welcome' },
     ]);
     for (const s of home.sections) expect(Object.keys(s)).not.toContain('start');
-    expect(home.seo).toMatchObject({ hasTitle: true, hasDescription: true, h1Count: 1, imagesWithoutAlt: 1, htmlLang: 'en' });
+    expect(home.seo).toMatchObject({
+      hasTitle: true,
+      hasDescription: true,
+      h1Count: 1,
+      imagesWithoutAlt: 1,
+      htmlLang: 'en',
+    });
     const blog = result.pages[2];
     expect(blog.seo.skippedHeadingLevel).toBe(true);
     expect(result.pages[1].seo).toMatchObject({ hasDescription: false, h1Count: 0 });
@@ -263,13 +274,21 @@ describe('analyseSite', () => {
   it('passes content findings through unchanged apart from their ids (REQ-014)', async () => {
     const result = await analyseSite(input());
     const direct = contentProblems(
-      sitePages().filter((p, i, all) => all.findIndex((q) => q.urlPath === p.urlPath) === i).map((p) => p.content),
+      sitePages()
+        .filter((p, i, all) => all.findIndex((q) => q.urlPath === p.urlPath) === i)
+        .map((p) => p.content),
       createFindingIdAllocator()
     );
     const passed = result.findings.filter((f) => f.source === 'rule' && f.rule !== 'broken-link');
     expect(passed.map(withoutId)).toEqual(direct.map(withoutId));
     expect(passed.map((f) => f.rule)).toEqual(
-      expect.arrayContaining(['missing-alt', 'missing-description', 'no-h1', 'skipped-heading-level', 'duplicate-title'])
+      expect.arrayContaining([
+        'missing-alt',
+        'missing-description',
+        'no-h1',
+        'skipped-heading-level',
+        'duplicate-title',
+      ])
     );
   });
 

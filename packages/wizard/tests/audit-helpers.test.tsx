@@ -21,7 +21,13 @@ import {
   type FirebaseWebConfig,
 } from '../src/screens/audit/saved/helper-api';
 import { HELPER_APP_NAME, signInWithGoogle, type FirebaseAuthSdk } from '../src/screens/audit/saved/firebase-sign-in';
-import { HelperRules, HelpersBody, HelpersScreen, HelpersView, type HelpersViewProps } from '../src/screens/audit/saved/HelpersScreen';
+import {
+  HelperRules,
+  HelpersBody,
+  HelpersScreen,
+  HelpersView,
+  type HelpersViewProps,
+} from '../src/screens/audit/saved/HelpersScreen';
 import {
   HelperSignInScreen,
   HelperSignInView,
@@ -39,13 +45,23 @@ const CONFIG: FirebaseWebConfig = { apiKey: 'public-web-key', authDomain: 'demo.
 
 const helpers: HelperGrant[] = [
   { auditId: AUDIT_ID, email: 'asha@gmail.com', permissions: ['view'], grantedAt: '2026-11-01T00:00:00Z' },
-  { auditId: AUDIT_ID, email: 'ravi@gmail.com', permissions: ['view', 'edit', 'export'], grantedAt: '2026-11-02T00:00:00Z' },
+  {
+    auditId: AUDIT_ID,
+    email: 'ravi@gmail.com',
+    permissions: ['view', 'edit', 'export'],
+    grantedAt: '2026-11-02T00:00:00Z',
+  },
 ];
 
 const session: HelperSession = {
   email: 'asha@gmail.com',
   grants: [
-    { auditId: 'audit001', email: 'asha@gmail.com', permissions: ['view', 'export'], grantedAt: '2026-11-01T00:00:00Z' },
+    {
+      auditId: 'audit001',
+      email: 'asha@gmail.com',
+      permissions: ['view', 'export'],
+      grantedAt: '2026-11-01T00:00:00Z',
+    },
   ],
 };
 
@@ -66,7 +82,10 @@ function fakeFetch(...replies: Array<{ status: number; body: unknown }>): { fetc
       body: typeof init?.body === 'string' ? JSON.parse(init.body) : undefined,
     });
     const reply = replies[Math.min(next++, replies.length - 1)]!;
-    return new Response(JSON.stringify(reply.body), { status: reply.status, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify(reply.body), {
+      status: reply.status,
+      headers: { 'Content-Type': 'application/json' },
+    });
   };
   return { fetchImpl, calls };
 }
@@ -116,7 +135,11 @@ describe('Helper API calls', () => {
     expect(list.calls[0]).toMatchObject({ url: `/api/audits/${AUDIT_ID}/helpers`, method: 'GET' });
 
     const give = fakeFetch({ status: 200, body: { helper: helpers[1] } });
-    const given = await grantHelper(AUDIT_ID, { email: 'ravi@gmail.com', permissions: ['export', 'edit'] }, give.fetchImpl);
+    const given = await grantHelper(
+      AUDIT_ID,
+      { email: 'ravi@gmail.com', permissions: ['export', 'edit'] },
+      give.fetchImpl
+    );
     expect(given).toEqual({ ok: true, value: helpers[1] });
     expect(give.calls[0]).toEqual({
       url: `/api/audits/${AUDIT_ID}/helpers`,
@@ -153,7 +176,10 @@ describe('Helper API calls', () => {
   });
 
   it('shows a plain message for ERR_SIGN_IN_FAILED', async () => {
-    const refused = fakeFetch({ status: 401, body: { error: 'Token audience mismatch: aud=xyz', code: 'ERR_SIGN_IN_FAILED' } });
+    const refused = fakeFetch({
+      status: 401,
+      body: { error: 'Token audience mismatch: aud=xyz', code: 'ERR_SIGN_IN_FAILED' },
+    });
     expect(await startHelperSession('bad', refused.fetchImpl)).toEqual({
       ok: false,
       message: SIGN_IN_FAILED_MESSAGE,
@@ -233,9 +259,7 @@ describe('Helpers screen', () => {
   });
 
   it('says Helper sign-in is not set up and offers nothing else when it is off', () => {
-    const html = renderToStaticMarkup(
-      createElement(HelpersBody, { ...viewProps(), loaded: { status: 'off' } })
-    );
+    const html = renderToStaticMarkup(createElement(HelpersBody, { ...viewProps(), loaded: { status: 'off' } }));
     expect(textOf(html).trim()).toBe(HELPERS_OFF_MESSAGE);
     expect(html).not.toMatch(/<(button|input|form|a)\b/);
   });
@@ -243,15 +267,22 @@ describe('Helpers screen', () => {
   it('shows the loading state first, then the list when loaded', () => {
     const loading = renderToStaticMarkup(createElement(HelpersScreen, { auditId: AUDIT_ID }));
     expect(loading).toContain('Loading the Helpers…');
-    const loaded = renderToStaticMarkup(createElement(HelpersBody, { ...viewProps(), loaded: { status: 'loaded', helpers } }));
+    const loaded = renderToStaticMarkup(
+      createElement(HelpersBody, { ...viewProps(), loaded: { status: 'loaded', helpers } })
+    );
     expect(loaded).toContain('ravi@gmail.com');
-    const failed = renderToStaticMarkup(createElement(HelpersBody, { ...viewProps(), loaded: { status: 'failed', message: 'Nope.' } }));
+    const failed = renderToStaticMarkup(
+      createElement(HelpersBody, { ...viewProps(), loaded: { status: 'failed', message: 'Nope.' } })
+    );
     expect(failed).toContain('role="alert"');
   });
 
   it('escapes Helper emails rendered from data', () => {
     const html = renderToStaticMarkup(
-      createElement(HelpersView, viewProps({ helpers: [{ ...helpers[0]!, email: '<img src=x onerror=alert(1)>@x.io' }] }))
+      createElement(
+        HelpersView,
+        viewProps({ helpers: [{ ...helpers[0]!, email: '<img src=x onerror=alert(1)>@x.io' }] })
+      )
     );
     expect(html).not.toContain('<img');
     expect(html).toContain('&lt;img');
@@ -272,7 +303,12 @@ describe('Helper sign-in screen', () => {
     expect(state).toEqual({ status: 'signed-in', session, message: null });
 
     const html = renderToStaticMarkup(
-      createElement(HelperSignInView, { state, onSignIn: () => undefined, onSignOut: () => undefined, onOpenAudit: () => undefined })
+      createElement(HelperSignInView, {
+        state,
+        onSignIn: () => undefined,
+        onSignOut: () => undefined,
+        onOpenAudit: () => undefined,
+      })
     );
     expect(html).toContain('Signed in as asha@gmail.com');
     expect(html).toContain('Website Audit audit001');
@@ -308,7 +344,9 @@ describe('Helper sign-in screen', () => {
 
   it('shows the off, loading and empty states', () => {
     const render = (state: HelperSignInState) =>
-      renderToStaticMarkup(createElement(HelperSignInView, { state, onSignIn: () => undefined, onSignOut: () => undefined }));
+      renderToStaticMarkup(
+        createElement(HelperSignInView, { state, onSignIn: () => undefined, onSignOut: () => undefined })
+      );
     const off = render({ status: 'off' });
     expect(textOf(off).trim()).toBe(HELPERS_OFF_MESSAGE);
     expect(off).not.toMatch(/<button\b/);
@@ -339,7 +377,9 @@ const IN_MEMORY = { type: 'NONE' };
 const RESOLVER = { resolver: true };
 
 function fakeSdk(signInWithPopup: FirebaseAuthSdk['signInWithPopup']) {
-  const initializeAuth = vi.fn((_app: never, _deps: { persistence: unknown; popupRedirectResolver: unknown }) => ({ auth: true }));
+  const initializeAuth = vi.fn((_app: never, _deps: { persistence: unknown; popupRedirectResolver: unknown }) => ({
+    auth: true,
+  }));
   const signOut = vi.fn(async () => undefined);
   const initializeApp = vi.fn((_config: FirebaseWebConfig, name: string) => ({ name }));
   const sdk: FirebaseAuthSdk = {
@@ -409,8 +449,12 @@ describe('Firebase sign-in', () => {
     for (const file of ['firebase-sign-in.ts', 'HelperSignInScreen.tsx', 'helper-api.ts']) {
       const source = readFileSync(new URL(`../src/screens/audit/saved/${file}`, import.meta.url), 'utf8');
       expect(source, file).not.toMatch(/\b(localStorage|sessionStorage|indexedDB)\s*\./);
-      expect(source, file).not.toMatch(/\b(location|history)\s*\.\s*(href|hash|search|assign|replace|pushState|replaceState)\b/);
-      expect(source, file).not.toMatch(/browserLocalPersistence|browserSessionPersistence|indexedDBLocalPersistence|signInWithRedirect/);
+      expect(source, file).not.toMatch(
+        /\b(location|history)\s*\.\s*(href|hash|search|assign|replace|pushState|replaceState)\b/
+      );
+      expect(source, file).not.toMatch(
+        /browserLocalPersistence|browserSessionPersistence|indexedDBLocalPersistence|signInWithRedirect/
+      );
     }
   });
 });
@@ -436,7 +480,9 @@ describe('firebase bundle boundary', () => {
   }));
 
   it('loads the firebase SDK by dynamic import in firebase-sign-in.ts only, auth module only', () => {
-    const withFirebase = files.filter((file) => /['"]firebase(\/[a-z-]+)?['"]/.test(file.source)).map((file) => file.path);
+    const withFirebase = files
+      .filter((file) => /['"]firebase(\/[a-z-]+)?['"]/.test(file.source))
+      .map((file) => file.path);
     expect(withFirebase).toEqual(['screens/audit/saved/firebase-sign-in.ts']);
 
     const source = files.find((file) => file.path === 'screens/audit/saved/firebase-sign-in.ts')!.source;
@@ -499,7 +545,10 @@ describe('Helper wording', () => {
         ...source.matchAll(/>([^<>{}]+)</g),
       ]
         .map((match) => match[1]!)
-        .filter((text) => !/^(view|edit|export|status|alert|button|submit|email|off|checkbox|loading|loaded|failed)$/.test(text));
+        .filter(
+          (text) =>
+            !/^(view|edit|export|status|alert|button|submit|email|off|checkbox|loading|loaded|failed)$/.test(text)
+        );
       for (const text of shown) expect(text, `${file}: ${text}`).not.toMatch(BANNED_PERSON_WORDS);
     }
   });

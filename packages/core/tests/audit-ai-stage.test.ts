@@ -36,7 +36,7 @@ function setup(overrides: Partial<ResolveAuditAiDeps> = {}, answer?: string) {
 }
 
 describe('resolveAuditAi', () => {
-  it('REQ-011 AC-1: calls the saved provider with the tool user\'s key', async () => {
+  it("REQ-011 AC-1: calls the saved provider with the tool user's key", async () => {
     const { deps, createProvider, calls } = setup();
     const resolved = await resolveAuditAi(deps);
     expect(resolved.ok).toBe(true);
@@ -100,7 +100,7 @@ describe('resolveAuditAi', () => {
     expect(calls[0].model).toBeUndefined();
   });
 
-  it('does not send the saved provider\'s model ids to a key found for another provider', async () => {
+  it("does not send the saved provider's model ids to a key found for another provider", async () => {
     const { deps, createProvider, calls } = setup({
       keys: keysFor({ provider: 'anthropic', apiKey: TEST_KEY, source: 'env' }),
       models: { rewrite: 'openrouter/model' },

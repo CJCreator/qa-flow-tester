@@ -24,7 +24,14 @@ export const OPT_OUT_LANGUAGES = ['en', 'ta'] as const;
 export type OptOutLanguage = (typeof OPT_OUT_LANGUAGES)[number];
 
 /** The company details fields, in the order the screen shows them. */
-export const COMPANY_FIELDS: readonly (keyof CompanyDetails)[] = ['name', 'address', 'phone', 'email', 'website', 'terms'];
+export const COMPANY_FIELDS: readonly (keyof CompanyDetails)[] = [
+  'name',
+  'address',
+  'phone',
+  'email',
+  'website',
+  'terms',
+];
 
 /**
  * The placeholders a Proposal template may use. Kept in step with `PROPOSAL_PLACEHOLDERS` of
@@ -35,7 +42,10 @@ export const PROPOSAL_PLACEHOLDERS: ReadonlyArray<{ name: string; description: s
   { name: 'scope', description: 'Each page with redesign or repair, as edited.' },
   { name: 'not_included', description: 'The "not included" lines of this audit, or the default list.' },
   { name: 'price', description: 'The price in INR as written for this audit; a "to fill in" marker when empty.' },
-  { name: 'payment_terms', description: 'The payment terms as written for this audit; a "to fill in" marker when empty.' },
+  {
+    name: 'payment_terms',
+    description: 'The payment terms as written for this audit; a "to fill in" marker when empty.',
+  },
   { name: 'timeline', description: 'The Improvement Roadmap phases and their items.' },
   { name: 'company.name', description: 'Your company name.' },
   { name: 'company.address', description: 'Your company address.' },
@@ -79,7 +89,8 @@ export function settingsUpdate(reply: AuditSettingsReply, draft: SettingsDraft):
     }
   }
   for (const field of COMPANY_FIELDS) {
-    if (draft.company[field] !== saved.company[field]) update.company = { ...update.company, [field]: draft.company[field] };
+    if (draft.company[field] !== saved.company[field])
+      update.company = { ...update.company, [field]: draft.company[field] };
   }
   return update;
 }
@@ -115,12 +126,18 @@ function isObject(value: unknown): value is Record<string, unknown> {
 function acceptReply(body: unknown): AuditSettingsReply | null {
   if (!isObject(body) || !isObject(body.settings) || !isObject(body.defaults)) return null;
   const { settings, defaults } = body;
-  if (typeof settings.proposalTemplate !== 'string' || !isObject(settings.optOutText) || !isObject(settings.company)) return null;
+  if (typeof settings.proposalTemplate !== 'string' || !isObject(settings.optOutText) || !isObject(settings.company))
+    return null;
   if (typeof defaults.proposalTemplate !== 'string' || !isObject(defaults.optOutText)) return null;
   return body as unknown as AuditSettingsReply;
 }
 
-async function call(url: string, init: RequestInit, fetchImpl: Fetch, fallback: string): Promise<SettingsOutcome<AuditSettingsReply>> {
+async function call(
+  url: string,
+  init: RequestInit,
+  fetchImpl: Fetch,
+  fallback: string
+): Promise<SettingsOutcome<AuditSettingsReply>> {
   let res: Response;
   try {
     res = await fetchImpl(url, init);
@@ -155,7 +172,10 @@ export function loadSettings(fetchImpl: Fetch = fetch): Promise<SettingsOutcome<
 }
 
 /** `PUT /api/audit-settings`: saves the fields in `update` and returns the settings now in effect. */
-export function saveSettings(update: AuditSettingsUpdate, fetchImpl: Fetch = fetch): Promise<SettingsOutcome<AuditSettingsReply>> {
+export function saveSettings(
+  update: AuditSettingsUpdate,
+  fetchImpl: Fetch = fetch
+): Promise<SettingsOutcome<AuditSettingsReply>> {
   return call(
     auditPath(AUDIT_API.putSettings.path, {}),
     {

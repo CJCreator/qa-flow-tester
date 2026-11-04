@@ -106,7 +106,12 @@ async function call<T>(
 }
 
 function isSummary(value: unknown): value is AuditSummary {
-  return isObject(value) && typeof value.auditId === 'string' && typeof value.url === 'string' && Array.isArray(value.versions);
+  return (
+    isObject(value) &&
+    typeof value.auditId === 'string' &&
+    typeof value.url === 'string' &&
+    Array.isArray(value.versions)
+  );
 }
 
 function isEntry(value: unknown): value is ShortlistEntry {
@@ -129,13 +134,18 @@ export function listAudits(fetchImpl: Fetch = fetch): Promise<SavedOutcome<Audit
 }
 
 /** `GET /api/audits/:id?version=n`: one version (the latest when `version` is not given) with its summary. */
-export function loadVersion(auditId: string, version?: number, fetchImpl: Fetch = fetch): Promise<SavedOutcome<AuditGetReply>> {
+export function loadVersion(
+  auditId: string,
+  version?: number,
+  fetchImpl: Fetch = fetch
+): Promise<SavedOutcome<AuditGetReply>> {
   return call(
     withQuery(auditPath(AUDIT_API.get.path, { id: auditId }), { version }),
     { method: AUDIT_API.get.method },
     fetchImpl,
     'The Website Audit could not be opened. Try again.',
-    (body) => (isObject(body) && isSummary(body.summary) && isObject(body.version) ? (body as unknown as AuditGetReply) : null)
+    (body) =>
+      isObject(body) && isSummary(body.summary) && isObject(body.version) ? (body as unknown as AuditGetReply) : null
   );
 }
 
@@ -146,7 +156,10 @@ export function rerunAudit(auditId: string, fetchImpl: Fetch = fetch): Promise<S
     { method: AUDIT_API.rerun.method },
     fetchImpl,
     'The Website Audit could not be re-run. Try again.',
-    (body) => (isObject(body) && typeof body.version === 'number' && typeof body.auditId === 'string' ? (body as unknown as AuditStartReply) : null)
+    (body) =>
+      isObject(body) && typeof body.version === 'number' && typeof body.auditId === 'string'
+        ? (body as unknown as AuditStartReply)
+        : null
   );
 }
 
@@ -194,7 +207,11 @@ export function saveShortlistEntry(
 ): Promise<SavedOutcome<ShortlistEntry>> {
   return call(
     auditPath(AUDIT_API.putShortlist.path, { id: auditId }),
-    { method: AUDIT_API.putShortlist.method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(update) },
+    {
+      method: AUDIT_API.putShortlist.method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(update),
+    },
     fetchImpl,
     'The Shortlist entry could not be saved. Try again.',
     (body) => (isObject(body) && isEntry(body.entry) ? body.entry : null)
@@ -202,13 +219,19 @@ export function saveShortlistEntry(
 }
 
 /** `GET /api/shortlist?mark=&outcome=`: the Shortlist, filtered on the runner. */
-export function listShortlist(query: ShortlistListQuery = {}, fetchImpl: Fetch = fetch): Promise<SavedOutcome<ShortlistListItem[]>> {
+export function listShortlist(
+  query: ShortlistListQuery = {},
+  fetchImpl: Fetch = fetch
+): Promise<SavedOutcome<ShortlistListItem[]>> {
   return call(
     withQuery(AUDIT_API.listShortlist.path, { mark: query.mark, outcome: query.outcome }),
     { method: AUDIT_API.listShortlist.method },
     fetchImpl,
     'The Shortlist could not be loaded. Try again.',
-    (body) => (isObject(body) && Array.isArray(body.entries) && body.entries.every(isEntry) ? (body.entries as ShortlistListItem[]) : null)
+    (body) =>
+      isObject(body) && Array.isArray(body.entries) && body.entries.every(isEntry)
+        ? (body.entries as ShortlistListItem[])
+        : null
   );
 }
 
@@ -311,6 +334,7 @@ export function readOutcomeFilter(value: string): ShortlistFilters['outcome'] {
 export function filterShortlist(items: readonly ShortlistListItem[], filters: ShortlistFilters): ShortlistListItem[] {
   return items.filter(
     (item) =>
-      (filters.mark === 'all' || item.mark === filters.mark) && (filters.outcome === 'all' || item.outcome === filters.outcome)
+      (filters.mark === 'all' || item.mark === filters.mark) &&
+      (filters.outcome === 'all' || item.outcome === filters.outcome)
   );
 }

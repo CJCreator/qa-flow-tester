@@ -24,9 +24,15 @@ function statusLine(text: string): string {
 }
 
 const AVOID = [
-  'public link', 'permalink', 'share url', 'published report', // Shared Link
-  'collaborator', 'team member', // Helper
-  'site review', 'teardown', 'scrape', // Website Audit, Page Content
+  'public link',
+  'permalink',
+  'share url',
+  'published report', // Shared Link
+  'collaborator',
+  'team member', // Helper
+  'site review',
+  'teardown',
+  'scrape', // Website Audit, Page Content
 ];
 
 function expectNoAvoidWords(text: string): void {

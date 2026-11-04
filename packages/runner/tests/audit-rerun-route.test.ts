@@ -64,10 +64,12 @@ async function serve(rows: Route[]): Promise<string> {
       res.end(JSON.stringify({ error: 'Not found' }));
       return;
     }
-    Promise.resolve(match.route.handle({ server: undefined as never, req, res, url, params: match.params })).catch(() => {
-      res.writeHead(500);
-      res.end();
-    });
+    Promise.resolve(match.route.handle({ server: undefined as never, req, res, url, params: match.params })).catch(
+      () => {
+        res.writeHead(500);
+        res.end();
+      }
+    );
   });
   servers.push(server);
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -143,7 +145,12 @@ describe('POST /api/audits/:id/rerun', () => {
 
     const audit = await store.getAudit(auditId);
     expect(audit?.versions.map((v) => v.version)).toEqual([1, 2]);
-    expect(audit?.versions[1]).toMatchObject({ url: REQUEST.url, limits: REQUEST.limits, language: 'en', status: 'running' });
+    expect(audit?.versions[1]).toMatchObject({
+      url: REQUEST.url,
+      limits: REQUEST.limits,
+      language: 'en',
+      status: 'running',
+    });
   });
 
   it('can be run again after a failed version, and adds versions in order', async () => {
@@ -256,7 +263,12 @@ describe('POST /api/audits/:id/rerun', () => {
   });
 
   it('marks the new version failed and releases the slot when the version cannot be registered as a run', async () => {
-    const brokenRuns = { start: () => { throw new Error('nope'); }, get: () => undefined } as unknown as AuditRuns;
+    const brokenRuns = {
+      start: () => {
+        throw new Error('nope');
+      },
+      get: () => undefined,
+    } as unknown as AuditRuns;
     const base = await serve(createAuditRerunRoutes(deps({ runs: brokenRuns })));
     const { status, json } = await rerun(base, auditId);
     expect(status).toBe(500);

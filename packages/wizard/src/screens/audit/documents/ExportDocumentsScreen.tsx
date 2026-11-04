@@ -116,7 +116,16 @@ export interface ExportDocumentsViewProps {
  * The export panel itself, without state. Every download is a link to a GET route: the tool user hands
  * the files over; the tool sends nothing (REQ-019 AC-4).
  */
-export function ExportDocumentsView({ auditId, version, choice, pitch, owner, onChoice, onPitch, onOwner }: ExportDocumentsViewProps) {
+export function ExportDocumentsView({
+  auditId,
+  version,
+  choice,
+  pitch,
+  owner,
+  onChoice,
+  onPitch,
+  onOwner,
+}: ExportDocumentsViewProps) {
   const documentsHref = exportUrl(auditId, choice, version);
   return (
     <div className="space-y-10">

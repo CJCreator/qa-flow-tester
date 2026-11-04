@@ -76,10 +76,7 @@ export function requestError(err: unknown, signal: AbortSignal, provider: string
   if (!signal.aborted) return err;
   const reason: unknown = signal.reason;
   if (reason instanceof AITimeoutError) {
-    return new AITimeoutError(
-      `${provider} did not answer within ${reason.timeoutMs} ms.`,
-      reason.timeoutMs
-    );
+    return new AITimeoutError(`${provider} did not answer within ${reason.timeoutMs} ms.`, reason.timeoutMs);
   }
   return new DOMException(`The ${provider} request was cancelled.`, 'AbortError');
 }

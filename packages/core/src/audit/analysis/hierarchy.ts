@@ -181,7 +181,7 @@ function hrefToSitePath(href: string | null, pageUrl: string): string | null {
 function menuParentCandidates(
   start: RawPage,
   lookup: (path: string) => string | null,
-  rootPath: string,
+  rootPath: string
 ): Map<string, string> {
   const parents = new Map<string, string>();
   const walk = (items: RawMenuItem[], parent: string): void => {
@@ -203,7 +203,7 @@ function menuParentCandidates(
 function breadcrumbParent(page: HierarchyPage, lookup: (path: string) => string | null): string | null {
   const trail = page.raw.breadcrumb.map((item) => {
     const sitePath = hrefToSitePath(item.href, page.raw.url);
-    return sitePath === null ? null : lookup(sitePath) ?? sitePath;
+    return sitePath === null ? null : (lookup(sitePath) ?? sitePath);
   });
   const self = trail.findIndex((target) => target === page.urlPath);
   const before = self === -1 ? trail : trail.slice(0, self);

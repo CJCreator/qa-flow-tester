@@ -12,7 +12,8 @@ const FIXED = new Date('2026-11-03T10:00:00.000Z');
 const now = () => FIXED;
 
 const HEADER = 'Kumar Bakery';
-const BODY = 'Fresh bread baked every morning in our family kitchen. Call us to order cakes for birthdays and weddings.';
+const BODY =
+  'Fresh bread baked every morning in our family kitchen. Call us to order cakes for birthdays and weddings.';
 const FRESH = 'Every day our home kitchen bakes new loaves. Ring us for celebration cakes.';
 const COPIED = 'Fresh bread baked every morning in our family kitchen. Ring us for cakes.';
 
@@ -137,9 +138,9 @@ describe('RewriteStore approval gate (REQ-030 AC-1)', () => {
     const store = new RewriteStore(dir);
     await store.approve({ urlPath: '/about', sectionId: 's9' }, now);
     const { provider, requests } = scripted([FRESH]);
-    expect(
-      await store.run({ urlPath: '/about', sectionId: 's9', language: 'en' }, deps(provider).run)
-    ).toMatchObject({ code: 'ERR_INVALID_REQUEST' });
+    expect(await store.run({ urlPath: '/about', sectionId: 's9', language: 'en' }, deps(provider).run)).toMatchObject({
+      code: 'ERR_INVALID_REQUEST',
+    });
     expect(requests).toHaveLength(0);
   });
 });
@@ -265,12 +266,16 @@ describe('RewriteStore persistence', () => {
     expect(await new RewriteStore(dir).list()).toEqual([]);
     await fs.writeFile(
       path.join(dir, REWRITES_FILE),
-      JSON.stringify({ schemaVersion: 1, rewrites: [{ urlPath: 'nope', sectionId: 's1' }, { ...S2, approvedAt: 'x' }] }),
+      JSON.stringify({
+        schemaVersion: 1,
+        rewrites: [
+          { urlPath: 'nope', sectionId: 's1' },
+          { ...S2, approvedAt: 'x' },
+        ],
+      }),
       'utf8'
     );
-    expect(await new RewriteStore(dir).list()).toEqual([
-      { ...S2, approvedAt: 'x', proposal: null, acceptedAt: null },
-    ]);
+    expect(await new RewriteStore(dir).list()).toEqual([{ ...S2, approvedAt: 'x', proposal: null, acceptedAt: null }]);
   });
 
   it('keeps concurrent approvals of different Sections', async () => {

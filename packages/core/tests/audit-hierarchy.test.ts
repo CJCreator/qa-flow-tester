@@ -115,14 +115,18 @@ function fixturePages(): HierarchyPage[] {
         ['/blog/2025', '2025'],
         ['/blog/2025/diwali', 'Diwali'],
         ['/blog/2025/diwali/sweets', 'Sweets guide'],
-        [null, 'Kaju katli'],
+        [null, 'Kaju katli']
       ),
     }),
     page('/seasonal-offers', 'Seasonal offers'),
   ];
 }
 
-function walk(node: HierarchyNode, visit: (n: HierarchyNode, parent: HierarchyNode | null) => void, parent: HierarchyNode | null = null): void {
+function walk(
+  node: HierarchyNode,
+  visit: (n: HierarchyNode, parent: HierarchyNode | null) => void,
+  parent: HierarchyNode | null = null
+): void {
   visit(node, parent);
   for (const child of node.children) walk(child, visit, node);
 }
@@ -248,12 +252,7 @@ describe('buildPageHierarchy', () => {
     const first = buildPageHierarchy(fixturePages(), '/');
     const second = buildPageHierarchy(fixturePages(), '/');
     expect(second).toEqual(first);
-    expect(first.root.children.map((c) => c.urlPath)).toEqual([
-      '/about',
-      '/blog',
-      '/seasonal-offers',
-      '/services',
-    ]);
+    expect(first.root.children.map((c) => c.urlPath)).toEqual(['/about', '/blog', '/seasonal-offers', '/services']);
     // Children are sorted, so crawl order does not change the tree.
     const reversed = buildPageHierarchy([...fixturePages()].reverse(), '/');
     expect(reversed.root).toEqual(first.root);
@@ -265,7 +264,9 @@ describe('navigation map (REQ-007 AC-1)', () => {
     const pages = fixturePages();
     const { links } = buildPageHierarchy(pages, '/');
     const expected = pages.flatMap((p) =>
-      p.content.links.filter((l) => !l.leavesSite).map((l) => ({ from: p.urlPath, to: l.to, region: l.region, text: l.text })),
+      p.content.links
+        .filter((l) => !l.leavesSite)
+        .map((l) => ({ from: p.urlPath, to: l.to, region: l.region, text: l.text }))
     );
     expect(links).toEqual(expected);
     expect(links).toContainEqual({ from: '/', to: '/services/catering', region: 'menu', text: 'Catering' });

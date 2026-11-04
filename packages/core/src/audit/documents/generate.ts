@@ -72,7 +72,7 @@ function proposalTemplateFor(settings: DocumentSettings, language: DocumentLangu
 /** The Audit Documents of an already edited view. Used by the exports so the overlay is applied only once. */
 export function documentsFromView(
   view: EditedAuditView,
-  options: Pick<AuditDocumentsInput, 'settings' | 'language' | 'documents' | 'now'>,
+  options: Pick<AuditDocumentsInput, 'settings' | 'language' | 'documents' | 'now'>
 ): AuditDoc[] {
   const lookup = labelsFor(options.language ?? view.result.language);
   const language = lookup.requested;
@@ -82,10 +82,17 @@ export function documentsFromView(
     findings: () => buildFindingsDocument(view, { language }),
     roadmap: () => buildRoadmapDocument(view, lookup, { showEffort: true }),
     proposal: () =>
-      fillProposal(proposalTemplateFor(options.settings, lookup.language), view, view.proposal, options.settings.company, lookup.labels, {
-        language: lookup.requested ?? lookup.language,
-        ...(options.now !== undefined ? { now: options.now } : {}),
-      }).doc,
+      fillProposal(
+        proposalTemplateFor(options.settings, lookup.language),
+        view,
+        view.proposal,
+        options.settings.company,
+        lookup.labels,
+        {
+          language: lookup.requested ?? lookup.language,
+          ...(options.now !== undefined ? { now: options.now } : {}),
+        }
+      ).doc,
   };
   return selectedDocumentKinds(options.documents).map((kind) => build[kind]());
 }

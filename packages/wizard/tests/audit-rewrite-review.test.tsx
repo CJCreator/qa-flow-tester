@@ -107,7 +107,10 @@ function fakeFetch(...replies: Array<{ status: number; body: unknown } | Error>)
     const next = replies.shift();
     if (!next) throw new Error('no reply queued');
     if (next instanceof Error) throw next;
-    return new Response(JSON.stringify(next.body), { status: next.status, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify(next.body), {
+      status: next.status,
+      headers: { 'Content-Type': 'application/json' },
+    });
   };
   return { impl, calls };
 }
@@ -122,7 +125,9 @@ describe('approval before a rewrite (REQ-030 AC-1)', () => {
     expect(button(html, 'Write new copy for Section s1: Our bakery')).toMatch(/disabled=""/);
     expect(button(html, 'Approve rewrite of Section s1: Our bakery')).not.toMatch(/disabled/);
     expect(textOf(html)).toContain(APPROVE_FIRST);
-    expect(button(html, 'Write new copy for Section s1: Our bakery')).toMatch(/aria-describedby="rewrite-section-0-approve-first"/);
+    expect(button(html, 'Write new copy for Section s1: Our bakery')).toMatch(
+      /aria-describedby="rewrite-section-0-approve-first"/
+    );
   });
 
   it('enables Write new copy once approved and drops the Approve rewrite control', () => {
@@ -145,12 +150,22 @@ describe('approval before a rewrite (REQ-030 AC-1)', () => {
 
   it('sends the rewrite request once approved', async () => {
     const fake = fakeFetch({ status: 200, body: { rewrite: proposed } });
-    const outcome = await writeNewCopy(AUDIT_ID, approved, { urlPath: '/about', sectionId: 's1', version: 2, language: 'en' }, fake.impl);
+    const outcome = await writeNewCopy(
+      AUDIT_ID,
+      approved,
+      { urlPath: '/about', sectionId: 's1', version: 2, language: 'en' },
+      fake.impl
+    );
     expect(outcome).toEqual({ ok: true, value: proposed });
     expect(fake.calls).toHaveLength(1);
     expect(fake.calls[0]!.url).toBe(`/api/audits/${AUDIT_ID}/rewrite`);
     expect(fake.calls[0]!.init?.method).toBe('POST');
-    expect(JSON.parse(String(fake.calls[0]!.init?.body))).toEqual({ urlPath: '/about', sectionId: 's1', version: 2, language: 'en' });
+    expect(JSON.parse(String(fake.calls[0]!.init?.body))).toEqual({
+      urlPath: '/about',
+      sectionId: 's1',
+      version: 2,
+      language: 'en',
+    });
   });
 
   it('approves a Section through the approve route', async () => {
@@ -175,7 +190,10 @@ describe('approval before a rewrite (REQ-030 AC-1)', () => {
 
 describe('refusals', () => {
   it('shows ERR_NO_AI_KEY as the Settings sentence', async () => {
-    const fake = fakeFetch({ status: 409, body: { error: 'Add an AI key to write new copy for this Section.', code: 'ERR_NO_AI_KEY' } });
+    const fake = fakeFetch({
+      status: 409,
+      body: { error: 'Add an AI key to write new copy for this Section.', code: 'ERR_NO_AI_KEY' },
+    });
     const outcome = await writeNewCopy(AUDIT_ID, approved, { urlPath: '/about', sectionId: 's1' }, fake.impl);
     expect(outcome).toEqual({ ok: false, message: NO_AI_KEY, code: 'ERR_NO_AI_KEY' });
     expect(NO_AI_KEY).toBe('Add an AI key in Settings to write new copy.');
@@ -222,7 +240,12 @@ describe('copied phrases (REQ-030 AC-2)', () => {
 
   it('marks every occurrence, merges touching phrases and leaves text without flags whole', () => {
     const text = 'one two three. One two three four';
-    expect(markCopiedPhrases(text, [{ words: 'one two three', wordCount: 3 }, { words: 'three four', wordCount: 2 }])).toEqual([
+    expect(
+      markCopiedPhrases(text, [
+        { words: 'one two three', wordCount: 3 },
+        { words: 'three four', wordCount: 2 },
+      ])
+    ).toEqual([
       { text: 'one two three', copied: true },
       { text: '. ', copied: false },
       { text: 'One two three four', copied: true },
@@ -233,7 +256,9 @@ describe('copied phrases (REQ-030 AC-2)', () => {
 
   it('matches words of other scripts and inner apostrophes like the runner', () => {
     const tamil = 'நாங்கள் தினமும் புதிய ரொட்டி சுடுகிறோம்';
-    expect(markCopiedPhrases(tamil, [{ words: 'புதிய ரொட்டி', wordCount: 2 }]).find((p) => p.copied)?.text).toBe('புதிய ரொட்டி');
+    expect(markCopiedPhrases(tamil, [{ words: 'புதிய ரொட்டி', wordCount: 2 }]).find((p) => p.copied)?.text).toBe(
+      'புதிய ரொட்டி'
+    );
     expect(markCopiedPhrases("We're open daily", [{ words: 'were open', wordCount: 2 }])[0]).toEqual({
       text: "We're open",
       copied: true,
@@ -243,13 +268,17 @@ describe('copied phrases (REQ-030 AC-2)', () => {
   it('highlights each flagged phrase in a mark element and lists it with its word count', () => {
     const html = renderView({ rewrites: { s1: proposed } });
     expect(html).toContain('<mark class="');
-    expect(html).toMatch(/<mark[^>]*aria-label="Copied phrase: Fresh bread, every single morning in"[^>]*>Fresh bread, every single morning in<\/mark>/);
+    expect(html).toMatch(
+      /<mark[^>]*aria-label="Copied phrase: Fresh bread, every single morning in"[^>]*>Fresh bread, every single morning in<\/mark>/
+    );
     expect(textOf(html)).toContain('Copied phrases (1)');
     expect(textOf(html)).toContain('fresh bread every single morning in : 6 words');
     expect(wordCountText(1)).toBe('1 word');
     // The textarea starts from the proposal and has a label.
     expect(html).toMatch(/<label for="rewrite-section-0"[^>]*>New copy for Section s1: Our bakery<\/label>/);
-    expect(html).toMatch(/<textarea id="rewrite-section-0"[^>]*>Each day we offer Fresh bread, every single morning in town\.<\/textarea>/);
+    expect(html).toMatch(
+      /<textarea id="rewrite-section-0"[^>]*>Each day we offer Fresh bread, every single morning in town\.<\/textarea>/
+    );
   });
 
   it('says so when the proposal copies no phrase', () => {
@@ -261,11 +290,18 @@ describe('copied phrases (REQ-030 AC-2)', () => {
 
   it('returns the server ERR_OVERLAP message with the phrases still copied', async () => {
     const message = 'This copy still repeats phrases from the original. Reword the marked phrases.';
-    const fake = fakeFetch({ status: 422, body: { error: message, code: 'ERR_OVERLAP', overlaps: [FLAG, { bad: true }] } });
+    const fake = fakeFetch({
+      status: 422,
+      body: { error: message, code: 'ERR_OVERLAP', overlaps: [FLAG, { bad: true }] },
+    });
     const outcome = await acceptNewCopy(AUDIT_ID, { urlPath: '/about', sectionId: 's1', text: PROPOSAL }, fake.impl);
     expect(outcome).toEqual({ ok: false, message, code: 'ERR_OVERLAP', overlaps: [FLAG] });
     expect(fake.calls[0]!.url).toBe(`/api/audits/${AUDIT_ID}/rewrite/accept`);
-    expect(JSON.parse(String(fake.calls[0]!.init?.body))).toEqual({ urlPath: '/about', sectionId: 's1', text: PROPOSAL });
+    expect(JSON.parse(String(fake.calls[0]!.init?.body))).toEqual({
+      urlPath: '/about',
+      sectionId: 's1',
+      text: PROPOSAL,
+    });
   });
 
   it('shows the ERR_OVERLAP refusal and keeps the edited text', () => {
@@ -281,19 +317,29 @@ describe('copied phrases (REQ-030 AC-2)', () => {
         },
       },
     });
-    expect(html).toMatch(/role="alert"[^>]*>This copy still repeats phrases from the original\. Reword the marked phrases\.</);
+    expect(html).toMatch(
+      /role="alert"[^>]*>This copy still repeats phrases from the original\. Reword the marked phrases\.</
+    );
     expect(html).toMatch(new RegExp(`<textarea id="rewrite-section-0"[^>]*>${edited}</textarea>`));
     expect(textOf(html)).toContain('Phrases still copied (1)');
     expect(html).toMatch(/<mark[^>]*aria-label="Copied phrase: fresh bread every single morning in"/);
   });
 
   it('disables Accept while working or when the copy is empty', () => {
-    expect(button(renderView({ rewrites: { s1: proposed } }), 'Accept new copy for Section s1: Our bakery')).not.toMatch(/disabled/);
-    expect(button(renderView({ rewrites: { s1: proposed }, drafts: { s1: '  ' } }), 'Accept new copy for Section s1: Our bakery')).toMatch(
-      /disabled=""/
-    );
     expect(
-      button(renderView({ rewrites: { s1: proposed }, busy: { s1: 'accepting' } }), 'Accept new copy for Section s1: Our bakery')
+      button(renderView({ rewrites: { s1: proposed } }), 'Accept new copy for Section s1: Our bakery')
+    ).not.toMatch(/disabled/);
+    expect(
+      button(
+        renderView({ rewrites: { s1: proposed }, drafts: { s1: '  ' } }),
+        'Accept new copy for Section s1: Our bakery'
+      )
+    ).toMatch(/disabled=""/);
+    expect(
+      button(
+        renderView({ rewrites: { s1: proposed }, busy: { s1: 'accepting' } }),
+        'Accept new copy for Section s1: Our bakery'
+      )
     ).toMatch(/disabled=""/);
   });
 });
@@ -310,7 +356,10 @@ describe('accessible markup and wording', () => {
   const screens = {
     empty: renderView(),
     proposed: renderView({ rewrites: { s1: proposed } }),
-    refused: renderView({ rewrites: { s1: proposed }, messages: { s1: { tone: 'fail', text: NO_AI_KEY, overlaps: [FLAG] } } }),
+    refused: renderView({
+      rewrites: { s1: proposed },
+      messages: { s1: { tone: 'fail', text: NO_AI_KEY, overlaps: [FLAG] } },
+    }),
     accepted: renderView({
       rewrites: { s1: { ...proposed, acceptedAt: '2026-11-01T11:00:00.000Z' } },
       messages: { s1: { tone: 'pass', text: 'Accepted. The new copy is in the Audit Documents.' } },
@@ -342,7 +391,11 @@ describe('accessible markup and wording', () => {
 
   it('escapes page text and AI copy instead of rendering it as markup', () => {
     const evil = '<img src=x onerror=alert(1)>';
-    const page = { ...content, text: evil, sections: [{ id: 's1', kind: 'main' as const, start: 0, end: evil.length }] };
+    const page = {
+      ...content,
+      text: evil,
+      sections: [{ id: 's1', kind: 'main' as const, start: 0, end: evil.length }],
+    };
     const html = renderView({
       content: page,
       rewrites: { s1: { ...proposed, proposal: { ...proposed.proposal!, text: evil, overlaps: [] } } },
@@ -359,7 +412,9 @@ describe('accessible markup and wording', () => {
   });
 
   it('shows a loading state before the saved rewrites arrive', () => {
-    const html = renderToStaticMarkup(createElement(RewriteReview, { auditId: AUDIT_ID, content, fetchImpl: fakeFetch().impl }));
+    const html = renderToStaticMarkup(
+      createElement(RewriteReview, { auditId: AUDIT_ID, content, fetchImpl: fakeFetch().impl })
+    );
     expect(html).toContain('role="status"');
     expect(textOf(html)).toContain('Loading the saved rewrites');
   });
@@ -369,7 +424,10 @@ describe('imports (T-211)', () => {
   it('reaches @qa/types through browser.js only and imports no Node-only module', () => {
     const dir = new URL('../src/screens/audit/ai/', import.meta.url);
     const files = ['RewriteReview.tsx', 'rewrite-api.ts'];
-    for (const url of [...files.map((f) => new URL(f, dir)), new URL('./audit-rewrite-review.test.tsx', import.meta.url)]) {
+    for (const url of [
+      ...files.map((f) => new URL(f, dir)),
+      new URL('./audit-rewrite-review.test.tsx', import.meta.url),
+    ]) {
       const source = readFileSync(url, 'utf8');
       const specifiers = [...source.matchAll(/from '(@qa\/types[^']*)'/g)].map((m) => m[1]);
       expect(specifiers.length, url.pathname).toBeGreaterThan(0);

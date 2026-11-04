@@ -81,10 +81,13 @@ describe('applySettingsUpdate', () => {
     expect(resolveAuditSettings(reset.settings, false).proposalTemplate).toBe(PROPOSAL_TEMPLATE_EN);
   });
 
-  it('saves opt-out text per language; null puts that language\'s default back', () => {
+  it("saves opt-out text per language; null puts that language's default back", () => {
     const current = deepFreeze(emptyAuditSettings());
     const saved = applied(current, { optOutText: { ta: 'புதிய உரை', en: 'Reply STOP to us.' } });
-    expect(resolveAuditSettings(saved.settings, false).optOutText).toEqual({ en: 'Reply STOP to us.', ta: 'புதிய உரை' });
+    expect(resolveAuditSettings(saved.settings, false).optOutText).toEqual({
+      en: 'Reply STOP to us.',
+      ta: 'புதிய உரை',
+    });
 
     const reset = applied(saved.settings, { optOutText: { ta: null } });
     expect(reset.settings.optOutText).toEqual({ en: 'Reply STOP to us.' });
@@ -104,7 +107,10 @@ describe('applySettingsUpdate', () => {
       website: '',
       terms: '',
     });
-    expect(resolveAuditSettings(second.settings, true)).toMatchObject({ rewriteOverlapWords: 8, pagespeedKeySaved: true });
+    expect(resolveAuditSettings(second.settings, true)).toMatchObject({
+      rewriteOverlapWords: 8,
+      pagespeedKeySaved: true,
+    });
   });
 
   it('passes the PageSpeed key through untouched and never stores it', () => {
@@ -150,7 +156,10 @@ describe('applySettingsUpdate', () => {
   }
 
   it('changes nothing when any field is refused', () => {
-    const base = applied(emptyAuditSettings(), { proposalTemplate: 'Mine {{scope}}', company: { name: 'Kavi' } }).settings;
+    const base = applied(emptyAuditSettings(), {
+      proposalTemplate: 'Mine {{scope}}',
+      company: { name: 'Kavi' },
+    }).settings;
     const before = structuredClone(base);
     const result = applySettingsUpdate(deepFreeze(base), {
       proposalTemplate: 'New {{scope}}',

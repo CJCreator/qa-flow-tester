@@ -113,7 +113,10 @@ describe('Helper access (REQ-033)', () => {
       code: 'ERR_AUDIT_NOT_FOUND',
       error: expect.any(String),
     });
-    expect(await access.refusal(req, 'view', { id: 'audit_unknown1' })).toMatchObject({ status: 404, code: 'ERR_AUDIT_NOT_FOUND' });
+    expect(await access.refusal(req, 'view', { id: 'audit_unknown1' })).toMatchObject({
+      status: 404,
+      code: 'ERR_AUDIT_NOT_FOUND',
+    });
     expect(await access.refusal(req, 'edit', { id: auditA })).toMatchObject({ status: 403, code: 'ERR_FORBIDDEN' });
     expect(await access.refusal(req, 'export', { id: auditA })).toMatchObject({ status: 403, code: 'ERR_FORBIDDEN' });
     expect(await access.refusal(req, 'view', { id: auditA })).toBeNull();
@@ -132,7 +135,10 @@ describe('Helper access (REQ-033)', () => {
     expect(await access.helperGrants(req, { id: auditA })).toContain('export');
     await store.removeHelper(auditA, HELPER);
     expect(await access.helperGrants(req, { id: auditA })).toEqual([]);
-    expect(await access.refusal(req, 'view', { id: auditA })).toMatchObject({ status: 404, code: 'ERR_AUDIT_NOT_FOUND' });
+    expect(await access.refusal(req, 'view', { id: auditA })).toMatchObject({
+      status: 404,
+      code: 'ERR_AUDIT_NOT_FOUND',
+    });
     expect(access.session(req)?.email).toBe(HELPER); // still signed in
   });
 
@@ -148,7 +154,10 @@ describe('Helper session key (F-045, DEC-011)', () => {
     await store.grantHelper(auditA, HELPER, ['edit']);
     const exp = Math.floor(NOW.getTime() / 1000) + 3600;
     // What a beta tester holding the access key could forge before DEC-011, in the new and the old cookie shape.
-    for (const claims of [{ email: HELPER, sub: SUB, exp }, { email: HELPER, exp }]) {
+    for (const claims of [
+      { email: HELPER, sub: SUB, exp },
+      { email: HELPER, exp },
+    ]) {
       const forged = reqWith(cookieSignedWith(oldAccessDerivedKey(ACCESS), claims));
       expect(access.session(forged)).toBeNull();
       expect(await access.helperGrants(forged, { id: auditA })).toEqual([]);
@@ -178,12 +187,18 @@ describe('Helper session key (F-045, DEC-011)', () => {
     await store.grantHelper(auditA, HELPER, ['view']);
     const exp = Math.floor(NOW.getTime() / 1000) + 3600;
     const key = access.sessionKey();
-    for (const claims of [{ email: HELPER, exp }, { email: HELPER, sub: '', exp }, { email: HELPER, sub: 7, exp }]) {
+    for (const claims of [
+      { email: HELPER, exp },
+      { email: HELPER, sub: '', exp },
+      { email: HELPER, sub: 7, exp },
+    ]) {
       const req = reqWith(cookieSignedWith(key, claims));
       expect(access.session(req)).toBeNull();
       expect(await access.helperGrants(req, { id: auditA })).toEqual([]);
     }
-    const [payload, mac] = helperCookie().slice(HELPER_COOKIE.length + 1).split('.') as [string, string];
+    const [payload, mac] = helperCookie()
+      .slice(HELPER_COOKIE.length + 1)
+      .split('.') as [string, string];
     const claims = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
     const otherSub = Buffer.from(JSON.stringify({ ...claims, sub: 'google-uid-mallory' })).toString('base64url');
     const tampered = reqWith(`${HELPER_COOKIE}=${otherSub}.${mac}`);
@@ -195,7 +210,13 @@ describe('Helper session key (F-045, DEC-011)', () => {
 
   it('takes an injected key (test seam) of at least 32 bytes, and makes none while off', () => {
     const key = randomBytes(32);
-    const seeded = createHelperAccess({ projectId: 'proj', accessToken: ACCESS, store, now: () => NOW, sessionKey: key });
+    const seeded = createHelperAccess({
+      projectId: 'proj',
+      accessToken: ACCESS,
+      store,
+      now: () => NOW,
+      sessionKey: key,
+    });
     expect(seeded.sessionKey().equals(key)).toBe(true);
     const cookie = `${HELPER_COOKIE}=${signHelperSession(key, { email: HELPER, sub: SUB }, NOW)}`;
     expect(seeded.session(reqWith(cookie))?.email).toBe(HELPER);

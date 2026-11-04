@@ -120,7 +120,8 @@ describe('Audit Document renderers: content and order', () => {
 });
 
 describe('Audit Document renderers: page text cannot add structure or markup', () => {
-  const hostile = '# Heading\n| a | b |\n<script>alert(1)</script> **bold** [link](https://evil.example) <img src=x onerror=alert(1)>';
+  const hostile =
+    '# Heading\n| a | b |\n<script>alert(1)</script> **bold** [link](https://evil.example) <img src=x onerror=alert(1)>';
   const hostileDoc = sampleDoc({
     title: '# <script>title</script>',
     blocks: [
@@ -178,7 +179,25 @@ describe('Audit Document renderers: page text cannot add structure or markup', (
     // Exactly the tags the renderer writes for this document.
     const tags = [...body.matchAll(/<([a-z0-9]+)[\s>]/gi)].map((m) => m[1].toLowerCase());
     expect(new Set(tags)).toEqual(
-      new Set(['body', 'main', 'h1', 'h2', 'p', 'ul', 'li', 'table', 'thead', 'tr', 'th', 'tbody', 'td', 'div', 'figure', 'img', 'figcaption']),
+      new Set([
+        'body',
+        'main',
+        'h1',
+        'h2',
+        'p',
+        'ul',
+        'li',
+        'table',
+        'thead',
+        'tr',
+        'th',
+        'tbody',
+        'td',
+        'div',
+        'figure',
+        'img',
+        'figcaption',
+      ])
     );
   });
 
@@ -311,7 +330,14 @@ describe('Audit Document HTML is self-contained (ADR 0021)', () => {
 });
 
 describe('Document labels', () => {
-  const avoidTerms = [/\breports?\b/i, /\bplans?\b/i, /\benhancement plan\b/i, /\bthe three audit documents\b/i, /\bpitch deck\b/i, /\bowner report\b/i];
+  const avoidTerms = [
+    /\breports?\b/i,
+    /\bplans?\b/i,
+    /\benhancement plan\b/i,
+    /\bthe three audit documents\b/i,
+    /\bpitch deck\b/i,
+    /\bowner report\b/i,
+  ];
 
   it('English and Tamil have exactly the same keys and no empty value', () => {
     const enEntries = flattenLabels(en);
@@ -368,7 +394,17 @@ describe('Document labels', () => {
 
 describe('findClaimWords (ADR 0018)', () => {
   it('lists every ADR 0018 word and the release-verdict words', () => {
-    for (const word of ['compliant', 'compliance', 'certified', 'secure', 'safe', 'hack-proof', 'passes WCAG', 'fully accessible', 'Ready to release']) {
+    for (const word of [
+      'compliant',
+      'compliance',
+      'certified',
+      'secure',
+      'safe',
+      'hack-proof',
+      'passes WCAG',
+      'fully accessible',
+      'Ready to release',
+    ]) {
       expect(CLAIM_WORDS).toContain(word);
     }
   });

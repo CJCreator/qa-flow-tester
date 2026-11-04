@@ -63,7 +63,12 @@ function isReset(value: object): value is { reset: true } {
 // Changing the draft (each returns a new draft)
 // ---------------------------------------------------------------------------------------------------
 
-export function setFindingField(draft: ReviewDraft, findingId: string, field: FindingField, value: string): ReviewDraft {
+export function setFindingField(
+  draft: ReviewDraft,
+  findingId: string,
+  field: FindingField,
+  value: string
+): ReviewDraft {
   const current = draft.findings[findingId];
   const fields = current && !isReset(current) ? current : {};
   return { ...draft, findings: { ...draft.findings, [findingId]: { ...fields, [field]: value } } };

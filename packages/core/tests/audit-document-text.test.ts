@@ -27,7 +27,10 @@ describe('Document text tables (en, ta, hi)', () => {
     expect(keys.length).toBeGreaterThan(50);
     for (const [lang, table] of Object.entries(TABLES)) {
       const entries = flattenLabels(table);
-      expect(entries.map(([k]) => k), lang).toEqual(keys);
+      expect(
+        entries.map(([k]) => k),
+        lang
+      ).toEqual(keys);
       for (const [key, value] of entries) {
         expect(typeof value, `${lang} ${key}`).toBe('string');
         expect(value.trim(), `${lang} ${key}`).not.toBe('');
@@ -46,7 +49,9 @@ describe('Document text tables (en, ta, hi)', () => {
     for (const [lang, table, script] of scripts) {
       for (const [key, value] of flattenLabels(table)) {
         expect(value, `${lang} ${key}`).toMatch(script);
-        expect(value.replace(KEPT_AS_IS, ''), `${lang} ${key}: Latin text outside proper nouns`).not.toMatch(/[A-Za-z]/);
+        expect(value.replace(KEPT_AS_IS, ''), `${lang} ${key}: Latin text outside proper nouns`).not.toMatch(
+          /[A-Za-z]/
+        );
       }
     }
   });
@@ -63,17 +68,38 @@ describe('Document text tables (en, ta, hi)', () => {
   it('English uses none of the CONTEXT.md Avoid terms and no ADR 0018 claim words', () => {
     const avoid = [
       // Website Audit
-      /\bcheck-?ups?\b/i, /\bscans?\b/i, /\bruns?\b/i, /\bsite reviews?\b/i, /\bteardowns?\b/i, /\bprojects?\b/i,
+      /\bcheck-?ups?\b/i,
+      /\bscans?\b/i,
+      /\bruns?\b/i,
+      /\bsite reviews?\b/i,
+      /\bteardowns?\b/i,
+      /\bprojects?\b/i,
       // Audit Document
-      /\breports?\b/i, /\bdeliverables?\b/i, /\bthe three audit documents\b/i,
+      /\breports?\b/i,
+      /\bdeliverables?\b/i,
+      /\bthe three audit documents\b/i,
       // Improvement Roadmap
-      /\bplans?\b/i, /\benhancement plans?\b/i, /\baction plans?\b/i, /\bbacklogs?\b/i, /\bto-?do lists?\b/i,
+      /\bplans?\b/i,
+      /\benhancement plans?\b/i,
+      /\baction plans?\b/i,
+      /\bbacklogs?\b/i,
+      /\bto-?do lists?\b/i,
       // Pitch Glimpse
-      /\bpitch decks?\b/i, /\bsales sheets?\b/i, /\bteasers?\b/i, /\bsummary reports?\b/i, /\bcold emails?\b/i,
+      /\bpitch decks?\b/i,
+      /\bsales sheets?\b/i,
+      /\bteasers?\b/i,
+      /\bsummary reports?\b/i,
+      /\bcold emails?\b/i,
       // Owner Audit
-      /\bowner reports?\b/i, /\bowner versions?\b/i, /\bclient cop(y|ies)\b/i, /\bfree audits?\b/i,
+      /\bowner reports?\b/i,
+      /\bowner versions?\b/i,
+      /\bclient cop(y|ies)\b/i,
+      /\bfree audits?\b/i,
       // ADR 0018
-      /\bcompliant\b/i, /\bsecure\b/i, /\bpasses\b/i, /\baccessible\b/i,
+      /\bcompliant\b/i,
+      /\bsecure\b/i,
+      /\bpasses\b/i,
+      /\baccessible\b/i,
     ];
     for (const [key, value] of enEntries) {
       for (const term of avoid) expect(value, `${key}: ${term}`).not.toMatch(term);

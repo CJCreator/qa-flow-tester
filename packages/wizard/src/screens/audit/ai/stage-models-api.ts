@@ -140,13 +140,23 @@ function fieldErrors(refusal: Record<string, unknown>): AuditAiModelsErrors | un
   const errors: AuditAiModelsErrors = {};
   for (const [field, message] of Object.entries(source)) {
     if (typeof message === 'string' && message.trim() !== '') {
-      Object.defineProperty(errors, field, { value: message.trim(), enumerable: true, writable: true, configurable: true });
+      Object.defineProperty(errors, field, {
+        value: message.trim(),
+        enumerable: true,
+        writable: true,
+        configurable: true,
+      });
     }
   }
   return Object.keys(errors).length > 0 ? errors : undefined;
 }
 
-async function call(route: { method: string; path: string }, init: RequestInit, fetchImpl: Fetch, fallback: string): Promise<ModelsOutcome> {
+async function call(
+  route: { method: string; path: string },
+  init: RequestInit,
+  fetchImpl: Fetch,
+  fallback: string
+): Promise<ModelsOutcome> {
   let res: Response;
   try {
     res = await fetchImpl(route.path, { ...init, method: route.method });

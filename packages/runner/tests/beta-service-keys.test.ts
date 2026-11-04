@@ -44,10 +44,7 @@ describe('SessionKeyResolver service keys (beta)', () => {
       vi.spyOn(fs, 'mkdir'),
       vi.spyOn(fs, 'appendFile'),
     ] as never;
-    keychain = [
-      vi.spyOn(OsKeychainStore.prototype, 'get'),
-      vi.spyOn(OsKeychainStore.prototype, 'set'),
-    ] as never;
+    keychain = [vi.spyOn(OsKeychainStore.prototype, 'get'), vi.spyOn(OsKeychainStore.prototype, 'set')] as never;
   });
 
   afterEach(() => {
@@ -96,9 +93,7 @@ describe('SessionKeyResolver service keys (beta)', () => {
       source: 'keychain',
     });
     // Another resolver instance in the same session sees it too: it lives in the session, not the object.
-    expect((await inSession(mine, () => new SessionKeyResolver().resolveServiceKey('pagespeed')))?.apiKey).toBe(
-      SAVED
-    );
+    expect((await inSession(mine, () => new SessionKeyResolver().resolveServiceKey('pagespeed')))?.apiKey).toBe(SAVED);
 
     expect(await inSession(theirs, () => keys.resolveServiceKey('pagespeed'))).toBeNull();
     expect(await keys.resolveServiceKey('pagespeed')).toBeNull();

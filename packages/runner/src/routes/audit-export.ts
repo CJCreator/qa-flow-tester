@@ -117,7 +117,8 @@ function commonQuery(url: URL): CommonQuery | string {
 function formatQuery<F extends ExportFormat>(url: URL, allowed: readonly F[], fallback: F | undefined): F | string {
   const raw = url.searchParams.get('format');
   if (raw === null) return fallback ?? `format: one of ${allowed.join(', ')}.`;
-  if (!isExportFormat(raw) || !(allowed as readonly string[]).includes(raw)) return `format: one of ${allowed.join(', ')}.`;
+  if (!isExportFormat(raw) || !(allowed as readonly string[]).includes(raw))
+    return `format: one of ${allowed.join(', ')}.`;
   return raw as F;
 }
 
@@ -133,7 +134,10 @@ function documentsQuery(url: URL): AuditDocumentKind[] | undefined | string {
 
 /** A file name safe in a header and on disk: letters, digits, dot, dash, underscore. */
 function safeFileName(name: string): string {
-  const cleaned = name.replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^[.-]+/, '').slice(0, 120);
+  const cleaned = name
+    .replace(/[^A-Za-z0-9._-]+/g, '-')
+    .replace(/^[.-]+/, '')
+    .slice(0, 120);
   return cleaned === '' ? 'audit' : cleaned;
 }
 
@@ -344,7 +348,12 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
   };
 
   return [
-    { method: AUDIT_API.export.method, path: AUDIT_API.export.path, access: AUDIT_API.export.access, handle: exportRoute },
+    {
+      method: AUDIT_API.export.method,
+      path: AUDIT_API.export.path,
+      access: AUDIT_API.export.access,
+      handle: exportRoute,
+    },
     { method: AUDIT_API.pitch.method, path: AUDIT_API.pitch.path, access: AUDIT_API.pitch.access, handle: pitchRoute },
     { method: AUDIT_API.owner.method, path: AUDIT_API.owner.path, access: AUDIT_API.owner.access, handle: ownerRoute },
   ];

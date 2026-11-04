@@ -150,7 +150,8 @@ describe('what the export panel offers (REQ-019, REQ-025)', () => {
       expect(html).toContain(`<label for="export-format-${format}">${label}</label>`);
     }
     for (const kind of AUDIT_DOCUMENT_KINDS) expect(html).toContain(`id="export-document-${kind}"`);
-    for (const name of ['Structure', 'Content', 'Findings', 'Improvement Roadmap', 'Proposal']) expect(textOf(html)).toContain(name);
+    for (const name of ['Structure', 'Content', 'Findings', 'Improvement Roadmap', 'Proposal'])
+      expect(textOf(html)).toContain(name);
   });
 
   it('offers a Pitch Glimpse download in English or Tamil, as HTML or PDF', () => {
@@ -251,7 +252,14 @@ describe('accessible markup and wording', () => {
 
   it('uses the CONTEXT.md terms and has one h1', () => {
     const text = textOf(views.screen);
-    for (const term of ['Audit Documents', 'Improvement Roadmap', 'Pitch Glimpse', 'Owner Audit', 'Proposal', 'Website Audit']) {
+    for (const term of [
+      'Audit Documents',
+      'Improvement Roadmap',
+      'Pitch Glimpse',
+      'Owner Audit',
+      'Proposal',
+      'Website Audit',
+    ]) {
       expect(text).toContain(term);
     }
     expect((views.screen.match(/<h1/g) ?? []).length).toBe(1);

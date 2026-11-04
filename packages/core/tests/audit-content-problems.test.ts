@@ -58,7 +58,17 @@ function expectWellFormed(findings: AuditFinding[]): void {
   for (const f of findings) {
     expect(f.id).toMatch(/^AF-\d{3,}$/);
     expect(f.source).toBe('rule');
-    for (const key of ['rule', 'group', 'area', 'title', 'detail', 'suggestion', 'impact', 'effort', 'urlPath'] as const) {
+    for (const key of [
+      'rule',
+      'group',
+      'area',
+      'title',
+      'detail',
+      'suggestion',
+      'impact',
+      'effort',
+      'urlPath',
+    ] as const) {
       expect(typeof f[key], `${f.rule}.${key}`).toBe('string');
       expect(f[key], `${f.rule}.${key}`).not.toBe('');
     }
@@ -131,7 +141,12 @@ describe('contentProblems', () => {
           ['header', 'Bakery'],
           ['main', 'Gallery'],
         ]),
-        images: [img('/img/a.jpg', null, 's2'), img('/img/deco.png', ''), img('/img/b.jpg', null, 's2'), img('/img/c.jpg', 'A cake')],
+        images: [
+          img('/img/a.jpg', null, 's2'),
+          img('/img/deco.png', ''),
+          img('/img/b.jpg', null, 's2'),
+          img('/img/c.jpg', 'A cake'),
+        ],
       }),
     ]);
     const alt = byRule(findings, 'missing-alt');
@@ -145,8 +160,20 @@ describe('contentProblems', () => {
 
   it('duplicate content compares the main Sections after whitespace normalisation', () => {
     const findings = run([
-      page('/a', { ...withSections([['header', 'Menu A'], ['main', 'Same  words\nhere'], ['footer', 'Foot A']]) }),
-      page('/b', { ...withSections([['header', 'Menu B'], ['main', 'Same words here'], ['footer', 'Foot B']]) }),
+      page('/a', {
+        ...withSections([
+          ['header', 'Menu A'],
+          ['main', 'Same  words\nhere'],
+          ['footer', 'Foot A'],
+        ]),
+      }),
+      page('/b', {
+        ...withSections([
+          ['header', 'Menu B'],
+          ['main', 'Same words here'],
+          ['footer', 'Foot B'],
+        ]),
+      }),
       page('/c', { ...withSections([['main', 'Other words']]) }),
     ]);
     const dup = byRule(findings, 'duplicate-content');
@@ -163,7 +190,10 @@ describe('contentProblems', () => {
 
   it('pages sharing title and description but not main text give no duplicate content', () => {
     const shared = { title: 'Shop', description: 'Buy bread.' };
-    const findings = run([page('/a', { ...shared, text: 'Rye bread' }), page('/b', { ...shared, text: 'White bread' })]);
+    const findings = run([
+      page('/a', { ...shared, text: 'Rye bread' }),
+      page('/b', { ...shared, text: 'White bread' }),
+    ]);
     expect(byRule(findings, 'duplicate-content')).toEqual([]);
     expect(byRule(findings, 'duplicate-title')).toHaveLength(1);
     expect(byRule(findings, 'duplicate-description')).toHaveLength(1);
@@ -198,7 +228,10 @@ describe('contentProblems', () => {
 
   it('ids come from the shared allocator, unique and in order', () => {
     const ids = createFindingIdAllocator(7);
-    const findings = contentProblems([page('/a', { title: null, description: null }), page('/b', { title: null })], ids);
+    const findings = contentProblems(
+      [page('/a', { title: null, description: null }), page('/b', { title: null })],
+      ids
+    );
     expect(findings.map((f) => f.id)).toEqual(['AF-007', 'AF-008', 'AF-009']);
     expect(ids.nextNumber).toBe(10);
   });

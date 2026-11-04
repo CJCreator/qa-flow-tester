@@ -143,7 +143,9 @@ describe('GET and PATCH /api/audits/:id/edits', () => {
 
   it('saves a Section edit that names a real Section', async () => {
     const { id } = await seedDone();
-    const res = await call('PATCH', editsPath(id), { sections: [{ urlPath: PATHS.home, sectionId: 's2', text: 'New copy.' }] });
+    const res = await call('PATCH', editsPath(id), {
+      sections: [{ urlPath: PATHS.home, sectionId: 's2', text: 'New copy.' }],
+    });
     expect(res.status).toBe(200);
     expect(res.json.edits.sections[0]).toMatchObject({ urlPath: PATHS.home, sectionId: 's2', text: 'New copy.' });
   });

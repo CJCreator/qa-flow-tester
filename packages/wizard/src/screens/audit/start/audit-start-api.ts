@@ -87,7 +87,12 @@ export async function startAudit(body: AuditStartBody, fetchImpl: Fetch = fetch)
   }
   if (res.ok) {
     const started = reply as Partial<AuditStartReply> | undefined;
-    if (started && typeof started.auditId === 'string' && started.auditId !== '' && typeof started.version === 'number') {
+    if (
+      started &&
+      typeof started.auditId === 'string' &&
+      started.auditId !== '' &&
+      typeof started.version === 'number'
+    ) {
       return { kind: 'started', reply: { auditId: started.auditId, version: started.version } };
     }
     return { kind: 'refused', message: NOT_ANSWERING };

@@ -1,12 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { writeJsonAtomic } from '../../atomic-write.js';
-import {
-  assertValidKey,
-  AuditStoreError,
-  normalizePrefix,
-  type AuditStoreBackend,
-} from './backend.js';
+import { assertValidKey, AuditStoreError, normalizePrefix, type AuditStoreBackend } from './backend.js';
 
 /** Folder under the runner data folder that holds the local audit store (ADR 0036). */
 export const LOCAL_AUDIT_STORE_DIR = 'audit-store';

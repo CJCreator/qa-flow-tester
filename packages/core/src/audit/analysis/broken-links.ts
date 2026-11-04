@@ -193,7 +193,8 @@ export async function checkLinks(
     if (!isBrokenStatus(status)) continue;
 
     const { impact, effort } = IMPACT_EFFORT_BY_RULE['broken-link'];
-    const where = target.pages.length === 1 ? target.pages[0] : `${target.pages.length} pages (${target.pages.join(', ')})`;
+    const where =
+      target.pages.length === 1 ? target.pages[0] : `${target.pages.length} pages (${target.pages.join(', ')})`;
     findings.push({
       id: ids.next(),
       rule: 'broken-link',

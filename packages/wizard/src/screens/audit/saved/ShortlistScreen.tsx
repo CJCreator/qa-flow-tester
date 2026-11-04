@@ -16,7 +16,8 @@ import {
   type ShortlistFilters,
 } from './saved-api';
 
-export type ShortlistLoad = { status: 'loading' } | { status: 'failed'; message: string } | { status: 'loaded'; items: ShortlistListItem[] };
+export type ShortlistLoad =
+  { status: 'loading' } | { status: 'failed'; message: string } | { status: 'loaded'; items: ShortlistListItem[] };
 
 export interface ShortlistViewProps {
   filters: ShortlistFilters;

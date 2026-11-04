@@ -29,7 +29,16 @@ const entry: ShortlistEntry = {
 
 const items: ShortlistListItem[] = [
   { ...entry, url: 'https://shop.example.org/', host: 'shop.example.org' },
-  { ...entry, auditId: 'bbbb2222', mark: 'skip', outcome: null, notes: '', outcomeNote: '', url: 'https://b.example/', host: 'b.example' },
+  {
+    ...entry,
+    auditId: 'bbbb2222',
+    mark: 'skip',
+    outcome: null,
+    notes: '',
+    outcomeNote: '',
+    url: 'https://b.example/',
+    host: 'b.example',
+  },
   { ...entry, auditId: 'cccc3333', mark: 'pitch', outcome: 'Won', url: 'https://c.example/', host: 'c.example' },
 ];
 
@@ -55,7 +64,10 @@ function fakeFetch(...replies: Array<{ status: number; body: unknown } | Error>)
     const next = replies.shift();
     if (!next) throw new Error('no reply queued');
     if (next instanceof Error) throw next;
-    return new Response(JSON.stringify(next.body), { status: next.status, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify(next.body), {
+      status: next.status,
+      headers: { 'Content-Type': 'application/json' },
+    });
   };
   return { impl, calls };
 }
@@ -129,12 +141,17 @@ describe('Shortlist panel (REQ-023)', () => {
 
   it('sends only the changed fields, null to clear a mark or outcome', () => {
     expect(shortlistUpdate(entry, draftFromEntry(entry))).toEqual({});
-    expect(shortlistUpdate(entry, { ...draftFromEntry(entry), mark: null, outcome: 'Won', outcomeNote: 'Signed' })).toEqual({
+    expect(
+      shortlistUpdate(entry, { ...draftFromEntry(entry), mark: null, outcome: 'Won', outcomeNote: 'Signed' })
+    ).toEqual({
       mark: null,
       outcome: 'Won',
       outcomeNote: 'Signed',
     });
-    expect(shortlistUpdate(null, { mark: 'skip', notes: 'n', outcome: null, outcomeNote: '' })).toEqual({ mark: 'skip', notes: 'n' });
+    expect(shortlistUpdate(null, { mark: 'skip', notes: 'n', outcome: null, outcomeNote: '' })).toEqual({
+      mark: 'skip',
+      notes: 'n',
+    });
   });
 
   it('saves through PUT /api/audits/:id/shortlist and returns the saved entry', async () => {
@@ -152,9 +169,16 @@ describe('Shortlist panel (REQ-023)', () => {
   });
 
   it('shows a refusal as a plain message', async () => {
-    const { impl } = fakeFetch({ status: 400, body: { error: 'The outcome is not one of the fixed values.', code: 'ERR_INVALID_REQUEST' } });
+    const { impl } = fakeFetch({
+      status: 400,
+      body: { error: 'The outcome is not one of the fixed values.', code: 'ERR_INVALID_REQUEST' },
+    });
     const outcome = await saveShortlistEntry(AUDIT_ID, { notes: 'x' }, impl);
-    expect(outcome).toEqual({ ok: false, code: 'ERR_INVALID_REQUEST', message: 'The outcome is not one of the fixed values.' });
+    expect(outcome).toEqual({
+      ok: false,
+      code: 'ERR_INVALID_REQUEST',
+      message: 'The outcome is not one of the fixed values.',
+    });
     expect(panel({ message: { tone: 'fail', text: 'No.' } })).toContain('role="alert"');
   });
 
@@ -172,7 +196,10 @@ describe('Shortlist panel (REQ-023)', () => {
 describe('Shortlist screen filters (REQ-023 AC-3)', () => {
   it('turns filters into the query and reads select values safely', () => {
     expect(filtersToQuery({ mark: 'all', outcome: 'all' })).toEqual({});
-    expect(filtersToQuery({ mark: 'pitch', outcome: 'Meeting set' })).toEqual({ mark: 'pitch', outcome: 'Meeting set' });
+    expect(filtersToQuery({ mark: 'pitch', outcome: 'Meeting set' })).toEqual({
+      mark: 'pitch',
+      outcome: 'Meeting set',
+    });
     expect(readMarkFilter('skip')).toBe('skip');
     expect(readMarkFilter('other')).toBe('all');
     expect(readOutcomeFilter('Lost')).toBe('Lost');
@@ -180,7 +207,10 @@ describe('Shortlist screen filters (REQ-023 AC-3)', () => {
   });
 
   it('lists through GET /api/shortlist with mark and outcome', async () => {
-    const { impl, calls } = fakeFetch({ status: 200, body: { entries: [items[2]] } }, { status: 200, body: { entries: items } });
+    const { impl, calls } = fakeFetch(
+      { status: 200, body: { entries: [items[2]] } },
+      { status: 200, body: { entries: items } }
+    );
     expect(await listShortlist({ mark: 'pitch', outcome: 'Won' }, impl)).toEqual({ ok: true, value: [items[2]] });
     expect(calls[0].url).toBe('/api/shortlist?mark=pitch&outcome=Won');
     await listShortlist({}, impl);
@@ -188,7 +218,10 @@ describe('Shortlist screen filters (REQ-023 AC-3)', () => {
   });
 
   it('filters by mark and by outcome', () => {
-    expect(filterShortlist(items, { mark: 'pitch', outcome: 'all' }).map((i) => i.auditId)).toEqual([AUDIT_ID, 'cccc3333']);
+    expect(filterShortlist(items, { mark: 'pitch', outcome: 'all' }).map((i) => i.auditId)).toEqual([
+      AUDIT_ID,
+      'cccc3333',
+    ]);
     expect(filterShortlist(items, { mark: 'all', outcome: 'Won' }).map((i) => i.auditId)).toEqual(['cccc3333']);
     expect(filterShortlist(items, { mark: 'skip', outcome: 'Won' })).toEqual([]);
 

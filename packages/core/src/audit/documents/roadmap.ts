@@ -69,7 +69,7 @@ export function buildRoadmap(rankedFindings: readonly AuditFinding[]): RoadmapIt
         RANK[a.priority] - RANK[b.priority] ||
         // Lower effort first: low (2) before high (0).
         RANK[b.effort] - RANK[a.effort] ||
-        a.firstRank - b.firstRank,
+        a.firstRank - b.firstRank
     )
     .map((g, i) => ({
       id: `RM-${i + 1}`,

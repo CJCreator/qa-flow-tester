@@ -89,7 +89,14 @@ function homePage(): RawPage {
       { element: 'a', text: 'Call to order', href: 'tel:+914400000000', role: 'button', className: '', chunk: 3 },
       { element: 'a', text: 'Read more', href: '/blog', role: null, className: 'more-link', chunk: 2 },
       { element: 'button', text: 'Send', href: null, role: null, className: '', chunk: 5 },
-      { element: 'a', text: 'Book', href: 'https://booking.example.com/b', role: null, className: 'Btn-primary', chunk: 5 },
+      {
+        element: 'a',
+        text: 'Book',
+        href: 'https://booking.example.com/b',
+        role: null,
+        className: 'Btn-primary',
+        chunk: 5,
+      },
       { element: 'button', text: '   ', href: null, role: null, className: '', chunk: 5 },
     ],
   });
@@ -110,7 +117,7 @@ describe('buildPageContent', () => {
         'Enquiries',
         'Send us a message.',
         '© Sweet Crumbs',
-      ].join('\n'),
+      ].join('\n')
     );
     expect(content.textTruncated).toBeUndefined();
     expect(content.headings.map((h) => [h.level, h.text])).toEqual([
@@ -192,7 +199,7 @@ describe('buildPageContent', () => {
         images: [{ src: '/a.png', alt: 'a', chunk: -1 }],
         headings: [{ level: 3, text: 'Loose after main', chunk: 2 }],
       }),
-      OPTIONS,
+      OPTIONS
     );
     expect(content.sections.map((s) => sectionText(content, s))).toEqual([
       'Loose top\nMain text\nLoose after main\n',
@@ -222,7 +229,7 @@ describe('buildPageContent', () => {
         images: [{ src: '/logo.png', alt: 'Logo', chunk: 1 }],
         anchors: [{ href: '/privacy', text: 'Privacy', region: 'footer', chunk: 99 }],
       }),
-      OPTIONS,
+      OPTIONS
     );
     expect(content.images[0].sectionId).toBe('s2');
     expect(content.links[0].sectionId).toBe('s2');
@@ -261,7 +268,7 @@ describe('buildPageContent', () => {
           { href: 'next', text: 'relative', region: 'internal', chunk: 0 },
         ],
       }),
-      OPTIONS,
+      OPTIONS
     );
     expect(content.links.map((l) => [l.text, l.to])).toEqual([['relative', '/blog/next']]);
   });
@@ -317,7 +324,7 @@ describe('buildPageContent', () => {
           { level: 9, text: 'y', chunk: 0 },
         ],
       }),
-      OPTIONS,
+      OPTIONS
     );
     expect(content.images[0].src.length).toBe(DATA_SRC_MAX + 1);
     expect(content.headings.map((h) => h.level)).toEqual([1, 6]);
@@ -326,7 +333,7 @@ describe('buildPageContent', () => {
   it('a form without method is GET and without action has no action', () => {
     const content = buildPageContent(
       rawPage({ forms: [{ method: null, action: null, fields: [], chunk: 0 }] }),
-      OPTIONS,
+      OPTIONS
     );
     expect(content.forms[0]).toEqual({ method: 'GET', fields: [], sectionId: 's1' });
   });

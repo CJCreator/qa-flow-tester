@@ -93,7 +93,13 @@ function finding(
 /** Producer ids raw-1..raw-6, in no particular order. raw-4 and raw-5 have impact/effort set; the rest do not. */
 const RAW: UnscoredAuditFinding[] = [
   finding('raw-1', { rule: 'missing-alt', group: 'content', area: 'accessibility', urlPath: '/', sectionId: 's2' }),
-  finding('raw-2', { rule: 'missing-title', group: 'technical', area: 'search-ranking', urlPath: '/', sectionId: null }),
+  finding('raw-2', {
+    rule: 'missing-title',
+    group: 'technical',
+    area: 'search-ranking',
+    urlPath: '/',
+    sectionId: null,
+  }),
   finding('raw-3', { rule: 'ctas', group: 'marketing', area: 'marketing', urlPath: '/services/a', sectionId: 's1' }),
   finding('raw-4', {
     rule: 'unclear-offer',
@@ -239,7 +245,13 @@ function recommendationInputs(ranked: AuditFinding[]): RecommendationPageInput[]
   const [home, a] = pageInputs(ranked);
   return [
     { urlPath: '/', title: HOME.title, coverage: 'sample', findings: home!.findings, grades: HOME_GRADES },
-    { urlPath: '/services/a', title: SERVICE_A.title, coverage: 'sample', findings: a!.findings, grades: SERVICE_A_GRADES },
+    {
+      urlPath: '/services/a',
+      title: SERVICE_A.title,
+      coverage: 'sample',
+      findings: a!.findings,
+      grades: SERVICE_A_GRADES,
+    },
     {
       urlPath: '/services/b',
       title: SERVICE_B.title,
@@ -269,10 +281,7 @@ async function runFlow(resolution: AuditAiResolution) {
     },
     resolution
   );
-  const recommendations = await recommendPages(
-    { language: LANGUAGE, pages: recommendationInputs(ranked) },
-    resolution
-  );
+  const recommendations = await recommendPages({ language: LANGUAGE, pages: recommendationInputs(ranked) }, resolution);
   return { ranked, idMap, pages, site, recommendations };
 }
 

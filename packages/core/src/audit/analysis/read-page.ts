@@ -285,7 +285,9 @@ function readDom(args: { maxTextChars: number; jsonLdCap: number }): DomFacts {
         // The value attribute of a submit or button input is its label, never typed data.
         if (type === 'submit' || type === 'button') {
           const text =
-            clean(el.getAttribute('value')) || clean(el.getAttribute('aria-label')) || (type === 'submit' ? 'Submit' : '');
+            clean(el.getAttribute('value')) ||
+            clean(el.getAttribute('aria-label')) ||
+            (type === 'submit' ? 'Submit' : '');
           ctaCandidates.push({ element: 'button', text, href: null, role, className, chunk: here() });
         }
       }

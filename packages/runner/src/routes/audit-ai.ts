@@ -97,7 +97,12 @@ export interface AuditAiRouteDeps {
   /** The rewrite operations of one existing audit version. */
   rewrites: (auditId: string, version: number) => MaybePromise<AuditRewriteOps>;
   /** The recorded Page Content holding the Section; null when the page is not recorded. */
-  loadSection: (auditId: string, version: number, urlPath: string, sectionId: string) => MaybePromise<PageContent | null>;
+  loadSection: (
+    auditId: string,
+    version: number,
+    urlPath: string,
+    sectionId: string
+  ) => MaybePromise<PageContent | null>;
   /** Puts accepted copy into the version's edit overlay and returns the overlay. */
   applyRewriteEdit: (auditId: string, version: number, edit: SectionEdit) => MaybePromise<EditOverlay>;
   /** AuditSettings.rewriteOverlapWords. */
@@ -211,7 +216,10 @@ function auditIdOf(ctx: RouteContext): string | undefined {
 }
 
 /** A signal that aborts when the caller goes away before the reply is sent: no AI spend for nobody. */
-function callerSignal(req: http.IncomingMessage, res: http.ServerResponse): { signal: AbortSignal; release: () => void } {
+function callerSignal(
+  req: http.IncomingMessage,
+  res: http.ServerResponse
+): { signal: AbortSignal; release: () => void } {
   const controller = new AbortController();
   const onClose = () => {
     if (!res.writableEnded) controller.abort();
@@ -283,9 +291,16 @@ export function createAuditAiRoutes(deps: AuditAiRouteDeps): Route[] {
   }
 
   /** Body, section fields and a finished version for the approve/run/accept rows. */
-  async function sectionTarget(
-    ctx: RouteContext
-  ): Promise<{ body: Record<string, unknown>; auditId: string; version: number; language: DocumentLanguage; section: RewriteSectionRef } | undefined> {
+  async function sectionTarget(ctx: RouteContext): Promise<
+    | {
+        body: Record<string, unknown>;
+        auditId: string;
+        version: number;
+        language: DocumentLanguage;
+        section: RewriteSectionRef;
+      }
+    | undefined
+  > {
     const body = await readBody(ctx.req, AUDIT_REWRITE_BODY_MAX);
     const check = sectionRequest(body);
     if (!check.ok) {
@@ -350,7 +365,9 @@ export function createAuditAiRoutes(deps: AuditAiRouteDeps): Route[] {
       handle: guarded(async (ctx) => {
         const version = versionOf(ctx.url.searchParams.get('version') ?? undefined);
         if (version === null) {
-          refuse(ctx.res, 400, 'ERR_INVALID_REQUEST', INVALID, { errors: { version: 'must be a version number: 1, 2, 3…' } });
+          refuse(ctx.res, 400, 'ERR_INVALID_REQUEST', INVALID, {
+            errors: { version: 'must be a version number: 1, 2, 3…' },
+          });
           return;
         }
         const found = await versionFor(ctx, version);
@@ -406,7 +423,10 @@ export function createAuditAiRoutes(deps: AuditAiRouteDeps): Route[] {
         const overlapWords = await deps.overlapWords();
         const scope = callerSignal(ctx.req, ctx.res);
         try {
-          const result = await ops.run({ ...target.section, language }, { content, overlapWords, signal: scope.signal });
+          const result = await ops.run(
+            { ...target.section, language },
+            { content, overlapWords, signal: scope.signal }
+          );
           if (scope.signal.aborted) return;
           if (!result.ok) return refuseRewrite(ctx.res, result);
           const reply: RewriteReply = { rewrite: result.rewrite };

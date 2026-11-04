@@ -66,7 +66,14 @@ describe('checkLinks', () => {
     const f = fakeFetch({});
     const findings = await checkLinks(
       [page('/', [link('/about')]), page('/about', [link('/gone', 's2')])],
-      options({ fetch: f.fetch, statusByPath: new Map([['/', 200], ['/about', 200], ['/gone', 404]]) }),
+      options({
+        fetch: f.fetch,
+        statusByPath: new Map([
+          ['/', 200],
+          ['/about', 200],
+          ['/gone', 404],
+        ]),
+      }),
       createFindingIdAllocator()
     );
     expect(f.calls).toEqual([]);
@@ -112,7 +119,12 @@ describe('checkLinks', () => {
       [`${ORIGIN}/private`]: 403,
     });
     const findings = await checkLinks(
-      [page('/', ['/gone', '/err', '/nothing', '/boom', '/private'].map((to) => link(to)))],
+      [
+        page(
+          '/',
+          ['/gone', '/err', '/nothing', '/boom', '/private'].map((to) => link(to))
+        ),
+      ],
       options({ fetch: f.fetch }),
       createFindingIdAllocator()
     );
@@ -123,7 +135,12 @@ describe('checkLinks', () => {
     const skippedPaths = ['/login', '/checkout', '/private', '/excluded', '/deep'];
     const f = fakeFetch(Object.fromEntries(skippedPaths.map((p) => [`${ORIGIN}${p}`, 404])));
     const findings = await checkLinks(
-      [page('/', skippedPaths.map((to) => link(to)))],
+      [
+        page(
+          '/',
+          skippedPaths.map((to) => link(to))
+        ),
+      ],
       options({ fetch: f.fetch, skippedPaths, statusByPath: new Map([['/login', 404]]) }),
       createFindingIdAllocator()
     );
@@ -181,7 +198,16 @@ describe('checkLinks', () => {
     const targets = Array.from({ length: 8 }, (_, i) => `/p${i}`);
     const f = fakeFetch(Object.fromEntries(targets.map((p) => [`${ORIGIN}${p}`, 404])));
     const findings = await checkLinks(
-      [page('/', targets.map((to) => link(to))), page('/2', targets.map((to) => link(to)))],
+      [
+        page(
+          '/',
+          targets.map((to) => link(to))
+        ),
+        page(
+          '/2',
+          targets.map((to) => link(to))
+        ),
+      ],
       options({ fetch: f.fetch, maxRequests: 5 }),
       createFindingIdAllocator()
     );
@@ -195,7 +221,11 @@ describe('checkLinks', () => {
   it('a maxRequests of 0 or not a number makes no request', async () => {
     for (const maxRequests of [0, -3, Number.NaN]) {
       const f = fakeFetch({ [`${ORIGIN}/x`]: 404 });
-      const findings = await checkLinks([page('/', [link('/x')])], options({ fetch: f.fetch, maxRequests }), createFindingIdAllocator());
+      const findings = await checkLinks(
+        [page('/', [link('/x')])],
+        options({ fetch: f.fetch, maxRequests }),
+        createFindingIdAllocator()
+      );
       expect(f.calls).toEqual([]);
       expect(findings).toEqual([]);
     }
@@ -203,7 +233,11 @@ describe('checkLinks', () => {
 
   it('requests stay on the audited origin: a path starting with // is not resolved to another host', async () => {
     const f = fakeFetch({});
-    await checkLinks([page('/', [link('//evil.example/x'), link('/a?token=***')])], options({ fetch: f.fetch }), createFindingIdAllocator());
+    await checkLinks(
+      [page('/', [link('//evil.example/x'), link('/a?token=***')])],
+      options({ fetch: f.fetch }),
+      createFindingIdAllocator()
+    );
     expect(f.calls).toEqual([`${ORIGIN}//evil.example/x`]);
     expect(f.calls.every((u) => new URL(u).origin === ORIGIN)).toBe(true);
   });
@@ -217,7 +251,17 @@ describe('checkLinks', () => {
     );
     expect(findings).toHaveLength(2);
     for (const x of findings) {
-      for (const key of ['rule', 'group', 'area', 'title', 'detail', 'suggestion', 'impact', 'effort', 'urlPath'] as const) {
+      for (const key of [
+        'rule',
+        'group',
+        'area',
+        'title',
+        'detail',
+        'suggestion',
+        'impact',
+        'effort',
+        'urlPath',
+      ] as const) {
         expect(typeof x[key]).toBe('string');
         expect(x[key]).not.toBe('');
       }
@@ -245,7 +289,14 @@ describe('checkLinks', () => {
   });
 
   it('a checkout or payment path is not fetched or reported, even with no policy passed', async () => {
-    const checkout = ['/checkout', '/shop/pay', '/billing?step=2', '/cart/check-out/', '/shop/%63heckout', '/shop/x/../payment'];
+    const checkout = [
+      '/checkout',
+      '/shop/pay',
+      '/billing?step=2',
+      '/cart/check-out/',
+      '/shop/%63heckout',
+      '/shop/x/../payment',
+    ];
     const f = fakeFetch({
       ...Object.fromEntries(checkout.map((p) => [`${ORIGIN}${p}`, 404])),
       [`${ORIGIN}/checkout-guide`]: 404,
@@ -269,7 +320,10 @@ describe('checkLinks', () => {
     });
     const findings = await checkLinks(
       [page('/blog', [link('/admin/users'), link('/shop/item'), link('/blog/post')])],
-      options({ fetch: f.fetch, pathLimits: { includePaths: ['/blog'], excludePaths: ['/admin'], startPath: '/blog' } }),
+      options({
+        fetch: f.fetch,
+        pathLimits: { includePaths: ['/blog'], excludePaths: ['/admin'], startPath: '/blog' },
+      }),
       createFindingIdAllocator()
     );
     expect(f.calls).toEqual([`${ORIGIN}/blog/post`]);
@@ -277,7 +331,10 @@ describe('checkLinks', () => {
   });
 
   it('an allowed link is still checked with robots.txt and limits passed', async () => {
-    const robots = RobotsPolicy.parse('User-agent: *\nDisallow: /private\nAllow: /private/open\n', 'QA-Benchmarking-Bot');
+    const robots = RobotsPolicy.parse(
+      'User-agent: *\nDisallow: /private\nAllow: /private/open\n',
+      'QA-Benchmarking-Bot'
+    );
     const f = fakeFetch({ [`${ORIGIN}/about-us`]: 404, [`${ORIGIN}/private/open`]: 503, [`${ORIGIN}/private/x`]: 404 });
     const findings = await checkLinks(
       [page('/', [link('/about-us'), link('/private/open', 's2'), link('/private/x')])],
@@ -292,7 +349,10 @@ describe('checkLinks', () => {
   });
 
   it('the module makes requests only through the injected FetchFn', () => {
-    const source = readFileSync(fileURLToPath(new URL('../src/audit/analysis/broken-links.ts', import.meta.url)), 'utf8');
+    const source = readFileSync(
+      fileURLToPath(new URL('../src/audit/analysis/broken-links.ts', import.meta.url)),
+      'utf8'
+    );
     const code = source.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '');
     // No global fetch: the only call is `opts.fetch(`.
     expect(code).not.toMatch(/(?<![.\w])fetch\s*\(/);

@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { inflateRawSync, crc32 } from 'node:zlib';
-import { AUDIT_DOCUMENT_KINDS, EXPORT_CONTENT_TYPES, EXPORT_FORMATS, type EditOverlay, type ExportFormat } from '@qa/types';
+import {
+  AUDIT_DOCUMENT_KINDS,
+  EXPORT_CONTENT_TYPES,
+  EXPORT_FORMATS,
+  type EditOverlay,
+  type ExportFormat,
+} from '@qa/types';
 import { emptyOverlay, mergeEditsPatch, validateAuditEditsPatch } from '../src/audit/documents/edits.js';
 import {
   editedViewOf,
@@ -26,7 +32,13 @@ import { en } from '../src/audit/documents/labels/en.js';
 import { ta } from '../src/audit/documents/labels/ta.js';
 import { PROPOSAL_FILL_IN_TA } from '../src/audit/documents/templates/proposal-ta.js';
 import * as barrel from '../src/audit/documents/index.js';
-import { auditDocContents, auditDocResult, fixtureSectionText, FIXTURE_URL, PATHS } from './helpers/audit-doc-fixture.js';
+import {
+  auditDocContents,
+  auditDocResult,
+  fixtureSectionText,
+  FIXTURE_URL,
+  PATHS,
+} from './helpers/audit-doc-fixture.js';
 
 const NOW = '2026-11-03T10:00:00.000Z';
 const FOLDER = 'shop.example.in-v1';
@@ -109,7 +121,10 @@ function fakePdf() {
 }
 
 /** The text of every file an export produces, for content checks. */
-async function exportTexts(format: ExportFormat, data: AuditDocumentsInput): Promise<Array<[name: string, text: string]>> {
+async function exportTexts(
+  format: ExportFormat,
+  data: AuditDocumentsInput
+): Promise<Array<[name: string, text: string]>> {
   const pdf = fakePdf();
   const file = await exportAudit(format, data, { renderPdf: pdf.renderPdf });
   if (format === 'pdf') return [[`${file.fileName} (printed HTML)`, pdf.printed.join('')]];
@@ -174,7 +189,10 @@ describe('generateAuditDocuments (REQ-018 AC-1)', () => {
   });
 
   it('a saved Proposal template is used as written', () => {
-    const settings = resolveAuditSettings({ ...emptyAuditSettings(), proposalTemplate: '# Our offer\n\nPrice: {{price}}\n' }, false);
+    const settings = resolveAuditSettings(
+      { ...emptyAuditSettings(), proposalTemplate: '# Our offer\n\nPrice: {{price}}\n' },
+      false
+    );
     const [proposal] = generateAuditDocuments(input({ settings, documents: ['proposal'] }));
     expect(proposal!.title).toBe('Our offer');
   });
@@ -209,11 +227,13 @@ describe('export bundle (REQ-021 AC-1, Q-24)', () => {
         `${FOLDER}/05-proposal.md`,
         `${FOLDER}/README.md`,
         `${FOLDER}/site.json`,
-      ].sort(),
+      ].sort()
     );
     const docs = generateAuditDocuments(input());
     for (const doc of docs) {
-      expect(files.get(`${FOLDER}/${BUNDLE_FILE_NAMES[doc.kind as keyof typeof BUNDLE_FILE_NAMES]}`)).toBe(renderMarkdown(doc));
+      expect(files.get(`${FOLDER}/${BUNDLE_FILE_NAMES[doc.kind as keyof typeof BUNDLE_FILE_NAMES]}`)).toBe(
+        renderMarkdown(doc)
+      );
     }
   });
 
@@ -227,7 +247,13 @@ describe('export bundle (REQ-021 AC-1, Q-24)', () => {
     const site = JSON.parse(files.get(`${FOLDER}/site.json`)!) as SiteJson;
     expect(site.schemaVersion).toBe(SITE_JSON_SCHEMA_VERSION);
     expect(site.site).toMatchObject({ url: FIXTURE_URL, version: 1, language: 'en' });
-    expect(site.pages.map((p) => p.urlPath)).toEqual([PATHS.home, PATHS.about, PATHS.team, PATHS.services, PATHS.tamil]);
+    expect(site.pages.map((p) => p.urlPath)).toEqual([
+      PATHS.home,
+      PATHS.about,
+      PATHS.team,
+      PATHS.services,
+      PATHS.tamil,
+    ]);
     const home = site.pages[0]!;
     expect(home).toMatchObject({ depth: 0, coverage: 'sample', title: 'Shop Example' });
     expect(home.recommendation).toMatchObject({ action: 'repair', decidedBy: 'ai', findingIds: ['AF-004'] });
@@ -261,7 +287,8 @@ describe('export bundle (REQ-021 AC-1, Q-24)', () => {
   it('README.md describes every file for Claude Code, with no claim words', async () => {
     const { files } = await bundleOf(input());
     const readme = files.get(`${FOLDER}/README.md`)!;
-    for (const name of [...Object.values(BUNDLE_FILE_NAMES), 'site.json', 'README.md']) expect(readme, name).toContain(`\`${name}\``);
+    for (const name of [...Object.values(BUNDLE_FILE_NAMES), 'site.json', 'README.md'])
+      expect(readme, name).toContain(`\`${name}\``);
     expect(readme).toContain('Claude Code');
     expect(findClaimWords(readme)).toEqual([]);
   });
@@ -279,7 +306,10 @@ describe('site.json against the Markdown documents (REQ-021 AC-2)', () => {
       const { files } = await bundleOf(data);
       const raw = files.get(`${FOLDER}/site.json`)!;
       const site = JSON.parse(raw) as SiteJson;
-      const markdown = [...files].filter(([n]) => n.endsWith('.md') && !n.endsWith('README.md')).map(([, t]) => t).join('\n');
+      const markdown = [...files]
+        .filter(([n]) => n.endsWith('.md') && !n.endsWith('README.md'))
+        .map(([, t]) => t)
+        .join('\n');
       const view = editedViewOf(data);
       const titles = new Set(site.findings.map((f) => f.title));
       const ids = new Set(site.findings.map((f) => f.id));
@@ -432,7 +462,9 @@ describe('content types and file names', () => {
 
   it('refuses an unknown format and an empty selection with a plain sentence', async () => {
     await expect(exportAudit('txt' as ExportFormat, input())).rejects.toThrow('This export format is not available.');
-    await expect(exportAudit('md', input({ documents: ['nope' as never] }))).rejects.toThrow('There is no document to export.');
+    await expect(exportAudit('md', input({ documents: ['nope' as never] }))).rejects.toThrow(
+      'There is no document to export.'
+    );
   });
 });
 
@@ -450,7 +482,9 @@ describe('several documents in one file', () => {
     const topHeadings = md.split('\n').filter((l) => /^## /.test(l));
     expect(topHeadings).toEqual([`## ${en.documentTitles.structure}`, `## ${en.documentTitles.findings}`]);
     const pdf = fakePdf();
-    const file = await exportAudit('pdf', input({ documents: ['structure', 'findings'] }), { renderPdf: pdf.renderPdf });
+    const file = await exportAudit('pdf', input({ documents: ['structure', 'findings'] }), {
+      renderPdf: pdf.renderPdf,
+    });
     expect(file.body.toString()).toBe('%PDF-1.7 fake');
     expect(pdf.printed).toHaveLength(1);
     expect(pdf.printed[0]).toContain(`<h2>${en.documentTitles.findings}</h2>`);

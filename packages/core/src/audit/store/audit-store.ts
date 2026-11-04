@@ -333,9 +333,7 @@ export class AuditStore implements AuditStoreContext {
   async listAudits(): Promise<AuditSummary[]> {
     const keys = await this.backend.list(AUDITS_FOLDER);
     const ids = keys.map((key) => AUDIT_RECORD_KEY.exec(key)?.[1]).filter((id): id is string => !!id);
-    const audits = (await Promise.all(ids.map((id) => this.getAudit(id)))).filter(
-      (a): a is AuditSummary => a !== null
-    );
+    const audits = (await Promise.all(ids.map((id) => this.getAudit(id)))).filter((a): a is AuditSummary => a !== null);
     return audits.sort((a, b) => b.createdAt.localeCompare(a.createdAt) || a.auditId.localeCompare(b.auditId));
   }
 

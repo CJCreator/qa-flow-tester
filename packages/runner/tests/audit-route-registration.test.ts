@@ -18,9 +18,7 @@ function pathsOf(route: { path: string | string[] }): string[] {
 describe('audit route registration (REQ-048)', () => {
   it('AC-2: every contract entry has exactly one registered route with its method, path and access', () => {
     for (const [name, entry] of contract) {
-      const rows = allRoutes.filter(
-        (r) => r.method === entry.method && !r.prefix && pathsOf(r).includes(entry.path)
-      );
+      const rows = allRoutes.filter((r) => r.method === entry.method && !r.prefix && pathsOf(r).includes(entry.path));
       expect(rows, `${name}: ${entry.method} ${entry.path}`).toHaveLength(1);
       expect(rows[0].access, name).toBe(entry.access);
     }

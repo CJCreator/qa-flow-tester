@@ -121,17 +121,14 @@ describe('detectTechnology', () => {
     for (const tech of TECHNOLOGIES) expect(tested, tech.name).toContain(tech.name);
   });
 
-  it.each(CASES.map((c) => [`${c.name} by ${c.evidence}`, c] as const))(
-    'technology: identifies %s',
-    (_label, c) => {
-      const result = detectTechnology([rawPage(c.page)], c.headers);
-      const kind = TECHNOLOGIES.find((t) => t.name === c.name)!.kind;
-      expect(result).toEqual({
-        status: 'identified',
-        technologies: [{ name: c.name, kind, evidence: [c.evidence] }],
-      });
-    },
-  );
+  it.each(CASES.map((c) => [`${c.name} by ${c.evidence}`, c] as const))('technology: identifies %s', (_label, c) => {
+    const result = detectTechnology([rawPage(c.page)], c.headers);
+    const kind = TECHNOLOGIES.find((t) => t.name === c.name)!.kind;
+    expect(result).toEqual({
+      status: 'identified',
+      technologies: [{ name: c.name, kind, evidence: [c.evidence] }],
+    });
+  });
 
   it('technology: the fixtures/audit-site home page facts name WordPress', () => {
     // Read the facts the reader would report from the fixture home page itself.

@@ -110,7 +110,13 @@ function overlay(over: Partial<EditOverlay> = {}): EditOverlay {
 
 function getReply(edits: EditOverlay = overlay()): AuditGetReply {
   return {
-    summary: { auditId: AUDIT_ID, url: result.url, host: 'shop.example.org', createdAt: '2026-11-01T00:00:00Z', versions: [] },
+    summary: {
+      auditId: AUDIT_ID,
+      url: result.url,
+      host: 'shop.example.org',
+      createdAt: '2026-11-01T00:00:00Z',
+      versions: [],
+    },
     version: {
       auditId: AUDIT_ID,
       version: 2,
@@ -186,7 +192,10 @@ function fakeFetch(...replies: Array<{ status: number; body: unknown } | Error>)
     const next = replies.shift();
     if (!next) throw new Error('no reply queued');
     if (next instanceof Error) throw next;
-    return new Response(JSON.stringify(next.body), { status: next.status, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify(next.body), {
+      status: next.status,
+      headers: { 'Content-Type': 'application/json' },
+    });
   };
   return { impl, calls };
 }
@@ -211,7 +220,9 @@ describe('editing a finding (REQ-020)', () => {
     expect(rows[1].changed).toEqual(['detail']);
     expect(rows[1].finding.detail).toBe(findings[1].detail);
 
-    const saved = overlay({ findings: [{ findingId: 'AF-002', detail: 'The shop photo lacks alt text.', editedAt: 'x' }] });
+    const saved = overlay({
+      findings: [{ findingId: 'AF-002', detail: 'The shop photo lacks alt text.', editedAt: 'x' }],
+    });
     const html = view({ edits: saved });
     expect(html).toMatch(/<textarea id="review-finding-1-detail"[^>]*>The shop photo lacks alt text\.<\/textarea>/);
     const text = textOf(html);
@@ -283,7 +294,9 @@ describe('editing a Section (REQ-020)', () => {
 
   it('shows each Section with its edit and the original kept beside it, page text escaped', () => {
     const saved = overlay({
-      sections: [{ urlPath: '/services', sectionId: 's2', text: 'Same-day laptop repair.', by: 'person', editedAt: 'x' }],
+      sections: [
+        { urlPath: '/services', sectionId: 's2', text: 'Same-day laptop repair.', by: 'person', editedAt: 'x' },
+      ],
     });
     const rows = sectionRows(content, saved, emptyDraft());
     expect(rows.map((r) => [r.section.id, r.edited])).toEqual([
@@ -449,9 +462,18 @@ describe('review-api', () => {
       new Error('offline')
     );
     expect(await loadAudit(AUDIT_ID, undefined, impl)).toMatchObject({ ok: false, code: 'ERR_AUDIT_NOT_FOUND' });
-    expect(await saveEdits(AUDIT_ID, {}, 1, impl)).toMatchObject({ ok: false, message: expect.stringMatching(/permission/) });
-    expect(await loadEdits(AUDIT_ID, 1, impl)).toEqual({ ok: false, message: 'The saved edits could not be loaded. Try again.' });
-    expect(await loadPageContent(AUDIT_ID, '/', 1, impl)).toMatchObject({ ok: false, message: expect.stringMatching(/not answering/) });
+    expect(await saveEdits(AUDIT_ID, {}, 1, impl)).toMatchObject({
+      ok: false,
+      message: expect.stringMatching(/permission/),
+    });
+    expect(await loadEdits(AUDIT_ID, 1, impl)).toEqual({
+      ok: false,
+      message: 'The saved edits could not be loaded. Try again.',
+    });
+    expect(await loadPageContent(AUDIT_ID, '/', 1, impl)).toMatchObject({
+      ok: false,
+      message: expect.stringMatching(/not answering/),
+    });
   });
 
   it('refuses a missing audit id before any request', () => {

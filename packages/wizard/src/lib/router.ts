@@ -49,8 +49,10 @@ export const PATHS = {
   audits: '/audits',
   audit: (auditId: string) => `/audits/${encodeURIComponent(auditId)}`,
   auditVersion: (auditId: string, version: number) => `/audits/${encodeURIComponent(auditId)}/versions/${version}`,
-  auditReview: (auditId: string, version: number) => `/audits/${encodeURIComponent(auditId)}/versions/${version}/review`,
-  auditExport: (auditId: string, version: number) => `/audits/${encodeURIComponent(auditId)}/versions/${version}/export`,
+  auditReview: (auditId: string, version: number) =>
+    `/audits/${encodeURIComponent(auditId)}/versions/${version}/review`,
+  auditExport: (auditId: string, version: number) =>
+    `/audits/${encodeURIComponent(auditId)}/versions/${version}/export`,
   auditShare: (auditId: string) => `/audits/${encodeURIComponent(auditId)}/share`,
   auditHelpers: (auditId: string) => `/audits/${encodeURIComponent(auditId)}/helpers`,
   auditSettings: '/audit-settings',

@@ -9,13 +9,7 @@ import type { AddressInfo } from 'net';
 import fs from 'fs/promises';
 import os from 'os';
 import path from 'path';
-import {
-  AUDIT_API,
-  AUDIT_ID_PATTERN,
-  type AuditProgressEvent,
-  type AuditRequest,
-  type AuditResult,
-} from '@qa/types';
+import { AUDIT_API, AUDIT_ID_PATTERN, type AuditProgressEvent, type AuditRequest, type AuditResult } from '@qa/types';
 import {
   AuditPipelineError,
   AuditStore,
@@ -136,10 +130,12 @@ async function serve(rows: Route[]): Promise<string> {
       res.end(JSON.stringify({ error: 'Not found' }));
       return;
     }
-    Promise.resolve(match.route.handle({ server: undefined as never, req, res, url, params: match.params })).catch(() => {
-      res.writeHead(500);
-      res.end();
-    });
+    Promise.resolve(match.route.handle({ server: undefined as never, req, res, url, params: match.params })).catch(
+      () => {
+        res.writeHead(500);
+        res.end();
+      }
+    );
   });
   servers.push(server);
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -544,7 +540,13 @@ describe('run outcomes', () => {
         throw new Error('key file unreadable');
       },
       pipeline: async (crawl, d) => {
-        seen.push({ pages: crawl.pages.length, ai: d.ai, workDir: d.workDir, hasPacer: 'pacer' in d, recorder: !!d.recorder });
+        seen.push({
+          pages: crawl.pages.length,
+          ai: d.ai,
+          workDir: d.workDir,
+          hasPacer: 'pacer' in d,
+          recorder: !!d.recorder,
+        });
         await store.updateVersion(d.auditId, d.version, { status: 'done', finishedAt: '2026-11-03T10:00:00.000Z' });
         return {} as never;
       },

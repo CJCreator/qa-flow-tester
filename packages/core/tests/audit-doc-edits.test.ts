@@ -54,8 +54,11 @@ function pipelineResult(change?: (result: AuditResult) => void): AuditResult {
 /** Every roadmap item of the view equals, id aside, the item `buildRoadmap` makes from the view's findings. */
 function expectRoadmapFollowsFindings(view: EditedAuditView): void {
   const withoutId = (item: RoadmapItem): RoadmapItem => ({ ...item, id: '' });
-  const rebuilt = new Map(buildRoadmap(view.result.findings).map((item) => [item.findingIds.join(' '), withoutId(item)]));
-  for (const item of view.result.roadmap) expect(withoutId(item), item.id).toEqual(rebuilt.get(item.findingIds.join(' ')));
+  const rebuilt = new Map(
+    buildRoadmap(view.result.findings).map((item) => [item.findingIds.join(' '), withoutId(item)])
+  );
+  for (const item of view.result.roadmap)
+    expect(withoutId(item), item.id).toEqual(rebuilt.get(item.findingIds.join(' ')));
   expect(view.result.roadmap).toHaveLength(rebuilt.size);
 }
 
@@ -69,14 +72,20 @@ function roadmapHeadings(view: EditedAuditView): string[] {
 describe('validateAuditEditsPatch', () => {
   it('accepts a well-formed patch and keeps only its known keys', () => {
     const patch: AuditEditsPatch = {
-      findings: [{ findingId: 'AF-001', title: 'New title' }, { findingId: 'AF-002', reset: true }],
+      findings: [
+        { findingId: 'AF-001', title: 'New title' },
+        { findingId: 'AF-002', reset: true },
+      ],
       sections: [
         { urlPath: '/ta', sectionId: 's2', text: 'புதிய உரை' },
         { urlPath: '/', sectionId: 's1', reset: true },
       ],
       removePages: ['/about'],
       restorePages: ['/services'],
-      recommendations: [{ urlPath: '/', action: 'redesign' }, { urlPath: '/ta', reset: true }],
+      recommendations: [
+        { urlPath: '/', action: 'redesign' },
+        { urlPath: '/ta', reset: true },
+      ],
       proposal: { price: '₹45,000 + GST', paymentTerms: '50% up front', notIncluded: ['Hosting'] },
     };
     const checked = validateAuditEditsPatch(patch);
@@ -117,7 +126,7 @@ describe('validateAuditEditsPatch', () => {
         'recommendations[0].decidedBy',
         'removedPages',
         'sections[0].by',
-      ].sort(),
+      ].sort()
     );
   });
 
@@ -146,7 +155,9 @@ describe('validateAuditEditsPatch', () => {
 
   it('refuses text over the caps and accepts text at the caps', () => {
     const atCap = validateAuditEditsPatch({
-      findings: [{ findingId: 'AF-001', title: 't'.repeat(MAX_EDIT_TITLE_CHARS), detail: 'd'.repeat(MAX_EDIT_TEXT_CHARS) }],
+      findings: [
+        { findingId: 'AF-001', title: 't'.repeat(MAX_EDIT_TITLE_CHARS), detail: 'd'.repeat(MAX_EDIT_TEXT_CHARS) },
+      ],
       sections: [{ urlPath: '/', sectionId: 's1', text: 'அ'.repeat(MAX_SECTION_EDIT_CHARS) }],
     });
     expect(atCap.ok).toBe(true);
@@ -169,7 +180,16 @@ describe('validateAuditEditsPatch', () => {
   });
 
   it('refuses malformed page paths', () => {
-    for (const urlPath of ['about', '//evil.example', 'https://evil.example/', '/a b', '/a\\b', '/a#top', '', '/a\u0000']) {
+    for (const urlPath of [
+      'about',
+      '//evil.example',
+      'https://evil.example/',
+      '/a b',
+      '/a\\b',
+      '/a#top',
+      '',
+      '/a\u0000',
+    ]) {
       const checked = validateAuditEditsPatch({ removePages: [urlPath] });
       expect(checked.ok, urlPath).toBe(false);
       if (!checked.ok) expect(checked.errors['removePages[0]']).toBeTruthy();
@@ -191,14 +211,23 @@ describe('validateAuditEditsPatch', () => {
     expect(checked.ok).toBe(false);
     if (checked.ok) return;
     expect(Object.keys(checked.errors).sort()).toEqual(
-      ['findings[0].reset', 'findings[1].reset', 'findings[2]', 'findings[3].title', 'findings[4].detail', 'restorePages'].sort(),
+      [
+        'findings[0].reset',
+        'findings[1].reset',
+        'findings[2]',
+        'findings[3].title',
+        'findings[4].detail',
+        'restorePages',
+      ].sort()
     );
   });
 
   it('merges nothing when a patch is refused', () => {
     const before = overlayOf({ findings: [{ findingId: 'AF-001', title: 'Kept' }] });
     const copy = structuredClone(before);
-    const checked = validateAuditEditsPatch({ findings: [{ findingId: 'AF-001', title: 'x'.repeat(MAX_EDIT_TITLE_CHARS + 1) }] });
+    const checked = validateAuditEditsPatch({
+      findings: [{ findingId: 'AF-001', title: 'x'.repeat(MAX_EDIT_TITLE_CHARS + 1) }],
+    });
     expect(checked.ok).toBe(false);
     expect(before).toEqual(copy);
   });
@@ -219,8 +248,11 @@ describe('mergeEditsPatch', () => {
       recommendations: [{ urlPath: '/', action: 'redesign' }],
     });
     const two = overlayOf(
-      { sections: [{ urlPath: '/', sectionId: 's2', text: 'B' }], recommendations: [{ urlPath: '/', action: 'repair' }] },
-      one,
+      {
+        sections: [{ urlPath: '/', sectionId: 's2', text: 'B' }],
+        recommendations: [{ urlPath: '/', action: 'repair' }],
+      },
+      one
     );
     expect(two.sections).toEqual([{ urlPath: '/', sectionId: 's2', text: 'B', by: 'person', editedAt: NOW }]);
     expect(two.recommendations).toEqual([{ urlPath: '/', action: 'repair', editedAt: NOW }]);
@@ -240,7 +272,7 @@ describe('mergeEditsPatch', () => {
         recommendations: [{ urlPath: '/', reset: true }],
         restorePages: ['/about'],
       },
-      edited,
+      edited
     );
     expect(reset.findings).toEqual([]);
     expect(reset.sections).toEqual([]);
@@ -252,9 +284,12 @@ describe('mergeEditsPatch', () => {
     const { title, detail, suggestion } = original.findings.find((f) => f.id === 'AF-001')!;
     expect(view.result.findings.find((f) => f.id === 'AF-001')).toMatchObject({ title, detail, suggestion });
     expect(view.result.pages.find((p) => p.urlPath === '/')!.recommendation!.action).toBe('repair');
-    expect(sectionText(view.contents.find((c) => c.urlPath === '/')!, { start: 0, end: Infinity })).toBe(
-      auditDocContents().find((c) => c.urlPath === '/')!.text,
-    );
+    expect(
+      sectionText(
+        view.contents.find((c) => c.urlPath === '/')!,
+        { start: 0, end: Infinity }
+      )
+    ).toBe(auditDocContents().find((c) => c.urlPath === '/')!.text);
     expect(view.result.pages.map((p) => p.urlPath)).toContain('/about');
   });
 
@@ -269,7 +304,7 @@ describe('mergeEditsPatch', () => {
     const copy = structuredClone(base);
     const next = overlayOf(
       { findings: [{ findingId: 'AF-001', reset: true }], restorePages: ['/about'], proposal: { price: '1' } },
-      base,
+      base
     );
     expect(base).toEqual(copy);
     expect(next).not.toEqual(base);
@@ -296,7 +331,11 @@ describe('buildEditedView', () => {
     const view = buildEditedView(result, contents, overlay);
 
     const af3 = view.result.findings.find((f) => f.id === 'AF-003')!;
-    expect(af3).toMatchObject({ title: 'Add a description', detail: 'Edited detail.', suggestion: 'Edited suggestion.' });
+    expect(af3).toMatchObject({
+      title: 'Add a description',
+      detail: 'Edited detail.',
+      suggestion: 'Edited suggestion.',
+    });
     const af5 = view.result.findings.find((f) => f.id === 'AF-005')!;
     expect(af5.title).toBe('திருத்திய தலைப்பு');
     expect(af5.detail).toBe(before.findings.find((f) => f.id === 'AF-005')!.detail);
@@ -361,7 +400,7 @@ describe('buildEditedView', () => {
     const view = buildEditedView(
       auditDocResult(),
       auditDocContents(),
-      overlayOf({ removePages: [PATHS.about, PATHS.team, PATHS.services] }),
+      overlayOf({ removePages: [PATHS.about, PATHS.team, PATHS.services] })
     );
     const r = view.result;
     expect(r.pages.map((p) => p.urlPath)).toEqual([PATHS.home, PATHS.tamil]);
@@ -385,7 +424,7 @@ describe('buildEditedView', () => {
     const view = buildEditedView(
       auditDocResult(),
       contents,
-      overlayOf({ sections: [{ urlPath: PATHS.tamil, sectionId: 's2', text: edited }] }),
+      overlayOf({ sections: [{ urlPath: PATHS.tamil, sectionId: 's2', text: edited }] })
     );
 
     for (const original of before) {
@@ -412,7 +451,7 @@ describe('buildEditedView', () => {
           { urlPath: PATHS.home, sectionId: 's1', text: '' },
           { urlPath: PATHS.home, sectionId: 's3', text: 'Call us any time.' },
         ],
-      }),
+      })
     );
     const home = view.contents.find((c) => c.urlPath === PATHS.home)!;
     expect(home.sections.map((s) => sectionText(home, s))).toEqual([
@@ -426,7 +465,7 @@ describe('buildEditedView', () => {
     const view = buildEditedView(
       auditDocResult(),
       auditDocContents(),
-      overlayOf({ recommendations: [{ urlPath: PATHS.services, action: 'repair' }] }),
+      overlayOf({ recommendations: [{ urlPath: PATHS.services, action: 'repair' }] })
     );
     const rec = view.result.pages.find((p) => p.urlPath === PATHS.services)!.recommendation!;
     expect(rec.action).toBe('repair');
@@ -434,7 +473,11 @@ describe('buildEditedView', () => {
   });
 
   it('carries the Proposal inputs', () => {
-    const view = buildEditedView(auditDocResult(), auditDocContents(), overlayOf({ proposal: { price: '₹45,000 + GST' } }));
+    const view = buildEditedView(
+      auditDocResult(),
+      auditDocContents(),
+      overlayOf({ proposal: { price: '₹45,000 + GST' } })
+    );
     expect(view.proposal).toEqual({ price: '₹45,000 + GST' });
   });
 });
@@ -446,9 +489,15 @@ describe('buildEditedView: the Improvement Roadmap follows the edited findings (
 
   it('editing the title of an item’s first finding renames the item, and the Roadmap document shows it', () => {
     const result = deepFreeze(pipelineResult());
-    expect(duplicateTitle(buildEditedView(result, auditDocContents(), emptyOverlay())).title).toBe('Two pages share one title');
+    expect(duplicateTitle(buildEditedView(result, auditDocContents(), emptyOverlay())).title).toBe(
+      'Two pages share one title'
+    );
 
-    const view = buildEditedView(result, auditDocContents(), overlayOf({ findings: [{ findingId: 'AF-001', title: EDITED }] }));
+    const view = buildEditedView(
+      result,
+      auditDocContents(),
+      overlayOf({ findings: [{ findingId: 'AF-001', title: EDITED }] })
+    );
 
     expect(duplicateTitle(view).title).toBe(EDITED);
     expectRoadmapFollowsFindings(view);
@@ -482,12 +531,15 @@ describe('buildEditedView: the Improvement Roadmap follows the edited findings (
     // AF-003 (only on /services) leads the missing-description item ahead of AF-006 (only on /about/team).
     const result = deepFreeze(
       pipelineResult((r) => {
-        Object.assign(r.findings.find((f) => f.id === 'AF-003')!, {
-          title: 'The services page has no description',
-          impact: 'high',
-          effort: 'medium',
-        });
-      }),
+        Object.assign(
+          r.findings.find((f) => f.id === 'AF-003')!,
+          {
+            title: 'The services page has no description',
+            impact: 'high',
+            effort: 'medium',
+          }
+        );
+      })
     );
     const recorded = result.roadmap.find((i) => i.findingIds.includes('AF-003'))!;
     expect(recorded).toMatchObject({
@@ -516,7 +568,10 @@ describe('buildEditedView: the Improvement Roadmap follows the edited findings (
     const both = buildEditedView(
       result,
       auditDocContents(),
-      overlayOf({ removePages: [PATHS.services], findings: [{ findingId: 'AF-006', title: 'The team page has no description' }] }),
+      overlayOf({
+        removePages: [PATHS.services],
+        findings: [{ findingId: 'AF-006', title: 'The team page has no description' }],
+      })
     );
     expect(both.result.roadmap.find((i) => i.id === recorded.id)).toMatchObject({
       title: 'The team page has no description',
@@ -530,8 +585,11 @@ describe('buildEditedView: the Improvement Roadmap follows the edited findings (
   it('a dropped later finding lowers priority and effort to what the kept findings need, keeping the name', () => {
     const result = deepFreeze(
       pipelineResult((r) => {
-        Object.assign(r.findings.find((f) => f.id === 'AF-006')!, { impact: 'high', effort: 'high' });
-      }),
+        Object.assign(
+          r.findings.find((f) => f.id === 'AF-006')!,
+          { impact: 'high', effort: 'high' }
+        );
+      })
     );
     const recorded = result.roadmap.find((i) => i.findingIds.includes('AF-006'))!;
     expect(recorded).toMatchObject({ title: 'No meta description', priority: 'high', effort: 'high', phase: 1 });

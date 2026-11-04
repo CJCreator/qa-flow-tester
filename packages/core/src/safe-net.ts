@@ -182,7 +182,14 @@ export type SafeGetFailure =
   'dns-failed' | 'private-address' | 'redirected' | 'timeout' | 'too-large' | 'bad-scheme' | 'error';
 
 export type SafeGetResult =
-  | { ok: true; status: number; finalUrl: string; headers: Record<string, string | string[] | undefined>; body: string; bytes: Buffer }
+  | {
+      ok: true;
+      status: number;
+      finalUrl: string;
+      headers: Record<string, string | string[] | undefined>;
+      body: string;
+      bytes: Buffer;
+    }
   | { ok: false; reason: SafeGetFailure; status?: number };
 
 export interface SafeGetOptions {

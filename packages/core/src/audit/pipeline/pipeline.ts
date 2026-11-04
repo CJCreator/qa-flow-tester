@@ -86,14 +86,7 @@ export const DEFAULT_SITE_STAGES: SiteStages = {
 };
 
 export type PipelineStep =
-  | 'reading'
-  | 'analysis'
-  | 'speed'
-  | 'assessment'
-  | 'recommendation'
-  | 'ranking'
-  | 'roadmap'
-  | 'saving';
+  'reading' | 'analysis' | 'speed' | 'assessment' | 'recommendation' | 'ranking' | 'roadmap' | 'saving';
 
 /** How one step ended. 'not-done' is never shown as a clean result. */
 export interface PipelineStepOutcome {
@@ -106,7 +99,10 @@ export interface PipelineStepOutcome {
 }
 
 /** What the pipeline uses from the audit store. */
-export type AuditPipelineStore = Pick<AuditStore, 'saveResult' | 'writeVersionJson' | 'putVersionFile' | 'updateVersion'>;
+export type AuditPipelineStore = Pick<
+  AuditStore,
+  'saveResult' | 'writeVersionJson' | 'putVersionFile' | 'updateVersion'
+>;
 
 export interface AuditPipelineDeps {
   auditId: string;
@@ -157,7 +153,7 @@ export class AuditPipelineError extends Error {
     super(
       code === 'save-failed'
         ? 'The audit could not be saved.'
-        : 'The audit result is saved, but its status could not be updated.',
+        : 'The audit result is saved, but its status could not be updated.'
     );
     this.name = 'AuditPipelineError';
     this.code = code;
@@ -227,7 +223,8 @@ function phoneFinding(f: Finding, urlPath: string, id: string, screenshotPath: s
     area: 'usability',
     title: hasClaimWords(f.title) ? 'Phone layout problem found' : f.title,
     detail: hasClaimWords(detail) ? `On ${urlPath} at phone width: the check "${rule}" found a problem.` : detail,
-    suggestion: hasClaimWords(f.resolution ?? '') || !f.resolution ? 'Fix the elements named in this finding.' : f.resolution,
+    suggestion:
+      hasClaimWords(f.resolution ?? '') || !f.resolution ? 'Fix the elements named in this finding.' : f.resolution,
     urlPath,
     sectionId: null,
     source: 'checker',
@@ -300,7 +297,10 @@ function startPathOf(crawl: AuditCrawlResult): string {
   }
 }
 
-export async function runAuditPipeline(crawl: AuditCrawlResult, deps: AuditPipelineDeps): Promise<AuditPipelineOutcome> {
+export async function runAuditPipeline(
+  crawl: AuditCrawlResult,
+  deps: AuditPipelineDeps
+): Promise<AuditPipelineOutcome> {
   const stages: SiteStages = { ...DEFAULT_SITE_STAGES, ...(deps.stages ?? {}) };
   const signal = deps.signal;
   const now = deps.now ?? (() => new Date());
@@ -367,9 +367,12 @@ export async function runAuditPipeline(crawl: AuditCrawlResult, deps: AuditPipel
     analysis = await stages.analyseSite({
       origin,
       startPath,
-      pages: readable.map(
-        (p): AnalysisPage => ({ urlPath: p.info.urlPath, depth: p.info.depth, raw: p.read!.raw, content: p.read!.content })
-      ),
+      pages: readable.map((p): AnalysisPage => ({
+        urlPath: p.info.urlPath,
+        depth: p.info.depth,
+        raw: p.read!.raw,
+        content: p.read!.content,
+      })),
       statusByPath,
       skippedPaths,
       accessibility: readable
@@ -588,7 +591,9 @@ export async function runAuditPipeline(crawl: AuditCrawlResult, deps: AuditPipel
   siteAreas = siteAreas.map((a) => (a.status === 'done' ? { ...a, evidence: re(a.evidence) } : a));
   const marketing = {
     ...analysis.marketing,
-    checks: analysis.marketing.checks.map((c) => (c.findingId ? { ...c, findingId: idMap.get(c.findingId) ?? c.findingId } : c)),
+    checks: analysis.marketing.checks.map((c) =>
+      c.findingId ? { ...c, findingId: idMap.get(c.findingId) ?? c.findingId } : c
+    ),
     signals: analysis.marketing.signals.map((s) => (s.findingIds ? { ...s, findingIds: re(s.findingIds) } : s)),
   };
   const citationProblems = checkCitations(findings, pages);

@@ -108,7 +108,9 @@ describe('Website Audit start screen: messages next to their fields (REQ-001 AC-
     expect(tagWithId(html, 'audit-maxDepth')).toContain('aria-describedby="audit-maxDepth-hint audit-maxDepth-error"');
     expect(html).toContain('id="audit-maxDepth-error" role="alert"');
     expect(html).toContain('Max depth must be a whole number from 0 to 100.');
-    expect(html).toMatch(/<p id="audit-start-message" role="alert"[^>]*>This address cannot be audited: it points to a private/);
+    expect(html).toMatch(
+      /<p id="audit-start-message" role="alert"[^>]*>This address cannot be audited: it points to a private/
+    );
     expect(html).toContain('aria-describedby="audit-start-message"');
   });
 
@@ -143,7 +145,9 @@ describe('Website Audit start screen: progress from the stream', () => {
     expect(done).not.toContain('aria-current');
 
     const stopped = render({ status: 'stopped', progress, message: 'The Website Audit stopped before it finished.' });
-    expect(stopped).toMatch(/<div role="alert"[^>]*><p[^>]*>The Website Audit stopped\.<\/p><p[^>]*>The Website Audit stopped before it finished\.<\/p>/);
+    expect(stopped).toMatch(
+      /<div role="alert"[^>]*><p[^>]*>The Website Audit stopped\.<\/p><p[^>]*>The Website Audit stopped before it finished\.<\/p>/
+    );
   });
 
   it('shows zero counts while starting and a note while reconnecting', () => {
@@ -200,7 +204,9 @@ describe('Website Audit start screen: wording (CONTEXT.md, ADR 0029, ADR 0033)',
       renderToStaticMarkup(createElement(AuditStartScreen)),
       fields({ message: auditErrorText('ERR_INVALID_AUDIT'), starting: true }),
       ...states.map((state) =>
-        renderToStaticMarkup(createElement(AuditProgress, { address: 'https://example.com/', state, reconnecting: true }))
+        renderToStaticMarkup(
+          createElement(AuditProgress, { address: 'https://example.com/', state, reconnecting: true })
+        )
       ),
       ...['ERR_UNREACHABLE', 'ERR_PRIVATE_ADDRESS', 'ERR_INVALID_AUDIT', 'ERR_RUN_IN_PROGRESS'].map((code) =>
         auditErrorText(code)
@@ -217,8 +223,16 @@ describe('Website Audit start screen: wording (CONTEXT.md, ADR 0029, ADR 0033)',
   it('reaches @qa/types through browser.js only, never the barrel or another module by path (T-211)', () => {
     const dir = new URL('../src/screens/audit/start/', import.meta.url);
     const files = readdirSync(dir).filter((f) => /\.tsx?$/.test(f));
-    expect(files.sort()).toEqual(['AuditProgress.tsx', 'AuditStartScreen.tsx', 'audit-start-api.ts', 'audit-start-form.ts']);
-    const testFiles = [new URL('./audit-start-form.test.ts', import.meta.url), new URL('./audit-start-screen.test.tsx', import.meta.url)];
+    expect(files.sort()).toEqual([
+      'AuditProgress.tsx',
+      'AuditStartScreen.tsx',
+      'audit-start-api.ts',
+      'audit-start-form.ts',
+    ]);
+    const testFiles = [
+      new URL('./audit-start-form.test.ts', import.meta.url),
+      new URL('./audit-start-screen.test.tsx', import.meta.url),
+    ];
     for (const url of [...files.map((f) => new URL(f, dir)), ...testFiles]) {
       const source = readFileSync(url, 'utf8');
       const specifiers = [...source.matchAll(/from '(@qa\/types[^']*)'/g)].map((m) => m[1]);

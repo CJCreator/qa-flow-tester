@@ -31,7 +31,14 @@ import {
 } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
 import { sendJson } from './body.js';
-import { AUDIT_FORBIDDEN, AUDIT_NOT_FOUND, mayUseAudit, refuse, refuseStoreFailure, type AuditCaller } from './audit-store.js';
+import {
+  AUDIT_FORBIDDEN,
+  AUDIT_NOT_FOUND,
+  mayUseAudit,
+  refuse,
+  refuseStoreFailure,
+  type AuditCaller,
+} from './audit-store.js';
 
 /**
  * Headers of a served preview: the same as a Shared Link page (ADR 0036). The Content-Security-Policy is
@@ -92,7 +99,10 @@ export interface AuditPreviewRouteDeps {
   now?: () => Date;
 }
 
-function row(key: 'createPreview' | 'getPreview', handle: Route['handle']): Route & { method: string; access: AuditAccess } {
+function row(
+  key: 'createPreview' | 'getPreview',
+  handle: Route['handle']
+): Route & { method: string; access: AuditAccess } {
   const { method, path, access } = AUDIT_API[key];
   return { method, path, access, handle };
 }
@@ -130,7 +140,12 @@ function checkCreateBody(raw: string): { version?: number; language?: DocumentLa
   }
   const out: { version?: number; language?: DocumentLanguage } = {};
   if (value.version !== undefined) {
-    if (typeof value.version !== 'number' || !Number.isInteger(value.version) || value.version < 1 || value.version > 9_999_999) {
+    if (
+      typeof value.version !== 'number' ||
+      !Number.isInteger(value.version) ||
+      value.version < 1 ||
+      value.version > 9_999_999
+    ) {
       return 'The version must be a whole number from 1.';
     }
     out.version = value.version;
@@ -212,10 +227,12 @@ export function auditPreviewRoutes(deps: AuditPreviewRouteDeps): Route[] {
     try {
       const auditId = c.params?.id ?? '';
       const wanted = versionQuery(c.url);
-      if (wanted === 'invalid') return refuse(res, 400, 'ERR_INVALID_REQUEST', 'The version must be a whole number from 1.');
+      if (wanted === 'invalid')
+        return refuse(res, 400, 'ERR_INVALID_REQUEST', 'The version must be a whole number from 1.');
       const caller = await deps.caller(c);
       // A Helper without a view grant gets the same answer as for an audit that does not exist.
-      if (!(await mayUseAudit(store, caller, auditId, 'view'))) return refuse(res, 404, 'ERR_AUDIT_NOT_FOUND', AUDIT_NOT_FOUND);
+      if (!(await mayUseAudit(store, caller, auditId, 'view')))
+        return refuse(res, 404, 'ERR_AUDIT_NOT_FOUND', AUDIT_NOT_FOUND);
 
       const record = await store.readAuditRecord(auditId);
       const versionNumber = wanted ?? record?.latestVersion;

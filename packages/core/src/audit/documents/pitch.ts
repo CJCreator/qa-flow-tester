@@ -54,7 +54,8 @@ const TA: PitchWording = {
   pagesNotRead: 'படிக்கப்படாத பக்கங்கள்: {n} ({list}).',
   areasNotGraded: 'தரம் அளிக்கப்படாத துறைகள்: {list}.',
   limits: 'படித்த பக்கங்களில் தானியங்கிச் சோதனைகள் கண்டறிந்தவை மட்டுமே இங்கு உள்ளன; வேறு சிக்கல்களும் இருக்கலாம்.',
-  noFindings: 'படித்த பக்கங்களில் சிக்கல்கள் எதுவும் பதிவு செய்யப்படவில்லை. இது சரிபார்க்கப்பட்டவற்றை மட்டுமே குறிக்கிறது.',
+  noFindings:
+    'படித்த பக்கங்களில் சிக்கல்கள் எதுவும் பதிவு செய்யப்படவில்லை. இது சரிபார்க்கப்பட்டவற்றை மட்டுமே குறிக்கிறது.',
   moreFindings: 'மேலும் {n} சிக்கல்கள் முழுத் தணிக்கையில் உள்ளன.',
 };
 
@@ -137,7 +138,7 @@ function findingBlocks(
   screenshot: string | undefined,
   labels: DocumentLabels,
   words: PitchWording,
-  limits: ClampLimits,
+  limits: ClampLimits
 ): DocBlock[] {
   const title = clampText(finding.title, limits.title);
   const pages = finding.pages && finding.pages.length > 0 ? finding.pages : [finding.urlPath];
@@ -168,7 +169,8 @@ function coverageBlocks(view: EditedAuditView, labels: DocumentLabels, words: Pi
   const checked = [formatLabel(words.pagesRead, { n: read, found })];
   if (graded.length > 0) checked.push(formatLabel(words.areasGraded, { list: graded.join(', ') }));
   const notChecked: string[] = [];
-  if (skipped.length > 0) notChecked.push(formatLabel(words.pagesNotRead, { n: skipped.length, list: reasons.join(', ') }));
+  if (skipped.length > 0)
+    notChecked.push(formatLabel(words.pagesNotRead, { n: skipped.length, list: reasons.join(', ') }));
   if (notGraded.length > 0) notChecked.push(formatLabel(words.areasNotGraded, { list: notGraded.join(', ') }));
   notChecked.push(words.limits);
 
@@ -184,7 +186,7 @@ function coverageBlocks(view: EditedAuditView, labels: DocumentLabels, words: Pi
 function optOutFor(
   requested: DocumentLanguage,
   language: DocumentLanguage,
-  saved: Partial<Record<DocumentLanguage, string>> | undefined,
+  saved: Partial<Record<DocumentLanguage, string>> | undefined
 ): string {
   const own = saved && Object.prototype.hasOwnProperty.call(saved, requested) ? saved[requested] : undefined;
   return typeof own === 'string' && own.trim() !== '' ? own.trim() : defaultOptOutText(language);
@@ -217,7 +219,12 @@ export function pitchGlimpseDoc(view: EditedAuditView, options: PitchGlimpseOpti
   blocks.push({ type: 'heading', level: 1, text: labels.headings.optOut });
   blocks.push({ type: 'paragraph', text: optOutFor(lookup.requested, language, options.optOutText) });
 
-  return { kind: 'pitch-glimpse', title: labels.documentTitles['pitch-glimpse'], language: lookup.requested ?? lookup.language, blocks };
+  return {
+    kind: 'pitch-glimpse',
+    title: labels.documentTitles['pitch-glimpse'],
+    language: lookup.requested ?? lookup.language,
+    blocks,
+  };
 }
 
 /** The Pitch Glimpse as one self-contained HTML file laid out on one A4 page (REQ-019). */

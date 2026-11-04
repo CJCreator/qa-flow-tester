@@ -114,7 +114,12 @@ describe('audit store rows', () => {
     await store.grantHelper(c, 'other@example.com', ['view']);
     caller = { owner: false, helperEmail: 'helper@example.com' };
     const res = await call(routes(), 'list', '/api/audits');
-    expect(res.json().audits.map((x: any) => x.auditId).sort()).toEqual([a, b].sort());
+    expect(
+      res
+        .json()
+        .audits.map((x: any) => x.auditId)
+        .sort()
+    ).toEqual([a, b].sort());
     caller = { owner: false };
     expect((await call(routes(), 'list', '/api/audits')).json().audits).toEqual([]);
   });
@@ -174,7 +179,14 @@ describe('audit store rows', () => {
   it('get: a version asked for, a running version has no result, saved edits are returned', async () => {
     const id = await finishedAudit();
     await store.addVersion(id);
-    await store.writeVersionJson(id, 1, 'edits', { findings: [], sections: [], removedPages: ['/x'], recommendations: [], proposal: {}, updatedAt: 't' });
+    await store.writeVersionJson(id, 1, 'edits', {
+      findings: [],
+      sections: [],
+      removedPages: ['/x'],
+      recommendations: [],
+      proposal: {},
+      updatedAt: 't',
+    });
     const v1 = (await call(routes(), 'get', `/api/audits/${id}`, '?version=1')).json();
     expect(v1.version.version).toBe(1);
     expect(v1.edits.removedPages).toEqual(['/x']);

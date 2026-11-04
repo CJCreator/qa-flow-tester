@@ -18,7 +18,11 @@ import {
   type AuditAiModelsReply,
   type ModelsState,
 } from '../src/screens/audit/ai/stage-models-api';
-import { AuditAiModelsPanel, AuditAiModelsView, type AuditAiModelsViewProps } from '../src/screens/audit/ai/AuditAiModelsPanel';
+import {
+  AuditAiModelsPanel,
+  AuditAiModelsView,
+  type AuditAiModelsViewProps,
+} from '../src/screens/audit/ai/AuditAiModelsPanel';
 
 // ---------------------------------------------------------------------------------------------------
 // Fixtures
@@ -76,7 +80,10 @@ function fakeFetch(...replies: Array<{ status: number; body: unknown } | Error>)
     const next = replies.shift();
     if (!next) throw new Error('no reply queued');
     if (next instanceof Error) throw next;
-    return new Response(JSON.stringify(next.body), { status: next.status, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify(next.body), {
+      status: next.status,
+      headers: { 'Content-Type': 'application/json' },
+    });
   };
   return { impl, calls };
 }
@@ -108,13 +115,18 @@ describe('a model per Website Audit AI task (REQ-039 AC-1)', () => {
     const update = modelsUpdate(reply, draft);
     expect(update).toEqual({ models: { assessment: 'gpt-4.1', rewrite: 'claude-haiku-4-5' } });
 
-    const { impl, calls } = fakeFetch({ status: 200, body: modelsReply({ ...reply.models, ...update.models } as AuditAiModelsReply['models']) });
+    const { impl, calls } = fakeFetch({
+      status: 200,
+      body: modelsReply({ ...reply.models, ...update.models } as AuditAiModelsReply['models']),
+    });
     const outcome = await saveModels(update, impl);
     expect(outcome.ok).toBe(true);
     expect(calls).toHaveLength(1);
     expect(calls[0]!.url).toBe('/api/audit-ai/models');
     expect(calls[0]!.init?.method).toBe('PUT');
-    expect(JSON.parse(String(calls[0]!.init?.body))).toEqual({ models: { assessment: 'gpt-4.1', rewrite: 'claude-haiku-4-5' } });
+    expect(JSON.parse(String(calls[0]!.init?.body))).toEqual({
+      models: { assessment: 'gpt-4.1', rewrite: 'claude-haiku-4-5' },
+    });
   });
 
   it('sends null for a cleared field, to put the default back', () => {
@@ -200,9 +212,17 @@ describe('a refused save', () => {
   const tooLong = 'Use a model id of at most 200 characters.';
 
   it('returns the message per field of a 400', async () => {
-    const { impl } = fakeFetch({ status: 400, body: { error: 'Invalid models', code: 'ERR_INVALID_REQUEST', errors: { rewrite: tooLong } } });
+    const { impl } = fakeFetch({
+      status: 400,
+      body: { error: 'Invalid models', code: 'ERR_INVALID_REQUEST', errors: { rewrite: tooLong } },
+    });
     const outcome = await saveModels({ models: { rewrite: 'x'.repeat(201) } }, impl);
-    expect(outcome).toEqual({ ok: false, message: FIX_FIELDS, code: 'ERR_INVALID_REQUEST', errors: { rewrite: tooLong } });
+    expect(outcome).toEqual({
+      ok: false,
+      message: FIX_FIELDS,
+      code: 'ERR_INVALID_REQUEST',
+      errors: { rewrite: tooLong },
+    });
     const { impl: viaFields } = fakeFetch({ status: 400, body: { fields: { preview: 'Enter a model id.' } } });
     const other = await saveModels({ models: { preview: 'x' } }, viaFields);
     expect(!other.ok && other.errors).toEqual({ preview: 'Enter a model id.' });
@@ -220,7 +240,9 @@ describe('a refused save', () => {
     const html = view(after);
     const box = stageBox(html, 'rewrite');
     expect(box).toContain('aria-invalid="true"');
-    expect(box).toContain('aria-describedby="audit-ai-model-rewrite-hint audit-ai-model-rewrite-default audit-ai-model-rewrite-error"');
+    expect(box).toContain(
+      'aria-describedby="audit-ai-model-rewrite-hint audit-ai-model-rewrite-default audit-ai-model-rewrite-error"'
+    );
     expect(textOf(box)).toContain(tooLong);
     expect(stageBox(html, 'assessment')).toContain('value="gpt-4.1"');
     expect(stageBox(html, 'assessment')).not.toContain('aria-invalid');
@@ -280,7 +302,11 @@ describe('stage-models-api', () => {
 
   it('turns refusals, bad replies and a silent runner into plain sentences', async () => {
     const forbidden = await loadModels(fakeFetch({ status: 403, body: { error: 'nope', code: 'ERR_FORBIDDEN' } }).impl);
-    expect(forbidden).toEqual({ ok: false, message: 'Only the tool user can change the AI models.', code: 'ERR_FORBIDDEN' });
+    expect(forbidden).toEqual({
+      ok: false,
+      message: 'Only the tool user can change the AI models.',
+      code: 'ERR_FORBIDDEN',
+    });
     const bad = await loadModels(fakeFetch({ status: 200, body: { models: [] } }).impl);
     expect(bad).toEqual({ ok: false, message: 'The AI models could not be loaded. Try again.' });
     const silent = await saveModels({ models: {} }, fakeFetch(new Error('ECONNREFUSED')).impl);
@@ -339,16 +365,14 @@ describe('accessible markup and wording', () => {
   });
 
   it('uses no Avoid word in UI text', () => {
-    const shown = [
-      ...Object.values(views).map(textOf),
-      ...Object.values(STAGE_TEXT).flatMap((t) => [t.label, t.hint]),
-    ];
+    const shown = [...Object.values(views).map(textOf), ...Object.values(STAGE_TEXT).flatMap((t) => [t.label, t.hint])];
     for (const text of shown) expect(text).not.toMatch(AVOID_WORDS);
   });
 
   it('uses the CONTEXT.md terms and shows the loading state first', () => {
     const text = textOf(views.view);
-    for (const term of ['AI Provider', 'Website Audit', 'Pitch Glimpse', 'Audit Documents', 'Section']) expect(text).toContain(term);
+    for (const term of ['AI Provider', 'Website Audit', 'Pitch Glimpse', 'Audit Documents', 'Section'])
+      expect(text).toContain(term);
     expect(views.screen).toContain('Loading the AI models');
   });
 });

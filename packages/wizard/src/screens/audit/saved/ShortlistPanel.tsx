@@ -44,9 +44,7 @@ export function ShortlistPanelView({ saved, draft, saving, message, onDraft, onS
       <p className="text-sm text-ink-soft">
         Notes can hold the owner&apos;s personal details. Deleting the Website Audit deletes its Shortlist entry.
       </p>
-      <p className="mt-2 text-sm text-ink">
-        {savedLine(saved)}
-      </p>
+      <p className="mt-2 text-sm text-ink">{savedLine(saved)}</p>
 
       <fieldset className="mt-4">
         <legend className="label text-ink">Mark</legend>
@@ -124,7 +122,10 @@ export function ShortlistPanelView({ saved, draft, saving, message, onDraft, onS
           {saving ? 'Saving…' : 'Save the Shortlist entry'}
         </button>
         {message && (
-          <p role={message.tone === 'fail' ? 'alert' : 'status'} className={`text-sm ${message.tone === 'fail' ? 'text-fail' : 'text-pass'}`}>
+          <p
+            role={message.tone === 'fail' ? 'alert' : 'status'}
+            className={`text-sm ${message.tone === 'fail' ? 'text-fail' : 'text-pass'}`}
+          >
             {message.text}
           </p>
         )}

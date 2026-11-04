@@ -58,12 +58,12 @@ New baselines automatically mask dates and times, well-known ad slots and passwo
 
 All optional and empty in `.env.example`.
 
-| Variable               | Default | Meaning                                                                                                                                                                       |
-| ---------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AUDIT_STORE_BUCKET`   | none    | Cloud Storage bucket for saved Website Audits ([ADR 0036](adr/0036-hosted-audit-storage-and-shared-links.md)). Unset: audits are kept as local files under `RUNNER_DATA_DIR` |
-| `FIREBASE_PROJECT_ID`  | none    | Firebase project ID for Helper sign-in. Public value, not a secret. Helper sign-in turns on only when this and `RUNNER_ACCESS_TOKEN` are both set                            |
-| `FIREBASE_WEB_API_KEY` | none    | Firebase web API key the runner sends to the wizard for Helper sign-in. Optional. A public browser value, not a server secret                                                 |
-| `FIREBASE_AUTH_DOMAIN` | `<FIREBASE_PROJECT_ID>.firebaseapp.com` | Firebase auth domain for Helper sign-in. Optional (for example `PROJECT.firebaseapp.com`)                                                                        |
+| Variable               | Default                                 | Meaning                                                                                                                                                                      |
+| ---------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AUDIT_STORE_BUCKET`   | none                                    | Cloud Storage bucket for saved Website Audits ([ADR 0036](adr/0036-hosted-audit-storage-and-shared-links.md)). Unset: audits are kept as local files under `RUNNER_DATA_DIR` |
+| `FIREBASE_PROJECT_ID`  | none                                    | Firebase project ID for Helper sign-in. Public value, not a secret. Helper sign-in turns on only when this and `RUNNER_ACCESS_TOKEN` are both set                            |
+| `FIREBASE_WEB_API_KEY` | none                                    | Firebase web API key the runner sends to the wizard for Helper sign-in. Optional. A public browser value, not a server secret                                                |
+| `FIREBASE_AUTH_DOMAIN` | `<FIREBASE_PROJECT_ID>.firebaseapp.com` | Firebase auth domain for Helper sign-in. Optional (for example `PROJECT.firebaseapp.com`)                                                                                    |
 
 `FIREBASE_WEB_API_KEY` and `FIREBASE_AUTH_DOMAIN` are optional. The wizard can also take the Firebase values at build
 time as `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_WEB_API_KEY` and `VITE_FIREBASE_AUTH_DOMAIN` (public values only).
@@ -83,9 +83,9 @@ Bring your own key. Supported providers: OpenRouter (default in CI), Gemini, Ope
 
 Gemini can also authenticate with Google Application Default Credentials. `GOOGLE_APPLICATION_CREDENTIALS` gives the path to the credentials file. `GOOGLE_CLOUD_PROJECT` or `GCP_PROJECT` gives the project ID. `APPDATA` is set by Windows and locates the default gcloud folder.
 
-| Variable          | Default                                     | Meaning                                                                                                                                                                           |
-| ----------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `XDG_CONFIG_HOME` | `%APPDATA%` on Windows, else `~/.config`    | Optional. Folder that holds `qa-flow-tester/key-file.key`, the local key for the encrypted key file ([ADR 0034](adr/0034-encrypted-key-fallback.md)). Not a secret; holds a path |
+| Variable          | Default                                  | Meaning                                                                                                                                                                          |
+| ----------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `XDG_CONFIG_HOME` | `%APPDATA%` on Windows, else `~/.config` | Optional. Folder that holds `qa-flow-tester/key-file.key`, the local key for the encrypted key file ([ADR 0034](adr/0034-encrypted-key-fallback.md)). Not a secret; holds a path |
 
 Key order (see `packages/core/src/ai/key-resolver.ts`): a key given for the run comes first (command line, or `QA_AI_API_KEY` in
 a check-up from CI). Then, for the preferred provider: the OS keychain, the legacy `.qa-keys.json` file, then the environment

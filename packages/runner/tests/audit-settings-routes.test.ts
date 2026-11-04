@@ -56,7 +56,7 @@ class FakeKeyPort implements PagespeedKeyPort {
 
 const OPT_OUT_TEXT_EN = auditSettingsDefaults().optOutText.en;
 const OPT_OUT_TEXT_TA = auditSettingsDefaults().optOutText.ta;
-const SECRET ='AIza-test-pagespeed-key-1234567890';
+const SECRET = 'AIza-test-pagespeed-key-1234567890';
 
 let dataDir: string;
 let port: FakeKeyPort;
@@ -140,7 +140,10 @@ describe('audit settings routes', () => {
 
   it('keeps an edited Proposal template and company details after reopening over the same store (REQ-027 AC-1)', async () => {
     const template = '# Proposal for {{site_name}}\n\nEdited by the tool user.';
-    const put = await call(depsFor(), 'PUT', { proposalTemplate: template, company: { name: 'Acme Web', email: 'hi@acme.test' } });
+    const put = await call(depsFor(), 'PUT', {
+      proposalTemplate: template,
+      company: { name: 'Acme Web', email: 'hi@acme.test' },
+    });
     expect(put.statusCode).toBe(200);
     const putReply = put.json<AuditSettingsReply>();
     expect(putReply.settings.proposalTemplate).toBe(template);
@@ -286,7 +289,10 @@ describe('audit settings routes', () => {
         throw new Error(`keychain failed for ${SECRET} at C:\\secret\\path`);
       },
     };
-    const deps: AuditSettingsDeps = { settings: auditSettingsStoreOn(createLocalAuditStoreBackend(dataDir)), pagespeedKey: failingPort };
+    const deps: AuditSettingsDeps = {
+      settings: auditSettingsStoreOn(createLocalAuditStoreBackend(dataDir)),
+      pagespeedKey: failingPort,
+    };
     const res = await call(deps, 'PUT', { pagespeedKey: SECRET, company: { name: 'Nope' } });
     expect(res.statusCode).toBe(500);
     expect(res.body).not.toContain(SECRET);

@@ -22,7 +22,8 @@ async function sessionsOf(
   if (!states) return undefined;
   const sessions: Record<string, StorageStateData> = {};
   for (const [role, state] of Object.entries(states)) {
-    sessions[role] = typeof state === 'string' ? (JSON.parse(await fs.readFile(state, 'utf8')) as StorageStateData) : state;
+    sessions[role] =
+      typeof state === 'string' ? (JSON.parse(await fs.readFile(state, 'utf8')) as StorageStateData) : state;
   }
   return sessions;
 }

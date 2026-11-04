@@ -159,7 +159,12 @@ describe('Cloud Storage backend requests', () => {
 
   it('refuses a bad bucket name at construction', () => {
     expect(
-      () => new GcsAuditStoreBackend({ bucket: 'Bad_Bucket', fetch: async () => new Response(), tokenProvider: async () => TOKEN })
+      () =>
+        new GcsAuditStoreBackend({
+          bucket: 'Bad_Bucket',
+          fetch: async () => new Response(),
+          tokenProvider: async () => TOKEN,
+        })
     ).toThrow(AuditStoreError);
   });
 });

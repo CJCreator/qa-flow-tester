@@ -28,7 +28,11 @@ const COMPANY_LABEL: Readonly<Record<keyof CompanyDetails, string>> = {
   terms: 'Terms and conditions',
 };
 
-const COMPANY_INPUT_TYPE: Partial<Record<keyof CompanyDetails, string>> = { phone: 'tel', email: 'email', website: 'url' };
+const COMPANY_INPUT_TYPE: Partial<Record<keyof CompanyDetails, string>> = {
+  phone: 'tel',
+  email: 'email',
+  website: 'url',
+};
 const COMPANY_MULTILINE: ReadonlySet<keyof CompanyDetails> = new Set(['address', 'terms']);
 
 export type SettingsMessage = { tone: 'pass' | 'fail'; text: string } | null;
@@ -46,7 +50,16 @@ export interface DocumentSettingsViewProps {
 }
 
 /** The document settings without state: Proposal template, opt-out text per language, company details. */
-export function DocumentSettingsView({ reply, draft, saving, message, onDraft, onSave, onDiscard, onReset }: DocumentSettingsViewProps) {
+export function DocumentSettingsView({
+  reply,
+  draft,
+  saving,
+  message,
+  onDraft,
+  onSave,
+  onDiscard,
+  onReset,
+}: DocumentSettingsViewProps) {
   const pending = !isUpdateEmpty(settingsUpdate(reply, draft));
   return (
     <div className="space-y-10">
@@ -102,7 +115,10 @@ export function DocumentSettingsView({ reply, draft, saving, message, onDraft, o
         <h3 id="settings-placeholders-title" className="font-bold">
           Placeholders you can use
         </h3>
-        <dl aria-labelledby="settings-placeholders-title" className="grid grid-cols-1 gap-x-4 gap-y-1 text-sm sm:grid-cols-[auto_1fr]">
+        <dl
+          aria-labelledby="settings-placeholders-title"
+          className="grid grid-cols-1 gap-x-4 gap-y-1 text-sm sm:grid-cols-[auto_1fr]"
+        >
           {PROPOSAL_PLACEHOLDERS.map((p) => (
             <div key={p.name} className="contents">
               <dt>
@@ -202,7 +218,8 @@ export interface DocumentSettingsScreenProps {
   fetchImpl?: Fetch;
 }
 
-type Loaded = { status: 'loading' } | { status: 'failed'; message: string } | { status: 'loaded'; reply: AuditSettingsReply };
+type Loaded =
+  { status: 'loading' } | { status: 'failed'; message: string } | { status: 'loaded'; reply: AuditSettingsReply };
 
 /** Edit the Proposal template, the opt-out text and the company details (REQ-027, REQ-019, REQ-018). */
 export function DocumentSettingsScreen({ fetchImpl }: DocumentSettingsScreenProps) {

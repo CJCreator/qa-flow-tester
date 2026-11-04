@@ -52,7 +52,7 @@ const BUNDLE_FILE_DESCRIPTIONS: Readonly<Record<AuditDocumentKind, string>> = {
   structure:
     'Structure: the page hierarchy and how each place was decided, navigation links by region, links that leave the site, pages not checked and what the site is built with.',
   content:
-    'Content: every page read, split into Sections, with each Section\'s text as it is (or as edited), plus its images, calls to action and forms.',
+    "Content: every page read, split into Sections, with each Section's text as it is (or as edited), plus its images, calls to action and forms.",
   findings:
     'Findings: every issue found, grouped technical, marketing and content, with page, Section, area, impact, effort, what was seen and a suggested fix.',
   roadmap: 'Improvement Roadmap: the findings turned into ordered work, by phase, with priority and effort.',
@@ -99,11 +99,14 @@ export function exportBaseName(url: string, version: number): string {
 
 /** A document's blocks under its own title, one heading level lower, after a page break unless it is first. */
 function partBlocks(doc: AuditDoc, first: boolean): DocBlock[] {
-  const nested = doc.blocks.map(
-    (block): DocBlock =>
-      block.type === 'heading' ? { ...block, level: Math.min(4, block.level + 1) as HeadingLevel } : block,
+  const nested = doc.blocks.map((block): DocBlock =>
+    block.type === 'heading' ? { ...block, level: Math.min(4, block.level + 1) as HeadingLevel } : block
   );
-  return [...(first ? [] : [{ type: 'pagebreak' } as DocBlock]), { type: 'heading', level: 1, text: doc.title }, ...nested];
+  return [
+    ...(first ? [] : [{ type: 'pagebreak' } as DocBlock]),
+    { type: 'heading', level: 1, text: doc.title },
+    ...nested,
+  ];
 }
 
 /** The documents as one: a single document as it is, several under a joint title, each starting a new page. */
@@ -131,7 +134,7 @@ async function documentFile(
   format: Exclude<ExportFormat, 'bundle'>,
   docs: readonly AuditDoc[],
   stem: string,
-  options: ExportOptions,
+  options: ExportOptions
 ): Promise<AuditExportFile> {
   const name = `${stem}.${format}`;
   switch (format) {
@@ -155,13 +158,13 @@ function readme(url: string, version: number, folder: string): string {
     `# Website Audit export: ${escapeMarkdownInline(url)} (version ${version})`,
     '',
     'This folder holds one Website Audit version, laid out for Claude Code or another coding assistant that',
-    'rebuilds or repairs the site. The tool user\'s edits are applied; pages they removed are left out of every',
+    "rebuilds or repairs the site. The tool user's edits are applied; pages they removed are left out of every",
     'file. It lists what was checked and what was found; it does not say the site meets any standard.',
     '',
     '## Files',
     '',
     ...(Object.keys(BUNDLE_FILE_NAMES) as AuditDocumentKind[]).map(
-      (kind) => `- \`${BUNDLE_FILE_NAMES[kind]}\`: ${BUNDLE_FILE_DESCRIPTIONS[kind]}`,
+      (kind) => `- \`${BUNDLE_FILE_NAMES[kind]}\`: ${BUNDLE_FILE_DESCRIPTIONS[kind]}`
     ),
     `- \`site.json\`: the same audit as data (schemaVersion ${SITE_JSON_SCHEMA_VERSION}): \`site\` (address and version), \`pages\` (urlPath, title, depth, coverage, language, redesign-or-repair recommendation, and \`sections\` with each Section's text character for character), \`findings\` (id, group, area, page, Section, impact, effort, title, detail, suggestion), \`roadmap\` (items with their finding ids and pages) and \`skippedPages\` (found but not read, so not checked).`,
     '- `README.md`: this index.',
@@ -169,7 +172,7 @@ function readme(url: string, version: number, folder: string): string {
     '## How to use it',
     '',
     '1. Read `site.json` for the pages, their Sections and the findings; finding ids (such as AF-001) link findings, roadmap items and recommendations.',
-    '2. Use `02-content.md` and the Section texts to keep the site\'s own wording.',
+    "2. Use `02-content.md` and the Section texts to keep the site's own wording.",
     '3. Work through `04-improvement-roadmap.md` phase by phase; each item lists the findings it repairs.',
     '4. Findings marked as AI advice were written by an AI: check them before acting on them.',
     '',
@@ -202,7 +205,7 @@ export function buildAuditBundle(input: AuditDocumentsInput): AuditExportFile {
 export async function exportAudit(
   format: ExportFormat,
   input: AuditDocumentsInput,
-  options: ExportOptions = {},
+  options: ExportOptions = {}
 ): Promise<AuditExportFile> {
   if (!isExportFormat(format)) throw new Error('This export format is not available.');
   if (format === 'bundle') return buildAuditBundle(input);
@@ -218,7 +221,7 @@ export async function exportAudit(
 export async function exportPitchGlimpse(
   format: 'html' | 'pdf',
   input: PitchGlimpseInput,
-  options: ExportOptions = {},
+  options: ExportOptions = {}
 ): Promise<AuditExportFile> {
   const { html } = generatePitchGlimpse(input);
   const name = `${exportBaseName(input.result.url, input.result.version)}-pitch-glimpse.${format}`;
@@ -230,7 +233,7 @@ export async function exportPitchGlimpse(
 export async function exportOwnerAudit(
   format: Exclude<ExportFormat, 'bundle'>,
   input: OwnerAuditInput,
-  options: ExportOptions = {},
+  options: ExportOptions = {}
 ): Promise<AuditExportFile> {
   const doc = generateOwnerAudit(input);
   return documentFile(format, [doc], `${exportBaseName(input.result.url, input.result.version)}-owner-audit`, options);

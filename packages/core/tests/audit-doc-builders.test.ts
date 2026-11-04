@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { AUDIT_AREAS, sectionText, type DocumentLanguage, type EditOverlay } from '@qa/types';
-import { buildEditedView, emptyOverlay, mergeEditsPatch, validateAuditEditsPatch, type EditedAuditView } from '../src/audit/documents/edits.js';
+import {
+  buildEditedView,
+  emptyOverlay,
+  mergeEditsPatch,
+  validateAuditEditsPatch,
+  type EditedAuditView,
+} from '../src/audit/documents/edits.js';
 import { buildStructureDocument } from '../src/audit/documents/structure.js';
 import { buildContentDocument } from '../src/audit/documents/content.js';
 import { buildFindingsDocument } from '../src/audit/documents/findings.js';
@@ -53,8 +59,7 @@ function chunks(md: string, marker: string): Array<{ head: string; body: string 
 
 const paragraphs = (doc: AuditDoc): string[] =>
   doc.blocks.filter((b): b is Extract<DocBlock, { type: 'paragraph' }> => b.type === 'paragraph').map((b) => b.text);
-const listItems = (doc: AuditDoc): string[] =>
-  doc.blocks.flatMap((b) => (b.type === 'list' ? b.items : []));
+const listItems = (doc: AuditDoc): string[] => doc.blocks.flatMap((b) => (b.type === 'list' ? b.items : []));
 
 describe('Findings document: edits (REQ-020 AC-1)', () => {
   it('shows the edited title, detail and suggestion and not the originals', () => {
@@ -142,7 +147,11 @@ describe('Findings document: groups, ranking and citations (REQ-017 AC-2)', () =
   const groups = chunks(md, '## ');
 
   it('lists technical, marketing and content in that order', () => {
-    expect(groups.map((g) => g.head).slice(0, 3)).toEqual([en.groups.technical, en.groups.marketing, en.groups.content]);
+    expect(groups.map((g) => g.head).slice(0, 3)).toEqual([
+      en.groups.technical,
+      en.groups.marketing,
+      en.groups.content,
+    ]);
   });
 
   it('keeps ranking order inside each group and cites each finding’s page and Section', () => {
@@ -177,7 +186,10 @@ describe('Findings document: groups, ranking and citations (REQ-017 AC-2)', () =
   });
 
   it('showEffort: false leaves effort out everywhere', () => {
-    for (const [lang, labels] of [['en', en], ['ta', ta]] as const) {
+    for (const [lang, labels] of [
+      ['en', en],
+      ['ta', ta],
+    ] as const) {
       const doc = buildFindingsDocument(viewOf(), { language: lang, showEffort: false });
       for (const [format, text] of outputs(doc)) {
         expect(text, `${lang} ${format}`).not.toContain(labels.columns.effort);
@@ -190,14 +202,19 @@ describe('Findings document: groups, ranking and citations (REQ-017 AC-2)', () =
     const view = viewOf(undefined, (r) => {
       r.findings = r.findings.filter((f) => f.group !== 'marketing');
     });
-    const marketing = chunks(renderMarkdown(buildFindingsDocument(view)), '## ').find((g) => g.head === en.groups.marketing)!;
+    const marketing = chunks(renderMarkdown(buildFindingsDocument(view)), '## ').find(
+      (g) => g.head === en.groups.marketing
+    )!;
     expect(marketing.body.trim()).toBe(en.status.noneFound);
   });
 });
 
 describe('not checked is never a clean result (ADR 0018)', () => {
   it('Skipped Pages are listed with their reason as not checked', () => {
-    for (const [lang, labels] of [['en', en], ['ta', ta]] as const) {
+    for (const [lang, labels] of [
+      ['en', en],
+      ['ta', ta],
+    ] as const) {
       const md = renderMarkdown(buildStructureDocument(viewOf(), { language: lang }));
       const section = chunks(md, '## ').find((c) => c.head === labels.headings.pagesNotChecked)!;
       expect(section.body).toContain(`| /checkout | ${labels.skipReasons.payment} | ${labels.status.notChecked} |`);
@@ -206,13 +223,18 @@ describe('not checked is never a clean result (ADR 0018)', () => {
   });
 
   it('areas without a grade show not checked; graded areas show the grade with the AI note as advice', () => {
-    for (const [lang, labels] of [['en', en], ['ta', ta]] as const) {
+    for (const [lang, labels] of [
+      ['en', en],
+      ['ta', ta],
+    ] as const) {
       const md = renderMarkdown(buildFindingsDocument(viewOf(), { language: lang }));
       for (const area of AUDIT_AREAS) {
         if (area === 'marketing') {
           expect(md).toContain(`| ${labels.areas.marketing} | C | The offer is clear; the call to action is late. |`);
         } else {
-          expect(md).toContain(`| ${labels.areas[area]} | ${labels.status.notChecked} | ${labels.aiNotDone['no-ai-key']} |`);
+          expect(md).toContain(
+            `| ${labels.areas[area]} | ${labels.status.notChecked} | ${labels.aiNotDone['no-ai-key']} |`
+          );
         }
       }
       expect(md).toContain(`> ${labels.status.aiNote}`);
@@ -337,7 +359,11 @@ describe('languages and claim wording', () => {
       'Website:',
     ];
     const docs = BUILDERS.map(([, build]) => build(view, { language: 'ta' }));
-    expect(docs.map((d) => d.title)).toEqual([ta.documentTitles.structure, ta.documentTitles.content, ta.documentTitles.findings]);
+    expect(docs.map((d) => d.title)).toEqual([
+      ta.documentTitles.structure,
+      ta.documentTitles.content,
+      ta.documentTitles.findings,
+    ]);
     for (const doc of docs) {
       expect(doc.language).toBe('ta');
       for (const [format, text] of outputs(doc)) {

@@ -197,8 +197,14 @@ describe('runAuditCrawl with default limits', () => {
       const entry = result.leavingSite.find((l) => new URL(l.to).hostname.endsWith(host));
       expect(entry, host).toBeDefined();
       expect(entry!.from).toContain('/');
-      expect(browserRequests.some((r) => r.url.includes(host)), `browser asked for ${host}`).toBe(false);
-      expect(lookups.some((h) => h.endsWith(host)), `looked up ${host}`).toBe(false);
+      expect(
+        browserRequests.some((r) => r.url.includes(host)),
+        `browser asked for ${host}`
+      ).toBe(false);
+      expect(
+        lookups.some((h) => h.endsWith(host)),
+        `looked up ${host}`
+      ).toBe(false);
     }
   });
 
@@ -346,7 +352,9 @@ describe('runAuditCrawl robots.txt Crawl-delay', () => {
         res.end('User-agent: *\nCrawl-delay: 1\n');
       } else if (pathname === '/') {
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-        res.end('<!doctype html><html lang="en"><head><title>Slow</title></head><body><main><p>Hi</p></main></body></html>');
+        res.end(
+          '<!doctype html><html lang="en"><head><title>Slow</title></head><body><main><p>Hi</p></main></body></html>'
+        );
       } else {
         res.writeHead(404, { 'Content-Type': 'text/plain' });
         res.end('Not found');

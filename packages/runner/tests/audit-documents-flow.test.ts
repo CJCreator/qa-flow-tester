@@ -29,7 +29,9 @@ const PORT = 3761;
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 // Playwright is a dependency of @qa/core, not of the runner: load the copy core's printer uses, so the spy
 // below sees the very same `chromium` object.
-const corePlaywright = createRequire(path.resolve(HERE, '../../core/package.json'))('playwright') as typeof import('../../core/node_modules/playwright');
+const corePlaywright = createRequire(path.resolve(HERE, '../../core/package.json'))(
+  'playwright'
+) as typeof import('../../core/node_modules/playwright');
 const { chromium } = corePlaywright;
 
 // 1x1 PNG: the stored screenshot of each top finding.
@@ -198,7 +200,8 @@ function watchOutbound(): void {
     const real = mod.request.bind(mod);
     vi.spyOn(mod, 'request').mockImplementation(((...args: unknown[]) => {
       const host = hostOf(args[0]);
-      if (!['localhost', '127.0.0.1', '::1', '[::1]'].includes(host)) outbound.push(`${mod === https ? 'https' : 'http'}://${host}`);
+      if (!['localhost', '127.0.0.1', '::1', '[::1]'].includes(host))
+        outbound.push(`${mod === https ? 'https' : 'http'}://${host}`);
       return (real as (...a: unknown[]) => http.ClientRequest)(...args);
     }) as typeof mod.request);
   }
@@ -320,7 +323,11 @@ describe('REQ-020: edits are kept and reach every format', () => {
     const edits = await call('GET', `/api/audits/${auditId}/edits`);
     expect(edits.status).toBe(200);
     expect(edits.json.edits.removedPages).toEqual([REMOVED_PAGE]);
-    expect(edits.json.edits.findings.map((f: { findingId: string }) => f.findingId).sort()).toEqual(['AF-001', 'AF-002', 'AF-005']);
+    expect(edits.json.edits.findings.map((f: { findingId: string }) => f.findingId).sort()).toEqual([
+      'AF-001',
+      'AF-002',
+      'AF-005',
+    ]);
     expect(edits.json.edits.proposal).toMatchObject({ price: PRICE, paymentTerms: PAYMENT_TERMS });
 
     const settings = await call('GET', '/api/audit-settings');
@@ -376,9 +383,13 @@ describe('REQ-018 and REQ-021: five Audit Documents, one Pitch Glimpse, the bund
     expect([...AUDIT_DOCUMENT_KINDS]).toEqual(['structure', 'content', 'findings', 'roadmap', 'proposal']);
     const titles = labelsFor('en').labels.documentTitles;
     // The Proposal's title is the saved template's own first heading.
-    const heading = (kind: (typeof AUDIT_DOCUMENT_KINDS)[number]) => (kind === 'proposal' ? 'Custom Proposal for ' : titles[kind]);
+    const heading = (kind: (typeof AUDIT_DOCUMENT_KINDS)[number]) =>
+      kind === 'proposal' ? 'Custom Proposal for ' : titles[kind];
     const at = AUDIT_DOCUMENT_KINDS.map((kind) => res.text.indexOf(`# ${heading(kind)}`));
-    expect(at.every((i) => i >= 0), JSON.stringify(at)).toBe(true);
+    expect(
+      at.every((i) => i >= 0),
+      JSON.stringify(at)
+    ).toBe(true);
     expect([...at].sort((a, b) => a - b)).toEqual(at);
     // The Pitch Glimpse and the Owner Audit are separate downloads, not part of the five.
     expect(res.text).not.toContain(titles['pitch-glimpse']);
@@ -478,21 +489,24 @@ describe('REQ-027: the Proposal follows the saved template, filled with the audi
 });
 
 describe('REQ-022: PDF and Word hold the same documents as the Markdown', () => {
-  it.each(['en', 'ta'] as const)('%s: the PDF is printed from the same document as the HTML export', async (language) => {
-    const html = await call('GET', exportUrl(`format=html&language=${language}`));
-    const pdf = await call('GET', exportUrl(`format=pdf&language=${language}`));
-    expect(html.status).toBe(200);
-    expect(pdf.status).toBe(200);
-    expect(pdf.headers['content-type']).toBe('application/pdf');
-    expect(pdf.body.subarray(0, 5).toString('latin1')).toBe('%PDF-');
-    // The printer received exactly the HTML the export route serves.
-    expect(printedHtml[printedHtml.length - 1]).toBe(html.text);
-    for (const [x0, y0, x1, y1] of mediaBoxes(pdf.body)) {
-      expect(Math.abs(x1! - x0! - 595.28)).toBeLessThan(1);
-      expect(Math.abs(y1! - y0! - 841.89)).toBeLessThan(1);
+  it.each(['en', 'ta'] as const)(
+    '%s: the PDF is printed from the same document as the HTML export',
+    async (language) => {
+      const html = await call('GET', exportUrl(`format=html&language=${language}`));
+      const pdf = await call('GET', exportUrl(`format=pdf&language=${language}`));
+      expect(html.status).toBe(200);
+      expect(pdf.status).toBe(200);
+      expect(pdf.headers['content-type']).toBe('application/pdf');
+      expect(pdf.body.subarray(0, 5).toString('latin1')).toBe('%PDF-');
+      // The printer received exactly the HTML the export route serves.
+      expect(printedHtml[printedHtml.length - 1]).toBe(html.text);
+      for (const [x0, y0, x1, y1] of mediaBoxes(pdf.body)) {
+        expect(Math.abs(x1! - x0! - 595.28)).toBeLessThan(1);
+        expect(Math.abs(y1! - y0! - 841.89)).toBeLessThan(1);
+      }
+      expect(pageCount(pdf.body)).toBeGreaterThanOrEqual(1);
     }
-    expect(pageCount(pdf.body)).toBeGreaterThanOrEqual(1);
-  });
+  );
 
   it('Tamil text survives into the .docx character for character (AC-2)', async () => {
     const docx = await call('GET', exportUrl('format=docx&language=ta'));
@@ -528,76 +542,85 @@ describe('REQ-022: PDF and Word hold the same documents as the Markdown', () => 
 });
 
 describe('REQ-019: the Pitch Glimpse', () => {
-  it.each(['en', 'ta'] as const)('%s: one A4 page with the top 3 issues, their screenshots and the opt-out wording', async (language) => {
-    const html = await call('GET', pitchUrl(`format=html&language=${language}`));
-    const pdf = await call('GET', pitchUrl(`format=pdf&language=${language}`));
-    expect(html.status).toBe(200);
-    expect(pdf.status, pdf.text.slice(0, 200)).toBe(200);
-    expect(pdf.headers['content-type']).toBe('application/pdf');
-    expect(pdf.headers['content-disposition']).toContain('pitch-glimpse.pdf');
+  it.each(['en', 'ta'] as const)(
+    '%s: one A4 page with the top 3 issues, their screenshots and the opt-out wording',
+    async (language) => {
+      const html = await call('GET', pitchUrl(`format=html&language=${language}`));
+      const pdf = await call('GET', pitchUrl(`format=pdf&language=${language}`));
+      expect(html.status).toBe(200);
+      expect(pdf.status, pdf.text.slice(0, 200)).toBe(200);
+      expect(pdf.headers['content-type']).toBe('application/pdf');
+      expect(pdf.headers['content-disposition']).toContain('pitch-glimpse.pdf');
 
-    // Printed from exactly this HTML.
-    expect(printedHtml[printedHtml.length - 1]).toBe(html.text);
-    expect(pageCount(pdf.body)).toBe(1);
-    const boxes = mediaBoxes(pdf.body);
-    expect(boxes.length).toBe(1);
-    const [x0, y0, x1, y1] = boxes[0]!;
-    expect(Math.abs(x1! - x0! - 595.28)).toBeLessThan(1);
-    expect(Math.abs(y1! - y0! - 841.89)).toBeLessThan(1);
+      // Printed from exactly this HTML.
+      expect(printedHtml[printedHtml.length - 1]).toBe(html.text);
+      expect(pageCount(pdf.body)).toBe(1);
+      const boxes = mediaBoxes(pdf.body);
+      expect(boxes.length).toBe(1);
+      const [x0, y0, x1, y1] = boxes[0]!;
+      expect(Math.abs(x1! - x0! - 595.28)).toBeLessThan(1);
+      expect(Math.abs(y1! - y0! - 841.89)).toBeLessThan(1);
 
-    // The language chosen, the top 3 findings (ranking order, edited text), a screenshot each, the opt-out text.
-    expect(html.text).toContain(`<html lang="${language}"`);
-    const text = visible(html.text);
-    const top3 = auditDocResult().findings.slice(0, 3);
-    const edited: Record<string, string> = { 'AF-001': EDITED_TITLE_001 };
-    for (const f of top3) expect(text, f.id).toContain(edited[f.id] ?? f.title);
-    expect(text).not.toContain(auditDocResult().findings[3]!.title);
-    expect(html.text.match(/data:image\/png;base64,/g)?.length).toBe(3);
-    expect(text).toContain(language === 'en' ? OPT_OUT_EN : OPT_OUT_TA);
-    expect(text).not.toContain(REMOVED_PAGE);
-    // No send action: no form, no mailto: or tel: link, no script.
-    expect(html.text).not.toMatch(/<form\b|mailto:|tel:|<script\b/i);
-    keep(`pitch html ${language}`, html.text);
-  });
+      // The language chosen, the top 3 findings (ranking order, edited text), a screenshot each, the opt-out text.
+      expect(html.text).toContain(`<html lang="${language}"`);
+      const text = visible(html.text);
+      const top3 = auditDocResult().findings.slice(0, 3);
+      const edited: Record<string, string> = { 'AF-001': EDITED_TITLE_001 };
+      for (const f of top3) expect(text, f.id).toContain(edited[f.id] ?? f.title);
+      expect(text).not.toContain(auditDocResult().findings[3]!.title);
+      expect(html.text.match(/data:image\/png;base64,/g)?.length).toBe(3);
+      expect(text).toContain(language === 'en' ? OPT_OUT_EN : OPT_OUT_TA);
+      expect(text).not.toContain(REMOVED_PAGE);
+      // No send action: no form, no mailto: or tel: link, no script.
+      expect(html.text).not.toMatch(/<form\b|mailto:|tel:|<script\b/i);
+      keep(`pitch html ${language}`, html.text);
+    }
+  );
 });
 
 describe('REQ-025: the Owner Audit', () => {
-  it.each(['en', 'ta'] as const)('%s: in that language, with no pitch/skip mark, notes, outcome, effort or price', async (language) => {
-    const { labels } = labelsFor(language);
-    const downloads: Array<[string, string]> = [];
-    for (const format of ['md', 'html', 'docx'] as const) {
-      const res = await call('GET', ownerUrl(`format=${format}&language=${language}`));
-      expect(res.status, format).toBe(200);
-      downloads.push([format, format === 'docx' ? docxText(res.body) : res.text]);
-    }
-    const pdf = await call('GET', ownerUrl(`format=pdf&language=${language}`));
-    expect(pdf.status).toBe(200);
-    expect(pdf.body.subarray(0, 5).toString('latin1')).toBe('%PDF-');
-    downloads.push(['pdf (printed html)', printedHtml[printedHtml.length - 1]!]);
+  it.each(['en', 'ta'] as const)(
+    '%s: in that language, with no pitch/skip mark, notes, outcome, effort or price',
+    async (language) => {
+      const { labels } = labelsFor(language);
+      const downloads: Array<[string, string]> = [];
+      for (const format of ['md', 'html', 'docx'] as const) {
+        const res = await call('GET', ownerUrl(`format=${format}&language=${language}`));
+        expect(res.status, format).toBe(200);
+        downloads.push([format, format === 'docx' ? docxText(res.body) : res.text]);
+      }
+      const pdf = await call('GET', ownerUrl(`format=pdf&language=${language}`));
+      expect(pdf.status).toBe(200);
+      expect(pdf.body.subarray(0, 5).toString('latin1')).toBe('%PDF-');
+      downloads.push(['pdf (printed html)', printedHtml[printedHtml.length - 1]!]);
 
-    for (const [format, text] of downloads) {
-      expect(text, format).toContain(labels.documentTitles['owner-audit']);
-      expect(text, format).not.toContain(NOTES);
-      expect(text, format).not.toContain(OUTCOME_NOTE);
-      expect(text, format).not.toContain('Interested');
-      expect(text, format).not.toContain(PRICE);
-      expect(text, format).not.toContain(PAYMENT_TERMS);
-      expect(text, format).not.toContain(COMPANY_NAME);
-      expect(text, format).not.toContain(`${labels.columns.effort}:`);
-      expect(text, format).not.toContain(labels.documentTitles.proposal);
-      expect(text, format).not.toMatch(/\b(pitch|skip)\b/i);
-      // The edits still apply: it follows the edited view.
-      expect(text, format).not.toContain(REMOVED_PAGE);
-      keep(`owner ${format} ${language}`, text);
+      for (const [format, text] of downloads) {
+        expect(text, format).toContain(labels.documentTitles['owner-audit']);
+        expect(text, format).not.toContain(NOTES);
+        expect(text, format).not.toContain(OUTCOME_NOTE);
+        expect(text, format).not.toContain('Interested');
+        expect(text, format).not.toContain(PRICE);
+        expect(text, format).not.toContain(PAYMENT_TERMS);
+        expect(text, format).not.toContain(COMPANY_NAME);
+        expect(text, format).not.toContain(`${labels.columns.effort}:`);
+        expect(text, format).not.toContain(labels.documentTitles.proposal);
+        expect(text, format).not.toMatch(/\b(pitch|skip)\b/i);
+        // The edits still apply: it follows the edited view.
+        expect(text, format).not.toContain(REMOVED_PAGE);
+        keep(`owner ${format} ${language}`, text);
+      }
+      expect(downloads[0]![1]).toContain('EDITED-TITLE-001');
+      expect(downloads[0]![1]).not.toContain('Order before 6 pm for same-day delivery.');
     }
-    expect(downloads[0]![1]).toContain('EDITED-TITLE-001');
-    expect(downloads[0]![1]).not.toContain('Order before 6 pm for same-day delivery.');
-  });
+  );
 });
 
 describe('PDF concurrency (BE-510) does not get in the way of the flow', () => {
   it('two PDFs at once both succeed', async () => {
-    const [a, b] = await Promise.all([call('GET', pitchUrl('format=pdf&language=en')), call('GET', ownerUrl('format=pdf&language=en'))]);
+    const [a, b] = await Promise.all([
+      call('GET', pitchUrl('format=pdf&language=en')),
+      call('GET', ownerUrl('format=pdf&language=en')),
+    ]);
     expect(a.status).toBe(200);
     expect(b.status).toBe(200);
   });

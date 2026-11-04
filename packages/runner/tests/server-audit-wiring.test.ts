@@ -127,7 +127,11 @@ describe('RunnerServer.auditWiring: the typed surface the audit routes use (BE-6
 
   it("hands over the runner's key resolver and the saved AI setup without the bookkeeping fields", async () => {
     const keys = new KeyResolver(scratch);
-    const server = new RunnerServer({ dataDir: path.join(scratch, 'data'), outputDir: path.join(scratch, 'report'), keyResolver: keys });
+    const server = new RunnerServer({
+      dataDir: path.join(scratch, 'data'),
+      outputDir: path.join(scratch, 'report'),
+      keyResolver: keys,
+    });
     const wiring = server.auditWiring;
     expect(wiring.keys).toBe(keys);
 
@@ -135,7 +139,13 @@ describe('RunnerServer.auditWiring: the typed surface the audit routes use (BE-6
     await fs.mkdir(wiring.dataDir, { recursive: true });
     await fs.writeFile(
       path.join(wiring.dataDir, '.qa-ai-models.json'),
-      JSON.stringify({ provider: 'openrouter', text: 'm/text', vision: null, chosenBy: 'person', chosenAt: '2026-11-03T09:00:00.000Z' }),
+      JSON.stringify({
+        provider: 'openrouter',
+        text: 'm/text',
+        vision: null,
+        chosenBy: 'person',
+        chosenAt: '2026-11-03T09:00:00.000Z',
+      }),
       'utf8'
     );
     const setup = await wiring.readAiModels();
@@ -203,7 +213,8 @@ describe('Helper sign-in configured: a runner built as cli.ts builds it (REQ-033
   });
 
   beforeEach(async () => {
-    for (const id of [auditA, auditB]) for (const g of await wiring.store.listHelpers(id)) await wiring.store.removeHelper(id, g.email);
+    for (const id of [auditA, auditB])
+      for (const g of await wiring.store.listHelpers(id)) await wiring.store.removeHelper(id, g.email);
   });
 
   it('the Helper status row says Helper sign-in is on, with the public Firebase settings', async () => {
@@ -239,7 +250,7 @@ describe('Helper sign-in configured: a runner built as cli.ts builds it (REQ-033
     expect(session.json.grants.map((g: { auditId: string }) => g.auditId)).toEqual([auditA]);
   });
 
-  it("refuses a view-only Helper on edit and owner rows, and ends access when the grant is removed", async () => {
+  it('refuses a view-only Helper on edit and owner rows, and ends access when the grant is removed', async () => {
     await wiring.store.grantHelper(auditA, HELPER, ['view']);
 
     const edit = await call(ON_PORT, 'PATCH', `/api/audits/${auditA}/edits`, { cookie });

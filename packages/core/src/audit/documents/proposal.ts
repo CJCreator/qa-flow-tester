@@ -26,7 +26,10 @@ export const PROPOSAL_PLACEHOLDERS = [
   { name: 'scope', description: 'Each page with redesign or repair, as edited.' },
   { name: 'not_included', description: 'The "not included" lines of this audit, or the default list.' },
   { name: 'price', description: 'The price in INR as written for this audit; a "to fill in" marker when empty.' },
-  { name: 'payment_terms', description: 'The payment terms as written for this audit; a "to fill in" marker when empty.' },
+  {
+    name: 'payment_terms',
+    description: 'The payment terms as written for this audit; a "to fill in" marker when empty.',
+  },
   { name: 'timeline', description: 'The Improvement Roadmap phases and their items.' },
   { name: 'company.name', description: 'Your company name.' },
   { name: 'company.address', description: 'Your company address.' },
@@ -250,7 +253,7 @@ export function fillProposal(
   inputs: ProposalInputs,
   company: CompanyDetails,
   labels: DocumentLabels,
-  options: FillProposalOptions = {},
+  options: FillProposalOptions = {}
 ): FilledProposal {
   const language = options.language ?? languageOf(labels);
   const fillIn = (PROPOSAL_WORDING[language] ?? PROPOSAL_WORDING.en!).fillIn;
@@ -294,7 +297,11 @@ export function fillProposal(
   for (const block of raw) {
     switch (block.type) {
       case 'heading':
-        blocks.push({ type: 'heading', level: Math.max(1, Math.min(4, block.depth - 1)) as HeadingLevel, text: fill(block.text) });
+        blocks.push({
+          type: 'heading',
+          level: Math.max(1, Math.min(4, block.depth - 1)) as HeadingLevel,
+          text: fill(block.text),
+        });
         break;
       case 'paragraph':
         blocks.push({ type: 'paragraph', text: fill(block.lines.join('\n')) });

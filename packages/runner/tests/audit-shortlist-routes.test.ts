@@ -46,7 +46,10 @@ async function call(key: Key, pathname: string, opts: { search?: string; body?: 
   const row = rows.find((r) => r.method === method && r.path === pattern)!;
   const params = (matchAuditPath(pattern, pathname) ?? {}) as Record<string, string>;
   const payload = opts.raw ?? (opts.body === undefined ? '' : JSON.stringify(opts.body));
-  const req = Object.assign(Readable.from(payload ? [payload] : []), { method, headers: {} }) as unknown as http.IncomingMessage;
+  const req = Object.assign(Readable.from(payload ? [payload] : []), {
+    method,
+    headers: {},
+  }) as unknown as http.IncomingMessage;
   const res = new MockResponse();
   await row.handle({
     server: undefined as never,
@@ -139,7 +142,7 @@ describe('Shortlist rows', () => {
       expect(res.statusCode, raw).toBe(400);
       expect(res.json().code).toBe('ERR_INVALID_REQUEST');
     }
-    expect((await store.getShortlist(auditId))).toBeNull();
+    expect(await store.getShortlist(auditId)).toBeNull();
   });
 
   it('put accepts every outcome on the fixed list', async () => {
@@ -159,7 +162,10 @@ describe('Shortlist rows', () => {
     await store.putShortlist(b, { mark: 'pitch', outcome: 'Lost' });
     await store.putShortlist(c, { mark: 'skip', outcome: 'Won' });
     const ids = async (search: string) =>
-      (await call('listShortlist', '/api/shortlist', { search })).json().entries.map((e: any) => e.auditId).sort();
+      (await call('listShortlist', '/api/shortlist', { search }))
+        .json()
+        .entries.map((e: any) => e.auditId)
+        .sort();
     expect(await ids('')).toEqual([a, b, c].sort());
     expect(await ids('?mark=pitch')).toEqual([a, b].sort());
     expect(await ids('?outcome=Won')).toEqual([a, c].sort());

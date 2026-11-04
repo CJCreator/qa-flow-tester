@@ -26,7 +26,8 @@ import type { Route } from '../src/routes/route.js';
 
 const TEST_KEY = 'test-key-not-real';
 const NOW = new Date('2026-11-03T10:00:00.000Z');
-const AI_PAGE = '<nav><a href="/about">About</a><a href="/services">Services</a></nav><h1 id="top">Fresh groceries</h1>';
+const AI_PAGE =
+  '<nav><a href="/about">About</a><a href="/services">Services</a></nav><h1 id="top">Fresh groceries</h1>';
 
 class MockResponse {
   statusCode = 0;
@@ -69,7 +70,9 @@ function deps(extra: Partial<AuditPreviewRouteDeps> = {}): AuditPreviewRouteDeps
     resolveAi: () =>
       resolveAuditAi({
         setup: { provider: 'openrouter', text: 'default/text', vision: 'default/vision' },
-        keys: { resolveKey: async () => (hasKey ? { provider: 'openrouter', apiKey: TEST_KEY, source: 'keychain' } : null) },
+        keys: {
+          resolveKey: async () => (hasKey ? { provider: 'openrouter', apiKey: TEST_KEY, source: 'keychain' } : null),
+        },
         models,
         createProvider: () => provider,
       }),
@@ -260,8 +263,13 @@ describe('serving the preview', () => {
   });
 
   it('the policy keeps the ADR 0036 directives; styles come only through hashes', () => {
-    const adr = readFileSync(path.resolve(__dirname, '../../../docs/adr/0036-hosted-audit-storage-and-shared-links.md'), 'utf8');
-    expect(adr).toContain("default-src 'none'; img-src data:; style-src 'sha256-…'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
+    const adr = readFileSync(
+      path.resolve(__dirname, '../../../docs/adr/0036-hosted-audit-storage-and-shared-links.md'),
+      'utf8'
+    );
+    expect(adr).toContain(
+      "default-src 'none'; img-src data:; style-src 'sha256-…'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    );
     expect(previewHeaders('<p>x</p>')['Content-Security-Policy']).toBe(
       "default-src 'none'; img-src data:; style-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
     );

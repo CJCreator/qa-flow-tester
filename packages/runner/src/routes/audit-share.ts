@@ -139,7 +139,12 @@ export function checkShareBody(body: unknown): { ok: true; value: ShareRequest }
     value.language = b.language;
   }
   if (b.version !== undefined) {
-    if (typeof b.version !== 'number' || !Number.isInteger(b.version) || b.version < 1 || b.version > MAX_AUDIT_VERSION) {
+    if (
+      typeof b.version !== 'number' ||
+      !Number.isInteger(b.version) ||
+      b.version < 1 ||
+      b.version > MAX_AUDIT_VERSION
+    ) {
       return { ok: false, error: 'version: a whole number from 1.' };
     }
     value.version = b.version;
@@ -252,7 +257,10 @@ export const SHARED_GONE_PAGE = messagePage(
   'This shared page is no longer available. Ask the person who sent it for a new link.',
   'ERR_LINK_GONE'
 );
-const SHARED_FAILED_PAGE = messagePage('Not available right now', 'This shared page could not be opened. Try again later.');
+const SHARED_FAILED_PAGE = messagePage(
+  'Not available right now',
+  'This shared page could not be opened. Try again later.'
+);
 
 /** Puts the robots meta tag at the start of the snapshot's head (or the page, when it has none). */
 export function withRobotsMeta(html: string): string {
@@ -384,9 +392,24 @@ export function auditShareRoutes(deps: AuditShareDeps): Route[] {
   const sharedNotFound = (c: RouteContext): void => sendSharedPage(c.res, 404, SHARED_NOT_FOUND_PAGE);
 
   return [
-    { method: AUDIT_API.listShares.method, path: AUDIT_API.listShares.path, access: AUDIT_API.listShares.access, handle: listShares },
-    { method: AUDIT_API.createShare.method, path: AUDIT_API.createShare.path, access: AUDIT_API.createShare.access, handle: createShare },
-    { method: AUDIT_API.revokeShare.method, path: AUDIT_API.revokeShare.path, access: AUDIT_API.revokeShare.access, handle: revokeShare },
+    {
+      method: AUDIT_API.listShares.method,
+      path: AUDIT_API.listShares.path,
+      access: AUDIT_API.listShares.access,
+      handle: listShares,
+    },
+    {
+      method: AUDIT_API.createShare.method,
+      path: AUDIT_API.createShare.path,
+      access: AUDIT_API.createShare.access,
+      handle: createShare,
+    },
+    {
+      method: AUDIT_API.revokeShare.method,
+      path: AUDIT_API.revokeShare.path,
+      access: AUDIT_API.revokeShare.access,
+      handle: revokeShare,
+    },
     {
       method: AUDIT_API.sharedPage.method,
       path: AUDIT_API.sharedPage.path,

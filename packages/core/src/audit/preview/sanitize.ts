@@ -322,7 +322,24 @@ const ALLOWED = new Set([
 export const VOID_ELEMENTS: ReadonlySet<string> = new Set(['br', 'hr', 'img']);
 
 /** HTML's void elements: they never have content, so dropping one never drops what follows. */
-const HTML_VOID = new Set(['area', 'base', 'br', 'col', 'embed', 'frame', 'hr', 'img', 'input', 'keygen', 'link', 'meta', 'param', 'source', 'track', 'wbr']);
+const HTML_VOID = new Set([
+  'area',
+  'base',
+  'br',
+  'col',
+  'embed',
+  'frame',
+  'hr',
+  'img',
+  'input',
+  'keygen',
+  'link',
+  'meta',
+  'param',
+  'source',
+  'track',
+  'wbr',
+]);
 
 /** Dropped with everything inside them. Any other unknown element is unwrapped: its text stays. */
 const DROP_WITH_CONTENT = new Set([
@@ -484,7 +501,10 @@ function cleanDeclaration(decl: string): string | null {
   const colon = decl.indexOf(':');
   if (colon < 0) return null;
   const prop = decl.slice(0, colon).trim().toLowerCase();
-  const value = decl.slice(colon + 1).replace(/\s+/g, ' ').trim();
+  const value = decl
+    .slice(colon + 1)
+    .replace(/\s+/g, ' ')
+    .trim();
   if (!/^-?[a-z][a-z-]{0,40}$/.test(prop) || BAD_CSS_PROPS.has(prop)) return null;
   if (value === '' || value.length > 500) return null;
   // eslint-disable-next-line no-control-regex
@@ -596,7 +616,8 @@ function cleanRules(css: string, nested: boolean, scope = false): string[] {
       }
       continue;
     }
-    if (!SELECTOR.test(prelude) || !balancedSelector(prelude) || prelude.toLowerCase().includes(RESERVED_PREFIX)) continue;
+    if (!SELECTOR.test(prelude) || !balancedSelector(prelude) || prelude.toLowerCase().includes(RESERVED_PREFIX))
+      continue;
     const selectors = splitSelectors(prelude).filter((sel) => !isFrameSelector(sel));
     if (selectors.length === 0) continue;
     const decls = cleanDeclarations(body);
@@ -786,7 +807,9 @@ function serializeNodes(nodes: readonly PreviewNode[]): string {
     if (node.kind === 'text') out += escapeText(node.text);
     else if (node.kind === 'close') out += `</${node.name}>`;
     else {
-      const attrs = node.attrs.map(([name, value]) => (value === '' && name !== 'alt' ? ` ${name}` : ` ${name}="${escapeAttr(value)}"`));
+      const attrs = node.attrs.map(([name, value]) =>
+        value === '' && name !== 'alt' ? ` ${name}` : ` ${name}="${escapeAttr(value)}"`
+      );
       out += `<${node.name}${attrs.join('')}>`;
     }
   }

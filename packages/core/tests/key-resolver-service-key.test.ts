@@ -117,6 +117,8 @@ describe('KeyResolver.removeServiceKey', () => {
   });
 
   it('refuses an unknown service name', async () => {
-    await expect(resolver(new MemoryStore()).removeServiceKey('nope' as never)).rejects.toThrow(/Unknown service key name/);
+    await expect(resolver(new MemoryStore()).removeServiceKey('nope' as never)).rejects.toThrow(
+      /Unknown service key name/
+    );
   });
 });

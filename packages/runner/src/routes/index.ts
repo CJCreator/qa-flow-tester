@@ -121,7 +121,10 @@ export function buildAuditRoutes(server: RunnerServer): Route[] {
 
   const findVersion: AuditAiRouteDeps['findVersion'] = async (auditId, version) => {
     const audit = await store.getAudit(auditId);
-    const v = version === undefined ? audit?.versions[audit.versions.length - 1] : audit?.versions.find((x) => x.version === version);
+    const v =
+      version === undefined
+        ? audit?.versions[audit.versions.length - 1]
+        : audit?.versions.find((x) => x.version === version);
     return v ? { version: v.version, status: v.status, language: v.language } : null;
   };
 
@@ -212,18 +215,17 @@ function rowsFor(server: RunnerServer): Map<string, Route> {
  */
 function contractRows(): Route[] {
   const entries = Object.entries({ ...AUDIT_API, ...AUDIT_AI_API }) as Array<[string, AuditEndpoint]>;
-  return entries
-    .map(([, { method, path, access }]) => ({
-      method,
-      path,
-      access,
-      beta: access === 'public' ? ('allow' as const) : ('closed' as const),
-      handle: (context: RouteContext) => {
-        const real = rowsFor(context.server).get(rowKey(method, path));
-        if (!real) return sendNotFound(context.res);
-        return real.handle(context);
-      },
-    }));
+  return entries.map(([, { method, path, access }]) => ({
+    method,
+    path,
+    access,
+    beta: access === 'public' ? ('allow' as const) : ('closed' as const),
+    handle: (context: RouteContext) => {
+      const real = rowsFor(context.server).get(rowKey(method, path));
+      if (!real) return sendNotFound(context.res);
+      return real.handle(context);
+    },
+  }));
 }
 
 export const auditRoutes: readonly Route[] = contractRows();

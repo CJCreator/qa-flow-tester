@@ -46,7 +46,17 @@ export interface HelpersViewProps {
 }
 
 /** The Helper list and the "give access" form, without state. */
-export function HelpersView({ helpers, email, permissions, busy, message, onEmail, onPermissions, onGive, onRemove }: HelpersViewProps) {
+export function HelpersView({
+  helpers,
+  email,
+  permissions,
+  busy,
+  message,
+  onEmail,
+  onPermissions,
+  onGive,
+  onRemove,
+}: HelpersViewProps) {
   const chosen = withView(permissions);
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -224,7 +234,10 @@ export function HelpersScreen({ auditId, fetchImpl }: HelpersScreenProps) {
       );
       setEmail('');
       setPermissions(['view']);
-      setMessage({ tone: 'pass', text: `${grant.email} can now ${permissionText(grant.permissions).toLowerCase()} this Website Audit.` });
+      setMessage({
+        tone: 'pass',
+        text: `${grant.email} can now ${permissionText(grant.permissions).toLowerCase()} this Website Audit.`,
+      });
     } else {
       setMessage({ tone: 'fail', text: outcome.message });
     }

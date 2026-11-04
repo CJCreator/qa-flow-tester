@@ -11,12 +11,7 @@ import path from 'path';
 import { promises as fs } from 'fs';
 import { generateKeyPairSync, sign } from 'crypto';
 import type { AuditRequest, ShareLink } from '@qa/types';
-import {
-  AuditStore,
-  LocalAuditStoreBackend,
-  pageContentName,
-  selectAuditStoreBackend,
-} from '@qa/core';
+import { AuditStore, LocalAuditStoreBackend, pageContentName, selectAuditStoreBackend } from '@qa/core';
 import { RunnerServer } from '../src/server.js';
 import { createHelperAccess } from '../src/helpers/helper-access.js';
 import type { KeysFetch } from '../src/helpers/firebase-token.js';
@@ -44,7 +39,13 @@ interface Answer {
   json: any;
 }
 
-function call(port: number, method: string, pathname: string, headers: Record<string, string> = {}, body?: unknown): Promise<Answer> {
+function call(
+  port: number,
+  method: string,
+  pathname: string,
+  headers: Record<string, string> = {},
+  body?: unknown
+): Promise<Answer> {
   return new Promise((resolve, reject) => {
     const payload = body === undefined ? undefined : JSON.stringify(body);
     const req = http.request(
@@ -55,7 +56,9 @@ function call(port: number, method: string, pathname: string, headers: Record<st
         method,
         headers: {
           host: `localhost:${port}`,
-          ...(payload === undefined ? {} : { 'content-type': 'application/json', 'content-length': String(Buffer.byteLength(payload)) }),
+          ...(payload === undefined
+            ? {}
+            : { 'content-type': 'application/json', 'content-length': String(Buffer.byteLength(payload)) }),
           ...headers,
         },
       },
@@ -93,7 +96,11 @@ async function filesUnder(dir: string): Promise<string[]> {
   return out;
 }
 
-function newRunner(port: number, dir: string, extra: { beta?: boolean; helperAccess?: ReturnType<typeof createHelperAccess> } = {}): RunnerServer {
+function newRunner(
+  port: number,
+  dir: string,
+  extra: { beta?: boolean; helperAccess?: ReturnType<typeof createHelperAccess> } = {}
+): RunnerServer {
   return new RunnerServer({
     port,
     host: 'localhost',
@@ -272,7 +279,11 @@ describe('Q-30: DELETE /api/audits/:id removes everything', () => {
     await store.grantHelper(id, HELPER, ['view']);
     await call(PORT_LOCAL, 'PUT', `/api/audits/${id}/shortlist`, owner, { mark: 'pitch', notes: 'private note' });
 
-    const created = await call(PORT_LOCAL, 'POST', `/api/audits/${id}/share`, owner, { kind: 'pitch', language: 'en', version: 1 });
+    const created = await call(PORT_LOCAL, 'POST', `/api/audits/${id}/share`, owner, {
+      kind: 'pitch',
+      language: 'en',
+      version: 1,
+    });
     expect(created.status).toBe(201);
     const link = created.json.link as ShareLink;
     expect((await call(PORT_LOCAL, 'GET', `/s/${link.id}`)).status).toBe(200);
@@ -306,7 +317,11 @@ describe('D-004: with an access key on a beta copy, only Shared Links are public
     // the only audit rows a beta copy serves, so the link is made first); every later request carries no key.
     const owned = await start(newRunner(PORT_BETA, scratch));
     const id = await seedDone(owned.auditWiring.store);
-    const created = await call(PORT_BETA, 'POST', `/api/audits/${id}/share`, owner, { kind: 'pitch', language: 'en', version: 1 });
+    const created = await call(PORT_BETA, 'POST', `/api/audits/${id}/share`, owner, {
+      kind: 'pitch',
+      language: 'en',
+      version: 1,
+    });
     expect(created.status).toBe(201);
     const linkId = (created.json.link as ShareLink).id;
     await owned.stop();
@@ -385,7 +400,10 @@ describe('REQ-033 AC-1/AC-2: a Helper over HTTP with a test-signed token', () =>
     const auditB = await seedDone(store, 'https://b.example/');
 
     // The owner grants A over HTTP.
-    const grant = await call(PORT_HELPER, 'PUT', `/api/audits/${auditA}/helpers`, owner, { email: HELPER, permissions: ['view'] });
+    const grant = await call(PORT_HELPER, 'PUT', `/api/audits/${auditA}/helpers`, owner, {
+      email: HELPER,
+      permissions: ['view'],
+    });
     expect(grant.status).toBe(200);
 
     // Sign in with a token signed by the test key.
@@ -438,7 +456,12 @@ describe('REQ-033 AC-1/AC-2: a Helper over HTTP with a test-signed token', () =>
     expect(anonymous.status).toBe(401);
 
     // The owner removes the grant: the next request for A is refused.
-    const removed = await call(PORT_HELPER, 'DELETE', `/api/audits/${auditA}/helpers?email=${encodeURIComponent(HELPER)}`, owner);
+    const removed = await call(
+      PORT_HELPER,
+      'DELETE',
+      `/api/audits/${auditA}/helpers?email=${encodeURIComponent(HELPER)}`,
+      owner
+    );
     expect(removed.status).toBe(200);
     const after = await call(PORT_HELPER, 'GET', `/api/audits/${auditA}`, cookie);
     expect(after.status).toBe(404);

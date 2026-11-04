@@ -107,7 +107,12 @@ export function buildSiteJson(view: EditedAuditView): SiteJson {
   const pages = result.pages.map((page): SiteJsonPage => {
     const content = contents.get(page.urlPath);
     const sections = content
-      ? content.sections.map((s) => ({ id: s.id, kind: s.kind, heading: s.heading ?? null, text: sectionText(content, s) }))
+      ? content.sections.map((s) => ({
+          id: s.id,
+          kind: s.kind,
+          heading: s.heading ?? null,
+          text: sectionText(content, s),
+        }))
       : page.sections.map((s) => ({ id: s.id, kind: s.kind, heading: s.heading ?? null, text: null }));
     const rec = page.recommendation;
     return {
@@ -125,25 +130,23 @@ export function buildSiteJson(view: EditedAuditView): SiteJson {
     };
   });
 
-  const findings = result.findings.map(
-    (f): SiteJsonFinding => ({
-      id: f.id,
-      rule: f.rule,
-      group: f.group,
-      area: f.area,
-      title: f.title,
-      detail: f.detail,
-      suggestion: f.suggestion,
-      impact: f.impact,
-      effort: f.effort,
-      urlPath: f.urlPath,
-      pages: f.pages && f.pages.length > 0 ? [...f.pages] : [f.urlPath],
-      sectionId: f.sectionId,
-      target: f.target ?? null,
-      source: f.source,
-      advisory: f.advisory === true || f.source === 'ai',
-    }),
-  );
+  const findings = result.findings.map((f): SiteJsonFinding => ({
+    id: f.id,
+    rule: f.rule,
+    group: f.group,
+    area: f.area,
+    title: f.title,
+    detail: f.detail,
+    suggestion: f.suggestion,
+    impact: f.impact,
+    effort: f.effort,
+    urlPath: f.urlPath,
+    pages: f.pages && f.pages.length > 0 ? [...f.pages] : [f.urlPath],
+    sectionId: f.sectionId,
+    target: f.target ?? null,
+    source: f.source,
+    advisory: f.advisory === true || f.source === 'ai',
+  }));
 
   return {
     schemaVersion: SITE_JSON_SCHEMA_VERSION,

@@ -73,7 +73,7 @@ function findingBlocks(
   language: DocumentLanguage,
   labels: DocumentLabels,
   words: FindingsWording,
-  showEffort: boolean,
+  showEffort: boolean
 ): DocBlock[] {
   const section = finding.sectionId
     ? sectionsByPage.get(finding.urlPath)?.find((s) => s.id === finding.sectionId)
@@ -141,7 +141,13 @@ export function buildFindingsDocument(view: EditedAuditView, options: FindingsDo
   blocks.push({
     type: 'table',
     columns: [labels.columns.area, labels.columns.grade, words.aiNote],
-    rows: AUDIT_AREAS.map((name) => areaRow(name, result.siteAreas.find((a) => a.area === name), labels)),
+    rows: AUDIT_AREAS.map((name) =>
+      areaRow(
+        name,
+        result.siteAreas.find((a) => a.area === name),
+        labels
+      )
+    ),
   });
   if (result.siteAreas.some((a) => a.status === 'done')) blocks.push({ type: 'note', text: labels.status.aiNote });
 

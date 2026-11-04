@@ -259,17 +259,11 @@ function readArea(value: unknown, area: AuditArea, knownIds: Set<string>): NoteR
   const note = rawNote.trim().slice(0, MAX_NOTE_CHARS);
   if (findClaimWords(note).length > 0) return { problem: 'claim' };
   const rawEvidence = Array.isArray(entry?.evidence) ? entry.evidence : [];
-  const evidence = [
-    ...new Set(rawEvidence.filter((id): id is string => typeof id === 'string' && knownIds.has(id))),
-  ];
+  const evidence = [...new Set(rawEvidence.filter((id): id is string => typeof id === 'string' && knownIds.has(id)))];
   return { note, evidence };
 }
 
-function notDone(
-  grades: AreaGrades,
-  areas: readonly AuditArea[],
-  reason: AssessmentNotDoneReason
-): AreaAssessment[] {
+function notDone(grades: AreaGrades, areas: readonly AuditArea[], reason: AssessmentNotDoneReason): AreaAssessment[] {
   return areas.map((area) => ({ area, grade: grades[area] ?? null, status: 'not-done', reason }));
 }
 

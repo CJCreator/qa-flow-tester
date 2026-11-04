@@ -103,7 +103,10 @@ function mainText(page: PageContent): string | null {
 }
 
 /** Groups pages by a key, in page order; only groups with two pages or more. */
-function duplicates(pages: readonly PageContent[], key: (p: PageContent) => string | null): Array<[string, PageContent[]]> {
+function duplicates(
+  pages: readonly PageContent[],
+  key: (p: PageContent) => string | null
+): Array<[string, PageContent[]]> {
   const groups = new Map<string, PageContent[]>();
   for (const page of pages) {
     const k = key(page);

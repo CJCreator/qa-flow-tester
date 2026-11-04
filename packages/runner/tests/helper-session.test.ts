@@ -58,7 +58,9 @@ describe('Helper session cookie (REQ-033)', () => {
   it('a tampered, foreign-key, malformed or expired cookie is no Helper', () => {
     const value = signHelperSession(key, who('a@example.com'), NOW);
     const [payload, mac] = value.split('.') as [string, string];
-    const forged = Buffer.from(JSON.stringify({ email: 'b@example.com', sub: SUB, exp: 9_999_999_999 })).toString('base64url');
+    const forged = Buffer.from(JSON.stringify({ email: 'b@example.com', sub: SUB, exp: 9_999_999_999 })).toString(
+      'base64url'
+    );
     expect(readHelperSessionValue(key, `${forged}.${mac}`, NOW)).toBeNull();
     const flipped = `${mac[0] === 'A' ? 'B' : 'A'}${mac.slice(1)}`;
     expect(readHelperSessionValue(key, `${payload}.${flipped}`, NOW)).toBeNull();
@@ -89,7 +91,11 @@ describe('Helper session cookie (REQ-033)', () => {
   });
 
   it('F-045: a cookie signed with the old HKDF(access key) key is refused', () => {
-    const forged = signedWith(oldAccessDerivedKey(ACCESS), { email: 'victim@example.com', sub: SUB, exp: NOW_SECONDS + 3600 });
+    const forged = signedWith(oldAccessDerivedKey(ACCESS), {
+      email: 'victim@example.com',
+      sub: SUB,
+      exp: NOW_SECONDS + 3600,
+    });
     expect(readHelperSessionValue(key, forged, NOW)).toBeNull();
     // The old cookie shape (email and expiry only) is refused too, whatever key signed it.
     const oldShape = signedWith(oldAccessDerivedKey(ACCESS), { email: 'victim@example.com', exp: NOW_SECONDS + 3600 });
@@ -104,7 +110,9 @@ describe('Helper session cookie (REQ-033)', () => {
       if (sub !== undefined) claims.sub = sub;
       expect(readHelperSessionValue(key, signedWith(key, claims), NOW)).toBeNull();
     }
-    expect(readHelperSessionValue(key, signedWith(key, { email: 'a@example.com', sub: 'x'.repeat(128), exp }), NOW)).not.toBeNull();
+    expect(
+      readHelperSessionValue(key, signedWith(key, { email: 'a@example.com', sub: 'x'.repeat(128), exp }), NOW)
+    ).not.toBeNull();
 
     // The MAC covers `sub`: another account id with the original MAC is refused.
     const value = signHelperSession(key, who('a@example.com'), NOW);

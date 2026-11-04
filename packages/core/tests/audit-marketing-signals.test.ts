@@ -2,7 +2,12 @@ import { describe, it, expect } from 'vitest';
 import { MARKETING_SIGNALS } from '@qa/types';
 import type { AuditFinding, ContentForm, InternalLinking, MarketingSignal, MarketingSignalKey } from '@qa/types';
 import { buildPageContent } from '../src/audit/analysis/page-content.js';
-import { auditMarketing, isLeadForm, marketingSignals, type MarketingPage } from '../src/audit/analysis/marketing-signals.js';
+import {
+  auditMarketing,
+  isLeadForm,
+  marketingSignals,
+  type MarketingPage,
+} from '../src/audit/analysis/marketing-signals.js';
 import { firstTelPhone, napFromAddressText, napFromJsonLd, napFromPage } from '../src/audit/analysis/nap.js';
 import type { RawForm, RawPage } from '../src/audit/analysis/raw-page.js';
 
@@ -109,14 +114,19 @@ describe('marketingSignals: shape (REQ-015 AC-1)', () => {
   });
 
   it('is deterministic and leaves its input unchanged', () => {
-    const pages = [page('/', { scripts: ['https://www.googletagmanager.com/gtm.js?id=GTM-1'], forms: [form([['email', 'Email']])] })];
+    const pages = [
+      page('/', { scripts: ['https://www.googletagmanager.com/gtm.js?id=GTM-1'], forms: [form([['email', 'Email']])] }),
+    ];
     const before = JSON.stringify(pages);
     expect(run(pages)).toEqual(run(pages));
     expect(JSON.stringify(pages)).toBe(before);
   });
 
   it('counts a page read twice once', () => {
-    const signals = run([page('/call', { contactLinks: [{ kind: 'tel', href: 'tel:+914412345678', text: 'Call', chunk: -1 }] }), page('/call')]);
+    const signals = run([
+      page('/call', { contactLinks: [{ kind: 'tel', href: 'tel:+914412345678', text: 'Call', chunk: -1 }] }),
+      page('/call'),
+    ]);
     expect(signal(signals, 'click-to-call').pages).toEqual(['/call']);
   });
 });
@@ -134,13 +144,19 @@ describe('click-to-call (REQ-015 AC-2)', () => {
   });
 
   it('counts a tel: anchor the reader did not list as a contact link', () => {
-    const s = signal(run([page('/', { anchors: [{ href: 'tel:044123456', text: 'Call', region: 'internal', chunk: -1 }] })]), 'click-to-call');
+    const s = signal(
+      run([page('/', { anchors: [{ href: 'tel:044123456', text: 'Call', region: 'internal', chunk: -1 }] })]),
+      'click-to-call'
+    );
     expect(s.status).toBe('found');
     expect(s.pages).toEqual(['/']);
   });
 
   it("is 'not-found' without a tel: link", () => {
-    const s = signal(run([page('/', { contactLinks: [{ kind: 'mailto', href: 'mailto:a@b.example', text: 'Mail', chunk: -1 }] })]), 'click-to-call');
+    const s = signal(
+      run([page('/', { contactLinks: [{ kind: 'mailto', href: 'mailto:a@b.example', text: 'Mail', chunk: -1 }] })]),
+      'click-to-call'
+    );
     expect(s.status).toBe('not-found');
     expect(s.detail).toBe('Not found: no tel: link on the 1 page read.');
   });
@@ -150,7 +166,16 @@ describe('lead forms (REQ-015 AC-3)', () => {
   it("is 'found' with the page of a form asking for a name, email or phone", () => {
     const signals = run([
       page('/'),
-      page('/contact', { forms: [form([['text', 'Your name', 'name'], ['email', 'Email'], ['textarea', 'Message'], ['submit', 'Send']])] }),
+      page('/contact', {
+        forms: [
+          form([
+            ['text', 'Your name', 'name'],
+            ['email', 'Email'],
+            ['textarea', 'Message'],
+            ['submit', 'Send'],
+          ]),
+        ],
+      }),
     ]);
     const s = signal(signals, 'lead-forms');
     expect(s.status).toBe('found');
@@ -159,7 +184,16 @@ describe('lead forms (REQ-015 AC-3)', () => {
   });
 
   it('a sign-in form with a password field is not a lead form', () => {
-    const signals = run([page('/login', { forms: [form([['email', 'Email'], ['password', 'Password']])] })]);
+    const signals = run([
+      page('/login', {
+        forms: [
+          form([
+            ['email', 'Email'],
+            ['password', 'Password'],
+          ]),
+        ],
+      }),
+    ]);
     expect(signal(signals, 'lead-forms').status).toBe('not-found');
   });
 
@@ -176,12 +210,30 @@ describe('lead forms (REQ-015 AC-3)', () => {
     expect(isLeadForm({ fields: [{ type: 'tel', label: 'Mobile' }] })).toBe(true);
     expect(isLeadForm({ fields: [{ type: 'text', label: 'Full name' }] })).toBe(true);
     expect(isLeadForm({ fields: [{ type: 'text', label: 'Phone number' }] })).toBe(true);
-    expect(isLeadForm({ fields: [{ type: 'number', label: 'Quantity' }, { type: 'hidden', label: '', name: 'email' }] })).toBe(false);
-    expect(isLeadForm({ fields: [{ type: 'text', label: 'Username', name: 'username' }, { type: 'password', label: 'Password' }] })).toBe(false);
+    expect(
+      isLeadForm({
+        fields: [
+          { type: 'number', label: 'Quantity' },
+          { type: 'hidden', label: '', name: 'email' },
+        ],
+      })
+    ).toBe(false);
+    expect(
+      isLeadForm({
+        fields: [
+          { type: 'text', label: 'Username', name: 'username' },
+          { type: 'password', label: 'Password' },
+        ],
+      })
+    ).toBe(false);
   });
 
   it('never submits anything: it reads the form facts and leaves them unchanged', () => {
-    const contact: ContentForm = { method: 'POST', action: 'https://bakery.example/send', fields: [{ type: 'email', label: 'Email' }] };
+    const contact: ContentForm = {
+      method: 'POST',
+      action: 'https://bakery.example/send',
+      fields: [{ type: 'email', label: 'Email' }],
+    };
     const frozen = Object.freeze({ ...contact, fields: Object.freeze([...contact.fields]) }) as ContentForm;
     expect(isLeadForm(frozen)).toBe(true);
     expect(frozen).toEqual(contact);
@@ -204,12 +256,20 @@ describe('local signals and NAP (REQ-015 AC-4)', () => {
   });
 
   it('lists the NAP from LocalBusiness JSON-LD with its page and names the schema', () => {
-    const signals = run([page('/'), page('/about', { jsonLd: [{ types: ['Bakery', 'PostalAddress'], raw: localBusiness }] })]);
+    const signals = run([
+      page('/'),
+      page('/about', { jsonLd: [{ types: ['Bakery', 'PostalAddress'], raw: localBusiness }] }),
+    ]);
     const s = signal(signals, 'local-signals');
     expect(s.status).toBe('found');
     expect(s.pages).toEqual(['/about']);
     expect(s.nap).toEqual([
-      { urlPath: '/about', name: 'Sunrise Bakery', address: '12 Market Street, Chennai, 600001, IN', phone: '+91 44 1234 5678' },
+      {
+        urlPath: '/about',
+        name: 'Sunrise Bakery',
+        address: '12 Market Street, Chennai, 600001, IN',
+        phone: '+91 44 1234 5678',
+      },
     ]);
     expect(s.detail).toContain('LocalBusiness schema');
     expect(s.detail).toContain('NAP');
@@ -226,13 +286,21 @@ describe('local signals and NAP (REQ-015 AC-4)', () => {
     expect(s.status).toBe('found');
     expect(s.pages).toEqual(['/contact']);
     expect(s.nap).toEqual([
-      { urlPath: '/contact', name: 'Sunrise Bakery', address: '12 Market Street, Chennai 600001', phone: '+91 44 1234 5678' },
+      {
+        urlPath: '/contact',
+        name: 'Sunrise Bakery',
+        address: '12 Market Street, Chennai 600001',
+        phone: '+91 44 1234 5678',
+      },
     ]);
     expect(s.detail).toContain('map embed on 1 page: /contact');
   });
 
   it("is 'not-found' without NAP, map or LocalBusiness schema", () => {
-    const s = signal(run([page('/', { jsonLd: [{ types: ['Organization'], raw: '{"@type":"Organization"}' }] })]), 'local-signals');
+    const s = signal(
+      run([page('/', { jsonLd: [{ types: ['Organization'], raw: '{"@type":"Organization"}' }] })]),
+      'local-signals'
+    );
     expect(s.status).toBe('not-found');
     expect(s.nap).toBeUndefined();
   });
@@ -244,7 +312,9 @@ describe('nap.ts', () => {
       addresses: ['Sunrise Bakery\n12 Market Street, Chennai'],
       contactLinks: [{ kind: 'tel', href: 'tel:%2B91%2044%201234', text: 'Call', chunk: -1 }],
     });
-    expect(napFromPage(raw, '/c')).toEqual([{ urlPath: '/c', name: 'Sunrise Bakery', address: '12 Market Street, Chennai', phone: '+91 44 1234' }]);
+    expect(napFromPage(raw, '/c')).toEqual([
+      { urlPath: '/c', name: 'Sunrise Bakery', address: '12 Market Street, Chennai', phone: '+91 44 1234' },
+    ]);
   });
 
   it('reads a labelled phone inside an address line and keeps a one-line address as the address', () => {
@@ -261,7 +331,12 @@ describe('nap.ts', () => {
   });
 
   it('reads LocalBusiness in an @graph and skips blocks that do not parse or are not LocalBusiness', () => {
-    const graph = JSON.stringify({ '@graph': [{ '@type': 'WebSite' }, { '@type': ['Restaurant'], name: 'Dosa Corner', address: 'Anna Nagar, Chennai' }] });
+    const graph = JSON.stringify({
+      '@graph': [
+        { '@type': 'WebSite' },
+        { '@type': ['Restaurant'], name: 'Dosa Corner', address: 'Anna Nagar, Chennai' },
+      ],
+    });
     expect(napFromJsonLd({ types: ['WebSite', 'Restaurant'], raw: graph }, '/')).toEqual([
       { urlPath: '/', name: 'Dosa Corner', address: 'Anna Nagar, Chennai' },
     ]);
@@ -275,7 +350,9 @@ describe('nap.ts', () => {
   });
 
   it('firstTelPhone ignores non-tel links', () => {
-    expect(firstTelPhone({ contactLinks: [], anchors: [{ href: '/tel:123', text: '', region: 'internal', chunk: -1 }] })).toBeUndefined();
+    expect(
+      firstTelPhone({ contactLinks: [], anchors: [{ href: '/tel:123', text: '', region: 'internal', chunk: -1 }] })
+    ).toBeUndefined();
   });
 });
 
@@ -297,7 +374,9 @@ describe('trust signals (Q-27)', () => {
   });
 
   it("is 'not-found' on plain text", () => {
-    expect(signal(run([page('/', { textChunks: text('Fresh bread daily.') })]), 'trust-signals').status).toBe('not-found');
+    expect(signal(run([page('/', { textChunks: text('Fresh bread daily.') })]), 'trust-signals').status).toBe(
+      'not-found'
+    );
   });
 });
 
@@ -320,13 +399,21 @@ describe('the other signals report the pages they were found on', () => {
     page('/menu', {
       title: '',
       socialMetaKeys: ['twitter:card'],
-      scripts: ['https://connect.facebook.net/en_US/fbevents.js', 'https://www.clarity.ms/tag/xyz', 'https://static.hotjar.com/c/hotjar-1.js'],
+      scripts: [
+        'https://connect.facebook.net/en_US/fbevents.js',
+        'https://www.clarity.ms/tag/xyz',
+        'https://static.hotjar.com/c/hotjar-1.js',
+      ],
       iframes: [],
     }),
     page('/blank'),
   ];
   const linking: InternalLinking = { inboundCounts: { '/': 0, '/menu': 1, '/blank': 0 }, unlinkedPages: ['/blank'] };
-  const findings = [finding('AF-001', 'missing-title', '/menu'), finding('AF-002', 'broken-link', '/'), finding('AF-003', 'no-h1', '/menu')];
+  const findings = [
+    finding('AF-001', 'missing-title', '/menu'),
+    finding('AF-002', 'broken-link', '/'),
+    finding('AF-003', 'no-h1', '/menu'),
+  ];
   const signals = run(pages, linking, findings);
 
   it('on-page SEO: pages with a title, description or H1, citing the content findings', () => {
@@ -334,7 +421,9 @@ describe('the other signals report the pages they were found on', () => {
     expect(s.status).toBe('found');
     expect(s.pages).toEqual(['/']);
     expect(s.findingIds).toEqual(['AF-001', 'AF-003']);
-    expect(s.detail).toBe('Found: title on 1 of 3 pages, meta description on 1, H1 on 1; 2 title, description or heading findings.');
+    expect(s.detail).toBe(
+      'Found: title on 1 of 3 pages, meta description on 1, H1 on 1; 2 title, description or heading findings.'
+    );
   });
 
   it('schema: JSON-LD types with pages', () => {
@@ -368,7 +457,12 @@ describe('the other signals report the pages they were found on', () => {
   });
 
   it('analytics: a look-alike host is not a tag tool', () => {
-    const s = signal(run([page('/', { scripts: ['https://evilgoogletagmanager.com/gtm.js', 'https://clarity.ms.evil.example/x.js'] })]), 'analytics');
+    const s = signal(
+      run([
+        page('/', { scripts: ['https://evilgoogletagmanager.com/gtm.js', 'https://clarity.ms.evil.example/x.js'] }),
+      ]),
+      'analytics'
+    );
     expect(s.status).toBe('not-found');
   });
 
@@ -391,7 +485,10 @@ describe('auditMarketing', () => {
   });
 
   it('findingIds reference only ids present in the given findings', () => {
-    const findings = [finding('AF-010', 'missing-description', '/'), finding('AF-011', 'duplicate-title', '/elsewhere')];
+    const findings = [
+      finding('AF-010', 'missing-description', '/'),
+      finding('AF-011', 'duplicate-title', '/elsewhere'),
+    ];
     const signals = run([page('/')], NO_LINKING, findings);
     const ids = new Set(findings.map((f) => f.id));
     const cited = signals.flatMap((s) => s.findingIds ?? []);
@@ -405,7 +502,12 @@ describe('wording (ADR 0018)', () => {
     const rich = page('/', {
       title: 'T',
       textChunks: text('Testimonials', 'ISO 9001 certification', 'Rated 5 out of 5'),
-      jsonLd: [{ types: ['LocalBusiness'], raw: '{"@type":"LocalBusiness","name":"N","address":"A","telephone":"044 1234 567"}' }],
+      jsonLd: [
+        {
+          types: ['LocalBusiness'],
+          raw: '{"@type":"LocalBusiness","name":"N","address":"A","telephone":"044 1234 567"}',
+        },
+      ],
       contactLinks: [{ kind: 'tel', href: 'tel:0441234567', text: 'Call', chunk: 0 }],
       forms: [form([['email', 'Email']])],
       scripts: ['https://www.googletagmanager.com/gtag/js?id=G-1'],

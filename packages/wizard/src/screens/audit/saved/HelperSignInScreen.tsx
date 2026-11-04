@@ -47,7 +47,10 @@ export async function helperSignIn(
   if (google.status === 'failed') return { status: 'signed-out', message: SIGN_IN_FAILED_MESSAGE };
   const session = await startHelperSession(google.idToken, fetchImpl);
   if (session.ok) return { status: 'signed-in', session: session.value, message: null };
-  return { status: 'signed-out', message: session.code === 'ERR_SIGN_IN_FAILED' ? SIGN_IN_FAILED_MESSAGE : session.message };
+  return {
+    status: 'signed-out',
+    message: session.code === 'ERR_SIGN_IN_FAILED' ? SIGN_IN_FAILED_MESSAGE : session.message,
+  };
 }
 
 export interface HelperSignInViewProps {
@@ -79,7 +82,9 @@ export function HelperSignInView({ state, onSignIn, onSignOut, onOpenAudit }: He
             Website Audits given to you
           </h2>
           {session.grants.length === 0 ? (
-            <p className="mt-2 text-ink-soft">No Website Audit has been given to you yet. Ask the person who invited you.</p>
+            <p className="mt-2 text-ink-soft">
+              No Website Audit has been given to you yet. Ask the person who invited you.
+            </p>
           ) : (
             <ul className="mt-3 divide-y divide-rule">
               {session.grants.map((grant) => (
@@ -123,7 +128,12 @@ export interface HelperSignInScreenProps {
 }
 
 /** A Helper signs in with Google and sees only the Website Audits given to them (REQ-033). */
-export function HelperSignInScreen({ onOpenAudit, fetchImpl, signIn = signInWithGoogle, fallbackConfig }: HelperSignInScreenProps) {
+export function HelperSignInScreen({
+  onOpenAudit,
+  fetchImpl,
+  signIn = signInWithGoogle,
+  fallbackConfig,
+}: HelperSignInScreenProps) {
   const [state, setState] = useState<HelperSignInState>({ status: 'loading' });
   const [config, setConfig] = useState<FirebaseWebConfig | null>(null);
 
@@ -133,12 +143,17 @@ export function HelperSignInScreen({ onOpenAudit, fetchImpl, signIn = signInWith
       const status = await loadHelperStatus(fetchImpl);
       if (!live) return;
       if (!status.ok) return setState({ status: 'failed', message: status.message });
-      const settings = status.value.firebase ?? (fallbackConfig === undefined ? buildTimeFirebaseConfig() : fallbackConfig);
+      const settings =
+        status.value.firebase ?? (fallbackConfig === undefined ? buildTimeFirebaseConfig() : fallbackConfig);
       if (!status.value.enabled || settings === null) return setState({ status: 'off' });
       setConfig(settings);
       const session = await loadHelperSession(fetchImpl);
       if (!live) return;
-      setState(session.ok ? { status: 'signed-in', session: session.value, message: null } : { status: 'signed-out', message: null });
+      setState(
+        session.ok
+          ? { status: 'signed-in', session: session.value, message: null }
+          : { status: 'signed-out', message: null }
+      );
     })();
     return () => {
       live = false;
@@ -170,7 +185,12 @@ export function HelperSignInScreen({ onOpenAudit, fetchImpl, signIn = signInWith
           <HelperRules />
         </div>
       )}
-      <HelperSignInView state={state} onSignIn={() => void start()} onSignOut={() => void stop()} onOpenAudit={onOpenAudit} />
+      <HelperSignInView
+        state={state}
+        onSignIn={() => void start()}
+        onSignOut={() => void stop()}
+        onOpenAudit={onOpenAudit}
+      />
     </div>
   );
 }

@@ -13,13 +13,7 @@ import path from 'path';
 import { promises as fs } from 'fs';
 import { createRequire } from 'module';
 import type { AuditProgressEvent, AuditResult, AuditStartReply, ShareLinkReply } from '@qa/types';
-import {
-  checkAuditAddress,
-  defaultNetDeps,
-  runAuditCrawl,
-  type AuditBrowserLauncher,
-  type NetDeps,
-} from '@qa/core';
+import { checkAuditAddress, defaultNetDeps, runAuditCrawl, type AuditBrowserLauncher, type NetDeps } from '@qa/core';
 import { RunnerServer } from '../src/server.js';
 import { allRoutes } from '../src/routes/index.js';
 import { auditPipelineStep, createAuditCrawlRoutes } from '../src/routes/audit-crawl.js';
@@ -82,7 +76,10 @@ function auditRowsWithFakeNetwork(): Route[] {
     });
     return rows;
   };
-  const delegate = (index: number): Route['handle'] => (context) => build(context)[index].handle(context);
+  const delegate =
+    (index: number): Route['handle'] =>
+    (context) =>
+      build(context)[index].handle(context);
   const [startRow, streamRow] = createAuditCrawlRoutes({
     store: undefined as never,
     caller: () => ({ owner: false }),
@@ -152,7 +149,12 @@ beforeAll(async () => {
     outputDir: path.join(dir, 'report'),
     dataDir: path.join(dir, 'data'),
     accessToken: ACCESS,
-    routes: [...allRoutes.filter((r) => !(r.method === 'POST' && r.path === '/api/audits') && r.path !== '/api/audits/:id/stream'), ...auditRowsWithFakeNetwork()],
+    routes: [
+      ...allRoutes.filter(
+        (r) => !(r.method === 'POST' && r.path === '/api/audits') && r.path !== '/api/audits/:id/stream'
+      ),
+      ...auditRowsWithFakeNetwork(),
+    ],
   });
   base = await server.start();
 }, 60_000);

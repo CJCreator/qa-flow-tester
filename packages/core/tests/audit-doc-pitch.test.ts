@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import type { AuditFinding, DocumentLanguage, EditOverlay } from '@qa/types';
-import { buildEditedView, emptyOverlay, mergeEditsPatch, validateAuditEditsPatch, type EditedAuditView } from '../src/audit/documents/edits.js';
+import {
+  buildEditedView,
+  emptyOverlay,
+  mergeEditsPatch,
+  validateAuditEditsPatch,
+  type EditedAuditView,
+} from '../src/audit/documents/edits.js';
 import {
   buildPitchGlimpse,
   clampText,
@@ -17,7 +23,8 @@ import { OPT_OUT_TEXT_EN, OPT_OUT_TEXT_TA } from '../src/audit/documents/templat
 import { auditDocContents, auditDocResult, FIXTURE_URL } from './helpers/audit-doc-fixture.js';
 
 const NOW = '2026-11-03T10:00:00.000Z';
-const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGD4DwABBAEAwS2OUAAAAABJRU5ErkJggg==';
+const PNG =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGD4DwABBAEAwS2OUAAAAABJRU5ErkJggg==';
 const JPEG = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAEBAQ==';
 
 type Result = ReturnType<typeof auditDocResult>;
@@ -86,10 +93,16 @@ describe('Pitch Glimpse: top 3 findings (REQ-019 AC-1)', () => {
   });
 
   it('shows fewer when fewer findings exist, and says so plainly when there are none', () => {
-    const two = pitchGlimpseDoc(viewOf((r) => (r.findings = r.findings.slice(0, 2))), { language: 'en' });
+    const two = pitchGlimpseDoc(
+      viewOf((r) => (r.findings = r.findings.slice(0, 2))),
+      { language: 'en' }
+    );
     expect(headings(two.blocks, 2)).toHaveLength(2);
 
-    const none = pitchGlimpseDoc(viewOf((r) => (r.findings = [])), { language: 'en' });
+    const none = pitchGlimpseDoc(
+      viewOf((r) => (r.findings = [])),
+      { language: 'en' }
+    );
     expect(headings(none.blocks, 2)).toHaveLength(0);
     const text = none.blocks.flatMap((b) => (b.type === 'paragraph' ? [b.text] : []));
     expect(text).toContain(pitchWording('en').noFindings);
@@ -114,7 +127,7 @@ describe('Pitch Glimpse: top 3 findings (REQ-019 AC-1)', () => {
   it('ignores screenshot keys inherited from Object.prototype', () => {
     const html = buildPitchGlimpse(
       viewOf((r) => (r.findings[0].screenshotPath = 'constructor')),
-      { language: 'en', screenshots: {} },
+      { language: 'en', screenshots: {} }
     );
     expect(html.match(/<img [^>]*>/g) ?? []).toHaveLength(0);
   });
@@ -212,7 +225,9 @@ describe('Pitch Glimpse: opt-out text (REQ-019, BE-504)', () => {
   });
 
   it('uses the default when only another language has saved text, or the saved text is blank', () => {
-    expect(buildPitchGlimpse(viewOf(), { language: 'ta', optOutText: { en: 'English only.' } })).toContain(OPT_OUT_TEXT_TA);
+    expect(buildPitchGlimpse(viewOf(), { language: 'ta', optOutText: { en: 'English only.' } })).toContain(
+      OPT_OUT_TEXT_TA
+    );
     expect(buildPitchGlimpse(viewOf(), { language: 'en', optOutText: { en: '   ' } })).toContain(OPT_OUT_TEXT_EN);
   });
 
@@ -227,7 +242,8 @@ describe('Pitch Glimpse: no send action, nothing loads (supports REQ-019 AC-4, A
   const hostile = (r: Result) => {
     r.findings[0].title = '<form action="https://x.example"><input name=a></form>';
     r.findings[0].detail = '<a href="mailto:owner@example.in">mail</a> <a href="tel:+919876543210">call</a>';
-    r.findings[1].suggestion = '<script>alert(1)</script><img src="https://x.example/p.gif"><link rel=stylesheet href=//x>';
+    r.findings[1].suggestion =
+      '<script>alert(1)</script><img src="https://x.example/p.gif"><link rel=stylesheet href=//x>';
     r.findings[2].screenshotPath = 'shots/AF-003.png';
   };
 
@@ -316,9 +332,7 @@ describe('Pitch Glimpse: fits one A4 page (text clamped in both languages)', () 
 describe('Pitch Glimpse: claim wording (ADR 0018, ADR 0029)', () => {
   for (const language of ['en', 'ta'] as const) {
     it(`${language}: no ADR 0018 word, no "Ready to release", no verdict`, () => {
-      const text = visibleText(
-        buildPitchGlimpse(viewOf(withScreenshots(1)), { language, screenshots: SCREENSHOTS }),
-      );
+      const text = visibleText(buildPitchGlimpse(viewOf(withScreenshots(1)), { language, screenshots: SCREENSHOTS }));
       expect(findClaimWords(text)).toEqual([]);
       expect(text).not.toContain('Ready to release');
       expect(text).not.toMatch(/verdict/i);

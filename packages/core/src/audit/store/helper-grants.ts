@@ -22,7 +22,8 @@ import {
 /** Longest email address accepted (RFC 5321 path limit). */
 export const MAX_HELPER_EMAIL_CHARS = 254;
 
-const EMAIL = /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]{1,64}@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
+const EMAIL =
+  /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]{1,64}@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
 
 /** Trims, lower-cases and checks a Helper's Google account address. */
 export function normalizeHelperEmail(email: unknown): string {

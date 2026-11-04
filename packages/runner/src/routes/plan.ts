@@ -225,7 +225,10 @@ export async function ensurePlanLoaded(session: CheckupSession): Promise<StoredP
 }
 
 /** The 409 for a Plan action while a Website Audit or Competitive Benchmark holds the run slot; null when none does. */
-function otherRunBusy(session: CheckupSession, isBeta?: boolean): { error: string; code: 'ERR_RUN_IN_PROGRESS' } | null {
+function otherRunBusy(
+  session: CheckupSession,
+  isBeta?: boolean
+): { error: string; code: 'ERR_RUN_IN_PROGRESS' } | null {
   const kind = session.run.kind;
   if (kind !== 'audit' && kind !== 'benchmark') return null;
   return {

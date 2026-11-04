@@ -29,7 +29,8 @@ export type ShareOutcome<T> = { ok: true; value: T } | { ok: false; message: str
 const NOT_ANSWERING = 'The tool is not answering. Make sure it is still open in its terminal, then try again.';
 
 /** Shown when the preview needs an AI key and none is saved; the screen links to Settings beside it. */
-export const NO_AI_KEY_MESSAGE = 'An AI key is needed to write the improved homepage. Add one in Settings, then try again.';
+export const NO_AI_KEY_MESSAGE =
+  'An AI key is needed to write the improved homepage. Add one in Settings, then try again.';
 
 /** Said wherever a Shared Link is made or shown. */
 export const SHARED_LINK_WARNING =
@@ -41,7 +42,8 @@ const REFUSALS: Partial<Record<AuditErrorCode, string>> = {
   ERR_AUDIT_RUNNING: 'This version of the Website Audit is still running. Try again when it has finished.',
   ERR_FORBIDDEN: 'You do not have permission to do this on this Website Audit.',
   ERR_LINK_GONE: 'This Shared Link has already expired or been revoked.',
-  ERR_RUN_IN_PROGRESS: 'Another run is in progress: a Check-up, a benchmark or a Website Audit. Wait for it to finish, then try again.',
+  ERR_RUN_IN_PROGRESS:
+    'Another run is in progress: a Check-up, a benchmark or a Website Audit. Wait for it to finish, then try again.',
 };
 
 /** The languages offered for the preview and the Pitch Glimpse. */
@@ -166,7 +168,11 @@ export function createSharedLink(
 }
 
 /** `DELETE /api/audits/:id/share/:linkId`: the link stops working at once; it stays in the list as revoked. */
-export function revokeSharedLink(auditId: string, linkId: string, fetchImpl: Fetch = fetch): Promise<ShareOutcome<ShareLink>> {
+export function revokeSharedLink(
+  auditId: string,
+  linkId: string,
+  fetchImpl: Fetch = fetch
+): Promise<ShareOutcome<ShareLink>> {
   return call(
     auditPath(AUDIT_API.revokeShare.path, { id: auditId, linkId }),
     { method: AUDIT_API.revokeShare.method },
@@ -224,5 +230,7 @@ export function expiryText(formattedDay: string): string {
 
 /** Puts a revoked or new link in the list, newest first, replacing the one with the same id. */
 export function withLink(links: readonly ShareLink[], link: ShareLink): ShareLink[] {
-  return [link, ...links.filter((other) => other.id !== link.id)].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return [link, ...links.filter((other) => other.id !== link.id)].sort((a, b) =>
+    b.createdAt.localeCompare(a.createdAt)
+  );
 }

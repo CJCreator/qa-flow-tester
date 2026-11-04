@@ -73,7 +73,10 @@ export async function generatePreview(input: PreviewInput, options: GeneratePrev
   }
 
   const nodes = await inlineImages(page.nodes, facts, options);
-  return { ok: true, html: renderPreviewDocument({ nodes, css: page.css, language: facts.language, host: facts.host }) };
+  return {
+    ok: true,
+    html: renderPreviewDocument({ nodes, css: page.css, language: facts.language, host: facts.host }),
+  };
 }
 
 async function askOnce(
@@ -115,9 +118,22 @@ function buildNodes(answer: string, facts: PreviewFacts): SanitizedPreview {
   const missing = facts.menu.filter((link) => !present.has(withoutHash(link.href)));
   if (missing.length === 0) return page;
 
-  const menu: PreviewNode[] = [{ kind: 'open', name: 'nav', attrs: [['class', 'qa-preview-menu'], ['aria-label', 'Site menu']] }];
+  const menu: PreviewNode[] = [
+    {
+      kind: 'open',
+      name: 'nav',
+      attrs: [
+        ['class', 'qa-preview-menu'],
+        ['aria-label', 'Site menu'],
+      ],
+    },
+  ];
   for (const link of missing) {
-    menu.push({ kind: 'open', name: 'a', attrs: [['href', link.href]] }, { kind: 'text', text: link.text }, { kind: 'close', name: 'a' });
+    menu.push(
+      { kind: 'open', name: 'a', attrs: [['href', link.href]] },
+      { kind: 'text', text: link.text },
+      { kind: 'close', name: 'a' }
+    );
   }
   menu.push({ kind: 'close', name: 'nav' });
   return { nodes: [...menu, ...page.nodes], css: page.css };

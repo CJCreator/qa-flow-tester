@@ -150,7 +150,14 @@ export function napFromAddressText(text: string, urlPath: string, telPhone?: str
       phone ??= match[0].trim();
       continue;
     }
-    if (EMAIL.test(line) && line.replace(EMAIL, '').replace(/^(?:e-?mail)\s*:?\s*/i, '').trim() === '') continue;
+    if (
+      EMAIL.test(line) &&
+      line
+        .replace(EMAIL, '')
+        .replace(/^(?:e-?mail)\s*:?\s*/i, '')
+        .trim() === ''
+    )
+      continue;
     rest.push(line);
   }
   if (!phone) {

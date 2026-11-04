@@ -54,7 +54,13 @@ function fakeAi(answers: Array<string | Error>, models: Record<string, string> =
     async ai(): Promise<AuditAi> {
       const resolved = await resolveAuditAi({
         setup: { provider: 'openrouter', text: 'default/text', vision: 'default/vision' },
-        keys: { resolveKey: async () => ({ provider: 'openrouter' as AIProviderType, apiKey: TEST_KEY, source: 'keychain' as const }) },
+        keys: {
+          resolveKey: async () => ({
+            provider: 'openrouter' as AIProviderType,
+            apiKey: TEST_KEY,
+            source: 'keychain' as const,
+          }),
+        },
         models,
         createProvider: () => provider,
       });
@@ -97,7 +103,13 @@ describe('preview generator', () => {
     const edits = {
       ...emptyOverlay(),
       sections: [
-        { urlPath: PATHS.home, sectionId: 's2', text: 'Groceries at your door by evening.', by: 'person' as const, editedAt: '2026-11-03T00:00:00.000Z' },
+        {
+          urlPath: PATHS.home,
+          sectionId: 's2',
+          text: 'Groceries at your door by evening.',
+          by: 'person' as const,
+          editedAt: '2026-11-03T00:00:00.000Z',
+        },
       ],
     };
     const messages = previewMessages(previewFacts(input({ edits })));
@@ -169,7 +181,9 @@ describe('preview generator', () => {
     if (!out.ok) throw new Error(out.problem);
     expect(out.html).toContain('Preview of suggested changes');
     expect(out.html).not.toMatch(/\b(compliant|compliance|certified|secure|safe|hack-proof)\b/i);
-    expect(out.html).not.toMatch(/Ready to release|Not ready yet|release verdict|release-ready|passes WCAG|fully accessible/i);
+    expect(out.html).not.toMatch(
+      /Ready to release|Not ready yet|release verdict|release-ready|passes WCAG|fully accessible/i
+    );
   });
 
   it('claim words: one retry that names them; the clean retry is kept', async () => {
@@ -218,7 +232,13 @@ describe('preview images through the real makeOutboundFetch (BE-101), network fa
         connects.push(req);
         if (body.length > req.maxBytes) {
           const cut = body.subarray(0, req.maxBytes);
-          return { status: 200, headers: { 'content-type': 'image/png' }, body: cut.toString('utf8'), raw: cut, tooLarge: true };
+          return {
+            status: 200,
+            headers: { 'content-type': 'image/png' },
+            body: cut.toString('utf8'),
+            raw: cut,
+            tooLarge: true,
+          };
         }
         return { status: 200, headers: { 'content-type': 'image/png' }, body: body.toString('utf8'), raw: body };
       },
@@ -234,7 +254,9 @@ describe('preview images through the real makeOutboundFetch (BE-101), network fa
     if (!out.ok) throw new Error(out.problem);
     expect(net.connects.map((c) => c.url.toString())).toEqual(['https://shop.example.in/img/hero.jpg']);
     expect(net.connects[0].maxBytes).toBe(PREVIEW_IMAGE_MAX_BYTES);
-    expect(out.html).toContain(`<img src="data:image/png;base64,${BINARY_PNG.toString('base64')}" alt="Fresh vegetables">`);
+    expect(out.html).toContain(
+      `<img src="data:image/png;base64,${BINARY_PNG.toString('base64')}" alt="Fresh vegetables">`
+    );
   });
 
   it('the byte cap is honoured: an image over it is not inlined and keeps its alt text', async () => {
@@ -281,7 +303,9 @@ describe('preview sources', () => {
     const dir = path.resolve(__dirname, '../src/audit/preview');
     for (const file of readdirSync(dir)) {
       const source = readFileSync(path.join(dir, file), 'utf8');
-      expect(source, file).not.toMatch(/(^|[^.\w$])fetch\s*\(|globalThis\.fetch|from\s+['"](?:undici|node-fetch|playwright)['"]/);
+      expect(source, file).not.toMatch(
+        /(^|[^.\w$])fetch\s*\(|globalThis\.fetch|from\s+['"](?:undici|node-fetch|playwright)['"]/
+      );
       expect(source, file).not.toMatch(/\.request\.(get|post|fetch)\s*\(|APIRequestContext/);
     }
   });

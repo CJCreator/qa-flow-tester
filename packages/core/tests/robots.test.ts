@@ -175,7 +175,7 @@ describe('RobotsPolicy.fetch (ADR 0031: pinned outbound path)', () => {
     expect(policy.isAllowed('/anything')).toBe(true);
   });
 
-  it('the default fetch reads the robots.txt of a local origin (the user\'s own build)', async () => {
+  it("the default fetch reads the robots.txt of a local origin (the user's own build)", async () => {
     const server = http.createServer((req, res) => {
       res.setHeader('content-type', 'text/plain');
       res.end(req.url === '/robots.txt' ? 'User-agent: *\nDisallow: /private/admin\n' : 'nope');

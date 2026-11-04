@@ -182,6 +182,7 @@ _Avoid_: Login page, auth wall, bounce
 
 **Skipped Page**:
 A page the crawl found but did not record, with one reason: `page-limit`, `depth-limit`, `excluded`, `payment`, `did-not-load`, `robots`, `sign-in`, `http-error`, `timeout`, `off-site-redirect`, `time-limit`, `trap-limit`, `session-lost` or `duplicate`. The Plan lists them under what was not reached, and a Website Audit flags them in its output; a Skipped Page is never a failure, and it is never a clean result either: it was not checked. The crawl-limit and payment reasons mean:
+
 - `depth-limit`: the page is more link steps from the start address than the max depth allows (8 unless the person sets another number).
 - `excluded`: the path starts with an exclude path, or, when include paths are set, starts with none of them. The start page is never excluded.
 - `payment`: the page is a payment area (a card-number field, a payment-provider frame or a checkout path). Nothing on it is clicked or sent, and its links are not followed.

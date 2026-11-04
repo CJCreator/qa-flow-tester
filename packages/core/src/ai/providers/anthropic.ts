@@ -31,11 +31,7 @@ export class AnthropicProvider implements AIProvider {
     }
   }
 
-  private async send(
-    messages: AIMessage[],
-    options: AICompletionOptions,
-    signal: AbortSignal
-  ): Promise<AICompletion> {
+  private async send(messages: AIMessage[], options: AICompletionOptions, signal: AbortSignal): Promise<AICompletion> {
     const systemMessage = messages.find((m) => m.role === 'system');
     const nonSystemMessages = messages.filter((m) => m.role !== 'system');
 

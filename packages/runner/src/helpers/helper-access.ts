@@ -116,9 +116,7 @@ export class HelperAccess {
       throw new Error('A Helper session key needs at least 32 bytes.');
     }
     this.key = this.enabled ? (options.sessionKey ? Buffer.from(options.sessionKey) : newHelperSessionKey()) : null;
-    this.verifier = this.enabled
-      ? new FirebaseTokenVerifier({ projectId, fetch: options.fetch, now: this.now })
-      : null;
+    this.verifier = this.enabled ? new FirebaseTokenVerifier({ projectId, fetch: options.fetch, now: this.now }) : null;
     const apiKey = options.webApiKey?.trim() || '';
     this.firebaseWeb =
       this.enabled && apiKey
@@ -148,7 +146,10 @@ export class HelperAccess {
    * The dispatch hook (RunnerServerOptions.helperGrants): the permissions the signed-in Helper holds on the
    * audit `params.id` names. A row without `:id` grants nothing, so no Helper reaches cross-audit lists.
    */
-  helperGrants = async (req: http.IncomingMessage, params: Readonly<Record<string, string>>): Promise<HelperPermission[]> => {
+  helperGrants = async (
+    req: http.IncomingMessage,
+    params: Readonly<Record<string, string>>
+  ): Promise<HelperPermission[]> => {
     const session = this.session(req);
     const auditId = params.id;
     if (!session || !auditId) return [];
@@ -185,9 +186,7 @@ export class HelperAccess {
         ? { status: 404, code: 'ERR_AUDIT_NOT_FOUND', error: AUDIT_NOT_FOUND_REFUSAL }
         : { status: 403, code: 'ERR_FORBIDDEN', error: FORBIDDEN_REFUSAL };
     }
-    return allows(grant, access)
-      ? null
-      : { status: 403, code: 'ERR_FORBIDDEN', error: FORBIDDEN_REFUSAL };
+    return allows(grant, access) ? null : { status: 403, code: 'ERR_FORBIDDEN', error: FORBIDDEN_REFUSAL };
   }
 }
 

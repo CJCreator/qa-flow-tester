@@ -154,7 +154,11 @@ export function buildStructureDocument(view: EditedAuditView, options: Structure
     blocks.push({
       type: 'table',
       columns: [labels.columns.page, labels.columns.reason, words.status],
-      rows: result.coverage.skipped.map((s) => [s.urlPath, labels.skipReasons[s.why] ?? s.why, labels.status.notChecked]),
+      rows: result.coverage.skipped.map((s) => [
+        s.urlPath,
+        labels.skipReasons[s.why] ?? s.why,
+        labels.status.notChecked,
+      ]),
     });
   }
 
@@ -169,5 +173,10 @@ export function buildStructureDocument(view: EditedAuditView, options: Structure
     blocks.push({ type: 'paragraph', text: labels.status.notIdentified });
   }
 
-  return { kind: 'structure', title: labels.documentTitles.structure, language: lookup.requested ?? lookup.language, blocks };
+  return {
+    kind: 'structure',
+    title: labels.documentTitles.structure,
+    language: lookup.requested ?? lookup.language,
+    blocks,
+  };
 }

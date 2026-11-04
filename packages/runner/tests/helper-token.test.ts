@@ -181,7 +181,12 @@ describe('Firebase ID token check (REQ-033)', () => {
       throw new Error('offline');
     };
     await refused(verifier(failing), signToken());
-    const notOk: KeysFetch = async () => ({ ok: false, status: 500, headers: { get: () => null }, json: async () => ({}) });
+    const notOk: KeysFetch = async () => ({
+      ok: false,
+      status: 500,
+      headers: { get: () => null },
+      json: async () => ({}),
+    });
     await refused(verifier(notOk), signToken());
     await refused(verifier(fakeFetch({ [KID]: 'not a pem' }).fetch), signToken());
   });

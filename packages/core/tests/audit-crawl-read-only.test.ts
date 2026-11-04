@@ -50,9 +50,7 @@ const netDeps: NetDeps = {
 const browserManager: AuditCrawlDeps['browserManager'] = {
   async createContext(): Promise<BrowserContext> {
     const context = await browser.newContext();
-    context.on('request', (r) =>
-      browserRequests.push({ method: r.method(), url: r.url(), postData: r.postData() })
-    );
+    context.on('request', (r) => browserRequests.push({ method: r.method(), url: r.url(), postData: r.postData() }));
     return context;
   },
 };
@@ -65,7 +63,8 @@ function auditRequest(url: string): AuditRequest {
 
 const pathOf = (p: string) => new URL(p, 'http://x.invalid').pathname;
 const recordedPaths = (r: AuditCrawlResult) => r.pages.map((p) => pathOf(p.urlPath));
-const skippedAs = (r: AuditCrawlResult, why: string) => r.coverage.skipped.filter((s) => s.why === why).map((s) => s.urlPath);
+const skippedAs = (r: AuditCrawlResult, why: string) =>
+  r.coverage.skipped.filter((s) => s.why === why).map((s) => s.urlPath);
 
 function resetCapture() {
   browserRequests = [];
@@ -94,7 +93,10 @@ function expectOnlyReads(
   for (const h of lookups) expect(LOOPBACK.test(h), `looked up ${h}`).toBe(false);
   for (const r of browserRequests) {
     const host = new URL(r.url).hostname;
-    expect(['facebook.com', 'instagram.com', 'example.invalid'].some((x) => host.endsWith(x)), r.url).toBe(false);
+    expect(
+      ['facebook.com', 'instagram.com', 'example.invalid'].some((x) => host.endsWith(x)),
+      r.url
+    ).toBe(false);
   }
 }
 
@@ -116,7 +118,10 @@ async function startInlineSite() {
       ),
     },
     '/about': { html: page('About', '<p>About us.</p> <a href="/">Home</a>') },
-    '/gate': { status: 401, html: page('Members only', '<p>Please sign in.</p> <a href="/gate-only-target">Inside</a>') },
+    '/gate': {
+      status: 401,
+      html: page('Members only', '<p>Please sign in.</p> <a href="/gate-only-target">Inside</a>'),
+    },
     '/sign-in': {
       html: page(
         'Sign in',
@@ -142,7 +147,12 @@ async function startInlineSite() {
     },
   };
   const server = http.createServer((req, res) => {
-    const entry: LoggedRequest = { method: req.method || 'GET', path: req.url || '/', headers: req.headers, bodyBytes: 0 };
+    const entry: LoggedRequest = {
+      method: req.method || 'GET',
+      path: req.url || '/',
+      headers: req.headers,
+      bodyBytes: 0,
+    };
     requests.push(entry);
     req.on('data', (c: Buffer) => (entry.bodyBytes += c.length));
     res.setHeader('Cache-Control', 'no-store');
@@ -216,7 +226,10 @@ describe('read-only crawl of fixtures/audit-site with default limits', () => {
   it('no request goes to Facebook, Instagram or the off-site robots.txt Sitemap host (REQ-003 AC-2)', () => {
     const all = [...browserRequests.map((r) => r.url), ...connects, ...lookups];
     for (const host of ['facebook.com', 'instagram.com', 'sitemaps.example.invalid', 'example.invalid']) {
-      expect(all.filter((x) => x.includes(host)), host).toEqual([]);
+      expect(
+        all.filter((x) => x.includes(host)),
+        host
+      ).toEqual([]);
     }
     expect(result.leavingSite.some((l) => l.to.includes('facebook.com'))).toBe(true);
     expect(site.requests.map((r) => pathOf(r.path))).toContain('/sitemap.xml');

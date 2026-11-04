@@ -58,13 +58,17 @@ export const AUDIT_INVALID = 'Some fields need a change. See the message next to
 export const AUDIT_BAD_BODY = 'The request body must be a JSON object.';
 export const AUDIT_FORBIDDEN_START = 'Only the owner of this QA Tool can start a Website Audit.';
 export const AUDIT_UNREACHABLE = 'The site could not be reached.';
-export const AUDIT_BUSY = 'Another Check-up, benchmark or Website Audit is in progress. Start this one when it has finished.';
-export const AUDIT_NOT_FOUND_STREAM = 'This Website Audit was not found. It may have finished long ago or been deleted.';
+export const AUDIT_BUSY =
+  'Another Check-up, benchmark or Website Audit is in progress. Start this one when it has finished.';
+export const AUDIT_NOT_FOUND_STREAM =
+  'This Website Audit was not found. It may have finished long ago or been deleted.';
 export const AUDIT_START_FAILED = 'The Website Audit could not be started. Try again.';
 /** Fixed wording of the 'failed' events and of the version's stored error. Never page text or internals. */
-export const AUDIT_CRAWL_FAILED = 'The website could not be read to the end. Check that it is online, then run the audit again.';
+export const AUDIT_CRAWL_FAILED =
+  'The website could not be read to the end. Check that it is online, then run the audit again.';
 export const AUDIT_SAVE_FAILED = 'The Website Audit could not be saved. Try again.';
-export const AUDIT_STATUS_FAILED = 'The Website Audit was saved, but its status could not be updated. Try reloading it.';
+export const AUDIT_STATUS_FAILED =
+  'The Website Audit was saved, but its status could not be updated. Try reloading it.';
 export const AUDIT_STOPPED = 'The Website Audit was stopped before it finished.';
 
 /**
@@ -425,7 +429,9 @@ export function createAuditCrawlRoutes(deps: AuditCrawlRouteDeps): Route[] {
  * The production rows: the analysis and save pipeline runs after the crawl unless `afterCrawl` is given.
  * BE-190 registers them: `...auditCrawlRoutes({ store, caller, runs, resolveAi, resolveServiceKey })`.
  */
-export function auditCrawlRoutes(deps: AuditCrawlRouteDeps & Omit<AuditPipelineStepDeps, 'store' | 'pipeline'> & { store: AuditStore }): Route[] {
+export function auditCrawlRoutes(
+  deps: AuditCrawlRouteDeps & Omit<AuditPipelineStepDeps, 'store' | 'pipeline'> & { store: AuditStore }
+): Route[] {
   return createAuditCrawlRoutes({
     ...deps,
     afterCrawl:

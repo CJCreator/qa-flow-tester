@@ -120,7 +120,10 @@ describe('checkAuditAddress', () => {
 
   it('a 399 is still reachable (boundary)', async () => {
     const net = fake({ 'site.test': PUBLIC }, { 'https://site.test/': ok(399) });
-    expect(await checkAuditAddress('https://site.test/', { netDeps: net.deps })).toMatchObject({ ok: true, status: 399 });
+    expect(await checkAuditAddress('https://site.test/', { netDeps: net.deps })).toMatchObject({
+      ok: true,
+      status: 399,
+    });
   });
 
   it('a final 4xx after a redirect is unreachable', async () => {

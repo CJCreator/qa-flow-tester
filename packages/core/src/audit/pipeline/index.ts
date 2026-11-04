@@ -2,12 +2,7 @@
  * Website Audit pipeline: a finished crawl to a saved AuditResult. Node only. Named exports, so the core
  * barrel can re-export it without name clashes.
  */
-export {
-  runAuditPipeline,
-  pageContentName,
-  AuditPipelineError,
-  DEFAULT_SITE_STAGES,
-} from './pipeline.js';
+export { runAuditPipeline, pageContentName, AuditPipelineError, DEFAULT_SITE_STAGES } from './pipeline.js';
 export type {
   AuditPipelineDeps,
   AuditPipelineOutcome,

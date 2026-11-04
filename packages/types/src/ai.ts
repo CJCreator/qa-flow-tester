@@ -1,6 +1,6 @@
 import type { AuditEndpoint } from './website-audit.js';
 
-export type AIProviderType ='anthropic' | 'openai' | 'gemini' | 'openrouter' | 'mock';
+export type AIProviderType = 'anthropic' | 'openai' | 'gemini' | 'openrouter' | 'mock';
 
 export interface AIMessage {
   role: 'system' | 'user' | 'assistant';
@@ -107,9 +107,7 @@ export interface AuditAiModelsUpdate {
 
 export type AuditAiModelsErrors = Partial<Record<string, string>>;
 
-export type AuditAiModelsCheck =
-  | { ok: true; value: AuditAiModelsUpdate }
-  | { ok: false; errors: AuditAiModelsErrors };
+export type AuditAiModelsCheck = { ok: true; value: AuditAiModelsUpdate } | { ok: false; errors: AuditAiModelsErrors };
 
 /** Longest model id accepted. */
 export const AUDIT_AI_MODEL_ID_MAX = 200;

@@ -7,13 +7,7 @@ import path from 'path';
 import { createCheckupSession, type CheckupSession } from '../src/session/checkup-session.js';
 import type { StoredPlanRecord } from '../src/session/plan-store.js';
 import type { ReviewPlan, DiscoveryDraft, TestCase, PlanPage, PageInventoryItem } from '@qa/types';
-import {
-  getPlan,
-  patchPlan,
-  approvePlan,
-  planMarkdown,
-  waitingPlans,
-} from '../src/routes/plan.js';
+import { getPlan, patchPlan, approvePlan, planMarkdown, waitingPlans } from '../src/routes/plan.js';
 import { CREDENTIAL_PLACEHOLDERS } from '@qa/core';
 
 class MockResponse {

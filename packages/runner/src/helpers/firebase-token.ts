@@ -23,7 +23,10 @@ const MAX_KEYS_TTL_SECONDS = 24 * 60 * 60;
 const KEYS_FETCH_TIMEOUT_MS = 5000;
 
 /** The fetch the key loader uses: the standard one, or a fake in tests. */
-export type KeysFetch = (url: string, init?: { signal?: AbortSignal }) => Promise<{
+export type KeysFetch = (
+  url: string,
+  init?: { signal?: AbortSignal }
+) => Promise<{
   ok: boolean;
   status: number;
   headers: { get(name: string): string | null };

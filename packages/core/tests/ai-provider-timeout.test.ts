@@ -260,10 +260,9 @@ describe('answered calls keep their behaviour', () => {
         model: 'claude-x',
         usage: { input_tokens: 3, output_tokens: 4 },
       });
-    const out = await new AnthropicProvider(KEY, 'https://api.anthropic.com/v1', 'claude-x').complete(
-      MESSAGES,
-      { maxTokens: 100 }
-    );
+    const out = await new AnthropicProvider(KEY, 'https://api.anthropic.com/v1', 'claude-x').complete(MESSAGES, {
+      maxTokens: 100,
+    });
     expect(out).toEqual({
       text: 'hi',
       finishReason: 'length',

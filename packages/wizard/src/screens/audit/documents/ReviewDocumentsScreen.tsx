@@ -34,7 +34,8 @@ import {
 import { loadAudit, loadEdits, loadPageContent, saveEdits, type Fetch } from './review-api';
 
 /** A page's Page Content as the screen holds it while it loads. */
-export type PageContentState = { status: 'loading' } | { status: 'failed'; message: string } | { status: 'loaded'; content: PageContent };
+export type PageContentState =
+  { status: 'loading' } | { status: 'failed'; message: string } | { status: 'loaded'; content: PageContent };
 
 const FIELD_LABEL: Readonly<Record<FindingField, string>> = {
   title: 'Title',
@@ -122,7 +123,13 @@ function PageItem({
       {node.children.length > 0 && (
         <ul className="ml-4 border-l border-rule pl-3">
           {node.children.map((child) => (
-            <PageItem key={child.urlPath} node={child} selectedPage={selectedPage} onRemove={onRemove} onSelect={onSelect} />
+            <PageItem
+              key={child.urlPath}
+              node={child}
+              selectedPage={selectedPage}
+              onRemove={onRemove}
+              onSelect={onSelect}
+            />
           ))}
         </ul>
       )}
@@ -177,7 +184,9 @@ function SectionsEditor({
                   {name}
                   <UnsavedTag show={row.unsaved} />
                 </h3>
-                {row.byRewrite && <p className="text-xs text-ink-soft">Accepted AI copy, in the Audit Documents only.</p>}
+                {row.byRewrite && (
+                  <p className="text-xs text-ink-soft">Accepted AI copy, in the Audit Documents only.</p>
+                )}
                 <div className="mt-2 grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
                     <label htmlFor={id} className="label text-ink">
@@ -481,7 +490,8 @@ export interface ReviewDocumentsScreenProps {
   fetchImpl?: Fetch;
 }
 
-type Loaded = { status: 'loading' } | { status: 'failed'; message: string } | { status: 'loaded'; reply: AuditGetReply };
+type Loaded =
+  { status: 'loading' } | { status: 'failed'; message: string } | { status: 'loaded'; reply: AuditGetReply };
 
 /** Review and edit a Website Audit version's Audit Documents before export (REQ-020). */
 export function ReviewDocumentsScreen({ auditId, version, fetchImpl }: ReviewDocumentsScreenProps) {
@@ -521,7 +531,9 @@ export function ReviewDocumentsScreen({ auditId, version, fetchImpl }: ReviewDoc
     void loadPageContent(auditId, urlPath, versionNumber, fetchImpl).then((outcome) => {
       setContents((all) => ({
         ...all,
-        [urlPath]: outcome.ok ? { status: 'loaded', content: outcome.value } : { status: 'failed', message: outcome.message },
+        [urlPath]: outcome.ok
+          ? { status: 'loaded', content: outcome.value }
+          : { status: 'failed', message: outcome.message },
       }));
     });
   };
@@ -550,7 +562,9 @@ export function ReviewDocumentsScreen({ auditId, version, fetchImpl }: ReviewDoc
         Change the text of Sections and findings, remove pages, and pick redesign or repair before you export. Edits
         change the Audit Documents only: the Website Audit keeps every original, and you can reset an edit at any time.
       </p>
-      {reply && <p className="mb-6 break-all text-sm text-ink-soft">{`${reply.summary.url}, version ${reply.version.version}`}</p>}
+      {reply && (
+        <p className="mb-6 break-all text-sm text-ink-soft">{`${reply.summary.url}, version ${reply.version.version}`}</p>
+      )}
 
       {loaded.status === 'loading' && <Spinner label="Loading the Website Audit…" />}
       {loaded.status === 'failed' && <ErrorMessage>{loaded.message}</ErrorMessage>}

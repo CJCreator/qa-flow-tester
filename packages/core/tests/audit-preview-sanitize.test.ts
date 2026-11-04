@@ -39,7 +39,9 @@ function expectSelfContained(html: string): void {
   expect(bodyTags.filter((t) => /javascript:|vbscript:|data:text\/html/i.test(t))).toEqual([]);
   expect(html).not.toMatch(/<meta[^>]*http-equiv=["']?refresh/i);
   expect(html).not.toMatch(/<base\b/i);
-  expect(html).not.toMatch(/<(iframe|object|embed|form|input|textarea|select|button|link|svg|math|template|noscript)\b/i);
+  expect(html).not.toMatch(
+    /<(iframe|object|embed|form|input|textarea|select|button|link|svg|math|template|noscript)\b/i
+  );
   expect(html).not.toMatch(/url\s*\(/i);
   expect(html).not.toMatch(/@import|@font-face/i);
   for (const img of bodyTags.filter((t) => /^<img\b/i.test(t))) {
@@ -56,7 +58,8 @@ const HOSTILE: Record<string, string> = {
   'script split by a comment': '<scr<!-- x -->ipt>alert(1)</script>',
   'on* attributes': '<p onclick="alert(1)" ONMOUSEOVER=alert(2)>x</p><img src=x onerror=alert(3) alt="pic">',
   'javascript: link': '<a href="javascript:alert(1)">a</a><a href=" JaVaScRiPt:alert(1)">b</a>',
-  'entity-encoded javascript: link': '<a href="&#106;avascript&colon;alert(1)">a</a><a href="java&#x09;script:alert(1)">b</a>',
+  'entity-encoded javascript: link':
+    '<a href="&#106;avascript&colon;alert(1)">a</a><a href="java&#x09;script:alert(1)">b</a>',
   'data:text/html link': '<a href="data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==">a</a>',
   'meta refresh': '<meta http-equiv="refresh" content="0;url=https://evil.example/">',
   'base element': '<base href="https://evil.example/"><a href="/about">About</a>',
@@ -112,7 +115,9 @@ describe('preview sanitiser: links', () => {
     expect(html).toContain(
       '<a href="https://shop.example.in/about" target="_blank" rel="noopener noreferrer">About</a>'
     );
-    expect(html).toContain('href="https://shop.example.in/contact?x=1&amp;y=2" target="_blank" rel="noopener noreferrer"');
+    expect(html).toContain(
+      'href="https://shop.example.in/contact?x=1&amp;y=2" target="_blank" rel="noopener noreferrer"'
+    );
   });
 
   it("an AI's own target and rel are replaced", () => {
@@ -294,7 +299,10 @@ describe('preview sanitiser: hostile CSS cannot hide or cover the note (SEC-002)
   });
 
   it('scopes every surviving AI selector under the root wrapper', () => {
-    const scoped = cleanStylesheet('p:first-child, .a ~ p { color: red } @media (max-width: 9px) { h1 { color: blue } }', true);
+    const scoped = cleanStylesheet(
+      'p:first-child, .a ~ p { color: red } @media (max-width: 9px) { h1 { color: blue } }',
+      true
+    );
     expect(scoped).toContain('.qa-preview-root p:first-child, .qa-preview-root .a ~ p { color: red }');
     expect(scoped).toContain('.qa-preview-root h1 { color: blue }');
     for (const line of aiCss.split('\n').filter((l) => l.includes('{') && !l.startsWith('@'))) {
@@ -306,7 +314,16 @@ describe('preview sanitiser: hostile CSS cannot hide or cover the note (SEC-002)
     expect(html.indexOf('id="qa-preview-note"')).toBeLessThan(html.indexOf('<div class="qa-preview-root">'));
     expect(html).toMatch(/<body>\n<p id="qa-preview-note" role="note">[^<]*<\/p>\n<div class="qa-preview-root">/);
     const pin = /html body > p#qa-preview-note\[role="note"\] \{([^}]*)\}/.exec(style)?.[1] ?? '';
-    for (const prop of ['display: block', 'visibility: visible', 'opacity: 1', 'height: auto', 'overflow: visible', 'transform: none', 'clip-path: none', 'position: static']) {
+    for (const prop of [
+      'display: block',
+      'visibility: visible',
+      'opacity: 1',
+      'height: auto',
+      'overflow: visible',
+      'transform: none',
+      'clip-path: none',
+      'position: static',
+    ]) {
       expect(pin).toContain(`${prop} !important`);
     }
     expect(style).toMatch(/html body > div\.qa-preview-root \{[^}]*overflow: hidden[^}]*contain: paint/);

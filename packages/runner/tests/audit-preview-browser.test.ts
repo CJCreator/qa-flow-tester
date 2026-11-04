@@ -18,7 +18,9 @@ import { generatePreview } from '../../core/src/audit/preview/index.js';
 import { auditDocContents, auditDocResult, PATHS } from '../../core/tests/helpers/audit-doc-fixture.js';
 import { RunnerServer } from '../src/server.js';
 
-const { chromium } = createRequire(path.resolve(__dirname, '../../core/package.json'))('playwright') as typeof import('../../core/node_modules/playwright');
+const { chromium } = createRequire(path.resolve(__dirname, '../../core/package.json'))(
+  'playwright'
+) as typeof import('../../core/node_modules/playwright');
 
 const PORT = 3845;
 const ORIGIN = `http://localhost:${PORT}`;
@@ -104,7 +106,8 @@ beforeAll(async () => {
   const result = { ...auditDocResult(), auditId, version: 1 };
   await store.saveResult(auditId, 1, result);
   const home = auditDocContents().find((c) => c.urlPath === PATHS.home)!;
-  for (const content of auditDocContents()) await store.writeVersionJson(auditId, 1, pageContentName(content.urlPath), content);
+  for (const content of auditDocContents())
+    await store.writeVersionJson(auditId, 1, pageContentName(content.urlPath), content);
   await store.updateVersion(auditId, 1, { status: 'done', finishedAt: '2026-11-03T10:00:00.000Z' });
 
   // A real preview page: core's generator with a fake AI provider, stored as the create row would store it.

@@ -44,7 +44,9 @@ function get(rawPath: string): Promise<Answer> {
       res.on('data', (c) => chunks.push(c));
       res.on('end', () => {
         const body = Buffer.concat(chunks);
-        const json = (res.headers['content-type'] ?? '').startsWith('application/json') ? JSON.parse(body.toString('utf8')) : null;
+        const json = (res.headers['content-type'] ?? '').startsWith('application/json')
+          ? JSON.parse(body.toString('utf8'))
+          : null;
         resolve({ status: res.statusCode || 0, headers: res.headers, body, json });
       });
     });

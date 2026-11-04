@@ -38,7 +38,9 @@ function call(
 ): Promise<Answer> {
   return new Promise((resolve, reject) => {
     const payload = json === undefined ? undefined : JSON.stringify(json);
-    const sent = payload ? { 'content-type': 'application/json', 'content-length': String(Buffer.byteLength(payload)) } : {};
+    const sent = payload
+      ? { 'content-type': 'application/json', 'content-length': String(Buffer.byteLength(payload)) }
+      : {};
     const req = http.request(
       { host: 'localhost', port, path: rawPath, method, headers: { host: `localhost:${port}`, ...sent, ...headers } },
       (res) => {
@@ -387,7 +389,9 @@ describe('Helper access through the RunnerServer dispatch (REQ-033 wiring, BE-10
   });
 
   it('a signed-in Helper without any grant is refused the list rows; no session keeps the key refusal', async () => {
-    const noGrant = await call(KEYED_LOCAL_CHECK_PORT, 'GET', '/api/t/audits', { cookie: cookieFor('nobody@example.com') });
+    const noGrant = await call(KEYED_LOCAL_CHECK_PORT, 'GET', '/api/t/audits', {
+      cookie: cookieFor('nobody@example.com'),
+    });
     expect(noGrant.status).toBe(403);
     expect(JSON.parse(noGrant.body).code).toBe('ERR_FORBIDDEN');
 

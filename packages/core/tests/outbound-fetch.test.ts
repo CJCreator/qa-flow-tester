@@ -158,7 +158,7 @@ describe('makeOutboundFetch request shape', () => {
       }
     );
     const get = makeOutboundFetch({ maxBytes: 10, deps: f.deps });
-    expect(Buffer.from((await (await get('http://a.test/t'))!.bytes())).toString('utf8')).toBe('héllo');
+    expect(Buffer.from(await (await get('http://a.test/t'))!.bytes()).toString('utf8')).toBe('héllo');
     const big = await get('http://a.test/big');
     expect(big?.status).toBe(200);
     expect((await big!.bytes()).length).toBe(0);

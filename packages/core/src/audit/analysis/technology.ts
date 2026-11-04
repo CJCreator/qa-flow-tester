@@ -36,12 +36,7 @@ const siteHost = (h: string): Signature => ({ kind: 'site-host', host: h });
 
 /** One entry per TECHNOLOGIES name: the Record type makes a missing entry a compile error. */
 const SIGNATURES: Record<TechnologyName, readonly Signature[]> = {
-  WordPress: [
-    gen(/^wordpress\b/i),
-    path('/wp-content/'),
-    path('/wp-includes/'),
-    header('link', /api\.w\.org/i),
-  ],
+  WordPress: [gen(/^wordpress\b/i), path('/wp-content/'), path('/wp-includes/'), header('link', /api\.w\.org/i)],
   Wix: [
     gen(/\bwix\.com\b/i),
     host('parastorage.com'),
@@ -96,11 +91,7 @@ const SIGNATURES: Record<TechnologyName, readonly Signature[]> = {
   'Google Sites': [gen(/^google sites\b/i), path('/_/atari/'), siteHost('sites.google.com')],
   Blogger: [gen(/^blogger\b/i), host('blogger.com'), siteHost('blogspot.com')],
   Dukaan: [gen(/^dukaan\b/i), host('mydukaan.io'), host('dukaan.app'), siteHost('mydukaan.io')],
-  'GoDaddy Website Builder': [
-    gen(/go ?daddy website builder/i),
-    host('img1.wsimg.com'),
-    host('img.secureserver.net'),
-  ],
+  'GoDaddy Website Builder': [gen(/go ?daddy website builder/i), host('img1.wsimg.com'), host('img.secureserver.net')],
   React: [
     marker('data-reactroot'),
     marker('_reactRootContainer'),
@@ -231,7 +222,7 @@ function match(sig: Signature, facts: SiteFacts): string[] {
             a.source === source &&
             (sig.kind === 'path'
               ? decodePath(a.url.pathname).toLowerCase().includes(sig.contains.toLowerCase())
-              : onHost(a.url.hostname, sig.host)),
+              : onHost(a.url.hostname, sig.host))
         );
         if (hit) out.push(evidenceFor(sig, source));
       }

@@ -41,11 +41,7 @@ interface Read extends ReadPageResult {
 }
 
 /** Opens a page, waits until it is rendered and quiet, then reads it while counting every request. */
-async function read(
-  urlPath: string,
-  options?: ReadPageOptions,
-  before?: (page: Page) => Promise<void>
-): Promise<Read> {
+async function read(urlPath: string, options?: ReadPageOptions, before?: (page: Page) => Promise<void>): Promise<Read> {
   const page = await context.newPage();
   try {
     await page.goto(site.url(urlPath), { waitUntil: 'networkidle' });
@@ -88,7 +84,10 @@ describe('readPage on the home page', () => {
     const { content } = home;
     // Header menu links.
     for (const to of ['/about', '/services', '/services/party-orders', '/blog', '/ta', '/hi', '/account/sign-in']) {
-      expect(linkTo(content, to).map((l) => l.region), to).toContain('menu');
+      expect(
+        linkTo(content, to).map((l) => l.region),
+        to
+      ).toContain('menu');
     }
     expect(linkTo(content, '/blog').map((l) => l.region)).toEqual(['menu']);
     // Breadcrumb link (Home).

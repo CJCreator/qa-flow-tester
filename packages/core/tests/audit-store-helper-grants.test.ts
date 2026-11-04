@@ -35,7 +35,15 @@ afterEach(async () => {
 describe('Helper grants (REQ-033)', () => {
   it('trims, lower-cases and validates the email', async () => {
     expect(normalizeHelperEmail('  Priya.K@Example.COM ')).toBe('priya.k@example.com');
-    for (const bad of ['', 'no-at-sign', 'a@b', 'a b@example.com', '@example.com', `${'x'.repeat(250)}@example.com`, 7]) {
+    for (const bad of [
+      '',
+      'no-at-sign',
+      'a@b',
+      'a b@example.com',
+      '@example.com',
+      `${'x'.repeat(250)}@example.com`,
+      7,
+    ]) {
       expect(() => normalizeHelperEmail(bad)).toThrow(AuditRecordError);
     }
   });

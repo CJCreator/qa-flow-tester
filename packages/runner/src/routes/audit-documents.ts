@@ -145,7 +145,10 @@ async function unknownReference(
   const contents = new Map<string, PageContent | null>();
   for (const s of patch.sections ?? []) {
     if (!contents.has(s.urlPath)) {
-      contents.set(s.urlPath, await store.readVersionJson<PageContent>(t.auditId, t.version, pageContentName(s.urlPath)));
+      contents.set(
+        s.urlPath,
+        await store.readVersionJson<PageContent>(t.auditId, t.version, pageContentName(s.urlPath))
+      );
     }
     const content = contents.get(s.urlPath);
     if (!content || !content.sections.some((x) => x.id === s.sectionId)) {
@@ -179,7 +182,12 @@ export function auditEditsRoutes(deps: AuditDocumentDeps): Route[] {
       if (!target) return;
       const version = await store.getVersion(target.auditId, target.version);
       if (version?.status === 'running') {
-        return refuse(c.res, 409, 'ERR_AUDIT_RUNNING', 'This version of the Website Audit is still running. Review it when it has finished.');
+        return refuse(
+          c.res,
+          409,
+          'ERR_AUDIT_RUNNING',
+          'This version of the Website Audit is still running. Review it when it has finished.'
+        );
       }
 
       let body: unknown;
@@ -214,7 +222,17 @@ export function auditEditsRoutes(deps: AuditDocumentDeps): Route[] {
   };
 
   return [
-    { method: AUDIT_API.getEdits.method, path: AUDIT_API.getEdits.path, access: AUDIT_API.getEdits.access, handle: getEdits },
-    { method: AUDIT_API.patchEdits.method, path: AUDIT_API.patchEdits.path, access: AUDIT_API.patchEdits.access, handle: patchEdits },
+    {
+      method: AUDIT_API.getEdits.method,
+      path: AUDIT_API.getEdits.path,
+      access: AUDIT_API.getEdits.access,
+      handle: getEdits,
+    },
+    {
+      method: AUDIT_API.patchEdits.method,
+      path: AUDIT_API.patchEdits.path,
+      access: AUDIT_API.patchEdits.access,
+      handle: patchEdits,
+    },
   ];
 }
