@@ -11,6 +11,7 @@ All notable changes. Format follows [Keep a Changelog](https://keepachangelog.co
 
 ### Added
 
+- Removed every fabricated website (`fixtures/`, `pnpm fixture`, the planted-defect benchmark) and the tests that used one; two test tiers: `pnpm test` runs only the fast `unit` project (no website, no Chromium), `test:browser` and `test:all` added; pull requests and deploys run `unit` only, browser tests run nightly; real sites are checked by hand (ADR 0040)
 - Intent on Plan Items (Works, Rejects, Limits, Denied); Rejects planned from form attributes by fixed rules (no AI key needed); Limits from the AI Planner or a Source; the refusal rule shared by the Check-up and the Playwright export (`expectRefused`); Rejects and Limits wait for a Test Copy or sign-in consent; Ambiguity Questions for Sensitive submits (ADR 0024)
 - Test cap (default 2000; `testCap` in the API, `--test-cap` in the CI command): Rejects and Limits past it are switched off and counted in the approval summary; Plan Review has a filter chip and one switch-off per Intent, with counts
 - Spider deep exploration of tabs, accordions, drawers and modals (opening steps stored on the Plan Item, shown in Plan Review, replayed by the export), CRUD facts from structure, and a guarded Delete probe that cancels at the confirm (ADR 0025)

@@ -123,7 +123,7 @@ To prevent breaking existing functionality or violating safety and legal boundar
 
 **Effort:** **S** = a day or two, **M** = about a week, **L** = several weeks. One builder, so phases run one after another. The only thing that runs beside a phase is **Gate G1**, which is calendar time, not build time.
 
-**How "better" is measured.** The repo already has a benchmark (`pnpm benchmark`, script in [scripts/benchmark.ts](../scripts/benchmark.ts), sites in `fixtures/benchmarks/`) that scores how many reported issues are real and how many planted defects are found. Record a baseline score before Phase 0 and again at the end of each phase. A phase that lowers precision (more false findings) does not ship. Fixes in Phase 0 should raise it.
+**How "better" is measured.** The planted-defect benchmark was removed (ADR 0040), so score by hand on real websites: how many reported issues are real and how many known defects are found. Record a baseline score before Phase 0 and again at the end of each phase. A phase that lowers precision (more false findings) does not ship. Fixes in Phase 0 should raise it.
 
 ```mermaid
 graph LR

@@ -211,13 +211,13 @@ describe('new check-up screen: recovery and choices', () => {
     recent: null,
   };
 
-  it('offers the built-in test app, with the command that starts it, while the address is empty', async () => {
+  it('offers no built-in test app shortcut while the address is empty', async () => {
     const { NewCheckupScreen } = await import('../src/screens/NewCheckupScreen');
     const html = renderToStaticMarkup(
       createElement(NewCheckupScreen, { ...props, ai: { configured: true, model: 'm' } })
     );
-    expect(html).toContain('Try the built-in test app');
-    expect(html).toContain('pnpm fixture');
+    expect(html).not.toContain('built-in test app');
+    expect(html).not.toContain('pnpm fixture');
   });
 
   it('says why Start is off, and shows Retry beside the AI setup error', async () => {

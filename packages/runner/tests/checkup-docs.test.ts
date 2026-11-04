@@ -29,25 +29,7 @@ const roles = JSON.stringify([
   { role: 'guest', username: 'guest@x.test', password: 'Gu3st-pw-55' },
 ]);
 
-describe('docs/DEMO.md labels', () => {
-  it('every label quoted in DEMO.md appears in the wizard source', async () => {
-    const demo = await fs.readFile(path.join(root, 'docs', 'DEMO.md'), 'utf8');
-    const wizard = plainQuotes(await sourceText(path.join(root, 'packages', 'wizard', 'src')));
-    const labels = [...demo.matchAll(/"([^"\n]+)"/g)].map((m) => m[1]);
-    expect(labels.length).toBeGreaterThan(20);
-    const missing = labels.filter((label) => !wizard.includes(plainQuotes(label)));
-    expect(missing).toEqual([]);
-  });
-
-  it('the two stamp words in DEMO.md are the verdict stamps', async () => {
-    const demo = await fs.readFile(path.join(root, 'docs', 'DEMO.md'), 'utf8');
-    const verdict = await fs.readFile(path.join(root, 'packages', 'types', 'src', 'verdict.ts'), 'utf8');
-    for (const stamp of ['Ready to release', 'Not ready yet']) {
-      expect(demo).toContain(`\`${stamp}\``);
-      expect(verdict).toContain(`'${stamp}'`);
-    }
-  });
-
+describe('wizard labels', () => {
   it('the palette jump label matches its section name', async () => {
     const palette = await fs.readFile(
       path.join(root, 'packages', 'wizard', 'src', 'components', 'CommandPalette.tsx'),

@@ -130,26 +130,6 @@ describe('detectTechnology', () => {
     });
   });
 
-  it('technology: the fixtures/audit-site home page facts name WordPress', () => {
-    // Read the facts the reader would report from the fixture home page itself.
-    const html = readFileSync(new URL('../../../fixtures/audit-site/index.html', import.meta.url), 'utf8');
-    const generator = /<meta\s+name="generator"\s+content="([^"]*)"/i.exec(html)?.[1] ?? null;
-    const stylesheets = [...html.matchAll(/<link\s+rel="stylesheet"\s+href="([^"]*)"/gi)].map((m) => m[1]!);
-    const scripts = [...html.matchAll(/<script\s+src="([^"]*)"/gi)].map((m) => m[1]!);
-    expect(generator).toMatch(/^WordPress/);
-    expect(stylesheets.some((s) => s.startsWith('/wp-content/'))).toBe(true);
-
-    const result = detectTechnology([rawPage({ metaGenerator: generator, stylesheets, scripts })]);
-    expect(result.status).toBe('identified');
-    if (result.status !== 'identified') return;
-    expect(result.technologies).toHaveLength(1);
-    const [wp] = result.technologies;
-    expect(wp!.name).toBe('WordPress');
-    expect(wp!.kind).toBe('cms');
-    expect(wp!.evidence).toContain('meta generator');
-    expect(wp!.evidence).toContain('stylesheet from /wp-content/');
-  });
-
   it('technology: no known signature gives not-identified, never an empty identified list', () => {
     expect(detectTechnology([])).toEqual({ status: 'not-identified' });
     const plain = rawPage({

@@ -19,7 +19,7 @@
   - [One Command (`pnpm start`)](#one-command-pnpm-start)
   - [Working on the Wizard (Hot Reload)](#working-on-the-wizard-hot-reload)
 - [End-to-End (E2E) Testing Guide](#end-to-end-e2e-testing-guide)
-  - [Step 1: Start the Built-in Test Application](#step-1-start-the-built-in-test-application)
+  - [Step 1: Pick a Site to Check](#step-1-pick-a-site-to-check)
   - [Step 2: Use Release check-up](#step-2-use-release-check-up)
 - [Testing & Quality Checks](#testing--quality-checks)
 - [Troubleshooting & FAQ](#troubleshooting--faq)
@@ -44,7 +44,7 @@ flowchart TD
     end
 
     subgraph Target ["Target Under Test"]
-        App["Target Web Application\n(Staging / Dev / Fixture App)"]
+        App["Target Web Application\n(Staging / Dev / Public Site)"]
     end
 
     Wizard -->|POST /api/runner/run| Runner
@@ -69,15 +69,13 @@ flowchart TD
 
 ## 📦 Monorepo Structure
 
-| Package / Directory                            | Purpose                                                                                                                                                          |
-| :--------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`packages/core`](packages/core)               | Core test orchestration, AI discovery agent, test planner, crawler, benchmarking engine, and AI providers                                                        |
-| [`packages/checkers`](packages/checkers)       | Automated checkers (A11y/WCAG, design tokens, visual diffs, console errors, network failures)                                                                    |
-| [`packages/runner`](packages/runner)           | The QA Tool server: runs checks over HTTP with Server-Sent Events (SSE) streaming, keeps every check-up's report, and serves the Wizard on the same port         |
-| [`packages/wizard`](packages/wizard)           | "Release check-up": the one app, in plain language, with details for developers under each finding ([ADR 0010](docs/adr/0010-one-app-with-details-on-demand.md)) |
-| [`packages/types`](packages/types)             | Shared TypeScript type definitions, schemas, and interfaces                                                                                                      |
-| [`fixtures/test-app`](fixtures/test-app)       | Built-in target test application (Invoicing app with simulated errors)                                                                                           |
-| [`scripts/benchmark.ts`](scripts/benchmark.ts) | Automated benchmark harness measuring check accuracy and planted defect detection                                                                                |
+| Package / Directory                      | Purpose                                                                                                                                                          |
+| :--------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`packages/core`](packages/core)         | Core test orchestration, AI discovery agent, test planner, crawler, benchmarking engine, and AI providers                                                        |
+| [`packages/checkers`](packages/checkers) | Automated checkers (A11y/WCAG, design tokens, visual diffs, console errors, network failures)                                                                    |
+| [`packages/runner`](packages/runner)     | The QA Tool server: runs checks over HTTP with Server-Sent Events (SSE) streaming, keeps every check-up's report, and serves the Wizard on the same port         |
+| [`packages/wizard`](packages/wizard)     | "Release check-up": the one app, in plain language, with details for developers under each finding ([ADR 0010](docs/adr/0010-one-app-with-details-on-demand.md)) |
+| [`packages/types`](packages/types)       | Shared TypeScript type definitions, schemas, and interfaces                                                                                                      |
 
 ---
 
@@ -236,19 +234,11 @@ Without `--beta`, `pnpm tunnel` shares **your** saved AI key with whoever has th
 
 ## 🧪 End-to-End (E2E) Testing Guide
 
-Follow this walkthrough to run and verify a complete test flow end-to-end against the built-in test application.
+Follow this walkthrough to run and verify a complete test flow end-to-end against a real site.
 
-### Step 1: Start the Built-in Test Application
+### Step 1: Pick a Site to Check
 
-The repository includes a fixture application (`@qa/fixture-test-app`) with simulated invoices, authentication, and planted defects:
-
-```bash
-# In a new terminal window:
-cd fixtures/test-app
-node server.js
-```
-
-The test app will start at: **`http://localhost:3050`**
+Use your own staging or dev App, or a public site you are allowed to scan. The repository has no built-in test site; real sites are the test target.
 
 ---
 
@@ -260,7 +250,7 @@ The test app will start at: **`http://localhost:3050`**
    ```
 2. Use Release check-up, which it opens at `http://localhost:3001/`.
 3. The first time, paste an OpenRouter key at the top of the screen (the free tier works). It's checked as you paste it, and nothing else you type is lost. You can replace it later in **Settings**.
-4. Enter the site's address. A bare address on this computer or a private network (`localhost:3050`, `192.168.1.5`) gets `http://`; anything else gets `https://`. Once it's checked, the screen shows the address used and which kind of check-up it gets:
+4. Enter the site's address. A bare address on this computer or a private network (`localhost:3000`, `192.168.1.5`) gets `http://`; anything else gets `https://`. Once it's checked, the screen shows the address used and which kind of check-up it gets:
    - **Test copy**: forms can be filled in and sent. That needs an address on this computer, a private network or a dev tunnel, or one you chose **It’s a test copy I’m allowed to test fully** for.
    - **Live site** (**Only look at it**, or **It’s my live site: only look at it**): only looked at, nothing is sent or changed.
 
@@ -293,17 +283,17 @@ The plan needs an AI key: set one up on the new check-up screen or in **Settings
 Run the automated test suites:
 
 ```bash
-# Run unit & integration tests
+# Run the fast unit tests (no browser)
 pnpm test
+
+# Run the Chromium tests (setContent pages, run nightly in CI)
+pnpm test:browser
 
 # Run tests in watch mode
 pnpm test:watch
 
 # Format code
 pnpm format
-
-# Run planted-defect benchmark
-pnpm benchmark
 ```
 
 ---

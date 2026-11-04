@@ -5,7 +5,6 @@
 ## How it was tested
 
 - [ ] `pnpm build` and `pnpm test` pass
-- [ ] `pnpm test:url-first` (if checkers, scoring, reports or URL-first flow changed)
 - [ ] New or changed behavior has a test that fails without the change
 
 ## Checklist

@@ -1,5 +1,5 @@
-# One shard of the test suite. CI calls it for every pull request, and Deploy calls it before publishing
-# main, so a push to main is tested the same way as the pull request it came from.
+# One shard of one test project (unit or browser). CI runs unit for every pull request, Deploy runs unit
+# before publishing main, and the nightly workflow runs browser.
 name: Tests
 
 on:
@@ -8,6 +8,11 @@ on:
       shard:
         description: 'Which part of the suite to run, as N/4 (for example 2/4).'
         required: true
+        type: string
+      project:
+        description: 'Which vitest project to run: unit or browser. Only browser needs Chromium and the builds.'
+        required: false
+        default: unit
         type: string
 
 permissions:
@@ -29,12 +34,15 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build the site (also type-checks types and the wizard)
+        if: inputs.project != 'unit'
         run: pnpm run site-build
 
       - name: Build the runner and the packages it uses
+        if: inputs.project != 'unit'
         run: pnpm --filter "@qa/runner..." run build
 
       - name: Cache Playwright browser
+        if: inputs.project != 'unit'
         id: playwright-cache
         uses: actions/cache@v4
         with:
@@ -42,13 +50,12 @@ jobs:
           key: ${{ runner.os }}-playwright-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - name: Install Chromium (the browser tests drive it)
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        if: inputs.project != 'unit' && steps.playwright-cache.outputs.cache-hit != 'true'
         run: pnpm --filter @qa/core exec playwright install --with-deps chromium
 
       - name: Install Playwright system dependencies
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        if: inputs.project != 'unit' && steps.playwright-cache.outputs.cache-hit == 'true'
         run: pnpm --filter @qa/core exec playwright install-deps chromium
 
-      # wizard-e2e and auth-crawl run in their own jobs in ci.yml; every other test runs here.
-      - name: Tests (shard ${{ inputs.shard }})
-        run: pnpm exec vitest run --shard=${{ inputs.shard }} --exclude "**/wizard-e2e.test.ts" --exclude "**/auth-crawl-*.test.ts"
+      - name: Tests (${{ inputs.project }}, shard ${{ inputs.shard }})
+        run: pnpm exec vitest run --project ${{ inputs.project }} --shard=${{ inputs.shard }}

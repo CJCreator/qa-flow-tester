@@ -25,7 +25,7 @@ Requires Node 22.9 or newer and pnpm 11 (the exact version is pinned in `package
 ## Definition of done
 
 - Behavior works and is covered by a test that would fail without it
-- `pnpm build`, `pnpm test`, `pnpm lint` and `pnpm format:check` pass; `pnpm test:url-first` too if you touched checkers, scoring, reports or URL-first flow
+- `pnpm build`, `pnpm test`, `pnpm lint` and `pnpm format:check` pass
 - User-facing words use glossary terms and avoid the "_Avoid_" words in `CONTEXT.md`
 - A decision that changes architecture, safety or product behavior has an ADR (`/adr`)
 - Docs that describe what you changed are updated: `docs/API.md` for routes, `docs/CONFIGURATION.md` for settings

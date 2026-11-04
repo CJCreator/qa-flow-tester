@@ -22,11 +22,9 @@ describe('.gitignore', () => {
 });
 
 describe('runner Dockerfile', () => {
-  it('copies the fixture manifest before the frozen install', () => {
+  it('names no fixture workspace (there are no fixture sites)', () => {
     const dockerfile = read('packages/runner/Dockerfile');
-    const copy = dockerfile.indexOf('COPY fixtures/test-app/package.json');
-    const install = dockerfile.indexOf('RUN pnpm install --frozen-lockfile');
-    expect(copy).toBeGreaterThan(-1);
-    expect(copy).toBeLessThan(install);
+    expect(dockerfile).not.toContain('fixtures/');
+    expect(dockerfile).toContain('RUN pnpm install --frozen-lockfile');
   });
 });

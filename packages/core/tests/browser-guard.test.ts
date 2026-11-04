@@ -3,10 +3,8 @@
  * redirected request is checked the same way, and the guard only ever adds a refusal.
  */
 import { describe, it, expect, afterEach } from 'vitest';
-import http from 'http';
-import type { AddressInfo } from 'net';
 import type { BrowserContext } from 'playwright';
-import { BrowserManager, installRequestGuard, setBrowserPolicy, getBrowserPolicy } from '../src/browser.js';
+import { installRequestGuard, setBrowserPolicy } from '../src/browser.js';
 import { blockChanges } from '../src/live-site.js';
 import { makeRequestGuard, type NetDeps } from '../src/safe-net.js';
 
@@ -130,45 +128,4 @@ describe('the shared-machine request guard (isTestHost, rebinding and redirects)
       expect((await send('https://bad.test/', { method: 'GET' })).aborted, order).toBe(true);
     }
   });
-});
-
-describe('the guard in a real browser (needs Chromium)', () => {
-  let server: http.Server | undefined;
-  afterEach(async () => {
-    await new Promise<void>((resolve) => (server ? server.close(() => resolve()) : resolve()));
-    server = undefined;
-  });
-
-  async function listen(): Promise<number> {
-    server = http.createServer((req, res) => {
-      res.writeHead(200, { 'content-type': 'text/html' });
-      res.end('<html><body><h1>fixture</h1></body></html>');
-    });
-    await new Promise<void>((resolve) => server!.listen(0, '127.0.0.1', () => resolve()));
-    return (server.address() as AddressInfo).port;
-  }
-
-  it('with the shared-machine policy a page on loopback is blocked; with no policy it loads', async () => {
-    const port = await listen();
-    const url = `http://127.0.0.1:${port}/`;
-
-    expect(getBrowserPolicy()).toBeNull();
-    const open = new BrowserManager();
-    try {
-      const { page } = await open.openPage();
-      await page.goto(url, { timeout: 8000 });
-      expect(await page.textContent('h1')).toBe('fixture');
-    } finally {
-      await open.close();
-    }
-
-    setBrowserPolicy({ guard: makeRequestGuard({ lookup: async () => ['8.8.8.8'] }) });
-    const guarded = new BrowserManager();
-    try {
-      const { page } = await guarded.openPage();
-      await expect(page.goto(url, { timeout: 8000 })).rejects.toThrow();
-    } finally {
-      await guarded.close();
-    }
-  }, 60_000);
 });

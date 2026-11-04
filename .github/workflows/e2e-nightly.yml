@@ -1,4 +1,5 @@
-# Nightly end-to-end wizard check against the fixture and mock backend.
+# Nightly: the browser test project (it never runs on pull requests). Uses tests.yml, which builds the
+# site and runner and installs Chromium for it.
 name: Nightly E2E
 
 on:
@@ -14,39 +15,12 @@ permissions:
   contents: read
 
 jobs:
-  wizard-e2e:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: Install
-        run: pnpm install --frozen-lockfile
-
-      - name: Playwright version matches the Docker image tag
-        run: node scripts/check-playwright-version.mjs
-
-      - name: Build the site
-        run: pnpm run site-build
-
-      - name: Build the runner and the packages it uses
-        run: pnpm --filter "@qa/runner..." run build
-
-      - name: Install Chromium (the browser tests drive it)
-        run: pnpm --filter @qa/core exec playwright install --with-deps chromium
-
-      - name: Run wizard end-to-end tests
-        run: pnpm exec vitest run packages/wizard/tests/wizard-e2e.test.ts
-
-      - name: Upload traces on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-traces
-          path: test-results/
-          if-no-files-found: ignore
+  browser:
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ['1/4', '2/4', '3/4', '4/4']
+    uses: ./.github/workflows/tests.yml
+    with:
+      project: browser
+      shard: ${{ matrix.shard }}

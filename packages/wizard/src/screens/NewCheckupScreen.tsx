@@ -72,9 +72,6 @@ export interface StartFacts {
 
 const CHECK_DELAY_MS = 600;
 
-/** The fixture app that ships with the tool: `pnpm fixture` serves it here. */
-const BUILT_IN_TEST_APP = 'http://localhost:3050';
-
 /** The runner's own site facts decide whether the address is a Test Copy; the person can mark a live-looking one. */
 function testCopyOf(facts: SiteFacts, form: CheckupForm): { natural: boolean; showMark: boolean; isTestCopy: boolean } {
   const natural = !!facts.testCopy && !facts.remembered?.markedTestCopy;
@@ -372,26 +369,6 @@ export function NewCheckupScreen({
           aria-describedby="url-status"
           aria-invalid={check.state === 'invalid' || check.state === 'unreachable'}
         />
-        {!form.address.trim() && (
-          <p className="mt-2 text-sm text-ink-soft">
-            No site handy?{' '}
-            <button
-              type="button"
-              className="btn-link text-sm"
-              onClick={() =>
-                onFormChange((f) =>
-                  withAddress(f, BUILT_IN_TEST_APP, (a) => {
-                    const n = normalizeUrl(a);
-                    return n.ok ? hostOf(n.url) : null;
-                  })
-                )
-              }
-            >
-              Try the built-in test app
-            </button>{' '}
-            (start it first with <code className="font-mono">pnpm fixture</code>).
-          </p>
-        )}
         <div id="url-status" role="status" className="mt-2 min-h-[1.6em] text-sm">
           {check.state === 'checking' && <Spinner label="Checking the address…" />}
           {check.state === 'invalid' && <span className="text-fail font-medium">{check.reason}</span>}

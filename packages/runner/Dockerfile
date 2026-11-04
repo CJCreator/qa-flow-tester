@@ -12,8 +12,6 @@ COPY packages/checkers/package.json packages/checkers/
 COPY packages/core/package.json packages/core/
 COPY packages/runner/package.json packages/runner/
 COPY packages/wizard/package.json packages/wizard/
-# fixtures/* is a workspace package in the lockfile, so its manifest must be here for --frozen-lockfile.
-COPY fixtures/test-app/package.json fixtures/test-app/
 RUN pnpm install --frozen-lockfile --filter "@qa/runner..." --filter "@qa/wizard..."
 
 COPY packages/types packages/types
