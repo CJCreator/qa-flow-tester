@@ -219,3 +219,59 @@ describe('isLoopbackAddress: the owner without a key is the local machine (DEC-0
     }
   });
 });
+
+describe('schedule rows and the scheduler access level (ADR 0039)', () => {
+  const rows = allRoutes.filter((r) => String(r.path).startsWith('/api/runner/schedules'));
+
+  it('the four owner rows are owner / allow, and the tick row is scheduler / allow', () => {
+    const tick = rows.filter((r) => r.access === 'scheduler');
+    expect(tick).toHaveLength(1);
+    expect(tick[0]).toMatchObject({ method: 'POST', path: '/api/runner/schedules/tick', beta: 'allow' });
+    const owner = rows.filter((r) => r.access === 'owner');
+    expect(owner).toHaveLength(4);
+    for (const row of owner) expect(row.beta).toBe('allow');
+  });
+
+  it('owner rows: the key passes in beta, no key is 401', () => {
+    expect(authorizeRoute({ access: 'owner', beta: 'allow' }, { hasAccessKey: true, beta: true })).toEqual({
+      allow: true,
+    });
+    expect(authorizeRoute({ access: 'owner', beta: 'allow' }, { hasAccessKey: false, beta: true })).toMatchObject({
+      allow: false,
+      status: 401,
+    });
+  });
+
+  it("'scheduler' is allowed only with a verified token, and the access key is not enough", () => {
+    const row = { access: 'scheduler', beta: 'allow' } as const;
+    expect(authorizeRoute(row, { hasAccessKey: false, beta: true, scheduler: true })).toEqual({ allow: true });
+    expect(authorizeRoute(row, { hasAccessKey: false, beta: false, scheduler: true })).toEqual({ allow: true });
+    for (const caller of [
+      { hasAccessKey: false, beta: true },
+      { hasAccessKey: true, beta: true },
+      { hasAccessKey: true, beta: false, scheduler: false },
+    ]) {
+      expect(authorizeRoute(row, caller)).toMatchObject({ allow: false, status: 401, code: 'ERR_SCHEDULER_AUTH' });
+    }
+  });
+
+  it("'scheduler' without a beta policy is closed in beta", () => {
+    expect(authorizeRoute({ access: 'scheduler' }, { hasAccessKey: false, beta: true, scheduler: true })).toMatchObject(
+      {
+        allow: false,
+        code: 'ERR_BETA',
+      }
+    );
+  });
+
+  it('every row declares an access level', () => {
+    for (const row of allRoutes) expect(row.access, String(row.path)).toBeDefined();
+  });
+
+  it('the tick beats the schedule id prefix rows, and ids resolve to the prefix rows', () => {
+    expect(resolveRoute(allRoutes, 'POST', '/api/runner/schedules/tick')?.route.access).toBe('scheduler');
+    expect(resolveRoute(allRoutes, 'POST', '/api/runner/schedules/sched_1_ab/toggle')?.route.access).toBe('owner');
+    expect(resolveRoute(allRoutes, 'DELETE', '/api/runner/schedules/sched_1_ab')?.route.access).toBe('owner');
+    expect(resolveRoute(allRoutes, 'GET', '/api/runner/schedules/tick')).toBeUndefined();
+  });
+});

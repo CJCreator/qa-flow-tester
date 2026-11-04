@@ -24,6 +24,7 @@ import type { Route, RouteContext } from './route.js';
 import { sendNotFound } from './route.js';
 import type { RunnerServer } from '../server.js';
 import { planRoutes } from './plan.js';
+import { scheduleRoutes } from './schedules.js';
 import { AuditRuns } from '../session/audit-run.js';
 import { auditCrawlRoutes } from './audit-crawl.js';
 import { auditContentRoutes } from './audit-content.js';
@@ -59,9 +60,11 @@ export {
   ACCESS_KEY_REFUSAL,
   BETA_REFUSAL,
   CLOSED_REFUSAL,
+  SCHEDULER_REFUSAL,
 } from './route.js';
 export { MAX_BODY_CHARS, readJsonBody, sendJson } from './body.js';
 export * from './plan.js';
+export * from './schedules.js';
 export * from './audit-ai.js';
 export * from './audit-crawl.js';
 export * from './audit-content.js';
@@ -230,4 +233,4 @@ function contractRows(): Route[] {
 
 export const auditRoutes: readonly Route[] = contractRows();
 
-export const allRoutes: readonly Route[] = [...planRoutes, ...auditRoutes];
+export const allRoutes: readonly Route[] = [...planRoutes, ...scheduleRoutes, ...auditRoutes];

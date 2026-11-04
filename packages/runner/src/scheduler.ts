@@ -1,5 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
+import type { AuditStoreBackend } from '@qa/core';
 
 export interface CheckupSchedule {
   id: string;
@@ -16,12 +17,71 @@ export interface CheckupSchedule {
   nextRunAt: string;
 }
 
-export class SchedulerManager {
-  private schedulesFile: string;
-  private timer: NodeJS.Timeout | null = null;
+/** Where the schedule list lives. A failed read must throw: an empty list would be saved over the real one. */
+export interface ScheduleStore {
+  read(): Promise<CheckupSchedule[]>;
+  write(list: CheckupSchedule[]): Promise<void>;
+}
+
+/** What one tick did. Counts only: no ids, addresses or errors. */
+export interface TickSummary {
+  /** Runs that finished well. */
+  started: number;
+  /** Runs that could not start, finished with an error, or threw. */
+  failed: number;
+  /** Enabled schedules that were not due. */
+  skipped: number;
+  /** Another tick was still going, so this one did nothing. */
+  busy: boolean;
+}
+
+/** `<dataDir>/schedules.json`: the local copy's store. A missing or unreadable file reads as no schedules. */
+export class FileScheduleStore implements ScheduleStore {
+  private readonly file: string;
 
   constructor(dataDir: string) {
-    this.schedulesFile = path.join(dataDir, 'schedules.json');
+    this.file = path.join(dataDir, 'schedules.json');
+  }
+
+  async read(): Promise<CheckupSchedule[]> {
+    try {
+      const data = await fs.readFile(this.file, 'utf8');
+      const parsed: unknown = JSON.parse(data);
+      return Array.isArray(parsed) ? (parsed as CheckupSchedule[]) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  async write(list: CheckupSchedule[]): Promise<void> {
+    await fs.mkdir(path.dirname(this.file), { recursive: true });
+    await fs.writeFile(this.file, JSON.stringify(list, null, 2), 'utf8');
+  }
+}
+
+/** The audit store key the hosted copy keeps its schedules under (ADR 0036 backend, ADR 0039). */
+export const SCHEDULES_KEY = 'schedules/schedules.json';
+
+/** Schedules in the audit store backend (Cloud Storage on the hosted copy). Store errors propagate. */
+export class BackendScheduleStore implements ScheduleStore {
+  constructor(private readonly backend: AuditStoreBackend) {}
+
+  async read(): Promise<CheckupSchedule[]> {
+    const stored = await this.backend.getJson<CheckupSchedule[]>(SCHEDULES_KEY);
+    return Array.isArray(stored) ? stored : [];
+  }
+
+  async write(list: CheckupSchedule[]): Promise<void> {
+    await this.backend.putJson(SCHEDULES_KEY, list);
+  }
+}
+
+export class SchedulerManager {
+  private readonly store: ScheduleStore;
+  private timer: NodeJS.Timeout | null = null;
+
+  constructor(storeOrDataDir: string | ScheduleStore) {
+    this.store = typeof storeOrDataDir === 'string' ? new FileScheduleStore(storeOrDataDir) : storeOrDataDir;
   }
 
   calculateNextRun(cadence: 'daily' | 'weekly' | 'hourly', hour: number = 2, dayOfWeek: number = 1): string {
@@ -57,17 +117,11 @@ export class SchedulerManager {
   }
 
   async loadSchedules(): Promise<CheckupSchedule[]> {
-    try {
-      const data = await fs.readFile(this.schedulesFile, 'utf8');
-      return JSON.parse(data) as CheckupSchedule[];
-    } catch {
-      return [];
-    }
+    return this.store.read();
   }
 
   async saveSchedules(schedules: CheckupSchedule[]): Promise<void> {
-    await fs.mkdir(path.dirname(this.schedulesFile), { recursive: true });
-    await fs.writeFile(this.schedulesFile, JSON.stringify(schedules, null, 2), 'utf8');
+    await this.store.write(schedules);
   }
 
   async addSchedule(input: Omit<CheckupSchedule, 'id' | 'createdAt' | 'nextRunAt'>): Promise<CheckupSchedule> {
@@ -110,37 +164,48 @@ export class SchedulerManager {
   private ticking = false;
 
   /**
-   * Runs every schedule that is due, once. The next run time is saved before the run is started, so a
-   * schedule that is due is never fired twice, and a tick that is still going is not entered again.
+   * Runs every schedule that is due, once, one after another. The next run time is saved before the run is
+   * started, so a schedule that is due is never fired twice, and a tick that is still going is not entered
+   * again (it answers busy). Once `deadlineMs` (epoch ms) has passed no new run is started: the rest stay due
+   * for the next tick.
    */
-  async tick(onRunScheduled: (schedule: CheckupSchedule) => Promise<boolean>, now: Date = new Date()): Promise<void> {
-    if (this.ticking) return;
+  async tick(
+    onRunScheduled: (schedule: CheckupSchedule) => Promise<boolean>,
+    now: Date = new Date(),
+    opts: { deadlineMs?: number } = {}
+  ): Promise<TickSummary> {
+    const summary: TickSummary = { started: 0, failed: 0, skipped: 0, busy: false };
+    if (this.ticking) return { ...summary, busy: true };
     this.ticking = true;
     try {
       const schedules = await this.loadSchedules();
       const due = schedules.filter((s) => s.enabled && now >= new Date(s.nextRunAt));
-      if (due.length === 0) return;
-      for (const sched of due) {
+      summary.skipped = schedules.filter((s) => s.enabled).length - due.length;
+      for (const { id } of due) {
+        if (opts.deadlineMs !== undefined && Date.now() >= opts.deadlineMs) break;
+        // Re-load so a schedule added, paused or removed while an earlier run was going is not undone.
+        const list = await this.loadSchedules();
+        const sched = list.find((s) => s.id === id);
+        if (!sched || !sched.enabled) continue;
         sched.lastRunAt = now.toISOString();
         sched.nextRunAt = this.calculateNextRun(sched.cadence, sched.hour, sched.dayOfWeek);
+        await this.saveSchedules(list);
+        const ok = await onRunScheduled({ ...sched }).catch(() => false);
+        if (ok) summary.started += 1;
+        else summary.failed += 1;
+        const latest = await this.loadSchedules();
+        const target = latest.find((s) => s.id === id);
+        if (target) {
+          target.lastRunStatus = ok ? 'passed' : 'failed';
+          await this.saveSchedules(latest);
+        }
       }
-      await this.saveSchedules(schedules);
-      for (const sched of due) {
-        const started = await onRunScheduled(sched).catch(() => false);
-        sched.lastRunStatus = started ? 'passed' : 'failed';
-      }
-      // Re-read so a schedule added or removed while a run was starting is not undone.
-      const latest = await this.loadSchedules();
-      for (const sched of due) {
-        const target = latest.find((s) => s.id === sched.id);
-        if (target) target.lastRunStatus = sched.lastRunStatus;
-      }
-      await this.saveSchedules(latest);
     } catch {
-      // scheduler tick error resilience
+      // scheduler tick error resilience: a failed store read stops the tick and saves nothing
     } finally {
       this.ticking = false;
     }
+    return summary;
   }
 
   start(onRunScheduled: (schedule: CheckupSchedule) => Promise<boolean>, intervalMs = 60000): void {
