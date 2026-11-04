@@ -181,7 +181,14 @@ import {
   type AuditAiSetup,
 } from '@qa/core';
 import { BenchmarkStore, cleanFlowType, compareSites, siteName } from './benchmarks.js';
-import { SchedulerManager, type CheckupSchedule } from './scheduler.js';
+import {
+  BackendScheduleStore,
+  SchedulerManager,
+  type CheckupSchedule,
+  type ScheduleStore,
+  type TickSummary,
+} from './scheduler.js';
+import { schedulerAuthFromEnv, type GoogleOidcVerifier } from './helpers/google-oidc-token.js';
 import {
   SessionKeyResolver,
   betaLimitsFromEnv,
@@ -332,6 +339,10 @@ const DOWNLOADABLE_REPORT_FILES: Record<string, string> = {
   'issues.html': 'text/html; charset=utf-8',
 };
 const RUNS_KEPT_PER_SITE = 10;
+/** One scheduled run may hold the tick request this long (28 min); past it the run is left going and marked failed. */
+const SCHEDULE_RUN_CAP_MS = 28 * 60 * 1000;
+/** A tick starts no new run after this long (29 min): Cloud Scheduler gives up on a request at 30 min (ADR 0039). */
+const TICK_BUDGET_MS = 29 * 60 * 1000;
 
 export interface RunnerServerOptions {
   port?: number;
@@ -407,6 +418,13 @@ export interface RunnerServerOptions {
    * list rows (handlers filter per Helper). A test seam when given: it brings its own grant store.
    */
   helperAccess?: HelperAccess;
+  /** Test seam: where schedules are kept. Default: the audit store when it is Cloud Storage, else `<dataDir>/schedules.json`. */
+  scheduleStore?: ScheduleStore;
+  /**
+   * Checks the Google-signed token on the Cloud Scheduler tick call (ADR 0039). Default: built from
+   * SCHEDULER_SERVICE_ACCOUNT, audience = this runner's allowed origins; none when unset, which keeps the tick closed.
+   */
+  schedulerAuth?: GoogleOidcVerifier;
 }
 
 /**
@@ -554,6 +572,7 @@ export class RunnerServer {
   private defaultsFile: string;
   private baselineDir: string;
   private scheduler: SchedulerManager;
+  private schedulerAuth: GoogleOidcVerifier | undefined;
   private checkupRun: CheckupRun;
 
   private get isRunning(): boolean {
@@ -737,7 +756,6 @@ export class RunnerServer {
       authDir: options.authDir,
       legacyDataDir,
     });
-    this.scheduler = new SchedulerManager(this.dataDir);
     this.aiModelsFile = path.join(this.dataDir, '.qa-ai-models.json');
     this.modelRecordFile = path.join(this.dataDir, '.qa-ai-model-record.json');
     this.defaultsFile = path.join(this.dataDir, '.qa-settings.json');
@@ -767,6 +785,12 @@ export class RunnerServer {
     this.routes = options.routes ?? allRoutes;
     // One audit store per runner (ADR 0036), shared by Helper access and the audit routes. No I/O here.
     const auditStore = createAuditStore(selectAuditStoreBackend({ dataDir: this.dataDir }));
+    // Schedules follow the audit store: in the bucket on the hosted copy (they survive a redeploy), a file otherwise.
+    this.scheduler = new SchedulerManager(
+      options.scheduleStore ??
+        (auditStore.backend.kind === 'gcs' ? new BackendScheduleStore(auditStore.backend) : this.dataDir)
+    );
+    this.schedulerAuth = options.schedulerAuth ?? schedulerAuthFromEnv(process.env, () => [...this.allowedOrigins]);
     // Helper sign-in takes this runner's own access key: with none, every local caller is the owner (DEC-004).
     const ownHelperAccess = createHelperAccess({
       ...helperSettingsFromEnv(),
@@ -924,7 +948,8 @@ export class RunnerServer {
     route: Route,
     params: RouteParams
   ): Promise<{ status: number; error: string; code: string } | null> {
-    if (!this.helperAccess || this.carriesAccessKey(req)) return null;
+    // The scheduler row has its own 401; a Helper session means nothing there.
+    if (!this.helperAccess || this.carriesAccessKey(req) || route.access === 'scheduler') return null;
     try {
       return await this.helperAccess.refusal(req, route.access, params);
     } catch {
@@ -974,7 +999,7 @@ export class RunnerServer {
     await this.ensurePlanLoaded();
     await this.loadLatestReport();
     // A schedule does what its screen says: it is checked every minute from the moment the server is up.
-    // Schedules are closed in beta, so the shared copy never starts runs on its own.
+    // The hosted copy (beta) has no timer of its own: Cloud Scheduler calls the tick route (ADR 0039).
     if (!this.beta) this.scheduler.start((schedule) => this.runSchedule(schedule));
     return new Promise((resolve, reject) => {
       this.server = http.createServer(async (req, res) => {
@@ -1054,10 +1079,19 @@ export class RunnerServer {
           if (matched) {
             // Closed by default: a row without an access level, or one this caller doesn't meet, is refused.
             const granted = await this.helperPermissionsFor(req, matched.route, matched.params);
+            // A scheduler row is the Cloud Scheduler's: only a valid Google-signed token opens it, never the key.
+            const scheduler =
+              matched.route.access === 'scheduler' && this.schedulerAuth
+                ? await this.schedulerAuth.verify(req.headers.authorization).then(
+                    () => true,
+                    () => false
+                  )
+                : false;
             const decision = authorizeRoute(matched.route, {
               hasAccessKey: this.carriesAccessKey(req),
               beta: this.beta,
               helper: (permission) => granted.has(permission),
+              scheduler,
             });
             if (!decision.allow) {
               const refusal = await this.helperRefusal(req, matched.route, matched.params);
@@ -1070,7 +1104,8 @@ export class RunnerServer {
             }
           }
 
-          if (this.beta) {
+          // The scheduler's call is no visitor: no session cookie, no visitor quota, no per-visitor scope.
+          if (this.beta && matched?.route.access !== 'scheduler') {
             const proto = req.headers['x-forwarded-proto'];
             try {
               enterSession(sessionFor(req, res, (Array.isArray(proto) ? proto[0] : proto)?.includes('https') ?? false));
@@ -1283,30 +1318,6 @@ export class RunnerServer {
             return;
           }
 
-          // Schedules API
-          if (pathname === '/api/runner/schedules' && req.method === 'GET') {
-            const list = await this.scheduler.loadSchedules();
-            this.sendJson(res, 200, list);
-            return;
-          }
-          if (pathname === '/api/runner/schedules' && req.method === 'POST') {
-            await this.handleAddSchedule(req, res);
-            return;
-          }
-          if (pathname.startsWith('/api/runner/schedules/') && pathname.endsWith('/toggle') && req.method === 'POST') {
-            const id = pathname.replace('/api/runner/schedules/', '').replace('/toggle', '');
-            const body = await this.readJsonBody<{ enabled: boolean }>(req).catch(() => ({ enabled: true }));
-            const updated = await this.scheduler.toggleSchedule(id, body.enabled);
-            this.sendJson(res, updated ? 200 : 404, updated || { error: 'Schedule not found' });
-            return;
-          }
-          if (pathname.startsWith('/api/runner/schedules/') && req.method === 'DELETE') {
-            const id = pathname.replace('/api/runner/schedules/', '');
-            const ok = await this.scheduler.deleteSchedule(id);
-            this.sendJson(res, ok ? 200 : 404, { ok });
-            return;
-          }
-
           // Spec Drift Overrides API (FR-2.6, FR-9.4.1)
           if (pathname === '/api/runner/spec-override' && req.method === 'POST') {
             await this.handleRecordSpecOverride(req, res);
@@ -1396,6 +1407,8 @@ export class RunnerServer {
    */
   private async runSchedule(schedule: CheckupSchedule): Promise<boolean> {
     if (this.checkupStartRefused || this.runStartDone) return false;
+    // resolveAuthorization({ beta: false }) below skips the public-address check, so the hosted copy does it here.
+    if (this.beta && (await refusedTarget(schedule.targetUrl, this.hostChecks?.lookup))) return false;
     let finishStart!: () => void;
     this.runStartDone = new Promise<void>((resolve) => (finishStart = resolve));
     try {
@@ -1415,13 +1428,22 @@ export class RunnerServer {
         hostChecks: this.hostChecks,
       });
       await this.checkupRun.start({ body, authorization });
-      return true;
     } catch {
       return false;
     } finally {
       this.runStartDone = null;
       finishStart();
     }
+    // Hold on until the run has finished: on Cloud Run the CPU is only there while a request is open.
+    try {
+      await this.checkupRun.waitFor(SCHEDULE_RUN_CAP_MS);
+    } catch {
+      return false;
+    }
+    // Past the cap the run is left going (stopping it could park a plan and keep the slot busy); the schedule
+    // is marked failed because its end was not seen.
+    if (this.session.run.isRunning) return false;
+    return !this.session.report.error().message;
   }
 
   public async stop(): Promise<void> {
@@ -1509,7 +1531,6 @@ export class RunnerServer {
 
   /** Routes that change what every tester sees; shut on a beta copy. */
   private closedInBeta(method: string | undefined, pathname: string): boolean {
-    if (pathname.startsWith('/api/runner/schedules') && method !== 'GET') return true;
     if (method === 'POST' && pathname === '/api/runner/spec-override') return true;
     if (method === 'POST' && pathname === '/api/settings/defaults') return true;
     // Triage is remembered for the whole copy's next check-ups; judgement edits a stored report.
@@ -3669,6 +3690,30 @@ export class RunnerServer {
     this.sendJson(res, 200, job);
   }
 
+  /** The schedule routes' reach into the runner (ADR 0039): rows call these, never private members. */
+  public listSchedules(): Promise<CheckupSchedule[]> {
+    return this.scheduler.loadSchedules();
+  }
+
+  public addScheduleFromRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+    return this.handleAddSchedule(req, res);
+  }
+
+  public toggleScheduleById(id: string, enabled: boolean): Promise<CheckupSchedule | null> {
+    return this.scheduler.toggleSchedule(id, enabled);
+  }
+
+  public deleteScheduleById(id: string): Promise<boolean> {
+    return this.scheduler.deleteSchedule(id);
+  }
+
+  /** What the Cloud Scheduler's call does: runs due schedules one by one and holds on until each run has finished. */
+  public runScheduleTick(): Promise<TickSummary> {
+    return this.scheduler.tick((schedule) => this.runSchedule(schedule), new Date(), {
+      deadlineMs: Date.now() + TICK_BUDGET_MS,
+    });
+  }
+
   private async handleAddSchedule(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
     const body = await this.readJsonBody<{
       targetUrl: string;
@@ -3681,6 +3726,35 @@ export class RunnerServer {
 
     if (!body || !body.targetUrl) {
       this.sendJson(res, 400, { error: 'Target URL is required' });
+      return;
+    }
+    if (typeof body.targetUrl !== 'string') {
+      this.sendJson(res, 400, { error: 'Target URL is required' });
+      return;
+    }
+
+    // On the hosted copy a schedule may only aim at a public address (ADR 0014); it is checked again at run time.
+    if (await this.refuseTarget(res, body.targetUrl)) return;
+    const target = body.targetUrl.trim();
+    if (/^[a-z][a-z0-9+.-]*:(?!\d+(\/|$))/i.test(target) && !/^https?:\/\//i.test(target)) {
+      this.sendJson(res, 400, {
+        error: 'Only http and https addresses can be checked.',
+        code: 'ERR_INVALID_REQUEST',
+      });
+      return;
+    }
+    const whole = (value: unknown, min: number, max: number) =>
+      value === undefined || (typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max);
+    if (
+      !whole(body.hour, 0, 23) ||
+      !whole(body.dayOfWeek, 0, 6) ||
+      (body.cadence !== undefined && !['daily', 'weekly', 'hourly'].includes(body.cadence)) ||
+      (body.preset !== undefined && !['full', 'quick'].includes(body.preset))
+    ) {
+      this.sendJson(res, 400, {
+        error: 'That schedule has a value that is out of range.',
+        code: 'ERR_INVALID_REQUEST',
+      });
       return;
     }
 

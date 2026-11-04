@@ -8,6 +8,8 @@
 #   GCP_WORKLOAD_IDENTITY_PROVIDER, GCP_DEPLOY_SERVICE_ACCOUNT
 # Optional variables for Website Audits on the hosted copy (docs/DEPLOYMENT.md, "Website Audit storage and Helper sign-in"):
 #   AUDIT_STORE_BUCKET, FIREBASE_PROJECT_ID, FIREBASE_WEB_API_KEY, FIREBASE_AUTH_DOMAIN
+# Optional variable for scheduled Check-ups on the hosted copy (docs/DEPLOYMENT.md, "Scheduled Check-ups on the hosted copy"):
+#   SCHEDULER_SERVICE_ACCOUNT
 # The runner's access token is in Secret Manager as qa-access-token.
 name: Deploy
 
@@ -136,23 +138,25 @@ jobs:
       # Cloud Run's root filesystem is read-only except /tmp, so data goes there (the image's /data is not writable).
       # The access token is read from Secret Manager, never from this file.
       # Website Audits and Shared Links live in the AUDIT_STORE_BUCKET Cloud Storage bucket (ADR 0036); Helper
-      # sign-in uses Firebase Authentication in the same project. All four are public names from repository
-      # variables (docs/DEPLOYMENT.md). An unset variable passes an empty value, which the runner treats as off.
+      # sign-in uses Firebase Authentication in the same project. Those four and SCHEDULER_SERVICE_ACCOUNT (the
+      # Cloud Scheduler service account whose Google token may call the tick route, ADR 0039) are public names from
+      # repository variables (docs/DEPLOYMENT.md). An unset variable passes an empty value, which the runner treats as off.
       # gcloud splits --set-env-vars on commas, and RUNNER_ALLOWED_ORIGINS is itself a comma-separated list. The
-      # leading ^@^ makes "@" the separator instead (`gcloud topic escaping`), so the origin list stays one value.
-      # No value may contain "@".
+      # leading ^#^ makes "#" the separator instead (`gcloud topic escaping`), so the origin list stays one value.
+      # "#" and not "@" because SCHEDULER_SERVICE_ACCOUNT is an email address. No value may contain "#".
       - name: Deploy to Cloud Run
         env:
           AUDIT_STORE_BUCKET: ${{ vars.AUDIT_STORE_BUCKET }}
           FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
           FIREBASE_WEB_API_KEY: ${{ vars.FIREBASE_WEB_API_KEY }}
           FIREBASE_AUTH_DOMAIN: ${{ vars.FIREBASE_AUTH_DOMAIN }}
+          SCHEDULER_SERVICE_ACCOUNT: ${{ vars.SCHEDULER_SERVICE_ACCOUNT }}
         run: |
           gcloud run deploy "$SERVICE" --project "$GCP_PROJECT" --region "$GCP_REGION" \
             --image "$IMAGE" --port 8080 --memory 2Gi --cpu 1 \
             --min-instances 1 --max-instances 1 --timeout 3600 \
             --allow-unauthenticated \
-            --set-env-vars "^@^RUNNER_BETA=1@RUNNER_HOST=0.0.0.0@RUNNER_DATA_DIR=/tmp/qa-data@RUNNER_OUTPUT_DIR=/tmp/qa-data/reports@RUNNER_ALLOWED_ORIGINS=$RUNNER_URL,https://qa-check-up-cnhl7suwnq-uc.a.run.app@AUDIT_STORE_BUCKET=$AUDIT_STORE_BUCKET@FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID@FIREBASE_WEB_API_KEY=$FIREBASE_WEB_API_KEY@FIREBASE_AUTH_DOMAIN=$FIREBASE_AUTH_DOMAIN" \
+            --set-env-vars "^#^RUNNER_BETA=1#RUNNER_HOST=0.0.0.0#RUNNER_DATA_DIR=/tmp/qa-data#RUNNER_OUTPUT_DIR=/tmp/qa-data/reports#RUNNER_ALLOWED_ORIGINS=$RUNNER_URL,https://qa-check-up-cnhl7suwnq-uc.a.run.app#AUDIT_STORE_BUCKET=$AUDIT_STORE_BUCKET#FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID#FIREBASE_WEB_API_KEY=$FIREBASE_WEB_API_KEY#FIREBASE_AUTH_DOMAIN=$FIREBASE_AUTH_DOMAIN#SCHEDULER_SERVICE_ACCOUNT=$SCHEDULER_SERVICE_ACCOUNT" \
             --set-secrets "RUNNER_ACCESS_TOKEN=qa-access-token:latest"
 
       # Cloud Run's front end answers /healthz with its own 404 and never reaches the container, so this

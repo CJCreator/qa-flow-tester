@@ -6,7 +6,7 @@
  * lines of the chain). Any status is fine — 400, 401, 403, 404-with-another-body, 409, 422 and 429 all mean the
  * route was reached and refused the request because of the state it is in, not because it was never matched.
  *
- * The chain has **42** `if (pathname …)` conditionals; this file has **59** pairs, because some conditionals serve
+ * The chain has **42** `if (pathname …)` conditionals; this file has **60** pairs, because some conditionals serve
  * more than one method or alias (`abort`/`stop`, the six `/api/runs/…` shapes, three `/api/sites/…` shapes). The
  * mapping, in the order the chain is written:
  *
@@ -55,6 +55,7 @@
  * | `POST /api/runner/spec-override`             | 57                                                        |
  * | `GET /api/runner/spec-overrides`             | 58                                                        |
  * | `GET /api/evidence/…`                        | 59                                                        |
+ * | `POST /api/runner/schedules/tick` (ADR 0039)  | 60 (new row, no chain conditional; answers 401 here)      |
  *
  * (`grep -c "if (pathname" packages/runner/src/server.ts` counts 47 in the file: the 42 above plus 5 inside the
  * beta-scope helpers, which decide whether *an already matched* route is visible to a beta visitor and never
@@ -135,6 +136,7 @@ const ROUTES: Array<{ method: string; path: string }> = [
   { method: 'POST', path: '/api/runner/spec-override' }, // 57
   { method: 'GET', path: '/api/runner/spec-overrides' }, // 58
   { method: 'GET', path: '/api/evidence/some-file.txt' }, // 59
+  { method: 'POST', path: '/api/runner/schedules/tick' }, // 60: scheduler-only; no token here, so 401
 ];
 
 describe('route inventory (T-203)', () => {

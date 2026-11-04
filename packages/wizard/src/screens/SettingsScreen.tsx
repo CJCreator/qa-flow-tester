@@ -9,6 +9,7 @@ import {
   getStoredReleaseGates,
   listFreeModels,
   listSchedules,
+  SCHEDULES_OWNER_ONLY,
   listSites,
   RunnerError,
   saveAiSettings,
@@ -687,6 +688,7 @@ function CheckupSchedules() {
   const [preset, setPreset] = useState<'full' | 'quick'>('full');
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [ownerOnly, setOwnerOnly] = useState(false);
 
   const loadSchedules = useCallback(async () => {
     setLoading(true);
@@ -694,7 +696,13 @@ function CheckupSchedules() {
       const items = await listSchedules();
       setSchedules(items);
       setError(null);
+      setOwnerOnly(false);
     } catch (err) {
+      if (err instanceof RunnerError && err.code === 'ERR_FORBIDDEN') {
+        setOwnerOnly(true);
+        setShowAddForm(false);
+        return;
+      }
       setError(err instanceof RunnerError ? err.message : 'Could not load recurring schedules.');
     } finally {
       setLoading(false);
@@ -754,17 +762,22 @@ function CheckupSchedules() {
         <h2 id="schedules-title" className="text-xl font-bold">
           Scheduled Check-ups
         </h2>
-        <button
-          type="button"
-          onClick={() => setShowAddForm((prev) => !prev)}
-          className="btn-primary rounded-control px-3 py-1.5 text-xs font-bold shadow-level-1"
-        >
-          {showAddForm ? 'Cancel' : '+ New Schedule'}
-        </button>
+        {!ownerOnly && (
+          <button
+            type="button"
+            onClick={() => setShowAddForm((prev) => !prev)}
+            className="btn-primary rounded-control px-3 py-1.5 text-xs font-bold shadow-level-1"
+          >
+            {showAddForm ? 'Cancel' : '+ New Schedule'}
+          </button>
+        )}
       </div>
       <p className="mb-4 text-sm text-ink-soft">
-        Automate recurring release check-ups. The runner executes them in the background and saves full reports.
+        Automate recurring release check-ups. The runner executes them in the background and saves full reports. Times
+        follow the runner's clock (UTC on the shared copy).
       </p>
+
+      {ownerOnly && <Notice tone="warn" title={SCHEDULES_OWNER_ONLY} />}
 
       {notice && (
         <p role="status" className="mb-3 text-sm text-pass font-bold">
@@ -888,7 +901,7 @@ function CheckupSchedules() {
         </form>
       )}
 
-      {loading && !schedules && <Spinner label="Reading automated schedules…" />}
+      {loading && !schedules && !ownerOnly && <Spinner label="Reading automated schedules…" />}
 
       {schedules && schedules.length === 0 && !showAddForm && (
         <p className="text-sm text-ink-soft py-2">

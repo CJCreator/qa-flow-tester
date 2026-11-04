@@ -928,11 +928,17 @@ export interface CheckupSchedule {
   nextRunAt: string;
 }
 
+export const SCHEDULES_OWNER_ONLY = 'Schedules are managed by the owner of this copy.';
+
 export async function listSchedules(): Promise<CheckupSchedule[]> {
   try {
     const res = await call('/api/runner/schedules');
+    if (res.status === 401 || res.status === 403) {
+      throw new RunnerError(SCHEDULES_OWNER_ONLY, 'ERR_FORBIDDEN');
+    }
     return res.ok ? json<CheckupSchedule[]>(res) : [];
-  } catch {
+  } catch (err) {
+    if (err instanceof RunnerError && err.code === 'ERR_FORBIDDEN') throw err;
     return [];
   }
 }

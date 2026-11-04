@@ -48,6 +48,34 @@ function call(method: string, rawPath: string, cookie?: string, body?: unknown, 
   });
 }
 
+/** A call that carries the owner's access key in the X-QA-Access header. */
+function callWithKey(method: string, rawPath: string, key: string, body: unknown, port: number): Promise<Answer> {
+  return new Promise((resolve, reject) => {
+    const payload = body === undefined ? undefined : JSON.stringify(body);
+    const req = http.request(
+      {
+        host: 'localhost',
+        port,
+        path: rawPath,
+        method,
+        headers: {
+          host: `localhost:${port}`,
+          'x-qa-access': key,
+          ...(payload ? { 'content-type': 'application/json', 'content-length': Buffer.byteLength(payload) } : {}),
+        },
+      },
+      (res) => {
+        let text = '';
+        res.on('data', (chunk) => (text += chunk));
+        res.on('end', () => resolve({ status: res.statusCode || 0, headers: res.headers, body: text }));
+      }
+    );
+    req.on('error', reject);
+    if (payload) req.write(payload);
+    req.end();
+  });
+}
+
 /** The session cookie a first visit is given, ready to send back. */
 async function newSession(port = PORT): Promise<string> {
   const first = await call('GET', '/api/runner/status', undefined, undefined, port);
@@ -159,9 +187,6 @@ describe('A runner shared as a beta', () => {
   it('shuts the routes that change what other testers see', async () => {
     const cookie = await newSession();
     expect((await call('DELETE', '/api/runs/run-1', cookie)).status).toBe(403);
-    expect((await call('POST', '/api/runner/schedules', cookie, { targetUrl: 'https://example.com' })).status).toBe(
-      403
-    );
   });
 
   it('turns away a request body that is far too large', async () => {
@@ -170,6 +195,59 @@ describe('A runner shared as a beta', () => {
       targetUrl: 'https://example.com/' + 'a'.repeat(5_100_000),
     });
     expect(answer.status).toBe(400);
+  });
+});
+
+describe('Schedules on a beta copy with an access key (ADR 0039)', () => {
+  const KEY_PORT = 3573;
+  const dir = path.join(process.cwd(), '.tmp-beta-schedules');
+  let server: RunnerServer;
+
+  const asOwner = (method: string, rawPath: string, body?: unknown) =>
+    callWithKey(method, rawPath, 'k', body, KEY_PORT);
+
+  beforeAll(async () => {
+    server = new RunnerServer({
+      port: KEY_PORT,
+      outputDir: path.join(dir, 'report'),
+      dataDir: path.join(dir, 'data'),
+      beta: true,
+      accessToken: 'k',
+      hostChecks: { lookup: async () => ['93.184.216.34'], connect: async () => Promise.reject(new Error('no')) },
+    });
+    await server.start();
+  });
+
+  afterAll(async () => {
+    await server?.stop();
+    await fs.rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  });
+
+  it('serves the owner: add, list, pause and delete are never 403', async () => {
+    const added = await asOwner('POST', '/api/runner/schedules', { targetUrl: 'https://example.com' });
+    expect(added.status).toBe(201);
+    const { id } = JSON.parse(added.body) as { id: string };
+    expect((await asOwner('GET', '/api/runner/schedules')).status).toBe(200);
+    expect((await asOwner('POST', `/api/runner/schedules/${id}/toggle`, { enabled: false })).status).toBe(200);
+    expect((await asOwner('DELETE', `/api/runner/schedules/${id}`)).status).toBe(200);
+    expect((await asOwner('DELETE', '/api/runner/schedules/sched_0_nothere')).status).toBe(404);
+    expect((await asOwner('POST', '/api/runner/schedules/sched_0_nothere/toggle', {})).status).toBe(404);
+  });
+
+  it('turns a visitor without the key away with 401', async () => {
+    for (const [method, rawPath] of [
+      ['GET', '/api/runner/schedules'],
+      ['POST', '/api/runner/schedules'],
+      ['POST', '/api/runner/schedules/sched_1_abc/toggle'],
+      ['DELETE', '/api/runner/schedules/sched_1_abc'],
+    ] as const) {
+      const answer = await call(method, rawPath, undefined, { targetUrl: 'https://example.com' }, KEY_PORT);
+      expect(answer.status, `${method} ${rawPath}`).toBe(401);
+    }
+  });
+
+  it('still shuts the other routes that change what testers see, for the owner too', async () => {
+    expect((await asOwner('DELETE', '/api/runs/run-1')).status).toBe(403);
   });
 });
 

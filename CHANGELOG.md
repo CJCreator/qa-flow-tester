@@ -11,6 +11,7 @@ All notable changes. Format follows [Keep a Changelog](https://keepachangelog.co
 
 ### Added
 
+- Owner can create, pause and delete scheduled Check-ups on the hosted copy; they run from Google Cloud Scheduler, which proves itself with a Google token, never the access key (ADR 0039). Scheduled Check-ups now record `passed` when the run finishes, not when it starts
 - Intent on Plan Items (Works, Rejects, Limits, Denied); Rejects planned from form attributes by fixed rules (no AI key needed); Limits from the AI Planner or a Source; the refusal rule shared by the Check-up and the Playwright export (`expectRefused`); Rejects and Limits wait for a Test Copy or sign-in consent; Ambiguity Questions for Sensitive submits (ADR 0024)
 - Test cap (default 2000; `testCap` in the API, `--test-cap` in the CI command): Rejects and Limits past it are switched off and counted in the approval summary; Plan Review has a filter chip and one switch-off per Intent, with counts
 - Spider deep exploration of tabs, accordions, drawers and modals (opening steps stored on the Plan Item, shown in Plan Review, replayed by the export), CRUD facts from structure, and a guarded Delete probe that cancels at the confirm (ADR 0025)

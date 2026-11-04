@@ -9,7 +9,8 @@ routes and what they are for; **request and response bodies are defined by the h
 
 - Requests must have a loopback `Host` header unless `RUNNER_ALLOWED_ORIGINS` is set. Browser requests from other origins are refused (CORS), so a web page cannot trigger runs.
 - With `RUNNER_ACCESS_TOKEN`, every request must carry the key: open a page with `?access=<key>` (kept in a cookie) or send header `X-QA-Access`.
-- Beta mode (`RUNNER_BETA=1`) closes the routes that change shared state (schedules, deleting runs and baselines) and keeps keys per session.
+- Beta mode (`RUNNER_BETA=1`) closes the routes that change shared state (deleting runs and baselines) and keeps keys per session.
+- Schedule routes (`/api/runner/schedules`) are owner-only: they need the access key, and they are served in beta mode too. A Helper session answers `403 ERR_FORBIDDEN`; no key answers `401 ERR_ACCESS_KEY` (ADR 0039).
 - `POST /api/runner/context/docx` stays open in beta mode (stateless; the size and ZIP caps bound the work).
 - `POST /api/runner/domain-proof` stays open in beta mode (it changes nothing shared; the token and the throttle are per session). In beta mode a Test Copy needs a passing Verified Domain proof, checked at `POST /api/runner/run` and again when a waiting plan is approved (ADR 0014).
 - Beta mode also limits starts per visitor session and per UTC day (`RUNNER_BETA_RUNS_PER_VISITOR`, `RUNNER_BETA_RUNS_PER_DAY`). Over a limit, `POST /api/runner/run` and `POST /api/runner/benchmark` answer `429 ERR_BETA_LIMIT` with `error`, `suggestion`, `scope` (`visitor` or `day`) and `resetsAt` (ISO time of the next 00:00 UTC). Preflight and the plan routes are not counted.
@@ -17,9 +18,8 @@ routes and what they are for; **request and response bodies are defined by the h
 
 ### Closed on the shared beta copy
 
-With `RUNNER_BETA=1` these answer `403 { code: 'ERR_BETA' }`. The list is `BETA_CLOSED_ROUTES` in `server.ts`; `beta-privacy.test.ts` verifies these write routes return 403 `ERR_BETA`.
+With `RUNNER_BETA=1` these answer `403 { code: 'ERR_BETA' }`. The list is `closedInBeta` in `server.ts`; `beta-privacy.test.ts` verifies these write routes return 403 `ERR_BETA`.
 
-- `non-GET /api/runner/schedules`
 - `POST /api/runner/spec-override`
 - `GET /api/runner/spec-overrides`
 - `POST /api/settings/defaults`
@@ -133,7 +133,8 @@ Decision: [ADR 0017](adr/0017-findings-contract.md). Schema: [`findings.schema.j
 ## Benchmarks and schedules
 
 - `POST /api/runner/benchmark` (beta: `429 ERR_BETA_LIMIT` over a limit), `GET /api/runner/benchmarks`, `GET/DELETE /api/runner/benchmark/<id>`
-- `GET/POST /api/runner/schedules`, `POST /api/runner/schedules/<id>/toggle`, `DELETE /api/runner/schedules/<id>`
+- `GET/POST /api/runner/schedules`, `POST /api/runner/schedules/<id>/toggle`, `DELETE /api/runner/schedules/<id>` (owner only; see Access rules)
+- `POST /api/runner/schedules/tick`: scheduler only. Send `Authorization: Bearer <Google OIDC token>` from the Cloud Scheduler service account; the access key is not accepted. Anything else answers `401 ERR_SCHEDULER_AUTH`, and the route is closed while `SCHEDULER_SERVICE_ACCOUNT` is unset. It starts the enabled schedules that are due, one at a time, and holds the request open until they finish (up to 29 minutes). Reply `200 { started, failed, skipped, busy }` (counts, and `busy` true when another tick is running). See `docs/DEPLOYMENT.md`.
 
 ## AI settings (`handleAiSettings`, `handleOpenRouter`)
 
