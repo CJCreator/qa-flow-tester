@@ -246,9 +246,9 @@ Verification:
 
 ## Decisions
 
-| id | Decision | Default in this plan |
+| id | Decision | Default or decision |
 |---|---|---|
-| D1 | Where Website Audit sits in the top bar | A primary item beside New check-up, Past check-ups and Settings |
-| D2 | Whether the public landing page mentions the Website Audit, which has a different market (India-wide, free) from the Check-up (global, USD) | A short secondary section below the check-up content; the check-up stays the main call to action |
+| D1 | Where Website Audit sits in the top bar | Decided 2026-11-04: a primary item beside New check-up, Past check-ups and Settings |
+| D2 | Whether the public landing page mentions the Website Audit, which has a different market (India-wide, free) from the Check-up (global, USD) | Decided 2026-11-04: a short secondary section below the check-up content; the check-up stays the main call to action |
 | D3 | Settings provider order: commit `a3f3efe` says it reordered the providers to Anthropic, OpenAI, Gemini, OpenRouter, but `SettingsScreen.tsx:36-44` and `server.ts:315-320` still list OpenRouter first | Keep the code as it is (OpenRouter first, free models) and correct nothing until confirmed |
 | D4 | Owner audits on the hosted beta copy | Unchanged. ADR 0037 D-004 keeps them closed; T-67 explains this in the UI |
