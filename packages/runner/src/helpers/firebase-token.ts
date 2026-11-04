@@ -68,7 +68,7 @@ function refuse(): never {
 
 const BASE64URL = /^[A-Za-z0-9_-]+$/;
 
-function decodeJsonPart(part: string): Record<string, unknown> {
+export function decodeJsonPart(part: string): Record<string, unknown> {
   if (!BASE64URL.test(part)) refuse();
   let parsed: unknown;
   try {

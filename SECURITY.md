@@ -32,6 +32,7 @@ The tool drives real browsers against real sites, so safety is enforced in code,
 - If a key is exposed, rotate it at the provider first, then clean up.
 - No AI key is stored in the repo, in `.claude/settings.json` or in any tracked file (checked 2026-10-09; the `sk-...` strings in `packages/*/tests` are fake test values). The owner enters an AI key in the wizard at test time; it is not kept in files or commands.
 - Hosting is Google Cloud Run (ADR 0032). Deploys need no stored key: `.github/workflows/deploy.yml` signs in with Workload Identity Federation (the variables `GCP_WORKLOAD_IDENTITY_PROVIDER` and `GCP_DEPLOY_SERVICE_ACCOUNT`). The runner's access token lives only in Secret Manager (`qa-access-token`). Never put either value in the repo, a workflow input, or a command; rotate the secret in Secret Manager.
+- The scheduled Check-up route (`POST /api/runner/schedules/tick`) is called by Cloud Scheduler with a Google-signed token (checked for signature, audience and the configured service account) and never accepts the access key. It is closed unless `SCHEDULER_SERVICE_ACCOUNT` is set (ADR 0039).
 
 ## Saved sessions and docs URLs (ADR 0021)
 

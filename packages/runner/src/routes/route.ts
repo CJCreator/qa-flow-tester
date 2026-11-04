@@ -30,8 +30,11 @@ export interface Route {
   prefix?: boolean;
   /** Some rows accept any method (today's `/api/runner/waiting-plans`). */
   anyMethod?: boolean;
-  /** Who may call the row. Required by dispatch: a row without one is refused (closed by default). */
-  access?: AuditAccess;
+  /**
+   * Who may call the row. Required by dispatch: a row without one is refused (closed by default).
+   * 'scheduler' is route-only (ADR 0039): the Cloud Scheduler job, proven by a Google-signed OIDC token.
+   */
+  access?: AuditAccess | 'scheduler';
   /** Served on a beta copy only when 'allow'. Default 'closed'. */
   beta?: RouteBetaPolicy;
   handle: (context: RouteContext) => Promise<void> | void;
@@ -130,6 +133,8 @@ export interface RouteCaller {
    * missing means no Helper.
    */
   helper?: (permission: HelperPermission) => boolean;
+  /** The request carries a valid Google-signed scheduler token (ADR 0039). Missing means no. */
+  scheduler?: boolean;
 }
 
 export type RouteDecision = { allow: true } | { allow: false; status: 401 | 403; code: string; error: string };
@@ -137,17 +142,19 @@ export type RouteDecision = { allow: true } | { allow: false; status: 401 | 403;
 export const ACCESS_KEY_REFUSAL = 'This QA Tool is shared privately: send its access key.';
 export const BETA_REFUSAL = 'This is closed on the shared beta copy, so testers don’t change each other’s check-ups.';
 export const CLOSED_REFUSAL = 'This address is not open.';
+/** Fixed text: says nothing about why the scheduler token was refused. */
+export const SCHEDULER_REFUSAL = 'The scheduler token was refused.';
 
 const ALLOW: RouteDecision = { allow: true };
 
-function isHelperPermission(access: AuditAccess): access is HelperPermission {
+function isHelperPermission(access: AuditAccess | 'scheduler'): access is HelperPermission {
   return access === 'view' || access === 'edit' || access === 'export';
 }
 
 /**
  * May this caller use this row? Pure: no request, no I/O. Closed by default: a row without an access level
  * is refused. 'owner' needs the access key; 'view' | 'edit' | 'export' the key or a Helper grant of that
- * permission; 'sign-in' and 'public' neither. On a beta copy only rows whose beta policy is 'allow' are
+ * permission; 'scheduler' a valid scheduler token (no key); 'sign-in' and 'public' neither. On a beta copy only rows whose beta policy is 'allow' are
  * served, plus Helper sign-in rows and rows a signed-in Helper holds a grant for (D-004, D-005).
  */
 export function authorizeRoute(route: Pick<Route, 'access' | 'beta'>, caller: RouteCaller): RouteDecision {
@@ -161,6 +168,10 @@ export function authorizeRoute(route: Pick<Route, 'access' | 'beta'>, caller: Ro
     helperGranted = caller.helper?.(access) === true;
     if (!caller.hasAccessKey && !helperGranted) {
       return { allow: false, status: 401, code: 'ERR_ACCESS_KEY', error: ACCESS_KEY_REFUSAL };
+    }
+  } else if (access === 'scheduler') {
+    if (caller.scheduler !== true) {
+      return { allow: false, status: 401, code: 'ERR_SCHEDULER_AUTH', error: SCHEDULER_REFUSAL };
     }
   } else if (access !== 'sign-in' && access !== 'public') {
     // An access level this code doesn't know is closed too.

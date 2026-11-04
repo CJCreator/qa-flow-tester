@@ -128,6 +128,33 @@ The runner sends the Firebase web settings to the wizard at run time. A wizard b
 fallback with `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_WEB_API_KEY` and `VITE_FIREBASE_AUTH_DOMAIN`
 (see `.env.example`); the deploy does not need them.
 
+## Scheduled Check-ups on the hosted copy
+
+The owner can create, pause and delete scheduled Check-ups on the hosted copy (Settings, with the access key). Google Cloud Scheduler is the clock: it calls `POST /api/runner/schedules/tick` every few minutes and the runner starts the schedules that are due ([ADR 0039](adr/0039-cloud-scheduler-owner-schedules.md)). The job proves who it is with a Google-signed token; the runner's access key is never given to Cloud Scheduler. Local runs need none of this (the runner has its own 60 second timer). Replace `PROJECT`, `PROJECT_NUMBER`, `REGION` and `RUNNER_URL` (no trailing slash; it must equal one URL in `RUNNER_ALLOWED_ORIGINS`). Do this once, after the deploy that carries this feature:
+
+1. Turn on the API: `gcloud services enable cloudscheduler.googleapis.com --project PROJECT`
+
+2. Create a service account only for the job. It needs no project roles (the runner is `--allow-unauthenticated` and checks the token itself, so it does not need `roles/run.invoker`):
+   `gcloud iam service-accounts create qa-scheduler --display-name "QA check-up scheduler" --project PROJECT`
+
+3. Allow identities to mint its token:
+   - Whoever creates the job needs act-as permission on that service account: `roles/iam.serviceAccountUser` on `qa-scheduler`.
+   - The Cloud Scheduler service agent signs the token as the service account. For a service account in the same project the agent normally already has this; if the job is refused, grant it explicitly:
+     `gcloud iam service-accounts add-iam-policy-binding qa-scheduler@PROJECT.iam.gserviceaccount.com --member serviceAccount:service-PROJECT_NUMBER@gcp-sa-cloudscheduler.iam.gserviceaccount.com --role roles/iam.serviceAccountTokenCreator --project PROJECT`
+
+4. Set the repository variable `SCHEDULER_SERVICE_ACCOUNT` to `qa-scheduler@PROJECT.iam.gserviceaccount.com` (Settings > Secrets and variables > Actions > **Variables**, not secrets; the email is a public value). Then deploy (push to `main` or run the Deploy workflow). Use the workflow, not `scripts/deploy-cloud-run.mjs`: the script replaces all env vars and leaves out the bucket, Firebase and scheduler settings. While the variable is unset the tick route stays closed (401).
+
+5. Create the job. The audience must be the runner's URL exactly. `--attempt-deadline 1800s` is the longest an HTTP job may wait, and the tick holds its request open while the runs finish. Retries are off, because a repeat tick would only find nothing due. Use a Cloud Scheduler region (for example `us-central1`, like the runner):
+   `gcloud scheduler jobs create http qa-check-up-tick --project PROJECT --location REGION --schedule "*/5 * * * *" --time-zone "Etc/UTC" --uri "RUNNER_URL/api/runner/schedules/tick" --http-method POST --oidc-service-account-email qa-scheduler@PROJECT.iam.gserviceaccount.com --oidc-token-audience "RUNNER_URL" --attempt-deadline 1800s --max-retry-attempts 0`
+
+6. Check it: `gcloud scheduler jobs run qa-check-up-tick --project PROJECT --location REGION`, then read the job's last attempt status in the Cloud console. A 401 means the audience or the service account email does not match the runner's settings.
+
+To stop: `gcloud scheduler jobs pause qa-check-up-tick --project PROJECT --location REGION`, or unset the variable and redeploy.
+
+Cost: Cloud Scheduler gives 3 jobs per billing account free; this uses 1. Beyond the free jobs a job is about 0.10 US dollars a month. The runner is already billed warm (ADR 0038); a due Check-up holds one request open for as long as it runs, up to 30 minutes.
+
+Schedules live in the audit bucket (`schedules/schedules.json`), so `AUDIT_STORE_BUCKET` must be set (the section above). Without it they sit in `/tmp` and are lost on each redeploy. The hour of a schedule is in UTC on the hosted copy.
+
 ## Release checklist
 
 - [ ] CI green on the PR; `pnpm test` and `pnpm build` pass locally
@@ -152,3 +179,4 @@ Revert the merge commit on `main` and push; the deploy redeploys both services. 
 - Beta limits (per visitor and per day) are in memory: a restart or redeploy resets all counters. Set `RUNNER_BETA_RUNS_PER_VISITOR` (default 5) and `RUNNER_BETA_RUNS_PER_DAY` (default 40). Clearing the cookie gives a visitor a fresh count (and loses their AI key); the daily cap is the backstop.
 - The runner's data folder is `/tmp` on Cloud Run and is wiped on every redeploy, restart or scale-down. Do not store anything there that must survive. Website Audits and Shared Links survive only because they live in the `AUDIT_STORE_BUCKET` bucket; without it they are lost on each redeploy.
 - The runner runs at most one instance (`--max-instances 1`), because limits and sessions are held in memory.
+- Scheduled Check-ups: the hour is UTC; one tick holds a request open for up to 30 minutes (a longer run is recorded as failed and keeps running); schedules live in the audit bucket and are lost on redeploy without `AUDIT_STORE_BUCKET` (ADR 0039).

@@ -22,4 +22,5 @@ Each deploy also pushes a new runner image and a new site image to Artifact Regi
 - The warm instance is billed while idle: roughly 15 to 20 US dollars a month at list price, paid from the project's
   credit. This departs from the $0 hosting goal; a billing budget alert watches it. Set `--min-instances 0` again to go back.
 - `/tmp` survives longer, but is still wiped on every redeploy and restart. Website Audits stay in the bucket ([0036](0036-hosted-audit-storage-and-shared-links.md)).
+- Scheduled Check-ups ([0039](0039-cloud-scheduler-owner-schedules.md)) rely on this instance: Cloud Scheduler calls the runner, which holds the request open while a run finishes. No CPU flag changes.
 - A rollback can only use a revision whose image is among the 3 newest. Older revisions fail to start once their image is deleted.

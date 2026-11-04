@@ -87,3 +87,124 @@ describe('The scheduler', () => {
     stop.mockRestore();
   });
 });
+
+describe('The scheduler tick (ADR 0039)', () => {
+  const dir = path.join(process.cwd(), '.tmp-scheduler-tick');
+  let scheduler: SchedulerManager;
+
+  beforeEach(async () => {
+    await fs.mkdir(dir, { recursive: true });
+    scheduler = new SchedulerManager(dir);
+  });
+
+  afterEach(async () => {
+    scheduler.stop();
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  const addDue = async (name: string, overrides: Partial<CheckupSchedule> = {}) => {
+    const added = await scheduler.addSchedule({
+      name,
+      targetUrl: 'http://localhost:3050',
+      cadence: 'daily',
+      hour: 2,
+      preset: 'quick',
+      enabled: true,
+    });
+    const all = await scheduler.loadSchedules();
+    const target = all.find((s) => s.id === added.id)!;
+    target.nextRunAt = new Date(Date.now() - 1000).toISOString();
+    Object.assign(target, overrides);
+    await scheduler.saveSchedules(all);
+    return added;
+  };
+
+  it('answers with counts: started, failed, skipped (enabled but not due)', async () => {
+    await addDue('ok');
+    await addDue('bad');
+    await addDue('later', { nextRunAt: new Date(Date.now() + 3_600_000).toISOString() });
+    await addDue('off', { enabled: false });
+    const summary = await scheduler.tick(async (s) => s.name === 'ok');
+    expect(summary).toEqual({ started: 1, failed: 1, skipped: 1, busy: false });
+  });
+
+  it('a second tick that overlaps the first answers busy, and the schedule fires once', async () => {
+    await addDue('one');
+    const run = vi.fn(async () => {
+      await new Promise((r) => setTimeout(r, 30));
+      return true;
+    });
+    const [a, b] = await Promise.all([scheduler.tick(run), scheduler.tick(run)]);
+    expect(run).toHaveBeenCalledTimes(1);
+    expect([a.busy, b.busy].sort()).toEqual([false, true]);
+    const again = await scheduler.tick(run);
+    expect(again).toMatchObject({ started: 0, failed: 0, busy: false });
+  });
+
+  it('runs due schedules one after another, not at the same time', async () => {
+    await addDue('a');
+    await addDue('b');
+    let active = 0;
+    let most = 0;
+    await scheduler.tick(async () => {
+      active += 1;
+      most = Math.max(most, active);
+      await new Promise((r) => setTimeout(r, 15));
+      active -= 1;
+      return true;
+    });
+    expect(most).toBe(1);
+  });
+
+  it('starts no new run once the deadline has passed, and the schedule stays due', async () => {
+    const added = await addDue('late');
+    const before = (await scheduler.loadSchedules()).find((s) => s.id === added.id)!.nextRunAt;
+    const run = vi.fn(async () => true);
+    const summary = await scheduler.tick(run, new Date(), { deadlineMs: Date.now() - 1 });
+    expect(run).not.toHaveBeenCalled();
+    expect(summary).toMatchObject({ started: 0, failed: 0 });
+    expect((await scheduler.loadSchedules())[0].nextRunAt).toBe(before);
+  });
+
+  it('a run that throws is a failed run, and the tick goes on', async () => {
+    await addDue('boom');
+    const summary = await scheduler.tick(async () => {
+      throw new Error('boom');
+    });
+    expect(summary.failed).toBe(1);
+    expect((await scheduler.loadSchedules())[0].lastRunStatus).toBe('failed');
+  });
+
+  it('a schedule paused while an earlier run was going is not started', async () => {
+    await addDue('first');
+    const second = await addDue('second');
+    const seen: string[] = [];
+    await scheduler.tick(async (s) => {
+      seen.push(s.name);
+      if (s.name === 'first') await scheduler.toggleSchedule(second.id, false);
+      return true;
+    });
+    expect(seen).toEqual(['first']);
+  });
+});
+
+describe('The scheduler on a beta server', () => {
+  it('is not started by a beta server (the hosted copy ticks from Cloud Scheduler)', async () => {
+    const dir = path.join(process.cwd(), '.tmp-scheduler-beta');
+    const start = vi.spyOn(SchedulerManager.prototype, 'start');
+    const server = new RunnerServer({
+      port: 3742,
+      outputDir: path.join(dir, 'report'),
+      dataDir: path.join(dir, 'data'),
+      beta: true,
+    });
+    try {
+      await server.start();
+      expect(start).not.toHaveBeenCalled();
+    } finally {
+      await server.stop();
+      start.mockRestore();
+      await fs.rm(dir, { recursive: true, force: true });
+    }
+  });
+});
