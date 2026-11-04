@@ -1,5 +1,6 @@
 # Every push to main is tested, then published to Google Cloud Run: the runner (the full app, shared online
 # copy) and the static site (landing page and wizard). Render and Vercel are retired (docs/adr/0032).
+# A manual run (Actions > Deploy > Run workflow) can tick "skip_tests" to deploy after build-and-smoke only.
 #
 # Auth is keyless (Workload Identity Federation): no key lives in GitHub.
 #
@@ -14,6 +15,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: 'Skip the test suite and deploy after build-and-smoke (lint, build, smoke check) only'
+        type: boolean
+        default: false
 
 # One deploy at a time. If a new commit is pushed to main while a previous run is in progress,
 # the older run is cancelled to immediately deploy the latest code without queuing delays.
@@ -79,9 +85,10 @@ jobs:
           retention-days: 1
 
   # The full test suite, the same shards a pull request runs (see tests.yml). Nothing reaches the
-  # Cloud Run deploys without passing them.
+  # Cloud Run deploys without passing them, unless a manual run ticked skip_tests. On a push,
+  # inputs.skip_tests is empty, so the tests always run.
   test:
-    if: github.repository == 'CJCreator/qa-flow-tester'
+    if: github.repository == 'CJCreator/qa-flow-tester' && !inputs.skip_tests
     strategy:
       fail-fast: true
       matrix:
@@ -91,9 +98,14 @@ jobs:
       shard: ${{ matrix.shard }}
 
   # The runner: the full app, behind its access key (RUNNER_ACCESS_TOKEN from Secret Manager).
+  # A skipped job normally skips everything that needs it, so the deploys check the results themselves:
+  # build-and-smoke must pass, and test must pass or have been skipped on purpose (skip_tests).
   cloud-run:
     needs: [build-and-smoke, test]
-    if: github.repository == 'CJCreator/qa-flow-tester'
+    if: >-
+      ${{ !cancelled() && github.repository == 'CJCreator/qa-flow-tester' &&
+      needs.build-and-smoke.result == 'success' &&
+      (needs.test.result == 'success' || (inputs.skip_tests && needs.test.result == 'skipped')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -159,7 +171,10 @@ jobs:
   # The static site: the landing page and the wizard, public, served by nginx (site/Dockerfile).
   site:
     needs: [build-and-smoke, test]
-    if: github.repository == 'CJCreator/qa-flow-tester'
+    if: >-
+      ${{ !cancelled() && github.repository == 'CJCreator/qa-flow-tester' &&
+      needs.build-and-smoke.result == 'success' &&
+      (needs.test.result == 'success' || (inputs.skip_tests && needs.test.result == 'skipped')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
