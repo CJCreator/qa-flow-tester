@@ -1,20 +1,27 @@
 import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { AuditSummary, AuditVersion } from '@qa/types/src/browser.js';
 import {
   AUDIT_PATHS,
   RUN_IN_PROGRESS_TEXT,
   deleteAudit,
+  followRunningVersion,
+  latestFinishedVersion,
   latestVersion,
+  runningVersion,
   listAudits,
   loadVersion,
   rerunAndReload,
   versionCounts,
   versionsOldestFirst,
 } from '../src/screens/audit/saved/saved-api';
-import { SavedAuditsView, type SavedAuditsLoad } from '../src/screens/audit/saved/SavedAuditsScreen';
+import {
+  SavedAuditsActions,
+  SavedAuditsView,
+  type SavedAuditsLoad,
+} from '../src/screens/audit/saved/SavedAuditsScreen';
 import {
   AuditHistoryView,
   DELETE_WARNING,
@@ -201,29 +208,29 @@ describe('saved Website Audits list', () => {
 // ---------------------------------------------------------------------------------------------------
 
 describe('history of one Website Audit (REQ-028)', () => {
-  it('sorts versions oldest first and finds the latest', () => {
+  it('sorts versions oldest first in the helper and finds the latest', () => {
     expect(versionsOldestFirst(summary).map((v) => v.version)).toEqual([1, 2, 3]);
     expect(latestVersion(summary)?.version).toBe(3);
     expect(latestVersion({ ...summary, versions: [] })).toBeNull();
   });
 
-  it('lists every version oldest first with start time, status in words and counts', () => {
+  it('lists every version newest first with start time, status in words and counts', () => {
     const html = historyView();
     const order = [1, 2, 3].map((n) => html.indexOf(`data-version="${n}"`));
     expect(order.every((i) => i >= 0)).toBe(true);
-    expect(order).toEqual([...order].sort((a, b) => a - b));
+    expect(order).toEqual([...order].sort((a, b) => b - a));
 
-    const first = textOf(html.slice(order[0], order[1]));
+    const first = textOf(html.slice(order[0]));
     expect(first).toContain('Version 1');
     expect(first).toMatch(/Started \d{1,2} Nov 2026/);
     expect(first).toContain('Status: Finished');
     expect(first).toContain('11 pages recorded · 1 page skipped · 5 findings');
 
-    const second = textOf(html.slice(order[1], order[2]));
+    const second = textOf(html.slice(order[1], order[0]));
     expect(second).toContain('Status: Running');
     expect(second).toContain('No counts yet');
 
-    const third = textOf(html.slice(order[2]));
+    const third = textOf(html.slice(order[2], order[1]));
     expect(third).toContain('Status: Failed');
     expect(third).toContain('The site stopped answering.');
 
@@ -300,7 +307,7 @@ describe('re-run (REQ-028 AC-3)', () => {
       message: { tone: 'pass', text: `Version ${outcome.value.started.version} started. It is listed below.` },
     });
     expect(html).toContain('data-version="4"');
-    expect(html.indexOf('data-version="3"')).toBeLessThan(html.indexOf('data-version="4"'));
+    expect(html.indexOf('data-version="4"')).toBeLessThan(html.indexOf('data-version="3"'));
     expect(textOf(html)).toContain('Version 4 started.');
   });
 
@@ -356,6 +363,111 @@ describe('delete', () => {
       ok: false,
       message: expect.stringContaining('still running'),
     });
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------
+// T-69, T-76: results first, live history, Helper view, header actions
+// ---------------------------------------------------------------------------------------------------
+
+describe('history: results first and live', () => {
+  it('finds the latest finished and the running version', () => {
+    expect(latestFinishedVersion(summary)?.version).toBe(1);
+    expect(runningVersion(summary)?.version).toBe(2);
+    expect(latestFinishedVersion({ ...summary, versions: [] })).toBeNull();
+  });
+
+  it('puts an "Open the results" primary button for the latest finished version above the versions', () => {
+    const html = historyView();
+    const link = html.match(/<a [^>]*>Open the results<\/a>/)?.[0] ?? '';
+    expect(link).toContain('href="/audits/abcd1234/versions/1"');
+    expect(link).toContain('btn-primary');
+    expect(html.indexOf('Open the results')).toBeLessThan(html.indexOf('data-version="1"'));
+    expect(textOf(html)).toContain('Version 2 is running');
+  });
+
+  it('re-reads when the stream ends and opens no stream when nothing runs', () => {
+    type Fake = { onmessage: ((m: { data: string }) => void) | null; onerror: (() => void) | null; close(): void };
+    const close = vi.fn();
+    let source: Fake | undefined;
+    const openSource = (url: string) => {
+      expect(url).toBe('/api/audits/abcd1234/stream');
+      source = { onmessage: null, onerror: null, close };
+      return source as never;
+    };
+    const onProgress = vi.fn();
+    const onEnd = vi.fn();
+    const stop = followRunningVersion(summary, { onProgress, onEnd }, openSource);
+    source!.onmessage!({
+      data: JSON.stringify({
+        type: 'progress',
+        auditId: AUDIT_ID,
+        version: 2,
+        stage: 'crawling',
+        pagesFound: 3,
+        pagesRecorded: 1,
+        pagesSkipped: 0,
+      }),
+    });
+    expect(onProgress).toHaveBeenCalledTimes(1);
+    expect(onEnd).not.toHaveBeenCalled();
+    source!.onmessage!({ data: JSON.stringify({ type: 'done', auditId: AUDIT_ID, version: 2 }) });
+    expect(onEnd).toHaveBeenCalledTimes(1);
+    expect(close).toHaveBeenCalled();
+    stop();
+
+    const idle = vi.fn();
+    followRunningVersion({ ...summary, versions: [version(1)] }, { onEnd }, idle)();
+    expect(idle).not.toHaveBeenCalled();
+  });
+
+  it('closes the stream when asked to stop', () => {
+    const close = vi.fn();
+    const stop = followRunningVersion(
+      summary,
+      { onEnd: vi.fn() },
+      () => ({ onmessage: null, onerror: null, close }) as never
+    );
+    stop();
+    expect(close).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('history for a Helper (ADR 0037)', () => {
+  it('shows the owner actions to the owner', () => {
+    const text = textOf(historyView());
+    for (const word of ['Re-run', 'Preview and Shared Links', 'Helpers', 'Delete']) expect(text).toContain(word);
+  });
+
+  it('hides the owner actions until the Helper check has answered', () => {
+    const text = textOf(historyView({ isHelper: null }));
+    for (const word of ['Re-run', 'Preview and Shared Links', 'Helpers', 'Delete']) expect(text).not.toContain(word);
+    expect(text).toContain('Open the results');
+  });
+
+  it('hides Re-run, Delete, Helpers and Preview and Shared Links from a Helper but keeps the results', () => {
+    const html = historyView({ isHelper: true, confirmingDelete: true });
+    const text = textOf(html);
+    for (const word of ['Re-run', 'Preview and Shared Links', 'Delete']) expect(text).not.toContain(word);
+    expect(html).not.toContain('/helpers"');
+    expect(html).not.toContain('alertdialog');
+    expect(text).toContain('Open the results');
+  });
+});
+
+describe('saved list header', () => {
+  it('has a Start a Website Audit button when audits exist, and always a settings link', () => {
+    const withAudits = renderToStaticMarkup(
+      createElement(SavedAuditsActions, { load: { status: 'loaded', audits: [summary] } })
+    );
+    expect(withAudits).toContain('href="/audits/new"');
+    expect(textOf(withAudits)).toContain('Start a Website Audit');
+    expect(withAudits).toContain('href="/audit-settings"');
+    expect(textOf(withAudits)).toContain('Website Audit settings');
+
+    const empty = renderToStaticMarkup(createElement(SavedAuditsActions, { load: { status: 'loaded', audits: [] } }));
+    expect(empty).not.toContain('href="/audits/new"');
+    expect(empty).toContain('href="/audit-settings"');
   });
 });
 

@@ -62,6 +62,21 @@ export interface SettingsDraft {
   proposalTemplate: string;
   optOutText: Record<OptOutLanguage, string>;
   company: CompanyDetails;
+  /** The words of a copied phrase that block an accepted rewrite, as typed. */
+  rewriteOverlapWords: string;
+  /** A PageSpeed key being typed. Write-only: never filled from a reply. */
+  pagespeedKey: string;
+}
+
+/** The most words a copied phrase may have, as the runner checks it. */
+export const MAX_REWRITE_OVERLAP_WORDS = 100;
+
+/** The overlap field's number, or null when it is not a whole number from 1 to the maximum. */
+export function overlapWordsValue(text: string): number | null {
+  const trimmed = text.trim();
+  if (!/^\d{1,3}$/.test(trimmed)) return null;
+  const n = Number(trimmed);
+  return n >= 1 && n <= MAX_REWRITE_OVERLAP_WORDS ? n : null;
 }
 
 /** The opt-out text in effect for a language: the saved one, else the tool's default. */
@@ -75,6 +90,8 @@ export function draftFrom(reply: AuditSettingsReply): SettingsDraft {
     proposalTemplate: reply.settings.proposalTemplate,
     optOutText: { en: optOutInEffect(reply, 'en'), ta: optOutInEffect(reply, 'ta') },
     company: { ...reply.settings.company },
+    rewriteOverlapWords: String(reply.settings.rewriteOverlapWords ?? reply.defaults.rewriteOverlapWords ?? ''),
+    pagespeedKey: '',
   };
 }
 
@@ -92,6 +109,11 @@ export function settingsUpdate(reply: AuditSettingsReply, draft: SettingsDraft):
     if (draft.company[field] !== saved.company[field])
       update.company = { ...update.company, [field]: draft.company[field] };
   }
+  if (draft.rewriteOverlapWords !== saved.rewriteOverlapWords) {
+    const words = overlapWordsValue(draft.rewriteOverlapWords);
+    if (words !== null) update.rewriteOverlapWords = words;
+  }
+  if (draft.pagespeedKey.trim() !== '') update.pagespeedKey = draft.pagespeedKey.trim();
   return update;
 }
 
@@ -107,6 +129,11 @@ export function resetProposalTemplate(): AuditSettingsUpdate {
 /** Puts the tool's default opt-out text back for one language. */
 export function resetOptOutText(language: OptOutLanguage): AuditSettingsUpdate {
   return { optOutText: { [language]: null } };
+}
+
+/** Removes the saved PageSpeed key. */
+export function removePagespeedKey(): AuditSettingsUpdate {
+  return { pagespeedKey: null };
 }
 
 const NOT_ANSWERING = 'The tool is not answering. Make sure it is still open in its terminal, then try again.';

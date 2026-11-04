@@ -1,5 +1,18 @@
-import type { AuditMarketing, AuditPage, TechnologyResult } from '@qa/types/src/browser.js';
+import type {
+  AuditMarketing,
+  AuditPage,
+  ExternalSpeed,
+  PageSpeed,
+  PhoneLayout,
+  TechnologyResult,
+} from '@qa/types/src/browser.js';
+import { auditFileUrl } from './analysis-client';
 import {
+  SPEED_LIMITS,
+  SPEED_METRIC_LABEL,
+  SPEED_NOT_MEASURED_TEXT,
+  speedMethodText,
+  speedValueText,
   ACCESSIBILITY_NOTE,
   ACCESSIBILITY_STANDARD,
   NONE,
@@ -22,6 +35,86 @@ export interface PageFactsViewProps {
   technology: TechnologyResult;
   /** The ten marketing signals of the whole site, in report order. */
   signals: MarketingSignal[];
+  /** With the version, lets the phone screenshot load through the file endpoint. Without an id it is left out. */
+  auditId?: string;
+  version?: number;
+}
+
+function SpeedResult({ title, speed }: { title: string; speed: ExternalSpeed }) {
+  return (
+    <div className="space-y-1">
+      <h4 className="font-bold">{title}</h4>
+      <p className="text-sm text-ink-soft">{speedMethodText(speed)}</p>
+      {speed.status === 'measured' ? (
+        <>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+            {speed.values.map((value) => (
+              <div key={value.metric} className="contents">
+                <dt className="font-bold">{SPEED_METRIC_LABEL[value.metric]}</dt>
+                <dd>{speedValueText(value)}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="text-xs text-ink-soft">{`Measured ${speed.measuredAt}.`}</p>
+        </>
+      ) : (
+        <p className="text-sm">{`Not measured: ${SPEED_NOT_MEASURED_TEXT[speed.reason]}.`}</p>
+      )}
+    </div>
+  );
+}
+
+function SpeedFacts({ speed }: { speed: PageSpeed }) {
+  return (
+    <>
+      <h3 className="text-lg font-bold">Speed (PageSpeed Insights)</h3>
+      <SpeedResult title="Lab test" speed={speed.lab} />
+      <SpeedResult title="Real visitors" speed={speed.field} />
+      <p className="text-xs text-ink-soft">{SPEED_LIMITS}</p>
+    </>
+  );
+}
+
+function PhoneFacts({
+  page,
+  phone,
+  auditId,
+  version,
+}: {
+  page: AuditPage;
+  phone: PhoneLayout;
+  auditId?: string;
+  version?: number;
+}) {
+  const overflow =
+    phone.overflow === null
+      ? 'Not checked'
+      : phone.overflow
+        ? 'The page is wider than the screen'
+        : 'The page fits the screen width';
+  return (
+    <>
+      <h3 className="text-lg font-bold">Phone layout</h3>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+        <dt className="font-bold">Screen width tested</dt>
+        <dd>{`${phone.widthPx} px`}</dd>
+        <dt className="font-bold">Width check</dt>
+        <dd>{overflow}</dd>
+      </dl>
+      {phone.screenshotPath === null ? (
+        <p className="text-sm text-ink-soft">No screenshot was taken.</p>
+      ) : (
+        auditId && (
+          <img
+            loading="lazy"
+            src={auditFileUrl(auditId, phone.screenshotPath, version)}
+            alt={`${page.urlPath} at ${phone.widthPx} px wide, as a phone shows it`}
+            className="max-h-96 rounded border border-rule"
+          />
+        )
+      )}
+    </>
+  );
 }
 
 function NapList({ signal }: { signal: MarketingSignal }) {
@@ -38,7 +131,7 @@ function NapList({ signal }: { signal: MarketingSignal }) {
 }
 
 /** One page's facts and the site's technology and marketing signals (REQ-010, REQ-013, REQ-015, REQ-038). */
-export function PageFactsView({ page, technology, signals }: PageFactsViewProps) {
+export function PageFactsView({ page, technology, signals, auditId, version }: PageFactsViewProps) {
   const { seo, accessibility } = page;
   return (
     <section aria-labelledby="page-facts-title" className="space-y-4">
@@ -52,6 +145,9 @@ export function PageFactsView({ page, technology, signals }: PageFactsViewProps)
             ? `Shares its layout with the Sample Page ${page.sampleUrlPath}, which was checked for it.`
             : 'Shares its layout with a Sample Page, which was checked for it.'}
       </p>
+
+      {page.speed && <SpeedFacts speed={page.speed} />}
+      {page.phone && <PhoneFacts page={page} phone={page.phone} auditId={auditId} version={version} />}
 
       <h3 className="text-lg font-bold">Language</h3>
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
@@ -116,31 +212,33 @@ export function PageFactsView({ page, technology, signals }: PageFactsViewProps)
       {signals.length === 0 ? (
         <p className="text-sm text-ink-soft">Not checked</p>
       ) : (
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr>
-              <th scope="col">Signal</th>
-              <th scope="col">Status</th>
-              <th scope="col">Pages</th>
-              <th scope="col">What was seen</th>
-            </tr>
-          </thead>
-          <tbody>
-            {signals.map((signal) => (
-              <tr key={signal.key}>
-                <th scope="row" className="font-bold">
-                  {signal.label}
-                </th>
-                <td>{SIGNAL_STATUS_LABEL[signal.status]}</td>
-                <td className="break-all">{signal.pages.length === 0 ? NONE : signal.pages.join(', ')}</td>
-                <td>
-                  {signal.detail}
-                  <NapList signal={signal} />
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr>
+                <th scope="col">Signal</th>
+                <th scope="col">Status</th>
+                <th scope="col">Pages</th>
+                <th scope="col">What was seen</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {signals.map((signal) => (
+                <tr key={signal.key}>
+                  <th scope="row" className="font-bold">
+                    {signal.label}
+                  </th>
+                  <td>{SIGNAL_STATUS_LABEL[signal.status]}</td>
+                  <td className="break-all">{signal.pages.length === 0 ? NONE : signal.pages.join(', ')}</td>
+                  <td>
+                    {signal.detail}
+                    <NapList signal={signal} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </section>
   );

@@ -68,6 +68,7 @@ import { TestingScreen } from './screens/TestingScreen';
 import { VisualBaselinesScreen } from './screens/VisualBaselinesScreen';
 import { BenchmarkScreen } from './screens/BenchmarkScreen';
 import { splitStoredContext } from './lib/context';
+import { BetaAuditNotice, showsBetaAuditNotice } from './screens/audit/BetaAuditNotice';
 import { AuditStartScreen } from './screens/audit/start/AuditStartScreen';
 import { SavedAuditsScreen } from './screens/audit/saved/SavedAuditsScreen';
 import { AuditHistoryScreen } from './screens/audit/saved/AuditHistoryScreen';
@@ -741,24 +742,7 @@ export default function App() {
                 ? 'Visual Baselines'
                 : route.name === 'benchmark'
                   ? 'Compare with another site'
-                  : route.name === 'audit-new'
-                    ? 'New Website Audit'
-                    : route.name === 'audits'
-                      ? 'Saved Website Audits'
-                      : route.name === 'audit-settings'
-                        ? 'Website Audit settings'
-                        : route.name === 'audit-shortlist'
-                          ? 'Shortlist'
-                          : route.name === 'helper-sign-in'
-                            ? 'Helper sign-in'
-                            : route.name === 'audit' ||
-                                route.name === 'audit-version' ||
-                                route.name === 'audit-review' ||
-                                route.name === 'audit-export' ||
-                                route.name === 'audit-share' ||
-                                route.name === 'audit-helpers'
-                              ? 'Website Audit'
-                              : null
+                  : null // the audit screens set their own titles
   );
 
   const scanFailure =
@@ -770,6 +754,8 @@ export default function App() {
     body = <LandingScreen />;
   } else if (!reachable) {
     body = checks > 0 ? <ConnectionScreen checks={checks} /> : <Loading label="Connecting…" />;
+  } else if (showsBetaAuditNotice(route.name, !!status?.beta, !!status?.helper)) {
+    body = <BetaAuditNotice />;
   } else {
     switch (route.name) {
       case 'new':
@@ -953,7 +939,12 @@ export default function App() {
         Skip to the content
       </a>
       {!landing && (
-        <TopBar route={route} checkupInProgress={inProgress} showDeveloperShortcuts={hasFinishedCheckup(recent)} />
+        <TopBar
+          route={route}
+          checkupInProgress={inProgress}
+          showDeveloperShortcuts={hasFinishedCheckup(recent)}
+          beta={!!status?.beta}
+        />
       )}
       {step && <StepBar current={step} links={{ address: PATHS.new }} />}
       <main id="main">
@@ -980,7 +971,7 @@ export default function App() {
         )}
         {body}
       </main>
-      {!landing && <CommandPalette route={route} />}
+      {!landing && <CommandPalette route={route} beta={!!status?.beta} />}
       {dialog}
     </div>
   );

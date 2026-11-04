@@ -1,18 +1,25 @@
 /**
  * Fixed UI wording for the Website Audit analysis views (HierarchyView, PageContentView, PageFactsView,
- * FindingsList). Terms follow CONTEXT.md; claims follow ADR 0018 (found or not found, never "accessible",
- * "compliant" or "secure") and ADR 0033 (a Website Audit has no release verdict).
+ * FindingsList). Terms follow CONTEXT.md; claims follow ADR 0018 (found or not found, never a claim about
+ * the whole site) and ADR 0033 (a Website Audit has no release verdict).
  */
 import {
   DOCUMENT_LANGUAGE_INFO,
   isDocumentLanguage,
+  AUDIT_SCALE,
+  type AssessmentNotDoneReason,
+  type AuditArea,
   type AuditFinding,
   type AuditMarketing,
   type AuditScale,
+  type ExternalSpeed,
   type HierarchyNode,
   type LinkRegion,
   type PageLanguage,
   type SectionKind,
+  type SpeedMetric,
+  type SpeedNotMeasuredReason,
+  type SpeedValue,
   type TechnologyKind,
 } from '@qa/types/src/browser.js';
 
@@ -151,4 +158,78 @@ export function textLangAttrs(text: string, primary: PageLanguage['primary']): {
     return lang === 'ur' ? { lang, dir: 'rtl' } : { lang };
   }
   return {};
+}
+
+// ---------------------------------------------------------------------------------------------------
+// Summary, site areas, Improvement Roadmap and per-page speed (T-72, T-73)
+// ---------------------------------------------------------------------------------------------------
+
+export const AI_ADVISORY_CHIP = 'AI advisory';
+export const NO_GRADE = 'No grade: no checks ran';
+export const GRADE_BASIS =
+  'The grade comes from automatic checks only. The AI writes the note and never changes the grade.';
+
+export const AREA_LABEL: Readonly<Record<AuditArea, string>> = {
+  'search-ranking': 'Search ranking',
+  marketing: 'Marketing',
+  usability: 'Usability',
+  content: 'Content',
+  accessibility: 'Accessibility (automatic checks only)',
+  speed: 'Speed',
+};
+
+export const NOT_DONE_REASON_TEXT: Readonly<Record<AssessmentNotDoneReason, string>> = {
+  'no-ai-key': 'No AI note was written: an AI key is needed. Add one in Settings.',
+  'ai-failed': 'No AI note was written: the AI did not answer. Try again later.',
+  'budget-spent': 'No AI note was written: the AI budget for this Website Audit was spent.',
+};
+
+export const SPEED_METRIC_LABEL: Readonly<Record<SpeedMetric, string>> = {
+  'performance-score': 'Performance score (0 to 100)',
+  lcp: 'Largest Contentful Paint',
+  inp: 'Interaction to Next Paint',
+  cls: 'Cumulative Layout Shift',
+  fcp: 'First Contentful Paint',
+  ttfb: 'Time to First Byte',
+  tbt: 'Total Blocking Time',
+  'speed-index': 'Speed Index',
+};
+
+export const SPEED_NOT_MEASURED_TEXT: Readonly<Record<SpeedNotMeasuredReason, string>> = {
+  failed: 'the measurement failed',
+  timeout: 'the measurement took too long',
+  quota: 'the PageSpeed Insights limit was reached',
+  'no-network': 'the PageSpeed Insights service could not be reached',
+  'no-field-data': 'Google has no visitor data for this page',
+};
+
+/** How one measured value reads: "2400 ms", "78", "0.05". */
+export function speedValueText(value: SpeedValue): string {
+  return value.unit === 'ms' ? `${Math.round(value.value)} ms` : String(value.value);
+}
+
+/** How a speed result was measured, said before its numbers (ADR 0018). */
+export function speedMethodText(speed: ExternalSpeed): string {
+  if (speed.method === 'lab') {
+    return 'Lab test: a Lighthouse test made by the Google PageSpeed Insights API, simulating a phone (mobile)';
+  }
+  const scope =
+    speed.status === 'measured' && speed.scope === 'origin'
+      ? 'the whole website, as this page has few visitors'
+      : 'this page';
+  return `Field data: what real Chrome visitors on phones experienced, from the Chrome UX Report, for ${scope}`;
+}
+
+export const SPEED_LIMITS =
+  'This is one measurement by Google, not a guarantee of how the website feels to every visitor.';
+
+/** Findings ranked for "Fix first": higher impact first, then lower effort. Ties keep the given order. */
+export function fixFirst(findings: AuditFinding[], limit = 5): AuditFinding[] {
+  const impact = (f: AuditFinding) => AUDIT_SCALE.indexOf(f.impact);
+  const effort = (f: AuditFinding) => AUDIT_SCALE.indexOf(f.effort);
+  return findings
+    .map((finding, i) => ({ finding, i }))
+    .sort((a, b) => impact(a.finding) - impact(b.finding) || effort(b.finding) - effort(a.finding) || a.i - b.i)
+    .slice(0, limit)
+    .map((entry) => entry.finding);
 }

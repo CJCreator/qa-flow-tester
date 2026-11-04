@@ -7,7 +7,11 @@ import {
   defaultExportChoice,
   defaultOwnerAuditChoice,
   defaultPitchChoice,
+  exportBlockedReason,
   exportUrl,
+  fallbackFileName,
+  fetchDownload,
+  fileNameFrom,
   ownerAuditUrl,
   pitchUrl,
   setDocument,
@@ -59,8 +63,17 @@ function links(html: string): Array<{ href: string; text: string; attrs: string 
   }));
 }
 
-function linkStarting(html: string, text: string) {
-  const found = links(html).find((l) => l.text.startsWith(text));
+/** Every button of the markup: its text and attributes. */
+function buttons(html: string): Array<{ text: string; attrs: string }> {
+  return [...html.matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/g)].map((m) => ({
+    text: textOf(m[2]).trim(),
+    attrs: m[1],
+  }));
+}
+
+/** The download button whose text starts with `text`. Downloads are fetched and saved, not plain links. */
+function downloadButton(html: string, text: string) {
+  const found = buttons(html).find((b) => b.text.startsWith(text));
   expect(found, text).toBeDefined();
   return found!;
 }
@@ -76,9 +89,10 @@ function queryOf(href: string): { path: string; query: Record<string, string> } 
 
 describe('Audit Documents download link (REQ-021, REQ-022)', () => {
   it('asks for all five Audit Documents in English Markdown when nothing is changed', () => {
-    const link = linkStarting(view(), 'Download the Audit Documents');
-    expect(link.attrs).toMatch(/\sdownload(=""|\s|$)/);
-    expect(queryOf(link.href)).toEqual({
+    const button = downloadButton(view(), 'Download the Audit Documents');
+    expect(button.attrs).toContain('type="button"');
+    expect(button.attrs).not.toContain('disabled');
+    expect(queryOf(exportUrl(AUDIT_ID, defaultExportChoice())!)).toEqual({
       path: `/api/audits/${AUDIT_ID}/export`,
       query: { format: 'md', documents: AUDIT_DOCUMENT_KINDS.join(','), language: 'en' },
     });
@@ -88,12 +102,12 @@ describe('Audit Documents download link (REQ-021, REQ-022)', () => {
   it('carries exactly the picked format, documents, language and version', () => {
     let choice: ExportChoice = { ...defaultExportChoice(), format: 'pdf', language: 'ta' };
     for (const kind of ['structure', 'content', 'proposal'] as const) choice = setDocument(choice, kind, false);
-    const link = linkStarting(view({ choice, version: 3 }), 'Download the Audit Documents');
-    expect(queryOf(link.href)).toEqual({
+    const button = downloadButton(view({ choice, version: 3 }), 'Download the Audit Documents');
+    expect(queryOf(exportUrl(AUDIT_ID, choice, 3)!)).toEqual({
       path: `/api/audits/${AUDIT_ID}/export`,
       query: { format: 'pdf', documents: 'findings,roadmap', language: 'ta', version: '3' },
     });
-    expect(link.text).toBe('Download the Audit Documents (PDF, Tamil)');
+    expect(button.text).toBe('Download the Audit Documents (PDF, Tamil)');
   });
 
   it('keeps the documents in their fixed order whatever order they are ticked in', () => {
@@ -120,7 +134,7 @@ describe('Audit Documents download link (REQ-021, REQ-022)', () => {
 
   it('offers no download and says why when no Audit Document is ticked', () => {
     const html = view({ choice: { ...defaultExportChoice(), documents: [] } });
-    expect(links(html).some((l) => l.text.startsWith('Download the Audit Documents'))).toBe(false);
+    expect(buttons(html).some((b) => b.text.startsWith('Download the Audit Documents'))).toBe(false);
     expect(html).toContain('role="alert"');
     expect(textOf(html)).toContain('Tick at least one Audit Document to download.');
     expect(exportUrl(AUDIT_ID, { ...defaultExportChoice(), documents: [] })).toBeNull();
@@ -160,12 +174,14 @@ describe('what the export panel offers (REQ-019, REQ-025)', () => {
     expect(html).toContain('<label for="pitch-language-ta">Tamil</label>');
     expect(html).toContain('<label for="pitch-format-html">HTML</label>');
     expect(html).toContain('<label for="pitch-format-pdf">PDF</label>');
-    expect(queryOf(linkStarting(html, 'Download the Pitch Glimpse').href)).toEqual({
+    expect(downloadButton(html, 'Download the Pitch Glimpse').text).toBe('Download the Pitch Glimpse (PDF, English)');
+    expect(queryOf(pitchUrl(AUDIT_ID, defaultPitchChoice()))).toEqual({
       path: `/api/audits/${AUDIT_ID}/pitch`,
       query: { format: 'pdf', language: 'en' },
     });
     const tamil = view({ pitch: { format: 'html', language: 'ta' }, version: 2 });
-    expect(queryOf(linkStarting(tamil, 'Download the Pitch Glimpse').href)).toEqual({
+    expect(downloadButton(tamil, 'Download the Pitch Glimpse').text).toBe('Download the Pitch Glimpse (HTML, Tamil)');
+    expect(queryOf(pitchUrl(AUDIT_ID, { format: 'html', language: 'ta' }, 2))).toEqual({
       path: `/api/audits/${AUDIT_ID}/pitch`,
       query: { format: 'html', language: 'ta', version: '2' },
     });
@@ -177,7 +193,8 @@ describe('what the export panel offers (REQ-019, REQ-025)', () => {
     expect(html).not.toContain('id="owner-format-bundle"');
     expect(html).toContain('id="owner-language-en"');
     expect(html).toContain('id="owner-language-ta"');
-    expect(queryOf(linkStarting(html, 'Download the Owner Audit').href)).toEqual({
+    expect(downloadButton(html, 'Download the Owner Audit').text).toBe('Download the Owner Audit (Word, Tamil)');
+    expect(queryOf(ownerAuditUrl(AUDIT_ID, { format: 'docx', language: 'ta' }))).toEqual({
       path: `/api/audits/${AUDIT_ID}/owner`,
       query: { format: 'docx', language: 'ta' },
     });
@@ -189,15 +206,18 @@ describe('what the export panel offers (REQ-019, REQ-025)', () => {
       expect(html).not.toMatch(/<form\b/);
       expect(html).not.toMatch(/\saction="/);
       expect(html).not.toMatch(/mailto:|tel:|sms:|wa\.me|whatsapp/i);
-      for (const link of links(html)) {
-        expect(link.href, link.text).toMatch(new RegExp(`^/api/audits/${AUDIT_ID}/(export|pitch|owner)\\?`));
-        expect(link.attrs).toMatch(/\sdownload/);
-        expect(link.text).not.toMatch(SENDING);
-      }
+      expect(links(html)).toEqual([]);
       for (const m of html.matchAll(/<button\b[^>]*>([\s\S]*?)<\/button>/g)) expect(textOf(m[1])).not.toMatch(SENDING);
       for (const m of html.matchAll(/aria-label="([^"]*)"/g)) expect(m[1]).not.toMatch(SENDING);
     }
-    expect(links(view()).map((l) => l.text.replace(/ \(.*$/, ''))).toEqual([
+    for (const url of [
+      exportUrl(AUDIT_ID, defaultExportChoice())!,
+      pitchUrl(AUDIT_ID, defaultPitchChoice()),
+      ownerAuditUrl(AUDIT_ID, defaultOwnerAuditChoice()),
+    ]) {
+      expect(url).toMatch(new RegExp(`^/api/audits/${AUDIT_ID}/(export|pitch|owner)\\?`));
+    }
+    expect(buttons(view()).map((b) => b.text.replace(/ \(.*$/, ''))).toEqual([
       'Download the Audit Documents',
       'Download the Pitch Glimpse',
       'Download the Owner Audit',
@@ -264,7 +284,112 @@ describe('accessible markup and wording', () => {
     }
     expect((views.screen.match(/<h1/g) ?? []).length).toBe(1);
     expect(text).toContain('Version 2');
-    expect(queryOf(linkStarting(views.screen, 'Download the Audit Documents').href).query.version).toBe('2');
+    expect(queryOf(exportUrl(AUDIT_ID, defaultExportChoice(), 2)!).query.version).toBe('2');
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------
+// T-70: fetch and save, refusals inline, running version
+// ---------------------------------------------------------------------------------------------------
+
+describe('saving a download (T-70)', () => {
+  function reply(status: number, body: BodyInit, headers: Record<string, string>) {
+    const calls: string[] = [];
+    const impl = async (url: string): Promise<Response> => {
+      calls.push(url);
+      return new Response(body, { status, headers });
+    };
+    return { impl, calls };
+  }
+
+  it('returns the blob and the name from Content-Disposition', async () => {
+    const { impl, calls } = reply(200, 'hello', {
+      'Content-Type': 'text/markdown',
+      'Content-Disposition': 'attachment; filename="site-audit.md"',
+    });
+    const outcome = await fetchDownload('/api/audits/abcd1234/export?format=md', 'audit-documents.md', impl);
+    expect(calls).toEqual(['/api/audits/abcd1234/export?format=md']);
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      expect(outcome.fileName).toBe('site-audit.md');
+      expect(await outcome.blob.text()).toBe('hello');
+    }
+  });
+
+  it('uses a default name when the reply names none, and strips any folder part', () => {
+    expect(fileNameFrom(null, 'audit-documents.md')).toBe('audit-documents.md');
+    expect(fileNameFrom('attachment', 'audit-documents.md')).toBe('audit-documents.md');
+    expect(fileNameFrom('attachment; filename="../../evil.md"', 'x.md')).toBe('evil.md');
+    expect(fileNameFrom("attachment; filename*=UTF-8''site%20audit.pdf", 'x.pdf')).toBe('site audit.pdf');
+    expect(fallbackFileName('documents', 'bundle')).toBe('audit-documents.zip');
+    expect(fallbackFileName('pitch', 'pdf')).toBe('pitch-glimpse.pdf');
+    expect(fallbackFileName('owner', 'docx')).toBe('owner-audit.docx');
+  });
+
+  it('shows the runner message of a 4xx JSON reply and saves no file', async () => {
+    const message = 'This version of the Website Audit is still running. Download it when it has finished.';
+    const { impl } = reply(409, JSON.stringify({ error: message, code: 'ERR_AUDIT_RUNNING' }), {
+      'Content-Type': 'application/json',
+    });
+    const outcome = await fetchDownload('/api/audits/abcd1234/export', 'audit-documents.md', impl);
+    expect(outcome).toEqual({ ok: false, message });
+    // The screen saves a file only on ok: the refusal carries no blob.
+    expect('blob' in outcome).toBe(false);
+    const html = view({ error: message });
+    expect(html).toContain('role="alert"');
+    expect(textOf(html)).toContain(message);
+  });
+
+  it('falls back to one fixed sentence for a non-JSON refusal, and says when the tool does not answer', async () => {
+    const { impl } = reply(500, 'oops', { 'Content-Type': 'text/plain' });
+    expect(await fetchDownload('/x', 'a.md', impl)).toEqual({
+      ok: false,
+      message: 'The file could not be made. Try again.',
+    });
+    const down = async (): Promise<Response> => {
+      throw new Error('offline');
+    };
+    const outcome = await fetchDownload('/x', 'a.md', down);
+    expect(outcome.ok).toBe(false);
+    if (!outcome.ok) expect(outcome.message).toContain('The tool is not answering');
+  });
+
+  it('turns export off with a short reason while the version runs or failed', () => {
+    expect(exportBlockedReason('done')).toBeNull();
+    expect(exportBlockedReason(undefined)).toBeNull();
+    const running = exportBlockedReason('running');
+    expect(running).toMatch(/still running/);
+    expect(exportBlockedReason('failed')).toMatch(/did not finish/);
+    const html = view({ blockedReason: running });
+    expect(textOf(html)).toContain(running!);
+    for (const text of ['Download the Audit Documents', 'Download the Pitch Glimpse', 'Download the Owner Audit']) {
+      expect(downloadButton(html, text).attrs).toContain('disabled=""');
+    }
+    expect(downloadButton(view(), 'Download the Pitch Glimpse').attrs).not.toContain('disabled');
+  });
+
+  it('keeps every download off until the version read has answered', () => {
+    const screen = renderToStaticMarkup(createElement(ExportDocumentsScreen, { auditId: AUDIT_ID, version: 2 }));
+    expect(textOf(screen)).toContain('Checking this version…');
+    for (const text of ['Download the Audit Documents', 'Download the Pitch Glimpse', 'Download the Owner Audit']) {
+      expect(downloadButton(screen, text).attrs).toContain('disabled=""');
+    }
+  });
+
+  it('shows the read failure with a Retry and keeps every download off', () => {
+    const html = view({ loadError: 'The tool is not answering.', onRetry: noop });
+    expect(textOf(html)).toContain('The tool is not answering.');
+    expect(buttons(html).some((b) => b.text === 'Retry')).toBe(true);
+    for (const text of ['Download the Audit Documents', 'Download the Pitch Glimpse', 'Download the Owner Audit']) {
+      expect(downloadButton(html, text).attrs).toContain('disabled=""');
+    }
+    expect(textOf(view())).not.toContain('Checking this version…');
+  });
+
+  it('shows Back links to the Website Audit and to the review', () => {
+    const screen = renderToStaticMarkup(createElement(ExportDocumentsScreen, { auditId: AUDIT_ID, version: 2 }));
+    expect(links(screen).find((l) => l.text === 'Back to this Website Audit')?.href).toBe(`/audits/${AUDIT_ID}`);
+    expect(links(screen).some((l) => l.text === 'Review the Audit Documents')).toBe(true);
   });
 });
 

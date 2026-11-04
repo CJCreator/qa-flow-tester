@@ -43,7 +43,7 @@ export function AuditAiModelsView({
   return (
     <section aria-labelledby="audit-ai-models-title" className="space-y-3">
       <h2 id="audit-ai-models-title" className="text-xl font-bold">
-        AI model per task
+        AI models
       </h2>
       <p className="max-w-prose text-sm text-ink-soft">
         Each AI task of a Website Audit can use its own model from your AI Provider. Leave a field empty to use the

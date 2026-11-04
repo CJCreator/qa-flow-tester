@@ -70,7 +70,7 @@ export function VisibilityScreen({ runId }: { runId: string }) {
       <div className="mx-auto max-w-4xl px-4 py-12">
         <ErrorMessage>{error}</ErrorMessage>
         <div className="mt-4">
-          <Link to={PATHS.report(runId)} className="btn-secondary">
+          <Link to={PATHS.report(runId)} className="btn-quiet">
             ← Back to Report
           </Link>
         </div>
@@ -148,7 +148,7 @@ export function VisibilityScreen({ runId }: { runId: string }) {
             <span className="font-semibold text-ink">{hostOf(report.targetUrl)}</span>.
           </p>
         </div>
-        <Link to={PATHS.report(runId)} className="btn-secondary text-xs">
+        <Link to={PATHS.report(runId)} className="btn-quiet text-xs">
           ← Back to Report
         </Link>
       </div>

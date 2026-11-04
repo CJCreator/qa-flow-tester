@@ -424,16 +424,37 @@ describe('FindingsList', () => {
   it('shows title, page, Section or Whole page, every page of a cross-page finding, impact, effort and source', () => {
     expect(text).toContain('Two pages share a title');
     expect(text).toContain('Page /services Section Whole page All pages /services /services/repair');
-    expect(text).toContain('Impact High Effort Low Source Fixed rule over Page Content');
+    expect(text).toContain('Impact: High Effort: Low');
+    expect(text).toContain('Source Fixed rule over Page Content');
     expect(text).toContain('Section Section s2');
-    expect(text).toContain('Impact Medium Effort Medium');
-    expect(text).toContain('Impact Low Effort High Source AI');
+    expect(text).toContain('Impact: Medium Effort: Medium');
+    expect(text).toContain('Impact: Low Effort: High');
+    expect(text).toContain('Source AI');
+  });
+
+  it('leads each card with title and chips, and keeps Page, Section and Source in a collapsed details', () => {
+    const first = html.slice(html.indexOf('data-finding-id="AF-001"'), html.indexOf('data-finding-id="AF-002"'));
+    expect(first).toMatch(/<h3[^>]*>[^<]*<\/h3><p[^>]*><span[^>]*>Impact: High/);
+    expect(first).toMatch(/<details(?![^>]*\bopen\b)[^>]*>[\s\S]*Page[\s\S]*Section[\s\S]*Source[\s\S]*<\/details>/);
+    expect(html).not.toContain('text-accent');
+    expect(html).toContain('bg-stamp-tint text-stamp');
   });
 
   it('labels AI findings advisory and only them', () => {
     expect(text.match(/Advisory/g)).toHaveLength(1);
     const third = html.slice(html.indexOf('data-finding-id="AF-003"'));
     expect(third).toContain('Advisory');
+  });
+
+  it('shows a lazy screenshot with alt text when the finding has one and an audit id is given', () => {
+    const shot = [finding({ id: 'AF-009', title: 'Banner is cut off', screenshotPath: 'shots/home.png' })];
+    const withId = render(createElement(FindingsList, { findings: shot, auditId: 'abcd1234', version: 2 }));
+    const img = withId.match(/<img\b[^>]*>/)?.[0] ?? '';
+    expect(img).toContain('loading="lazy"');
+    expect(img).toMatch(/alt="[^"]+"/);
+    expect(img).toContain('src="/api/audits/abcd1234/file?path=shots%2Fhome.png&amp;version=2"');
+    expect(render(createElement(FindingsList, { findings: shot }))).not.toContain('<img');
+    expect(render(createElement(FindingsList, { findings, auditId: 'abcd1234' }))).not.toContain('<img');
   });
 
   it('says so when there are no findings', () => {

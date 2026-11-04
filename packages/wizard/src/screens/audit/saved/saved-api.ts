@@ -16,6 +16,8 @@ import {
   type ShortlistOutcome,
   type ShortlistUpdate,
 } from '@qa/types/src/browser.js';
+import { count } from '../../../lib/format';
+import { watchAudit, type AuditEventSourceFactory } from '../start/audit-start-api';
 
 /**
  * The saved Website Audits screens' calls to the runner (REQ-028, REQ-023): the list (`GET /api/audits`), one
@@ -262,16 +264,49 @@ export function latestVersion(summary: AuditSummary): AuditVersion | null {
   return all.length === 0 ? null : all[all.length - 1];
 }
 
-function plural(n: number, one: string, many: string): string {
-  return `${n} ${n === 1 ? one : many}`;
+/** The newest finished version, or null when none has finished. */
+export function latestFinishedVersion(summary: AuditSummary): AuditVersion | null {
+  const done = versionsOldestFirst(summary).filter((v) => v.status === 'done');
+  return done.length === 0 ? null : done[done.length - 1];
+}
+
+/** The newest version that is still running, or null. */
+export function runningVersion(summary: AuditSummary): AuditVersion | null {
+  const running = versionsOldestFirst(summary).filter((v) => v.status === 'running');
+  return running.length === 0 ? null : running[running.length - 1];
+}
+
+/**
+ * Follows the running version of a Website Audit on `GET /api/audits/:id/stream`. `onProgress` fires for
+ * every event; `onEnd` once when it is done, failed or the stream closed for good: the caller re-reads then.
+ * Returns a function that closes the stream; a Website Audit with nothing running opens no stream.
+ */
+export function followRunningVersion(
+  summary: AuditSummary,
+  handlers: { onProgress?: () => void; onEnd: () => void },
+  openSource?: AuditEventSourceFactory
+): () => void {
+  const running = runningVersion(summary);
+  if (!running) return () => {};
+  return watchAudit(
+    { auditId: summary.auditId, version: running.version },
+    {
+      onEvent: (event) => {
+        handlers.onProgress?.();
+        if (event.type !== 'progress') handlers.onEnd();
+      },
+      onEnd: handlers.onEnd,
+    },
+    openSource
+  );
 }
 
 /** "12 pages recorded · 2 pages skipped · 7 findings", with only the counts the version has. */
 export function versionCounts(version: AuditVersion): string {
   const parts: string[] = [];
-  if (version.pagesRecorded !== undefined) parts.push(plural(version.pagesRecorded, 'page recorded', 'pages recorded'));
-  if (version.pagesSkipped !== undefined) parts.push(plural(version.pagesSkipped, 'page skipped', 'pages skipped'));
-  if (version.findings !== undefined) parts.push(plural(version.findings, 'finding', 'findings'));
+  if (version.pagesRecorded !== undefined) parts.push(count(version.pagesRecorded, 'page recorded', 'pages recorded'));
+  if (version.pagesSkipped !== undefined) parts.push(count(version.pagesSkipped, 'page skipped', 'pages skipped'));
+  if (version.findings !== undefined) parts.push(count(version.findings, 'finding', 'findings'));
   return parts.length === 0 ? 'No counts yet' : parts.join(' · ');
 }
 

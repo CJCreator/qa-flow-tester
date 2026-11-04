@@ -1,6 +1,9 @@
 /** Contact and email-updates targets for the landing page (T-13). Public values set at build time. */
 
-export const ISSUES_URL = 'https://github.com/CJCreator/qa-flow-tester/issues';
+/** The project's public repository. */
+export const REPO_URL = 'https://github.com/CJCreator/qa-flow-tester';
+
+export const ISSUES_URL = `${REPO_URL}/issues`;
 
 export interface ContactEnv {
   email?: string;

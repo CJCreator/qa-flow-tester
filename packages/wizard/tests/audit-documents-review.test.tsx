@@ -482,6 +482,48 @@ describe('review-api', () => {
 });
 
 // ---------------------------------------------------------------------------------------------------
+// T-74 and T-69: Section rewrite behind an AI key, Back links
+// ---------------------------------------------------------------------------------------------------
+
+describe('Section rewrite on the review (T-74)', () => {
+  const loaded = { selectedPage: '/services', content: { status: 'loaded', content } } as const;
+
+  it('mounts the Section rewrite of the open page when an AI key is set up', () => {
+    const html = view({ ...loaded, aiConfigured: true });
+    // The rewrite loads its saved rewrites first (effects do not run in static markup).
+    expect(textOf(html)).toContain('Loading the saved rewrites');
+    expect(textOf(html)).not.toContain('needs an AI key');
+  });
+
+  it('hides it without a key and links to Settings, where the key is added', () => {
+    const html = view({ ...loaded, aiConfigured: false });
+    expect(textOf(html)).not.toContain('Loading the saved rewrites');
+    expect(textOf(html)).toContain('Rewriting a Section needs an AI key');
+    expect(html).toMatch(/<a[^>]*href="\/settings"[^>]*>Add an AI key in Settings<\/a>/);
+  });
+
+  it('shows neither while the key state is unknown, or before a page is open', () => {
+    const unknown = textOf(view({ ...loaded }));
+    expect(unknown).not.toContain('needs an AI key');
+    expect(unknown).not.toContain('Loading the saved rewrites');
+    expect(textOf(view({ aiConfigured: false }))).not.toContain('needs an AI key');
+  });
+
+  it('shows Back links to the Website Audit and to export, and names the stamp tag with stamp colours', () => {
+    const screen = renderToStaticMarkup(createElement(ReviewDocumentsScreen, { auditId: AUDIT_ID, version: 2 }));
+    expect(screen).toMatch(/<a[^>]*href="\/audits\/abcd1234"[^>]*>Back to this Website Audit<\/a>/);
+    expect(screen).toMatch(
+      /<a[^>]*href="\/audits\/abcd1234\/versions\/2\/export"[^>]*>Export the Audit Documents<\/a>/
+    );
+    const source = readFileSync(
+      new URL('../src/screens/audit/documents/ReviewDocumentsScreen.tsx', import.meta.url),
+      'utf8'
+    );
+    expect(source).not.toMatch(/bg-accent|text-accent/);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------
 // AC-5: imports
 // ---------------------------------------------------------------------------------------------------
 

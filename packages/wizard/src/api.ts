@@ -10,7 +10,7 @@ import type {
   RunCap,
 } from '@qa/types';
 // The check-up API's shapes live in @qa/types (T-201): the runner and this client share one copy.
-import type { PlanPatchBody, RunnerStatusReply, RunStartBody } from '@qa/types';
+import type { AiKeySource, PlanPatchBody, RunnerStatusReply, RunStartBody } from '@qa/types';
 import {
   DEFAULT_RELEASE_GATES,
   isSignInFailureReason,
@@ -107,6 +107,11 @@ export interface AiSetup {
   chosenBy?: 'person' | 'auto';
   /** The services a key can be added for. */
   providers?: Array<{ id: AiProviderId; name: string; free: boolean }>;
+  /**
+   * Where the key in use is kept (ADR 0034). 'byok_file' is the encrypted-file fallback, used when the
+   * system keychain could not be reached. Never the key itself.
+   */
+  keySource?: AiKeySource;
 }
 
 /**
@@ -339,7 +344,7 @@ export async function checkReachable(targetUrl: string): Promise<Reachability> {
       ok: false,
       reason: 'That doesn’t look like a valid web address.',
       code: body.code || 'ERR_INVALID_URL',
-      suggestion: 'Check the address, for example shop.example.com or localhost:3050.',
+      suggestion: 'Check the address, for example shop.example.com or localhost:5173.',
       statusCode: body.statusCode,
       startWarning: body.startWarning,
       ...facts,
