@@ -1,9 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AuditGetReply, AuditPage, PageContent, RouteSkipReason } from '@qa/types/src/browser.js';
+import { ErrorMessage, FocusHeading, Notice, Spinner } from '../../../components/text';
+import { Link, PATHS } from '../../../lib/router';
+import { useDocumentTitle } from '../../../lib/title';
+import { AuditSummary, NotesBanner } from './AuditSummary';
 import { FindingsList } from './FindingsList';
+import { InternalLinkingView, LeavingSiteView, RoadmapView } from './RoadmapView';
+import { SiteAreasView } from './SiteAreasView';
 import { HierarchyView } from './HierarchyView';
 import { PageContentView } from './PageContentView';
 import { PageFactsView } from './PageFactsView';
+import { loadCallerIsHelper } from '../saved/caller-access';
 import { getAuditResult, getPageContent } from './analysis-client';
 import { titleText } from './analysis-text';
 
@@ -51,11 +58,26 @@ export interface AnalysisViewProps {
   selectedPath: string | null;
   content: ContentLoad;
   onSelect: (urlPath: string) => void;
+  /** For the way back from an error; once loaded, the version's own id is used. */
+  auditId?: string;
+  /** Tries the load again; the error state shows a Retry button when given. */
+  onRetry?: () => void;
+  /** The caller is a Helper: the owner's "Preview and Shared Links" is not shown. null while the check is open: shown to no one yet (ADR 0037). */
+  isHelper?: boolean | null;
+}
+
+/** "Version 2 results · example.org", for the tab title. */
+function resultsTitle(reply: AuditGetReply): string {
+  let host = reply.version.url;
+  try {
+    host = new URL(reply.version.url).host;
+  } catch {
+    // keep the address as written
+  }
+  return `Version ${reply.version.version} results · ${host}`;
 }
 
 const CARD = 'mt-8';
-const NOTICE = 'mt-6 max-w-prose rounded-md border-l-4 border-stamp bg-panel px-4 py-3 text-ink';
-const ERROR = 'mt-6 max-w-prose rounded-md border-l-4 border-fail bg-fail-tint px-4 py-3 text-fail';
 
 function PageList({
   pages,
@@ -151,20 +173,24 @@ function SelectedPage({
   return (
     <div className={`${CARD} space-y-8`}>
       {page.coverage === 'covered' && (
-        <p className={NOTICE}>
-          {`${pageCheckText(page)}. Its checks, notes and recommendation come from that Sample Page, which shares its layout.`}
-        </p>
+        <Notice tone="stamp" title={`${pageCheckText(page)}.`}>
+          Its checks, notes and recommendation come from that Sample Page, which shares its layout.
+        </Notice>
       )}
-      <PageFactsView page={page} technology={result.technology} signals={result.marketing.signals} />
+      <PageFactsView
+        page={page}
+        technology={result.technology}
+        signals={result.marketing.signals}
+        auditId={reply.version.auditId}
+        version={reply.version.version}
+      />
       {content.status === 'loading' && (
-        <p role="status" className="text-sm text-ink-soft">
-          {`Loading the Page Content of ${content.urlPath}…`}
+        <p className="text-sm text-ink-soft">
+          <Spinner label={`Loading the Page Content of ${content.urlPath}…`} />
         </p>
       )}
       {content.status === 'error' && (
-        <p role="alert" className={ERROR}>
-          {`The Page Content of ${content.urlPath} could not be loaded. ${content.message}`}
-        </p>
+        <ErrorMessage>{`The Page Content of ${content.urlPath} could not be loaded. ${content.message}`}</ErrorMessage>
       )}
       {content.status === 'loaded' && content.urlPath === page.urlPath && <PageContentView content={content.content} />}
     </div>
@@ -181,19 +207,45 @@ function versionStatusText(reply: AuditGetReply): string {
 }
 
 /** The analysis of one Website Audit version, from what is already loaded. Takes props only. */
-export function AnalysisView({ load, selectedPath, content, onSelect }: AnalysisViewProps) {
+export function AnalysisView({
+  load,
+  selectedPath,
+  content,
+  onSelect,
+  auditId,
+  onRetry,
+  isHelper = false,
+}: AnalysisViewProps) {
+  useDocumentTitle(load.status === 'loaded' ? resultsTitle(load.reply) : 'Website Audit results');
+  const backTo = PATHS.audit(auditId ?? (load.status === 'loaded' ? load.reply.version.auditId : ''));
   return (
-    <main className="mx-auto max-w-[64rem] px-4 py-10 sm:px-6 sm:py-14">
-      <h1 className="mb-2 break-words text-question font-bold">Website Audit analysis</h1>
+    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
+      <FocusHeading className="mb-2 break-words text-question font-bold">Website Audit analysis</FocusHeading>
       {load.status === 'loading' && (
-        <p role="status" className="text-ink-soft">
-          Loading the Website Audit…
+        <p className="text-ink-soft">
+          <Spinner label="Loading the Website Audit…" />
         </p>
       )}
       {load.status === 'error' && (
-        <p role="alert" className={ERROR}>
-          {load.message}
-        </p>
+        <div className="mt-6 max-w-prose">
+          <Notice
+            title={load.message}
+            actions={
+              <>
+                {onRetry && (
+                  <button type="button" className="btn-quiet" onClick={onRetry}>
+                    Retry
+                  </button>
+                )}
+                {auditId && (
+                  <Link to={backTo} className="btn-link">
+                    Back to this Website Audit
+                  </Link>
+                )}
+              </>
+            }
+          />
+        </div>
       )}
       {load.status === 'loaded' && (
         <>
@@ -201,11 +253,52 @@ export function AnalysisView({ load, selectedPath, content, onSelect }: Analysis
             {`${load.reply.version.url} · version ${load.reply.version.version}`}
           </p>
           {load.reply.result === null ? (
-            <p role="status" className={NOTICE}>
-              {versionStatusText(load.reply)}
-            </p>
+            <div className="mt-6 max-w-prose">
+              <Notice tone="stamp" title={versionStatusText(load.reply)} />
+              <p className="mt-3">
+                <Link to={backTo} className="btn-link">
+                  Back to this Website Audit
+                </Link>
+              </p>
+            </div>
           ) : (
             <>
+              <nav aria-label="Next steps" className="mt-6 flex flex-wrap items-center gap-3">
+                <Link
+                  to={PATHS.auditReview(load.reply.version.auditId, load.reply.version.version)}
+                  className="btn-primary"
+                >
+                  Review Audit Documents
+                </Link>
+                <Link
+                  to={PATHS.auditExport(load.reply.version.auditId, load.reply.version.version)}
+                  className="btn-quiet"
+                >
+                  Export
+                </Link>
+                {isHelper === false && (
+                  <Link to={PATHS.auditShare(load.reply.version.auditId)} className="btn-quiet">
+                    Preview and Shared Links
+                  </Link>
+                )}
+                <Link to={backTo} className="btn-link">
+                  Back to this Website Audit
+                </Link>
+              </nav>
+              {load.reply.result.notes.length > 0 && (
+                <div className={CARD}>
+                  <NotesBanner notes={load.reply.result.notes} />
+                </div>
+              )}
+              <div className={CARD}>
+                <AuditSummary result={load.reply.result} />
+              </div>
+              <div className={CARD}>
+                <SiteAreasView areas={load.reply.result.siteAreas} />
+              </div>
+              <div className={CARD}>
+                <RoadmapView roadmap={load.reply.result.roadmap} />
+              </div>
               <div className={CARD}>
                 <HierarchyView hierarchy={load.reply.result.hierarchy} />
               </div>
@@ -213,13 +306,23 @@ export function AnalysisView({ load, selectedPath, content, onSelect }: Analysis
               <SkippedPages reply={load.reply} />
               <SelectedPage reply={load.reply} selectedPath={selectedPath} content={content} />
               <div className={CARD}>
-                <FindingsList findings={load.reply.result.findings} />
+                <FindingsList
+                  findings={load.reply.result.findings}
+                  auditId={load.reply.version.auditId}
+                  version={load.reply.version.version}
+                />
+              </div>
+              <div className={CARD}>
+                <InternalLinkingView linking={load.reply.result.internalLinking} />
+              </div>
+              <div className={CARD}>
+                <LeavingSiteView links={load.reply.result.leavingSite ?? []} />
               </div>
             </>
           )}
         </>
       )}
-    </main>
+    </div>
   );
 }
 
@@ -238,6 +341,16 @@ export function AnalysisScreen({ auditId, version, fetchImpl }: AnalysisScreenPr
   const [content, setContent] = useState<ContentLoad>({ status: 'idle' });
   /** The page whose Page Content is wanted now: a late answer for another page is dropped. */
   const wanted = useRef<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const [isHelper, setIsHelper] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    void loadCallerIsHelper(fetchImpl).then((helper) => live && setIsHelper(helper));
+    return () => {
+      live = false;
+    };
+  }, [fetchImpl]);
 
   useEffect(() => {
     let current = true;
@@ -252,7 +365,7 @@ export function AnalysisScreen({ auditId, version, fetchImpl }: AnalysisScreenPr
     return () => {
       current = false;
     };
-  }, [auditId, version, fetchImpl]);
+  }, [auditId, version, fetchImpl, attempt]);
 
   const select = (urlPath: string) => {
     setSelectedPath(urlPath);
@@ -269,5 +382,15 @@ export function AnalysisScreen({ auditId, version, fetchImpl }: AnalysisScreenPr
     });
   };
 
-  return <AnalysisView load={load} selectedPath={selectedPath} content={content} onSelect={select} />;
+  return (
+    <AnalysisView
+      load={load}
+      selectedPath={selectedPath}
+      content={content}
+      onSelect={select}
+      auditId={auditId}
+      onRetry={() => setAttempt((n) => n + 1)}
+      isHelper={isHelper}
+    />
+  );
 }

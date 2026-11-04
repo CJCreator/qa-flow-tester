@@ -59,27 +59,29 @@ export function HierarchyView({ hierarchy }: HierarchyViewProps) {
         return (
           <div key={region} className="space-y-2">
             <h4 className="font-bold">{label}</h4>
-            <table className="w-full text-left text-sm">
-              <caption className="sr-only">{`${label}: ${links.length} ${links.length === 1 ? 'link' : 'links'}`}</caption>
-              <thead>
-                <tr>
-                  <th scope="col">On page</th>
-                  <th scope="col">Link text</th>
-                  <th scope="col">Goes to</th>
-                  <th scope="col">Where it sits</th>
-                </tr>
-              </thead>
-              <tbody>
-                {links.map((link, i) => (
-                  <tr key={`${link.from}-${link.to}-${i}`}>
-                    <td className="break-all">{link.from}</td>
-                    <td>{link.text.trim() === '' ? 'No link text' : link.text}</td>
-                    <td className="break-all">{link.to}</td>
-                    <td>{label}</td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <caption className="sr-only">{`${label}: ${links.length} ${links.length === 1 ? 'link' : 'links'}`}</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">On page</th>
+                    <th scope="col">Link text</th>
+                    <th scope="col">Goes to</th>
+                    <th scope="col">Where it sits</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {links.map((link, i) => (
+                    <tr key={`${link.from}-${link.to}-${i}`}>
+                      <td className="break-all">{link.from}</td>
+                      <td>{link.text.trim() === '' ? 'No link text' : link.text}</td>
+                      <td className="break-all">{link.to}</td>
+                      <td>{label}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         );
       })}

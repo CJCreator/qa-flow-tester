@@ -81,77 +81,83 @@ export function PageContentView({ content }: PageContentViewProps) {
       {content.headings.length === 0 ? (
         <Empty>No headings were found.</Empty>
       ) : (
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr>
-              <th scope="col">Level</th>
-              <th scope="col">Heading text</th>
-            </tr>
-          </thead>
-          <tbody>
-            {content.headings.map((heading, i) => (
-              <tr key={i}>
-                <td>{`H${heading.level}`}</td>
-                <td {...as(heading.text)}>{heading.text}</td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr>
+                <th scope="col">Level</th>
+                <th scope="col">Heading text</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {content.headings.map((heading, i) => (
+                <tr key={i}>
+                  <td>{`H${heading.level}`}</td>
+                  <td {...as(heading.text)}>{heading.text}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       <h3 className="text-lg font-bold">Images</h3>
       {content.images.length === 0 ? (
         <Empty>No images were found.</Empty>
       ) : (
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr>
-              <th scope="col">Image address</th>
-              <th scope="col">Alt text</th>
-            </tr>
-          </thead>
-          <tbody>
-            {content.images.map((image, i) => (
-              <tr key={i}>
-                <td className="break-all">{image.src}</td>
-                {image.alt === null ? (
-                  <td className="font-bold">{ALT_MISSING}</td>
-                ) : image.alt === '' ? (
-                  <td className="text-ink-soft">{ALT_DECORATIVE}</td>
-                ) : (
-                  <td {...as(image.alt)}>{image.alt}</td>
-                )}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr>
+                <th scope="col">Image address</th>
+                <th scope="col">Alt text</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {content.images.map((image, i) => (
+                <tr key={i}>
+                  <td className="break-all">{image.src}</td>
+                  {image.alt === null ? (
+                    <td className="font-bold">{ALT_MISSING}</td>
+                  ) : image.alt === '' ? (
+                    <td className="text-ink-soft">{ALT_DECORATIVE}</td>
+                  ) : (
+                    <td {...as(image.alt)}>{image.alt}</td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       <h3 className="text-lg font-bold">Links</h3>
       {content.links.length === 0 ? (
         <Empty>No links were found.</Empty>
       ) : (
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr>
-              <th scope="col">Link text</th>
-              <th scope="col">Goes to</th>
-              <th scope="col">Where it sits</th>
-            </tr>
-          </thead>
-          <tbody>
-            {content.links.map((link, i) => (
-              <tr key={i}>
-                <td {...as(link.text)}>{link.text.trim() === '' ? 'No link text' : link.text}</td>
-                <td className="break-all">
-                  {link.to}
-                  {link.leavesSite && <span className="ml-2 text-xs text-ink-soft">{LEAVES_SITE}</span>}
-                </td>
-                <td>{LINK_REGION_LABEL[link.region]}</td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr>
+                <th scope="col">Link text</th>
+                <th scope="col">Goes to</th>
+                <th scope="col">Where it sits</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {content.links.map((link, i) => (
+                <tr key={i}>
+                  <td {...as(link.text)}>{link.text.trim() === '' ? 'No link text' : link.text}</td>
+                  <td className="break-all">
+                    {link.to}
+                    {link.leavesSite && <span className="ml-2 text-xs text-ink-soft">{LEAVES_SITE}</span>}
+                  </td>
+                  <td>{LINK_REGION_LABEL[link.region]}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       <h3 className="text-lg font-bold">Forms</h3>
@@ -169,26 +175,28 @@ export function PageContentView({ content }: PageContentViewProps) {
               {form.fields.length === 0 ? (
                 <Empty>No fields.</Empty>
               ) : (
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr>
-                      <th scope="col">Field</th>
-                      <th scope="col">Type</th>
-                      <th scope="col">Name</th>
-                      <th scope="col">Required</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {form.fields.map((field, j) => (
-                      <tr key={j}>
-                        <td {...as(field.label)}>{field.label.trim() === '' ? 'No label' : field.label}</td>
-                        <td>{field.type}</td>
-                        <td>{field.name ?? 'Not set'}</td>
-                        <td>{field.required ? 'Yes' : 'No'}</td>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr>
+                        <th scope="col">Field</th>
+                        <th scope="col">Type</th>
+                        <th scope="col">Name</th>
+                        <th scope="col">Required</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {form.fields.map((field, j) => (
+                        <tr key={j}>
+                          <td {...as(field.label)}>{field.label.trim() === '' ? 'No label' : field.label}</td>
+                          <td>{field.type}</td>
+                          <td>{field.name ?? 'Not set'}</td>
+                          <td>{field.required ? 'Yes' : 'No'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </li>
           ))}
@@ -199,24 +207,26 @@ export function PageContentView({ content }: PageContentViewProps) {
       {content.ctas.length === 0 ? (
         <Empty>No calls to action were found.</Empty>
       ) : (
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr>
-              <th scope="col">Text</th>
-              <th scope="col">Kind</th>
-              <th scope="col">Goes to</th>
-            </tr>
-          </thead>
-          <tbody>
-            {content.ctas.map((cta, i) => (
-              <tr key={i}>
-                <td {...as(cta.text)}>{cta.text.trim() === '' ? 'No text' : cta.text}</td>
-                <td>{cta.kind === 'button' ? 'Button' : 'Button-styled link'}</td>
-                <td className="break-all">{cta.to ?? 'No target'}</td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr>
+                <th scope="col">Text</th>
+                <th scope="col">Kind</th>
+                <th scope="col">Goes to</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {content.ctas.map((cta, i) => (
+                <tr key={i}>
+                  <td {...as(cta.text)}>{cta.text.trim() === '' ? 'No text' : cta.text}</td>
+                  <td>{cta.kind === 'button' ? 'Button' : 'Button-styled link'}</td>
+                  <td className="break-all">{cta.to ?? 'No target'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </article>
   );

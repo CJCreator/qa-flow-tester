@@ -120,3 +120,11 @@ export async function getPageContent(
   if (!AUDIT_ID_PATTERN.test(auditId)) return { ok: false, error: BAD_ID, code: 'ERR_AUDIT_NOT_FOUND' };
   return call(pageContentUrl(auditId, urlPath, version), AUDIT_API.content.method, isContentReply, fetchImpl);
 }
+
+/** `GET /api/audits/:id/file?path=…`: a screenshot of one version, `path` relative to the version's folder. */
+export function auditFileUrl(auditId: string, path: string, version?: number): string {
+  return withQuery(auditPath(AUDIT_API.file.path, { id: auditId }), [
+    `path=${encodeURIComponent(path)}`,
+    versionQuery(version),
+  ]);
+}

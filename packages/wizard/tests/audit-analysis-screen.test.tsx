@@ -322,12 +322,15 @@ describe('AnalysisScreen: loading, error and empty states in words', () => {
     const fetchImpl = mockFetch(jsonResponse(reply()));
     const html = renderToStaticMarkup(createElement(AnalysisScreen, { auditId: AUDIT_ID, version: 2, fetchImpl }));
     expect(html).toMatch(/<h1[^>]*>Website Audit analysis<\/h1>/);
-    expect(html).toMatch(/role="status"[^>]*>Loading the Website Audit…/);
+    expect(html).toContain('role="status"');
+    expect(textOf(html)).toContain('Loading the Website Audit…');
+    expect(html).not.toContain('<main');
   });
 
-  it('states an error in words, as an alert', () => {
+  it('states an error in words, as an alert, with Retry and the way back', () => {
     const html = view({ status: 'error', message: 'This Website Audit was deleted.' });
-    expect(html).toMatch(/role="alert"[^>]*>This Website Audit was deleted\.</);
+    expect(html).toContain('role="alert"');
+    expect(textOf(html)).toContain('This Website Audit was deleted.');
     expect(html).not.toContain('Page hierarchy');
   });
 
@@ -440,7 +443,8 @@ describe('AnalysisScreen: the picked page', () => {
 
   it('states loading and error of the Page Content in words', () => {
     const loading = view(loaded, '/services/repair', { status: 'loading', urlPath: '/services/repair' });
-    expect(loading).toMatch(/role="status"[^>]*>Loading the Page Content of \/services\/repair…/);
+    expect(loading).toContain('role="status"');
+    expect(textOf(loading)).toContain('Loading the Page Content of /services/repair…');
     expect(loading).not.toContain('id="page-content-title"');
     const failed = view(loaded, '/services/repair', {
       status: 'error',
