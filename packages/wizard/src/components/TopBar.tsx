@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { Link, PATHS, type Route } from '../lib/router';
+import { AUDIT_ROUTE_NAMES } from '../screens/audit/BetaAuditNotice';
 
 /** The mark: an inspector's stamp with a tick. */
 export function Mark({ size = 24 }: { size?: number }) {
@@ -32,12 +33,68 @@ type NavItem = { to: string; label: string; names: Route['name'][] };
 const PRIMARY: NavItem[] = [
   { to: PATHS.new, label: 'New check-up', names: ['new'] },
   { to: PATHS.reports, label: 'Past check-ups', names: ['reports', 'report'] },
+  { to: PATHS.audits, label: 'Website Audit', names: [...AUDIT_ROUTE_NAMES] },
   { to: PATHS.settings, label: 'Settings', names: ['settings'] },
 ];
 const MORE: NavItem[] = [
   { to: PATHS.baselines, label: 'Visual Baselines', names: ['baselines'] },
   { to: PATHS.benchmark, label: 'Compare with another site', names: ['benchmark'] },
+  { to: PATHS.auditShortlist, label: 'Shortlist', names: ['audit-shortlist'] },
+  { to: PATHS.auditSettings, label: 'Website Audit settings', names: ['audit-settings'] },
 ];
+/** The owner's Website Audit items: the shared (beta) copy hides them. */
+const OWNER_AUDIT_TO: string[] = [PATHS.audits, PATHS.auditShortlist, PATHS.auditSettings];
+
+/** The top bar's destinations. On the shared (beta) copy the owner's Website Audit items are left out. */
+export function navItems(beta = false): { primary: NavItem[]; more: NavItem[] } {
+  const keep = (l: NavItem) => !beta || !OWNER_AUDIT_TO.includes(l.to);
+  return { primary: PRIMARY.filter(keep), more: MORE.filter(keep) };
+}
+
+/**
+ * The breadcrumb trail for each screen. A `Record` over every route name, so adding a route fails to compile
+ * until it has a label. The route holds only the audit's id, not its site, so audit crumbs are generic.
+ * "Version" becomes "Version N" for the routes that carry a version.
+ */
+export const CRUMB_LABELS: Record<Route['name'], string[]> = {
+  landing: ['Release check-up'],
+  new: ['New check-up'],
+  scan: ['Scanning'],
+  plan: ['Plan review'],
+  testing: ['Testing'],
+  reports: ['Past check-ups'],
+  report: ['Report'],
+  visibility: ['Visibility'],
+  baselines: ['Visual Baselines'],
+  benchmark: ['Compare with another site'],
+  settings: ['Settings'],
+  'audit-new': ['Website Audits', 'New Website Audit'],
+  audits: ['Website Audits'],
+  audit: ['Website Audits', 'Website Audit'],
+  'audit-version': ['Website Audits', 'Website Audit', 'Version'],
+  'audit-review': ['Website Audits', 'Website Audit', 'Version', 'Review'],
+  'audit-export': ['Website Audits', 'Website Audit', 'Version', 'Export'],
+  'audit-share': ['Website Audits', 'Website Audit', 'Shared Links'],
+  'audit-helpers': ['Website Audits', 'Website Audit', 'Helpers'],
+  'audit-settings': ['Website Audits', 'Website Audit settings'],
+  'audit-shortlist': ['Website Audits', 'Shortlist'],
+  'helper-sign-in': ['Helper sign-in'],
+  'not-found': ['Page not found'],
+};
+
+export function crumbTrail(route: Route): string[] {
+  const version = 'version' in route ? `Version ${route.version}` : 'Version';
+  return CRUMB_LABELS[route.name].map((l) => (l === 'Version' ? version : l));
+}
+
+/** Where an earlier crumb leads, when it leads anywhere. */
+function crumbTo(route: Route, label: string): string | undefined {
+  if (label === 'Website Audits') return PATHS.audits;
+  if (!('auditId' in route)) return undefined;
+  if (label === 'Website Audit') return PATHS.audit(route.auditId);
+  if (label.startsWith('Version ') && 'version' in route) return PATHS.auditVersion(route.auditId, route.version);
+  return undefined;
+}
 /** Check-up screens show the StepBar instead of a breadcrumb row. */
 const NO_CRUMBS: Route['name'][] = ['new', 'scan', 'plan', 'testing', 'report'];
 
@@ -112,12 +169,16 @@ export function TopBar({
   route,
   checkupInProgress,
   showDeveloperShortcuts = false,
+  beta = false,
 }: {
   route: Route;
   checkupInProgress: boolean;
   /** The Commands and shortcuts buttons: hidden until a first check-up is done. The keys still work. */
   showDeveloperShortcuts?: boolean;
+  /** The shared copy: the owner's Website Audit items are hidden. */
+  beta?: boolean;
 }) {
+  const { primary, more } = navItems(beta);
   const [menuOpen, setMenuOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLLIElement>(null);
@@ -209,7 +270,7 @@ export function TopBar({
         </button>
         <nav aria-label="Main" className="hidden sm:block">
           <ul className="flex items-center gap-x-5">
-            {PRIMARY.map((l) => (
+            {primary.map((l) => (
               <li key={l.to}>{link(l)}</li>
             ))}
             <li className="relative" ref={moreRef}>
@@ -218,13 +279,13 @@ export function TopBar({
                 ref={moreButtonRef}
                 aria-expanded={moreOpen}
                 onClick={() => setMoreOpen((o) => !o)}
-                className={`${ITEM} ${tone(MORE.some((l) => l.names.includes(route.name)) ? 'page' : undefined)}`}
+                className={`${ITEM} ${tone(more.some((l) => l.names.includes(route.name)) ? 'page' : undefined)}`}
               >
                 More
               </button>
               {moreOpen && (
                 <ul className="absolute right-0 top-full z-50 min-w-[11rem] rounded-control border border-rule bg-surface p-1 shadow-level-1">
-                  {MORE.map((l) => (
+                  {more.map((l) => (
                     <li key={l.to}>{link(l, 'w-full')}</li>
                   ))}
                 </ul>
@@ -234,7 +295,7 @@ export function TopBar({
         </nav>
         {menuOpen && (
           <MobileMenu
-            items={[...PRIMARY, ...MORE]}
+            items={[...primary, ...more]}
             route={route}
             checkupInProgress={checkupInProgress}
             onNavigate={close}
@@ -250,30 +311,29 @@ export function TopBar({
             <Link to={PATHS.landing} className="font-sans hover:text-ink">
               Home
             </Link>
-            <span aria-hidden="true" className="text-edge/70 px-0.5">
-              /
-            </span>
-            <span aria-current="page" className="font-sans font-medium text-ink">
-              {route.name === 'new'
-                ? 'New check-up'
-                : route.name === 'reports'
-                  ? 'Past check-ups'
-                  : route.name === 'report'
-                    ? 'Report'
-                    : route.name === 'baselines'
-                      ? 'Visual Baselines'
-                      : route.name === 'benchmark'
-                        ? 'Compare with another site'
-                        : route.name === 'settings'
-                          ? 'Settings'
-                          : route.name === 'scan'
-                            ? 'Scanning'
-                            : route.name === 'testing'
-                              ? 'Testing'
-                              : route.name === 'plan'
-                                ? 'Plan review'
-                                : 'Visibility'}
-            </span>
+            {crumbTrail(route).map((label, i, all) => {
+              const last = i === all.length - 1;
+              const to = last ? undefined : crumbTo(route, label);
+              return (
+                <Fragment key={`${i}-${label}`}>
+                  <span aria-hidden="true" className="text-edge/70 px-0.5">
+                    /
+                  </span>
+                  {to ? (
+                    <Link to={to} className="font-sans hover:text-ink">
+                      {label}
+                    </Link>
+                  ) : (
+                    <span
+                      aria-current={last ? 'page' : undefined}
+                      className={last ? 'font-sans font-medium text-ink' : 'font-sans'}
+                    >
+                      {label}
+                    </span>
+                  )}
+                </Fragment>
+              );
+            })}
           </nav>
         </div>
       )}

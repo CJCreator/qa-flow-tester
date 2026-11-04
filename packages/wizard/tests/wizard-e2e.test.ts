@@ -240,8 +240,14 @@ describe('Release check-up end to end, on the one server', () => {
     await expect.poll(() => heading(page), { timeout: 10000 }).toBe('Enter the address of the site to check');
     await expect.poll(() => page.title()).toBe('New check-up · Release check-up');
     const topBar = page.getByRole('navigation', { name: 'Main' });
-    for (const name of ['New check-up', 'Past check-ups', 'Settings'])
+    for (const name of ['New check-up', 'Past check-ups', 'Website Audit', 'Settings'])
       expect(await topBar.getByRole('link', { name }).count(), name).toBe(1);
+    // Website Audit is one click from the top bar and leads to the saved list.
+    await topBar.getByRole('link', { name: 'Website Audit' }).click();
+    await page.waitForURL(/\/audits$/);
+    await expect.poll(() => heading(page), { timeout: 10000 }).toBe('Saved Website Audits');
+    await page.goBack();
+    await page.waitForURL(`${toolUrl}/check`);
     // Served by the QA Tool, the page never needs to explain how to start it.
     expect(await page.getByText('Start Release check-up first').count()).toBe(0);
     // No key yet: connecting the AI is offered below the form, in a closed section.

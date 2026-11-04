@@ -17,6 +17,9 @@ export function NotFoundScreen() {
         <Link to={PATHS.reports} className="btn-quiet">
           Past check-ups
         </Link>
+        <Link to={PATHS.audits} className="btn-quiet">
+          Saved Website Audits
+        </Link>
       </div>
     </div>
   );

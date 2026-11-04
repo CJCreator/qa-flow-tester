@@ -11,7 +11,35 @@ export interface CommandAction {
   run: () => void;
 }
 
-export function CommandPalette({ route }: { route: Route }) {
+/** The Website Audit destinations. Hidden on the shared (beta) copy, where only a Helper's own audits open. */
+export const AUDIT_COMMANDS: { id: string; title: string; to: string; keywords: string[] }[] = [
+  {
+    id: 'nav-audit-new',
+    title: 'New Website Audit',
+    to: PATHS.auditNew,
+    keywords: ['audit', 'website', 'start', 'address'],
+  },
+  {
+    id: 'nav-audits',
+    title: 'Saved Website Audits',
+    to: PATHS.audits,
+    keywords: ['audit', 'website', 'history', 'saved'],
+  },
+  {
+    id: 'nav-shortlist',
+    title: 'Shortlist',
+    to: PATHS.auditShortlist,
+    keywords: ['audit', 'pitch', 'leads', 'outcome'],
+  },
+  {
+    id: 'nav-audit-settings',
+    title: 'Website Audit settings',
+    to: PATHS.auditSettings,
+    keywords: ['audit', 'documents', 'ai', 'models', 'settings'],
+  },
+];
+
+export function CommandPalette({ route, beta = false }: { route: Route; beta?: boolean }) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<'command' | 'shortcuts'>('command');
   const [query, setQuery] = useState('');
@@ -115,6 +143,15 @@ export function CommandPalette({ route }: { route: Route }) {
         keywords: ['config', 'ai', 'keys', 'models', 'gates', 'schedules'],
         run: () => navigate(PATHS.settings),
       },
+      ...(beta
+        ? []
+        : AUDIT_COMMANDS.map((c): CommandAction => ({
+            id: c.id,
+            title: c.title,
+            category: 'Navigation',
+            keywords: c.keywords,
+            run: () => navigate(c.to),
+          }))),
       {
         id: 'nav-gates',
         title: 'Change the release rule',
@@ -255,7 +292,7 @@ export function CommandPalette({ route }: { route: Route }) {
     }
 
     return actions;
-  }, [route]);
+  }, [route, beta]);
 
   // Filter actions based on query
   const filteredActions = useMemo(() => {
