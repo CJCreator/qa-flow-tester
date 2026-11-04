@@ -10,7 +10,7 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "@axe-core/playwright": "^4.10.1",
+    "@axe-core/playwright": "^4.14.0",
     "@qa/types": "workspace:*",
     "pixelmatch": "^7.2.0",
     "playwright": "1.63.0",
