@@ -60,7 +60,7 @@ async function main() {
   sh(
     `gcloud run deploy qa-check-up --project "${PROJECT}" --region "${REGION}" ` +
       `--image "${runnerImage}" --port 8080 --memory 2Gi --cpu 1 ` +
-      `--min-instances 0 --max-instances 1 --timeout 3600 ` +
+      `--min-instances 1 --max-instances 1 --timeout 3600 ` +
       `--allow-unauthenticated ` +
       // '^@^' makes '@' the separator: RUNNER_ALLOWED_ORIGINS is a comma-separated list (see deploy.yml).
       `--set-env-vars "^@^RUNNER_BETA=1@RUNNER_HOST=0.0.0.0@RUNNER_DATA_DIR=/tmp/qa-data@RUNNER_OUTPUT_DIR=/tmp/qa-data/reports@RUNNER_ALLOWED_ORIGINS=${RUNNER_URL},${RUNNER_HASH_URL}" ` +
