@@ -197,7 +197,7 @@ export function ScanningScreen({
             )}
 
             {showStallWarning && (
-              <div role="status" className="mt-3 rounded-md border border-warn bg-warn-tint p-3 text-sm text-warn-dark">
+              <div role="status" className="mt-3 rounded-md border border-warn bg-warn-tint p-3 text-sm text-warn">
                 No new pages for {stall} seconds
               </div>
             )}

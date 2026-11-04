@@ -28,6 +28,12 @@ export function skipReasonText(reason: RouteSkipReason | string): string {
       return 'Over the page limit';
     case 'duplicate':
       return 'Same page as another';
+    case 'depth-limit':
+      return 'Too many links away from the start page';
+    case 'excluded':
+      return 'Left out by your include or exclude paths';
+    case 'payment':
+      return 'A payment area: nothing was clicked or sent';
     default:
       return 'Skipped';
   }

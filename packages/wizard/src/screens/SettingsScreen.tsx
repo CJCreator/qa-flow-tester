@@ -29,6 +29,8 @@ import { DEFAULT_RELEASE_GATES, type ReleaseGateCriteria } from '@qa/types';
 import { KeyField } from '../components/KeyField';
 import { ErrorMessage, Notice, Question, Spinner } from '../components/text';
 import { formatWhen } from '../lib/format';
+import { keySourceText } from '../lib/key-source';
+import { Link, PATHS } from '../lib/router';
 import { PRESET_META, presetOf, type GatePreset } from '../lib/release-rule';
 import { useDocumentTitle } from '../lib/title';
 
@@ -109,6 +111,20 @@ export function SettingsScreen({ onKeySaved }: { onKeySaved: (model: string) => 
 
         {setup && (
           <>
+            {setup.configured && keySourceText(setup.keySource) && (
+              <dl className="mb-5 grid gap-x-4 gap-y-2 sm:grid-cols-[12rem_1fr]">
+                <dt className="text-ink-soft">Where the key is kept</dt>
+                <dd className="font-bold">{keySourceText(setup.keySource)}</dd>
+              </dl>
+            )}
+            {setup.configured && setup.keySource === 'byok_file' && (
+              <div className="mb-5">
+                <Notice tone="warn" title="The system keychain couldn’t be reached">
+                  The key is kept in an encrypted file on this computer instead. To keep it across a new container or
+                  machine, set the QA_KEYS_ENCRYPTION_KEY environment variable to a secret of 32 or more characters.
+                </Notice>
+              </div>
+            )}
             <fieldset className="mb-5">
               <legend className="label">Which AI to use</legend>
               <div className="space-y-2">
@@ -192,6 +208,18 @@ export function SettingsScreen({ onKeySaved }: { onKeySaved: (model: string) => 
             {!choosing && setup.configured && provider === 'openrouter' && <Usage />}
           </>
         )}
+      </section>
+
+      <section aria-labelledby="audit-settings-title" className="mt-6 rounded-lg border-2 border-edge bg-surface p-5">
+        <h2 id="audit-settings-title" className="mb-1 text-xl font-bold">
+          Website Audit
+        </h2>
+        <p className="mb-3 text-sm text-ink-soft">
+          The Website Audit has settings of its own, apart from the ones on this screen.
+        </p>
+        <Link to={PATHS.auditSettings} className="btn-link">
+          Website Audit settings
+        </Link>
       </section>
 
       <Defaults />
@@ -1051,7 +1079,7 @@ function AddSignIn({ host, onSaved }: { host: string; onSaved: () => void }) {
           {showAdvanced ? 'Hide advanced settings' : 'Advanced (custom form selectors)'}
         </button>
         {showAdvanced ? (
-          <div className="mt-2 grid gap-2 rounded-card border border-edge bg-surface-base/50 p-2 sm:grid-cols-3">
+          <div className="mt-2 grid gap-2 rounded-card border border-edge bg-paper/50 p-2 sm:grid-cols-3">
             <label className="text-xs">
               <span className="mb-1 block font-medium">Username selector</span>
               <input
