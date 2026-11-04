@@ -133,6 +133,7 @@ describe('the browser-safe entry into @qa/types (T-211)', () => {
       'site-map.js',
       'context-parse.js',
       'evidence-finding.js',
+      'website-audit.js',
     ]);
   });
 

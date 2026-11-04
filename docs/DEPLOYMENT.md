@@ -53,6 +53,77 @@ Local site build: `pnpm site-build`, then `docker build -f site/Dockerfile -t qa
 The image binds `0.0.0.0`, so `RUNNER_ACCESS_TOKEN` is required: the runner exits at start without it. On Cloud Run the
 token comes from Secret Manager; open the copy once as `https://<host>/?access=<key>` to set the cookie.
 
+## Website Audit storage and Helper sign-in
+
+**Local runs need none of this.** Without `AUDIT_STORE_BUCKET` the runner keeps every Website Audit, its Shared
+Links and Helper grants as plain files under the data folder (`<RUNNER_DATA_DIR>/audit-store/`), with no cloud
+account. Without `FIREBASE_PROJECT_ID` Helper sign-in is simply off.
+
+**On the hosted copy** (`qa-check-up`), Website Audits and Shared Links live in one Cloud Storage bucket
+([ADR 0036](adr/0036-hosted-audit-storage-and-shared-links.md)), because `/tmp` is wiped on every redeploy. Helper
+sign-in uses Firebase Authentication (Google sign-in) in the same project. It turns on only when both
+`FIREBASE_PROJECT_ID` and `RUNNER_ACCESS_TOKEN` are set.
+
+One-time setup, run by hand by someone with owner rights on `qa-flow-tester-512310`. The bucket name below is an
+example; bucket names are global, so pick your own.
+
+1. Create the bucket in the runner's region, on the always-free tier (Standard storage in `us-central1`; `us-east1`
+   and `us-west1` are also free, but keep it in the runner's region). Uniform bucket-level access on, public access
+   prevention enforced, soft delete off (0 days):
+
+   ```bash
+   gcloud storage buckets create gs://qa-check-up-audits --project qa-flow-tester-512310 \
+     --location us-central1 --default-storage-class STANDARD \
+     --uniform-bucket-level-access --public-access-prevention --soft-delete-duration=0
+   ```
+
+2. Keep object versioning off and add no lifecycle rule, so deleting a Website Audit removes its data at once and
+   nothing else expires it (Q-30). New buckets start this way; check, and turn off anything that is on:
+
+   ```bash
+   gcloud storage buckets describe gs://qa-check-up-audits \
+     --format="yaml(versioning_enabled,lifecycle_config,soft_delete_policy,uniform_bucket_level_access,public_access_prevention)"
+   gcloud storage buckets update gs://qa-check-up-audits --no-versioning --clear-lifecycle --clear-soft-delete
+   ```
+
+   There are no backups: a deleted Website Audit cannot be recovered.
+
+3. Give the runner's runtime service account `roles/storage.objectAdmin` on this bucket only (never a project-wide
+   storage role). Find the account first; an empty answer means the default compute account
+   `809804736896-compute@developer.gserviceaccount.com`:
+
+   ```bash
+   gcloud run services describe qa-check-up --region us-central1 --project qa-flow-tester-512310 \
+     --format="value(spec.template.spec.serviceAccountName)"
+   gcloud storage buckets add-iam-policy-binding gs://qa-check-up-audits \
+     --member "serviceAccount:<runtime service account>" --role roles/storage.objectAdmin
+   ```
+
+   The runner reaches the bucket keylessly through that account. No storage key or signed URL is created.
+
+4. Add Firebase to the same project and turn on Google sign-in ([Firebase CLI](https://firebase.google.com/docs/cli)):
+
+   ```bash
+   gcloud services enable firebase.googleapis.com identitytoolkit.googleapis.com --project qa-flow-tester-512310
+   firebase projects:addfirebase qa-flow-tester-512310
+   firebase apps:create web qa-check-up --project qa-flow-tester-512310
+   firebase apps:sdkconfig web <app id from the line above> --project qa-flow-tester-512310
+   ```
+
+   `apps:sdkconfig` prints the public web settings: `projectId`, `apiKey` and `authDomain`
+   (`qa-flow-tester-512310.firebaseapp.com`). Then, in the Firebase console, under Authentication: Sign-in method,
+   enable **Google**; Settings, Authorized domains, add the runner's host
+   `qa-check-up-809804736896.us-central1.run.app` (and the site's host if the wizard is opened from there).
+
+5. Set the repository variables (Settings > Secrets and variables > Actions > **Variables**, not secrets; all four
+   are public values): `AUDIT_STORE_BUCKET` (the bucket name, without `gs://`), `FIREBASE_PROJECT_ID`,
+   `FIREBASE_WEB_API_KEY`, `FIREBASE_AUTH_DOMAIN`. `deploy.yml` passes them to the runner on the next deploy. A
+   variable left unset reaches the runner empty, which it treats as off (local files, Helper sign-in off).
+
+The runner sends the Firebase web settings to the wizard at run time. A wizard build can also bake them in as a
+fallback with `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_WEB_API_KEY` and `VITE_FIREBASE_AUTH_DOMAIN`
+(see `.env.example`); the deploy does not need them.
+
 ## Release checklist
 
 - [ ] CI green on the PR; `pnpm test` and `pnpm build` pass locally
@@ -74,5 +145,5 @@ Revert the merge commit on `main` and push; the deploy redeploys both services. 
 
 - Cloud Run scales to zero, so the first request after idle waits for a cold start (the wizard shows a wake note while it wakes).
 - Beta limits (per visitor and per day) are in memory: a restart or redeploy resets all counters. Set `RUNNER_BETA_RUNS_PER_VISITOR` (default 5) and `RUNNER_BETA_RUNS_PER_DAY` (default 40). Clearing the cookie gives a visitor a fresh count (and loses their AI key); the daily cap is the backstop.
-- The runner's data folder is `/tmp` on Cloud Run and is wiped on every redeploy, restart or scale-down. Do not store anything there that must survive; a persistent volume is the fix.
+- The runner's data folder is `/tmp` on Cloud Run and is wiped on every redeploy, restart or scale-down. Do not store anything there that must survive. Website Audits and Shared Links survive only because they live in the `AUDIT_STORE_BUCKET` bucket; without it they are lost on each redeploy.
 - The runner runs at most one instance (`--max-instances 1`), because limits and sessions are held in memory.

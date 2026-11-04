@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import path from 'path';
+import os from 'os';
 import http from 'http';
-import { promises as fs } from 'fs';
+import { promises as fs, mkdtempSync } from 'fs';
 import { server as fixtureServer } from '../../../fixtures/test-app/server.js';
 import { DiscoveryAgent } from '../src/discovery/discovery-agent.js';
 import { FlowTestOrchestrator } from '../src/orchestrator.js';
@@ -9,12 +10,30 @@ import { PreFlightChecker } from '../src/preflight.js';
 import { DeterministicSpider } from '../src/discovery/deterministic-spider.js';
 import { BrowserManager } from '../src/browser.js';
 import { RobotsPolicy } from '../src/competitive/robots.js';
-import type { TestCase, ProductProfile } from '@qa/types';
+import type { TestCase, ProductProfile, StorageStateData } from '@qa/types';
+
+/**
+ * Pre-flight keeps a signed-in role's session as a storage-state file path; `suppliedSessions` takes the
+ * session itself. Reads each saved file, so the run gets the same session the pre-flight saved.
+ */
+async function sessionsOf(
+  states: Record<string, string | StorageStateData> | undefined
+): Promise<Record<string, StorageStateData> | undefined> {
+  if (!states) return undefined;
+  const sessions: Record<string, StorageStateData> = {};
+  for (const [role, state] of Object.entries(states)) {
+    sessions[role] =
+      typeof state === 'string' ? (JSON.parse(await fs.readFile(state, 'utf8')) as StorageStateData) : state;
+  }
+  return sessions;
+}
 
 describe('T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts)', () => {
   let port: number;
   let base: string;
-  const tmpDir = path.join(process.cwd(), '.tmp-auth-crawl-e2e');
+  // A new folder per run, outside the repository: inside OneDrive the sync client picks up every file a run
+  // writes, competes with Chromium for the CPU and holds files open so the clean-up fails.
+  const tmpDir = mkdtempSync(path.join(os.tmpdir(), 'qa-test-auth-crawl-e2e-'));
 
   beforeAll(async () => {
     await fs.mkdir(tmpDir, { recursive: true });
@@ -32,7 +51,7 @@ describe('T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts)', () => {
 
   afterAll(async () => {
     await new Promise<void>((resolve) => fixtureServer.close(() => resolve()));
-    await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+    await fs.rm(tmpDir, { recursive: true, force: true, maxRetries: 5 }).catch(() => {});
   });
 
   beforeEach(async () => {
@@ -78,7 +97,7 @@ describe('T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts)', () => {
         outputDir,
         authDir,
         maxPages: 15,
-        useAI: false,
+        // No aiProvider: discovery plans with fixed rules only (the AI is used only when one is given).
         profile,
         customHeaders: {
           'x-qa-bypass-token': sentinelToken,
@@ -127,7 +146,7 @@ describe('T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts)', () => {
         authDir,
         profile,
         preflight: outcome.preflight,
-        suppliedSessions: outcome.preflight?.roleStorageStates,
+        suppliedSessions: await sessionsOf(outcome.preflight?.roleStorageStates),
         enableSecurity: false,
         enablePerformance: false,
         enableSeo: false,
@@ -211,9 +230,9 @@ describe('T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts)', () => {
     const context = await browserManager.createContext({ baseUrl: base });
 
     try {
+      // The page budget (5) is the constructor's second argument.
       const spider = new DeterministicSpider([], 5);
       const result = await spider.crawl(context, `${base}/lab/hash`, {
-        maxPages: 5,
         exploreClicks: false,
       });
 
@@ -231,14 +250,16 @@ describe('T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts)', () => {
     const context = await browserManager.createContext({ baseUrl: base });
 
     try {
+      // The page budget (20) is the constructor's second argument.
       const spider = new DeterministicSpider([], 20);
       const result = await spider.crawl(context, `${base}/lab/index`, {
-        maxPages: 20,
         exploreClicks: false,
       });
 
-      const err500 = result.skipped.find((s) => s.urlPath === '/lab/always-500');
-      const err403 = result.skipped.find((s) => s.urlPath === '/lab/forbidden');
+      expect(result.skipped).toBeDefined();
+      const skipped = result.skipped ?? [];
+      const err500 = skipped.find((s) => s.urlPath === '/lab/always-500');
+      const err403 = skipped.find((s) => s.urlPath === '/lab/forbidden');
       expect(err500).toBeTruthy();
       expect(err500?.why).toBe('http-error');
       expect(err500?.status).toBe(500);
@@ -309,7 +330,7 @@ describe('T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts)', () => {
         authDir,
         profile,
         preflight,
-        suppliedSessions: preflight.roleStorageStates,
+        suppliedSessions: await sessionsOf(preflight.roleStorageStates),
         enableSecurity: false,
         enablePerformance: false,
         enableSeo: false,
@@ -412,7 +433,17 @@ describe('T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts)', () => {
     try {
       const { DiscoveryAgent: HonouringAgent } = await import('../src/discovery/discovery-agent.js');
       const { RobotsPolicy: FreshRobots } = await import('../src/competitive/robots.js');
+      const { makeOutboundFetch } = await import('../src/safe-net.js');
       const outputDir = path.join(tmpDir, 'robots-note');
+
+      // RobotsPolicy.fetch reads robots.txt through the pinned outbound path, public addresses only by default
+      // (ADR 0031), so on this localhost fixture it is refused and the policy falls back to allow-all. Like the
+      // host check above, the address rule is the one thing changed here: the same fetch, parse, gate and note
+      // run, with the fetch told that a private address is allowed.
+      const realFetch = FreshRobots.fetch.bind(FreshRobots);
+      vi.spyOn(FreshRobots, 'fetch').mockImplementation((origin, token) =>
+        realFetch(origin, token, makeOutboundFetch({ allowPrivate: true, maxBytes: 512_000, timeoutMs: 10000 }))
+      );
 
       const crawl = (name: string) =>
         HonouringAgent.discoverWithSession({
@@ -452,6 +483,7 @@ describe('T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts)', () => {
         fetchSpy.mockRestore();
       }
     } finally {
+      vi.restoreAllMocks();
       vi.doUnmock('../src/competitive/safe-crawler.js');
       vi.resetModules();
     }

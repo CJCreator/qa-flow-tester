@@ -1,0 +1,7 @@
+# Kaveri Sweets
+User-agent: *
+Disallow: /private
+Crawl-delay: 1
+
+Sitemap: {{ORIGIN}}/sitemap.xml
+Sitemap: https://sitemaps.example.invalid/kaveri-sweets/sitemap.xml

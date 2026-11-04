@@ -8,6 +8,8 @@ import http from 'http';
 import { chromium, type Browser } from 'playwright';
 import { DeterministicSpider } from '../src/discovery/deterministic-spider.js';
 import { RobotsPolicy } from '../src/competitive/robots.js';
+import { makeOutboundFetch } from '../src/safe-net.js';
+import { startAuditSite, AUDIT_SITE_PAGES, type AuditSiteServer } from './helpers/audit-site-server.js';
 
 const PORT = 3539;
 const BASE = `http://localhost:${PORT}`;
@@ -22,6 +24,8 @@ const ROBOTS_DISALLOW_QUERY = 'User-agent: *\nDisallow: /*?\n';
 describe('DeterministicSpider honours robots.txt (T-304)', () => {
   let server: http.Server;
   let browser: Browser;
+  /** Paths the server was asked for, in order. */
+  const served: string[] = [];
 
   const crawlWith = async (robots?: RobotsPolicy) => {
     const context = await browser.newContext();
@@ -40,6 +44,7 @@ describe('DeterministicSpider honours robots.txt (T-304)', () => {
   beforeAll(async () => {
     server = http.createServer((req, res) => {
       const path = new URL(req.url || '/', BASE).pathname;
+      served.push(path);
       const send = (body: string, status = 200) => {
         res.writeHead(status, { 'Content-Type': 'text/html' });
         res.end(body);
@@ -108,6 +113,33 @@ describe('DeterministicSpider honours robots.txt (T-304)', () => {
     expect(result.skippedByRobots).not.toContain('/private/ok');
   }, 60000);
 
+  it('REQ-034 AC-2: with no robots.txt (404) the crawl proceeds normally, with no robots skips', async () => {
+    served.length = 0;
+    const robots = await RobotsPolicy.fetch(BASE, 'qa-crawler', makeOutboundFetch());
+    expect(served).toContain('/robots.txt');
+    expect(robots.crawlDelayMs).toBeUndefined();
+
+    const context = await browser.newContext();
+    let result;
+    try {
+      // Sitemap seeding on, so the Spider asks for robots.txt itself too and gets the 404.
+      result = await new DeterministicSpider().crawl(context, `${BASE}/`, {
+        concurrency: 1,
+        exploreClicks: false,
+        robots,
+      });
+    } finally {
+      await context.close();
+    }
+
+    expect(result.pages.map((p) => p.urlPath)).toEqual(
+      expect.arrayContaining(['/public', '/private/', '/private/ok', '/private/data'])
+    );
+    expect(result.skippedByRobots).toBeUndefined();
+    expect(result.skipped?.filter((s) => s.why === 'robots') ?? []).toEqual([]);
+    expect(served.filter((p) => p === '/robots.txt').length).toBeGreaterThanOrEqual(2);
+  }, 60000);
+
   it('skips a URL with a query when a rule says so', async () => {
     const result = await crawlWith(RobotsPolicy.parse(ROBOTS_DISALLOW_QUERY, 'qa-crawler'));
 
@@ -116,4 +148,49 @@ describe('DeterministicSpider honours robots.txt (T-304)', () => {
     // The path and query were what was asked about: a queryless page is unaffected.
     expect(result.pages.map((p) => p.urlPath)).toContain('/public');
   }, 60000);
+});
+
+describe('REQ-034: robots.txt on the audit fixture (Disallow: /private)', () => {
+  let browser: Browser;
+  let audit: AuditSiteServer;
+
+  beforeAll(async () => {
+    browser = await chromium.launch();
+    audit = await startAuditSite();
+  });
+
+  afterAll(async () => {
+    await browser?.close();
+    await audit?.close();
+  });
+
+  it('AC-1: a disallowed page met by link or only in sitemap.xml is never requested, and is a robots Skipped Page', async () => {
+    const robots = await RobotsPolicy.fetch(audit.origin, 'qa-crawler', makeOutboundFetch());
+    audit.clearRequests();
+
+    const context = await browser.newContext();
+    let result;
+    try {
+      result = await new DeterministicSpider([], 40).crawl(context, audit.origin, {
+        concurrency: 3,
+        exploreClicks: false,
+        pageDelayMs: 0,
+        robots,
+      });
+    } finally {
+      await context.close();
+    }
+
+    const asked = audit.requests.map((r) => new URL(r.path, audit.origin).pathname);
+    // The crawl did run: robots.txt and sitemap.xml were read and the sitemap-only page was visited.
+    expect(asked).toEqual(expect.arrayContaining(['/robots.txt', '/sitemap.xml', AUDIT_SITE_PAGES.sitemapOnly]));
+    expect(asked).not.toContain(AUDIT_SITE_PAGES.privateLinked);
+    expect(asked).not.toContain(AUDIT_SITE_PAGES.privateSitemapOnly);
+    expect(asked.filter((p) => p.startsWith('/private'))).toEqual([]);
+
+    for (const urlPath of [AUDIT_SITE_PAGES.privateLinked, AUDIT_SITE_PAGES.privateSitemapOnly]) {
+      expect(result.skipped).toEqual(expect.arrayContaining([expect.objectContaining({ urlPath, why: 'robots' })]));
+      expect(result.pages.map((p) => p.urlPath)).not.toContain(urlPath);
+    }
+  }, 120000);
 });

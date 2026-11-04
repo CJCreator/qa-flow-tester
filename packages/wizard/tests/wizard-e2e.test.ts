@@ -9,8 +9,9 @@
  * Set WIZARD_SCREENSHOTS=<dir> to also save a screenshot of every screen.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { promises as fs } from 'fs';
+import { promises as fs, mkdtempSync } from 'fs';
 import { createRequire } from 'module';
+import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright';
@@ -28,7 +29,11 @@ const fixtureUrl = `http://${fixtureHost}/`;
 const toolUrl = `http://localhost:${TOOL_PORT}`;
 const wizardRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repoRoot = path.resolve(wizardRoot, '..', '..');
-const outputDir = path.join(process.cwd(), '.tmp-wizard-e2e');
+// A new folder per run, outside the repository. A run cut short used to leave .tmp-wizard-e2e-data behind,
+// and the next run's first visit then found the site already remembered as tested fully. Inside OneDrive
+// the sync client also picks up every file written (the built Wizard, screenshots, videos), competes with
+// Chromium for the CPU and holds files open so the clean-up fails.
+const outputDir = path.join(mkdtempSync(path.join(os.tmpdir(), 'qa-test-wizard-e2e-')), 'report');
 const uiDir = `${outputDir}-ui`;
 const screenshotDir = process.env.WIZARD_SCREENSHOTS;
 
@@ -211,8 +216,8 @@ describe('Release check-up end to end, on the one server', () => {
     await browser?.close();
     await tool?.stop();
     if (fixtureServer.listening) await fixtureDown();
-    for (const dir of [outputDir, `${outputDir}-data`, uiDir])
-      await fs.rm(dir, { recursive: true, force: true }).catch(() => {});
+    // The run's own folder: the report, its -data and -ui folders.
+    await fs.rm(path.dirname(outputDir), { recursive: true, force: true, maxRetries: 5 }).catch(() => {});
   });
 
   it('opens on the landing page, which leads to a new check-up, with the top bar, and every address answers', async () => {
@@ -379,7 +384,10 @@ describe('Release check-up end to end, on the one server', () => {
     expect(runRequests[0].skipReview).toBeFalsy();
     expect(runRequests[0].productContext).toContain('# Specs\n\n# Invoices\n- Amount must be positive');
     // The specs pasted before the key reached the plan.
-    expect(await page.getByLabel(/Product context/i).inputValue()).toContain('Amount must be positive');
+    // The field, by its role: the plan's "Product context and design notes" section is labelled too.
+    expect(await page.getByRole('textbox', { name: /Product context/i }).inputValue()).toContain(
+      'Amount must be positive'
+    );
 
     // The complete plan: every page found, every link, every journey.
     const plan = await api<ReviewPlan>('/api/runner/plan');
@@ -566,6 +574,10 @@ describe('Release check-up end to end, on the one server', () => {
       watching.stop();
     }
     firstRunId = decodeURIComponent(page.url().split('/').pop()!);
+    // The Wizard opens the report on RUN_COMPLETED, which the orchestrator sends before the runner has saved the plan,
+    // cleaned the run folder and kept the report (checkup-run.ts sets 'done' last). Timeout raised from the 1000 ms
+    // default: that tail took longer than 1 s on the developer's 4-core laptop under the full suite (EV-0006).
+    await expect.poll(runnerPhase, { timeout: 60000 }).toBe('done');
     for (const text of watching.seen.texts) expectPlain(text, 'the check-up in progress');
     // The testing screen showed the real test count, a screenshot and problems pinned to their pages.
     expect(watching.seen).toMatchObject({ testCount: true, screenshot: true, found: true, pinned: true });
@@ -719,12 +731,19 @@ describe('Release check-up end to end, on the one server', () => {
     await page.waitForURL((url) => /^\/reports\/run-\d+$/.test(url.pathname) && !url.pathname.endsWith(firstRunId), {
       timeout: 360000,
     });
-    await expect.poll(runnerPhase).toBe('done');
     secondRunId = decodeURIComponent(page.url().split('/').pop()!);
+    // The report opens on RUN_COMPLETED, before the runner keeps it and reaches 'done' (see the test above).
+    // Timeout raised from the 1000 ms default: it ran out under the full suite on the developer's laptop (EV-0006),
+    // and Past check-ups, next, then listed the site before this report was kept.
+    await expect.poll(runnerPhase, { timeout: 60000 }).toBe('done');
     expect(secondRunId).not.toBe(firstRunId);
     const report = await api<ReleaseReport>(`/api/runs/${secondRunId}`);
     expect(report.testedWithApprovedPlan).toEqual(expect.any(String));
-    expect(new Set(report.results.map((r) => r.breakpoint))).toEqual(new Set(['375px', '768px', '1440px']));
+    // Tested at the screen sizes the plan was approved with: Phone and Tablet were switched off in the review, so
+    // desktop only, as the first check-up (site-memory.ts: "Test again" tests at the same ones).
+    const sizes = (r: ReleaseReport) => new Set(r.results.map((x) => x.breakpoint));
+    expect(sizes(report)).toEqual(new Set(['1440px']));
+    expect(sizes(report)).toEqual(sizes(await api<ReleaseReport>(`/api/runs/${firstRunId}`)));
     await page.getByText(/^Tested with the plan you approved on \d+ \w+ \d{4}\.$/).waitFor({ timeout: 20000 });
   }, 420000);
 

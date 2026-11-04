@@ -1,0 +1,93 @@
+{
+  "captchaResult": "CAPTCHA_NOT_NEEDED",
+  "kind": "pagespeedonline#result",
+  "id": "https://shop.example.in/",
+  "loadingExperience": {
+    "id": "https://shop.example.in/",
+    "metrics": {
+      "CUMULATIVE_LAYOUT_SHIFT_SCORE": { "percentile": 12, "distributions": [], "category": "NEEDS_IMPROVEMENT" },
+      "EXPERIMENTAL_TIME_TO_FIRST_BYTE": { "percentile": 1310, "distributions": [], "category": "NEEDS_IMPROVEMENT" },
+      "FIRST_CONTENTFUL_PAINT_MS": { "percentile": 2104, "distributions": [], "category": "AVERAGE" },
+      "INTERACTION_TO_NEXT_PAINT": { "percentile": 231, "distributions": [], "category": "AVERAGE" },
+      "LARGEST_CONTENTFUL_PAINT_MS": { "percentile": 3120, "distributions": [], "category": "AVERAGE" }
+    },
+    "overall_category": "AVERAGE",
+    "initial_url": "https://shop.example.in/"
+  },
+  "originLoadingExperience": {
+    "id": "https://shop.example.in",
+    "metrics": {
+      "LARGEST_CONTENTFUL_PAINT_MS": { "percentile": 2800, "distributions": [], "category": "AVERAGE" }
+    },
+    "overall_category": "AVERAGE",
+    "initial_url": "https://shop.example.in/"
+  },
+  "lighthouseResult": {
+    "requestedUrl": "https://shop.example.in/",
+    "finalUrl": "https://shop.example.in/",
+    "lighthouseVersion": "12.2.1",
+    "fetchTime": "2026-11-02T09:15:04.120Z",
+    "runWarnings": [],
+    "configSettings": {
+      "emulatedFormFactor": "mobile",
+      "formFactor": "mobile",
+      "locale": "en-US",
+      "onlyCategories": ["performance"]
+    },
+    "audits": {
+      "first-contentful-paint": {
+        "id": "first-contentful-paint",
+        "score": 0.52,
+        "numericValue": 2911.4,
+        "numericUnit": "millisecond",
+        "displayValue": "2.9 s"
+      },
+      "largest-contentful-paint": {
+        "id": "largest-contentful-paint",
+        "score": 0.21,
+        "numericValue": 5432.77,
+        "numericUnit": "millisecond",
+        "displayValue": "5.4 s"
+      },
+      "cumulative-layout-shift": {
+        "id": "cumulative-layout-shift",
+        "score": 0.8,
+        "numericValue": 0.10432,
+        "numericUnit": "unitless",
+        "displayValue": "0.104"
+      },
+      "server-response-time": {
+        "id": "server-response-time",
+        "score": 1,
+        "numericValue": 412.6,
+        "numericUnit": "millisecond",
+        "displayValue": "Root document took 410 ms"
+      },
+      "total-blocking-time": {
+        "id": "total-blocking-time",
+        "score": 0.6,
+        "numericValue": 388.5,
+        "numericUnit": "millisecond",
+        "displayValue": "390 ms"
+      },
+      "speed-index": {
+        "id": "speed-index",
+        "score": 0.45,
+        "numericValue": 6012.2,
+        "numericUnit": "millisecond",
+        "displayValue": "6.0 s"
+      },
+      "interactive": {
+        "id": "interactive",
+        "score": 0.3,
+        "numericValue": 8020.1,
+        "numericUnit": "millisecond",
+        "displayValue": "8.0 s"
+      }
+    },
+    "categories": {
+      "performance": { "id": "performance", "title": "Performance", "score": 0.47, "auditRefs": [] }
+    }
+  },
+  "analysisUTCTimestamp": "2026-11-02T09:15:04.120Z"
+}

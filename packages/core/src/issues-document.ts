@@ -126,6 +126,9 @@ export function rolesNotTestedLines(roles: RoleNotTested[]): string[] {
 
 const SKIP_WHY: Record<NonNullable<ReleaseReport['pageCoverage']>['skipped'][number]['why'], string> = {
   'page-limit': 'stopped at the page limit',
+  'depth-limit': 'too many clicks from the start page',
+  excluded: 'left out by your page filters',
+  payment: 'a payment page, not opened',
   'did-not-load': 'did not load',
   robots: 'blocked by robots rules',
   'sign-in': 'behind a sign-in',

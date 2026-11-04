@@ -3,6 +3,36 @@ import type { FallbackReason, PageLink, NarrowMenu, DraftPlan, DocSource, PlanIn
 import type { SignInFailureReason } from './signin.js';
 import type { PageCoverage } from './route-telemetry.js';
 
+/**
+ * How far a crawl goes (REQ-002, Q-11). Depth counts link steps from the start address (the start page is
+ * depth 0). Include and exclude paths are path prefixes such as "/blog"; the start page is always allowed.
+ * A page outside the limits is a Skipped Page: `page-limit`, `depth-limit` or `excluded`.
+ */
+export interface CrawlLimits {
+  /** Pages recorded at most (1 to 1000; default 200). */
+  maxPages?: number;
+  /** Link steps from the start address at most (0 to 100; default 8). */
+  maxDepth?: number;
+  /** When set, only pages whose path starts with one of these are recorded (the start page excepted). */
+  includePaths?: string[];
+  /** Pages whose path starts with one of these are not recorded. */
+  excludePaths?: string[];
+}
+
+/** The bounds and defaults of `CrawlLimits`, shared by the validator, the wizard form and the crawl. */
+export const CRAWL_LIMIT_BOUNDS = {
+  minPages: 1,
+  maxPages: 1000,
+  defaultPages: 200,
+  minDepth: 0,
+  maxDepth: 100,
+  defaultDepth: 8,
+  /** Most include paths, and most exclude paths, one crawl takes. */
+  maxPathPrefixes: 50,
+  /** Longest path prefix, in characters. */
+  maxPathPrefixChars: 200,
+} as const;
+
 export interface SensitiveAction {
   type: 'deletion' | 'payment' | 'external_communication' | 'admin_setting';
   elementSelector: string;

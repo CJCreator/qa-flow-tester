@@ -16,8 +16,11 @@ import { SafetyFilter } from './safety-filter.js';
 import { collectElementInventory, TEST_ID_ATTRIBUTES } from './element-inventory.js';
 import { redactUrl } from '../redact.js';
 import { isSameSite } from '../same-site.js';
+import { makeOutboundFetch, sameSiteUrl } from '../safe-net.js';
+import type { FetchFn } from '@qa/checkers';
 import { readLayoutFingerprint } from '../competitive/safe-crawler.js';
 import type { RobotsPolicy } from '../competitive/robots.js';
+import type { HostPacer } from '../host-pacer.js';
 import { exploreInteractiveStates, type ReadForm } from './interactive-states.js';
 import { inferCrud, readCrudStructure, probeDeleteConfirm } from './crud-facts.js';
 import { navigate, toTelemetry, looksLikeLogin } from '../navigate.js';
@@ -54,6 +57,15 @@ export interface DiscoveredFormInfo {
 
 export interface SpiderPageInventoryItem extends PageInventoryItem {
   exploreErrors?: number;
+  /** Link steps from the start address (the start page is 0). Always set on pages the Spider records. */
+  depth?: number;
+}
+
+/** Why a page found by the crawl is left alone: it becomes a Skipped Page with this reason. */
+export interface SpiderSkipVerdict {
+  why: RouteSkipReason;
+  /** Short fixed wording, never page text. */
+  detail?: string;
 }
 
 export interface SpiderResult {
@@ -81,8 +93,14 @@ export interface CrawlOptions {
   exploreClicks?: boolean;
   /** Pages robots.txt asks crawlers to leave alone are skipped (public sites). */
   robots?: RobotsPolicy;
-  /** Minimum pause between page loads, to go easy on a site we don't own. Default 100ms. */
+  /** Minimum pause between page loads, to go easy on a site we don't own. Default 100ms. Unused with `pacer`. */
   pageDelayMs?: number;
+  /**
+   * One request at a time per host (ADR 0015): every page load, click and the robots/sitemap fetches wait
+   * for the host's turn, so workers never load two pages of one host at once. Replaces `pageDelayMs`
+   * pacing; share it with the run's other fetches (`makeOutboundFetch({ pacer })`).
+   */
+  pacer?: HostPacer;
   /** Number of concurrent page evaluations (1 to 5, default 2). */
   concurrency?: number;
   /** Custom HTTP headers sent with every request (e.g. X-QA-Bypass-Token). */
@@ -119,8 +137,28 @@ export interface CrawlOptions {
   includeHash?: boolean;
   /** Whether to seed crawl with /sitemap.xml (default true) */
   seedSitemap?: boolean;
+  /** GET used for robots.txt and sitemaps (ADR 0031). Defaults to `makeOutboundFetch` (pinned, guard-aware). */
+  outboundFetch?: FetchFn;
   /** On-demand session re-authenticator when consecutive auth walls are hit */
   reloginHandler?: () => Promise<boolean>;
+  /**
+   * Asked for every address found (links, sitemaps, clicks), never for the start addresses, before it is
+   * queued. A verdict makes it a Skipped Page that is never requested (Website Audit: `excluded`, checkout
+   * paths as `payment`). Asked once per address.
+   */
+  admitPath?: (url: URL, depth: number) => SpiderSkipVerdict | undefined;
+  /**
+   * Asked once a page has loaded and passed the sign-in, redirect and status checks, before anything on it
+   * is read or clicked. A verdict makes it a Skipped Page: nothing on it is clicked, none of its links are
+   * followed, and a `sign-in` verdict also lists it in `signInWalls`.
+   */
+  inspectPage?: (page: Page, landed: URL) => Promise<SpiderSkipVerdict | undefined>;
+  /** Follow the action address of a GET form with no required fields, as a link. Default true. */
+  followFormActions?: boolean;
+  /** Awaited after a page is recorded, while the rendered page is still open (Page Content extraction). */
+  onRecordedPage?: (page: Page, item: SpiderPageInventoryItem) => Promise<void>;
+  /** Told about each Skipped Page as it is listed, for progress. */
+  onSkipped?: (info: SkippedPageInfo) => void;
 }
 
 /** Links and buttons that would end a signed-in session. */
@@ -155,6 +193,8 @@ const MAX_CLICKS_PER_PAGE = 8;
 const MAX_EXPLORATION_CLICKS = 100;
 /** Pages a crawl visits at most: enough to list a whole site, not so many that a shop's catalogue runs for hours. */
 export const DEFAULT_MAX_PAGES = 200;
+/** Bytes read per robots.txt or sitemap file while seeding; a larger file is skipped. */
+const SITEMAP_MAX_BYTES = 10_000_000;
 
 function isLoopback(h: string): boolean {
   const hostWithoutPort = h.replace(/:\d+$/, '').toLowerCase();
@@ -331,6 +371,31 @@ export class DeterministicSpider {
     const startTime = Date.now();
     const deadline = Math.min(options.deadlineAt ?? Infinity, startTime + maxDurationMs);
     let timedOut = false;
+    /** Milliseconds left before the deadline (Infinity when there is none). */
+    const timeLeft = () => deadline - Date.now();
+    /** A wait or timeout cut to the time left, so work started near the deadline cannot overrun it. */
+    const capToDeadline = (ms: number) => Math.max(1, Math.min(ms, timeLeft()));
+    /** Navigation limits that fit inside the time left: no retry, and a shorter settle, once time is short. */
+    const navLimits = (timeoutMs: number) => {
+      const left = timeLeft();
+      return {
+        timeoutMs: capToDeadline(timeoutMs),
+        settleMs: Math.max(0, Math.min(3000, Math.floor(left / 2))),
+        ...(left < timeoutMs * 2.5 ? { retries: 0 } : {}),
+      };
+    };
+
+    // With a pacer, requests to the host take turns; waiting for a turn stops at the deadline or on abort.
+    const pacer = options.pacer;
+    const pacerSignal = pacer
+      ? AbortSignal.any([
+          AbortSignal.timeout(Math.max(0, Math.min(deadline - Date.now(), 2 ** 31 - 1))),
+          ...(options.signal ? [options.signal] : []),
+        ])
+      : undefined;
+    /** Runs `task` in the host's turn when there is a pacer; straight away otherwise. */
+    const paced = <T>(url: string, task: () => Promise<T>): Promise<T> =>
+      pacer ? pacer.run(new URL(url).host, task, pacerSignal) : task();
 
     const frontier = new CrawlFrontier({
       maxPerShape,
@@ -363,8 +428,20 @@ export class DeterministicSpider {
     options.signal?.addEventListener('abort', onAbort, { once: true });
 
     const skipped: SkippedPageInfo[] = [];
+    /** Every Skipped Page goes through here, so `onSkipped` hears of each entry exactly once. */
+    const skip = (info: SkippedPageInfo) => {
+      skipped.push(info);
+      options.onSkipped?.(info);
+    };
+    /** Route keys `admitPath` turned away: asked once per address, listed once. */
+    const refusedKeys = new Set<string>();
+    /**
+     * Addresses found only beyond the max depth, by route key. Listed once the crawl ends, and only if the
+     * address was never reached by a shorter path, so a page is never both recorded and skipped.
+     */
+    const tooDeep = new Map<string, string>();
 
-    const enqueue = (rawUrl: string, depth: number) => {
+    const enqueue = (rawUrl: string, depth: number, isStart = false) => {
       if (options.signal?.aborted || sessionLost || startRedirectedOffSite) return;
       if (Date.now() >= deadline) {
         timedOut = true;
@@ -378,8 +455,27 @@ export class DeterministicSpider {
       }
       if (!onSite(u)) return;
 
+      if (options.admitPath && !isStart) {
+        const key = normRoute(u.toString()).key;
+        if (refusedKeys.has(key) || frontier.has(key)) return;
+        const verdict = options.admitPath(u, depth);
+        if (verdict) {
+          refusedKeys.add(key);
+          skip({
+            urlPath: redactUrl(u.pathname),
+            why: verdict.why,
+            ...(verdict.detail ? { detail: verdict.detail } : {}),
+          });
+          return;
+        }
+      }
+
       const admitted = frontier.admit(u.toString(), site.toString(), depth);
       if (!admitted.admit) {
+        if (admitted.reason === 'depth-limit') {
+          if (!tooDeep.has(admitted.key)) tooDeep.set(admitted.key, redactUrl(u.pathname));
+          return;
+        }
         if (admitted.reason === 'trap-limit') {
           const shape = frontier.getShape(u.toString(), site.toString());
           if (!loggedTrapShapes.has(shape)) {
@@ -389,7 +485,7 @@ export class DeterministicSpider {
               path: redactUrl(u.pathname + u.search),
             });
           }
-          skipped.push({ urlPath: redactUrl(u.pathname), why: 'trap-limit' });
+          skip({ urlPath: redactUrl(u.pathname), why: 'trap-limit' });
         }
         return;
       }
@@ -399,22 +495,48 @@ export class DeterministicSpider {
     };
 
     for (const start of [...(options.startPaths || []), baseUrlObj.pathname + baseUrlObj.search || '/']) {
-      enqueue(start, 0);
+      enqueue(start, 0, true);
     }
 
-    // Sitemap seeding (crawls /sitemap.xml and robots.txt Sitemap: lines)
-    if (options.seedSitemap !== false) {
+    // Sitemap seeding (crawls /sitemap.xml and robots.txt Sitemap: lines) through the pinned outbound
+    // path (ADR 0031). Only addresses on the target's site are read; other hosts are logged and skipped.
+    if (options.seedSitemap !== false && timeLeft() > 0) {
+      // Each default fetch's timeout is cut to the time left, so seeding cannot run past the deadline.
+      const unpacedFetch: FetchFn =
+        options.outboundFetch ??
+        ((url) =>
+          timeLeft() <= 0
+            ? Promise.resolve(null)
+            : makeOutboundFetch({
+                maxBytes: SITEMAP_MAX_BYTES,
+                timeoutMs: capToDeadline(10000),
+                ...(options.customHeaders ? { headers: options.customHeaders } : {}),
+              })(url));
+      // A fetch already paced by the same pacer runs inside this turn rather than waiting for it.
+      const outboundFetch: FetchFn = pacer ? (url) => paced(url, () => unpacedFetch(url)) : unpacedFetch;
+      const sitemapOnSite = (u: URL) =>
+        (u.protocol === 'http:' || u.protocol === 'https:') && (sameSiteUrl(u, site) || onSite(u));
       try {
         const sitemapUrls = [new URL('/sitemap.xml', site).toString()];
         try {
-          const robotsRes = await context.request.get(new URL('/robots.txt', site).toString(), { timeout: 5000 });
-          if (robotsRes.ok()) {
+          const robotsRes = await outboundFetch(new URL('/robots.txt', site).toString());
+          if (robotsRes && robotsRes.status >= 200 && robotsRes.status < 300) {
             const robotsText = await robotsRes.text();
             for (const line of robotsText.split(/\r?\n/)) {
               const m = line.match(/^\s*sitemap:\s*(.+)$/i);
               if (m && m[1]) {
                 const sm = m[1].trim();
-                if (sm && !sitemapUrls.includes(sm)) sitemapUrls.push(sm);
+                let smUrl: URL;
+                try {
+                  smUrl = new URL(sm, site);
+                } catch {
+                  continue;
+                }
+                if (!sitemapOnSite(smUrl)) {
+                  debugLog('crawl', 'sitemap on another host skipped', { url: smUrl.toString() });
+                  continue;
+                }
+                if (!sitemapUrls.includes(smUrl.toString())) sitemapUrls.push(smUrl.toString());
               }
             }
           }
@@ -424,10 +546,10 @@ export class DeterministicSpider {
 
         let locCount = 0;
         for (const smUrl of sitemapUrls) {
-          if (locCount >= 200) break;
+          if (locCount >= 200 || timeLeft() <= 0) break;
           try {
-            const res = await context.request.get(smUrl, { timeout: 10000 });
-            if (!res.ok()) continue;
+            const res = await outboundFetch(smUrl);
+            if (!res || res.status < 200 || res.status >= 300) continue;
             const text = await res.text();
             const isIndex = /<sitemapindex/i.test(text);
             const matches = text.matchAll(/<loc>\s*([^<]+?)\s*<\/loc>/gi);
@@ -436,16 +558,18 @@ export class DeterministicSpider {
                 const loc = m[1].trim();
                 try {
                   const locUrl = new URL(loc, site);
-                  if (onSite(locUrl)) {
-                    if (isIndex || (loc.endsWith('.xml') && !loc.endsWith('.html'))) {
-                      if (sitemapUrls.length < 25 && !sitemapUrls.includes(locUrl.toString())) {
-                        sitemapUrls.push(locUrl.toString());
-                      }
-                    } else {
-                      enqueue(loc, 1);
-                      locCount++;
-                      if (locCount >= 200) break;
+                  if (!sitemapOnSite(locUrl)) {
+                    debugLog('crawl', 'sitemap entry on another host skipped', { url: locUrl.toString() });
+                    continue;
+                  }
+                  if (isIndex || (loc.endsWith('.xml') && !loc.endsWith('.html'))) {
+                    if (sitemapUrls.length < 25 && !sitemapUrls.includes(locUrl.toString())) {
+                      sitemapUrls.push(locUrl.toString());
                     }
+                  } else {
+                    enqueue(loc, 1);
+                    locCount++;
+                    if (locCount >= 200) break;
                   }
                 } catch {}
               }
@@ -481,7 +605,7 @@ export class DeterministicSpider {
         const waitMs = Math.max(0, lastLoadAt + pageDelayMs - now);
         if (waitMs > 0) {
           lastLoadAt = Math.max(lastLoadAt, now) + pageDelayMs;
-          await new Promise((res) => setTimeout(res, waitMs));
+          await new Promise((res) => setTimeout(res, Math.max(0, Math.min(waitMs, timeLeft()))));
         } else {
           lastLoadAt = now;
         }
@@ -527,7 +651,7 @@ export class DeterministicSpider {
       // judging a rebased origin by its own robots.txt is a follow-up.
       if (options.robots && !options.robots.isAllowed(requestedUrl.pathname + requestedUrl.search)) {
         skippedByRobots.push(requestedAsAsked);
-        skipped.push({ urlPath: requestedAsAsked, why: 'robots' });
+        skip({ urlPath: requestedAsAsked, why: 'robots' });
         const rTel: RouteTelemetry = {
           requestedPath: redactUrl(requestedPath),
           outcome: 'skipped',
@@ -551,16 +675,33 @@ export class DeterministicSpider {
       let exploreErrors = 0;
 
       try {
-        await waitForPacing();
+        if (!pacer) await waitForPacing();
+        // Opened after the deadline: not loaded, counted with the rest of the time-limit skips.
+        if (timeLeft() <= 0) {
+          timedOut = true;
+          skip({ urlPath: requestedAsAsked, why: 'time-limit' });
+          return;
+        }
 
         let navRes;
         try {
-          navRes = await navigate(page, fullUrl, {
-            timeoutMs: 10000,
-            needLinks: true,
-            who: options.role || (isRoleSignedIn ? 'signed-in' : 'visitor'),
-          });
+          // Limits are worked out once the turn comes, from the time left then.
+          navRes = await paced(fullUrl, () =>
+            navigate(page, fullUrl, {
+              ...navLimits(10000),
+              needLinks: true,
+              who: options.role || (isRoleSignedIn ? 'signed-in' : 'visitor'),
+            })
+          );
         } catch (err: unknown) {
+          // The wait for the host's turn ended at the deadline or on abort: the page was never requested.
+          if (pacerSignal?.aborted) {
+            if (timeLeft() <= 0) {
+              timedOut = true;
+              skip({ urlPath: requestedAsAsked, why: 'time-limit' });
+            }
+            return;
+          }
           const detail = err instanceof Error ? err.name : 'other';
           const rTel: RouteTelemetry = {
             requestedPath: redactUrl(requestedPath),
@@ -572,7 +713,7 @@ export class DeterministicSpider {
             who: options.role || (isRoleSignedIn ? 'signed-in' : 'visitor'),
           };
           routes.push(rTel);
-          skipped.push({ urlPath: requestedAsAsked, why: 'did-not-load', detail });
+          skip({ urlPath: requestedAsAsked, why: 'did-not-load', detail });
           debugLog('crawl', 'route navigation failed', {
             path: rTel.requestedPath,
             outcome: 'skipped',
@@ -595,7 +736,7 @@ export class DeterministicSpider {
           telemetry.outcome = 'skipped';
           telemetry.skipReason = 'page-limit';
           routes.push(telemetry);
-          skipped.push({ urlPath: requestedAsAsked, why: 'page-limit' });
+          skip({ urlPath: requestedAsAsked, why: 'page-limit' });
           debugLog('crawl', 'route hit the page limit', {
             path: telemetry.requestedPath,
             status: telemetry.status,
@@ -610,13 +751,16 @@ export class DeterministicSpider {
 
         // Classification 1: Navigation did not succeed (timeout, network error)
         if (!navRes.ok) {
-          const skipWhy: RouteSkipReason = navRes.error?.kind === 'timeout' ? 'timeout' : 'did-not-load';
+          // A load cut short by the crawl's own deadline is a time-limit skip, not a slow page.
+          const skipWhy: RouteSkipReason =
+            timeLeft() <= 0 ? 'time-limit' : navRes.error?.kind === 'timeout' ? 'timeout' : 'did-not-load';
+          if (skipWhy === 'time-limit') timedOut = true;
           const detail = navRes.error?.kind || 'net';
           telemetry.outcome = 'skipped';
           telemetry.skipReason = skipWhy;
           telemetry.detail = detail;
           routes.push(telemetry);
-          skipped.push({ urlPath: requestedAsAsked, why: skipWhy, status: navRes.status, detail });
+          skip({ urlPath: requestedAsAsked, why: skipWhy, status: navRes.status, detail });
           debugLog('crawl', 'route failed to load', {
             path: telemetry.requestedPath,
             status: telemetry.status,
@@ -683,7 +827,7 @@ export class DeterministicSpider {
           telemetry.skipReason = skipWhy;
           telemetry.detail = wallReason;
           routes.push(telemetry);
-          skipped.push({ urlPath: requestedAsAsked, why: skipWhy, status: navRes.status });
+          skip({ urlPath: requestedAsAsked, why: skipWhy, status: navRes.status });
           debugLog('crawl', 'route hit sign-in wall or session loss', {
             path: telemetry.requestedPath,
             status: telemetry.status,
@@ -715,7 +859,7 @@ export class DeterministicSpider {
             telemetry.outcome = 'skipped';
             telemetry.skipReason = 'off-site-redirect';
             routes.push(telemetry);
-            skipped.push({ urlPath: requestedAsAsked, why: 'off-site-redirect', status: navRes.status });
+            skip({ urlPath: requestedAsAsked, why: 'off-site-redirect', status: navRes.status });
             debugLog('crawl', 'start address redirected off-site', {
               path: telemetry.requestedPath,
               status: telemetry.status,
@@ -734,7 +878,7 @@ export class DeterministicSpider {
           telemetry.outcome = 'skipped';
           telemetry.skipReason = 'off-site-redirect';
           routes.push(telemetry);
-          skipped.push({
+          skip({
             urlPath: requestedAsAsked,
             why: 'off-site-redirect',
             status: navRes.status,
@@ -757,7 +901,7 @@ export class DeterministicSpider {
           telemetry.outcome = 'skipped';
           telemetry.skipReason = 'http-error';
           routes.push(telemetry);
-          skipped.push({ urlPath: requestedAsAsked, why: 'http-error', status: navRes.status });
+          skip({ urlPath: requestedAsAsked, why: 'http-error', status: navRes.status });
           debugLog('crawl', 'route returned http-error', {
             path: telemetry.requestedPath,
             status: telemetry.status,
@@ -811,11 +955,40 @@ export class DeterministicSpider {
         // elements, forms, a fingerprint and a screenshot it is about to throw away (LC-008).
         if (skipForPageLimit()) return;
 
+        // The caller's own look at the page (a payment area, a sign-in wall): a verdict leaves it untouched,
+        // before any overlay is dismissed, link followed or control clicked.
+        const verdict = options.inspectPage ? await options.inspectPage(page, landed) : undefined;
+        if (verdict) {
+          telemetry.outcome = 'skipped';
+          telemetry.skipReason = verdict.why;
+          telemetry.detail = verdict.detail;
+          routes.push(telemetry);
+          if (verdict.why === 'sign-in') signInWalls.push(requestedAsAsked);
+          const landedPath = redactUrl(landed.pathname);
+          skip({
+            urlPath: requestedAsAsked,
+            why: verdict.why,
+            status: navRes.status,
+            ...(landedPath !== requestedAsAsked ? { finalPath: landedPath } : {}),
+            ...(verdict.detail ? { detail: verdict.detail } : {}),
+          });
+          debugLog('crawl', 'route skipped on inspection', {
+            path: telemetry.requestedPath,
+            status: telemetry.status,
+            finalPath: telemetry.finalPath,
+            outcome: 'skipped',
+            reason: verdict.why,
+            attempts: telemetry.attempts,
+            ms: telemetry.durationMs,
+          });
+          return;
+        }
+
         // Dismiss overlays (cookie banners) before link extraction
         await dismissOverlays(page);
 
         // 1. Discover links (anchors, role=link, data-href, get-forms)
-        const rawLinks = await page.evaluate(() => {
+        const rawLinks = await page.evaluate((followFormActions) => {
           const results: Array<{ href: string; text: string }> = [];
 
           // (a) a[href]
@@ -843,7 +1016,7 @@ export class DeterministicSpider {
           }
 
           // (c) <form method=get action=...> without fields that need input
-          const forms = Array.from(document.querySelectorAll('form'));
+          const forms = followFormActions ? Array.from(document.querySelectorAll('form')) : [];
           for (const f of forms) {
             const method = (f.getAttribute('method') || 'get').toLowerCase();
             if (method !== 'get') continue;
@@ -858,7 +1031,7 @@ export class DeterministicSpider {
           }
 
           return results;
-        });
+        }, options.followFormActions !== false);
 
         for (const { href, text } of rawLinks) {
           try {
@@ -926,6 +1099,7 @@ export class DeterministicSpider {
           layoutGroup: fingerprint ? `layout-${fingerprint}` : undefined,
           links,
           contentKey: contentKeyOf(elements, pageForms.length),
+          depth: requestedDepth,
         };
         // Race guard for the limit (workers share `pages`): the slot is taken before anything is written, so
         // `pages.length` never passes the limit and no screenshot is left for a page that is not in `pages`.
@@ -956,6 +1130,16 @@ export class DeterministicSpider {
           ms: telemetry.durationMs,
         });
         options.onPage?.(pageItem, pages.length, forms.slice(forms.length - pageForms.length));
+        // Still the rendered page, before any exploring click changes it. A failing hook costs the caller
+        // its own extract, not the crawl.
+        if (options.onRecordedPage) {
+          await options.onRecordedPage(page, pageItem).catch((err: unknown) => {
+            debugLog('crawl', 'recorded-page hook failed', {
+              path: telemetry.requestedPath,
+              error: err instanceof Error ? err.name : 'other',
+            });
+          });
+        }
 
         // 4. Single-page apps navigate by script: try the controls that look like navigation.
         if (exploreClicks && clickBudget > 0) {
@@ -968,18 +1152,29 @@ export class DeterministicSpider {
           });
           const pageClickLimit = Math.min(MAX_CLICKS_PER_PAGE, candidates.length);
           for (const el of candidates.slice(0, pageClickLimit)) {
+            if (timeLeft() <= 0) {
+              timedOut = true;
+              break;
+            }
             if (clickBudget-- <= 0) break;
             try {
               if (page.url() !== pageUrl) {
-                await waitForPacing();
-                await navigate(page, pageUrl, { timeoutMs: 10000 });
+                if (!pacer) await waitForPacing();
+                if (timeLeft() <= 0) continue;
+                await paced(pageUrl, () => navigate(page, pageUrl, navLimits(10000)));
               }
               const urlBefore = page.url();
-              await page.locator(el.selector).first().click({ timeout: 3000 });
-              await Promise.race([
-                page.waitForURL((u) => u.toString() !== urlBefore, { timeout: 1500 }),
-                page.waitForTimeout(250),
-              ]).catch(() => {});
+              // A click may load another page of the host, so with a pacer it takes a turn too.
+              await paced(pageUrl, async () => {
+                await page
+                  .locator(el.selector)
+                  .first()
+                  .click({ timeout: capToDeadline(3000) });
+                await Promise.race([
+                  page.waitForURL((u) => u.toString() !== urlBefore, { timeout: capToDeadline(1500) }),
+                  page.waitForTimeout(capToDeadline(250)),
+                ]).catch(() => {});
+              });
               const after = new URL(page.url());
               if (onSite(after)) {
                 const normAfter = normRoute(after.toString());
@@ -999,17 +1194,19 @@ export class DeterministicSpider {
                 }
               }
             } catch {
-              exploreErrors++;
+              if (timeLeft() > 0) exploreErrors++;
             }
           }
         }
 
         // 5. Tabs, accordions, drawers and dialogs hide forms; list pages show how they are managed.
         // Guarded (ADR 0025): nothing is submitted, changing requests are aborted, dialogs dismissed.
-        if (exploreClicks && clickBudget > 0 && onSite(landed)) {
+        // Skipped once the deadline has passed: its own clicks are not limited by the time left.
+        if (exploreClicks && clickBudget > 0 && onSite(landed) && timeLeft() > 0) {
           const reload = async () => {
-            await waitForPacing();
-            await navigate(page, pageUrl, { timeoutMs: 10000 });
+            if (!pacer) await waitForPacing();
+            if (timeLeft() <= 0) throw new Error('time-limit');
+            await paced(pageUrl, () => navigate(page, pageUrl, navLimits(10000)));
           };
           try {
             clickBudget -= await exploreInteractiveStates({
@@ -1024,6 +1221,7 @@ export class DeterministicSpider {
               budget: clickBudget,
             });
             if (page.url() !== pageUrl) await reload();
+            if (timeLeft() <= 0) throw new Error('time-limit');
             const structure = await readCrudStructure(page);
             const crud = structure && inferCrud(structure);
             if (crud) {
@@ -1041,7 +1239,9 @@ export class DeterministicSpider {
               }
             }
           } catch {
-            exploreErrors++;
+            // Stopped by the deadline is not an exploration error.
+            if (timeLeft() > 0) exploreErrors++;
+            else timedOut = true;
           }
         }
 
@@ -1051,7 +1251,7 @@ export class DeterministicSpider {
       } catch {
         // Double-record fix: only record as skipped if page was not already recorded
         if (!recorded) {
-          skipped.push({ urlPath: requestedAsAsked, why: 'did-not-load' });
+          skip({ urlPath: requestedAsAsked, why: 'did-not-load' });
         }
       }
     };
@@ -1127,20 +1327,20 @@ export class DeterministicSpider {
       for (const left of queue) {
         const norm = normRoute(left.url);
         if (!frontier.isVisited(norm.key)) {
-          skipped.push({ urlPath: redactUrl(norm.path), why: 'time-limit' });
+          skip({ urlPath: redactUrl(norm.path), why: 'time-limit' });
           count++;
           if (count >= 50) break;
         }
       }
       if (count === 0 && !skipped.some((s) => s.why === 'time-limit')) {
-        skipped.push({ urlPath: redactUrl(normRoute(targetUrl).path), why: 'time-limit' });
+        skip({ urlPath: redactUrl(normRoute(targetUrl).path), why: 'time-limit' });
       }
     } else if (sessionLost) {
       let count = 0;
       for (const left of queue) {
         const norm = normRoute(left.url);
         if (!frontier.isVisited(norm.key)) {
-          skipped.push({ urlPath: redactUrl(norm.path), why: 'session-lost' });
+          skip({ urlPath: redactUrl(norm.path), why: 'session-lost' });
           count++;
           if (count >= 50) break;
         }
@@ -1149,8 +1349,13 @@ export class DeterministicSpider {
       // Still queued when the page limit ended the crawl: found, never opened.
       for (const left of queue) {
         const norm = normRoute(left.url);
-        if (!frontier.isVisited(norm.key)) skipped.push({ urlPath: redactUrl(norm.path), why: 'page-limit' });
+        if (!frontier.isVisited(norm.key)) skip({ urlPath: redactUrl(norm.path), why: 'page-limit' });
       }
+    }
+
+    // Found only beyond the max depth: one entry per address never reached by a shorter path.
+    for (const [key, urlPath] of tooDeep) {
+      if (!frontier.has(key)) skip({ urlPath, why: 'depth-limit' });
     }
 
     // A link to an address the site redirects is expected to land where the redirect goes.

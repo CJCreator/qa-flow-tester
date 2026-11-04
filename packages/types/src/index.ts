@@ -23,3 +23,4 @@ export * from './intent.js';
 export * from './route-telemetry.js';
 export * from './input-rules.js';
 export * from './checkup-api.js';
+export * from './website-audit.js';

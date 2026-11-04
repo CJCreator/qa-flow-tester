@@ -31,8 +31,10 @@ const saved = JSON.stringify({
 describe('old plans without selectorReason', () => {
   it('load, expand and export unchanged', () => {
     const plan = JSON.parse(saved) as ReviewPlan;
-    expect(expandValidationTestCases(plan.testCases)).toEqual(plan.testCases);
-    expect(plan.testCases[0]!.steps.every((s) => s.selectorReason === undefined)).toBe(true);
+    expect(plan.testCases).toBeDefined();
+    const testCases = plan.testCases ?? [];
+    expect(expandValidationTestCases(testCases)).toEqual(testCases);
+    expect(testCases[0]!.steps.every((s) => s.selectorReason === undefined)).toBe(true);
     const files = planToPlaywrightProject(plan);
     const spec = files.map((f) => f.content).join('\n');
     expect(spec).toContain('(await sel(page, "div.card > a.buy")).click();');

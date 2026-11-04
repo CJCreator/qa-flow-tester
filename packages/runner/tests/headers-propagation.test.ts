@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { promises as fs } from 'fs';
+import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
+import { promises as fs, mkdtempSync } from 'fs';
+import os from 'os';
 import path from 'path';
 import { RunnerServer } from '../src/server.js';
 import { server as fixtureServer } from '../../../fixtures/test-app/server.js';
@@ -9,7 +10,10 @@ describe('headers propagation & per-run auth isolation', () => {
   const RUNNER_PORT = 3621;
   const fixtureUrl = `http://localhost:${FIXTURE_PORT}`;
   const runnerUrl = `http://localhost:${RUNNER_PORT}`;
-  const outputDir = path.join(process.cwd(), '.tmp-headers-propagation');
+  // A new folder per run, outside the repository: inside OneDrive the sync client picks up every file a run
+  // writes, competes with Chromium for the CPU and holds files open so the clean-up fails.
+  const scratch = mkdtempSync(path.join(os.tmpdir(), 'qa-test-headers-propagation-'));
+  const outputDir = path.join(scratch, 'report');
   const dataDir = `${outputDir}-data`;
   const authDir = `${outputDir}-auth`;
   const BYPASS_TOKEN = 'bypass-secret-test-token-777';
@@ -34,10 +38,26 @@ describe('headers propagation & per-run auth isolation', () => {
   afterAll(async () => {
     await runner.stop();
     await new Promise<void>((resolve) => fixtureServer.close(() => resolve()));
-    await fs.rm(outputDir, { recursive: true, force: true }).catch(() => {});
-    await fs.rm(dataDir, { recursive: true, force: true }).catch(() => {});
-    await fs.rm(authDir, { recursive: true, force: true }).catch(() => {});
+    await fs.rm(scratch, { recursive: true, force: true, maxRetries: 5 }).catch(() => {});
   });
+
+  // A test that fails or times out must not leave its run going: the next test's start would be refused (one
+  // run at a time) and it would fail for a reason that is not its own.
+  afterEach(async ({ task }) => {
+    if (task.result?.state !== 'fail') return;
+    try {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        if (!(await (await fetch(`${runnerUrl}/api/runner/status`)).json()).isRunning) break;
+        await fetch(`${runnerUrl}/api/runner/abort`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ discard: true }),
+        });
+      }
+    } catch {
+      // Runner not reachable: nothing to stop.
+    }
+  }, 30000);
 
   it('rejects invalid roles and cross-origin loginPath with 400', async () => {
     // Empty role name

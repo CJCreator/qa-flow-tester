@@ -1,9 +1,30 @@
+import type { FetchFn } from '@qa/checkers';
+import { isLocalOriginHost, makeOutboundFetch } from '../safe-net.js';
+import { debugLog } from '../debug-log.js';
+
+/** RFC 9309 asks crawlers to read at least 500 KiB of a robots.txt. */
+const ROBOTS_MAX_BYTES = 512_000;
+/** The longest Crawl-delay honoured (ADR 0015); a larger value is cut to this and logged. */
+export const MAX_CRAWL_DELAY_MS = 30_000;
+
+/** Milliseconds for a Crawl-delay value in seconds, or undefined when it is not a number of seconds ≥ 0. */
+function crawlDelayMsOf(value: string): number | undefined {
+  if (!/^(\d+(\.\d*)?|\.\d+)$/.test(value)) return undefined;
+  const ms = Math.round(Number(value) * 1000);
+  return Number.isFinite(ms) ? ms : undefined;
+}
+
 /**
  * Minimal robots.txt policy (RFC 9309): picks the group for our user-agent token
  * (falling back to `*`) and applies longest-match Allow/Disallow with `*` and `$` wildcards.
+ * Also reads the chosen group's `Crawl-delay` (not in RFC 9309, widely used), see `crawlDelayMs`.
  */
 export class RobotsPolicy {
-  private constructor(private rules: Array<{ allow: boolean; pattern: string }>) {}
+  private constructor(
+    private rules: Array<{ allow: boolean; pattern: string }>,
+    /** The chosen group's Crawl-delay in milliseconds (capped at MAX_CRAWL_DELAY_MS); undefined when none is set. */
+    readonly crawlDelayMs?: number
+  ) {}
 
   static allowAll(): RobotsPolicy {
     return new RobotsPolicy([]);
@@ -11,7 +32,11 @@ export class RobotsPolicy {
 
   static parse(robotsTxt: string, userAgentToken: string): RobotsPolicy {
     const token = userAgentToken.toLowerCase();
-    const groups: Array<{ agents: string[]; rules: Array<{ allow: boolean; pattern: string }> }> = [];
+    const groups: Array<{
+      agents: string[];
+      rules: Array<{ allow: boolean; pattern: string }>;
+      crawlDelay?: string;
+    }> = [];
     let current: (typeof groups)[number] | null = null;
     let lastWasAgent = false;
 
@@ -36,19 +61,47 @@ export class RobotsPolicy {
         if (value) current.rules.push({ allow: key === 'allow', pattern: value });
       } else {
         lastWasAgent = false;
+        // The first valid Crawl-delay of a group counts; a malformed one is ignored.
+        if (
+          key === 'crawl-delay' &&
+          current &&
+          current.crawlDelay === undefined &&
+          crawlDelayMsOf(value) !== undefined
+        ) {
+          current.crawlDelay = value;
+        }
       }
     }
 
     const specific = groups.filter((g) => g.agents.includes(token));
     const chosen = specific.length > 0 ? specific : groups.filter((g) => g.agents.includes('*'));
-    return new RobotsPolicy(chosen.flatMap((g) => g.rules));
+    const delay = chosen.find((g) => g.crawlDelay !== undefined)?.crawlDelay;
+    let crawlDelayMs = delay === undefined ? undefined : crawlDelayMsOf(delay);
+    if (crawlDelayMs !== undefined && crawlDelayMs > MAX_CRAWL_DELAY_MS) {
+      debugLog('crawl', 'robots.txt Crawl-delay capped', { askedMs: crawlDelayMs, usedMs: MAX_CRAWL_DELAY_MS });
+      crawlDelayMs = MAX_CRAWL_DELAY_MS;
+    }
+    return new RobotsPolicy(
+      chosen.flatMap((g) => g.rules),
+      crawlDelayMs
+    );
   }
 
-  /** Fetches `<origin>/robots.txt`. A missing or unreachable file means everything is allowed. */
-  static async fetch(origin: string, userAgentToken: string): Promise<RobotsPolicy> {
+  /**
+   * Fetches `<origin>/robots.txt` through the pinned outbound path (ADR 0031): public addresses only by
+   * default, except that an origin which is itself a local/private host (the user's own build) may read its own
+   * robots.txt; a run on a shared machine still refuses it. A missing, refused or unreachable file means
+   * everything is allowed. A caller-supplied `fetchFn` is used as given.
+   */
+  static async fetch(origin: string, userAgentToken: string, fetchFn?: FetchFn): Promise<RobotsPolicy> {
     try {
-      const res = await fetch(new URL('/robots.txt', origin), { signal: AbortSignal.timeout(10000) });
-      if (!res.ok) return RobotsPolicy.allowAll();
+      fetchFn ??= makeOutboundFetch({
+        allowPrivate: isLocalOriginHost(new URL(origin).hostname),
+        maxBytes: ROBOTS_MAX_BYTES,
+        timeoutMs: 10000,
+      });
+      const res = await fetchFn(new URL('/robots.txt', origin).toString());
+      if (!res || res.status < 200 || res.status >= 300) return RobotsPolicy.allowAll();
       return RobotsPolicy.parse(await res.text(), userAgentToken);
     } catch {
       return RobotsPolicy.allowAll();

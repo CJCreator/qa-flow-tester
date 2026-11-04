@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest';
 import http from 'http';
-import { promises as fs } from 'fs';
+import { promises as fs, mkdtempSync } from 'fs';
+import os from 'os';
 import path from 'path';
 import { RunnerServer } from '../src/server.js';
 import {
@@ -84,7 +85,10 @@ describe('Runner endpoints for the wizard', () => {
   const SITE_PORT = 3288;
   const runnerUrl = `http://localhost:${RUNNER_PORT}`;
   const siteUrl = `http://localhost:${SITE_PORT}`;
-  const outputDir = path.join(process.cwd(), '.tmp-runner-wizard');
+  // A new folder per run, outside the repository: inside OneDrive the sync client picks up every file a run
+  // writes, competes with Chromium for the CPU and holds files open so the clean-up fails.
+  const scratch = mkdtempSync(path.join(os.tmpdir(), 'qa-test-runner-wizard-'));
+  const outputDir = path.join(scratch, 'report');
   const store = new MemoryStore();
   const openRouter = fakeOpenRouter();
   let runner: RunnerServer;
@@ -106,13 +110,23 @@ describe('Runner endpoints for the wizard', () => {
   afterAll(async () => {
     await runner.stop();
     await new Promise<void>((resolve) => site.server.close(() => resolve()));
-    await fs.rm(outputDir, { recursive: true, force: true });
-    await fs.rm(`${outputDir}-data`, { recursive: true, force: true }).catch(() => {});
+    await fs.rm(scratch, { recursive: true, force: true, maxRetries: 5 });
   });
 
-  afterEach(() => {
+  afterEach(async ({ task }) => {
     vi.restoreAllMocks();
-  });
+    // A test that fails or times out must not leave its run going: the next test's start would be refused
+    // (one run at a time), and it would read the old run's report and fail for a reason that is not its own.
+    if (task.result?.state !== 'fail') return;
+    try {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        if (!(await (await fetch(`${runnerUrl}/api/runner/status`)).json()).isRunning) break;
+        await post('/api/runner/abort', { discard: true });
+      }
+    } catch {
+      // Runner not reachable: nothing to stop.
+    }
+  }, 30000);
 
   const post = (route: string, body: unknown, headers: Record<string, string> = {}) =>
     fetch(`${runnerUrl}${route}`, {

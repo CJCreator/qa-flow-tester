@@ -4,18 +4,23 @@
  * read-only, a shared machine ignores consent, a wrong password stops the run before the crawl, and
  * the password never reaches disk, the stream or the console.
  */
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
-import { promises as fs } from 'fs';
+import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest';
+import { promises as fs, mkdtempSync } from 'fs';
+import os from 'os';
 import path from 'path';
 import http from 'http';
 import type { ReleaseReport, ReviewPlan } from '@qa/types';
 import { RunnerServer, resolveReadOnly } from '../src/server.js';
 
-const SITE_PORT = 3194;
+// Its own port: reapproval-roles.test.ts listens on 3194, and the two files can run at the same time.
+const SITE_PORT = 3197;
 const RUNNER_PORT = 3195;
 const BETA_PORT = 3196;
 const runnerUrl = `http://localhost:${RUNNER_PORT}`;
-const outputDir = path.join(process.cwd(), '.tmp-credentials-crawl');
+// A new folder per run, outside the repository: inside OneDrive the sync client picks up every file a run
+// writes, competes with Chromium for the CPU and holds files open so the clean-up fails.
+const scratch = mkdtempSync(path.join(os.tmpdir(), 'qa-test-credentials-crawl-'));
+const outputDir = path.join(scratch, 'report');
 const dataDir = `${outputDir}-data`;
 const betaOut = `${outputDir}-beta`;
 const PASSWORD = 'S3cret-Pw-Zq81-unique';
@@ -136,10 +141,22 @@ describe('test sign-in as consent (ADR 0022)', () => {
     vi.restoreAllMocks();
     await runner.stop();
     await new Promise<void>((resolve) => shop.close(() => resolve()));
-    for (const d of [outputDir, dataDir, betaOut, `${betaOut}-data`]) {
-      await fs.rm(d, { recursive: true, force: true }).catch(() => {});
-    }
+    await fs.rm(scratch, { recursive: true, force: true, maxRetries: 5 }).catch(() => {});
   });
+
+  // A test that fails or times out must not leave its run going: the next test's start would be refused (one
+  // run at a time) and it would fail for a reason that is not its own.
+  afterEach(async ({ task }) => {
+    if (task.result?.state !== 'fail') return;
+    try {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        if (!(await (await fetch(`${runnerUrl}/api/runner/status`)).json()).isRunning) break;
+        await post('/api/runner/abort', { discard: true });
+      }
+    } catch {
+      // Runner not reachable: nothing to stop.
+    }
+  }, 30000);
 
   it('live host + consent + good details: acts after sign-in, never on a Sensitive Action', async () => {
     sent.length = 0;

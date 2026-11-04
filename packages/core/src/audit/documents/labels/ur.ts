@@ -1,0 +1,123 @@
+/**
+ * Every fixed piece of document wording, in Urdu (right-to-left, DOCUMENT_LANGUAGE_INFO.ur.dir). Same keys as
+ * en.ts (the type and the label tests enforce it). Product names and standards (AI, WCAG 2.2 AA, robots.txt)
+ * stay as they are. Machine translation, not yet reviewed by a native speaker, so documents in Urdu carry the
+ * "beta translation" label (Q-45).
+ */
+
+import type { DocumentLabels } from './en.js';
+
+export const ur: DocumentLabels = {
+  documentTitles: {
+    structure: 'ساخت',
+    content: 'مواد',
+    findings: 'نتائج',
+    roadmap: 'بہتری کا روڈ میپ',
+    proposal: 'تجویز',
+    'pitch-glimpse': 'آپ کی ویب سائٹ پر ملنے والے اہم مسائل',
+    'owner-audit': 'ویب سائٹ آڈٹ',
+  },
+  headings: {
+    summary: 'خلاصہ',
+    pageHierarchy: 'صفحات کی ترتیب',
+    navigationLinks: 'نیویگیشن لنکس',
+    leavingSite: 'سائٹ سے باہر جانے والے لنکس',
+    technology: 'تعمیر میں استعمال ہونے والی ٹیکنالوجی',
+    pagesNotChecked: 'وہ صفحات جن کی جانچ نہیں ہوئی',
+    whatThisDidNotCheck: 'اس میں کن چیزوں کی جانچ نہیں ہوئی',
+    topIssues: 'اہم مسائل',
+    scope: 'کام کا دائرہ',
+    notIncluded: 'شامل نہیں',
+    price: 'قیمت',
+    paymentTerms: 'ادائیگی کی شرائط',
+    timeline: 'وقت کا خاکہ',
+    aboutUs: 'ہمارے بارے میں',
+    optOut: 'رابطہ نہ کرنے کا اختیار',
+  },
+  columns: {
+    page: 'صفحہ',
+    section: 'حصہ',
+    title: 'عنوان',
+    issue: 'مسئلہ',
+    found: 'کیا ملا',
+    suggestedFix: 'تجویز کردہ حل',
+    impact: 'اثر',
+    effort: 'محنت',
+    priority: 'ترجیح',
+    phase: 'مرحلہ',
+    area: 'شعبہ',
+    grade: 'گریڈ',
+    reason: 'وجہ',
+    work: 'کام',
+    linksIn: 'اس صفحے پر آنے والے لنکس',
+    linkText: 'لنک کا متن',
+    goesTo: 'کہاں جاتا ہے',
+  },
+  scale: {
+    high: 'زیادہ',
+    medium: 'درمیانہ',
+    low: 'کم',
+  },
+  status: {
+    notChecked: 'جانچ نہیں ہوئی',
+    needsHumanReview: 'کسی شخص کی جانچ ضروری ہے',
+    notIdentified: 'شناخت نہیں ہوئی',
+    noneFound: 'کچھ نہیں ملا',
+    imageNotIncluded: 'تصویر شامل نہیں',
+    aiNote: 'AI تبصرہ: صرف مشورہ، یہ کوئی گریڈ نہیں بدلتا',
+    ruleBased: 'ایک طے شدہ اصول سے متعین',
+    automaticChecksOnly: 'WCAG 2.2 AA، صرف خودکار جانچ',
+    betaTranslation: 'بیٹا ترجمہ',
+  },
+  areas: {
+    'search-ranking': 'سرچ رینکنگ',
+    marketing: 'مارکیٹنگ',
+    usability: 'استعمال میں آسانی',
+    content: 'مواد',
+    accessibility: 'رسائی',
+    speed: 'رفتار',
+  },
+  groups: {
+    technical: 'تکنیکی',
+    marketing: 'مارکیٹنگ',
+    content: 'مواد',
+  },
+  actions: {
+    redesign: 'نیا ڈیزائن',
+    repair: 'مرمت',
+  },
+  skipReasons: {
+    'page-limit': 'صفحات کی حد پوری ہو گئی',
+    'depth-limit': 'پہلے صفحے سے بہت زیادہ لنک مراحل',
+    excluded: 'پاتھ کی حدود کی وجہ سے خارج',
+    payment: 'ادائیگی کا صفحہ',
+    'did-not-load': 'لوڈ نہیں ہوا',
+    robots: 'robots.txt نے اجازت نہیں دی',
+    'sign-in': 'سائن ان ضروری ہے',
+    'http-error': 'سرور نے خرابی دکھائی',
+    timeout: 'لوڈ ہونے میں بہت وقت لگا',
+    'off-site-redirect': 'دوسری سائٹ پر بھیج دیا گیا',
+    'time-limit': 'وقت کی حد پوری ہو گئی',
+    'trap-limit': 'ملتے جلتے پتے بہت زیادہ',
+    'session-lost': 'سائن ان ختم ہو گیا',
+    duplicate: 'دوسرے پتے والا وہی صفحہ',
+  },
+  aiNotDone: {
+    'no-ai-key': 'AI تبصروں کے لیے AI کلید درکار ہے',
+    'ai-failed': 'AI نے جواب نہیں دیا',
+    'budget-spent': 'AI درخواستوں کا بجٹ ختم ہو گیا',
+  },
+  speedNotMeasured: {
+    failed: 'پیمائش ناکام رہی',
+    timeout: 'پیمائش میں بہت وقت لگا',
+    quota: 'روزانہ پیمائش کی حد پوری ہو گئی',
+    'no-network': 'نیٹ ورک کنکشن نہیں ہے',
+    'no-field-data': 'حقیقی زائرین کا کافی ڈیٹا نہیں',
+  },
+  phases: {
+    numbered: 'مرحلہ {n}',
+    first: 'فوری اصلاحات',
+    second: 'اہم اصلاحات',
+    third: 'وسیع تبدیلیاں',
+  },
+};

@@ -1,14 +1,17 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { FlowTestOrchestrator } from '../src/orchestrator.js';
 import { server } from '../../../fixtures/test-app/server.js';
-import { promises as fs } from 'fs';
+import { promises as fs, mkdtempSync } from 'fs';
+import os from 'os';
 import path from 'path';
 import type { TestCase, ProductProfile } from '@qa/types';
 
 describe('FlowTestOrchestrator E2E', () => {
   const PORT = 3085;
   const baseUrl = `http://localhost:${PORT}`;
-  const outputDir = path.join(process.cwd(), '.tmp-e2e-qa-report');
+  // A new folder per run, outside the repository: inside OneDrive the sync client picks up every file a run
+  // writes (screenshots, videos), competes with Chromium for the CPU and holds files open so the clean-up fails.
+  const outputDir = mkdtempSync(path.join(os.tmpdir(), 'qa-test-e2e-orchestrator-'));
 
   beforeAll(async () => {
     await new Promise<void>((resolve) => {
@@ -20,7 +23,7 @@ describe('FlowTestOrchestrator E2E', () => {
     await new Promise<void>((resolve) => {
       server.close(() => resolve());
     });
-    await fs.rm(outputDir, { recursive: true, force: true }).catch(() => {});
+    await fs.rm(outputDir, { recursive: true, force: true, maxRetries: 5 }).catch(() => {});
   });
 
   it('should execute test cases, capture evidence, detect bugs, and produce report with traceability', async () => {

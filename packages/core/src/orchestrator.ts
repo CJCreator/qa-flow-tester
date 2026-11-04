@@ -27,6 +27,7 @@ import {
   type BrowserEngine,
 } from './browser.js';
 import { runAccessChecks, contextFetcher, type AccessFetcher } from './access-control.js';
+import { makeCheckerFetch, checkLinkStatus } from './checker-fetch.js';
 import { EvidenceCollector } from './evidence.js';
 import { captureVisualShot, readBaselineMode, writeVisualBaseline } from './visual-capture.js';
 import { PreFlightChecker, SignInFailedError, type PreFlightResult } from './preflight.js';
@@ -199,25 +200,6 @@ export function sitePathOf(urlPath: string, targetUrl: string): string {
   } catch {
     return normalizeRoute(urlPath);
   }
-}
-
-/**
- * Opens a link's address with one request and fails only when the link is broken: the page is
- * gone (404, 410), the server fails (5xx), or nothing answers. Sites that turn automated requests
- * away (401, 403, 429, 999) can't be judged this way, so they pass.
- */
-async function checkLink(page: Page, address: string): Promise<void> {
-  let status: number;
-  try {
-    const res = await page.request.get(address, { timeout: 10000, maxRedirects: 10, failOnStatusCode: false });
-    status = res.status();
-  } catch (err) {
-    throw new Error(
-      `The link doesn’t open: ${address} (${(err instanceof Error ? err.message : String(err)).split('\n')[0]})`
-    );
-  }
-  if (status === 404 || status === 410 || status >= 500)
-    throw new Error(`The link is broken: ${address} answered ${status}`);
 }
 
 /** The checks a test point runs, in plain words, and how each went. */
@@ -582,6 +564,10 @@ export class FlowTestOrchestrator {
     const siteWide = new Set<string>();
     // What the marketing basics found, page by page, for the report's checklist.
     const marketingLog = newMarketingLog();
+    // The checkers' requests (security.txt, source maps, links, site files) and the plan's link checks go
+    // through the pinned, redirect-checked path only (ADR 0031), never Playwright's request API.
+    const checkerFetch = makeCheckerFetch();
+    const linkFetch = makeCheckerFetch({ maxRedirects: 10, timeoutMs: 10_000 });
 
     // Pages whose vitals were already measured with repeat loads in this run.
     const vitalsMeasured = new Set<string>();
@@ -911,7 +897,7 @@ export class FlowTestOrchestrator {
                   } else if (step.action === 'wait') {
                     await page.waitForTimeout(1000);
                   } else if (step.action === 'check-link') {
-                    await checkLink(page, step.value || '');
+                    await checkLinkStatus(step.value || '', linkFetch);
                   }
 
                   await page.waitForTimeout(300);
@@ -1110,16 +1096,20 @@ export class FlowTestOrchestrator {
                     baseUrl: options.targetUrl,
                     responseHeaders: mainResponseHeaders,
                   })),
-                  ...(await this.securityDepth.checkPage(page, {
-                    testCaseId: testCase.id,
-                    flowId: testCase.flowId,
-                    role: testCase.role,
-                    breakpoint: bp,
-                    urlPath: new URL(page.url(), options.targetUrl).pathname,
-                    baseUrl: options.targetUrl,
-                    siteWide,
-                    cspHeader,
-                  })),
+                  ...(await this.securityDepth.checkPage(
+                    page,
+                    {
+                      testCaseId: testCase.id,
+                      flowId: testCase.flowId,
+                      role: testCase.role,
+                      breakpoint: bp,
+                      urlPath: new URL(page.url(), options.targetUrl).pathname,
+                      baseUrl: options.targetUrl,
+                      siteWide,
+                      cspHeader,
+                    },
+                    checkerFetch
+                  )),
                 ];
 
           // 3c. Performance (Speed, Web Vitals, Mobile Overflow & Overlap)
@@ -1146,18 +1136,22 @@ export class FlowTestOrchestrator {
           const searchHere = options.enableSeo !== false && pageLevelChecks && bp === searchSize;
           const seoFindings = !searchHere
             ? []
-            : await this.seoChecker.checkPage(page, {
-                testCaseId: testCase.id,
-                flowId: testCase.flowId,
-                role: testCase.role,
-                breakpoint: bp,
-                urlPath: new URL(page.url(), options.targetUrl).pathname,
-                baseUrl: options.targetUrl,
-                searchChecks: options.searchChecks,
-                visibility: options.visibility,
-                siteWide,
-                marketingLog,
-              });
+            : await this.seoChecker.checkPage(
+                page,
+                {
+                  testCaseId: testCase.id,
+                  flowId: testCase.flowId,
+                  role: testCase.role,
+                  breakpoint: bp,
+                  urlPath: new URL(page.url(), options.targetUrl).pathname,
+                  baseUrl: options.targetUrl,
+                  searchChecks: options.searchChecks,
+                  visibility: options.visibility,
+                  siteWide,
+                  marketingLog,
+                },
+                checkerFetch
+              );
 
           // 4. Permission Matrix Check
           const permFindings: Finding[] = [];

@@ -1,0 +1,22 @@
+{
+  "captchaResult": "CAPTCHA_NOT_NEEDED",
+  "kind": "pagespeedonline#result",
+  "id": "https://small-clinic.example.in/",
+  "loadingExperience": { "initial_url": "https://small-clinic.example.in/" },
+  "originLoadingExperience": { "initial_url": "https://small-clinic.example.in/" },
+  "lighthouseResult": {
+    "requestedUrl": "https://small-clinic.example.in/",
+    "finalUrl": "https://small-clinic.example.in/",
+    "fetchTime": "2026-11-02T09:20:00.000Z",
+    "audits": {
+      "first-contentful-paint": { "id": "first-contentful-paint", "numericValue": 4100.2 },
+      "largest-contentful-paint": { "id": "largest-contentful-paint", "numericValue": 7800.9 },
+      "cumulative-layout-shift": { "id": "cumulative-layout-shift", "numericValue": 0.3 },
+      "server-response-time": { "id": "server-response-time", "numericValue": 1630 },
+      "total-blocking-time": { "id": "total-blocking-time", "numericValue": 1200 },
+      "speed-index": { "id": "speed-index", "numericValue": 9000 }
+    },
+    "categories": { "performance": { "id": "performance", "score": 0.18 } }
+  },
+  "analysisUTCTimestamp": "2026-11-02T09:20:00.000Z"
+}

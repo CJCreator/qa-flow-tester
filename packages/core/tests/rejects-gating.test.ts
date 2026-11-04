@@ -64,7 +64,13 @@ describe('Test Copy gating', () => {
 describe('Test cap', () => {
   const tests = (n: number): PlanPageTest[] =>
     Array.from({ length: n }, (_, i) => ({ ...rejects()[0], id: `rejects:${i}`, name: `Rejects: ${i}` }));
-  const works: PlanPageTest = { id: 'w', name: 'Works', role: 'visitor', steps: [{ action: 'wait' }], source: 'ai' };
+  const works: PlanPageTest = {
+    id: 'w',
+    name: 'Works',
+    role: 'visitor',
+    steps: [{ action: 'wait', name: 'Wait' }],
+    source: 'ai',
+  };
 
   it('fans out per screen size and trims only Rejects, last planned first, deterministically', () => {
     const draft = () => draftOf([pageWith([works, ...tests(5)])]);

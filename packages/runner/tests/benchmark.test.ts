@@ -85,6 +85,12 @@ describe('Comparing two sites', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
+  const startCheckup = () =>
+    fetch(`${base}/api/runner/run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetUrl: fixture, skipReview: true }),
+    });
 
   it('asks for both addresses', async () => {
     expect((await post({ ourUrl: fixture })).status).toBe(400);
@@ -99,6 +105,12 @@ describe('Comparing two sites', () => {
 
     // One at a time: a second comparison is turned away while this one runs.
     expect((await post({ ourUrl: fixture, refUrl: fixture })).status).toBe(409);
+    // REQ-049 AC-3: the benchmark holds the one run slot, so a Check-up start is refused too.
+    expect(runner.session.run.kind).toBe('benchmark');
+    const checkup = await startCheckup();
+    expect(checkup.status).toBe(409);
+    expect(((await checkup.json()) as { code: string }).code).toBe('ERR_RUN_IN_PROGRESS');
+    expect(runner.session.run.begin('audit-1', fixture, 'audit')).toBe(false);
 
     let current: BenchmarkJob | undefined;
     for (let i = 0; i < 160 && current?.status !== 'done' && current?.status !== 'failed'; i++) {
@@ -115,6 +127,8 @@ describe('Comparing two sites', () => {
     expect(result.delta.fieldDifference).toBe(0);
     expect(result.ourProduct.screenshots).toEqual([]);
     expect(typeof current!.aiUsed).toBe('boolean');
+    // The slot is given back once the benchmark has finished.
+    expect(runner.session.run.kind).toBeNull();
 
     // Kept: it is on the list (without its full result), can be opened again, and can be removed.
     const list = (await (await fetch(`${base}/api/runner/benchmarks`)).json()) as BenchmarkJob[];
@@ -127,4 +141,47 @@ describe('Comparing two sites', () => {
   it('says so when the comparison is not there', async () => {
     expect((await fetch(`${base}/api/runner/benchmark/bench-0`)).status).toBe(404);
   });
+
+  it('REQ-049 AC-2: a Website Audit holding the slot refuses a Check-up and a benchmark with 409', async () => {
+    expect(runner.session.run.begin('audit-1', fixture, 'audit')).toBe(true);
+    try {
+      const checkup = await startCheckup();
+      expect(checkup.status).toBe(409);
+      expect(((await checkup.json()) as { code: string }).code).toBe('ERR_RUN_IN_PROGRESS');
+      const bench = await post({ ourUrl: fixture, refUrl: fixture });
+      expect(bench.status).toBe(409);
+      expect(((await bench.json()) as { code: string }).code).toBe('ERR_RUN_IN_PROGRESS');
+      expect(runner.session.run.kind).toBe('audit');
+    } finally {
+      runner.session.run.release();
+    }
+    expect(runner.session.run.kind).toBeNull();
+  });
+
+  it('REQ-049 AC-4: a benchmark and a Check-up started together: exactly one claims the slot', async () => {
+    const [bench, checkup] = await Promise.all([post({ ourUrl: fixture, refUrl: fixture }), startCheckup()]);
+    expect([bench.status, checkup.status].sort()).toEqual([202, 409]);
+    const refused = bench.status === 409 ? bench : checkup;
+    expect(((await refused.json()) as { code: string }).code).toBe('ERR_RUN_IN_PROGRESS');
+
+    if (checkup.status === 202) {
+      expect(runner.session.run.kind).toBe('checkup');
+      // Stop until idle: a stopped run can be left awaiting review once.
+      for (let i = 0; i < 3 && runner.session.run.isRunning; i++) {
+        await fetch(`${base}/api/runner/stop`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ discard: true }),
+        });
+      }
+    } else {
+      const { id } = (await bench.json()) as { id: string };
+      let current: BenchmarkJob | undefined;
+      for (let i = 0; i < 160 && current?.status !== 'done' && current?.status !== 'failed'; i++) {
+        await new Promise((r) => setTimeout(r, 500));
+        current = (await (await fetch(`${base}/api/runner/benchmark/${id}`)).json()) as BenchmarkJob;
+      }
+      expect(runner.session.run.kind).toBeNull();
+    }
+  }, 120000);
 });

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import path from 'path';
-import { promises as fs } from 'fs';
+import os from 'os';
+import { promises as fs, mkdtempSync } from 'fs';
 import { server as fixtureServer } from '../../../fixtures/test-app/server.js';
 import { DiscoveryAgent, type DiscoveryOptions } from '../src/discovery/discovery-agent.js';
 import { SignInFailedError } from '../src/preflight.js';
@@ -21,7 +22,9 @@ class EmptyPlanAI implements AIProvider {
 describe('Discovery Agent headers, handoff, and session awareness (T-113)', () => {
   let port: number;
   let fixtureUrl: string;
-  const outputDir = path.join(process.cwd(), '.tmp-discovery-headers-test');
+  // A new folder per run, outside the repository: inside OneDrive the sync client picks up every file a run
+  // writes, competes with Chromium for the CPU and holds files open so the clean-up fails.
+  const outputDir = mkdtempSync(path.join(os.tmpdir(), 'qa-test-discovery-headers-'));
 
   beforeAll(async () => {
     await new Promise<void>((resolve) => {
@@ -39,7 +42,7 @@ describe('Discovery Agent headers, handoff, and session awareness (T-113)', () =
 
   afterAll(async () => {
     await new Promise<void>((resolve) => fixtureServer.close(() => resolve()));
-    await fs.rm(outputDir, { recursive: true, force: true }).catch(() => {});
+    await fs.rm(outputDir, { recursive: true, force: true, maxRetries: 5 }).catch(() => {});
   });
 
   const testProfile: ProductProfile = {
@@ -87,7 +90,7 @@ describe('Discovery Agent headers, handoff, and session awareness (T-113)', () =
     const draftJson = JSON.stringify(outcome.draft);
     expect(draftJson).not.toContain(outcome.preflight?.roleStorageStates?.manager);
     expect(draftJson).not.toContain('manager-password');
-  }, 60000);
+  }, 180000); // a sign-in, a visitor crawl, a role crawl and narrow screens in Chromium: over 60 s alone on a busy 4-core laptop
 
   it('/lab/expiring as a signed-in role reports session-expired and fixed note', async () => {
     await fetch(`${fixtureUrl}/lab/stats/reset`, { method: 'POST' });

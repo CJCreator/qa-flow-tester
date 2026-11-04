@@ -4,8 +4,8 @@
  * fails the run (also on the caller-supplied test case path), headless Check-ups keep sessions out of
  * the report folder, and the no-AI issues document lists the pages found on its first write.
  */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { promises as fs } from 'fs';
+import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
+import { promises as fs, mkdtempSync } from 'fs';
 import os from 'os';
 import path from 'path';
 import http from 'http';
@@ -15,7 +15,11 @@ import { runCheckup, parseArgs } from '../src/checkup.js';
 const SITE_PORT = 3291;
 const RUNNER_PORT = 3292;
 const runnerUrl = `http://localhost:${RUNNER_PORT}`;
-const outputDir = path.join(process.cwd(), '.tmp-consent-enforcement');
+// A new folder per run, outside the repository: inside OneDrive the sync client picks up every file a run
+// writes, competes with Chromium for the CPU and holds files open so the clean-up fails. Its name does not
+// start with qa-checkup-, so the working-folder check below does not count it.
+const scratch = mkdtempSync(path.join(os.tmpdir(), 'qa-test-consent-enforcement-'));
+const outputDir = path.join(scratch, 'report');
 const dataDir = `${outputDir}-data`;
 const ciOut = `${outputDir}-ci`;
 const PASSWORD = 'Enf0rce-Pw-Qx47-unique';
@@ -87,6 +91,11 @@ async function walk(dir: string): Promise<string[]> {
 }
 const qaTempDirs = async () => (await fs.readdir(os.tmpdir())).filter((n) => n.startsWith('qa-checkup-')).sort();
 
+// After every describe below, the headless Check-up's report folder included.
+afterAll(async () => {
+  await fs.rm(scratch, { recursive: true, force: true, maxRetries: 5 }).catch(() => {});
+});
+
 describe('sign-in consent is enforced beyond discovery', () => {
   let runner: RunnerServer;
   const make = () =>
@@ -104,6 +113,20 @@ describe('sign-in consent is enforced beyond discovery', () => {
     await new Promise<void>((resolve) => shop.close(() => resolve()));
     for (const d of [outputDir, dataDir, ciOut]) await fs.rm(d, { recursive: true, force: true }).catch(() => {});
   });
+
+  // A test that fails or times out must not leave its run going: the next test's start would be refused (one
+  // run at a time), and its wait would see the old run's phase and fail for a reason that is not its own.
+  afterEach(async ({ task }) => {
+    if (task.result?.state !== 'fail') return;
+    try {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        if (!(await (await fetch(`${runnerUrl}/api/runner/status`)).json()).isRunning) break;
+        await post('/api/runner/abort', { discard: true });
+      }
+    } catch {
+      // Runner not reachable: nothing to stop.
+    }
+  }, 30000);
 
   it('approving a consented plan whose sign-in details are gone is refused and sends nothing', async () => {
     const res = await post('/api/runner/run', {

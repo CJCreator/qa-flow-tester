@@ -1,14 +1,18 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import http from 'http';
 import { promises as fs } from 'fs';
 import path from 'path';
+import type { BrowserContext } from 'playwright';
 import {
   runAccessChecks,
   checkSignedOutAccess,
   checkSessionIsolation,
+  contextFetcher,
   ACCESS_CHECKS_NOTE,
   type AccessFetcher,
 } from '../src/access-control.js';
+import { setBrowserPolicy } from '../src/browser.js';
+import type { NetDeps, PinnedRequest } from '../src/safe-net.js';
 
 const PORT = 3097;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -190,6 +194,62 @@ describe('runAccessChecks against a local server', () => {
     expect(out.findings.length).toBeGreaterThan(0);
     const text = JSON.stringify(out);
     expect(text).not.toContain('user=zed_sentinel_user');
+  });
+});
+
+/** A context stand-in: only `cookies(url)` is used by contextFetcher. */
+function fakeContext(user?: string): BrowserContext {
+  return {
+    cookies: async () => (user ? [{ name: 'user', value: user }] : []),
+  } as unknown as BrowserContext;
+}
+
+describe('contextFetcher (ADR 0031: pinned outbound path)', () => {
+  afterEach(() => setBrowserPolicy(null));
+
+  it('runs the same checks through the outbound path with the context cookies', async () => {
+    requests.length = 0;
+    const out = await runAccessChecks({
+      targetUrl: BASE,
+      pages: [page('/open'), page('/closed'), page('/denied')],
+      signedOut: contextFetcher(fakeContext()),
+      roles: { alice: contextFetcher(fakeContext('alice')) },
+      markers: { alice: 'alice' },
+    });
+    expect(out.findings.map((f) => f.where.urlPath)).toEqual(['/open']);
+    expect(requests.length).toBeGreaterThan(0);
+    for (const r of requests) expect(r.method).toBe('GET');
+    expect(requests.some((r) => r.headers.cookie === 'user=alice')).toBe(true);
+  });
+
+  it('sends the Cookie header, follows no redirect and returns the 3xx with its Location', async () => {
+    const connects: PinnedRequest[] = [];
+    const deps: NetDeps = {
+      lookup: async () => ['93.184.216.34'],
+      connect: async (req) => {
+        connects.push(req);
+        return { status: 302, headers: { location: '/login' }, body: '' };
+      },
+    };
+    const res = await contextFetcher(fakeContext('alice'), deps)('http://app.test/closed');
+    expect(res).toEqual({ status: 302, location: '/login', body: '' });
+    expect(connects).toHaveLength(1);
+    expect(connects[0].headers.Cookie).toBe('user=alice');
+    expect(connects[0].address).toBe('93.184.216.34');
+  });
+
+  it('with a browser guard set, a host resolving to 169.254.169.254 is never connected to', async () => {
+    setBrowserPolicy({ guard: async () => true });
+    const connects: PinnedRequest[] = [];
+    const deps: NetDeps = {
+      lookup: async () => ['169.254.169.254'],
+      connect: async (req) => {
+        connects.push(req);
+        return { status: 200, headers: {}, body: 'SECRET' };
+      },
+    };
+    expect(await contextFetcher(fakeContext('alice'), deps)('http://metadata.test/')).toBeUndefined();
+    expect(connects).toHaveLength(0);
   });
 });
 

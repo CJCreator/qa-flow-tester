@@ -1,0 +1,123 @@
+/**
+ * Every fixed piece of document wording, in Bengali. Same keys as en.ts (the type and the label tests enforce it).
+ * Product names and standards (AI, WCAG 2.2 AA, robots.txt) stay as they are. Machine translation, not yet
+ * reviewed by a native speaker, so documents in Bengali carry the "beta translation" label (Q-45).
+ * Nukta letters (ড়, ঢ়, য়) are avoided: their precomposed forms are not NFC.
+ */
+
+import type { DocumentLabels } from './en.js';
+
+export const bn: DocumentLabels = {
+  documentTitles: {
+    structure: 'কাঠামো',
+    content: 'বিষয়বস্তু',
+    findings: 'প্রাপ্ত তথ্য',
+    roadmap: 'উন্নয়ন রোডম্যাপ',
+    proposal: 'প্রস্তাব',
+    'pitch-glimpse': 'আপনার ওয়েবসাইটে পাওয়া প্রধান সমস্যা',
+    'owner-audit': 'ওয়েবসাইট অডিট',
+  },
+  headings: {
+    summary: 'সারসংক্ষেপ',
+    pageHierarchy: 'পেজের ক্রম',
+    navigationLinks: 'নেভিগেশন লিঙ্ক',
+    leavingSite: 'সাইটের বাইরে যাওয়া লিঙ্ক',
+    technology: 'তৈরিতে ব্যবহৃত প্রযুক্তি',
+    pagesNotChecked: 'যেসব পেজ পরীক্ষা করা হয়নি',
+    whatThisDidNotCheck: 'এতে যা পরীক্ষা করা হয়নি',
+    topIssues: 'প্রধান সমস্যা',
+    scope: 'কাজের পরিধি',
+    notIncluded: 'অন্তর্ভুক্ত নয়',
+    price: 'মূল্য',
+    paymentTerms: 'পেমেন্টের শর্ত',
+    timeline: 'সময়সূচি',
+    aboutUs: 'আমাদের সম্পর্কে',
+    optOut: 'যোগাযোগ না চাওয়ার বিকল্প',
+  },
+  columns: {
+    page: 'পেজ',
+    section: 'বিভাগ',
+    title: 'শিরোনাম',
+    issue: 'সমস্যা',
+    found: 'কী পাওয়া গেছে',
+    suggestedFix: 'প্রস্তাবিত সমাধান',
+    impact: 'প্রভাব',
+    effort: 'পরিশ্রম',
+    priority: 'অগ্রাধিকার',
+    phase: 'ধাপ',
+    area: 'ক্ষেত্র',
+    grade: 'গ্রেড',
+    reason: 'কারণ',
+    work: 'কাজ',
+    linksIn: 'এই পেজে আসা লিঙ্ক',
+    linkText: 'লিঙ্কের লেখা',
+    goesTo: 'কোথায় যায়',
+  },
+  scale: {
+    high: 'বেশি',
+    medium: 'মাঝারি',
+    low: 'কম',
+  },
+  status: {
+    notChecked: 'পরীক্ষা করা হয়নি',
+    needsHumanReview: 'ব্যক্তির পর্যালোচনা প্রয়োজন',
+    notIdentified: 'শনাক্ত হয়নি',
+    noneFound: 'কিছু পাওয়া যায়নি',
+    imageNotIncluded: 'ছবি অন্তর্ভুক্ত নয়',
+    aiNote: 'AI মন্তব্য: শুধু পরামর্শ, এটি কোনো গ্রেড বদলায় না',
+    ruleBased: 'নির্দিষ্ট নিয়মে নির্ধারিত',
+    automaticChecksOnly: 'WCAG 2.2 AA, শুধু স্বয়ংক্রিয় পরীক্ষা',
+    betaTranslation: 'বিটা অনুবাদ',
+  },
+  areas: {
+    'search-ranking': 'সার্চ র‍্যাঙ্কিং',
+    marketing: 'মার্কেটিং',
+    usability: 'ব্যবহারের সুবিধা',
+    content: 'বিষয়বস্তু',
+    accessibility: 'অ্যাক্সেসিবিলিটি',
+    speed: 'গতি',
+  },
+  groups: {
+    technical: 'প্রযুক্তিগত',
+    marketing: 'মার্কেটিং',
+    content: 'বিষয়বস্তু',
+  },
+  actions: {
+    redesign: 'নতুন নকশা',
+    repair: 'মেরামত',
+  },
+  skipReasons: {
+    'page-limit': 'পেজের সীমা পূর্ণ হয়েছে',
+    'depth-limit': 'প্রথম পেজ থেকে অনেক লিঙ্ক ধাপ',
+    excluded: 'পাথ সীমার কারণে বাদ',
+    payment: 'পেমেন্ট পেজ',
+    'did-not-load': 'লোড হয়নি',
+    robots: 'robots.txt অনুমতি দেয়নি',
+    'sign-in': 'সাইন-ইন প্রয়োজন',
+    'http-error': 'সার্ভার ত্রুটি দেখিয়েছে',
+    timeout: 'লোড হতে অনেক সময় লেগেছে',
+    'off-site-redirect': 'অন্য সাইটে পাঠানো হয়েছে',
+    'time-limit': 'সময়সীমা পূর্ণ হয়েছে',
+    'trap-limit': 'একই রকম ঠিকানা অনেক বেশি',
+    'session-lost': 'সাইন-ইন হারিয়ে গেছে',
+    duplicate: 'অন্য ঠিকানার একই পেজ',
+  },
+  aiNotDone: {
+    'no-ai-key': 'AI মন্তব্যের জন্য AI কী প্রয়োজন',
+    'ai-failed': 'AI সাড়া দেয়নি',
+    'budget-spent': 'AI অনুরোধের বাজেট শেষ',
+  },
+  speedNotMeasured: {
+    failed: 'পরিমাপ ব্যর্থ হয়েছে',
+    timeout: 'পরিমাপে অনেক সময় লেগেছে',
+    quota: 'দৈনিক পরিমাপের সীমা পূর্ণ হয়েছে',
+    'no-network': 'নেটওয়ার্ক সংযোগ নেই',
+    'no-field-data': 'প্রকৃত দর্শকদের যথেষ্ট তথ্য নেই',
+  },
+  phases: {
+    numbered: 'ধাপ {n}',
+    first: 'দ্রুত সমাধান',
+    second: 'প্রধান সমাধান',
+    third: 'ব্যাপক পরিবর্তন',
+  },
+};

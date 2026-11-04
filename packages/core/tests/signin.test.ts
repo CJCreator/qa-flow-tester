@@ -41,6 +41,9 @@ describe('PreFlightChecker.signIn', () => {
     }
   }
 
+  /** The failure reason; undefined on a success, which has none. */
+  const reasonOf = (result: Awaited<ReturnType<typeof trySignIn>>) => (result.ok ? undefined : result.reason);
+
   const manager = (loginPath: string, password = 'manager-password'): RoleCredential => ({
     role: 'manager',
     username: 'manager@example.com',
@@ -56,9 +59,9 @@ describe('PreFlightChecker.signIn', () => {
 
   it('success carries no reason', async () => {
     const result = await trySignIn(manager('/signin'));
-    expect(result.ok).toBe(true);
-    expect(result.landingPath).toBe('/account');
-    expect(result.reason).toBeUndefined();
+    expect(result).toMatchObject({ ok: true, landingPath: '/account' });
+    expect(result).not.toHaveProperty('reason');
+    expect(reasonOf(result)).toBeUndefined();
   }, 60000);
 
   it('signs in on a two-step login (username, then password)', async () => {
@@ -68,8 +71,7 @@ describe('PreFlightChecker.signIn', () => {
 
   it('signs in on a login that opens in a modal', async () => {
     const result = await trySignIn(manager('/login-modal'));
-    expect(result.ok).toBe(true);
-    expect(result.landingPath).toBe('/account');
+    expect(result).toMatchObject({ ok: true, landingPath: '/account' });
   }, 60000);
 
   it('reports wrong-details for a wrong password on single-step, two-step and modal logins', async () => {
@@ -80,13 +82,13 @@ describe('PreFlightChecker.signIn', () => {
     ];
     for (const [name, credential] of cases) {
       const result = await trySignIn(credential);
-      expect({ name, ok: result.ok, reason: result.reason }).toEqual({ name, ok: false, reason: 'wrong-details' });
+      expect({ name, ok: result.ok, reason: reasonOf(result) }).toEqual({ name, ok: false, reason: 'wrong-details' });
     }
   }, 120000);
 
   it('reports wrong-details for a wrong username on step one of a two-step login', async () => {
     const result = await trySignIn(twoStep('two-step-password', 'nobody@example.com'));
-    expect(result.reason).toBe('wrong-details');
+    expect(reasonOf(result)).toBe('wrong-details');
   }, 60000);
 
   it('reports no-form when the page has no sign-in form', async () => {
@@ -117,7 +119,7 @@ describe('PreFlightChecker.signIn', () => {
   it('gives the same reason every time for the same failure', async () => {
     const first = await trySignIn(manager('/signin', 'not-the-password'));
     const second = await trySignIn(manager('/signin', 'not-the-password'));
-    expect(second.reason).toBe(first.reason);
-    expect(first.reason).toBe('wrong-details');
+    expect(reasonOf(second)).toBe(reasonOf(first));
+    expect(reasonOf(first)).toBe('wrong-details');
   }, 60000);
 });

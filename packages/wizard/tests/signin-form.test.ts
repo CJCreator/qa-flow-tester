@@ -274,14 +274,12 @@ describe('T-108: approvePlan customHeaders and RunnerError needsHeaders', () => 
     );
 
     await approvePlan({
-      planId: 'plan-1',
       roles: [{ role: 'member', username: 'u', password: 'p' }],
       customHeaders: 'Authorization: Bearer xyz',
     });
     expect(bodies[0].customHeaders).toBe('Authorization: Bearer xyz');
 
     await approvePlan({
-      planId: 'plan-2',
       roles: [{ role: 'member', username: 'u', password: 'p' }],
     });
     expect(bodies[1].customHeaders).toBeUndefined();
@@ -307,7 +305,6 @@ describe('T-108: approvePlan customHeaders and RunnerError needsHeaders', () => 
     let caught: unknown;
     try {
       await approvePlan({
-        planId: 'plan-1',
         roles: [],
       });
     } catch (err) {

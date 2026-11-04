@@ -68,6 +68,18 @@ import { TestingScreen } from './screens/TestingScreen';
 import { VisualBaselinesScreen } from './screens/VisualBaselinesScreen';
 import { BenchmarkScreen } from './screens/BenchmarkScreen';
 import { splitStoredContext } from './lib/context';
+import { AuditStartScreen } from './screens/audit/start/AuditStartScreen';
+import { SavedAuditsScreen } from './screens/audit/saved/SavedAuditsScreen';
+import { AuditHistoryScreen } from './screens/audit/saved/AuditHistoryScreen';
+import { ShortlistScreen } from './screens/audit/saved/ShortlistScreen';
+import { PreviewShareScreen } from './screens/audit/saved/PreviewShareScreen';
+import { HelpersScreen } from './screens/audit/saved/HelpersScreen';
+import { HelperSignInScreen } from './screens/audit/saved/HelperSignInScreen';
+import { AnalysisScreen } from './screens/audit/results/AnalysisScreen';
+import { ReviewDocumentsScreen } from './screens/audit/documents/ReviewDocumentsScreen';
+import { ExportDocumentsScreen } from './screens/audit/documents/ExportDocumentsScreen';
+import { DocumentSettingsScreen } from './screens/audit/documents/DocumentSettingsScreen';
+import { AuditAiModelsPanel } from './screens/audit/ai/AuditAiModelsPanel';
 
 /** How often the runner's state is read while a check-up is in progress, besides its events. */
 const POLL_MS = 5000;
@@ -729,7 +741,24 @@ export default function App() {
                 ? 'Visual Baselines'
                 : route.name === 'benchmark'
                   ? 'Compare with another site'
-                  : null
+                  : route.name === 'audit-new'
+                    ? 'New Website Audit'
+                    : route.name === 'audits'
+                      ? 'Saved Website Audits'
+                      : route.name === 'audit-settings'
+                        ? 'Website Audit settings'
+                        : route.name === 'audit-shortlist'
+                          ? 'Shortlist'
+                          : route.name === 'helper-sign-in'
+                            ? 'Helper sign-in'
+                            : route.name === 'audit' ||
+                                route.name === 'audit-version' ||
+                                route.name === 'audit-review' ||
+                                route.name === 'audit-export' ||
+                                route.name === 'audit-share' ||
+                                route.name === 'audit-helpers'
+                              ? 'Website Audit'
+                              : null
   );
 
   const scanFailure =
@@ -868,6 +897,44 @@ export default function App() {
         break;
       case 'settings':
         body = <SettingsScreen onKeySaved={(model) => setAi({ configured: true, model })} />;
+        break;
+      case 'audit-new':
+        body = <AuditStartScreen />;
+        break;
+      case 'audits':
+        body = <SavedAuditsScreen />;
+        break;
+      case 'audit':
+        body = <AuditHistoryScreen auditId={route.auditId} />;
+        break;
+      case 'audit-version':
+        body = <AnalysisScreen auditId={route.auditId} version={route.version} />;
+        break;
+      case 'audit-review':
+        body = <ReviewDocumentsScreen auditId={route.auditId} version={route.version} />;
+        break;
+      case 'audit-export':
+        body = <ExportDocumentsScreen auditId={route.auditId} version={route.version} />;
+        break;
+      case 'audit-share':
+        body = <PreviewShareScreen auditId={route.auditId} />;
+        break;
+      case 'audit-helpers':
+        body = <HelpersScreen auditId={route.auditId} />;
+        break;
+      case 'audit-settings':
+        body = (
+          <>
+            <DocumentSettingsScreen />
+            <AuditAiModelsPanel />
+          </>
+        );
+        break;
+      case 'audit-shortlist':
+        body = <ShortlistScreen />;
+        break;
+      case 'helper-sign-in':
+        body = <HelperSignInScreen onOpenAudit={(auditId) => navigate(PATHS.audit(auditId))} />;
         break;
       default:
         body = <NotFoundScreen />;

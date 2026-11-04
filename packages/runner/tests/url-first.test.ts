@@ -3,19 +3,49 @@
  * without an AI key, turning a sentence into a test, and remembering a site between runs. Only the
  * AI is scripted.
  */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { promises as fs } from 'fs';
+import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
+import { promises as fs, mkdtempSync } from 'fs';
+import os from 'os';
 import path from 'path';
 import type http from 'http';
+import net, { type AddressInfo } from 'net';
 import type { AIMessage, AIProviderType, DiscoveredFlow, ReleaseReport, ReviewPlan } from '@qa/types';
 import { KeyResolver } from '@qa/core';
 import { RunnerServer } from '../src/server.js';
 import { server as fixtureServer } from '../../../fixtures/test-app/server.js';
 
-const FIXTURE_PORT = 3190;
-const RUNNER_PORT = 3191;
-const runnerUrl = `http://localhost:${RUNNER_PORT}`;
-const outputDir = path.join(process.cwd(), '.tmp-url-first');
+// Ports the OS picks, set in beforeAll. The fixed ports 3190/3191 could be held by a vitest worker left over from
+// an earlier run: `listen` then emits 'error' instead of calling back, and beforeAll hung until its 30 s timeout
+// with all six tests skipped (EV-0006, QA-706).
+let FIXTURE_PORT = 0;
+let runnerUrl = '';
+
+/** Listens on a port the OS picks; a listen error rejects at once instead of hanging the hook. */
+function listenOnFreePort(server: http.Server): Promise<number> {
+  return new Promise<number>((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, () => {
+      server.off('error', reject);
+      resolve((server.address() as AddressInfo).port);
+    });
+  });
+}
+
+/** A port the OS reports free. RunnerServer reads port 0 as its default 3001, so a runner gets one picked here. */
+function freePort(): Promise<number> {
+  return new Promise<number>((resolve, reject) => {
+    const probe = net.createServer();
+    probe.once('error', reject);
+    probe.listen(0, () => {
+      const { port } = probe.address() as AddressInfo;
+      probe.close(() => resolve(port));
+    });
+  });
+}
+// A new folder per run, outside the repository: inside OneDrive the sync client picks up every file a run
+// writes (screenshots, videos), competes with Chromium for the CPU and holds files open so the clean-up fails.
+const scratch = mkdtempSync(path.join(os.tmpdir(), 'qa-test-url-first-'));
+const outputDir = path.join(scratch, 'report');
 const dataDir = `${outputDir}-data`;
 
 /** Plans two journeys and answers the review's sentence questions the way a model would. */
@@ -79,7 +109,9 @@ async function post(route: string, body: unknown = {}): Promise<Response> {
 async function status(): Promise<{ phase: string; isRunning: boolean; lastRunError: string | null }> {
   return (await fetch(`${runnerUrl}/api/runner/status`)).json();
 }
-async function waitForPhase(wanted: string[], seconds = 200): Promise<string> {
+// A full scan and test of the fixture in Chromium took 200 to 250 s alone on a 4-core laptop (more beside other
+// browser tests), against well under 200 s on a CI runner: the wait allows for the slower machine.
+async function waitForPhase(wanted: string[], seconds = 600): Promise<string> {
   for (let i = 0; i < seconds * 2; i++) {
     const s = await status();
     if (wanted.includes(s.phase)) return s.phase;
@@ -99,10 +131,12 @@ describe('URL-first runs', () => {
   };
 
   beforeAll(async () => {
-    await new Promise<void>((resolve) => fixtureServer.listen(FIXTURE_PORT, () => resolve()));
+    FIXTURE_PORT = await listenOnFreePort(fixtureServer);
     fixtureServer.on('request', onRequest);
+    const runnerPort = await freePort();
+    runnerUrl = `http://localhost:${runnerPort}`;
     runner = new RunnerServer({
-      port: RUNNER_PORT,
+      port: runnerPort,
       outputDir,
       dataDir,
       // A "live" shop on this machine: decisions use the typed host, the connection goes to localhost.
@@ -113,12 +147,26 @@ describe('URL-first runs', () => {
   });
 
   afterAll(async () => {
-    await runner.stop();
+    // Undefined only when beforeAll failed; its own error is the one to read.
+    await runner?.stop();
     fixtureServer.off('request', onRequest);
-    await new Promise<void>((resolve) => fixtureServer.close(() => resolve()));
-    await fs.rm(outputDir, { recursive: true, force: true }).catch(() => {});
-    await fs.rm(dataDir, { recursive: true, force: true }).catch(() => {});
+    if (fixtureServer.listening) await new Promise<void>((resolve) => fixtureServer.close(() => resolve()));
+    await fs.rm(scratch, { recursive: true, force: true, maxRetries: 5 }).catch(() => {});
   });
+
+  // A test that fails or times out must not leave its run going: the next test's start would be refused (one
+  // run at a time) and it would fail for a reason that is not its own. Only after a failure, since a plan one
+  // test leaves waiting for review is replaced on purpose by a later one.
+  afterEach(async ({ task }) => {
+    if (task.result?.state !== 'fail') return;
+    try {
+      for (let attempt = 0; attempt < 3 && (await status()).isRunning; attempt++) {
+        await post('/api/runner/abort', { discard: true });
+      }
+    } catch {
+      // Runner not reachable: nothing to stop.
+    }
+  }, 30000);
 
   it('keeps a live host read-only even when the owner box is ticked: nothing is sent', async () => {
     sent.length = 0;
@@ -153,7 +201,7 @@ describe('URL-first runs', () => {
     expect(invoice?.skipReason).toContain('Needs a test copy');
     expect(result.notes?.some((n) => n.includes('need a test copy') || n.includes('needs a test copy'))).toBe(true);
     expect(sent).toEqual([]);
-  }, 240000);
+  }, 900000); // a scan and a test run of the fixture: 194 s alone on a 4-core laptop, see waitForPhase
 
   it('tests localhost fully when the owner box is ticked', async () => {
     sent.length = 0;
@@ -170,7 +218,7 @@ describe('URL-first runs', () => {
     expect(result.scanMode).toBeUndefined();
     expect(result.results.find((r) => r.flowId === 'FLOW-INVOICE')?.status).not.toBe('Skipped');
     expect(sent).toContain('POST /api/invoices');
-  }, 240000);
+  }, 660000); // a full scan and test of the fixture: over 200 s alone on a 4-core laptop, see waitForPhase
 
   it('without the owner box, even localhost is only looked at', async () => {
     await post('/api/runner/run', { targetUrl: `http://localhost:${FIXTURE_PORT}/`, owner: false, skipReview: false });
@@ -182,15 +230,16 @@ describe('URL-first runs', () => {
 
   it('refuses a wizard scan until an AI key is set up: the AI writes the plan', async () => {
     // Its own runner, with an empty key store, so a key saved on this machine can't count.
+    const keylessPort = await freePort();
     const keyless = new RunnerServer({
-      port: RUNNER_PORT + 10,
+      port: keylessPort,
       outputDir: `${outputDir}-keyless`,
       dataDir: `${dataDir}-keyless`,
       keyResolver: new KeyResolver(`${dataDir}-keyless`, { get: async () => null, set: async () => {} }),
     });
     await keyless.start();
     try {
-      const res = await fetch(`http://localhost:${RUNNER_PORT + 10}/api/runner/run`, {
+      const res = await fetch(`http://localhost:${keylessPort}/api/runner/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -204,7 +253,7 @@ describe('URL-first runs', () => {
       });
       expect(res.status).toBe(400);
       expect(await res.json()).toMatchObject({ code: 'ERR_NO_AI_KEY' });
-      expect((await (await fetch(`http://localhost:${RUNNER_PORT + 10}/api/runner/status`)).json()).phase).toBe('idle');
+      expect((await (await fetch(`http://localhost:${keylessPort}/api/runner/status`)).json()).phase).toBe('idle');
     } finally {
       await keyless.stop();
       await fs.rm(`${outputDir}-keyless`, { recursive: true, force: true }).catch(() => {});
@@ -312,5 +361,5 @@ describe('URL-first runs', () => {
     expect(second.flows.some((f) => f.source === 'user' && f.name === 'Save with an empty amount')).toBe(true);
     expect(second.pages.filter((p) => p.isNew).map((p) => p.urlPath)).toEqual(['/about']);
     expect(second.sinceLastRun).toMatchObject({ newPages: 1, rememberedAnswers: expect.any(Number) });
-  }, 300000);
+  }, 900000); // a scan, a test run and a second scan of the fixture: 249 s alone on a 4-core laptop
 });

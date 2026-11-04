@@ -1,5 +1,6 @@
 import type { AIProvider } from '../ai-provider.js';
 import { DEFAULT_MODELS } from '../default-models.js';
+import { requestError, requestSignal } from '../timeout.js';
 import type { AICompletion, AIMessage, AICompletionOptions, AIProviderType } from '@qa/types';
 
 interface AdcAuth {
@@ -9,7 +10,7 @@ interface AdcAuth {
 
 let cachedAdc: { auth: AdcAuth; expiresAt: number } | null = null;
 
-async function resolveAdcToken(): Promise<AdcAuth | null> {
+async function resolveAdcToken(signal?: AbortSignal): Promise<AdcAuth | null> {
   if (cachedAdc && Date.now() < cachedAdc.expiresAt) {
     return cachedAdc.auth;
   }
@@ -42,6 +43,7 @@ async function resolveAdcToken(): Promise<AdcAuth | null> {
           refresh_token: creds.refresh_token,
           grant_type: 'refresh_token',
         }),
+        signal,
       });
       if (res.ok) {
         const data = (await res.json()) as any;
@@ -50,7 +52,10 @@ async function resolveAdcToken(): Promise<AdcAuth | null> {
         return auth;
       }
     }
-  } catch {}
+  } catch (err) {
+    // A cancel or a passed deadline stops the call; other failures mean "no ADC".
+    if (signal?.aborted) throw err;
+  }
   return null;
 }
 
@@ -69,13 +74,24 @@ export class GeminiProvider implements AIProvider {
   }
 
   async complete(messages: AIMessage[], options: AICompletionOptions = {}): Promise<AICompletion> {
+    const { signal, release } = requestSignal(options);
+    try {
+      return await this.send(messages, options, signal);
+    } catch (err) {
+      throw requestError(err, signal, 'Gemini');
+    } finally {
+      release();
+    }
+  }
+
+  private async send(messages: AIMessage[], options: AICompletionOptions, signal: AbortSignal): Promise<AICompletion> {
     const model = options.model || this.defaultModel || DEFAULT_MODELS.gemini;
     const isAdc = this.apiKey === 'adc' || this.apiKey.startsWith('ya29.');
     let endpoint: string;
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
 
     if (isAdc) {
-      const adc = await resolveAdcToken();
+      const adc = await resolveAdcToken(signal);
       if (!adc && !this.apiKey.startsWith('ya29.')) {
         throw new Error(
           'No Google Application Default Credentials found. Please authenticate via gcloud auth application-default login.'
@@ -127,11 +143,12 @@ export class GeminiProvider implements AIProvider {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
+      signal,
     });
 
     // Fall back to Vertex AI ADC if standard API key has exhausted its quota (HTTP 402/403)
     if (!res.ok && (res.status === 402 || res.status === 403) && !isAdc) {
-      const adc = await resolveAdcToken();
+      const adc = await resolveAdcToken(signal);
       if (adc) {
         const fallbackEndpoint = `https://aiplatform.googleapis.com/v1/projects/${adc.projectId}/locations/global/publishers/google/models/${model}:generateContent`;
         const fallbackHeaders = {
@@ -143,6 +160,7 @@ export class GeminiProvider implements AIProvider {
           method: 'POST',
           headers: fallbackHeaders,
           body: JSON.stringify(body),
+          signal,
         });
         if (fallbackRes.ok) {
           res = fallbackRes;

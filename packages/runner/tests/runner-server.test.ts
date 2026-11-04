@@ -1,33 +1,89 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import { RunnerServer } from '../src/server.js';
 import { server as fixtureServer } from '../../../fixtures/test-app/server.js';
-import { promises as fs } from 'fs';
+import { promises as fs, mkdtempSync } from 'fs';
+import os from 'os';
 import path from 'path';
+import type http from 'http';
+import net, { type AddressInfo } from 'net';
+
+/**
+ * Listens on a port the OS picks and rejects on a listen error. Fixed ports (3186/3187) collided with a vitest
+ * worker left over from an earlier run still holding them: `listen` then emits 'error' instead of calling back,
+ * and beforeAll hung until its 30 s timeout with every test skipped (QA-706).
+ */
+function listenOnFreePort(server: http.Server): Promise<number> {
+  return new Promise<number>((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, () => {
+      server.off('error', reject);
+      resolve((server.address() as AddressInfo).port);
+    });
+  });
+}
+
+/** A port the OS reports free. RunnerServer reads port 0 as its default 3001, so the runner gets one picked here. */
+function freePort(): Promise<number> {
+  return new Promise<number>((resolve, reject) => {
+    const probe = net.createServer();
+    probe.once('error', reject);
+    probe.listen(0, () => {
+      const { port } = probe.address() as AddressInfo;
+      probe.close(() => resolve(port));
+    });
+  });
+}
+
+/**
+ * Polls the runner's phase until it leaves 'scanning' or the deadline passes. A fixed count of polls ignored how
+ * long each status request takes and gave the scan 30 to 45 s; on the developer's 4-core laptop the scan of the
+ * fixture (Chromium crawl, sign-in and planning) runs past that, alone and more so beside other browser tests
+ * (QA-706). The deadline stays well inside each test's own timeout.
+ */
+// Waits for the review itself (or a failure), not merely for 'scanning' to end: right after the 202 the status can
+// still show the previous run's 'done' for a moment, which ended the old loop before this scan began.
+async function waitWhileScanning(statusUrl: string, seconds: number): Promise<{ phase: string; elapsedMs: number }> {
+  const started = Date.now();
+  let phase = 'scanning';
+  while (phase !== 'awaiting-review' && phase !== 'failed' && Date.now() - started < seconds * 1000) {
+    await new Promise((r) => setTimeout(r, 500));
+    phase = (await (await fetch(statusUrl)).json()).phase;
+  }
+  return { phase, elapsedMs: Date.now() - started };
+}
 
 describe('RunnerServer', () => {
-  const FIXTURE_PORT = 3186;
-  const RUNNER_PORT = 3187;
-  const fixtureBaseUrl = `http://localhost:${FIXTURE_PORT}`;
-  const runnerBaseUrl = `http://localhost:${RUNNER_PORT}`;
-  const outputDir = path.join(process.cwd(), '.tmp-runner-report');
+  let fixtureBaseUrl = '';
+  let runnerBaseUrl = '';
+  // A new folder per run, outside the repository: inside OneDrive the sync client picks up every file a run
+  // writes (screenshots, videos), competes with Chromium for the CPU and holds files open so the clean-up fails.
+  const scratch = mkdtempSync(path.join(os.tmpdir(), 'qa-test-runner-server-'));
+  const outputDir = path.join(scratch, 'report');
 
   let runner: RunnerServer;
+  let runnerPort = 0;
+  // A restart reuses the same port, as a real restart of the runner would.
+  const startRunner = async (): Promise<void> => {
+    runner = new RunnerServer({ port: runnerPort, outputDir, dataDir: `${outputDir}-data` });
+    await runner.start();
+  };
 
   beforeAll(async () => {
-    await new Promise<void>((resolve) => {
-      fixtureServer.listen(FIXTURE_PORT, () => resolve());
-    });
-    runner = new RunnerServer({ port: RUNNER_PORT, outputDir, dataDir: `${outputDir}-data` });
-    await runner.start();
+    fixtureBaseUrl = `http://localhost:${await listenOnFreePort(fixtureServer)}`;
+    runnerPort = await freePort();
+    runnerBaseUrl = `http://localhost:${runnerPort}`;
+    await startRunner();
   });
 
   afterAll(async () => {
-    await runner.stop();
-    await new Promise<void>((resolve) => {
-      fixtureServer.close(() => resolve());
-    });
-    await fs.rm(outputDir, { recursive: true, force: true }).catch(() => {});
-    await fs.rm(`${outputDir}-data`, { recursive: true, force: true }).catch(() => {});
+    // Undefined only when beforeAll failed; its own error is the one to read.
+    await runner?.stop();
+    if (fixtureServer.listening) {
+      await new Promise<void>((resolve) => {
+        fixtureServer.close(() => resolve());
+      });
+    }
+    await fs.rm(scratch, { recursive: true, force: true, maxRetries: 5 }).catch(() => {});
   });
 
   // A test that fails or times out must not leave its run active: the next test's POST would get
@@ -213,14 +269,8 @@ describe('RunnerServer', () => {
     expect(runId).toBeTruthy();
 
     // Poll until discovery completes and runner pauses in awaiting-review
-    let phase = 'scanning';
-    for (let i = 0; i < 60 && phase === 'scanning'; i++) {
-      await new Promise((r) => setTimeout(r, 500));
-      const statusRes = await fetch(`${runnerBaseUrl}/api/runner/status`);
-      const status = await statusRes.json();
-      phase = status.phase;
-    }
-    expect(phase).toBe('awaiting-review');
+    const scan = await waitWhileScanning(`${runnerBaseUrl}/api/runner/status`, 150);
+    expect(scan.phase, `phase after ${scan.elapsedMs} ms`).toBe('awaiting-review');
 
     // GET /api/runner/plan returns the formulated plan
     const planRes = await fetch(`${runnerBaseUrl}/api/runner/plan`);
@@ -240,8 +290,7 @@ describe('RunnerServer', () => {
 
     // Plan survives runner reload
     await runner.stop();
-    runner = new RunnerServer({ port: RUNNER_PORT, outputDir, dataDir: `${outputDir}-data` });
-    await runner.start();
+    await startRunner();
 
     const reloadedPlanRes = await fetch(`${runnerBaseUrl}/api/runner/plan`);
     expect(reloadedPlanRes.status).toBe(200);
@@ -307,15 +356,17 @@ describe('RunnerServer', () => {
     expect(exportAfter.status).toBe(404);
     expect((await exportAfter.json()).error).toBe('No plan awaiting review');
 
-    // Poll until run completes
+    // Poll until run completes. A deadline, not a count of polls: on the 4-core laptop with url-first.test.ts
+    // running beside it, testing these 24 items ran past 150 s and then past 240 s, still making progress (QA-706).
+    const testingStarted = Date.now();
     let isRunning = true;
-    for (let i = 0; i < 300 && isRunning; i++) {
+    while (isRunning && Date.now() - testingStarted < 400_000) {
       await new Promise((r) => setTimeout(r, 500));
       const statusRes = await fetch(`${runnerBaseUrl}/api/runner/status`);
       const status = await statusRes.json();
       isRunning = status.isRunning;
     }
-    expect(isRunning).toBe(false);
+    expect(isRunning, `still running after ${Date.now() - testingStarted} ms`).toBe(false);
 
     const reportRes = await fetch(`${runnerBaseUrl}/api/report`);
     expect(reportRes.status).toBe(200);
@@ -324,12 +375,13 @@ describe('RunnerServer', () => {
 
     // Once tested, the plan is gone: a restart doesn't bring it back for review.
     await runner.stop();
-    runner = new RunnerServer({ port: RUNNER_PORT, outputDir, dataDir: `${outputDir}-data` });
-    await runner.start();
+    await startRunner();
     const afterRestart = await (await fetch(`${runnerBaseUrl}/api/runner/status`)).json();
     expect(afterRestart).toMatchObject({ phase: 'idle', hasPlan: false, isRunning: false });
     expect((await fetch(`${runnerBaseUrl}/api/runner/plan`)).status).toBe(404);
-  }, 240000);
+    // Raised from 240 s (QA-706): up to 150 s of scanning plus up to 400 s of testing, as measured on the 4-core
+    // laptop beside url-first.test.ts (testing alone ran past 240 s), with room for the two restarts.
+  }, 600000);
 
   it('keeps sign-in details out of the saved plan, and asks for them again after a restart', async () => {
     const roles = [
@@ -352,12 +404,8 @@ describe('RunnerServer', () => {
     });
     expect(runRes.status).toBe(202);
 
-    let phase = 'scanning';
-    for (let i = 0; i < 90 && phase === 'scanning'; i++) {
-      await new Promise((r) => setTimeout(r, 500));
-      phase = (await (await fetch(`${runnerBaseUrl}/api/runner/status`)).json()).phase;
-    }
-    expect(phase).toBe('awaiting-review');
+    const scan = await waitWhileScanning(`${runnerBaseUrl}/api/runner/status`, 150);
+    expect(scan.phase, `phase after ${scan.elapsedMs} ms`).toBe('awaiting-review');
 
     const saved = await fs.readFile(path.join(`${outputDir}-data`, '.qa-plan.json'), 'utf8');
     expect(saved).not.toContain('manager-password');
@@ -365,8 +413,7 @@ describe('RunnerServer', () => {
 
     // After a restart the plan is still there, but approving needs the sign-in details again.
     await runner.stop();
-    runner = new RunnerServer({ port: RUNNER_PORT, outputDir, dataDir: `${outputDir}-data` });
-    await runner.start();
+    await startRunner();
 
     const withoutRes = await fetch(`${runnerBaseUrl}/api/runner/plan/approve`, { method: 'POST' });
     expect(withoutRes.status).toBe(409);
@@ -380,18 +427,22 @@ describe('RunnerServer', () => {
     });
     expect(withRes.status).toBe(200);
 
+    // A deadline, not a count of polls (QA-706): the 700 polls of 500 ms also counted each status request's time.
+    const testingStarted = Date.now();
     let isRunning = true;
-    for (let i = 0; i < 700 && isRunning; i++) {
+    while (isRunning && Date.now() - testingStarted < 400_000) {
       await new Promise((r) => setTimeout(r, 500));
       isRunning = (await (await fetch(`${runnerBaseUrl}/api/runner/status`)).json()).isRunning;
     }
-    expect(isRunning).toBe(false);
+    expect(isRunning, `still running after ${Date.now() - testingStarted} ms`).toBe(false);
 
     // The details sent with the approval were used: the manager signed in.
     const report = await (await fetch(`${runnerBaseUrl}/api/report`)).json();
     expect(report.productId).toBe('secrets-test');
     expect((report.notes || []).filter((n: string) => n.includes('Signing in as'))).toEqual([]);
-  }, 420000);
+    // Raised from 420 s (QA-706): this test took 344 s alone on the 4-core laptop, close to the old limit; now up
+    // to 150 s of scanning plus up to 400 s of testing, with room for the restart.
+  }, 600000);
 
   it('runs straight through to completion when skipReview: true is provided', async () => {
     const runRes = await fetch(`${runnerBaseUrl}/api/runner/run`, {

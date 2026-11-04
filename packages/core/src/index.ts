@@ -71,3 +71,4 @@ export { buildIssuesModel, renderIssuesMarkdown } from './issues-document.js';
 export { renderIssuesHtml } from './issues-html.js';
 export * from './ai/visual-review.js';
 export * from './atomic-write.js';
+export * from './audit/index.js';

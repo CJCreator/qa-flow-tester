@@ -1,0 +1,123 @@
+/**
+ * Every fixed piece of document wording, in Odia. Same keys as en.ts (the type and the label tests enforce it).
+ * Product names and standards (AI, WCAG 2.2 AA, robots.txt) stay as they are. Machine translation, not yet
+ * reviewed by a native speaker, so documents in Odia carry the "beta translation" label (Q-45).
+ * Nukta letters (ଡ଼, ଢ଼) are avoided: their precomposed forms are not NFC.
+ */
+
+import type { DocumentLabels } from './en.js';
+
+export const or: DocumentLabels = {
+  documentTitles: {
+    structure: 'ଗଠନ',
+    content: 'ବିଷୟବସ୍ତୁ',
+    findings: 'ମିଳିଥିବା ତଥ୍ୟ',
+    roadmap: 'ଉନ୍ନତି ରୋଡମ୍ୟାପ',
+    proposal: 'ପ୍ରସ୍ତାବ',
+    'pitch-glimpse': 'ଆପଣଙ୍କ ୱେବସାଇଟରେ ମିଳିଥିବା ମୁଖ୍ୟ ସମସ୍ୟା',
+    'owner-audit': 'ୱେବସାଇଟ ଅଡିଟ',
+  },
+  headings: {
+    summary: 'ସାରାଂଶ',
+    pageHierarchy: 'ପୃଷ୍ଠାର କ୍ରମ',
+    navigationLinks: 'ନାଭିଗେସନ ଲିଙ୍କ',
+    leavingSite: 'ସାଇଟ ବାହାରକୁ ଯାଉଥିବା ଲିଙ୍କ',
+    technology: 'ନିର୍ମାଣରେ ବ୍ୟବହୃତ ପ୍ରଯୁକ୍ତି',
+    pagesNotChecked: 'ଯାଞ୍ଚ ନହୋଇଥିବା ପୃଷ୍ଠା',
+    whatThisDidNotCheck: 'ଏଥିରେ ଯାହା ଯାଞ୍ଚ ହୋଇନାହିଁ',
+    topIssues: 'ମୁଖ୍ୟ ସମସ୍ୟା',
+    scope: 'କାମର ପରିସର',
+    notIncluded: 'ଅନ୍ତର୍ଭୁକ୍ତ ନୁହେଁ',
+    price: 'ମୂଲ୍ୟ',
+    paymentTerms: 'ଦେୟର ସର୍ତ୍ତାବଳୀ',
+    timeline: 'ସମୟସୀମା',
+    aboutUs: 'ଆମ ବିଷୟରେ',
+    optOut: 'ଯୋଗାଯୋଗ ନଚାହିଁବାର ବିକଳ୍ପ',
+  },
+  columns: {
+    page: 'ପୃଷ୍ଠା',
+    section: 'ବିଭାଗ',
+    title: 'ଶୀର୍ଷକ',
+    issue: 'ସମସ୍ୟା',
+    found: 'କଣ ମିଳିଲା',
+    suggestedFix: 'ପରାମର୍ଶିତ ସମାଧାନ',
+    impact: 'ପ୍ରଭାବ',
+    effort: 'ପରିଶ୍ରମ',
+    priority: 'ପ୍ରାଥମିକତା',
+    phase: 'ପର୍ଯ୍ୟାୟ',
+    area: 'କ୍ଷେତ୍ର',
+    grade: 'ଗ୍ରେଡ',
+    reason: 'କାରଣ',
+    work: 'କାମ',
+    linksIn: 'ଏହି ପୃଷ୍ଠାକୁ ଆସୁଥିବା ଲିଙ୍କ',
+    linkText: 'ଲିଙ୍କର ଲେଖା',
+    goesTo: 'କେଉଁଠାକୁ ଯାଏ',
+  },
+  scale: {
+    high: 'ଅଧିକ',
+    medium: 'ମଧ୍ୟମ',
+    low: 'କମ',
+  },
+  status: {
+    notChecked: 'ଯାଞ୍ଚ ହୋଇନାହିଁ',
+    needsHumanReview: 'ବ୍ୟକ୍ତିଙ୍କ ସମୀକ୍ଷା ଆବଶ୍ୟକ',
+    notIdentified: 'ଚିହ୍ନଟ ହୋଇନାହିଁ',
+    noneFound: 'କିଛି ମିଳିଲା ନାହିଁ',
+    imageNotIncluded: 'ଛବି ଅନ୍ତର୍ଭୁକ୍ତ ନୁହେଁ',
+    aiNote: 'AI ମନ୍ତବ୍ୟ: କେବଳ ପରାମର୍ଶ, ଏହା କୌଣସି ଗ୍ରେଡ ବଦଳାଏ ନାହିଁ',
+    ruleBased: 'ନିର୍ଦ୍ଦିଷ୍ଟ ନିୟମରେ ସ୍ଥିର',
+    automaticChecksOnly: 'WCAG 2.2 AA, କେବଳ ସ୍ୱୟଂଚାଳିତ ଯାଞ୍ଚ',
+    betaTranslation: 'ବିଟା ଅନୁବାଦ',
+  },
+  areas: {
+    'search-ranking': 'ସର୍ଚ୍ଚ ର୍‍ୟାଙ୍କିଂ',
+    marketing: 'ମାର୍କେଟିଂ',
+    usability: 'ବ୍ୟବହାରର ସୁବିଧା',
+    content: 'ବିଷୟବସ୍ତୁ',
+    accessibility: 'ଆକ୍ସେସିବିଲିଟି',
+    speed: 'ବେଗ',
+  },
+  groups: {
+    technical: 'ବୈଷୟିକ',
+    marketing: 'ମାର୍କେଟିଂ',
+    content: 'ବିଷୟବସ୍ତୁ',
+  },
+  actions: {
+    redesign: 'ନୂଆ ଡିଜାଇନ',
+    repair: 'ମରାମତି',
+  },
+  skipReasons: {
+    'page-limit': 'ପୃଷ୍ଠା ସୀମା ପୂରଣ ହେଲା',
+    'depth-limit': 'ପ୍ରଥମ ପୃଷ୍ଠାରୁ ଅନେକ ଲିଙ୍କ ପର୍ଯ୍ୟାୟ',
+    excluded: 'ପଥ ସୀମା ଯୋଗୁଁ ବାଦ୍',
+    payment: 'ଦେୟ ପୃଷ୍ଠା',
+    'did-not-load': 'ଲୋଡ ହେଲା ନାହିଁ',
+    robots: 'robots.txt ଅନୁମତି ଦେଲା ନାହିଁ',
+    'sign-in': 'ସାଇନ-ଇନ ଆବଶ୍ୟକ',
+    'http-error': 'ସର୍ଭର ତ୍ରୁଟି ଦେଖାଇଲା',
+    timeout: 'ଲୋଡ ହେବାକୁ ଅନେକ ସମୟ ଲାଗିଲା',
+    'off-site-redirect': 'ଅନ୍ୟ ସାଇଟକୁ ପଠାଗଲା',
+    'time-limit': 'ସମୟ ସୀମା ପୂରଣ ହେଲା',
+    'trap-limit': 'ସମାନ ଠିକଣା ବହୁତ ଅଧିକ',
+    'session-lost': 'ସାଇନ-ଇନ ହଜିଗଲା',
+    duplicate: 'ଅନ୍ୟ ଠିକଣାର ସେହି ପୃଷ୍ଠା',
+  },
+  aiNotDone: {
+    'no-ai-key': 'AI ମନ୍ତବ୍ୟ ପାଇଁ AI କି ଆବଶ୍ୟକ',
+    'ai-failed': 'AI ଉତ୍ତର ଦେଲା ନାହିଁ',
+    'budget-spent': 'AI ଅନୁରୋଧର ବଜେଟ ଶେଷ ହେଲା',
+  },
+  speedNotMeasured: {
+    failed: 'ମାପ ବିଫଳ ହେଲା',
+    timeout: 'ମାପିବାକୁ ଅନେକ ସମୟ ଲାଗିଲା',
+    quota: 'ଦୈନିକ ମାପ ସୀମା ପୂରଣ ହେଲା',
+    'no-network': 'ନେଟୱାର୍କ ସଂଯୋଗ ନାହିଁ',
+    'no-field-data': 'ପ୍ରକୃତ ଦର୍ଶକଙ୍କ ପର୍ଯ୍ୟାପ୍ତ ତଥ୍ୟ ନାହିଁ',
+  },
+  phases: {
+    numbered: 'ପର୍ଯ୍ୟାୟ {n}',
+    first: 'ଦ୍ରୁତ ସମାଧାନ',
+    second: 'ମୁଖ୍ୟ ସମାଧାନ',
+    third: 'ବ୍ୟାପକ ପରିବର୍ତ୍ତନ',
+  },
+};

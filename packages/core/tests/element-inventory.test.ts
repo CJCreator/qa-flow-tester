@@ -88,5 +88,5 @@ describe('Spider records the real elements of each page', () => {
 
     const invoiceForm = result.forms.find((f) => f.urlPath === '/invoices/new');
     expect(invoiceForm?.inputs.map((i) => i.label)).toEqual(['Customer', 'Amount']);
-  }, 30000);
+  }, 90000); // a full Chromium crawl of the fixture: 27 to over 30 s alone on a busy 4-core laptop, more beside other tests
 });

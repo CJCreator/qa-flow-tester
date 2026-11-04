@@ -1,0 +1,41 @@
+{
+  "captchaResult": "CAPTCHA_NOT_NEEDED",
+  "kind": "pagespeedonline#result",
+  "id": "https://shop.example.in/contact",
+  "loadingExperience": {
+    "id": "https://shop.example.in",
+    "metrics": {
+      "CUMULATIVE_LAYOUT_SHIFT_SCORE": { "percentile": 5, "distributions": [], "category": "FAST" },
+      "LARGEST_CONTENTFUL_PAINT_MS": { "percentile": 2800, "distributions": [], "category": "AVERAGE" },
+      "INTERACTION_TO_NEXT_PAINT": { "percentile": 180, "distributions": [], "category": "FAST" }
+    },
+    "overall_category": "AVERAGE",
+    "initial_url": "https://shop.example.in/contact",
+    "origin_fallback": true
+  },
+  "originLoadingExperience": {
+    "id": "https://shop.example.in",
+    "metrics": {
+      "CUMULATIVE_LAYOUT_SHIFT_SCORE": { "percentile": 5, "distributions": [], "category": "FAST" },
+      "LARGEST_CONTENTFUL_PAINT_MS": { "percentile": 2800, "distributions": [], "category": "AVERAGE" },
+      "INTERACTION_TO_NEXT_PAINT": { "percentile": 180, "distributions": [], "category": "FAST" }
+    },
+    "overall_category": "AVERAGE",
+    "initial_url": "https://shop.example.in/contact"
+  },
+  "lighthouseResult": {
+    "requestedUrl": "https://shop.example.in/contact",
+    "finalUrl": "https://shop.example.in/contact",
+    "fetchTime": "2026-11-02T09:16:40.000Z",
+    "audits": {
+      "first-contentful-paint": { "id": "first-contentful-paint", "numericValue": 1800 },
+      "largest-contentful-paint": { "id": "largest-contentful-paint", "numericValue": 2500 },
+      "cumulative-layout-shift": { "id": "cumulative-layout-shift", "numericValue": 0 },
+      "server-response-time": { "id": "server-response-time", "numericValue": 120 },
+      "total-blocking-time": { "id": "total-blocking-time", "numericValue": 0 },
+      "speed-index": { "id": "speed-index", "numericValue": 2100 }
+    },
+    "categories": { "performance": { "id": "performance", "score": 0.91 } }
+  },
+  "analysisUTCTimestamp": "2026-11-02T09:16:40.000Z"
+}
