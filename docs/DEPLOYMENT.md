@@ -6,7 +6,7 @@ Ways the tool reaches people (ADR 0012, and ADR 0032 for hosting). Everything ru
 | Surface                                                           | What                                                                                                                              | Where it is defined                                                                |
 | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | **Cloud Run `qa-check-up-site`**: landing page and wizard         | Static files behind nginx (`nginxinc/nginx-unprivileged`), public, 256 MiB, scales to zero                                        | `site/Dockerfile`, `site/nginx.conf`, `scripts/site-output.mjs`, `pnpm site-build` |
-| **Cloud Run `qa-check-up`**: the full app as a shared online copy | Runner image, 2 GiB, 1 CPU, scales to zero, `RUNNER_BETA=1`, behind the access key (Secret Manager `qa-access-token`)             | `packages/runner/Dockerfile`, `.github/workflows/deploy.yml`                       |
+| **Cloud Run `qa-check-up`**: the full app as a shared online copy | Runner image, 2 GiB, 1 CPU, 1 warm instance, `RUNNER_BETA=1`, behind the access key (Secret Manager `qa-access-token`)            | `packages/runner/Dockerfile`, `.github/workflows/deploy.yml`                       |
 | **The user's own GitHub Actions**: the main way to run a check-up | The wizard generates a workflow from `templates/qa-check.yml`; the job builds the tool and runs `packages/runner/dist/checkup.js` | `templates/qa-check.yml`, `.github/workflows/qa-check.yml`                         |
 
 Both Cloud Run services get their address from the project number, so it is fixed before the first deploy:
@@ -147,7 +147,8 @@ Revert the merge commit on `main` and push; the deploy redeploys both services. 
 
 ## Known risks
 
-- Cloud Run scales to zero, so the first request after idle waits for a cold start (the wizard shows a wake note while it wakes).
+- The runner keeps one warm instance (`--min-instances 1`, [ADR 0038](adr/0038-warm-runner-instance.md)), so it answers at once but is billed while idle (roughly 15 to 20 US dollars a month). The site still scales to zero; its first request after idle waits for a short cold start.
+- Artifact Registry `qa` keeps only the 3 newest versions of each image (cleanup policy, ADR 0038). A rollback to an older revision fails once its image is deleted.
 - Beta limits (per visitor and per day) are in memory: a restart or redeploy resets all counters. Set `RUNNER_BETA_RUNS_PER_VISITOR` (default 5) and `RUNNER_BETA_RUNS_PER_DAY` (default 40). Clearing the cookie gives a visitor a fresh count (and loses their AI key); the daily cap is the backstop.
 - The runner's data folder is `/tmp` on Cloud Run and is wiped on every redeploy, restart or scale-down. Do not store anything there that must survive. Website Audits and Shared Links survive only because they live in the `AUDIT_STORE_BUCKET` bucket; without it they are lost on each redeploy.
 - The runner runs at most one instance (`--max-instances 1`), because limits and sessions are held in memory.
