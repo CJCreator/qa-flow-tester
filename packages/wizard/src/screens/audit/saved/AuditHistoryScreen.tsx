@@ -3,16 +3,22 @@ import type { AuditGetReply, AuditSummary, AuditVersion, ShortlistEntry } from '
 import { ErrorMessage, FocusHeading, Notice, Spinner } from '../../../components/text';
 import { count, formatWhen } from '../../../lib/format';
 import { Link } from '../../../lib/router';
+import { useDocumentTitle } from '../../../lib/title';
+import { loadCallerIsHelper } from './caller-access';
 import {
   AUDIT_PATHS,
   STATUS_LABEL,
   deleteAudit,
+  followRunningVersion,
+  latestFinishedVersion,
   loadVersion,
   rerunAndReload,
+  runningVersion,
   versionCounts,
   versionsOldestFirst,
   type Fetch,
 } from './saved-api';
+import type { AuditEventSourceFactory } from '../start/audit-start-api';
 import { ShortlistPanel } from './ShortlistPanel';
 
 /** What a delete removes, said before it happens. */
@@ -40,6 +46,8 @@ export interface AuditHistoryViewProps {
   onConfirmDelete: () => void;
   /** The Shortlist panel; a slot so the view renders without requests. */
   shortlist?: ReactNode;
+  /** The caller is a Helper: the owner's actions (Re-run, Delete, Helpers, Shared Links) are not shown (ADR 0037). */
+  isHelper?: boolean | null;
 }
 
 function VersionItem({
@@ -52,7 +60,7 @@ function VersionItem({
   onOpen: (n: number) => void;
 }) {
   return (
-    <li className="rounded-lg border border-edge bg-surface p-4" data-version={version.version}>
+    <li className="card-1 bg-surface p-4" data-version={version.version}>
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
         <div className="min-w-0">
           <h3 className="font-bold text-ink">{`Version ${version.version}`}</h3>
@@ -79,7 +87,7 @@ function VersionItem({
 
 function OpenedPanel({ auditId, opened }: { auditId: string; opened: OpenedVersion }) {
   return (
-    <section aria-labelledby="opened-version-title" className="rounded-lg border border-rule p-4">
+    <section aria-labelledby="opened-version-title" className="card-1 bg-surface p-4">
       <h2 id="opened-version-title" className="text-xl font-bold">{`Version ${opened.version}`}</h2>
       {opened.status === 'loading' && <Spinner label={`Opening version ${opened.version}…`} />}
       {opened.status === 'failed' && <ErrorMessage>{opened.message}</ErrorMessage>}
@@ -125,42 +133,68 @@ export function AuditHistoryView({
   onCancelDelete,
   onConfirmDelete,
   shortlist,
+  isHelper = false,
 }: AuditHistoryViewProps) {
-  const versions = versionsOldestFirst(summary);
+  // Newest first; owner actions show only once the check has said the caller is not a Helper.
+  const versions = versionsOldestFirst(summary).reverse();
+  const owner = isHelper === false;
+  const latestDone = latestFinishedVersion(summary);
+  const running = runningVersion(summary);
   return (
     <div className="space-y-8">
       <div>
         <p className="break-all text-ink-soft">{summary.url}</p>
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            className="btn-primary min-h-[44px] px-4 text-sm"
-            disabled={rerunning}
-            onClick={onRerun}
-          >
-            {rerunning ? 'Starting…' : 'Re-run'}
-          </button>
-          <Link to={AUDIT_PATHS.previewShare(summary.auditId)} className="btn-quiet min-h-[44px] px-4 text-sm">
-            Preview and Shared Links
-          </Link>
-          <Link to={AUDIT_PATHS.helpers(summary.auditId)} className="btn-quiet min-h-[44px] px-4 text-sm">
-            Helpers
-          </Link>
-          <button
-            type="button"
-            className="btn-quiet min-h-[44px] border-fail px-4 text-sm text-fail hover:border-fail hover:bg-fail-tint"
-            aria-label={`Delete the Website Audit of ${summary.host}`}
-            onClick={onAskDelete}
-          >
-            Delete
-          </button>
-        </div>
-        <p className="mt-2 max-w-prose text-sm text-ink-soft">
-          Re-run makes a new version with the same address and limits.
-        </p>
+        {latestDone && (
+          <p className="mt-3">
+            <Link
+              to={AUDIT_PATHS.version(summary.auditId, latestDone.version)}
+              className="btn-primary min-h-[44px] px-4 text-sm"
+            >
+              Open the results
+            </Link>
+            <span className="ml-3 text-sm text-ink-soft">{`Version ${latestDone.version}, the latest finished`}</span>
+          </p>
+        )}
+        {owner && (
+          <>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                className="btn-quiet min-h-[44px] px-4 text-sm"
+                disabled={rerunning}
+                onClick={onRerun}
+              >
+                {rerunning ? 'Starting…' : 'Re-run'}
+              </button>
+              <Link to={AUDIT_PATHS.previewShare(summary.auditId)} className="btn-quiet min-h-[44px] px-4 text-sm">
+                Preview and Shared Links
+              </Link>
+              <Link to={AUDIT_PATHS.helpers(summary.auditId)} className="btn-quiet min-h-[44px] px-4 text-sm">
+                Helpers
+              </Link>
+              <button
+                type="button"
+                className="btn-quiet min-h-[44px] border-fail px-4 text-sm text-fail hover:border-fail hover:bg-fail-tint"
+                aria-label={`Delete the Website Audit of ${summary.host}`}
+                onClick={onAskDelete}
+              >
+                Delete
+              </button>
+            </div>
+            <p className="mt-2 max-w-prose text-sm text-ink-soft">
+              Re-run makes a new version with the same address and limits.
+            </p>
+          </>
+        )}
       </div>
 
-      {confirmingDelete && (
+      {running && (
+        <Notice tone="stamp" title={`Version ${running.version} is running`}>
+          This page updates by itself when it ends.
+        </Notice>
+      )}
+
+      {confirmingDelete && owner && (
         <section
           role="alertdialog"
           aria-labelledby="delete-audit-title"
@@ -202,7 +236,7 @@ export function AuditHistoryView({
 
       <section aria-labelledby="versions-title">
         <h2 id="versions-title" className="mb-3 text-xl font-bold">
-          {`Versions (${count(versions.length, 'version', 'versions')}, oldest first)`}
+          {`Versions (${count(versions.length, 'version', 'versions')}, newest first)`}
         </h2>
         {versions.length === 0 ? (
           <p className="text-sm text-ink-soft">This Website Audit has no versions.</p>
@@ -231,13 +265,15 @@ export interface AuditHistoryScreenProps {
   auditId: string;
   /** For tests; the browser's fetch otherwise. */
   fetchImpl?: Fetch;
+  /** For tests: the progress stream. */
+  openSource?: AuditEventSourceFactory;
 }
 
 type Loaded =
   { status: 'loading' } | { status: 'failed'; message: string } | { status: 'loaded'; summary: AuditSummary };
 
 /** One saved Website Audit: every version, re-run, delete and its Shortlist entry (REQ-028, REQ-023). */
-export function AuditHistoryScreen({ auditId, fetchImpl }: AuditHistoryScreenProps) {
+export function AuditHistoryScreen({ auditId, fetchImpl, openSource }: AuditHistoryScreenProps) {
   const [loaded, setLoaded] = useState<Loaded>({ status: 'loading' });
   const [opened, setOpened] = useState<OpenedVersion | null>(null);
   const [rerunning, setRerunning] = useState(false);
@@ -245,18 +281,39 @@ export function AuditHistoryScreen({ auditId, fetchImpl }: AuditHistoryScreenPro
   const [deleting, setDeleting] = useState(false);
   const [deleted, setDeleted] = useState(false);
   const [message, setMessage] = useState<AuditHistoryViewProps['message']>(null);
+  const [isHelper, setIsHelper] = useState<boolean | null>(null);
 
-  const refresh = useCallback(() => {
-    setLoaded({ status: 'loading' });
-    void loadVersion(auditId, undefined, fetchImpl).then((outcome) =>
-      setLoaded(
-        outcome.ok
-          ? { status: 'loaded', summary: outcome.value.summary }
-          : { status: 'failed', message: outcome.message }
-      )
-    );
-  }, [auditId, fetchImpl]);
+  useEffect(() => {
+    let live = true;
+    void loadCallerIsHelper(fetchImpl).then((helper) => live && setIsHelper(helper));
+    return () => {
+      live = false;
+    };
+  }, [fetchImpl]);
+
+  const reload = useCallback(
+    (quiet: boolean) => {
+      if (!quiet) setLoaded({ status: 'loading' });
+      void loadVersion(auditId, undefined, fetchImpl).then((outcome) =>
+        setLoaded(
+          outcome.ok
+            ? { status: 'loaded', summary: outcome.value.summary }
+            : { status: 'failed', message: outcome.message }
+        )
+      );
+    },
+    [auditId, fetchImpl]
+  );
+  const refresh = useCallback(() => reload(false), [reload]);
   useEffect(refresh, [refresh]);
+
+  // While a version runs, follow its stream and re-read the history when it ends. The stream closes on unmount.
+  const watching = loaded.status === 'loaded' ? runningVersion(loaded.summary)?.version : undefined;
+  useEffect(() => {
+    if (loaded.status !== 'loaded' || watching === undefined) return;
+    return followRunningVersion(loaded.summary, { onEnd: () => reload(true) }, openSource);
+    // Re-open only when the running version changes, not on every re-read.
+  }, [watching, auditId, openSource, reload]);
 
   const open = (version: number) => {
     setOpened({ status: 'loading', version });
@@ -301,6 +358,7 @@ export function AuditHistoryScreen({ auditId, fetchImpl }: AuditHistoryScreenPro
     );
 
   const summary = loaded.status === 'loaded' ? loaded.summary : null;
+  useDocumentTitle(summary ? `Website Audit of ${summary.host}` : 'Website Audit');
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
@@ -341,6 +399,7 @@ export function AuditHistoryScreen({ auditId, fetchImpl }: AuditHistoryScreenPro
               onAskDelete={() => setConfirmingDelete(true)}
               onCancelDelete={() => setConfirmingDelete(false)}
               onConfirmDelete={() => void remove()}
+              isHelper={isHelper}
               shortlist={
                 <ShortlistPanel
                   auditId={auditId}

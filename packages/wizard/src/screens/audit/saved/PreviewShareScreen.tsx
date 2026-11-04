@@ -4,6 +4,7 @@ import { useConfirm } from '../../../components/ConfirmDialog';
 import { ErrorMessage, FocusHeading, Notice, Spinner } from '../../../components/text';
 import { formatDay, formatWhen } from '../../../lib/format';
 import { Link, PATHS } from '../../../lib/router';
+import { useDocumentTitle } from '../../../lib/title';
 import { AUDIT_PATHS, loadVersion, versionsOldestFirst } from './saved-api';
 import {
   KIND_LABEL,
@@ -113,7 +114,7 @@ function CreatedLink({
 }) {
   const address = sharedLinkAddress(origin, link);
   return (
-    <div className="mt-4 rounded border border-rule p-3">
+    <div className="card-1 bg-surface mt-4 p-3">
       <label htmlFor="shared-link-address" className="label text-ink">
         {`Shared Link to the ${KIND_LABEL[link.kind]} (${languageName(link.language)})`}
       </label>
@@ -260,7 +261,7 @@ export function PreviewShareView(props: PreviewShareViewProps) {
         </select>
       </div>
 
-      <section aria-labelledby="preview-title" className="rounded border border-rule p-4">
+      <section aria-labelledby="preview-title" className="card-1 bg-surface p-4">
         <h2 id="preview-title" className="text-xl font-bold">
           Improved homepage preview
         </h2>
@@ -313,7 +314,7 @@ export function PreviewShareView(props: PreviewShareViewProps) {
         )}
       </section>
 
-      <section aria-labelledby="new-link-title" className="rounded border border-rule p-4">
+      <section aria-labelledby="new-link-title" className="card-1 bg-surface p-4">
         <h2 id="new-link-title" className="text-xl font-bold">
           Make a Shared Link
         </h2>
@@ -347,7 +348,7 @@ export function PreviewShareView(props: PreviewShareViewProps) {
         )}
       </section>
 
-      <section aria-labelledby="links-title" className="rounded border border-rule p-4">
+      <section aria-labelledby="links-title" className="card-1 bg-surface p-4">
         <h2 id="links-title" className="text-xl font-bold">
           Shared Links
         </h2>
@@ -406,6 +407,7 @@ export function PreviewShareScreen({
   const [links, setLinks] = useState<LinksState>({ status: 'loading' });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<ShareMessage>(null);
+  useDocumentTitle('Preview and Shared Links');
 
   useEffect(() => {
     let live = true;
@@ -504,7 +506,7 @@ export function PreviewShareScreen({
   );
 
   return (
-    <div className="mx-auto max-w-[64rem] px-4 py-10 sm:px-6 sm:py-14">
+    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
       <FocusHeading className="mb-2 break-words text-question font-bold">Preview and Shared Links</FocusHeading>
       <p className="mb-6">
         <Link to={AUDIT_PATHS.history(auditId)} className="btn-link text-sm">

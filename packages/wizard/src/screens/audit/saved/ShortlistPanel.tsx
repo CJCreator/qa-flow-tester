@@ -37,7 +37,7 @@ export function ShortlistPanelView({ saved, draft, saving, message, onDraft, onS
   const changed = Object.keys(shortlistUpdate(saved, draft)).length > 0;
   const marks: Array<ShortlistMark | typeof NO_MARK> = [...SHORTLIST_MARKS, NO_MARK];
   return (
-    <section aria-labelledby="shortlist-panel-title" className="rounded-lg border border-edge bg-surface p-4">
+    <section aria-labelledby="shortlist-panel-title" className="card-1 bg-surface p-4">
       <h2 id="shortlist-panel-title" className="text-xl font-bold">
         Shortlist
       </h2>

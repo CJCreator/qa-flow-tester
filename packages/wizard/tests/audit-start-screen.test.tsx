@@ -109,7 +109,7 @@ describe('Website Audit start screen: messages next to their fields (REQ-001 AC-
     expect(html).toContain('id="audit-maxDepth-error" role="alert"');
     expect(html).toContain('Max depth must be a whole number from 0 to 100.');
     expect(html).toMatch(
-      /<p id="audit-start-message" role="alert"[^>]*>This address cannot be audited: it points to a private/
+      /<div id="audit-start-message"><p role="alert"[^>]*>This address cannot be audited: it points to a private/
     );
     expect(html).toContain('aria-describedby="audit-start-message"');
   });
@@ -178,6 +178,17 @@ describe('Website Audit start screen: progress from the stream', () => {
     const ended = renderToStaticMarkup(createElement(AuditFollowUpLink, { auditId: 'abcd1234', done: false }));
     expect(ended).toContain('href="/audits/abcd1234"');
     expect(ended).toContain('history');
+  });
+
+  it('points the finished follow-up link at the version, not the history', () => {
+    const done = renderToStaticMarkup(
+      createElement(AuditFollowUpLink, { auditId: 'abcd1234', done: true, version: 3 })
+    );
+    expect(done).toContain('href="/audits/abcd1234/versions/3"');
+    const ended = renderToStaticMarkup(
+      createElement(AuditFollowUpLink, { auditId: 'abcd1234', done: false, version: 3 })
+    );
+    expect(ended).toContain('href="/audits/abcd1234"');
   });
 
   it('has a label for every stage and a status sentence for every state', () => {

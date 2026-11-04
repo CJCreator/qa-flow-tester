@@ -11,6 +11,7 @@ import {
   endHelperSession,
   grantHelper,
   listHelpers,
+  loadCallerIsHelper,
   loadHelperSession,
   loadHelperStatus,
   normalEmail,
@@ -348,7 +349,7 @@ describe('Helper sign-in screen', () => {
         createElement(HelperSignInView, { state, onSignIn: () => undefined, onSignOut: () => undefined })
       );
     const off = render({ status: 'off' });
-    expect(textOf(off).trim()).toBe(HELPERS_OFF_MESSAGE);
+    expect(textOf(off).trim()).toBe(`${HELPERS_OFF_MESSAGE} Back to the home page`);
     expect(off).not.toMatch(/<button\b/);
     expect(render({ status: 'loading' })).toContain('role="status"');
     expect(render({ status: 'signed-in', session: { email: 'a@b.co', grants: [] }, message: null })).toContain(
@@ -503,6 +504,60 @@ describe('firebase bundle boundary', () => {
 // ---------------------------------------------------------------------------------------------------
 // Wording
 // ---------------------------------------------------------------------------------------------------
+
+describe('Helper role, host, address and ways back', () => {
+  it('reads helper: true from GET /api/runner/status, and false for anything else', async () => {
+    const yes = fakeFetch({ status: 200, body: { helper: true, phase: 'idle' } });
+    expect(await loadCallerIsHelper(yes.fetchImpl)).toBe(true);
+    expect(yes.calls[0]).toMatchObject({ url: '/api/runner/status', method: 'GET' });
+    expect(await loadCallerIsHelper(fakeFetch({ status: 200, body: { phase: 'idle' } }).fetchImpl)).toBe(false);
+    expect(await loadCallerIsHelper(fakeFetch({ status: 500, body: {} }).fetchImpl)).toBe(false);
+    expect(
+      await loadCallerIsHelper(async () => {
+        throw new Error('down');
+      })
+    ).toBe(false);
+  });
+
+  it('shows the site host of each Website Audit given to the Helper, the id only when the host is unknown', () => {
+    const state: HelperSignInState = { status: 'signed-in', session, message: null };
+    const props = { state, onSignIn: () => undefined, onSignOut: () => undefined, onOpenAudit: () => undefined };
+    const withHost = renderToStaticMarkup(
+      createElement(HelperSignInView, { ...props, hosts: { audit001: 'shop.example.org' } })
+    );
+    expect(withHost).toContain('Website Audit of shop.example.org');
+    expect(withHost).not.toContain('audit001');
+    expect(withHost).not.toContain('btn-secondary');
+    expect(renderToStaticMarkup(createElement(HelperSignInView, props))).toContain('Website Audit audit001');
+  });
+
+  it('gives the off state a link home', () => {
+    const html = renderToStaticMarkup(
+      createElement(HelperSignInView, {
+        state: { status: 'off' },
+        onSignIn: () => undefined,
+        onSignOut: () => undefined,
+      })
+    );
+    expect(html).toContain(HELPERS_OFF_MESSAGE);
+    expect(html).toContain('href="/"');
+  });
+
+  it('shows the full Helper sign-in address with a copy button', () => {
+    const html = renderToStaticMarkup(
+      createElement(HelpersView, viewProps({ signInAddress: 'https://qa.example.org/helper', onCopy: () => undefined }))
+    );
+    expect(html).toContain('value="https://qa.example.org/helper"');
+    expect(textOf(html)).toContain('Copy address');
+    expect(renderToStaticMarkup(createElement(HelpersView, viewProps()))).not.toContain('helper-sign-in-address');
+  });
+
+  it('links back to the Website Audit from the Helpers screen', () => {
+    const html = renderToStaticMarkup(createElement(HelpersScreen, { auditId: AUDIT_ID }));
+    expect(html).toContain(`href="/audits/${AUDIT_ID}"`);
+    expect(textOf(html)).toContain('Back to this Website Audit');
+  });
+});
 
 describe('Helper wording', () => {
   it('calls the person a Helper, and says what a Helper can and cannot do', () => {

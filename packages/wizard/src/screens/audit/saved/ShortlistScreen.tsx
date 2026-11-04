@@ -3,6 +3,7 @@ import { SHORTLIST_OUTCOMES, type ShortlistListItem } from '@qa/types/src/browse
 import { ErrorMessage, FocusHeading, Spinner } from '../../../components/text';
 import { formatWhen } from '../../../lib/format';
 import { Link } from '../../../lib/router';
+import { useDocumentTitle } from '../../../lib/title';
 import {
   AUDIT_PATHS,
   MARK_LABEL,
@@ -28,7 +29,7 @@ export interface ShortlistViewProps {
 
 function ShortlistRow({ item }: { item: ShortlistListItem }) {
   return (
-    <li className="rounded-lg border border-edge bg-surface p-4" data-audit={item.auditId}>
+    <li className="card-1 bg-surface p-4" data-audit={item.auditId}>
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
         <div className="min-w-0">
           <h2 className="break-all text-lg font-bold text-ink">{item.host}</h2>
@@ -109,7 +110,7 @@ export function ShortlistView({ filters, load, onFilters, onRetry }: ShortlistVi
         </>
       )}
       {load.status === 'loaded' && items.length === 0 && (
-        <p className="rounded-lg border border-rule bg-surface p-6 text-ink-soft">
+        <p className="card-1 bg-surface p-6 text-ink-soft">
           {filtered
             ? 'No Website Audit on the Shortlist matches these filters.'
             : 'The Shortlist is empty. Open a saved Website Audit and mark it pitch or skip to add it.'}
@@ -148,6 +149,7 @@ export function ShortlistScreen({ fetchImpl }: ShortlistScreenProps = {}) {
     };
   }, [filters, fetchImpl]);
   useEffect(refresh, [refresh]);
+  useDocumentTitle('Shortlist');
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
