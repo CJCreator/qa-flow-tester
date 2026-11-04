@@ -1,0 +1,26 @@
+# AI-EOS evidence EV-0156
+check: CHK-BE-104-UNIT (checker fetch wiring and outbound source-grep guard)
+command: pnpm exec vitest run packages/core/tests/checker-fetch.test.ts packages/core/tests/outbound-source-grep.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T12:01:17.353Z
+finished: 2026-11-03T12:01:28.720Z (11367 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/outbound-source-grep.test.ts (2 tests) 256ms
+ ✓ |unit| packages/core/tests/checker-fetch.test.ts (8 tests) 59ms
+
+ Test Files  2 passed (2)
+      Tests  10 passed (10)
+   Start at  17:31:20
+   Duration  7.47s (transform 1.45s, setup 0ms, collect 4.94s, tests 315ms, environment 1ms, prepare 2.09s)
+
+
+
+## stderr
+

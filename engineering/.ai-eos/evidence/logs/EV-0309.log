@@ -1,0 +1,26 @@
+# AI-EOS evidence EV-0309
+check: CHK-QA-711-LANGUAGES (Tamil and Hindi end to end in core)
+command: pnpm exec vitest run packages/core/tests/audit-languages-e2e.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T04:31:03.270Z
+finished: 2026-11-04T04:32:04.029Z (60759 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-languages-e2e.test.ts (23 tests) 44832ms
+   ✓ 'Tamil' page text, code point for code point (REQ-044 AC-1) > keeps the same text in the Word export, read back with mammoth 351ms
+
+ Test Files  1 passed (1)
+      Tests  23 passed (23)
+   Start at  10:01:08
+   Duration  55.52s (transform 3.42s, setup 0ms, collect 9.18s, tests 44.83s, environment 1ms, prepare 514ms)
+
+
+
+## stderr
+

@@ -1,0 +1,25 @@
+# AI-EOS evidence EV-0012
+check: CHK-DOC-104-ADR (ADR 0036 required content)
+command: pnpm exec vitest run packages/runner/tests/adr-0036.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T07:06:28.215Z
+finished: 2026-11-03T07:06:34.159Z (5944 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/runner/tests/adr-0036.test.ts (10 tests) 28ms
+
+ Test Files  1 passed (1)
+      Tests  10 passed (10)
+   Start at  12:36:32
+   Duration  1.42s (transform 60ms, setup 0ms, collect 100ms, tests 28ms, environment 1ms, prepare 457ms)
+
+
+
+## stderr
+

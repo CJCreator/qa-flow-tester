@@ -1,0 +1,25 @@
+# AI-EOS evidence EV-0257
+check: CHK-BE-404-UNIT (PageSpeed Insights client)
+command: pnpm exec vitest run packages/core/tests/audit-pagespeed.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T03:38:38.079Z
+finished: 2026-11-04T03:38:54.826Z (16747 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-pagespeed.test.ts (21 tests) 407ms
+
+ Test Files  1 passed (1)
+      Tests  21 passed (21)
+   Start at  09:08:45
+   Duration  7.52s (transform 502ms, setup 0ms, collect 3.67s, tests 407ms, environment 1ms, prepare 931ms)
+
+
+
+## stderr
+

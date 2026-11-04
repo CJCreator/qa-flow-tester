@@ -1,0 +1,26 @@
+# AI-EOS evidence EV-0099
+check: CHK-FE-602-UNIT (Helpers and Helper sign-in screen tests)
+command: pnpm exec vitest run packages/wizard/tests/audit-helpers.test.tsx packages/wizard/tests/no-banned-words.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T10:42:32.932Z
+finished: 2026-11-03T10:42:45.030Z (12098 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/wizard/tests/no-banned-words.test.ts (1 test) 11ms
+ ✓ |unit| packages/wizard/tests/audit-helpers.test.tsx (26 tests) 638ms
+
+ Test Files  2 passed (2)
+      Tests  27 passed (27)
+   Start at  16:12:40
+   Duration  3.74s (transform 1.26s, setup 0ms, collect 2.52s, tests 649ms, environment 1ms, prepare 1.45s)
+
+
+
+## stderr
+

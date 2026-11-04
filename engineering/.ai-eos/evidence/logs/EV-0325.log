@@ -1,0 +1,34 @@
+# AI-EOS evidence EV-0325
+check: CHK-BE-102-UNIT (route table access, beta policy and param matching (unit))
+command: pnpm exec vitest run packages/runner/tests/route-table.test.ts packages/runner/tests/route-access.test.ts packages/runner/tests/plan-routes.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T05:12:42.730Z
+finished: 2026-11-04T05:13:48.915Z (66185 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+Scope: all 7 workspace projects
+✓ Lockfile passes supply-chain policies (verified 16h ago)
+Lockfile is up to date, resolution step is skipped
+Already up to date
+
+Done in 14.1s using pnpm v11.10.0
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/runner/tests/route-table.test.ts (15 tests) 150ms
+ ✓ |unit| packages/runner/tests/route-access.test.ts (21 tests) 168ms
+ ✓ |unit| packages/runner/tests/plan-routes.test.ts (8 tests) 1492ms
+   ✓ Plan handlers as functions over CheckupSession (T-207) > waitingPlans lists parked plans and unparks a plan 347ms
+
+ Test Files  3 passed (3)
+      Tests  44 passed (44)
+   Start at  10:43:10
+   Duration  36.66s (transform 18.22s, setup 0ms, collect 90.49s, tests 1.81s, environment 16ms, prepare 6.43s)
+
+
+
+## stderr
+

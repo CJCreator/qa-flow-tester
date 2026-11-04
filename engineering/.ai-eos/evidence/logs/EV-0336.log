@@ -1,0 +1,345 @@
+# AI-EOS evidence EV-0336
+check: CHK-LINT (eslint)
+command: pnpm lint
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T05:59:07.538Z
+finished: 2026-11-04T06:01:55.381Z (167843 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\agent-dashboard\dashboard.test.ts
+   15:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  163:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  163:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  323:69  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  324:71  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  349:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  353:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  354:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  369:35  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  399:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  399:45  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  401:35  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  437:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\checkers\src\performance.ts
+  487:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  488:22  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\checkers\src\permission-matrix.ts
+  1:42  warning  'PermissionRule' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\checkers\src\spec-conformance.ts
+  538:13  warning  'allNetwork' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  540:13  warning  'matched' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\checkers\src\ux-quality.ts
+  136:53  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\checkers\tests\performance.test.ts
+  2:30  warning  'SPEED_THRESHOLDS' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\checkers\tests\security.test.ts
+  122:24  warning  'fn' is defined but never used. Allowed unused args must match /^_/u          @typescript-eslint/no-unused-vars
+  122:36  warning  'args' is defined but never used. Allowed unused args must match /^_/u        @typescript-eslint/no-unused-vars
+  147:24  warning  'fn' is defined but never used. Allowed unused args must match /^_/u          @typescript-eslint/no-unused-vars
+  147:33  warning  'patternStr' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\core\src\ai\providers\anthropic.ts
+  44:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  64:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  91:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  92:46  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\core\src\ai\providers\gemini.ts
+   49:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  114:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  134:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  180:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\core\src\ai\providers\openai.ts
+   42:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   54:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  100:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\core\src\atomic-write.ts
+  35:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  52:15  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\core\src\audit\documents\render-docx.ts
+  48:14  warning  Unexpected control character(s) in regular expression: \x00, \x08, \x0b, \x0c, \x0e, \x1f  no-control-regex
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\core\src\audit\documents\zip.ts
+  36:39  warning  Unexpected control character(s) in regular expression: \x00, \x1f  no-control-regex
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\core\src\browser.ts
+  286:20  warning  Unnecessary escape character: \-  no-useless-escape
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\core\src\discovery\deterministic-spider.ts
+  804:24  warning  'rErr' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\core\src\discovery\discovery-agent.ts
+  372:11  warning  'spider' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\core\src\discovery\docx-to-markdown.ts
+  232:28  warning  Unexpected control character(s) in regular expression: \x00, \x01  no-control-regex
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\core\src\discovery\frontier.ts
+  86:20  warning  Unnecessary escape character: \/  no-useless-escape
+  86:45  warning  Unnecessary escape character: \/  no-useless-escape
+  87:20  warning  Unnecessary escape character: \/  no-useless-escape
+  87:36  warning  Unnecessary escape character: \/  no-useless-escape
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\core\src\evidence.ts
+  95:52  warning  Unnecessary escape character: \-  no-useless-escape
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\core\src\orchestrator.ts
+   519:16  warning  'err' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+   606:20  warning  'bp' is assigned a value but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+   909:97  warning  Unexpected control character(s) in regular expression: \x1b                     no-control-regex
+  1368:97  warning  Unexpected control character(s) in regular expression: \x1b                     no-control-regex
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\core\src\plan\ai-planner.ts
+   228:48   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   544:8    warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   563:16   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   566:21   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   676:24   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   689:102  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   701:15   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   944:32   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   947:40   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   948:70   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1034:29   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\core\src\plan\sources.ts
+   52:11  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  164:53  warning  Unnecessary escape character: \/          no-useless-escape
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\core\src\plan\spec-roles.ts
+  62:17  warning  Unnecessary escape character: \/  no-useless-escape
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\core\src\post-deploy-smoke.ts
+  278:19  warning  Unnecessary escape character: \-  no-useless-escape
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\core\src\reporter.ts
+  3:39  warning  'RunCoverage' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\core\src\scoring.ts
+  15:7  warning  'MAX_OPINION_DEDUCTION' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\core\src\site-history.ts
+  25:38  warning  Unnecessary escape character: \/          no-useless-escape
+  84:70  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\core\tests\atomic-write.test.ts
+  44:11  warning  'originalRename' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\core\tests\discovery-agent-headers.test.ts
+  6:31  warning  'DiscoveryOptions' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\core\tests\navigate.test.ts
+  5:20  warning  'settlePage' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\core\tests\refusal-parity.test.ts
+  41:66  warning  Unnecessary escape character: \.  no-useless-escape
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\core\tests\signin-determinism.test.ts
+  5:15  warning  'RoleCredential' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\runner\src\cli.ts
+  21:33  warning  Unexpected control character(s) in regular expression: \x1b, \x1b, \x07  no-control-regex
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\runner\src\routes\audit-content.ts
+  38:82  warning  Unexpected control character(s) in regular expression: \x00, \x1f  no-control-regex
+  48:7   warning  Unexpected control character(s) in regular expression: \x00, \x1f  no-control-regex
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\runner\src\routes\audit-rerun.ts
+  30:3  warning  'AUDIT_FORBIDDEN_START' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\runner\src\routes\plan.ts
+    16:8   warning  'SignInFailureReason' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+    21:3   warning  'signInReasonText' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  1293:21  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  1304:35  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  1305:24  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  1306:36  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  1307:53  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  1308:49  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  1309:47  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  1310:31  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  1311:47  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  1313:18  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\runner\src\server.ts
+     6:3   warning  'journeyPages' is defined but never used. Allowed unused vars must match /^_/u                        @typescript-eslint/no-unused-vars
+    22:8   warning  'RunAuthorization' is defined but never used. Allowed unused vars must match /^_/u                    @typescript-eslint/no-unused-vars
+    24:3   warning  'readOnlyReason' is defined but never used. Allowed unused vars must match /^_/u                      @typescript-eslint/no-unused-vars
+    25:3   warning  'hasCompleteSignIn' is defined but never used. Allowed unused vars must match /^_/u                   @typescript-eslint/no-unused-vars
+    27:3   warning  'nothingNew' is defined but never used. Allowed unused vars must match /^_/u                          @typescript-eslint/no-unused-vars
+    29:3   warning  'signInAccount' is defined but never used. Allowed unused vars must match /^_/u                       @typescript-eslint/no-unused-vars
+    32:3   warning  'formatDay' is defined but never used. Allowed unused vars must match /^_/u                           @typescript-eslint/no-unused-vars
+    44:3   warning  'MAX_BODY_CHARS' is defined but never used. Allowed unused vars must match /^_/u                      @typescript-eslint/no-unused-vars
+    50:3   warning  'SiteMapSummary' is defined but never used. Allowed unused vars must match /^_/u                      @typescript-eslint/no-unused-vars
+    51:3   warning  'ProductProfile' is defined but never used. Allowed unused vars must match /^_/u                      @typescript-eslint/no-unused-vars
+    59:3   warning  'PlanIntent' is defined but never used. Allowed unused vars must match /^_/u                          @typescript-eslint/no-unused-vars
+    60:3   warning  'AmbiguityQuestion' is defined but never used. Allowed unused vars must match /^_/u                   @typescript-eslint/no-unused-vars
+    63:3   warning  'PageInventoryItem' is defined but never used. Allowed unused vars must match /^_/u                   @typescript-eslint/no-unused-vars
+    70:3   warning  'FindingSeverity' is defined but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars
+    74:3   warning  'FlowTestOrchestrator' is defined but never used. Allowed unused vars must match /^_/u                @typescript-eslint/no-unused-vars
+    75:3   warning  'DiscoveryAgent' is defined but never used. Allowed unused vars must match /^_/u                      @typescript-eslint/no-unused-vars
+    77:3   warning  'runSafeWebsiteScan' is defined but never used. Allowed unused vars must match /^_/u                  @typescript-eslint/no-unused-vars
+    91:3   warning  'SignInFailedError' is defined but never used. Allowed unused vars must match /^_/u                   @typescript-eslint/no-unused-vars
+    92:3   warning  'PlanValidator' is defined but never used. Allowed unused vars must match /^_/u                       @typescript-eslint/no-unused-vars
+    93:3   warning  'Redactor' is defined but never used. Allowed unused vars must match /^_/u                            @typescript-eslint/no-unused-vars
+    94:3   warning  'redactUrl' is defined but never used. Allowed unused vars must match /^_/u                           @typescript-eslint/no-unused-vars
+    95:8   warning  'PreFlightResult' is defined but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars
+    96:3   warning  'replaceCredentialsWithPlaceholders' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+    97:3   warning  'applySafeAnswers' is defined but never used. Allowed unused vars must match /^_/u                    @typescript-eslint/no-unused-vars
+   102:3   warning  'resolvePublic' is defined but never used. Allowed unused vars must match /^_/u                       @typescript-eslint/no-unused-vars
+   103:3   warning  'isIpLiteral' is defined but never used. Allowed unused vars must match /^_/u                         @typescript-eslint/no-unused-vars
+   108:3   warning  'markJourneysNeedingTestCopy' is defined but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+   109:3   warning  'needsTestCopy' is defined but never used. Allowed unused vars must match /^_/u                       @typescript-eslint/no-unused-vars
+   110:3   warning  'NEEDS_TEST_COPY' is defined but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars
+   115:3   warning  'applySiteMemory' is defined but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars
+   116:3   warning  'rememberRun' is defined but never used. Allowed unused vars must match /^_/u                         @typescript-eslint/no-unused-vars
+   117:3   warning  'rememberObservations' is defined but never used. Allowed unused vars must match /^_/u                @typescript-eslint/no-unused-vars
+   118:3   warning  'interpretTest' is defined but never used. Allowed unused vars must match /^_/u                       @typescript-eslint/no-unused-vars
+   119:3   warning  'interpretRule' is defined but never used. Allowed unused vars must match /^_/u                       @typescript-eslint/no-unused-vars
+   124:3   warning  'emptyPlan' is defined but never used. Allowed unused vars must match /^_/u                           @typescript-eslint/no-unused-vars
+   125:3   warning  'defaultTestCase' is defined but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars
+   126:3   warning  'buildPlan' is defined but never used. Allowed unused vars must match /^_/u                           @typescript-eslint/no-unused-vars
+   127:3   warning  'testsFor' is defined but never used. Allowed unused vars must match /^_/u                            @typescript-eslint/no-unused-vars
+   128:3   warning  'screenSizesOf' is defined but never used. Allowed unused vars must match /^_/u                       @typescript-eslint/no-unused-vars
+   129:3   warning  'gradedChecksFor' is defined but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars
+   130:3   warning  'siteMapOf' is defined but never used. Allowed unused vars must match /^_/u                           @typescript-eslint/no-unused-vars
+   131:3   warning  'handCheckNotes' is defined but never used. Allowed unused vars must match /^_/u                      @typescript-eslint/no-unused-vars
+   132:3   warning  'planToMarkdown' is defined but never used. Allowed unused vars must match /^_/u                      @typescript-eslint/no-unused-vars
+   133:3   warning  'planToPlaywrightProject' is defined but never used. Allowed unused vars must match /^_/u             @typescript-eslint/no-unused-vars
+   134:3   warning  'zipFiles' is defined but never used. Allowed unused vars must match /^_/u                            @typescript-eslint/no-unused-vars
+   139:3   warning  'fetchDocsPages' is defined but never used. Allowed unused vars must match /^_/u                      @typescript-eslint/no-unused-vars
+   140:3   warning  'makeGuardedDocsGet' is defined but never used. Allowed unused vars must match /^_/u                  @typescript-eslint/no-unused-vars
+   141:3   warning  'localDocsGet' is defined but never used. Allowed unused vars must match /^_/u                        @typescript-eslint/no-unused-vars
+   147:3   warning  'replanPage' is defined but never used. Allowed unused vars must match /^_/u                          @typescript-eslint/no-unused-vars
+   148:3   warning  'replanMenus' is defined but never used. Allowed unused vars must match /^_/u                         @typescript-eslint/no-unused-vars
+   149:3   warning  'replanJourneys' is defined but never used. Allowed unused vars must match /^_/u                      @typescript-eslint/no-unused-vars
+   150:3   warning  'replanAll' is defined but never used. Allowed unused vars must match /^_/u                           @typescript-eslint/no-unused-vars
+   151:3   warning  'addPagesToPlan' is defined but never used. Allowed unused vars must match /^_/u                      @typescript-eslint/no-unused-vars
+   152:3   warning  'onOtherHost' is defined but never used. Allowed unused vars must match /^_/u                         @typescript-eslint/no-unused-vars
+   153:3   warning  'pathOf' is defined but never used. Allowed unused vars must match /^_/u                              @typescript-eslint/no-unused-vars
+   154:3   warning  'isSameSite' is defined but never used. Allowed unused vars must match /^_/u                          @typescript-eslint/no-unused-vars
+   156:3   warning  'RobotsPolicy' is defined but never used. Allowed unused vars must match /^_/u                        @typescript-eslint/no-unused-vars
+   158:3   warning  'DeterministicSpider' is defined but never used. Allowed unused vars must match /^_/u                 @typescript-eslint/no-unused-vars
+   159:3   warning  'blockChanges' is defined but never used. Allowed unused vars must match /^_/u                        @typescript-eslint/no-unused-vars
+   163:8   warning  'ReplanOptions' is defined but never used. Allowed unused vars must match /^_/u                       @typescript-eslint/no-unused-vars
+   165:8   warning  'MemorySummary' is defined but never used. Allowed unused vars must match /^_/u                       @typescript-eslint/no-unused-vars
+   167:8   warning  'RunOptions' is defined but never used. Allowed unused vars must match /^_/u                          @typescript-eslint/no-unused-vars
+   170:3   warning  'writeJsonAtomic' is defined but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars
+   171:3   warning  'readJsonSafe' is defined but never used. Allowed unused vars must match /^_/u                        @typescript-eslint/no-unused-vars
+   205:3   warning  'checkIntentsOff' is defined but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars
+   207:3   warning  'checkTestCap' is defined but never used. Allowed unused vars must match /^_/u                        @typescript-eslint/no-unused-vars
+   208:3   warning  'checkCrawlConcurrency' is defined but never used. Allowed unused vars must match /^_/u               @typescript-eslint/no-unused-vars
+   209:3   warning  'checkCrawlDelayMs' is defined but never used. Allowed unused vars must match /^_/u                   @typescript-eslint/no-unused-vars
+   285:7   warning  'MAX_RUN_EVENTS' is assigned a value but never used. Allowed unused vars must match /^_/u             @typescript-eslint/no-unused-vars
+   324:7   warning  'INCLUDED_HOST_PAGES' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+   326:7   warning  'SIGNED_IN_PAGES' is assigned a value but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+   334:7   warning  'RUNS_KEPT_PER_SITE' is assigned a value but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+   432:10  warning  'normalizeStoredPlan' is defined but never used. Allowed unused vars must match /^_/u                 @typescript-eslint/no-unused-vars
+   457:10  warning  'planForClient' is defined but never used. Allowed unused vars must match /^_/u                       @typescript-eslint/no-unused-vars
+   472:10  warning  'planDelta' is defined but never used. Allowed unused vars must match /^_/u                           @typescript-eslint/no-unused-vars
+   499:10  warning  'asFlow' is defined but never used. Allowed unused vars must match /^_/u                              @typescript-eslint/no-unused-vars
+   756:20  warning  Unexpected control character(s) in regular expression: \x1b, \x1b, \x07                               no-control-regex
+   980:39  warning  Promise returned in function argument where a void return was expected                                @typescript-eslint/no-misused-promises
+  3184:19  warning  Unexpected any. Specify a different type                                                              @typescript-eslint/no-explicit-any
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\runner\src\session\checkup-run.ts
+   14:3   warning  'SignInFailureReason' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   15:3   warning  'DiscoveredFlow' is defined but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+   36:3   warning  'isTestHost' is defined but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+   57:10  warning  'signInReasonText' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  398:98  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  669:69  warning  'owner' is assigned a value but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\runner\tests\checkup-debug.test.ts
+  1:32  warning  'beforeEach' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\runner\tests\test-cap-endpoints.test.ts
+  46:7  warning  'FIXTURE_PORT' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\types\tests\route-telemetry.test.ts
+  2:29  warning  'RouteTelemetry' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\wizard\src\components\DeveloperDetails.tsx
+  15:17  warning  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\wizard\src\components\KeyField.tsx
+  42:30  warning  Promise returned in function argument where a void return was expected  @typescript-eslint/no-misused-promises
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\wizard\src\components\plan\PlanDocument.tsx
+   513:16  warning  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+  1187:18  warning  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+  1432:19  warning  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+  1467:21  warning  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+  1767:17  warning  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\wizard\src\hooks\useRunnerConnection.ts
+  25:31  warning  Promise returned in function argument where a void return was expected                                                                                              @typescript-eslint/no-misused-promises
+  28:5   warning  Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator  @typescript-eslint/no-floating-promises
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\wizard\src\lib\plan-translate.ts
+  2:3  warning  'AmbiguityQuestion' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\wizard\src\screens\BenchmarkScreen.tsx
+  162:18  warning  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\wizard\src\screens\ConnectionScreen.tsx
+  93:70  warning  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\wizard\src\screens\NewCheckupScreen.tsx
+    41:3   warning  'signInConsentGiven' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   147:30  warning  Promise returned in function argument where a void return was expected                @typescript-eslint/no-misused-promises
+   932:22  warning  Promise-returning function provided to attribute where a void return was expected     @typescript-eslint/no-misused-promises
+  1001:22  warning  Promise-returning function provided to attribute where a void return was expected     @typescript-eslint/no-misused-promises
+  1362:22  warning  Promise-returning function provided to attribute where a void return was expected     @typescript-eslint/no-misused-promises
+  1530:22  warning  Promise-returning function provided to attribute where a void return was expected     @typescript-eslint/no-misused-promises
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\wizard\src\screens\PlanReviewScreen.tsx
+    8:10  warning  'approveRolesOf' is defined but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+  232:5   warning  Promise-returning function provided to property where a void return was expected   @typescript-eslint/no-misused-promises
+  400:23  warning  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+  408:23  warning  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\wizard\src\screens\ReportScreen.tsx
+   489:19  warning  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+   547:19  warning  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+  1359:82  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  1419:35  warning  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+  1568:26  warning  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+  1612:31  warning  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+  1630:27  warning  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\wizard\src\screens\SettingsScreen.tsx
+  258:16  warning  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+  779:24  warning  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+  805:63  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  863:62  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  998:16  warning  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\scripts\deploy-cloud-run.mjs
+  3:10  warning  'readFileSync' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  3:24  warning  'existsSync' is defined but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+
+C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\scripts\tunnel.mjs
+  136:22  warning  Unexpected control character(s) in regular expression: \x1b, \x1b, \x07  no-control-regex
+  148:19  warning  Unexpected control character(s) in regular expression: \x1b              no-control-regex
+
+✖ 218 problems (0 errors, 218 warnings)
+
+
+
+## stderr
+$ eslint .
+

@@ -1,0 +1,32 @@
+# AI-EOS evidence EV-0231
+check: CHK-QA-195-E2E (Website Audit end to end through the runner (Chromium, audit-site fixture))
+command: pnpm exec vitest run packages/runner/tests/website-audit-e2e.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T18:28:04.851Z
+finished: 2026-11-03T18:28:54.182Z (49331 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+Scope: all 7 workspace projects
+✓ Lockfile passes supply-chain policies (verified 5h ago)
+Lockfile is up to date, resolution step is skipped
+Already up to date
+
+Done in 2.8s using pnpm v11.10.0
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/runner/tests/website-audit-e2e.test.ts (8 tests) 33734ms
+   ✓ Website Audit end to end (fixtures/audit-site) > starts with 202, refuses a second run with 409 while it runs, and finishes 33345ms
+
+ Test Files  1 passed (1)
+      Tests  8 passed (8)
+   Start at  23:58:11
+   Duration  42.66s (transform 4.51s, setup 0ms, collect 8.02s, tests 33.73s, environment 0ms, prepare 371ms)
+
+
+
+## stderr
+

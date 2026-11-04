@@ -1,0 +1,30 @@
+# AI-EOS evidence EV-0044
+check: CHK-BE-405-UNIT (service key removal and beta session isolation)
+command: pnpm exec vitest run packages/core/tests/key-resolver-service-key.test.ts packages/core/tests/key-resolver-encryption.test.ts packages/runner/tests/beta-service-keys.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T07:47:57.279Z
+finished: 2026-11-03T07:48:13.294Z (16015 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/key-resolver-service-key.test.ts (5 tests) 765ms
+   ✓ KeyResolver.removeServiceKey > removes the encrypted-file entry, keeps the other entries and never writes plain text 679ms
+ ✓ |unit| packages/core/tests/key-resolver-encryption.test.ts (16 tests) 2035ms
+   ✓ KeyResolver encrypted fallback file and service keys > rejects a tampered file instead of returning altered keys 579ms
+   ✓ KeyResolver encrypted fallback file and service keys > with QA_KEYS_ENCRYPTION_KEY set, encrypts with that secret and needs it to read 633ms
+ ✓ |unit| packages/runner/tests/beta-service-keys.test.ts (5 tests) 39ms
+
+ Test Files  3 passed (3)
+      Tests  26 passed (26)
+   Start at  13:18:02
+   Duration  10.54s (transform 4.31s, setup 0ms, collect 9.50s, tests 2.84s, environment 5ms, prepare 2.24s)
+
+
+
+## stderr
+

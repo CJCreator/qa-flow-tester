@@ -1,0 +1,34 @@
+# AI-EOS evidence EV-0307
+check: CHK-QA-500-FLOW (Audit Documents end-to-end flow (runner + Chromium))
+command: pnpm exec vitest run packages/runner/tests/audit-documents-flow.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T04:27:55.657Z
+finished: 2026-11-04T04:28:49.264Z (53607 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/runner/tests/audit-documents-flow.test.ts (24 tests) 27581ms
+   ✓ REQ-020: edits are kept and reach every format > pdf export (English): edited finding, Section and price; the removed page is not listed (REQ-020 AC-1..AC-3) 2223ms
+   ✓ REQ-018 and REQ-021: five Audit Documents, one Pitch Glimpse, the bundle > one Pitch Glimpse (html) and one Owner Audit per language are produced 301ms
+   ✓ REQ-022: PDF and Word hold the same documents as the Markdown > en: the PDF is printed from the same document as the HTML export 2077ms
+   ✓ REQ-022: PDF and Word hold the same documents as the Markdown > ta: the PDF is printed from the same document as the HTML export 2924ms
+   ✓ REQ-019: the Pitch Glimpse > en: one A4 page with the top 3 issues, their screenshots and the opt-out wording 1845ms
+   ✓ REQ-019: the Pitch Glimpse > ta: one A4 page with the top 3 issues, their screenshots and the opt-out wording 2915ms
+   ✓ REQ-025: the Owner Audit > en: in that language, with no pitch/skip mark, notes, outcome, effort or price 3690ms
+   ✓ REQ-025: the Owner Audit > ta: in that language, with no pitch/skip mark, notes, outcome, effort or price 4396ms
+   ✓ PDF concurrency (BE-510) does not get in the way of the flow > two PDFs at once both succeed 5687ms
+
+ Test Files  1 passed (1)
+      Tests  24 passed (24)
+   Start at  09:58:02
+   Duration  45.69s (transform 8.98s, setup 0ms, collect 15.95s, tests 27.58s, environment 1ms, prepare 861ms)
+
+
+
+## stderr
+

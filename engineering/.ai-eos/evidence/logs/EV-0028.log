@@ -1,0 +1,25 @@
+# AI-EOS evidence EV-0028
+check: CHK-BE-406-UNIT (six-area AI assessment)
+command: pnpm exec vitest run packages/core/tests/audit-assessment.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T07:22:54.486Z
+finished: 2026-11-03T07:23:09.255Z (14769 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-assessment.test.ts (13 tests) 285ms
+
+ Test Files  1 passed (1)
+      Tests  13 passed (13)
+   Start at  12:52:59
+   Duration  9.65s (transform 3.46s, setup 0ms, collect 7.55s, tests 285ms, environment 1ms, prepare 669ms)
+
+
+
+## stderr
+

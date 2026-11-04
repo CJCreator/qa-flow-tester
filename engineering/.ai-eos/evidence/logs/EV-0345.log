@@ -1,0 +1,36 @@
+# AI-EOS evidence EV-0345
+check: CHK-BE-605-UNIT (preview generator, sanitiser and route tests)
+command: pnpm exec vitest run packages/core/tests/audit-preview.test.ts packages/core/tests/audit-preview-sanitize.test.ts packages/runner/tests/audit-preview-routes.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T05:59:46.749Z
+finished: 2026-11-04T06:00:19.974Z (33225 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-preview-sanitize.test.ts (52 tests) 221ms
+ ✓ |unit| packages/core/tests/audit-preview.test.ts (15 tests) 205ms
+ ✓ |unit| packages/runner/tests/audit-preview-routes.test.ts (12 tests) 4608ms
+   ✓ preview rows > without an AI key: 409 ERR_NO_AI_KEY, no AI request, nothing stored 413ms
+   ✓ preview rows > with a key: stores preview.html and answers PreviewReply; the 'preview' stage model is used 552ms
+   ✓ preview rows > an empty body uses the latest version and its language 539ms
+   ✓ preview rows > an AI failure answers fixed wording and stores nothing 318ms
+   ✓ preview rows > a generator that throws is the same fixed failure 429ms
+   ✓ preview rows > refuses bad bodies, unknown audits and versions, and a Helper 310ms
+   ✓ serving the preview > 404 ERR_AUDIT_NOT_FOUND when no preview exists for that version 395ms
+   ✓ serving the preview > serves the stored page with the Shared Link page headers (ADR 0036) 386ms
+   ✓ serving the preview > a Helper needs a view grant on this audit 554ms
+
+ Test Files  3 passed (3)
+      Tests  79 passed (79)
+   Start at  11:29:53
+   Duration  25.34s (transform 13.56s, setup 0ms, collect 26.69s, tests 5.03s, environment 2ms, prepare 1.99s)
+
+
+
+## stderr
+

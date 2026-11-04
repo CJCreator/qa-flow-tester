@@ -1,0 +1,15 @@
+# AI-EOS evidence EV-0188
+check: CHK-QA-702-TYPECHECK (typecheck runner tests)
+command: pnpm exec tsc -p packages/runner/tests/tsconfig.typecheck.json --noEmit
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T13:04:08.522Z
+finished: 2026-11-03T13:04:24.880Z (16358 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+
+## stderr
+

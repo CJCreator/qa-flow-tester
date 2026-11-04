@@ -1,0 +1,26 @@
+# AI-EOS evidence EV-0290
+check: CHK-QA-400-UNIT (audit AI flow and free-tier inspection)
+command: pnpm exec vitest run packages/core/tests/audit-ai-flow.test.ts packages/core/tests/audit-external-apis.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T03:44:22.143Z
+finished: 2026-11-04T03:44:53.041Z (30898 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-ai-flow.test.ts (5 tests) 251ms
+ ✓ |unit| packages/core/tests/audit-external-apis.test.ts (7 tests) 120ms
+
+ Test Files  2 passed (2)
+      Tests  12 passed (12)
+   Start at  09:14:31
+   Duration  20.22s (transform 9.75s, setup 0ms, collect 32.51s, tests 372ms, environment 1ms, prepare 1.67s)
+
+
+
+## stderr
+

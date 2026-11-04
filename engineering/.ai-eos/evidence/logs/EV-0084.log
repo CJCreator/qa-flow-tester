@@ -1,0 +1,130 @@
+# AI-EOS evidence EV-0084
+check: CHK-BE-505-UNIT (Pitch Glimpse and Owner Audit tests)
+command: pnpm exec vitest run packages/core/tests/audit-doc-pitch.test.ts packages/core/tests/audit-doc-owner.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T10:14:48.684Z
+finished: 2026-11-03T10:15:08.435Z (19751 ms)
+exit_code: 1
+verdict: FAIL
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ❯ |unit| packages/core/tests/audit-doc-pitch.test.ts (23 tests | 1 failed) 283ms
+   × Pitch Glimpse: language (REQ-019 AC-2, AC-3) > a language without a table uses English throughout 28ms
+     → expected '<!DOCTYPE html>\n<html lang="hi" dir=…' to match /<html lang="en"/
+ ✓ |unit| packages/core/tests/audit-doc-owner.test.ts (14 tests) 441ms
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 36 passed (37)
+   Start at  15:45:00
+   Duration  5.67s (transform 2.47s, setup 0ms, collect 4.57s, tests 724ms, environment 1ms, prepare 1.85s)
+
+
+
+## stderr
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL |unit|  packages/core/tests/audit-doc-pitch.test.ts > Pitch Glimpse: language (REQ-019 AC-2, AC-3) > a language without a table uses English throughout
+AssertionError: expected '<!DOCTYPE html>\n<html lang="hi" dir=…' to match /<html lang="en"/
+
+- Expected: 
+/<html lang="en"/
+
++ Received: 
+"<!DOCTYPE html>
+<html lang=\"hi\" dir=\"ltr\">
+<head>
+<meta charset=\"utf-8\">
+<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; img-src data:; style-src 'unsafe-inline'\">
+<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">
+<title>आपकी वेबसाइट पर मिली मुख्य समस्याएँ</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: 'Noto Sans Tamil', 'Nirmala UI', 'Latha', 'FreeSerif', sans-serif; color: #0f172a; background: #ffffff; line-height: 1.6; margin: 0; }
+  main { max-width: 52rem; margin: 0 auto; padding: 2rem 1.5rem; }
+  h1 { font-size: 1.75rem; margin: 0 0 1.25rem; }
+  h2 { font-size: 1.35rem; margin: 1.75rem 0 0.75rem; }
+  h3 { font-size: 1.15rem; margin: 1.5rem 0 0.5rem; }
+  h4, h5 { font-size: 1rem; margin: 1.25rem 0 0.5rem; }
+  p { margin: 0 0 0.75rem; white-space: pre-line; overflow-wrap: anywhere; }
+  ul, ol { margin: 0 0 0.75rem; padding-inline-start: 1.5rem; }
+  li { margin: 0.2rem 0; overflow-wrap: anywhere; }
+  table { width: 100%; border-collapse: collapse; margin: 0 0 1rem; font-size: 0.9rem; }
+  th, td { border: 1px solid #cbd5e1; padding: 0.4rem 0.55rem; text-align: start; vertical-align: top; overflow-wrap: anywhere; }
+  th { background: #f1f5f9; }
+  figure { margin: 0 0 1rem; }
+  figure img { max-width: 100%; height: auto; border: 1px solid #e2e8f0; }
+  figcaption { font-size: 0.85rem; color: #475569; margin-top: 0.35rem; }
+  .note { border-inline-start: 4px solid #64748b; background: #f8fafc; padding: 0.6rem 0.9rem; margin: 0 0 1rem; }
+  .pagebreak { break-after: page; page-break-after: always; height: 0; }
+  @page { size: A4; margin: 18mm 16mm; }
+  @media print {
+    main { max-width: none; padding: 0; }
+    h1, h2, h3, h4, h5 { break-after: avoid; page-break-after: avoid; }
+    tr, figure, .note { break-inside: avoid; page-break-inside: avoid; }
+    thead { display: table-header-group; }
+  }
+</style>
+<style>
+  @page { size: A4; margin: 12mm 14mm; }
+  body { font-size: 10pt; line-height: 1.4; }
+  main { padding: 1rem 1.25rem; }
+  h1 { font-size: 16pt; margin: 0 0 2mm; }
+  h2 { font-size: 12.5pt; margin: 4mm 0 2mm; clear: both; }
+  h3 { font-size: 11pt; margin: 3mm 0 1mm; clear: both; }
+  p { margin: 0 0 1mm; }
+  figure { float: right; float: inline-end; width: 62mm; margin: 0 0 2mm 4mm; margin-inline: 4mm 0; }
+  figure img { display: block; max-width: 100%; max-height: 40mm; width: auto; object-fit: contain; }
+  .note { padding: 1mm 3mm; margin: 0 0 2mm; clear: both; }
+  @media print {
+    main { padding: 0; }
+    h1 { font-size: 15pt; }
+  }
+</style>
+</head>
+<body>
+<main>
+<h1>आपकी वेबसाइट पर मिली मुख्य समस्याएँ</h1>
+<p>Website: https://shop.example.in/</p>
+<h2>मुख्य समस्याएँ</h2>
+<h3>1. Two pages share one title</h3>
+<p>पेज: /about, /services</p>
+<p>क्या मिला: The pages /about and /services both have the title &quot;Shop Example&quot;.</p>
+<p>सुझाया गया सुधार: Give each page its own title.</p>
+<div class=\"note\" role=\"note\"><p>No screenshot for this issue.</p></div>
+<h3>2. An image has no alt text</h3>
+<p>पेज: /about</p>
+<p>क्या मिला: The image /img/shop.jpg has no alt attribute.</p>
+<p>सुझाया गया सुधार: Describe the image in its alt text.</p>
+<div class=\"note\" role=\"note\"><p>No screenshot for this issue.</p></div>
+<h3>3. No meta description</h3>
+<p>पेज: /services</p>
+<p>क्या मिला: The page has no meta description.</p>
+<p>सुझाया गया सुधार: Write a one-sentence description.</p>
+<div class=\"note\" role=\"note\"><p>No screenshot for this issue.</p></div>
+<p>3 more issues are listed in the full audit.</p>
+<h2>What was checked</h2>
+<p>Pages read: 5 of 6 found. Areas graded by fixed checks: मार्केटिंग.</p>
+<h2>इसमें किन बातों की जाँच नहीं हुई</h2>
+<p>Pages not read: 1 (भुगतान पेज). Areas not graded: सर्च रैंकिंग, उपयोग में आसानी, सामग्री, सुलभता, गति. This page shows only what automatic checks found on the pages read; other issues may exist.</p>
+<h2>संपर्क न चाहने का विकल्प</h2>
+<p>You received this page because we looked at the public pages of your website. If you do not want to hear from us again, tell us and we will not contact you about this website again.</p>
+</main>
+</body>
+</html>
+"
+
+ ❯ packages/core/tests/audit-doc-pitch.test.ts:194:18
+    192|   it('a language without a table uses English throughout', () => {
+    193|     const html = buildPitchGlimpse(viewOf(), { language: 'hi' as Docum…
+    194|     expect(html).toMatch(/<html lang="en"/);
+       |                  ^
+    195|     expect(html).toContain(OPT_OUT_TEXT_EN);
+    196|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+

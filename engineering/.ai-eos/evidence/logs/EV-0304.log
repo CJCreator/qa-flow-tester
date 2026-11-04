@@ -1,0 +1,103 @@
+# AI-EOS evidence EV-0304
+check: CHK-QA-707-AUTH-CRAWL (auth-crawl end-to-end file)
+command: pnpm exec vitest run packages/core/tests/auth-crawl-e2e.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T04:21:04.153Z
+finished: 2026-11-04T04:26:01.141Z (296988 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > regression: session expiry mid-run reports session-expired and skips with fixed wording
+[QA Orchestrator] Running Pre-flight health check on http://localhost:55300...
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > regression: session expiry mid-run reports session-expired and skips with fixed wording
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-EXPIRY-1 ("expiring-flow") on 1440px as manager...
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > regression: session expiry mid-run reports session-expired and skips with fixed wording
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-auth-crawl-e2e-kTEtaT\expiry-run...
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > regression: session expiry mid-run reports session-expired and skips with fixed wording
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: an ordinary page with a password field is recorded, not called a sign-in wall (LC-002)
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:55300/account...
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: an ordinary page with a password field is recorded, not called a sign-in wall (LC-002)
+[DiscoveryAgent] Exploring signed in as "manager" from /account...
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: an ordinary page with a password field is recorded, not called a sign-in wall (LC-002)
+[DiscoveryAgent] Spider found 16 pages, 5 forms, 0 sensitive actions.
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: an ordinary page with a password field is recorded, not called a sign-in wall (LC-002)
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-auth-crawl-e2e-kTEtaT\security-page\discovery-draft.json
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: the politeness note names the pages robots.txt asks crawlers to leave alone (LC-001)
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:55300/...
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: the politeness note names the pages robots.txt asks crawlers to leave alone (LC-001)
+[DiscoveryAgent] Spider found 9 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: the politeness note names the pages robots.txt asks crawlers to leave alone (LC-001)
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-auth-crawl-e2e-kTEtaT\robots-note\gated\discovery-draft.json
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: the politeness note names the pages robots.txt asks crawlers to leave alone (LC-001)
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:55300/...
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: the politeness note names the pages robots.txt asks crawlers to leave alone (LC-001)
+[DiscoveryAgent] Spider found 11 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: the politeness note names the pages robots.txt asks crawlers to leave alone (LC-001)
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-auth-crawl-e2e-kTEtaT\robots-note\open\discovery-draft.json
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: a Role whose session dies mid-crawl is restored and the crawl continues (LC-003, LC-004)
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:58019...
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: a Role whose session dies mid-crawl is restored and the crawl continues (LC-003, LC-004)
+[DiscoveryAgent] Exploring signed in as "manager" from /account...
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: a Role whose session dies mid-crawl is restored and the crawl continues (LC-003, LC-004)
+[DiscoveryAgent] Spider found 10 pages, 1 forms, 0 sensitive actions.
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: a Role whose session dies mid-crawl is restored and the crawl continues (LC-003, LC-004)
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-auth-crawl-e2e-kTEtaT\session-recovery\discovery-draft.json
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > regression: custom headers propagate to every request during test run
+[QA Orchestrator] Running Pre-flight health check on http://localhost:55300...
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > regression: custom headers propagate to every request during test run
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-HEADER-1 ("header-flow") on 1440px as anonymous...
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > regression: custom headers propagate to every request during test run
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-auth-crawl-e2e-kTEtaT\header-run...
+
+stdout | packages/core/tests/auth-crawl-e2e.test.ts > T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > regression: custom headers propagate to every request during test run
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+ ✓ |browser| packages/core/tests/auth-crawl-e2e.test.ts (10 tests) 291046ms
+   ✓ T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: discovers with session, hands off to orchestrator, single sign-in, headers on all phases, secrets redacted 62720ms
+   ✓ T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > regression: sign-in succeeds against late-rendered /lab/spa-login 2268ms
+   ✓ T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > regression: zero-link SPA does not stall or crash crawl 6053ms
+   ✓ T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > regression: dead links (500/403/broken) are bounded and recorded under skipped 22474ms
+   ✓ T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > regression: session expiry mid-run reports session-expired and skips with fixed wording 4083ms
+   ✓ T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: a path robots.txt disallows is left alone and reported (LC-001) 22322ms
+   ✓ T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: an ordinary page with a password field is recorded, not called a sign-in wall (LC-002) 55891ms
+   ✓ T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: the politeness note names the pages robots.txt asks crawlers to leave alone (LC-001) 48866ms
+   ✓ T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > end-to-end: a Role whose session dies mid-crawl is restored and the crawl continues (LC-003, LC-004) 61709ms
+   ✓ T-117 Auth and crawl end-to-end (auth-crawl-e2e.test.ts) > regression: custom headers propagate to every request during test run 4619ms
+
+ Test Files  1 passed (1)
+      Tests  10 passed (10)
+   Start at  09:51:06
+   Duration  294.40s (transform 1.20s, setup 0ms, collect 2.72s, tests 291.05s, environment 0ms, prepare 167ms)
+
+
+
+## stderr
+

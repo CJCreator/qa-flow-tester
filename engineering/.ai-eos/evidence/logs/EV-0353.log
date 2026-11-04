@@ -1,0 +1,1656 @@
+# AI-EOS evidence EV-0353
+check: CHK-BROWSER-3 (vitest browser project shard 3/4)
+command: pnpm exec vitest run --project browser --shard=3/4
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T06:14:19.255Z
+finished: 2026-11-04T06:36:07.252Z (1307997 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+stdout | packages/runner/tests/wizard-endpoints.test.ts > Runner endpoints for the wizard > Task 0.1: productContext > writes productContext to a file and hands its path to discovery
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3288/clean/...
+
+stdout | packages/runner/tests/wizard-endpoints.test.ts > Runner endpoints for the wizard > Task 0.1: productContext > writes productContext to a file and hands its path to discovery
+[QA Orchestrator] Pre-flight check PASSED.
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > refuses an address that is not http or https
+[QA Orchestrator] Running Pre-flight health check on http://localhost:63132...
+
+stdout | packages/runner/tests/wizard-endpoints.test.ts > Runner endpoints for the wizard > Task 0.1: productContext > writes productContext to a file and hands its path to discovery
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-runner-wizard-ckxDQZ\report\runs\run-1793772866069...
+
+stdout | packages/runner/tests/wizard-endpoints.test.ts > Runner endpoints for the wizard > Task 0.1: productContext > writes productContext to a file and hands its path to discovery
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > refuses an address that is not http or https
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-DEFAULT-001 ("landing-verification") on 375px as anonymous...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Running Pre-flight health check on http://localhost:63132...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-DEFAULT-001 ("landing-verification") on 375px as anonymous...
+
+stdout | packages/runner/tests/wizard-endpoints.test.ts > Runner endpoints for the wizard > Task 0.1: productContext > passes no context file when productContext is omitted
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3288/clean/...
+
+stdout | packages/runner/tests/wizard-endpoints.test.ts > Runner endpoints for the wizard > Task 0.1: productContext > passes no context file when productContext is omitted
+[QA Orchestrator] Pre-flight check PASSED.
+
+stdout | packages/runner/tests/wizard-endpoints.test.ts > Runner endpoints for the wizard > Task 0.1: productContext > passes no context file when productContext is omitted
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-runner-wizard-ckxDQZ\report\runs\run-1793772866632...
+
+stdout | packages/runner/tests/wizard-endpoints.test.ts > Runner endpoints for the wizard > Task 0.1: productContext > passes no context file when productContext is omitted
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Executing TC-DEFAULT-001 ("landing-verification") on 768px as anonymous...
+[QA Orchestrator] Executing TC-DEFAULT-001 ("landing-verification") on 768px as anonymous...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Executing TC-DEFAULT-001 ("landing-verification") on 1440px as anonymous...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Executing TC-DEFAULT-001 ("landing-verification") on 1440px as anonymous...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > scans, shows the plan, and keeps it waiting when you leave it
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3485/...
+
+ ✓ |browser| packages/runner/tests/wizard-endpoints.test.ts (17 tests) 18754ms
+   ✓ Runner endpoints for the wizard > Task 0.1: productContext > writes productContext to a file and hands its path to discovery 578ms
+   ✓ Runner endpoints for the wizard > Task 0.1: productContext > passes no context file when productContext is omitted 548ms
+   ✓ Runner endpoints for the wizard > Pre-flight check > reports reachable, unreachable and invalid URLs 4032ms
+   ✓ Runner endpoints for the wizard > Pre-flight check > rewrites localhost targets when running in a container 4082ms
+   ✓ Runner endpoints for the wizard > Task 5.2: safe-public runs > scans read-only: no discovery, no orchestrator, no mutating requests 3107ms
+   ✓ Runner endpoints for the wizard > Task 5.2: safe-public runs > serves report.md and findings.json byte-for-byte, including for a run with zero findings 2062ms
+   ✓ Runner endpoints for the wizard > Settings, the AI estimate, and marking problems > says the key was not recognised when a run starts with a rejected OpenRouter key 520ms
+   ✓ Runner endpoints for the wizard > Settings, the AI estimate, and marking problems > marks a problem as not a problem: the report hides it, the site remembers it, and it can be undone 3661ms
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-runner-server-h9DmBo\report\runs\run-1793772866130...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-runner-server-h9DmBo\report\runs\run-1793772866470...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:63132...
+
+stdout | packages/runner/tests/beta.test.ts > beta limits: a runner that is not a beta > beta limits: a runner that is not a beta is never limited
+[QA Orchestrator] Running Pre-flight health check on http://127.0.0.1:9/...
+
+ ✓ |browser| packages/runner/tests/beta.test.ts (24 tests) 289ms
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:62261/...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > scans, shows the plan, and keeps it waiting when you leave it
+[DiscoveryAgent] Spider found 11 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[DiscoveryAgent] Spider found 10 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-runner-server-h9DmBo\report\runs\run-1793772885425\discovery-draft.json
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Running Pre-flight health check on http://localhost:63132...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 375px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > scans, shows the plan, and keeps it waiting when you leave it
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-wizard-e2e-tW1bCf\report\runs\run-1793772880485\discovery-draft.json
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[DiscoveryAgent] Spider found 10 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-url-first-uo4XmN\report\runs\run-1793772890336\discovery-draft.json
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Running Pre-flight health check on http://localhost:62261/...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3485/...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 375px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3485/...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3485/...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-004 ("page-visit") on 375px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-005 ("page-visit") on 375px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing PAGE-004 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-006 ("page-visit") on 375px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-004 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing PAGE-005 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-007 ("page-visit") on 375px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-005 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing PAGE-006 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-008 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-009 ("page-visit") on 375px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-006 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing TEST-001 ("page-test") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-010 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing PAGE-007 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing TEST-002 ("page-test") on 375px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-007 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-001 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-002 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-003 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing PAGE-008 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-004 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-005 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-006 ("navigation") on 375px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-008 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-007 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-008 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-009 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-010 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-011 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing PAGE-009 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-012 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing TC-FLOW-CUSTOM-001 ("FLOW-CUSTOM-001") on 375px as anonymous...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-runner-server-h9DmBo\report\runs\run-1793772885425...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing TEST-001 ("page-test") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:63132...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-009 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing PAGE-010 ("page-visit") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing TEST-002 ("page-test") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing TEST-001 ("page-test") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-010 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing NAV-001 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[DiscoveryAgent] Exploring signed in as "manager" from /account...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing NAV-002 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing NAV-003 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing NAV-004 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing NAV-005 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing NAV-001 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing NAV-006 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing NAV-002 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing NAV-003 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing NAV-007 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing NAV-004 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing NAV-008 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing NAV-005 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing NAV-009 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing NAV-006 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing NAV-010 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[DiscoveryAgent] Spider found 15 pages, 5 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-runner-server-h9DmBo\report\runs\run-1793773034436\discovery-draft.json
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Running Pre-flight health check on http://localhost:63132...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing NAV-011 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 375px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing NAV-007 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing NAV-012 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing NAV-008 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing TC-FLOW-DASHBOARD ("FLOW-DASHBOARD") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing NAV-009 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing NAV-010 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing NAV-011 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-url-first-uo4XmN\report\runs\run-1793772890336...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 375px as manager...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:62261/...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing NAV-012 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing TC-FLOW-001 ("FLOW-001") on 1440px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-004 ("page-visit") on 375px as manager...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-wizard-e2e-tW1bCf\report\runs\run-1793772880485...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-005 ("page-visit") on 375px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3485/...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-006 ("page-visit") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-007 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[DiscoveryAgent] Spider found 11 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-url-first-uo4XmN\report\runs\run-1793773090571\discovery-draft.json
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Running Pre-flight health check on http://localhost:62261/...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-008 ("page-visit") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-009 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-010 ("page-visit") on 375px as manager...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[DiscoveryAgent] Spider found 11 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-wizard-e2e-tW1bCf\report\runs\run-1793773109884\discovery-draft.json
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3485/...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-011 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing PAGE-004 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-012 ("page-visit") on 375px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-013 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing PAGE-005 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-014 ("page-visit") on 375px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing PAGE-004 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing PAGE-006 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing TEST-001 ("page-test") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-015 ("page-visit") on 375px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing PAGE-005 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing TEST-002 ("page-test") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-016 ("page-visit") on 375px as manager...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing PAGE-007 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-017 ("page-visit") on 375px as manager...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing PAGE-006 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing PAGE-008 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-018 ("page-visit") on 375px as manager...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing PAGE-007 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-019 ("page-visit") on 375px as manager...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing PAGE-009 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-020 ("page-visit") on 375px as manager...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing PAGE-008 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing TEST-001 ("page-test") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing PAGE-010 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-001 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-002 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-003 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-004 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-005 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-006 ("navigation") on 375px as manager...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing TEST-001 ("page-test") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-007 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-008 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-009 ("navigation") on 375px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing PAGE-009 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-010 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing TEST-002 ("page-test") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-011 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-012 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing PAGE-011 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-013 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-014 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-015 ("navigation") on 375px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing TEST-002 ("page-test") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-016 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-017 ("navigation") on 375px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing PAGE-010 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-018 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-019 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-020 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-021 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing NAV-001 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-022 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing NAV-002 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-023 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing NAV-003 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-024 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-025 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing NAV-004 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-026 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing NAV-005 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing TC-FLOW-001 ("FLOW-001") on 375px as manager...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing NAV-006 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing NAV-001 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing NAV-002 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing NAV-003 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing NAV-007 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing NAV-004 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing NAV-008 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-runner-server-h9DmBo\report\runs\run-1793773034436...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing NAV-005 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing NAV-009 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:63132...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing NAV-006 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing NAV-010 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing NAV-011 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing NAV-012 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing NAV-007 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing TC-FLOW-INVOICE ("FLOW-INVOICE") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing NAV-008 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing NAV-009 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing NAV-010 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing NAV-011 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing NAV-012 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing TC-FLOW-001 ("FLOW-001") on 1440px as manager...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing TC-FLOW-DASHBOARD ("FLOW-DASHBOARD") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-url-first-uo4XmN\report\runs\run-1793773090571...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > without the owner box, even localhost is only looked at
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:62261/...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[DiscoveryAgent] Spider found 10 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-runner-server-h9DmBo\report\runs\run-1793773287502\discovery-draft.json
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Running Pre-flight health check on http://localhost:63132...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 375px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-wizard-e2e-tW1bCf\report\runs\run-1793773109884...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+ ✓ |browser| packages/wizard/tests/wizard-e2e.test.ts (10 tests) 454614ms
+   ✓ Release check-up end to end, on the one server > opens on the landing page, which leads to a new check-up, with the top bar, and every address answers 2523ms
+   ✓ Release check-up end to end, on the one server > first visit: specs typed before the AI key are kept, and the key is checked on the same screen 3517ms
+   ✓ Release check-up end to end, on the one server > scans, shows the plan, and keeps it waiting when you leave it 36462ms
+   ✓ Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too 188051ms
+   ✓ Release check-up end to end, on the one server > the report: one verdict, graded areas, problems by what to fix first, and details for developers 4890ms
+   ✓ Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once 205762ms
+   ✓ Release check-up end to end, on the one server > Past check-ups: an older report opens, survives a reload, and can be deleted 971ms
+   ✓ Release check-up end to end, on the one server > Go deeper starts a clean signed-in scan with the first check-up’s specs, and stopping keeps the form 782ms
+   ✓ Release check-up end to end, on the one server > remembers the owner choice for the site on the next check-up 1788ms
+   ✓ Release check-up end to end, on the one server > Settings: the key in use, and replacing it 1402ms
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 375px as visitor...
+
+ ✓ |browser| packages/runner/tests/domain-proof.test.ts (15 tests) 4298ms
+   ✓ POST /api/runner/domain-proof on a shared copy > preflight on a shared copy ignores the x-test-copy header and checks every hop 4016ms
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > without the owner box, even localhost is only looked at
+[DiscoveryAgent] Spider found 11 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > without the owner box, even localhost is only looked at
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-url-first-uo4XmN\report\runs\run-1793773310544\discovery-draft.json
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > plans with fixed rules when there is no AI, and says describing a test needs it
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:62261/...
+
+ ✓ |browser| packages/checkers/tests/performance.test.ts (20 tests) 10676ms
+   ✓ PerformanceChecker > in a real browser > reads a real LCP and a real interaction time from the observers 1348ms
+   ✓ PerformanceChecker > in a real browser > loads the page repeatedly in a throttled tab and reports the median with its spread 9113ms
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing PAGE-004 ("page-visit") on 375px as visitor...
+
+ ✓ |browser| packages/runner/tests/helper-access.test.ts (12 tests) 364ms
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing PAGE-005 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing PAGE-006 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > plans with fixed rules when there is no AI, and says describing a test needs it
+[DiscoveryAgent] Spider found 11 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > plans with fixed rules when there is no AI, and says describing a test needs it
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-url-first-uo4XmN\report\runs\run-1793773337485\discovery-draft.json
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:62261/...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing PAGE-007 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing PAGE-008 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing PAGE-009 ("page-visit") on 375px as visitor...
+
+ ✓ |browser| packages/core/tests/audit-crawl-read-only.test.ts (9 tests) 43757ms
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[DiscoveryAgent] Spider found 11 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-url-first-uo4XmN\report\runs\run-1793773363449\discovery-draft.json
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Running Pre-flight health check on http://localhost:62261/...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 1440px as visitor...
+
+ ✓ |browser| packages/runner/tests/beta-privacy.test.ts (11 tests) 503ms
+   ✓ On the shared copy, a visitor sees only their own check-up > sends a run’s progress only to the visitor who started it 309ms
+ ✓ |browser| packages/runner/tests/context-docx-route.test.ts (8 tests) 670ms
+   ✓ POST /api/runner/context/docx > returns Markdown, warnings and a read summary for a Word file 523ms
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing TEST-001 ("page-test") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing PAGE-010 ("page-visit") on 375px as visitor...
+
+stdout | packages/core/tests/orchestrator-session.test.ts > Orchestrator session awareness (T-114) > with preflight supplied and valid, stats.signIns stays 0 from the run itself (no second sign-in)
+[QA Orchestrator] Running Pre-flight health check on http://localhost:61039...
+
+stdout | packages/core/tests/orchestrator-session.test.ts > Orchestrator session awareness (T-114) > with preflight supplied and valid, stats.signIns stays 0 from the run itself (no second sign-in)
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-1 ("flow-TC-1") on 1440px as manager...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 1440px as visitor...
+
+stdout | packages/core/tests/orchestrator-session.test.ts > Orchestrator session awareness (T-114) > with preflight supplied and valid, stats.signIns stays 0 from the run itself (no second sign-in)
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-orchestrator-session-0X8apt\run-preflight...
+
+stdout | packages/core/tests/orchestrator-session.test.ts > Orchestrator session awareness (T-114) > with preflight supplied and valid, stats.signIns stays 0 from the run itself (no second sign-in)
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/core/tests/orchestrator-session.test.ts > Orchestrator session awareness (T-114) > /lab/expiring: signed-in point after session died is Skipped and attempts 1 re-login (stats.signIns = 2)
+[QA Orchestrator] Running Pre-flight health check on http://localhost:61039...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing TEST-002 ("page-test") on 375px as visitor...
+
+stdout | packages/core/tests/orchestrator-session.test.ts > Orchestrator session awareness (T-114) > /lab/expiring: signed-in point after session died is Skipped and attempts 1 re-login (stats.signIns = 2)
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-EXP-1 ("flow-TC-EXP-1") on 1440px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-001 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-002 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-003 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-004 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-005 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-006 ("navigation") on 375px as visitor...
+
+stdout | packages/core/tests/orchestrator-session.test.ts > Orchestrator session awareness (T-114) > /lab/expiring: signed-in point after session died is Skipped and attempts 1 re-login (stats.signIns = 2)
+[QA Orchestrator] Executing TC-EXP-2 ("flow-TC-EXP-2") on 1440px as manager...
+
+stdout | packages/core/tests/orchestrator-session.test.ts > Orchestrator session awareness (T-114) > /lab/expiring: signed-in point after session died is Skipped and attempts 1 re-login (stats.signIns = 2)
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-orchestrator-session-0X8apt\run-expiring...
+
+stdout | packages/core/tests/orchestrator-session.test.ts > Orchestrator session awareness (T-114) > /lab/expiring: signed-in point after session died is Skipped and attempts 1 re-login (stats.signIns = 2)
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/core/tests/orchestrator-session.test.ts > Orchestrator session awareness (T-114) > QA_RELOGIN=0: no re-login attempted, points skipped
+[QA Orchestrator] Running Pre-flight health check on http://localhost:61039...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-007 ("navigation") on 375px as visitor...
+
+stdout | packages/core/tests/orchestrator-session.test.ts > Orchestrator session awareness (T-114) > QA_RELOGIN=0: no re-login attempted, points skipped
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-NOREL-1 ("flow-TC-NOREL-1") on 1440px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-008 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-009 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-010 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-011 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing PAGE-004 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-012 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing TC-FLOW-001 ("FLOW-001") on 375px as manager...
+
+stdout | packages/core/tests/orchestrator-session.test.ts > Orchestrator session awareness (T-114) > QA_RELOGIN=0: no re-login attempted, points skipped
+[QA Orchestrator] Executing TC-NOREL-2 ("flow-TC-NOREL-2") on 1440px as manager...
+
+stdout | packages/core/tests/orchestrator-session.test.ts > Orchestrator session awareness (T-114) > QA_RELOGIN=0: no re-login attempted, points skipped
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-orchestrator-session-0X8apt\run-no-relogin...
+
+stdout | packages/core/tests/orchestrator-session.test.ts > Orchestrator session awareness (T-114) > QA_RELOGIN=0: no re-login attempted, points skipped
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/core/tests/orchestrator-session.test.ts > Orchestrator session awareness (T-114) > under requireSignIn a lost session throws SignInFailedError with reason session-expired
+[QA Orchestrator] Running Pre-flight health check on http://localhost:61039...
+
+stdout | packages/core/tests/orchestrator-session.test.ts > Orchestrator session awareness (T-114) > under requireSignIn a lost session throws SignInFailedError with reason session-expired
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-REQ-1 ("flow-TC-REQ-1") on 1440px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-runner-server-h9DmBo\report\runs\run-1793773287502...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+ ✓ |browser| packages/runner/tests/runner-server.test.ts (9 tests) 568176ms
+   ✓ RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report 19149ms
+   ✓ RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve 148999ms
+   ✓ RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart 253072ms
+   ✓ RunnerServer > runs straight through to completion when skipReview: true is provided 146575ms
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing PAGE-005 ("page-visit") on 1440px as visitor...
+
+stdout | packages/core/tests/orchestrator-session.test.ts > Orchestrator session awareness (T-114) > under requireSignIn a lost session throws SignInFailedError with reason session-expired
+[QA Orchestrator] Executing TC-REQ-2 ("flow-TC-REQ-2") on 1440px as manager...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > propagates custom headers across sign-in, discovery, and test phases, cleanly cleans authDir, and leaks zero secrets
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3620...
+
+stdout | packages/core/tests/orchestrator-session.test.ts > Orchestrator session awareness (T-114) > /lab/forbidden as a role with an expected-denied rule: Permission Matrix receives status 403
+[QA Orchestrator] Running Pre-flight health check on http://localhost:61039...
+
+stdout | packages/core/tests/orchestrator-session.test.ts > Orchestrator session awareness (T-114) > /lab/forbidden as a role with an expected-denied rule: Permission Matrix receives status 403
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-PERM-1 ("flow-TC-PERM-1") on 1440px as manager...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing PAGE-006 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > propagates custom headers across sign-in, discovery, and test phases, cleanly cleans authDir, and leaks zero secrets
+[DiscoveryAgent] Exploring signed in as "admin" from /account...
+
+stdout | packages/core/tests/orchestrator-session.test.ts > Orchestrator session awareness (T-114) > /lab/forbidden as a role with an expected-denied rule: Permission Matrix receives status 403
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-orchestrator-session-0X8apt\run-perm...
+
+stdout | packages/core/tests/orchestrator-session.test.ts > Orchestrator session awareness (T-114) > /lab/forbidden as a role with an expected-denied rule: Permission Matrix receives status 403
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/core/tests/orchestrator-session.test.ts > Orchestrator session awareness (T-114) > G-008: when session expired, points are not run or passed against the login page
+[QA Orchestrator] Running Pre-flight health check on http://localhost:61039...
+
+stdout | packages/core/tests/orchestrator-session.test.ts > Orchestrator session awareness (T-114) > G-008: when session expired, points are not run or passed against the login page
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-G-1 ("flow-TC-G-1") on 1440px as manager...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > propagates custom headers across sign-in, discovery, and test phases, cleanly cleans authDir, and leaks zero secrets
+[DiscoveryAgent] Spider found 1 pages, 0 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > propagates custom headers across sign-in, discovery, and test phases, cleanly cleans authDir, and leaks zero secrets
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-headers-propagation-MKD1eN\report\runs\run-1793773436891\discovery-draft.json
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > propagates custom headers across sign-in, discovery, and test phases, cleanly cleans authDir, and leaks zero secrets
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3620...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > propagates custom headers across sign-in, discovery, and test phases, cleanly cleans authDir, and leaks zero secrets
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 1440px as visitor...
+
+stdout | packages/core/tests/orchestrator-session.test.ts > Orchestrator session awareness (T-114) > G-008: when session expired, points are not run or passed against the login page
+[QA Orchestrator] Executing TC-G-2 ("flow-g-2") on 1440px as manager...
+
+stdout | packages/core/tests/orchestrator-session.test.ts > Orchestrator session awareness (T-114) > G-008: when session expired, points are not run or passed against the login page
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-orchestrator-session-0X8apt\run-g008...
+
+stdout | packages/core/tests/orchestrator-session.test.ts > Orchestrator session awareness (T-114) > G-008: when session expired, points are not run or passed against the login page
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+ ✓ |browser| packages/core/tests/orchestrator-session.test.ts (6 tests) 59805ms
+   ✓ Orchestrator session awareness (T-114) > with preflight supplied and valid, stats.signIns stays 0 from the run itself (no second sign-in) 9588ms
+   ✓ Orchestrator session awareness (T-114) > /lab/expiring: signed-in point after session died is Skipped and attempts 1 re-login (stats.signIns = 2) 10995ms
+   ✓ Orchestrator session awareness (T-114) > QA_RELOGIN=0: no re-login attempted, points skipped 9215ms
+   ✓ Orchestrator session awareness (T-114) > under requireSignIn a lost session throws SignInFailedError with reason session-expired 12505ms
+   ✓ Orchestrator session awareness (T-114) > /lab/forbidden as a role with an expected-denied rule: Permission Matrix receives status 403 8161ms
+   ✓ Orchestrator session awareness (T-114) > G-008: when session expired, points are not run or passed against the login page 9322ms
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > streams DISCOVERY_PROGRESS with optional fields and serves report with pageCoverage
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:60032/about...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > streams DISCOVERY_PROGRESS with optional fields and serves report with pageCoverage
+[DiscoveryAgent] Exploring signed in as "manager" from /account...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > streams DISCOVERY_PROGRESS with optional fields and serves report with pageCoverage
+[DiscoveryAgent] Spider found 2 pages, 0 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > streams DISCOVERY_PROGRESS with optional fields and serves report with pageCoverage
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-auth-crawl-run-iBwRxI\report\runs\run-1793773459219\discovery-draft.json
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > streams DISCOVERY_PROGRESS with optional fields and serves report with pageCoverage
+[QA Orchestrator] Running Pre-flight health check on http://localhost:60032/about...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing PAGE-007 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > streams DISCOVERY_PROGRESS with optional fields and serves report with pageCoverage
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > propagates custom headers across sign-in, discovery, and test phases, cleanly cleans authDir, and leaks zero secrets
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 1440px as admin...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > propagates custom headers across sign-in, discovery, and test phases, cleanly cleans authDir, and leaks zero secrets
+[QA Orchestrator] Executing NAV-001 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > propagates custom headers across sign-in, discovery, and test phases, cleanly cleans authDir, and leaks zero secrets
+[QA Orchestrator] Executing NAV-002 ("navigation") on 1440px as admin...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > propagates custom headers across sign-in, discovery, and test phases, cleanly cleans authDir, and leaks zero secrets
+[QA Orchestrator] Executing NAV-003 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > propagates custom headers across sign-in, discovery, and test phases, cleanly cleans authDir, and leaks zero secrets
+[QA Orchestrator] Executing NAV-004 ("navigation") on 1440px as admin...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing PAGE-008 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > propagates custom headers across sign-in, discovery, and test phases, cleanly cleans authDir, and leaks zero secrets
+[QA Orchestrator] Executing NAV-005 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > streams DISCOVERY_PROGRESS with optional fields and serves report with pageCoverage
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 1440px as manager...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > propagates custom headers across sign-in, discovery, and test phases, cleanly cleans authDir, and leaks zero secrets
+[QA Orchestrator] Executing NAV-006 ("navigation") on 1440px as admin...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > propagates custom headers across sign-in, discovery, and test phases, cleanly cleans authDir, and leaks zero secrets
+[QA Orchestrator] Executing NAV-007 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > propagates custom headers across sign-in, discovery, and test phases, cleanly cleans authDir, and leaks zero secrets
+[QA Orchestrator] Executing NAV-008 ("navigation") on 1440px as admin...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > propagates custom headers across sign-in, discovery, and test phases, cleanly cleans authDir, and leaks zero secrets
+[QA Orchestrator] Executing NAV-009 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > propagates custom headers across sign-in, discovery, and test phases, cleanly cleans authDir, and leaks zero secrets
+[QA Orchestrator] Executing NAV-010 ("navigation") on 1440px as admin...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing PAGE-009 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > propagates custom headers across sign-in, discovery, and test phases, cleanly cleans authDir, and leaks zero secrets
+[QA Orchestrator] Executing NAV-011 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > streams DISCOVERY_PROGRESS with optional fields and serves report with pageCoverage
+[QA Orchestrator] Executing NAV-001 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > streams DISCOVERY_PROGRESS with optional fields and serves report with pageCoverage
+[QA Orchestrator] Executing NAV-002 ("navigation") on 1440px as manager...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > streams DISCOVERY_PROGRESS with optional fields and serves report with pageCoverage
+[QA Orchestrator] Executing NAV-003 ("navigation") on 1440px as manager...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > propagates custom headers across sign-in, discovery, and test phases, cleanly cleans authDir, and leaks zero secrets
+[QA Orchestrator] Executing NAV-012 ("navigation") on 1440px as admin...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > streams DISCOVERY_PROGRESS with optional fields and serves report with pageCoverage
+[QA Orchestrator] Executing NAV-004 ("navigation") on 1440px as manager...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > streams DISCOVERY_PROGRESS with optional fields and serves report with pageCoverage
+[QA Orchestrator] Executing NAV-005 ("navigation") on 1440px as manager...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > propagates custom headers across sign-in, discovery, and test phases, cleanly cleans authDir, and leaks zero secrets
+[QA Orchestrator] Executing NAV-013 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > streams DISCOVERY_PROGRESS with optional fields and serves report with pageCoverage
+[QA Orchestrator] Executing NAV-006 ("navigation") on 1440px as manager...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing TEST-001 ("page-test") on 1440px as visitor...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > propagates custom headers across sign-in, discovery, and test phases, cleanly cleans authDir, and leaks zero secrets
+[QA Orchestrator] Executing NAV-014 ("navigation") on 1440px as admin...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > streams DISCOVERY_PROGRESS with optional fields and serves report with pageCoverage
+[QA Orchestrator] Executing NAV-007 ("navigation") on 1440px as manager...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > propagates custom headers across sign-in, discovery, and test phases, cleanly cleans authDir, and leaks zero secrets
+[QA Orchestrator] Executing NAV-015 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > streams DISCOVERY_PROGRESS with optional fields and serves report with pageCoverage
+[QA Orchestrator] Executing NAV-008 ("navigation") on 1440px as manager...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing PAGE-010 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > propagates custom headers across sign-in, discovery, and test phases, cleanly cleans authDir, and leaks zero secrets
+[QA Orchestrator] Executing NAV-016 ("navigation") on 1440px as admin...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > streams DISCOVERY_PROGRESS with optional fields and serves report with pageCoverage
+[QA Orchestrator] Executing TC-FLOW-001 ("FLOW-001") on 1440px as manager...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > propagates custom headers across sign-in, discovery, and test phases, cleanly cleans authDir, and leaks zero secrets
+[QA Orchestrator] Executing NAV-017 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > propagates custom headers across sign-in, discovery, and test phases, cleanly cleans authDir, and leaks zero secrets
+[QA Orchestrator] Executing NAV-018 ("navigation") on 1440px as admin...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > streams DISCOVERY_PROGRESS with optional fields and serves report with pageCoverage
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-auth-crawl-run-iBwRxI\report\runs\run-1793773459219...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > streams DISCOVERY_PROGRESS with optional fields and serves report with pageCoverage
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > propagates custom headers across sign-in, discovery, and test phases, cleanly cleans authDir, and leaks zero secrets
+[QA Orchestrator] Executing TC-FLOW-001 ("FLOW-001") on 1440px as admin...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:60032/account...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > propagates custom headers across sign-in, discovery, and test phases, cleanly cleans authDir, and leaks zero secrets
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-headers-propagation-MKD1eN\report\runs\run-1793773436891...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > propagates custom headers across sign-in, discovery, and test phases, cleanly cleans authDir, and leaks zero secrets
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > omits headers from disk plan and requires re-approval with ERR_HEADERS_NOT_SAVED after restart
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3620...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing TEST-002 ("page-test") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing PAGE-011 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > omits headers from disk plan and requires re-approval with ERR_HEADERS_NOT_SAVED after restart
+[DiscoveryAgent] Spider found 1 pages, 0 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > omits headers from disk plan and requires re-approval with ERR_HEADERS_NOT_SAVED after restart
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-headers-propagation-MKD1eN\report\runs\run-1793773516510\discovery-draft.json
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > omits headers from disk plan and requires re-approval with ERR_HEADERS_NOT_SAVED after restart
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3620...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > omits headers from disk plan and requires re-approval with ERR_HEADERS_NOT_SAVED after restart
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[DiscoveryAgent] Exploring signed in as "manager" from /account...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing NAV-001 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing NAV-002 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > omits headers from disk plan and requires re-approval with ERR_HEADERS_NOT_SAVED after restart
+[QA Orchestrator] Executing NAV-001 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing NAV-003 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > omits headers from disk plan and requires re-approval with ERR_HEADERS_NOT_SAVED after restart
+[QA Orchestrator] Executing NAV-002 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing NAV-004 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > omits headers from disk plan and requires re-approval with ERR_HEADERS_NOT_SAVED after restart
+[QA Orchestrator] Executing NAV-003 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing NAV-005 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > omits headers from disk plan and requires re-approval with ERR_HEADERS_NOT_SAVED after restart
+[QA Orchestrator] Executing NAV-004 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing NAV-006 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > omits headers from disk plan and requires re-approval with ERR_HEADERS_NOT_SAVED after restart
+[QA Orchestrator] Executing NAV-005 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > omits headers from disk plan and requires re-approval with ERR_HEADERS_NOT_SAVED after restart
+[QA Orchestrator] Executing NAV-006 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing NAV-007 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing NAV-008 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > omits headers from disk plan and requires re-approval with ERR_HEADERS_NOT_SAVED after restart
+[QA Orchestrator] Executing NAV-007 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing NAV-009 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > omits headers from disk plan and requires re-approval with ERR_HEADERS_NOT_SAVED after restart
+[QA Orchestrator] Executing NAV-008 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing NAV-010 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[DiscoveryAgent] Spider found 15 pages, 5 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-auth-crawl-run-iBwRxI\report\runs\run-1793773511352\discovery-draft.json
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Running Pre-flight health check on http://localhost:60032/account...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > omits headers from disk plan and requires re-approval with ERR_HEADERS_NOT_SAVED after restart
+[QA Orchestrator] Executing NAV-009 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing NAV-011 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > omits headers from disk plan and requires re-approval with ERR_HEADERS_NOT_SAVED after restart
+[QA Orchestrator] Executing TC-FLOW-001 ("FLOW-001") on 1440px as anonymous...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing NAV-012 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing TC-FLOW-INVOICE ("FLOW-INVOICE") on 1440px as visitor...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > omits headers from disk plan and requires re-approval with ERR_HEADERS_NOT_SAVED after restart
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-headers-propagation-MKD1eN\report\runs\run-1793773516510...
+
+stdout | packages/runner/tests/headers-propagation.test.ts > headers propagation & per-run auth isolation > omits headers from disk plan and requires re-approval with ERR_HEADERS_NOT_SAVED after restart
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+ ✓ |browser| packages/runner/tests/headers-propagation.test.ts (3 tests) 120546ms
+   ✓ headers propagation & per-run auth isolation > propagates custom headers across sign-in, discovery, and test phases, cleanly cleans authDir, and leaks zero secrets 79630ms
+   ✓ headers propagation & per-run auth isolation > omits headers from disk plan and requires re-approval with ERR_HEADERS_NOT_SAVED after restart 40770ms
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 1440px as manager...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing TC-FLOW-USER-1793773389860 ("FLOW-USER-1793773389860") on 1440px as visitor...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-url-first-uo4XmN\report\runs\run-1793773363449...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:62261/...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing PAGE-004 ("page-visit") on 1440px as manager...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing PAGE-005 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing PAGE-006 ("page-visit") on 1440px as manager...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing PAGE-007 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[DiscoveryAgent] Spider found 11 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-url-first-uo4XmN\report\runs\run-1793773574976\discovery-draft.json
+
+ ✓ |browser| packages/runner/tests/url-first.test.ts (6 tests) 710712ms
+   ✓ URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent 200236ms
+   ✓ URL-first runs > tests localhost fully when the owner box is ticked 219986ms
+   ✓ URL-first runs > without the owner box, even localhost is only looked at 26933ms
+   ✓ URL-first runs > plans with fixed rules when there is no AI, and says describing a test needs it 25963ms
+   ✓ URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time 237492ms
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing PAGE-008 ("page-visit") on 1440px as manager...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing PAGE-009 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing PAGE-010 ("page-visit") on 1440px as manager...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing PAGE-011 ("page-visit") on 1440px as visitor...
+
+ ✓ |browser| packages/core/tests/spider-sitemap-outbound.test.ts (4 tests) 32425ms
+   ✓ Spider sitemap seeding through the outbound fetch (ADR 0031) > AC-3/AC-4 local run: the audit site is seeded (pinned to 127.0.0.1); the other-host Sitemap line is logged, never fetched 11023ms
+   ✓ Spider sitemap seeding through the outbound fetch (ADR 0031) > local run with the default outbound fetch still seeds from the sitemap 10999ms
+   ✓ Spider sitemap seeding through the outbound fetch (ADR 0031) > AC-1 browser guard set: a site resolving to 127.0.0.1 gets no robots/sitemap connection 5079ms
+   ✓ Spider sitemap seeding through the outbound fetch (ADR 0031) > AC-1/AC-2/AC-4 browser guard set: other-host lines are skipped and a redirect to 169.254.169.254 is refused at that hop 5074ms
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing PAGE-012 ("page-visit") on 1440px as visitor...
+
+ ✓ |browser| packages/core/tests/spider-signin-walls.test.ts (5 tests) 11109ms
+   ✓ DeterministicSpider: sign-in walls and the paths it reports (T-301) > records a password-field page reached through a redirect, and keeps why it was decided 1180ms
+   ✓ DeterministicSpider: sign-in walls and the paths it reports (T-301) > records a password-field page once under its real path when asked by a case-different path 1025ms
+   ✓ DeterministicSpider: sign-in walls and the paths it reports (T-301) > still calls a Role bounced to the sign-in page a wall, and reports the path as asked 958ms
+   ✓ DeterministicSpider: sign-in walls and the paths it reports (T-301) > treats a bounce to the sign-in page as a wall for a visitor, and still records the sign-in page 2771ms
+   ✓ DeterministicSpider: sign-in walls and the paths it reports (T-301) > reports the requested path, not the lower-cased route key 4973ms
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing PAGE-013 ("page-visit") on 1440px as visitor...
+
+ ✓ |browser| packages/core/tests/audit-doc-pdf.test.ts (5 tests) 7396ms
+   ✓ renderPdf > prints rendered HTML to an A4 PDF with the same document (REQ-022 AC-1) 642ms
+   ✓ renderPdf > embeds a font that covers Tamil for a Tamil document (REQ-022 AC-3) 713ms
+   ✓ renderPdf > with a local server that must never be reached > aborts every request that is not a data: URI, so nothing leaves the process 568ms
+   ✓ renderPdf > closes the browser when printing takes too long 5179ms
+ ✓ |browser| packages/core/tests/navigate.test.ts (6 tests) 7253ms
+   ✓ navigate helper > captures 404, 500, and 302 redirect chain 1893ms
+   ✓ navigate helper > settles late hydrated links when needLinks is true 1646ms
+   ✓ navigate helper > retries when the first request hangs and succeeds on second attempt 1271ms
+   ✓ navigate helper > returns ok false and timeout error when request always hangs 1127ms
+   ✓ navigate helper > detects login page with looksLikeLogin 1096ms
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing PAGE-014 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/reapproval-roles.test.ts > Re-approval Roles (reapproval-roles.test.ts) > handles partial roles reapproval with 409 ERR_SIGN_IN_REQUIRED and needsSignInDetails, ignores unknown roles
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3050...
+
+ ✓ |browser| packages/runner/tests/reapproval-roles.test.ts (2 tests) 101ms
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing TEST-001 ("page-test") on 1440px as visitor...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing PAGE-015 ("page-visit") on 1440px as visitor...
+
+stdout | packages/core/tests/require-sign-in.test.ts > requireSignIn > correct password: the crawl proceeds
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3557...
+
+stdout | packages/core/tests/require-sign-in.test.ts > requireSignIn > correct password: the crawl proceeds
+[DiscoveryAgent] Exploring signed in as "member" from /account...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing TEST-002 ("page-test") on 1440px as visitor...
+
+stdout | packages/core/tests/require-sign-in.test.ts > requireSignIn > correct password: the crawl proceeds
+[DiscoveryAgent] Spider found 2 pages, 1 forms, 0 sensitive actions.
+
+stdout | packages/core/tests/require-sign-in.test.ts > requireSignIn > correct password: the crawl proceeds
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-require-sign-in\right\discovery-draft.json
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing PAGE-016 ("page-visit") on 1440px as manager...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing PAGE-017 ("page-visit") on 1440px as manager...
+
+stdout | packages/core/tests/require-sign-in.test.ts > requireSignIn > requireSignIn false with a wrong password: no throw, crawl runs
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3557...
+
+stdout | packages/core/tests/require-sign-in.test.ts > requireSignIn > requireSignIn false with a wrong password: no throw, crawl runs
+[DiscoveryAgent] Spider found 1 pages, 1 forms, 0 sensitive actions.
+
+stdout | packages/core/tests/require-sign-in.test.ts > requireSignIn > requireSignIn false with a wrong password: no throw, crawl runs
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-require-sign-in\optional\discovery-draft.json
+
+ ✓ |browser| packages/core/tests/require-sign-in.test.ts (5 tests) 44705ms
+   ✓ requireSignIn > wrong password: rejects with SignInFailedError before any crawl, without leaking details 11143ms
+   ✓ requireSignIn > correct password: the crawl proceeds 12361ms
+   ✓ requireSignIn > unreachable home page: connection dropped > requireSignIn: throws reason unreachable, no crawl 4033ms
+   ✓ requireSignIn > requireSignIn false with a wrong password: no throw, crawl runs 17144ms
+ ✓ |browser| packages/core/tests/finding-groups.test.ts (7 tests) 657ms
+   ✓ EvidenceCollector > reports each console error at the step where it happened, not again at every later step 641ms
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing PAGE-018 ("page-visit") on 1440px as manager...
+
+stdout | packages/core/tests/visual-baseline-compat.test.ts > visual baseline compat > visual baseline compat: update writes a sidecar with matching sha256; unchanged page gives no finding
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3087...
+
+stdout | packages/core/tests/visual-baseline-compat.test.ts > visual baseline compat > visual baseline compat: update writes a sidecar with matching sha256; unchanged page gives no finding
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-VISUAL-COMPAT ("login-page") on 1440px as anonymous...
+
+stdout | packages/core/tests/visual-baseline-compat.test.ts > visual baseline compat > visual baseline compat: update writes a sidecar with matching sha256; unchanged page gives no finding
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-visual-compat\run...
+
+stdout | packages/core/tests/visual-baseline-compat.test.ts > visual baseline compat > visual baseline compat: update writes a sidecar with matching sha256; unchanged page gives no finding
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/core/tests/visual-baseline-compat.test.ts > visual baseline compat > visual baseline compat: update writes a sidecar with matching sha256; unchanged page gives no finding
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3087...
+
+stdout | packages/core/tests/visual-baseline-compat.test.ts > visual baseline compat > visual baseline compat: update writes a sidecar with matching sha256; unchanged page gives no finding
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-VISUAL-COMPAT ("login-page") on 1440px as anonymous...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing PAGE-019 ("page-visit") on 1440px as manager...
+
+stdout | packages/core/tests/visual-baseline-compat.test.ts > visual baseline compat > visual baseline compat: update writes a sidecar with matching sha256; unchanged page gives no finding
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-visual-compat\run...
+
+stdout | packages/core/tests/visual-baseline-compat.test.ts > visual baseline compat > visual baseline compat: update writes a sidecar with matching sha256; unchanged page gives no finding
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/core/tests/visual-baseline-compat.test.ts > visual baseline compat > visual baseline compat: a PNG with no sidecar compares unmasked and unchanged page gives no finding
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3087...
+
+stdout | packages/core/tests/visual-baseline-compat.test.ts > visual baseline compat > visual baseline compat: a PNG with no sidecar compares unmasked and unchanged page gives no finding
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-VISUAL-COMPAT ("login-page") on 1440px as anonymous...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing PAGE-020 ("page-visit") on 1440px as manager...
+
+stdout | packages/core/tests/visual-baseline-compat.test.ts > visual baseline compat > visual baseline compat: a PNG with no sidecar compares unmasked and unchanged page gives no finding
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-visual-compat\run...
+
+stdout | packages/core/tests/visual-baseline-compat.test.ts > visual baseline compat > visual baseline compat: a PNG with no sidecar compares unmasked and unchanged page gives no finding
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/core/tests/visual-baseline-compat.test.ts > visual baseline compat > visual baseline compat: a sidecar whose sha256 no longer matches (PNG overwritten) falls back to unmasked
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3087...
+
+stdout | packages/core/tests/visual-baseline-compat.test.ts > visual baseline compat > visual baseline compat: a sidecar whose sha256 no longer matches (PNG overwritten) falls back to unmasked
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-VISUAL-COMPAT ("login-page") on 1440px as anonymous...
+
+ ✓ |browser| packages/core/tests/spider-links-and-traps.test.ts (7 tests) 181757ms
+   ✓ DeterministicSpider link discovery and trap protection (T-112) > /lab/trap/1: stops at maxPerShape (25) pages of that shape and skipped contains trap-limit entries 55193ms
+   ✓ DeterministicSpider link discovery and trap protection (T-112) > with routeQueryParams: ["month"] the calendar is bounded by the shape cap; without it collapses to one page 56911ms
+   ✓ DeterministicSpider link discovery and trap protection (T-112) > /lab/hash with includeHash: true records two routes; without it, none 13259ms
+   ✓ DeterministicSpider link discovery and trap protection (T-112) > /lab/onclick target pages are found via data-href and click exploration 25327ms
+   ✓ DeterministicSpider link discovery and trap protection (T-112) > a page with a fixed cookie banner (/lab/overlay) is crawled and its links are found 18650ms
+   ✓ DeterministicSpider link discovery and trap protection (T-112) > in-test server with /sitemap.xml listing unlinked /hidden page: crawled when seeded, skipped when seedSitemap: false 10119ms
+   ✓ DeterministicSpider link discovery and trap protection (T-112) > maxDurationMs: 2000 against /lab/trap/1 ends in about 2s with a time-limit skip entry 2035ms
+ ✓ |browser| packages/core/tests/audit-accessibility-basics.test.ts (4 tests) 3371ms
+   ✓ accessibilityBasics (REQ-038) > records WCAG 2.2 AA automatic-check basics on the gallery page with the image-alt finding (AC-1) 1332ms
+   ✓ accessibilityBasics (REQ-038) > passes axe on and no phone breakpoint to the checker, and maps only the axe violations 1164ms
+stdout | packages/core/tests/visual-baseline-compat.test.ts > visual baseline compat > visual baseline compat: a sidecar whose sha256 no longer matches (PNG overwritten) falls back to unmasked
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-visual-compat\run...
+
+stdout | packages/core/tests/visual-baseline-compat.test.ts > visual baseline compat > visual baseline compat: a sidecar whose sha256 no longer matches (PNG overwritten) falls back to unmasked
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/core/tests/visual-baseline-compat.test.ts > visual baseline compat > visual baseline compat: a regression finding has baseline, current and difference images inside the report folder as relative paths; a match writes none
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3087...
+
+stdout | packages/core/tests/visual-baseline-compat.test.ts > visual baseline compat > visual baseline compat: a regression finding has baseline, current and difference images inside the report folder as relative paths; a match writes none
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-VISUAL-COMPAT ("login-page") on 1440px as anonymous...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing NAV-001 ("navigation") on 1440px as visitor...
+
+stdout | packages/core/tests/visual-baseline-compat.test.ts > visual baseline compat > visual baseline compat: a regression finding has baseline, current and difference images inside the report folder as relative paths; a match writes none
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-visual-compat\evidence-run...
+
+stdout | packages/core/tests/visual-baseline-compat.test.ts > visual baseline compat > visual baseline compat: a regression finding has baseline, current and difference images inside the report folder as relative paths; a match writes none
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/core/tests/visual-baseline-compat.test.ts > visual baseline compat > visual baseline compat: a regression finding has baseline, current and difference images inside the report folder as relative paths; a match writes none
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3087...
+
+stdout | packages/core/tests/visual-baseline-compat.test.ts > visual baseline compat > visual baseline compat: a regression finding has baseline, current and difference images inside the report folder as relative paths; a match writes none
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-VISUAL-COMPAT ("login-page") on 1440px as anonymous...
+
+stdout | packages/core/tests/visual-baseline-compat.test.ts > visual baseline compat > visual baseline compat: a regression finding has baseline, current and difference images inside the report folder as relative paths; a match writes none
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-visual-compat\run...
+
+stdout | packages/core/tests/visual-baseline-compat.test.ts > visual baseline compat > visual baseline compat: a regression finding has baseline, current and difference images inside the report folder as relative paths; a match writes none
+[QA Orchestrator] Reports generated: report.md and findings.json
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3087...
+
+stdout | packages/core/tests/visual-baseline-compat.test.ts > visual baseline compat > visual baseline compat: a regression finding has baseline, current and difference images inside the report folder as relative paths; a match writes none
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-VISUAL-COMPAT ("login-page") on 1440px as anonymous...
+
+stdout | packages/core/tests/visual-baseline-compat.test.ts > visual baseline compat > visual baseline compat: a regression finding has baseline, current and difference images inside the report folder as relative paths; a match writes none
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-visual-compat\match-run...
+
+stdout | packages/core/tests/visual-baseline-compat.test.ts > visual baseline compat > visual baseline compat: a regression finding has baseline, current and difference images inside the report folder as relative paths; a match writes none
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+ ✓ |browser| packages/core/tests/visual-baseline-compat.test.ts (5 tests) 51957ms
+   ✓ visual baseline compat > visual baseline compat: update writes a sidecar with matching sha256; unchanged page gives no finding 14526ms
+   ✓ visual baseline compat > visual baseline compat: a PNG with no sidecar compares unmasked and unchanged page gives no finding 7216ms
+   ✓ visual baseline compat > visual baseline compat: a sidecar whose sha256 no longer matches (PNG overwritten) falls back to unmasked 8075ms
+   ✓ visual baseline compat > visual baseline compat: a regression finding has baseline, current and difference images inside the report folder as relative paths; a match writes none 22108ms
+ ✓ |browser| packages/core/tests/sources-e2e.test.ts (1 test) 22397ms
+   ✓ Sources end to end on the fixture app > Admin sees Create user, Viewer (saved session) is denied, a role that cannot sign in is not tested, Not found is reported 22386ms
+ ✓ |browser| packages/core/tests/page-coverage.test.ts (2 tests) 15341ms
+   ✓ page coverage: found = reached + skipped > maxPages 3: skipped pages are page-limit and the numbers add up 9102ms
+   ✓ page coverage: found = reached + skipped > a page that fails to load is skipped as did-not-load, path only 5998ms
+ ✓ |browser| packages/core/tests/spider-host-pacing.test.ts (2 tests) 15829ms
+   ✓ Spider with a HostPacer (REQ-035) > AC-1: no two top-level requests to the host overlap, and starts are at least the Crawl-delay apart 13430ms
+   ✓ Spider with a HostPacer (REQ-035) > waiting for a turn stops at the crawl deadline 2161ms
+ ✓ |browser| packages/runner/tests/scheduler.test.ts (4 tests) 134ms
+stdout | packages/core/tests/flaky-retry.test.ts > Clean flow retry > marks a flow that fails once and passes on a clean retry as flaky, still passed
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3091...
+
+stdout | packages/core/tests/flaky-retry.test.ts > Clean flow retry > marks a flow that fails once and passes on a clean retry as flaky, still passed
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-FLAKY-1 ("flaky-flow") on 1440px as anonymous...
+
+stdout | packages/core/tests/flaky-retry.test.ts > Clean flow retry > marks a flow that fails once and passes on a clean retry as flaky, still passed
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-flaky-report...
+
+stdout | packages/core/tests/flaky-retry.test.ts > Clean flow retry > marks a flow that fails once and passes on a clean retry as flaky, still passed
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+ ✓ |browser| packages/core/tests/flaky-retry.test.ts (2 tests) 12448ms
+   ✓ Clean flow retry > marks a flow that fails once and passes on a clean retry as flaky, still passed 12437ms
+ ✓ |browser| packages/core/tests/multi-browser-network.test.ts (3 tests) 1102ms
+   ✓ Multi-Browser Support & Network Intelligence (FR-1.4, FR-6.3.1) > launches requested browser engine and opens page 615ms
+   ✓ Multi-Browser Support & Network Intelligence (FR-1.4, FR-6.3.1) > EvidenceCollector measures network request durationMs (FR-6.3.1) 369ms
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing NAV-002 ("navigation") on 1440px as manager...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing NAV-003 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing NAV-004 ("navigation") on 1440px as manager...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing NAV-005 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing NAV-006 ("navigation") on 1440px as manager...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing NAV-007 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing NAV-008 ("navigation") on 1440px as manager...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing NAV-009 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing NAV-010 ("navigation") on 1440px as manager...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing NAV-011 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing NAV-012 ("navigation") on 1440px as manager...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing NAV-013 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing NAV-014 ("navigation") on 1440px as manager...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing NAV-015 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing NAV-016 ("navigation") on 1440px as manager...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing NAV-017 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing NAV-018 ("navigation") on 1440px as manager...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing NAV-019 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing NAV-020 ("navigation") on 1440px as manager...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing NAV-021 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing NAV-022 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing NAV-023 ("navigation") on 1440px as manager...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing NAV-024 ("navigation") on 1440px as manager...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing NAV-025 ("navigation") on 1440px as manager...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing NAV-026 ("navigation") on 1440px as manager...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing TC-FLOW-001 ("FLOW-001") on 1440px as manager...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing TC-FLOW-002 ("FLOW-002") on 1440px as manager...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Executing TC-FLOW-003 ("FLOW-003") on 1440px as manager...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-auth-crawl-run-iBwRxI\report\runs\run-1793773511352...
+
+stdout | packages/runner/tests/auth-crawl-run.test.ts > T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+ ✓ |browser| packages/runner/tests/auth-crawl-run.test.ts (3 tests) 705808ms
+   ✓ T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > streams DISCOVERY_PROGRESS with optional fields and serves report with pageCoverage 52385ms
+   ✓ T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > runs the fixture signed in and reports the covered pages 637850ms
+   ✓ T-117 Runner auth crawl SSE and report (auth-crawl-run.test.ts) > asserts RUN_FAILED event carries signInReason when credentials fail under consent 11498ms
+ ✓ |browser| packages/runner/tests/cli-bind-host.test.ts (12 tests) 2038ms
+   ✓ cli start > exits with a message on 0.0.0.0 without RUNNER_ACCESS_TOKEN 2033ms
+
+ Test Files  31 passed (31)
+      Tests  229 passed (229)
+   Start at  11:44:20
+   Duration  1306.20s (transform 2.79s, setup 0ms, collect 54.71s, tests 3108.99s, environment 10ms, prepare 7.02s)
+
+
+
+## stderr
+

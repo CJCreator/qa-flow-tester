@@ -1,0 +1,31 @@
+# AI-EOS evidence EV-0046
+check: CHK-BE-403-UNIT (audit finding ranking)
+command: pnpm exec vitest run packages/core/tests/audit-ranking.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T07:50:45.119Z
+finished: 2026-11-03T07:50:54.701Z (9582 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+Scope: all 7 workspace projects
+✓ Lockfile passes supply-chain policies (verified 2d ago)
+Lockfile is up to date, resolution step is skipped
+Already up to date
+
+Done in 2.9s using pnpm v11.10.0
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-ranking.test.ts (16 tests) 42ms
+
+ Test Files  1 passed (1)
+      Tests  16 passed (16)
+   Start at  13:20:52
+   Duration  1.79s (transform 445ms, setup 0ms, collect 770ms, tests 42ms, environment 0ms, prepare 352ms)
+
+
+
+## stderr
+

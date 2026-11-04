@@ -1,0 +1,45 @@
+# AI-EOS evidence EV-0237
+check: CHK-BE-102-SERVER (runner dispatch enforces access and beta policy (RunnerServer))
+command: pnpm exec vitest run packages/runner/tests/route-access-server.test.ts packages/runner/tests/access-token.test.ts packages/runner/tests/beta.test.ts packages/runner/tests/route-inventory.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T03:35:55.402Z
+finished: 2026-11-04T03:37:21.076Z (85674 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+stdout | packages/runner/tests/beta.test.ts > beta limits: a runner that is not a beta > beta limits: a runner that is not a beta is never limited
+[QA Orchestrator] Running Pre-flight health check on http://127.0.0.1:9/...
+
+ ✓ |browser| packages/runner/tests/beta.test.ts (24 tests) 5858ms
+   ✓ A runner shared as a beta > gives each visitor a session, and keeps it for a visitor who sends the cookie back 328ms
+   ✓ A runner shared as a beta > keeps a tester’s key to their own session, in memory only 411ms
+   ✓ A runner shared as a beta > compares sites for a tester, but only public ones, and keeps each tester’s comparisons to themselves 338ms
+   ✓ A runner shared as a beta > turns away a request body that is far too large 931ms
+   ✓ beta limits: a runner that is not a beta > beta limits: a runner that is not a beta is never limited 1990ms
+ ✓ |unit| packages/runner/tests/route-access-server.test.ts (23 tests) 7952ms
+   ✓ Helper access through the RunnerServer dispatch (REQ-033 wiring, BE-102) > a signed-in Helper gets 403 ERR_FORBIDDEN on an owner row and on an ungranted permission 463ms
+   ✓ Helper access through the RunnerServer dispatch (REQ-033 wiring, BE-102) > a signed-in Helper with a view grant gets 200 on the id-less list rows 376ms
+   ✓ F-030: a Website Audit or Competitive Benchmark in the run slot keeps the Plan closed (DEC-002, REQ-049) > audit holds the slot: the stored Plan is not marked awaiting review, and approving answers 409 479ms
+   ✓ F-030: a Website Audit or Competitive Benchmark in the run slot keeps the Plan closed (DEC-002, REQ-049) > audit holds the slot: bringing back a kept Plan answers 409 ERR_RUN_IN_PROGRESS and changes nothing 562ms
+   ✓ F-030: a Website Audit or Competitive Benchmark in the run slot keeps the Plan closed (DEC-002, REQ-049) > benchmark holds the slot: bringing back a kept Plan answers 409 ERR_RUN_IN_PROGRESS and changes nothing 747ms
+   ✓ F-030: a Website Audit or Competitive Benchmark in the run slot keeps the Plan closed (DEC-002, REQ-049) > with the slot free, bringing back a kept Plan claims the slot for the Check-up and sets the waiting one aside 1027ms
+ ✓ |browser| packages/runner/tests/route-inventory.test.ts (66 tests) 11769ms
+   ✓ route inventory (T-203) > 'GET' '/healthz' is matched (not the generic 404) 401ms
+   ✓ route inventory (T-203) > 'POST' '/api/runner/ai-estimate' is matched (not the generic 404) 2226ms
+   ✓ route inventory (T-203) > 'POST' '/api/ai/settings' is matched (not the generic 404) 446ms
+ ✓ |browser| packages/runner/tests/access-token.test.ts (6 tests) 420ms
+
+ Test Files  4 passed (4)
+      Tests  119 passed (119)
+   Start at  09:06:04
+   Duration  74.84s (transform 55.60s, setup 0ms, collect 143.67s, tests 26.00s, environment 2ms, prepare 6.77s)
+
+
+
+## stderr
+

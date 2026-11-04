@@ -1,0 +1,26 @@
+# AI-EOS evidence EV-0266
+check: CHK-BE-504-UNIT (Proposal and settings defaults tests)
+command: pnpm exec vitest run packages/core/tests/audit-doc-proposal.test.ts packages/core/tests/audit-doc-settings.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T03:40:20.020Z
+finished: 2026-11-04T03:41:00.312Z (40292 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-doc-settings.test.ts (29 tests) 1082ms
+ ✓ |unit| packages/core/tests/audit-doc-proposal.test.ts (19 tests) 1159ms
+
+ Test Files  2 passed (2)
+      Tests  48 passed (48)
+   Start at  09:10:35
+   Duration  21.82s (transform 20.41s, setup 0ms, collect 24.94s, tests 2.24s, environment 2ms, prepare 3.60s)
+
+
+
+## stderr
+

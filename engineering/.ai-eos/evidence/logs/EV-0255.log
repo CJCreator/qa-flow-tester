@@ -1,0 +1,29 @@
+# AI-EOS evidence EV-0255
+check: CHK-BE-307-BROWSER (accessibility basics on the audit fixture site in Chromium)
+command: pnpm exec vitest run packages/core/tests/audit-accessibility-basics.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T03:38:23.166Z
+finished: 2026-11-04T03:38:54.733Z (31567 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-accessibility-basics.test.ts (4 tests) 13914ms
+   ✓ accessibilityBasics (REQ-038) > records WCAG 2.2 AA automatic-check basics on the gallery page with the image-alt finding (AC-1) 2762ms
+   ✓ accessibilityBasics (REQ-038) > when axe cannot run (closed page), basics is null with a note, never zero violations 571ms
+   ✓ accessibilityBasics (REQ-038) > when the checker itself throws, basics is null with a note 573ms
+   ✓ accessibilityBasics (REQ-038) > passes axe on and no phone breakpoint to the checker, and maps only the axe violations 2316ms
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  09:08:31
+   Duration  22.00s (transform 1.21s, setup 0ms, collect 5.70s, tests 13.91s, environment 1ms, prepare 716ms)
+
+
+
+## stderr
+

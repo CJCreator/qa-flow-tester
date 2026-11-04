@@ -1,0 +1,26 @@
+# AI-EOS evidence EV-0285
+check: CHK-FE-501-UNIT (export panel and document settings tests)
+command: pnpm exec vitest run packages/wizard/tests/audit-documents-export.test.tsx packages/wizard/tests/audit-document-settings.test.tsx
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T03:43:50.538Z
+finished: 2026-11-04T03:44:09.960Z (19422 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/wizard/tests/audit-document-settings.test.tsx (16 tests) 805ms
+ ✓ |unit| packages/wizard/tests/audit-documents-export.test.tsx (14 tests) 840ms
+
+ Test Files  2 passed (2)
+      Tests  30 passed (30)
+   Start at  09:14:01
+   Duration  6.40s (transform 2.06s, setup 0ms, collect 3.88s, tests 1.65s, environment 1ms, prepare 2.03s)
+
+
+
+## stderr
+

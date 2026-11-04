@@ -1,0 +1,748 @@
+# AI-EOS evidence EV-0303
+check: CHK-QA-706-RUNNER-BROWSER (runner-server and url-first files)
+command: pnpm exec vitest run packages/runner/tests/runner-server.test.ts packages/runner/tests/url-first.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T04:08:50.884Z
+finished: 2026-11-04T04:21:01.995Z (731111 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > refuses an address that is not http or https
+[QA Orchestrator] Running Pre-flight health check on http://localhost:49684...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:49685/...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > refuses an address that is not http or https
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-DEFAULT-001 ("landing-verification") on 375px as anonymous...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Running Pre-flight health check on http://localhost:49684...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-DEFAULT-001 ("landing-verification") on 375px as anonymous...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Executing TC-DEFAULT-001 ("landing-verification") on 768px as anonymous...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Executing TC-DEFAULT-001 ("landing-verification") on 768px as anonymous...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Executing TC-DEFAULT-001 ("landing-verification") on 1440px as anonymous...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Executing TC-DEFAULT-001 ("landing-verification") on 1440px as anonymous...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-runner-server-p39QAV\report\runs\run-1793765340692...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-runner-server-p39QAV\report\runs\run-1793765340290...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:49684...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[DiscoveryAgent] Spider found 10 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-url-first-Etq3bv\report\runs\run-1793765340241\discovery-draft.json
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Running Pre-flight health check on http://localhost:49685/...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[DiscoveryAgent] Spider found 10 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-runner-server-p39QAV\report\runs\run-1793765360774\discovery-draft.json
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Running Pre-flight health check on http://localhost:49684...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing PAGE-004 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-004 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing PAGE-005 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-005 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing PAGE-006 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-006 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-007 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing PAGE-007 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-008 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing PAGE-008 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-009 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing PAGE-009 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing TEST-001 ("page-test") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-010 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing PAGE-010 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing TEST-002 ("page-test") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-001 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-002 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-003 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-004 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-005 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-006 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing TEST-001 ("page-test") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-007 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-008 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-009 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-010 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing NAV-001 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-011 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-012 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing NAV-002 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing TC-FLOW-CUSTOM-001 ("FLOW-CUSTOM-001") on 375px as anonymous...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing NAV-003 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing NAV-004 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-runner-server-p39QAV\report\runs\run-1793765360774...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing NAV-005 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:49684...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing NAV-006 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing NAV-007 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing NAV-008 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing NAV-009 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing NAV-010 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing NAV-011 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing NAV-012 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing TC-FLOW-DASHBOARD ("FLOW-DASHBOARD") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-url-first-Etq3bv\report\runs\run-1793765340241...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[DiscoveryAgent] Exploring signed in as "manager" from /account...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:49685/...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[DiscoveryAgent] Spider found 15 pages, 5 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-runner-server-p39QAV\report\runs\run-1793765510123\discovery-draft.json
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Running Pre-flight health check on http://localhost:49684...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[DiscoveryAgent] Spider found 11 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-url-first-Etq3bv\report\runs\run-1793765533539\discovery-draft.json
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Running Pre-flight health check on http://localhost:49685/...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-004 ("page-visit") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-005 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-006 ("page-visit") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-007 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing PAGE-004 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-008 ("page-visit") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-009 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing PAGE-005 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-010 ("page-visit") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-011 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing PAGE-006 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-012 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-013 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing PAGE-007 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-014 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing PAGE-008 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing TEST-001 ("page-test") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-015 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing PAGE-009 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing TEST-002 ("page-test") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-016 ("page-visit") on 375px as manager...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing TEST-001 ("page-test") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-017 ("page-visit") on 375px as manager...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing PAGE-010 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-018 ("page-visit") on 375px as manager...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing TEST-002 ("page-test") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-019 ("page-visit") on 375px as manager...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing PAGE-011 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-020 ("page-visit") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-001 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing NAV-001 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-002 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing NAV-002 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-003 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-004 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing NAV-003 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-005 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing NAV-004 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-006 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-007 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing NAV-005 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-008 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing NAV-006 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-009 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-010 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-011 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing NAV-007 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing NAV-008 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-012 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing NAV-009 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing NAV-010 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-013 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-014 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing NAV-011 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-015 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing NAV-012 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-016 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-017 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing TC-FLOW-INVOICE ("FLOW-INVOICE") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-018 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-019 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-020 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-021 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-022 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-023 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-024 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-025 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-026 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Executing TC-FLOW-DASHBOARD ("FLOW-DASHBOARD") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing TC-FLOW-001 ("FLOW-001") on 375px as manager...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-url-first-Etq3bv\report\runs\run-1793765533539...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > tests localhost fully when the owner box is ticked
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > without the owner box, even localhost is only looked at
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:49685/...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-runner-server-p39QAV\report\runs\run-1793765510123...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:49684...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > without the owner box, even localhost is only looked at
+[DiscoveryAgent] Spider found 11 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > without the owner box, even localhost is only looked at
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-url-first-Etq3bv\report\runs\run-1793765756162\discovery-draft.json
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > plans with fixed rules when there is no AI, and says describing a test needs it
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:49685/...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[DiscoveryAgent] Spider found 10 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-runner-server-p39QAV\report\runs\run-1793765760749\discovery-draft.json
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Running Pre-flight health check on http://localhost:49684...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > plans with fixed rules when there is no AI, and says describing a test needs it
+[DiscoveryAgent] Spider found 11 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > plans with fixed rules when there is no AI, and says describing a test needs it
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-url-first-Etq3bv\report\runs\run-1793765782674\discovery-draft.json
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:49685/...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing PAGE-004 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing PAGE-005 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing PAGE-006 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[DiscoveryAgent] Spider found 11 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-url-first-Etq3bv\report\runs\run-1793765809190\discovery-draft.json
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Running Pre-flight health check on http://localhost:49685/...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing PAGE-007 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing PAGE-008 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing PAGE-009 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing TEST-001 ("page-test") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing PAGE-004 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing PAGE-010 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing TEST-002 ("page-test") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing PAGE-005 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-001 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-002 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-003 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-004 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-005 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-006 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-007 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing PAGE-006 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-008 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-009 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-010 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-011 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-012 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing TC-FLOW-001 ("FLOW-001") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-runner-server-p39QAV\report\runs\run-1793765760749...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+ ✓ |browser| packages/runner/tests/runner-server.test.ts (9 tests) 572983ms
+   ✓ RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report 20289ms
+   ✓ RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve 149328ms
+   ✓ RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart 250639ms
+   ✓ RunnerServer > runs straight through to completion when skipReview: true is provided 152234ms
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing PAGE-007 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing PAGE-008 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing PAGE-009 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing TEST-001 ("page-test") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing PAGE-010 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing TEST-002 ("page-test") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing PAGE-011 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing NAV-001 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing NAV-002 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing NAV-003 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing NAV-004 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing NAV-005 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing NAV-006 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing NAV-007 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing NAV-008 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing NAV-009 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing NAV-010 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing NAV-011 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing NAV-012 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing TC-FLOW-INVOICE ("FLOW-INVOICE") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Executing TC-FLOW-USER-1793765835621 ("FLOW-USER-1793765835621") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-url-first-Etq3bv\report\runs\run-1793765809190...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:49685/...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[DiscoveryAgent] Spider found 11 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-url-first-Etq3bv\report\runs\run-1793766035819\discovery-draft.json
+
+ ✓ |browser| packages/runner/tests/url-first.test.ts (6 tests) 721667ms
+   ✓ URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent 193330ms
+   ✓ URL-first runs > tests localhost fully when the owner box is ticked 222623ms
+   ✓ URL-first runs > without the owner box, even localhost is only looked at 26489ms
+   ✓ URL-first runs > plans with fixed rules when there is no AI, and says describing a test needs it 26518ms
+   ✓ URL-first runs > turns a sentence into a test after the owner confirms it, and remembers the site next time 252565ms
+
+ Test Files  2 passed (2)
+      Tests  15 passed (15)
+   Start at  09:38:53
+   Duration  728.11s (transform 3.22s, setup 0ms, collect 11.49s, tests 1294.65s, environment 1ms, prepare 474ms)
+
+
+
+## stderr
+

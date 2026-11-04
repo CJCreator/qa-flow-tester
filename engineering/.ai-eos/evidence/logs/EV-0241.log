@@ -1,0 +1,27 @@
+# AI-EOS evidence EV-0241
+check: CHK-BE-104-UNIT (checker fetch wiring and outbound source-grep guard)
+command: pnpm exec vitest run packages/core/tests/checker-fetch.test.ts packages/core/tests/outbound-source-grep.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T03:35:56.215Z
+finished: 2026-11-04T03:36:21.396Z (25181 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/outbound-source-grep.test.ts (2 tests) 803ms
+   ✓ outbound source grep (ADR 0031) > finds no Playwright request call or Node fetch outside the named exceptions 768ms
+ ✓ |unit| packages/core/tests/checker-fetch.test.ts (8 tests) 106ms
+
+ Test Files  2 passed (2)
+      Tests  10 passed (10)
+   Start at  09:06:06
+   Duration  13.98s (transform 2.67s, setup 0ms, collect 10.12s, tests 908ms, environment 2ms, prepare 2.29s)
+
+
+
+## stderr
+

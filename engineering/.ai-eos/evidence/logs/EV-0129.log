@@ -1,0 +1,32 @@
+# AI-EOS evidence EV-0129
+check: CHK-BE-509-UNIT (edits route tests)
+command: pnpm exec vitest run packages/runner/tests/audit-edits-routes.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\usr\bin\bash.exe
+started: 2026-11-03T11:34:53.670Z
+finished: 2026-11-03T11:35:19.533Z (25863 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+Scope: all 7 workspace projects
+✓ Lockfile passes supply-chain policies (verified 1h ago)
+Lockfile is up to date, resolution step is skipped
+Already up to date
+
+Done in 4.6s using pnpm v11.10.0
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/runner/tests/audit-edits-routes.test.ts (8 tests) 1134ms
+   ✓ GET and PATCH /api/audits/:id/edits > returns an empty overlay before any edit 370ms
+
+ Test Files  1 passed (1)
+      Tests  8 passed (8)
+   Start at  17:05:04
+   Duration  13.99s (transform 6.53s, setup 0ms, collect 11.35s, tests 1.13s, environment 1ms, prepare 556ms)
+
+
+
+## stderr
+

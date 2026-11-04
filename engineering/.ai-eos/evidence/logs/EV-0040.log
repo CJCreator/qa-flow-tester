@@ -1,0 +1,29 @@
+# AI-EOS evidence EV-0040
+check: CHK-BE-601-UNIT (Website Audit store unit tests)
+command: pnpm exec vitest run packages/core/tests/audit-store.test.ts packages/core/tests/audit-store-shortlist.test.ts packages/core/tests/audit-store-shares.test.ts packages/core/tests/audit-store-helper-grants.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T07:36:42.842Z
+finished: 2026-11-03T07:36:52.989Z (10147 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-store-shares.test.ts (8 tests) 450ms
+ ✓ |unit| packages/core/tests/audit-store-helper-grants.test.ts (7 tests) 488ms
+ ✓ |unit| packages/core/tests/audit-store.test.ts (15 tests) 1266ms
+   ✓ no secrets in stored audits > keeps none of the seeded secrets after every store method runs 301ms
+ ✓ |unit| packages/core/tests/audit-store-shortlist.test.ts (5 tests) 380ms
+
+ Test Files  4 passed (4)
+      Tests  35 passed (35)
+   Start at  13:06:47
+   Duration  5.15s (transform 964ms, setup 0ms, collect 3.03s, tests 2.58s, environment 2ms, prepare 1.89s)
+
+
+
+## stderr
+

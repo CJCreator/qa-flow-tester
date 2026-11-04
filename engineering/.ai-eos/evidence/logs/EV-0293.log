@@ -1,0 +1,27 @@
+# AI-EOS evidence EV-0293
+check: CHK-QA-700-UNIT (checkers tests whose typings changed)
+command: pnpm exec vitest run packages/checkers/tests/bug-detection.test.ts packages/checkers/tests/bug-grouping.test.ts packages/checkers/tests/visual-diff-finding.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T03:44:50.756Z
+finished: 2026-11-04T03:45:06.663Z (15907 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/checkers/tests/bug-grouping.test.ts (6 tests) 24ms
+ ✓ |unit| packages/checkers/tests/bug-detection.test.ts (3 tests) 14ms
+ ✓ |unit| packages/checkers/tests/visual-diff-finding.test.ts (2 tests) 11ms
+
+ Test Files  3 passed (3)
+      Tests  11 passed (11)
+   Start at  09:14:59
+   Duration  4.57s (transform 405ms, setup 0ms, collect 774ms, tests 49ms, environment 2ms, prepare 2.57s)
+
+
+
+## stderr
+

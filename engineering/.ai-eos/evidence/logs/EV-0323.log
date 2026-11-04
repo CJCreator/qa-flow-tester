@@ -1,0 +1,16 @@
+# AI-EOS evidence EV-0323
+check: CHK-SECRETS (secret scan (commit set, project wrapper))
+command: node scripts/scan-commit-secrets.mjs --aieos "C:/Users/HP/.claude/plugins/cache/ai-eos-marketplace/ai-eos/1.9.0/scripts/aieos.mjs"
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T05:12:42.276Z
+finished: 2026-11-04T05:13:30.723Z (48447 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+Scanned 1237 file(s) that would be committed (421 left out by the .gitleaks.toml allowlist, 1 {{...}} placeholder(s) ignored): 0 finding(s). Values are not printed.
+
+
+## stderr
+

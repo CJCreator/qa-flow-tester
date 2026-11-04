@@ -1,0 +1,25 @@
+# AI-EOS evidence EV-0256
+check: CHK-BE-403-UNIT (audit finding ranking)
+command: pnpm exec vitest run packages/core/tests/audit-ranking.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T03:38:30.411Z
+finished: 2026-11-04T03:38:42.747Z (12336 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-ranking.test.ts (16 tests) 316ms
+
+ Test Files  1 passed (1)
+      Tests  16 passed (16)
+   Start at  09:08:37
+   Duration  4.38s (transform 1.64s, setup 0ms, collect 2.01s, tests 316ms, environment 1ms, prepare 691ms)
+
+
+
+## stderr
+

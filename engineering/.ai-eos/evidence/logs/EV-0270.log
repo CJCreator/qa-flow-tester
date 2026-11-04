@@ -1,0 +1,26 @@
+# AI-EOS evidence EV-0270
+check: CHK-BE-507-UNIT (docx and zip writer tests)
+command: pnpm exec vitest run packages/core/tests/audit-doc-docx.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T03:41:15.382Z
+finished: 2026-11-04T03:41:59.558Z (44176 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-doc-docx.test.ts (17 tests) 1747ms
+   ✓ renderDocx > produces a .docx whose headings, paragraphs, list items and table cells mammoth reads back (REQ-022 AC-2) 888ms
+
+ Test Files  1 passed (1)
+      Tests  17 passed (17)
+   Start at  09:11:27
+   Duration  29.48s (transform 1.64s, setup 0ms, collect 24.32s, tests 1.75s, environment 1ms, prepare 817ms)
+
+
+
+## stderr
+

@@ -1,0 +1,25 @@
+# AI-EOS evidence EV-0147
+check: CHK-BE-189-UNIT (core audit exports contract)
+command: pnpm exec vitest run packages/core/tests/audit-exports.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T11:54:05.899Z
+finished: 2026-11-03T11:54:12.258Z (6359 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-exports.test.ts (20 tests) 39ms
+
+ Test Files  1 passed (1)
+      Tests  20 passed (20)
+   Start at  17:24:07
+   Duration  4.30s (transform 1.86s, setup 0ms, collect 3.81s, tests 39ms, environment 0ms, prepare 159ms)
+
+
+
+## stderr
+

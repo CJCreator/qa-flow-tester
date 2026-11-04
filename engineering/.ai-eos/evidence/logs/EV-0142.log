@@ -1,0 +1,30 @@
+# AI-EOS evidence EV-0142
+check: CHK-BE-507-BROWSER (PDF printing tests (Chromium))
+command: pnpm exec vitest run packages/core/tests/audit-doc-pdf.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T11:47:59.748Z
+finished: 2026-11-03T11:48:16.778Z (17030 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-doc-pdf.test.ts (5 tests) 8996ms
+   ✓ renderPdf > prints rendered HTML to an A4 PDF with the same document (REQ-022 AC-1) 1211ms
+   ✓ renderPdf > embeds a font that covers Tamil for a Tamil document (REQ-022 AC-3) 1380ms
+   ✓ renderPdf > with a local server that must never be reached > aborts every request that is not a data: URI, so nothing leaves the process 632ms
+   ✓ renderPdf > closes the browser when printing fails 451ms
+   ✓ renderPdf > closes the browser when printing takes too long 5304ms
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  17:18:03
+   Duration  12.57s (transform 694ms, setup 0ms, collect 2.45s, tests 9.00s, environment 1ms, prepare 407ms)
+
+
+
+## stderr
+

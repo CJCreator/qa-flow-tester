@@ -1,0 +1,522 @@
+# AI-EOS evidence EV-0375
+check: CHK-BROWSER-1 (vitest browser project shard 1/4)
+command: pnpm exec vitest run --project browser --shard=1/4
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T08:10:43.563Z
+finished: 2026-11-04T08:15:29.579Z (286016 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |browser| packages/runner/tests/audit-persistence-integration.test.ts (6 tests) 925ms
+ ✓ |browser| packages/runner/tests/audit-helpers-routes.test.ts (11 tests) 483ms
+ ✓ |browser| packages/checkers/tests/security-depth.test.ts (27 tests) 38ms
+stdout | packages/runner/tests/consent-enforcement.test.ts > sign-in consent is enforced beyond discovery > approving a consented plan whose sign-in details are gone is refused and sends nothing
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3291/...
+
+ ✓ |browser| packages/core/tests/audit-analysis-fixture.test.ts (22 tests) 10369ms
+ ✓ |browser| packages/runner/tests/route-inventory.test.ts (66 tests) 5203ms
+   ✓ route inventory (T-203) > 'POST' '/api/runner/ai-estimate' is matched (not the generic 404) 632ms
+stdout | packages/runner/tests/consent-enforcement.test.ts > sign-in consent is enforced beyond discovery > approving a consented plan whose sign-in details are gone is refused and sends nothing
+[DiscoveryAgent] Exploring signed in as "manager" from /account...
+
+ ✓ |browser| packages/checkers/tests/design-ux-checkers.test.ts (12 tests) 2082ms
+   ✓ UXQualityChecker accessibility scan > lists every element that breaks a rule, with the WCAG criterion 1005ms
+ ✓ |browser| packages/runner/tests/audit-preview-browser.test.ts (3 tests) 1662ms
+   ✓ REQ-024 AC-1: the stored preview in Chromium > opens through GET /api/audits/:id/preview, and its menu and in-page links navigate; no script runs 756ms
+   ✓ REQ-024 AC-1: the stored preview in Chromium > opens through its Shared Link with no access key, and its menu and in-page links navigate; no script runs 481ms
+stdout | packages/runner/tests/consent-enforcement.test.ts > sign-in consent is enforced beyond discovery > approving a consented plan whose sign-in details are gone is refused and sends nothing
+[DiscoveryAgent] Spider found 3 pages, 1 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > sign-in consent is enforced beyond discovery > approving a consented plan whose sign-in details are gone is refused and sends nothing
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-consent-enforcement-WRfQ3S\report\runs\run-1793779856481\discovery-draft.json
+
+stdout | packages/core/tests/unconfirmed-guesses.test.ts > Unconfirmed guesses never fail a site > passes when the site shows an error in its own words, and records what it said
+[QA Orchestrator] Running Pre-flight health check on http://localhost:49683...
+
+stdout | packages/core/tests/unconfirmed-guesses.test.ts > Unconfirmed guesses never fail a site > passes when the site shows an error in its own words, and records what it said
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-LOGIN ("FLOW-LOGIN") on 1440px as visitor...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > sign-in consent is enforced beyond discovery > wrong password under consent on the caller-supplied test case path: run fails, nothing interactive is sent
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3291/...
+
+stdout | packages/core/tests/unconfirmed-guesses.test.ts > Unconfirmed guesses never fail a site > passes when the site shows an error in its own words, and records what it said
+[QA Orchestrator] Executing TC-LOGIN-val-user-name-empty ("FLOW-LOGIN") on 1440px as visitor...
+
+ ✓ |browser| packages/runner/tests/benchmark.test.ts (8 tests) 5442ms
+   ✓ Comparing two sites > visits both sites and measures what it finds, rather than using preset numbers 3169ms
+   ✓ Comparing two sites > REQ-049 AC-4: a benchmark and a Check-up started together: exactly one claims the slot 2042ms
+ ✓ |browser| packages/core/tests/browser-guard.test.ts (6 tests) 889ms
+   ✓ the guard in a real browser (needs Chromium) > with the shared-machine policy a page on loopback is blocked; with no policy it loads 880ms
+stdout | packages/core/tests/unconfirmed-guesses.test.ts > Unconfirmed guesses never fail a site > passes when the site shows an error in its own words, and records what it said
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-unconfirmed-guesses\login...
+
+stdout | packages/core/tests/unconfirmed-guesses.test.ts > Unconfirmed guesses never fail a site > passes when the site shows an error in its own words, and records what it said
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/core/tests/unconfirmed-guesses.test.ts > Unconfirmed guesses never fail a site > reports wrong guesses as "Could not verify", never as defects
+[QA Orchestrator] Running Pre-flight health check on http://localhost:49683...
+
+stdout | packages/core/tests/unconfirmed-guesses.test.ts > Unconfirmed guesses never fail a site > reports wrong guesses as "Could not verify", never as defects
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-INVOICE ("FLOW-INVOICE") on 1440px as visitor...
+
+stdout | packages/core/tests/unconfirmed-guesses.test.ts > Unconfirmed guesses never fail a site > reports wrong guesses as "Could not verify", never as defects
+[QA Orchestrator] Executing TC-INVOICE-val-amount-empty ("FLOW-INVOICE") on 1440px as visitor...
+
+stdout | packages/core/tests/retry-no-duplicates.test.ts > namespacing: retried flow cannot create duplicates > namespacing: Test Copy fill values reach the page with the per-run token
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3534...
+
+stdout | packages/core/tests/retry-no-duplicates.test.ts > namespacing: retried flow cannot create duplicates > namespacing: Test Copy fill values reach the page with the per-run token
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-NS-1 ("TC-NS-1-flow") on 1440px as anonymous...
+
+stdout | packages/core/tests/retry-no-duplicates.test.ts > namespacing: retried flow cannot create duplicates > namespacing: Test Copy fill values reach the page with the per-run token
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-retry-no-dupes-report...
+
+stdout | packages/core/tests/retry-no-duplicates.test.ts > namespacing: retried flow cannot create duplicates > namespacing: Test Copy fill values reach the page with the per-run token
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/core/tests/retry-no-duplicates.test.ts > namespacing: retried flow cannot create duplicates > namespacing: flow that fails after submit is not retried, POST /submit count is 1
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3534...
+
+stdout | packages/core/tests/retry-no-duplicates.test.ts > namespacing: retried flow cannot create duplicates > namespacing: flow that fails after submit is not retried, POST /submit count is 1
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-NS-2 ("TC-NS-2-flow") on 1440px as anonymous...
+
+stdout | packages/core/tests/unconfirmed-guesses.test.ts > Unconfirmed guesses never fail a site > reports wrong guesses as "Could not verify", never as defects
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-unconfirmed-guesses\invoice...
+
+stdout | packages/core/tests/unconfirmed-guesses.test.ts > Unconfirmed guesses never fail a site > reports wrong guesses as "Could not verify", never as defects
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/core/tests/unconfirmed-guesses.test.ts > Unconfirmed guesses never fail a site > still fails the site when a confirmed expectation is not met
+[QA Orchestrator] Running Pre-flight health check on http://localhost:49683...
+
+stdout | packages/core/tests/unconfirmed-guesses.test.ts > Unconfirmed guesses never fail a site > still fails the site when a confirmed expectation is not met
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-INVOICE ("FLOW-INVOICE") on 1440px as visitor...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > sign-in consent is enforced beyond discovery > wrong password under consent on the caller-supplied test case path: run fails, nothing interactive is sent
+[QA Orchestrator] Pre-flight check PASSED.
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > sign-in consent is enforced beyond discovery > a no-AI run writes "Pages found" into issues.md on its first write
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3291/...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > sign-in consent is enforced beyond discovery > a no-AI run writes "Pages found" into issues.md on its first write
+[DiscoveryAgent] Spider found 2 pages, 0 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > sign-in consent is enforced beyond discovery > a no-AI run writes "Pages found" into issues.md on its first write
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-consent-enforcement-WRfQ3S\report\runs\run-1793779881069\discovery-draft.json
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > sign-in consent is enforced beyond discovery > a no-AI run writes "Pages found" into issues.md on its first write
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3291/...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > sign-in consent is enforced beyond discovery > a no-AI run writes "Pages found" into issues.md on its first write
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 375px as visitor...
+
+stdout | packages/core/tests/unconfirmed-guesses.test.ts > Unconfirmed guesses never fail a site > still fails the site when a confirmed expectation is not met
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-unconfirmed-guesses\confirmed...
+
+stdout | packages/core/tests/unconfirmed-guesses.test.ts > Unconfirmed guesses never fail a site > still fails the site when a confirmed expectation is not met
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+ ✓ |browser| packages/core/tests/unconfirmed-guesses.test.ts (5 tests) 16743ms
+   ✓ Unconfirmed guesses never fail a site > passes when the site shows an error in its own words, and records what it said 4642ms
+   ✓ Unconfirmed guesses never fail a site > reports wrong guesses as "Could not verify", never as defects 5620ms
+   ✓ Unconfirmed guesses never fail a site > still fails the site when a confirmed expectation is not met 6461ms
+stdout | packages/core/tests/missing-element.test.ts > missing element step cap > a missing element fails the step within the default cap
+[QA Orchestrator] Running Pre-flight health check on http://localhost:59976...
+
+stdout | packages/core/tests/missing-element.test.ts > missing element step cap > a missing element fails the step within the default cap
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-MISSING-1 ("missing-flow") on 1440px as anonymous...
+
+stdout | packages/core/tests/retry-no-duplicates.test.ts > namespacing: retried flow cannot create duplicates > namespacing: flow that fails after submit is not retried, POST /submit count is 1
+[QA Orchestrator] TC-NS-2 on 1440px: not retried, a form was already sent (a retry would send it twice).
+
+stdout | packages/core/tests/retry-no-duplicates.test.ts > namespacing: retried flow cannot create duplicates > namespacing: flow that fails after submit is not retried, POST /submit count is 1
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-retry-no-dupes-report...
+
+stdout | packages/core/tests/retry-no-duplicates.test.ts > namespacing: retried flow cannot create duplicates > namespacing: flow that fails after submit is not retried, POST /submit count is 1
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/core/tests/retry-no-duplicates.test.ts > namespacing: retried flow cannot create duplicates > namespacing: failure before any send still retries whole flow once and is FLAKY_PASSED, POST count 1
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3534...
+
+stdout | packages/core/tests/retry-no-duplicates.test.ts > namespacing: retried flow cannot create duplicates > namespacing: failure before any send still retries whole flow once and is FLAKY_PASSED, POST count 1
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-NS-3 ("TC-NS-3-flow") on 1440px as anonymous...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > sign-in consent is enforced beyond discovery > a no-AI run writes "Pages found" into issues.md on its first write
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > sign-in consent is enforced beyond discovery > a no-AI run writes "Pages found" into issues.md on its first write
+[QA Orchestrator] Executing NAV-001 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > sign-in consent is enforced beyond discovery > a no-AI run writes "Pages found" into issues.md on its first write
+[QA Orchestrator] Executing NAV-002 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > sign-in consent is enforced beyond discovery > a no-AI run writes "Pages found" into issues.md on its first write
+[QA Orchestrator] Executing NAV-003 ("navigation") on 375px as visitor...
+
+stdout | packages/core/tests/retry-no-duplicates.test.ts > namespacing: retried flow cannot create duplicates > namespacing: failure before any send still retries whole flow once and is FLAKY_PASSED, POST count 1
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-retry-no-dupes-report...
+
+stdout | packages/core/tests/retry-no-duplicates.test.ts > namespacing: retried flow cannot create duplicates > namespacing: failure before any send still retries whole flow once and is FLAKY_PASSED, POST count 1
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/core/tests/retry-no-duplicates.test.ts > namespacing: retried flow cannot create duplicates > namespacing: readOnly true sends no POST and types values unchanged
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3534...
+
+stdout | packages/core/tests/retry-no-duplicates.test.ts > namespacing: retried flow cannot create duplicates > namespacing: readOnly true sends no POST and types values unchanged
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-NS-4 ("TC-NS-4-flow") on 1440px as anonymous...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > sign-in consent is enforced beyond discovery > a no-AI run writes "Pages found" into issues.md on its first write
+[QA Orchestrator] Executing TC-FLOW-001 ("FLOW-001") on 375px as anonymous...
+
+stdout | packages/core/tests/retry-no-duplicates.test.ts > namespacing: retried flow cannot create duplicates > namespacing: readOnly true sends no POST and types values unchanged
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-retry-no-dupes-report...
+
+stdout | packages/core/tests/retry-no-duplicates.test.ts > namespacing: retried flow cannot create duplicates > namespacing: readOnly true sends no POST and types values unchanged
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/core/tests/retry-no-duplicates.test.ts > namespacing: retried flow cannot create duplicates > namespacing: {{password}} fill types the real password, not namespaced, on a Test Copy
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3534...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > sign-in consent is enforced beyond discovery > a no-AI run writes "Pages found" into issues.md on its first write
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-consent-enforcement-WRfQ3S\report\runs\run-1793779881069...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > sign-in consent is enforced beyond discovery > a no-AI run writes "Pages found" into issues.md on its first write
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/core/tests/retry-no-duplicates.test.ts > namespacing: retried flow cannot create duplicates > namespacing: {{password}} fill types the real password, not namespaced, on a Test Copy
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-NS-5 ("TC-NS-5-flow") on 1440px as member...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[checkup] No QA_AI_API_KEY set: the plan is written by fixed rules, with no AI.
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3294...
+
+stdout | packages/core/tests/missing-element.test.ts > missing element step cap > a missing element fails the step within the default cap
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-missing-element-report...
+
+stdout | packages/core/tests/missing-element.test.ts > missing element step cap > a missing element fails the step within the default cap
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/core/tests/missing-element.test.ts > missing element step cap > a missing element fails at a 2 s override
+[QA Orchestrator] Running Pre-flight health check on http://localhost:59976...
+
+stdout | packages/core/tests/missing-element.test.ts > missing element step cap > a missing element fails at a 2 s override
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-MISSING-1 ("missing-flow") on 1440px as anonymous...
+
+stdout | packages/core/tests/retry-no-duplicates.test.ts > namespacing: retried flow cannot create duplicates > namespacing: {{password}} fill types the real password, not namespaced, on a Test Copy
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-retry-no-dupes-report...
+
+stdout | packages/core/tests/retry-no-duplicates.test.ts > namespacing: retried flow cannot create duplicates > namespacing: {{password}} fill types the real password, not namespaced, on a Test Copy
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+ ✓ |browser| packages/core/tests/retry-no-duplicates.test.ts (5 tests) 34043ms
+   ✓ namespacing: retried flow cannot create duplicates > namespacing: Test Copy fill values reach the page with the per-run token 2264ms
+   ✓ namespacing: retried flow cannot create duplicates > namespacing: flow that fails after submit is not retried, POST /submit count is 1 12223ms
+   ✓ namespacing: retried flow cannot create duplicates > namespacing: failure before any send still retries whole flow once and is FLAKY_PASSED, POST count 1 13707ms
+   ✓ namespacing: retried flow cannot create duplicates > namespacing: readOnly true sends no POST and types values unchanged 2637ms
+   ✓ namespacing: retried flow cannot create duplicates > namespacing: {{password}} fill types the real password, not namespaced, on a Test Copy 3171ms
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[DiscoveryAgent] Exploring signed in as "member" from /account...
+
+ ✓ |browser| packages/runner/tests/remembered-signins.test.ts (3 tests) 201ms
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[DiscoveryAgent] Spider found 2 pages, 0 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-consent-enforcement-WRfQ3S\report-ci\runs\run-1793779908100\discovery-draft.json
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3294...
+
+stdout | packages/core/tests/missing-element.test.ts > missing element step cap > a missing element fails at a 2 s override
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-missing-element-report...
+
+stdout | packages/core/tests/missing-element.test.ts > missing element step cap > a missing element fails at a 2 s override
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/core/tests/missing-element.test.ts > missing element step cap > a missing element waits out a larger override
+[QA Orchestrator] Running Pre-flight health check on http://localhost:59976...
+
+stdout | packages/core/tests/missing-element.test.ts > missing element step cap > a missing element waits out a larger override
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-MISSING-1 ("missing-flow") on 1440px as anonymous...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/test-cap-endpoints.test.ts > Test cap on a Waiting Plan > echoes the cap, validates intentsOff, and expands a saved plan again after a restart
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:64952/...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 768px as visitor...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 375px as member...
+
+stdout | packages/core/tests/missing-element.test.ts > missing element step cap > a missing element waits out a larger override
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-missing-element-report...
+
+stdout | packages/core/tests/missing-element.test.ts > missing element step cap > a missing element waits out a larger override
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/core/tests/missing-element.test.ts > missing element step cap > a missing element on a failing flow retries within twice the cap
+[QA Orchestrator] Running Pre-flight health check on http://localhost:59976...
+
+stdout | packages/core/tests/missing-element.test.ts > missing element step cap > a missing element on a failing flow retries within twice the cap
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-MISSING-1 ("missing-flow") on 1440px as anonymous...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 768px as member...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 1440px as member...
+
+stdout | packages/core/tests/missing-element.test.ts > missing element step cap > a missing element on a failing flow retries within twice the cap
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-missing-element-report...
+
+stdout | packages/core/tests/missing-element.test.ts > missing element step cap > a missing element on a failing flow retries within twice the cap
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/core/tests/missing-element.test.ts > missing element step cap > a missing element that appears late is still clicked
+[QA Orchestrator] Running Pre-flight health check on http://localhost:59976...
+
+stdout | packages/core/tests/missing-element.test.ts > missing element step cap > a missing element that appears late is still clicked
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-MISSING-1 ("missing-flow") on 1440px as anonymous...
+
+stdout | packages/core/tests/missing-element.test.ts > missing element step cap > a missing element that appears late is still clicked
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-missing-element-report...
+
+stdout | packages/core/tests/missing-element.test.ts > missing element step cap > a missing element that appears late is still clicked
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/core/tests/missing-element.test.ts > missing element step cap > a missing field that appears late is still filled
+[QA Orchestrator] Running Pre-flight health check on http://localhost:59976...
+
+stdout | packages/core/tests/missing-element.test.ts > missing element step cap > a missing field that appears late is still filled
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-MISSING-1 ("missing-flow") on 1440px as anonymous...
+
+stdout | packages/runner/tests/test-cap-endpoints.test.ts > Test cap on a Waiting Plan > echoes the cap, validates intentsOff, and expands a saved plan again after a restart
+[DiscoveryAgent] Spider found 11 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/test-cap-endpoints.test.ts > Test cap on a Waiting Plan > echoes the cap, validates intentsOff, and expands a saved plan again after a restart
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-test-cap-endpoints\runs\run-1793779915578\discovery-draft.json
+
+ ✓ |browser| packages/runner/tests/test-cap-endpoints.test.ts (4 tests) 30080ms
+   ✓ Test cap on a Waiting Plan > echoes the cap, validates intentsOff, and expands a saved plan again after a restart 29909ms
+ ✓ |browser| packages/checkers/tests/marketing-review.test.ts (10 tests) 28ms
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 375px as member...
+
+stdout | packages/core/tests/missing-element.test.ts > missing element step cap > a missing field that appears late is still filled
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-missing-element-report...
+
+stdout | packages/core/tests/missing-element.test.ts > missing element step cap > a missing field that appears late is still filled
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/core/tests/missing-element.test.ts > missing element step cap > a missing optional element is skipped at about 1.5 s
+[QA Orchestrator] Running Pre-flight health check on http://localhost:59976...
+
+stdout | packages/core/tests/missing-element.test.ts > missing element step cap > a missing optional element is skipped at about 1.5 s
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-MISSING-1 ("missing-flow") on 1440px as anonymous...
+
+ ✓ |browser| packages/core/tests/browser-context.test.ts (4 tests) 1548ms
+   ✓ T-103 browser context scoped headers and restart guard > sends X-QA-Bypass-Token only to target host A and NOT to third-party host B 568ms
+   ✓ T-103 browser context scoped headers and restart guard > openPage with a nonexistent storageState path throws without killing the shared browser 322ms
+stdout | packages/core/tests/missing-element.test.ts > missing element step cap > a missing optional element is skipped at about 1.5 s
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-missing-element-report...
+
+stdout | packages/core/tests/missing-element.test.ts > missing element step cap > a missing optional element is skipped at about 1.5 s
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+ ✓ |browser| packages/core/tests/missing-element.test.ts (7 tests) 64160ms
+   ✓ missing element step cap > a missing element fails the step within the default cap 22036ms
+   ✓ missing element step cap > a missing element fails at a 2 s override 5945ms
+   ✓ missing element step cap > a missing element waits out a larger override 17007ms
+   ✓ missing element step cap > a missing element on a failing flow retries within twice the cap 8302ms
+   ✓ missing element step cap > a missing element that appears late is still clicked 3907ms
+   ✓ missing element step cap > a missing field that appears late is still filled 3261ms
+   ✓ missing element step cap > a missing optional element is skipped at about 1.5 s 3653ms
+stdout | packages/runner/tests/error-redaction.test.ts > error redaction > redacts query secrets in server RUN_FAILED events when discovery fails to connect
+[DiscoveryAgent] Crawling routes and interactive forms on http://127.0.0.1:54321/probe?api_key=leaked-secret-query-token-999...
+
+stdout | packages/runner/tests/error-redaction.test.ts > error redaction > redacts query secrets in server RUN_FAILED events when discovery fails to connect
+[DiscoveryAgent] Spider found 0 pages, 0 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/error-redaction.test.ts > error redaction > redacts query secrets in server RUN_FAILED events when discovery fails to connect
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-error-redaction-xyBfqC\report\runs\run-1793779956053\discovery-draft.json
+
+stdout | packages/runner/tests/error-redaction.test.ts > error redaction > redacts query secrets in server RUN_FAILED events when discovery fails to connect
+[QA Orchestrator] Running Pre-flight health check on http://127.0.0.1:54321/probe?api_key=leaked-secret-query-token-999...
+
+stdout | packages/core/tests/small-fixes.test.ts > Reports explain every failure and travel well > gives a test that could not run a finding saying why, and writes paths relative to the report folder
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3508...
+
+stdout | packages/core/tests/small-fixes.test.ts > Reports explain every failure and travel well > gives a test that could not run a finding saying why, and writes paths relative to the report folder
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-OK ("home") on 1440px as visitor...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 768px as member...
+
+ ✓ |browser| packages/runner/tests/error-redaction.test.ts (7 tests) 5836ms
+   ✓ error redaction > redacts query secrets in server RUN_FAILED events when discovery fails to connect 5804ms
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 1440px as member...
+
+stdout | packages/core/tests/small-fixes.test.ts > Reports explain every failure and travel well > gives a test that could not run a finding saying why, and writes paths relative to the report folder
+[QA Orchestrator] Executing TC-DOWN ("elsewhere") on 1440px as visitor...
+
+stdout | packages/core/tests/small-fixes.test.ts > Reports explain every failure and travel well > gives a test that could not run a finding saying why, and writes paths relative to the report folder
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-small-fixes...
+
+stdout | packages/core/tests/small-fixes.test.ts > Reports explain every failure and travel well > gives a test that could not run a finding saying why, and writes paths relative to the report folder
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+ ✓ |browser| packages/core/tests/small-fixes.test.ts (3 tests) 11810ms
+   ✓ Dead-end rule and WCAG 2.2 > does not call the start page of a one-screen app a dead end, but still flags other pages 407ms
+   ✓ Dead-end rule and WCAG 2.2 > checks WCAG 2.2 rules, such as minimum target size 1533ms
+   ✓ Reports explain every failure and travel well > gives a test that could not run a finding saying why, and writes paths relative to the report folder 9434ms
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Executing NAV-001 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Executing NAV-002 ("navigation") on 1440px as member...
+
+stdout | packages/runner/tests/sources-endpoints.test.ts > Sources on the run route > keeps the documents and their names in the waiting plan after a restart
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3720/...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Executing NAV-003 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Executing NAV-004 ("navigation") on 1440px as member...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Executing TC-FLOW-001 ("FLOW-001") on 375px as member...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Executing TC-FLOW-001 ("FLOW-001") on 768px as member...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Executing TC-FLOW-001 ("FLOW-001") on 1440px as member...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-consent-enforcement-WRfQ3S\report-ci\runs\run-1793779908100...
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/consent-enforcement.test.ts > headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted
+
+[checkup] Not ready yet: Quality gate breached: Secure score is 28 (minimum 60 required) and Secure grade is F (minimum Grade C required) must be fixed first. Not checked: 2 areas not checked.
+[checkup] Report written to C:\Users\HP\AppData\Local\Temp\qa-test-consent-enforcement-WRfQ3S\report-ci
+
+ ✓ |browser| packages/runner/tests/consent-enforcement.test.ts (4 tests) 152114ms
+   ✓ sign-in consent is enforced beyond discovery > approving a consented plan whose sign-in details are gone is refused and sends nothing 13332ms
+   ✓ sign-in consent is enforced beyond discovery > wrong password under consent on the caller-supplied test case path: run fails, nothing interactive is sent 11290ms
+   ✓ sign-in consent is enforced beyond discovery > a no-AI run writes "Pages found" into issues.md on its first write 26975ms
+   ✓ headless Check-up keeps sign-in sessions out of the report folder > no session file under the report folder, and the working folder is deleted 100340ms
+stdout | packages/runner/tests/sources-endpoints.test.ts > Sources on the run route > keeps the documents and their names in the waiting plan after a restart
+[DiscoveryAgent] Spider found 11 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/sources-endpoints.test.ts > Sources on the run route > keeps the documents and their names in the waiting plan after a restart
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-sources-endpoints\runs\run-1793779969759\discovery-draft.json
+
+ ✓ |browser| packages/runner/tests/sources-endpoints.test.ts (4 tests) 44853ms
+   ✓ Sources on the run route > keeps the documents and their names in the waiting plan after a restart 44738ms
+ ✓ |browser| packages/core/tests/spider-site-edge.test.ts (2 tests) 27762ms
+   ✓ DeterministicSpider: where the site begins and ends > crawls the host the start address lands on, and records each redirected page once under its real address 20040ms
+   ✓ DeterministicSpider: where the site begins and ends > does not follow a start address onto a sign-in service on another host 2221ms
+ ✓ |browser| packages/runner/tests/access-token.test.ts (6 tests) 190ms
+ ✓ |browser| packages/runner/tests/signin-endpoint.test.ts (3 tests) 35914ms
+   ✓ sign-in test endpoint > adding a wrong sign-in answers 422 with reason and saves nothing 13713ms
+   ✓ sign-in test endpoint > adding a sign-in on a page with no form answers 422 no-form 7716ms
+   ✓ sign-in test endpoint > success answers verified:true with no reason, then a saved wrong one tests as verified:false with a reason 14302ms
+ ✓ |browser| packages/core/tests/signin.test.ts (11 tests) 110730ms
+   ✓ PreFlightChecker.signIn > success carries no reason 1263ms
+   ✓ PreFlightChecker.signIn > signs in on a two-step login (username, then password) 1156ms
+   ✓ PreFlightChecker.signIn > signs in on a login that opens in a modal 7551ms
+   ✓ PreFlightChecker.signIn > reports wrong-details for a wrong password on single-step, two-step and modal logins 43974ms
+   ✓ PreFlightChecker.signIn > reports wrong-details for a wrong username on step one of a two-step login 8268ms
+   ✓ PreFlightChecker.signIn > reports no-form when the page has no sign-in form 7696ms
+   ✓ PreFlightChecker.signIn > reports needs-more for a CAPTCHA 1143ms
+   ✓ PreFlightChecker.signIn > reports needs-more for a single-sign-on-only page 7586ms
+   ✓ PreFlightChecker.signIn > reports unreachable when the site refuses connection 1662ms
+   ✓ PreFlightChecker.signIn > reports unreachable on a timeout 3964ms
+   ✓ PreFlightChecker.signIn > gives the same reason every time for the same failure 25496ms
+ ✓ |browser| packages/core/tests/spider-page-limit.test.ts (1 test) 14306ms
+   ✓ the page limit is checked before a page’s work (T-307) > stops at the limit, keeps every route’s own reason, and writes no orphan screenshot 12314ms
+ ✓ |browser| packages/core/tests/fixture-access-lab.test.ts (4 tests) 695ms
+   ✓ QSP-011 access and security lab routes > mirror shows each session its own name; mirror-leak shows the first name to everyone 331ms
+stdout | packages/core/tests/opening-missing.test.ts > opening step missing > is Could not verify with "Could not reach", and no form finding
+[QA Orchestrator] Running Pre-flight health check on http://localhost:52996...
+
+stdout | packages/core/tests/opening-missing.test.ts > opening step missing > is Could not verify with "Could not reach", and no form finding
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-OPEN-1 ("open-flow") on 1440px as anonymous...
+
+ ✓ |browser| packages/runner/tests/preflight-route.test.ts (3 tests) 330ms
+ ✓ |browser| packages/core/tests/interactive-states.test.ts (4 tests) 19952ms
+   ✓ Spider: Interactive States > records the click that opens a form hidden in a tab, an accordion and a drawer 12427ms
+   ✓ Spider: Interactive States > records the button that opens a dialog form 3533ms
+   ✓ Spider: Interactive States > gives a form that is visible from the start no opening steps 3437ms
+ ✓ |browser| packages/runner/tests/spec-override-endpoint.test.ts (1 test) 161ms
+stdout | packages/core/tests/opening-missing.test.ts > opening step missing > is Could not verify with "Could not reach", and no form finding
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-opening-missing-report...
+
+stdout | packages/core/tests/opening-missing.test.ts > opening step missing > is Could not verify with "Could not reach", and no form finding
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/core/tests/opening-missing.test.ts > opening step missing > the same missing step without the opening flag still fails the test
+[QA Orchestrator] Running Pre-flight health check on http://localhost:52996...
+
+stdout | packages/core/tests/opening-missing.test.ts > opening step missing > the same missing step without the opening flag still fails the test
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-OPEN-1 ("open-flow") on 1440px as anonymous...
+
+stdout | packages/core/tests/opening-missing.test.ts > opening step missing > the same missing step without the opening flag still fails the test
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-opening-missing-report...
+
+stdout | packages/core/tests/opening-missing.test.ts > opening step missing > the same missing step without the opening flag still fails the test
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+ ✓ |browser| packages/core/tests/opening-missing.test.ts (2 tests) 36137ms
+   ✓ opening step missing > is Could not verify with "Could not reach", and no form finding 16421ms
+   ✓ opening step missing > the same missing step without the opening flag still fails the test 19680ms
+ ✓ |browser| packages/core/tests/spider-crud.test.ts (2 tests) 5445ms
+   ✓ Spider: CRUD facts and Delete probe > reports CRUD facts for /lab/crud, sends no POST/DELETE, and the rows survive 4849ms
+
+ Test Files  31 passed (31)
+      Tests  256 passed (256)
+   Start at  13:40:45
+   Duration  284.10s (transform 4.42s, setup 0ms, collect 99.10s, tests 640.13s, environment 18ms, prepare 14.61s)
+
+
+
+## stderr
+

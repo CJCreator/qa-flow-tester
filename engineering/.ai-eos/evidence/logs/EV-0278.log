@@ -1,0 +1,26 @@
+# AI-EOS evidence EV-0278
+check: CHK-BE-709-TEXT (document text tables EN/TA/HI)
+command: pnpm exec vitest run packages/core/tests/audit-document-text.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T03:42:58.302Z
+finished: 2026-11-04T03:43:15.256Z (16954 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-document-text.test.ts (11 tests) 1086ms
+   ✓ Document text tables (en, ta, hi) > English uses none of the CONTEXT.md Avoid terms and no ADR 0018 claim words 798ms
+
+ Test Files  1 passed (1)
+      Tests  11 passed (11)
+   Start at  09:13:06
+   Duration  7.19s (transform 1.73s, setup 0ms, collect 2.20s, tests 1.09s, environment 1ms, prepare 1.32s)
+
+
+
+## stderr
+

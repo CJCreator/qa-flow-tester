@@ -1,0 +1,25 @@
+# AI-EOS evidence EV-0195
+check: CHK-BE-603-UNIT (re-run route tests)
+command: pnpm exec vitest run packages/runner/tests/audit-rerun-route.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T16:51:05.029Z
+finished: 2026-11-03T16:51:24.486Z (19457 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/runner/tests/audit-rerun-route.test.ts (13 tests) 1502ms
+
+ Test Files  1 passed (1)
+      Tests  13 passed (13)
+   Start at  22:21:09
+   Duration  14.04s (transform 5.86s, setup 0ms, collect 11.26s, tests 1.50s, environment 0ms, prepare 465ms)
+
+
+
+## stderr
+

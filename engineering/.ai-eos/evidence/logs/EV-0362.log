@@ -1,0 +1,25 @@
+# AI-EOS evidence EV-0362
+check: CHK-QA-200-INTEGRATION (Audit crawl sends only reads)
+command: pnpm exec vitest run packages/core/tests/audit-crawl-read-only.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T07:32:06.551Z
+finished: 2026-11-04T07:32:59.005Z (52454 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |browser| packages/core/tests/audit-crawl-read-only.test.ts (9 tests) 42377ms
+
+ Test Files  1 passed (1)
+      Tests  9 passed (9)
+   Start at  13:02:11
+   Duration  47.24s (transform 1.41s, setup 0ms, collect 3.80s, tests 42.38s, environment 0ms, prepare 327ms)
+
+
+
+## stderr
+

@@ -1,0 +1,25 @@
+# AI-EOS evidence EV-0135
+check: CHK-BE-508-UNIT (audit settings route tests)
+command: pnpm exec vitest run packages/runner/tests/audit-settings-routes.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T11:38:32.640Z
+finished: 2026-11-03T11:38:49.242Z (16602 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/runner/tests/audit-settings-routes.test.ts (12 tests) 224ms
+
+ Test Files  1 passed (1)
+      Tests  12 passed (12)
+   Start at  17:08:37
+   Duration  11.14s (transform 4.71s, setup 0ms, collect 9.77s, tests 224ms, environment 1ms, prepare 450ms)
+
+
+
+## stderr
+

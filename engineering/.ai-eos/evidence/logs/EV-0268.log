@@ -1,0 +1,25 @@
+# AI-EOS evidence EV-0268
+check: CHK-BE-506-UNIT (document generation and export bundle tests)
+command: pnpm exec vitest run packages/core/tests/audit-doc-export.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T03:40:35.174Z
+finished: 2026-11-04T03:41:25.929Z (50755 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-doc-export.test.ts (31 tests) 2173ms
+
+ Test Files  1 passed (1)
+      Tests  31 passed (31)
+   Start at  09:11:03
+   Duration  18.33s (transform 5.19s, setup 0ms, collect 10.79s, tests 2.17s, environment 1ms, prepare 1.17s)
+
+
+
+## stderr
+

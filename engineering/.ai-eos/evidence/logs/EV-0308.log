@@ -1,0 +1,27 @@
+# AI-EOS evidence EV-0308
+check: CHK-QA-195-E2E (Website Audit end to end through the runner (Chromium, audit-site fixture))
+command: pnpm exec vitest run packages/runner/tests/website-audit-e2e.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T04:27:55.819Z
+finished: 2026-11-04T04:29:03.423Z (67604 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/runner/tests/website-audit-e2e.test.ts (8 tests) 42174ms
+   ✓ Website Audit end to end (fixtures/audit-site) > starts with 202, refuses a second run with 409 while it runs, and finishes 41378ms
+   ✓ Website Audit end to end (fixtures/audit-site) > exports the Audit Documents, and no reply or export holds a release verdict 501ms
+
+ Test Files  1 passed (1)
+      Tests  8 passed (8)
+   Start at  09:58:02
+   Duration  59.58s (transform 8.38s, setup 0ms, collect 15.21s, tests 42.17s, environment 1ms, prepare 691ms)
+
+
+
+## stderr
+

@@ -1,0 +1,25 @@
+# AI-EOS evidence EV-0100
+check: CHK-QA-300-BROWSER (page analysis end to end on the audit fixture site)
+command: pnpm exec vitest run packages/core/tests/audit-analysis-fixture.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T10:45:00.089Z
+finished: 2026-11-03T10:45:25.106Z (25017 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-analysis-fixture.test.ts (22 tests) 12490ms
+
+ Test Files  1 passed (1)
+      Tests  22 passed (22)
+   Start at  16:15:05
+   Duration  18.64s (transform 1.41s, setup 0ms, collect 4.45s, tests 12.49s, environment 1ms, prepare 630ms)
+
+
+
+## stderr
+

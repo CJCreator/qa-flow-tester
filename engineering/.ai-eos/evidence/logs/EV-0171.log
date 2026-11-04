@@ -1,0 +1,28 @@
+# AI-EOS evidence EV-0171
+check: CHK-BE-605-UNIT (preview generator, sanitiser and route tests)
+command: pnpm exec vitest run packages/core/tests/audit-preview.test.ts packages/core/tests/audit-preview-sanitize.test.ts packages/runner/tests/audit-preview-routes.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T12:29:46.340Z
+finished: 2026-11-03T12:30:14.679Z (28339 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-preview-sanitize.test.ts (44 tests) 117ms
+ ✓ |unit| packages/core/tests/audit-preview.test.ts (15 tests) 322ms
+ ✓ |unit| packages/runner/tests/audit-preview-routes.test.ts (12 tests) 1718ms
+   ✓ preview rows > with a key: stores preview.html and answers PreviewReply; the 'preview' stage model is used 444ms
+
+ Test Files  3 passed (3)
+      Tests  71 passed (71)
+   Start at  17:59:54
+   Duration  19.25s (transform 10.96s, setup 0ms, collect 23.00s, tests 2.16s, environment 2ms, prepare 3.03s)
+
+
+
+## stderr
+

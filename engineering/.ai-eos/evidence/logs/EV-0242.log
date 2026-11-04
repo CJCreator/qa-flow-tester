@@ -1,0 +1,29 @@
+# AI-EOS evidence EV-0242
+check: CHK-BE-102-UNIT (route table access, beta policy and param matching (unit))
+command: pnpm exec vitest run packages/runner/tests/route-table.test.ts packages/runner/tests/route-access.test.ts packages/runner/tests/plan-routes.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T03:35:57.657Z
+finished: 2026-11-04T03:36:42.296Z (44639 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/runner/tests/route-access.test.ts (21 tests) 166ms
+ ✓ |unit| packages/runner/tests/route-table.test.ts (15 tests) 183ms
+ ✓ |unit| packages/runner/tests/plan-routes.test.ts (8 tests) 1770ms
+   ✓ Plan handlers as functions over CheckupSession (T-207) > 1. items switched off: patchPlan switches item to skipped in stored record 328ms
+   ✓ Plan handlers as functions over CheckupSession (T-207) > waitingPlans lists parked plans and unparks a plan 343ms
+
+ Test Files  3 passed (3)
+      Tests  44 passed (44)
+   Start at  09:06:07
+   Duration  32.18s (transform 16.83s, setup 0ms, collect 80.37s, tests 2.12s, environment 2ms, prepare 2.80s)
+
+
+
+## stderr
+

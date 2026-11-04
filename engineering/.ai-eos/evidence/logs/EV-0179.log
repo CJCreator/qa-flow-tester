@@ -1,0 +1,40 @@
+# AI-EOS evidence EV-0179
+check: CHK-BE-102-SERVER (runner dispatch enforces access and beta policy (RunnerServer))
+command: pnpm exec vitest run packages/runner/tests/route-access-server.test.ts packages/runner/tests/access-token.test.ts packages/runner/tests/beta.test.ts packages/runner/tests/route-inventory.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T12:43:02.480Z
+finished: 2026-11-03T12:43:26.346Z (23866 ms)
+exit_code: 1
+verdict: FAIL
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+stdout | packages/runner/tests/beta.test.ts > beta limits: a runner that is not a beta > beta limits: a runner that is not a beta is never limited
+[QA Orchestrator] Running Pre-flight health check on http://127.0.0.1:9/...
+
+ ❯ |browser| packages/runner/tests/beta.test.ts (24 tests | 1 failed) 506ms
+   × beta limits: a runner that is not a beta > beta limits: a runner that is not a beta is never limited 57ms
+     → ENOTEMPTY: directory not empty, rmdir 'C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-beta\plain-report'
+ ✓ |unit| packages/runner/tests/route-access-server.test.ts (18 tests) 247ms
+ ✓ |browser| packages/runner/tests/route-inventory.test.ts (66 tests) 5271ms
+   ✓ route inventory (T-203) > 'POST' '/api/runner/ai-estimate' is matched (not the generic 404) 713ms
+ ✓ |browser| packages/runner/tests/access-token.test.ts (6 tests) 54ms
+
+ Test Files  1 failed | 3 passed (4)
+      Tests  1 failed | 113 passed (114)
+   Start at  18:13:05
+   Duration  20.88s (transform 12.94s, setup 0ms, collect 37.39s, tests 6.08s, environment 4ms, prepare 2.73s)
+
+
+
+## stderr
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL |browser|  packages/runner/tests/beta.test.ts > beta limits: a runner that is not a beta > beta limits: a runner that is not a beta is never limited
+Error: ENOTEMPTY: directory not empty, rmdir 'C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-beta\plain-report'
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+

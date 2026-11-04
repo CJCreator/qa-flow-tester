@@ -1,0 +1,33 @@
+# AI-EOS evidence EV-0227
+check: CHK-BE-612-UNIT (runner audit wiring and Helper access)
+command: pnpm exec vitest run packages/runner/tests/server-audit-wiring.test.ts packages/runner/tests/helper-access.test.ts packages/runner/tests/audit-helpers-routes.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T18:14:13.742Z
+finished: 2026-11-03T18:14:34.789Z (21047 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+Scope: all 7 workspace projects
+✓ Lockfile passes supply-chain policies (verified 5h ago)
+Lockfile is up to date, resolution step is skipped
+Already up to date
+
+Done in 3.4s using pnpm v11.10.0
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/runner/tests/server-audit-wiring.test.ts (10 tests) 662ms
+ ✓ |unit| packages/runner/tests/helper-access.test.ts (12 tests) 928ms
+ ✓ |unit| packages/runner/tests/audit-helpers-routes.test.ts (11 tests) 735ms
+
+ Test Files  3 passed (3)
+      Tests  33 passed (33)
+   Start at  23:44:21
+   Duration  12.54s (transform 6.83s, setup 0ms, collect 31.21s, tests 2.33s, environment 1ms, prepare 1.04s)
+
+
+
+## stderr
+

@@ -1,0 +1,121 @@
+# AI-EOS evidence EV-0194
+check: CHK-QA-706-RUNNER-BROWSER (runner-server and url-first files)
+command: pnpm exec vitest run packages/runner/tests/runner-server.test.ts packages/runner/tests/url-first.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T13:18:38.906Z
+finished: 2026-11-03T13:21:57.710Z (198804 ms)
+exit_code: 1
+verdict: FAIL
+
+## stdout
+Scope: all 7 workspace projects
+✓ Lockfile passes supply-chain policies (verified 46m ago)
+Lockfile is up to date, resolution step is skipped
+Already up to date
+
+Done in 8.8s using pnpm v11.10.0
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > refuses an address that is not http or https
+[QA Orchestrator] Running Pre-flight health check on http://localhost:65157...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:65158/...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > refuses an address that is not http or https
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-DEFAULT-001 ("landing-verification") on 375px as anonymous...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Running Pre-flight health check on http://localhost:65157...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-DEFAULT-001 ("landing-verification") on 375px as anonymous...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Executing TC-DEFAULT-001 ("landing-verification") on 768px as anonymous...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Executing TC-DEFAULT-001 ("landing-verification") on 768px as anonymous...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Executing TC-DEFAULT-001 ("landing-verification") on 1440px as anonymous...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Executing TC-DEFAULT-001 ("landing-verification") on 1440px as anonymous...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[DiscoveryAgent] Spider found 10 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-url-first-qS2gBA\report\runs\run-1793711950678\discovery-draft.json
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Running Pre-flight health check on http://localhost:65158/...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-runner-server-tOHsvy\report\runs\run-1793711950741...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-runner-server-tOHsvy\report\runs\run-1793711951227...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:65157...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[DiscoveryAgent] Spider found 10 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-runner-server-tOHsvy\report\runs\run-1793711994826\discovery-draft.json
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Running Pre-flight health check on http://localhost:65157...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing PAGE-004 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing PAGE-005 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-004 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/url-first.test.ts > URL-first runs > keeps a live host read-only even when the owner box is ticked: nothing is sent
+[QA Orchestrator] Executing PAGE-006 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-005 ("page-visit") on 375px as visitor...
+
+
+
+## stderr
+

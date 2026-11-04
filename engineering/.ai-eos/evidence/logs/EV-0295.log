@@ -1,0 +1,18 @@
+# AI-EOS evidence EV-0295
+check: CHK-QA-701-TYPECHECK (typecheck core tests)
+command: pnpm exec tsc -p packages/core/tests/tsconfig.typecheck.json --noEmit
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T03:45:15.198Z
+finished: 2026-11-04T03:47:06.629Z (111431 ms)
+exit_code: 2
+verdict: FAIL
+
+## stdout
+packages/core/tests/audit-languages-e2e.test.ts(141,15): error TS2322: Type '(urls: string[]) => Promise<never>' is not assignable to type '(pages: readonly string[], deps?: PageSpeedDeps) => Promise<SampleSpeed[]>'.
+  Types of parameters 'urls' and 'pages' are incompatible.
+    The type 'readonly string[]' is 'readonly' and cannot be assigned to the mutable type 'string[]'.
+
+
+## stderr
+

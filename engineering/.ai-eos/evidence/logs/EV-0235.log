@@ -1,0 +1,34 @@
+# AI-EOS evidence EV-0235
+check: CHK-QA-712-WIZARD-LANG (wizard audit screens: Tamil content and Tamil export)
+command: pnpm exec vitest run packages/wizard/tests/audit-languages-browser.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T03:34:31.823Z
+finished: 2026-11-04T03:36:25.812Z (113989 ms)
+exit_code: 1
+verdict: FAIL
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ❯ |unit| packages/wizard/tests/audit-languages-browser.test.ts (2 tests) 91427ms
+   ✓ Website Audit screens: Tamil content and export (browser) > results show the /ta Page Content unchanged, inside an element with lang="ta" 1567ms
+   ✓ Website Audit screens: Tamil content and export (browser) > the documents screen > exporting in Tamil downloads documents whose headings come from the Tamil table 1587ms
+
+ Test Files  1 failed (1)
+      Tests  2 passed (2)
+   Start at  09:04:37
+   Duration  107.31s (transform 6.39s, setup 0ms, collect 12.91s, tests 91.43s, environment 1ms, prepare 504ms)
+
+
+
+## stderr
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL |unit|  packages/wizard/tests/audit-languages-browser.test.ts > Website Audit screens: Tamil content and export (browser)
+Error: Hook timed out in 30000ms.
+If this is a long-running hook, pass a timeout value as the last argument or configure it globally with "hookTimeout".
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+

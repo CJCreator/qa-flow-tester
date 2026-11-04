@@ -1,0 +1,26 @@
+# AI-EOS evidence EV-0076
+check: CHK-FE-401-UNIT (rewrite review UI)
+command: pnpm exec vitest run packages/wizard/tests/audit-rewrite-review.test.tsx packages/wizard/tests/no-banned-words.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T10:09:05.156Z
+finished: 2026-11-03T10:09:25.483Z (20327 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/wizard/tests/no-banned-words.test.ts (1 test) 12ms
+ ✓ |unit| packages/wizard/tests/audit-rewrite-review.test.tsx (24 tests) 248ms
+
+ Test Files  2 passed (2)
+      Tests  25 passed (25)
+   Start at  15:39:15
+   Duration  7.74s (transform 2.54s, setup 0ms, collect 4.76s, tests 260ms, environment 3ms, prepare 3.89s)
+
+
+
+## stderr
+

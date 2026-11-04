@@ -1,0 +1,233 @@
+# AI-EOS evidence EV-0302
+check: CHK-QA-705-WIZARD-E2E (wizard end-to-end file)
+command: pnpm exec vitest run packages/wizard/tests/wizard-e2e.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T04:00:53.693Z
+finished: 2026-11-04T04:08:48.517Z (474824 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > scans, shows the plan, and keeps it waiting when you leave it
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3485/...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > scans, shows the plan, and keeps it waiting when you leave it
+[DiscoveryAgent] Spider found 11 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > scans, shows the plan, and keeps it waiting when you leave it
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-wizard-e2e-Xs27dH\report\runs\run-1793764880308\discovery-draft.json
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3485/...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3485/...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3485/...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-004 ("page-visit") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-005 ("page-visit") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-006 ("page-visit") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-007 ("page-visit") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-008 ("page-visit") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing TEST-001 ("page-test") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-009 ("page-visit") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing TEST-002 ("page-test") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing PAGE-010 ("page-visit") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing NAV-001 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing NAV-002 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing NAV-003 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing NAV-004 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing NAV-005 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing NAV-006 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing NAV-007 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing NAV-008 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing NAV-009 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing NAV-010 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing NAV-011 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing NAV-012 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Executing TC-FLOW-001 ("FLOW-001") on 1440px as manager...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-wizard-e2e-Xs27dH\report\runs\run-1793764880308...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3485/...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[DiscoveryAgent] Spider found 11 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-wizard-e2e-Xs27dH\report\runs\run-1793765114637\discovery-draft.json
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3485/...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing PAGE-004 ("page-visit") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing PAGE-005 ("page-visit") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing PAGE-006 ("page-visit") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing PAGE-007 ("page-visit") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing PAGE-008 ("page-visit") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing TEST-001 ("page-test") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing PAGE-009 ("page-visit") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing TEST-002 ("page-test") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing PAGE-010 ("page-visit") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing NAV-001 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing NAV-002 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing NAV-003 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing NAV-004 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing NAV-005 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing NAV-006 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing NAV-007 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing NAV-008 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing NAV-009 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing NAV-010 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing NAV-011 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing NAV-012 ("navigation") on 1440px as visitor...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Executing TC-FLOW-001 ("FLOW-001") on 1440px as manager...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-wizard-e2e-Xs27dH\report\runs\run-1793765114637...
+
+stdout | packages/wizard/tests/wizard-e2e.test.ts > Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+ ✓ |browser| packages/wizard/tests/wizard-e2e.test.ts (10 tests) 464499ms
+   ✓ Release check-up end to end, on the one server > opens on the landing page, which leads to a new check-up, with the top bar, and every address answers 2374ms
+   ✓ Release check-up end to end, on the one server > first visit: specs typed before the AI key are kept, and the key is checked on the same screen 3622ms
+   ✓ Release check-up end to end, on the one server > scans, shows the plan, and keeps it waiting when you leave it 35682ms
+   ✓ Release check-up end to end, on the one server > a test run that fails goes back to the plan and says why; stopping testing keeps the plan too 193184ms
+   ✓ Release check-up end to end, on the one server > the report: one verdict, graded areas, problems by what to fix first, and details for developers 5420ms
+   ✓ Release check-up end to end, on the one server > New check-up of this site reuses the approved plan: nothing changed, so it tests at once 207930ms
+   ✓ Release check-up end to end, on the one server > Past check-ups: an older report opens, survives a reload, and can be deleted 1212ms
+   ✓ Release check-up end to end, on the one server > Go deeper starts a clean signed-in scan with the first check-up’s specs, and stopping keeps the form 935ms
+   ✓ Release check-up end to end, on the one server > remembers the owner choice for the site on the next check-up 2123ms
+   ✓ Release check-up end to end, on the one server > Settings: the key in use, and replacing it 1412ms
+
+ Test Files  1 passed (1)
+      Tests  10 passed (10)
+   Start at  09:30:56
+   Duration  472.20s (transform 3.83s, setup 0ms, collect 7.13s, tests 464.50s, environment 0ms, prepare 199ms)
+
+
+
+## stderr
+

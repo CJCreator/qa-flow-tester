@@ -1,0 +1,27 @@
+# AI-EOS evidence EV-0062
+check: CHK-BE-105-UNIT (host pacer and robots Crawl-delay unit tests)
+command: pnpm exec vitest run packages/core/tests/host-pacer.test.ts packages/core/tests/robots.test.ts packages/core/tests/outbound-fetch.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T08:15:50.401Z
+finished: 2026-11-03T08:16:00.403Z (10002 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/host-pacer.test.ts (14 tests) 105ms
+ ✓ |unit| packages/core/tests/outbound-fetch.test.ts (16 tests) 75ms
+ ✓ |unit| packages/core/tests/robots.test.ts (19 tests) 40ms
+
+ Test Files  3 passed (3)
+      Tests  49 passed (49)
+   Start at  13:45:53
+   Duration  6.51s (transform 2.00s, setup 0ms, collect 10.49s, tests 221ms, environment 2ms, prepare 2.14s)
+
+
+
+## stderr
+

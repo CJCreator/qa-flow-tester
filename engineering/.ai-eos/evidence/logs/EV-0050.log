@@ -1,0 +1,31 @@
+# AI-EOS evidence EV-0050
+check: CHK-FE-300-UNIT (audit analysis views render tests)
+command: pnpm exec vitest run packages/wizard/tests/audit-analysis-views.test.tsx
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T08:03:50.757Z
+finished: 2026-11-03T08:03:56.670Z (5913 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+Scope: all 7 workspace projects
+✓ Lockfile passes supply-chain policies (verified 2d ago)
+Lockfile is up to date, resolution step is skipped
+Already up to date
+
+Done in 2.1s using pnpm v11.10.0
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/wizard/tests/audit-analysis-views.test.tsx (21 tests) 50ms
+
+ Test Files  1 passed (1)
+      Tests  21 passed (21)
+   Start at  13:33:55
+   Duration  1.17s (transform 260ms, setup 0ms, collect 489ms, tests 50ms, environment 0ms, prepare 169ms)
+
+
+
+## stderr
+

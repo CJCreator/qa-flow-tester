@@ -1,0 +1,25 @@
+# AI-EOS evidence EV-0264
+check: CHK-BE-502-UNIT (Improvement Roadmap unit tests)
+command: pnpm exec vitest run packages/core/tests/audit-doc-roadmap.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T03:39:54.776Z
+finished: 2026-11-04T03:40:13.842Z (19044 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-doc-roadmap.test.ts (14 tests) 944ms
+
+ Test Files  1 passed (1)
+      Tests  14 passed (14)
+   Start at  09:10:04
+   Duration  6.88s (transform 2.12s, setup 0ms, collect 2.75s, tests 944ms, environment 1ms, prepare 720ms)
+
+
+
+## stderr
+

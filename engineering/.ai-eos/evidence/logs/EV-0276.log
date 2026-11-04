@@ -1,0 +1,28 @@
+# AI-EOS evidence EV-0276
+check: CHK-BE-704-CONFIG-DOCS (config docs agree with the code)
+command: pnpm exec vitest run packages/runner/tests/config-docs.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T03:42:40.729Z
+finished: 2026-11-04T03:43:07.195Z (26466 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/runner/tests/config-docs.test.ts (7 tests) 13168ms
+   ✓ .env.example lists every variable the code reads > each name the code reads appears in .env.example exactly once 5099ms
+   ✓ .env.example lists every variable the code reads > retired settings are not read or listed anywhere 6881ms
+   ✓ the setup docs name commands and files that exist > every relative link in the setup docs and the E2E plan points at a file that exists 802ms
+
+ Test Files  1 passed (1)
+      Tests  7 passed (7)
+   Start at  09:12:49
+   Duration  16.36s (transform 93ms, setup 0ms, collect 133ms, tests 13.17s, environment 1ms, prepare 858ms)
+
+
+
+## stderr
+

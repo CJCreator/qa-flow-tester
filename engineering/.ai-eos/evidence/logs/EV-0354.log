@@ -1,0 +1,597 @@
+# AI-EOS evidence EV-0354
+check: CHK-BROWSER-4 (vitest browser project shard 4/4)
+command: pnpm exec vitest run --project browser --shard=4/4
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T06:36:08.102Z
+finished: 2026-11-04T06:46:45.254Z (637152 ms)
+exit_code: 1
+verdict: FAIL
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |browser| packages/checkers/tests/security.test.ts (24 tests) 2727ms
+   ✓ SecurityChecker > forms with password fields > flags a sign-in form that is sent with GET, said or implied 418ms
+   ✓ SecurityChecker > mixed content from CSS and scripts > flags an http:// request the page made that no HTML attribute shows 523ms
+   ✓ SecurityChecker > passive CORS and CSRF checks (QSP-010) > leaves a form with a hidden token, a meta token, a GET form or a sign-in form alone 461ms
+ ✓ |browser| packages/core/tests/audit-read-page.test.ts (13 tests) 4912ms
+   ✓ readPage on other fixture pages > gives the two gallery images without an alt attribute alt null (REQ-009 AC-2) 673ms
+   ✓ readPage on other fixture pages > reads the breadcrumb trail of a blog page in order 666ms
+   ✓ readPage on other fixture pages > keeps the Tamil page text character for character, language ta 763ms
+   ✓ readPage on other fixture pages > reads the JavaScript-rendered updates page after rendering 729ms
+   ✓ readPage on other fixture pages > drops credential headers, keeps platform headers, and cuts the text at maxTextChars 799ms
+ ✓ |browser| packages/checkers/tests/seo.test.ts (13 tests) 29ms
+ ✓ |browser| packages/runner/tests/server-audit-wiring.test.ts (10 tests) 870ms
+   ✓ Helper sign-in configured: a runner built as cli.ts builds it (REQ-033) > a Helper uses a view row of a granted audit and is refused for an audit not granted 314ms
+ ✓ |browser| packages/runner/tests/audit-documents-flow.test.ts (24 tests) 11259ms
+   ✓ REQ-020: edits are kept and reach every format > pdf export (English): edited finding, Section and price; the removed page is not listed (REQ-020 AC-1..AC-3) 1177ms
+   ✓ REQ-022: PDF and Word hold the same documents as the Markdown > en: the PDF is printed from the same document as the HTML export 1026ms
+   ✓ REQ-022: PDF and Word hold the same documents as the Markdown > ta: the PDF is printed from the same document as the HTML export 1363ms
+   ✓ REQ-019: the Pitch Glimpse > en: one A4 page with the top 3 issues, their screenshots and the opt-out wording 735ms
+   ✓ REQ-019: the Pitch Glimpse > ta: one A4 page with the top 3 issues, their screenshots and the opt-out wording 1178ms
+   ✓ REQ-025: the Owner Audit > en: in that language, with no pitch/skip mark, notes, outcome, effort or price 1546ms
+   ✓ REQ-025: the Owner Audit > ta: in that language, with no pitch/skip mark, notes, outcome, effort or price 1844ms
+   ✓ PDF concurrency (BE-510) does not get in the way of the flow > two PDFs at once both succeed 1765ms
+ ✓ |browser| packages/core/tests/audit-languages-e2e.test.ts (23 tests) 36158ms
+ ✓ |browser| packages/runner/tests/website-audit-e2e.test.ts (8 tests) 32520ms
+   ✓ Website Audit end to end (fixtures/audit-site) > starts with 202, refuses a second run with 409 while it runs, and finishes 32217ms
+ ✓ |browser| packages/wizard/tests/audit-languages-browser.test.ts (2 tests) 41908ms
+   ✓ Website Audit screens: Tamil content and export (browser) > results show the /ta Page Content unchanged, inside an element with lang="ta" 808ms
+ ✓ |browser| packages/checkers/tests/keyboard-a11y.test.ts (17 tests) 4148ms
+   ✓ KeyboardA11yChecker (browser) > safety > walk presses only Tab and Escape, never Enter or Space 503ms
+   ✓ KeyboardA11yChecker (browser) > focus trap > flags a focus cycle with no way out 447ms
+   ✓ KeyboardA11yChecker (browser) > focus trap > an open dialog trapping focus is not flagged 445ms
+   ✓ KeyboardA11yChecker (browser) > focus trap > a trap that Escape releases is not flagged 496ms
+ ✓ |browser| packages/core/tests/spider-audit-hooks.test.ts (3 tests) 50655ms
+   ✓ DeterministicSpider audit hooks (BE-200) > lists a page past the max depth once as depth-limit, without any new option set 34279ms
+   ✓ DeterministicSpider audit hooks (BE-200) > runs every hook: admitPath, inspectPage, followFormActions, onRecordedPage, onSkipped 14301ms
+   ✓ DeterministicSpider audit hooks (BE-200) > never asks admitPath about the start address, even when its rule would refuse it 1872ms
+stdout | packages/core/tests/signed-in-discovery.test.ts > Discovery explores signed in > without a sign-in, lists the sign-in page and says what was not reached
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3504...
+
+stdout | packages/core/tests/signed-in-discovery.test.ts > Discovery explores signed in > without a sign-in, lists the sign-in page and says what was not reached
+[DiscoveryAgent] Spider found 2 pages, 1 forms, 0 sensitive actions.
+
+stdout | packages/core/tests/signed-in-discovery.test.ts > Discovery explores signed in > without a sign-in, lists the sign-in page and says what was not reached
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-signed-in-discovery\signed-out\discovery-draft.json
+
+stdout | packages/core/tests/signed-in-discovery.test.ts > Discovery explores signed in > explores as each role, records who reached what, and never logs itself out or clicks risky buttons
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3504...
+
+stdout | packages/core/tests/signed-in-discovery.test.ts > Discovery explores signed in > explores as each role, records who reached what, and never logs itself out or clicks risky buttons
+[DiscoveryAgent] Exploring signed in as "member" from /account...
+
+stdout | packages/core/tests/signed-in-discovery.test.ts > Discovery explores signed in > explores as each role, records who reached what, and never logs itself out or clicks risky buttons
+[DiscoveryAgent] Exploring signed in as "admin" from /account...
+
+stdout | packages/core/tests/signed-in-discovery.test.ts > Discovery explores signed in > explores as each role, records who reached what, and never logs itself out or clicks risky buttons
+[DiscoveryAgent] Spider found 6 pages, 1 forms, 1 sensitive actions.
+
+stdout | packages/core/tests/signed-in-discovery.test.ts > Discovery explores signed in > explores as each role, records who reached what, and never logs itself out or clicks risky buttons
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-signed-in-discovery\roles\discovery-draft.json
+
+stdout | packages/core/tests/signed-in-discovery.test.ts > Discovery explores signed in > says so when a role cannot sign in
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3504...
+
+ ✓ |browser| packages/runner/tests/credentials-crawl.test.ts (5 tests) 169483ms
+   ✓ test sign-in as consent (ADR 0022) > live host + consent + good details: acts after sign-in, never on a Sensitive Action 70305ms
+   ✓ test sign-in as consent (ADR 0022) > no consent flag stays read-only, even after a consented run on the same host 86537ms
+   ✓ test sign-in as consent (ADR 0022) > wrong password: RUN_FAILED with signInReason wrong-details, no crawl 11534ms
+   ✓ test sign-in as consent (ADR 0022) > password is absent from the run folder, data folder, stream and console 418ms
+stdout | packages/core/tests/signed-in-discovery.test.ts > Discovery explores signed in > says so when a role cannot sign in
+[DiscoveryAgent] Spider found 2 pages, 1 forms, 0 sensitive actions.
+
+stdout | packages/core/tests/signed-in-discovery.test.ts > Discovery explores signed in > says so when a role cannot sign in
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-signed-in-discovery\wrong-password\discovery-draft.json
+
+stdout | packages/core/tests/discovery-agent-headers.test.ts > Discovery Agent headers, handoff, and session awareness (T-113) > customHeaders reach sign-in, visitor crawl, role crawl, and narrow screens pass
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:59603/lab/headers...
+
+ ✓ |browser| packages/core/tests/spider-reliability.test.ts (8 tests) 155995ms
+   ✓ DeterministicSpider reliability core (T-111) > /lab/spa-late: finds late-rendered links (/lab/spa-late/a and /b) 51356ms
+   ✓ DeterministicSpider reliability core (T-111) > /lab/always-500 and /lab/forbidden are not in pages; routes has 500/403 and skipReason: http-error 29232ms
+   ✓ DeterministicSpider reliability core (T-111) > dead links (404) do not eat the maxPages budget; records real pages 15708ms
+   ✓ DeterministicSpider reliability core (T-111) > a page whose first load times out and second succeeds is recorded with attempts: 2 15026ms
+   ✓ DeterministicSpider reliability core (T-111) > /lab/expiring as signed-in role: stops crawl, sessionLost is true, remainder reported session-lost 3038ms
+   ✓ DeterministicSpider reliability core (T-111) > start address that redirects to another host: startRedirectedOffSite is true and site unchanged 5007ms
+   ✓ DeterministicSpider reliability core (T-111) > average gap between page loads with 4 workers and a 300 ms delay is >= 300 ms 12093ms
+   ✓ DeterministicSpider reliability core (T-111) > a recorded page never also appears in skipped 24298ms
+stdout | packages/core/tests/signed-in-discovery.test.ts > Discovery explores signed in > records the reason per role and still explores the visitor and the role that works
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3504...
+
+stdout | packages/core/tests/signed-in-discovery.test.ts > Discovery explores signed in > records the reason per role and still explores the visitor and the role that works
+[DiscoveryAgent] Exploring signed in as "admin" from /account...
+
+stdout | packages/core/tests/signed-in-discovery.test.ts > Discovery explores signed in > records the reason per role and still explores the visitor and the role that works
+[DiscoveryAgent] Spider found 6 pages, 1 forms, 1 sensitive actions.
+
+stdout | packages/core/tests/signed-in-discovery.test.ts > Discovery explores signed in > records the reason per role and still explores the visitor and the role that works
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-signed-in-discovery\one-fails\discovery-draft.json
+
+ ✓ |browser| packages/core/tests/signed-in-discovery.test.ts (4 tests) 53426ms
+   ✓ Discovery explores signed in > without a sign-in, lists the sign-in page and says what was not reached 3177ms
+   ✓ Discovery explores signed in > explores as each role, records who reached what, and never logs itself out or clicks risky buttons 15668ms
+   ✓ Discovery explores signed in > says so when a role cannot sign in 13826ms
+   ✓ Discovery explores signed in > records the reason per role and still explores the visitor and the role that works 20743ms
+stdout | packages/core/tests/e2e-orchestrator.test.ts > FlowTestOrchestrator E2E > should execute test cases, capture evidence, detect bugs, and produce report with traceability
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3085...
+
+stdout | packages/core/tests/e2e-orchestrator.test.ts > FlowTestOrchestrator E2E > should execute test cases, capture evidence, detect bugs, and produce report with traceability
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-E2E-001 ("invoice-creation") on 1440px as manager...
+
+stdout | packages/core/tests/discovery-agent-headers.test.ts > Discovery Agent headers, handoff, and session awareness (T-113) > customHeaders reach sign-in, visitor crawl, role crawl, and narrow screens pass
+[DiscoveryAgent] Exploring signed in as "manager" from /account...
+
+stdout | packages/core/tests/e2e-orchestrator.test.ts > FlowTestOrchestrator E2E > should execute test cases, capture evidence, detect bugs, and produce report with traceability
+[QA Orchestrator] Executing TC-E2E-002 ("dashboard-telemetry") on 1440px as manager...
+
+stdout | packages/core/tests/e2e-orchestrator.test.ts > FlowTestOrchestrator E2E > should execute test cases, capture evidence, detect bugs, and produce report with traceability
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-e2e-orchestrator-A5Cg4b...
+
+stdout | packages/core/tests/e2e-orchestrator.test.ts > FlowTestOrchestrator E2E > should execute test cases, capture evidence, detect bugs, and produce report with traceability
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/core/tests/e2e-orchestrator.test.ts > FlowTestOrchestrator E2E > records visual baselines, then flags a visual regression against them
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3085...
+
+stdout | packages/core/tests/e2e-orchestrator.test.ts > FlowTestOrchestrator E2E > records visual baselines, then flags a visual regression against them
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-VISUAL-001 ("login-page") on 1440px as anonymous...
+
+stdout | packages/core/tests/e2e-orchestrator.test.ts > FlowTestOrchestrator E2E > records visual baselines, then flags a visual regression against them
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-e2e-orchestrator-A5Cg4b\visual-run...
+
+stdout | packages/core/tests/e2e-orchestrator.test.ts > FlowTestOrchestrator E2E > records visual baselines, then flags a visual regression against them
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/core/tests/e2e-orchestrator.test.ts > FlowTestOrchestrator E2E > records visual baselines, then flags a visual regression against them
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3085...
+
+stdout | packages/core/tests/e2e-orchestrator.test.ts > FlowTestOrchestrator E2E > records visual baselines, then flags a visual regression against them
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-VISUAL-001 ("login-page") on 1440px as anonymous...
+
+stdout | packages/core/tests/e2e-orchestrator.test.ts > FlowTestOrchestrator E2E > records visual baselines, then flags a visual regression against them
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-e2e-orchestrator-A5Cg4b\visual-run...
+
+stdout | packages/core/tests/e2e-orchestrator.test.ts > FlowTestOrchestrator E2E > records visual baselines, then flags a visual regression against them
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/core/tests/e2e-orchestrator.test.ts > FlowTestOrchestrator E2E > records visual baselines, then flags a visual regression against them
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3085...
+
+stdout | packages/core/tests/e2e-orchestrator.test.ts > FlowTestOrchestrator E2E > records visual baselines, then flags a visual regression against them
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-VISUAL-001 ("login-page") on 1440px as anonymous...
+
+stdout | packages/core/tests/discovery-agent-headers.test.ts > Discovery Agent headers, handoff, and session awareness (T-113) > customHeaders reach sign-in, visitor crawl, role crawl, and narrow screens pass
+[DiscoveryAgent] Spider found 17 pages, 5 forms, 0 sensitive actions.
+
+stdout | packages/core/tests/discovery-agent-headers.test.ts > Discovery Agent headers, handoff, and session awareness (T-113) > customHeaders reach sign-in, visitor crawl, role crawl, and narrow screens pass
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-discovery-headers-VbPFZX\headers-echo\discovery-draft.json
+
+stdout | packages/core/tests/discovery-agent-headers.test.ts > Discovery Agent headers, handoff, and session awareness (T-113) > /lab/expiring as a signed-in role reports session-expired and fixed note
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:59603/lab/expiring...
+
+stdout | packages/core/tests/e2e-orchestrator.test.ts > FlowTestOrchestrator E2E > records visual baselines, then flags a visual regression against them
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-e2e-orchestrator-A5Cg4b\visual-run...
+
+stdout | packages/core/tests/e2e-orchestrator.test.ts > FlowTestOrchestrator E2E > records visual baselines, then flags a visual regression against them
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+ ✓ |browser| packages/core/tests/e2e-orchestrator.test.ts (2 tests) 46498ms
+   ✓ FlowTestOrchestrator E2E > should execute test cases, capture evidence, detect bugs, and produce report with traceability 23167ms
+   ✓ FlowTestOrchestrator E2E > records visual baselines, then flags a visual regression against them 23312ms
+ ✓ |browser| packages/wizard/tests/landing-audit-browser.test.ts (6 tests) 15766ms
+   ✓ landing page in a browser > Light theme button sets data-theme=light on <html>, survives reload, switching back removes it 1181ms
+   ✓ landing page in a browser > app screens (/check) stay dark 687ms
+   ✓ landing page in a browser > landing has no serious or critical axe violations (dark) 1817ms
+   ✓ landing page in a browser > landing has no serious or critical axe violations (light) 1577ms
+   ✓ landing page in a browser > landing has no serious or critical axe violations at 375 px, with no sideways scroll 2142ms
+ ✓ |browser| packages/core/tests/fixture-failure-modes.test.ts (8 tests) 112ms
+stdout | packages/core/tests/discovery-agent-headers.test.ts > Discovery Agent headers, handoff, and session awareness (T-113) > /lab/expiring as a signed-in role reports session-expired and fixed note
+[DiscoveryAgent] Exploring signed in as "manager" from /account...
+
+ ✓ |browser| packages/core/tests/visual-capture.test.ts (8 tests) 11515ms
+   ✓ visual capture > visual capture: stabilising returns within its deadline when an image never loads (route hangs) 3283ms
+   ✓ visual capture > visual capture: stabilising clicks and submits nothing (button onclick/form flag unchanged) 753ms
+   ✓ visual capture > visual capture: a changing date and <time> give match true when masked, and a diff when not 1524ms
+   ✓ visual capture > visual capture: a changing ad slot (`[data-ad-slot]`, `ins.adsbygoogle`) is masked 1391ms
+   ✓ visual capture > visual capture: real content change ("Pay now" -> "Pay later") still differs when masked 1408ms
+   ✓ visual capture > visual capture: password field length change does not show in a masked shot 1475ms
+   ✓ visual capture > visual capture: no data-qa-visual-mask attribute remains; invalid extra selector does not throw; extra selector masks 1451ms
+stdout | packages/core/tests/discovery-agent-headers.test.ts > Discovery Agent headers, handoff, and session awareness (T-113) > /lab/expiring as a signed-in role reports session-expired and fixed note
+[DiscoveryAgent] Spider found 13 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/core/tests/discovery-agent-headers.test.ts > Discovery Agent headers, handoff, and session awareness (T-113) > /lab/expiring as a signed-in role reports session-expired and fixed note
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-discovery-headers-VbPFZX\expiring-discovery\discovery-draft.json
+
+stdout | packages/core/tests/discovery-agent-headers.test.ts > Discovery Agent headers, handoff, and session awareness (T-113) > /lab/expiring with requireSignIn throws SignInFailedError with reason session-expired
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:59603/lab/expiring...
+
+ ✓ |browser| packages/core/tests/spider-session-recovery.test.ts (3 tests) 16415ms
+   ✓ mid-crawl session recovery (T-305) > keeps the route a mid-crawl recovery saved (cookie session) 8049ms
+   ✓ mid-crawl session recovery (T-305) > keeps the route a mid-crawl recovery saved (local-storage session) 8045ms
+ ✓ |browser| packages/core/tests/spider-robots.test.ts (6 tests) 112592ms
+   ✓ DeterministicSpider honours robots.txt (T-304) > leaves a disallowed path alone, and reports it 11149ms
+   ✓ DeterministicSpider honours robots.txt (T-304) > records the same path when there is no policy 26119ms
+   ✓ DeterministicSpider honours robots.txt (T-304) > lets a longer Allow beat Disallow 16099ms
+   ✓ DeterministicSpider honours robots.txt (T-304) > REQ-034 AC-2: with no robots.txt (404) the crawl proceeds normally, with no robots skips 26012ms
+   ✓ DeterministicSpider honours robots.txt (T-304) > skips a URL with a query when a rule says so 20828ms
+   ✓ REQ-034: robots.txt on the audit fixture (Disallow: /private) > AC-1: a disallowed page met by link or only in sitemap.xml is never requested, and is a robots Skipped Page 12034ms
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[checkup] No QA_AI_API_KEY set: the plan is written by fixed rules, with no AI.
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3310...
+
+stdout | packages/core/tests/discovery-agent-headers.test.ts > Discovery Agent headers, handoff, and session awareness (T-113) > /lab/expiring with requireSignIn throws SignInFailedError with reason session-expired
+[DiscoveryAgent] Exploring signed in as "manager" from /account...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[DiscoveryAgent] Exploring signed in as "member" from /account...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[DiscoveryAgent] Spider found 4 pages, 1 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-checkup-vs-api-ci\runs\run-1793774484989\discovery-draft.json
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3310...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 375px as visitor...
+
+stdout | packages/core/tests/discovery-agent-headers.test.ts > Discovery Agent headers, handoff, and session awareness (T-113) > with deadlineAt in the past, crawls end immediately with time-limit entries and call resolves
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:59603/lab...
+
+stdout | packages/core/tests/discovery-agent-headers.test.ts > Discovery Agent headers, handoff, and session awareness (T-113) > with deadlineAt in the past, crawls end immediately with time-limit entries and call resolves
+[DiscoveryAgent] Exploring signed in as "manager" from /account...
+
+stdout | packages/core/tests/discovery-agent-headers.test.ts > Discovery Agent headers, handoff, and session awareness (T-113) > with deadlineAt in the past, crawls end immediately with time-limit entries and call resolves
+[DiscoveryAgent] Spider found 0 pages, 0 forms, 0 sensitive actions.
+
+stdout | packages/core/tests/discovery-agent-headers.test.ts > Discovery Agent headers, handoff, and session awareness (T-113) > with deadlineAt in the past, crawls end immediately with time-limit entries and call resolves
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-discovery-headers-VbPFZX\past-deadline\discovery-draft.json
+
+stdout | packages/core/tests/discovery-agent-headers.test.ts > Discovery Agent headers, handoff, and session awareness (T-113) > pageCoverage.skipped contains http-error with a status for /lab/always-500
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:59603/lab/always-500...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 768px as visitor...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 375px as member...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 768px as member...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 1440px as member...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 375px as visitor...
+
+stdout | packages/core/tests/discovery-agent-headers.test.ts > Discovery Agent headers, handoff, and session awareness (T-113) > pageCoverage.skipped contains http-error with a status for /lab/always-500
+[DiscoveryAgent] Spider found 11 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/core/tests/discovery-agent-headers.test.ts > Discovery Agent headers, handoff, and session awareness (T-113) > pageCoverage.skipped contains http-error with a status for /lab/always-500
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-discovery-headers-VbPFZX\always-500\discovery-draft.json
+
+stdout | packages/core/tests/discovery-agent-headers.test.ts > Discovery Agent headers, handoff, and session awareness (T-113) > pageCoverage routes are present and capped at 500 with redirectChain <= 5
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:59603/lab...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 768px as visitor...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 1440px as visitor...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing PAGE-004 ("page-visit") on 375px as member...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing PAGE-004 ("page-visit") on 768px as member...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing PAGE-004 ("page-visit") on 1440px as member...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing PAGE-005 ("page-visit") on 375px as member...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing PAGE-005 ("page-visit") on 768px as member...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing PAGE-005 ("page-visit") on 1440px as member...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing PAGE-006 ("page-visit") on 375px as member...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing PAGE-006 ("page-visit") on 768px as member...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing PAGE-006 ("page-visit") on 1440px as member...
+
+ ✓ |browser| packages/core/tests/signin-redaction.test.ts (1 test) 112911ms
+   ✓ Sign-in keeps the seeded username and password out of logs, reports and the Plan > keeps seeded username and password out of logs, report files and the Plan 112788ms
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing NAV-001 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing NAV-002 ("navigation") on 1440px as member...
+
+stdout | packages/core/tests/discovery-agent-headers.test.ts > Discovery Agent headers, handoff, and session awareness (T-113) > pageCoverage routes are present and capped at 500 with redirectChain <= 5
+[DiscoveryAgent] Spider found 33 pages, 4 forms, 0 sensitive actions.
+
+stdout | packages/core/tests/discovery-agent-headers.test.ts > Discovery Agent headers, handoff, and session awareness (T-113) > pageCoverage routes are present and capped at 500 with redirectChain <= 5
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-discovery-headers-VbPFZX\coverage-routes\discovery-draft.json
+
+ ✓ |browser| packages/core/tests/discovery-agent-headers.test.ts (6 tests) 237887ms
+   ✓ Discovery Agent headers, handoff, and session awareness (T-113) > customHeaders reach sign-in, visitor crawl, role crawl, and narrow screens pass 62838ms
+   ✓ Discovery Agent headers, handoff, and session awareness (T-113) > /lab/expiring as a signed-in role reports session-expired and fixed note 38466ms
+   ✓ Discovery Agent headers, handoff, and session awareness (T-113) > /lab/expiring with requireSignIn throws SignInFailedError with reason session-expired 36547ms
+   ✓ Discovery Agent headers, handoff, and session awareness (T-113) > with deadlineAt in the past, crawls end immediately with time-limit entries and call resolves 1267ms
+   ✓ Discovery Agent headers, handoff, and session awareness (T-113) > pageCoverage.skipped contains http-error with a status for /lab/always-500 27435ms
+   ✓ Discovery Agent headers, handoff, and session awareness (T-113) > pageCoverage routes are present and capped at 500 with redirectChain <= 5 71217ms
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing NAV-003 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing NAV-004 ("navigation") on 1440px as member...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing NAV-005 ("navigation") on 1440px as visitor...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing NAV-006 ("navigation") on 1440px as member...
+
+stdout | packages/runner/tests/docs-url-beta.test.ts > Docs address > a site on this machine reads the docs, stops at 20 pages and ignores the other host
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3724/...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing NAV-007 ("navigation") on 1440px as member...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing TC-FLOW-001 ("FLOW-001") on 375px as member...
+
+ ✓ |browser| packages/core/tests/safe-scan.test.ts (2 tests) 15856ms
+   ✓ Safe website scan > reports accessibility and console-error findings without submitting anything 7333ms
+   ✓ Safe website scan > writes the same report.md / findings.json a product run produces, marked as read-only 8420ms
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing TC-FLOW-001 ("FLOW-001") on 768px as member...
+
+ ✓ |browser| packages/runner/tests/issues-download.test.ts (2 tests) 2363ms
+   ✓ Issues files > serves issues.md and issues.html as downloads 836ms
+   ✓ Issues files > accepting a judgement item counts it and rewrites the issues files 811ms
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing TC-FLOW-001 ("FLOW-001") on 1440px as member...
+
+stdout | packages/core/tests/page-sweep.test.ts > Page sweep > finds all four defects planted in the fixture, with no journey planned at all
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3507...
+
+stdout | packages/runner/tests/docs-url-beta.test.ts > Docs address > a site on this machine reads the docs, stops at 20 pages and ignores the other host
+[DiscoveryAgent] Spider found 11 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/docs-url-beta.test.ts > Docs address > a site on this machine reads the docs, stops at 20 pages and ignores the other host
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-docs-url\runs\run-1793774607690\discovery-draft.json
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing TC-FLOW-002 ("FLOW-002") on 375px as member...
+
+ ❯ |browser| packages/runner/tests/docs-url-beta.test.ts (2 tests | 1 failed) 41367ms
+   × Docs address > a public-looking site does not read a private docs address; the run goes on with a note 141ms
+     → expected 409 to be 202 // Object.is equality
+   ✓ Docs address > a site on this machine reads the docs, stops at 20 pages and ignores the other host 41023ms
+ ✓ |browser| packages/checkers/tests/marketing.test.ts (5 tests) 22ms
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing TC-FLOW-002 ("FLOW-002") on 768px as member...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing TC-FLOW-002 ("FLOW-002") on 1440px as member...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-checkup-vs-api-ci\runs\run-1793774484989...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+
+[checkup] Not ready yet: Quality gate breached: 1 blocker problem (0 allowed) and Works score is 20 (minimum 60 required) and Works grade is F (minimum Grade C required) and Accessible score is 50 (minimum 60 required) and Accessible grade is D (minimum Grade C required) and Secure score is 0 (minimum 60 required) and Secure grade is F (minimum Grade C required) must be fixed first. Not checked: 2 areas not checked.
+[checkup] Report written to C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-checkup-vs-api-ci
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:3310...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[DiscoveryAgent] Exploring signed in as "member" from /account...
+
+stdout | packages/core/tests/page-sweep.test.ts > Page sweep > finds all four defects planted in the fixture, with no journey planned at all
+[DiscoveryAgent] Spider found 11 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/core/tests/page-sweep.test.ts > Page sweep > finds all four defects planted in the fixture, with no journey planned at all
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-page-sweep\discovery\discovery-draft.json
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3507...
+
+stdout | packages/core/tests/page-sweep.test.ts > Page sweep > finds all four defects planted in the fixture, with no journey planned at all
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing SWEEP-001 ("page-sweep") on 375px as visitor...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[DiscoveryAgent] Spider found 4 pages, 1 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-checkup-vs-api\runs\run-1793774664528\discovery-draft.json
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Running Pre-flight health check on http://localhost:3310...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 375px as visitor...
+
+stdout | packages/core/tests/page-sweep.test.ts > Page sweep > finds all four defects planted in the fixture, with no journey planned at all
+[QA Orchestrator] Executing SWEEP-001 ("page-sweep") on 1440px as visitor...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 375px as member...
+
+stdout | packages/core/tests/page-sweep.test.ts > Page sweep > finds all four defects planted in the fixture, with no journey planned at all
+[QA Orchestrator] Executing SWEEP-002 ("page-sweep") on 375px as visitor...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 375px as visitor...
+
+stdout | packages/core/tests/page-sweep.test.ts > Page sweep > finds all four defects planted in the fixture, with no journey planned at all
+[QA Orchestrator] Executing SWEEP-002 ("page-sweep") on 1440px as visitor...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing PAGE-004 ("page-visit") on 375px as member...
+
+stdout | packages/core/tests/page-sweep.test.ts > Page sweep > finds all four defects planted in the fixture, with no journey planned at all
+[QA Orchestrator] Executing SWEEP-003 ("page-sweep") on 375px as visitor...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing PAGE-005 ("page-visit") on 375px as member...
+
+stdout | packages/core/tests/page-sweep.test.ts > Page sweep > finds all four defects planted in the fixture, with no journey planned at all
+[QA Orchestrator] Executing SWEEP-003 ("page-sweep") on 1440px as visitor...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing PAGE-006 ("page-visit") on 375px as member...
+
+stdout | packages/core/tests/page-sweep.test.ts > Page sweep > finds all four defects planted in the fixture, with no journey planned at all
+[QA Orchestrator] Executing SWEEP-004 ("page-sweep") on 375px as visitor...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing NAV-001 ("navigation") on 375px as visitor...
+
+stdout | packages/core/tests/page-sweep.test.ts > Page sweep > finds all four defects planted in the fixture, with no journey planned at all
+[QA Orchestrator] Executing SWEEP-004 ("page-sweep") on 1440px as visitor...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing NAV-002 ("navigation") on 375px as member...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing NAV-003 ("navigation") on 375px as visitor...
+
+stdout | packages/core/tests/page-sweep.test.ts > Page sweep > finds all four defects planted in the fixture, with no journey planned at all
+[QA Orchestrator] Executing SWEEP-005 ("page-sweep") on 375px as visitor...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing NAV-004 ("navigation") on 375px as member...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing NAV-005 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing NAV-006 ("navigation") on 375px as member...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing NAV-007 ("navigation") on 375px as member...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing TC-FLOW-001 ("FLOW-001") on 375px as member...
+
+stdout | packages/core/tests/page-sweep.test.ts > Page sweep > finds all four defects planted in the fixture, with no journey planned at all
+[QA Orchestrator] Executing SWEEP-005 ("page-sweep") on 1440px as visitor...
+
+stdout | packages/core/tests/page-sweep.test.ts > Page sweep > finds all four defects planted in the fixture, with no journey planned at all
+[QA Orchestrator] Executing SWEEP-006 ("page-sweep") on 375px as visitor...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Executing TC-FLOW-002 ("FLOW-002") on 375px as member...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-checkup-vs-api\runs\run-1793774664528...
+
+stdout | packages/runner/tests/checkup-vs-api.test.ts > headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+ ✓ |browser| packages/runner/tests/checkup-vs-api.test.ts (1 test) 249208ms
+   ✓ headless Check-up and API run report the same Issues (AC5) > same fingerprints from both paths 249117ms
+ ✓ |browser| packages/core/tests/spider-form-facts.test.ts (1 test) 3383ms
+   ✓ DeterministicSpider: form input facts > reads required, pattern, min, max, minlength and maxlength off each field 3183ms
+stdout | packages/core/tests/page-sweep.test.ts > Page sweep > finds all four defects planted in the fixture, with no journey planned at all
+[QA Orchestrator] Executing SWEEP-006 ("page-sweep") on 1440px as visitor...
+
+stdout | packages/core/tests/page-sweep.test.ts > Page sweep > finds all four defects planted in the fixture, with no journey planned at all
+[QA Orchestrator] Executing SWEEP-007 ("page-sweep") on 375px as visitor...
+
+stdout | packages/core/tests/page-sweep.test.ts > Page sweep > finds all four defects planted in the fixture, with no journey planned at all
+[QA Orchestrator] Executing SWEEP-007 ("page-sweep") on 1440px as visitor...
+
+stdout | packages/core/tests/page-sweep.test.ts > Page sweep > finds all four defects planted in the fixture, with no journey planned at all
+[QA Orchestrator] Executing SWEEP-008 ("page-sweep") on 375px as visitor...
+
+stdout | packages/core/tests/page-sweep.test.ts > Page sweep > finds all four defects planted in the fixture, with no journey planned at all
+[QA Orchestrator] Executing SWEEP-008 ("page-sweep") on 1440px as visitor...
+
+stdout | packages/core/tests/page-sweep.test.ts > Page sweep > finds all four defects planted in the fixture, with no journey planned at all
+[QA Orchestrator] Executing SWEEP-009 ("page-sweep") on 375px as visitor...
+
+stdout | packages/core/tests/page-sweep.test.ts > Page sweep > finds all four defects planted in the fixture, with no journey planned at all
+[QA Orchestrator] Executing SWEEP-009 ("page-sweep") on 1440px as visitor...
+
+stdout | packages/core/tests/page-sweep.test.ts > Page sweep > finds all four defects planted in the fixture, with no journey planned at all
+[QA Orchestrator] Executing SWEEP-010 ("page-sweep") on 375px as visitor...
+
+stdout | packages/core/tests/page-sweep.test.ts > Page sweep > finds all four defects planted in the fixture, with no journey planned at all
+[QA Orchestrator] Executing SWEEP-010 ("page-sweep") on 1440px as visitor...
+
+stdout | packages/core/tests/page-sweep.test.ts > Page sweep > finds all four defects planted in the fixture, with no journey planned at all
+[QA Orchestrator] Executing SWEEP-011 ("page-sweep") on 375px as visitor...
+
+stdout | packages/core/tests/page-sweep.test.ts > Page sweep > finds all four defects planted in the fixture, with no journey planned at all
+[QA Orchestrator] Executing SWEEP-011 ("page-sweep") on 1440px as visitor...
+
+stdout | packages/core/tests/page-sweep.test.ts > Page sweep > finds all four defects planted in the fixture, with no journey planned at all
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\.tmp-page-sweep\run...
+
+stdout | packages/core/tests/page-sweep.test.ts > Page sweep > finds all four defects planted in the fixture, with no journey planned at all
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+ ✓ |browser| packages/core/tests/page-sweep.test.ts (1 test) 162710ms
+   ✓ Page sweep > finds all four defects planted in the fixture, with no journey planned at all 162647ms
+ ✓ |browser| packages/checkers/tests/spec-denial.test.ts (4 tests) 6ms
+
+ Test Files  1 failed | 28 passed (29)
+      Tests  1 failed | 211 passed (212)
+   Start at  12:06:09
+   Duration  635.06s (transform 4.14s, setup 0ms, collect 68.06s, tests 1592.70s, environment 9ms, prepare 9.78s)
+
+
+
+## stderr
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL |browser|  packages/runner/tests/docs-url-beta.test.ts > Docs address > a public-looking site does not read a private docs address; the run goes on with a note
+AssertionError: expected 409 to be 202 // Object.is equality
+
+- Expected
++ Received
+
+- 202
++ 409
+
+ ❯ packages/runner/tests/docs-url-beta.test.ts:89:24
+     87|       contextUrl: `http://localhost:${DOCS_PORT}/page1`,
+     88|     });
+     89|     expect(res.status).toBe(202);
+       |                        ^
+     90|     await waitForPhase(['awaiting-review']);
+     91|     const p = await plan();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+

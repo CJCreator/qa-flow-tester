@@ -1,0 +1,38 @@
+# AI-EOS evidence EV-0224
+check: CHK-BE-102-SERVER (runner dispatch enforces access and beta policy (RunnerServer))
+command: pnpm exec vitest run packages/runner/tests/route-access-server.test.ts packages/runner/tests/access-token.test.ts packages/runner/tests/beta.test.ts packages/runner/tests/route-inventory.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T18:10:58.795Z
+finished: 2026-11-03T18:11:35.273Z (36478 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+Scope: all 7 workspace projects
+✓ Lockfile passes supply-chain policies (verified 5h ago)
+Lockfile is up to date, resolution step is skipped
+Already up to date
+
+Done in 3.1s using pnpm v11.10.0
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+stdout | packages/runner/tests/beta.test.ts > beta limits: a runner that is not a beta > beta limits: a runner that is not a beta is never limited
+[QA Orchestrator] Running Pre-flight health check on http://127.0.0.1:9/...
+
+ ✓ |browser| packages/runner/tests/beta.test.ts (24 tests) 659ms
+ ✓ |unit| packages/runner/tests/route-access-server.test.ts (23 tests) 624ms
+ ✓ |browser| packages/runner/tests/route-inventory.test.ts (66 tests) 5896ms
+   ✓ route inventory (T-203) > 'POST' '/api/runner/ai-estimate' is matched (not the generic 404) 1006ms
+ ✓ |browser| packages/runner/tests/access-token.test.ts (6 tests) 207ms
+
+ Test Files  4 passed (4)
+      Tests  119 passed (119)
+   Start at  23:41:06
+   Duration  28.24s (transform 17.66s, setup 0ms, collect 50.99s, tests 7.39s, environment 3ms, prepare 2.27s)
+
+
+
+## stderr
+

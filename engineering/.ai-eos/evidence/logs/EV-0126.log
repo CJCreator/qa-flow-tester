@@ -1,0 +1,25 @@
+# AI-EOS evidence EV-0126
+check: CHK-BE-503-UNIT (Structure, Content and Findings document tests)
+command: pnpm exec vitest run packages/core/tests/audit-doc-builders.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\usr\bin\bash.exe
+started: 2026-11-03T11:34:08.238Z
+finished: 2026-11-03T11:34:27.623Z (19385 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-doc-builders.test.ts (30 tests) 294ms
+
+ Test Files  1 passed (1)
+      Tests  30 passed (30)
+   Start at  17:04:19
+   Duration  6.68s (transform 2.61s, setup 0ms, collect 3.14s, tests 294ms, environment 1ms, prepare 1.11s)
+
+
+
+## stderr
+

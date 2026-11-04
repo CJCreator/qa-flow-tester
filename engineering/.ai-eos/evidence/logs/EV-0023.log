@@ -1,0 +1,70 @@
+# AI-EOS evidence EV-0023
+check: CHK-BE-101-SPIDER (Spider sitemap/robots seeding through the outbound fetch (Chromium))
+command: pnpm exec vitest run packages/core/tests/spider-sitemap-outbound.test.ts packages/core/tests/spider-robots.test.ts packages/core/tests/spider-links-and-traps.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T07:18:46.853Z
+finished: 2026-11-03T07:22:27.072Z (220219 ms)
+exit_code: 1
+verdict: FAIL
+
+## stdout
+Scope: all 7 workspace projects
+✓ Lockfile passes supply-chain policies (verified 2d ago)
+Lockfile is up to date, resolution step is skipped
+Already up to date
+[WARN] Failed to create bin at C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\node_modules\.bin\vitest. ENOENT: no such file or directory, chmod 'C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\node_modules\.bin\vitest'
+[WARN] Failed to create bin at C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\checkers\node_modules\.bin\tsc. ENOENT: no such file or directory, chmod 'C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\checkers\node_modules\.bin\tsc.CMD'
+[WARN] Failed to create bin at C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\checkers\node_modules\.bin\tsserver. ENOENT: no such file or directory, chmod 'C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\checkers\node_modules\.bin\tsserver.CMD'
+[WARN] Failed to create bin at C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\core\node_modules\.bin\playwright. ENOENT: no such file or directory, chmod 'C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\core\node_modules\.bin\playwright'
+[WARN] Failed to create bin at C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\types\node_modules\.bin\tsc. ENOENT: no such file or directory, chmod 'C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\types\node_modules\.bin\tsc.CMD'
+[WARN] Failed to create bin at C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\wizard\node_modules\.bin\tsc. ENOENT: no such file or directory, chmod 'C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\wizard\node_modules\.bin\tsc'
+[WARN] Failed to create bin at C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\wizard\node_modules\.bin\tsserver. ENOENT: no such file or directory, chmod 'C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\wizard\node_modules\.bin\tsserver.CMD'
+
+Done in 3.7s using pnpm v11.10.0
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/spider-sitemap-outbound.test.ts (4 tests) 35765ms
+   ✓ Spider sitemap seeding through the outbound fetch (ADR 0031) > AC-3/AC-4 local run: the audit site is seeded (pinned to 127.0.0.1); the other-host Sitemap line is logged, never fetched 12781ms
+   ✓ Spider sitemap seeding through the outbound fetch (ADR 0031) > local run with the default outbound fetch still seeds from the sitemap 11755ms
+   ✓ Spider sitemap seeding through the outbound fetch (ADR 0031) > AC-1 browser guard set: a site resolving to 127.0.0.1 gets no robots/sitemap connection 5396ms
+   ✓ Spider sitemap seeding through the outbound fetch (ADR 0031) > AC-1/AC-2/AC-4 browser guard set: other-host lines are skipped and a redirect to 169.254.169.254 is refused at that hop 5262ms
+ ✓ |browser| packages/core/tests/spider-robots.test.ts (4 tests) 78191ms
+   ✓ DeterministicSpider honours robots.txt (T-304) > leaves a disallowed path alone, and reports it 12266ms
+   ✓ DeterministicSpider honours robots.txt (T-304) > records the same path when there is no policy 26661ms
+   ✓ DeterministicSpider honours robots.txt (T-304) > lets a longer Allow beat Disallow 16835ms
+   ✓ DeterministicSpider honours robots.txt (T-304) > skips a URL with a query when a rule says so 21617ms
+ ❯ |browser| packages/core/tests/spider-links-and-traps.test.ts (7 tests | 1 failed) 206121ms
+   ✓ DeterministicSpider link discovery and trap protection (T-112) > /lab/trap/1: stops at maxPerShape (25) pages of that shape and skipped contains trap-limit entries 61525ms
+   ✓ DeterministicSpider link discovery and trap protection (T-112) > with routeQueryParams: ["month"] the calendar is bounded by the shape cap; without it collapses to one page 61629ms
+   ✓ DeterministicSpider link discovery and trap protection (T-112) > /lab/hash with includeHash: true records two routes; without it, none 14782ms
+   ✓ DeterministicSpider link discovery and trap protection (T-112) > /lab/onclick target pages are found via data-href and click exploration 27379ms
+   ✓ DeterministicSpider link discovery and trap protection (T-112) > a page with a fixed cookie banner (/lab/overlay) is crawled and its links are found 21382ms
+   ✓ DeterministicSpider link discovery and trap protection (T-112) > in-test server with /sitemap.xml listing unlinked /hidden page: crawled when seeded, skipped when seedSitemap: false 10550ms
+   × DeterministicSpider link discovery and trap protection (T-112) > maxDurationMs: 2000 against /lab/trap/1 ends in about 2s with a time-limit skip entry 8386ms
+     → expected 8353 to be less than 8000
+
+ Test Files  1 failed | 2 passed (3)
+      Tests  1 failed | 14 passed (15)
+   Start at  12:48:54
+   Duration  212.35s (transform 2.57s, setup 0ms, collect 13.86s, tests 320.08s, environment 2ms, prepare 1.98s)
+
+
+
+## stderr
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL |browser|  packages/core/tests/spider-links-and-traps.test.ts > DeterministicSpider link discovery and trap protection (T-112) > maxDurationMs: 2000 against /lab/trap/1 ends in about 2s with a time-limit skip entry
+AssertionError: expected 8353 to be less than 8000
+ ❯ packages/core/tests/spider-links-and-traps.test.ts:195:23
+    193|       });
+    194|       const elapsed = Date.now() - start;
+    195|       expect(elapsed).toBeLessThan(8000);
+       |                       ^
+    196|       expect((res.skipped || []).some((s) => s.why === 'time-limit')).…
+    197|     } finally {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+

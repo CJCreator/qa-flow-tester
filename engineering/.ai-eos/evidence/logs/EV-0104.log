@@ -1,0 +1,35 @@
+# AI-EOS evidence EV-0104
+check: CHK-BE-307-BROWSER (accessibility basics on the audit fixture site in Chromium)
+command: pnpm exec vitest run packages/core/tests/audit-accessibility-basics.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\usr\bin\bash.exe
+started: 2026-11-03T10:52:01.912Z
+finished: 2026-11-03T10:52:31.673Z (29761 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+Scope: all 7 workspace projects
+✓ Lockfile passes supply-chain policies (verified 52m ago)
+Lockfile is up to date, resolution step is skipped
+Already up to date
+
+Done in 7.9s using pnpm v11.10.0
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-accessibility-basics.test.ts (4 tests) 7912ms
+   ✓ accessibilityBasics (REQ-038) > records WCAG 2.2 AA automatic-check basics on the gallery page with the image-alt finding (AC-1) 2902ms
+   ✓ accessibilityBasics (REQ-038) > when axe cannot run (closed page), basics is null with a note, never zero violations 724ms
+   ✓ accessibilityBasics (REQ-038) > when the checker itself throws, basics is null with a note 659ms
+   ✓ accessibilityBasics (REQ-038) > passes axe on and no phone breakpoint to the checker, and maps only the axe violations 2380ms
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  16:22:18
+   Duration  13.04s (transform 959ms, setup 0ms, collect 3.94s, tests 7.91s, environment 1ms, prepare 409ms)
+
+
+
+## stderr
+

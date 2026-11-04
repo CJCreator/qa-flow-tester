@@ -1,0 +1,30 @@
+# AI-EOS evidence EV-0161
+check: CHK-BE-604-UNIT (Shared Link route tests)
+command: pnpm exec vitest run packages/runner/tests/audit-share-routes.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T12:03:50.212Z
+finished: 2026-11-03T12:04:10.818Z (20606 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/runner/tests/audit-share-routes.test.ts (20 tests) 4891ms
+   ✓ POST /api/audits/:id/share > creates a pitch link through the store and returns ShareLinkReply 397ms
+   ✓ POST /api/audits/:id/share > answers 409 with a fixed message for a preview link when the version has no stored preview 588ms
+   ✓ POST /api/audits/:id/share > serves the stored preview.html of that version for a preview link 855ms
+   ✓ GET /s/:linkId > is served with no access key and no cookie, sets no cookie, and carries the noindex and CSP headers 408ms
+   ✓ GET /s/:linkId > is open until 30 days after creation and answers 410 at 30 days plus 1 ms (injected clock) 508ms
+
+ Test Files  1 passed (1)
+      Tests  20 passed (20)
+   Start at  17:33:53
+   Duration  16.23s (transform 4.87s, setup 0ms, collect 9.49s, tests 4.89s, environment 1ms, prepare 527ms)
+
+
+
+## stderr
+

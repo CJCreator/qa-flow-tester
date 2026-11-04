@@ -1,0 +1,26 @@
+# AI-EOS evidence EV-0240
+check: CHK-BE-103-UNIT (RunSlot kinds and benchmarkBusy removal (unit))
+command: pnpm exec vitest run packages/runner/tests/run-slot.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T03:35:56.195Z
+finished: 2026-11-04T03:36:12.786Z (16591 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/runner/tests/run-slot.test.ts (8 tests) 1437ms
+   ✓ RunSlot kinds > AC-5: benchmarkBusy does not appear anywhere in packages/runner/src 1415ms
+
+ Test Files  1 passed (1)
+      Tests  8 passed (8)
+   Start at  09:06:04
+   Duration  5.65s (transform 148ms, setup 0ms, collect 202ms, tests 1.44s, environment 1ms, prepare 1.73s)
+
+
+
+## stderr
+

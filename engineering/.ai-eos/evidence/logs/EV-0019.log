@@ -1,0 +1,27 @@
+# AI-EOS evidence EV-0019
+check: CHK-BE-402-UNIT (audit AI stage resolution, model store, claim words)
+command: pnpm exec vitest run packages/core/tests/audit-ai-stage.test.ts packages/core/tests/audit-ai-stage-models-store.test.ts packages/core/tests/audit-claim-words.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T07:15:00.867Z
+finished: 2026-11-03T07:15:07.126Z (6259 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-claim-words.test.ts (23 tests) 90ms
+ ✓ |unit| packages/core/tests/audit-ai-stage-models-store.test.ts (15 tests) 199ms
+ ✓ |unit| packages/core/tests/audit-ai-stage.test.ts (13 tests) 70ms
+
+ Test Files  3 passed (3)
+      Tests  51 passed (51)
+   Start at  12:45:04
+   Duration  2.31s (transform 772ms, setup 0ms, collect 1.96s, tests 359ms, environment 1ms, prepare 1.48s)
+
+
+
+## stderr
+

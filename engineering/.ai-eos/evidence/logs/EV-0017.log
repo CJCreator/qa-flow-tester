@@ -1,0 +1,22 @@
+# AI-EOS evidence EV-0017
+check: CHK-CORE-BUILD (build core and its dependencies)
+command: pnpm --filter "@qa/core..." run build
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T07:13:10.371Z
+finished: 2026-11-03T07:13:39.562Z (29190 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+Scope: 3 of 7 workspace projects
+packages/types build$ tsc
+packages/types build: Done
+packages/checkers build$ tsc
+packages/checkers build: Done
+packages/core build$ tsc
+packages/core build: Done
+
+
+## stderr
+

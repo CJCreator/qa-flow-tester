@@ -1,0 +1,25 @@
+# AI-EOS evidence EV-0058
+check: CHK-BE-203-UNIT (Audit address public-only and reachability check)
+command: pnpm exec vitest run packages/core/tests/audit-reachability.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T08:08:45.622Z
+finished: 2026-11-03T08:08:51.214Z (5592 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-reachability.test.ts (20 tests) 159ms
+
+ Test Files  1 passed (1)
+      Tests  20 passed (20)
+   Start at  13:38:48
+   Duration  2.50s (transform 226ms, setup 0ms, collect 1.42s, tests 159ms, environment 0ms, prepare 413ms)
+
+
+
+## stderr
+

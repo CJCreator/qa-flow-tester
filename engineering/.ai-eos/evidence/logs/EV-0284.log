@@ -1,0 +1,25 @@
+# AI-EOS evidence EV-0284
+check: CHK-FE-500-UNIT (review and edit screen tests)
+command: pnpm exec vitest run packages/wizard/tests/audit-documents-review.test.tsx
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T03:43:45.327Z
+finished: 2026-11-04T03:44:04.947Z (19620 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/wizard/tests/audit-documents-review.test.tsx (18 tests) 248ms
+
+ Test Files  1 passed (1)
+      Tests  18 passed (18)
+   Start at  09:13:56
+   Duration  6.60s (transform 1.70s, setup 0ms, collect 2.37s, tests 248ms, environment 1ms, prepare 1.03s)
+
+
+
+## stderr
+

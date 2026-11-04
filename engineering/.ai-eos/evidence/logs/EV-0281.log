@@ -1,0 +1,25 @@
+# AI-EOS evidence EV-0281
+check: CHK-FE-300-UNIT (audit analysis views render tests)
+command: pnpm exec vitest run packages/wizard/tests/audit-analysis-views.test.tsx
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T03:43:29.067Z
+finished: 2026-11-04T03:43:46.561Z (17494 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/wizard/tests/audit-analysis-views.test.tsx (21 tests) 294ms
+
+ Test Files  1 passed (1)
+      Tests  21 passed (21)
+   Start at  09:13:38
+   Duration  6.23s (transform 1.42s, setup 0ms, collect 2.57s, tests 294ms, environment 1ms, prepare 1.02s)
+
+
+
+## stderr
+

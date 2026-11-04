@@ -1,0 +1,32 @@
+# AI-EOS evidence EV-0039
+check: CHK-BE-505-UNIT (Pitch Glimpse and Owner Audit tests)
+command: pnpm exec vitest run packages/core/tests/audit-doc-pitch.test.ts packages/core/tests/audit-doc-owner.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T07:35:26.887Z
+finished: 2026-11-03T07:35:38.044Z (11157 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+Scope: all 7 workspace projects
+✓ Lockfile passes supply-chain policies (verified 2d ago)
+Lockfile is up to date, resolution step is skipped
+Already up to date
+
+Done in 3.3s using pnpm v11.10.0
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-doc-pitch.test.ts (23 tests) 209ms
+ ✓ |unit| packages/core/tests/audit-doc-owner.test.ts (14 tests) 219ms
+
+ Test Files  2 passed (2)
+      Tests  37 passed (37)
+   Start at  13:05:34
+   Duration  2.85s (transform 1.09s, setup 0ms, collect 2.47s, tests 428ms, environment 2ms, prepare 1.05s)
+
+
+
+## stderr
+

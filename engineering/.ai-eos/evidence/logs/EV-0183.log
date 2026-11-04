@@ -1,0 +1,75 @@
+# AI-EOS evidence EV-0183
+check: CHK-QA-703-UNIT (wizard unit tests)
+command: pnpm exec vitest run --project unit packages/wizard/tests
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T12:49:37.974Z
+finished: 2026-11-03T12:50:11.320Z (33346 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/wizard/tests/audit-documents-review.test.tsx (18 tests) 141ms
+ ✓ |unit| packages/wizard/tests/audit-helpers.test.tsx (26 tests) 239ms
+ ✓ |unit| packages/wizard/tests/audit-analysis-screen.test.tsx (23 tests) 135ms
+ ✓ |unit| packages/wizard/tests/audit-analysis-views.test.tsx (21 tests) 85ms
+ ✓ |unit| packages/wizard/tests/audit-ai-models-panel.test.tsx (22 tests) 100ms
+ ✓ |unit| packages/wizard/tests/audit-rewrite-review.test.tsx (24 tests) 145ms
+ ✓ |unit| packages/wizard/tests/audit-saved.test.tsx (20 tests) 222ms
+ ✓ |unit| packages/wizard/tests/audit-preview-share.test.tsx (24 tests) 358ms
+ ✓ |unit| packages/wizard/tests/sources-screens.test.tsx (27 tests) 2942ms
+   ✓ new check-up screen: Sources > lists the Product Context files and the docs address under More options 1094ms
+   ✓ Plan Review: Sources > shows the Source, role confirmation, Not found in app and Roles not tested 918ms
+   ✓ Report: Sources > shows the judgement bucket with Accept, issues downloads, documented count and roles not tested 726ms
+ ✓ |unit| packages/wizard/tests/translate.test.ts (37 tests) 62ms
+ ✓ |unit| packages/wizard/tests/audit-document-settings.test.tsx (16 tests) 109ms
+ ✓ |unit| packages/wizard/tests/audit-start-form.test.ts (20 tests) 56ms
+ ✓ |unit| packages/wizard/tests/audit-documents-export.test.tsx (14 tests) 91ms
+ ✓ |unit| packages/wizard/tests/context-url-summary.test.ts (26 tests) 55ms
+ ✓ |unit| packages/wizard/tests/audit-start-screen.test.tsx (11 tests) 136ms
+ ✓ |unit| packages/wizard/tests/signin-form.test.ts (16 tests) 126ms
+ ✓ |unit| packages/wizard/tests/audit-shortlist.test.tsx (13 tests) 194ms
+ ✓ |unit| packages/wizard/tests/signin-consent.test.ts (15 tests) 51ms
+ ✓ |unit| packages/wizard/tests/landing-audit.test.tsx (8 tests) 510ms
+ ✓ |unit| packages/wizard/tests/plan-sources-view.test.ts (11 tests) 32ms
+ ✓ |unit| packages/wizard/tests/scanning-progress.test.tsx (11 tests) 43ms
+ ✓ |unit| packages/wizard/tests/audit-routing.test.ts (30 tests) 66ms
+ ✓ |unit| packages/wizard/tests/context-files.test.ts (9 tests) 27ms
+ ✓ |unit| packages/wizard/tests/coverage-view.test.tsx (5 tests) 109ms
+ ✓ |unit| packages/wizard/tests/intent-view.test.ts (8 tests) 25ms
+ ✓ |unit| packages/wizard/tests/online.test.ts (13 tests) 128ms
+ ✓ |unit| packages/wizard/tests/counter.test.ts (9 tests) 35ms
+ ✓ |unit| packages/wizard/tests/contrast.test.ts (121 tests) 48ms
+ ✓ |unit| packages/wizard/tests/release-rule.test.ts (9 tests) 21ms
+ ✓ |unit| packages/wizard/tests/signin-reason.test.ts (4 tests) 37ms
+ ✓ |unit| packages/wizard/tests/domain-proof-client.test.ts (4 tests) 27ms
+ ✓ |unit| packages/wizard/tests/sample-report-format.test.ts (6 tests) 146ms
+ ✓ |unit| packages/wizard/tests/router.test.ts (21 tests) 18ms
+ ✓ |unit| packages/wizard/tests/import-roles.test.ts (5 tests) 16ms
+ ✓ |unit| packages/wizard/tests/onboarding.test.ts (5 tests) 11ms
+ ✓ |unit| packages/wizard/tests/start-run.test.ts (5 tests) 30ms
+ ✓ |unit| packages/wizard/tests/context-read-report.test.ts (3 tests) 17ms
+ ✓ |unit| packages/wizard/tests/popstate-done.test.ts (6 tests) 12ms
+ ✓ |unit| packages/wizard/tests/theme.test.ts (5 tests) 15ms
+ ✓ |unit| packages/wizard/tests/workflow.test.ts (6 tests) 14ms
+ ✓ |unit| packages/wizard/tests/share-image.test.ts (3 tests) 76ms
+ ✓ |unit| packages/wizard/tests/cap-estimate.test.ts (5 tests) 12ms
+ ✓ |unit| packages/wizard/tests/session-file.test.ts (3 tests) 17ms
+ ✓ |unit| packages/wizard/tests/contact.test.ts (4 tests) 10ms
+ ✓ |unit| packages/wizard/tests/repo-hygiene.test.ts (3 tests) 14ms
+ ✓ |unit| packages/wizard/tests/no-banned-words.test.ts (1 test) 7ms
+ ✓ |unit| packages/wizard/tests/review-first-default.test.ts (2 tests) 5ms
+ ✓ |unit| packages/wizard/tests/landing-prefill.test.ts (2 tests) 8ms
+
+ Test Files  48 passed (48)
+      Tests  700 passed (700)
+   Start at  18:19:40
+   Duration  30.26s (transform 10.81s, setup 0ms, collect 23.67s, tests 6.78s, environment 30ms, prepare 26.90s)
+
+
+
+## stderr
+

@@ -1,0 +1,27 @@
+# AI-EOS evidence EV-0286
+check: CHK-FE-600-UNIT (saved audits and Shortlist screen tests)
+command: pnpm exec vitest run packages/wizard/tests/audit-saved.test.tsx packages/wizard/tests/audit-shortlist.test.tsx packages/wizard/tests/no-banned-words.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T03:43:56.120Z
+finished: 2026-11-04T03:44:14.993Z (18873 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/wizard/tests/no-banned-words.test.ts (1 test) 11ms
+ ✓ |unit| packages/wizard/tests/audit-shortlist.test.tsx (13 tests) 652ms
+ ✓ |unit| packages/wizard/tests/audit-saved.test.tsx (20 tests) 981ms
+
+ Test Files  3 passed (3)
+      Tests  34 passed (34)
+   Start at  09:14:05
+   Duration  7.64s (transform 4.23s, setup 0ms, collect 8.59s, tests 1.64s, environment 2ms, prepare 2.48s)
+
+
+
+## stderr
+

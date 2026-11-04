@@ -1,0 +1,428 @@
+# AI-EOS evidence EV-0160
+check: CHK-BE-103-SERVER (benchmark and Check-up share the run slot (RunnerServer))
+command: pnpm exec vitest run packages/runner/tests/benchmark.test.ts packages/runner/tests/scheduler.test.ts packages/runner/tests/runner-server.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T12:03:50.189Z
+finished: 2026-11-03T12:12:53.989Z (543800 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |browser| packages/runner/tests/scheduler.test.ts (4 tests) 175ms
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > refuses an address that is not http or https
+[QA Orchestrator] Running Pre-flight health check on http://localhost:52943...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-DEFAULT-001 ("landing-verification") on 375px as anonymous...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Running Pre-flight health check on http://localhost:52943...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing TC-DEFAULT-001 ("landing-verification") on 375px as anonymous...
+
+ ✓ |browser| packages/runner/tests/benchmark.test.ts (8 tests) 7723ms
+   ✓ Comparing two sites > visits both sites and measures what it finds, rather than using preset numbers 4147ms
+   ✓ Comparing two sites > REQ-049 AC-4: a benchmark and a Check-up started together: exactly one claims the slot 3051ms
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Executing TC-DEFAULT-001 ("landing-verification") on 768px as anonymous...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Executing TC-DEFAULT-001 ("landing-verification") on 768px as anonymous...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Executing TC-DEFAULT-001 ("landing-verification") on 1440px as anonymous...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Executing TC-DEFAULT-001 ("landing-verification") on 1440px as anonymous...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-runner-server-cb01b4\report\runs\run-1793707445847...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:52943...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-runner-server-cb01b4\report\runs\run-1793707445383...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[DiscoveryAgent] Spider found 10 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-runner-server-cb01b4\report\runs\run-1793707466942\discovery-draft.json
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Running Pre-flight health check on http://localhost:52943...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-004 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-005 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-006 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-007 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-008 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-009 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing TEST-001 ("page-test") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing PAGE-010 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing TEST-002 ("page-test") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-001 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-002 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-003 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-004 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-005 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-006 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-007 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-008 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-009 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-010 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-011 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing NAV-012 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Executing TC-FLOW-CUSTOM-001 ("FLOW-CUSTOM-001") on 375px as anonymous...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-runner-server-cb01b4\report\runs\run-1793707466942...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:52943...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[DiscoveryAgent] Exploring signed in as "manager" from /account...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[DiscoveryAgent] Spider found 15 pages, 5 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-runner-server-cb01b4\report\runs\run-1793707612030\discovery-draft.json
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Running Pre-flight health check on http://localhost:52943...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-004 ("page-visit") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-005 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-006 ("page-visit") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-007 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-008 ("page-visit") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-009 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-010 ("page-visit") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-011 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-012 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-013 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-014 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing TEST-001 ("page-test") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-015 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing TEST-002 ("page-test") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-016 ("page-visit") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-017 ("page-visit") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-018 ("page-visit") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-019 ("page-visit") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing PAGE-020 ("page-visit") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-001 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-002 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-003 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-004 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-005 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-006 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-007 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-008 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-009 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-010 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-011 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-012 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-013 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-014 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-015 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-016 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-017 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-018 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-019 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-020 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-021 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-022 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-023 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-024 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-025 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing NAV-026 ("navigation") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Executing TC-FLOW-001 ("FLOW-001") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-runner-server-cb01b4\report\runs\run-1793707612030...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[DiscoveryAgent] Crawling routes and interactive forms on http://localhost:52943...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[DiscoveryAgent] Spider found 10 pages, 3 forms, 0 sensitive actions.
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[DiscoveryAgent] Discovery draft saved to C:\Users\HP\AppData\Local\Temp\qa-test-runner-server-cb01b4\report\runs\run-1793707836603\discovery-draft.json
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Running Pre-flight health check on http://localhost:52943...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Pre-flight check PASSED.
+[QA Orchestrator] Executing PAGE-001 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing PAGE-002 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing PAGE-003 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing PAGE-004 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing PAGE-005 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing PAGE-006 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing PAGE-007 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing PAGE-008 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing PAGE-009 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing TEST-001 ("page-test") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing PAGE-010 ("page-visit") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing TEST-002 ("page-test") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-001 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-002 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-003 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-004 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-005 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-006 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-007 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-008 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-009 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-010 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-011 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing NAV-012 ("navigation") on 375px as visitor...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Executing TC-FLOW-001 ("FLOW-001") on 375px as manager...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Generating release readiness report in C:\Users\HP\AppData\Local\Temp\qa-test-runner-server-cb01b4\report\runs\run-1793707836603...
+
+stdout | packages/runner/tests/runner-server.test.ts > RunnerServer > runs straight through to completion when skipReview: true is provided
+[QA Orchestrator] Reports generated: report.md and findings.json
+
+ ✓ |browser| packages/runner/tests/runner-server.test.ts (9 tests) 528650ms
+   ✓ RunnerServer > accepts a POST /api/runner/run, streams events over SSE, and exposes the finished report 21443ms
+   ✓ RunnerServer > pauses in awaiting-review when skipReview: false, survives runner reload, accepts PATCH edits, and resumes on approve 145089ms
+   ✓ RunnerServer > keeps sign-in details out of the saved plan, and asks for them again after a restart 224575ms
+   ✓ RunnerServer > runs straight through to completion when skipReview: true is provided 137156ms
+
+ Test Files  3 passed (3)
+      Tests  21 passed (21)
+   Start at  17:33:53
+   Duration  539.87s (transform 5.24s, setup 0ms, collect 28.59s, tests 536.55s, environment 2ms, prepare 1.67s)
+
+
+
+## stderr
+

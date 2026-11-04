@@ -1,0 +1,35 @@
+# AI-EOS evidence EV-0222
+check: CHK-BE-204-INTEGRATION (Audit crawl against fixtures/audit-site)
+command: pnpm exec vitest run packages/core/tests/audit-crawl.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T18:03:18.553Z
+finished: 2026-11-03T18:05:54.774Z (156221 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-crawl.test.ts (33 tests) 147009ms
+   ✓ runAuditCrawl limits (REQ-002) > records at most maxPages pages; the rest are page-limit Skipped Pages (AC-1) 8243ms
+   ✓ runAuditCrawl limits (REQ-002) > does not record pages beyond maxDepth 3; they are depth-limit Skipped Pages (AC-2) 32409ms
+   ✓ runAuditCrawl limits (REQ-002) > never requests or records an excluded path; each is an excluded Skipped Page (AC-3) 27014ms
+   ✓ runAuditCrawl limits (REQ-002) > with include path /services records only /services pages besides the start page (AC-4) 8278ms
+   ✓ runAuditCrawl on a site with no sitemap and a 401 page > crawls from links, flags the 401 page as a sign-in wall and keeps secrets out of progress (REQ-004 AC-3, REQ-006) 9597ms
+   ✓ runAuditCrawl robots.txt Crawl-delay > returns the Crawl-delay and a pacer whose gap honours it (ADR 0015) 7268ms
+   ✓ runAuditCrawl stopping and guarding > an aborted signal returns what was found so far 5239ms
+   ✓ runAuditCrawl stopping and guarding > the public-only guard still stops every request when the name turns private after the start check 1452ms
+   ✓ runAuditCrawl pins the audited host in its own Chromium (F-051) and blocks service workers (F-052) > crawls through its own launched browser and closes it when the crawl ends 9634ms
+   ✓ runAuditCrawl pins the audited host in its own Chromium (F-051) and blocks service workers (F-052) > closes its own browser when the crawl is stopped 2184ms
+
+ Test Files  1 passed (1)
+      Tests  33 passed (33)
+   Start at  23:33:22
+   Duration  151.87s (transform 1.50s, setup 0ms, collect 3.80s, tests 147.01s, environment 0ms, prepare 364ms)
+
+
+
+## stderr
+

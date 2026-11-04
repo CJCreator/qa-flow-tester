@@ -1,0 +1,28 @@
+# AI-EOS evidence EV-0246
+check: CHK-BE-192-UNIT (audit pipeline stages with fakes)
+command: pnpm exec vitest run packages/core/tests/audit-pipeline.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T03:37:03.715Z
+finished: 2026-11-04T03:37:35.268Z (31552 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-pipeline.test.ts (16 tests) 3229ms
+   ✓ audit pipeline: runAuditPipeline > runs the stages in order and builds a ranked, cited, graded and saved AuditResult 541ms
+   ✓ audit pipeline: runAuditPipeline > records failed AI stages as not done: areas not-done with grades, recommendation by the fixed rule 378ms
+   ✓ audit pipeline: runAuditPipeline > a lost phone screenshot is not cited: the page and its findings drop the path 314ms
+
+ Test Files  1 passed (1)
+      Tests  16 passed (16)
+   Start at  09:07:11
+   Duration  22.29s (transform 7.42s, setup 0ms, collect 15.09s, tests 3.23s, environment 1ms, prepare 1.12s)
+
+
+
+## stderr
+

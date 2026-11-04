@@ -1,0 +1,57 @@
+# AI-EOS evidence EV-0037
+check: CHK-BE-101-SPIDER (Spider sitemap/robots seeding through the outbound fetch (Chromium))
+command: pnpm exec vitest run packages/core/tests/spider-sitemap-outbound.test.ts packages/core/tests/spider-robots.test.ts packages/core/tests/spider-links-and-traps.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T07:31:29.400Z
+finished: 2026-11-03T07:35:06.354Z (216954 ms)
+exit_code: 1
+verdict: FAIL
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/spider-sitemap-outbound.test.ts (4 tests) 36108ms
+   ✓ Spider sitemap seeding through the outbound fetch (ADR 0031) > AC-3/AC-4 local run: the audit site is seeded (pinned to 127.0.0.1); the other-host Sitemap line is logged, never fetched 13105ms
+   ✓ Spider sitemap seeding through the outbound fetch (ADR 0031) > local run with the default outbound fetch still seeds from the sitemap 11740ms
+   ✓ Spider sitemap seeding through the outbound fetch (ADR 0031) > AC-1 browser guard set: a site resolving to 127.0.0.1 gets no robots/sitemap connection 5290ms
+   ✓ Spider sitemap seeding through the outbound fetch (ADR 0031) > AC-1/AC-2/AC-4 browser guard set: other-host lines are skipped and a redirect to 169.254.169.254 is refused at that hop 5423ms
+ ✓ |browser| packages/core/tests/spider-robots.test.ts (4 tests) 76872ms
+   ✓ DeterministicSpider honours robots.txt (T-304) > leaves a disallowed path alone, and reports it 11927ms
+   ✓ DeterministicSpider honours robots.txt (T-304) > records the same path when there is no policy 26665ms
+   ✓ DeterministicSpider honours robots.txt (T-304) > lets a longer Allow beat Disallow 16444ms
+   ✓ DeterministicSpider honours robots.txt (T-304) > skips a URL with a query when a rule says so 21369ms
+ ❯ |browser| packages/core/tests/spider-links-and-traps.test.ts (7 tests | 1 failed) 207116ms
+   ✓ DeterministicSpider link discovery and trap protection (T-112) > /lab/trap/1: stops at maxPerShape (25) pages of that shape and skipped contains trap-limit entries 62693ms
+   ✓ DeterministicSpider link discovery and trap protection (T-112) > with routeQueryParams: ["month"] the calendar is bounded by the shape cap; without it collapses to one page 61483ms
+   ✓ DeterministicSpider link discovery and trap protection (T-112) > /lab/hash with includeHash: true records two routes; without it, none 14636ms
+   ✓ DeterministicSpider link discovery and trap protection (T-112) > /lab/onclick target pages are found via data-href and click exploration 27106ms
+   ✓ DeterministicSpider link discovery and trap protection (T-112) > a page with a fixed cookie banner (/lab/overlay) is crawled and its links are found 21449ms
+   ✓ DeterministicSpider link discovery and trap protection (T-112) > in-test server with /sitemap.xml listing unlinked /hidden page: crawled when seeded, skipped when seedSitemap: false 10591ms
+   × DeterministicSpider link discovery and trap protection (T-112) > maxDurationMs: 2000 against /lab/trap/1 ends in about 2s with a time-limit skip entry 8699ms
+     → expected 8678 to be less than 8000
+
+ Test Files  1 failed | 2 passed (3)
+      Tests  1 failed | 14 passed (15)
+   Start at  13:01:33
+   Duration  212.52s (transform 2.67s, setup 0ms, collect 12.30s, tests 320.10s, environment 2ms, prepare 1.43s)
+
+
+
+## stderr
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL |browser|  packages/core/tests/spider-links-and-traps.test.ts > DeterministicSpider link discovery and trap protection (T-112) > maxDurationMs: 2000 against /lab/trap/1 ends in about 2s with a time-limit skip entry
+AssertionError: expected 8678 to be less than 8000
+ ❯ packages/core/tests/spider-links-and-traps.test.ts:195:23
+    193|       });
+    194|       const elapsed = Date.now() - start;
+    195|       expect(elapsed).toBeLessThan(8000);
+       |                       ^
+    196|       expect((res.skipped || []).some((s) => s.why === 'time-limit')).…
+    197|     } finally {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+

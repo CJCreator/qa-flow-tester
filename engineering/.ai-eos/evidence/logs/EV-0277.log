@@ -1,0 +1,31 @@
+# AI-EOS evidence EV-0277
+check: CHK-BE-708-PHONE (phone layout recorder tests)
+command: pnpm exec vitest run packages/core/tests/audit-phone-layout.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T03:42:49.852Z
+finished: 2026-11-04T03:43:25.515Z (35663 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-phone-layout.test.ts (7 tests) 17543ms
+   ✓ recordPhoneLayout (REQ-037) > records overflow, a 375px PNG and the overflow and tap-target findings (AC-1) 1010ms
+   ✓ recordPhoneLayout (REQ-037) > a page that fits has no overflow and no overflow finding 494ms
+   ✓ recordPhoneLayout (REQ-037) > a closed page gives a null screenshot and does not throw 495ms
+   ✓ recordPhoneLayout (REQ-037) > an unwritable folder gives a null screenshot and does not throw 498ms
+   ✓ recordPhoneLayout (REQ-037) > a screenshot path leaving the version folder is refused 469ms
+   ✓ recordPhoneLayout (REQ-037) > finding wording says what was found, never a claim (ADR 0018) 751ms
+
+ Test Files  1 passed (1)
+      Tests  7 passed (7)
+   Start at  09:12:57
+   Duration  26.88s (transform 1.42s, setup 0ms, collect 7.03s, tests 17.54s, environment 1ms, prepare 777ms)
+
+
+
+## stderr
+

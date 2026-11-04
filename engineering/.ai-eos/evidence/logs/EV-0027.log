@@ -1,0 +1,25 @@
+# AI-EOS evidence EV-0027
+check: CHK-BE-304-UNIT (page hierarchy and navigation map unit tests)
+command: pnpm exec vitest run packages/core/tests/audit-hierarchy.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T07:22:54.438Z
+finished: 2026-11-03T07:23:05.265Z (10827 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-hierarchy.test.ts (12 tests) 120ms
+
+ Test Files  1 passed (1)
+      Tests  12 passed (12)
+   Start at  12:52:59
+   Duration  5.56s (transform 1.13s, setup 0ms, collect 3.62s, tests 120ms, environment 1ms, prepare 637ms)
+
+
+
+## stderr
+

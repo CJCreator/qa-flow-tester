@@ -1,0 +1,26 @@
+# AI-EOS evidence EV-0366
+check: CHK-QA-712-WIZARD-LANG (wizard audit screens: Tamil content and Tamil export)
+command: pnpm exec vitest run packages/wizard/tests/audit-languages-browser.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T07:33:47.045Z
+finished: 2026-11-04T07:34:37.152Z (50107 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |browser| packages/wizard/tests/audit-languages-browser.test.ts (2 tests) 42799ms
+   ✓ Website Audit screens: Tamil content and export (browser) > results show the /ta Page Content unchanged, inside an element with lang="ta" 615ms
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  13:03:48
+   Duration  48.41s (transform 2.71s, setup 0ms, collect 5.13s, tests 42.80s, environment 0ms, prepare 149ms)
+
+
+
+## stderr
+

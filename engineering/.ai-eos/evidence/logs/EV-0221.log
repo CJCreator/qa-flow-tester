@@ -1,0 +1,28 @@
+# AI-EOS evidence EV-0221
+check: CHK-BE-606-UNIT (Helper sign-in, session and access tests)
+command: pnpm exec vitest run packages/runner/tests/helper-token.test.ts packages/runner/tests/helper-session.test.ts packages/runner/tests/helper-access.test.ts packages/runner/tests/audit-helpers-routes.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T18:02:29.927Z
+finished: 2026-11-03T18:02:50.571Z (20644 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/runner/tests/helper-token.test.ts (14 tests) 180ms
+ ✓ |unit| packages/runner/tests/helper-access.test.ts (12 tests) 996ms
+ ✓ |unit| packages/runner/tests/audit-helpers-routes.test.ts (11 tests) 879ms
+ ✓ |unit| packages/runner/tests/helper-session.test.ts (12 tests) 26ms
+
+ Test Files  4 passed (4)
+      Tests  49 passed (49)
+   Start at  23:32:34
+   Duration  15.51s (transform 6.95s, setup 0ms, collect 25.61s, tests 2.08s, environment 3ms, prepare 2.01s)
+
+
+
+## stderr
+

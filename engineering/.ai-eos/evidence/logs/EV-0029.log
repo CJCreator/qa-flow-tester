@@ -1,0 +1,29 @@
+# AI-EOS evidence EV-0029
+check: CHK-BE-101-UNIT (outbound fetch, robots fetch and access-control unit tests)
+command: pnpm exec vitest run packages/core/tests/outbound-fetch.test.ts packages/core/tests/robots.test.ts packages/core/tests/access-control.test.ts packages/core/tests/safe-net.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T07:22:54.498Z
+finished: 2026-11-03T07:23:08.296Z (13798 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/outbound-fetch.test.ts (16 tests) 98ms
+ ✓ |unit| packages/core/tests/safe-net.test.ts (21 tests) 78ms
+ ✓ |unit| packages/core/tests/access-control.test.ts (12 tests) 907ms
+   ✓ contract > no reader of activeChecksConsent in core src; ADR 0030 links its siblings 479ms
+ ✓ |unit| packages/core/tests/robots.test.ts (11 tests) 89ms
+
+ Test Files  4 passed (4)
+      Tests  60 passed (60)
+   Start at  12:52:59
+   Duration  8.62s (transform 959ms, setup 0ms, collect 9.64s, tests 1.17s, environment 3ms, prepare 2.77s)
+
+
+
+## stderr
+

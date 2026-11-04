@@ -1,0 +1,25 @@
+# AI-EOS evidence EV-0117
+check: CHK-BE-192-UNIT (audit pipeline stages with fakes)
+command: pnpm exec vitest run packages/core/tests/audit-pipeline.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\usr\bin\bash.exe
+started: 2026-11-03T11:18:19.752Z
+finished: 2026-11-03T11:18:32.390Z (12638 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-pipeline.test.ts (13 tests) 428ms
+
+ Test Files  1 passed (1)
+      Tests  13 passed (13)
+   Start at  16:48:24
+   Duration  7.09s (transform 2.05s, setup 0ms, collect 5.60s, tests 428ms, environment 0ms, prepare 367ms)
+
+
+
+## stderr
+

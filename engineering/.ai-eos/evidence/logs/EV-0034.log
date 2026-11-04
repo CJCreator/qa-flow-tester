@@ -1,0 +1,25 @@
+# AI-EOS evidence EV-0034
+check: CHK-BE-306-UNIT (marketing signals and NAP unit tests)
+command: pnpm exec vitest run packages/core/tests/audit-marketing-signals.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T07:30:43.329Z
+finished: 2026-11-03T07:30:51.446Z (8117 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-marketing-signals.test.ts (33 tests) 71ms
+
+ Test Files  1 passed (1)
+      Tests  33 passed (33)
+   Start at  13:00:47
+   Duration  3.33s (transform 930ms, setup 0ms, collect 2.16s, tests 71ms, environment 1ms, prepare 379ms)
+
+
+
+## stderr
+

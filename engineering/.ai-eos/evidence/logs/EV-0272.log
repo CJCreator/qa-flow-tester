@@ -1,0 +1,32 @@
+# AI-EOS evidence EV-0272
+check: CHK-BE-509-UNIT (edits route tests)
+command: pnpm exec vitest run packages/runner/tests/audit-edits-routes.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T03:41:33.393Z
+finished: 2026-11-04T03:42:37.063Z (63670 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/runner/tests/audit-edits-routes.test.ts (9 tests) 5802ms
+   ✓ GET and PATCH /api/audits/:id/edits > returns an empty overlay before any edit 425ms
+   ✓ GET and PATCH /api/audits/:id/edits > saves finding text in the overlay and leaves the stored result untouched 706ms
+   ✓ GET and PATCH /api/audits/:id/edits > lists a removed page and brings it back with restorePages 1237ms
+   ✓ GET and PATCH /api/audits/:id/edits > keeps both changes when a PATCH and updateEditsOverlay run at the same moment 982ms
+   ✓ GET and PATCH /api/audits/:id/edits > saves a Section edit that names a real Section 611ms
+   ✓ GET and PATCH /api/audits/:id/edits > answers 404 for an unknown audit or version, and no match for a bad id 377ms
+   ✓ GET and PATCH /api/audits/:id/edits > refuses unknown findings, pages and Sections with 400 and stores nothing 1147ms
+
+ Test Files  1 passed (1)
+      Tests  9 passed (9)
+   Start at  09:11:56
+   Duration  38.74s (transform 18.08s, setup 0ms, collect 29.53s, tests 5.80s, environment 1ms, prepare 650ms)
+
+
+
+## stderr
+

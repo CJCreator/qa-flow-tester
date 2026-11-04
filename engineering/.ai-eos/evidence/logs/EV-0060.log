@@ -1,0 +1,26 @@
+# AI-EOS evidence EV-0060
+check: CHK-BE-305-UNIT (content problems, broken links and SEO basics unit tests)
+command: pnpm exec vitest run packages/core/tests/audit-content-problems.test.ts packages/core/tests/audit-broken-links.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T08:11:41.541Z
+finished: 2026-11-03T08:11:49.756Z (8215 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-content-problems.test.ts (16 tests) 83ms
+ ✓ |unit| packages/core/tests/audit-broken-links.test.ts (10 tests) 232ms
+
+ Test Files  2 passed (2)
+      Tests  26 passed (26)
+   Start at  13:41:45
+   Duration  3.93s (transform 1.85s, setup 0ms, collect 3.50s, tests 315ms, environment 1ms, prepare 1.07s)
+
+
+
+## stderr
+

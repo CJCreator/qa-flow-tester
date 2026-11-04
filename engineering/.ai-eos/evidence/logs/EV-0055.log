@@ -1,0 +1,25 @@
+# AI-EOS evidence EV-0055
+check: CHK-BE-507-UNIT (docx and zip writer tests)
+command: pnpm exec vitest run packages/core/tests/audit-doc-docx.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T08:05:42.577Z
+finished: 2026-11-03T08:05:47.854Z (5277 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-doc-docx.test.ts (16 tests) 170ms
+
+ Test Files  1 passed (1)
+      Tests  16 passed (16)
+   Start at  13:35:45
+   Duration  2.45s (transform 395ms, setup 0ms, collect 1.41s, tests 170ms, environment 0ms, prepare 313ms)
+
+
+
+## stderr
+

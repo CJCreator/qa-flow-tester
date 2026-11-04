@@ -1,0 +1,26 @@
+# AI-EOS evidence EV-0041
+check: CHK-BE-505-UNIT (Pitch Glimpse and Owner Audit tests)
+command: pnpm exec vitest run packages/core/tests/audit-doc-pitch.test.ts packages/core/tests/audit-doc-owner.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T07:36:42.868Z
+finished: 2026-11-03T07:36:50.634Z (7766 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-doc-pitch.test.ts (23 tests) 200ms
+ ✓ |unit| packages/core/tests/audit-doc-owner.test.ts (14 tests) 235ms
+
+ Test Files  2 passed (2)
+      Tests  37 passed (37)
+   Start at  13:06:47
+   Duration  2.79s (transform 1.02s, setup 0ms, collect 2.39s, tests 436ms, environment 1ms, prepare 1.00s)
+
+
+
+## stderr
+

@@ -1,0 +1,25 @@
+# AI-EOS evidence EV-0263
+check: CHK-BE-501-UNIT (document model and renderers unit tests)
+command: pnpm exec vitest run packages/core/tests/audit-doc-render.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T03:39:52.826Z
+finished: 2026-11-04T03:40:09.506Z (16680 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-doc-render.test.ts (26 tests) 547ms
+
+ Test Files  1 passed (1)
+      Tests  26 passed (26)
+   Start at  09:10:01
+   Duration  5.96s (transform 2.22s, setup 0ms, collect 2.70s, tests 547ms, environment 1ms, prepare 986ms)
+
+
+
+## stderr
+

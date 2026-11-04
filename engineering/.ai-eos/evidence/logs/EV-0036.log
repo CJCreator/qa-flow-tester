@@ -1,0 +1,44 @@
+# AI-EOS evidence EV-0036
+check: CHK-BE-301-BROWSER (readPage against the audit fixture site in Chromium)
+command: pnpm exec vitest run packages/core/tests/audit-read-page.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T07:31:04.782Z
+finished: 2026-11-03T07:31:25.429Z (20647 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+Scope: all 7 workspace projects
+✓ Lockfile passes supply-chain policies (verified 2d ago)
+Lockfile is up to date, resolution step is skipped
+Already up to date
+
+[WARN] Failed to create bin at C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\checkers\node_modules\.bin\tsc. ENOENT: no such file or directory, chmod 'C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\checkers\node_modules\.bin\tsc.CMD'
+[WARN] Failed to create bin at C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\checkers\node_modules\.bin\yaml. ENOENT: no such file or directory, chmod 'C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\checkers\node_modules\.bin\yaml'
+[WARN] Failed to create bin at C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\wizard\node_modules\.bin\autoprefixer. ENOENT: no such file or directory, chmod 'C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\wizard\node_modules\.bin\autoprefixer'
+[WARN] Failed to create bin at C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\wizard\node_modules\.bin\playwright. ENOENT: no such file or directory, chmod 'C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\wizard\node_modules\.bin\playwright'
+[WARN] Failed to create bin at C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\wizard\node_modules\.bin\tsc. ENOENT: no such file or directory, chmod 'C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\wizard\node_modules\.bin\tsc.CMD'
+[WARN] Failed to create bin at C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\wizard\node_modules\.bin\tailwind. ENOENT: no such file or directory, chmod 'C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\wizard\node_modules\.bin\tailwind'
+[WARN] Failed to create bin at C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\wizard\node_modules\.bin\vite. ENOENT: no such file or directory, chmod 'C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\wizard\node_modules\.bin\vite'
+[WARN] Failed to create bin at C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\core\node_modules\.bin\mammoth. ENOENT: no such file or directory, chmod 'C:\Users\HP\OneDrive\Desktop\Projects\AntiGravity - Google - Projects\QA Tool\packages\core\node_modules\.bin\mammoth.CMD'
+Done in 4s using pnpm v11.10.0
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-read-page.test.ts (13 tests) 6368ms
+   ✓ readPage on other fixture pages > gives the two gallery images without an alt attribute alt null (REQ-009 AC-2) 966ms
+   ✓ readPage on other fixture pages > reads the breadcrumb trail of a blog page in order 797ms
+   ✓ readPage on other fixture pages > keeps the Tamil page text character for character, language ta 808ms
+   ✓ readPage on other fixture pages > reads the JavaScript-rendered updates page after rendering 900ms
+   ✓ readPage on other fixture pages > drops credential headers, keeps platform headers, and cuts the text at maxTextChars 991ms
+
+ Test Files  1 passed (1)
+      Tests  13 passed (13)
+   Start at  13:01:13
+   Duration  11.38s (transform 1.19s, setup 0ms, collect 3.83s, tests 6.37s, environment 1ms, prepare 419ms)
+
+
+
+## stderr
+

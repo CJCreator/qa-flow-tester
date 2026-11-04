@@ -1,0 +1,25 @@
+# AI-EOS evidence EV-0010
+check: CHK-BE-302-UNIT (page language detection unit tests)
+command: pnpm exec vitest run packages/core/tests/audit-language.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T07:06:28.174Z
+finished: 2026-11-03T07:06:34.875Z (6701 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-language.test.ts (15 tests) 40ms
+
+ Test Files  1 passed (1)
+      Tests  15 passed (15)
+   Start at  12:36:32
+   Duration  2.09s (transform 482ms, setup 0ms, collect 756ms, tests 40ms, environment 1ms, prepare 439ms)
+
+
+
+## stderr
+

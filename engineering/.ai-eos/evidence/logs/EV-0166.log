@@ -1,0 +1,33 @@
+# AI-EOS evidence EV-0166
+check: CHK-BE-605-UNIT (preview generator, sanitiser and route tests)
+command: pnpm exec vitest run packages/core/tests/audit-preview.test.ts packages/core/tests/audit-preview-sanitize.test.ts packages/runner/tests/audit-preview-routes.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T12:24:08.226Z
+finished: 2026-11-03T12:24:25.953Z (17727 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+Scope: all 7 workspace projects
+✓ Lockfile passes supply-chain policies (verified 2h ago)
+Lockfile is up to date, resolution step is skipped
+Already up to date
+
+Done in 3.9s using pnpm v11.10.0
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-preview-sanitize.test.ts (39 tests) 136ms
+ ✓ |unit| packages/core/tests/audit-preview.test.ts (15 tests) 215ms
+ ✓ |unit| packages/runner/tests/audit-preview-routes.test.ts (12 tests) 773ms
+
+ Test Files  3 passed (3)
+      Tests  66 passed (66)
+   Start at  17:54:15
+   Duration  10.21s (transform 4.61s, setup 0ms, collect 13.54s, tests 1.12s, environment 2ms, prepare 1.27s)
+
+
+
+## stderr
+

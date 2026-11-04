@@ -1,0 +1,34 @@
+# AI-EOS evidence EV-0212
+check: CHK-BE-704-CONFIG-DOCS (config docs agree with the code)
+command: pnpm exec vitest run packages/runner/tests/config-docs.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T17:50:42.141Z
+finished: 2026-11-03T17:51:32.131Z (49990 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+Scope: all 7 workspace projects
+✓ Lockfile passes supply-chain policies (verified 5h ago)
+Lockfile is up to date, resolution step is skipped
+Already up to date
+
+Done in 12.1s using pnpm v11.10.0
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/runner/tests/config-docs.test.ts (7 tests) 23138ms
+   ✓ .env.example lists every variable the code reads > each name the code reads appears in .env.example exactly once 15495ms
+   ✓ .env.example lists every variable the code reads > retired settings are not read or listed anywhere 5644ms
+   ✓ the setup docs name commands and files that exist > every relative link in the setup docs and the E2E plan points at a file that exists 1647ms
+
+ Test Files  1 passed (1)
+      Tests  7 passed (7)
+   Start at  23:21:04
+   Duration  27.10s (transform 80ms, setup 0ms, collect 151ms, tests 23.14s, environment 1ms, prepare 1.50s)
+
+
+
+## stderr
+

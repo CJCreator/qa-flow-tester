@@ -1,0 +1,31 @@
+# AI-EOS evidence EV-0015
+check: CHK-BE-202-UNIT (Audit include/exclude path filter)
+command: pnpm exec vitest run packages/core/tests/audit-crawl-limits.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T07:11:56.183Z
+finished: 2026-11-03T07:12:06.255Z (10071 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+Scope: all 7 workspace projects
+✓ Lockfile passes supply-chain policies (verified 2d ago)
+Lockfile is up to date, resolution step is skipped
+Already up to date
+
+Done in 3.2s using pnpm v11.10.0
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-crawl-limits.test.ts (11 tests) 26ms
+
+ Test Files  1 passed (1)
+      Tests  11 passed (11)
+   Start at  12:42:04
+   Duration  1.29s (transform 63ms, setup 0ms, collect 119ms, tests 26ms, environment 1ms, prepare 354ms)
+
+
+
+## stderr
+

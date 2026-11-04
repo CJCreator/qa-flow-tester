@@ -1,0 +1,37 @@
+# AI-EOS evidence EV-0327
+check: CHK-QA-600-INTEGRATION (audit persistence and access integration tests)
+command: pnpm exec vitest run packages/runner/tests/audit-persistence-integration.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-04T05:12:43.120Z
+finished: 2026-11-04T05:14:04.600Z (81480 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+Scope: all 7 workspace projects
+✓ Lockfile passes supply-chain policies (verified 16h ago)
+Lockfile is up to date, resolution step is skipped
+Already up to date
+
+Done in 13.9s using pnpm v11.10.0
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |browser| packages/runner/tests/audit-persistence-integration.test.ts (6 tests) 14611ms
+   ✓ REQ-028 AC-1/AC-2: saved audits survive a runner restart > lists and opens a finished audit, and one with two versions, after stop and start on the same data folder 4003ms
+   ✓ REQ-029 AC-1: local files, no Google host > saves and lists in local files and makes no call to a Google host 2052ms
+   ✓ REQ-023: Shortlist over HTTP > a mark, notes and outcome saved with PUT come back with the audit in GET /api/audits 1425ms
+   ✓ Q-30: DELETE /api/audits/:id removes everything > leaves no file of the audit, and its Shared Links answer 410 or 404 3052ms
+   ✓ D-004: with an access key on a beta copy, only Shared Links are public > serves GET /s/:linkId without the key and refuses list, get, Shortlist, share and preview routes 1402ms
+   ✓ REQ-033 AC-1/AC-2: a Helper over HTTP with a test-signed token > lists and opens only the granted audit, is refused for others and owner rows, and loses access when the grant is removed 2668ms
+
+ Test Files  1 passed (1)
+      Tests  6 passed (6)
+   Start at  10:43:10
+   Duration  52.65s (transform 20.71s, setup 0ms, collect 32.73s, tests 14.61s, environment 1ms, prepare 1.33s)
+
+
+
+## stderr
+

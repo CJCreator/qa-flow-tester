@@ -1,0 +1,32 @@
+# AI-EOS evidence EV-0098
+check: CHK-QA-400-UNIT (audit AI flow and free-tier inspection)
+command: pnpm exec vitest run packages/core/tests/audit-ai-flow.test.ts packages/core/tests/audit-external-apis.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\usr\bin\bash.exe
+started: 2026-11-03T10:40:41.501Z
+finished: 2026-11-03T10:41:10.345Z (28844 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+Scope: all 7 workspace projects
+✓ Lockfile passes supply-chain policies (verified 40m ago)
+Lockfile is up to date, resolution step is skipped
+Already up to date
+
+Done in 7.6s using pnpm v11.10.0
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/core/tests/audit-external-apis.test.ts (7 tests) 19ms
+ ✓ |unit| packages/core/tests/audit-ai-flow.test.ts (5 tests) 165ms
+
+ Test Files  2 passed (2)
+      Tests  12 passed (12)
+   Start at  16:10:59
+   Duration  9.86s (transform 3.84s, setup 0ms, collect 14.84s, tests 184ms, environment 1ms, prepare 1.66s)
+
+
+
+## stderr
+

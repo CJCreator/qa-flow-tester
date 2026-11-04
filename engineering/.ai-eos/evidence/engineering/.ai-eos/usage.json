@@ -1,0 +1,841 @@
+{
+  "workflow": {
+    "input_tokens": 576,
+    "output_tokens": 150694,
+    "cache_read_input_tokens": 51866684,
+    "cache_creation_input_tokens": 1365654,
+    "cost_usd": 328.13296000999935,
+    "turns": 41
+  },
+  "by_phase": {
+    "AWAITING_APPROVAL": {
+      "input_tokens": 6,
+      "output_tokens": 1486,
+      "cache_read_input_tokens": 831096,
+      "cache_creation_input_tokens": 7009,
+      "cost_usd": 304.93064340999916,
+      "turns": 1
+    },
+    "READY": {
+      "input_tokens": 22,
+      "output_tokens": 6008,
+      "cache_read_input_tokens": 1646109,
+      "cache_creation_input_tokens": 780402,
+      "cost_usd": 8.458283399999914,
+      "turns": 3
+    },
+    "IN_PROGRESS": {
+      "input_tokens": 548,
+      "output_tokens": 143200,
+      "cache_read_input_tokens": 49389479,
+      "cache_creation_input_tokens": 578243,
+      "cost_usd": 14.744033200000274,
+      "turns": 37
+    }
+  },
+  "by_task": {
+    "BE-302": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-101": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "DOC-104": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-500": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-501": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-201": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-400": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-202": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-402": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-401": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-708": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-300": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-600": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-503": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-504": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-502": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-406": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-301": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-304": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-306": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-303": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-307": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-601": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-407": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-505": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-507": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-403": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-102": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-408": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-405": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "DOC-105": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "FE-300": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "FE-200": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-105": {
+      "input_tokens": 36,
+      "output_tokens": 15972,
+      "cache_read_input_tokens": 492393,
+      "cache_creation_input_tokens": 47674,
+      "cost_usd": 3.418026,
+      "turns": 2
+    },
+    "BE-305": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-203": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-404": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-506": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-103": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "FE-500": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "FE-301": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-308": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-409": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "FE-501": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-200": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "FE-600": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "FE-401": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "FE-602": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "SEC-001": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "FE-400": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "QA-700": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "FE-601": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-104": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-709": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "QA-300": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "QA-706": {
+      "input_tokens": 14,
+      "output_tokens": 2834,
+      "cache_read_input_tokens": 94671,
+      "cache_creation_input_tokens": 21608,
+      "cost_usd": 0.732238,
+      "turns": 1
+    },
+    "BE-204": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "QA-703": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "QA-701": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "QA-400": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "QA-702": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-704": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "FE-191": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "REVIEW-002": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "QA-200": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-192": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "QA-707": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-710": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-189": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "QA-711": {
+      "input_tokens": 20,
+      "output_tokens": 5479,
+      "cache_read_input_tokens": 174151,
+      "cache_creation_input_tokens": 26464,
+      "cost_usd": 1.266921,
+      "turns": 2
+    },
+    "BE-508": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-605": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-606": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-410": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-602": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-604": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-509": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-510": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-607": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "REVIEW-003": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "QA-705": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-205": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-603": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-190": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-612": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "BE-611": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "QA-195": {
+      "input_tokens": 14,
+      "output_tokens": 2898,
+      "cache_read_input_tokens": 100531,
+      "cache_creation_input_tokens": 23745,
+      "cost_usd": 0.781786,
+      "turns": 2
+    },
+    "QA-500": {
+      "input_tokens": 28,
+      "output_tokens": 7333,
+      "cache_read_input_tokens": 198957,
+      "cache_creation_input_tokens": 27766,
+      "cost_usd": 1.438844,
+      "turns": 2
+    },
+    "QA-600": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cost_usd": 0,
+      "turns": 0
+    },
+    "QA-712": {
+      "input_tokens": 26,
+      "output_tokens": 8378,
+      "cache_read_input_tokens": 746359,
+      "cache_creation_input_tokens": 221515,
+      "cost_usd": 6.000887,
+      "turns": 2
+    },
+    "QA-713": {
+      "input_tokens": 32,
+      "output_tokens": 9453,
+      "cache_read_input_tokens": 420006,
+      "cache_creation_input_tokens": 39394,
+      "cost_usd": 2.882095,
+      "turns": 1
+    }
+  },
+  "by_agent": {
+    "a32c8564ac5d6d977": {
+      "input_tokens": 32,
+      "output_tokens": 9453,
+      "cache_read_input_tokens": 420006,
+      "cache_creation_input_tokens": 39394,
+      "cost_usd": 0,
+      "turns": 1,
+      "model": "claude-sonnet-5-5"
+    },
+    "a9930133b0966233e": {
+      "input_tokens": 14,
+      "output_tokens": 2898,
+      "cache_read_input_tokens": 100531,
+      "cache_creation_input_tokens": 23745,
+      "cost_usd": 0,
+      "turns": 2,
+      "model": "claude-sonnet-5-5"
+    },
+    "a9db68986ae0ce790": {
+      "input_tokens": 36,
+      "output_tokens": 15972,
+      "cache_read_input_tokens": 492393,
+      "cache_creation_input_tokens": 47674,
+      "cost_usd": 0,
+      "turns": 2,
+      "model": "claude-sonnet-5-5"
+    },
+    "ab510700719597107": {
+      "input_tokens": 26,
+      "output_tokens": 8378,
+      "cache_read_input_tokens": 746359,
+      "cache_creation_input_tokens": 221515,
+      "cost_usd": 0,
+      "turns": 2,
+      "model": "claude-sonnet-5-5"
+    },
+    "ae2b15840a5cf0af4": {
+      "input_tokens": 14,
+      "output_tokens": 2834,
+      "cache_read_input_tokens": 94671,
+      "cache_creation_input_tokens": 21608,
+      "cost_usd": 0,
+      "turns": 1,
+      "model": "claude-sonnet-5-5"
+    },
+    "ae96d4d173bdc080b": {
+      "input_tokens": 20,
+      "output_tokens": 5479,
+      "cache_read_input_tokens": 174151,
+      "cache_creation_input_tokens": 26464,
+      "cost_usd": 0,
+      "turns": 2,
+      "model": "claude-sonnet-5-5"
+    },
+    "afc6d0157e3b38847": {
+      "input_tokens": 28,
+      "output_tokens": 7333,
+      "cache_read_input_tokens": 198957,
+      "cache_creation_input_tokens": 27766,
+      "cost_usd": 0,
+      "turns": 2,
+      "model": "claude-sonnet-5-5"
+    },
+    "main": {
+      "input_tokens": 406,
+      "output_tokens": 98347,
+      "cache_read_input_tokens": 49639616,
+      "cache_creation_input_tokens": 957488,
+      "cost_usd": 0,
+      "turns": 29,
+      "model": "claude-opus-5-5"
+    }
+  },
+  "updated_at": "2026-11-04T08:26:09.006Z"
+}

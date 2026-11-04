@@ -1,0 +1,26 @@
+# AI-EOS evidence EV-0208
+check: CHK-BE-607-UNIT (deploy wiring and guide test)
+command: pnpm exec vitest run packages/runner/tests/deploy-audit-store.test.ts packages/runner/tests/release-workflow.test.ts
+cwd: C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+shell: C:\Program Files\Git\bin\bash.exe
+started: 2026-11-03T17:38:19.344Z
+finished: 2026-11-03T17:38:25.040Z (5696 ms)
+exit_code: 0
+verdict: PASS
+
+## stdout
+
+ RUN  v2.1.9 C:/Users/HP/OneDrive/Desktop/Projects/AntiGravity - Google - Projects/QA Tool
+
+ ✓ |unit| packages/runner/tests/release-workflow.test.ts (5 tests) 19ms
+ ✓ |unit| packages/runner/tests/deploy-audit-store.test.ts (19 tests) 36ms
+
+ Test Files  2 passed (2)
+      Tests  24 passed (24)
+   Start at  23:08:23
+   Duration  1.12s (transform 102ms, setup 0ms, collect 202ms, tests 54ms, environment 1ms, prepare 657ms)
+
+
+
+## stderr
+
