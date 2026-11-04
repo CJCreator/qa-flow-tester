@@ -32,6 +32,7 @@ The Website Audit ([0033](0033-website-audit-entry-point.md)) adds about 40 rout
 - Dispatch, a security-sensitive path, is refactored; it is covered by tests for each level, the closed default and the beta policy (REQ-048 AC-1 to AC-5).
 - In beta, the tool user's own audit pages are closed; the hosted copy serves Shared Links to anyone and Website Audits only to signed-in Helpers given them.
 - The remaining inline endpoints of `server.ts` move to the route table over time, finishing [0027](0027-checkup-session-module-and-route-table.md); until then they keep their present checks.
+- The wizard page, its assets and a reduced `GET /api/runner/status` pass for a verified Helper session without the access key, so a Helper can load the hosted copy (T-68); every other inline endpoint keeps the access-key gate.
 - Shared Links publish an audit of someone else's site (RISK-022); keeping `public` to Shared Link rows only limits that to the shared snapshot.
 
 ## Alternatives considered
