@@ -252,3 +252,15 @@ Verification:
 | D2 | Whether the public landing page mentions the Website Audit, which has a different market (India-wide, free) from the Check-up (global, USD) | Decided 2026-11-04: a short secondary section below the check-up content; the check-up stays the main call to action |
 | D3 | Settings provider order: commit `a3f3efe` says it reordered the providers to Anthropic, OpenAI, Gemini, OpenRouter, but `SettingsScreen.tsx:36-44` and `server.ts:315-320` still list OpenRouter first | Keep the code as it is (OpenRouter first, free models) and correct nothing until confirmed |
 | D4 | Owner audits on the hosted beta copy | Unchanged. ADR 0037 D-004 keeps them closed; T-67 explains this in the UI |
+
+## Implementation notes
+
+Built on 2026-11-04 on branch `worktree-frontend-enhancement-plan`. Six agents built the tickets in parallel, each owning its own files. Two review passes (standards and spec) followed, and their findings were fixed. Where the code differs from the tickets above:
+
+- **Cards:** the plan says `.card`, but `index.css` defines only `.card-1` to `.card-4`. Cards use `card-1 bg-surface`, and `tests/style-tokens.test.ts` now also rejects undefined `card` classes.
+- **Breadcrumbs (T-65):** audit crumbs use generic labels ("Website Audit", "Version N"). The route carries only the audit id, and the top bar does not fetch the host.
+- **AI key messages (T-72, T-74):** they link to Settings, where the key is added, not to Website Audit settings, which only picks models.
+- **One fetch helper (T-77):** not done. The audit `*-api.ts` modules still each have their own `call()`, `Fetch` type and `NOT_ANSWERING` text. A shared `screens/audit/http.ts` is a follow-up.
+- **Download helper (T-70):** `export-api.ts` keeps its own `saveBlob`. `saveResponse` in `api.ts` is not exported and does not read `filename*=`.
+- **Report and Settings tests (T-71):** the slower note and key source are tested through their pure helpers (`lib/slower-note.ts`, `lib/key-source.ts`), not by rendering the screens.
+- **Extra colour fixes (T-66):** the guard test found more undefined tokens than F3 and F4 listed: `text-warn-dark`, `bg-surface-base`, `bg-page`, `text-danger` and `emerald-*`. They are fixed as well.
