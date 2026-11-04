@@ -22,6 +22,10 @@ Both Cloud Run services get their address from the project number, so it is fixe
    - **site**: builds and pushes the site image (`.../qa/site:$GITHUB_SHA`), deploys `qa-check-up-site`, and verifies `version.json` names this commit.
 3. A newer push to `main` cancels an older deploy that is still running (`concurrency: deploy`).
 
+To deploy without the test suite (for example, to pick up changed repository variables), run it by hand:
+Actions > Deploy > **Run workflow**, tick **skip_tests**, or `gh workflow run deploy.yml --ref main -f skip_tests=true`.
+build-and-smoke still runs (the site job needs its build). A push to `main` always runs the tests.
+
 Sign-in is keyless: Workload Identity Federation with the variables `GCP_WORKLOAD_IDENTITY_PROVIDER` and `GCP_DEPLOY_SERVICE_ACCOUNT`
 (Settings > Secrets and variables > Actions > Variables). No GitHub secret holds a GCP key.
 
