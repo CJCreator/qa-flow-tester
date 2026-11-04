@@ -37,6 +37,9 @@ coverage/
 .claude/work/
 .scratch/
 
+# AI-EOS runtime state (session, locks, events, evidence logs, checkpoints)
+.ai-eos/
+
 # Benchmark runs (scripts/benchmark.ts)
 .benchmark/
 
@@ -50,3 +53,4 @@ coverage/
 
 .vercel
 .env*
+!.env.example
