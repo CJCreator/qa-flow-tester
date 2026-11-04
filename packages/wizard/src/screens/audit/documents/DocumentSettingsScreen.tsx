@@ -1,8 +1,13 @@
 import { useEffect, useState } from 'react';
 import type { AuditSettingsReply, AuditSettingsUpdate, CompanyDetails } from '@qa/types/src/browser.js';
 import { ErrorMessage, FocusHeading, Spinner } from '../../../components/text';
+import { Link, PATHS } from '../../../lib/router';
+import { useDocumentTitle } from '../../../lib/title';
 import {
   COMPANY_FIELDS,
+  MAX_REWRITE_OVERLAP_WORDS,
+  overlapWordsValue,
+  removePagespeedKey,
   OPT_OUT_LANGUAGES,
   PROPOSAL_PLACEHOLDERS,
   draftFrom,
@@ -63,8 +68,16 @@ export function DocumentSettingsView({
   const pending = !isUpdateEmpty(settingsUpdate(reply, draft));
   return (
     <div className="space-y-10">
+      <h2 id="settings-documents-title" className="text-2xl font-bold">
+        Audit Documents
+      </h2>
       <div className="sticky top-0 z-10 flex flex-wrap items-center gap-3 border-b border-rule bg-canvas py-3">
-        <button type="button" className="btn-primary px-6 font-bold" disabled={!pending || saving} onClick={onSave}>
+        <button
+          type="button"
+          className="btn-primary min-h-[44px] px-6 font-bold"
+          disabled={!pending || saving}
+          onClick={onSave}
+        >
           {saving ? <Spinner label="Saving…" /> : 'Save document settings'}
         </button>
         <button type="button" className="btn-quiet" disabled={!pending || saving} onClick={onDiscard}>
@@ -84,9 +97,9 @@ export function DocumentSettingsView({
       </div>
 
       <section aria-labelledby="settings-proposal-title" className="space-y-3">
-        <h2 id="settings-proposal-title" className="text-xl font-bold">
+        <h3 id="settings-proposal-title" className="text-xl font-bold">
           Proposal template
-        </h2>
+        </h3>
         <p className="max-w-prose text-sm text-ink-soft">
           Every Proposal is filled from this Markdown template. Write a placeholder in double braces, such as{' '}
           <code>{'{{price}}'}</code>, where its value goes.
@@ -112,9 +125,9 @@ export function DocumentSettingsView({
         >
           Put the default back
         </button>
-        <h3 id="settings-placeholders-title" className="font-bold">
+        <h4 id="settings-placeholders-title" className="font-bold">
           Placeholders you can use
-        </h3>
+        </h4>
         <dl
           aria-labelledby="settings-placeholders-title"
           className="grid grid-cols-1 gap-x-4 gap-y-1 text-sm sm:grid-cols-[auto_1fr]"
@@ -131,9 +144,9 @@ export function DocumentSettingsView({
       </section>
 
       <section aria-labelledby="settings-optout-title" className="space-y-3">
-        <h2 id="settings-optout-title" className="text-xl font-bold">
+        <h3 id="settings-optout-title" className="text-xl font-bold">
           Opt-out text
-        </h2>
+        </h3>
         <p className="max-w-prose text-sm text-ink-soft">
           The Pitch Glimpse ends with this text, in its language. The tool ships default text in English and Tamil as a
           starting point. You own checking it: make sure it is right and true for you before you hand a Pitch Glimpse
@@ -174,9 +187,9 @@ export function DocumentSettingsView({
       </section>
 
       <section aria-labelledby="settings-company-title" className="space-y-3">
-        <h2 id="settings-company-title" className="text-xl font-bold">
+        <h3 id="settings-company-title" className="text-xl font-bold">
           Company details
-        </h2>
+        </h3>
         <p className="max-w-prose text-sm text-ink-soft">Saved once and put in every Proposal.</p>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {COMPANY_FIELDS.map((field) => {
@@ -209,6 +222,76 @@ export function DocumentSettingsView({
           })}
         </div>
       </section>
+
+      <section aria-labelledby="settings-rewrite-title" className="space-y-3">
+        <h3 id="settings-rewrite-title" className="text-xl font-bold">
+          Section rewrite
+        </h3>
+        <div>
+          <label htmlFor="settings-rewrite-overlap" className="label text-ink">
+            Copied phrase length (words)
+          </label>
+          <input
+            id="settings-rewrite-overlap"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={MAX_REWRITE_OVERLAP_WORDS}
+            className="field w-32 text-sm"
+            aria-describedby="settings-rewrite-overlap-hint"
+            value={draft.rewriteOverlapWords}
+            onChange={(e) => onDraft({ ...draft, rewriteOverlapWords: e.target.value })}
+          />
+          <p id="settings-rewrite-overlap-hint" className="mt-1 max-w-prose text-sm text-ink-soft">
+            {`New copy that repeats this many words in a row from the original cannot be accepted. Default ${reply.defaults.rewriteOverlapWords}.`}
+          </p>
+          {overlapWordsValue(draft.rewriteOverlapWords) === null && (
+            <p role="alert" className="mt-1 text-sm font-semibold text-fail">
+              {`Enter a whole number from 1 to ${MAX_REWRITE_OVERLAP_WORDS}.`}
+            </p>
+          )}
+        </div>
+      </section>
+
+      <section aria-labelledby="settings-pagespeed-title" className="space-y-3">
+        <h3 id="settings-pagespeed-title" className="text-xl font-bold">
+          PageSpeed key
+        </h3>
+        <p className="max-w-prose text-sm text-ink-soft">
+          Used to measure speed in a Website Audit. The key is kept with your AI keys and never shown again.
+        </p>
+        <p
+          className="text-sm font-semibold"
+          data-pagespeed-key={reply.settings.pagespeedKeySaved ? 'saved' : 'not-saved'}
+        >
+          {reply.settings.pagespeedKeySaved ? 'A PageSpeed key is saved.' : 'No PageSpeed key is saved.'}
+        </p>
+        <div>
+          <label htmlFor="settings-pagespeed-key" className="label text-ink">
+            {reply.settings.pagespeedKeySaved ? 'Replace the PageSpeed key' : 'PageSpeed key'}
+          </label>
+          <input
+            id="settings-pagespeed-key"
+            type="password"
+            autoComplete="off"
+            spellCheck={false}
+            className="field w-full max-w-md text-sm"
+            value={draft.pagespeedKey}
+            onChange={(e) => onDraft({ ...draft, pagespeedKey: e.target.value })}
+          />
+        </div>
+        {reply.settings.pagespeedKeySaved && (
+          <button
+            type="button"
+            className="btn-quiet min-h-[44px] text-sm"
+            disabled={saving}
+            aria-label="Remove the saved PageSpeed key"
+            onClick={() => onReset(removePagespeedKey())}
+          >
+            Remove the key
+          </button>
+        )}
+      </section>
     </div>
   );
 }
@@ -223,6 +306,7 @@ type Loaded =
 
 /** Edit the Proposal template, the opt-out text and the company details (REQ-027, REQ-019, REQ-018). */
 export function DocumentSettingsScreen({ fetchImpl }: DocumentSettingsScreenProps) {
+  useDocumentTitle('Website Audit settings');
   const [loaded, setLoaded] = useState<Loaded>({ status: 'loading' });
   const [draft, setDraft] = useState<SettingsDraft | null>(null);
   const [saving, setSaving] = useState(false);
@@ -259,6 +343,7 @@ export function DocumentSettingsScreen({ fetchImpl }: DocumentSettingsScreenProp
         return {
           ...current,
           ...(update.proposalTemplate !== undefined ? { proposalTemplate: fresh.proposalTemplate } : {}),
+          ...(update.pagespeedKey !== undefined ? { pagespeedKey: '' } : {}),
           optOutText: {
             en: update.optOutText?.en !== undefined ? fresh.optOutText.en : current.optOutText.en,
             ta: update.optOutText?.ta !== undefined ? fresh.optOutText.ta : current.optOutText.ta,
@@ -273,11 +358,16 @@ export function DocumentSettingsScreen({ fetchImpl }: DocumentSettingsScreenProp
   };
 
   return (
-    <div className="mx-auto max-w-[64rem] px-4 py-10 sm:px-6 sm:py-14">
-      <FocusHeading className="mb-2 break-words text-question font-bold">Document settings</FocusHeading>
+    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
+      <p className="mb-4 text-sm">
+        <Link to={PATHS.audits} className="btn-link min-h-[44px]">
+          Back to Saved Website Audits
+        </Link>
+      </p>
+      <FocusHeading className="mb-2 break-words text-question font-bold">Website Audit settings</FocusHeading>
       <p className="mb-6 max-w-prose text-ink-soft">
-        The Proposal template, the opt-out text of the Pitch Glimpse and your company details, used by every Website
-        Audit you export.
+        The Proposal template, the opt-out text of the Pitch Glimpse, your company details and the keys used by every
+        Website Audit you run or export.
       </p>
       {loaded.status === 'loading' && <Spinner label="Loading the document settings…" />}
       {loaded.status === 'failed' && <ErrorMessage>{loaded.message}</ErrorMessage>}
