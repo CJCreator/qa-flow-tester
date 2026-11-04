@@ -16,16 +16,15 @@ deterministic checkers, and produces a pre-release report. pnpm monorepo, TypeSc
 `packages/`: `types` (shared types, verdict, plan types), `checkers` (axe, security, SEO/AEO/GEO, performance,
 design, marketing, bug detection...), `core` (orchestrator, discovery, planning, AI providers, scoring,
 reports), `runner` (HTTP + SSE server, serves the wizard, port 3001; also `checkup.ts` for CI), `wizard`
-(Vite + React UI). `fixtures/test-app` is the built-in app to test against.
+(Vite + React UI).
 
 ## Commands
 
 - `pnpm bootstrap`: install, Playwright Chromium, build everything (first run)
 - `pnpm start`: the whole app on http://localhost:3001; `pnpm dev:wizard`: wizard with hot reload
-- `pnpm fixture`: start the fixture test app
 - `pnpm build`: build all packages. Build order matters: types, then checkers/core, then runner
-- `pnpm test`: all vitest tests. Slow browser test `wizard-e2e.test.ts` needs Chromium: run it before a release
-- `pnpm test:url-first`: the focused URL-first suite; `pnpm smoke`: smoke run
+- `pnpm test`: fast `unit` tests only (no website, no browser, no Chromium). `pnpm test:browser`: Chromium tests on `setContent`/`route()` pages, run nightly; `pnpm test:all`: both. No fixture sites: real sites are checked by hand (`docs/TESTING.md`)
+- `pnpm smoke`: smoke run
 - Run a single test: `pnpm exec vitest run path/to/file.test.ts`
 
 ## More docs

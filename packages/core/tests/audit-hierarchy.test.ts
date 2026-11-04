@@ -47,7 +47,7 @@ function page(urlPath: string, title: string, overrides: Partial<RawPage> = {}):
   return { urlPath, title, raw, content };
 }
 
-/** The fixture site's main menu (fixtures/audit-site/index.html). */
+/** A small shop's main menu, written inline (no fixture site). */
 const MAIN_MENU: RawMenuItem[] = [
   menuItem('/', 'Home'),
   menuItem('/about', 'About us'),

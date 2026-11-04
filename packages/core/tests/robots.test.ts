@@ -1,10 +1,7 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { promises as fs } from 'fs';
-import path from 'path';
 import http from 'http';
 import type { AddressInfo } from 'net';
 import { RobotsPolicy, MAX_CRAWL_DELAY_MS } from '../src/competitive/robots.js';
-import { AUDIT_SITE_ROOT } from './helpers/audit-site-server.js';
 import { makeOutboundFetch, type NetDeps, type PinnedRequest, type RawResponse } from '../src/safe-net.js';
 import { setBrowserPolicy } from '../src/browser.js';
 
@@ -112,13 +109,6 @@ describe('RobotsPolicy Crawl-delay (REQ-035)', () => {
     expect(MAX_CRAWL_DELAY_MS).toBe(30_000);
     expect(logs.some((l) => l.includes('Crawl-delay capped'))).toBe(true);
     expect(RobotsPolicy.parse('User-agent: *\nCrawl-delay: 30\n', UA).crawlDelayMs).toBe(30_000);
-  });
-
-  it('reads the audit fixture robots.txt: Crawl-delay 1 for every crawler', async () => {
-    const txt = await fs.readFile(path.join(AUDIT_SITE_ROOT, 'robots.txt'), 'utf8');
-    const policy = RobotsPolicy.parse(txt, UA);
-    expect(policy.crawlDelayMs).toBe(1000);
-    expect(policy.isAllowed('/private/staff-rota')).toBe(false);
   });
 });
 

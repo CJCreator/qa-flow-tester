@@ -63,7 +63,7 @@ Ordered by expected gain for the least risk. Each item has a check that proves i
 
 - Add per-phase timing to the run: discovery (per crawl), planning, each test point (with breakpoint), each checker,
   and each navigate settle. Emit it as a `timing` field in the report and in `debug-log`.
-- Run one check-up on `fixtures/test-app` and one on a real public site. Record the top ten costs.
+- Run check-ups on two real public sites. Record the top ten costs.
 - **Done when:** the report shows where time goes, and this plan's estimates are confirmed or corrected.
 
 ### Phase 1. Stop paying fixed waits (low risk, large gain)

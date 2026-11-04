@@ -1,6 +1,5 @@
 packages:
   - 'packages/*'
-  - 'fixtures/*'
 allowBuilds:
   '@firebase/util': false
   esbuild: true

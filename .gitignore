@@ -40,7 +40,7 @@ coverage/
 # AI-EOS runtime state (session, locks, events, evidence logs, checkpoints)
 .ai-eos/
 
-# Benchmark runs (scripts/benchmark.ts)
+# Benchmark runs (generated)
 .benchmark/
 
 # built static site (scripts/site-output.mjs)

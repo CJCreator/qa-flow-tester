@@ -11,6 +11,7 @@ All notable changes. Format follows [Keep a Changelog](https://keepachangelog.co
 
 ### Added
 
+- Removed every fabricated website (`fixtures/`, `pnpm fixture`, the planted-defect benchmark) and the tests that used one; two test tiers: `pnpm test` runs only the fast `unit` project (no website, no Chromium), `test:browser` and `test:all` added; pull requests and deploys run `unit` only, browser tests run nightly; real sites are checked by hand (ADR 0040)
 - Owner can create, pause and delete scheduled Check-ups on the hosted copy; they run from Google Cloud Scheduler, which proves itself with a Google token, never the access key (ADR 0039). Scheduled Check-ups now record `passed` when the run finishes, not when it starts
 - Intent on Plan Items (Works, Rejects, Limits, Denied); Rejects planned from form attributes by fixed rules (no AI key needed); Limits from the AI Planner or a Source; the refusal rule shared by the Check-up and the Playwright export (`expectRefused`); Rejects and Limits wait for a Test Copy or sign-in consent; Ambiguity Questions for Sensitive submits (ADR 0024)
 - Test cap (default 2000; `testCap` in the API, `--test-cap` in the CI command): Rejects and Limits past it are switched off and counted in the approval summary; Plan Review has a filter chip and one switch-off per Intent, with counts

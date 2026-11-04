@@ -86,7 +86,7 @@ jobs:
           path: public
           retention-days: 1
 
-  # The full test suite, the same shards a pull request runs (see tests.yml). Nothing reaches the
+  # The unit tests, the same shards a pull request runs (see tests.yml). Nothing reaches the
   # Cloud Run deploys without passing them, unless a manual run ticked skip_tests. On a push,
   # inputs.skip_tests is empty, so the tests always run.
   test:
@@ -94,9 +94,10 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        shard: ['1/4', '2/4', '3/4', '4/4']
+        shard: ['1/2', '2/2']
     uses: ./.github/workflows/tests.yml
     with:
+      project: unit
       shard: ${{ matrix.shard }}
 
   # The runner: the full app, behind its access key (RUNNER_ACCESS_TOKEN from Secret Manager).

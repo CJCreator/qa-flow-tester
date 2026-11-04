@@ -344,7 +344,7 @@ export async function checkReachable(targetUrl: string): Promise<Reachability> {
       ok: false,
       reason: 'That doesn’t look like a valid web address.',
       code: body.code || 'ERR_INVALID_URL',
-      suggestion: 'Check the address, for example shop.example.com or localhost:3050.',
+      suggestion: 'Check the address, for example shop.example.com or localhost:5173.',
       statusCode: body.statusCode,
       startWarning: body.startWarning,
       ...facts,

@@ -1815,7 +1815,7 @@ export class RunnerServer {
         reachable: false,
         reason: 'invalid-url',
         code: 'ERR_INVALID_URL',
-        suggestion: 'Please enter a valid HTTP or HTTPS address (e.g. http://localhost:3050 or https://example.com).',
+        suggestion: 'Please enter a valid HTTP or HTTPS address (e.g. http://localhost:5173 or https://example.com).',
       });
       return;
     }

@@ -158,10 +158,10 @@ Schedules live in the audit bucket (`schedules/schedules.json`), so `AUDIT_STORE
 ## Release checklist
 
 - [ ] CI green on the PR; `pnpm test` and `pnpm build` pass locally
-- [ ] `wizard-e2e` run once with Chromium installed
+- [ ] One check-up run by hand on a real site (see `docs/TESTING.md`, Checking against real websites)
 - [ ] `CHANGELOG.md` updated
 - [ ] Tag `vX.Y.Z` equal to the `package.json` version; "Release build" workflow green (builds only, publishes nothing)
-- [ ] After merge: deploy workflow green, both services answer, open the online app and run one check-up on the fixture or a public site
+- [ ] After merge: deploy workflow green, both services answer, open the online app and run one check-up on a public site
 - [ ] Rotate anything that was exposed during development
 
 Bumping the version means updating every `package.json`, `TOOL_REF` in `packages/wizard/src/lib/workflow.ts`, and

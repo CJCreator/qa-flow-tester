@@ -1,8 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { chromium, type Browser } from 'playwright';
 import { collectElementInventory } from '../src/discovery/element-inventory.js';
-import { DeterministicSpider } from '../src/discovery/deterministic-spider.js';
-import { server } from '../../../fixtures/test-app/server.js';
 
 const PAGE = `<!doctype html><html lang="en"><body>
   <label for="full-name">Full name</label><input id="full-name">
@@ -60,33 +58,4 @@ describe('Element inventory', () => {
     }
     await page.close();
   });
-});
-
-describe('Spider records the real elements of each page', () => {
-  const PORT = 3501;
-  const baseUrl = `http://localhost:${PORT}`;
-
-  beforeAll(async () => {
-    await new Promise<void>((resolve) => server.listen(PORT, () => resolve()));
-  });
-
-  afterAll(async () => {
-    await new Promise<void>((resolve) => server.close(() => resolve()));
-  });
-
-  it('lists the dashboard buttons and names the invoice fields by their labels', async () => {
-    const browser = await chromium.launch();
-    const context = await browser.newContext();
-    const result = await new DeterministicSpider().crawl(context, baseUrl);
-    await browser.close();
-
-    const dashboard = result.pages.find((p) => p.urlPath === '/dashboard');
-    const names = (dashboard?.elements || []).map((e) => `${e.testId}: ${e.name}`);
-    expect(names).toContain('trigger-error-btn: Trigger Console Error');
-    expect(names).toContain('trigger-failed-api-btn: Trigger 500 API Failure');
-    expect(names).toContain('tiny-touch-btn: X');
-
-    const invoiceForm = result.forms.find((f) => f.urlPath === '/invoices/new');
-    expect(invoiceForm?.inputs.map((i) => i.label)).toEqual(['Customer', 'Amount']);
-  }, 90000); // a full Chromium crawl of the fixture: 27 to over 30 s alone on a busy 4-core laptop, more beside other tests
 });

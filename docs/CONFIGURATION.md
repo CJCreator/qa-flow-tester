@@ -212,12 +212,11 @@ No new variable. Retries apply to every Check-up, read-only or Test Copy.
 
 ## Scripts
 
-| Variable             | Default | Meaning                                                                                                         |
-| -------------------- | ------- | --------------------------------------------------------------------------------------------------------------- |
-| `SKIP_BROWSER_CHECK` | none    | `1` skips the check that the browser is installed when `pnpm start` runs                                        |
-| `SMOKE_PORT`         | `3591`  | Port the smoke run (`pnpm smoke`) listens on                                                                    |
-| `GITHUB_SHA`         | none    | Set by the build host. The commit that `scripts/site-output.mjs` writes into the site's `version.json`          |
-| `NODE_ENV`           | none    | Set to `test` by the benchmark script (`scripts/benchmark.ts`) so the fixture does not listen on its usual port |
+| Variable             | Default | Meaning                                                                                                |
+| -------------------- | ------- | ------------------------------------------------------------------------------------------------------ |
+| `SKIP_BROWSER_CHECK` | none    | `1` skips the check that the browser is installed when `pnpm start` runs                               |
+| `SMOKE_PORT`         | `3591`  | Port the smoke run (`pnpm smoke`) listens on                                                           |
+| `GITHUB_SHA`         | none    | Set by the build host. The commit that `scripts/site-output.mjs` writes into the site's `version.json` |
 
 `CI` and `RUNNER_PORT` are read by the scripts too: see the Runner and CI sections above.
 
@@ -225,5 +224,4 @@ No new variable. Retries apply to every Check-up, read-only or Test Copy.
 
 - `3001`: the QA Tool (wizard at `/`, API under `/api`)
 - `3601`: previously used by CI check-up (`QA_CHECKUP_PORT`), now unused as CLI check-ups run directly on the session
-- `3050`: the fixture test app (`pnpm fixture`; set `PORT` to change)
 - `3591`: the smoke run (`pnpm smoke`; set `SMOKE_PORT` to change)

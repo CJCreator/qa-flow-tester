@@ -237,10 +237,7 @@ qa-flow-tester/
 │   ├── checkers/       # Automated audit rules (WCAG axe-core, tokens, SEO, AEO, security, perf)
 │   ├── runner/         # HTTP/SSE server, scheduling, static wizard UI, and the CI check-up (checkup.ts)
 │   └── wizard/         # React + Vite "Release check-up" single-page application
-├── fixtures/
-│   └── test-app/       # Built-in reference application with planted defects
-└── scripts/
-    └── benchmark.ts    # Automated defect detection accuracy harness
+└── scripts/            # Build, smoke and deploy scripts
 ```
 
 ### State Management & Data Storage Architecture
@@ -344,7 +341,7 @@ sequenceDiagram
     participant AI as AI Planner
     participant Engine as Test Orchestrator
 
-    User->>UI: Enter Target URL (e.g. localhost:3050)
+    User->>UI: Enter Target URL (e.g. localhost:5173)
     UI->>Runner: POST /api/runner/scan
     Runner->>Spider: Crawl reachable pages & DOM facts
     Spider-->>Runner: Routes, Layout Groups, Forms & Links
@@ -359,7 +356,7 @@ sequenceDiagram
     Runner-->>UI: Render "Ready to release" Verdict & Grades
 ```
 
-1. **Start the check-up**: Navigate to `http://localhost:3001/`. Enter your target web application address (e.g. `localhost:3050`).
+1. **Start the check-up**: Navigate to `http://localhost:3001/`. Enter your target web application address, for example your own dev server (`localhost:5173`) or a staging URL.
 2. **Environment Classification**:
    - The system inspects the URL. If it resides on `localhost`, a private IP, or a dev tunnel, it is designated a **Test copy** (interactive testing unlocked).
    - If the address is not clearly a test copy, the wizard asks what the check-up may do. Choose **It’s a test copy I’m allowed to test fully** only if forms may be filled in and sent; choose **Only look at it** or **It’s my live site: only look at it** otherwise (read-only).

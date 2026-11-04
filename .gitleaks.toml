@@ -4,5 +4,5 @@ title = "QA Tool gitleaks config"
 useDefault = true
 
 [allowlist]
-description = "Fake keys in fixtures and tests"
-paths = ['''^fixtures/''', '''^packages/[^/]+/tests/''']
+description = "Fake keys in tests"
+paths = ['''^packages/[^/]+/tests/''']

@@ -107,7 +107,6 @@ qa-flow-tester/
 │   ├── core/       # Crawl spider, AI planner, test orchestrator, scoring engine, evidence recorder
 │   ├── runner/     # Express HTTP + SSE server (port 3001), CLI checkup runner, session storage
 │   └── wizard/     # React + Vite frontend ("Release check-up", dual-audience UI)
-├── fixtures/       # Built-in target applications for automated benchmarking (Invoicing app)
 └── docs/           # ADRs, API specs, architectural diagrams, research roadmaps
 ```
 
@@ -444,7 +443,7 @@ gantt
 
 ## 9. Success Metrics & Key Performance Indicators (KPIs)
 
-1. **Defect Detection Accuracy:** Planted defect detection rate >= 95% on benchmark fixtures (broken links, unhandled 500s, tap-target violations, console exceptions).
+1. **Defect Detection Accuracy:** Detection of real defects (broken links, unhandled 500s, tap-target violations, console exceptions) on real sites, checked by hand (ADR 0040: no planted-defect benchmark).
 2. **False Positive Rate:** < 2% across standard web applications with Clean Flow Retry enabled.
 3. **Time to First Verdict (TTFV):** Initial check-up completion in < 5 minutes for a 50-page web application.
 4. **Fix Verification Velocity:** Single-click "Test again" executes in < 30 seconds for targeted problem re-verification.

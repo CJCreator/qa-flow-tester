@@ -1,10 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import http from 'http';
-import { promises as fs } from 'fs';
-import path from 'path';
 import { chromium, type Browser } from 'playwright';
 import { UXQualityChecker } from '@qa/checkers';
-import { FlowTestOrchestrator } from '../src/orchestrator.js';
 
 const ONE_SCREEN_APP = `<!doctype html><html lang="en"><head><title>Todos</title></head><body><main>
   <h1>todos</h1><label for="new">New todo</label><input id="new"><button>Add</button><button>Clear done</button>
@@ -55,70 +51,4 @@ describe('Dead-end rule and WCAG 2.2', () => {
     expect(findings.map((f) => f.title)).toContainEqual(expect.stringContaining('(target-size)'));
     await page.close();
   });
-});
-
-describe('Reports explain every failure and travel well', () => {
-  const PORT = 3508;
-  const baseUrl = `http://localhost:${PORT}`;
-  const outputDir = path.join(process.cwd(), '.tmp-small-fixes');
-  let server: http.Server;
-
-  beforeAll(async () => {
-    server = http.createServer((_req, res) => {
-      res.writeHead(200, { 'Content-Type': 'text/html' });
-      res.end(
-        '<!doctype html><html lang="en"><head><title>Home</title></head><body><nav><a href="/">Home</a></nav><main><h1>Home</h1></main></body></html>'
-      );
-    });
-    await new Promise<void>((resolve) => server.listen(PORT, resolve));
-  });
-
-  afterAll(async () => {
-    await new Promise<void>((resolve) => server.close(() => resolve()));
-    await fs.rm(outputDir, { recursive: true, force: true }).catch(() => {});
-  });
-
-  it('gives a test that could not run a finding saying why, and writes paths relative to the report folder', async () => {
-    const report = await new FlowTestOrchestrator().run({
-      targetUrl: baseUrl,
-      productId: 'small-fixes',
-      outputDir,
-      breakpoints: ['1440px'],
-      enableA11y: false,
-      recordVideo: false,
-      specTestCases: [
-        {
-          id: 'TC-OK',
-          flowId: 'home',
-          role: 'visitor',
-          startPage: '/',
-          steps: [{ action: 'wait', name: 'Look' }],
-          expectations: {},
-        },
-        {
-          id: 'TC-DOWN',
-          flowId: 'elsewhere',
-          name: 'Open the help centre',
-          role: 'visitor',
-          startPage: 'http://localhost:1/help',
-          steps: [{ action: 'wait', name: 'Look' }],
-          expectations: {},
-        },
-      ],
-    });
-
-    const down = report.results.find((r) => r.testCaseId === 'TC-DOWN');
-    expect(down?.status).toBe('Failed');
-    expect(down?.findings.map((f) => f.title)).toEqual(['Couldn’t run “Open the help centre”']);
-    expect(report.findings.some((f) => f.title === 'Couldn’t run “Open the help centre”')).toBe(true);
-
-    const ok = report.results.find((r) => r.testCaseId === 'TC-OK');
-    expect(ok?.stepEvidence[0].screenshotPath).toBe('evidence/TC-OK-1440px/step-1-Look.png');
-
-    for (const file of ['findings.json', 'report.md']) {
-      const content = await fs.readFile(path.join(outputDir, file), 'utf8');
-      expect(content, file).not.toContain(path.resolve(outputDir));
-      expect(content, file).not.toContain(path.resolve(outputDir).replace(/\\/g, '\\\\'));
-    }
-  }, 60000);
 });

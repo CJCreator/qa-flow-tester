@@ -110,12 +110,12 @@ afterAll(() => {
 });
 
 describe('commit secret scan: helpers', () => {
-  it("reads the project's .gitleaks.toml allowlist: fixtures and package tests only", () => {
+  it("reads the project's .gitleaks.toml allowlist: package tests only", () => {
     const res: RegExp[] = parseGitleaksAllowlistPaths(readFileSync(path.join(ROOT, '.gitleaks.toml'), 'utf8'));
     const allowed = (p: string) => res.some((re) => re.test(p));
-    expect(allowed('fixtures/test-app/server.js')).toBe(true);
     expect(allowed('packages/core/tests/ai-provider.test.ts')).toBe(true);
     expect(allowed('packages/core/src/ai/openrouter.ts')).toBe(false);
+    expect(allowed('fixtures/test-app/server.js')).toBe(false);
     expect(allowed('scripts/fixtures/x.js')).toBe(false);
     expect(allowed('packages/core/src/tests/x.ts')).toBe(false);
   });

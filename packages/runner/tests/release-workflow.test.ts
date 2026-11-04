@@ -35,14 +35,7 @@ describe('release workflow', () => {
 
   it('all package versions agree with the root version', () => {
     expect(version).toMatch(/^\d+\.\d+\.\d+$/);
-    for (const dir of [
-      'packages/types',
-      'packages/checkers',
-      'packages/core',
-      'packages/runner',
-      'packages/wizard',
-      'fixtures/test-app',
-    ]) {
+    for (const dir of ['packages/types', 'packages/checkers', 'packages/core', 'packages/runner', 'packages/wizard']) {
       expect((JSON.parse(read(`${dir}/package.json`)) as { version: string }).version, dir).toBe(version);
     }
   });
