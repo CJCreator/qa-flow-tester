@@ -2,15 +2,19 @@ import { useState } from 'react';
 import type { Finding } from '@qa/types';
 import { readRunText, runFileUrl } from '../api';
 import { bugReportMarkdown, playwrightFromSteps } from '../lib/summary';
+import { Spinner } from './text';
 
-/** Copies text and says so; when the browser won't copy, the text is shown to copy by hand. */
-function CopyButton({ label, getText }: { label: string; getText: () => Promise<string> }) {
+/**
+ * Copies text and says so in a live region; when the browser won't copy, the text is shown to copy by hand.
+ * The report's "Copy as Markdown" uses it too.
+ */
+export function CopyButton({ label, getText }: { label: string; getText: () => Promise<string> }) {
   const [state, setState] = useState<'idle' | 'working' | 'copied' | { manual: string }>('idle');
   return (
     <div>
       <button
         type="button"
-        className="btn-quiet min-h-[40px] px-3 text-sm"
+        className="btn-quiet btn-sm"
         disabled={state === 'working'}
         onClick={async () => {
           setState('working');
@@ -24,7 +28,7 @@ function CopyButton({ label, getText }: { label: string; getText: () => Promise<
           }
         }}
       >
-        {label}
+        {state === 'working' ? <Spinner label="Copying…" announce={false} /> : label}
       </button>
       <span role="status" className="ml-2 text-sm text-pass">
         {state === 'copied' ? 'Copied' : ''}
@@ -69,18 +73,18 @@ export function DeveloperDetails({
   const failedRequests = (f.evidence.networkLogs || []).filter((n) => !n.status || n.status >= 400).slice(0, 5);
 
   return (
-    <details className="mt-3 rounded-md border border-rule bg-canvas/60">
-      <summary className="min-h-[40px] cursor-pointer px-3 py-2 text-sm font-bold text-ink">
+    <details className="disclosure mt-3 border-y border-rule">
+      <summary className="py-1 text-sm">
         Details for developers
       </summary>
-      <div className="space-y-4 border-t border-rule p-3 text-sm">
+      <div className="space-y-4 pb-4 pt-2 text-sm">
         {screenshot && (
           <figure>
             <img
               src={runFileUrl(runId, screenshot)}
               alt={`The screen when this was found: ${f.where.urlPath} at ${f.where.breakpoint}`}
               loading="lazy"
-              className="max-h-80 w-auto rounded border border-rule"
+              className="max-h-80 w-auto max-w-full rounded-control border border-rule"
             />
             <figcaption className="mt-1 text-sm text-ink-soft">
               {f.where.urlPath} at {f.where.breakpoint}, as {f.where.role}
@@ -140,7 +144,7 @@ export function DeveloperDetails({
         {consoleLines.length > 0 && (
           <div>
             <p className="font-bold text-ink">Console errors</p>
-            <pre className="mt-1 max-h-48 overflow-auto rounded border border-rule bg-canvas p-2 font-mono text-sm text-ink">
+            <pre className="mt-1 max-h-48 overflow-auto rounded-control border border-rule bg-canvas p-2 font-mono text-sm text-ink">
               {consoleLines.join('\n')}
             </pre>
           </div>

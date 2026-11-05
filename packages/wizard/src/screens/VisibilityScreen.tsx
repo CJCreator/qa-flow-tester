@@ -1,38 +1,44 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import type { AspectGrade, Finding, ReleaseReport } from '@qa/types';
 import { getRun, RunnerError } from '../api';
-import { ErrorMessage, FocusHeading, Spinner } from '../components/text';
+import { DeveloperDetails } from '../components/DeveloperDetails';
+import { FocusHeading, Spinner } from '../components/text';
+import { Badge, EmptyState, LoadError, Page, PageHeader, type Tone } from '../components/ui';
 import { gradeClasses } from '../lib/grades';
 import { Link, PATHS } from '../lib/router';
+import { aspectOf, BUCKETS, bucketOf, howToFix, plainTitle, whyItMatters, type Bucket } from '../lib/summary';
 import { useDocumentTitle } from '../lib/title';
+import { looksTechnical } from '../lib/translate';
 import { hostOf } from '../lib/url';
 
 type LensTab = 'search' | 'answers' | 'aiSearch' | 'marketing';
+
+const TABS: LensTab[] = ['search', 'answers', 'aiSearch', 'marketing'];
 
 const LENS_METADATA: Record<LensTab, { label: string; tag: string; description: string; hint: string }> = {
   search: {
     label: 'Search (SEO)',
     tag: 'SEO',
-    description: 'How search engines like Google and Bing find, index, and rank your pages.',
-    hint: 'Titles, meta descriptions, headings, canonical links, robots.txt, and sitemaps.',
+    description: 'How search engines such as Google and Bing find, list and rank your pages.',
+    hint: 'Page titles and descriptions, headings, links to the main copy of a page, and the files that guide search engines.',
   },
   answers: {
     label: 'AI answers (AEO)',
     tag: 'AEO',
-    description: 'How voice assistants and AI answer boxes select direct answers from your site.',
-    hint: 'Structured data: FAQPage, HowTo and BreadcrumbList markup.',
+    description: 'How voice assistants and AI answer boxes pick direct answers from your site.',
+    hint: 'Questions and answers, step-by-step guides and page trails marked up so machines can read them.',
   },
   aiSearch: {
     label: 'AI search (GEO)',
     tag: 'GEO',
-    description: 'How AI search engines like ChatGPT, Claude, and Perplexity parse, understand, and cite your content.',
-    hint: 'llms.txt agent summary, AI crawler permissions (GPTBot, ClaudeBot), semantic article structure, and citable facts.',
+    description: 'How AI search tools such as ChatGPT, Claude and Perplexity read, understand and quote your content.',
+    hint: 'A summary file for AI tools, whether AI crawlers may visit, clear article structure, and facts worth quoting.',
   },
   marketing: {
     label: 'Marketing (MKT)',
     tag: 'MKT',
-    description: 'How effectively your pages convert visitors into customers.',
-    hint: 'Rich social share previews, clear call to action, contact channels, privacy links, analytics, and trust proof.',
+    description: 'How well your pages turn visitors into customers.',
+    hint: 'Share previews, a clear call to action, ways to get in touch, privacy links, analytics and proof people trust.',
   },
 };
 
@@ -44,45 +50,64 @@ function gradeForScore(score: number): AspectGrade {
   return 'F';
 }
 
+const BUCKET_TONE: Record<Bucket, Tone> = {
+  'must-fix': 'fail',
+  'should-fix': 'warn',
+  suggestion: 'neutral',
+  'to-confirm': 'neutral',
+  judgement: 'neutral',
+};
+
 export function VisibilityScreen({ runId }: { runId: string }) {
   const [report, setReport] = useState<ReleaseReport | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const [activeTab, setActiveTab] = useState<LensTab>('search');
+  const tabRefs = useRef<Partial<Record<LensTab, HTMLButtonElement | null>>>({});
 
   useEffect(() => {
     let cancelled = false;
+    setError(null);
     getRun(runId)
       .then((r) => !cancelled && setReport(r))
       .catch(
         (err) =>
           !cancelled &&
-          setError(err instanceof RunnerError ? err.message : 'The report could not be opened. Try again.')
+          setError(err instanceof RunnerError ? err.message : 'The report couldn’t be opened. Try again.')
       );
     return () => {
       cancelled = true;
     };
-  }, [runId]);
+  }, [runId, attempt]);
 
   useDocumentTitle(report ? `Search and AI visibility · ${hostOf(report.targetUrl)}` : 'Search and AI visibility');
 
+  const back = { to: PATHS.report(runId), label: 'Back to the report' };
+
   if (error) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-12">
-        <ErrorMessage>{error}</ErrorMessage>
-        <div className="mt-4">
-          <Link to={PATHS.report(runId)} className="btn-quiet">
-            ← Back to Report
-          </Link>
-        </div>
-      </div>
+      <Page width="workspace">
+        <Link to={back.to} className="btn-link -my-2 w-fit text-sm">
+          <span aria-hidden="true">←&nbsp;</span>
+          {back.label}
+        </Link>
+        <FocusHeading className="mb-4 mt-6 font-stamp text-3xl font-bold sm:text-4xl">
+          Search and AI visibility can’t be shown
+        </FocusHeading>
+        <LoadError title="The report didn’t open" onRetry={() => setAttempt((n) => n + 1)}>
+          {error}
+        </LoadError>
+      </Page>
     );
   }
 
   if (!report) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <Spinner label="Loading search and AI visibility..." />
-      </div>
+      <Page width="workspace">
+        <p className="text-ink-soft">
+          <Spinner label="Opening search and AI visibility…" />
+        </p>
+      </Page>
     );
   }
 
@@ -116,73 +141,63 @@ export function VisibilityScreen({ runId }: { runId: string }) {
   const currentSub = getTabScore(activeTab);
   const marketingChecks = report.marketing?.checks ?? [];
 
+  /** Arrow keys, Home and End move between the tabs (roving tabindex); the chosen tab opens. */
+  const onTabKey = (e: KeyboardEvent<HTMLButtonElement>) => {
+    const at = TABS.indexOf(activeTab);
+    const next =
+      e.key === 'ArrowRight'
+        ? TABS[(at + 1) % TABS.length]
+        : e.key === 'ArrowLeft'
+          ? TABS[(at - 1 + TABS.length) % TABS.length]
+          : e.key === 'Home'
+            ? TABS[0]
+            : e.key === 'End'
+              ? TABS[TABS.length - 1]
+              : null;
+    if (!next) return;
+    e.preventDefault();
+    setActiveTab(next);
+    tabRefs.current[next]?.focus();
+  };
+
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-      {/* Breadcrumb Navigation */}
-      <nav aria-label="Breadcrumbs" className="mb-4 text-xs text-ink-soft">
-        <ol className="flex items-center gap-1.5">
-          <li>
-            <Link to={PATHS.reports} className="hover:text-ink hover:underline">
-              Check-ups
-            </Link>
-          </li>
-          <li aria-hidden="true">/</li>
-          <li>
-            <Link to={PATHS.report(runId)} className="hover:text-ink hover:underline">
-              {hostOf(report.targetUrl)}
-            </Link>
-          </li>
-          <li aria-hidden="true">/</li>
-          <li className="font-semibold text-ink" aria-current="page">
-            Search & AI Visibility
-          </li>
-        </ol>
-      </nav>
+    <Page width="workspace">
+      <PageHeader
+        back={back}
+        meta={<span className="break-all">{hostOf(report.targetUrl)}</span>}
+        title="Search and AI visibility"
+        lede="How search engines, AI answers and AI search tools find and read the site, and the marketing basics."
+      />
 
-      {/* Screen Title */}
-      <div className="mb-6 flex flex-wrap items-baseline justify-between gap-4 border-b border-rule pb-4">
-        <div>
-          <FocusHeading className="text-2xl font-bold text-ink sm:text-3xl">Search & AI Visibility</FocusHeading>
-          <p className="mt-1 text-sm text-ink-soft">
-            Audit of SEO, structured data, AI crawler accessibility, and conversion readiness for{' '}
-            <span className="font-semibold text-ink">{hostOf(report.targetUrl)}</span>.
-          </p>
-        </div>
-        <Link to={PATHS.report(runId)} className="btn-quiet text-xs">
-          ← Back to Report
-        </Link>
-      </div>
-
-      {/* Tabs */}
-      <div
-        role="tablist"
-        aria-label="Visibility audit dimensions"
-        className="mb-6 flex flex-wrap gap-2 border-b border-rule pb-2"
-      >
-        {(['search', 'answers', 'aiSearch', 'marketing'] as const).map((tab) => {
+      <div role="tablist" aria-label="What to look at" className="mb-6 flex flex-wrap gap-2">
+        {TABS.map((tab) => {
           const meta = LENS_METADATA[tab];
           const part = getTabScore(tab);
           const isSelected = activeTab === tab;
-          const scoreDisplay = part?.checked === false ? 'Off' : `${part?.score ?? 100}%`;
-          const grade = part?.score !== undefined ? gradeForScore(part.score) : undefined;
+          const scoreDisplay = part?.checked === false ? 'Not checked' : `${part?.score ?? 100}%`;
+          const grade = part?.score !== undefined && part.checked !== false ? gradeForScore(part.score) : undefined;
 
           return (
             <button
               key={tab}
+              ref={(el) => {
+                tabRefs.current[tab] = el;
+              }}
+              type="button"
               role="tab"
               id={`tab-${tab}`}
               aria-selected={isSelected}
-              aria-controls={`panel-${tab}`}
+              aria-controls={isSelected ? `panel-${tab}` : undefined}
+              tabIndex={isSelected ? 0 : -1}
               onClick={() => setActiveTab(tab)}
-              className={`flex items-center gap-2 rounded-control px-4 py-2.5 text-sm font-bold transition-all ${
-                isSelected
-                  ? 'border-2 border-stamp bg-surface text-ink shadow-level-1'
-                  : 'border border-edge bg-canvas text-ink-soft hover:bg-surface hover:text-ink'
+              onKeyDown={onTabKey}
+              className={`flex min-h-[44px] items-center gap-2 rounded-control border-[1.5px] px-4 py-2 text-sm font-bold transition-colors duration-fast ${
+                isSelected ? 'border-stamp bg-stamp-tint text-ink' : 'border-edge bg-surface text-ink-soft hover:text-ink'
               }`}
             >
               <span>{meta.label}</span>
               <span
-                className={`rounded px-1.5 py-0.5 text-xs ${grade ? gradeClasses(grade) : 'bg-surface text-ink-soft'}`}
+                className={`rounded-control border px-1.5 py-0.5 text-xs ${grade ? gradeClasses(grade) : 'border-rule bg-canvas text-ink-soft'}`}
               >
                 {scoreDisplay}
               </span>
@@ -191,147 +206,113 @@ export function VisibilityScreen({ runId }: { runId: string }) {
         })}
       </div>
 
-      {/* Tab Panel */}
-      <section id={`panel-${activeTab}`} role="tabpanel" aria-labelledby={`tab-${activeTab}`} className="space-y-6">
-        {/* Dimension Header Banner */}
-        <div className="rounded-card border border-edge bg-surface p-5 shadow-level-1">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-bold text-ink">{LENS_METADATA[activeTab].label}</h2>
-              <p className="mt-1 max-w-2xl text-sm text-ink-soft">{LENS_METADATA[activeTab].description}</p>
-              <p className="mt-1 text-xs text-ink-soft">
-                <span className="font-semibold text-ink">Checked: </span>
-                {LENS_METADATA[activeTab].hint}
-              </p>
-            </div>
-            {currentSub && currentSub.checked !== false && (
-              <div className="text-right">
-                <div className="text-3xl font-extrabold text-ink">{currentSub.score}%</div>
-                <div className="text-xs font-semibold uppercase tracking-wider text-ink-soft">Health Score</div>
-              </div>
-            )}
+      <section
+        id={`panel-${activeTab}`}
+        role="tabpanel"
+        aria-labelledby={`tab-${activeTab}`}
+        tabIndex={0}
+        className="space-y-10"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-rule pb-6">
+          <div className="max-w-prose">
+            <h2 className="text-xl font-bold text-ink">{LENS_METADATA[activeTab].label}</h2>
+            <p className="mt-1 text-ink-soft">{LENS_METADATA[activeTab].description}</p>
+            <p className="mt-2 text-sm text-ink-soft">
+              <span className="font-bold text-ink">What it looks at: </span>
+              {LENS_METADATA[activeTab].hint}
+            </p>
           </div>
+          {currentSub && currentSub.checked !== false && (
+            <p className="text-right">
+              <span className="block font-stamp text-3xl font-bold text-ink">{currentSub.score}%</span>
+              <span className="block text-sm text-ink-soft">Score</span>
+            </p>
+          )}
         </div>
 
-        {/* Marketing Specific Checklist */}
         {activeTab === 'marketing' && marketingChecks.length > 0 && (
-          <div className="rounded-card border border-edge bg-surface p-5 shadow-level-1">
-            <h3 className="mb-3 text-base font-bold text-ink">Marketing Basics Checklist</h3>
-            <p className="mb-4 text-xs text-ink-soft">
-              Scanned across tested pages to evaluate social reach, user action guidance, and trust factors.
+          <div>
+            <h3 className="text-lg font-bold text-ink">Marketing basics</h3>
+            <p className="mb-3 text-sm text-ink-soft">
+              Read across the tested pages: how the site is shared, what it asks visitors to do, and what makes people
+              trust it.
             </p>
-            <ul className="divide-y divide-rule text-sm">
+            <ul className="divide-y divide-rule rounded-card border border-rule bg-surface">
               {marketingChecks.map((check) => (
-                <li key={check.key} className="flex items-start justify-between gap-4 py-3">
-                  <div>
-                    <div className="flex items-center gap-2">
+                <li key={check.key} className="flex flex-wrap items-start justify-between gap-3 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="flex flex-wrap items-center gap-2">
                       <span
-                        className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                        aria-hidden="true"
+                        className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-control text-xs font-bold ${
                           check.status === 'ok'
-                            ? 'bg-pass/10 text-pass'
+                            ? 'bg-pass-tint text-pass'
                             : check.status === 'gap'
-                              ? 'bg-warn/10 text-warn'
+                              ? 'bg-warn-tint text-warn'
                               : 'bg-canvas text-ink-soft'
                         }`}
                       >
-                        {check.status === 'ok' ? '✓' : check.status === 'gap' ? '⚠' : '○'}
+                        {check.status === 'ok' ? '✓' : check.status === 'gap' ? '!' : '–'}
                       </span>
-                      <span className="font-semibold text-ink">{check.label}</span>
-                      {check.kind === 'opinion' && (
-                        <span className="rounded bg-canvas px-1.5 py-0.5 text-[10px] text-ink-soft">
-                          Recommendation
-                        </span>
-                      )}
-                    </div>
-                    {check.detail && <p className="mt-1 pl-7 text-xs text-ink-soft">{check.detail}</p>}
+                      <span className="font-bold text-ink">{check.label}</span>
+                      {check.kind === 'opinion' && <Badge>Suggestion</Badge>}
+                    </p>
+                    {check.detail && <p className="mt-1 pl-8 text-sm text-ink-soft">{check.detail}</p>}
                   </div>
-                  <span
-                    className={`shrink-0 rounded px-2 py-0.5 text-xs font-bold uppercase tracking-wider ${
-                      check.status === 'ok'
-                        ? 'border border-pass/30 bg-pass/10 text-pass'
-                        : check.status === 'gap'
-                          ? 'border border-warn/30 bg-warn/10 text-warn'
-                          : 'border border-edge bg-canvas text-ink-soft'
-                    }`}
-                  >
+                  <Badge tone={check.status === 'ok' ? 'pass' : check.status === 'gap' ? 'warn' : 'neutral'}>
                     {check.status === 'ok' ? 'Present' : check.status === 'gap' ? 'Missing' : 'Not relevant'}
-                  </span>
+                  </Badge>
                 </li>
               ))}
             </ul>
           </div>
         )}
 
-        {/* Missing / Needs Attention Items */}
-        <div className="rounded-card border border-edge bg-surface p-5 shadow-level-1">
-          <div className="flex items-center justify-between border-b border-rule pb-3">
-            <h3 className="text-base font-bold text-ink">Needs Attention ({currentFindings.length})</h3>
-            <span className="text-xs text-ink-soft">
-              {currentFindings.length === 0 ? 'All checked items passed' : 'Actionable findings to resolve'}
-            </span>
-          </div>
+        <div>
+          <h3 className="mb-3 text-lg font-bold text-ink">Needs attention ({currentFindings.length})</h3>
 
           {currentFindings.length === 0 ? (
-            <div className="py-8 text-center text-ink-soft">
-              <span className="inline-block text-2xl text-pass">✓</span>
-              <p className="mt-2 text-sm font-semibold text-ink">
-                No defects found for {LENS_METADATA[activeTab].label}!
-              </p>
-              <p className="text-xs">Your inspected pages conform to the expected best practices for this category.</p>
-            </div>
+            <EmptyState
+              title={`Nothing to fix for ${LENS_METADATA[activeTab].label}`}
+              action={
+                <Link to={back.to} className="btn-quiet">
+                  Back to the report
+                </Link>
+              }
+            >
+              The tested pages do what is expected here.
+            </EmptyState>
           ) : (
-            <div className="mt-4 space-y-4">
-              {currentFindings.map((finding) => (
-                <article
-                  key={finding.id}
-                  className="rounded-control border border-edge bg-canvas p-4 text-sm transition-all hover:border-stamp"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <h4 className="font-bold text-ink">{finding.title}</h4>
-                    <span
-                      className={`rounded px-2 py-0.5 text-xs font-semibold ${
-                        finding.severity === 'Major'
-                          ? 'bg-fail/10 text-fail border border-fail/20'
-                          : finding.severity === 'Minor'
-                            ? 'bg-warn/10 text-warn border border-warn/20'
-                            : 'bg-canvas text-ink-soft border border-edge'
-                      }`}
-                    >
-                      {finding.severity === 'Major'
-                        ? 'Must fix'
-                        : finding.severity === 'Minor'
-                          ? 'Should fix'
-                          : 'Suggestion'}
-                    </span>
-                  </div>
-
-                  <p className="mt-1 text-xs text-ink-soft">
-                    Found on: <code className="font-mono text-ink">{finding.where.urlPath}</code>
-                  </p>
-
-                  <div className="mt-3 grid gap-2 rounded border border-edge/60 bg-surface p-3 text-xs">
-                    <div>
-                      <span className="font-semibold text-ink">Actual: </span>
-                      <span className="text-warn">{finding.expectedVsActual.actual}</span>
+            <ul className="divide-y divide-rule rounded-card border border-rule bg-surface">
+              {currentFindings.map((finding, i) => {
+                const bucket = bucketOf(finding);
+                const title = plainTitle(finding);
+                const aspect = finding.aspect ?? aspectOf(finding.checker);
+                return (
+                  <li key={`${finding.id}-${i}`} className="p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <h4 className="font-bold text-ink">{title}</h4>
+                      <Badge tone={BUCKET_TONE[bucket]}>{BUCKETS.find((b) => b.id === bucket)?.title}</Badge>
                     </div>
-                    <div>
-                      <span className="font-semibold text-ink">Expected: </span>
-                      <span className="text-ink-soft">{finding.expectedVsActual.expected}</span>
-                    </div>
-                  </div>
-
-                  {finding.resolution && (
-                    <div className="mt-3 border-t border-rule pt-2 text-xs">
-                      <span className="font-semibold text-pass">How to fix: </span>
-                      <span className="text-ink">{finding.resolution}</span>
-                    </div>
-                  )}
-                </article>
-              ))}
-            </div>
+                    <p className="mt-1 text-sm text-ink-soft">
+                      Found on <span className="break-all font-mono text-ink">{finding.where.urlPath}</span>
+                    </p>
+                    <p className="mt-2 text-ink">
+                      <strong>Why it matters: </strong>
+                      {whyItMatters({ title, aspect })}
+                    </p>
+                    <p className="mt-1 text-ink">
+                      <strong>How to fix: </strong>
+                      {howToFix({ findings: [finding] }, looksTechnical)}
+                    </p>
+                    <DeveloperDetails finding={finding} runId={report.runId} targetUrl={report.targetUrl} />
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </div>
       </section>
-    </div>
+    </Page>
   );
 }

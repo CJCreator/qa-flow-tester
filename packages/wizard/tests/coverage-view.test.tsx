@@ -1,9 +1,10 @@
+import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import type { ReleaseReport } from '@qa/types';
 import { skipReasonText } from '../src/lib/coverage-text';
-import { Report } from '../src/screens/ReportScreen';
+import { Report, reportHeadline } from '../src/screens/ReportScreen';
 
 function makeReport(partial?: Partial<ReleaseReport>): ReleaseReport {
   return {
@@ -121,5 +122,96 @@ describe('T-109: rolesNotTested rendering', () => {
 
     // Make sure it is not inside the spec section
     expect(html).not.toContain('How the site matches its requirements');
+  });
+});
+
+describe('Report redesign: verdict tag, headline, order and grouped problems', () => {
+  const finding = (id: string, urlPath: string) =>
+    ({
+      id,
+      title: 'Missing Content-Security-Policy header',
+      severity: 'Blocker',
+      checker: 'security',
+      issueKey: `security|csp|${urlPath}`,
+      where: { urlPath, breakpoint: '1440px', role: 'anonymous' },
+      expectedVsActual: { expected: 'A CSP header', actual: 'None' },
+      evidence: {},
+      stepsToReproduce: [],
+    }) as unknown as ReleaseReport['findings'][number];
+
+  const render = (report: ReleaseReport) =>
+    renderToStaticMarkup(createElement(Report, { report, actions: mockActions, onReportChanged: () => {} }));
+
+  it('shows the same problem on several pages as one row that says on how many pages', () => {
+    const html = render(
+      makeReport({ findings: [finding('f1', '/'), finding('f2', '/about'), finding('f3', '/pricing')] })
+    );
+    expect(html.match(/data-problem-key=/g)?.length).toBe(1);
+    expect(html).toContain('on 3 pages');
+    expect(html).toMatch(/Must fix before release <span[^>]*>\(1\)<\/span>/);
+  });
+
+  it('puts the verdict on a tag, a short headline under it, and the long sentence under Details for developers', () => {
+    const html = render(makeReport({ findings: [finding('f1', '/'), finding('f2', '/about')] }));
+    expect(html).toContain('class="stamp ');
+    expect(html).not.toContain('rotate');
+    expect(html).toMatch(/<h1[^>]*font-stamp text-verdict[^>]*>Not ready yet<\/h1>/);
+    expect(html).toContain('1 problem must be fixed first, all in security.');
+    expect(html.indexOf('Verdict, in full')).toBeGreaterThan(html.indexOf('Problems found'));
+    const order = ['Not ready yet', 'New check-up of this site', 'Problems found', 'Go further', 'Details for developers'];
+    const at = order.map((text) => html.indexOf(text));
+    expect(at.every((n) => n >= 0)).toBe(true);
+    expect(at).toEqual([...at].sort((a, b) => a - b));
+    expect(html).not.toContain('Check-up #');
+    expect(html).not.toContain('Light view');
+  });
+
+  it('has exactly one primary button and links to visibility, compare and baselines', () => {
+    const html = render(makeReport());
+    expect(html.match(/class="btn-primary/g)?.length).toBe(1);
+    expect(html).toContain('href="/reports/run-cov-1/visibility"');
+    expect(html).toContain(`href="/benchmark?url=${encodeURIComponent('https://example.com')}"`);
+    expect(html).toContain('href="/baselines"');
+  });
+});
+
+describe('reportHeadline', () => {
+  it('counts must-fix problems and names the top one or two areas', () => {
+    expect(
+      reportHeadline({
+        ready: false,
+        mustFix: [{ aspect: 'Secure' }, { aspect: 'Secure' }, { aspect: 'Fast and mobile' }, { aspect: 'Works' }],
+        total: 6,
+        lowAreas: [],
+      })
+    ).toBe('4 problems must be fixed first, mostly in security and speed and phone layout.');
+    expect(reportHeadline({ ready: false, mustFix: [{ aspect: 'Secure' }], total: 1, lowAreas: [] })).toBe(
+      '1 problem must be fixed first, all in security.'
+    );
+  });
+
+  it('says what blocks release when only an area score is too low, and stays calm when ready', () => {
+    expect(reportHeadline({ ready: false, mustFix: [], total: 2, lowAreas: ['Accessible'] })).toBe(
+      'Some areas scored too low to release: accessibility.'
+    );
+    expect(reportHeadline({ ready: true, mustFix: [], total: 0, lowAreas: [] })).toBe('No problems found.');
+    expect(reportHeadline({ ready: true, mustFix: [], total: 2, lowAreas: [] })).toBe(
+      'Nothing blocks release. 2 smaller problems are worth fixing.'
+    );
+  });
+});
+
+describe('Visibility screen: plain layer and accessible tabs', () => {
+  it('shows problems in plain words, technical bits under Details for developers, and roving tabs', () => {
+    const source = readFileSync(new URL('../src/screens/VisibilityScreen.tsx', import.meta.url), 'utf8');
+    expect(source).not.toContain('expectedVsActual');
+    expect(source).not.toContain('{finding.title}');
+    expect(source).toContain('<DeveloperDetails');
+    expect(source).toContain('whyItMatters(');
+    expect(source).toContain('tabIndex={isSelected ? 0 : -1}');
+    expect(source).toContain('aria-controls={isSelected ? `panel-${tab}` : undefined}');
+    expect(source).toContain('ArrowRight');
+    expect(source).toContain('onRetry=');
+    expect(source).not.toMatch(/text-\[1[0-2]px\]|uppercase|tracking-wider|bg-(pass|warn|fail)\/10/);
   });
 });
