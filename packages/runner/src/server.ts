@@ -550,11 +550,43 @@ function asFlow(testCase: TestCase): DiscoveredFlow {
 }
 
 /**
+ * Scans stored audits and recovers any version left in 'running' status (ADR 0042, T-85).
+ * Marks them 'stopped' with stoppedReason: 'tool-restarted'.
+ */
+export async function recoverRunningAudits(store: AuditStore, now: () => Date = () => new Date()): Promise<number> {
+  let count = 0;
+  try {
+    const audits = await store.listAudits();
+    for (const audit of audits) {
+      for (const version of audit.versions) {
+        if (version.status === 'running') {
+          try {
+            await store.updateVersion(audit.auditId, version.version, {
+              status: 'stopped',
+              stoppedReason: 'tool-restarted',
+              finishedAt: now().toISOString(),
+              error: 'The tool restarted before the Website Audit finished.',
+            });
+            count += 1;
+          } catch {
+            // Version update failure should not break overall recovery
+          }
+        }
+      }
+    }
+  } catch {
+    // Audit store listing failure (e.g. empty or uninitialized)
+  }
+  return count;
+}
+
+/**
  * RunnerServer is the only component that actually invokes FlowTestOrchestrator /
  * DiscoveryAgent on behalf of the Wizard. It is the live, single-flight execution engine
  * for UI-triggered runs.
  */
 export class RunnerServer {
+  readonly auditRecoveryDone: Promise<number>;
   private server: http.Server | null = null;
   private port: number;
   private host: string;
@@ -809,6 +841,7 @@ export class RunnerServer {
     this.routes = options.routes ?? allRoutes;
     // One audit store per runner (ADR 0036), shared by Helper access and the audit routes. No I/O here.
     const auditStore = createAuditStore(selectAuditStoreBackend({ dataDir: this.dataDir }));
+    this.auditRecoveryDone = recoverRunningAudits(auditStore);
     // Schedules follow the audit store: in the bucket on the hosted copy (they survive a redeploy), a file otherwise.
     this.scheduler = new SchedulerManager(
       options.scheduleStore ??
@@ -1040,6 +1073,7 @@ export class RunnerServer {
   public async start(): Promise<string> {
     // A shared machine checks every browser request: nothing may reach a non-public address (ADR 0014).
     if (this.beta) setBrowserPolicy({ guard: makeRequestGuard(this.hostChecks) });
+    await this.auditRecoveryDone;
     await this.moveLegacyData();
     await this.ensurePlanLoaded();
     await this.loadLatestReport();
@@ -3145,6 +3179,7 @@ export class RunnerServer {
         suggestion: this.beta
           ? 'Only one check-up runs at a time here. Try again in a few minutes.'
           : 'Wait for the check-up in progress to finish, or stop it, then start this one.',
+        running: this.session.run.running ?? { kind: 'checkup', href: '/check' },
       });
       return;
     }
@@ -3169,6 +3204,7 @@ export class RunnerServer {
         suggestion: this.beta
           ? 'Only one check-up runs at a time here. Try again in a few minutes.'
           : 'Wait for the check-up in progress to finish, or stop it, then start this one.',
+        running: this.session.run.running ?? { kind: 'checkup', href: '/check' },
       });
       return;
     }
@@ -3756,6 +3792,7 @@ export class RunnerServer {
           ? 'Someone else is using this shared copy right now. Try again in a few minutes.'
           : 'A check-up or comparison is running. Wait for it to finish first.',
         code: 'ERR_RUN_IN_PROGRESS',
+        running: this.session.run.running ?? { kind: 'checkup', href: '/check' },
       });
       return;
     }

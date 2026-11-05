@@ -6,6 +6,8 @@ export type RunKind = 'checkup' | 'benchmark' | 'audit';
 export interface RunSlot {
   /** Which kind of run holds the slot; null when it is free. */
   readonly kind: RunKind | null;
+  /** What is currently running: kind and href (ADR 0042). Null when free. */
+  readonly running: { kind: 'checkup' | 'audit'; href: string } | null;
   /** The Check-up's state: a benchmark or an audit holding the slot leaves it untouched. */
   readonly isRunning: boolean;
   readonly phase: RunnerPhase;
@@ -66,6 +68,21 @@ export class DefaultRunSlot implements RunSlot {
     return this._other?.kind ?? (this._isRunning ? 'checkup' : null);
   }
 
+  get running(): { kind: 'checkup' | 'audit'; href: string } | null {
+    if (this._other) {
+      if (this._other.kind === 'audit') {
+        const id = this._other.runId;
+        const href = id ? `/audits/${id}` : '/audits';
+        return { kind: 'audit', href };
+      }
+      return { kind: 'checkup', href: '/check' };
+    }
+    if (this._isRunning) {
+      return { kind: 'checkup', href: '/check' };
+    }
+    return null;
+  }
+
   begin(runId: string, targetUrl: string, kind: RunKind = 'checkup'): boolean {
     if (this._other) return false;
     if (this._isRunning && (kind !== 'checkup' || this._phase !== 'awaiting-review')) return false;
@@ -108,6 +125,9 @@ export class DefaultRunSlot implements RunSlot {
 
   setRunId(runId: string | null): void {
     this._runId = runId;
+    if (this._other && runId) {
+      this._other.runId = runId;
+    }
   }
 
   setTargetUrl(targetUrl: string | null): void {

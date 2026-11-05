@@ -65,6 +65,7 @@ export interface AuditVersionUpdate {
   findings?: number;
   edited?: boolean;
   documents?: StoredAuditDocument[];
+  stoppedReason?: 'tool-restarted' | 'stopped-by-user';
 }
 
 export interface AuditStoreOptions {
@@ -202,6 +203,12 @@ function checkVersionUpdate(input: unknown): AuditVersionUpdate {
   if (update.edited !== undefined) {
     if (typeof update.edited !== 'boolean') throw invalidInput('The edited flag is not valid.');
     out.edited = update.edited;
+  }
+  if (update.stoppedReason !== undefined) {
+    if (update.stoppedReason !== 'tool-restarted' && update.stoppedReason !== 'stopped-by-user') {
+      throw invalidInput('The stopped reason is not valid.');
+    }
+    out.stoppedReason = update.stoppedReason;
   }
   if (update.documents !== undefined) {
     if (!Array.isArray(update.documents)) throw invalidInput('The documents list is not valid.');

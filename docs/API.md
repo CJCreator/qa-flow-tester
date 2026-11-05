@@ -160,6 +160,15 @@ Google Gemini (AI Studio keys; the key `adc` means Google sign-in through Vertex
   once with a model the key can use (`workingGeminiModel`, remembered per key for 30 minutes), and the answer names
   that model.
 
+## Website Audit API
+
+Website Audits run through `packages/runner/src/routes/audit-crawl.ts` and associated audit routes (`AUDIT_API` in `@qa/types`):
+- `POST /api/audits`: Starts a new audit. Sends preflight check for AI readiness (`status` event) before crawling.
+- `GET /api/audits/:id/stream`: Server-Sent Events stream. On connect, immediately dispatches a `snapshot` event (`stage`, `counts`, `pages` with `AuditPageState`, `ai`, and `speed`). For completed runs no longer in memory, emits the stored terminal event (`done` or `failed`) and finishes.
+- Error codes: 1:1 mapped to HTTP replies and stream `failed` events: `ERR_SITE_BLOCKED` (422), `ERR_DNS` (422), `ERR_BROWSER_LAUNCH` (500), `ERR_UNREACHABLE` (422), `ERR_PRIVATE_ADDRESS` (400), `ERR_RUN_IN_PROGRESS` (409, with running `{ kind, href }`), and `ERR_PIPELINE` (500).
+- Startup recovery: On server boot, stored audits remaining in `status: 'running'` are recovered to `status: 'stopped'` with `stoppedReason: 'tool-restarted'`.
+- Document export: `GET /api/audits/:id/export/:kind.:format` direct-serves stored Markdown and HTML generated at audit completion when available.
+
 ## Adding or changing a route
 
 The runner is migrating from a dispatch chain in `server.ts` to a data-driven route table (`packages/runner/src/routes/`, [ADR 0027](adr/0027-checkup-session-module-and-route-table.md)). The eleven plan routes (`/api/runner/plan*` and `/api/runner/waiting-plans`) are in the route table today; remaining routes are still in `server.ts:start()`'s dispatch chain until the follow-up plan.

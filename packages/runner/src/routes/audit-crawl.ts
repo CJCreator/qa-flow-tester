@@ -23,18 +23,23 @@ import {
   AUDIT_ID_PATTERN,
   validateAuditStartBody,
   type AuditAccess,
+  type AuditAiStatus,
   type AuditErrorCode,
   type AuditErrorReply,
   type AuditProgressEvent,
   type AuditRequest,
+  type AuditStage,
   type AuditStartReply,
 } from '@qa/types';
 import {
+  AuditBrowserLaunchError,
   AuditCrawlBlockedError,
+  AuditCrawlRefusedError,
   AuditPipelineError,
   checkAuditAddress,
   createPageRecorder,
   isAbortError,
+  preflightAuditAi,
   runAuditCrawl,
   runAuditPipeline,
   type AuditAddressResult,
@@ -51,6 +56,7 @@ import { readJsonBody, sendJson } from './body.js';
 import { mayUseAudit, type AuditCaller } from './audit-store.js';
 import type { RunSlot } from '../session/run-slot.js';
 import { AuditRun, AuditRuns } from '../session/audit-run.js';
+import { logAuditFailure } from '../audit-log.js';
 
 /** A start body is a URL, four limits and a language: far below this. */
 const MAX_START_BODY_CHARS = 16_384;
@@ -102,7 +108,10 @@ export type AfterCrawlStep = (input: AfterCrawlInput) => Promise<void>;
 
 export type AuditAddressCheck = (url: string) => Promise<AuditAddressResult>;
 export type AuditCrawl = (request: AuditRequest, opts: AuditCrawlOptions) => Promise<AuditCrawlResult>;
-export type AuditRunStore = Pick<AuditStore, 'createAudit' | 'updateVersion' | 'getResult' | 'grantsFor'>;
+export type AuditRunStore = Pick<
+  AuditStore,
+  'createAudit' | 'updateVersion' | 'getResult' | 'grantsFor' | 'readAuditRecord' | 'getVersion'
+>;
 
 /** What the background run uses. `runAuditVersion` takes these, so the re-run route (BE-603) shares them. */
 export interface AuditRunServices {
@@ -118,6 +127,9 @@ export interface AuditRunServices {
    * be audited. Set from the runner's own settings, never from the start body. Default false.
    */
   allowPrivateAddresses?: boolean;
+  resolveAi?: () => Promise<AuditAiResolution>;
+  resolveServiceKey?: PageSpeedDeps['resolveServiceKey'];
+  preflightAi?: typeof preflightAuditAi;
 }
 
 export interface AuditCrawlRouteDeps extends AuditRunServices {
@@ -142,14 +154,51 @@ export interface AuditPipelineStepDeps {
   pipeline?: typeof runAuditPipeline;
 }
 
+export function getRunningInfo(slot: RunSlot, runs?: AuditRuns): { kind: 'checkup' | 'audit'; href: string } {
+  if (runs?.active) {
+    return {
+      kind: 'audit',
+      href: `/audits/${runs.active.auditId}`,
+    };
+  }
+  if (slot.running) {
+    return slot.running;
+  }
+  if (slot.kind === 'audit') {
+    return {
+      kind: 'audit',
+      href: '/audits',
+    };
+  }
+  return {
+    kind: 'checkup',
+    href: '/check',
+  };
+}
+
 function refuse(
   res: http.ServerResponse,
   status: number,
   code: AuditErrorCode,
   error: string,
-  fields?: AuditErrorReply['fields']
+  extra?: { fields?: AuditErrorReply['fields']; running?: AuditErrorReply['running'] } | AuditErrorReply['fields']
 ): void {
-  const body: AuditErrorReply = fields ? { error, code, fields } : { error, code };
+  let fields: AuditErrorReply['fields'];
+  let running: AuditErrorReply['running'];
+  if (extra && typeof extra === 'object') {
+    if ('fields' in extra || 'running' in extra) {
+      fields = (extra as { fields?: AuditErrorReply['fields'] }).fields;
+      running = (extra as { running?: AuditErrorReply['running'] }).running;
+    } else {
+      fields = extra as AuditErrorReply['fields'];
+    }
+  }
+  const body: AuditErrorReply = {
+    error,
+    code,
+    ...(fields ? { fields } : {}),
+    ...(running ? { running } : {}),
+  };
   sendJson(res, status, body);
 }
 
@@ -265,8 +314,40 @@ export async function runAuditVersion(
   let workDir: string | undefined;
   let crawled = false;
   let outcome: Outcome;
+  let currentStage: AuditStage = 'checking-address';
 
   try {
+    // 1. Run preflightAuditAi and send initial status event (T-85)
+    const preflight = services.preflightAi ?? preflightAuditAi;
+    let aiStatus: AuditAiStatus = 'no-key';
+    if (services.resolveAi) {
+      try {
+        aiStatus = await preflight(services.resolveAi, { signal });
+      } catch (err) {
+        if (isAbortError(err) || signal.aborted) throw err;
+        aiStatus = 'no-key';
+      }
+    }
+    let speedSource: 'pagespeed-insights' | 'this-tool' | 'not-measured' = 'this-tool';
+    if (services.resolveServiceKey) {
+      try {
+        const key = await services.resolveServiceKey('pagespeed');
+        if (key && key.apiKey && key.apiKey.trim()) {
+          speedSource = 'pagespeed-insights';
+        }
+      } catch {
+        speedSource = 'this-tool';
+      }
+    }
+    run.emit({
+      type: 'status',
+      auditId: run.auditId,
+      version: run.version,
+      ai: aiStatus,
+      speed: speedSource,
+    });
+
+    currentStage = 'crawling';
     workDir = await (services.makeWorkDir ?? defaultMakeWorkDir)();
     const recorder = (services.createRecorder ?? createPageRecorder)({ workDir });
     const crawl = await crawlFn(request, {
@@ -274,6 +355,7 @@ export async function runAuditVersion(
       // The crawl redacts currentPath; the run adds the audit id and version.
       onProgress: (p) => {
         if ('stage' in p) {
+          currentStage = p.stage;
           run.emit({
             type: 'progress',
             auditId: run.auditId,
@@ -309,10 +391,15 @@ export async function runAuditVersion(
       recorder,
       workDir,
       signal,
-      onProgress: (event) => run.emit(event),
+      onProgress: (event) => {
+        if (event.type === 'progress') {
+          currentStage = event.stage;
+        }
+        run.emit(event);
+      },
     });
     outcome = { kind: 'done' };
-  } catch (err) {
+  } catch (err: unknown) {
     const finishedAt = now().toISOString();
     if (isAbortError(err) || signal.aborted) {
       // A stop is neither done nor failed.
@@ -322,16 +409,50 @@ export async function runAuditVersion(
       // The result IS stored: never mark it failed.
       outcome = await retryDoneStatus(store, run);
     } else if (err instanceof AuditCrawlBlockedError) {
-      // The start page was a tunnel warning or a bot check: its own fixed sentence, which the wizard shows as-is
-      // (it has no sentence of its own for OTHER_FAILED_CODE).
       await recordStatus(store, run, 'failed', finishedAt, err.message);
-      outcome = { kind: 'failed', error: err.message, code: OTHER_FAILED_CODE };
+      outcome = { kind: 'failed', error: err.message, code: 'ERR_SITE_BLOCKED' };
+      logAuditFailure({ code: outcome.code, stage: currentStage, message: outcome.error, url: request.url });
+    } else if (err instanceof AuditBrowserLaunchError || (err as { code?: string })?.code === 'ERR_BROWSER_LAUNCH') {
+      const msg = (err as Error).message || 'The browser could not be launched.';
+      await recordStatus(store, run, 'failed', finishedAt, msg);
+      outcome = { kind: 'failed', error: msg, code: 'ERR_BROWSER_LAUNCH' };
+      logAuditFailure({ code: outcome.code, stage: currentStage, message: outcome.error, url: request.url });
+    } else if (err instanceof AuditCrawlRefusedError) {
+      await recordStatus(store, run, 'failed', finishedAt, err.message);
+      outcome = { kind: 'failed', error: err.message, code: err.code };
+      logAuditFailure({ code: outcome.code, stage: currentStage, message: outcome.error, url: request.url });
+    } else if (err instanceof AuditPipelineError && err.code === 'save-failed') {
+      await recordStatus(store, run, 'failed', finishedAt, AUDIT_SAVE_FAILED);
+      outcome = { kind: 'failed', error: AUDIT_SAVE_FAILED, code: 'ERR_PIPELINE' };
+      logAuditFailure({ code: outcome.code, stage: currentStage, message: outcome.error, url: request.url });
+    } else if ((err as { code?: string })?.code === 'ERR_PIPELINE') {
+      const msg = (err as Error).message || AUDIT_SAVE_FAILED;
+      await recordStatus(store, run, 'failed', finishedAt, msg);
+      outcome = { kind: 'failed', error: msg, code: 'ERR_PIPELINE' };
+      logAuditFailure({ code: outcome.code, stage: currentStage, message: outcome.error, url: request.url });
+    } else if ((err as { code?: string })?.code === 'ERR_DNS') {
+      const msg = (err as Error).message || 'The site name could not be found. Check the address for typos.';
+      await recordStatus(store, run, 'failed', finishedAt, msg);
+      outcome = { kind: 'failed', error: msg, code: 'ERR_DNS' };
+      logAuditFailure({ code: outcome.code, stage: currentStage, message: outcome.error, url: request.url });
+    } else if ((err as { code?: string })?.code === 'ERR_PRIVATE_ADDRESS') {
+      const msg = (err as Error).message || 'This address points to a private or local network.';
+      await recordStatus(store, run, 'failed', finishedAt, msg);
+      outcome = { kind: 'failed', error: msg, code: 'ERR_PRIVATE_ADDRESS' };
+      logAuditFailure({ code: outcome.code, stage: currentStage, message: outcome.error, url: request.url });
+    } else if ((err as { code?: string })?.code === 'ERR_UNREACHABLE') {
+      const msg = (err as Error).message || AUDIT_CRAWL_FAILED;
+      await recordStatus(store, run, 'failed', finishedAt, msg);
+      outcome = { kind: 'failed', error: msg, code: 'ERR_UNREACHABLE' };
+      logAuditFailure({ code: outcome.code, stage: currentStage, message: outcome.error, url: request.url });
     } else if (!crawled) {
       await recordStatus(store, run, 'failed', finishedAt, AUDIT_CRAWL_FAILED);
       outcome = { kind: 'failed', error: AUDIT_CRAWL_FAILED, code: CRAWL_FAILED_CODE };
+      logAuditFailure({ code: outcome.code, stage: currentStage, message: outcome.error, url: request.url });
     } else {
       await recordStatus(store, run, 'failed', finishedAt, AUDIT_SAVE_FAILED);
-      outcome = { kind: 'failed', error: AUDIT_SAVE_FAILED, code: OTHER_FAILED_CODE };
+      outcome = { kind: 'failed', error: AUDIT_SAVE_FAILED, code: 'ERR_PIPELINE' };
+      logAuditFailure({ code: outcome.code, stage: currentStage, message: outcome.error, url: request.url });
     }
   }
 
@@ -376,7 +497,10 @@ export function createAuditCrawlRoutes(deps: AuditCrawlRouteDeps): Route[] {
 
     // Busy now: answer before spending a network check on it. Claimed for real after the check, below.
     const slot = slotOf(context);
-    if (slot.kind !== null) return refuse(res, 409, 'ERR_RUN_IN_PROGRESS', AUDIT_BUSY);
+    if (slot.kind !== null) {
+      const running = getRunningInfo(slot, runs);
+      return refuse(res, 409, 'ERR_RUN_IN_PROGRESS', AUDIT_BUSY, { running });
+    }
 
     let address: AuditAddressResult;
     try {
@@ -386,18 +510,22 @@ export function createAuditCrawlRoutes(deps: AuditCrawlRouteDeps): Route[] {
     }
     if (!address.ok) {
       if (address.code === 'ERR_PRIVATE_ADDRESS') return refuse(res, 400, 'ERR_PRIVATE_ADDRESS', address.reason);
+      if (address.code === 'ERR_DNS') return refuse(res, 422, 'ERR_DNS', address.reason);
       return refuse(res, 422, 'ERR_UNREACHABLE', address.reason);
     }
 
     // Synchronous claim, no await before it after the check (BE-103).
-    if (!slot.begin(`audit-${randomUUID()}`, request.url, 'audit')) {
-      return refuse(res, 409, 'ERR_RUN_IN_PROGRESS', AUDIT_BUSY);
+    const tempRunId = `audit-${randomUUID()}`;
+    if (!slot.begin(tempRunId, request.url, 'audit')) {
+      const running = getRunningInfo(slot, runs);
+      return refuse(res, 409, 'ERR_RUN_IN_PROGRESS', AUDIT_BUSY, { running });
     }
 
     let run: AuditRun;
     let startedAt: string;
     try {
       const version = await deps.store.createAudit(request);
+      slot.setRunId(version.auditId);
       run = runs.start(version.auditId, version.version);
       startedAt = version.startedAt;
     } catch {
@@ -427,8 +555,51 @@ export function createAuditCrawlRoutes(deps: AuditCrawlRouteDeps): Route[] {
     } catch {
       allowed = false;
     }
-    const run = allowed ? runs.get(auditId) : undefined;
+    if (!allowed) {
+      return refuse(res, 404, 'ERR_AUDIT_NOT_FOUND', AUDIT_NOT_FOUND_STREAM);
+    }
+    const run = runs.get(auditId);
     if (!run || (wanted !== undefined && wanted !== run.version)) {
+      try {
+        const record = await deps.store.readAuditRecord?.(auditId);
+        const targetVersion = wanted ?? record?.latestVersion;
+        if (targetVersion !== undefined) {
+          const stored = await deps.store.getVersion?.(auditId, targetVersion);
+          if (stored) {
+            res.writeHead(200, {
+              'Content-Type': 'text/event-stream',
+              'Cache-Control': 'no-cache, no-transform',
+              Connection: 'keep-alive',
+              'X-Accel-Buffering': 'no',
+            });
+            let terminalEvent: AuditProgressEvent;
+            if (stored.status === 'done') {
+              terminalEvent = { type: 'done', auditId, version: stored.version };
+            } else if (stored.status === 'stopped') {
+              terminalEvent = {
+                type: 'failed',
+                auditId,
+                version: stored.version,
+                error: stored.error ?? AUDIT_STOPPED,
+                code: 'ERR_INVALID_REQUEST',
+              };
+            } else {
+              terminalEvent = {
+                type: 'failed',
+                auditId,
+                version: stored.version,
+                error: stored.error ?? AUDIT_CRAWL_FAILED,
+                code: 'ERR_UNREACHABLE',
+              };
+            }
+            res.write(`data: ${JSON.stringify(terminalEvent)}\n\n`);
+            res.end();
+            return;
+          }
+        }
+      } catch {
+        // Fall through to 404
+      }
       return refuse(res, 404, 'ERR_AUDIT_NOT_FOUND', AUDIT_NOT_FOUND_STREAM);
     }
 
@@ -443,7 +614,7 @@ export function createAuditCrawlRoutes(deps: AuditCrawlRouteDeps): Route[] {
       res.write(`data: ${JSON.stringify(event)}\n\n`);
       if (event.type === 'done' || event.type === 'failed') res.end();
     };
-    // The last event first (a late subscriber catches up), then every later one.
+    // The snapshot event first, then every later one.
     const unsubscribe = run.subscribe(send);
     req.on('close', unsubscribe);
   });

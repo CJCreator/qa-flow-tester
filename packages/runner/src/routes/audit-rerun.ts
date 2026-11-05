@@ -32,6 +32,7 @@ import {
   AUDIT_START_FAILED,
   AUDIT_UNREACHABLE,
   auditPipelineStep,
+  getRunningInfo,
   runAuditVersion,
   type AuditAddressCheck,
   type AuditPipelineStepDeps,
@@ -64,8 +65,19 @@ export interface AuditRerunRouteDeps extends Omit<AuditRunServices, 'store'> {
   start?: AuditStarter;
 }
 
-function refuse(res: Parameters<typeof sendJson>[0], status: number, code: AuditErrorCode, error: string): void {
-  const body: AuditErrorReply = { error, code };
+function refuse(
+  res: Parameters<typeof sendJson>[0],
+  status: number,
+  code: AuditErrorCode,
+  error: string,
+  extra?: { fields?: AuditErrorReply['fields']; running?: AuditErrorReply['running'] }
+): void {
+  const body: AuditErrorReply = {
+    error,
+    code,
+    ...(extra?.fields ? { fields: extra.fields } : {}),
+    ...(extra?.running ? { running: extra.running } : {}),
+  };
   sendJson(res, status, body);
 }
 
@@ -105,7 +117,10 @@ export function createAuditRerunRoutes(deps: AuditRerunRouteDeps): Route[] {
 
     // Busy now: answer before spending a network check on it. Claimed for real after the check, below.
     const slot = slotOf(context);
-    if (slot.kind !== null) return refuse(res, 409, 'ERR_RUN_IN_PROGRESS', AUDIT_BUSY);
+    if (slot.kind !== null) {
+      const running = getRunningInfo(slot, runs);
+      return refuse(res, 409, 'ERR_RUN_IN_PROGRESS', AUDIT_BUSY, { running });
+    }
 
     let address: AuditAddressResult;
     try {
@@ -115,12 +130,14 @@ export function createAuditRerunRoutes(deps: AuditRerunRouteDeps): Route[] {
     }
     if (!address.ok) {
       if (address.code === 'ERR_PRIVATE_ADDRESS') return refuse(res, 400, 'ERR_PRIVATE_ADDRESS', address.reason);
+      if (address.code === 'ERR_DNS') return refuse(res, 422, 'ERR_DNS', address.reason);
       return refuse(res, 422, 'ERR_UNREACHABLE', address.reason);
     }
 
     // Synchronous claim, no await before it after the check (BE-103).
-    if (!slot.begin(`audit-${randomUUID()}`, request.url, 'audit')) {
-      return refuse(res, 409, 'ERR_RUN_IN_PROGRESS', AUDIT_BUSY);
+    if (!slot.begin(auditId, request.url, 'audit')) {
+      const running = getRunningInfo(slot, runs);
+      return refuse(res, 409, 'ERR_RUN_IN_PROGRESS', AUDIT_BUSY, { running });
     }
 
     let version: Awaited<ReturnType<RerunStore['addVersion']>> | undefined;

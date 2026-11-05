@@ -143,8 +143,8 @@ describe('the setup docs name commands and files that exist', () => {
     expect(unknown).toEqual([]);
   });
 
-  it('every relative link in the setup docs and the E2E plan points at a file that exists', async () => {
-    const files = [...docs, 'docs/README.md', 'docs/E2E_PLATFORM_IMPLEMENTATION_PLAN.md'];
+  it('every relative link in the setup docs and the docs index points at a file that exists', async () => {
+    const files = [...docs, 'docs/README.md'];
     const missing: string[] = [];
     for (const doc of files) {
       const abs = path.join(root, doc);

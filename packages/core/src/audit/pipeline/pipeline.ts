@@ -10,7 +10,8 @@
  *   5. scoreFindings and rankFindings over every finding; phone findings continue the AF numbers from
  *      analyseSite.nextFindingNumber, and every list citing a finding follows the renumbering ('ranking');
  *   6. buildRoadmap ('ranking');
- *   7. Page Content, phone screenshots and the result saved through the audit store (ADR 0036), so deleting
+ *   7. writeAllDocuments for all 7 audit documents ('writing-documents');
+ *   8. Page Content, phone screenshots and the result saved through the audit store (ADR 0036), so deleting
  *      the audit deletes them ('saving').
  *
  * A stage that fails is recorded as not done (stage outcome, `onStage`, a plain note in the result, and
@@ -24,6 +25,7 @@ import path from 'node:path';
 import type {
   AreaAssessment,
   AssessmentNotDoneReason,
+  AuditAiStatus,
   AuditFinding,
   AuditPage,
   AuditProgressEvent,
@@ -61,10 +63,17 @@ import {
   type UnscoredAuditFinding,
 } from '../ai/ranking.js';
 import { hasClaimWords } from '../ai/claim-words.js';
-import type { AuditAiResolution } from '../ai/stage-ai.js';
+import { classifyAiError, redactAiMessage, type AuditAiResolution } from '../ai/stage-ai.js';
 import { buildRoadmap } from '../documents/roadmap.js';
+import {
+  writeAllDocuments,
+  type StoredAuditDocument,
+  type WriteAllDocumentsStore,
+  type WriteAllSettings,
+} from '../documents/write-all.js';
 import { areaGrades, labPerformanceScore, type CheckedAreas } from './grades.js';
 import type { AuditPageRecorder, RecordedPage } from './page-recorder.js';
+import { createSkippedPageFinding, isSiteCausedSkip } from './skipped-findings.js';
 
 /** The site-level stage functions; the defaults are the real modules. Tests pass fakes. */
 export interface SiteStages {
@@ -74,6 +83,7 @@ export interface SiteStages {
   assessSite: typeof assessSite;
   recommendPages: typeof recommendPages;
   buildRoadmap: typeof buildRoadmap;
+  writeAllDocuments?: typeof writeAllDocuments;
 }
 
 export const DEFAULT_SITE_STAGES: SiteStages = {
@@ -83,10 +93,19 @@ export const DEFAULT_SITE_STAGES: SiteStages = {
   assessSite,
   recommendPages,
   buildRoadmap,
+  writeAllDocuments,
 };
 
 export type PipelineStep =
-  'reading' | 'analysis' | 'speed' | 'assessment' | 'recommendation' | 'ranking' | 'roadmap' | 'saving';
+  | 'reading'
+  | 'analysis'
+  | 'speed'
+  | 'assessment'
+  | 'recommendation'
+  | 'ranking'
+  | 'roadmap'
+  | 'writing-documents'
+  | 'saving';
 
 /** How one step ended. 'not-done' is never shown as a clean result. */
 export interface PipelineStepOutcome {
@@ -102,7 +121,8 @@ export interface PipelineStepOutcome {
 export type AuditPipelineStore = Pick<
   AuditStore,
   'saveResult' | 'writeVersionJson' | 'putVersionFile' | 'updateVersion'
->;
+> &
+  Partial<Pick<AuditStore, 'saveAuditDocument' | 'readVersionJson'>>;
 
 export interface AuditPipelineDeps {
   auditId: string;
@@ -132,6 +152,8 @@ export interface AuditPipelineDeps {
   onStep?: (outcome: PipelineStepOutcome) => void;
   now?: () => Date;
   stages?: Partial<SiteStages>;
+  /** Settings for writing documents (company, proposal template, optOutText). */
+  settings?: WriteAllSettings;
 }
 
 export interface AuditPipelineOutcome {
@@ -148,12 +170,13 @@ export interface AuditPipelineOutcome {
  *    retry); the caller must not mark the version 'failed' and may retry the status update.
  */
 export class AuditPipelineError extends Error {
-  readonly code: 'save-failed' | 'status-not-updated';
-  constructor(code: 'save-failed' | 'status-not-updated' = 'save-failed') {
+  readonly code: 'save-failed' | 'status-not-updated' | 'ERR_PIPELINE';
+  readonly errorCode: 'ERR_PIPELINE' = 'ERR_PIPELINE';
+  constructor(code: 'save-failed' | 'status-not-updated' | 'ERR_PIPELINE' = 'save-failed') {
     super(
-      code === 'save-failed'
-        ? 'The audit could not be saved.'
-        : 'The audit result is saved, but its status could not be updated.'
+      code === 'status-not-updated'
+        ? 'The audit result is saved, but its status could not be updated.'
+        : 'The audit could not be saved.'
     );
     this.name = 'AuditPipelineError';
     this.code = code;
@@ -179,10 +202,40 @@ const NOTES: Record<Exclude<PipelineStep, 'reading'>, string> = {
   recommendation: 'The AI redesign-or-repair step did not finish, so a fixed rule decided.',
   ranking: 'The findings could not be ranked, so they are listed in the order found.',
   roadmap: 'The Improvement Roadmap could not be built.',
+  'writing-documents': 'The Audit Documents could not be written.',
   saving: 'The audit could not be saved.',
 };
-const NO_AI_KEY_NOTE = 'AI notes need an AI key.';
 const NOT_CHECKED_SIGNAL = 'Not checked: the page checks did not finish.';
+
+/** "Only 1 page was read" note text (T-84, T-88, ADR 0042). */
+export function onlyOnePageNoteText(): string {
+  return 'Only 1 page was read.';
+}
+
+/** "The site stopped answering after N pages" note text (T-84, T-88, ADR 0042). */
+export function siteStoppedAnsweringNoteText(pages: number): string {
+  return `The site stopped answering after ${pages} ${pages === 1 ? 'page' : 'pages'}.`;
+}
+
+/** Speed source note text (T-84, T-88, ADR 0042). */
+export function speedSourceNoteText(source: 'pagespeed-insights' | 'this-tool' | 'not-measured'): string {
+  if (source === 'pagespeed-insights') return 'Speed was measured by Google PageSpeed Insights.';
+  if (source === 'this-tool') return 'Speed was measured by this tool.';
+  return 'Speed was not measured.';
+}
+
+/** AI status note text with its reason (T-84, T-88, ADR 0042). */
+export function aiStatusNoteText(status: AuditAiStatus, reason?: string): string {
+  if (status === 'ready') return 'AI: ready.';
+  if (status === 'no-key') return 'AI notes need an AI key.';
+  if (status === 'key-expired') return 'The AI key expired. Update it in Audit settings.';
+  if (status === 'quota') return 'The AI quota was reached.';
+  if (status === 'timeout') return 'The AI did not answer in time.';
+  if (status === 'provider-error') {
+    return reason ? `The AI provider returned an error: ${reason}.` : 'The AI provider returned an error.';
+  }
+  return 'AI status: not available.';
+}
 
 function notMeasured(reason: SpeedNotMeasuredReason): PageSpeed {
   return {
@@ -301,6 +354,7 @@ export async function runAuditPipeline(
   crawl: AuditCrawlResult,
   deps: AuditPipelineDeps
 ): Promise<AuditPipelineOutcome> {
+  const { auditId, version, store } = deps;
   const stages: SiteStages = { ...DEFAULT_SITE_STAGES, ...(deps.stages ?? {}) };
   const signal = deps.signal;
   const now = deps.now ?? (() => new Date());
@@ -308,6 +362,21 @@ export async function runAuditPipeline(
   const language = deps.request.language;
   const notes: string[] = [];
   const steps: PipelineStepOutcome[] = [];
+
+  // Note for only 1 page recorded but more found / links seen (T-84, ADR 0042)
+  if (
+    crawl.pages.length === 1 &&
+    (crawl.coverage.found > 1 || (crawl.pages[0]?.links && crawl.pages[0].links.length > 0))
+  ) {
+    const note = onlyOnePageNoteText();
+    if (!notes.includes(note)) notes.push(note);
+  }
+
+  // Note for site stopped answering during crawl outage (T-84, ADR 0042)
+  if (typeof crawl.stoppedAnsweringAfter === 'number') {
+    const note = siteStoppedAnsweringNoteText(crawl.stoppedAnsweringAfter);
+    if (!notes.includes(note)) notes.push(note);
+  }
 
   const counts = {
     pagesFound: crawl.coverage.found,
@@ -410,6 +479,13 @@ export async function runAuditPipeline(
     });
   }
 
+  // Site-caused Skipped Pages become findings (T-84, ADR 0018)
+  for (const s of crawl.coverage.skipped) {
+    if (isSiteCausedSkip(s.why)) {
+      unscored.push(createSkippedPageFinding(s, ids.next()));
+    }
+  }
+
   const recordedByPath = new Map(readable.map((p) => [p.info.urlPath, p]));
   const groups = deps.recorder.layoutGroups();
   const pages: AuditPage[] = analysis.pages.map((a) => {
@@ -436,18 +512,65 @@ export async function runAuditPipeline(
   // ---- 3. Speed -----------------------------------------------------------------------------------
   stopIfAborted(signal);
   emit('measuring-speed');
+  let speedSource: 'pagespeed-insights' | 'this-tool' | 'not-measured' = 'not-measured';
   try {
     const urls = samples.map((p) => new URL(p.urlPath, origin).toString());
     const speeds = urls.length > 0 ? await stages.measureSampleSpeeds(urls, deps.pageSpeed) : [];
     samples.forEach((p, i) => {
-      p.speed = speeds[i]?.speed ?? notMeasured('failed');
+      const psiResult = speeds[i];
+      const psiMeasured = psiResult?.speed?.lab.status === 'measured';
+      if (psiMeasured) {
+        p.speed = psiResult.speed;
+      } else {
+        const rec = recordedByPath.get(p.urlPath);
+        if (rec?.timing?.speed && rec.timing.speed.status === 'measured') {
+          p.speed = {
+            lab: rec.timing.speed,
+            field: { status: 'not-measured', source: 'this-tool', method: 'field', reason: 'failed' },
+          };
+        } else {
+          p.speed = psiResult?.speed ?? notMeasured('failed');
+        }
+      }
     });
-    record('speed', 'measuring-speed', true);
+    const anyPsi = samples.some(
+      (p) => p.speed?.lab.status === 'measured' && p.speed.lab.source === 'pagespeed-insights'
+    );
+    const anyTool = samples.some((p) => p.speed?.lab.status === 'measured' && p.speed.lab.source === 'this-tool');
+    if (anyPsi) speedSource = 'pagespeed-insights';
+    else if (anyTool) speedSource = 'this-tool';
+    else speedSource = 'not-measured';
+
+    record(
+      'speed',
+      'measuring-speed',
+      speedSource !== 'not-measured',
+      speedSource === 'not-measured' ? NOTES.speed : undefined
+    );
   } catch (err) {
     rethrowIfStopped(err, signal);
-    for (const p of samples) p.speed = notMeasured('failed');
-    record('speed', 'measuring-speed', false, NOTES.speed);
+    for (const p of samples) {
+      const rec = recordedByPath.get(p.urlPath);
+      if (rec?.timing?.speed && rec.timing.speed.status === 'measured') {
+        p.speed = {
+          lab: rec.timing.speed,
+          field: { status: 'not-measured', source: 'this-tool', method: 'field', reason: 'failed' },
+        };
+      } else {
+        p.speed = notMeasured('failed');
+      }
+    }
+    const anyTool = samples.some((p) => p.speed?.lab.status === 'measured' && p.speed.lab.source === 'this-tool');
+    speedSource = anyTool ? 'this-tool' : 'not-measured';
+    record(
+      'speed',
+      'measuring-speed',
+      speedSource !== 'not-measured',
+      speedSource === 'not-measured' ? NOTES.speed : undefined
+    );
   }
+  const speedNote = speedSourceNoteText(speedSource);
+  if (!notes.includes(speedNote)) notes.push(speedNote);
 
   // ---- 4. Grades, then the AI notes and redesign or repair ------------------------------------------
   stopIfAborted(signal);
@@ -465,7 +588,7 @@ export async function runAuditPipeline(
   const findingsOf = (urlPath: string) => aiOrdered.filter((f) => f.urlPath === urlPath);
 
   const pageGrades = new Map<string, Required<AreaGrades>>();
-  for (const p of samples) {
+  for (const p of pages) {
     const own = findingsOf(p.urlPath);
     const checked: CheckedAreas = {
       'search-ranking': analysed,
@@ -491,7 +614,26 @@ export async function runAuditPipeline(
     scores.length > 0 ? Math.min(...scores) : null
   );
 
-  if (!ai.ok && ai.reason === 'no-ai-key') notes.push(NO_AI_KEY_NOTE);
+  if (!ai.ok) {
+    const rawStatus = (ai as any).status ?? (ai as any).reason;
+    const aiStatus: AuditAiStatus =
+      rawStatus === 'key-expired'
+        ? 'key-expired'
+        : rawStatus === 'quota'
+          ? 'quota'
+          : rawStatus === 'timeout'
+            ? 'timeout'
+            : rawStatus === 'no-ai-key' || rawStatus === 'no-key'
+              ? 'no-key'
+              : 'provider-error';
+    const aiReason =
+      (ai as any).message ??
+      ((ai as any).reason && !['no-ai-key', 'no-key', 'key-expired', 'quota', 'timeout'].includes((ai as any).reason)
+        ? (ai as any).reason
+        : undefined);
+    const aiNote = aiStatusNoteText(aiStatus, aiReason);
+    if (!notes.includes(aiNote)) notes.push(aiNote);
+  }
   const run = { language, signal, ...(deps.aiTimeoutMs !== undefined ? { timeoutMs: deps.aiTimeoutMs } : {}) };
 
   let siteAreas: AreaAssessment[];
@@ -500,7 +642,18 @@ export async function runAuditPipeline(
     const pageAreas = await stages.assessPages(
       {
         ...run,
-        pages: samples
+        aiInFlight: 4,
+        onPageAiProgress: (path, status) => {
+          deps.onProgress?.({
+            type: 'page',
+            auditId: deps.auditId,
+            version: deps.version,
+            path,
+            state: 'recorded',
+            ai: status,
+          });
+        },
+        pages: pages
           .filter((p) => recordedByPath.has(p.urlPath))
           .map((p) => ({
             urlPath: p.urlPath,
@@ -513,7 +666,7 @@ export async function runAuditPipeline(
       ai
     );
     const byPath = new Map(pageAreas.map((a) => [a.urlPath, a.areas]));
-    for (const p of samples) {
+    for (const p of pages) {
       const grades = pageGrades.get(p.urlPath)!;
       const areas = byPath.get(p.urlPath);
       p.areas = areas ? withGrades(areas, grades) : notDoneAreas(grades, 'ai-failed');
@@ -521,7 +674,11 @@ export async function runAuditPipeline(
   } catch (err) {
     rethrowIfStopped(err, signal);
     assessed = false;
-    for (const p of samples) p.areas = notDoneAreas(pageGrades.get(p.urlPath)!, 'ai-failed');
+    const status = classifyAiError(err);
+    const reason = redactAiMessage(err);
+    const aiNote = aiStatusNoteText(status, reason);
+    if (!notes.includes(aiNote)) notes.push(aiNote);
+    for (const p of pages) p.areas = notDoneAreas(pageGrades.get(p.urlPath)!, 'ai-failed');
   }
   try {
     siteAreas = withGrades(
@@ -540,6 +697,10 @@ export async function runAuditPipeline(
   } catch (err) {
     rethrowIfStopped(err, signal);
     assessed = false;
+    const status = classifyAiError(err);
+    const reason = redactAiMessage(err);
+    const aiNote = aiStatusNoteText(status, reason);
+    if (!notes.includes(aiNote)) notes.push(aiNote);
     siteAreas = notDoneAreas(siteGrades, 'ai-failed');
   }
   record('assessment', 'assessing', assessed, assessed ? undefined : NOTES.assessment);
@@ -597,7 +758,10 @@ export async function runAuditPipeline(
     ),
     signals: analysis.marketing.signals.map((s) => (s.findingIds ? { ...s, findingIds: re(s.findingIds) } : s)),
   };
-  const citationProblems = checkCitations(findings, pages);
+  const citationProblems = checkCitations(
+    findings.filter((f) => !isSiteCausedSkip(f.rule as any)),
+    pages
+  );
 
   // ---- 6. Improvement Roadmap ---------------------------------------------------------------------
   let roadmap: RoadmapItem[];
@@ -610,10 +774,53 @@ export async function runAuditPipeline(
     record('roadmap', 'ranking', false, NOTES.roadmap);
   }
 
-  // ---- 7. Save --------------------------------------------------------------------------------------
+  const finishedAt = now().toISOString();
+  let result: AuditResult = {
+    auditId,
+    version,
+    url: deps.request.url,
+    limits: deps.request.limits,
+    language,
+    startedAt: deps.startedAt,
+    finishedAt,
+    technology: analysis.technology,
+    pages,
+    coverage: crawl.coverage,
+    leavingSite: crawl.leavingSite.map((l) => ({ to: l.to, from: [...l.from] })),
+    hierarchy: analysis.hierarchy,
+    internalLinking: analysis.internalLinking,
+    findings,
+    roadmap,
+    marketing,
+    siteAreas,
+    notes: [...new Set(notes)],
+  };
+
+  let storedDocuments: StoredAuditDocument[] | undefined;
+  // ---- 7. Write documents --------------------------------------------------------------------------
+  stopIfAborted(signal);
+  emit('writing-documents');
+  try {
+    const writeDocs = stages.writeAllDocuments ?? writeAllDocuments;
+    const docStore: WriteAllDocumentsStore = {
+      saveAuditDocument:
+        typeof store.saveAuditDocument === 'function' ? store.saveAuditDocument.bind(store) : async () => {},
+      readVersionJson: typeof store.readVersionJson === 'function' ? store.readVersionJson.bind(store) : undefined,
+    };
+    storedDocuments = await writeDocs(result, deps.settings ?? {}, docStore, {
+      contents: readable.map((p) => p.read!.content),
+      language,
+      now: now(),
+    });
+    record('writing-documents', 'writing-documents', true);
+  } catch (err) {
+    rethrowIfStopped(err, signal);
+    record('writing-documents', 'writing-documents', false, NOTES['writing-documents']);
+  }
+
+  // ---- 8. Save --------------------------------------------------------------------------------------
   stopIfAborted(signal);
   emit('saving');
-  const { auditId, version, store } = deps;
   const saveNotes: string[] = [];
   for (const p of readable) {
     try {
@@ -640,27 +847,12 @@ export async function runAuditPipeline(
     const { screenshotPath: _dropped, ...rest } = f;
     return rest;
   });
-  notes.push(...saveNotes);
-
-  const finishedAt = now().toISOString();
-  const result: AuditResult = {
-    auditId,
-    version,
-    url: deps.request.url,
-    limits: deps.request.limits,
-    language,
-    startedAt: deps.startedAt,
-    finishedAt,
-    technology: analysis.technology,
-    pages,
-    coverage: crawl.coverage,
-    leavingSite: crawl.leavingSite.map((l) => ({ to: l.to, from: [...l.from] })),
-    hierarchy: analysis.hierarchy,
-    internalLinking: analysis.internalLinking,
+  if (saveNotes.length > 0) {
+    notes.push(...saveNotes);
+  }
+  result = {
+    ...result,
     findings,
-    roadmap,
-    marketing,
-    siteAreas,
     notes: [...new Set(notes)],
   };
 
@@ -682,6 +874,7 @@ export async function runAuditPipeline(
     pagesRecorded: crawl.pages.length,
     pagesSkipped: crawl.coverage.skipped.length,
     findings: findings.length,
+    ...(storedDocuments ? { documents: storedDocuments } : {}),
   };
   try {
     await store.updateVersion(auditId, version, done);

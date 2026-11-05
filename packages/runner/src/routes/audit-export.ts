@@ -11,6 +11,7 @@ import type http from 'http';
 import {
   AUDIT_API,
   AUDIT_DOCUMENT_KINDS,
+  EXPORT_CONTENT_TYPES,
   EXPORT_FORMATS,
   isAuditDocumentKind,
   isDocumentLanguage,
@@ -23,6 +24,7 @@ import {
   type EditOverlay,
   type ExportFormat,
   type PageContent,
+  type StoredDocumentKind,
 } from '@qa/types';
 import {
   AuditRecordError,
@@ -33,6 +35,7 @@ import {
   emptyAuditSettings,
   emptyOverlay,
   exportAudit,
+  exportBaseName,
   exportOwnerAudit,
   exportPitchGlimpse,
   pageContentName,
@@ -70,6 +73,14 @@ const IMAGE_TYPES: Readonly<Record<string, string>> = {
   jpeg: 'image/jpeg',
   webp: 'image/webp',
   gif: 'image/gif',
+};
+
+const DOCUMENT_SLUGS: Readonly<Record<AuditDocumentKind, string>> = {
+  structure: 'structure',
+  content: 'content',
+  findings: 'findings',
+  roadmap: 'improvement-roadmap',
+  proposal: 'proposal',
 };
 
 function refuse(res: http.ServerResponse, status: number, code: AuditErrorCode, error: string): void {
@@ -268,6 +279,30 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
     try {
       const loaded = await load(store, c, common.version);
       if (!loaded) return;
+      if (
+        (format === 'md' || format === 'html') &&
+        documents?.length === 1 &&
+        (!common.language || common.language === loaded.result.language)
+      ) {
+        const kind = documents[0]!;
+        const docFormat = format === 'md' ? 'markdown' : 'html';
+        const stored = await store.readAuditDocument(
+          loaded.auditId,
+          loaded.version,
+          kind as StoredDocumentKind,
+          docFormat
+        );
+        if (stored !== null) {
+          const base = exportBaseName(loaded.result.url, loaded.result.version);
+          const stem = `${base}-${DOCUMENT_SLUGS[kind] ?? kind}`;
+          sendFile(c.res, {
+            fileName: `${stem}.${format}`,
+            contentType: EXPORT_CONTENT_TYPES[format],
+            body: Buffer.from(stored, 'utf8'),
+          });
+          return;
+        }
+      }
       const file = await exportAudit(
         format,
         {
@@ -298,6 +333,18 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
     try {
       const loaded = await load(store, c, common.version);
       if (!loaded) return;
+      if (format === 'html' && (!common.language || common.language === loaded.result.language)) {
+        const stored = await store.readAuditDocument(loaded.auditId, loaded.version, 'pitch-glimpse', 'html');
+        if (stored !== null) {
+          const name = `${exportBaseName(loaded.result.url, loaded.result.version)}-pitch-glimpse.html`;
+          sendFile(c.res, {
+            fileName: name,
+            contentType: 'text/html; charset=utf-8',
+            body: Buffer.from(stored, 'utf8'),
+          });
+          return;
+        }
+      }
       const { optOutText } = await loadSettings(settings);
       const file = await exportPitchGlimpse(
         format,
@@ -329,6 +376,19 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
     try {
       const loaded = await load(store, c, common.version);
       if (!loaded) return;
+      if ((format === 'md' || format === 'html') && (!common.language || common.language === loaded.result.language)) {
+        const docFormat = format === 'md' ? 'markdown' : 'html';
+        const stored = await store.readAuditDocument(loaded.auditId, loaded.version, 'owner-audit', docFormat);
+        if (stored !== null) {
+          const name = `${exportBaseName(loaded.result.url, loaded.result.version)}-owner-audit.${format}`;
+          sendFile(c.res, {
+            fileName: name,
+            contentType: EXPORT_CONTENT_TYPES[format],
+            body: Buffer.from(stored, 'utf8'),
+          });
+          return;
+        }
+      }
       const file = await exportOwnerAudit(
         format,
         {

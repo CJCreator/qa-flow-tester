@@ -275,6 +275,7 @@ function siteStages(over: Partial<SiteStages> = {}): Partial<SiteStages> {
     }),
     assessPages: vi.fn(async (input: AssessPagesInput): Promise<PageAssessment[]> => {
       calls.push('assessPages');
+      for (const p of input.pages) input.onPageAiProgress?.(p.urlPath, 'done');
       return input.pages.map((p) => ({ urlPath: p.urlPath, areas: aiAreas(p.findings) }));
     }),
     assessSite: vi.fn(async (input: AssessSiteInput) => {
@@ -305,6 +306,10 @@ function siteStages(over: Partial<SiteStages> = {}): Partial<SiteStages> {
         },
       ];
     }),
+    writeAllDocuments: vi.fn(async () => {
+      calls.push('documents');
+      return [];
+    }),
     ...over,
   };
 }
@@ -325,6 +330,7 @@ function memoryStore() {
       files.set(name, data);
     }),
     updateVersion: vi.fn(async () => ({}) as never),
+    saveAuditDocument: vi.fn(async () => {}),
   };
   return { store: store as unknown as AuditPipelineStore & typeof store, json, files, results };
 }
@@ -426,12 +432,13 @@ describe('audit pipeline: runAuditPipeline', () => {
 
     // Stage order (calls after the crawl hook) and progress events.
     const after = calls.filter((c) => !/^(read|a11y|phone):/.test(c));
-    expect(after).toEqual(['analyse', 'speed', 'assessPages', 'assessSite', 'recommend', 'roadmap', 'save']);
-    expect(events.map((e) => (e.type === 'progress' ? e.stage : e.type))).toEqual([
+    expect(after).toEqual(['analyse', 'speed', 'assessPages', 'assessSite', 'recommend', 'roadmap', 'documents', 'save']);
+    expect(events.filter((e) => e.type === 'progress').map((e) => (e as any).stage)).toEqual([
       'checking-pages',
       'measuring-speed',
       'assessing',
       'ranking',
+      'writing-documents',
       'saving',
     ]);
     expect(events[0]).toMatchObject({
@@ -450,6 +457,7 @@ describe('audit pipeline: runAuditPipeline', () => {
       'recommendation',
       'ranking',
       'roadmap',
+      'writing-documents',
       'saving',
     ]);
 
@@ -468,11 +476,21 @@ describe('audit pipeline: runAuditPipeline', () => {
     // Speed for Sample Pages only, by absolute address.
     expect(vi.mocked(stages.measureSampleSpeeds!).mock.calls[0][0]).toEqual(SAMPLE_PATHS.map((p) => `${ORIGIN}${p}`));
 
+    // Assessment: every recorded page goes to the pool (using aiInFlight: 4), with per-page ai progress
+    const assessCall = vi.mocked(stages.assessPages!).mock.calls[0][0];
+    expect(assessCall.pages.map((p) => p.urlPath)).toEqual(CRAWL_PAGES.map((p) => p.urlPath));
+    expect(assessCall.aiInFlight).toBe(4);
+    const pageAiEvents = events.filter((e) => e.type === 'page' && e.state === 'recorded');
+    expect(pageAiEvents.map((e) => (e as any).path)).toEqual(CRAWL_PAGES.map((p) => p.urlPath));
+    for (const e of pageAiEvents) {
+      expect((e as any).ai).toBe('done');
+    }
+
     // Pages: sample/covered, layout group, phone, speed, areas and recommendation on Sample Pages only.
     expect(result.pages.map((p) => p.urlPath)).toEqual(CRAWL_PAGES.map((p) => p.urlPath));
     const covered = result.pages.find((p) => p.urlPath === '/products/item-4')!;
     expect(covered).toMatchObject({ coverage: 'covered', sampleUrlPath: '/products/item-1', layoutGroup: 'group-1' });
-    expect(covered.areas).toBeUndefined();
+    expect(covered.areas).toBeDefined();
     expect(covered.recommendation).toBeUndefined();
     for (const p of result.pages.filter((x) => x.coverage === 'sample')) {
       expect(p.speed).toEqual(MEASURED);
@@ -481,15 +499,15 @@ describe('audit pipeline: runAuditPipeline', () => {
       expect(p.phone!.screenshotPath).toMatch(/^phone\//);
     }
 
-    // Findings: 6 rule + 5 accessibility from the analysis, then 5 phone findings continuing the numbers.
-    expect(result.findings).toHaveLength(16);
+    // Findings: 6 rule + 5 accessibility from the analysis, 5 phone findings, plus 1 site-caused skipped finding (/gone).
+    expect(result.findings).toHaveLength(17);
     const ids = result.findings.map((f) => f.id);
     expect(ids).toEqual(ids.map((_, i) => `AF-${String(i + 1).padStart(3, '0')}`));
     // Ranked: impact high first, then lower effort.
     const order = { high: 0, medium: 1, low: 2 } as const;
     const ranks = result.findings.map((f) => order[f.impact]);
     expect([...ranks].sort((a, b) => a - b)).toEqual(ranks);
-    const phoneFindings = result.findings.filter((f) => f.area === 'usability');
+    const phoneFindings = result.findings.filter((f) => f.rule === 'tap-target');
     expect(phoneFindings).toHaveLength(5);
     expect(phoneFindings[0]).toMatchObject({
       rule: 'tap-target',
@@ -498,6 +516,17 @@ describe('audit pipeline: runAuditPipeline', () => {
       target: '#buy',
     });
     expect(phoneFindings.every((f) => f.findingId?.startsWith('F-UX-TARGET-'))).toBe(true);
+
+    const skippedFinding = result.findings.find((f) => f.rule === 'http-error')!;
+    expect(skippedFinding).toMatchObject({
+      urlPath: '/gone',
+      title: 'Page failed to load: HTTP 404',
+      rule: 'http-error',
+    });
+
+    // Notes emitted
+    expect(result.notes).toContain('Speed was measured by Google PageSpeed Insights.');
+    expect(result.notes).toContain('AI notes need an AI key.');
 
     // Every list citing a finding follows the renumbering: each cited id exists and is on that page.
     const byId = new Map(result.findings.map((f) => [f.id, f]));
@@ -526,7 +555,7 @@ describe('audit pipeline: runAuditPipeline', () => {
 
     // Citations: rule findings cite real Sections; whole-page checker findings are reported, never dropped.
     expect(citationProblems.every((c) => c.kind === 'missing-section')).toBe(true);
-    expect(result.findings).toHaveLength(16);
+    expect(result.findings).toHaveLength(17);
 
     // Saved through the store: Page Content per page, phone screenshots, the result, then the version.
     expect(mem.results).toHaveLength(1);
@@ -544,7 +573,8 @@ describe('audit pipeline: runAuditPipeline', () => {
       finishedAt: '2026-11-03T00:05:00.000Z',
       pagesRecorded: 6,
       pagesSkipped: 2,
-      findings: 16,
+      findings: 17,
+      documents: [],
     });
     expect(result).toMatchObject({
       auditId: AUDIT_ID,
@@ -576,6 +606,7 @@ describe('audit pipeline: runAuditPipeline', () => {
       'assessSite',
       'recommend',
       'roadmap',
+      'documents',
       'save',
     ]);
     // Never a clean result: unchecked areas have no grade, marketing signals are 'not-checked'.
@@ -583,8 +614,8 @@ describe('audit pipeline: runAuditPipeline', () => {
     expect(result.siteAreas.find((a) => a.area === 'content')!.grade).toBeNull();
     expect(result.marketing.signals.every((s) => s.status === 'not-checked')).toBe(true);
     expect(result.pages).toHaveLength(CRAWL_PAGES.length);
-    // Phone findings still numbered from AF-001.
-    expect(result.findings.map((f) => f.area)).toEqual(Array(5).fill('usability'));
+    // 5 phone findings + 1 skipped page finding (/gone).
+    expect(result.findings.map((f) => f.area)).toEqual(Array(6).fill('usability'));
     expect(mem.results).toHaveLength(1);
   });
 
@@ -721,6 +752,239 @@ describe('audit pipeline: runAuditPipeline', () => {
     await expect(outcome).rejects.toMatchObject({ name: 'AbortError' });
     expect(mem.store.saveResult).not.toHaveBeenCalled();
     expect(stages.measureSampleSpeeds).not.toHaveBeenCalled();
+  });
+
+  it('falls back to browser timing when PageSpeed Insights does not measure and notes the speed source', async () => {
+    const recorder = await recordCrawl();
+    recorder.pages.forEach((p) => {
+      if (p.coverage === 'sample') {
+        p.timing = {
+          speed: {
+            status: 'measured',
+            source: 'this-tool',
+            method: 'lab',
+            strategy: 'mobile',
+            values: [{ metric: 'performance-score', value: 85, unit: 'score' }],
+            measuredAt: '2026-11-03T00:00:00.000Z',
+          },
+          raw: {},
+        };
+      }
+    });
+
+    const stages = siteStages({
+      measureSampleSpeeds: vi.fn(async (urls) => {
+        return urls.map((url) => ({
+          url,
+          speed: {
+            lab: { status: 'not-measured', source: 'pagespeed-insights', method: 'lab', reason: 'quota' },
+            field: { status: 'not-measured', source: 'pagespeed-insights', method: 'field', reason: 'quota' },
+          },
+        }));
+      }),
+    });
+
+    const { outcome, steps } = await run({ recorder }, stages);
+    const { result } = await outcome;
+
+    expect(steps.find((s) => s.step === 'speed')).toMatchObject({ status: 'done' });
+    expect(result.notes).toContain('Speed was measured by this tool.');
+    const samples = result.pages.filter((p) => p.coverage === 'sample');
+    for (const p of samples) {
+      expect(p.speed?.lab.source).toBe('this-tool');
+      expect(p.speed?.lab.status).toBe('measured');
+    }
+    expect(result.siteAreas.find((a) => a.area === 'speed')?.grade).toBe('B');
+  });
+
+  it('notes speed was not measured when neither PSI nor browser timing is available', async () => {
+    const stages = siteStages({
+      measureSampleSpeeds: vi.fn(async (urls) => {
+        return urls.map((url) => ({
+          url,
+          speed: {
+            lab: { status: 'not-measured', source: 'pagespeed-insights', method: 'lab', reason: 'quota' },
+            field: { status: 'not-measured', source: 'pagespeed-insights', method: 'field', reason: 'quota' },
+          },
+        }));
+      }),
+    });
+
+    const { outcome, steps } = await run({}, stages);
+    const { result } = await outcome;
+
+    expect(steps.find((s) => s.step === 'speed')).toMatchObject({ status: 'not-done' });
+    expect(result.notes).toContain('Speed was not measured.');
+    const samples = result.pages.filter((p) => p.coverage === 'sample');
+    for (const p of samples) {
+      expect(p.speed?.lab.status).toBe('not-measured');
+    }
+  });
+
+  it('emits only-one-page note when only 1 page was recorded but more were found or linked', async () => {
+    const crawl = crawlResult();
+    crawl.pages = [crawl.pages[0]];
+    crawl.coverage = {
+      ...crawl.coverage,
+      found: 5,
+    };
+    const recorder = createPageRecorder({ workDir, stages: pageStages() });
+    await recorder.onRenderedPage({ urlPath: '/' } as unknown as Page, crawl.pages[0]);
+
+    const { outcome } = await run({ recorder }, siteStages(), crawl);
+    const { result } = await outcome;
+
+    expect(result.notes).toContain('Only 1 page was read.');
+  });
+
+  it('emits site-stopped-answering note from crawl stoppedAnsweringAfter count', async () => {
+    const crawl = crawlResult();
+    crawl.stoppedAnsweringAfter = 3;
+
+    const { outcome } = await run({}, siteStages(), crawl);
+    const { result } = await outcome;
+
+    expect(result.notes).toContain('The site stopped answering after 3 pages.');
+  });
+
+  it('emits ai-status note with classified error and reason', async () => {
+    const testCases = [
+      {
+        ai: { ok: false as const, reason: 'key-expired' as const },
+        expectedNote: 'The AI key expired. Update it in Audit settings.',
+      },
+      {
+        ai: { ok: false as const, reason: 'quota' as const },
+        expectedNote: 'The AI quota was reached.',
+      },
+      {
+        ai: { ok: false as const, reason: 'timeout' as const },
+        expectedNote: 'The AI did not answer in time.',
+      },
+      {
+        ai: { ok: false as const, reason: 'provider-error' as const, message: 'model overloaded' },
+        expectedNote: 'The AI provider returned an error: model overloaded.',
+      },
+      {
+        ai: { ok: false as const, reason: 'no-ai-key' as const },
+        expectedNote: 'AI notes need an AI key.',
+      },
+    ];
+
+    for (const tc of testCases) {
+      const { outcome } = await run({ ai: tc.ai as any });
+      const { result } = await outcome;
+      expect(result.notes).toContain(tc.expectedNote);
+    }
+  });
+
+  it('turns site-caused skipped pages into findings and keeps tool-caused skips out of findings', async () => {
+    const crawl = crawlResult();
+    crawl.coverage.skipped = [
+      { urlPath: '/server-err', why: 'http-error', status: 503 },
+      { urlPath: '/hanging', why: 'timeout', detail: '30000ms' },
+      { urlPath: '/conn-reset', why: 'did-not-load' },
+      { urlPath: '/excess', why: 'page-limit' },
+      { urlPath: '/deep', why: 'depth-limit' },
+      { urlPath: '/admin', why: 'sign-in' },
+    ];
+
+    const { outcome } = await run({}, siteStages(), crawl);
+    const { result } = await outcome;
+
+    const skipFindings = result.findings.filter((f) =>
+      ['http-error', 'timeout', 'did-not-load'].includes(f.rule)
+    );
+    expect(skipFindings).toHaveLength(3);
+    expect(skipFindings.find((f) => f.rule === 'http-error')).toMatchObject({
+      urlPath: '/server-err',
+      title: 'Page failed to load: HTTP 503',
+      source: 'checker',
+      impact: 'high',
+    });
+    expect(skipFindings.find((f) => f.rule === 'timeout')).toMatchObject({
+      urlPath: '/hanging',
+      title: 'Page timed out after 30s',
+      source: 'checker',
+      impact: 'high',
+    });
+    expect(skipFindings.find((f) => f.rule === 'did-not-load')).toMatchObject({
+      urlPath: '/conn-reset',
+      title: 'Page failed to load',
+      source: 'checker',
+      impact: 'high',
+    });
+
+    expect(result.findings.some((f) => f.urlPath === '/excess')).toBe(false);
+    expect(result.findings.some((f) => f.urlPath === '/deep')).toBe(false);
+    expect(result.findings.some((f) => f.urlPath === '/admin')).toBe(false);
+  });
+
+  it('calls writeAllDocuments after ranking and before saving, recording stored documents on the version', async () => {
+    const fakeDocs = [
+      {
+        kind: 'structure' as const,
+        format: 'md' as const,
+        path: 'structure.md',
+        bytes: 100,
+        sha256: 'abc',
+        createdAt: '2026-11-03T00:05:00.000Z',
+      },
+    ];
+    const stages = siteStages({
+      writeAllDocuments: vi.fn(async () => fakeDocs),
+    });
+
+    const { outcome, mem, events } = await run({}, stages);
+    const { result } = await outcome;
+
+    expect(stages.writeAllDocuments).toHaveBeenCalledTimes(1);
+    expect(events.some((e) => e.type === 'progress' && e.stage === 'writing-documents')).toBe(true);
+    expect(mem.store.updateVersion).toHaveBeenCalledWith(
+      AUDIT_ID,
+      1,
+      expect.objectContaining({
+        status: 'done',
+        documents: fakeDocs,
+      })
+    );
+    expect(result).toBeDefined();
+  });
+
+  it('a document failure never fails the pipeline: records step not-done and ends done', async () => {
+    const stages = siteStages({
+      writeAllDocuments: vi.fn(async () => {
+        throw new Error('document template crashed');
+      }),
+    });
+
+    const { outcome, steps, mem } = await run({}, stages);
+    const { result } = await outcome;
+
+    expect(steps.find((s) => s.step === 'writing-documents')).toMatchObject({
+      status: 'not-done',
+      note: 'The Audit Documents could not be written.',
+    });
+    expect(result.notes).toContain('The Audit Documents could not be written.');
+    expect(mem.store.updateVersion).toHaveBeenCalledWith(
+      AUDIT_ID,
+      1,
+      expect.objectContaining({
+        status: 'done',
+      })
+    );
+    expect(result).toBeDefined();
+  });
+
+  it('only a save failure throws with errorCode ERR_PIPELINE', async () => {
+    const { outcome, mem } = await run();
+    mem.store.saveResult.mockRejectedValueOnce(new Error('disk write failed'));
+
+    await expect(outcome).rejects.toThrow(AuditPipelineError);
+    await expect(outcome).rejects.toMatchObject({
+      code: 'save-failed',
+      errorCode: 'ERR_PIPELINE',
+    });
   });
 });
 

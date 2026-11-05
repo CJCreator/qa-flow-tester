@@ -413,7 +413,14 @@ describe('the run slot', () => {
     const base = await serve(createAuditCrawlRoutes(deps()));
     const { status, json } = await post(base, VALID);
     expect(status).toBe(409);
-    expect(json).toEqual({ error: expect.any(String), code: 'ERR_RUN_IN_PROGRESS' });
+    expect(json).toEqual({
+      error: expect.any(String),
+      code: 'ERR_RUN_IN_PROGRESS',
+      running: {
+        kind: kind === 'audit' ? 'audit' : 'checkup',
+        href: kind === 'audit' ? '/audits/other-run' : '/check',
+      },
+    });
     expect(crawlCalls).toHaveLength(0);
     expect(slot.kind).toBe(kind);
   });
@@ -429,6 +436,7 @@ describe('the run slot', () => {
     const second = await post(base, VALID);
     expect(second.status).toBe(409);
     expect(second.json.code).toBe('ERR_RUN_IN_PROGRESS');
+    expect(second.json.running).toEqual({ kind: 'audit', href: `/audits/${first.json.auditId}` });
     expect(slot.begin('checkup-run', 'http://localhost:4000/', 'checkup')).toBe(false);
     expect(slot.begin('bench-run', 'https://other.example/', 'benchmark')).toBe(false);
 
@@ -459,6 +467,7 @@ describe('the run slot', () => {
     const { status, json } = await pending;
     expect(status).toBe(409);
     expect(json.code).toBe('ERR_RUN_IN_PROGRESS');
+    expect(json.running).toEqual({ kind: 'checkup', href: '/check' });
     expect(slot.kind).toBe('checkup');
     expect(await store.listAudits()).toEqual([]);
   });
@@ -504,8 +513,7 @@ describe('run outcomes', () => {
       auditId: json.auditId,
       version: 1,
       error: expected,
-      // No wizard sentence for this code, so the wizard shows `error` (audit-start-api.ts auditErrorText).
-      code: 'ERR_INVALID_REQUEST',
+      code: 'ERR_SITE_BLOCKED',
     });
     const v = await store.getVersion(json.auditId, 1);
     expect(v?.status).toBe('failed');
@@ -610,16 +618,17 @@ describe('GET /api/audits/:id/stream', () => {
     const stream = openStream(base, json.auditId);
     expect(await stream.status).toBe(200);
     await stream.next(1);
-    // A subscriber that comes late first gets the last event.
-    expect(stream.events[0]).toEqual({
-      type: 'progress',
+    // A subscriber that comes late first gets the snapshot event.
+    expect(stream.events[0]).toMatchObject({
+      type: 'snapshot',
       auditId: json.auditId,
       version: 1,
       stage: 'crawling',
-      pagesFound: 3,
-      pagesRecorded: 1,
-      pagesSkipped: 1,
-      currentPath: '/account?token=[redacted]',
+      counts: {
+        pagesFound: 3,
+        pagesRecorded: 1,
+        pagesSkipped: 1,
+      },
     });
     gate.resolve();
     await stream.ended;
@@ -639,11 +648,11 @@ describe('GET /api/audits/:id/stream', () => {
     await started.promise;
     const stream = openStream(base, json.auditId);
     await stream.next(1);
-    expect(stream.events[0]).toMatchObject({ type: 'progress', stage: 'checking-address', pagesFound: 0 });
+    expect(stream.events[0]).toMatchObject({ type: 'snapshot', stage: 'checking-address' });
     go.resolve();
     await stream.ended;
     expect(stream.events.map((e) => (e.type === 'progress' ? e.stage : e.type))).toEqual([
-      'checking-address',
+      'snapshot',
       'crawling',
       'crawling',
       'done',
@@ -660,9 +669,26 @@ describe('GET /api/audits/:id/stream', () => {
     await waitFor(runEnded(json.auditId));
     const stream = openStream(base, json.auditId);
     await stream.ended;
-    expect(stream.events).toEqual([
-      { type: 'failed', auditId: json.auditId, version: 1, error: AUDIT_CRAWL_FAILED, code: 'ERR_UNREACHABLE' },
-    ]);
+    expect(stream.events[0]).toMatchObject({ type: 'snapshot', auditId: json.auditId, version: 1 });
+    expect(stream.events[1]).toEqual({
+      type: 'failed',
+      auditId: json.auditId,
+      version: 1,
+      error: AUDIT_CRAWL_FAILED,
+      code: 'ERR_UNREACHABLE',
+    });
+  });
+
+  it('answers stored version status and ends for a run no longer in memory', async () => {
+    const base = await serve(createAuditCrawlRoutes(deps()));
+    const { json } = await post(base, VALID);
+    await waitFor(runEnded(json.auditId));
+    runs = new AuditRuns();
+    const base2 = await serve(createAuditCrawlRoutes(deps()));
+    const stream = openStream(base2, json.auditId);
+    expect(await stream.status).toBe(200);
+    await stream.ended;
+    expect(stream.events).toEqual([{ type: 'done', auditId: json.auditId, version: 1 }]);
   });
 
   it('answers 404 ERR_AUDIT_NOT_FOUND for an unknown id, a bad id, another version and a Helper without a grant', async () => {

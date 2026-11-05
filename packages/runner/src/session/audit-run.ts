@@ -1,6 +1,6 @@
-import type { AuditProgressEvent } from '@qa/types';
+import type { AuditAiStatus, AuditPageState, AuditProgressCounts, AuditProgressEvent, AuditStage } from '@qa/types';
 
-/** Gets every event of one Website Audit run, starting with the last one sent before it subscribed. */
+/** Gets every event of one Website Audit run, starting with a snapshot on connect. */
 export type AuditRunListener = (event: AuditProgressEvent) => void;
 
 function isTerminal(event: AuditProgressEvent): boolean {
@@ -8,9 +8,9 @@ function isTerminal(event: AuditProgressEvent): boolean {
 }
 
 /**
- * One Website Audit version while it runs, and for a while after: its stop control, its last progress event
- * and the streams following it. A late subscriber first gets the last event (REQ-003). After 'done' or
- * 'failed' nothing more is sent.
+ * One Website Audit version while it runs, and for a while after: its stop control, its page-state map,
+ * and the streams following it. On connect, every subscriber receives a snapshot event first (REQ-003, ADR 0042).
+ * After 'done' or 'failed' nothing more is sent.
  */
 export class AuditRun {
   readonly auditId: string;
@@ -19,11 +19,15 @@ export class AuditRun {
   private last: AuditProgressEvent;
   private readonly listeners = new Set<AuditRunListener>();
   private ended = false;
+  private readonly pages = new Map<string, AuditPageState>();
+  private stage: AuditStage = 'checking-address';
+  private counts: AuditProgressCounts = { pagesFound: 0, pagesRecorded: 0, pagesSkipped: 0 };
+  private ai?: AuditAiStatus;
+  private speed?: 'pagespeed-insights' | 'this-tool' | 'not-measured';
 
   constructor(auditId: string, version: number) {
     this.auditId = auditId;
     this.version = version;
-    // The address check passed before the run exists; this is where a stream opened right after 202 starts.
     this.last = {
       type: 'progress',
       auditId,
@@ -48,10 +52,63 @@ export class AuditRun {
     return this.controller.signal;
   }
 
-  /** Records the event as the last one and sends it to every subscriber. Ignored once the run has ended. */
+  get pageStates(): ReadonlyMap<string, AuditPageState> {
+    return this.pages;
+  }
+
+  get currentStage(): AuditStage {
+    return this.stage;
+  }
+
+  /** Returns a snapshot of the run's current state. */
+  getSnapshot(): AuditProgressEvent {
+    return {
+      type: 'snapshot',
+      auditId: this.auditId,
+      version: this.version,
+      stage: this.stage,
+      counts: { ...this.counts },
+      pages: Array.from(this.pages.values()),
+      ...(this.ai !== undefined ? { ai: this.ai } : {}),
+      ...(this.speed !== undefined ? { speed: this.speed } : {}),
+    };
+  }
+
+  /** Records the event as the last one, updates state, and sends it to every subscriber. Ignored once ended. */
   emit(event: AuditProgressEvent): void {
     if (this.ended) return;
     this.last = event;
+    if (event.type === 'progress') {
+      this.stage = event.stage;
+      this.counts = {
+        pagesFound: event.pagesFound,
+        pagesRecorded: event.pagesRecorded,
+        pagesSkipped: event.pagesSkipped,
+      };
+    } else if (event.type === 'page') {
+      const existing = this.pages.get(event.path);
+      this.pages.set(event.path, {
+        path: event.path,
+        state: event.state,
+        ...(event.reason !== undefined
+          ? { reason: event.reason }
+          : existing?.reason
+            ? { reason: existing.reason }
+            : {}),
+        ...(event.ai !== undefined ? { ai: event.ai } : existing?.ai ? { ai: existing.ai } : {}),
+      });
+    } else if (event.type === 'status') {
+      this.ai = event.ai;
+      this.speed = event.speed;
+    } else if (event.type === 'snapshot') {
+      this.stage = event.stage;
+      this.counts = { ...event.counts };
+      for (const p of event.pages) {
+        this.pages.set(p.path, { ...p });
+      }
+      if (event.ai !== undefined) this.ai = event.ai;
+      if (event.speed !== undefined) this.speed = event.speed;
+    }
     if (isTerminal(event)) this.ended = true;
     for (const listener of [...this.listeners]) {
       try {
@@ -63,10 +120,15 @@ export class AuditRun {
     if (this.ended) this.listeners.clear();
   }
 
-  /** Sends the last event now, then every later one. Returns the unsubscribe function. */
+  /** Sends snapshot event first on connect, then every later event (ADR 0042). Returns unsubscribe. */
   subscribe(listener: AuditRunListener): () => void {
-    listener(this.last);
-    if (this.ended) return () => undefined;
+    listener(this.getSnapshot());
+    if (this.ended) {
+      if (isTerminal(this.last)) {
+        listener(this.last);
+      }
+      return () => undefined;
+    }
     this.listeners.add(listener);
     return () => {
       this.listeners.delete(listener);
