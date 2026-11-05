@@ -134,11 +134,10 @@ export function Disclosure({
 }) {
   return (
     <details className={`disclosure border-y border-rule ${className}`} open={defaultOpen || undefined}>
-      <summary className="py-1">
-        <span className="flex min-w-0 flex-1 flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <span>{summary}</span>
-          {hint && <span className="text-sm font-normal text-ink-soft">{hint}</span>}
-        </span>
+      {/* The summary's own children, so a heading passed as `summary` stays a heading (valid in <summary>). */}
+      <summary className="flex-wrap py-1">
+        {typeof summary === 'string' ? <span>{summary}</span> : summary}
+        {hint && <span className="text-sm font-normal text-ink-soft">{hint}</span>}
       </summary>
       <div className="pb-6 pt-2">{children}</div>
     </details>

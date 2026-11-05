@@ -155,6 +155,11 @@
   .disclosure > summary::-webkit-details-marker {
     display: none;
   }
+  /* The title takes the room; a hint and the chevron sit at the end. */
+  .disclosure > summary > :first-child {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
   .disclosure > summary::after {
     content: '';
     @apply h-2.5 w-2.5 shrink-0 border-b-2 border-r-2 border-ink-soft transition-transform duration-base ease-standard;
