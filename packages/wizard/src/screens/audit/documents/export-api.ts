@@ -107,7 +107,7 @@ export type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 export type DownloadOutcome = { ok: true; fileName: string; blob: Blob } | { ok: false; message: string };
 
-const NOT_ANSWERING = 'The tool is not answering. Make sure it is still open in its terminal, then try again.';
+const NOT_ANSWERING = 'The tool is not answering. Check your connection and that the tool is still running, then try again.';
 const DOWNLOAD_FAILED = 'The file could not be made. Try again.';
 
 /** Which of the three downloads. */

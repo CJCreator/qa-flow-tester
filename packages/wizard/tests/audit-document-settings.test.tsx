@@ -321,8 +321,8 @@ describe('accessible markup and wording', () => {
 describe('Website Audit settings (T-75)', () => {
   it('names the screen, with Audit Documents as a section and a Back link', () => {
     const screen = renderToStaticMarkup(createElement(DocumentSettingsScreen, { fetchImpl: fakeFetch().impl }));
-    expect(screen).toMatch(/<h1[^>]*>Website Audit settings<\/h1>/);
-    expect(screen).toMatch(/<a[^>]*href="\/audits"[^>]*>Back to Saved Website Audits<\/a>/);
+    expect(screen).toMatch(/<h1[^>]*>Audit settings<\/h1>/);
+    expect(screen).toMatch(/<a[^>]*href="\/audits"[^>]*>(<[^>]*>[^<]*<\/[^>]*>)?[^<]*All Website Audits<\/a>/);
     expect(view()).toMatch(/<h2[^>]*>Audit Documents<\/h2>/);
     expect((view().match(/<h1/g) ?? []).length).toBe(0);
   });
@@ -331,7 +331,7 @@ describe('Website Audit settings (T-75)', () => {
     const screen = renderToStaticMarkup(
       createElement(DocumentSettingsScreen, { fetchImpl: fakeFetch().impl }, createElement('section', { id: 'more' }))
     );
-    const column = screen.indexOf('<div class="mx-auto max-w-4xl');
+    const column = screen.indexOf('<div class="screen-in mx-auto w-full max-w-form');
     expect(column).toBe(0);
     expect(screen.indexOf('<section id="more">')).toBeGreaterThan(column);
     expect(screen.endsWith('<section id="more"></section></div></div>')).toBe(true);

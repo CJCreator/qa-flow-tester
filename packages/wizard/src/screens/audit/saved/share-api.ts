@@ -26,7 +26,7 @@ export type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 export type ShareOutcome<T> = { ok: true; value: T } | { ok: false; message: string; code?: AuditErrorCode };
 
-const NOT_ANSWERING = 'The tool is not answering. Make sure it is still open in its terminal, then try again.';
+const NOT_ANSWERING = 'The tool is not answering. Check your connection and that the tool is still running, then try again.';
 
 /** Shown when the preview needs an AI key and none is saved; the screen links to Settings beside it. */
 export const NO_AI_KEY_MESSAGE =

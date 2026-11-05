@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { AuditVersion, ShareLink, ShareLinkKind } from '@qa/types/src/browser.js';
 import { useConfirm } from '../../../components/ConfirmDialog';
-import { ErrorMessage, FocusHeading, Notice, Spinner } from '../../../components/text';
+import { ErrorMessage, Notice, Spinner } from '../../../components/text';
+import { LoadError, Page, PageHeader } from '../../../components/ui';
 import { formatDay, formatWhen } from '../../../lib/format';
 import { Link, PATHS } from '../../../lib/router';
 import { useDocumentTitle } from '../../../lib/title';
-import { AUDIT_PATHS, loadVersion, versionsOldestFirst } from './saved-api';
+import { AuditTabs } from '../AuditTabs';
+import { loadVersion, versionsOldestFirst } from './saved-api';
 import {
   KIND_LABEL,
   LINK_STATE_LABEL,
@@ -64,6 +66,8 @@ export interface PreviewShareViewProps {
   onCreateLink: () => void;
   onCopy: (address: string) => void;
   onRevoke: (link: ShareLink) => void;
+  /** Reads the Shared Links again after a failed read. */
+  onRetry?: () => void;
 }
 
 function readLanguage(value: string): ShareLanguage {
@@ -86,7 +90,7 @@ function LanguageSelect({
       </label>
       <select
         id={id}
-        className="field mt-1 text-sm"
+        className="field mt-1"
         value={value}
         onChange={(e) => onChange(readLanguage(e.target.value))}
       >
@@ -123,7 +127,7 @@ function CreatedLink({
           id="shared-link-address"
           type="text"
           readOnly
-          className="field w-full max-w-xl font-mono text-sm"
+          className="field w-full max-w-xl font-mono"
           value={address}
           onFocus={(e) => e.target.select()}
         />
@@ -166,54 +170,54 @@ function LinkList({
     return <p className="mt-2 text-ink-soft">No Shared Link has been made for this Website Audit yet.</p>;
   return (
     <div className="mt-3 overflow-x-auto">
-      <table className="w-full text-left text-sm">
+      <table className="table-plain">
         <caption className="sr-only">Shared Links of this Website Audit</caption>
         <thead>
           <tr>
-            <th scope="col" className="py-2 pr-3">
+            <th scope="col">
               Kind
             </th>
-            <th scope="col" className="py-2 pr-3">
+            <th scope="col">
               Version
             </th>
-            <th scope="col" className="py-2 pr-3">
+            <th scope="col">
               Language
             </th>
-            <th scope="col" className="py-2 pr-3">
+            <th scope="col">
               Created
             </th>
-            <th scope="col" className="py-2 pr-3">
+            <th scope="col">
               Expires
             </th>
-            <th scope="col" className="py-2 pr-3">
+            <th scope="col">
               State
             </th>
-            <th scope="col" className="py-2">
+            <th scope="col">
               <span className="sr-only">Action</span>
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-rule">
+        <tbody>
           {links.map((link) => {
             const state = linkState(link, now);
             const name = `${KIND_LABEL[link.kind]}, version ${link.version}, ${languageName(link.language)}, created ${formatWhen(link.createdAt)}`;
             return (
               <tr key={link.id}>
-                <td className="py-2 pr-3 font-semibold">{KIND_LABEL[link.kind]}</td>
-                <td className="py-2 pr-3">{link.version}</td>
-                <td className="py-2 pr-3">{languageName(link.language)}</td>
-                <td className="py-2 pr-3">{formatWhen(link.createdAt)}</td>
-                <td className="py-2 pr-3">{formatDay(link.expiresAt)}</td>
-                <td className="py-2 pr-3">
+                <td className="font-semibold">{KIND_LABEL[link.kind]}</td>
+                <td>{link.version}</td>
+                <td>{languageName(link.language)}</td>
+                <td>{formatWhen(link.createdAt)}</td>
+                <td>{formatDay(link.expiresAt)}</td>
+                <td>
                   {state === 'revoked' && link.revokedAt
                     ? `Revoked ${formatWhen(link.revokedAt)}`
                     : LINK_STATE_LABEL[state]}
                 </td>
-                <td className="py-2">
+                <td>
                   {state === 'open' && (
                     <button
                       type="button"
-                      className="btn-quiet"
+                      className="btn-quiet btn-sm"
                       disabled={busy}
                       aria-label={`Revoke Shared Link: ${name}`}
                       onClick={() => onRevoke(link)}
@@ -249,7 +253,7 @@ export function PreviewShareView(props: PreviewShareViewProps) {
         </label>
         <select
           id="share-version"
-          className="field mt-1 text-sm"
+          className="field mt-1"
           value={String(version)}
           onChange={(e) => props.onVersion(Number(e.target.value))}
         >
@@ -273,22 +277,29 @@ export function PreviewShareView(props: PreviewShareViewProps) {
           <LanguageSelect id="preview-language" value={props.previewLanguage} onChange={props.onPreviewLanguage} />
           <button
             type="button"
-            className="btn-primary px-6 font-bold"
+            className="btn-quiet"
             disabled={busy || preview.status === 'making'}
             onClick={props.onMakePreview}
           >
-            {preview.status === 'making' ? <Spinner label="Making the preview…" /> : 'Make preview'}
+            {preview.status === 'making' ? <Spinner label="Making the preview…" announce={false} /> : 'Make preview'}
           </button>
+          {/* Always a link: a preview made in an earlier visit can still be opened. */}
           <a
             href={previewUrl(auditId, version)}
             target="_blank"
             rel="noopener noreferrer"
             className="btn-quiet"
             aria-label={`Open preview of version ${version} (opens in a new tab)`}
+            aria-describedby={preview.status !== 'made' ? 'preview-open-reason' : undefined}
           >
             Open preview
           </a>
         </div>
+        {preview.status !== 'made' && (
+          <p id="preview-open-reason" className="mt-2 text-sm text-ink-soft">
+            Opens the last preview made for this version. If there isn’t one yet, make it first.
+          </p>
+        )}
         {preview.status === 'made' && (
           <p role="status" className="mt-3 text-sm font-semibold text-pass">
             {`The preview is ready (${formatWhen(preview.createdAt)}). Open it to check it.`}
@@ -322,9 +333,9 @@ export function PreviewShareView(props: PreviewShareViewProps) {
         <div className="mt-4 flex flex-wrap items-end gap-4">
           <fieldset>
             <legend className="label text-ink">Shared Link to</legend>
-            <div className="mt-1 flex flex-wrap gap-x-5 gap-y-2">
+            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
               {SHARE_KINDS.map((kind) => (
-                <span key={kind} className="inline-flex items-center gap-1.5">
+                <span key={kind} className="inline-flex min-h-[44px] items-center gap-2">
                   <input
                     id={`share-kind-${kind}`}
                     type="radio"
@@ -332,17 +343,30 @@ export function PreviewShareView(props: PreviewShareViewProps) {
                     value={kind}
                     checked={props.kind === kind}
                     onChange={() => props.onKind(kind)}
+                    className="h-5 w-5 accent-stamp"
                   />
-                  <label htmlFor={`share-kind-${kind}`}>{KIND_LABEL[kind]}</label>
+                  <label htmlFor={`share-kind-${kind}`} className="py-3 pr-2">
+                    {KIND_LABEL[kind]}
+                  </label>
                 </span>
               ))}
             </div>
           </fieldset>
           <LanguageSelect id="share-language" value={props.shareLanguage} onChange={props.onShareLanguage} />
-          <button type="button" className="btn-primary px-6 font-bold" disabled={busy} onClick={props.onCreateLink}>
-            {busy ? <Spinner label="Working…" /> : 'Make Shared Link'}
+          <button type="button" className="btn-primary" disabled={busy} onClick={props.onCreateLink}>
+            {busy ? <Spinner label="Working…" announce={false} /> : 'Make Shared Link'}
           </button>
         </div>
+        {message &&
+          (message.tone === 'fail' ? (
+            <p role="alert" className="mt-3 max-w-prose text-sm font-semibold text-fail">
+              {message.text}
+            </p>
+          ) : (
+            <p role="status" className="mt-3 text-sm font-semibold text-pass">
+              {message.text}
+            </p>
+          ))}
         {props.created && (
           <CreatedLink link={props.created} origin={props.origin} copied={props.copied} onCopy={props.onCopy} />
         )}
@@ -353,20 +377,15 @@ export function PreviewShareView(props: PreviewShareViewProps) {
           Shared Links
         </h2>
         {links.status === 'loading' && <Spinner label="Loading the Shared Links…" />}
-        {links.status === 'failed' && <ErrorMessage>{links.message}</ErrorMessage>}
+        {links.status === 'failed' && (
+          <LoadError title="The Shared Links could not be loaded" onRetry={props.onRetry}>
+            {links.message}
+          </LoadError>
+        )}
         {links.status === 'loaded' && (
           <LinkList links={links.links} busy={busy} now={props.now} onRevoke={props.onRevoke} />
         )}
       </section>
-
-      {message &&
-        (message.tone === 'fail' ? (
-          <ErrorMessage>{message.text}</ErrorMessage>
-        ) : (
-          <p role="status" className="text-sm font-semibold text-pass">
-            {message.text}
-          </p>
-        ))}
     </div>
   );
 }
@@ -407,10 +426,13 @@ export function PreviewShareScreen({
   const [links, setLinks] = useState<LinksState>({ status: 'loading' });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<ShareMessage>(null);
+  const [attempt, setAttempt] = useState(0);
   useDocumentTitle('Preview and Shared Links');
 
   useEffect(() => {
     let live = true;
+    setVersions({ status: 'loading' });
+    setLinks({ status: 'loading' });
     void (async () => {
       const [loaded, listed] = await Promise.all([
         loadVersion(auditId, undefined, fetchImpl),
@@ -435,7 +457,7 @@ export function PreviewShareScreen({
     return () => {
       live = false;
     };
-  }, [auditId, fetchImpl]);
+  }, [auditId, fetchImpl, attempt]);
 
   const makePreview = useCallback(async () => {
     setPreview({ status: 'making' });
@@ -506,15 +528,19 @@ export function PreviewShareScreen({
   );
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
-      <FocusHeading className="mb-2 break-words text-question font-bold">Preview and Shared Links</FocusHeading>
-      <p className="mb-6">
-        <Link to={AUDIT_PATHS.history(auditId)} className="btn-link text-sm">
-          Back to this Website Audit
-        </Link>
-      </p>
+    <Page width="workspace">
+      <PageHeader
+        back={{ to: PATHS.audits, label: 'All Website Audits' }}
+        title="Preview and Shared Links"
+        lede="Show the site owner an improved homepage, or give them a link to a document. Nothing is sent for you."
+      />
+      <AuditTabs auditId={auditId} version={version > 0 ? version : undefined} current="share" />
       {versions.status === 'loading' && <Spinner label="Loading the Website Audit…" />}
-      {versions.status === 'failed' && <ErrorMessage>{versions.message}</ErrorMessage>}
+      {versions.status === 'failed' && (
+        <LoadError title="The Website Audit could not be loaded" onRetry={() => setAttempt((n) => n + 1)}>
+          {versions.message}
+        </LoadError>
+      )}
       {versions.status === 'loaded' && (
         <PreviewShareView
           auditId={auditId}
@@ -541,9 +567,10 @@ export function PreviewShareScreen({
           onCreateLink={() => void createLink()}
           onCopy={(address) => void copy(address)}
           onRevoke={(link) => void revoke(link)}
+          onRetry={() => setAttempt((n) => n + 1)}
         />
       )}
       {dialog}
-    </div>
+    </Page>
   );
 }

@@ -400,7 +400,8 @@ describe('accessible markup and wording', () => {
         expect(accessible, `${name}: ${match[0]}`).toBe(true);
       }
     }
-    expect(views.full).not.toMatch(/tabindex="-?[1-9]/);
+    // Only a positive tabindex is wrong; -1 is how the Sections heading takes focus when it opens.
+    expect(views.full).not.toMatch(/tabindex="[1-9]/);
   });
 
   it('uses no Avoid word in UI text', () => {
@@ -511,10 +512,9 @@ describe('Section rewrite on the review (T-74)', () => {
 
   it('shows Back links to the Website Audit and to export, and names the stamp tag with stamp colours', () => {
     const screen = renderToStaticMarkup(createElement(ReviewDocumentsScreen, { auditId: AUDIT_ID, version: 2 }));
-    expect(screen).toMatch(/<a[^>]*href="\/audits\/abcd1234"[^>]*>Back to this Website Audit<\/a>/);
-    expect(screen).toMatch(
-      /<a[^>]*href="\/audits\/abcd1234\/versions\/2\/export"[^>]*>Export the Audit Documents<\/a>/
-    );
+    expect(screen).toMatch(/<a[^>]*href="\/audits"[^>]*>[^<]*(<[^>]*>[^<]*)*All Website Audits<\/a>/);
+    expect(screen).toMatch(/<a[^>]*href="\/audits\/abcd1234\/versions\/2\/export"[^>]*>Download<\/a>/);
+    expect(screen).toMatch(/<a[^>]*href="\/audits\/abcd1234"[^>]*>Versions<\/a>/);
     const source = readFileSync(
       new URL('../src/screens/audit/documents/ReviewDocumentsScreen.tsx', import.meta.url),
       'utf8'

@@ -37,9 +37,10 @@ export interface HelperStatus {
   firebase: FirebaseWebConfig | null;
 }
 
-const NOT_ANSWERING = 'The tool is not answering. Make sure it is still open in its terminal, then try again.';
+const NOT_ANSWERING = 'The tool is not answering. Check your connection and that the tool is still running, then try again.';
 
-export const HELPERS_OFF_MESSAGE = 'Helper sign-in is not set up on this copy.';
+export const HELPERS_OFF_MESSAGE =
+  'Helper sign-in is not set up on this copy. Until it is, give the people helping you the downloaded documents instead. Whoever hosts this copy can turn Helper sign-in on.';
 export const SIGN_IN_FAILED_MESSAGE = 'Google sign-in did not work. Try again, or ask the person who gave you access.';
 
 const REFUSALS: Partial<Record<AuditErrorCode, string>> = {

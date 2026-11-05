@@ -136,7 +136,7 @@ export function removePagespeedKey(): AuditSettingsUpdate {
   return { pagespeedKey: null };
 }
 
-const NOT_ANSWERING = 'The tool is not answering. Make sure it is still open in its terminal, then try again.';
+const NOT_ANSWERING = 'The tool is not answering. Check your connection and that the tool is still running, then try again.';
 
 const REFUSALS: Partial<Record<AuditErrorCode, string>> = {
   ERR_FORBIDDEN: 'Only the tool user can change the document settings.',
