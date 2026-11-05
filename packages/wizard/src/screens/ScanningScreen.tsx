@@ -80,6 +80,7 @@ export function ScanningScreen({
   const stats = [
     progress?.pagesFound !== undefined ? `${count(progress.pagesFound, 'page', 'pages')} found` : null,
     progress?.skipped ? `${progress.skipped} skipped` : null,
+    progress?.layoutGroups ? `${count(progress.layoutGroups, 'layout', 'layouts')}` : null,
     progress?.plannedSoFar ? `${count(progress.plannedSoFar, 'item', 'items')} planned while scanning` : null,
     progress?.stage === 'planning' && progress.requestsUsed !== undefined
       ? `${progress.requestsUsed} of about ${progress.requestsNeeded ?? 0} AI requests${

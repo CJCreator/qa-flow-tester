@@ -79,7 +79,7 @@ export function SignInRow({
             type="button"
             className="btn-link text-sm"
             aria-expanded={fieldsOpen}
-            aria-controls={`${id}-fields`}
+            aria-controls={fieldsOpen ? `${id}-fields` : undefined}
             onClick={() => setShowFields((s) => !s)}
           >
             {fieldsOpen ? 'Hide the form’s field names' : 'Name the form’s fields, for developers'}

@@ -386,11 +386,14 @@ describe('saving a download (T-70)', () => {
     expect(textOf(view())).not.toContain('Checking this version…');
   });
 
-  it('shows a Back link to all Website Audits, the audit tabs and a link to Audit settings', () => {
+  it('goes back to this Website Audit and shows only tabs a Helper may open', () => {
     const screen = renderToStaticMarkup(createElement(ExportDocumentsScreen, { auditId: AUDIT_ID, version: 2 }));
-    expect(links(screen).find((l) => l.text.endsWith('All Website Audits'))?.href).toBe('/audits');
+    // The list of all audits, Share, Helpers and Audit settings are the owner's: a Helper would be refused there.
+    expect(links(screen).find((l) => l.text.endsWith('Back to this Website Audit'))?.href).toBe(`/audits/${AUDIT_ID}`);
     expect(links(screen).find((l) => l.text === 'Documents')?.href).toBe(`/audits/${AUDIT_ID}/versions/2/review`);
-    expect(links(screen).find((l) => l.text === 'Audit settings')?.href).toBe('/audit-settings');
+    for (const ownerOnly of ['Share', 'Helpers', 'Audit settings']) {
+      expect(links(screen).some((l) => l.text === ownerOnly)).toBe(false);
+    }
     expect(screen).toMatch(/<h1[^>]*>Download documents<\/h1>/);
   });
 

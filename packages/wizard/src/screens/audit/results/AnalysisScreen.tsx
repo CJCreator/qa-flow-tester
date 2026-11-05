@@ -229,7 +229,8 @@ export function AnalysisView({
   return (
     <Page width="workspace">
       <PageHeader
-        back={{ to: PATHS.audits, label: 'All Website Audits' }}
+        // The list of all audits is the owner's; a Helper goes back to this audit.
+        back={owner ? { to: PATHS.audits, label: 'All Website Audits' } : { to: backTo, label: 'Back to this Website Audit' }}
         meta={meta}
         title="Website Audit results"
         actions={

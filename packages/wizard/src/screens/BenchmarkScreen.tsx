@@ -336,7 +336,7 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
 
       {/* An opened comparison sits above the history. */}
       {result && job && (
-        <div ref={resultRef} tabIndex={-1} aria-label="Comparison result" className="space-y-8 outline-none">
+        <div ref={resultRef} tabIndex={-1} role="region" aria-label="Comparison result" className="space-y-8 rounded-card">
           <p className="text-sm text-ink-soft">
             {result.ourProduct.name} compared with {result.referenceProduct.name}, {when(result.createdAt)}.
           </p>

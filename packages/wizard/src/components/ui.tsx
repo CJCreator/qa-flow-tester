@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from '../lib/router';
 import { FocusHeading, Notice } from './text';
 
@@ -132,8 +132,15 @@ export function Disclosure({
   children: ReactNode;
   className?: string;
 }) {
+  // `defaultOpen` opens it (e.g. when a field inside has an error) but never closes it on the person:
+  // after the first render, React leaves the open state to the browser.
+  const ref = useRef<HTMLDetailsElement>(null);
+  const [initiallyOpen] = useState(defaultOpen);
+  useEffect(() => {
+    if (defaultOpen && ref.current && !ref.current.open) ref.current.open = true;
+  }, [defaultOpen]);
   return (
-    <details className={`disclosure border-y border-rule ${className}`} open={defaultOpen || undefined}>
+    <details ref={ref} className={`disclosure border-y border-rule ${className}`} open={initiallyOpen || undefined}>
       {/* The summary's own children, so a heading passed as `summary` stays a heading (valid in <summary>). */}
       <summary className="flex-wrap py-1">
         {typeof summary === 'string' ? <span>{summary}</span> : summary}

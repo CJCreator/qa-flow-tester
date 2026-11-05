@@ -512,7 +512,9 @@ describe('Section rewrite on the review (T-74)', () => {
 
   it('shows Back links to the Website Audit and to export, and names the stamp tag with stamp colours', () => {
     const screen = renderToStaticMarkup(createElement(ReviewDocumentsScreen, { auditId: AUDIT_ID, version: 2 }));
-    expect(screen).toMatch(/<a[^>]*href="\/audits"[^>]*>[^<]*(<[^>]*>[^<]*)*All Website Audits<\/a>/);
+    // Back to this audit (a Helper may open it), and no owner-only Share or Helpers tab.
+    expect(screen).toMatch(/<a[^>]*href="\/audits\/abcd1234"[^>]*>[^<]*(<[^>]*>[^<]*)*Back to this Website Audit<\/a>/);
+    expect(screen).not.toMatch(/>Share<\/a>|>Helpers<\/a>/);
     expect(screen).toMatch(/<a[^>]*href="\/audits\/abcd1234\/versions\/2\/export"[^>]*>Download<\/a>/);
     expect(screen).toMatch(/<a[^>]*href="\/audits\/abcd1234"[^>]*>Versions<\/a>/);
     const source = readFileSync(

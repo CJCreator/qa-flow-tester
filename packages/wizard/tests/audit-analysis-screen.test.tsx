@@ -323,7 +323,8 @@ describe('AnalysisScreen: loading, error and empty states in words', () => {
     const fetchImpl = mockFetch(jsonResponse(reply()));
     const html = renderToStaticMarkup(createElement(AnalysisScreen, { auditId: AUDIT_ID, version: 2, fetchImpl }));
     expect(html).toMatch(/<h1[^>]*>Website Audit results<\/h1>/);
-    expect(html).toContain('All Website Audits');
+    // Until the Helper check answers, the way back is the one a Helper may follow too.
+    expect(html).toContain('Back to this Website Audit');
     expect(html).toContain('role="status"');
     expect(textOf(html)).toContain('Loading the Website Audit…');
     expect(html).not.toContain('<main');

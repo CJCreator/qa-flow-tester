@@ -56,7 +56,7 @@ describe('theme', () => {
   it('saveTheme survives a throwing storage and writes the key', () => {
     const seen: string[] = [];
     saveTheme('light', { setItem: (k, v) => void seen.push(`${k}=${v}`) });
-    expect(seen).toEqual(['qa-theme=light']);
+    expect(seen).toEqual(['qa-color-theme=light']);
     expect(() =>
       saveTheme('dark', {
         setItem: () => {

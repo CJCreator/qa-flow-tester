@@ -137,6 +137,12 @@ export function SettingsScreen({ onKeySaved }: { onKeySaved: (model: string) => 
   const goTo = (id: string) => (e: React.MouseEvent) => {
     e.preventDefault();
     document.getElementById(id)?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
+    // Focus follows, so the next Tab continues inside the chosen section.
+    const heading = document.getElementById(`${id}-title`) ?? document.getElementById(id);
+    if (heading) {
+      if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1');
+      heading.focus({ preventScroll: true });
+    }
   };
 
   return (

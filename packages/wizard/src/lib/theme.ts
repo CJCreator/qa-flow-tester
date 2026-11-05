@@ -4,7 +4,11 @@
  */
 export type Theme = 'system' | 'light' | 'dark';
 
-export const THEME_KEY = 'qa-theme';
+/**
+ * A new key on purpose: the old landing page saved its default ('dark') under `qa-theme` on every visit, so
+ * that value says nothing about what the person chose. Starting fresh lets everyone get the new default.
+ */
+export const THEME_KEY = 'qa-color-theme';
 
 /** Anything but 'light' or 'dark' follows the device, so a missing or damaged value never breaks the page. */
 export function parseTheme(raw: string | null | undefined): Theme {

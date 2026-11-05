@@ -287,7 +287,7 @@ export function VisualBaselinesScreen() {
               </ul>
             </div>
 
-            <div ref={inspectorRef} tabIndex={-1} className="outline-none lg:col-span-7" aria-label="Selected baseline">
+            <div ref={inspectorRef} tabIndex={-1} role="region" className="rounded-card lg:col-span-7" aria-label="Selected baseline">
               {activeItem ? (
                 <div className="space-y-4 rounded-card border border-rule bg-surface p-5">
                   <div className="flex flex-wrap items-center justify-between gap-3 border-b border-rule pb-3">

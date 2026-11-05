@@ -683,14 +683,16 @@ export function ReviewDocumentsScreen({
   return (
     <Page width="workspace">
       <PageHeader
-        back={{ to: PATHS.audits, label: 'All Website Audits' }}
+        // Back to this audit, which a Helper may open too (the list of all audits is the owner's).
+        back={{ to: PATHS.audit(auditId), label: 'Back to this Website Audit' }}
         meta={
           reply ? <span className="break-all">{`${reply.summary.url}, version ${reply.version.version}`}</span> : undefined
         }
         title="Review the Audit Documents"
         lede="Change the text of Sections and findings, remove pages, and pick redesign or repair before you download. Edits change the Audit Documents only: the Website Audit keeps every original, and you can reset an edit at any time."
       />
-      <AuditTabs auditId={auditId} version={versionNumber} current="documents" />
+      {/* This screen doesn't know whether the caller is a Helper, so the owner-only tabs are left out. */}
+      <AuditTabs auditId={auditId} version={versionNumber} current="documents" hide={['share', 'helpers']} />
 
       {loaded.status === 'loading' && <Spinner label="Loading the Website Audit…" />}
       {loaded.status === 'failed' && (

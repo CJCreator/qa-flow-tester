@@ -2,17 +2,15 @@ import { useEffect, useState, type ReactNode } from 'react';
 import {
   AUDIT_DOCUMENT_KINDS,
   type AuditDocumentKind,
-  type AuditSettingsReply,
   type AuditStatus,
   type ExportFormat,
 } from '@qa/types/src/browser.js';
 import { Notice, Spinner } from '../../../components/text';
 import { Disclosure, LoadError, Page, PageHeader, Section } from '../../../components/ui';
-import { Link, PATHS } from '../../../lib/router';
+import { PATHS } from '../../../lib/router';
 import { useDocumentTitle } from '../../../lib/title';
 import { AuditTabs } from '../AuditTabs';
 import { loadAudit } from './review-api';
-import { COMPANY_FIELDS, loadSettings } from './settings-api';
 import {
   EXPORT_LANGUAGES,
   OWNER_AUDIT_FORMATS,
@@ -355,13 +353,6 @@ export function ExportDocumentsView({
   );
 }
 
-/** What is missing from the saved settings that the downloads use, in plain words; empty when nothing is. */
-function missingSettings(reply: AuditSettingsReply): string[] {
-  const missing: string[] = [];
-  if (reply.settings.proposalTemplate.trim() === '') missing.push('the Proposal template');
-  if (COMPANY_FIELDS.every((field) => (reply.settings.company[field] ?? '').trim() === '')) missing.push('your company details');
-  return missing;
-}
 
 export interface ExportDocumentsScreenProps {
   auditId: string;
@@ -393,7 +384,6 @@ export function ExportDocumentsScreen({
   const [checking, setChecking] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
-  const [missing, setMissing] = useState<string[]>([]);
 
   // Read the version first: a running or failed one has nothing to download, and nothing downloads before it answers.
   useEffect(() => {
@@ -414,18 +404,6 @@ export function ExportDocumentsScreen({
       live = false;
     };
   }, [auditId, version, fetchImpl, attempt]);
-
-  // The Proposal, the Pitch Glimpse and the Owner Audit use the saved settings: say so when they are empty.
-  // A failed read says nothing here; the settings screen shows its own error.
-  useEffect(() => {
-    let live = true;
-    void loadSettings(fetchImpl).then((outcome) => {
-      if (live && outcome.ok) setMissing(missingSettings(outcome.value));
-    });
-    return () => {
-      live = false;
-    };
-  }, [fetchImpl]);
 
   const download = async (kind: DownloadKind) => {
     const url =
@@ -454,34 +432,14 @@ export function ExportDocumentsScreen({
   return (
     <Page width="workspace">
       <PageHeader
-        back={{ to: PATHS.audits, label: 'All Website Audits' }}
+        // Back to this audit, which a Helper may open too (the list of all audits is the owner's).
+        back={{ to: PATHS.audit(auditId), label: 'Back to this Website Audit' }}
         meta={version !== undefined ? `Version ${version}` : undefined}
         title="Download documents"
         lede="Pick what to download, the language and the format. Downloads carry your saved edits. The tool never hands anything to the site owner for you: you decide what to give, and how."
       />
-      <AuditTabs auditId={auditId} version={shownVersion} current="download" />
-      <p className="mb-8 max-w-prose text-ink-soft">
-        {'The Proposal template, your company details and the opt-out text are set in '}
-        <Link to={PATHS.auditSettings} className="btn-link">
-          Audit settings
-        </Link>
-        {'.'}
-      </p>
-      {missing.length > 0 && (
-        <div className="mb-8">
-          <Notice
-            tone="warn"
-            title={`Not set yet: ${missing.join(' and ')}`}
-            actions={
-              <Link to={PATHS.auditSettings} className="btn-link">
-                Fill them in Audit settings
-              </Link>
-            }
-          >
-            The downloads will have blanks where these go.
-          </Notice>
-        </div>
-      )}
+      {/* This screen doesn't know whether the caller is a Helper, so the owner-only tabs are left out. */}
+      <AuditTabs auditId={auditId} version={shownVersion} current="download" hide={['share', 'helpers']} />
       <ExportDocumentsView
         auditId={auditId}
         version={version}

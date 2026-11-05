@@ -158,7 +158,8 @@ Motion helps someone see what changed. Each use is judged on that.
 
 - **Light is the default** on every page.
 - **Dark** follows the device (`prefers-color-scheme`), unless the person chose light.
-- **A saved choice** (`qa-theme` = `light` or `dark`, see `src/lib/theme.ts`) wins over the device. It is applied
+- **A saved choice** (`qa-color-theme` = `light` or `dark`, see `src/lib/theme.ts`) wins over the device. The
+  old `qa-theme` key is ignored, because the old landing page saved "dark" on every visit. It is applied
   before the first paint.
 - **Print** is always light.
 
