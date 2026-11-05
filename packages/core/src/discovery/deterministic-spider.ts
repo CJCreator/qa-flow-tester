@@ -129,6 +129,8 @@ export interface CrawlOptions {
   maxPerShape?: number;
   /** Maximum duration of crawl in milliseconds (default 10 min) */
   maxDurationMs?: number;
+  /** Time one page load may take before it counts as a timeout; its one retry gets 1.5 times this (default 10 s). */
+  pageTimeoutMs?: number;
   /** Epoch ms deadline shared across crawls */
   deadlineAt?: number;
   /** Allowed query parameters included in canonical route key */
@@ -368,6 +370,7 @@ export class DeterministicSpider {
     const envMinutes = process.env.QA_CRAWL_MAX_MINUTES ? parseInt(process.env.QA_CRAWL_MAX_MINUTES, 10) : undefined;
     const defaultMaxDurationMs = envMinutes && !isNaN(envMinutes) ? envMinutes * 60 * 1000 : 10 * 60 * 1000;
     const maxDurationMs = options.maxDurationMs ?? defaultMaxDurationMs;
+    const pageTimeoutMs = options.pageTimeoutMs ?? 10_000;
     const startTime = Date.now();
     const deadline = Math.min(options.deadlineAt ?? Infinity, startTime + maxDurationMs);
     let timedOut = false;
@@ -688,7 +691,7 @@ export class DeterministicSpider {
           // Limits are worked out once the turn comes, from the time left then.
           navRes = await paced(fullUrl, () =>
             navigate(page, fullUrl, {
-              ...navLimits(10000),
+              ...navLimits(pageTimeoutMs),
               needLinks: true,
               who: options.role || (isRoleSignedIn ? 'signed-in' : 'visitor'),
             })
@@ -1161,7 +1164,7 @@ export class DeterministicSpider {
               if (page.url() !== pageUrl) {
                 if (!pacer) await waitForPacing();
                 if (timeLeft() <= 0) continue;
-                await paced(pageUrl, () => navigate(page, pageUrl, navLimits(10000)));
+                await paced(pageUrl, () => navigate(page, pageUrl, navLimits(pageTimeoutMs)));
               }
               const urlBefore = page.url();
               // A click may load another page of the host, so with a pacer it takes a turn too.
@@ -1206,7 +1209,7 @@ export class DeterministicSpider {
           const reload = async () => {
             if (!pacer) await waitForPacing();
             if (timeLeft() <= 0) throw new Error('time-limit');
-            await paced(pageUrl, () => navigate(page, pageUrl, navLimits(10000)));
+            await paced(pageUrl, () => navigate(page, pageUrl, navLimits(pageTimeoutMs)));
           };
           try {
             clickBudget -= await exploreInteractiveStates({

@@ -10,8 +10,11 @@
  */
 import { defaultNetDeps, safeGet, type NetDeps, type PinnedRequest } from '../../safe-net.js';
 
-/** The crawl's page timeout (deterministic spider `navLimits(10000)`); it bounds the whole check. */
-export const AUDIT_ADDRESS_TIMEOUT_MS = 10_000;
+/**
+ * The audit's page timeout (crawl.ts AUDIT_PAGE_TIMEOUT_MS); it bounds the whole check. A dev server's first
+ * answer, while it compiles the page, can take longer than 10 s, which refused the audit with a 422.
+ */
+export const AUDIT_ADDRESS_TIMEOUT_MS = 30_000;
 /** The body is not needed; a small cap keeps the check cheap. */
 const MAX_BYTES = 64 * 1024;
 

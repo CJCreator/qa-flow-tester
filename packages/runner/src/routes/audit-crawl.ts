@@ -30,6 +30,7 @@ import {
   type AuditStartReply,
 } from '@qa/types';
 import {
+  AuditCrawlBlockedError,
   AuditPipelineError,
   checkAuditAddress,
   createPageRecorder,
@@ -302,6 +303,11 @@ export async function runAuditVersion(
     } else if (err instanceof AuditPipelineError && err.code === 'status-not-updated') {
       // The result IS stored: never mark it failed.
       outcome = await retryDoneStatus(store, run);
+    } else if (err instanceof AuditCrawlBlockedError) {
+      // The start page was a tunnel warning or a bot check: its own fixed sentence, which the wizard shows as-is
+      // (it has no sentence of its own for OTHER_FAILED_CODE).
+      await recordStatus(store, run, 'failed', finishedAt, err.message);
+      outcome = { kind: 'failed', error: err.message, code: OTHER_FAILED_CODE };
     } else if (!crawled) {
       await recordStatus(store, run, 'failed', finishedAt, AUDIT_CRAWL_FAILED);
       outcome = { kind: 'failed', error: AUDIT_CRAWL_FAILED, code: CRAWL_FAILED_CODE };

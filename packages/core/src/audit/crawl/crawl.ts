@@ -25,11 +25,28 @@ import { DeterministicSpider, type SpiderPageInventoryItem } from '../../discove
 import { skipKey } from '../analysis/broken-links.js';
 import { isCheckoutPath, pageAreaVerdict } from './area-detect.js';
 import { pathLimitVerdict } from './limits.js';
+import {
+  AuditCrawlBlockedError,
+  addTunnelSkipHeaders,
+  classifyInterstitial,
+  readInterstitialSignals,
+  type InterstitialKind,
+} from './interstitial.js';
 
 /** The user-agent token whose robots.txt group the audit follows (the Spider's, so one site rule fits both). */
 export const AUDIT_ROBOTS_TOKEN = 'QA-Benchmarking-Bot';
 /** Least pause between two requests to the audited host, when robots.txt asks for none (ADR 0015). */
 export const AUDIT_MIN_GAP_MS = 500;
+/**
+ * One page load's limit in a Website Audit (the Check-up keeps 10 s). Slow hosts, such as a dev server behind a
+ * tunnel, took 10 to 25 s per page, so a 10 s limit skipped about half of a site as `timeout`.
+ */
+export const AUDIT_PAGE_TIMEOUT_MS = 30_000;
+/**
+ * The whole crawl's limit in a Website Audit, so a slow site is read to its page limit instead of stopping at
+ * the Spider's 10 minutes. QA_CRAWL_MAX_MINUTES still overrides it.
+ */
+export const AUDIT_MAX_CRAWL_MS = 60 * 60 * 1000;
 /** robots.txt and sitemap fetches: same limit as a page load. */
 const SITE_FILE_TIMEOUT_MS = 10_000;
 const SITE_FILE_REDIRECTS = 5;
@@ -258,6 +275,10 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
 
   let finalUrl = request.url;
   let startRecorded = false;
+  // A start page that is a tunnel warning or a bot check stops the crawl: the site itself was never read.
+  let blocked: InterstitialKind | null = null;
+  const blockedStop = new AbortController();
+  const crawlSignal = opts.signal ? AbortSignal.any([opts.signal, blockedStop.signal]) : blockedStop.signal;
 
   try {
     if (deps.browserManager) {
@@ -282,17 +303,21 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
     // The guard is the first route; blockChanges, added after, runs first and falls back to it.
     await installRequestGuard(context, deps.requestGuard ?? makeRequestGuard(netDeps));
     await blockChanges(context);
+    // Added last, so it runs first: same-site requests carry the tunnel skip headers into the routes above.
+    await addTunnelSkipHeaders(context, start);
 
     const spider = new DeterministicSpider([], request.limits.maxPages);
     const result = await spider.crawl(context, request.url, {
       maxDepth: request.limits.maxDepth,
+      pageTimeoutMs: AUDIT_PAGE_TIMEOUT_MS,
+      ...(process.env.QA_CRAWL_MAX_MINUTES ? {} : { maxDurationMs: AUDIT_MAX_CRAWL_MS }),
       exploreClicks: false,
       followFormActions: false,
       seedSitemap: true,
       robots,
       pacer,
       outboundFetch: siteFetch,
-      signal: opts.signal,
+      signal: crawlSignal,
       ...(opts.screenshotDir ? { screenshotDir: opts.screenshotDir, screenshotPrefix: 'audit' } : {}),
       // Asked before an address is queued (never for the start page): refused ones are never requested.
       admitPath: (url) => {
@@ -313,10 +338,17 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
         if (!startRecorded && item.depth === 0) {
           startRecorded = true;
           finalUrl = withoutHash(page.url());
+          const kind = classifyInterstitial(await readInterstitialSignals(page));
+          if (kind) {
+            blocked = kind;
+            blockedStop.abort();
+            return;
+          }
         }
         if (opts.onRenderedPage) await opts.onRenderedPage(page, toAuditPage(item));
       },
     });
+    if (blocked) throw new AuditCrawlBlockedError(blocked);
 
     const pages = result.pages.map(toAuditPage);
     const recorded = new Set(pages.map((p) => skipKey(p.urlPath)));
