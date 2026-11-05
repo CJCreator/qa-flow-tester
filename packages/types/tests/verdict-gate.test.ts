@@ -94,7 +94,7 @@ describe('releaseVerdict zero-check gate (OPEN_ISSUES C5)', () => {
         Accessible: none,
         'Fast and mobile': none,
         Findable: none,
-        Secure: none,
+        Protected: none,
         'Looks and reads well': none,
       },
       overallGrade: null,
