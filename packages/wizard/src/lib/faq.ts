@@ -30,7 +30,7 @@ export const HOME_FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: 'What does it cost?',
-    a: 'It is free during the beta and nothing is charged today. Paid plans are planned for heavier use. The AI that writes your plan uses your own key (OpenRouter’s free models work), or you can skip AI and let fixed rules write the plan.',
+    a: 'It is free during the beta and nothing is charged today. Paid plans are planned for heavier use. The AI that writes your plan uses your own key (a free or low-cost model works), or you can skip AI and let fixed rules write the plan.',
   },
 ];
 
