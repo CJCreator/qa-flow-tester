@@ -66,11 +66,11 @@ export function classifyInterstitial(page: { title: string; text: string }): Int
 }
 
 /** Reads the open page's title and visible text, for classifyInterstitial. Empty strings when it cannot. */
-export async function readInterstitialSignals(page: Pick<Page, 'title' | 'evaluate'>): Promise<{ title: string; text: string }> {
+export async function readInterstitialSignals(
+  page: Pick<Page, 'title' | 'evaluate'>
+): Promise<{ title: string; text: string }> {
   const title = await page.title().catch(() => '');
-  const text = await page
-    .evaluate(() => (document.body ? document.body.innerText : '').slice(0, 8000))
-    .catch(() => '');
+  const text = await page.evaluate(() => (document.body ? document.body.innerText : '').slice(0, 8000)).catch(() => '');
   return { title, text };
 }
 
