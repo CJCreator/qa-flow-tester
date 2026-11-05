@@ -391,6 +391,8 @@ describe('POST /api/audits', () => {
       updateVersion: store.updateVersion.bind(store),
       getResult: store.getResult.bind(store),
       grantsFor: store.grantsFor.bind(store),
+      readAuditRecord: store.readAuditRecord.bind(store),
+      getVersion: store.getVersion.bind(store),
     };
     const base = await serve(createAuditCrawlRoutes(deps({ store: failing })));
     const { status, json } = await post(base, VALID);

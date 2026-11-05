@@ -392,8 +392,8 @@ describe('Hosted audits for the signed-in owner on a beta copy (T-86, ADR 0042)'
         const caller = c.server.isAuditOwner(c.req)
           ? { owner: true, helperEmail: betaAccess.session(c.req)?.email }
           : { owner: false };
-        if (c.server.wiring.claimAuditLimit && caller.helperEmail) {
-          const claim = c.server.wiring.claimAuditLimit(caller.helperEmail);
+        if (c.server.auditWiring.claimAuditLimit && caller.helperEmail) {
+          const claim = c.server.auditWiring.claimAuditLimit(caller.helperEmail);
           if (!claim.allowed) {
             return sendJson(c.res, 429, { error: claim.error, code: 'ERR_BETA_LIMIT' });
           }

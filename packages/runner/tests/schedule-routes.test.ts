@@ -154,7 +154,8 @@ describe('POST /api/runner/schedules/tick (non-beta)', () => {
   });
 
   it('is 401 ERR_SCHEDULER_AUTH without a token, and the access key alone is not the credential', async () => {
-    for (const headers of [{}, { 'x-qa-access': KEY }, { authorization: 'Bearer nope' }]) {
+    const cases: Record<string, string>[] = [{}, { 'x-qa-access': KEY }, { authorization: 'Bearer nope' }];
+    for (const headers of cases) {
       const res = await call(PORT, 'POST', TICK, headers);
       expect(res.status).toBe(401);
       expect(JSON.parse(res.body).code).toBe('ERR_SCHEDULER_AUTH');

@@ -216,17 +216,16 @@ beforeAll(async () => {
     accessToken: ACCESS,
     auditCheckAddress: async (url) => ({
       ok: true,
-      host: new URL(url).hostname,
+      finalUrl: url,
       status: 200,
-      elapsedMs: 10,
     }),
     auditCrawl: (requestData, opts) =>
       runAuditCrawl(requestData, {
         ...opts,
-        minGapMs: 10,
         deps: {
           browserManager,
           netDeps: makeNetDeps(),
+          minGapMs: 10,
         },
       }),
   });

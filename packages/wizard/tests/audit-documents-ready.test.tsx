@@ -68,7 +68,7 @@ function sampleVersion(documents?: StoredAuditDocument[]): AuditVersion {
     auditId: AUDIT_ID,
     version: VERSION_NUM,
     url: 'https://example.com/',
-    limits: { maxPages: 50, maxDepth: 5 },
+    limits: { maxPages: 50, maxDepth: 5, includePaths: [], excludePaths: [] },
     language: 'en',
     status: 'done',
     startedAt: '2026-11-01T10:00:00.000Z',
