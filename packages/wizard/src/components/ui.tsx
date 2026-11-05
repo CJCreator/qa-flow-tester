@@ -152,7 +152,7 @@ export function Disclosure({
 export function BottomActionBar({ summary, children }: { summary?: ReactNode; children: ReactNode }) {
   return (
     <div
-      className="sticky bottom-0 z-sticky -mx-4 mt-10 border-t border-rule bg-raised/95 px-4 shadow-level-3 backdrop-blur-sm sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
+      className="sticky bottom-0 z-sticky -mx-4 -mb-16 mt-10 border-t border-rule bg-raised/95 px-4 shadow-level-3 backdrop-blur-sm sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
       style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
     >
       <div className="flex flex-col gap-3 pt-3 sm:flex-row sm:items-center sm:justify-between">

@@ -170,7 +170,7 @@
   }
   .segmented > button,
   .segmented > a {
-    @apply inline-flex min-h-[40px] items-center rounded-[4px] px-3.5 text-sm font-semibold text-ink-soft transition-colors duration-fast ease-standard hover:text-ink;
+    @apply inline-flex min-h-[44px] items-center rounded-[4px] px-3.5 text-sm font-semibold text-ink-soft transition-colors duration-fast ease-standard hover:text-ink;
   }
   .segmented > [aria-pressed='true'],
   .segmented > [aria-selected='true'],
