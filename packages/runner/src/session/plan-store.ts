@@ -59,6 +59,9 @@ export interface StoredPlanRecord {
   };
 }
 
+/** A waiting Plan is dropped once it has been kept aside this long (M4). */
+export const WAITING_PLAN_TTL_MS = 7 * 24 * 3_600_000;
+
 export interface PlanStore {
   /** Where the Plan under review is written (today's `planFile`). */
   readonly file: string;
@@ -213,13 +216,23 @@ export class DefaultPlanStore implements PlanStore {
     await writeJsonAtomic(file, this.forDisk(record));
   }
 
+  /** Deletes a waiting-plan file kept aside longer than WAITING_PLAN_TTL_MS. True when it was deleted. */
+  private async dropIfExpired(file: string): Promise<boolean> {
+    const stat = await fs.stat(file).catch(() => null);
+    if (!stat || Date.now() - stat.mtimeMs <= WAITING_PLAN_TTL_MS) return false;
+    await fs.rm(file, { force: true }).catch(() => {});
+    return true;
+  }
+
   async waiting(): Promise<Array<{ host: string; record: StoredPlanRecord }>> {
     const dir = path.join(this.dataDir, 'waiting-plans');
     const result: Array<{ host: string; record: StoredPlanRecord }> = [];
     const names = await fs.readdir(dir).catch(() => [] as string[]);
     for (const name of names) {
       if (!name.endsWith('.json')) continue;
-      const res = await readJsonSafe<StoredPlanRecord>(path.join(dir, name), { currentVersion: 1 });
+      const file = path.join(dir, name);
+      if (await this.dropIfExpired(file)) continue;
+      const res = await readJsonSafe<StoredPlanRecord>(file, { currentVersion: 1 });
       if (res.data?.plan && res.data?.context) {
         const record = this.normalize(res.data);
         result.push({
@@ -228,10 +241,18 @@ export class DefaultPlanStore implements PlanStore {
         });
       }
     }
+    // A host whose file was just dropped as expired is no longer waiting in memory either.
+    for (const host of [...this.parkedPlans.keys()]) {
+      if (!(await fs.stat(this.parkedFileFor(host)).catch(() => null))) this.parkedPlans.delete(host);
+    }
     return result;
   }
 
   async unpark(host: string): Promise<StoredPlanRecord | null> {
+    if (await this.dropIfExpired(this.parkedFileFor(host))) {
+      this.parkedPlans.delete(host);
+      return null;
+    }
     let record = this.parkedPlans.get(host) ?? null;
     if (!record) {
       const res = await readJsonSafe<StoredPlanRecord>(this.parkedFileFor(host), { currentVersion: 1 });

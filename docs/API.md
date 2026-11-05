@@ -67,13 +67,14 @@ Every request: a non-loopback `Host` is refused unless it matches `RUNNER_ALLOWE
 
 ## Schedules (table rows)
 
-| Endpoint                                | Access    | Returns                                                                                                    |
-| --------------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------- |
-| `GET /api/runner/schedules`             | owner     | The schedules.                                                                                             |
-| `POST /api/runner/schedules`            | owner     | Adds one.                                                                                                  |
-| `POST /api/runner/schedules/:id/toggle` | owner     | Pauses or resumes (`{ enabled }`).                                                                         |
-| `DELETE /api/runner/schedules/:id`      | owner     | Deletes.                                                                                                   |
-| `POST /api/runner/schedules/tick`       | scheduler | Runs due schedules, holding the request until each finishes; replies `{ started, failed, skipped, busy }`. |
+| Endpoint                                | Access    | Returns                                                                                                                                                                                                                                          |
+| --------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GET /api/runner/schedules`             | owner     | The schedules.                                                                                                                                                                                                                                   |
+| `POST /api/runner/schedules`            | owner     | Adds one.                                                                                                                                                                                                                                        |
+| `POST /api/runner/schedules/:id/toggle` | owner     | Pauses or resumes (`{ enabled }`).                                                                                                                                                                                                               |
+| `DELETE /api/runner/schedules/:id`      | owner     | Deletes.                                                                                                                                                                                                                                         |
+| `POST /api/runner/schedules/tick`       | scheduler | Runs due schedules, holding the request until each finishes; replies `{ started, failed, skipped, busy }`.                                                                                                                                       |
+| `POST /api/runner/sessions/cleanup`     | scheduler | Cloud Scheduler cleanup (ADR 0039, M3): forgets visitor sessions and their folders idle for 24 hours. Needs the same Google token as the tick (`SCHEDULER_SERVICE_ACCOUNT`); anything else is 401. Replies `{ sessions, folders }`, counts only. |
 
 All served in beta (ADR 0039).
 
