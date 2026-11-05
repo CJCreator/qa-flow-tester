@@ -1,7 +1,7 @@
 # QA Tool: Phase-by-Phase Plan to an End-to-End Testing Platform
 
 **Date:** 2026-10-05
-**Based on:** [`docs/research/e2e-platform-roadmap.md`](./research/e2e-platform-roadmap.md) and clusters `00-brief.md` to `07-mobile-desktop-costs.md`.
+**Based on:** the research roadmap (`e2e-platform-roadmap.md`) and clusters `00-brief.md` to `07-mobile-desktop-costs.md`. They were removed on 2026-11-05; read them with `git show 68e6b02:docs/research/<file>`.
 **For:** one builder working with AI tools, a few early users, nobody paying yet, $0 hosting budget.
 **Goal:** teams with no QA staff paste a URL, get a plain "Ready to release / Not ready yet" verdict they can trust, and walk away with files and code they own.
 
@@ -190,7 +190,7 @@ graph LR
 ### Gate G1: user conversations (calendar time, starts now)
 
 **Goal:** replace guesses with answers before Phase 4, and check Phase 1's assumptions.
-**Do:** 3 to 5 conversations with current users. Use the 8 "signed-in" questions in [roadmap section 7](research/e2e-platform-roadmap.md) and ask for a real example of each, not an opinion. Add these:
+**Do:** 3 to 5 conversations with current users. Use the 8 "signed-in" questions in roadmap section 7 (see **Based on** at the top) and ask for a real example of each, not an opinion. Add these:
 
 - Would they run a check-up in their own GitHub Actions? Do they use GitHub at all?
 - Staging or preview URLs, or production only?
@@ -300,7 +300,7 @@ Check these at the start of the phase that depends on them. The research did not
 
 ### Item 0.1: Performance Metric Accuracy
 
-_Reference: Roadmap Gap Table Row 1, Cluster 04 ([04-performance-cwv.md](./research/e2e-platform/04-performance-cwv.md))_
+_Reference: Roadmap Gap Table Row 1, Cluster 04 (`04-performance-cwv.md`)_
 
 - **Problem in Codebase:**
   - In [`packages/checkers/src/performance.ts`](../packages/checkers/src/performance.ts):
@@ -342,7 +342,7 @@ _Reference: Roadmap Gap Table Row 1, Cluster 04 ([04-performance-cwv.md](./resea
 
 ### Item 0.2: Axe Accessibility Checker Accuracy
 
-_Reference: Roadmap Gap Table Row 2, Cluster 03 ([03-accessibility-compliance.md](./research/e2e-platform/03-accessibility-compliance.md))_
+_Reference: Roadmap Gap Table Row 2, Cluster 03 (`03-accessibility-compliance.md`)_
 
 - **Problem in Codebase:**
   - In [`packages/checkers/src/ux-quality.ts`](../packages/checkers/src/ux-quality.ts):
@@ -380,7 +380,7 @@ _Reference: Roadmap Gap Table Row 2, Cluster 03 ([03-accessibility-compliance.md
 
 ### Item 0.3: Wire Clean Flow Retry & Flaky Passed
 
-_Reference: Roadmap Gap Table Row 3, Cluster 01 ([01-web-e2e-ai-testing.md](./research/e2e-platform/01-web-e2e-ai-testing.md))_
+_Reference: Roadmap Gap Table Row 3, Cluster 01 (`01-web-e2e-ai-testing.md`)_
 
 - **Problem in Codebase:**
   - [`packages/core/src/retry-runner.ts`](../packages/core/src/retry-runner.ts) implements `runWithCleanRetry`, but it is never called by [`orchestrator.ts`](../packages/core/src/orchestrator.ts).
@@ -405,7 +405,7 @@ _Reference: Roadmap Gap Table Row 3, Cluster 01 ([01-web-e2e-ai-testing.md](./re
 
 ### Item 0.4: Security Cookie & Mixed Content Fixes
 
-_Reference: Roadmap Gap Table Row 4, Cluster 05 ([05-security.md](./research/e2e-platform/05-security.md))_
+_Reference: Roadmap Gap Table Row 4, Cluster 05 (`05-security.md`)_
 
 - **Problem in Codebase:**
   - In [`packages/checkers/src/security.ts`](../packages/checkers/src/security.ts) line 203: The `SameSite` check is nested inside `if (!cookie.secure)`, completely missing `SameSite=None` on a cookie that has `Secure: true`.
@@ -435,7 +435,7 @@ _Reference: Roadmap Gap Table Row 4, Cluster 05 ([05-security.md](./research/e2e
 
 ### Item 1.1: Findings Contract, CI Integration & Trend Reporting
 
-_Reference: Roadmap Gap Table Rows 18, 19, 20, Cluster 02 ([02-visual-crossbrowser-reporting.md](./research/e2e-platform/02-visual-crossbrowser-reporting.md))_
+_Reference: Roadmap Gap Table Rows 18, 19, 20, Cluster 02 (`02-visual-crossbrowser-reporting.md`)_
 
 - **Implementation Spec:**
   1. **Findings Contract (`findings.schema.json` & `schemaVersion`):**
@@ -476,7 +476,7 @@ _Reference: Roadmap Gap Table Rows 18, 19, 20, Cluster 02 ([02-visual-crossbrows
 
 ### Item 1.2: Standalone Playwright Test Suite Export
 
-_Reference: Roadmap Gap Table Row 5, Cluster 01 ([01-web-e2e-ai-testing.md](./research/e2e-platform/01-web-e2e-ai-testing.md))_
+_Reference: Roadmap Gap Table Row 5, Cluster 01 (`01-web-e2e-ai-testing.md`)_
 
 - **Implementation Spec:**
   1. **Playwright Exporter Module (`packages/core/src/export/playwright-export.ts`):**
@@ -513,7 +513,7 @@ _Reference: Roadmap Gap Table Row 5, Cluster 01 ([01-web-e2e-ai-testing.md](./re
 
 ### Item 1.3: Recorded API Traffic Intelligence & Zero-Request Checks
 
-_Reference: Roadmap Gap Table Rows 7-11, Cluster 06 ([06-api-testing.md](./research/e2e-platform/06-api-testing.md))_
+_Reference: Roadmap Gap Table Rows 7-11, Cluster 06 (`06-api-testing.md`)_
 
 - **Implementation Spec:**
   1. **Expanded Traffic Capture:**
@@ -553,7 +553,7 @@ _Reference: Roadmap Gap Table Rows 7-11, Cluster 06 ([06-api-testing.md](./resea
 
 ### Item 1.4: In-Browser Visual Baseline Approval & Noise Masking
 
-_Reference: Roadmap Gap Table Row 15, Cluster 02 ([02-visual-crossbrowser-reporting.md](./research/e2e-platform/02-visual-crossbrowser-reporting.md))_
+_Reference: Roadmap Gap Table Row 15, Cluster 02 (`02-visual-crossbrowser-reporting.md`)_
 
 - **Implementation Spec:**
   1. **In-Report Baseline Review:**
@@ -615,7 +615,7 @@ _Reference: Roadmap Gap Table Rows 12, 13, 14, 17, Clusters 03, 04, 05_
 
 ### Item 1.6: Signed-In Journey Detection & Diagnosis
 
-_Reference: Roadmap Gap Table Row 24, Cluster 01 ([01-web-e2e-ai-testing.md](./research/e2e-platform/01-web-e2e-ai-testing.md))_
+_Reference: Roadmap Gap Table Row 24, Cluster 01 (`01-web-e2e-ai-testing.md`)_
 
 - **Implementation Spec:**
   1. **Wizard Validation ("Test Sign-In"):**

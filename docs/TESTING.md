@@ -63,7 +63,7 @@ Notes:
 
 - Read-only: no `--staging`, so nothing is sent from forms. No `QA_AI_API_KEY` is needed; the Plan is the fixed-rule Plan.
 - Exit code 0 with `--fail-on none` whatever the verdict; 2 means the Check-up could not run.
-- Output goes to `.tmp-self-checkup` (ignored by git): `report.html`, `report.md`, `findings.json`. Copy the verdict and findings into `docs/research/self-checkup-landing.md`.
+- Output goes to `.tmp-self-checkup` (ignored by git): `report.html`, `report.md`, `findings.json`. Paste the verdict and the landing findings into the pull request or a ticket.
 - The crawl also reaches the app's own routes, which are noindex by design. Treat only findings on `/` and `/sample-report.html` as landing findings.
 - Speed numbers are lab measurements on localhost; see `docs/research/lab-lcp-noise.md` before filing a performance finding.
 - If port 3001 is busy, set `RUNNER_PORT` and change the URL.
