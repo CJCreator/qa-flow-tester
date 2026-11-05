@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { AuditSettingsReply, AuditSettingsUpdate, CompanyDetails } from '@qa/types/src/browser.js';
 import { ErrorMessage, FocusHeading, Spinner } from '../../../components/text';
 import { Link, PATHS } from '../../../lib/router';
@@ -299,13 +299,15 @@ export function DocumentSettingsView({
 export interface DocumentSettingsScreenProps {
   /** For tests: the requests. */
   fetchImpl?: Fetch;
+  /** More settings shown below, inside the same page column (the AI models panel). */
+  children?: ReactNode;
 }
 
 type Loaded =
   { status: 'loading' } | { status: 'failed'; message: string } | { status: 'loaded'; reply: AuditSettingsReply };
 
 /** Edit the Proposal template, the opt-out text and the company details (REQ-027, REQ-019, REQ-018). */
-export function DocumentSettingsScreen({ fetchImpl }: DocumentSettingsScreenProps) {
+export function DocumentSettingsScreen({ fetchImpl, children }: DocumentSettingsScreenProps) {
   useDocumentTitle('Website Audit settings');
   const [loaded, setLoaded] = useState<Loaded>({ status: 'loading' });
   const [draft, setDraft] = useState<SettingsDraft | null>(null);
@@ -389,6 +391,7 @@ export function DocumentSettingsScreen({ fetchImpl }: DocumentSettingsScreenProp
           onReset={(update) => void save(update, true)}
         />
       )}
+      {children && <div className="mt-14">{children}</div>}
     </div>
   );
 }

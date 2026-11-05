@@ -327,6 +327,16 @@ describe('Website Audit settings (T-75)', () => {
     expect((view().match(/<h1/g) ?? []).length).toBe(0);
   });
 
+  it('shows more settings (the AI models panel) inside its own page column', () => {
+    const screen = renderToStaticMarkup(
+      createElement(DocumentSettingsScreen, { fetchImpl: fakeFetch().impl }, createElement('section', { id: 'more' }))
+    );
+    const column = screen.indexOf('<div class="mx-auto max-w-4xl');
+    expect(column).toBe(0);
+    expect(screen.indexOf('<section id="more">')).toBeGreaterThan(column);
+    expect(screen.endsWith('<section id="more"></section></div></div>')).toBe(true);
+  });
+
   it('says whether a PageSpeed key is saved and never renders one back', () => {
     const saved = view({ reply: settingsReply({ pagespeedKeySaved: true }) });
     expect(textOf(saved)).toContain('A PageSpeed key is saved.');

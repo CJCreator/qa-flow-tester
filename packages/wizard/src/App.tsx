@@ -910,10 +910,9 @@ export default function App() {
         break;
       case 'audit-settings':
         body = (
-          <>
-            <DocumentSettingsScreen />
+          <DocumentSettingsScreen>
             <AuditAiModelsPanel />
-          </>
+          </DocumentSettingsScreen>
         );
         break;
       case 'audit-shortlist':
