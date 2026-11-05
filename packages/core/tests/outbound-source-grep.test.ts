@@ -32,6 +32,11 @@ const EXCEPTIONS: Array<{ file: string; rule: string; reason: string }> = [
     reason: 'AI provider endpoint, fixed address',
   },
   {
+    file: 'packages/core/src/ai/gemini-models.ts',
+    rule: 'node fetch',
+    reason: 'AI provider endpoint (Gemini model list and one-line probe), fixed address',
+  },
+  {
     file: 'packages/core/src/ai/providers/openai.ts',
     rule: 'node fetch',
     reason: 'AI provider endpoint, fixed address',

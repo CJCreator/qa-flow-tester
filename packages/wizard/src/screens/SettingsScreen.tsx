@@ -6,6 +6,7 @@ import {
   getAiSetup,
   getAiUsage,
   getDefaults,
+  getGeminiModels,
   getStoredReleaseGates,
   listFreeModels,
   listSchedules,
@@ -23,11 +24,13 @@ import {
   type AiSetup,
   type CheckupSchedule,
   type FreeModel,
+  type GeminiModelList,
   type RememberedSite,
   type ScreenSize,
 } from '../api';
 import { DEFAULT_RELEASE_GATES, type ReleaseGateCriteria } from '@qa/types';
 import { useConfirm } from '../components/ConfirmDialog';
+import { GeminiModelSelect } from '../components/GeminiModelSelect';
 import { KeyField } from '../components/KeyField';
 import { ErrorMessage, Notice, Spinner } from '../components/text';
 import { Badge, Disclosure, EmptyState, LoadError, Page, PageHeader, Section } from '../components/ui';
@@ -119,6 +122,7 @@ export function SettingsScreen({ onKeySaved }: { onKeySaved: (model: string) => 
   const [error, setError] = useState<string | null>(null);
   const [replacing, setReplacing] = useState(false);
   const [keySaved, setKeySaved] = useState<Result>(null);
+  const [keyNote, setKeyNote] = useState<string | null>(null);
 
   const load = useCallback(() => {
     getAiSetup()
@@ -259,10 +263,18 @@ export function SettingsScreen({ onKeySaved }: { onKeySaved: (model: string) => 
                     onSaved={(next) => {
                       setChoosing(null);
                       setKeySaved({ ok: true, text: 'Saved. Check-ups now use it.' });
+                      setKeyNote(next.modelNote ?? null);
                       if (next.configured && next.model) onKeySaved(next.model);
                       load();
                     }}
                   />
+                )}
+                {keyNote && !choosing && (
+                  <div className="mt-4">
+                    <Notice tone="warn" title="No model was picked">
+                      {keyNote}
+                    </Notice>
+                  </div>
                 )}
 
                 {!choosing && setup.configured && <ModelChoice setup={setup} onSaved={load} />}
@@ -427,6 +439,10 @@ function ModelChoice({ setup, onSaved }: { setup: AiSetup; onSaved: () => void }
   const openRouter = (setup.provider ?? 'openrouter') === 'openrouter';
   const [models, setModels] = useState<FreeModel[] | null>(null);
   const [listError, setListError] = useState<string | null>(null);
+  const gemini = setup.provider === 'gemini';
+  const [geminiList, setGeminiList] = useState<GeminiModelList | null>(null);
+  const [geminiError, setGeminiError] = useState<string | null>(null);
+  const [modelNote, setModelNote] = useState<string | null>(null);
   const [text, setText] = useState<string>(setup.chosenBy === 'person' ? (setup.model ?? '') : '');
   const [vision, setVision] = useState<string>(setup.chosenBy === 'person' ? (setup.visionModel ?? '') : '');
   const [saving, setSaving] = useState(false);
@@ -448,16 +464,32 @@ function ModelChoice({ setup, onSaved }: { setup: AiSetup; onSaved: () => void }
     loadModels();
   }, [openRouter, setup.configured, loadModels]);
 
+  const loadGemini = useCallback(() => {
+    setGeminiError(null);
+    getGeminiModels()
+      .then(setGeminiList)
+      .catch((err) =>
+        setGeminiError(err instanceof RunnerError ? err.message : 'The Gemini models couldn’t be listed.')
+      );
+  }, []);
+  useEffect(() => {
+    if (!gemini || !setup.configured) return;
+    loadGemini();
+  }, [gemini, setup.configured, loadGemini]);
+
   const save = async () => {
     setSaving(true);
     setResult(null);
+    setModelNote(null);
     try {
-      await saveAiSettings({
+      const saved = await saveAiSettings({
         provider: setup.provider ?? 'openrouter',
         model: text || null,
         visionModel: vision || null,
       });
+      setModelNote(saved.modelNote ?? null);
       setResult({ ok: true, text: 'Saved' });
+      if (gemini) loadGemini();
       onSaved();
     } catch (err) {
       setResult({ ok: false, text: err instanceof RunnerError ? err.message : 'The model couldn’t be saved.' });
@@ -524,6 +556,16 @@ function ModelChoice({ setup, onSaved }: { setup: AiSetup; onSaved: () => void }
               ))}
           </select>
         </>
+      ) : gemini ? (
+        <GeminiModelSelect
+          list={geminiList}
+          value={text}
+          onChange={setText}
+          savedModel={setup.model}
+          note={modelNote}
+          error={geminiError}
+          onRetry={loadGemini}
+        />
       ) : (
         <>
           <label htmlFor="text-model" className="label">

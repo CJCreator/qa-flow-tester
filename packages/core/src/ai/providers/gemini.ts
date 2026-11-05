@@ -1,5 +1,6 @@
 import type { AIProvider } from '../ai-provider.js';
 import { DEFAULT_MODELS } from '../default-models.js';
+import { geminiModelMissing, workingGeminiModel } from '../gemini-models.js';
 import { requestError, requestSignal } from '../timeout.js';
 import type { AICompletion, AIMessage, AICompletionOptions, AIProviderType } from '@qa/types';
 
@@ -10,23 +11,43 @@ interface AdcAuth {
 
 let cachedAdc: { auth: AdcAuth; expiresAt: number } | null = null;
 
+/** Where gcloud keeps Application Default Credentials, or GOOGLE_APPLICATION_CREDENTIALS when set. */
+async function adcCredentialsPath(): Promise<string> {
+  const path = await import('path');
+  const os = await import('os');
+  return (
+    process.env.GOOGLE_APPLICATION_CREDENTIALS ||
+    (process.platform === 'win32'
+      ? path.join(
+          process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'),
+          'gcloud',
+          'application_default_credentials.json'
+        )
+      : path.join(os.homedir(), '.config', 'gcloud', 'application_default_credentials.json'))
+  );
+}
+
+/**
+ * Whether this computer has Google sign-in for Gemini (Application Default Credentials, from
+ * `gcloud auth application-default login`). Only the file's presence is checked; nothing is read or sent.
+ */
+export async function hasGoogleAdc(): Promise<boolean> {
+  try {
+    const fs = await import('fs/promises');
+    await fs.access(await adcCredentialsPath());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function resolveAdcToken(signal?: AbortSignal): Promise<AdcAuth | null> {
   if (cachedAdc && Date.now() < cachedAdc.expiresAt) {
     return cachedAdc.auth;
   }
   try {
     const fs = await import('fs/promises');
-    const path = await import('path');
-    const os = await import('os');
-    const credPath =
-      process.env.GOOGLE_APPLICATION_CREDENTIALS ||
-      (process.platform === 'win32'
-        ? path.join(
-            process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'),
-            'gcloud',
-            'application_default_credentials.json'
-          )
-        : path.join(os.homedir(), '.config', 'gcloud', 'application_default_credentials.json'));
+    const credPath = await adcCredentialsPath();
 
     const raw = await fs.readFile(credPath, 'utf8');
     const creds = JSON.parse(raw);
@@ -59,6 +80,55 @@ async function resolveAdcToken(signal?: AbortSignal): Promise<AdcAuth | null> {
   return null;
 }
 
+/**
+ * The Vertex AI model for a requested one. AI Studio's moving aliases (`gemini-flash-latest`, `gemini-pro-latest`
+ * and the like) do not exist on Vertex AI, where they answer 404; they become the default model.
+ */
+export function vertexModelFor(model: string): string {
+  return /-latest$/i.test(model) ? DEFAULT_MODELS.gemini : model;
+}
+
+/**
+ * Whether an AI Studio answer means "this key cannot be used now", so Google sign-in (ADC, Vertex AI) is
+ * tried instead: a rejected or expired key (400 API_KEY_INVALID, 401, 403), used-up prepaid credit (402) or
+ * an exhausted quota (429).
+ */
+export function aiStudioKeyUnusable(status: number, body: string): boolean {
+  if (status === 401 || status === 402 || status === 403 || status === 429) return true;
+  return status === 400 && /API_KEY_INVALID|API key (not valid|expired)/i.test(body);
+}
+
+function vertexEndpoint(project: string, model: string): string {
+  return `https://aiplatform.googleapis.com/v1/projects/${project}/locations/global/publishers/google/models/${model}:generateContent`;
+}
+
+/** One Vertex AI call; a 404 for a model other than the default is tried once more with the default. */
+async function postVertex(
+  token: string,
+  project: string,
+  model: string,
+  body: string,
+  signal: AbortSignal
+): Promise<{ res: Response; model: string }> {
+  const headers = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+    'X-Goog-User-Project': project,
+  };
+  const first = vertexModelFor(model);
+  const res = await fetch(vertexEndpoint(project, first), { method: 'POST', headers, body, signal });
+  if (res.status === 404 && first !== DEFAULT_MODELS.gemini) {
+    const again = await fetch(vertexEndpoint(project, DEFAULT_MODELS.gemini), {
+      method: 'POST',
+      headers,
+      body,
+      signal,
+    });
+    return { res: again, model: DEFAULT_MODELS.gemini };
+  }
+  return { res, model: first };
+}
+
 export class GeminiProvider implements AIProvider {
   readonly providerType: AIProviderType = 'gemini';
   private apiKey: string;
@@ -87,24 +157,6 @@ export class GeminiProvider implements AIProvider {
   private async send(messages: AIMessage[], options: AICompletionOptions, signal: AbortSignal): Promise<AICompletion> {
     const model = options.model || this.defaultModel || DEFAULT_MODELS.gemini;
     const isAdc = this.apiKey === 'adc' || this.apiKey.startsWith('ya29.');
-    let endpoint: string;
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-
-    if (isAdc) {
-      const adc = await resolveAdcToken(signal);
-      if (!adc && !this.apiKey.startsWith('ya29.')) {
-        throw new Error(
-          'No Google Application Default Credentials found. Please authenticate via gcloud auth application-default login.'
-        );
-      }
-      const token = this.apiKey.startsWith('ya29.') ? this.apiKey : adc!.accessToken;
-      const proj = adc?.projectId || process.env.GOOGLE_CLOUD_PROJECT || 'qa-flow-tester-512310';
-      endpoint = `https://aiplatform.googleapis.com/v1/projects/${proj}/locations/global/publishers/google/models/${model}:generateContent`;
-      headers['Authorization'] = `Bearer ${token}`;
-      headers['X-Goog-User-Project'] = proj;
-    } else {
-      endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.apiKey}`;
-    }
 
     const contents = messages.map((m) => {
       const parts: any[] = [{ text: m.content }];
@@ -139,31 +191,56 @@ export class GeminiProvider implements AIProvider {
       body.generationConfig.responseMimeType = 'application/json';
     }
 
-    let res = await fetch(endpoint, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
-      signal,
-    });
+    const payload = JSON.stringify(body);
+    let res: Response;
+    let usedModel = model;
 
-    // Fall back to Vertex AI ADC if standard API key has exhausted its quota (HTTP 402/403)
-    if (!res.ok && (res.status === 402 || res.status === 403) && !isAdc) {
+    if (isAdc) {
+      // Google sign-in (ADC) or a bearer token: Vertex AI.
       const adc = await resolveAdcToken(signal);
-      if (adc) {
-        const fallbackEndpoint = `https://aiplatform.googleapis.com/v1/projects/${adc.projectId}/locations/global/publishers/google/models/${model}:generateContent`;
-        const fallbackHeaders = {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${adc.accessToken}`,
-          'X-Goog-User-Project': adc.projectId,
-        };
-        const fallbackRes = await fetch(fallbackEndpoint, {
+      if (!adc && !this.apiKey.startsWith('ya29.')) {
+        throw new Error(
+          'No Google Application Default Credentials found. Please authenticate via gcloud auth application-default login.'
+        );
+      }
+      const token = this.apiKey.startsWith('ya29.') ? this.apiKey : adc!.accessToken;
+      const proj = adc?.projectId || process.env.GOOGLE_CLOUD_PROJECT || 'qa-flow-tester-512310';
+      ({ res, model: usedModel } = await postVertex(token, proj, model, payload, signal));
+    } else {
+      const postStudio = (m: string) =>
+        fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${this.apiKey}`, {
           method: 'POST',
-          headers: fallbackHeaders,
-          body: JSON.stringify(body),
+          headers: { 'Content-Type': 'application/json' },
+          body: payload,
           signal,
         });
-        if (fallbackRes.ok) {
-          res = fallbackRes;
+      res = await postStudio(model);
+      if (!res.ok) {
+        let studioText = await res.text();
+        // The model is gone or never existed for this key (a retired name, a mistyped one): once, a model this
+        // key can use, chosen from the key's own model list and remembered.
+        if (geminiModelMissing(res.status, studioText)) {
+          const working = await workingGeminiModel(this.apiKey, { signal });
+          if (working && working !== model) {
+            res = await postStudio(working);
+            usedModel = working;
+            studioText = res.ok ? '' : await res.text();
+          }
+        }
+        if (!res.ok) {
+          // The key cannot be used now (rejected, expired, out of credit or quota): Google sign-in (ADC) on
+          // Vertex AI is tried when this computer has it. When that fails too, both answers are named.
+          const adc = aiStudioKeyUnusable(res.status, studioText) ? await resolveAdcToken(signal) : null;
+          if (!adc) throw new Error(`Gemini API error (${res.status}): ${studioText}`);
+          const vertex = await postVertex(adc.accessToken, adc.projectId, usedModel, payload, signal);
+          if (!vertex.res.ok) {
+            const vertexText = await vertex.res.text();
+            throw new Error(
+              `Gemini API error (${res.status}): ${studioText} | Vertex AI with Google sign-in (${vertex.res.status}): ${vertexText}`
+            );
+          }
+          res = vertex.res;
+          usedModel = vertex.model;
         }
       }
     }
@@ -179,7 +256,7 @@ export class GeminiProvider implements AIProvider {
     return {
       text: candidate?.content?.parts?.[0]?.text || '',
       finishReason: candidate?.finishReason === 'MAX_TOKENS' ? 'length' : candidate?.finishReason,
-      model,
+      model: usedModel,
       usage: usage
         ? {
             promptTokens: usage.promptTokenCount ?? 0,

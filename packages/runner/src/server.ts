@@ -87,6 +87,11 @@ import {
   unreliable,
   completeWith,
   DEFAULT_MODELS,
+  listGeminiModels,
+  rankGeminiModels,
+  pickGeminiModel,
+  explainGeminiListError,
+  type GeminiModelPick,
   type ModelRecord,
   PreFlightChecker,
   SignInFailedError,
@@ -2802,7 +2807,58 @@ export class RunnerServer {
     return resolved?.provider === provider ? resolved.source : undefined;
   }
 
+  /**
+   * A Gemini model the AI Studio key can use: its model list, ranked, each tried once until one answers.
+   * Null for Google sign-in (`adc` or a bearer token), which uses Vertex AI, not AI Studio. Settings waits for
+   * it, so it gives up after 20 s.
+   */
+  private async pickGemini(key: string): Promise<GeminiModelPick | null> {
+    if (key === 'adc' || key.startsWith('ya29.')) return null;
+    try {
+      return await pickGeminiModel(key, { signal: AbortSignal.timeout(20_000) });
+    } catch {
+      return {
+        ok: false,
+        reason: 'network',
+        detail: 'Google AI Studio took too long to answer. Try again in a minute.',
+        tried: [],
+      };
+    }
+  }
+
   private async handleAiSettings(route: string, req: http.IncomingMessage, res: http.ServerResponse): Promise<boolean> {
+    // GET gemini/models: the Gemini models the saved key can use, best first; the first is recommended.
+    if (route === 'gemini/models' && req.method === 'GET') {
+      const key = await this.storedKey('gemini');
+      if (!key) {
+        this.sendJson(res, 400, { error: 'Add a Google Gemini key first.' });
+        return true;
+      }
+      const settings = await this.readAiModels();
+      const isGemini = settings.provider === 'gemini';
+      const current = isGemini ? (settings.text ?? null) : null;
+      const chosenBy = isGemini && settings.chosenBy === 'person' ? 'person' : 'auto';
+      let ids: string[];
+      if (key === 'adc' || key.startsWith('ya29.')) {
+        // Google sign-in uses Vertex AI, which has no per-key list: the default model.
+        ids = [DEFAULT_MODELS.gemini];
+      } else {
+        try {
+          ids = rankGeminiModels(await listGeminiModels(key, { signal: AbortSignal.timeout(15_000) }));
+        } catch (err) {
+          const why = explainGeminiListError(err);
+          this.sendJson(res, why.reason === 'key-invalid' ? 400 : 502, { error: why.detail });
+          return true;
+        }
+      }
+      this.sendJson(res, 200, {
+        models: ids.map((id, i) => ({ id, recommended: i === 0 })),
+        current,
+        chosenBy,
+      });
+      return true;
+    }
+
     // GET settings: answered from this machine alone, so Settings shows at once.
     if (route === 'settings' && req.method === 'GET') {
       const setup = await this.aiSetup();
@@ -2849,6 +2905,20 @@ export class RunnerServer {
         return true;
       }
       const apiKey = body.apiKey?.trim();
+      // Gemini: a new key (or `model: null` with the saved one) is checked by picking a model it can use. That
+      // model is saved unless the person named one; a `-latest` alias counts as not naming one.
+      const latestAlias = (m: unknown) => typeof m === 'string' && /-latest$/i.test(m);
+      const geminiAuto =
+        provider === 'gemini' && (body.model === undefined || body.model === null || latestAlias(body.model));
+      let pick: GeminiModelPick | null = null;
+      if (provider === 'gemini') {
+        const geminiKey = apiKey || (body.model === null ? await this.storedKey('gemini') : undefined);
+        if (geminiKey) pick = await this.pickGemini(geminiKey);
+        if (pick && !pick.ok && pick.reason === 'key-invalid') {
+          this.sendJson(res, 400, { saved: false, reason: pick.detail, code: pick.reason });
+          return true;
+        }
+      }
       if (apiKey) {
         if (provider === 'openrouter') {
           const validation = await this.openRouter.validateKey(apiKey);
@@ -2864,12 +2934,24 @@ export class RunnerServer {
       const chosen = body.model !== undefined || body.visionModel !== undefined;
       // Beta: the model choice file is shared by every tester, so only the tester's own key is kept.
       if (!this.beta) {
-        await this.writeAiModels({
-          provider,
-          text: body.model !== undefined ? body.model : sameProvider ? current.text : null,
-          vision: body.visionModel !== undefined ? body.visionModel : sameProvider ? current.vision : null,
-          chosenBy: chosen ? 'person' : sameProvider ? current.chosenBy : undefined,
-        });
+        if (geminiAuto && (pick?.ok || body.model === null)) {
+          // Chosen automatically (no chosenBy); with no working model, the default is used.
+          const picked = pick?.ok ? pick.model : null;
+          const namedVision = typeof body.visionModel === 'string' && !latestAlias(body.visionModel);
+          await this.writeAiModels({
+            provider,
+            text: picked,
+            vision: namedVision ? body.visionModel : picked,
+            chosenBy: undefined,
+          });
+        } else {
+          await this.writeAiModels({
+            provider,
+            text: body.model !== undefined ? body.model : sameProvider ? current.text : null,
+            vision: body.visionModel !== undefined ? body.visionModel : sameProvider ? current.vision : null,
+            chosenBy: chosen ? 'person' : sameProvider ? current.chosenBy : undefined,
+          });
+        }
       }
       // Without a chosen model, OpenRouter's free models are picked automatically.
       const key = await this.storedKey(provider);
@@ -2883,6 +2965,8 @@ export class RunnerServer {
         configured: !!setup.key,
         model: setup.text ?? null,
         visionModel: setup.vision ?? null,
+        // The key is saved, but no model answered for it: why, for people.
+        ...(pick && !pick.ok ? { modelNote: pick.detail } : {}),
       });
       return true;
     }

@@ -32,7 +32,7 @@ import type {
 import { AUDIT_AREAS, DOCUMENT_LANGUAGE_INFO } from '@qa/types';
 import { stopIfAborted } from '../../abort.js';
 import { parseJsonAnswer } from '../../plan/ai-planner.js';
-import type { AreaGrades } from './assessment.js';
+import { logAiFailure, type AreaGrades } from './assessment.js';
 import { findClaimWords } from './claim-words.js';
 import type { AuditAi, AuditAiAnswer, AuditAiResolution } from './stage-ai.js';
 
@@ -256,6 +256,7 @@ async function askSafely(
     });
   } catch (err) {
     if (run.signal?.aborted) throw err;
+    logAiFailure(ai.provider, err);
     return { ok: false };
   }
 }

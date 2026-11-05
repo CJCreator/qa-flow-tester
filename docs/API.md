@@ -138,8 +138,27 @@ Decision: [ADR 0017](adr/0017-findings-contract.md). Schema: [`findings.schema.j
 
 ## AI settings (`handleAiSettings`, `handleOpenRouter`)
 
-Under `/api/ai/`: `settings` (GET/POST), `usage`, `test-model`, `validate`, `key` (GET/POST), and
+Under `/api/ai/`: `settings` (GET/POST), `usage`, `test-model`, `gemini/models`, `validate`, `key` (GET/POST), and
 `openrouter/free-models`. Keys are write-only from the UI's point of view: never log or return one in full.
+
+Google Gemini (AI Studio keys; the key `adc` means Google sign-in through Vertex AI and skips all of this):
+
+- `POST /api/ai/settings` with `provider: 'gemini'` and an `apiKey` checks the key by picking a model it can use
+  (`pickGeminiModel` in `@qa/core`: the key's model list, ranked with stable Flash and Flash-Lite first, newest first,
+  then one tiny `generateContent` per candidate, at most 4, until one answers). A key AI Studio rejects answers
+  `400 { saved: false, reason, code: 'key-invalid' }` (`reason` is a sentence for people) and is not saved. Otherwise the
+  key is saved; when the body names no model (`model` absent or `null`) or names a `-latest` alias, the picked model
+  is saved as the text and vision model, chosen automatically (`chosenBy` `auto`). The reply is the usual
+  `{ saved, provider, configured, model, visionModel }`, plus `modelNote` (a sentence) when no model answered: no
+  credit left, no usable model, or AI Studio not reachable. With no `apiKey` and `model: null`, the saved key is
+  picked for again the same way. Beta still saves no model choice.
+- `GET /api/ai/gemini/models`: `200 { models: [{ id, recommended }], current, chosenBy }`: the saved key's models,
+  ranked as above, the first `recommended` (listed only, not tried); `current` is the saved model or `null`, and
+  `chosenBy` is `'auto' | 'person'`. `400 { error }` when no Gemini key is saved or AI Studio rejects it, `502 { error }`
+  when AI Studio cannot be reached. For the key `adc`: the default model only, without calling AI Studio.
+- During a check-up, an AI Studio answer of 404 (or a 400 saying the model is not found or not supported) is retried
+  once with a model the key can use (`workingGeminiModel`, remembered per key for 30 minutes), and the answer names
+  that model.
 
 ## Adding or changing a route
 

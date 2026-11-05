@@ -13,6 +13,7 @@ import {
   applySettingsUpdate,
   emptyAuditSettings,
   generatePreview,
+  hasGoogleAdc,
   pageContentName,
   resolveAuditAi,
   resolveAuditSettings,
@@ -105,7 +106,14 @@ export function buildAuditRoutes(server: RunnerServer): Route[] {
 
   const readModels = () => modelsStore.read();
   const resolveAi = async () =>
-    resolveAuditAi({ setup: await wiring.readAiModels(), keys, models: await readModels() });
+    resolveAuditAi({
+      setup: await wiring.readAiModels(),
+      keys,
+      models: await readModels(),
+      // On the owner's own computer, Google sign-in (ADC) stands in when no key is saved or the saved key is
+      // refused (ADR 0042). The hosted copy never uses the machine's credentials.
+      ...(wiring.localRun ? { hasAdc: hasGoogleAdc } : {}),
+    });
   const resolveServiceKey: PageSpeedDeps['resolveServiceKey'] = (service) => keys.resolveServiceKey(service);
 
   const pagespeedKey: PagespeedKeyPort = {

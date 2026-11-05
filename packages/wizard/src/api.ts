@@ -112,6 +112,8 @@ export interface AiSetup {
    * system keychain could not be reached. Never the key itself.
    */
   keySource?: AiKeySource;
+  /** A plain sentence when no model could be picked, for example a key with no prepaid credit. */
+  modelNote?: string;
 }
 
 /**
@@ -146,6 +148,22 @@ export async function saveAiSettings(settings: {
   );
   if (!res.ok) throw new RunnerError(body.reason || body.error || 'The settings couldn’t be saved. Try again.');
   return { ...body, model: body.model ?? null };
+}
+
+export interface GeminiModelList {
+  models: Array<{ id: string; recommended: boolean }>;
+  current: string | null;
+  chosenBy: 'auto' | 'person';
+}
+
+/** The Gemini models the saved key can use. Fails when no Gemini key is saved or the key is invalid. */
+export async function getGeminiModels(): Promise<GeminiModelList> {
+  const res = await call('/api/ai/gemini/models', {}, 20000);
+  if (!res.ok) {
+    const body = await json<{ error?: string }>(res).catch(() => ({ error: undefined }));
+    throw new RunnerError(body.error || 'The Gemini models couldn’t be listed. Try again.');
+  }
+  return json<GeminiModelList>(res);
 }
 
 export interface FreeModel {

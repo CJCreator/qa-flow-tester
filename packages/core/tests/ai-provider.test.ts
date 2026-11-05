@@ -82,6 +82,45 @@ describe('AIProvider and KeyResolver', () => {
     expect(oai.providerType).toBe('openai');
   });
 
+  it('asks once more with low reasoning when an OpenRouter model cannot turn reasoning off', async () => {
+    const realFetch = globalThis.fetch;
+    const bodies: any[] = [];
+    globalThis.fetch = (async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body));
+      bodies.push(body);
+      if (body.reasoning?.enabled === false) {
+        return new Response(
+          JSON.stringify({ error: { message: 'Reasoning is mandatory for this endpoint and cannot be disabled.' } }),
+          { status: 400 }
+        );
+      }
+      return new Response(
+        JSON.stringify({ choices: [{ finish_reason: 'stop', message: { content: '{"ok":true}' } }] }),
+        {
+          status: 200,
+        }
+      );
+    }) as typeof fetch;
+    try {
+      const openRouter = createAIProvider('openrouter', 'test-key', undefined, 'openrouter/free');
+      await expect(openRouter.generateText([{ role: 'user', content: 'x' }], { responseFormat: 'json' })).resolves.toBe(
+        '{"ok":true}'
+      );
+      expect(bodies.map((b) => b.reasoning)).toEqual([{ enabled: false }, { effort: 'low', exclude: true }]);
+
+      // Any other 400 is not retried.
+      globalThis.fetch = (async (_url: string, init: RequestInit) => {
+        bodies.push(JSON.parse(String(init.body)));
+        return new Response('{"error":{"message":"Bad request"}}', { status: 400 });
+      }) as typeof fetch;
+      bodies.length = 0;
+      await expect(openRouter.generateText([{ role: 'user', content: 'x' }])).rejects.toThrow(/\(400\)/);
+      expect(bodies).toHaveLength(1);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
   it('asks OpenRouter models to answer without thinking first, and says when an answer was cut off', async () => {
     const realFetch = globalThis.fetch;
     const bodies: any[] = [];

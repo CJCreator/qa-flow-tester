@@ -254,6 +254,96 @@ describe('HostPacer', () => {
   });
 });
 
+describe('HostPacer with maxInFlight (ADR 0043)', () => {
+  it('runs up to maxInFlight tasks of one host at once, their starts a gap apart', async () => {
+    const clock = fakeClock();
+    const pacer = new HostPacer({ minGapMs: 500, maxInFlight: 3, now: clock.now, sleep: clock.sleep });
+    const log: string[] = [];
+    const tasks = ['a', 'b', 'c', 'd'].map((n) => controlled(log, n, clock));
+    const runs = tasks.map((t) => pacer.run('shop.example', t.task));
+
+    await clock.flush();
+    expect(log).toEqual(['start a']);
+    await clock.advance(500);
+    expect(log).toEqual(['start a', 'start b']);
+    await clock.advance(500);
+    expect(log).toEqual(['start a', 'start b', 'start c']);
+    // A fourth waits for a free slot, however long it waits.
+    await clock.advance(5_000);
+    expect(log).toEqual(['start a', 'start b', 'start c']);
+
+    tasks[0].finish();
+    await runs[0];
+    await clock.flush();
+    expect(log).toEqual(['start a', 'start b', 'start c', 'end a', 'start d']);
+    for (const t of tasks.slice(1)) t.finish();
+    await Promise.all(runs);
+  });
+
+  it('a robots Crawl-delay keeps the host at one at a time', () => {
+    expect(new HostPacer({ maxInFlight: 3, crawlDelayMs: 2000 }).maxInFlight).toBe(1);
+    expect(new HostPacer({ maxInFlight: 3, crawlDelayMs: 0 }).maxInFlight).toBe(3);
+    expect(new HostPacer().maxInFlight).toBe(1);
+  });
+
+  it('slowDown: one at a time from then on, Retry-After waited out, capped at 60 s', async () => {
+    const clock = fakeClock();
+    const pacer = new HostPacer({ minGapMs: 500, maxInFlight: 3, now: clock.now, sleep: clock.sleep });
+    const log: string[] = [];
+    const a = controlled(log, 'a', clock);
+    const pa = pacer.run('shop.example', a.task);
+    await clock.flush();
+
+    pacer.slowDown('Shop.Example', 120_000);
+    expect(pacer.inFlightLimit('shop.example')).toBe(1);
+    const b = controlled(log, 'b', clock);
+    const pb = pacer.run('shop.example', b.task);
+    await clock.advance(1_000);
+    expect(log).toEqual(['start a']);
+
+    a.finish();
+    await pa;
+    // Retry-After 120 s is capped at 60 s from the slowDown.
+    await clock.advance(58_000);
+    expect(log).toEqual(['start a', 'end a']);
+    await clock.advance(1_000);
+    expect(log).toEqual(['start a', 'end a', 'start b']);
+    b.finish();
+    await pb;
+  });
+
+  it('a second slowDown doubles the gap, up to 10 s', async () => {
+    const clock = fakeClock();
+    const pacer = new HostPacer({ minGapMs: 4_000, maxInFlight: 3, now: clock.now, sleep: clock.sleep });
+    pacer.slowDown('shop.example');
+    pacer.slowDown('shop.example');
+    const log: string[] = [];
+    const a = controlled(log, 'a', clock);
+    const b = controlled(log, 'b', clock);
+    const pa = pacer.run('shop.example', a.task);
+    const pb = pacer.run('shop.example', b.task);
+    await clock.flush();
+    a.finish();
+    await pa;
+    await clock.advance(7_999);
+    expect(log).toEqual(['start a', 'end a']);
+    await clock.advance(1);
+    expect(log).toEqual(['start a', 'end a', 'start b']);
+    b.finish();
+    await pb;
+
+    pacer.slowDown('shop.example');
+    const c = controlled(log, 'c', clock);
+    const pc = pacer.run('shop.example', c.task);
+    await clock.advance(9_999);
+    expect(log).not.toContain('start c');
+    await clock.advance(1);
+    expect(log).toContain('start c');
+    c.finish();
+    await pc;
+  });
+});
+
 describe('makeOutboundFetch with a pacer', () => {
   /** A fake network that counts requests in flight per host. */
   function countingNet() {

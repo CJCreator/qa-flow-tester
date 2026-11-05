@@ -3,7 +3,8 @@
  * Drives the Deterministic Spider in Safe Interaction Mode: links and sitemap.xml only (no exploring clicks,
  * no form actions followed), no Roles, no credentials, no sign-in again. The browser context lets through
  * public addresses only (`makeRequestGuard`) and aborts every changing request (`blockChanges`). robots.txt
- * is honoured and one request at a time goes to the host, Crawl-delay apart (ADR 0015).
+ * is honoured. Up to 3 pages load at once, starts 500 ms apart (ADR 0043); a robots Crawl-delay, or a host
+ * that answers 429 or 503, brings it back to one at a time (ADR 0015).
  * Pages outside the limits, checkout paths and payment or sign-in pages are Skipped Pages: never opened
  * (limits, checkout paths) or opened and left untouched (card fields, provider frames, sign-in forms).
  * The start host (and its www twin) is resolved once, public only, before any request, and the audit's own
@@ -47,6 +48,11 @@ export const AUDIT_PAGE_TIMEOUT_MS = 30_000;
  * the Spider's 10 minutes. QA_CRAWL_MAX_MINUTES still overrides it.
  */
 export const AUDIT_MAX_CRAWL_MS = 60 * 60 * 1000;
+/**
+ * Pages of one site loaded at once (ADR 0043), each with its own browser page; their starts stay
+ * AUDIT_MIN_GAP_MS apart. One at a time when robots.txt sets a Crawl-delay or the site says it is busy.
+ */
+export const AUDIT_FETCH_IN_FLIGHT = 3;
 /** robots.txt and sitemap fetches: same limit as a page load. */
 const SITE_FILE_TIMEOUT_MS = 10_000;
 const SITE_FILE_REDIRECTS = 5;
@@ -260,7 +266,11 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
     })
   );
   // One pacer per Website Audit: page loads, robots.txt and sitemaps take turns on the host.
-  const pacer = new HostPacer({ minGapMs: AUDIT_MIN_GAP_MS, crawlDelayMs: robots.crawlDelayMs });
+  const pacer = new HostPacer({
+    minGapMs: AUDIT_MIN_GAP_MS,
+    crawlDelayMs: robots.crawlDelayMs,
+    maxInFlight: AUDIT_FETCH_IN_FLIGHT,
+  });
   const siteFetch = makeCheckerFetch({
     allowPrivate,
     maxRedirects: SITE_FILE_REDIRECTS,
@@ -322,6 +332,9 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
     const result = await spider.crawl(context, request.url, {
       maxDepth: request.limits.maxDepth,
       pageTimeoutMs: AUDIT_PAGE_TIMEOUT_MS,
+      // One worker per page the pacer lets through at once, so all of them are used (ADR 0043).
+      concurrency: pacer.maxInFlight,
+      retryBusyHost: true,
       ...(process.env.QA_CRAWL_MAX_MINUTES ? {} : { maxDurationMs: AUDIT_MAX_CRAWL_MS }),
       exploreClicks: false,
       followFormActions: false,

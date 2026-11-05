@@ -51,6 +51,26 @@ export interface ResolveAuditAiDeps {
   budget?: AuditAiRequestBudget;
   /** Seam for tests; defaults to createAIProvider. */
   createProvider?: (type: AIProviderType, apiKey: string) => AIProvider;
+  /**
+   * Whether this computer has Google sign-in for Gemini (ADC); the runner passes `hasGoogleAdc`. When set, no
+   * key at all, or a key the provider refuses, falls back to Gemini through Vertex AI (ADR 0042). Unset: no
+   * fallback.
+   */
+  hasAdc?: () => Promise<boolean>;
+}
+
+/**
+ * The provider refused the key itself: rejected, expired, no permission or no credit (401, 402, 403). Not a
+ * timeout, a 429 rate limit or a bad answer, which another key would not fix.
+ */
+export function isKeyRefused(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err ?? '');
+  return (
+    /\((401|402|403)\)/.test(message) ||
+    /api key (expired|invalid|not valid)|credits? (are )?depleted|insufficient (credits|balance|quota)|billing/i.test(
+      message
+    )
+  );
 }
 
 export interface AuditAiAskOptions {
@@ -81,37 +101,97 @@ export interface AuditAi {
 export type AuditAiResolution = { ok: true; ai: AuditAi } | { ok: false; reason: 'no-ai-key' };
 
 export async function resolveAuditAi(deps: ResolveAuditAiDeps): Promise<AuditAiResolution> {
+  const create = deps.createProvider ?? createAIProvider;
+  const hasAdc = deps.hasAdc;
   const key = await deps.keys.resolveKey(deps.setup.provider);
-  if (!key || !key.apiKey) return { ok: false, reason: 'no-ai-key' };
+  // No saved key anywhere, but this computer has Google sign-in: Gemini through Vertex AI (ADR 0042).
+  if (!key || !key.apiKey) {
+    if (!hasAdc || !(await hasAdc())) return { ok: false, reason: 'no-ai-key' };
+    return { ok: true, ai: auditAiOn(deps, create('gemini', 'adc'), 'gemini', true) };
+  }
+  return { ok: true, ai: auditAiOn(deps, create(key.provider, key.apiKey), key.provider, false, hasAdc) };
+}
 
-  const providerType = key.provider;
-  const provider = (deps.createProvider ?? createAIProvider)(providerType, key.apiKey);
-  // Saved model ids belong to the saved provider: a key found for another provider uses its own defaults.
-  const sameProvider = !deps.setup.provider || deps.setup.provider === providerType;
-  const models = sameProvider ? deps.models : undefined;
-  const defaults = sameProvider ? { text: deps.setup.text, vision: deps.setup.vision } : {};
+/**
+ * The audit's AI on one provider. When that provider refuses its key (expired, rejected, out of credit) and
+ * this computer has Google sign-in, the request is made again on Gemini through Vertex AI, and the rest of the
+ * audit stays there. Gemini itself is not switched: it already tries Google sign-in when its key is refused.
+ */
+function auditAiOn(
+  deps: ResolveAuditAiDeps,
+  first: AIProvider,
+  firstType: AIProviderType,
+  onAdc: boolean,
+  hasAdc?: () => Promise<boolean>
+): AuditAi {
+  const create = deps.createProvider ?? createAIProvider;
+  let provider = first;
+  let providerType = firstType;
+  let switched = onAdc;
+  // Requests run in parallel (ADR 0043): the switch is made once, and every request that was sent on the old
+  // provider before it waits for the same decision.
+  let switching: Promise<boolean> | null = null;
+  const switchToAdc = (): Promise<boolean> => {
+    switching ??= (async () => {
+      if (!hasAdc || !(await hasAdc())) return false;
+      provider = create('gemini', 'adc');
+      providerType = 'gemini';
+      switched = true;
+      return true;
+    })();
+    return switching;
+  };
+
+  /** Saved model ids belong to the saved provider: another provider, or Google sign-in, uses its own defaults. */
+  const savedFor = (type: AIProviderType, adc: boolean) => {
+    const same = !adc && (!deps.setup.provider || deps.setup.provider === type);
+    return {
+      models: same ? deps.models : undefined,
+      defaults: same ? { text: deps.setup.text, vision: deps.setup.vision } : {},
+    };
+  };
+
+  const send = async (stage: AuditAiStage, messages: AIMessage[], options: AuditAiAskOptions) => {
+    const { models, defaults } = savedFor(providerType, switched);
+    const model = modelForStage(stage, models, defaults);
+    const request: AICompletionOptions = {
+      temperature: options.temperature,
+      maxTokens: options.maxTokens,
+      responseFormat: options.responseFormat,
+      reasoning: options.reasoning,
+      model: model ?? undefined,
+      stage,
+      signal: options.signal,
+      timeoutMs: options.timeoutMs,
+    };
+    const completion = await completeWith(provider, messages, request);
+    return { completion, model };
+  };
 
   return {
-    ok: true,
-    ai: {
-      provider: providerType,
-      async ask(stage, messages, options = {}) {
-        stopIfAborted(options.signal);
-        if (deps.budget && !deps.budget.take()) return { ok: false, reason: 'budget-spent' };
-        const model = modelForStage(stage, models, defaults);
-        const request: AICompletionOptions = {
-          temperature: options.temperature,
-          maxTokens: options.maxTokens,
-          responseFormat: options.responseFormat,
-          reasoning: options.reasoning,
-          model: model ?? undefined,
-          stage,
-          signal: options.signal,
-          timeoutMs: options.timeoutMs,
-        };
-        const completion = await completeWith(provider, messages, request);
+    get provider() {
+      return providerType;
+    },
+    async ask(stage, messages, options = {}) {
+      stopIfAborted(options.signal);
+      if (deps.budget && !deps.budget.take()) return { ok: false, reason: 'budget-spent' };
+      const sentWith = provider;
+      const sentAs = providerType;
+      try {
+        const { completion, model } = await send(stage, messages, options);
         return { ok: true, completion, model, claimWords: findClaimWords(completion.text) };
-      },
+      } catch (err) {
+        // Sent on the old provider while another request switched to Google sign-in: try the one in use now.
+        // Otherwise switch only for a refused key, on a provider other than Gemini.
+        const movedOn = provider !== sentWith;
+        if (!movedOn) {
+          const canSwitch = sentAs !== 'gemini' && hasAdc !== undefined && isKeyRefused(err);
+          if (!canSwitch || !(await switchToAdc())) throw err;
+        }
+        stopIfAborted(options.signal);
+        const { completion, model } = await send(stage, messages, options);
+        return { ok: true, completion, model, claimWords: findClaimWords(completion.text) };
+      }
     },
   };
 }

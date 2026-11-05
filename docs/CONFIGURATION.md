@@ -82,7 +82,15 @@ Bring your own key. Supported providers: OpenRouter (default in CI), Gemini, Ope
 | `OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` | Provider keys read from the environment |
 | `TEST_MOCK_AI`                                                                | Use the mock provider (tests)           |
 
-Gemini can also authenticate with Google Application Default Credentials. `GOOGLE_APPLICATION_CREDENTIALS` gives the path to the credentials file. `GOOGLE_CLOUD_PROJECT` or `GCP_PROJECT` gives the project ID. `APPDATA` is set by Windows and locates the default gcloud folder.
+Gemini can also authenticate with Google Application Default Credentials (ADC, from `gcloud auth application-default login`). `GOOGLE_APPLICATION_CREDENTIALS` gives the path to the credentials file. `GOOGLE_CLOUD_PROJECT` or `GCP_PROJECT` gives the project ID when the file has no `quota_project_id`. `APPDATA` is set by Windows and locates the default gcloud folder.
+
+How ADC is used:
+
+- **Save it as the key.** Saving `adc` as the Gemini key in Settings sends every Gemini request to Vertex AI with ADC.
+- **Gemini's own fallback.** When a Gemini AI Studio key cannot be used (rejected, expired, out of prepaid credit, or over quota: 400 `API_KEY_INVALID`, 401, 402, 403, 429), Gemini retries on Vertex AI with ADC. AI Studio aliases such as `gemini-flash-latest` do not exist on Vertex AI, so they are sent as the default Gemini model.
+- **The Website Audit's fallback, on a runner bound to this computer only.** When no key is saved, or another provider refuses its key (401, 402, 403), the audit uses Gemini through ADC for the rest of that audit. The hosted copy never uses the machine's credentials.
+
+Each failed AI request writes one line to the runner's console, with keys and tokens removed: `[Website Audit] AI request failed (<provider>): <reason>`.
 
 | Variable          | Default                                  | Meaning                                                                                                                                                                          |
 | ----------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -9,6 +9,7 @@ import { findClaimWords } from '../src/audit/ai/claim-words.js';
 import {
   assessPages,
   assessSite,
+  logAiFailure,
   type AreaGrades,
   type AssessmentPageInput,
   type AssessPagesInput,
@@ -300,13 +301,16 @@ describe('assessPages and assessSite', () => {
     });
 
     it('an unparsable answer gets one repair; still unparsable is ai-failed', async () => {
-      const fake = scripted(['not json at all', answer([]), 'still not json', '{"nope":1}']);
-      const { resolution } = await aiWith(fake.provider);
-      const [fixed, broken] = await assessPages(pagesInput([page('/a', []), page('/b', [])]), resolution);
-
+      // One page at a time so the scripted answers line up with the repair sequence.
+      const fixedRun = scripted(['not json at all', answer([])]);
+      const [fixed] = await assessPages(pagesInput([page('/a', [])]), (await aiWith(fixedRun.provider)).resolution);
       for (const a of fixed.areas) expect(a.status).toBe('done');
+      expect(fixedRun.requests).toHaveLength(2);
+
+      const brokenRun = scripted(['still not json', '{"nope":1}']);
+      const [broken] = await assessPages(pagesInput([page('/b', [])]), (await aiWith(brokenRun.provider)).resolution);
       for (const a of broken.areas) expect(a).toMatchObject({ status: 'not-done', reason: 'ai-failed' });
-      expect(fake.requests).toHaveLength(4);
+      expect(brokenRun.requests).toHaveLength(2);
     });
 
     it('a missing area gets one repair; still missing is ai-failed', async () => {
@@ -335,12 +339,83 @@ describe('assessPages and assessSite', () => {
     });
   });
 
-  it('assesses pages one request at a time', async () => {
+  it('assesses at most 4 pages at a time and keeps the input order', async () => {
+    const fake = scripted(Array.from({ length: 10 }, () => answer([])));
+    const { resolution } = await aiWith(fake.provider);
+    const paths = Array.from({ length: 10 }, (_, i) => `/p${i}`);
+    const results = await assessPages(pagesInput(paths.map((p) => page(p, []))), resolution);
+    expect(fake.requests).toHaveLength(10);
+    expect(fake.maxInFlight()).toBe(4);
+    expect(results.map((r) => r.urlPath)).toEqual(paths);
+  });
+
+  it('fewer pages than the pool: all run together, order kept', async () => {
     const fake = scripted([answer([]), answer([]), answer([])]);
     const { resolution } = await aiWith(fake.provider);
-    await assessPages(pagesInput([page('/a', []), page('/b', []), page('/c', [])]), resolution);
-    expect(fake.requests).toHaveLength(3);
-    expect(fake.maxInFlight()).toBe(1);
+    const results = await assessPages(pagesInput([page('/a', []), page('/b', []), page('/c', [])]), resolution);
+    expect(fake.maxInFlight()).toBe(3);
+    expect(results.map((r) => r.urlPath)).toEqual(['/a', '/b', '/c']);
+  });
+
+  describe('logAiFailure', () => {
+    function logged(err: unknown): string {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      try {
+        logAiFailure('gemini', err);
+        expect(warn).toHaveBeenCalledTimes(1);
+        return String(warn.mock.calls[0][0]);
+      } finally {
+        warn.mockRestore();
+      }
+    }
+
+    it('writes one line with the provider and the message', () => {
+      expect(logged(new Error('upstream 500'))).toBe('[Website Audit] AI request failed (gemini): upstream 500');
+    });
+
+    it('hides a ?key= value in a URL', () => {
+      const line = logged(new Error('Request to https://x.test/v1?key=AIzaSyABCDEFGHIJKLMNOP&alt=json failed (400)'));
+      expect(line).toContain('key=[hidden]');
+      expect(line).toContain('&alt=json');
+      expect(line).not.toContain('AIzaSy');
+    });
+
+    it('hides a Bearer token', () => {
+      const line = logged(new Error('Bearer ya29.a0AbCdEfGhIjKlMnOp rejected'));
+      expect(line).toContain('Bearer [hidden]');
+      expect(line).not.toContain('ya29');
+    });
+
+    it('hides an sk- key', () => {
+      const line = logged(new Error('Invalid key sk-or-v1-0123456789abcdef given'));
+      expect(line).toContain('[hidden]');
+      expect(line).not.toContain('sk-or');
+      expect(line).not.toContain('0123456789');
+    });
+
+    it('collapses whitespace and caps the message at 300 characters', () => {
+      expect(logged(new Error('a  \n\n b\t\tc'))).toBe('[Website Audit] AI request failed (gemini): a b c');
+      const prefix = '[Website Audit] AI request failed (gemini): ';
+      const line = logged(new Error('x'.repeat(1000)));
+      expect(line).toBe(prefix + 'x'.repeat(300));
+    });
+
+    it('accepts a non-Error value', () => {
+      expect(logged('plain text')).toContain('plain text');
+    });
+
+    it('askSafely logs a failed request once (no secret in the line)', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      try {
+        const fake = scripted([new Error('bad key=AIzaSyABCDEFGHIJKLMNOP')]);
+        const { resolution } = await aiWith(fake.provider);
+        await assessPages(pagesInput([page('/a', [])]), resolution);
+        expect(warn).toHaveBeenCalledTimes(1);
+        expect(String(warn.mock.calls[0][0])).not.toContain('AIzaSy');
+      } finally {
+        warn.mockRestore();
+      }
+    });
   });
 
   it('a caller stop is passed on, not reported as a failed note', async () => {

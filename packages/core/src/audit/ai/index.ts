@@ -5,7 +5,7 @@
  */
 export { AITimeoutError } from '../../ai/timeout.js';
 
-export { resolveAuditAi, auditAiRequestBudget } from './stage-ai.js';
+export { resolveAuditAi, auditAiRequestBudget, isKeyRefused } from './stage-ai.js';
 export type {
   AuditAi,
   AuditAiAnswer,

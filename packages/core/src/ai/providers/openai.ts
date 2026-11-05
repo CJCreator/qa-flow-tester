@@ -69,28 +69,46 @@ export class OpenAIProvider implements AIProvider {
       }
     }
 
-    let res: Response;
-    try {
-      res = await fetch(`${this.baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-        signal,
-      });
-    } catch (err) {
-      // fetch only says "fetch failed"; the reason is in its cause.
-      const cause = (err as { cause?: { code?: string; message?: string } }).cause;
-      throw new Error(
-        `Couldn’t reach the AI service: ${cause?.code || cause?.message || (err instanceof Error ? err.message : String(err))}`
-      );
+    const post = async (): Promise<Response> => {
+      try {
+        return await fetch(`${this.baseUrl}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
+          signal,
+        });
+      } catch (err) {
+        // fetch only says "fetch failed"; the reason is in its cause.
+        const cause = (err as { cause?: { code?: string; message?: string } }).cause;
+        throw new Error(
+          `Couldn’t reach the AI service: ${cause?.code || cause?.message || (err instanceof Error ? err.message : String(err))}`
+        );
+      }
+    };
+
+    let res = await post();
+    let errorText: string | undefined;
+    if (!res.ok) {
+      errorText = await res.text();
+      // OpenRouter's free router sometimes lands on a model that cannot turn reasoning off: ask once more with
+      // the least reasoning and leave it out of the answer, as `reasoning: 'low'` does.
+      if (
+        res.status === 400 &&
+        this.providerType === 'openrouter' &&
+        body.reasoning?.enabled === false &&
+        /reasoning is mandatory/i.test(errorText)
+      ) {
+        body.reasoning = { effort: 'low', exclude: true };
+        res = await post();
+        errorText = res.ok ? undefined : await res.text();
+      }
     }
 
     if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(`OpenAI/OpenRouter API error (${res.status}): ${errorText}`);
+      throw new Error(`OpenAI/OpenRouter API error (${res.status}): ${errorText ?? (await res.text())}`);
     }
 
     const data = (await res.json()) as any;

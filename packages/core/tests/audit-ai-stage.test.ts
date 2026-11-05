@@ -2,7 +2,12 @@ import { describe, it, expect, vi } from 'vitest';
 import type { AICompletionOptions, AIMessage, AIProviderType } from '@qa/types';
 import type { AIProvider } from '../src/ai/ai-provider.js';
 import type { ResolvedKeyInfo } from '../src/ai/key-resolver.js';
-import { auditAiRequestBudget, resolveAuditAi, type ResolveAuditAiDeps } from '../src/audit/ai/stage-ai.js';
+import {
+  auditAiRequestBudget,
+  isKeyRefused,
+  resolveAuditAi,
+  type ResolveAuditAiDeps,
+} from '../src/audit/ai/stage-ai.js';
 
 const TEST_KEY = 'test-key-not-real';
 const MESSAGES: AIMessage[] = [{ role: 'user', content: 'Assess the homepage.' }];
@@ -170,5 +175,213 @@ describe('resolveAuditAi', () => {
     const resolved = await resolveAuditAi(deps);
     if (!resolved.ok) throw new Error('expected AI');
     expect(await resolved.ai.ask('rewrite', MESSAGES)).toMatchObject({ ok: true, claimWords: [] });
+  });
+});
+
+/** Fakes per provider type, so a test can tell which provider answered. `failing` makes a type throw. */
+function adcSetup(opts: { keyed?: AIProviderType | null; failing?: Partial<Record<AIProviderType, Error>> } = {}) {
+  const fakes = new Map<AIProviderType, ReturnType<typeof fakeProvider>>();
+  const createProvider = vi.fn((type: AIProviderType, _key: string) => {
+    const fake = fakeProvider(type, `answer from ${type}`);
+    const err = opts.failing?.[type];
+    if (err) {
+      fake.provider.generateText = async (_m, o) => {
+        fake.calls.push(o ?? {});
+        throw err;
+      };
+    }
+    fakes.set(type, fake);
+    return fake.provider;
+  });
+  const keyed = opts.keyed === undefined ? 'openrouter' : opts.keyed;
+  const hasAdc = vi.fn(async () => true);
+  const deps: ResolveAuditAiDeps = {
+    setup: { provider: 'openrouter', text: 'default/text', vision: 'default/vision' },
+    keys: keysFor(keyed ? { provider: keyed, apiKey: TEST_KEY, source: 'keychain' } : null),
+    models: { rewrite: 'saved/rewrite' },
+    createProvider,
+    hasAdc,
+  };
+  return { deps, createProvider, hasAdc, fakes };
+}
+
+describe('isKeyRefused', () => {
+  it('is true for 401, 402, 403 and key or credit messages', () => {
+    for (const m of [
+      'Request failed (401)',
+      'Request failed (402)',
+      'Request failed (403)',
+      'API key expired. Please renew',
+      'API key not valid',
+      'Credits are depleted',
+      'Insufficient credits',
+      'insufficient quota',
+      'Billing not enabled',
+    ]) {
+      expect(isKeyRefused(new Error(m)), m).toBe(true);
+    }
+  });
+
+  it('is false for 429, 500, timeouts and bad answers', () => {
+    for (const m of ['Request failed (429)', 'upstream 500', 'The AI did not answer in time.', 'not json']) {
+      expect(isKeyRefused(new Error(m)), m).toBe(false);
+    }
+  });
+});
+
+describe('resolveAuditAi: Google sign-in (ADC) fallback', () => {
+  it('no key and ADC available: Gemini through ADC', async () => {
+    const { deps, createProvider, fakes } = adcSetup({ keyed: null });
+    const resolved = await resolveAuditAi(deps);
+    if (!resolved.ok) throw new Error('expected AI');
+    expect(createProvider).toHaveBeenCalledTimes(1);
+    expect(createProvider).toHaveBeenCalledWith('gemini', 'adc');
+    expect(resolved.ai.provider).toBe('gemini');
+    expect(await resolved.ai.ask('rewrite', MESSAGES)).toMatchObject({
+      ok: true,
+      completion: { text: 'answer from gemini' },
+      model: null,
+    });
+    expect(fakes.get('gemini')!.calls[0].model).toBeUndefined();
+  });
+
+  it('an empty key and ADC available: Gemini through ADC', async () => {
+    const { deps, createProvider } = adcSetup();
+    deps.keys = keysFor({ provider: 'openrouter', apiKey: '', source: 'env' });
+    const resolved = await resolveAuditAi(deps);
+    expect(resolved.ok).toBe(true);
+    expect(createProvider).toHaveBeenCalledTimes(1);
+    expect(createProvider).toHaveBeenCalledWith('gemini', 'adc');
+  });
+
+  it('no key and no ADC: still no-ai-key', async () => {
+    const { deps, createProvider, hasAdc } = adcSetup({ keyed: null });
+    hasAdc.mockResolvedValue(false);
+    expect(await resolveAuditAi(deps)).toEqual({ ok: false, reason: 'no-ai-key' });
+    expect(createProvider).not.toHaveBeenCalled();
+  });
+
+  it('no key and hasAdc unset: still no-ai-key', async () => {
+    const { deps, createProvider } = adcSetup({ keyed: null });
+    delete deps.hasAdc;
+    expect(await resolveAuditAi(deps)).toEqual({ ok: false, reason: 'no-ai-key' });
+    expect(createProvider).not.toHaveBeenCalled();
+  });
+
+  it('a refused key (403) switches to Gemini ADC, retries once and stays there', async () => {
+    const { deps, createProvider, fakes } = adcSetup({
+      failing: { openrouter: new Error('OpenRouter request failed (403)') },
+    });
+    const resolved = await resolveAuditAi(deps);
+    if (!resolved.ok) throw new Error('expected AI');
+    expect(resolved.ai.provider).toBe('openrouter');
+
+    const first = await resolved.ai.ask('rewrite', MESSAGES);
+    expect(first).toMatchObject({ ok: true, completion: { text: 'answer from gemini' }, model: null });
+    expect(resolved.ai.provider).toBe('gemini');
+    expect(createProvider).toHaveBeenCalledWith('gemini', 'adc');
+    expect(fakes.get('openrouter')!.calls).toHaveLength(1);
+    expect(fakes.get('gemini')!.calls).toHaveLength(1);
+    // Saved models and defaults belong to the saved provider, not to ADC.
+    expect(fakes.get('gemini')!.calls[0].model).toBeUndefined();
+
+    await resolved.ai.ask('assessment', MESSAGES);
+    expect(fakes.get('openrouter')!.calls).toHaveLength(1);
+    expect(fakes.get('gemini')!.calls).toHaveLength(2);
+    expect(fakes.get('gemini')!.calls[1].model).toBeUndefined();
+    expect(createProvider.mock.calls.filter(([t]) => t === 'gemini')).toHaveLength(1);
+  });
+
+  it.each(['Request failed (401)', 'Request failed (402)', 'API key expired', 'Credits are depleted'])(
+    'a key-refused error "%s" switches to Gemini ADC',
+    async (message) => {
+      const { deps } = adcSetup({ failing: { openrouter: new Error(message) } });
+      const resolved = await resolveAuditAi(deps);
+      if (!resolved.ok) throw new Error('expected AI');
+      expect(await resolved.ai.ask('rewrite', MESSAGES)).toMatchObject({ completion: { text: 'answer from gemini' } });
+    }
+  );
+
+  it('takes the budget once per ask, not again for the retry', async () => {
+    const budget = auditAiRequestBudget(1);
+    const { deps, fakes } = adcSetup({ failing: { openrouter: new Error('failed (401)') } });
+    deps.budget = budget;
+    const resolved = await resolveAuditAi(deps);
+    if (!resolved.ok) throw new Error('expected AI');
+    expect((await resolved.ai.ask('rewrite', MESSAGES)).ok).toBe(true);
+    expect(fakes.get('gemini')!.calls).toHaveLength(1);
+    expect(await resolved.ai.ask('rewrite', MESSAGES)).toEqual({ ok: false, reason: 'budget-spent' });
+  });
+
+  it('a Gemini provider is not switched: its error is thrown', async () => {
+    const { deps, createProvider } = adcSetup({
+      keyed: 'gemini',
+      failing: { gemini: new Error('Gemini request failed (403)') },
+    });
+    deps.setup = { provider: 'gemini' };
+    const resolved = await resolveAuditAi(deps);
+    if (!resolved.ok) throw new Error('expected AI');
+    await expect(resolved.ai.ask('rewrite', MESSAGES)).rejects.toThrow('(403)');
+    expect(createProvider).toHaveBeenCalledTimes(1);
+    expect(createProvider).toHaveBeenCalledWith('gemini', TEST_KEY);
+    expect(resolved.ai.provider).toBe('gemini');
+  });
+
+  it('a non-key error (500) is thrown and does not switch', async () => {
+    const { deps, createProvider, hasAdc } = adcSetup({ failing: { openrouter: new Error('upstream 500') } });
+    const resolved = await resolveAuditAi(deps);
+    if (!resolved.ok) throw new Error('expected AI');
+    await expect(resolved.ai.ask('rewrite', MESSAGES)).rejects.toThrow('upstream 500');
+    expect(resolved.ai.provider).toBe('openrouter');
+    expect(createProvider).toHaveBeenCalledTimes(1);
+    expect(hasAdc).not.toHaveBeenCalled();
+  });
+
+  it('a key-refused error with no ADC on this computer is thrown', async () => {
+    const { deps, createProvider, hasAdc } = adcSetup({ failing: { openrouter: new Error('failed (401)') } });
+    hasAdc.mockResolvedValue(false);
+    const resolved = await resolveAuditAi(deps);
+    if (!resolved.ok) throw new Error('expected AI');
+    await expect(resolved.ai.ask('rewrite', MESSAGES)).rejects.toThrow('(401)');
+    expect(resolved.ai.provider).toBe('openrouter');
+    expect(createProvider).toHaveBeenCalledTimes(1);
+  });
+
+  it('a key-refused error with hasAdc unset is thrown as before', async () => {
+    const { deps, createProvider } = adcSetup({ failing: { openrouter: new Error('failed (401)') } });
+    delete deps.hasAdc;
+    const resolved = await resolveAuditAi(deps);
+    if (!resolved.ok) throw new Error('expected AI');
+    await expect(resolved.ai.ask('rewrite', MESSAGES)).rejects.toThrow('(401)');
+    expect(createProvider).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('resolveAuditAi: parallel requests and the switch to Google sign-in (ADR 0043)', () => {
+  it('requests already sent on a refused key all retry on Gemini, which is created once', async () => {
+    const { deps, createProvider, fakes } = adcSetup({
+      failing: { openrouter: new Error('API error (401): API key expired') },
+    });
+    const resolved = await resolveAuditAi(deps);
+    if (!resolved.ok) throw new Error('expected AI');
+    const answers = await Promise.all([1, 2, 3, 4].map(() => resolved.ai.ask('assessment', MESSAGES)));
+    for (const a of answers) expect(a).toMatchObject({ ok: true, completion: { text: 'answer from gemini' } });
+    expect(createProvider.mock.calls.filter(([type]) => type === 'gemini')).toHaveLength(1);
+    expect(fakes.get('openrouter')!.calls).toHaveLength(4);
+    expect(fakes.get('gemini')!.calls).toHaveLength(4);
+    expect(resolved.ai.provider).toBe('gemini');
+  });
+
+  it('with no Google sign-in, every parallel request fails with its own error and nothing switches', async () => {
+    const { deps, createProvider, hasAdc } = adcSetup({
+      failing: { openrouter: new Error('API error (401): API key expired') },
+    });
+    hasAdc.mockResolvedValue(false);
+    const resolved = await resolveAuditAi(deps);
+    if (!resolved.ok) throw new Error('expected AI');
+    const results = await Promise.allSettled([1, 2, 3].map(() => resolved.ai.ask('assessment', MESSAGES)));
+    expect(results.every((r) => r.status === 'rejected')).toBe(true);
+    expect(hasAdc).toHaveBeenCalledTimes(1);
+    expect(createProvider).toHaveBeenCalledTimes(1);
   });
 });

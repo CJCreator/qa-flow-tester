@@ -81,30 +81,47 @@ const AREA_MEANING: Record<AuditArea, string> = {
   speed: 'how fast the page loads, from PageSpeed Insights values',
 };
 
-/** Assesses each Sample Page, one AI request at a time. */
+/** Pages assessed at once (ADR 0043): requests go to the AI Provider, not the audited site. */
+export const AUDIT_AI_IN_FLIGHT = 4;
+
+/** Assesses each page, AUDIT_AI_IN_FLIGHT at a time; the answers keep the pages' order. */
 export async function assessPages(input: AssessPagesInput, ai: AuditAiResolution): Promise<PageAssessment[]> {
-  const out: PageAssessment[] = [];
-  for (const page of input.pages) {
-    stopIfAborted(input.signal);
-    const subject = {
-      scope: 'page',
-      urlPath: clip(page.urlPath),
-      title: page.content.title === null ? null : clip(page.content.title),
-      headings: page.content.headings.slice(0, MAX_HEADINGS).map((h) => ({ level: h.level, text: clip(h.text) })),
-      sections: page.content.sections
-        .slice(0, MAX_SECTIONS)
-        .map((s) => ({ id: s.id, kind: s.kind, ...(s.heading ? { heading: clip(s.heading) } : {}) })),
-      ctas: page.content.ctas
-        .slice(0, MAX_CTAS)
-        .map((c) => ({ text: clip(c.text), kind: c.kind, ...(c.to ? { to: clip(c.to) } : {}) })),
-      grades: gradesFor(page.grades),
-      speed: page.speed ? speedSummary(page.speed) : null,
-      findings: findingsSummary(page.findings),
-    };
-    const areas = await assess(subject, page.findings, page.grades, input, ai);
-    out.push({ urlPath: page.urlPath, areas });
-  }
+  const out: PageAssessment[] = new Array(input.pages.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < input.pages.length) {
+      const index = next++;
+      stopIfAborted(input.signal);
+      out[index] = await assessOnePage(input.pages[index], input, ai);
+    }
+  };
+  const workers = Math.min(AUDIT_AI_IN_FLIGHT, input.pages.length);
+  await Promise.all(Array.from({ length: workers }, worker));
   return out;
+}
+
+async function assessOnePage(
+  page: AssessPagesInput['pages'][number],
+  input: AssessPagesInput,
+  ai: AuditAiResolution
+): Promise<PageAssessment> {
+  const subject = {
+    scope: 'page',
+    urlPath: clip(page.urlPath),
+    title: page.content.title === null ? null : clip(page.content.title),
+    headings: page.content.headings.slice(0, MAX_HEADINGS).map((h) => ({ level: h.level, text: clip(h.text) })),
+    sections: page.content.sections
+      .slice(0, MAX_SECTIONS)
+      .map((s) => ({ id: s.id, kind: s.kind, ...(s.heading ? { heading: clip(s.heading) } : {}) })),
+    ctas: page.content.ctas
+      .slice(0, MAX_CTAS)
+      .map((c) => ({ text: clip(c.text), kind: c.kind, ...(c.to ? { to: clip(c.to) } : {}) })),
+    grades: gradesFor(page.grades),
+    speed: page.speed ? speedSummary(page.speed) : null,
+    findings: findingsSummary(page.findings),
+  };
+  const areas = await assess(subject, page.findings, page.grades, input, ai);
+  return { urlPath: page.urlPath, areas };
 }
 
 /** Assesses the whole site in one AI request. */
@@ -233,8 +250,24 @@ async function askSafely(
     return answer;
   } catch (err) {
     if (run.signal?.aborted) throw err;
+    logAiFailure(ai.provider, err);
     return { ok: false, reason: 'ai-failed' };
   }
+}
+
+/**
+ * One console line per failed AI request, so the reason ("credits depleted", "API key expired") reaches the
+ * tool's terminal and the hosted copy's logs. Keys and tokens are cut out; the text is capped.
+ */
+export function logAiFailure(provider: string, err: unknown): void {
+  const raw = err instanceof Error ? err.message : String(err);
+  const safe = raw
+    .replace(/key=[^&\s"']+/gi, 'key=[hidden]')
+    .replace(/Bearer\s+[\w.-]+/gi, 'Bearer [hidden]')
+    .replace(/\b(sk-[\w-]{8,}|AIza[\w-]{20,}|ya29\.[\w.-]{8,})/g, '[hidden]')
+    .replace(/\s+/g, ' ')
+    .slice(0, 300);
+  console.warn(`[Website Audit] AI request failed (${provider}): ${safe}`);
 }
 
 function tryParse(text: string): unknown {

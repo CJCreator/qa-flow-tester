@@ -131,6 +131,12 @@ export interface CrawlOptions {
   maxDurationMs?: number;
   /** Time one page load may take before it counts as a timeout; its one retry gets 1.5 times this (default 10 s). */
   pageTimeoutMs?: number;
+  /**
+   * With a pacer (the Website Audit, ADR 0043): a page answered 429 or 503 slows its host down (`pacer.slowDown`,
+   * honouring Retry-After) and is loaded once more in a later turn. Default false: the Check-up keeps
+   * recording such a page as an `http-error` skip.
+   */
+  retryBusyHost?: boolean;
   /** Epoch ms deadline shared across crawls */
   deadlineAt?: number;
   /** Allowed query parameters included in canonical route key */
@@ -725,6 +731,24 @@ export class DeterministicSpider {
             ms: 0,
           });
           return;
+        }
+
+        // The host says it is busy (ADR 0043): it is asked less often from now on, and this page is loaded once
+        // more after the wait it asked for. A failed retry keeps the first answer.
+        if (pacer && options.retryBusyHost && navRes.ok && (navRes.status === 429 || navRes.status === 503)) {
+          pacer.slowDown(new URL(fullUrl).host, navRes.retryAfterMs);
+          try {
+            const again = await paced(fullUrl, () =>
+              navigate(page, fullUrl, {
+                ...navLimits(pageTimeoutMs),
+                needLinks: true,
+                who: options.role || (isRoleSignedIn ? 'signed-in' : 'visitor'),
+              })
+            );
+            navRes = { ...again, attempts: navRes.attempts + again.attempts };
+          } catch {
+            // The wait ended at the deadline or on abort: the first answer stands.
+          }
         }
 
         const landed = new URL(navRes.finalUrl || page.url());

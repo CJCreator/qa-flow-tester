@@ -30,8 +30,20 @@ export interface NavigateResult {
   settled: boolean;
   /** When needLinks */
   linkCount?: number;
+  /** The main response's Retry-After, in ms (seconds or an HTTP date), when it sent one. */
+  retryAfterMs?: number;
   /** Kind only, never message text */
   error?: { kind: 'timeout' | 'net' | 'aborted' | 'other' };
+}
+
+/** A Retry-After value in ms: delay-seconds or an HTTP date. Undefined when absent or unreadable. */
+export function parseRetryAfter(value: string | undefined, now: number = Date.now()): number | undefined {
+  if (!value) return undefined;
+  const v = value.trim();
+  if (/^\d+$/.test(v)) return Number(v) * 1000;
+  const at = Date.parse(v);
+  if (Number.isNaN(at)) return undefined;
+  return Math.max(0, at - now);
 }
 
 /**
@@ -170,6 +182,7 @@ export async function navigate(page: Page, url: string, options?: NavigateOption
         }
       }
 
+      const retryAfterMs = resp ? parseRetryAfter(resp.headers()['retry-after']) : undefined;
       return {
         ok: true,
         status: resp ? resp.status() : undefined,
@@ -179,6 +192,7 @@ export async function navigate(page: Page, url: string, options?: NavigateOption
         durationMs: Date.now() - startTime,
         settled,
         linkCount: needLinks ? linkCount : undefined,
+        ...(retryAfterMs !== undefined ? { retryAfterMs } : {}),
       };
     } catch (err) {
       const errInfo = classifyError(err, page);

@@ -30,7 +30,16 @@ export { KeyResolver } from './key-resolver.js';
 export { MockAIProvider } from './providers/mock.js';
 export { AnthropicProvider } from './providers/anthropic.js';
 export { OpenAIProvider } from './providers/openai.js';
-export { GeminiProvider } from './providers/gemini.js';
+export { GeminiProvider, hasGoogleAdc, vertexModelFor, aiStudioKeyUnusable } from './providers/gemini.js';
+export {
+  listGeminiModels,
+  rankGeminiModels,
+  pickGeminiModel,
+  workingGeminiModel,
+  explainGeminiListError,
+  type GeminiModelPick,
+  type GeminiModelProbe,
+} from './gemini-models.js';
 
 import { AnthropicProvider } from './providers/anthropic.js';
 import { OpenAIProvider } from './providers/openai.js';
