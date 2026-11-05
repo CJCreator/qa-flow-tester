@@ -1,6 +1,6 @@
 # 0037: Every Runner Route Declares an Access Level and a Beta Policy; Owner, Helper and Public Access
 
-Status: Accepted, 2026-11-03 (DEC-001, REC-06; beta policy from the developer's answers to D-004 / Q-51 on 2026-11-03: closed-default, and D-005 / Q-55 on 2026-11-03: allow-helpers; written in task DOC-105). Builds on [0027](0027-checkup-session-module-and-route-table.md) (route table), [0033](0033-website-audit-entry-point.md) (Website Audit; this is its follow-up record 0037, Helper sign-in) and [0036](0036-hosted-audit-storage-and-shared-links.md) (hosted storage and Shared Links).
+Status: Accepted, 2026-11-03 (DEC-001, REC-06; beta policy from the developer's answers to D-004 / Q-51 on 2026-11-03: closed-default, and D-005 / Q-55 on 2026-11-03: allow-helpers; written in task DOC-105). Builds on [0027](0027-checkup-session-module-and-route-table.md) (route table), [0033](0033-website-audit-entry-point.md) (Website Audit; this is its follow-up record 0037, Helper sign-in) and [0036](0036-hosted-audit-storage-and-shared-links.md) (hosted storage and Shared Links). D-004 is amended by [0042](0042-website-audit-reliability-and-access.md): on a beta copy the signed-in owner (`AUDIT_OWNER_EMAILS`) reaches the audit rows.
 
 Amended by [0039](0039-cloud-scheduler-owner-schedules.md): the schedule routes are owner-only rows served in beta, and the tick row uses a route-only `scheduler` access level (`AuditAccess` is unchanged).
 
