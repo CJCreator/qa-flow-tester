@@ -102,6 +102,25 @@ describe('RunnerServer.auditWiring: the typed surface the audit routes use (BE-6
     await removeDir(scratch);
   });
 
+  it('is a local run only when not a beta copy and bound to this computer (ADR 0042)', () => {
+    const build = (host: string, beta: boolean, dir: string) =>
+      new RunnerServer({
+        port: ON_PORT,
+        host,
+        outputDir: path.join(scratch, dir, 'report'),
+        dataDir: path.join(scratch, dir, 'data'),
+        localhostAlias: undefined,
+        allowedOrigins: undefined,
+        accessToken: ACCESS,
+        beta,
+        stepTimeoutMs: undefined,
+      });
+    expect(build('localhost', false, 'a').auditWiring.localRun).toBe(true);
+    expect(build('127.0.0.1', false, 'b').auditWiring.localRun).toBe(true);
+    expect(build('0.0.0.0', false, 'c').auditWiring.localRun).toBe(false);
+    expect(build('localhost', true, 'd').auditWiring.localRun).toBe(false);
+  });
+
   it('is one read-only object per runner with one audit store, shared by Helper access', async () => {
     const server = asCliBuildsIt(ON_PORT, scratch, ACCESS);
     const wiring: AuditWiring = server.auditWiring;

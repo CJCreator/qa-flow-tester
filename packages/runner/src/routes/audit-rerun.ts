@@ -72,7 +72,9 @@ function refuse(res: Parameters<typeof sendJson>[0], status: number, code: Audit
 export function createAuditRerunRoutes(deps: AuditRerunRouteDeps): Route[] {
   const runs = deps.runs ?? new AuditRuns();
   const slotOf = deps.slot ?? ((context: RouteContext) => context.server.session.run);
-  const checkAddress = deps.checkAddress ?? ((url: string) => checkAuditAddress(url));
+  const checkAddress =
+    deps.checkAddress ??
+    ((url: string) => checkAuditAddress(url, { allowPrivateAddresses: deps.allowPrivateAddresses === true }));
   const starter = deps.start ?? runAuditVersion;
   const { method, path: routePath, access } = AUDIT_API.rerun;
 

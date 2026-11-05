@@ -3,6 +3,8 @@
  * - Public: the host resolves to public addresses only (`resolvePublic`). Private, loopback and
  *   link-local addresses are refused here, for a Website Audit only; the Check-up preflight is separate,
  *   so Test Copies on local addresses keep working.
+ * - A local runner (ADR 0042: not a beta copy, bound to this computer) passes `allowPrivateAddresses`, set by
+ *   the runner and never from request input: localhost and LAN addresses are then accepted.
  * - Reachable: the final response after redirects is below 400 within the page timeout. Every hop goes
  *   through `safeGet` (ADR 0031): resolved once, pinned, re-checked, so no request reaches a private address.
  * - A body cut at the byte cap still counts: only the status matters.
@@ -26,6 +28,8 @@ export type AuditAddressResult =
 export interface AuditAddressOptions {
   timeoutMs?: number;
   netDeps?: NetDeps;
+  /** A local runner only (ADR 0042); set by the runner, never from the start body. */
+  allowPrivateAddresses?: boolean;
 }
 
 const MESSAGES = {
@@ -84,7 +88,11 @@ export async function checkAuditAddress(url: string, opts: AuditAddressOptions =
 
   let res;
   try {
-    res = await safeGet(url, { maxBytes: MAX_BYTES, timeoutMs }, deps);
+    res = await safeGet(
+      url,
+      { maxBytes: MAX_BYTES, timeoutMs, ...(opts.allowPrivateAddresses ? { allowPrivate: true } : {}) },
+      deps
+    );
   } catch {
     return unreachable(timedOut ? MESSAGES.timeout : MESSAGES.error);
   }

@@ -68,6 +68,26 @@ describe('checkAuditAddress', () => {
     }
   });
 
+  it('on a local runner (allowPrivateAddresses) accepts localhost and LAN addresses (ADR 0042)', async () => {
+    const local = fake({ localhost: ['::1', '127.0.0.1'] }, { 'http://localhost:3000/': ok() });
+    expect(
+      await checkAuditAddress('http://localhost:3000/', { netDeps: local.deps, allowPrivateAddresses: true })
+    ).toEqual({ ok: true, finalUrl: 'http://localhost:3000/', status: 200 });
+
+    const lan = fake({}, { 'http://192.168.1.20:8080/': ok() });
+    expect(
+      await checkAuditAddress('http://192.168.1.20:8080/', { netDeps: lan.deps, allowPrivateAddresses: true })
+    ).toMatchObject({ ok: true, status: 200 });
+
+    // The same address without the runner's permission is refused before any request.
+    const refused = fake({ localhost: ['::1', '127.0.0.1'] }, { 'http://localhost:3000/': ok() });
+    expect(await checkAuditAddress('http://localhost:3000/', { netDeps: refused.deps })).toMatchObject({
+      ok: false,
+      code: 'ERR_PRIVATE_ADDRESS',
+    });
+    expect(refused.connects).toHaveLength(0);
+  });
+
   it('refuses a mixed answer and literal private addresses and localhost', async () => {
     const mixed = fake({ 'mixed.test': ['8.8.8.8', '10.0.0.1'] }, { 'https://mixed.test/': ok() });
     expect(await checkAuditAddress('https://mixed.test/', { netDeps: mixed.deps })).toMatchObject({

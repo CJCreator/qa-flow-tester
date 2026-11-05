@@ -227,18 +227,33 @@ export async function safeGet(
       ? await resolveAny(current.hostname, deps)
       : await resolvePublic(current.hostname, deps);
     if (!resolved.ok) return { ok: false, reason: resolved.reason };
-    let raw: RawResponse;
-    try {
-      raw = await deps.connect({
-        url: current,
-        address: resolved.address,
-        headers: headersFor(opts.headers || {}, current.origin === firstOrigin),
-        timeoutMs: opts.timeoutMs ?? CONNECT_TIMEOUT_MS,
-        maxBytes,
-      });
-    } catch (err) {
-      return { ok: false, reason: err instanceof Error && err.message === 'timeout' ? 'timeout' : 'error' };
+    // A local run tries the name's other addresses when one refuses: `localhost` is ::1 and 127.0.0.1, and a
+    // dev server often listens on only one of them. A public address is one pinned address, as before.
+    const candidates = opts.allowPrivate
+      ? [resolved.address, ...resolved.all.filter((a) => a !== resolved.address)]
+      : [resolved.address];
+    let raw: RawResponse | undefined;
+    let failure: SafeGetFailure = 'error';
+    for (const address of candidates) {
+      try {
+        raw = await deps.connect({
+          url: current,
+          address,
+          headers: headersFor(opts.headers || {}, current.origin === firstOrigin),
+          timeoutMs: opts.timeoutMs ?? CONNECT_TIMEOUT_MS,
+          maxBytes,
+        });
+        break;
+      } catch (err) {
+        // A timeout means the time is spent: no other address is tried.
+        if (err instanceof Error && err.message === 'timeout') {
+          failure = 'timeout';
+          break;
+        }
+        failure = 'error';
+      }
     }
+    if (!raw) return { ok: false, reason: failure };
     if (raw.tooLarge) return { ok: false, reason: 'too-large', status: raw.status };
     const location = raw.headers.location;
     const target = Array.isArray(location) ? location[0] : location;
@@ -414,9 +429,12 @@ export async function verifyDomainProof(
  * The per-request browser guard: true lets the request go on, false aborts it. The host is resolved
  * afresh every call (no cache) and every address must be public. Pages that do not touch the network
  * (data:, blob:, about:) pass. A redirected request is checked exactly like any other.
+ * `allowPrivate` (a local run only, ADR 0031 and 0042; never from request input) lets any web address through
+ * and still refuses other schemes (file:, chrome: and the like).
  */
 export function makeRequestGuard(
-  deps: Pick<NetDeps, 'lookup'> = defaultNetDeps
+  deps: Pick<NetDeps, 'lookup'> = defaultNetDeps,
+  opts: { allowPrivate?: boolean } = {}
 ): (url: string, redirected: boolean) => Promise<boolean> {
   return async (url: string): Promise<boolean> => {
     let parsed: URL;
@@ -427,6 +445,7 @@ export function makeRequestGuard(
     }
     if (parsed.protocol === 'data:' || parsed.protocol === 'blob:' || parsed.protocol === 'about:') return true;
     if (!['http:', 'https:', 'ws:', 'wss:'].includes(parsed.protocol)) return false;
+    if (opts.allowPrivate) return true;
     return (await resolvePublic(parsed.hostname, deps)).ok;
   };
 }

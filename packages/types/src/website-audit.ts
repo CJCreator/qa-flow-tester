@@ -972,7 +972,10 @@ export const AUDIT_ERROR_CODES = [
   'ERR_INVALID_AUDIT',
   /** 400: another body or query value is wrong. */
   'ERR_INVALID_REQUEST',
-  /** 400: the host resolves to a private or local address (Q-22). */
+  /**
+   * 400: the host resolves to a private or local address (Q-22). Only on the hosted copy or a runner reachable
+   * from other machines: a local runner accepts localhost and LAN addresses (ADR 0042).
+   */
   'ERR_PRIVATE_ADDRESS',
   /** 422: the host does not resolve, does not answer, or answers 400 or above (REQ-001 AC-2). */
   'ERR_UNREACHABLE',
