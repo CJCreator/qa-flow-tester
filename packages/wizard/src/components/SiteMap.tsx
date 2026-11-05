@@ -366,9 +366,12 @@ export function SiteMap({
                     isSelected ? 'ring-2 ring-stamp' : ''
                   } ${node.status === 'running' ? 'animate-pulse ring-2 ring-stamp motion-reduce:animate-none' : ''}`}
                 >
-                  <span className="flex items-center justify-between border-b border-rule px-2.5 py-1.5 font-mono text-xs text-ink-soft">
-                    <span aria-hidden="true">{node.ref}</span>
-                    <span className="max-w-[100px] truncate">{node.urlPath}</span>
+                  {/* One line only: a wrapped label makes the card taller than its slot and it overlaps the next. */}
+                  <span className="flex items-center justify-between gap-2 whitespace-nowrap border-b border-rule px-2.5 py-1.5 font-mono text-xs text-ink-soft">
+                    <span aria-hidden="true" className="shrink-0">
+                      {node.ref}
+                    </span>
+                    <span className="min-w-0 truncate">{node.urlPath}</span>
                   </span>
                   <span
                     aria-hidden="true"
