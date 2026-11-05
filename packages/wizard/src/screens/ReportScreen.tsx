@@ -206,7 +206,8 @@ export function reportHeadline(input: {
     const top = [...byArea].sort((a, b) => b[1] - a[1]).slice(0, 2);
     if (top.length === 0) return '';
     if (byArea.size === 1) return `, all in ${AREA_WORDS[top[0][0]]}`;
-    return `, mostly in ${top.map(([a]) => AREA_WORDS[a]).join(' and ')}`;
+    // "and in" keeps two area names apart when one has its own "and" ("speed and phone layout").
+    return `, mostly in ${top.map(([a]) => AREA_WORDS[a]).join(' and in ')}`;
   })();
   if (ready) {
     if (total === 0) return 'No problems found.';
@@ -380,10 +381,17 @@ export function Report({
         )}
         {/* The person's own rule, kept in this browser: shown as information, never a second verdict. */}
         {evaluatedGate.gate && (
-          <p className="text-sm text-ink-soft">
-            {evaluatedGate.ready
-              ? 'Your release rule: met.'
-              : `Your release rule: not met. ${ruleBreachText(evaluatedGate)}`.trim()}
+          <div className="text-sm text-ink-soft">
+            {evaluatedGate.ready ? 'Your release rule: met.' : 'Your release rule: not met.'}
+            {!evaluatedGate.ready && ruleBreachText(evaluatedGate) && (
+              // The full list of limits missed is long: it opens on request, so the grades stay on the first screen.
+              <details className="mt-1">
+                <summary className="inline-flex min-h-[44px] cursor-pointer items-center font-semibold text-stamp underline decoration-2 underline-offset-4">
+                  Which limits were missed
+                </summary>
+                <span className="block pb-2">{ruleBreachText(evaluatedGate)}</span>
+              </details>
+            )}
             {!evaluatedGate.ready && summary.ready && (
               <>
                 {' '}
@@ -396,7 +404,7 @@ export function Report({
             {evaluatedGate.ready && !summary.ready && (
               <> The verdict uses the Standard rule and says {summary.stamp}. It does not change.</>
             )}
-          </p>
+          </div>
         )}
       </div>
 
@@ -867,10 +875,27 @@ function AspectGrades({ report }: { report: ReleaseReport }) {
 
 const EFFORT_WORDS: Record<string, string> = { Low: 'Little effort', Medium: 'Some effort', High: 'Big effort' };
 
+/**
+ * The same advice for the same area on several pages is one item, keeping the first one's place in the
+ * priority order and every page it affects (presentation only; the report data is unchanged).
+ */
+export function mergeSameRecommendation<R extends { title: string; aspect: string; affectedPages: string[] }>(
+  recommendations: R[]
+): R[] {
+  const byKey = new Map<string, R>();
+  for (const rec of recommendations) {
+    const key = `${rec.aspect}\u0000${plainTitleText(rec.title)}`;
+    const seen = byKey.get(key);
+    if (!seen) byKey.set(key, { ...rec, affectedPages: [...rec.affectedPages] });
+    else for (const page of rec.affectedPages) if (!seen.affectedPages.includes(page)) seen.affectedPages.push(page);
+  }
+  return [...byKey.values()];
+}
+
 /** "Fix these first": the recommendations in priority order, three until "Show all". */
 function FixFirst({ report }: { report: ReleaseReport }) {
   const [all, setAll] = useState(false);
-  const recommendations = report.recommendations || [];
+  const recommendations = mergeSameRecommendation(report.recommendations || []);
   if (recommendations.length === 0) return null;
   const more = recommendations.length - FIX_FIRST_SHOWN;
   return (

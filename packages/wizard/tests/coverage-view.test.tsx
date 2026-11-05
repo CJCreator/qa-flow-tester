@@ -4,7 +4,23 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import type { ReleaseReport } from '@qa/types';
 import { skipReasonText } from '../src/lib/coverage-text';
-import { Report, reportHeadline } from '../src/screens/ReportScreen';
+import { mergeSameRecommendation, Report, reportHeadline } from '../src/screens/ReportScreen';
+
+describe('mergeSameRecommendation', () => {
+  it('shows the same advice for the same area once, with every page, in first-seen order', () => {
+    const merged = mergeSameRecommendation([
+      { title: 'Missing header', aspect: 'Secure', affectedPages: ['/'] },
+      { title: 'No way back', aspect: 'Accessible', affectedPages: ['/a'] },
+      { title: 'Missing header', aspect: 'Secure', affectedPages: ['/b', '/'] },
+      { title: 'Missing header', aspect: 'Works', affectedPages: ['/c'] },
+    ]);
+    expect(merged.map((r) => [r.title, r.aspect, r.affectedPages])).toEqual([
+      ['Missing header', 'Secure', ['/', '/b']],
+      ['No way back', 'Accessible', ['/a']],
+      ['Missing header', 'Works', ['/c']],
+    ]);
+  });
+});
 
 function makeReport(partial?: Partial<ReleaseReport>): ReleaseReport {
   return {
@@ -184,7 +200,7 @@ describe('reportHeadline', () => {
         total: 6,
         lowAreas: [],
       })
-    ).toBe('4 problems must be fixed first, mostly in security and speed and phone layout.');
+    ).toBe('4 problems must be fixed first, mostly in security and in speed and phone layout.');
     expect(reportHeadline({ ready: false, mustFix: [{ aspect: 'Secure' }], total: 1, lowAreas: [] })).toBe(
       '1 problem must be fixed first, all in security.'
     );
