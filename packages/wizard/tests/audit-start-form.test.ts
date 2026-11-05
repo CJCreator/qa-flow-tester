@@ -34,18 +34,18 @@ const form = (patch: Partial<ReturnType<typeof initialAuditStartForm>> = {}) => 
 });
 
 describe('Website Audit start form: defaults and bounds (REQ-002)', () => {
-  it('starts with the shared check defaults: 200 pages, depth 8, no paths', () => {
+  it('starts with the shared check defaults: 50 pages, depth 5, no paths', () => {
     expect(initialAuditStartForm()).toEqual({
       address: '',
-      maxPages: '200',
-      maxDepth: '8',
+      maxPages: '50',
+      maxDepth: '5',
       includePaths: '',
       excludePaths: '',
     });
     const bare = validateAuditStartBody({ url: 'https://example.com' });
-    expect(bare.ok && bare.value.limits).toEqual({ maxPages: 200, maxDepth: 8, includePaths: [], excludePaths: [] });
-    expect(AUDIT_LIMIT_BOUNDS.defaultPages).toBe(200);
-    expect(AUDIT_LIMIT_BOUNDS.defaultDepth).toBe(8);
+    expect(bare.ok && bare.value.limits).toEqual({ maxPages: 50, maxDepth: 5, includePaths: [], excludePaths: [] });
+    expect(AUDIT_LIMIT_BOUNDS.defaultPages).toBe(50);
+    expect(AUDIT_LIMIT_BOUNDS.defaultDepth).toBe(5);
   });
 
   it('keeps its local bounds equal to validateAuditStartBody: pages 1-1000, depth 0-100, 50 paths', () => {
@@ -70,9 +70,9 @@ describe('Website Audit start form: defaults and bounds (REQ-002)', () => {
 
   it('shows the bounds in the hints', () => {
     expect(AUDIT_FIELD_HINTS.maxPages).toContain('From 1 to 1000');
-    expect(AUDIT_FIELD_HINTS.maxPages).toContain('200');
+    expect(AUDIT_FIELD_HINTS.maxPages).toContain('50');
     expect(AUDIT_FIELD_HINTS.maxDepth).toContain('from 0 to 100');
-    expect(AUDIT_FIELD_HINTS.maxDepth).toContain('8');
+    expect(AUDIT_FIELD_HINTS.maxDepth).toContain('5');
     expect(AUDIT_FIELD_HINTS.includePaths).toContain('up to 50');
   });
 
@@ -87,7 +87,7 @@ describe('Website Audit start form: defaults and bounds (REQ-002)', () => {
     ).toEqual({
       url: 'https://example.com/',
       maxPages: 50,
-      maxDepth: 8,
+      maxDepth: 5,
       includePaths: ['/a', '/b'],
       excludePaths: [],
     });
@@ -146,7 +146,7 @@ describe('Website Audit start form: the client-side check (REQ-001 AC-3)', () =>
     const check = checkAuditStartForm(form({ address: 'https://example.com#top', includePaths: '/blog\n/blog' }));
     expect(check).toEqual({
       ok: true,
-      body: { url: 'https://example.com/', maxPages: 200, maxDepth: 8, includePaths: ['/blog'], excludePaths: [] },
+      body: { url: 'https://example.com/', maxPages: 50, maxDepth: 5, includePaths: ['/blog'], excludePaths: [] },
     });
   });
 
@@ -170,7 +170,7 @@ describe('Website Audit start request: POST /api/audits (REQ-001 AC-2)', () => {
     expect(JSON.parse(String(init.body))).toEqual({
       url: 'https://example.com/',
       maxPages: 10,
-      maxDepth: 8,
+      maxDepth: 5,
       includePaths: [],
       excludePaths: [],
     });

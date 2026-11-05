@@ -417,6 +417,13 @@ export function auditShareRoutes(deps: AuditShareDeps): Route[] {
       beta: 'allow',
       handle: sharedPage,
     },
-    { method: 'GET', path: '/s', prefix: true, access: 'public', beta: 'allow', handle: sharedNotFound },
+    {
+      method: AUDIT_API.sharedPageFallback.method,
+      path: AUDIT_API.sharedPageFallback.path,
+      prefix: AUDIT_API.sharedPageFallback.prefix,
+      access: AUDIT_API.sharedPageFallback.access,
+      beta: 'allow',
+      handle: sharedNotFound,
+    },
   ];
 }

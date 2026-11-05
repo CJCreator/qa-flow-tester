@@ -352,7 +352,7 @@ export function HelpersScreen({ auditId, fetchImpl }: HelpersScreenProps) {
   return (
     <Page width="form">
       <PageHeader
-        back={{ to: PATHS.audits, label: 'All Website Audits' }}
+        back={{ to: PATHS.audit(auditId), label: 'Back to this Website Audit' }}
         title="Helpers"
         lede="People you let open this Website Audit with their own Google account."
       />

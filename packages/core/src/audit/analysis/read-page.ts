@@ -261,7 +261,8 @@ function readDom(args: { maxTextChars: number; jsonLdCap: number }): DomFacts {
     }
 
     // Facts recorded after their own text, so they land in the chunk that holds it.
-    if (level !== null) headings.push({ level, text: clean(el.textContent), chunk: here() });
+    // Headings inside a hidden subtree (display:none, hidden attribute) are not on the page for a visitor.
+    if (level !== null && !hidden) headings.push({ level, text: clean(el.textContent), chunk: here() });
     if (tag === 'a' && el.hasAttribute('href')) {
       const href = el.getAttribute('href') || '';
       const text = anchorText(el);

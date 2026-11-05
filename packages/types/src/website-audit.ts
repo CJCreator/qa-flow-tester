@@ -13,8 +13,10 @@
 
 import type { AspectGrade, MarketingReview, MarketingSignal } from './aspects.js';
 import { CRAWL_LIMIT_BOUNDS, type CrawlLimits } from './discovery.js';
-import type { PageCoverage } from './route-telemetry.js';
+import type { PageCoverage, RouteSkipReason } from './route-telemetry.js';
 import type { FindingSeverity } from './test-case.js';
+
+export type SkippedReason = RouteSkipReason;
 
 // ---------------------------------------------------------------------------------------------------
 // Languages
@@ -64,6 +66,18 @@ export interface AuditStartBody extends CrawlLimits {
   /** The language the AI writes its notes in (default 'en'). Documents can be exported in any language. */
   language?: DocumentLanguage;
 }
+
+/**
+ * Website Audit specific limits and parallel concurrency defaults (ADR 0042, ADR 0043).
+ * Check-up defaults in CRAWL_LIMIT_BOUNDS remain untouched.
+ */
+export const AUDIT_LIMIT_DEFAULTS = {
+  pages: 50,
+  depth: 5,
+  hostedMaxPages: 200,
+  fetchInFlight: 3,
+  aiInFlight: 4,
+} as const;
 
 /** The limits an audit ran with, defaults filled in. A re-run uses them unchanged (REQ-028 AC-3). */
 export interface AuditLimits {
@@ -186,11 +200,11 @@ export function validateAuditStartBody(input: unknown): AuditStartCheck {
   const url = urlProblem(body.url);
   if (typeof url === 'string') errors.url = url;
 
-  const maxPages = body.maxPages ?? b.defaultPages;
+  const maxPages = body.maxPages ?? AUDIT_LIMIT_DEFAULTS.pages;
   const pagesProblem = wholeNumberProblem(maxPages, b.minPages, b.maxPages, 'Max pages');
   if (pagesProblem) errors.maxPages = pagesProblem;
 
-  const maxDepth = body.maxDepth ?? b.defaultDepth;
+  const maxDepth = body.maxDepth ?? AUDIT_LIMIT_DEFAULTS.depth;
   const depthProblem = wholeNumberProblem(maxDepth, b.minDepth, b.maxDepth, 'Max depth');
   if (depthProblem) errors.maxDepth = depthProblem;
 
@@ -570,14 +584,16 @@ export interface SpeedValue {
 
 export type SpeedNotMeasuredReason = 'failed' | 'timeout' | 'quota' | 'no-network' | 'no-field-data';
 
+export type SpeedSource = 'pagespeed-insights' | 'this-tool';
+
 /**
- * Speed from the Google PageSpeed Insights API (REQ-012, ADR 0035), always with its source and method.
- * When it was not measured it carries no values, so it can never read as good (REQ-012 AC-2).
+ * Speed from the Google PageSpeed Insights API or measured directly in the audit's browser (ADR 0035, ADR 0042),
+ * always with its source and method. When it was not measured it carries no values, so it can never read as good (REQ-012 AC-2).
  */
 export type ExternalSpeed =
   | {
       status: 'measured';
-      source: 'pagespeed-insights';
+      source: SpeedSource;
       method: SpeedMethod;
       strategy: 'mobile';
       /** Field data for this page, or for the whole origin when the page has too few visitors. */
@@ -585,7 +601,7 @@ export type ExternalSpeed =
       values: SpeedValue[];
       measuredAt: string;
     }
-  | { status: 'not-measured'; source: 'pagespeed-insights'; method: SpeedMethod; reason: SpeedNotMeasuredReason };
+  | { status: 'not-measured'; source: SpeedSource; method: SpeedMethod; reason: SpeedNotMeasuredReason };
 
 export interface PageSpeed {
   lab: ExternalSpeed;
@@ -656,6 +672,10 @@ export interface AuditResult {
   /** Plain sentences for the tool user, such as "AI notes need an AI key." */
   notes: string[];
 }
+
+/** Structured note kinds that can appear in result.notes (ADR 0042). */
+export const AUDIT_NOTE_KINDS = ['ai-status', 'only-one-page', 'speed-source', 'site-stopped-answering'] as const;
+export type AuditNoteKind = (typeof AUDIT_NOTE_KINDS)[number];
 
 // ---------------------------------------------------------------------------------------------------
 // Audit Documents and export (REQ-018, REQ-021, REQ-022)
@@ -757,6 +777,24 @@ export const AUDIT_ID_PATTERN = /^[A-Za-z0-9_-]{8,64}$/;
 
 export type AuditStatus = 'running' | 'done' | 'failed' | 'stopped';
 
+/** All 7 documents produced by a website audit: the 5 audit documents plus Pitch Glimpse and Owner Audit (ADR 0042). */
+export type StoredDocumentKind = AuditDocumentKind | 'pitch-glimpse' | 'owner-audit';
+
+export type StoredAuditDocument =
+  | {
+      kind: StoredDocumentKind;
+      status: 'ready';
+      title: string;
+      formats: Array<'markdown' | 'html'>;
+      updatedAt: string;
+    }
+  | {
+      kind: StoredDocumentKind;
+      status: 'not-written';
+      title: string;
+      reason: string;
+    };
+
 /** One run of an audit. Each re-run is a new version with the same address and limits (Q-25). */
 export interface AuditVersion {
   auditId: string;
@@ -775,6 +813,10 @@ export interface AuditVersion {
   findings?: number;
   /** The version has edits. */
   edited?: boolean;
+  /** Why a running version was stopped (ADR 0042). */
+  stoppedReason?: 'tool-restarted' | 'stopped-by-user';
+  /** Audit Documents written at audit end (ADR 0042). */
+  documents?: StoredAuditDocument[];
 }
 
 /** A saved Website Audit with every version, oldest first (REQ-028 AC-2). */
@@ -949,7 +991,29 @@ export interface AuditSettingsUpdate {
 // ---------------------------------------------------------------------------------------------------
 
 export type AuditStage =
-  'checking-address' | 'crawling' | 'checking-pages' | 'measuring-speed' | 'assessing' | 'ranking' | 'saving';
+  | 'checking-address'
+  | 'crawling'
+  | 'checking-pages'
+  | 'measuring-speed'
+  | 'assessing'
+  | 'ranking'
+  | 'writing-documents'
+  | 'saving';
+
+export type AuditAiStatus = 'ready' | 'no-key' | 'key-expired' | 'quota' | 'timeout' | 'provider-error';
+
+export interface AuditPageState {
+  path: string;
+  state: 'queued' | 'loading' | 'recorded' | 'retrying' | 'skipped';
+  reason?: RouteSkipReason;
+  ai?: 'waiting' | 'done' | 'not-done';
+}
+
+export interface AuditProgressCounts {
+  pagesFound: number;
+  pagesRecorded: number;
+  pagesSkipped: number;
+}
 
 /** One event on `GET /api/audits/:id/stream`. */
 export type AuditProgressEvent =
@@ -963,6 +1027,32 @@ export type AuditProgressEvent =
       pagesSkipped: number;
       /** The path being read now (redacted). */
       currentPath?: string;
+    }
+  | {
+      type: 'page';
+      auditId: string;
+      version: number;
+      path: string;
+      state: 'queued' | 'loading' | 'recorded' | 'retrying' | 'skipped';
+      reason?: RouteSkipReason;
+      ai?: 'waiting' | 'done' | 'not-done';
+    }
+  | {
+      type: 'status';
+      auditId: string;
+      version: number;
+      ai: AuditAiStatus;
+      speed: 'pagespeed-insights' | 'this-tool' | 'not-measured';
+    }
+  | {
+      type: 'snapshot';
+      auditId: string;
+      version: number;
+      stage: AuditStage;
+      counts: AuditProgressCounts;
+      pages: AuditPageState[];
+      ai?: AuditAiStatus;
+      speed?: 'pagespeed-insights' | 'this-tool' | 'not-measured';
     }
   | { type: 'done'; auditId: string; version: number }
   | { type: 'failed'; auditId: string; version: number; error: string; code: AuditErrorCode };
@@ -979,6 +1069,14 @@ export const AUDIT_ERROR_CODES = [
   'ERR_PRIVATE_ADDRESS',
   /** 422: the host does not resolve, does not answer, or answers 400 or above (REQ-001 AC-2). */
   'ERR_UNREACHABLE',
+  /** 422: the site blocked automated access with an interstitial or challenge page (ADR 0042). */
+  'ERR_SITE_BLOCKED',
+  /** 422: the host domain could not be resolved by DNS (ADR 0042). */
+  'ERR_DNS',
+  /** 500: the headless browser could not be launched (ADR 0042). */
+  'ERR_BROWSER_LAUNCH',
+  /** 500: the audit pipeline encountered an internal error saving or processing (ADR 0042). */
+  'ERR_PIPELINE',
   /** 409: the run slot is busy with a Check-up, benchmark or audit. */
   'ERR_RUN_IN_PROGRESS',
   /** 429: the shared copy's limit for a visitor is reached. */
@@ -1013,6 +1111,8 @@ export interface AuditErrorReply {
   code: AuditErrorCode;
   /** ERR_INVALID_AUDIT only. */
   fields?: AuditStartErrors;
+  /** ERR_RUN_IN_PROGRESS only: what is currently running (ADR 0042). */
+  running?: { kind: 'checkup' | 'audit'; href: string };
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -1034,6 +1134,8 @@ export interface AuditEndpoint {
   /** 'json': a JSON reply. 'file': a download. 'html': a page to open. 'sse': an event stream. */
   replies: 'json' | 'file' | 'html' | 'sse';
   access: AuditAccess;
+  /** True for a prefix row: it matches every path that starts with `path`. */
+  prefix?: boolean;
 }
 
 /** Every audit route. Request and reply types per route are in `AuditApi`. */
@@ -1066,6 +1168,8 @@ export const AUDIT_API = {
   revokeShare: { method: 'DELETE', path: '/api/audits/:id/share/:linkId', replies: 'json', access: 'owner' },
   /** Public, noindex, strict Content-Security-Policy; 410 when expired or revoked. */
   sharedPage: { method: 'GET', path: '/s/:linkId', replies: 'html', access: 'public' },
+  /** Prefix row: any other GET under `/s` (a malformed id) gets the same public 404 page, never a 401. */
+  sharedPageFallback: { method: 'GET', path: '/s', replies: 'html', access: 'public', prefix: true },
   listRewrites: { method: 'GET', path: '/api/audits/:id/rewrite', replies: 'json', access: 'view' },
   approveRewrite: { method: 'POST', path: '/api/audits/:id/rewrite/approve', replies: 'json', access: 'edit' },
   /** Writes new copy for an approved Section (rewrite stage); 409 ERR_NOT_APPROVED / ERR_NO_AI_KEY. */
@@ -1313,6 +1417,7 @@ interface AuditApiShapes {
   createShare: { query: NoQuery; body: ShareCreateBody; reply: ShareLinkReply };
   revokeShare: { query: NoQuery; body: undefined; reply: ShareLinkReply };
   sharedPage: { query: NoQuery; body: undefined; reply: HtmlReply };
+  sharedPageFallback: { query: NoQuery; body: undefined; reply: HtmlReply };
   listRewrites: { query: VersionQuery; body: undefined; reply: RewriteListReply };
   approveRewrite: { query: NoQuery; body: RewriteSectionBody; reply: RewriteReply };
   runRewrite: { query: NoQuery; body: RewriteRunBody; reply: RewriteReply };

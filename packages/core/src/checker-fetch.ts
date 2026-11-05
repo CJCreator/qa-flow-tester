@@ -15,7 +15,17 @@ export const CHECKER_FETCH_TIMEOUT_MS = 3000;
 /** The checkers read status and at most a file head; a large body is not kept. */
 export const CHECKER_FETCH_MAX_BYTES = 512_000;
 
+/** Per-caller defaults for the shared factory. Pacer use is explicit: only the audit shares one with its crawl. */
+export const CHECKER_FETCH_CALLERS = {
+  audit: { maxRedirects: 0, timeoutMs: CHECKER_FETCH_TIMEOUT_MS, usesPacer: true },
+  orchestrator: { maxRedirects: 0, timeoutMs: CHECKER_FETCH_TIMEOUT_MS, usesPacer: false },
+  orchestratorLinks: { maxRedirects: 10, timeoutMs: 10_000, usesPacer: false },
+} as const;
+export type CheckerFetchCaller = keyof typeof CHECKER_FETCH_CALLERS;
+
 export interface CheckerFetchOptions {
+  /** Which caller's defaults apply (redirect limit, timeout, pacer use). Explicit fields below still win. */
+  caller?: CheckerFetchCaller;
   /** The run's rule for private addresses. Never set from request input. */
   allowPrivate?: boolean;
   /** 0 (default) returns a 3xx as the response; the checkers stay on the address they were given. */
@@ -27,15 +37,23 @@ export interface CheckerFetchOptions {
   deps?: NetDeps;
 }
 
-export function makeCheckerFetch(opts: CheckerFetchOptions = {}): FetchFn {
-  return makeOutboundFetch({
+/** The options handed to makeOutboundFetch: one place, so callers cannot drift. */
+export function resolveCheckerFetchOptions(opts: CheckerFetchOptions = {}) {
+  const profile: { maxRedirects: number; timeoutMs: number; usesPacer: boolean } = opts.caller
+    ? CHECKER_FETCH_CALLERS[opts.caller]
+    : { maxRedirects: 0, timeoutMs: CHECKER_FETCH_TIMEOUT_MS, usesPacer: true }; // no caller: options as given (crawl, tests)
+  return {
     allowPrivate: opts.allowPrivate,
-    maxRedirects: opts.maxRedirects ?? 0,
-    timeoutMs: opts.timeoutMs ?? CHECKER_FETCH_TIMEOUT_MS,
+    maxRedirects: opts.maxRedirects ?? profile.maxRedirects,
+    timeoutMs: opts.timeoutMs ?? profile.timeoutMs,
     maxBytes: CHECKER_FETCH_MAX_BYTES,
-    pacer: opts.pacer,
+    pacer: profile.usesPacer ? opts.pacer : undefined,
     deps: opts.deps,
-  });
+  };
+}
+
+export function makeCheckerFetch(opts: CheckerFetchOptions = {}): FetchFn {
+  return makeOutboundFetch(resolveCheckerFetchOptions(opts));
 }
 
 /**

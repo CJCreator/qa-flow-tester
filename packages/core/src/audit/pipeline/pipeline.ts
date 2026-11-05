@@ -380,7 +380,12 @@ export async function runAuditPipeline(
         .map((p) => ({ ...p.accessibility!, urlPath: p.info.urlPath })),
       // Public addresses only (private too when the crawl ran on a local runner, ADR 0042), no redirect followed
       // (a redirect could land on a Skipped Page), paced with the crawl.
-      fetch: makeCheckerFetch({ allowPrivate: crawl.allowPrivateAddresses === true, pacer, deps: deps.netDeps }),
+      fetch: makeCheckerFetch({
+        caller: 'audit',
+        allowPrivate: crawl.allowPrivateAddresses === true,
+        pacer,
+        deps: deps.netDeps,
+      }),
       firstFindingNumber: 1,
     });
     analysed = true;

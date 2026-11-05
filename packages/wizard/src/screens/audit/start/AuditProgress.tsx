@@ -17,6 +17,7 @@ export const AUDIT_STAGE_LABELS: Readonly<Record<AuditStage, string>> = {
   'measuring-speed': 'Measuring speed',
   assessing: 'Writing notes on each area',
   ranking: 'Ranking what to repair first',
+  'writing-documents': 'Writing documents',
   saving: 'Saving the results',
 };
 
@@ -46,7 +47,8 @@ export function applyAuditEvent(
   const last = state.status === 'starting' ? null : state.progress;
   if (event.type === 'progress') return { status: 'working', progress: event };
   if (event.type === 'done') return { status: 'done', progress: last };
-  return { status: 'stopped', progress: last, message: stoppedText(event) };
+  if (event.type === 'failed') return { status: 'stopped', progress: last, message: stoppedText(event) };
+  return state;
 }
 
 /**

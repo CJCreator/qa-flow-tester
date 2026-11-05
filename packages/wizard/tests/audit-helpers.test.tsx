@@ -265,6 +265,12 @@ describe('Helpers screen', () => {
     expect(html).not.toMatch(/<(button|input|form|a)\b/);
   });
 
+  it('goes back to this Website Audit, not the list of all of them', () => {
+    const html = renderToStaticMarkup(createElement(HelpersScreen, { auditId: AUDIT_ID }));
+    expect(html).toMatch(/<a[^>]*href="\/audits\/abcd1234"[^>]*>(<span[^>]*>[^<]*<\/span>)?Back to this Website Audit/);
+    expect(html).not.toContain('All Website Audits');
+  });
+
   it('shows the loading state first, then the list when loaded', () => {
     const loading = renderToStaticMarkup(createElement(HelpersScreen, { auditId: AUDIT_ID }));
     expect(loading).toContain('Loading the Helpers…');
@@ -558,8 +564,8 @@ describe('Helper role, host, address and ways back', () => {
   it('links back to the Website Audit from the Helpers screen', () => {
     const html = renderToStaticMarkup(createElement(HelpersScreen, { auditId: AUDIT_ID }));
     expect(html).toContain(`href="/audits/${AUDIT_ID}"`);
-    expect(textOf(html)).toContain('All Website Audits');
-    expect(html).toContain('href="/audits"');
+    expect(textOf(html)).toContain('Back to this Website Audit');
+    expect(html).not.toContain('href="/audits"');
   });
 });
 

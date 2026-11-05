@@ -12,6 +12,8 @@ import {
   AUDIT_DOCUMENT_KINDS,
   AUDIT_ERROR_CODES,
   AUDIT_ID_PATTERN,
+  AUDIT_LIMIT_DEFAULTS,
+  AUDIT_NOTE_KINDS,
   DOCUMENT_LANGUAGES,
   DOCUMENT_LANGUAGE_INFO,
   EXPORT_CONTENT_TYPES,
@@ -31,15 +33,22 @@ import {
   sectionText,
   validateAuditStartBody,
   type AreaAssessment,
+  type AuditAiStatus,
   type AuditApi,
   type AuditFinding,
+  type AuditPageState,
+  type AuditProgressEvent,
+  type AuditStage,
   type AuditStartBody,
   type AuditStartErrors,
+  type AuditVersion,
   type EditOverlay,
   type ExternalSpeed,
   type PageContent,
   type ShortlistEntry,
   type ShortlistOutcome,
+  type SpeedSource,
+  type StoredAuditDocument,
   type TechnologyResult,
 } from '../src/website-audit.js';
 import { ROUTE_SKIP_REASONS, type RouteSkipReason } from '../src/route-telemetry.js';
@@ -65,7 +74,12 @@ describe('validateAuditStartBody: the address (REQ-001 AC-3)', () => {
       ok: true,
       value: {
         url: 'https://example.com/shop?x=1',
-        limits: { maxPages: 200, maxDepth: 8, includePaths: [], excludePaths: [] },
+        limits: {
+          maxPages: AUDIT_LIMIT_DEFAULTS.pages,
+          maxDepth: AUDIT_LIMIT_DEFAULTS.depth,
+          includePaths: [],
+          excludePaths: [],
+        },
         language: 'en',
       },
     });
@@ -150,8 +164,8 @@ describe('validateAuditStartBody: crawl limits (REQ-002)', () => {
   it('treats null limits as not given', () => {
     const check = validateAuditStartBody({ ...VALID, maxPages: null, maxDepth: null, includePaths: null });
     expect(check.ok && check.value.limits).toEqual({
-      maxPages: CRAWL_LIMIT_BOUNDS.defaultPages,
-      maxDepth: CRAWL_LIMIT_BOUNDS.defaultDepth,
+      maxPages: AUDIT_LIMIT_DEFAULTS.pages,
+      maxDepth: AUDIT_LIMIT_DEFAULTS.depth,
       includePaths: [],
       excludePaths: [],
     });
@@ -384,8 +398,67 @@ describe('fixed lists', () => {
     expect(SHARED_LINK_PREFIX).toBe('/s/');
   });
 
-  it('error codes are unique', () => {
+  it('error codes are unique and include ADR 0042 codes', () => {
     expect(new Set(AUDIT_ERROR_CODES).size).toBe(AUDIT_ERROR_CODES.length);
+    expect(AUDIT_ERROR_CODES).toContain('ERR_SITE_BLOCKED');
+    expect(AUDIT_ERROR_CODES).toContain('ERR_DNS');
+    expect(AUDIT_ERROR_CODES).toContain('ERR_BROWSER_LAUNCH');
+    expect(AUDIT_ERROR_CODES).toContain('ERR_PIPELINE');
+  });
+
+  it('AUDIT_LIMIT_DEFAULTS defines 50 pages, depth 5, and concurrency (ADR 0042, ADR 0043)', () => {
+    expect(AUDIT_LIMIT_DEFAULTS).toEqual({
+      pages: 50,
+      depth: 5,
+      hostedMaxPages: 200,
+      fetchInFlight: 3,
+      aiInFlight: 4,
+    });
+  });
+
+  it('AuditStage includes writing-documents between ranking and saving', () => {
+    const stage: AuditStage = 'writing-documents';
+    expect(stage).toBe('writing-documents');
+  });
+
+  it('AuditAiStatus covers ready, key, quota, timeout, and provider error', () => {
+    const statuses: AuditAiStatus[] = ['ready', 'no-key', 'key-expired', 'quota', 'timeout', 'provider-error'];
+    expect(statuses).toHaveLength(6);
+  });
+
+  it('AuditProgressEvent shapes support progress, page, status, snapshot, done, and failed', () => {
+    const pageEvent: AuditProgressEvent = {
+      type: 'page',
+      auditId: 'audit-12345678',
+      version: 1,
+      path: '/about',
+      state: 'recorded',
+      ai: 'done',
+    };
+    const statusEvent: AuditProgressEvent = {
+      type: 'status',
+      auditId: 'audit-12345678',
+      version: 1,
+      ai: 'ready',
+      speed: 'this-tool',
+    };
+    const snapshotEvent: AuditProgressEvent = {
+      type: 'snapshot',
+      auditId: 'audit-12345678',
+      version: 1,
+      stage: 'writing-documents',
+      counts: { pagesFound: 10, pagesRecorded: 8, pagesSkipped: 2 },
+      pages: [{ path: '/', state: 'recorded' }],
+      ai: 'ready',
+      speed: 'this-tool',
+    };
+    expect(pageEvent.type).toBe('page');
+    expect(statusEvent.type).toBe('status');
+    expect(snapshotEvent.type).toBe('snapshot');
+  });
+
+  it('AUDIT_NOTE_KINDS includes expected note kinds', () => {
+    expect(AUDIT_NOTE_KINDS).toEqual(['ai-status', 'only-one-page', 'speed-source', 'site-stopped-answering']);
   });
 });
 
@@ -535,6 +608,7 @@ describe('AUDIT_API', () => {
       ['GET', '/api/audits/:id/share'],
       ['DELETE', '/api/audits/:id/share/:linkId'],
       ['GET', '/s/:linkId'],
+      ['GET', '/s'],
       // BE-024 rewrite
       ['GET', '/api/audits/:id/rewrite'],
       ['POST', '/api/audits/:id/rewrite/approve'],
@@ -562,11 +636,25 @@ describe('AUDIT_API', () => {
     const keys = endpoints.map(([, e]) => `${e.method} ${e.path}`);
     expect(new Set(keys).size).toBe(keys.length);
     for (const [, e] of endpoints)
-      expect(e.path.startsWith('/api/') || e.path.startsWith(SHARED_LINK_PREFIX)).toBe(true);
+      expect(e.path.startsWith('/api/') || e.path.startsWith(SHARED_LINK_PREFIX) || e.path === '/s').toBe(true);
+  });
+
+  it('declares the /s prefix row as public, so a malformed Shared Link id is a 404 page, not a 401', () => {
+    expect(AUDIT_API.sharedPageFallback).toEqual({
+      method: 'GET',
+      path: '/s',
+      replies: 'html',
+      access: 'public',
+      prefix: true,
+    });
+    expect(AUDIT_API.sharedPageFallback.path).toBe(SHARED_LINK_PREFIX.replace(/\/$/, ''));
   });
 
   it('opens only the Shared Link without the access key, and keeps Helpers off owner-only routes (REQ-033)', () => {
-    expect(endpoints.filter(([, e]) => e.access === 'public').map(([name]) => name)).toEqual(['sharedPage']);
+    expect(endpoints.filter(([, e]) => e.access === 'public').map(([name]) => name)).toEqual([
+      'sharedPage',
+      'sharedPageFallback',
+    ]);
     const ownerOnly = endpoints.filter(([, e]) => e.access === 'owner').map(([name]) => name);
     for (const name of ['remove', 'getSettings', 'putSettings', 'listHelpers', 'grantHelper', 'removeHelper']) {
       expect(ownerOnly).toContain(name);

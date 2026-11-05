@@ -15,29 +15,6 @@ export interface RetryTelemetryEntry {
   likelyCause?: 'timing' | 'state-leakage' | 'network' | 'unknown';
 }
 
-export interface DesignTokens {
-  colors?: Record<string, string>;
-  spacing?: Record<string, string>;
-  fontSize?: Record<string, string>;
-  borderRadius?: Record<string, string>;
-  fontFamily?: Record<string, string>;
-}
-
-export interface DesignTokenBaseline {
-  version: string;
-  productId: string;
-  updatedAt: string;
-  tokens: DesignTokens;
-}
-
-export interface AccountPoolConfig {
-  [role: string]: Array<{
-    username: string;
-    password?: string;
-    token?: string;
-  }>;
-}
-
 // --- Phase 4: Competitive & Reference Public Flow Analysis Types ---
 
 export interface ReferenceFlowStep {
@@ -66,13 +43,6 @@ export interface FrictionScorecard {
   requiredFieldsCount: number;
   clickDepth: number;
   frictionIndex: number;
-}
-
-export interface InteractivePattern {
-  name: string;
-  category: 'auth' | 'pricing' | 'form' | 'trust';
-  present: boolean;
-  description: string;
 }
 
 export interface UXRecommendation {

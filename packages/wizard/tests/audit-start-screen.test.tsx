@@ -65,13 +65,13 @@ describe('Website Audit start screen: the form (REQ-002)', () => {
     expect(pages).toContain('type="number"');
     expect(pages).toContain('min="1"');
     expect(pages).toContain('max="1000"');
-    expect(pages).toContain('value="200"');
+    expect(pages).toContain('value="50"');
     const depth = tagWithId(html, 'audit-maxDepth');
     expect(depth).toContain('min="0"');
     expect(depth).toContain('max="100"');
-    expect(depth).toContain('value="8"');
-    expect(html).toContain('From 1 to 1000. 200 unless you set another number.');
-    expect(html).toContain('from 0 to 100. 8 unless you set another number.');
+    expect(depth).toContain('value="5"');
+    expect(html).toContain('From 1 to 1000. 50 unless you set another number.');
+    expect(html).toContain('from 0 to 100. 5 unless you set another number.');
     expect(html).toMatch(/<button type="submit"[^>]*>Start the Website Audit<\/button>/);
   });
 
@@ -119,7 +119,7 @@ describe('Website Audit start screen: messages next to their fields (REQ-001 AC-
     expect(html).toMatch(/<details class="disclosure[^"]*">/);
     expect(html).not.toMatch(/<details[^>]*open=""/);
     expect(html).toContain('Limits (optional)');
-    expect(html).toContain('200 pages · 8 links deep');
+    expect(html).toContain('50 pages · 5 links deep');
     const details = html.slice(html.indexOf('<details'), html.indexOf('</details>'));
     for (const id of ['audit-maxPages', 'audit-maxDepth', 'audit-includePaths', 'audit-excludePaths'])
       expect(details).toContain(`id="${id}"`);

@@ -54,3 +54,18 @@ coverage/
 .vercel
 .env*
 !.env.example
+
+# Editor, OS and scratch files (repo cleanup 2026-11-05)
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+*~
+*.tmp
+*.temp
+*.bak
+*.log
+*.local
+.nyc_output/
+*.tsbuildinfo
+.vite/

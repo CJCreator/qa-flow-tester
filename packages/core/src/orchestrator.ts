@@ -566,8 +566,8 @@ export class FlowTestOrchestrator {
     const marketingLog = newMarketingLog();
     // The checkers' requests (security.txt, source maps, links, site files) and the plan's link checks go
     // through the pinned, redirect-checked path only (ADR 0031), never Playwright's request API.
-    const checkerFetch = makeCheckerFetch();
-    const linkFetch = makeCheckerFetch({ maxRedirects: 10, timeoutMs: 10_000 });
+    const checkerFetch = makeCheckerFetch({ caller: 'orchestrator' });
+    const linkFetch = makeCheckerFetch({ caller: 'orchestratorLinks' });
 
     // Pages whose vitals were already measured with repeat loads in this run.
     const vitalsMeasured = new Set<string>();

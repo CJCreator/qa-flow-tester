@@ -1,6 +1,6 @@
 # 0035: Page Speed for the Website Audit Comes from the PageSpeed Insights API
 
-Status: Accepted, 2026-11-03. Follow-up record named in [0033](0033-website-audit-entry-point.md). Records Q-03 (speed
+Status: Accepted, 2026-11-03. Amended by [0042](0042-website-audit-reliability-and-access.md) (lab timing by this tool when PageSpeed Insights cannot answer). Follow-up record named in [0033](0033-website-audit-entry-point.md). Records Q-03 (speed
 part) and Q-32 for REQ-012 and REQ-043.
 
 ## Context
