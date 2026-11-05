@@ -217,6 +217,32 @@ export function resetBetaUsage(): void {
   for (const s of sessions.values()) s.usage = undefined;
 }
 
+/**
+ * Cleanup (ADR 0039 / M3): forgets every visitor session idle for SESSION_HOURS, with its sign-ins and counts, and
+ * drops rate-limit times that are out of their window. Returns how many sessions were forgotten. Counts only.
+ */
+export function purgeStaleSessions(now: number = Date.now()): number {
+  const cutoff = now - SESSION_HOURS * 3_600_000;
+  let forgotten = 0;
+  for (const [id, s] of sessions) {
+    if (s.lastSeen < cutoff) {
+      sessions.delete(id);
+      forgotten += 1;
+    }
+  }
+  for (const [key, times] of newSessionTimes) {
+    const recent = times.filter((t) => now - t < NEW_SESSION_WINDOW_MS);
+    if (recent.length === 0) newSessionTimes.delete(key);
+    else newSessionTimes.set(key, recent);
+  }
+  return forgotten;
+}
+
+/** The folder names (as siteDir() makes them) of the visitor sessions still held in memory. */
+export function liveVisitorFolders(): Set<string> {
+  return new Set([...sessions.keys()].map((id) => id.replace(/[^\w-]/g, '_')));
+}
+
 /** The session the current request (or a run it started) belongs to; undefined outside beta mode. */
 export function currentSessionId(): string | undefined {
   return current.getStore();

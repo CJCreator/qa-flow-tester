@@ -94,7 +94,7 @@ describe('Schedules in the audit store backend', () => {
     backend.failReads = true;
     backend.writes.length = 0;
     const summary = await manager.tick(async () => true);
-    expect(summary).toEqual({ started: 0, failed: 0, skipped: 0, busy: false });
+    expect(summary).toEqual({ started: 0, failed: 0, skipped: 0, retrying: 0, busy: false });
     expect(backend.writes).toEqual([]);
   });
 });

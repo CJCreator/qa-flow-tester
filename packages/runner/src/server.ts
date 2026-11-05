@@ -199,6 +199,7 @@ import {
   BackendScheduleStore,
   SchedulerManager,
   type CheckupSchedule,
+  type RunOutcome,
   type ScheduleStore,
   type TickSummary,
 } from './scheduler.js';
@@ -216,8 +217,11 @@ import {
   sessionFor,
   pinSession,
   SessionRateLimited,
+  purgeStaleSessions,
+  liveVisitorFolders,
   type BetaLimits,
 } from './beta.js';
+import { purgeVisitorFolders } from './session/visitor-cleanup.js';
 import { testCopyFor } from './host-policy.js';
 import { isLoopbackBindHost } from './bind-host.js';
 import {
@@ -315,8 +319,6 @@ function matchesSecret(given: string | null | undefined, secret: string): boolea
   const b = Buffer.from(secret.trim());
   return a.length === b.length && timingSafeEqual(a, b);
 }
-
-const MAX_RUN_EVENTS = 5000;
 
 /** Token use per stage, added together. */
 function addTokens(a: AIRequestBudget['tokens'], b: AIRequestBudget['tokens']): AIRequestBudget['tokens'] {
@@ -916,7 +918,8 @@ export class RunnerServer {
       beta: this.beta,
       hostChecks: this.hostChecks,
       stepTimeoutMs: this.stepTimeoutMs,
-      onEvent: (event) => this.broadcastRunnerEvent(event),
+      // The checkup session already logged this event (CheckupRun's broadcast): only stream it here, do not log it twice.
+      onEvent: (event) => this.streamRunnerEvent(event),
       screensForReview: (report, draft) => this.screensForReview(report, draft),
       visualReview: (report, screens, options) => this.visualReview(report, screens, options),
       saveReviewedReport: (report) => this.saveReviewedReport(report),
@@ -956,6 +959,11 @@ export class RunnerServer {
 
   public broadcastRunnerEvent(event: OrchestratorEvent | Record<string, unknown>): void {
     this.recordRunEvent(event as Record<string, unknown>);
+    this.streamRunnerEvent(event);
+  }
+
+  /** Sends one event to the open event streams (SSE). Does not log it: see recordRunEvent. */
+  private streamRunnerEvent(event: OrchestratorEvent | Record<string, unknown>): void {
     const payload = `data: ${JSON.stringify(event)}\n\n`;
     const eventRun =
       typeof (event as Record<string, unknown>).runId === 'string'
@@ -1361,7 +1369,7 @@ export class RunnerServer {
               });
               return;
             }
-            await this.ensurePlanLoaded();
+            // Read-only: reading status does not load or start a plan (S11). Startup already loaded any saved one.
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(
               JSON.stringify({
@@ -1569,8 +1577,8 @@ export class RunnerServer {
    * A due schedule starts a read-only check-up of its address (nothing is sent or changed, no AI request
    * is spent). False when it could not start, for instance because a check-up is already running.
    */
-  private async runSchedule(schedule: CheckupSchedule): Promise<boolean> {
-    if (this.checkupStartRefused || this.runStartDone) return false;
+  private async runSchedule(schedule: CheckupSchedule): Promise<RunOutcome> {
+    if (this.checkupStartRefused || this.runStartDone) return 'busy';
     // resolveAuthorization({ beta: false }) below skips the public-address check, so the hosted copy does it here.
     if (this.beta && (await refusedTarget(schedule.targetUrl, this.hostChecks?.lookup))) return false;
     let finishStart!: () => void;
@@ -1592,8 +1600,9 @@ export class RunnerServer {
         hostChecks: this.hostChecks,
       });
       await this.checkupRun.start({ body, authorization });
-    } catch {
-      return false;
+    } catch (err) {
+      // The slot was taken between the check above and the start: the schedule is retried, not failed (R5).
+      return (err as { code?: unknown } | null)?.code === 'ERR_RUN_IN_PROGRESS' ? 'busy' : false;
     } finally {
       this.runStartDone = null;
       finishStart();
@@ -3977,6 +3986,16 @@ export class RunnerServer {
     return this.scheduler.tick((schedule) => this.runSchedule(schedule), new Date(), {
       deadlineMs: Date.now() + TICK_BUDGET_MS,
     });
+  }
+
+  /**
+   * What the Cloud Scheduler's cleanup call does (M3): forgets visitor sessions idle for 24 hours, and deletes
+   * their folders under `<dataDir>/sessions` that have been untouched for 24 hours. Counts only.
+   */
+  public async purgeVisitorSessions(now: Date = new Date()): Promise<{ sessions: number; folders: number }> {
+    const sessions = purgeStaleSessions(now.getTime());
+    const folders = await purgeVisitorFolders(path.join(this.dataDir, 'sessions'), now.getTime(), liveVisitorFolders());
+    return { sessions, folders };
   }
 
   private async handleAddSchedule(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {

@@ -1,3 +1,7 @@
+/**
+ * Replay cap: the newest 200 events of a run are kept for a reconnecting page (M9). The server used to carry an
+ * unused 5000 that suggested a larger log; it is gone.
+ */
 export const MAX_RUN_EVENTS = 200;
 
 export interface RunEvents {
