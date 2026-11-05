@@ -19,6 +19,6 @@ We decided that the tool and its reports never say a site is compliant, accessib
 Words to avoid in the product, reports, docs and marketing: compliant, compliance (as a result), certified, secure, safe, hack-proof, passes WCAG, fully accessible. A report may say that a site "meets" or "fails" a single named check.
 
 ## Consequences
-- Reports and the wizard need a "What this did not check" section. This is built with the accessibility checklist (item 3.4) and the report work (item 1.1). Until then, each finding states its own limits.
+- Reports and the wizard need a "What this did not check" section. This is built with the accessibility checklist and the report work. Until then, each finding states its own limits.
 - Marketing copy and the README are reviewed against this list before each release.
 - It costs some persuasiveness. We accept that, because a trusted verdict is the product.

@@ -3,8 +3,7 @@
 The Wizard is the app, for everyone ([ADR 0010](../../docs/adr/0010-one-app-with-details-on-demand.md)). It's written
 for people who don't test software for a living: product managers, founders, marketers. Engineers get their detail
 in the same app, under each finding, in a collapsed "Details for developers". QA Flow Studio (`packages/web`), the
-separate dashboard for engineers, is being retired
-([E2E_PLATFORM_IMPLEMENTATION_PLAN.md](../../docs/E2E_PLATFORM_IMPLEMENTATION_PLAN.md)).
+separate dashboard for engineers, is being retired.
 
 On screen the product is called **Release check-up**, and one pass over a site is a **check-up** (see
 [CONTEXT.md](../../CONTEXT.md)).
@@ -180,8 +179,7 @@ titles are rewritten in `src/lib/summary.ts`.
 - **"Check" is reserved.** A whole pass is a check-up. "Check" means a Navigation Check or one of the graded
   checks.
 - **Nothing technical on the plain-language layer:** no prototype labels, error codes, selectors, checker ids,
-  event names or command lines. They go under "Details for developers". A test reads every screen for them
-  ([E2E_PLATFORM_IMPLEMENTATION_PLAN.md](../../docs/E2E_PLATFORM_IMPLEMENTATION_PLAN.md), Wording).
+  event names or command lines. They go under "Details for developers". A test reads every screen for them.
 - **One word per thing:** the settings are "Settings" everywhere.
 - **A button names what happens, and the result uses the same words.** "Download the report" leads to "Report
   downloaded".
