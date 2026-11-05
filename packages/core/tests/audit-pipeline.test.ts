@@ -783,7 +783,7 @@ describe('audit pipeline: runAuditPipeline', () => {
 
     const stages = siteStages({
       measureSampleSpeeds: vi.fn(async (urls) => {
-        return urls.map((url) => ({
+        return urls.map((url: string) => ({
           url,
           speed: {
             lab: { status: 'not-measured', source: 'pagespeed-insights', method: 'lab', reason: 'quota' },
@@ -809,7 +809,7 @@ describe('audit pipeline: runAuditPipeline', () => {
   it('notes speed was not measured when neither PSI nor browser timing is available', async () => {
     const stages = siteStages({
       measureSampleSpeeds: vi.fn(async (urls) => {
-        return urls.map((url) => ({
+        return urls.map((url: string) => ({
           url,
           speed: {
             lab: { status: 'not-measured', source: 'pagespeed-insights', method: 'lab', reason: 'quota' },
@@ -931,11 +931,10 @@ describe('audit pipeline: runAuditPipeline', () => {
     const fakeDocs = [
       {
         kind: 'structure' as const,
-        format: 'md' as const,
-        path: 'structure.md',
-        bytes: 100,
-        sha256: 'abc',
-        createdAt: '2026-11-03T00:05:00.000Z',
+        status: 'ready' as const,
+        title: 'Structure',
+        formats: ['markdown' as const],
+        updatedAt: '2026-11-03T00:05:00.000Z',
       },
     ];
     const stages = siteStages({

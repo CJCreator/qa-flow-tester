@@ -133,7 +133,7 @@ describe('runAuditCrawl start page and typed errors', () => {
       runAuditCrawl(
         {
           url: 'https://example.com/',
-          limits: { maxPages: 5, maxDepth: 2 },
+          limits: { maxPages: 5, maxDepth: 2, includePaths: [], excludePaths: [] },
           language: 'en',
         },
         {
@@ -162,7 +162,7 @@ describe('runAuditCrawl start page and typed errors', () => {
       runAuditCrawl(
         {
           url: 'https://example.com/',
-          limits: { maxPages: 5, maxDepth: 2 },
+          limits: { maxPages: 5, maxDepth: 2, includePaths: [], excludePaths: [] },
           language: 'en',
         },
         {
@@ -191,7 +191,7 @@ describe('runAuditCrawl start page and typed errors', () => {
       runAuditCrawl(
         {
           url: 'https://example.com/',
-          limits: { maxPages: 5, maxDepth: 2 },
+          limits: { maxPages: 5, maxDepth: 2, includePaths: [], excludePaths: [] },
           language: 'en',
         },
         {
@@ -220,7 +220,7 @@ describe('runAuditCrawl start page and typed errors', () => {
       runAuditCrawl(
         {
           url: 'https://example.com/',
-          limits: { maxPages: 5, maxDepth: 2 },
+          limits: { maxPages: 5, maxDepth: 2, includePaths: [], excludePaths: [] },
           language: 'en',
         },
         {
@@ -250,7 +250,7 @@ describe('runAuditCrawl start page and typed errors', () => {
       runAuditCrawl(
         {
           url: 'https://doesnotexist.example.com/',
-          limits: { maxPages: 5, maxDepth: 2 },
+          limits: { maxPages: 5, maxDepth: 2, includePaths: [], excludePaths: [] },
           language: 'en',
         },
         {
@@ -274,7 +274,7 @@ describe('runAuditCrawl start page and typed errors', () => {
       runAuditCrawl(
         {
           url: 'https://example.com/',
-          limits: { maxPages: 5, maxDepth: 2 },
+          limits: { maxPages: 5, maxDepth: 2, includePaths: [], excludePaths: [] },
           language: 'en',
         },
         {

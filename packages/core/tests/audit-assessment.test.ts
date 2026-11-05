@@ -508,10 +508,10 @@ describe('assessPages and assessSite', () => {
       const fake = scripted([answer([]), answer([])]);
       const { resolution } = await aiWith(fake.provider);
       const limiterCalls: number[] = [];
-      const limiter = vi.fn(async <T>(fn: () => Promise<T>): Promise<T> => {
+      const limiter = vi.fn((fn: () => Promise<unknown>) => {
         limiterCalls.push(Date.now());
         return fn();
-      });
+      }) as <T>(fn: () => Promise<T>) => Promise<T>;
 
       const results = await assessPages(pagesInput([page('/p1', []), page('/p2', [])], { limiter }), resolution);
 
