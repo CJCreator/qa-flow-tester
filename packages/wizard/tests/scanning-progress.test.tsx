@@ -125,7 +125,7 @@ describe('T-109: ScanningScreen crawl health and accessible regions', () => {
 
     expect(html).toContain('Signed in as <strong class="text-ink">admin</strong>');
     expect(html).toContain('Sign-in failed for editor');
-    expect(html).toContain('Skipped');
+    expect(html).toContain('3 skipped');
     expect(html).toContain('3');
   });
 

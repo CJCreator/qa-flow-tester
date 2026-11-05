@@ -21,7 +21,7 @@ function PageItem({ node }: { node: HierarchyNode }) {
   const hasTitle = node.title !== null && node.title.trim() !== '';
   return (
     <li className="mt-1">
-      <span className="font-bold text-ink" {...(hasTitle ? textLangAttrs(node.title ?? '', 'not-identified') : {})}>
+      <span className="font-bold text-ink" {...(hasTitle ? textLangAttrs(node.title ?? '') : {})}>
         {hasTitle ? node.title : node.urlPath}
       </span>
       {hasTitle && <span className="ml-2 break-all text-sm text-ink-soft">{node.urlPath}</span>}
@@ -60,23 +60,21 @@ export function HierarchyView({ hierarchy }: HierarchyViewProps) {
           <div key={region} className="space-y-2">
             <h4 className="font-bold">{label}</h4>
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
+              <table className="table-plain">
                 <caption className="sr-only">{`${label}: ${links.length} ${links.length === 1 ? 'link' : 'links'}`}</caption>
                 <thead>
                   <tr>
                     <th scope="col">On page</th>
                     <th scope="col">Link text</th>
                     <th scope="col">Goes to</th>
-                    <th scope="col">Where it sits</th>
                   </tr>
                 </thead>
                 <tbody>
                   {links.map((link, i) => (
                     <tr key={`${link.from}-${link.to}-${i}`}>
-                      <td className="break-all">{link.from}</td>
-                      <td>{link.text.trim() === '' ? 'No link text' : link.text}</td>
-                      <td className="break-all">{link.to}</td>
-                      <td>{label}</td>
+                      <td className="break-all font-mono">{link.from}</td>
+                      <td {...textLangAttrs(link.text)}>{link.text.trim() === '' ? 'No link text' : link.text}</td>
+                      <td className="break-all font-mono">{link.to}</td>
                     </tr>
                   ))}
                 </tbody>

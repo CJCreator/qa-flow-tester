@@ -1,9 +1,12 @@
+import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
+import { AUDIT_LINKS, AreaNav, CHECKUP_LINKS, areaOf, menuGroups } from '../src/components/AreaNav';
 import { AUDIT_COMMANDS } from '../src/components/CommandPalette';
-import { CRUMB_LABELS, TopBar, crumbTrail, navItems } from '../src/components/TopBar';
+import { MobileMenu, TopBar } from '../src/components/TopBar';
 import { PATHS, type Route } from '../src/lib/router';
+import { NotFoundScreen } from '../src/screens/NotFoundScreen';
 import { AUDIT_ROUTE_NAMES, BetaAuditNotice, showsBetaAuditNotice } from '../src/screens/audit/BetaAuditNotice';
 
 const ROUTES: Route[] = [
@@ -32,74 +35,222 @@ const ROUTES: Route[] = [
   { name: 'not-found', path: '/x' },
 ];
 
-const topBar = (route: Route, beta = false) =>
-  renderToStaticMarkup(createElement(TopBar, { route, checkupInProgress: false, beta }));
+const topBar = (route: Route, beta = false, checkupInProgress = false) =>
+  renderToStaticMarkup(createElement(TopBar, { route, checkupInProgress, beta }));
+const areaNav = (route: Route, beta = false) => renderToStaticMarkup(createElement(AreaNav, { route, beta }));
+const CHECKUP_NAMES: Route['name'][] = [
+  'new',
+  'scan',
+  'plan',
+  'testing',
+  'reports',
+  'report',
+  'visibility',
+  'baselines',
+  'benchmark',
+];
+const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
 
-describe('breadcrumbs', () => {
-  it('every route name has a non-empty crumb label', () => {
+/** The <a> in some markup whose href is `to` and whose text starts with `label`, or ''. */
+const anchor = (html: string, to: string, label: string) =>
+  html.match(new RegExp(`<a [^>]*href="${to}"[^>]*>${label}(?:<(?!/a>)[^]*?)?</a>`))?.[0] ?? '';
+
+describe('no breadcrumb row (ADR 0041)', () => {
+  it('no screen renders a breadcrumb or a Home link to the marketing page', () => {
     for (const route of ROUTES) {
-      const trail = crumbTrail(route);
-      expect(trail.length, route.name).toBeGreaterThan(0);
-      expect(trail.every((l) => l.length > 0)).toBe(true);
+      const html = topBar(route) + areaNav(route);
+      expect(html, route.name).not.toContain('aria-label="Breadcrumb"');
+      expect(html, route.name).not.toContain('href="/"');
     }
-    expect(Object.keys(CRUMB_LABELS).sort()).toEqual([...new Set(ROUTES.map((r) => r.name))].sort());
   });
 
-  it('audit crumbs use the plain names, with the version number', () => {
-    expect(crumbTrail({ name: 'audit-review', auditId: 'a1', version: 3 })).toEqual([
-      'Website Audits',
-      'Website Audit',
-      'Version 3',
-      'Review',
-    ]);
-    expect(crumbTrail({ name: 'audit-helpers', auditId: 'a1' }).at(-1)).toBe('Helpers');
-    expect(crumbTrail({ name: 'audit-share', auditId: 'a1' }).at(-1)).toBe('Shared Links');
-    expect(crumbTrail({ name: 'audit-export', auditId: 'a1', version: 1 }).at(-1)).toBe('Export');
-  });
-
-  it('renders the trail on an audit screen', () => {
-    const html = topBar({ name: 'audit-version', auditId: 'a1', version: 2 });
-    expect(html).toContain('aria-label="Breadcrumb"');
-    expect(html).toContain('Version 2');
-    expect(html).toContain(`href="${PATHS.audits}"`);
+  it('the brand leads to New check-up', () => {
+    expect(topBar({ name: 'settings' })).toMatch(/<a [^>]*href="\/check"[^>]*><svg[^]*?Release check-up<\/a>/);
   });
 });
 
-describe('top bar: Website Audit', () => {
-  it('is active on every audit route and not on check-up routes', () => {
+describe('top bar: two areas and Settings', () => {
+  it('Check-ups is current on every check-up route and nowhere else', () => {
     for (const route of ROUTES) {
-      const html = topBar(route);
-      const item = html.match(/<a [^>]*href="\/audits"[^>]*>Website Audit<\/a>/)?.[0] ?? '';
+      const item = anchor(topBar(route), PATHS.new, 'Check-ups');
       expect(item, route.name).not.toBe('');
-      const active = item.includes('aria-current="page"');
-      expect(active, route.name).toBe(AUDIT_ROUTE_NAMES.includes(route.name));
+      expect(item.includes('aria-current'), route.name).toBe(CHECKUP_NAMES.includes(route.name));
     }
   });
 
-  it('has Shortlist and Website Audit settings in More and in the phone menu', () => {
-    const { more } = navItems();
-    expect(more.map((l) => l.label)).toEqual(expect.arrayContaining(['Shortlist', 'Website Audit settings']));
-    expect(more.find((l) => l.label === 'Shortlist')?.to).toBe(PATHS.auditShortlist);
-    expect(more.find((l) => l.label === 'Website Audit settings')?.to).toBe(PATHS.auditSettings);
+  it('Website Audits is current on every audit route and not on check-up routes', () => {
+    for (const route of ROUTES) {
+      const item = anchor(topBar(route), PATHS.audits, 'Website Audits');
+      expect(item, route.name).not.toBe('');
+      expect(item.includes('aria-current'), route.name).toBe(AUDIT_ROUTE_NAMES.includes(route.name));
+    }
   });
 
-  it('on a beta copy hides the owner audit items everywhere', () => {
-    const { primary, more } = navItems(true);
-    const labels = [...primary, ...more].map((l) => l.label);
-    for (const gone of ['Website Audit', 'Shortlist', 'Website Audit settings']) expect(labels).not.toContain(gone);
-    expect(labels).toContain('New check-up');
-    expect(topBar({ name: 'new' }, true)).not.toContain('>Website Audit<');
+  it('Settings is current only on Settings', () => {
+    for (const route of ROUTES) {
+      const item = anchor(topBar(route), PATHS.settings, 'Settings');
+      expect(item, route.name).not.toBe('');
+      expect(item.includes('aria-current="page"'), route.name).toBe(route.name === 'settings');
+    }
+  });
+
+  it('has no More menu', () => {
+    for (const route of ROUTES) expect(topBar(route), route.name).not.toMatch(/>More</);
+  });
+
+  it('keeps the in-progress dot with its spoken label, off the check-up screens', () => {
+    expect(topBar({ name: 'settings' }, false, true)).toContain('aria-label="(a check-up is in progress)"');
+    expect(topBar({ name: 'audits' }, false, true)).toContain('aria-label="(a check-up is in progress)"');
+    for (const name of ['new', 'scan', 'plan', 'testing'] as const) {
+      expect(topBar({ name }, false, true), name).not.toContain('a check-up is in progress');
+    }
+  });
+
+  it('the phone Menu button starts closed and says Menu', () => {
+    expect(topBar({ name: 'new' })).toMatch(/<button [^>]*aria-expanded="false"[^>]*>Menu<\/button>/);
+  });
+
+  it('on a beta copy hides Website Audits', () => {
+    const html = topBar({ name: 'new' }, true);
+    expect(html).not.toContain('>Website Audits<');
+    expect(html).not.toContain(`href="${PATHS.audits}"`);
+    expect(html).toContain('>Check-ups<');
+  });
+});
+
+describe('area row', () => {
+  it('Check-ups row: four places in order', () => {
+    expect(CHECKUP_LINKS.map((l) => [l.label, l.to])).toEqual([
+      ['New check-up', PATHS.new],
+      ['Past check-ups', PATHS.reports],
+      ['Visual baselines', PATHS.baselines],
+      ['Compare sites', PATHS.benchmark],
+    ]);
+    const html = areaNav({ name: 'baselines' });
+    expect(html).toContain('aria-label="Check-ups"');
+    expect(anchor(html, PATHS.baselines, 'Visual baselines')).toContain('aria-current="page"');
+    expect(anchor(html, PATHS.new, 'New check-up')).not.toContain('aria-current');
+  });
+
+  it('Website Audits row: Audits is current on the list, the start form and every per-audit screen', () => {
+    expect(AUDIT_LINKS.map((l) => [l.label, l.to])).toEqual([
+      ['Audits', PATHS.audits],
+      ['Shortlist', PATHS.auditShortlist],
+      ['Audit settings', PATHS.auditSettings],
+    ]);
+    for (const route of ROUTES.filter((r) => r.name.startsWith('audit'))) {
+      const html = areaNav(route);
+      expect(html, route.name).toContain('aria-label="Website Audits"');
+      const current = !['audit-shortlist', 'audit-settings'].includes(route.name);
+      expect(anchor(html, PATHS.audits, 'Audits').includes('aria-current="page"'), route.name).toBe(current);
+    }
+    expect(anchor(areaNav({ name: 'audit-shortlist' }), PATHS.auditShortlist, 'Shortlist')).toContain(
+      'aria-current="page"'
+    );
+  });
+
+  it('no row on the landing page, Settings, Helper sign-in and Page not found', () => {
+    const none: Route[] = [
+      { name: 'landing' },
+      { name: 'settings' },
+      { name: 'helper-sign-in' },
+      { name: 'not-found', path: '/x' },
+    ];
+    for (const route of none) expect(areaNav(route), route.name).toBe('');
+  });
+
+  it('every route belongs to the area its top-bar link marks', () => {
+    for (const route of ROUTES) {
+      const area = areaOf(route);
+      if (CHECKUP_NAMES.includes(route.name)) expect(area, route.name).toBe('checkups');
+      else if (AUDIT_ROUTE_NAMES.includes(route.name)) expect(area, route.name).toBe('audits');
+      else expect(area, route.name).toBeNull();
+    }
+  });
+
+  it('on a beta copy there is no Website Audits row', () => {
+    expect(areaNav({ name: 'audit', auditId: 'a1' }, true)).toBe('');
+    expect(areaNav({ name: 'reports' }, true)).toContain('aria-label="Check-ups"');
+  });
+});
+
+describe('phone menu', () => {
+  it('groups the places under Check-ups, Website Audits and Settings', () => {
+    expect(menuGroups().map((g) => [g.title, g.links.length])).toEqual([
+      ['Check-ups', 4],
+      ['Website Audits', 3],
+      ['Settings', 1],
+    ]);
+    const html = renderToStaticMarkup(
+      createElement(MobileMenu, {
+        id: 'm',
+        route: { name: 'audit-shortlist' },
+        checkupInProgress: false,
+        onNavigate: () => {},
+      })
+    );
+    for (const heading of ['Check-ups', 'Website Audits', 'Settings']) expect(html).toContain(`>${heading}</p>`);
+    expect(anchor(html, PATHS.auditShortlist, 'Shortlist')).toContain('aria-current="page"');
+  });
+
+  it('on a beta copy leaves out the Website Audits group', () => {
+    expect(menuGroups(true).map((g) => g.title)).toEqual(['Check-ups', 'Settings']);
+  });
+
+  it('the Menu button reads Close when open, and Esc returns focus to it', () => {
+    const topbar = read('../src/components/TopBar.tsx');
+    expect(topbar).toContain("{menuOpen ? 'Close' : 'Menu'}");
+    expect(topbar).toContain('menuButtonRef.current?.focus()');
+    expect(topbar).toContain('onNavigate={() => setMenuOpen(false)}');
   });
 });
 
 describe('command palette', () => {
   it('lists the four Website Audit entries', () => {
     expect(AUDIT_COMMANDS.map((c) => [c.title, c.to])).toEqual([
-      ['New Website Audit', PATHS.auditNew],
-      ['Saved Website Audits', PATHS.audits],
-      ['Shortlist', PATHS.auditShortlist],
-      ['Website Audit settings', PATHS.auditSettings],
+      ['Start a Website Audit', PATHS.auditNew],
+      ['Go to Website Audits', PATHS.audits],
+      ['Go to Shortlist', PATHS.auditShortlist],
+      ['Go to Audit settings', PATHS.auditSettings],
     ]);
+  });
+
+  it('lists only the g-chords PlanDocument handles, and scrolls with scrollBehavior()', () => {
+    const palette = read('../src/components/CommandPalette.tsx');
+    for (const gone of ["'g h'", "'g r'", "'g b'", "'g ,'", 'g then h', 'g then r', 'g then b', 'g then ,']) {
+      expect(palette, gone).not.toContain(gone);
+    }
+    expect(palette).not.toContain("behavior: 'smooth'");
+    expect(palette).toContain('scrollBehavior()');
+    const plan = read('../src/components/plan/PlanDocument.tsx');
+    const handled = new Set([...plan.matchAll(/^\s+([a-z]): 'plan-[a-z-]+',$/gm)].map((m) => m[1]));
+    expect(handled.size).toBeGreaterThan(0);
+    for (const m of palette.matchAll(/'g (?:then )?([a-z])'/g)) {
+      if (m[1] !== 'g') expect(handled.has(m[1]), m[0]).toBe(true);
+    }
+  });
+
+  it('is a labelled modal dialog with a combobox and a listbox', () => {
+    const palette = read('../src/components/CommandPalette.tsx');
+    expect(palette).toContain('showModal()');
+    expect(palette).toContain('role="combobox"');
+    expect(palette).toContain('role="listbox"');
+    expect(palette).toContain('aria-activedescendant=');
+    expect(palette).toContain('htmlFor={ids.input}');
+    expect(palette).toContain('opener.focus()');
+    expect(palette).not.toMatch(/bg-black|🔍/);
+  });
+});
+
+describe('Page not found', () => {
+  it('leads to New check-up and Past check-ups, and to Website Audits only off beta', () => {
+    const own = renderToStaticMarkup(createElement(NotFoundScreen));
+    expect(own).toContain('Page not found');
+    expect(anchor(own, PATHS.new, 'New check-up')).toContain('btn-primary');
+    expect(anchor(own, PATHS.reports, 'Past check-ups')).not.toBe('');
+    expect(anchor(own, PATHS.audits, 'Website Audits')).not.toBe('');
+    const beta = renderToStaticMarkup(createElement(NotFoundScreen, { beta: true }));
+    expect(beta).not.toContain(`href="${PATHS.audits}"`);
   });
 });
 

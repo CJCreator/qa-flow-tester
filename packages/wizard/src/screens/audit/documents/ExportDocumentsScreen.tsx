@@ -1,13 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   AUDIT_DOCUMENT_KINDS,
   type AuditDocumentKind,
   type AuditStatus,
   type ExportFormat,
 } from '@qa/types/src/browser.js';
-import { ErrorMessage, FocusHeading, Notice, Spinner } from '../../../components/text';
-import { Link, PATHS } from '../../../lib/router';
+import { Notice, Spinner } from '../../../components/text';
+import { Disclosure, LoadError, Page, PageHeader, Section } from '../../../components/ui';
+import { PATHS } from '../../../lib/router';
 import { useDocumentTitle } from '../../../lib/title';
+import { AuditTabs } from '../AuditTabs';
 import { loadAudit } from './review-api';
 import {
   EXPORT_LANGUAGES,
@@ -53,7 +55,7 @@ const FORMAT_LABEL: Readonly<Record<ExportFormat, string>> = {
   html: 'HTML',
   pdf: 'PDF',
   docx: 'Word',
-  bundle: 'Claude Code bundle',
+  bundle: 'A bundle for AI coding tools',
 };
 
 const FORMAT_HINT: Partial<Record<ExportFormat, string>> = {
@@ -64,8 +66,11 @@ const EXPORT_FORMATS_SHOWN: readonly ExportFormat[] = ['md', 'html', 'pdf', 'doc
 
 const LANGUAGE_LABEL: Readonly<Record<ExportLanguage, string>> = { en: 'English', ta: 'Tamil' };
 
-const DOWNLOAD_CLASS =
-  'btn-primary inline-block min-h-[44px] rounded-control px-4 py-2 text-sm font-bold shadow-level-1';
+/** A button's name in a result line: the bundle's long label is shortened. */
+const FORMAT_SHORT: Readonly<Record<ExportFormat, string>> = { ...FORMAT_LABEL, bundle: 'AI tools bundle' };
+
+/** The Download buttons are quiet: the screen's one primary is the Audit Documents download. */
+const DOWNLOAD_QUIET = 'btn-quiet';
 
 function RadioGroup<V extends string>({
   name,
@@ -87,12 +92,12 @@ function RadioGroup<V extends string>({
   return (
     <fieldset className="mt-4">
       <legend className="label text-ink">{legend}</legend>
-      <div className="mt-1 flex flex-wrap gap-x-5 gap-y-2">
+      <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
         {options.map((option) => {
           const id = `${name}-${option}`;
           const hint = hints?.[option];
           return (
-            <span key={option} className="inline-flex items-center gap-1.5">
+            <span key={option} className="inline-flex min-h-[44px] flex-wrap items-center gap-x-2">
               <input
                 id={id}
                 type="radio"
@@ -100,11 +105,14 @@ function RadioGroup<V extends string>({
                 value={option}
                 checked={value === option}
                 onChange={() => onChange(option)}
+                className="h-5 w-5 accent-stamp"
                 {...(hint ? { 'aria-describedby': `${id}-hint` } : {})}
               />
-              <label htmlFor={id}>{labels[option]}</label>
+              <label htmlFor={id} className="py-3 pr-2">
+                {labels[option]}
+              </label>
               {hint && (
-                <span id={`${id}-hint`} className="text-xs text-ink-soft">
+                <span id={`${id}-hint`} className="text-sm text-ink-soft">
                   {hint}
                 </span>
               )}
@@ -114,6 +122,36 @@ function RadioGroup<V extends string>({
       </div>
     </fieldset>
   );
+}
+
+/** The result of the download just pressed, next to its button: working, done, or the refusal. */
+function DownloadStatus({
+  kind,
+  busy,
+  done,
+  error,
+  errorKind,
+}: {
+  kind: DownloadKind;
+  busy: DownloadKind | null;
+  done: { kind: DownloadKind; fileName: string } | null;
+  error: string | null;
+  errorKind: DownloadKind | null;
+}): ReactNode {
+  if (busy === kind) return <Spinner label="Making the file…" />;
+  if (error !== null && errorKind === kind)
+    return (
+      <p role="alert" className="max-w-prose text-sm font-semibold text-fail">
+        {error}
+      </p>
+    );
+  if (done && done.kind === kind)
+    return (
+      <p role="status" className="break-all text-sm font-semibold text-pass">
+        {`Downloaded: ${done.fileName}`}
+      </p>
+    );
+  return null;
 }
 
 export interface ExportDocumentsViewProps {
@@ -133,6 +171,10 @@ export interface ExportDocumentsViewProps {
   blockedReason?: string | null;
   /** The last download's refusal, in the runner's words. */
   error?: string | null;
+  /** Which download the refusal belongs to; without it the refusal shows at the top. */
+  errorKind?: DownloadKind | null;
+  /** The last download that worked, shown beside its button. */
+  done?: { kind: DownloadKind; fileName: string } | null;
   /** The version read has not answered yet: every download stays off. */
   checking?: boolean;
   /** The version read failed, in the runner's words: every download stays off. */
@@ -158,6 +200,8 @@ export function ExportDocumentsView({
   busy = null,
   blockedReason = null,
   error = null,
+  errorKind = null,
+  done = null,
   checking = false,
   loadError = null,
   onRetry = () => {},
@@ -165,42 +209,41 @@ export function ExportDocumentsView({
   const off = blockedReason !== null || busy !== null || checking || loadError !== null;
   const documentsHref = exportUrl(auditId, choice, version);
   return (
-    <div className="space-y-10">
+    <div className="space-y-12">
       {blockedReason !== null && (
-        <Notice tone="warn" title="Export is not available yet">
+        <Notice tone="warn" title="Download is not available yet">
           {blockedReason}
         </Notice>
       )}
       {checking && <Spinner label="Checking this version…" />}
       {loadError !== null && (
-        <>
-          <ErrorMessage>{loadError}</ErrorMessage>
-          <button type="button" className="btn-quiet min-h-[44px] px-4 text-sm" onClick={onRetry}>
-            Retry
-          </button>
-        </>
+        <LoadError title="This version could not be read" onRetry={onRetry}>
+          {loadError}
+        </LoadError>
       )}
-      {busy !== null && <Spinner label="Making the file…" />}
-      {error !== null && <ErrorMessage>{error}</ErrorMessage>}
-      <section aria-labelledby="export-documents-title" className="card-1 bg-surface p-4">
-        <h2 id="export-documents-title" className="text-xl font-bold">
-          Audit Documents
-        </h2>
-        <fieldset className="mt-4">
+      {error !== null && errorKind === null && (
+        <p role="alert" className="max-w-prose rounded-card border border-fail/40 bg-fail-tint px-4 py-3 text-fail">
+          {error}
+        </p>
+      )}
+
+      <Section id="export-documents" title="Audit Documents">
+        <fieldset>
           <legend className="label text-ink">Audit Documents to include</legend>
-          <ul className="mt-1 space-y-2">
+          <ul className="mt-1">
             {AUDIT_DOCUMENT_KINDS.map((kind) => {
               const id = `export-document-${kind}`;
               return (
-                <li key={kind} className="flex flex-wrap items-center gap-2">
+                <li key={kind} className="flex min-h-[44px] flex-wrap items-center gap-x-2 gap-y-0">
                   <input
                     id={id}
                     type="checkbox"
                     checked={choice.documents.includes(kind)}
                     aria-describedby={`${id}-hint`}
                     onChange={(e) => onChoice(setDocument(choice, kind, e.target.checked))}
+                    className="h-5 w-5 accent-stamp"
                   />
-                  <label htmlFor={id} className="font-semibold">
+                  <label htmlFor={id} className="py-3 pr-2 font-semibold">
                     {DOCUMENT_LABEL[kind]}
                   </label>
                   <span id={`${id}-hint`} className="text-sm text-ink-soft">
@@ -228,27 +271,32 @@ export function ExportDocumentsView({
           hints={FORMAT_HINT}
           onChange={(format) => onChoice({ ...choice, format })}
         />
-        <div className="mt-5">
+        <div className="mt-3 max-w-prose">
+          <Disclosure summary="Details for developers">
+            <p className="text-sm text-ink-soft">
+              The bundle is a zip made for Claude Code: the Markdown documents, site.json and a README index.
+            </p>
+          </Disclosure>
+        </div>
+        <div className="mt-5 flex flex-wrap items-center gap-4">
           {documentsHref === null ? (
             <p role="alert" className="text-sm font-semibold text-fail">
               Tick at least one Audit Document to download.
             </p>
           ) : (
-            <button type="button" className={DOWNLOAD_CLASS} disabled={off} onClick={() => onDownload('documents')}>
-              {`Download the Audit Documents (${FORMAT_LABEL[choice.format]}, ${LANGUAGE_LABEL[choice.language]})`}
+            <button type="button" className="btn-primary" disabled={off} onClick={() => onDownload('documents')}>
+              {`Download the Audit Documents (${FORMAT_SHORT[choice.format]}, ${LANGUAGE_LABEL[choice.language]})`}
             </button>
           )}
+          <DownloadStatus kind="documents" busy={busy} done={done} error={error} errorKind={errorKind} />
         </div>
-      </section>
+      </Section>
 
-      <section aria-labelledby="export-pitch-title" className="card-1 bg-surface p-4">
-        <h2 id="export-pitch-title" className="text-xl font-bold">
-          Pitch Glimpse
-        </h2>
-        <p className="mt-1 max-w-prose text-sm text-ink-soft">
-          One A4 page for the site owner: the top 3 issues, a screenshot of each, and your opt-out text. Print it or
-          hand the file over yourself.
-        </p>
+      <Section
+        id="export-pitch"
+        title="Pitch Glimpse"
+        description="One A4 page for the site owner: the top 3 issues, a screenshot of each, and your opt-out text. Print it or hand the file over yourself."
+      >
         <RadioGroup
           name="pitch-language"
           legend="Language"
@@ -265,21 +313,19 @@ export function ExportDocumentsView({
           labels={FORMAT_LABEL}
           onChange={(format) => onPitch({ ...pitch, format })}
         />
-        <div className="mt-5">
-          <button type="button" className={DOWNLOAD_CLASS} disabled={off} onClick={() => onDownload('pitch')}>
-            {`Download the Pitch Glimpse (${FORMAT_LABEL[pitch.format]}, ${LANGUAGE_LABEL[pitch.language]})`}
+        <div className="mt-5 flex flex-wrap items-center gap-4">
+          <button type="button" className={DOWNLOAD_QUIET} disabled={off} onClick={() => onDownload('pitch')}>
+            {`Download the Pitch Glimpse (${FORMAT_SHORT[pitch.format]}, ${LANGUAGE_LABEL[pitch.language]})`}
           </button>
+          <DownloadStatus kind="pitch" busy={busy} done={done} error={error} errorKind={errorKind} />
         </div>
-      </section>
+      </Section>
 
-      <section aria-labelledby="export-owner-title" className="card-1 bg-surface p-4">
-        <h2 id="export-owner-title" className="text-xl font-bold">
-          Owner Audit
-        </h2>
-        <p className="mt-1 max-w-prose text-sm text-ink-soft">
-          A cleaned-up version of the Website Audit for the site owner, for when the owner asks for it. It leaves out
-          your Shortlist mark, notes and outcome, the effort and the price, and starts with a plain-language summary.
-        </p>
+      <Section
+        id="export-owner"
+        title="Owner Audit"
+        description="A cleaned-up version of the Website Audit for the site owner, for when the owner asks for it. It leaves out your Shortlist mark, notes and outcome, the effort and the price, and starts with a plain-language summary."
+      >
         <RadioGroup
           name="owner-language"
           legend="Language"
@@ -296,19 +342,20 @@ export function ExportDocumentsView({
           labels={FORMAT_LABEL}
           onChange={(format) => onOwner({ ...owner, format })}
         />
-        <div className="mt-5">
-          <button type="button" className={DOWNLOAD_CLASS} disabled={off} onClick={() => onDownload('owner')}>
-            {`Download the Owner Audit (${FORMAT_LABEL[owner.format]}, ${LANGUAGE_LABEL[owner.language]})`}
+        <div className="mt-5 flex flex-wrap items-center gap-4">
+          <button type="button" className={DOWNLOAD_QUIET} disabled={off} onClick={() => onDownload('owner')}>
+            {`Download the Owner Audit (${FORMAT_SHORT[owner.format]}, ${LANGUAGE_LABEL[owner.language]})`}
           </button>
+          <DownloadStatus kind="owner" busy={busy} done={done} error={error} errorKind={errorKind} />
         </div>
-      </section>
+      </Section>
     </div>
   );
 }
 
 export interface ExportDocumentsScreenProps {
   auditId: string;
-  /** The version to export; the latest when not given. */
+  /** The version to download; the latest when not given. */
   version?: number;
   /** For tests: the requests. */
   fetchImpl?: Fetch;
@@ -316,14 +363,14 @@ export interface ExportDocumentsScreenProps {
   saveFile?: (blob: Blob, fileName: string) => void;
 }
 
-/** Export a Website Audit version: the Audit Documents, the Pitch Glimpse and the Owner Audit (REQ-021, REQ-022). */
+/** Download a Website Audit version: the Audit Documents, the Pitch Glimpse and the Owner Audit (REQ-021, REQ-022). */
 export function ExportDocumentsScreen({
   auditId,
   version,
   fetchImpl,
   saveFile = saveBlob,
 }: ExportDocumentsScreenProps) {
-  useDocumentTitle('Export Audit Documents');
+  useDocumentTitle('Download documents');
   const [choice, setChoice] = useState<ExportChoice>(defaultExportChoice);
   const [pitch, setPitch] = useState<PitchChoice>(defaultPitchChoice);
   const [owner, setOwner] = useState<OwnerAuditChoice>(defaultOwnerAuditChoice);
@@ -331,6 +378,8 @@ export function ExportDocumentsScreen({
   const [shownVersion, setShownVersion] = useState<number | undefined>(version);
   const [busy, setBusy] = useState<DownloadKind | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [errorKind, setErrorKind] = useState<DownloadKind | null>(null);
+  const [done, setDone] = useState<{ kind: DownloadKind; fileName: string } | null>(null);
   const [checking, setChecking] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -366,30 +415,30 @@ export function ExportDocumentsScreen({
     const format = kind === 'documents' ? choice.format : kind === 'pitch' ? pitch.format : owner.format;
     setBusy(kind);
     setError(null);
+    setErrorKind(null);
+    setDone(null);
     const outcome = await fetchDownload(url, fallbackFileName(kind, format), fetchImpl);
-    if (outcome.ok) saveFile(outcome.blob, outcome.fileName);
-    else setError(outcome.message);
+    if (outcome.ok) {
+      saveFile(outcome.blob, outcome.fileName);
+      setDone({ kind, fileName: outcome.fileName });
+    } else {
+      setError(outcome.message);
+      setErrorKind(kind);
+    }
     setBusy(null);
   };
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
-      <p className="mb-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
-        <Link to={PATHS.audit(auditId)} className="btn-link min-h-[44px]">
-          Back to this Website Audit
-        </Link>
-        {shownVersion !== undefined && (
-          <Link to={PATHS.auditReview(auditId, shownVersion)} className="btn-link min-h-[44px]">
-            Review the Audit Documents
-          </Link>
-        )}
-      </p>
-      <FocusHeading className="mb-2 break-words text-question font-bold">Export the Audit Documents</FocusHeading>
-      <p className="mb-6 max-w-prose text-ink-soft">
-        Pick what to download, the language and the format. Downloads carry your saved edits. The tool never hands
-        anything to the site owner for you: you decide what to give, and how.
-      </p>
-      {version !== undefined && <p className="mb-6 text-sm text-ink-soft">{`Version ${version}`}</p>}
+    <Page width="workspace">
+      <PageHeader
+        // Back to this audit, which a Helper may open too (the list of all audits is the owner's).
+        back={{ to: PATHS.audit(auditId), label: 'Back to this Website Audit' }}
+        meta={version !== undefined ? `Version ${version}` : undefined}
+        title="Download documents"
+        lede="Pick what to download, the language and the format. Downloads carry your saved edits. The tool never hands anything to the site owner for you: you decide what to give, and how."
+      />
+      {/* This screen doesn't know whether the caller is a Helper, so the owner-only tabs are left out. */}
+      <AuditTabs auditId={auditId} version={shownVersion} current="download" hide={['share', 'helpers']} />
       <ExportDocumentsView
         auditId={auditId}
         version={version}
@@ -403,10 +452,12 @@ export function ExportDocumentsScreen({
         busy={busy}
         blockedReason={exportBlockedReason(status)}
         error={error}
+        errorKind={errorKind}
+        done={done}
         checking={checking}
         loadError={loadError}
         onRetry={() => setAttempt((n) => n + 1)}
       />
-    </div>
+    </Page>
   );
 }

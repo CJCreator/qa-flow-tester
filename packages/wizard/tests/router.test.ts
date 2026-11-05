@@ -48,3 +48,40 @@ describe('every screen has an address', () => {
     expect(readsAddressParam(matchRoute('/reports'))).toBe(false);
   });
 });
+
+describe('two-area navigation keeps every address (ADR 0041)', () => {
+  // One path per route kind, with the screen it opened before the redesign. No route moved.
+  const PATHS_TO_NAMES: Array<[string, string]> = [
+    ['/', 'landing'],
+    ['/check', 'new'],
+    ['/check/scan', 'scan'],
+    ['/check/plan', 'plan'],
+    ['/check/testing', 'testing'],
+    ['/reports', 'reports'],
+    ['/reports/r1', 'report'],
+    ['/reports/r1/visibility', 'visibility'],
+    ['/baselines', 'baselines'],
+    ['/benchmark', 'benchmark'],
+    ['/settings', 'settings'],
+    ['/audits/new', 'audit-new'],
+    ['/audits', 'audits'],
+    ['/audits/a1', 'audit'],
+    ['/audits/a1/versions/2', 'audit-version'],
+    ['/audits/a1/versions/2/review', 'audit-review'],
+    ['/audits/a1/versions/2/export', 'audit-export'],
+    ['/audits/a1/share', 'audit-share'],
+    ['/audits/a1/helpers', 'audit-helpers'],
+    ['/audit-settings', 'audit-settings'],
+    ['/shortlist', 'audit-shortlist'],
+    ['/helper', 'helper-sign-in'],
+    ['/nope', 'not-found'],
+  ];
+
+  it.each(PATHS_TO_NAMES)('%s still opens %s', (path, name) => {
+    expect(matchRoute(path).name).toBe(name);
+  });
+
+  it('covers all 23 route kinds', () => {
+    expect(new Set(PATHS_TO_NAMES.map(([, name]) => name)).size).toBe(23);
+  });
+});

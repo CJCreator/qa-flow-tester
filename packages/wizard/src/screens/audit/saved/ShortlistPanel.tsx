@@ -48,21 +48,27 @@ export function ShortlistPanelView({ saved, draft, saving, message, onDraft, onS
 
       <fieldset className="mt-4">
         <legend className="label text-ink">Mark</legend>
-        <div className="mt-1 flex flex-wrap gap-x-5 gap-y-2">
+        <div className="mt-1 flex flex-wrap gap-2">
           {marks.map((mark) => {
             const id = `shortlist-mark-${mark}`;
             const value = mark === NO_MARK ? null : mark;
             return (
-              <span key={mark} className="inline-flex items-center gap-1.5">
+              <span
+                key={mark}
+                className="inline-flex min-h-[44px] items-center gap-2 rounded-control border border-edge bg-surface pl-3 has-[:checked]:border-stamp has-[:checked]:bg-stamp-tint"
+              >
                 <input
                   id={id}
                   type="radio"
                   name="shortlist-mark"
                   value={mark}
+                  className="h-5 w-5 accent-stamp"
                   checked={draft.mark === value}
                   onChange={() => onDraft({ ...draft, mark: value })}
                 />
-                <label htmlFor={id}>{mark === NO_MARK ? 'No mark' : MARK_LABEL[mark]}</label>
+                <label htmlFor={id} className="flex min-h-[44px] cursor-pointer items-center pr-4">
+                  {mark === NO_MARK ? 'No mark' : MARK_LABEL[mark]}
+                </label>
               </span>
             );
           })}
@@ -88,7 +94,7 @@ export function ShortlistPanelView({ saved, draft, saving, message, onDraft, onS
         </label>
         <select
           id="shortlist-outcome"
-          className="field py-2 text-sm"
+          className="field min-h-[44px] py-2 text-sm"
           value={draft.outcome ?? ''}
           onChange={(e) => {
             const outcome = readOutcomeFilter(e.target.value);
@@ -118,7 +124,7 @@ export function ShortlistPanelView({ saved, draft, saving, message, onDraft, onS
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <button type="button" className="btn-primary" disabled={!changed || saving} onClick={onSave}>
+        <button type="button" className="btn-quiet btn-sm" disabled={!changed || saving} onClick={onSave}>
           {saving ? 'Saving…' : 'Save the Shortlist entry'}
         </button>
         {message && (

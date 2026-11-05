@@ -25,6 +25,7 @@ import {
 import {
   AuditHistoryView,
   DELETE_WARNING,
+  deleteConfirmOptions,
   type AuditHistoryViewProps,
 } from '../src/screens/audit/saved/AuditHistoryScreen';
 
@@ -120,14 +121,11 @@ function historyView(props: Partial<AuditHistoryViewProps> = {}): string {
       summary,
       opened: null,
       rerunning: false,
-      confirmingDelete: false,
       deleting: false,
       message: null,
       onOpen: noop,
       onRerun: noop,
       onAskDelete: noop,
-      onCancelDelete: noop,
-      onConfirmDelete: noop,
       ...props,
     })
   );
@@ -180,7 +178,14 @@ describe('saved Website Audits list', () => {
     expect(listView({ status: 'loading' })).toContain('role="status"');
     const failed = listView({ status: 'failed', message: 'The tool is not answering.' });
     expect(failed).toContain('role="alert"');
-    expect(textOf(failed)).toContain('Retry');
+    expect(textOf(failed)).toContain('Try again');
+    expect(textOf(failed)).toContain('The tool is not answering.');
+  });
+
+  it('makes the whole row the link to the audit, with no primary button per row', () => {
+    const html = listView({ status: 'loaded', audits: [summary, other] });
+    expect(html).not.toContain('btn-primary');
+    expect(html).toMatch(/<a [^>]*class="[^"]*after:inset-0[^"]*"/);
   });
 
   it('escapes text from the runner', () => {
@@ -232,7 +237,13 @@ describe('history of one Website Audit (REQ-028)', () => {
 
     const third = textOf(html.slice(order[2], order[1]));
     expect(third).toContain('Status: Failed');
-    expect(third).toContain('The site stopped answering.');
+    expect(third).toContain('This version stopped before it finished.');
+    // The raw error sits under Details for developers, not in the row's sentence.
+    const thirdHtml = html.slice(order[2], order[1]);
+    expect(thirdHtml.indexOf('Details for developers')).toBeGreaterThan(-1);
+    expect(thirdHtml.indexOf('The site stopped answering.')).toBeGreaterThan(
+      thirdHtml.indexOf('Details for developers')
+    );
 
     for (const n of [1, 2, 3]) expect(html).toContain(`aria-label="Open version ${n}"`);
   });
@@ -258,9 +269,12 @@ describe('history of one Website Audit (REQ-028)', () => {
     });
   });
 
-  it('shows the opened version with links to its screens as plain route paths', () => {
+  it('shows the opened version in place, under its row, with links to its screens as plain route paths', () => {
     const html = historyView({ opened: { status: 'loaded', version: 1, reply: getReply(1) as never } });
-    expect(html).toContain('aria-pressed="true"');
+    expect(html).toContain('aria-expanded="true"');
+    expect(html).toContain('aria-label="Close version 1"');
+    // In place: the details sit inside version 1's row (the last row, newest first).
+    expect(html.slice(html.indexOf('data-version="1"'))).toContain(`href="${AUDIT_PATHS.review(AUDIT_ID, 1)}"`);
     expect(html).toContain(`href="${AUDIT_PATHS.version(AUDIT_ID, 1)}"`);
     expect(html).toContain(`href="${AUDIT_PATHS.review(AUDIT_ID, 1)}"`);
     expect(html).toContain(`href="${AUDIT_PATHS.export(AUDIT_ID, 1)}"`);
@@ -273,10 +287,18 @@ describe('history of one Website Audit (REQ-028)', () => {
     expect(textOf(notDone)).toContain('This version has no results to open.');
   });
 
-  it('links to the preview and Shared Link screen and the Helpers screen by path', () => {
+  it('links to the Share and Helpers screens by path through the audit tabs', () => {
     const html = historyView();
+    expect(html).toContain('aria-label="This Website Audit"');
     expect(html).toContain(`href="/audits/${AUDIT_ID}/share"`);
     expect(html).toContain(`href="/audits/${AUDIT_ID}/helpers"`);
+    expect(html).toMatch(/aria-current="page"[^>]*>Versions</);
+  });
+
+  it('shows the Shortlist mark above the versions, not only at the bottom', () => {
+    const html = historyView();
+    expect(html.indexOf('Shortlist: Pitch')).toBeGreaterThan(-1);
+    expect(html.indexOf('Shortlist: Pitch')).toBeLessThan(html.indexOf('data-version="3"'));
   });
 
   it('renders the Shortlist slot', () => {
@@ -326,9 +348,9 @@ describe('re-run (REQ-028 AC-3)', () => {
     expect(textOf(html)).toContain('Another run is in progress');
   });
 
-  it('disables Re-run while it starts', () => {
+  it('disables Audit again while it starts', () => {
     expect(historyView({ rerunning: true })).toMatch(/<button[^>]*disabled=""[^>]*>Starting…<\/button>/);
-    expect(textOf(historyView())).toContain('Re-run');
+    expect(textOf(historyView())).toContain('Audit again');
   });
 });
 
@@ -337,20 +359,24 @@ describe('re-run (REQ-028 AC-3)', () => {
 // ---------------------------------------------------------------------------------------------------
 
 describe('delete', () => {
-  it('asks first and says everything it removes', () => {
+  it('asks first, in a red confirm dialog, and says everything it removes', () => {
+    // No inline question: the confirm dialog asks.
     expect(historyView()).not.toContain('role="alertdialog"');
     expect(historyView()).toContain('aria-label="Delete the Website Audit of shop.example.org"');
 
-    const html = historyView({ confirmingDelete: true });
-    expect(html).toContain('role="alertdialog"');
-    const text = textOf(html);
-    expect(text).toContain('Delete the Website Audit of shop.example.org?');
+    const options = deleteConfirmOptions('shop.example.org');
+    expect(options.danger).toBe(true);
+    expect(options.title).toBe('Delete the Website Audit of shop.example.org?');
+    expect(options.body).toBe(DELETE_WARNING);
     for (const part of ['every version', 'edit', 'Shortlist entry', 'Shared Link', 'Helper access']) {
       expect(DELETE_WARNING).toContain(part);
-      expect(text).toContain(part);
     }
-    expect(text).toContain('Delete the Website Audit');
-    expect(text).toContain('Keep it');
+    expect(options.confirmLabel).toBe('Delete the Website Audit');
+    expect(options.cancelLabel).toBe('Keep it');
+  });
+
+  it('disables Delete while it deletes', () => {
+    expect(historyView({ deleting: true })).toMatch(/<button[^>]*disabled=""[^>]*>Deleting…<\/button>/);
   });
 
   it('deletes through DELETE /api/audits/:id and explains a refusal', async () => {
@@ -436,38 +462,40 @@ describe('history: results first and live', () => {
 describe('history for a Helper (ADR 0037)', () => {
   it('shows the owner actions to the owner', () => {
     const text = textOf(historyView());
-    for (const word of ['Re-run', 'Preview and Shared Links', 'Helpers', 'Delete']) expect(text).toContain(word);
+    for (const word of ['Audit again', 'Share', 'Helpers', 'Delete']) expect(text).toContain(word);
   });
 
   it('hides the owner actions until the Helper check has answered', () => {
     const text = textOf(historyView({ isHelper: null }));
-    for (const word of ['Re-run', 'Preview and Shared Links', 'Helpers', 'Delete']) expect(text).not.toContain(word);
+    for (const word of ['Audit again', 'Share', 'Helpers', 'Delete']) expect(text).not.toContain(word);
     expect(text).toContain('Open the results');
   });
 
-  it('hides Re-run, Delete, Helpers and Preview and Shared Links from a Helper but keeps the results', () => {
-    const html = historyView({ isHelper: true, confirmingDelete: true });
+  it('hides Audit again, Delete, Helpers, Share and the Shortlist from a Helper but keeps the results', () => {
+    const html = historyView({ isHelper: true, shortlist: createElement('p', null, 'SLOT') });
     const text = textOf(html);
-    for (const word of ['Re-run', 'Preview and Shared Links', 'Delete']) expect(text).not.toContain(word);
+    for (const word of ['Audit again', 'Share', 'Delete', 'SLOT', 'Shortlist']) expect(text).not.toContain(word);
     expect(html).not.toContain('/helpers"');
+    expect(html).not.toContain('/share"');
     expect(html).not.toContain('alertdialog');
     expect(text).toContain('Open the results');
   });
 });
 
 describe('saved list header', () => {
-  it('has a Start a Website Audit button when audits exist, and always a settings link', () => {
+  it('has the one primary Start a Website Audit when audits exist; the empty state carries it otherwise', () => {
     const withAudits = renderToStaticMarkup(
       createElement(SavedAuditsActions, { load: { status: 'loaded', audits: [summary] } })
     );
     expect(withAudits).toContain('href="/audits/new"');
+    expect(withAudits).toContain('btn-primary');
     expect(textOf(withAudits)).toContain('Start a Website Audit');
-    expect(withAudits).toContain('href="/audit-settings"');
-    expect(textOf(withAudits)).toContain('Website Audit settings');
+    // Shortlist and settings live in the area row, not in the screen body.
+    expect(withAudits).not.toContain('href="/audit-settings"');
 
     const empty = renderToStaticMarkup(createElement(SavedAuditsActions, { load: { status: 'loaded', audits: [] } }));
-    expect(empty).not.toContain('href="/audits/new"');
-    expect(empty).toContain('href="/audit-settings"');
+    expect(empty).toBe('');
+    expect(listView({ status: 'loaded', audits: [] }).match(/btn-primary/g)).toHaveLength(1);
   });
 });
 

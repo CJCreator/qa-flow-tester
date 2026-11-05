@@ -1,6 +1,7 @@
-import { Notice, Question } from '../../components/text';
+import { Notice } from '../../components/text';
+import { Page, PageHeader } from '../../components/ui';
 import { REPO_URL } from '../../lib/contact';
-import type { Route } from '../../lib/router';
+import { Link, PATHS, type Route } from '../../lib/router';
 
 type Name = Route['name'];
 
@@ -41,11 +42,18 @@ export function showsBetaAuditNotice(name: Name, beta: boolean, helper: boolean)
 
 export function BetaAuditNotice() {
   return (
-    <div className="mx-auto max-w-prose px-4 py-12 sm:px-6">
-      <Question>Website Audits run on your own copy of Release check-up</Question>
+    <Page width="prose">
+      <PageHeader
+        title="Website Audits run on your own copy of Release check-up"
+        actions={
+          <Link to={PATHS.new} className="btn-primary">
+            Start a check-up
+          </Link>
+        }
+      />
       <Notice tone="stamp" title="This shared copy has no Website Audits of its own">
-        This shared copy only opens Shared Links and Website Audits given to a Helper. To run Website Audits, run your
-        own copy of Release check-up: see{' '}
+        This shared copy opens Shared Links and Website Audits given to a Helper, and it runs check-ups. To run Website
+        Audits, run your own copy of Release check-up. The steps for hosting it are in{' '}
         <a
           href={`${REPO_URL}/blob/main/docs/DEPLOYMENT.md`}
           target="_blank"
@@ -56,6 +64,6 @@ export function BetaAuditNotice() {
         </a>
         .
       </Notice>
-    </div>
+    </Page>
   );
 }

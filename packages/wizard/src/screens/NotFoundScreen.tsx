@@ -1,26 +1,33 @@
-import { Question } from '../components/text';
+import { EmptyState, Page, PageHeader } from '../components/ui';
 import { Link, PATHS } from '../lib/router';
 import { useDocumentTitle } from '../lib/title';
 
-export function NotFoundScreen() {
+/** An address the app doesn't know. The shared (beta) copy has no Website Audits, so no link to them. */
+export function NotFoundScreen({ beta = false }: { beta?: boolean }) {
   useDocumentTitle('Page not found');
   return (
-    <div className="mx-auto max-w-prose px-4 py-12 sm:px-6">
-      <Question>Page not found</Question>
-      <p className="mb-6 text-ink-soft">
-        There’s nothing at this address. It may be an old link, or it was typed with a mistake.
-      </p>
-      <div className="flex flex-wrap gap-3">
-        <Link to={PATHS.new} className="btn-primary">
-          Start a new check-up
-        </Link>
-        <Link to={PATHS.reports} className="btn-quiet">
-          Past check-ups
-        </Link>
-        <Link to={PATHS.audits} className="btn-quiet">
-          Saved Website Audits
-        </Link>
-      </div>
-    </div>
+    <Page width="prose">
+      <PageHeader title="Page not found" />
+      <EmptyState
+        title="There’s nothing at this address"
+        action={
+          <div className="flex flex-wrap justify-center gap-3">
+            <Link to={PATHS.new} className="btn-primary">
+              New check-up
+            </Link>
+            <Link to={PATHS.reports} className="btn-quiet">
+              Past check-ups
+            </Link>
+            {!beta && (
+              <Link to={PATHS.audits} className="btn-quiet">
+                Website Audits
+              </Link>
+            )}
+          </div>
+        }
+      >
+        It may be an old link, or the address was typed with a mistake.
+      </EmptyState>
+    </Page>
   );
 }

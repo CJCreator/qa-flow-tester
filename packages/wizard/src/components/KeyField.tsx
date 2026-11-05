@@ -17,22 +17,27 @@ export function KeyField({
   saveLabel = 'Save the key',
   onCancel,
   cancelLabel,
+  primary = true,
 }: {
   onSaved: (model: string) => void;
   saveLabel?: string;
   onCancel?: () => void;
   cancelLabel?: string;
+  /** False where the screen already has its one primary action: Save is then a quiet button. */
+  primary?: boolean;
 }) {
   const [key, setKey] = useState('');
   const [reveal, setReveal] = useState(false);
   const [status, setStatus] = useState<KeyStatus>({ kind: 'empty' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
   const latestCheck = useRef(0);
 
   useEffect(() => {
     const trimmed = key.trim();
     setError(null);
+    if (trimmed) setSaved(false);
     if (!trimmed) {
       setStatus({ kind: 'empty' });
       return;
@@ -65,6 +70,7 @@ export function KeyField({
         return;
       }
       setKey('');
+      setSaved(true);
       onSaved(model);
     } catch (err) {
       setError(err instanceof RunnerError ? err.message : 'The key couldn’t be saved. Try again.');
@@ -80,12 +86,7 @@ export function KeyField({
       </label>
       <p id="ai-key-hint" className="hint mb-3 text-sm">
         Don’t have one?{' '}
-        <a
-          className="inline-flex min-h-[44px] items-center font-bold text-stamp underline underline-offset-4 hover:text-stamp-dark"
-          href="https://openrouter.ai/keys"
-          target="_blank"
-          rel="noreferrer"
-        >
+        <a className="btn-link" href="https://openrouter.ai/keys" target="_blank" rel="noreferrer">
           Get a free key from OpenRouter
         </a>{' '}
         (opens in a new tab).
@@ -113,14 +114,15 @@ export function KeyField({
           type="button"
           className="btn-quiet shrink-0 px-4"
           onClick={() => setReveal((r) => !r)}
-          aria-pressed={reveal}
+          aria-controls="ai-key"
         >
-          Show key
+          {reveal ? 'Hide key' : 'Show key'}
         </button>
       </div>
 
       <p id="ai-key-status" role="status" className="mt-2 min-h-[1.6em] text-sm">
-        {status.kind === 'checking' && <Spinner label="Checking the key…" />}
+        {status.kind === 'checking' && <Spinner label="Checking the key…" announce={false} />}
+        {status.kind === 'empty' && saved && <span className="font-bold text-pass">Key saved</span>}
         {status.kind === 'valid' && <span className="font-bold text-pass">✓ The key works</span>}
         {status.kind === 'invalid' && (
           <span className="font-bold text-fail">✗ The key doesn’t work, or it’s out of credit. {status.reason}</span>
@@ -132,11 +134,11 @@ export function KeyField({
       <div className="mt-4 flex flex-wrap items-center gap-4">
         <button
           type="button"
-          className="btn-primary"
+          className={primary ? 'btn-primary' : 'btn-quiet'}
           disabled={status.kind !== 'valid' || saving}
           onClick={() => void save()}
         >
-          {saving ? <Spinner label="Saving your key…" /> : saveLabel}
+          {saving ? <Spinner label="Saving your key…" announce={false} /> : saveLabel}
         </button>
         {onCancel && (
           <button type="button" className="btn-link" onClick={onCancel}>

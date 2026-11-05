@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { HELPER_PERMISSIONS, type HelperGrant, type HelperPermission } from '@qa/types/src/browser.js';
 import { useConfirm } from '../../../components/ConfirmDialog';
-import { ErrorMessage, FocusHeading, Spinner } from '../../../components/text';
-import { Link, PATHS } from '../../../lib/router';
+import { Spinner } from '../../../components/text';
+import { LoadError, Page, PageHeader } from '../../../components/ui';
+import { PATHS } from '../../../lib/router';
 import { useDocumentTitle } from '../../../lib/title';
+import { AuditTabs } from '../AuditTabs';
 import {
   HELPERS_OFF_MESSAGE,
   PERMISSION_LABEL,
@@ -115,7 +117,7 @@ export function HelpersView({
               id="helper-email"
               type="email"
               autoComplete="off"
-              className="field mt-1 w-full max-w-md text-sm"
+              className="field mt-1 w-full max-w-md"
               value={email}
               onChange={(e) => onEmail(e.target.value)}
             />
@@ -126,12 +128,13 @@ export function HelpersView({
               {HELPER_PERMISSIONS.map((permission) => {
                 const id = `helper-permission-${permission}`;
                 return (
-                  <li key={permission} className="flex flex-wrap items-center gap-2">
+                  <li key={permission} className="flex min-h-[44px] flex-wrap items-center gap-x-2">
                     <input
                       id={id}
                       type="checkbox"
                       checked={chosen.includes(permission)}
                       disabled={permission === 'view'}
+                      className="h-5 w-5 accent-stamp"
                       aria-describedby={`${id}-hint`}
                       onChange={(e) =>
                         onPermissions(
@@ -150,9 +153,19 @@ export function HelpersView({
               })}
             </ul>
           </fieldset>
-          <button type="submit" className="btn-primary px-6 font-bold" disabled={busy}>
-            {busy ? <Spinner label="Saving…" /> : 'Give access'}
+          <button type="submit" className="btn-primary" disabled={busy}>
+            {busy ? <Spinner label="Saving…" announce={false} /> : 'Give access'}
           </button>
+          {message &&
+            (message.tone === 'fail' ? (
+              <p role="alert" className="max-w-prose text-sm font-semibold text-fail">
+                {message.text}
+              </p>
+            ) : (
+              <p role="status" className="text-sm font-semibold text-pass">
+                {message.text}
+              </p>
+            ))}
         </form>
       </section>
 
@@ -172,12 +185,12 @@ export function HelpersView({
               id="helper-sign-in-address"
               type="text"
               readOnly
-              className="field w-full max-w-md font-mono text-sm"
+              className="field w-full max-w-md font-mono"
               value={signInAddress}
               onFocus={(e) => e.target.select()}
             />
             {onCopy && (
-              <button type="button" className="btn-quiet min-h-[44px]" onClick={() => onCopy(signInAddress)}>
+              <button type="button" className="btn-quiet" onClick={() => onCopy(signInAddress)}>
                 Copy address
               </button>
             )}
@@ -194,15 +207,6 @@ export function HelpersView({
           )}
         </section>
       )}
-
-      {message &&
-        (message.tone === 'fail' ? (
-          <ErrorMessage>{message.text}</ErrorMessage>
-        ) : (
-          <p role="status" className="text-sm font-semibold text-pass">
-            {message.text}
-          </p>
-        ))}
     </div>
   );
 }
@@ -225,7 +229,11 @@ type Loaded = HelpersLoaded;
  * The screen below its heading, without state. When Helper sign-in is not set up on this copy it says so
  * and offers nothing else.
  */
-export function HelpersBody({ loaded, ...view }: { loaded: HelpersLoaded } & Omit<HelpersViewProps, 'helpers'>) {
+export function HelpersBody({
+  loaded,
+  onRetry,
+  ...view
+}: { loaded: HelpersLoaded; onRetry?: () => void } & Omit<HelpersViewProps, 'helpers'>) {
   if (loaded.status === 'off') return <p className="max-w-prose text-ink-soft">{HELPERS_OFF_MESSAGE}</p>;
   return (
     <>
@@ -233,7 +241,11 @@ export function HelpersBody({ loaded, ...view }: { loaded: HelpersLoaded } & Omi
         <HelperRules />
       </div>
       {loaded.status === 'loading' && <Spinner label="Loading the Helpers…" />}
-      {loaded.status === 'failed' && <ErrorMessage>{loaded.message}</ErrorMessage>}
+      {loaded.status === 'failed' && (
+        <LoadError title="The Helpers could not be loaded" onRetry={onRetry}>
+          {loaded.message}
+        </LoadError>
+      )}
       {loaded.status === 'loaded' && <HelpersView helpers={loaded.helpers} {...view} />}
     </>
   );
@@ -248,10 +260,12 @@ export function HelpersScreen({ auditId, fetchImpl }: HelpersScreenProps) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<HelpersMessage>(null);
   const [copied, setCopied] = useState<'copied' | 'failed' | null>(null);
+  const [attempt, setAttempt] = useState(0);
   useDocumentTitle('Helpers');
 
   useEffect(() => {
     let live = true;
+    setLoaded({ status: 'loading' });
     void (async () => {
       const status = await loadHelperStatus(fetchImpl);
       if (!live) return;
@@ -264,7 +278,7 @@ export function HelpersScreen({ auditId, fetchImpl }: HelpersScreenProps) {
     return () => {
       live = false;
     };
-  }, [auditId, fetchImpl]);
+  }, [auditId, fetchImpl, attempt]);
 
   const give = useCallback(async () => {
     const address = normalEmail(email);
@@ -336,15 +350,16 @@ export function HelpersScreen({ auditId, fetchImpl }: HelpersScreenProps) {
   );
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
-      <FocusHeading className="mb-2 break-words text-question font-bold">Helpers</FocusHeading>
-      <p className="mb-6">
-        <Link to={PATHS.audit(auditId)} className="btn-link text-sm">
-          Back to this Website Audit
-        </Link>
-      </p>
+    <Page width="form">
+      <PageHeader
+        back={{ to: PATHS.audits, label: 'All Website Audits' }}
+        title="Helpers"
+        lede="People you let open this Website Audit with their own Google account."
+      />
+      <AuditTabs auditId={auditId} current="helpers" />
       <HelpersBody
         loaded={loaded}
+        onRetry={() => setAttempt((n) => n + 1)}
         email={email}
         permissions={permissions}
         busy={busy}
@@ -361,6 +376,6 @@ export function HelpersScreen({ auditId, fetchImpl }: HelpersScreenProps) {
         onCopy={(address) => void copy(address)}
       />
       {dialog}
-    </div>
+    </Page>
   );
 }

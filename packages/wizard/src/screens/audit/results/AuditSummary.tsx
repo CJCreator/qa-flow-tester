@@ -60,14 +60,18 @@ export function AuditSummary({ result }: { result: AuditResult }) {
 /** The plain sentences the tool left for its user, such as "AI notes need an AI key", with the way to fix it. */
 export function NotesBanner({ notes }: { notes: string[] }) {
   if (notes.length === 0) return null;
+  // The way to Settings only helps when a note is about a missing AI key.
+  const aboutKey = notes.some((note) => /\bAI key\b/i.test(note));
   return (
     <Notice
       tone="warn"
       title="Notes about this Website Audit"
       actions={
-        <Link to={PATHS.settings} className="btn-link">
-          Add an AI key in Settings
-        </Link>
+        aboutKey && (
+          <Link to={PATHS.settings} className="btn-link">
+            Add an AI key in Settings
+          </Link>
+        )
       }
     >
       <ul className="list-disc pl-5">
