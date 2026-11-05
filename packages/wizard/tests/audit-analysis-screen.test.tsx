@@ -404,7 +404,10 @@ describe('AnalysisScreen: the loaded result', () => {
 
   it('lists every page as a button that says where its checks come from', () => {
     // Only the page list's buttons: the section index has buttons of its own.
-    const pageList = html.slice(html.indexOf('<h2 id="audit-pages-title"'), html.indexOf('<h2 id="audit-skipped-title"'));
+    const pageList = html.slice(
+      html.indexOf('<h2 id="audit-pages-title"'),
+      html.indexOf('<h2 id="audit-skipped-title"')
+    );
     const buttons = pageList.match(/<button[^>]*>.*?<\/button>/g) ?? [];
     expect(buttons).toHaveLength(2);
     const [first, second] = [itemAt(buttons, 0), itemAt(buttons, 1)];

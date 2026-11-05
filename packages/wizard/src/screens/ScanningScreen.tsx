@@ -212,7 +212,11 @@ export function ScanningScreen({
           </section>
 
           <div className="mt-8">
-            <button type="button" className="btn-quiet border-fail text-fail hover:border-fail hover:bg-fail-tint" onClick={onStop}>
+            <button
+              type="button"
+              className="btn-quiet border-fail text-fail hover:border-fail hover:bg-fail-tint"
+              onClick={onStop}
+            >
               Stop scanning
             </button>
           </div>

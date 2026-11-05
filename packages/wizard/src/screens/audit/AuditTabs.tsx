@@ -28,7 +28,10 @@ export function AuditTabs({
   ];
   const shown = tabs.filter((t): t is { id: AuditTab; label: string; to: string } => !!t.to && !hide.includes(t.id));
   return (
-    <nav aria-label="This Website Audit" className="-mx-4 mb-8 overflow-x-auto border-b border-rule px-4 sm:mx-0 sm:px-0">
+    <nav
+      aria-label="This Website Audit"
+      className="-mx-4 mb-8 overflow-x-auto border-b border-rule px-4 sm:mx-0 sm:px-0"
+    >
       <ul className="flex min-w-max gap-1">
         {shown.map((t) => {
           const on = t.id === current;

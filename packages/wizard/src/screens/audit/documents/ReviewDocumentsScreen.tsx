@@ -248,7 +248,12 @@ function SectionsEditor({
   }
   return (
     <section aria-labelledby="review-sections-title" className="space-y-3">
-      <h2 id="review-sections-title" ref={headingRef} tabIndex={-1} className="break-all text-xl font-bold outline-none">
+      <h2
+        id="review-sections-title"
+        ref={headingRef}
+        tabIndex={-1}
+        className="break-all text-xl font-bold outline-none"
+      >
         {urlPath === null ? 'Page Content by Section' : `Page Content by Section: ${urlPath}`}
       </h2>
       {body}
@@ -483,7 +488,9 @@ export function ReviewDocumentsView({
                             onChange={() => onDraft(chooseAction(draft, row.urlPath, action))}
                             className="h-5 w-5 accent-stamp"
                           />
-                          <label htmlFor={id} className="py-3 pr-3">{ACTION_LABEL[action]}</label>
+                          <label htmlFor={id} className="py-3 pr-3">
+                            {ACTION_LABEL[action]}
+                          </label>
                         </span>
                       );
                     })}
@@ -507,7 +514,9 @@ export function ReviewDocumentsView({
       <BottomActionBar
         summary={
           <>
-            <span aria-live="polite">{pending ? 'You have changes that are not saved yet.' : 'Every change is saved.'}</span>
+            <span aria-live="polite">
+              {pending ? 'You have changes that are not saved yet.' : 'Every change is saved.'}
+            </span>
             {message &&
               (message.tone === 'fail' ? (
                 <span role="alert" className="mt-1 block font-semibold text-fail">
@@ -686,7 +695,9 @@ export function ReviewDocumentsScreen({
         // Back to this audit, which a Helper may open too (the list of all audits is the owner's).
         back={{ to: PATHS.audit(auditId), label: 'Back to this Website Audit' }}
         meta={
-          reply ? <span className="break-all">{`${reply.summary.url}, version ${reply.version.version}`}</span> : undefined
+          reply ? (
+            <span className="break-all">{`${reply.summary.url}, version ${reply.version.version}`}</span>
+          ) : undefined
         }
         title="Review the Audit Documents"
         lede="Change the text of Sections and findings, remove pages, and pick redesign or repair before you download. Edits change the Audit Documents only: the Website Audit keeps every original, and you can reset an edit at any time."
@@ -723,5 +734,4 @@ export function ReviewDocumentsScreen({
       {dialog}
     </Page>
   );
-
 }

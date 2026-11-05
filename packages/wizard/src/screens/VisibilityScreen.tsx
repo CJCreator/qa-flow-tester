@@ -72,8 +72,7 @@ export function VisibilityScreen({ runId }: { runId: string }) {
       .then((r) => !cancelled && setReport(r))
       .catch(
         (err) =>
-          !cancelled &&
-          setError(err instanceof RunnerError ? err.message : 'The report couldn’t be opened. Try again.')
+          !cancelled && setError(err instanceof RunnerError ? err.message : 'The report couldn’t be opened. Try again.')
       );
     return () => {
       cancelled = true;
@@ -192,7 +191,9 @@ export function VisibilityScreen({ runId }: { runId: string }) {
               onClick={() => setActiveTab(tab)}
               onKeyDown={onTabKey}
               className={`flex min-h-[44px] items-center gap-2 rounded-control border-[1.5px] px-4 py-2 text-sm font-bold transition-colors duration-fast ${
-                isSelected ? 'border-stamp bg-stamp-tint text-ink' : 'border-edge bg-surface text-ink-soft hover:text-ink'
+                isSelected
+                  ? 'border-stamp bg-stamp-tint text-ink'
+                  : 'border-edge bg-surface text-ink-soft hover:text-ink'
               }`}
             >
               <span>{meta.label}</span>

@@ -17,7 +17,15 @@ const WIDTHS: Record<PageWidth, string> = {
 };
 
 /** The column a screen lives in: one of three widths, the page gutter, and the mount fade. */
-export function Page({ width = 'form', children, className = '' }: { width?: PageWidth; children: ReactNode; className?: string }) {
+export function Page({
+  width = 'form',
+  children,
+  className = '',
+}: {
+  width?: PageWidth;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
     <div className={`screen-in mx-auto w-full ${WIDTHS[width]} px-4 pb-16 pt-8 sm:px-6 sm:pt-12 lg:px-8 ${className}`}>
       {children}

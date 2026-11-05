@@ -74,9 +74,7 @@ export function DeveloperDetails({
 
   return (
     <details className="disclosure mt-3 border-y border-rule">
-      <summary className="py-1 text-sm">
-        Details for developers
-      </summary>
+      <summary className="py-1 text-sm">Details for developers</summary>
       <div className="space-y-4 pb-4 pt-2 text-sm">
         {screenshot && (
           <figure>

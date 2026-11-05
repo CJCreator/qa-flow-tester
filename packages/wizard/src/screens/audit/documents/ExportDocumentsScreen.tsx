@@ -353,7 +353,6 @@ export function ExportDocumentsView({
   );
 }
 
-
 export interface ExportDocumentsScreenProps {
   auditId: string;
   /** The version to download; the latest when not given. */

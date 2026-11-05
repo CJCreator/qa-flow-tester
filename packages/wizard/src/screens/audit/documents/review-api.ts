@@ -22,7 +22,8 @@ export type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 export type ReviewOutcome<T> = { ok: true; value: T } | { ok: false; message: string; code?: AuditErrorCode };
 
-const NOT_ANSWERING = 'The tool is not answering. Check your connection and that the tool is still running, then try again.';
+const NOT_ANSWERING =
+  'The tool is not answering. Check your connection and that the tool is still running, then try again.';
 
 const REFUSALS: Partial<Record<AuditErrorCode, string>> = {
   ERR_AUDIT_NOT_FOUND: 'This Website Audit was not found. It may have been deleted.',

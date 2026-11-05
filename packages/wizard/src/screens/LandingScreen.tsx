@@ -433,7 +433,10 @@ export function LandingScreen() {
 
         <section aria-labelledby="final-title" className="border-t border-rule bg-surface">
           <div className={`${SECTION} text-center`}>
-            <h2 id="final-title" className="mx-auto max-w-prose font-stamp text-3xl font-bold leading-tight sm:text-5xl">
+            <h2
+              id="final-title"
+              className="mx-auto max-w-prose font-stamp text-3xl font-bold leading-tight sm:text-5xl"
+            >
               Find out if you’re ready to ship
             </h2>
             <p className="mx-auto mt-4 max-w-prose text-lg text-ink-soft">

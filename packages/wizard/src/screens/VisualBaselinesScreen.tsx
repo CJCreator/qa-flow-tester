@@ -287,7 +287,13 @@ export function VisualBaselinesScreen() {
               </ul>
             </div>
 
-            <div ref={inspectorRef} tabIndex={-1} role="region" className="rounded-card lg:col-span-7" aria-label="Selected baseline">
+            <div
+              ref={inspectorRef}
+              tabIndex={-1}
+              role="region"
+              className="rounded-card lg:col-span-7"
+              aria-label="Selected baseline"
+            >
               {activeItem ? (
                 <div className="space-y-4 rounded-card border border-rule bg-surface p-5">
                   <div className="flex flex-wrap items-center justify-between gap-3 border-b border-rule pb-3">
@@ -376,7 +382,11 @@ export function VisualBaselinesScreen() {
                     {viewMode === 'overlay' && (
                       <div className="space-y-3">
                         <div className="relative mx-auto flex max-h-[32rem] select-none items-center justify-center overflow-hidden rounded-control border border-rule bg-panel">
-                          <img src={activeItem.previewUrl} alt="Baseline" className="block max-h-[30rem] object-contain" />
+                          <img
+                            src={activeItem.previewUrl}
+                            alt="Baseline"
+                            className="block max-h-[30rem] object-contain"
+                          />
                           {activeItem.currentUrl && (
                             <div
                               className="absolute inset-0 overflow-hidden"
@@ -427,7 +437,9 @@ export function VisualBaselinesScreen() {
                 </div>
               ) : (
                 <div className="rounded-card border border-dashed border-edge bg-surface p-12 text-center text-ink-soft">
-                  <p>Choose a baseline from the list to see what changed and decide whether to keep the new screenshot.</p>
+                  <p>
+                    Choose a baseline from the list to see what changed and decide whether to keep the new screenshot.
+                  </p>
                 </div>
               )}
             </div>

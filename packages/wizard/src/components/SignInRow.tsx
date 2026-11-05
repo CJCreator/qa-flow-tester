@@ -27,7 +27,11 @@ export function SignInRow({
   legend,
 }: SignInRowProps) {
   const id = useId();
-  const hasFieldNames = !!(value.usernameSelector?.trim() || value.passwordSelector?.trim() || value.submitSelector?.trim());
+  const hasFieldNames = !!(
+    value.usernameSelector?.trim() ||
+    value.passwordSelector?.trim() ||
+    value.submitSelector?.trim()
+  );
   const [showFields, setShowFields] = useState(hasFieldNames);
   const fieldsOpen = showFields || hasFieldNames;
   return (

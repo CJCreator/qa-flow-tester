@@ -214,10 +214,7 @@ export function HelperSignInScreen({
 
   return (
     <Page width="form">
-      <PageHeader
-        title="Helper sign-in"
-        lede={state.status !== 'off' ? <HelperRules /> : undefined}
-      />
+      <PageHeader title="Helper sign-in" lede={state.status !== 'off' ? <HelperRules /> : undefined} />
       <HelperSignInView
         state={state}
         onSignIn={() => void start()}

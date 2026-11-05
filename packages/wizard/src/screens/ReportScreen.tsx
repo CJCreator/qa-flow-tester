@@ -1,12 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { flushSync } from 'react-dom';
-import {
-  releaseVerdict,
-  type AspectType,
-  type Finding,
-  type FindingSeverity,
-  type ReleaseReport,
-} from '@qa/types';
+import { releaseVerdict, type AspectType, type Finding, type FindingSeverity, type ReleaseReport } from '@qa/types';
 import {
   acceptJudgement,
   downloadRunFile,
@@ -227,9 +221,7 @@ export function reportHeadline(input: {
 /** "14:05", or nothing for a time that can't be read. */
 function timeOf(iso: string): string {
   const date = new Date(iso);
-  return Number.isNaN(date.getTime())
-    ? ''
-    : date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 }
 
 /** True while the browser prints: every problem body opens so the paper copy is whole. */
@@ -354,7 +346,9 @@ export function Report({
           <p className="text-sm text-ink-soft">
             Check-up of <span className="break-all font-bold text-ink">{host}</span>
           </p>
-          <FocusHeading className={`mt-1 font-stamp text-verdict font-bold ${tone.words}`}>{summary.stamp}</FocusHeading>
+          <FocusHeading className={`mt-1 font-stamp text-verdict font-bold ${tone.words}`}>
+            {summary.stamp}
+          </FocusHeading>
           <p className="mt-3 text-sm text-ink-soft">
             {when && `Checked ${formatDay(when)}${time ? ` at ${time}` : ''}.`}
             {coverage.totalTestPoints > 0 &&
@@ -546,8 +540,8 @@ export function Report({
               </dd>
               <dt className="text-ink-soft">Findings</dt>
               <dd className="text-ink">
-                {summary.findings} behind the {count(summary.total, 'problem', 'problems')} the verdict counts (the
-                same problem on several pages or sizes is one problem)
+                {summary.findings} behind the {count(summary.total, 'problem', 'problems')} the verdict counts (the same
+                problem on several pages or sizes is one problem)
               </dd>
               {report.aiModels?.text && (
                 <>
@@ -767,8 +761,8 @@ function MarketingPanel({ report }: { report: ReleaseReport }) {
           What a visitor or a marketer looks for, read from{' '}
           {marketing.readPages.length === 1 ? 'one page' : `${marketing.readPages.length} pages`} (
           {marketing.readPages.slice(0, 3).join(', ')}
-          {marketing.readPages.length > 3 ? ', …' : ''}). Items marked as suggestions depend on what the site is for,
-          so they never count as faults.
+          {marketing.readPages.length > 3 ? ', …' : ''}). Items marked as suggestions depend on what the site is for, so
+          they never count as faults.
         </>
       }
     >
@@ -933,7 +927,8 @@ function FixFirst({ report }: { report: ReleaseReport }) {
                 </p>
                 <p className="mt-1 text-ink">
                   <strong>How to fix: </strong>
-                  {plainFix ?? 'A developer can see exactly what to change under the problem’s “Details for developers”.'}
+                  {plainFix ??
+                    'A developer can see exactly what to change under the problem’s “Details for developers”.'}
                 </p>
               </div>
             </li>
@@ -1026,7 +1021,9 @@ function Problems({
       (!words || [plainTitle(f), category(f), f.where.urlPath].join(' ').toLowerCase().includes(words));
     const groups = groupProblems(report.findings.filter(matches));
     const rows = {} as Record<Bucket, ProblemRow[]>;
-    for (const b of BUCKETS) rows[b.id] = b.id === 'judgement' ? groups[b.id].map((g) => ({ ...g, keys: [g.key] })) : mergeSameProblem(groups[b.id]);
+    for (const b of BUCKETS)
+      rows[b.id] =
+        b.id === 'judgement' ? groups[b.id].map((g) => ({ ...g, keys: [g.key] })) : mergeSameProblem(groups[b.id]);
     return rows;
   }, [report.findings, pageFilter, filters]);
 
@@ -1270,9 +1267,7 @@ function TestedDetails({ report }: { report: ReleaseReport }) {
         What was and wasn’t tested
       </h2>
       <details ref={detailsRef} className="disclosure border-y border-rule">
-        <summary className="py-1">
-          {gaps.length > 0 ? gaps.join(', ') : 'Pages, roles and documents'}
-        </summary>
+        <summary className="py-1">{gaps.length > 0 ? gaps.join(', ') : 'Pages, roles and documents'}</summary>
         <div className="space-y-8 pb-6 pt-2">
           <PageCoverageSection report={report} />
           <RolesNotTestedSection report={report} />
@@ -1407,7 +1402,9 @@ function SourcesSummary({ report }: { report: ReleaseReport }) {
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="flex flex-wrap items-center gap-2">
-                        <strong className="font-bold text-ink">{item.docSource.section ?? item.docSource.document}</strong>
+                        <strong className="font-bold text-ink">
+                          {item.docSource.section ?? item.docSource.document}
+                        </strong>
                         <span className="text-sm text-ink-soft">in {item.docSource.document}</span>
                         {isOverridden && <Badge tone="pass">Override recorded</Badge>}
                       </p>

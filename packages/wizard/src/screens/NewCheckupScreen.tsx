@@ -319,7 +319,11 @@ export function NewCheckupScreen({
   const adjustHint = [
     `${form.maxPages} pages`,
     `search checks ${searchChecksOn ? 'on' : 'off'}`,
-    signInCount > 0 ? `${signInCount} ${signInCount === 1 ? 'sign-in' : 'sign-ins'}` : usingSaved ? 'saved sign-ins' : '',
+    signInCount > 0
+      ? `${signInCount} ${signInCount === 1 ? 'sign-in' : 'sign-ins'}`
+      : usingSaved
+        ? 'saved sign-ins'
+        : '',
     added > 0 ? 'Product context added' : '',
     form.capRequests.trim() ? `up to ${form.capRequests.trim()} AI requests` : '',
   ]
@@ -370,7 +374,10 @@ export function NewCheckupScreen({
     <Page width="form">
       {inProgress && <ResumeCard status={inProgress} />}
       {waitingPlans.length > 0 && (
-        <aside aria-label="Plans waiting for review" className="mb-10 rounded-card border border-rule bg-surface px-5 py-4">
+        <aside
+          aria-label="Plans waiting for review"
+          className="mb-10 rounded-card border border-rule bg-surface px-5 py-4"
+        >
           <p className="font-bold text-ink">
             {waitingPlans.length === 1
               ? 'A plan is also waiting for your review'
@@ -1270,7 +1277,13 @@ function DomainProofPanel({ url }: { url: string }) {
 function hasRowDetails(s: SignInEntry | undefined): boolean {
   return (
     !!s &&
-    !!(s.role.trim() || s.loginPath.trim() || s.usernameSelector?.trim() || s.passwordSelector?.trim() || s.submitSelector?.trim())
+    !!(
+      s.role.trim() ||
+      s.loginPath.trim() ||
+      s.usernameSelector?.trim() ||
+      s.passwordSelector?.trim() ||
+      s.submitSelector?.trim()
+    )
   );
 }
 
@@ -1342,7 +1355,11 @@ function SignInsSection({
             }));
           }}
         >
-          {!rows ? 'Add a role or another sign-in' : form.signIns.length === 0 ? 'Add a sign-in' : 'Add another sign-in'}
+          {!rows
+            ? 'Add a role or another sign-in'
+            : form.signIns.length === 0
+              ? 'Add a sign-in'
+              : 'Add another sign-in'}
         </button>
         <ImportRoles onFormChange={onFormChange} />
       </div>

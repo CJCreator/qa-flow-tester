@@ -399,7 +399,15 @@ describe('T-37b: wizard copy, labels and accessibility', () => {
     expect(settings).toContain('Site address');
     expect(settings).toContain('Shorter check-up (faster)');
     expect(settings).toContain('Use a test sign-in, not a real person’s.');
-    for (const old of ['Target Website URL', 'Quick smoke scan', 'Quick check', 'window.confirm', 'accent-[#', 'Failed to', 'Use a test account']) {
+    for (const old of [
+      'Target Website URL',
+      'Quick smoke scan',
+      'Quick check',
+      'window.confirm',
+      'accent-[#',
+      'Failed to',
+      'Use a test account',
+    ]) {
       expect(settings, old).not.toContain(old);
     }
   });

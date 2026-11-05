@@ -174,7 +174,13 @@ describe('Report redesign: verdict tag, headline, order and grouped problems', (
     expect(html).toMatch(/<h1[^>]*font-stamp text-verdict[^>]*>Not ready yet<\/h1>/);
     expect(html).toContain('1 problem must be fixed first, all in security.');
     expect(html.indexOf('Verdict, in full')).toBeGreaterThan(html.indexOf('Problems found'));
-    const order = ['Not ready yet', 'New check-up of this site', 'Problems found', 'Go further', 'Details for developers'];
+    const order = [
+      'Not ready yet',
+      'New check-up of this site',
+      'Problems found',
+      'Go further',
+      'Details for developers',
+    ];
     const at = order.map((text) => html.indexOf(text));
     expect(at.every((n) => n >= 0)).toBe(true);
     expect(at).toEqual([...at].sort((a, b) => a - b));

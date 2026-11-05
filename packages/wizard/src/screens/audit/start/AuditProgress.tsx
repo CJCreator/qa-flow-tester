@@ -71,7 +71,10 @@ export function AuditProgress({
   const finished = state.status === 'done';
 
   return (
-    <section aria-labelledby="audit-progress-title" className="mt-2 rounded-card border border-rule bg-surface p-4 sm:p-6">
+    <section
+      aria-labelledby="audit-progress-title"
+      className="mt-2 rounded-card border border-rule bg-surface p-4 sm:p-6"
+    >
       <h2 id="audit-progress-title" className="mb-1 break-words text-lg font-bold">
         Website Audit of {address}
       </h2>

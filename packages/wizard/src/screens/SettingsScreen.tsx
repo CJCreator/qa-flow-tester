@@ -1182,12 +1182,7 @@ function AddSignIn({ host, onSaved }: { host: string; onSaved: () => void }) {
         />
       </SignInField>
       <SignInField label="Username or email">
-        <input
-          className="field"
-          autoComplete="off"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-        />
+        <input className="field" autoComplete="off" value={username} onChange={(e) => setUsername(e.target.value)} />
       </SignInField>
       <SignInField label="Password">
         <input

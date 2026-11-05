@@ -37,7 +37,8 @@ export interface HelperStatus {
   firebase: FirebaseWebConfig | null;
 }
 
-const NOT_ANSWERING = 'The tool is not answering. Check your connection and that the tool is still running, then try again.';
+const NOT_ANSWERING =
+  'The tool is not answering. Check your connection and that the tool is still running, then try again.';
 
 export const HELPERS_OFF_MESSAGE =
   'Helper sign-in is not set up on this copy. Until it is, give the people helping you the downloaded documents instead. Whoever hosts this copy can turn Helper sign-in on.';

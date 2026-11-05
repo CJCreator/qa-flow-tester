@@ -329,14 +329,7 @@ export function SiteMap({
               xmlns="http://www.w3.org/2000/svg"
             >
               {linkPaths.map((p) => (
-                <path
-                  key={p.id}
-                  d={p.d}
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={1}
-                  className="text-rule"
-                />
+                <path key={p.id} d={p.d} fill="none" stroke="currentColor" strokeWidth={1} className="text-rule" />
               ))}
               {connectorPaths.map((p) => (
                 <path key={p.id} d={p.d} fill="none" stroke="currentColor" strokeWidth={2} className={p.color} />

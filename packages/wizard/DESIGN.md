@@ -81,20 +81,20 @@ A check-up is a real sequence, so it's shown as one.
 The Certificate palette is defined in [tailwind.config.js](tailwind.config.js) as `palette` (light) and
 `darkPalette`, with the same token names.
 
-| Token                     | Light                 | Dark                  | Use                                                    |
-| ------------------------- | --------------------- | --------------------- | ------------------------------------------------------ |
-| paper                     | `#F4F6F4`             | `#0E1311`             | Page background                                        |
-| canvas                    | `#ECEFEC`             | `#0A0E0C`             | The map's drawing board, sunk areas, the step bar      |
-| surface                   | `#FFFFFF`             | `#161D1A`             | Cards and fields                                       |
-| panel                     | `#EEF1EE`             | `#121815`             | Side panels                                            |
-| raised                    | `#FFFFFF`             | `#1C2420`             | Menus, dialogs, sticky bars (with a shadow)            |
-| ink / ink-soft            | `#121A17` / `#4C5853` | `#E8EEEA` / `#A8B4AE` | Text / secondary text                                  |
-| rule                      | `#D8DDDA`             | `#26302C`             | Decorative dividers only, never the only cue           |
-| edge                      | `#7A8580`             | `#6F7C76`             | Control borders, at least 3:1 (WCAG 1.4.11)            |
-| stamp                     | `#1D3FD0`             | `#8FA6FF`             | Accent: actions, links, focus ring, progress           |
-| on-stamp                  | `#FFFFFF`             | `#0A1233`             | Text on the accent and on danger buttons               |
-| pass / warn / fail        | `#0B7547` / `#8A5000` / `#B42318` | `#5CD39B` / `#F0B85A` / `#FF9D93` | Verdict and status, on their `*-tint` |
-| j1–j5                     | violet, teal, green, pink, orange |                         | One colour per journey on the map                      |
+| Token              | Light                             | Dark                              | Use                                               |
+| ------------------ | --------------------------------- | --------------------------------- | ------------------------------------------------- |
+| paper              | `#F4F6F4`                         | `#0E1311`                         | Page background                                   |
+| canvas             | `#ECEFEC`                         | `#0A0E0C`                         | The map's drawing board, sunk areas, the step bar |
+| surface            | `#FFFFFF`                         | `#161D1A`                         | Cards and fields                                  |
+| panel              | `#EEF1EE`                         | `#121815`                         | Side panels                                       |
+| raised             | `#FFFFFF`                         | `#1C2420`                         | Menus, dialogs, sticky bars (with a shadow)       |
+| ink / ink-soft     | `#121A17` / `#4C5853`             | `#E8EEEA` / `#A8B4AE`             | Text / secondary text                             |
+| rule               | `#D8DDDA`                         | `#26302C`                         | Decorative dividers only, never the only cue      |
+| edge               | `#7A8580`                         | `#6F7C76`                         | Control borders, at least 3:1 (WCAG 1.4.11)       |
+| stamp              | `#1D3FD0`                         | `#8FA6FF`                         | Accent: actions, links, focus ring, progress      |
+| on-stamp           | `#FFFFFF`                         | `#0A1233`                         | Text on the accent and on danger buttons          |
+| pass / warn / fail | `#0B7547` / `#8A5000` / `#B42318` | `#5CD39B` / `#F0B85A` / `#FF9D93` | Verdict and status, on their `*-tint`             |
+| j1–j5              | violet, teal, green, pink, orange |                                   | One colour per journey on the map                 |
 
 Every pairing the classes use is checked by `tests/contrast.test.ts` for both palettes. The build fails if a
 change drops below WCAG 2.2 AA.

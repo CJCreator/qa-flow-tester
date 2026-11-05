@@ -217,15 +217,13 @@ export function CommandPalette({ route, beta = false }: { route: Route; beta?: b
       },
       ...(beta
         ? []
-        : AUDIT_COMMANDS.map(
-            (c): CommandAction => ({
-              id: c.id,
-              title: c.title,
-              category: 'Go to',
-              keywords: c.keywords,
-              run: () => navigate(c.to),
-            })
-          )),
+        : AUDIT_COMMANDS.map((c): CommandAction => ({
+            id: c.id,
+            title: c.title,
+            category: 'Go to',
+            keywords: c.keywords,
+            run: () => navigate(c.to),
+          }))),
       {
         id: 'nav-gates',
         title: 'Change the release rule',

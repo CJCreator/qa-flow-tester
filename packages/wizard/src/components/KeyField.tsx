@@ -86,12 +86,7 @@ export function KeyField({
       </label>
       <p id="ai-key-hint" className="hint mb-3 text-sm">
         Don’t have one?{' '}
-        <a
-          className="btn-link"
-          href="https://openrouter.ai/keys"
-          target="_blank"
-          rel="noreferrer"
-        >
+        <a className="btn-link" href="https://openrouter.ai/keys" target="_blank" rel="noreferrer">
           Get a free key from OpenRouter
         </a>{' '}
         (opens in a new tab).

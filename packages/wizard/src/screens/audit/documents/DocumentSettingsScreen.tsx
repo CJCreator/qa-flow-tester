@@ -120,7 +120,13 @@ export function DocumentSettingsView({
           className="btn-quiet btn-sm"
           disabled={saving}
           aria-label="Put the default Proposal template back"
-          onClick={() => void ask('the default Proposal template', 'Your own template is replaced and this saves at once.', resetProposalTemplate())}
+          onClick={() =>
+            void ask(
+              'the default Proposal template',
+              'Your own template is replaced and this saves at once.',
+              resetProposalTemplate()
+            )
+          }
         >
           Put the default back
         </button>
@@ -176,7 +182,13 @@ export function DocumentSettingsView({
                 className="btn-quiet btn-sm mt-2"
                 disabled={saving}
                 aria-label={`Put the default ${LANGUAGE_LABEL[language]} opt-out text back`}
-                onClick={() => void ask(`the default ${LANGUAGE_LABEL[language]} opt-out text`, 'Your own text is replaced and this saves at once.', resetOptOutText(language))}
+                onClick={() =>
+                  void ask(
+                    `the default ${LANGUAGE_LABEL[language]} opt-out text`,
+                    'Your own text is replaced and this saves at once.',
+                    resetOptOutText(language)
+                  )
+                }
               >
                 Put the default back
               </button>
@@ -285,7 +297,9 @@ export function DocumentSettingsView({
             className="btn-quiet btn-sm"
             disabled={saving}
             aria-label="Remove the saved PageSpeed key"
-            onClick={() => void ask('', 'The saved PageSpeed key is deleted and this saves at once.', removePagespeedKey())}
+            onClick={() =>
+              void ask('', 'The saved PageSpeed key is deleted and this saves at once.', removePagespeedKey())
+            }
           >
             Remove the key
           </button>

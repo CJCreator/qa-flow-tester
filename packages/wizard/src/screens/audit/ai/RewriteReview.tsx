@@ -76,7 +76,9 @@ function PhraseList({ overlaps, title }: { overlaps: readonly OverlapFlag[]; tit
       <ul className="list-disc pl-5 text-sm">
         {overlaps.map((flag, i) => (
           <li key={i}>
-            <mark className="rounded-control bg-warn-tint font-semibold text-ink underline decoration-2">{flag.words}</mark>
+            <mark className="rounded-control bg-warn-tint font-semibold text-ink underline decoration-2">
+              {flag.words}
+            </mark>
             {`: ${wordCountText(flag.wordCount)}`}
           </li>
         ))}

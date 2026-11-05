@@ -82,7 +82,10 @@ export function ConnectionScreen({ checks }: { checks: number }) {
         </li>
         <li>
           Copy this file into your repo as{' '}
-          <code className="break-all rounded-control bg-surface px-1.5 py-0.5 font-mono font-bold">{WORKFLOW_PATH}</code>:
+          <code className="break-all rounded-control bg-surface px-1.5 py-0.5 font-mono font-bold">
+            {WORKFLOW_PATH}
+          </code>
+          :
           <pre
             className="mt-2 max-h-72 overflow-auto rounded-card border border-rule bg-surface px-4 py-3 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-stamp"
             tabIndex={0}
@@ -103,8 +106,8 @@ export function ConnectionScreen({ checks }: { checks: number }) {
         </li>
         <li>
           In your repo, open <strong>Settings, Secrets and variables, Actions</strong> and add a secret named{' '}
-          <code className="break-all rounded-control bg-surface px-1.5 py-0.5 font-mono font-bold">QA_AI_API_KEY</code> with your AI key. Without a
-          key the plan is written by fixed rules and no AI is used.
+          <code className="break-all rounded-control bg-surface px-1.5 py-0.5 font-mono font-bold">QA_AI_API_KEY</code>{' '}
+          with your AI key. Without a key the plan is written by fixed rules and no AI is used.
         </li>
         <li>
           <label htmlFor="gh-repo" className="block font-bold">
@@ -130,8 +133,8 @@ export function ConnectionScreen({ checks }: { checks: number }) {
       <p className="mb-12 max-w-prose text-ink-soft">
         When the run ends, its summary page shows the verdict. The full report is in the run&rsquo;s{' '}
         <strong>qa-report</strong> download: open{' '}
-        <code className="break-all rounded-control bg-surface px-1.5 py-0.5 font-mono font-bold">report.html</code> with a double-click. It also
-        runs by itself when a preview or staging deployment succeeds.
+        <code className="break-all rounded-control bg-surface px-1.5 py-0.5 font-mono font-bold">report.html</code> with
+        a double-click. It also runs by itself when a preview or staging deployment succeeds.
       </p>
 
       <h2 className="mb-2 text-xl font-bold">On your computer</h2>
@@ -144,8 +147,11 @@ export function ConnectionScreen({ checks }: { checks: number }) {
       <details className="disclosure mb-8 border-y border-rule">
         <summary>Using Docker?</summary>
         <p className="pb-4">
-          Run <code className="break-all rounded-control bg-surface px-1.5 py-0.5 font-mono font-bold">docker compose up</code> in the same folder
-          instead.
+          Run{' '}
+          <code className="break-all rounded-control bg-surface px-1.5 py-0.5 font-mono font-bold">
+            docker compose up
+          </code>{' '}
+          in the same folder instead.
         </p>
       </details>
 

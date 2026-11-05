@@ -88,12 +88,7 @@ function LanguageSelect({
       <label htmlFor={id} className="label text-ink">
         Language
       </label>
-      <select
-        id={id}
-        className="field mt-1"
-        value={value}
-        onChange={(e) => onChange(readLanguage(e.target.value))}
-      >
+      <select id={id} className="field mt-1" value={value} onChange={(e) => onChange(readLanguage(e.target.value))}>
         {SHARE_LANGUAGES.map((language) => (
           <option key={language} value={language}>
             {languageName(language)}
@@ -174,24 +169,12 @@ function LinkList({
         <caption className="sr-only">Shared Links of this Website Audit</caption>
         <thead>
           <tr>
-            <th scope="col">
-              Kind
-            </th>
-            <th scope="col">
-              Version
-            </th>
-            <th scope="col">
-              Language
-            </th>
-            <th scope="col">
-              Created
-            </th>
-            <th scope="col">
-              Expires
-            </th>
-            <th scope="col">
-              State
-            </th>
+            <th scope="col">Kind</th>
+            <th scope="col">Version</th>
+            <th scope="col">Language</th>
+            <th scope="col">Created</th>
+            <th scope="col">Expires</th>
+            <th scope="col">State</th>
             <th scope="col">
               <span className="sr-only">Action</span>
             </th>

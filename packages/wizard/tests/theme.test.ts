@@ -1,13 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  THEME_KEY,
-  applyTheme,
-  effectiveTheme,
-  parseTheme,
-  readTheme,
-  saveTheme,
-  toggled,
-} from '../src/lib/theme';
+import { THEME_KEY, applyTheme, effectiveTheme, parseTheme, readTheme, saveTheme, toggled } from '../src/lib/theme';
 
 function fakeRoot() {
   const attrs = new Map<string, string>();

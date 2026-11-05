@@ -21,7 +21,8 @@ export type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 export type RewriteOutcome<T> =
   { ok: true; value: T } | { ok: false; message: string; code?: AuditErrorCode; overlaps?: OverlapFlag[] };
 
-export const NOT_ANSWERING = 'The tool is not answering. Check your connection and that the tool is still running, then try again.';
+export const NOT_ANSWERING =
+  'The tool is not answering. Check your connection and that the tool is still running, then try again.';
 export const NO_AI_KEY = 'Add an AI key in Settings to write new copy.';
 export const NOT_APPROVED = 'Approve this Section for a rewrite first.';
 export const AI_UNAVAILABLE = 'The AI did not write new copy. Try again later.';

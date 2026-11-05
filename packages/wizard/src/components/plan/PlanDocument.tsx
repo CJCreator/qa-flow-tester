@@ -176,7 +176,9 @@ function Section({
     const shouldOpen =
       view.expandAll !== undefined && view.expandAll !== null
         ? view.expandAll
-        : (typeof count === 'number' ? count : parseInt(count ?? '0', 10)) <= COLLAPSE_OVER ||!!view.query.trim() || view.needsMe;
+        : (typeof count === 'number' ? count : parseInt(count ?? '0', 10)) <= COLLAPSE_OVER ||
+          !!view.query.trim() ||
+          view.needsMe;
     const [open, setOpen] = useState(shouldOpen);
 
     useEffect(() => {
@@ -283,11 +285,7 @@ function ChunkedList<T>({
       <ul className={className}>{visibleItems.map(renderItem)}</ul>
       {!showAll && remaining > 0 && (
         <div className="pt-2 text-center">
-          <button
-            type="button"
-            className="btn-quiet btn-sm"
-            onClick={() => setVisibleCount((c) => c + chunkSize)}
-          >
+          <button type="button" className="btn-quiet btn-sm" onClick={() => setVisibleCount((c) => c + chunkSize)}>
             Show {Math.min(remaining, chunkSize)} more ({remaining} remaining)
           </button>
         </div>
@@ -357,11 +355,7 @@ export function EditableTitle({
           }}
           disabled={disabled}
         />
-        <button
-          type="submit"
-          className="btn-quiet btn-sm"
-          disabled={disabled || !text.trim()}
-        >
+        <button type="submit" className="btn-quiet btn-sm" disabled={disabled || !text.trim()}>
           Save
         </button>
         <button
@@ -489,12 +483,7 @@ function AddSignIn({ actions }: { actions: PlanActions }) {
   const [error, setError] = useState<string | null>(null);
   if (!open) {
     return (
-      <button
-        type="button"
-        className="btn-quiet btn-sm mt-3"
-        disabled={actions.busy}
-        onClick={() => setOpen(true)}
-      >
+      <button type="button" className="btn-quiet btn-sm mt-3" disabled={actions.busy} onClick={() => setOpen(true)}>
         Add a sign-in
       </button>
     );
@@ -785,7 +774,9 @@ function SummarySection({ plan, actions }: { plan: ReviewPlan; actions: PlanActi
       )}
 
       {plan.readOnlyReason && (
-        <p className="mt-4 rounded-card border border-warn/40 bg-warn-tint p-3 text-sm text-ink">{plan.readOnlyReason}</p>
+        <p className="mt-4 rounded-card border border-warn/40 bg-warn-tint p-3 text-sm text-ink">
+          {plan.readOnlyReason}
+        </p>
       )}
       {(plan.notes || []).length > 0 && (
         <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-ink">
@@ -888,8 +879,7 @@ function SourceDetails({ test, actions }: { test: PlanPageTest; actions: PlanAct
   return (
     <div className="mt-2 space-y-1.5 rounded-card border border-rule p-3 text-sm" data-source-for={test.id}>
       <p className="text-ink">
-        <Badge tone="stamp">Source</Badge>{' '}
-        {docSourceLabel(test.docSource)}
+        <Badge tone="stamp">Source</Badge> {docSourceLabel(test.docSource)}
       </p>
       {roles && (
         <p className="text-ink-soft">
@@ -969,11 +959,7 @@ function SourceDetails({ test, actions }: { test: PlanPageTest; actions: PlanAct
 
 function TestRow({ test, page, actions }: { test: PlanPageTest; page: PlanPage; actions: PlanActions }) {
   return (
-    <li
-      id={itemDomId(test.id)}
-      data-plan-item={test.id}
-      className="rounded-control bg-canvas p-2 transition-all"
-    >
+    <li id={itemDomId(test.id)} data-plan-item={test.id} className="rounded-control bg-canvas p-2 transition-all">
       <div className="flex items-start gap-2">
         <ItemToggle
           label={`Run the test “${test.name}”`}
@@ -1031,11 +1017,7 @@ function PageRow({ page, actions }: { page: PlanPage; actions: PlanActions }) {
   const covered = page.coverage === 'covered';
   const tests = filterByIntent(page.tests, view.intent);
   return (
-    <li
-      id={itemDomId(page.id)}
-      data-plan-item={page.id}
-      className="rounded-card border border-rule p-3 transition-all"
-    >
+    <li id={itemDomId(page.id)} data-plan-item={page.id} className="rounded-card border border-rule p-3 transition-all">
       <div className="flex items-start gap-3">
         {!covered && (
           <ItemToggle
@@ -1236,11 +1218,7 @@ function NavRow({ nav, actions }: { nav: NavigationCheck; actions: PlanActions }
   const ai = useContext(AiContext);
   const menuSizes = (nav.menuSteps || []).flatMap((s) => s.onlyAt || []);
   return (
-    <li
-      id={itemDomId(nav.id)}
-      data-plan-item={nav.id}
-      className="rounded-card border border-rule p-3 transition-all"
-    >
+    <li id={itemDomId(nav.id)} data-plan-item={nav.id} className="rounded-card border border-rule p-3 transition-all">
       <div className="flex items-start gap-2">
         <ItemToggle
           label={`Check the link: ${nav.name}`}
