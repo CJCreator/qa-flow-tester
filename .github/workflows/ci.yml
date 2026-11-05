@@ -39,16 +39,9 @@ jobs:
       - name: Check formatting
         run: pnpm format:check
 
+      # Blocking: tsc -p tsconfig.test.json --noEmit. A type error fails the job.
       - name: Typecheck
-        continue-on-error: true
-        run: |
-          out=$(pnpm typecheck 2>&1) || true
-          echo "$out"
-          count=$(echo "$out" | grep -c "error TS" || echo "0")
-          if [ -n "$GITHUB_STEP_SUMMARY" ]; then
-            echo "### TypeScript Check" >> "$GITHUB_STEP_SUMMARY"
-            echo "Typecheck found **$count** error(s)." >> "$GITHUB_STEP_SUMMARY"
-          fi
+        run: pnpm typecheck
 
   # Unit tests only (no browser, no fabricated site), 2 shards (see tests.yml). Browser and e2e tests run nightly
   # (e2e-nightly.yml). Deploy runs the unit shards on push to main.

@@ -1140,9 +1140,17 @@ export class RunnerServer {
           const pathname = url.pathname;
 
           // A host's health check asks this and nothing else: it says the server is up and shows no data.
+          // /healthz stays plain text "ok" (scripts/smoke.mjs and the route inventory read that exact body).
           if (pathname === '/healthz') {
             res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
             res.end('ok');
+            return;
+          }
+
+          // /health: the same no-data liveness check, as JSON for dashboards and uptime monitors. GET only.
+          if (pathname === '/health' && req.method === 'GET') {
+            res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+            res.end(JSON.stringify({ status: 'ok', uptimeSeconds: Math.round(process.uptime()) }));
             return;
           }
 

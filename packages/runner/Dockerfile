@@ -35,5 +35,15 @@ ENV NODE_ENV=production \
     RUNNER_PORT=3001 \
     RUNNER_DATA_DIR=/data \
     RUNNER_OUTPUT_DIR=/data/reports
+# Non-root runtime. Only the writable dirs the app uses are owned by qa: the data volume and the baselines folder.
+# --no-sandbox stays on Chromium (decided): the container's non-root user is the boundary, not Chromium's sandbox.
+RUN groupadd --system qa \
+ && useradd --system --gid qa --home-dir /app --shell /usr/sbin/nologin qa \
+ && mkdir -p /data/reports /app/.qa-baselines \
+ && chown -R qa:qa /data /app/.qa-baselines
+USER qa
 EXPOSE 3001
+# Same port rule as cli.ts: PORT is honored only on Cloud Run (K_SERVICE), else RUNNER_PORT. /healthz is public and shows no data.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+((process.env.K_SERVICE&&process.env.PORT)||process.env.RUNNER_PORT||3001)+'/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"
 CMD ["node", "packages/runner/dist/cli.js"]

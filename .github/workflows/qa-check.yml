@@ -46,7 +46,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: CJCreator/qa-flow-tester
-          ref: main
+          ref: 84f6e6d0e3fa443d83771ca3a40e92096514375b # main at resolve time (gh api repos/CJCreator/qa-flow-tester/commits/main); bump when the tool changes
           path: .qa-tool
 
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
