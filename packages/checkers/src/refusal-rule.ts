@@ -77,18 +77,24 @@ export const REFUSAL_RULE_SOURCE = String.raw`(input) => {
   const signals = [];
   let errorText;
   const note = (t) => { if (t && errorText === undefined) errorText = t; };
+  // The browser's own message is the last choice for the shown text: an alert or new error text the page shows wins.
+  let nativeText = '';
 
   const controls = Array.from(document.querySelectorAll('input, select, textarea'));
   const invalidControl = controls.find((c) => c.matches(':invalid') && visible(c));
   if (invalidControl) {
     signals.push('invalid');
-    note(invalidControl.validationMessage || '');
+    nativeText = invalidControl.validationMessage || '';
   }
   const ariaInvalid = Array.from(document.querySelectorAll('[aria-invalid="true"]')).find(visible);
   if (ariaInvalid) signals.push('aria-invalid');
 
   if (!probeOnly) {
-    const alert = Array.from(document.querySelectorAll('[role="alert"]')).find((el) => visible(el) && textOf(el));
+    // An alert counts only when its text is new since the baseline (a permanent banner is not a refusal).
+    const alert = Array.from(document.querySelectorAll('[role="alert"]')).find((el) => {
+      const t = textOf(el);
+      return visible(el) && !!t && !baseline.errorTexts.includes(t);
+    });
     if (alert) { signals.push('alert'); note(textOf(alert)); }
     const sel = '[class*="error" i], [class*="invalid" i], [data-test*="error" i], [data-testid*="error" i]';
     const fresh = [];
@@ -99,6 +105,7 @@ export const REFUSAL_RULE_SOURCE = String.raw`(input) => {
     }
     if (fresh.length > 0) { signals.push('error-text'); note(fresh[0]); }
   }
+  note(nativeText);
 
   const nav = performance.getEntriesByType('navigation')[0];
   const status = (nav && nav.responseStatus) || 0;

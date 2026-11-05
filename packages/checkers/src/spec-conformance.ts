@@ -1,6 +1,12 @@
 import type { Page } from 'playwright';
 import type { Finding, TestCase, StepEvidence, Breakpoint } from '@qa/types';
-import { judgeRefusal, readRefusal, type RefusalBaseline, type RefusalExpectation } from './refusal-rule.js';
+import {
+  captureRefusalBaseline,
+  judgeRefusal,
+  readRefusal,
+  type RefusalBaseline,
+  type RefusalExpectation,
+} from './refusal-rule.js';
 
 /** Elements sites commonly use to show a validation or error message. */
 const ERROR_MESSAGE_SELECTOR = [
@@ -139,9 +145,14 @@ export class SpecConformanceChecker {
 
     // 0b. Refusal rule: a form sent with a value it should not accept must be refused.
     const refusal = (testCase.expectations as { refusal?: RefusalExpectation }).refusal;
-    if (refusal && context.refusalBaseline) {
+    // A probe-only Rejects item has no submit click, so the orchestrator took no baseline: take it here,
+    // before the probe is read (as the Playwright export does).
+    const refusalBaseline =
+      context.refusalBaseline ??
+      (refusal?.probeOnly ? await captureRefusalBaseline(page).catch(() => undefined) : undefined);
+    if (refusal && refusalBaseline) {
       const seen = await readRefusal(page, {
-        baseline: context.refusalBaseline,
+        baseline: refusalBaseline,
         message: refusal.message,
         probeOnly: refusal.probeOnly,
       }).catch(() => null);

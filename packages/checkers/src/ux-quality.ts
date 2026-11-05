@@ -1,6 +1,6 @@
 import type { Page } from 'playwright';
 import axePlaywright from '@axe-core/playwright';
-import type { Finding, Breakpoint, WcagCoverageEntry, WcagCriterionStatus } from '@qa/types';
+import { normalizeRoute, type Finding, type Breakpoint, type WcagCoverageEntry, type WcagCriterionStatus } from '@qa/types';
 import { couldNotVerifyFinding } from './could-not-verify.js';
 
 // Support both ESM default and CJS named export
@@ -447,7 +447,7 @@ export class UXQualityChecker {
   deduplicateFindings(findings: Finding[]): Finding[] {
     const seen = new Set<string>();
     return findings.filter((f) => {
-      const key = `${f.checker}|${f.where.urlPath}|${f.title}|${f.where.dataTestId || f.where.cssSelector || ''}`;
+      const key = `${f.checker}|${normalizeRoute(f.where.urlPath)}|${f.title}|${f.where.dataTestId || f.where.cssSelector || ''}`;
       if (seen.has(key)) {
         return false;
       }

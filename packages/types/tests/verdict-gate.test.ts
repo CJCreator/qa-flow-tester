@@ -62,6 +62,22 @@ describe('releaseVerdict gate matrix', () => {
     expect(v.reason).toContain('3 tests did not run');
   });
 
+  it('a copy of a named rule is the same rule, not a custom gate (C8)', () => {
+    const copy = { ...DEFAULT_RELEASE_GATES.standard, advisoryAreas: undefined };
+    const standardReason = releaseVerdict([finding('1', 'Blocker')]).reason;
+    expect(releaseVerdict([finding('1', 'Blocker')], copy).reason).toBe(standardReason);
+    expect(releaseVerdict([finding('1', 'Blocker')], { ...DEFAULT_RELEASE_GATES.standard }).reason).toBe(
+      standardReason
+    );
+  });
+
+  it('a gate that differs in one criterion is a custom gate (C8)', () => {
+    const custom = { ...DEFAULT_RELEASE_GATES.standard, minAreaScore: 61 };
+    const v = releaseVerdict([finding('1', 'Blocker')], custom);
+    expect(v.reason).toContain('Quality gate breached');
+    expect(v.reason).not.toBe(releaseVerdict([finding('1', 'Blocker')]).reason);
+  });
+
   it('adds nothing to the reason when everything ran', () => {
     const v = releaseVerdict([], undefined, grades('A'), { skipped: 0, blocked: 0 });
     expect(v.reason).toBe('No problems found.');

@@ -44,6 +44,31 @@ export const DEFAULT_RELEASE_GATES: Record<'strict' | 'standard' | 'lenient', Re
   },
 };
 
+/** Structural equality for plain values: arrays in order, objects by key; undefined and a missing key are the same. */
+function deepEqualValue(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (Array.isArray(a) || Array.isArray(b)) {
+    return (
+      Array.isArray(a) &&
+      Array.isArray(b) &&
+      a.length === b.length &&
+      a.every((item, i) => deepEqualValue(item, b[i]))
+    );
+  }
+  if (a !== null && b !== null && typeof a === 'object' && typeof b === 'object') {
+    const left = a as Record<string, unknown>;
+    const right = b as Record<string, unknown>;
+    const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
+    return [...keys].every((k) => deepEqualValue(left[k], right[k]));
+  }
+  return false;
+}
+
+/** Whether two gates set the same criteria, whatever object they are. A copy of a named rule is the same rule. */
+function sameGateCriteria(a: ReleaseGateCriteria, b: ReleaseGateCriteria): boolean {
+  return deepEqualValue(a, b);
+}
+
 /**
  * The one verdict a report gives: ready to release, or not yet, and why. The screens, report.html
  * and report.md all use it, so they never disagree. It counts problems as a person reads them (the
@@ -91,7 +116,7 @@ export function releaseVerdict(
   coverage?: Pick<RunCoverage, 'skipped' | 'blocked'>
 ): ReleaseVerdict {
   gate = gate ?? DEFAULT_RELEASE_GATES.standard;
-  const customGate = gate !== DEFAULT_RELEASE_GATES.standard;
+  const customGate = !sameGateCriteria(gate, DEFAULT_RELEASE_GATES.standard);
   // AI-written findings are advisory: they never change the verdict (ADR 0009).
   const safeFindings = (findings ?? []).filter((f) => !f.advisory && f.checker !== 'ai-review');
   const problems = groupIntoProblems(
