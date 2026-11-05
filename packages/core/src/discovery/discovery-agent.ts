@@ -32,7 +32,7 @@ import { documentedUnits, reachedRequirementIds } from '../plan/sources.js';
 import { SafetyFilter } from './safety-filter.js';
 import type { PlanPage } from '@qa/types';
 import { ContextParser } from './context-parser.js';
-import { Redactor } from '../redact.js';
+import { Redactor, redactUrl } from '../redact.js';
 import { replaceCredentialsWithPlaceholders } from '../credentials.js';
 import { detectSiteType, type SiteType } from './site-type.js';
 import { formQuestion, intentQuestionsFor } from './questions.js';
@@ -500,7 +500,7 @@ export class DiscoveryAgent {
       return context;
     };
 
-    console.log(`[DiscoveryAgent] Crawling routes and interactive forms on ${options.targetUrl}...`);
+    console.log(`[DiscoveryAgent] Crawling routes and interactive forms on ${redactUrl(options.targetUrl)}...`);
     // Pages found so far across every explorer, for the progress screen.
     let pagesFound = 0;
     const signInFailed: string[] = [];

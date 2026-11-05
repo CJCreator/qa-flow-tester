@@ -41,7 +41,7 @@ import { ReportGenerator, withPortablePaths } from './reporter.js';
 import { withSourceWording } from './source-wording.js';
 import { expandValidationTestCases } from './validator-expander.js';
 import { SuppressionsManager } from './suppressions.js';
-import { Redactor } from './redact.js';
+import { Redactor, redactUrl } from './redact.js';
 import { mergeDuplicateFindings } from './finding-groups.js';
 import { resolveCredentialPlaceholders } from './credentials.js';
 import { blockChanges, NEEDS_TEST_COPY } from './live-site.js';
@@ -366,7 +366,7 @@ export class FlowTestOrchestrator {
     });
 
     onEvent({ type: 'PREFLIGHT_STARTED', roles: (options.profile?.roles || []).map((r) => r.role) });
-    console.log(`[QA Orchestrator] Running Pre-flight health check on ${options.targetUrl}...`);
+    console.log(`[QA Orchestrator] Running Pre-flight health check on ${redactUrl(options.targetUrl)}...`);
 
     let preflight: PreFlightResult;
     const neededRoles = options.profile?.roles || [];
