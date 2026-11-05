@@ -30,7 +30,7 @@ Reworked 2026-11-05 against `main` at `5bef5e9`, after the redesign (#56) and th
 
 | id | title | gaps | priority | size | wave | status | depends on |
 |---|---|---|---|---|---|---|---|
-| [T-79](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-79-website-audit-contract) | Website Audit contract | A3, A5, A7, A9, A10, A11, A13 | P0 | M | 1 | todo | - |
+| [T-79](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-79-website-audit-contract) | Website Audit contract | A3, A5, A7, A9, A10, A11, A13 | P0 | M | 1 | built | - |
 | [T-80](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-80-the-crawl-specific-errors-3-pages-at-a-time-rides-out-an-outage) | The crawl: specific errors, 3 pages at a time, rides out an outage | A5, A6, A7, A13 | P0 | L | 2 | todo | T-79 |
 | [T-81](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-81-ai-notes-on-every-page-in-parallel-with-the-real-reason) | AI notes on every page, in parallel, with the real reason | A3, A7 | P0 | M | 2 | todo | T-79 |
 | [T-82](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-82-speed-without-a-pagespeed-key) | Speed without a PageSpeed key | A4 | P1 | M | 2 | todo | T-79 |
