@@ -49,7 +49,7 @@ describe('plan Source view helpers', () => {
     expect(rolesToConfirm({ planPages: [{ tests: [test(false), test(true)] }] } as never)).toBe(1);
   });
   it('marks planned-while-scanning and added-after-scan', () => {
-    expect(originLabel('while-crawling')).toBe('Planned while scanning');
+    expect(originLabel('while-crawling')).toBe('Planned during the check-up');
     expect(originLabel('after-crawl')).toBe('Added after the scan');
     expect(originLabel(undefined)).toBeNull();
   });

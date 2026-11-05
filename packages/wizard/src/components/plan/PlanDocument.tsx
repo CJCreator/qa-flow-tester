@@ -56,6 +56,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { isSingleKeyShortcut, isTypingTarget, readSingleKeyShortcuts } from '../../lib/shortcuts';
 
 /** What the person can do to the plan from the document. Each change goes to Release check-up. */
 export interface PlanActions {
@@ -1859,14 +1860,13 @@ function usePlanKeyboardNavigation() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const activeEl = document.activeElement;
-      const tagName = activeEl?.tagName.toLowerCase();
-      if (
-        tagName === 'input' ||
-        tagName === 'textarea' ||
-        tagName === 'select' ||
-        (activeEl as HTMLElement)?.isContentEditable ||
-        document.querySelector('[role="dialog"]') !== null
-      ) {
+      // WCAG 2.1.4: single-key shortcuts never fire while someone types in a form control.
+      if (isTypingTarget(activeEl) || document.querySelector('[role="dialog"]') !== null) {
+        return;
+      }
+      // The person can switch j, k, g and G off (Keyboard shortcuts panel).
+      if (isSingleKeyShortcut(e.key) && !readSingleKeyShortcuts()) {
+        chordRef.current = null;
         return;
       }
 

@@ -901,7 +901,7 @@ function ResumeCard({ status }: { status: RunnerStatus }) {
   const host = status.targetUrl ? hostOf(status.targetUrl) : 'your site';
   const card =
     status.phase === 'scanning'
-      ? { text: `Your check-up of ${host} is scanning the site.`, to: PATHS.scan, action: 'Watch the scan' }
+      ? { text: `Your check-up of ${host} is looking at the site.`, to: PATHS.scan, action: 'Watch the scan' }
       : status.phase === 'awaiting-review'
         ? { text: `Your check-up of ${host} is waiting for your review.`, to: PATHS.plan, action: 'Open the plan' }
         : status.phase === 'testing'

@@ -31,7 +31,7 @@ const STAGES: Array<{ id: ScanProgress['stage']; label: string }> = [
 
 /**
  * The scan: the site is explored, then the AI writes the plan. Only real numbers are shown, and the
- * one way out is "Stop scanning", which asks first.
+ * one way out is "Stop the check-up", which asks first.
  */
 export function ScanningScreen({
   host,
@@ -81,7 +81,7 @@ export function ScanningScreen({
     progress?.pagesFound !== undefined ? `${count(progress.pagesFound, 'page', 'pages')} found` : null,
     progress?.skipped ? `${progress.skipped} skipped` : null,
     progress?.layoutGroups ? `${count(progress.layoutGroups, 'layout', 'layouts')}` : null,
-    progress?.plannedSoFar ? `${count(progress.plannedSoFar, 'item', 'items')} planned while scanning` : null,
+    progress?.plannedSoFar ? `${count(progress.plannedSoFar, 'item', 'items')} planned during the check-up` : null,
     progress?.stage === 'planning' && progress.requestsUsed !== undefined
       ? `${progress.requestsUsed} of about ${progress.requestsNeeded ?? 0} AI requests${
           progress.requestsLeft !== undefined ? `, ${progress.requestsLeft} free left today` : ''
@@ -205,7 +205,7 @@ export function ScanningScreen({
               <div className="mt-3 rounded-control border border-warn bg-warn-tint p-3 text-sm text-ink">
                 <p>No new pages for {stall} seconds</p>
                 <button type="button" className="btn-link mt-1 text-sm" onClick={onStop}>
-                  Stop scanning to plan what's found
+                  Stop now to plan what's found
                 </button>
               </div>
             )}
@@ -217,7 +217,7 @@ export function ScanningScreen({
               className="btn-quiet border-fail text-fail hover:border-fail hover:bg-fail-tint"
               onClick={onStop}
             >
-              Stop scanning
+              Stop the check-up
             </button>
           </div>
         </>

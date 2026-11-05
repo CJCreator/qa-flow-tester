@@ -408,7 +408,7 @@ export async function checkReachable(targetUrl: string): Promise<Reachability> {
  */
 export type StartRunRequest = RunStartBody;
 
-/** Starts a check-up: the scan, then the plan waits for review. Returns the run id. */
+/** Starts a check-up: the scan, then the plan waits for review. Returns the check-up ID. */
 export async function startRun(request: StartRunRequest): Promise<string> {
   let productId = 'default-product';
   try {
@@ -910,14 +910,34 @@ export async function startBenchmark(params: {
   const res = await call('/api/runner/benchmark', { method: 'POST', body: JSON.stringify(params) });
   const body = await json<{ id?: string; error?: string }>(res);
   if (!res.ok || !body.id)
-    throw new RunnerError(body.error || 'The comparison couldn’t start. Check both addresses and try again.');
+    throw new RunnerError(
+      res.status >= 500
+        ? BENCHMARK_START_FAILED
+        : plainMessage(body.error, 'The comparison couldn’t start. Check both addresses and try again.')
+    );
   return body.id;
+}
+
+const BENCHMARK_START_FAILED =
+  'The comparison couldn’t start because the QA Tool hit a problem. Try again in a minute. If it keeps happening, check the QA Tool’s terminal.';
+
+/**
+ * A message from the server that is fit to show: a short plain sentence. A stack trace, a file path, an error code
+ * or an empty value gives the fallback instead.
+ */
+export function plainMessage(raw: string | null | undefined, fallback: string): string {
+  if (!raw || raw.length > 240) return fallback;
+  if (/\n|\bError:|\bERR_[A-Z_]+|\bat\s+\S+:\d+|[A-Za-z]:\\|\/[\w.-]+\/[\w.-]+\.(ts|js|tsx)\b/.test(raw)) return fallback;
+  return raw.trim() || fallback;
 }
 
 export async function getBenchmark(id: string): Promise<BenchmarkJob> {
   const res = await call(`/api/runner/benchmark/${encodeURIComponent(id)}`);
   if (res.status === 404) throw new RunnerError('That comparison isn’t here any more.');
-  if (!res.ok) throw new RunnerError('That comparison couldn’t be opened. Try again.');
+  if (!res.ok)
+    throw new RunnerError(
+      'That comparison couldn’t be opened. Try again in a minute. If it keeps failing, check the QA Tool’s terminal.'
+    );
   return json<BenchmarkJob>(res);
 }
 

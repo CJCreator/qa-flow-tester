@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { BenchmarkJob } from '@qa/types';
-import { deleteBenchmark, getBenchmark, listBenchmarks, RunnerError, startBenchmark } from '../api';
+import { deleteBenchmark, getBenchmark, listBenchmarks, plainMessage, RunnerError, startBenchmark } from '../api';
 import { useConfirm } from '../components/ConfirmDialog';
 import { ErrorMessage, Spinner } from '../components/text';
 import { Badge, LoadError, Page, PageHeader } from '../components/ui';
@@ -331,7 +331,9 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
       </form>
 
       {job?.status === 'failed' && (
-        <ErrorMessage>{job.error || 'The comparison couldn’t finish. Try again.'}</ErrorMessage>
+        <ErrorMessage>
+          {plainMessage(job.error, 'The comparison couldn’t finish. Try again in a minute. If it keeps failing, check the QA Tool’s terminal.')}
+        </ErrorMessage>
       )}
 
       {/* An opened comparison sits above the history. */}
