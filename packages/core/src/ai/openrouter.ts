@@ -61,8 +61,28 @@ const NON_CHAT_PATTERN = /content-safety|guard|moderation|embed/i;
  */
 const ROUTER_PATTERN = /^openrouter\//i;
 
+/** How long a fetched model list is reused (LAT-8). Key validation is never cached. */
+export const MODEL_LIST_TTL_MS = 10 * 60 * 1000;
+
 export class OpenRouterClient {
+  private modelCache: { at: number; data: RawModel[] } | null = null;
+
   constructor(private fetchImpl: typeof fetch = fetch) {}
+
+  /** The public model list, reused for MODEL_LIST_TTL_MS. Only a successful answer is kept. */
+  private async rawModels(headers?: Record<string, string>): Promise<RawModel[]> {
+    const now = Date.now();
+    if (this.modelCache && now - this.modelCache.at < MODEL_LIST_TTL_MS) return this.modelCache.data;
+    const res = await this.fetchImpl(`${OPENROUTER_API}/models`, {
+      ...(headers ? { headers } : {}),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+    if (!res.ok) throw new Error(`OpenRouter model list failed: HTTP ${res.status}`);
+    const { data } = (await res.json()) as { data?: RawModel[] };
+    const list = data ?? [];
+    this.modelCache = { at: now, data: list };
+    return list;
+  }
 
   async validateKey(apiKey: string | undefined): Promise<KeyValidation> {
     const key = apiKey?.trim();
@@ -160,12 +180,7 @@ export class OpenRouterClient {
   /** The model's price per million tokens (free models: 0), or null when it can't be found. */
   async modelPrice(modelId: string): Promise<{ prompt: number; completion: number } | null> {
     try {
-      const res = await this.fetchImpl(`${OPENROUTER_API}/models`, {
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      });
-      if (!res.ok) return null;
-      const { data } = (await res.json()) as { data?: RawModel[] };
-      const model = (data ?? []).find((m) => m.id === modelId);
+      const model = (await this.rawModels()).find((m) => m.id === modelId);
       if (!model) return null;
       if (isFree(model)) return { prompt: 0, completion: 0 };
       const prompt = Number(model.pricing?.prompt);
@@ -185,14 +200,9 @@ export class OpenRouterClient {
     const validation = await this.validateKey(apiKey);
     if (!validation.valid) throw new OpenRouterAuthError(validation.reason);
 
-    const res = await this.fetchImpl(`${OPENROUTER_API}/models`, {
-      headers: { Authorization: `Bearer ${apiKey!.trim()}` },
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
-    if (!res.ok) throw new Error(`OpenRouter model list failed: HTTP ${res.status}`);
-    const { data } = (await res.json()) as { data?: RawModel[] };
+    const data = await this.rawModels({ Authorization: `Bearer ${apiKey!.trim()}` });
 
-    return (data ?? [])
+    return data
       .filter((m) => isFree(m) && isChatModel(m))
       .map((m) => ({
         id: m.id,

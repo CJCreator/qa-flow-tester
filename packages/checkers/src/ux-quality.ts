@@ -112,7 +112,40 @@ export function summariseWcag(
 export const MEANINGLESS_ALT =
   /^(?:(?:img|image|photo|picture|pic|graphic|untitled|dsc|screenshot|icon|banner|spacer)[\s_-]*\d*|.*\.(?:png|jpe?g|gif|svg|webp|avif|bmp))$/i;
 
+/** One axe scan of a page state: the parts the checker reads (violations, incomplete, passes...). */
+export type AxeScan = { violations: AxeRule[]; incomplete?: AxeRule[]; [key: string]: unknown };
+
+/**
+ * Per-run cache of axe results (PERF-2). Key: page URL and viewport (`axeCacheKey`). Share one Map across the
+ * checks of one run; the checker deletes an entry whose scan failed so the next check runs it again.
+ */
+export type AxeCache = Map<string, Promise<AxeScan>>;
+
+export function axeCacheKey(page: Page): string {
+  const vp = page.viewportSize();
+  return `${page.url()}|${vp ? `${vp.width}x${vp.height}` : 'no-viewport'}`;
+}
+
 export class UXQualityChecker {
+  private async axeScan(page: Page, cache?: AxeCache): Promise<AxeScan> {
+    const scan = async (): Promise<AxeScan> => {
+      const axeResults = await new (AxeBuilder as any)({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
+        .analyze();
+      return axeResults as AxeScan;
+    };
+    if (!cache) return scan();
+    const key = axeCacheKey(page);
+    const hit = cache.get(key);
+    if (hit) return hit;
+    const pending = scan();
+    cache.set(key, pending);
+    pending.catch(() => {
+      if (cache.get(key) === pending) cache.delete(key);
+    });
+    return pending;
+  }
+
   async check(
     page: Page,
     context: {
@@ -125,6 +158,8 @@ export class UXQualityChecker {
       entryPath?: string;
       /** Gets the per-criterion WCAG status of this page (see `summariseWcag`). */
       onCoverage?: (entries: WcagCoverageEntry[], unmappedTags: string[]) => void;
+      /** Shared per-run axe cache (see `AxeCache`). Omitted: every call runs axe. */
+      axeCache?: AxeCache;
     }
   ): Promise<Finding[]> {
     const findings: Finding[] = [];
@@ -133,11 +168,9 @@ export class UXQualityChecker {
     // 1. Accessibility Check via axe-core
     if (context.enableAxe !== false) {
       try {
-        const axeResults = await new (AxeBuilder as any)({ page })
-          .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
-          .analyze();
+        const axeResults = await this.axeScan(page, context.axeCache);
 
-        for (const violation of axeResults.violations as AxeRule[]) {
+        for (const violation of axeResults.violations) {
           const firstNode = violation.nodes[0];
           const targets = violation.nodes.map((n) => n.target.join(' > '));
           const criteria = wcagCriteria(violation.tags);

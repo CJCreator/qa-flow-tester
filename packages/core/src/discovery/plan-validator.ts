@@ -186,3 +186,21 @@ export class PlanValidator {
     ].join('\n');
   }
 }
+
+/**
+ * One PlanValidator per pages/forms pair (LAT-13/LAT-14): the same inventory checked again reuses the
+ * built lookups. Keyed by the pages array's identity; the forms array must be the same object too.
+ * The validator snapshots its inputs when built, so do not mutate a pages array after it was checked.
+ */
+const validatorCache = new WeakMap<
+  PageInventoryItem[],
+  { forms: KnownFormSelectors[] | undefined; validator: PlanValidator }
+>();
+
+export function planValidatorFor(pages: PageInventoryItem[], forms?: KnownFormSelectors[]): PlanValidator {
+  const hit = validatorCache.get(pages);
+  if (hit && hit.forms === forms) return hit.validator;
+  const validator = new PlanValidator(pages, forms);
+  validatorCache.set(pages, { forms, validator });
+  return validator;
+}

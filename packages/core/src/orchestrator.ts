@@ -27,7 +27,7 @@ import {
   type BrowserEngine,
 } from './browser.js';
 import { runAccessChecks, contextFetcher, type AccessFetcher } from './access-control.js';
-import { makeCheckerFetch, checkLinkStatus } from './checker-fetch.js';
+import { makeCheckerFetch, createRunLinkChecker } from './checker-fetch.js';
 import { EvidenceCollector } from './evidence.js';
 import { captureVisualShot, readBaselineMode, writeVisualBaseline } from './visual-capture.js';
 import { PreFlightChecker, SignInFailedError, type PreFlightResult } from './preflight.js';
@@ -51,6 +51,7 @@ import {
   BugDetectionChecker,
   SpecConformanceChecker,
   UXQualityChecker,
+  type AxeCache,
   PermissionMatrixChecker,
   DesignStandardsChecker,
   SecurityChecker,
@@ -568,6 +569,9 @@ export class FlowTestOrchestrator {
     // through the pinned, redirect-checked path only (ADR 0031), never Playwright's request API.
     const checkerFetch = makeCheckerFetch();
     const linkFetch = makeCheckerFetch({ maxRedirects: 10, timeoutMs: 10_000 });
+    // Each plan link is requested once per run; the axe cache is shared by the run's UX checks (PERF-2).
+    const checkRunLink = createRunLinkChecker(linkFetch);
+    const axeCache: AxeCache = new Map();
 
     // Pages whose vitals were already measured with repeat loads in this run.
     const vitalsMeasured = new Set<string>();
@@ -897,7 +901,7 @@ export class FlowTestOrchestrator {
                   } else if (step.action === 'wait') {
                     await page.waitForTimeout(1000);
                   } else if (step.action === 'check-link') {
-                    await checkLinkStatus(step.value || '', linkFetch);
+                    await checkRunLink(step.value || '');
                   }
 
                   await page.waitForTimeout(300);
@@ -1073,6 +1077,7 @@ export class FlowTestOrchestrator {
                 enableAxe: options.enableA11y ?? true,
                 entryPath: new URL(options.targetUrl).pathname,
                 onCoverage,
+                axeCache,
               });
 
           // 3b. Security (passive): passwords in page addresses. Page-level checks (security, speed,

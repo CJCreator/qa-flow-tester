@@ -73,7 +73,25 @@ function classifyError(err: unknown, page: Page): { kind: 'timeout' | 'net' | 'a
 }
 
 /**
- * Waits for a page to settle after DOMContentLoaded: networkidle cap and optional link wait.
+ * Lets the page paint after DOMContentLoaded: two animation frames, never longer than `capMs`.
+ * Replaces the old networkidle wait (PERF-1): the cap still bounds a page that never settles.
+ */
+export async function settleFrames(page: Page, capMs: number): Promise<void> {
+  const frames = Promise.resolve()
+    .then(() =>
+      page.evaluate(
+        () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+      )
+    )
+    .catch(() => undefined);
+  const cap = Promise.resolve()
+    .then(() => page.waitForTimeout(capMs))
+    .catch(() => undefined);
+  await Promise.race([frames, cap]);
+}
+
+/**
+ * Waits for a page to settle after DOMContentLoaded: frame micro-wait capped at settleMs, and optional link wait.
  */
 export async function settlePage(
   page: Page,
@@ -82,8 +100,7 @@ export async function settlePage(
   const settleMs = options?.settleMs ?? 3000;
   const needLinks = options?.needLinks ?? false;
 
-  // Race networkidle with the settle cap
-  await Promise.race([page.waitForLoadState('networkidle').catch(() => {}), page.waitForTimeout(settleMs)]);
+  await settleFrames(page, settleMs);
 
   let linkCount = 0;
   try {

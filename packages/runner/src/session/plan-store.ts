@@ -141,6 +141,8 @@ export class DefaultPlanStore implements PlanStore {
   private readonly secrets: RunSecrets;
   private currentPlanRecord: StoredPlanRecord | null = null;
   private parkedPlans = new Map<string, StoredPlanRecord>();
+  /** Whether the waiting-plans folder was read into `parkedPlans` (once, on first use) (LAT-3). */
+  private parkedScanned = false;
   private planUpdate: Promise<void> | null = null;
   private recentApprovals = new Map<string, { timestamp: number; runId: string }>();
 
@@ -212,21 +214,22 @@ export class DefaultPlanStore implements PlanStore {
   }
 
   async waiting(): Promise<Array<{ host: string; record: StoredPlanRecord }>> {
-    const dir = path.join(this.dataDir, 'waiting-plans');
-    const result: Array<{ host: string; record: StoredPlanRecord }> = [];
-    const names = await fs.readdir(dir).catch(() => [] as string[]);
-    for (const name of names) {
-      if (!name.endsWith('.json')) continue;
-      const res = await readJsonSafe<StoredPlanRecord>(path.join(dir, name), { currentVersion: 1 });
-      if (res.data?.plan && res.data?.context) {
-        const record = this.normalize(res.data);
-        result.push({
-          host: this.hostOf(record),
-          record,
-        });
+    if (!this.parkedScanned) {
+      // The folder is read once; park() and unpark() keep the map and the folder in step after that.
+      const dir = path.join(this.dataDir, 'waiting-plans');
+      const names = await fs.readdir(dir).catch(() => [] as string[]);
+      for (const name of names) {
+        if (!name.endsWith('.json')) continue;
+        const res = await readJsonSafe<StoredPlanRecord>(path.join(dir, name), { currentVersion: 1 });
+        if (res.data?.plan && res.data?.context) {
+          const record = this.normalize(res.data);
+          const host = this.hostOf(record);
+          if (!this.parkedPlans.has(host)) this.parkedPlans.set(host, record);
+        }
       }
+      this.parkedScanned = true;
     }
-    return result;
+    return [...this.parkedPlans.values()].map((record) => ({ host: this.hostOf(record), record }));
   }
 
   async unpark(host: string): Promise<StoredPlanRecord | null> {

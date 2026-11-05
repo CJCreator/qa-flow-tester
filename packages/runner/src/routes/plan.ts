@@ -21,7 +21,7 @@ import {
   signInReasonText,
 } from '@qa/types';
 import {
-  PlanValidator,
+  planValidatorFor,
   replaceCredentialsWithPlaceholders,
   markJourneysNeedingTestCopy,
   planToMarkdown,
@@ -280,7 +280,7 @@ export async function patchPlan(c: PlanRouteContext): Promise<void> {
     intentsOff = checked.value;
   }
 
-  const validator = new PlanValidator(record.plan.pages, record.context.draft?.forms);
+  const validator = planValidatorFor(record.plan.pages, record.context.draft?.forms);
   if (Array.isArray(body.testCases)) {
     const issues = validator.check(body.testCases.map(asFlow));
     if (issues.length > 0) {

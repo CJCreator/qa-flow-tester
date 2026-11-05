@@ -49,3 +49,19 @@ export async function checkLinkStatus(address: string, fetchFn: FetchFn): Promis
   if (status === 404 || status === 410 || (status >= 500 && status <= 599))
     throw new Error(`The link is broken: ${address} answered ${status}`);
 }
+
+/**
+ * One run's plan link checks (PERF-2): each address is requested once per run. A later check of the same
+ * address gets the first outcome, failure included, without a second request.
+ */
+export function createRunLinkChecker(fetchFn: FetchFn): (address: string) => Promise<void> {
+  const outcomes = new Map<string, Promise<void>>();
+  return (address) => {
+    let outcome = outcomes.get(address);
+    if (!outcome) {
+      outcome = checkLinkStatus(address, fetchFn);
+      outcomes.set(address, outcome);
+    }
+    return outcome;
+  };
+}
