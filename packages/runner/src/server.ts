@@ -1560,6 +1560,11 @@ export class RunnerServer {
           res.writeHead(404, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Not found' }));
         } catch (err: unknown) {
+          // A response that already started (a stream, a partly sent body) can't take a 500: just end it.
+          if (res.headersSent) {
+            if (!res.writableEnded) res.end();
+            return;
+          }
           const msg = this.redactedMessage(err);
           res.writeHead(500, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: msg }));
@@ -1616,6 +1621,15 @@ export class RunnerServer {
     // is marked failed because its end was not seen.
     if (this.session.run.isRunning) return false;
     return !this.session.report.error().message;
+  }
+
+  /**
+   * Process shutdown (SIGTERM, SIGINT): a running check-up is stopped and torn down first (a waiting Plan is kept),
+   * then the server closes.
+   */
+  public async shutdown(): Promise<void> {
+    await this.checkupRun.stop().catch(() => {});
+    await this.stop();
   }
 
   public async stop(): Promise<void> {

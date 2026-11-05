@@ -1,6 +1,7 @@
 import { RunnerServer } from './server.js';
 import { defaultUiApps } from './ui-static.js';
 import { isLoopbackBindHost } from './bind-host.js';
+import { createShutdown } from './shutdown.js';
 
 // Render and Cloud Run say which port to listen on with PORT (Cloud Run sets K_SERVICE). It is only trusted there,
 // so a PORT set in someone's shell can't move a local runner.
@@ -62,6 +63,19 @@ const server = new RunnerServer({
   beta,
   stepTimeoutMs,
   ui: defaultUiApps(),
+});
+
+// Ctrl+C, a container stop or a crash-level rejection: stop the run cleanly (a waiting Plan is kept), then exit.
+const shutdown = createShutdown({
+  shutdown: () => server.shutdown(),
+  exit: (code) => process.exit(code),
+  log: (message) => console.log(message),
+});
+process.on('SIGTERM', () => void shutdown('SIGTERM', 0));
+process.on('SIGINT', () => void shutdown('SIGINT', 0));
+process.on('unhandledRejection', (reason) => {
+  console.error('[Release check-up] Unhandled promise rejection:', reason);
+  void shutdown('Unhandled promise rejection', 1);
 });
 
 server

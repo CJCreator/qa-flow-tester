@@ -270,6 +270,15 @@ export async function patchPlan(c: PlanRouteContext): Promise<void> {
     return;
   }
 
+  // A write made against an older approved-plan generation is not applied over the stored one.
+  if (typeof body.generation === 'number' && body.generation < (record.planGeneration ?? 0)) {
+    sendJson(res, 409, {
+      error: 'The plan changed after you loaded it. Reload it and try again.',
+      code: 'ERR_PLAN_STALE',
+    });
+    return;
+  }
+
   let intentsOff: PlanIntent[] | undefined;
   if (body.intentsOff !== undefined) {
     const checked = checkIntentsOff(body.intentsOff);
@@ -1195,6 +1204,7 @@ async function approveOnce(c: PlanRouteContext, idempotencyKey: string | undefin
   }
 
   record.status = 'approved';
+  record.planGeneration = (record.planGeneration ?? 0) + 1;
   await session.plan.save(record);
 
   sendJson(res, 200, {

@@ -374,3 +374,94 @@ describe('Plan handlers as functions over CheckupSession (T-207)', () => {
     expect(unparkBody.runId).toBe('run-parked-1');
   });
 });
+
+describe('Plan generation: stale writes refused, approval bumps it (R9, R10)', () => {
+  let tmpDir: string;
+  let session: CheckupSession;
+
+  beforeEach(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'qa-plan-generation-'));
+    const outputDir = path.join(tmpDir, 'output');
+    const dataDir = path.join(tmpDir, 'data');
+    const authDir = path.join(tmpDir, 'auth');
+    await fs.mkdir(outputDir, { recursive: true });
+    await fs.mkdir(dataDir, { recursive: true });
+    await fs.mkdir(authDir, { recursive: true });
+    session = createCheckupSession({ outputDir, dataDir, authDir });
+  });
+
+  afterEach(async () => {
+    await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+  });
+
+  it('refuses a patch built on an older planGeneration with 409 ERR_PLAN_STALE and applies nothing', async () => {
+    const record = { ...makeStoredPlan(), planGeneration: 2 };
+    await session.plan.save(record);
+
+    const req = createMockRequest({ generation: 1, items: [{ id: 'test-item-1', skipped: true }] });
+    const res = new MockResponse();
+    await patchPlan({
+      session,
+      req,
+      res: res as unknown as http.ServerResponse,
+      url: new URL('http://localhost/api/runner/plan'),
+    });
+
+    expect(res.statusCode).toBe(409);
+    expect(res.json().code).toBe('ERR_PLAN_STALE');
+    const testItem = session.plan.currentRecord?.context.draft.plan?.pages[0].tests.find(
+      (t) => t.id === 'test-item-1'
+    );
+    expect(testItem?.skipped).not.toBe(true);
+  });
+
+  it('applies a patch built on the current planGeneration', async () => {
+    const record = { ...makeStoredPlan(), planGeneration: 2 };
+    await session.plan.save(record);
+
+    const req = createMockRequest({ generation: 2, items: [{ id: 'test-item-1', skipped: true }] });
+    const res = new MockResponse();
+    await patchPlan({
+      session,
+      req,
+      res: res as unknown as http.ServerResponse,
+      url: new URL('http://localhost/api/runner/plan'),
+    });
+
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('a patch without a generation is not refused (existing clients)', async () => {
+    await session.plan.save({ ...makeStoredPlan(), planGeneration: 5 });
+
+    const req = createMockRequest({ items: [{ id: 'test-item-1', skipped: true }] });
+    const res = new MockResponse();
+    await patchPlan({
+      session,
+      req,
+      res: res as unknown as http.ServerResponse,
+      url: new URL('http://localhost/api/runner/plan'),
+    });
+
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('approving bumps planGeneration before the approved plan is saved to disk', async () => {
+    await session.plan.save({ ...makeStoredPlan(), planGeneration: 3 });
+
+    const req = createMockRequest({});
+    const res = new MockResponse();
+    await approvePlan({
+      session,
+      req,
+      res: res as unknown as http.ServerResponse,
+      url: new URL('http://localhost/api/runner/plan/approve'),
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(session.plan.currentRecord?.planGeneration).toBe(4);
+    const onDisk = JSON.parse(await fs.readFile(session.plan.file, 'utf8'));
+    expect(onDisk.planGeneration).toBe(4);
+    expect(onDisk.status).toBe('approved');
+  });
+});

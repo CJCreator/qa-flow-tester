@@ -379,6 +379,13 @@ export function screensForReview(
   return [...byGroup.values()];
 }
 
+/** Longest a stop waits for the aborted run to tear down (browser closed, cleanup done) before it frees the slot. */
+const TEARDOWN_WAIT_MS = 20_000;
+
+function logPlanSaveFailure(err: unknown): void {
+  console.warn('[Release check-up] Couldn’t save the plan:', redactedMessage(err));
+}
+
 export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): CheckupRun {
   let currentRunPromise: Promise<void> | null = null;
   /** True from the moment start() is called until it has claimed the slot (or failed). Set before any await. */
@@ -489,7 +496,7 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
         tunnelAuth: context.tunnelAuth || session.secrets.tunnelAuth,
         targetUrl: context.targetUrl,
       });
-      await session.plan.save(record).catch(() => {});
+      await session.plan.save(record).catch(logPlanSaveFailure);
       session.run.setPhase('awaiting-review');
       session.run.setIsRunning(true);
       session.report.setError(msg, 'ERR_TEST_EXECUTION_FAILED');
@@ -506,7 +513,7 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
 
     if (!current()) return;
     record.status = 'done';
-    await session.plan.save(record).catch(() => {});
+    await session.plan.save(record).catch(logPlanSaveFailure);
     if (context.runId) {
       session.secrets.savedSessions.delete(context.runId);
       await session.secrets.clean(context.runId);
@@ -1080,6 +1087,24 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
     }
   }
 
+  /** Waits, up to TEARDOWN_WAIT_MS, for the current run's promise to settle. A run that is stuck is logged and left. */
+  async function waitForTeardown(): Promise<void> {
+    const pending = currentRunPromise;
+    if (!pending) return;
+    let timer: NodeJS.Timeout | undefined;
+    const cap = new Promise<void>((resolve) => {
+      timer = setTimeout(() => {
+        console.warn('[Release check-up] The stopped check-up did not finish tearing down in time; freeing the slot.');
+        resolve();
+      }, TEARDOWN_WAIT_MS);
+    });
+    try {
+      await Promise.race([pending.catch(() => {}), cap]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+
   async function stopRun(input?: {
     finish?: boolean;
     discard?: boolean;
@@ -1113,13 +1138,15 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
         } catch {}
         session.run.setAbortController(null);
       }
+      // The slot stays held (isRunning) until the aborted run has torn down, so a start cannot overlap it.
+      await waitForTeardown();
 
       const record = session.plan.currentRecord;
       const planKept = session.run.phase === 'testing' && !!record && record.plan.runId === runId;
       if (planKept) {
         session.run.setPhase('awaiting-review');
         session.run.setIsRunning(true);
-        await session.plan.save(record!).catch(() => {});
+        await session.plan.save(record!).catch(logPlanSaveFailure);
       } else {
         session.run.setIsRunning(false);
         session.run.setPhase('idle');

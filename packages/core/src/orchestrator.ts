@@ -335,7 +335,18 @@ export class FlowTestOrchestrator {
   private performanceChecker = new PerformanceChecker();
   private seoChecker = new SeoChecker();
 
+  /**
+   * Every exit (report, stop, sign-in failure, error) closes the browsers. close() is safe to call again.
+   */
   async run(options: RunOptions): Promise<ReleaseReport> {
+    try {
+      return await this.runChecks(options);
+    } finally {
+      await this.browserManager.close().catch(() => {});
+    }
+  }
+
+  private async runChecks(options: RunOptions): Promise<ReleaseReport> {
     const startTime = Date.now();
     const runId = options.runId || `run-${Date.now()}`;
     // Nothing the run streams or writes may carry a sign-in detail.
