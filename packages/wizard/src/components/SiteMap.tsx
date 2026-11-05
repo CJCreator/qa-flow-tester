@@ -46,7 +46,9 @@ export interface SiteMapProps {
   maxCards?: number;
 }
 
-const JOURNEY_COLORS = ['#B69CFB', '#6FB0FA', '#4ADE9A', '#F59AC6', '#FBA35C'];
+// Journey colours come from the palette (j1 to j5); written out so Tailwind sees every class.
+const JOURNEY_TEXT = ['text-j1', 'text-j2', 'text-j3', 'text-j4', 'text-j5'];
+const JOURNEY_FILL = ['bg-j1', 'bg-j2', 'bg-j3', 'bg-j4', 'bg-j5'];
 
 /** Phones get the list: the drawing is wider than their screen. */
 function startsAsList(): boolean {
@@ -94,7 +96,8 @@ export function SiteMap({
     () => givenJourneys ?? flows.map((f) => ({ id: f.id, name: f.name, pages: journeyPages(f) })),
     [givenJourneys, flows]
   );
-  const colorOf = (index: number) => JOURNEY_COLORS[index % JOURNEY_COLORS.length];
+  const textOf = (index: number) => JOURNEY_TEXT[index % JOURNEY_TEXT.length];
+  const fillOf = (index: number) => JOURNEY_FILL[index % JOURNEY_FILL.length];
 
   const { nodes, groups } = useMemo(() => {
     const onJourney = new Map<string, Array<{ id: string; index: number }>>();
@@ -175,7 +178,7 @@ export function SiteMap({
         paths.push({
           id: `${journey.id}-${i}`,
           d: `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`,
-          color: colorOf(index),
+          color: textOf(index),
         });
       }
     });
@@ -204,12 +207,12 @@ export function SiteMap({
 
   return (
     <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-canvas">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rule bg-panel/80 px-4 py-2 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rule bg-panel px-4 py-2 text-sm">
         <p className="text-ink-soft">
           {pageCount} {pageCount === 1 ? 'page' : 'pages'} · {journeys.length}{' '}
           {journeys.length === 1 ? 'journey' : 'journeys'}
         </p>
-        <div className="flex items-center gap-1" role="group" aria-label="How to show the map">
+        <div className="segmented" role="group" aria-label="How to show the map">
           {(
             [
               ['map', 'Map'],
@@ -221,9 +224,7 @@ export function SiteMap({
               type="button"
               onClick={() => setViewMode(id)}
               aria-pressed={viewMode === id}
-              className={`min-h-[44px] min-w-[44px] rounded px-3 py-1 font-bold transition-colors ${
-                viewMode === id ? 'bg-stamp text-surface' : 'text-ink-soft hover:bg-surface hover:text-ink'
-              }`}
+              className="min-h-[44px] min-w-[44px] justify-center"
             >
               {label}
             </button>
@@ -231,10 +232,24 @@ export function SiteMap({
         </div>
       </div>
 
+      {journeys.length > 0 && (
+        <ul
+          aria-label="Journeys on the map"
+          className="flex flex-wrap gap-x-4 gap-y-1 border-b border-rule bg-panel px-4 py-2 text-xs text-ink-soft"
+        >
+          {journeys.map((journey, i) => (
+            <li key={journey.id} className="flex min-w-0 items-center gap-1.5">
+              <span aria-hidden="true" className={`h-2.5 w-2.5 shrink-0 rounded-full ${fillOf(i)}`} />
+              <span className="min-w-0 break-words">{journey.name || `Journey ${i + 1}`}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
       {showStatus && (
         <ul
           aria-label="What the colours mean"
-          className="flex flex-wrap gap-x-4 gap-y-1 border-b border-rule bg-panel/60 px-4 py-1.5 text-xs text-ink-soft"
+          className="flex flex-wrap gap-x-4 gap-y-1 border-b border-rule bg-panel px-4 py-2 text-xs text-ink-soft"
         >
           <li className="flex items-center gap-1.5">
             <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-pass" /> Tested, no problems
@@ -262,10 +277,10 @@ export function SiteMap({
                   onClick={() => onSelectPage?.(node.urlPath)}
                   aria-pressed={selectedPagePath === node.urlPath}
                   aria-label={`${node.title}, ${node.urlPath}${showStatus ? `: ${statusText(node)}` : ''}`}
-                  className={`flex min-h-[44px] w-full items-center justify-between gap-3 rounded-md border-2 p-3 text-left transition-colors ${
+                  className={`flex min-h-[44px] w-full items-center justify-between gap-3 rounded-control border-2 p-3 text-left transition-colors duration-fast ${
                     selectedPagePath === node.urlPath
                       ? 'border-stamp bg-surface'
-                      : 'border-rule bg-surface/50 hover:border-edge'
+                      : 'border-edge bg-surface hover:border-ink'
                   }`}
                 >
                   <span className="min-w-0">
@@ -278,8 +293,8 @@ export function SiteMap({
             ))}
           </ul>
           {groups.map((group) => (
-            <details key={group.id} className="mx-auto mt-3 max-w-4xl rounded-md border border-rule">
-              <summary className="cursor-pointer px-3 py-2 text-sm font-bold text-ink">
+            <details key={group.id} className="mx-auto mt-3 max-w-4xl rounded-control border border-edge">
+              <summary className="flex min-h-[44px] cursor-pointer items-center px-3 text-sm font-bold text-ink">
                 {group.label} · {group.count} {group.count === 1 ? 'page' : 'pages'}
               </summary>
               <ul className="space-y-1 p-3">
@@ -288,7 +303,7 @@ export function SiteMap({
                     <button
                       type="button"
                       onClick={() => onSelectPage?.(page)}
-                      className="min-h-[44px] w-full rounded px-2 text-left font-mono text-xs text-ink-soft hover:bg-surface hover:text-ink"
+                      className="min-h-[44px] w-full rounded-control px-2 text-left font-mono text-xs text-ink-soft hover:bg-surface hover:text-ink"
                     >
                       {page}
                     </button>
@@ -302,13 +317,8 @@ export function SiteMap({
         // The drawing is a fixed size and scrolls inside the map, never the page.
         <div className="relative min-h-0 flex-1 overflow-auto bg-canvas">
           <div
-            className="relative p-8"
+            className="bg-blueprint-grid relative p-8"
             style={{
-              backgroundImage: `
-                linear-gradient(rgba(91,141,239,0.08) 1px, transparent 1px),
-                linear-gradient(to right, rgba(91,141,239,0.08) 1px, transparent 1px)
-              `,
-              backgroundSize: '40px 40px',
               minHeight: `${Math.max(620, groupsTop + Math.ceil(groups.length / 3) * 110)}px`,
               minWidth: '960px',
             }}
@@ -326,11 +336,10 @@ export function SiteMap({
                   stroke="currentColor"
                   strokeWidth={1}
                   className="text-rule"
-                  strokeOpacity={0.9}
                 />
               ))}
               {connectorPaths.map((p) => (
-                <path key={p.id} d={p.d} fill="none" stroke={p.color} strokeWidth={2} strokeOpacity={0.9} />
+                <path key={p.id} d={p.d} fill="none" stroke="currentColor" strokeWidth={2} className={p.color} />
               ))}
             </svg>
 
@@ -353,21 +362,21 @@ export function SiteMap({
                   aria-pressed={isSelected}
                   aria-label={`${node.title}, ${node.urlPath}${showStatus ? `: ${statusText(node)}` : ''}`}
                   style={{ position: 'absolute', left: `${pos.x}px`, top: `${pos.y}px`, width: `${pos.width}px` }}
-                  className={`rounded-md border border-rule bg-surface/95 text-left shadow-md transition-colors hover:border-stamp ${border} ${
+                  className={`rounded-control border border-edge bg-surface text-left shadow-level-1 transition-colors duration-fast hover:border-stamp focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stamp ${border} ${
                     isSelected ? 'ring-2 ring-stamp' : ''
                   } ${node.status === 'running' ? 'animate-pulse ring-2 ring-stamp motion-reduce:animate-none' : ''}`}
                 >
-                  <span className="flex items-center justify-between border-b border-rule/50 px-2.5 py-1.5 font-mono text-xs text-ink-soft">
+                  <span className="flex items-center justify-between border-b border-rule px-2.5 py-1.5 font-mono text-xs text-ink-soft">
                     <span aria-hidden="true">{node.ref}</span>
                     <span className="max-w-[100px] truncate">{node.urlPath}</span>
                   </span>
                   <span
                     aria-hidden="true"
-                    className="relative mx-2 my-1.5 block aspect-video overflow-hidden rounded border border-rule/30 bg-canvas/70 p-1.5"
+                    className="relative mx-2 my-1.5 block aspect-video overflow-hidden rounded-control border border-rule bg-canvas p-1.5"
                   >
-                    <span className="mb-1 block h-1 w-2/3 rounded-sm bg-rule" />
-                    <span className="mb-1 block h-3 w-full rounded bg-stamp/10" />
-                    <span className="block h-1 w-1/2 rounded-sm bg-rule/70" />
+                    <span className="mb-1 block h-1 w-2/3 rounded-control bg-rule" />
+                    <span className="mb-1 block h-3 w-full rounded-control bg-stamp-tint" />
+                    <span className="block h-1 w-1/2 rounded-control bg-rule" />
                   </span>
                   <span className="flex items-center justify-between gap-1 px-2.5 pb-2 pt-0.5">
                     <span className="truncate text-xs font-bold text-ink">{node.title}</span>
@@ -379,8 +388,7 @@ export function SiteMap({
                           <span
                             key={j.id}
                             aria-hidden="true"
-                            className="inline-block h-2 w-2 rounded-full"
-                            style={{ backgroundColor: colorOf(j.index) }}
+                            className={`inline-block h-2 w-2 rounded-full ${fillOf(j.index)}`}
                           />
                         ))
                       )}
@@ -404,7 +412,7 @@ export function SiteMap({
                   type="button"
                   aria-expanded={openGroup === group.id}
                   onClick={() => setOpenGroup(openGroup === group.id ? null : group.id)}
-                  className="w-full rounded-md border border-dashed border-rule bg-surface/40 p-3 text-center transition-colors hover:border-stamp hover:bg-surface/70"
+                  className="min-h-[44px] w-full rounded-control border border-dashed border-edge bg-surface p-3 text-center transition-colors duration-fast hover:border-stamp"
                 >
                   <span className="block text-xs font-bold text-ink">{group.label}</span>
                   <span className="block font-mono text-xs text-ink-soft">
@@ -412,13 +420,13 @@ export function SiteMap({
                   </span>
                 </button>
                 {openGroup === group.id && (
-                  <ul className="relative z-10 mt-1 max-h-48 overflow-y-auto rounded-md border border-rule bg-surface p-1 shadow-lg">
+                  <ul className="relative z-10 mt-1 max-h-48 overflow-y-auto rounded-control border border-edge bg-raised p-1 shadow-level-3">
                     {group.pages.map((page) => (
                       <li key={page}>
                         <button
                           type="button"
                           onClick={() => onSelectPage?.(page)}
-                          className="min-h-[44px] w-full truncate rounded px-2 text-left font-mono text-xs text-ink-soft hover:bg-canvas hover:text-ink"
+                          className="min-h-[44px] w-full truncate rounded-control px-2 text-left font-mono text-xs text-ink-soft hover:bg-canvas hover:text-ink"
                         >
                           {page}
                         </button>
@@ -457,7 +465,7 @@ function PageStatusLabel({ node, compact = false }: { node: PageNode; compact?: 
             ? '●'
             : '–';
   return (
-    <span className={`shrink-0 font-mono ${compact ? 'text-xs' : 'text-xs'} font-bold ${tone}`}>
+    <span className={`shrink-0 font-mono text-xs font-bold ${tone}`}>
       <span aria-hidden="true">{mark} </span>
       {compact && (node.status === 'warn' || node.status === 'fail') ? node.issuesCount : statusText(node)}
     </span>

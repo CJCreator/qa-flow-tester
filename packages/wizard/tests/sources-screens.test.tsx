@@ -275,7 +275,8 @@ describe('T-37a copy, group A', () => {
     const testing = read('../src/screens/TestingScreen.tsx');
     expect(testing).not.toContain('{left} LEFT');
     expect(testing).not.toContain("'HIGH' : 'WARN'");
-    expect(testing).toContain('{problem.severity}');
+    expect(testing).toContain('{problem.label}');
+    expect(testing).toContain("'Must fix'");
   });
 
   it('keeps the run stop copy and the sign-in labels plain', () => {
@@ -310,7 +311,8 @@ describe('recovery wiring', () => {
     expect(baselineName('tc-home-hero')).toBe('Home hero');
     expect(baselineName('checkout_form')).toBe('Checkout form');
     expect(baselineName('---')).toBe('---');
-    expect(read('../src/screens/VisualBaselinesScreen.tsx')).toContain('Retry');
+    // LoadError carries the Try again button.
+    expect(read('../src/screens/VisualBaselinesScreen.tsx')).toContain('<LoadError');
   });
 });
 
@@ -378,15 +380,15 @@ describe('T-37b: wizard copy, labels and accessibility', () => {
     expect(landing).not.toContain('>Product</p>');
   });
 
-  it('Settings: Standard shows no major limit, sign-in wording and plain labels', () => {
+  it('Settings: an unset limit reads "No limit", sign-in wording and plain labels', () => {
     const settings = read('../src/screens/SettingsScreen.tsx');
-    expect(settings).toContain('No limit (Standard)');
-    expect(settings).toContain("preset === 'standard' ? (");
+    expect(settings).toContain('No limit');
+    expect(settings).toContain('unlimitedWhenUnset');
     expect(settings).toContain('The stamp on every report always uses the Standard rule.');
     expect(settings).toContain('Site address');
-    expect(settings).toContain('Quick check (faster)');
+    expect(settings).toContain('Shorter check-up (faster)');
     expect(settings).toContain('Use a test sign-in, not a real person’s.');
-    for (const old of ['Target Website URL', 'Quick smoke scan', 'Failed to', 'Use a test account']) {
+    for (const old of ['Target Website URL', 'Quick smoke scan', 'Quick check', 'window.confirm', 'accent-[#', 'Failed to', 'Use a test account']) {
       expect(settings, old).not.toContain(old);
     }
   });

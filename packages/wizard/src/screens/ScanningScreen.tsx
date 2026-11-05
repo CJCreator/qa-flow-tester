@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { FocusHeading } from '../components/text';
+import { Page, PageHeader } from '../components/ui';
+import { count } from '../lib/format';
 import { RunFailure } from '../components/RunStates';
 import { timeLeft } from '../lib/translate';
 import { stalledForSeconds, statusText } from '../lib/coverage-text';
@@ -75,20 +76,37 @@ export function ScanningScreen({
   const stall = stalledSeconds ?? (history.length > 0 ? stalledForSeconds(history, now) : 0);
   const showStallWarning = stall >= 20 || (stalledSeconds !== undefined && stalledSeconds > 0);
 
+  const crawling = progress?.stage === 'crawling';
+  const stats = [
+    progress?.pagesFound !== undefined ? `${count(progress.pagesFound, 'page', 'pages')} found` : null,
+    progress?.skipped ? `${progress.skipped} skipped` : null,
+    progress?.plannedSoFar ? `${count(progress.plannedSoFar, 'item', 'items')} planned while scanning` : null,
+    progress?.stage === 'planning' && progress.requestsUsed !== undefined
+      ? `${progress.requestsUsed} of about ${progress.requestsNeeded ?? 0} AI requests${
+          progress.requestsLeft !== undefined ? `, ${progress.requestsLeft} free left today` : ''
+        }`
+      : null,
+    left,
+  ].filter((part): part is string => !!part);
+
   return (
-    <div className="mx-auto max-w-[44rem] px-4 py-10 sm:px-6 sm:py-14">
-      <FocusHeading className="mb-2 break-words text-question font-bold">Exploring {host}</FocusHeading>
-      <p className="mb-8 max-w-prose text-ink-soft">
-        This can take a few minutes on a big site. You can leave this page: the check-up keeps going, and "New check-up"
-        shows a dot while it does. You review the plan before anything is tested
-        {hasMaterials ? ', and the AI uses the specs you added to write it' : ''}.
-      </p>
+    <Page width="form">
+      <PageHeader
+        title={failure ? `The scan of ${host} stopped` : `Exploring ${host}`}
+        lede={
+          failure
+            ? undefined
+            : `This can take a few minutes on a big site. You can leave this page: the check-up keeps going, and "New check-up" shows a dot while it does. You review the plan before anything is tested${
+                hasMaterials ? ', and the AI uses the specs you added to write it' : ''
+              }.`
+        }
+      />
 
       {failure ? (
-        <RunFailure title="The check-up stopped" message={failure} />
+        <RunFailure title="What happened" message={failure} />
       ) : (
         <>
-          <ol className="mb-6 space-y-2.5" aria-label="Stages">
+          <ol className="mb-6 space-y-3" aria-label="Stages">
             {STAGES.map((stage, i) => {
               const state =
                 stageIndex < 0
@@ -108,46 +126,32 @@ export function ScanningScreen({
                 >
                   <span
                     aria-hidden="true"
-                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold transition-all duration-200 ${
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold ${
                       state === 'done'
-                        ? 'border-stamp bg-stamp text-surface shadow-level-1'
+                        ? 'border-stamp bg-stamp text-on-stamp'
                         : state === 'current'
-                          ? 'border-stamp bg-surface text-stamp ring-2 ring-stamp/40 font-bold shadow-level-1'
-                          : 'border-edge/50 bg-panel text-ink-soft'
+                          ? 'border-stamp bg-surface text-stamp'
+                          : 'border-edge bg-surface text-ink-soft'
                     }`}
                   >
                     {state === 'done' ? '✓' : i + 1}
                   </span>
-                  <span className={state === 'todo' ? 'text-ink-soft font-medium' : 'font-bold text-ink'}>
-                    {stage.label}
-                  </span>
-                  {state === 'current' && (
-                    <span className="badge-tech-stamp text-[10px] py-0 px-1.5 ml-auto">RUNNING</span>
-                  )}
-                  {state === 'done' && <span className="badge-tech-pass text-[10px] py-0 px-1.5 ml-auto">DONE</span>}
-                  <span className="sr-only">
-                    {state === 'done' ? '(done)' : state === 'current' ? '(now)' : '(to come)'}
+                  <span className={state === 'todo' ? 'text-ink-soft' : 'font-bold text-ink'}>{stage.label}</span>
+                  <span className="ml-auto text-sm text-ink-soft">
+                    {state === 'done' ? 'Done' : state === 'current' ? 'In progress' : 'Next'}
                   </span>
                 </li>
               );
             })}
           </ol>
 
-          <section
-            aria-label="Scan progress"
-            className="blueprint-card p-6 bg-surface/90 border border-rule/80 relative overflow-hidden shadow-level-3"
-          >
-            <div className="absolute top-0 inset-x-0 h-1 bg-panel overflow-hidden">
-              <div className="h-full bg-stamp progress-indeterminate shadow-[0_0_8px_rgba(108,155,242,0.5)]" />
-            </div>
-
-            {/* Polite screen reader live region announcing stage transitions only */}
+          <section aria-label="Scan progress" className="rounded-card border border-rule bg-surface p-5 sm:p-6">
+            {/* The live region holds the stage text only: no counters, so it never chatters. */}
             <div role="status" aria-live="polite" className="sr-only">
               {statusText(progress)}
             </div>
 
-            {/* Non-live visible progress indicator */}
-            <p className="font-bold text-ink text-base">
+            <p className="break-words text-base font-bold text-ink">
               {!progress
                 ? 'Opening the site…'
                 : progress.stage === 'crawling'
@@ -160,47 +164,7 @@ export function ScanningScreen({
               {waited !== null && waited >= 3 && (
                 <span className="font-normal text-ink-soft"> · {waited} s so far</span>
               )}
-              {left && !progress?.asking && <span className="font-normal text-ink-soft"> · {left}</span>}
             </p>
-
-            {progress?.signedInAs && (
-              <p className="mt-2 text-sm text-ink-soft">
-                Signed in as <strong className="text-ink">{progress.signedInAs}</strong>
-              </p>
-            )}
-
-            {progress?.signInFailedFor && progress.signInFailedFor.length > 0 && (
-              <div role="alert" className="mt-2 rounded-md border border-fail bg-fail-tint p-2 text-sm text-fail">
-                {progress.signInFailedFor.map((r) => `Sign-in failed for ${r}`).join('. ')}
-              </div>
-            )}
-
-            {progress?.pagesFound !== undefined && (
-              <div className="mt-4 flex flex-wrap items-center gap-2 pt-3 border-t border-rule/50">
-                <span className="badge-tech">
-                  <span>EXPLORED:</span>
-                  <strong className="text-ink">{progress.pagesFound} pages</strong>
-                </span>
-                {progress.layoutGroups !== undefined && (
-                  <span className="badge-tech">
-                    <span>LAYOUTS:</span>
-                    <strong className="text-ink">{progress.layoutGroups}</strong>
-                  </span>
-                )}
-                {left && (
-                  <span className="badge-tech">
-                    <span>EST. TIME LEFT:</span>
-                    <strong className="text-ink">{left}</strong>
-                  </span>
-                )}
-              </div>
-            )}
-
-            {showStallWarning && (
-              <div role="status" className="mt-3 rounded-md border border-warn bg-warn-tint p-3 text-sm text-warn">
-                No new pages for {stall} seconds
-              </div>
-            )}
 
             {planning ? (
               <div
@@ -209,67 +173,50 @@ export function ScanningScreen({
                 aria-valuemin={0}
                 aria-valuemax={planning.total}
                 aria-valuenow={planning.done}
-                className="mt-3 h-2 overflow-hidden rounded-full bg-rule"
+                className="mt-3 h-2 overflow-hidden rounded-pill bg-rule"
               >
                 <div
-                  className="h-full rounded-full bg-stamp transition-[width] motion-reduce:transition-none"
+                  className="h-full rounded-pill bg-stamp transition-[width] duration-base motion-reduce:transition-none"
                   style={{ width: `${(planning.done / planning.total) * 100}%` }}
                 />
               </div>
             ) : (
-              <div aria-hidden="true" className="mt-3 h-2 overflow-hidden rounded-full bg-rule">
-                <div className="progress-indeterminate h-full w-1/3 rounded-full bg-stamp" />
+              <div aria-hidden="true" className="mt-3 h-2 overflow-hidden rounded-pill bg-rule">
+                <div className="progress-indeterminate h-full w-1/3 rounded-pill bg-stamp" />
               </div>
             )}
 
-            <dl className="mt-5 grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
-              <div>
-                <dt className="text-ink-soft">Pages found</dt>
-                <dd className="font-mono text-xl font-bold text-ink">{progress?.pagesFound ?? 0}</dd>
+            {stats.length > 0 && <p className="mt-3 text-sm text-ink-soft">{stats.join(' · ')}</p>}
+
+            {progress?.signedInAs && (
+              <p className="mt-3 text-sm text-ink-soft">
+                Signed in as <strong className="text-ink">{progress.signedInAs}</strong>
+              </p>
+            )}
+
+            {progress?.signInFailedFor && progress.signInFailedFor.length > 0 && (
+              <div role="alert" className="mt-3 rounded-control border border-fail bg-fail-tint p-3 text-sm text-fail">
+                {progress.signInFailedFor.map((r) => `Sign-in failed for ${r}`).join('. ')}
               </div>
-              {progress?.skipped !== undefined && progress.skipped > 0 && (
-                <div>
-                  <dt className="text-ink-soft">Skipped</dt>
-                  <dd className="font-mono text-xl font-bold text-ink">{progress.skipped}</dd>
-                </div>
-              )}
-              {!!progress?.plannedSoFar && (
-                <div>
-                  <dt className="text-ink-soft">Planned while scanning</dt>
-                  <dd className="font-mono text-xl font-bold text-ink">{progress.plannedSoFar}</dd>
-                </div>
-              )}
-              {progress?.stage === 'planning' && !!progress.layoutGroups && (
-                <div>
-                  <dt className="text-ink-soft">Layouts</dt>
-                  <dd className="font-mono text-xl font-bold text-ink">{progress.layoutGroups ?? 0}</dd>
-                </div>
-              )}
-              {progress?.stage === 'planning' && (
-                <div className="col-span-2 sm:col-span-1">
-                  <dt className="text-ink-soft">AI requests</dt>
-                  <dd className="font-mono text-xl font-bold text-ink">
-                    {progress.requestsUsed ?? 0} of about {progress.requestsNeeded ?? 0}
-                  </dd>
-                  {progress.requestsLeft !== undefined && (
-                    <dd className="text-ink-soft">{progress.requestsLeft} free left today</dd>
-                  )}
-                </div>
-              )}
-            </dl>
+            )}
+
+            {crawling && showStallWarning && (
+              <div className="mt-3 rounded-control border border-warn bg-warn-tint p-3 text-sm text-ink">
+                <p>No new pages for {stall} seconds</p>
+                <button type="button" className="btn-link mt-1 text-sm" onClick={onStop}>
+                  Stop scanning to plan what's found
+                </button>
+              </div>
+            )}
           </section>
 
           <div className="mt-8">
-            <button
-              type="button"
-              className="btn-quiet border-fail text-fail hover:border-fail hover:bg-fail-tint"
-              onClick={onStop}
-            >
+            <button type="button" className="btn-quiet border-fail text-fail hover:border-fail hover:bg-fail-tint" onClick={onStop}>
               Stop scanning
             </button>
           </div>
         </>
       )}
-    </div>
+    </Page>
   );
 }
