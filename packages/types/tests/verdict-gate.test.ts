@@ -68,3 +68,43 @@ describe('releaseVerdict gate matrix', () => {
     expect(v.notChecked).toBeUndefined();
   });
 });
+
+describe('releaseVerdict zero-check gate (OPEN_ISSUES C5)', () => {
+  const nothingChecked = (): SiteAspectGrades => {
+    const none = { grade: null, score: 0, findings: [] as string[], checked: false };
+    return {
+      aspects: {
+        Works: none,
+        Accessible: none,
+        'Fast and mobile': none,
+        Findable: none,
+        Secure: none,
+        'Looks and reads well': none,
+      },
+      overallGrade: null,
+      overallScore: 0,
+    };
+  };
+
+  it('is not ready when no check ran, under Standard and Strict', () => {
+    for (const gate of [DEFAULT_RELEASE_GATES.standard, DEFAULT_RELEASE_GATES.strict]) {
+      const v = releaseVerdict([], gate, nothingChecked());
+      expect(v.ready).toBe(false);
+      expect(v.stamp).toBe('Not ready yet');
+      expect(v.breaches).toContain('no checks ran, so nothing was checked');
+      expect(v.reason).toMatch(/^No checks ran, so nothing can be called ready\. Not checked: /);
+    }
+  });
+
+  it('is not ready with the default gate when no check ran', () => {
+    expect(releaseVerdict([], undefined, nothingChecked()).ready).toBe(false);
+  });
+
+  it('is unaffected when at least one area was checked', () => {
+    expect(releaseVerdict([], undefined, grades('A')).ready).toBe(true);
+  });
+
+  it('leaves Lenient as it was: it does not enforce areas', () => {
+    expect(releaseVerdict([], DEFAULT_RELEASE_GATES.lenient, nothingChecked()).ready).toBe(true);
+  });
+});
