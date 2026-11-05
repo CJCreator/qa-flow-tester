@@ -1,4 +1,4 @@
-# 0041: Parallel Page Fetching in the Website Audit
+# 0043: Parallel Page Fetching in the Website Audit
 
 Status: Accepted, 2026-11-05 (owner's answers in a grilling session, 2026-11-05). Supersedes the "one request at a time per host" bullet of [0015](0015-live-site-request-rules.md) **for the Website Audit only**, and the matching clause in [0033](0033-website-audit-entry-point.md) (DEC-003). The Check-up's pacing is unchanged. robots.txt and its Crawl-delay are still honoured.
 
@@ -12,6 +12,11 @@ A Website Audit fetches pages one at a time per host with at least 500 ms betwee
   - The host answers 429 or 503. A `Retry-After` header, capped at 60 s, is waited out before the next request. A second 429 or 503 doubles the gap, up to 10 s.
 - **The 500 ms minimum gap between request starts stays**, so a site sees at most about 2 page loads a second.
 - **Retry once.** A page that times out, answers 5xx, or fails at the network level is retried once, after the back-off wait. If it fails again it becomes a Skipped Page with reason `timeout`, `http-error` or `did-not-load`.
+- **Ride out a short outage.**
+  - A network failure (refused, reset, unreachable) waits 5 s before its retry, not the immediate retry it gets today.
+  - When 3 pages in a row fail at the network level, the crawl pauses fetching. It checks the start address every 10 s for up to 60 s, and carries on when it answers. The pages that failed during the pause go back in the queue once.
+  - When the host does not come back, the audit finishes with what it has, plus a note: "The site stopped answering after N pages".
+  - On 2026-11-05 a dev server behind a tunnel dropped for a short while, and 13 of 21 pages failed in about 100 ms each.
 - **After fetching, work is not bound to the site.** Per-page checks, AI notes (4 requests at a time against the AI Provider, not the site) and Audit Document writing run in parallel pools. Only the fetch obeys the per-host rule.
 - **Default limits drop** to 50 pages and depth 5 for a Website Audit. The upper bound stays 1000 pages on a local runner and becomes 200 on the hosted copy. The Check-up's `CRAWL_LIMIT_BOUNDS` is unchanged.
 

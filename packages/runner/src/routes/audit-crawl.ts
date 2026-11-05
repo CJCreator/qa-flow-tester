@@ -30,6 +30,7 @@ import {
   type AuditStartReply,
 } from '@qa/types';
 import {
+  AuditCrawlBlockedError,
   AuditPipelineError,
   checkAuditAddress,
   createPageRecorder,
@@ -112,6 +113,11 @@ export interface AuditRunServices {
   /** A fresh local working folder for the run. Default: a temp folder. */
   makeWorkDir?: () => Promise<string>;
   now?: () => Date;
+  /**
+   * The runner is local (ADR 0042: not a beta copy, bound to this computer): localhost and LAN addresses may
+   * be audited. Set from the runner's own settings, never from the start body. Default false.
+   */
+  allowPrivateAddresses?: boolean;
 }
 
 export interface AuditCrawlRouteDeps extends AuditRunServices {
@@ -278,6 +284,7 @@ export async function runAuditVersion(
           ...(p.currentPath !== undefined ? { currentPath: p.currentPath } : {}),
         }),
       onRenderedPage: recorder.onRenderedPage,
+      ...(services.allowPrivateAddresses ? { allowPrivateAddresses: true } : {}),
     });
     crawled = true;
     if (signal.aborted) throw Object.assign(new Error('stopped'), { name: 'AbortError' });
@@ -302,6 +309,11 @@ export async function runAuditVersion(
     } else if (err instanceof AuditPipelineError && err.code === 'status-not-updated') {
       // The result IS stored: never mark it failed.
       outcome = await retryDoneStatus(store, run);
+    } else if (err instanceof AuditCrawlBlockedError) {
+      // The start page was a tunnel warning or a bot check: its own fixed sentence, which the wizard shows as-is
+      // (it has no sentence of its own for OTHER_FAILED_CODE).
+      await recordStatus(store, run, 'failed', finishedAt, err.message);
+      outcome = { kind: 'failed', error: err.message, code: OTHER_FAILED_CODE };
     } else if (!crawled) {
       await recordStatus(store, run, 'failed', finishedAt, AUDIT_CRAWL_FAILED);
       outcome = { kind: 'failed', error: AUDIT_CRAWL_FAILED, code: CRAWL_FAILED_CODE };
@@ -331,7 +343,9 @@ function versionQuery(url: URL): number | undefined | 'invalid' {
 export function createAuditCrawlRoutes(deps: AuditCrawlRouteDeps): Route[] {
   const runs = deps.runs ?? new AuditRuns();
   const slotOf = deps.slot ?? ((context: RouteContext) => context.server.session.run);
-  const checkAddress = deps.checkAddress ?? ((url: string) => checkAuditAddress(url));
+  const checkAddress =
+    deps.checkAddress ??
+    ((url: string) => checkAuditAddress(url, { allowPrivateAddresses: deps.allowPrivateAddresses === true }));
 
   const start = row('start', async (context) => {
     const { req, res } = context;

@@ -206,6 +206,7 @@ import {
   type BetaLimits,
 } from './beta.js';
 import { testCopyFor } from './host-policy.js';
+import { isLoopbackBindHost } from './bind-host.js';
 import {
   checkAiCap,
   checkContextDocuments,
@@ -445,6 +446,11 @@ export interface AuditWiring {
   readAiModels(): Promise<AuditAiSetup>;
   /** The request is the owner's: it carries the access key, or, with none set, comes from this computer (DEC-004). */
   isOwnerRequest(req: http.IncomingMessage): boolean;
+  /**
+   * The runner is local (ADR 0042): not a beta copy and bound to this computer, so a Website Audit may read
+   * localhost and LAN addresses. False on the hosted copy and on any runner reachable from other machines.
+   */
+  readonly localRun: boolean;
 }
 
 /** Plans saved before Intent carry the old Denial kind; read them as `intent: 'denied'`. */
@@ -810,6 +816,7 @@ export class RunnerServer {
         return { provider, text, vision };
       },
       isOwnerRequest: (req) => this.carriesAccessKey(req),
+      localRun: !this.beta && isLoopbackBindHost(this.host),
     };
     this.wiring = Object.freeze(wiring);
     this.checkupRun = createCheckupRun(this.session, {

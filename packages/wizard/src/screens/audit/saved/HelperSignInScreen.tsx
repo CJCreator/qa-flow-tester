@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { HelperSession } from '@qa/types/src/browser.js';
-import { ErrorMessage, FocusHeading, Spinner } from '../../../components/text';
+import { ErrorMessage, Spinner } from '../../../components/text';
+import { Page, PageHeader } from '../../../components/ui';
 import { Link, PATHS } from '../../../lib/router';
 import { useDocumentTitle } from '../../../lib/title';
 import { signInWithGoogle, type GoogleSignInResult } from './firebase-sign-in';
@@ -106,12 +107,12 @@ export function HelperSignInView({ state, onSignIn, onSignOut, onOpenAudit, host
                     <p className="break-words font-semibold">
                       {hosts[grant.auditId]
                         ? `Website Audit of ${hosts[grant.auditId]}`
-                        : `Website Audit ${grant.auditId}`}
+                        : 'A Website Audit given to you (loading its name…)'}
                     </p>
                     <p className="text-sm text-ink-soft">{`You can: ${permissionText(grant.permissions)}`}</p>
                   </div>
                   {onOpenAudit && (
-                    <button type="button" className="btn-quiet min-h-[44px]" onClick={() => onOpenAudit(grant.auditId)}>
+                    <button type="button" className="btn-quiet" onClick={() => onOpenAudit(grant.auditId)}>
                       Open
                     </button>
                   )}
@@ -127,7 +128,7 @@ export function HelperSignInView({ state, onSignIn, onSignOut, onOpenAudit, host
   return (
     <div className="space-y-4">
       <button type="button" className="btn-primary px-6 font-bold" disabled={busy} onClick={onSignIn}>
-        {busy ? <Spinner label="Signing in…" /> : 'Sign in with Google'}
+        {busy ? <Spinner label="Signing in…" announce={false} /> : 'Sign in with Google'}
       </button>
       {state.status === 'signed-out' && state.message && <ErrorMessage>{state.message}</ErrorMessage>}
     </div>
@@ -212,13 +213,8 @@ export function HelperSignInScreen({
   }, [fetchImpl]);
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
-      <FocusHeading className="mb-2 break-words text-question font-bold">Helper sign-in</FocusHeading>
-      {state.status !== 'off' && (
-        <div className="mb-6">
-          <HelperRules />
-        </div>
-      )}
+    <Page width="form">
+      <PageHeader title="Helper sign-in" lede={state.status !== 'off' ? <HelperRules /> : undefined} />
       <HelperSignInView
         state={state}
         onSignIn={() => void start()}
@@ -226,6 +222,6 @@ export function HelperSignInScreen({
         onOpenAudit={onOpenAudit}
         hosts={hosts}
       />
-    </div>
+    </Page>
   );
 }

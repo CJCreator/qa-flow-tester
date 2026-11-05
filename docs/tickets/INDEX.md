@@ -22,21 +22,24 @@ The order of work is `todo` → `planned` → `approved` → `building` → `bui
 
 Gap ids: `G*` resolve in [`../GAP_ANALYSIS.md`](../GAP_ANALYSIS.md). Every other id (`F*`, `D*`, `DEP-*`) resolves in the linked plan. Waves order tickets within one plan only. Build a wave once every ticket in the waves before it is `built`.
 
-## Open: Website Audit reliability (T-79 to T-89)
+## Open: Website Audit reliability (T-79 to T-90)
 
-Plan: [WEBSITE-AUDIT-RELIABILITY-PLAN.md](WEBSITE-AUDIT-RELIABILITY-PLAN.md). Decisions: [ADR 0041](../adr/0041-parallel-page-fetching-in-the-website-audit.md), [ADR 0042](../adr/0042-website-audit-reliability-and-access.md). It makes an audit read the real site, in parallel, say what went wrong, and have its Audit Documents ready at the end.
+Plan: [WEBSITE-AUDIT-RELIABILITY-PLAN.md](WEBSITE-AUDIT-RELIABILITY-PLAN.md). Decisions: [ADR 0042](../adr/0042-website-audit-reliability-and-access.md), [ADR 0043](../adr/0043-parallel-page-fetching-in-the-website-audit.md). It makes an audit read the real site, in parallel, say what went wrong, and have its Audit Documents ready at the end.
+
+Reworked 2026-11-05 against `main` at `5bef5e9`, after the redesign (#56) and the tunnel and localhost fixes (#57, #58). A1 and A2 are fixed; A5 and A7 are partly fixed.
 
 | id | title | gaps | priority | size | wave | status | depends on |
 |---|---|---|---|---|---|---|---|
-| [T-79](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-79-website-audit-contract) | Website Audit contract | A3, A5, A7, A9, A10, A11 | P0 | M | 1 | todo | - |
-| [T-80](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-80-the-crawl-reads-the-real-site-3-pages-at-a-time) | The crawl reads the real site, 3 pages at a time | A1, A2, A5, A6, A7 | P0 | L | 2 | todo | T-79 |
+| [T-79](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-79-website-audit-contract) | Website Audit contract | A3, A5, A7, A9, A10, A11, A13 | P0 | M | 1 | todo | - |
+| [T-80](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-80-the-crawl-specific-errors-3-pages-at-a-time-rides-out-an-outage) | The crawl: specific errors, 3 pages at a time, rides out an outage | A5, A6, A7, A13 | P0 | L | 2 | todo | T-79 |
 | [T-81](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-81-ai-notes-on-every-page-in-parallel-with-the-real-reason) | AI notes on every page, in parallel, with the real reason | A3, A7 | P0 | M | 2 | todo | T-79 |
 | [T-82](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-82-speed-without-a-pagespeed-key) | Speed without a PageSpeed key | A4 | P1 | M | 2 | todo | T-79 |
 | [T-83](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-83-audit-documents-written-when-the-audit-ends) | Audit Documents written when the audit ends | A11 | P1 | M | 2 | todo | T-79 |
-| [T-87](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-87-start-screen-and-live-progress) | Start screen and live progress | A5, A8, A10 | P0 | L | 2 | todo | T-79 |
-| [T-88](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-88-results-landing) | Results landing | A3, A4, A11 | P1 | M | 2 | todo | T-79 |
-| [T-84](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-84-pipeline-wiring) | Pipeline wiring | A3, A4, A7, A11 | P0 | M | 3 | todo | T-79, T-81, T-82, T-83 |
-| [T-85](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-85-runner-specific-errors-logs-recovery-local-addresses) | Runner: specific errors, logs, recovery, local addresses | A2, A5, A9, A10, A11 | P0 | M | 3 | todo | T-79, T-80, T-81, T-83 |
+| [T-87](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-87-start-screen-and-live-progress-on-the-redesigned-screens) | Start screen and live progress (on the redesigned screens) | A5, A8, A10 | P0 | L | 2 | todo | T-79 |
+| [T-88](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-88-results-landing-on-the-redesigned-workspace) | Results landing (on the redesigned workspace) | A3, A4, A11 | P1 | M | 2 | todo | T-79 |
+| [T-90](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-90-a-runner-bound-to-an-ipv6-address) | A runner bound to an IPv6 address | A14 | P2 | S | 2 | todo | - |
+| [T-84](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-84-pipeline-wiring) | Pipeline wiring | A3, A4, A7, A11, A13 | P0 | M | 3 | todo | T-79, T-80, T-81, T-82, T-83 |
+| [T-85](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-85-runner-specific-errors-logs-recovery) | Runner: specific errors, logs, recovery | A5, A9, A10, A11 | P0 | M | 3 | todo | T-79, T-80, T-81, T-83 |
 | [T-86](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-86-hosted-audits-for-the-signed-in-owner) | Hosted audits for the signed-in owner | A8 | P1 | M | 4 | todo | T-85 |
 | [T-89](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-89-proving-the-audit-works) | Proving the audit works | A12 | P1 | M | 4 | todo | T-84, T-85, T-87, T-88 |
 

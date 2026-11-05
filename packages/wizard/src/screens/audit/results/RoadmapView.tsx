@@ -67,7 +67,7 @@ export function InternalLinkingView({ linking }: { linking: AuditResult['interna
       )}
       {inbound.length > 0 && (
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="table-plain">
             <thead>
               <tr>
                 <th scope="col">Page</th>

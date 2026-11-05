@@ -19,6 +19,7 @@ import { NOT_DONE_REASON_TEXT, fixFirst } from '../src/screens/audit/results/ana
 import { PageFactsView } from '../src/screens/audit/results/PageFactsView';
 import { PageContentView } from '../src/screens/audit/results/PageContentView';
 import { HierarchyView } from '../src/screens/audit/results/HierarchyView';
+import { NotesBanner } from '../src/screens/audit/results/AuditSummary';
 
 const ID = 'abcd1234';
 
@@ -233,6 +234,9 @@ describe('notes, roadmap and links', () => {
   it('shows result.notes in a banner that links to Settings, where the AI key is added', () => {
     expect(text).toContain('AI notes need an AI key.');
     expect(html).toMatch(/<a [^>]*href="\/settings"[^>]*>Add an AI key in Settings<\/a>/);
+    // A note about something else does not send the person to Settings.
+    const other = renderToStaticMarkup(createElement(NotesBanner, { notes: ['Speed was not measured.'] }));
+    expect(other).not.toContain('Add an AI key in Settings');
     expect(NOT_DONE_REASON_TEXT['no-ai-key']).toContain('Add one in Settings.');
     expect(NOT_DONE_REASON_TEXT['no-ai-key']).not.toContain('Website Audit settings');
   });
@@ -257,32 +261,34 @@ describe('notes, roadmap and links', () => {
 });
 
 describe('action row and states', () => {
-  it('links to review, export, shared links and the Website Audit', () => {
-    expect(html).toMatch(/<a [^>]*href="\/audits\/abcd1234\/versions\/3\/review"[^>]*>Review Audit Documents<\/a>/);
-    expect(html).toMatch(/<a [^>]*href="\/audits\/abcd1234\/versions\/3\/export"[^>]*>Export<\/a>/);
-    expect(html).toMatch(/<a [^>]*href="\/audits\/abcd1234\/share"[^>]*>Preview and Shared Links<\/a>/);
-    expect(html).toMatch(/<a [^>]*href="\/audits\/abcd1234"[^>]*>Back to this Website Audit<\/a>/);
+  it('links to review (the primary), download, share and the versions of the Website Audit', () => {
+    expect(html).toMatch(/<a [^>]*href="\/audits\/abcd1234\/versions\/3\/review"[^>]*>Review documents<\/a>/);
+    expect(html).toMatch(/<a [^>]*href="\/audits\/abcd1234\/versions\/3\/export"[^>]*>Download<\/a>/);
+    expect(html).toMatch(/<a [^>]*href="\/audits\/abcd1234\/share"[^>]*>Share<\/a>/);
+    expect(html).toMatch(/<a [^>]*href="\/audits\/abcd1234"[^>]*>Versions<\/a>/);
+    expect(html).toMatch(/<a [^>]*href="\/audits"[^>]*>.*All Website Audits<\/a>/);
   });
 
-  it('hides Preview and Shared Links from a Helper and until the check has answered', () => {
+  it('hides Share and Helpers from a Helper and until the check has answered', () => {
     const loadedView = (isHelper: boolean | null) => view(loaded, { isHelper });
-    expect(loadedView(true)).not.toContain('Preview and Shared Links');
-    expect(loadedView(null)).not.toContain('Preview and Shared Links');
-    expect(textOf(loadedView(true))).toContain('Review Audit Documents');
-    expect(loadedView(false)).toContain('Preview and Shared Links');
+    expect(loadedView(true)).not.toContain('/share"');
+    expect(loadedView(true)).not.toContain('/helpers"');
+    expect(loadedView(null)).not.toContain('/share"');
+    expect(textOf(loadedView(true))).toContain('Review documents');
+    expect(loadedView(false)).toContain('/share"');
   });
 
-  it('gives an error Retry and the way back, and uses a div, not a nested main', () => {
+  it('gives an error Try again and the way back, and uses a div, not a nested main', () => {
     const error = view({ status: 'error', message: 'Not found.' }, { auditId: ID, onRetry: () => {} });
-    expect(error).toMatch(/<button[^>]*>Retry<\/button>/);
+    expect(error).toMatch(/<button[^>]*>Try again<\/button>/);
     expect(error).toMatch(/href="\/audits\/abcd1234"[^>]*>Back to this Website Audit/);
     expect(error).not.toContain('<main');
-    expect(error).toContain('max-w-4xl');
+    expect(error).toContain('max-w-workspace');
   });
 
-  it('shows a running version no action row but the way back', () => {
+  it('shows a running version no primary action but the way back', () => {
     const running = view({ status: 'loaded', reply: reply(null) });
-    expect(running).not.toContain('Review Audit Documents');
+    expect(running).not.toContain('Review documents');
     expect(running).toContain('Back to this Website Audit');
   });
 });

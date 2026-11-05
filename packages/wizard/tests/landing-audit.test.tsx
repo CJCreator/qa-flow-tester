@@ -66,34 +66,113 @@ function moreOptions(html: string): { open: string; inside: string; outside: str
 }
 
 describe('new check-up screen', () => {
-  it('new check-up renders More options closed with the address field and Scan button outside it', async () => {
+  it('new check-up renders Adjust the check-up closed, one level deep, with the address field and Start outside it', async () => {
     const html = await newCheckupMarkup(EMPTY_FORM);
     const { open, inside, outside } = moreOptions(html);
     expect(open).not.toMatch(/\sopen(=|\s|>)/);
-    expect(inside).toContain('More options');
+    expect(inside).toContain('Adjust the check-up');
     expect(inside).toContain('Explore up to');
-    expect(inside).toContain('Add notes, design rules or journeys');
+    for (const group of [
+      'Pages to explore',
+      'Sign in to test pages behind a login',
+      'Product context and design notes',
+      'Search and AI visibility checks',
+      'Details for developers',
+    ]) {
+      expect(inside).toContain(`<h3 class="mb-3 text-lg font-bold">${group}</h3>`);
+    }
+    // No disclosure inside the disclosure.
+    expect(inside.match(/<details\b/g)).toHaveLength(1);
     expect(outside).toContain('id="url-input"');
     expect(outside).toContain('Start the check-up');
     expect(outside).not.toContain('Explore up to');
   });
 
-  it('More options open when a spec is added', async () => {
-    const html = await newCheckupMarkup({ ...EMPTY_FORM, specs: 'Only managers see reports' });
-    expect(moreOptions(html).open).toMatch(/\sopen(=|\s|>)/);
+  it('Adjust the check-up stays closed with changed or remembered values, and its hint says what they are', async () => {
+    const html = await newCheckupMarkup({
+      ...EMPTY_FORM,
+      maxPages: 20,
+      searchChecks: false,
+      specs: 'Only managers see reports',
+    });
+    expect(moreOptions(html).open).not.toMatch(/\sopen(=|\s|>)/);
+    expect(html).toContain('20 pages, search checks off, Product context added');
   });
 
-  it('safety choice (AccessChoice) is outside More options', () => {
+  it('safety choice (AccessChoice) is outside Adjust the check-up', () => {
     // The choice only renders after an address check, which needs a browser; so check the source order.
     const source = readFileSync(`${SCREENS}NewCheckupScreen.tsx`, 'utf8');
     const choice = source.indexOf('<AccessChoice');
     const proof = source.indexOf('<DomainProofPanel');
-    const prod = source.indexOf('This appears to be a live production site');
+    const prod = source.indexOf('This looks like a live site');
     const block = source.indexOf('data-testid="more-options"');
+    const connectAi = source.indexOf('Connect the AI for a smarter plan');
     const submit = source.indexOf('Start the check-up');
     expect(choice).toBeGreaterThan(-1);
+    expect(prod).toBeGreaterThan(-1);
     for (const safety of [choice, proof, prod]) expect(safety).toBeLessThan(block);
     expect(submit).toBeGreaterThan(block);
+    // The AI panel sits above Start, not below it.
+    expect(connectAi).toBeGreaterThan(-1);
+    expect(connectAi).toBeLessThan(submit);
+  });
+
+  it('puts the sign-in consent beside the quick sign-in fields, never two editors for the first sign-in', async () => {
+    const signIn = { role: '', username: 'alice', password: 'secret', loginPath: '' };
+    const quick = await newCheckupMarkup({ ...EMPTY_FORM, signIns: [signIn] });
+    const { inside } = moreOptions(quick);
+    expect(inside).toContain('data-testid="sign-in-consent"');
+    expect(inside).toContain('I accept this');
+    expect(quick.match(/id="sign-in-username"/g)).toHaveLength(1);
+    expect(quick).not.toContain('Sign-in 1');
+    // The reason by Start names the group the box is in.
+    expect(quick).toContain('under “Sign in to test pages behind a login”');
+
+    const rows = await newCheckupMarkup({ ...EMPTY_FORM, signIns: [signIn, { ...signIn, role: 'admin' }] });
+    expect(rows).toContain('Sign-in 1');
+    expect(rows).toContain('Sign-in 2');
+    expect(rows).not.toContain('id="sign-in-username"');
+  });
+
+  it('has exactly one primary button, also with the Connect the AI panel showing', async () => {
+    const { NewCheckupScreen } = await import('../src/screens/NewCheckupScreen');
+    const html = renderToStaticMarkup(
+      createElement(NewCheckupScreen, {
+        ai: { configured: false, model: '' } as never,
+        onKeySaved: () => undefined,
+        form: EMPTY_FORM,
+        onFormChange: () => undefined,
+        onStart: () => undefined,
+        starting: false,
+        startError: null,
+        inProgress: null,
+        recent: null,
+      })
+    );
+    expect(html).toContain('Connect the AI for a smarter plan');
+    expect(html.match(/btn-primary/g)).toHaveLength(1);
+    expect(html).not.toContain('accent-[');
+  });
+
+  it('says only a public address works on the shared copy, in a hint outside the label', async () => {
+    const { NewCheckupScreen } = await import('../src/screens/NewCheckupScreen');
+    const html = renderToStaticMarkup(
+      createElement(NewCheckupScreen, {
+        ai: { configured: true, model: 'm' },
+        onKeySaved: () => undefined,
+        form: EMPTY_FORM,
+        onFormChange: () => undefined,
+        onStart: () => undefined,
+        starting: false,
+        startError: null,
+        inProgress: null,
+        recent: null,
+        shared: true,
+      })
+    );
+    expect(html).toContain('<p id="url-hint" class="-mt-1 mb-2 text-sm text-ink-soft">A public address</p>');
+    expect(html).not.toContain('one on your computer');
+    expect(html).toMatch(/id="url-input"[^>]*aria-describedby="url-hint url-status"/);
   });
 });
 
@@ -109,7 +188,7 @@ describe('top bar', () => {
     for (const html of [await topBar(), await topBar(false)]) {
       expect(html).not.toContain('Commands');
       expect(html).not.toContain('aria-label="Keyboard shortcuts"');
-      expect(html).toContain('New check-up');
+      expect(html).toContain('Check-ups');
     }
   });
 
@@ -142,8 +221,8 @@ describe('landing page', () => {
     }
   });
 
-  it('has a Light theme button that starts unpressed', async () => {
+  it('has a Dark theme button that starts unpressed (light is the default)', async () => {
     const html = await landingMarkup();
-    expect(html).toMatch(/<button[^>]*aria-pressed="false"[^>]*>Light theme<\/button>/);
+    expect(html).toMatch(/<button[^>]*aria-pressed="false"[^>]*>Dark theme<\/button>/);
   });
 });

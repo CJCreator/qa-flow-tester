@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { scrollBehavior } from '../../lib/format';
+import { Badge as SharedBadge } from '../ui';
 
 /** An element id for a Plan Item, so the approval summary can point at it. */
 export function itemDomId(itemId: string): string {
@@ -21,6 +22,7 @@ export function showItem(itemId: string): void {
   window.setTimeout(() => el.classList.remove('ring-2', 'ring-stamp'), 2500);
 }
 
+/** The plan's badge: the shared Badge, with the plan's older tone name 'quiet' for neutral. */
 export function Badge({
   tone = 'quiet',
   children,
@@ -30,20 +32,10 @@ export function Badge({
   children: React.ReactNode;
   title?: string;
 }) {
-  const tones = {
-    quiet: 'border-rule text-ink-soft',
-    stamp: 'border-stamp/50 text-stamp',
-    pass: 'border-pass/50 text-pass',
-    warn: 'border-warn/50 text-warn',
-    fail: 'border-fail/50 text-fail',
-  };
   return (
-    <span
-      title={title}
-      className={`inline-flex items-center rounded border px-1.5 py-0.5 text-xs font-bold ${tones[tone]}`}
-    >
+    <SharedBadge tone={tone === 'quiet' ? 'neutral' : tone} title={title}>
       {children}
-    </span>
+    </SharedBadge>
   );
 }
 
@@ -60,7 +52,7 @@ export function SourceBadge({ source }: { source?: 'ai' | 'fallback' | 'person' 
   return null;
 }
 
-/** A Plan Item's on/off switch, with a hit area of at least 24 px (WCAG 2.5.8). */
+/** A Plan Item's on/off switch, with a 44px hit area. */
 export function ItemToggle({
   label,
   on,
@@ -73,7 +65,7 @@ export function ItemToggle({
   onChange: (on: boolean) => void;
 }) {
   return (
-    <label className="-m-1 inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded hover:bg-panel">
+    <label className="-m-2 inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-control hover:bg-panel">
       <input
         type="checkbox"
         aria-label={label}
@@ -81,7 +73,7 @@ export function ItemToggle({
         checked={on}
         disabled={disabled}
         onChange={(e) => onChange(e.target.checked)}
-        className="h-5 w-5 cursor-pointer accent-[#6C9BF2]"
+        className="h-5 w-5 cursor-pointer accent-stamp"
       />
     </label>
   );
@@ -105,7 +97,7 @@ export function ReplanControl({
         type="button"
         disabled={disabled}
         onClick={() => setOpen(true)}
-        className="min-h-[32px] text-sm font-bold text-stamp hover:underline disabled:opacity-50"
+        className="btn-link text-sm disabled:cursor-not-allowed disabled:text-ink-soft"
         aria-label={label}
       >
         Re-plan with the AI
@@ -114,7 +106,8 @@ export function ReplanControl({
   }
   return (
     <form
-      className="mt-2 flex flex-col gap-2 sm:flex-row"
+      className="mt-2 grid gap-2"
+      aria-label={label}
       onSubmit={(e) => {
         e.preventDefault();
         onReplan(text);
@@ -122,20 +115,24 @@ export function ReplanControl({
         setText('');
       }}
     >
-      <input
-        className="field flex-1 py-2 text-sm"
-        placeholder="What should change? (optional)"
-        aria-label={`What should change: ${label}`}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        autoFocus
-      />
-      <button type="submit" disabled={disabled} className="btn-primary min-h-[44px] px-4 text-sm">
-        Re-plan
-      </button>
-      <button type="button" onClick={() => setOpen(false)} className="btn-link text-sm">
-        Cancel
-      </button>
+      <label className="grid gap-1 text-sm">
+        <span className="font-bold">What should change? (optional)</span>
+        <input
+          className="field py-2 text-sm"
+          placeholder="For example: also try an empty form"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          autoFocus
+        />
+      </label>
+      <div className="flex flex-wrap items-center gap-3">
+        <button type="submit" disabled={disabled} className="btn-quiet btn-sm">
+          Re-plan
+        </button>
+        <button type="button" onClick={() => setOpen(false)} className="btn-link text-sm">
+          Cancel
+        </button>
+      </div>
     </form>
   );
 }

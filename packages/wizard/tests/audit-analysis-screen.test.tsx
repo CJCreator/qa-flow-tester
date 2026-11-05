@@ -23,6 +23,7 @@ import {
 import {
   AnalysisScreen,
   AnalysisView,
+  RESULT_SECTIONS,
   SKIP_REASON_TEXT,
   pageCheckText,
   type AnalysisLoad,
@@ -321,7 +322,9 @@ describe('AnalysisScreen: loading, error and empty states in words', () => {
   it('starts under an h1 with a loading line, before anything has loaded', () => {
     const fetchImpl = mockFetch(jsonResponse(reply()));
     const html = renderToStaticMarkup(createElement(AnalysisScreen, { auditId: AUDIT_ID, version: 2, fetchImpl }));
-    expect(html).toMatch(/<h1[^>]*>Website Audit analysis<\/h1>/);
+    expect(html).toMatch(/<h1[^>]*>Website Audit results<\/h1>/);
+    // Until the Helper check answers, the way back is the one a Helper may follow too.
+    expect(html).toContain('Back to this Website Audit');
     expect(html).toContain('role="status"');
     expect(textOf(html)).toContain('Loading the Website Audit…');
     expect(html).not.toContain('<main');
@@ -381,8 +384,31 @@ describe('AnalysisScreen: the loaded result', () => {
     expect(text).toContain('No page is picked yet.');
   });
 
+  it('puts Findings second, right after the summary, with an index of the sections', () => {
+    const at = (id: string) => html.indexOf(`<h2 id="${id}"`);
+    expect(at('audit-summary-title')).toBeLessThan(at('audit-findings-title'));
+    for (const id of ['audit-areas-title', 'audit-roadmap-title', 'audit-hierarchy-title', 'audit-pages-title'])
+      expect(at('audit-findings-title'), id).toBeLessThan(at(id));
+    expect(html).toContain('aria-label="Sections of the results"');
+    for (const section of RESULT_SECTIONS) expect(html, section.id).toContain(`id="${section.id}"`);
+  });
+
+  it('has one primary action, Review documents, and the audit tabs', () => {
+    expect(html.match(/btn-primary/g)).toHaveLength(1);
+    expect(html).toMatch(
+      /<a [^>]*href="\/audits\/[^"]+\/versions\/2\/review"[^>]*btn-primary[^>]*>Review documents<\/a>|<a [^>]*btn-primary[^>]*href="\/audits\/[^"]+\/versions\/2\/review"[^>]*>Review documents<\/a>/
+    );
+    expect(html).toContain('aria-label="This Website Audit"');
+    expect(html).toMatch(/aria-current="page"[^>]*>Results</);
+  });
+
   it('lists every page as a button that says where its checks come from', () => {
-    const buttons = html.match(/<button[^>]*>.*?<\/button>/g) ?? [];
+    // Only the page list's buttons: the section index has buttons of its own.
+    const pageList = html.slice(
+      html.indexOf('<h2 id="audit-pages-title"'),
+      html.indexOf('<h2 id="audit-skipped-title"')
+    );
+    const buttons = pageList.match(/<button[^>]*>.*?<\/button>/g) ?? [];
     expect(buttons).toHaveLength(2);
     const [first, second] = [itemAt(buttons, 0), itemAt(buttons, 1)];
     expect(first).toContain('type="button"');
@@ -397,7 +423,10 @@ describe('AnalysisScreen: the loaded result', () => {
   });
 
   it('lists Skipped Pages as not checked, with their reason, never as clean', () => {
-    const skipped = html.slice(html.indexOf('audit-skipped-title'), html.indexOf('audit-findings-title'));
+    const skipped = html.slice(
+      html.indexOf('<h2 id="audit-skipped-title"'),
+      html.indexOf('<h2 id="audit-linking-title"')
+    );
     expect(textOf(skipped)).toContain('Pages found: 6 · recorded: 2 · skipped: 3');
     expect(textOf(skipped)).toContain('so it was not checked: it is not a clean result');
     const items = skipped.match(/<li>.*?<\/li>/g) ?? [];

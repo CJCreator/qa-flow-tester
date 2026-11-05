@@ -21,7 +21,9 @@ export function SiteAreasView({ areas }: { areas: AreaAssessment[] }) {
                 {area.grade === null ? (
                   <p className="mt-1 text-sm text-ink-soft">{NO_GRADE}</p>
                 ) : (
-                  <p className={`mt-1 inline-flex rounded border px-2 text-sm font-bold ${gradeClasses(area.grade)}`}>
+                  <p
+                    className={`mt-1 inline-flex rounded-control border px-2 text-sm font-bold ${gradeClasses(area.grade)}`}
+                  >
                     {`Grade ${area.grade}`}
                   </p>
                 )}

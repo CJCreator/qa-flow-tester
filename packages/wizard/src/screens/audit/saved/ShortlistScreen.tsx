@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { SHORTLIST_OUTCOMES, type ShortlistListItem } from '@qa/types/src/browser.js';
-import { ErrorMessage, FocusHeading, Spinner } from '../../../components/text';
+import { Spinner } from '../../../components/text';
+import { EmptyState, LoadError, Page, PageHeader } from '../../../components/ui';
 import { formatWhen } from '../../../lib/format';
 import { Link } from '../../../lib/router';
 import { useDocumentTitle } from '../../../lib/title';
@@ -27,29 +28,39 @@ export interface ShortlistViewProps {
   onRetry: () => void;
 }
 
+/** One Website Audit on the Shortlist. The whole row opens it. */
 function ShortlistRow({ item }: { item: ShortlistListItem }) {
   return (
-    <li className="card-1 bg-surface p-4" data-audit={item.auditId}>
-      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+    <li
+      className="relative rounded-card border border-rule bg-surface p-4 transition-colors duration-fast hover:border-edge focus-within:border-stamp"
+      data-audit={item.auditId}
+    >
+      <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h2 className="break-all text-lg font-bold text-ink">{item.host}</h2>
-          <p className="break-all text-sm text-ink-soft">{item.url}</p>
-          <p className="text-sm text-ink">
+          <h2 className="break-all text-lg font-bold text-ink">
+            <Link
+              to={AUDIT_PATHS.history(item.auditId)}
+              className="after:absolute after:inset-0 after:rounded-card hover:underline"
+              aria-label={`Open the Website Audit of ${item.host}`}
+            >
+              {item.host}
+            </Link>
+          </h2>
+          <p className="break-all font-mono text-sm text-ink-soft">{item.url}</p>
+          <p className="mt-1 text-sm text-ink">
             {`Mark: ${item.mark ? MARK_LABEL[item.mark] : 'none'} · Outcome: ${item.outcome ?? 'none yet'}`}
           </p>
-          {item.notes.trim() !== '' && <p className="whitespace-pre-wrap text-sm text-ink">{`Notes: ${item.notes}`}</p>}
+          {item.notes.trim() !== '' && (
+            <p className="whitespace-pre-wrap break-words text-sm text-ink">{`Notes: ${item.notes}`}</p>
+          )}
           {item.outcomeNote.trim() !== '' && (
-            <p className="whitespace-pre-wrap text-sm text-ink-soft">{`Outcome note: ${item.outcomeNote}`}</p>
+            <p className="whitespace-pre-wrap break-words text-sm text-ink-soft">{`Outcome note: ${item.outcomeNote}`}</p>
           )}
           <p className="text-xs text-ink-soft">{`Last changed ${formatWhen(item.updatedAt)}`}</p>
         </div>
-        <Link
-          to={AUDIT_PATHS.history(item.auditId)}
-          className="btn-primary min-h-[44px] px-4 text-sm"
-          aria-label={`Open the Website Audit of ${item.host}`}
-        >
-          Open
-        </Link>
+        <span aria-hidden="true" className="mt-1 shrink-0 text-xl text-ink-soft">
+          →
+        </span>
       </div>
     </li>
   );
@@ -61,14 +72,14 @@ export function ShortlistView({ filters, load, onFilters, onRetry }: ShortlistVi
   const items = load.status === 'loaded' ? filterShortlist(load.items, filters) : [];
   return (
     <>
-      <div className="mb-6 flex flex-wrap gap-6">
+      <div className="mb-6 grid gap-4 sm:flex sm:flex-wrap sm:gap-6">
         <div>
           <label htmlFor="shortlist-filter-mark" className="label text-ink">
             Mark
           </label>
           <select
             id="shortlist-filter-mark"
-            className="field py-2 text-sm"
+            className="field min-h-[44px] py-2 text-sm"
             value={filters.mark}
             onChange={(e) => onFilters({ ...filters, mark: readMarkFilter(e.target.value) })}
           >
@@ -86,7 +97,7 @@ export function ShortlistView({ filters, load, onFilters, onRetry }: ShortlistVi
           </label>
           <select
             id="shortlist-filter-outcome"
-            className="field py-2 text-sm"
+            className="field min-h-[44px] py-2 text-sm"
             value={filters.outcome}
             onChange={(e) => onFilters({ ...filters, outcome: readOutcomeFilter(e.target.value) })}
           >
@@ -102,22 +113,39 @@ export function ShortlistView({ filters, load, onFilters, onRetry }: ShortlistVi
 
       {load.status === 'loading' && <Spinner label="Loading the Shortlist…" />}
       {load.status === 'failed' && (
-        <>
-          <ErrorMessage>{load.message}</ErrorMessage>
-          <button type="button" className="btn-quiet mt-3" onClick={onRetry}>
-            Retry
-          </button>
-        </>
+        <LoadError title="The Shortlist could not be loaded" onRetry={onRetry}>
+          {load.message}
+        </LoadError>
       )}
-      {load.status === 'loaded' && items.length === 0 && (
-        <p className="card-1 bg-surface p-6 text-ink-soft">
-          {filtered
-            ? 'No Website Audit on the Shortlist matches these filters.'
-            : 'The Shortlist is empty. Open a saved Website Audit and mark it pitch or skip to add it.'}
-        </p>
-      )}
+      {load.status === 'loaded' &&
+        items.length === 0 &&
+        (filtered ? (
+          <EmptyState
+            title="No Website Audit on the Shortlist matches these filters."
+            action={
+              <button
+                type="button"
+                className="btn-quiet btn-sm"
+                onClick={() => onFilters({ mark: 'all', outcome: 'all' })}
+              >
+                Show every mark and outcome
+              </button>
+            }
+          />
+        ) : (
+          <EmptyState
+            title="The Shortlist is empty."
+            action={
+              <Link to={AUDIT_PATHS.list} className="btn-primary btn-sm">
+                See your Website Audits
+              </Link>
+            }
+          >
+            Open a saved Website Audit and mark it pitch or skip to add it.
+          </EmptyState>
+        ))}
       {items.length > 0 && (
-        <ul className="space-y-3" aria-label="Shortlist">
+        <ul className="grid gap-3" aria-label="Shortlist">
           {items.map((item) => (
             <ShortlistRow key={item.auditId} item={item} />
           ))}
@@ -152,15 +180,9 @@ export function ShortlistScreen({ fetchImpl }: ShortlistScreenProps = {}) {
   useDocumentTitle('Shortlist');
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
-      <FocusHeading className="mb-2 text-question font-bold">Shortlist</FocusHeading>
-      <p className="mb-6 max-w-prose text-ink-soft">
-        The Website Audits you marked pitch or skip, with their notes and outcome.{' '}
-        <Link to={AUDIT_PATHS.list} className="btn-link">
-          All saved Website Audits
-        </Link>
-      </p>
+    <Page width="prose">
+      <PageHeader title="Shortlist" lede="The Website Audits you marked pitch or skip, with their notes and outcome." />
       <ShortlistView filters={filters} load={load} onFilters={setFilters} onRetry={() => void refresh()} />
-    </div>
+    </Page>
   );
 }

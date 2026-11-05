@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import type { FindingSeverity, RunSummary } from '@qa/types';
 import { deleteRun, listRuns, RunnerError } from '../api';
 import type { ConfirmOptions } from '../components/ConfirmDialog';
-import { ErrorMessage, Question, Spinner } from '../components/text';
+import { ErrorMessage, Spinner } from '../components/text';
+import { Badge, EmptyState, LoadError, Page, PageHeader } from '../components/ui';
 import { count, formatDay, formatWhen } from '../lib/format';
 import { Link, PATHS } from '../lib/router';
 import { useDocumentTitle } from '../lib/title';
@@ -13,6 +14,8 @@ const COUNT_WORDS: Array<[FindingSeverity, string, string]> = [
   ['Minor', 'minor', 'minor'],
   ['Suggestion', 'suggestion', 'suggestions'],
 ];
+
+const STARTING_REASON = 'A check-up is already running.';
 
 /** "2 block release · 3 minor", or "No problems". */
 function countsLine(counts: RunSummary['counts']): string {
@@ -77,29 +80,45 @@ export function PastCheckupsScreen({
   const sites = runs ? [...new Set(runs.map((r) => r.host))] : [];
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
-      <Question>Past check-ups</Question>
-      <p className="mb-8 max-w-prose text-ink-soft">
-        The last ten check-ups of each site are kept. Older ones are deleted by themselves.
-      </p>
+    <Page width="workspace">
+      <PageHeader
+        title="Past check-ups"
+        lede="The last ten check-ups of each site are kept. Older ones are deleted by themselves."
+        actions={
+          <Link to={PATHS.new} className="btn-primary">
+            New check-up
+          </Link>
+        }
+      />
 
-      {error && <ErrorMessage>{error}</ErrorMessage>}
-      {error && !runs && (
-        <button type="button" className="btn-quiet mt-3" onClick={load}>
-          Retry
-        </button>
+      {error && !runs ? (
+        <LoadError title="Your past check-ups couldn’t be loaded" onRetry={load}>
+          {error}
+        </LoadError>
+      ) : (
+        error && <ErrorMessage>{error}</ErrorMessage>
       )}
       {actionError && <ErrorMessage>{actionError}</ErrorMessage>}
 
       {!runs && !error && <Spinner label="Loading your check-ups…" />}
 
+      {runs && runs.length > 0 && starting && (
+        <p role="status" className="mb-4 text-sm text-ink-soft">
+          {STARTING_REASON}
+        </p>
+      )}
+
       {runs && runs.length === 0 && (
-        <div className="rounded-lg border border-rule bg-surface p-6">
-          <p className="mb-4 font-bold">No check-ups yet.</p>
-          <Link to={PATHS.new} className="btn-primary">
-            Start a new check-up
-          </Link>
-        </div>
+        <EmptyState
+          title="No check-ups yet."
+          action={
+            <Link to={PATHS.new} className="btn-primary">
+              Start a new check-up
+            </Link>
+          }
+        >
+          Each check-up you run is kept here, with its report.
+        </EmptyState>
       )}
 
       <div className="space-y-10">
@@ -115,12 +134,20 @@ export function PastCheckupsScreen({
               </h2>
               <ul className="space-y-3">
                 {ofSite.map((run) => (
-                  <li key={run.runId} className="rounded-lg border border-edge bg-surface p-4">
+                  <li key={run.runId} className="rounded-card border border-rule bg-surface p-4">
                     <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
                       <div className="min-w-0">
-                        <p className="font-bold text-ink">{formatWhen(run.timestamp)}</p>
-                        <p className={`font-bold ${run.ready ? 'text-pass' : 'text-fail'}`}>{run.stamp}</p>
-                        <p className="text-sm text-ink-soft">
+                        <Link
+                          to={PATHS.report(run.runId)}
+                          className="inline-flex min-h-[44px] items-center font-bold text-ink underline decoration-edge underline-offset-4 hover:decoration-stamp"
+                          aria-label={`Open the check-up of ${run.host} from ${formatWhen(run.timestamp)}`}
+                        >
+                          {formatWhen(run.timestamp)}
+                        </Link>
+                        <p className="mt-1">
+                          <Badge tone={run.ready ? 'pass' : 'fail'}>{run.stamp}</Badge>
+                        </p>
+                        <p className="mt-1 text-sm text-ink-soft">
                           {countsLine(run.counts)}
                           {run.readOnly ? ' · only looked at' : ''}
                         </p>
@@ -131,17 +158,11 @@ export function PastCheckupsScreen({
                         )}
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <Link
-                          to={PATHS.report(run.runId)}
-                          className="btn-primary min-h-[44px] px-4 text-sm"
-                          aria-label={`Open the check-up of ${run.host} from ${formatWhen(run.timestamp)}`}
-                        >
-                          Open
-                        </Link>
                         <button
                           type="button"
-                          className="btn-quiet min-h-[44px] px-4 text-sm"
+                          className="btn-quiet btn-sm min-h-[44px]"
                           disabled={starting}
+                          title={starting ? STARTING_REASON : undefined}
                           onClick={() => onTestAgain(run)}
                           aria-label={`New check-up of ${run.host}`}
                         >
@@ -149,7 +170,7 @@ export function PastCheckupsScreen({
                         </button>
                         <button
                           type="button"
-                          className="btn-quiet min-h-[44px] border-fail px-4 text-sm text-fail hover:border-fail hover:bg-fail-tint"
+                          className="btn-quiet btn-sm min-h-[44px] border-fail text-fail hover:border-fail hover:bg-fail-tint"
                           onClick={() => void remove(run)}
                           aria-label={`Delete the check-up of ${run.host} from ${formatWhen(run.timestamp)}`}
                         >
@@ -164,6 +185,6 @@ export function PastCheckupsScreen({
           );
         })}
       </div>
-    </div>
+    </Page>
   );
 }

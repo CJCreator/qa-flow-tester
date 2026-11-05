@@ -98,6 +98,7 @@ export const TECHNOLOGY_KIND_LABEL: Readonly<Record<TechnologyKind, string>> = {
 
 /** The English name of a language code, or the code itself when it is not one of the listed languages. */
 export function languageName(code: string): string {
+  if (code === 'ta') return 'Tamil (தமிழ்)';
   return isDocumentLanguage(code) ? DOCUMENT_LANGUAGE_INFO[code].name : code;
 }
 
@@ -147,14 +148,18 @@ const SCRIPTS: ReadonlyArray<{ range: RegExp; langs: readonly string[] }> = [
 ];
 
 /**
- * The lang and dir attributes for a piece of page text written in one of the listed non-Latin scripts, so
- * screen readers and fonts treat it right. The page's primary language settles a shared script (Hindi or
- * Marathi). Other text inherits the UI's language.
+ * The lang and dir attributes for a piece of page text written mostly in one of the listed non-Latin scripts,
+ * so screen readers and fonts treat it right. The page's primary language settles a shared script (Hindi or
+ * Marathi). Mixed text, such as a page that says the same thing in several languages, and all other text
+ * inherit the UI's language and direction: one Arabic line must not turn an English block right-to-left.
  */
-export function textLangAttrs(text: string, primary: PageLanguage['primary']): { lang?: string; dir?: 'rtl' } {
+export function textLangAttrs(text: string, primary?: PageLanguage['primary']): { lang?: string; dir?: 'rtl' } {
+  // Letters and the vowel signs of Indian scripts, so a word in either kind of script weighs the same.
+  const letters = text.match(/[\p{L}\p{M}]/gu) ?? [];
   for (const script of SCRIPTS) {
-    if (!script.range.test(text)) continue;
-    const lang = script.langs.includes(primary) ? primary : script.langs[0];
+    const inScript = letters.filter((char) => script.range.test(char)).length;
+    if (inScript === 0 || inScript * 2 <= letters.length) continue;
+    const lang = primary !== undefined && script.langs.includes(primary) ? primary : script.langs[0];
     return lang === 'ur' ? { lang, dir: 'rtl' } : { lang };
   }
   return {};

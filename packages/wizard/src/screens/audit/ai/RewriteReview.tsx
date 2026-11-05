@@ -50,12 +50,12 @@ function MarkedText({
   lang: ReturnType<typeof textLangAttrs>;
 }) {
   return (
-    <p className="whitespace-pre-wrap text-sm text-ink" {...lang}>
+    <p className="whitespace-pre-wrap text-base text-ink" {...lang}>
       {markCopiedPhrases(text, overlaps).map((piece, i) =>
         piece.copied ? (
           <mark
             key={i}
-            className="rounded bg-warn-tint font-semibold text-ink underline decoration-2"
+            className="rounded-control bg-warn-tint font-semibold text-ink underline decoration-2"
             aria-label={`Copied phrase: ${piece.text}`}
           >
             {piece.text}
@@ -76,7 +76,9 @@ function PhraseList({ overlaps, title }: { overlaps: readonly OverlapFlag[]; tit
       <ul className="list-disc pl-5 text-sm">
         {overlaps.map((flag, i) => (
           <li key={i}>
-            <mark className="rounded bg-warn-tint font-semibold text-ink underline decoration-2">{flag.words}</mark>
+            <mark className="rounded-control bg-warn-tint font-semibold text-ink underline decoration-2">
+              {flag.words}
+            </mark>
             {`: ${wordCountText(flag.wordCount)}`}
           </li>
         ))}
@@ -120,7 +122,9 @@ export function RewriteReviewView({
       <h2 id="rewrite-title" className="text-xl font-bold">
         {`Rewrite Sections: ${content.urlPath}`}
       </h2>
-      <p className="max-w-prose text-sm text-ink-soft">{AUDIT_DOCUMENTS_ONLY}</p>
+      <p className="max-w-prose text-sm text-ink-soft">
+        {`The AI writes new copy for a Section, after you approve it. To change a Section by hand, use its text box above. ${AUDIT_DOCUMENTS_ONLY}`}
+      </p>
       {content.sections.length === 0 ? (
         <p className="text-sm text-ink-soft">This page has no Sections.</p>
       ) : (
@@ -138,11 +142,11 @@ export function RewriteReviewView({
             const draft = drafts[section.id] ?? proposal?.text ?? '';
             const hasText = original.trim() !== '';
             return (
-              <li key={section.id} className="rounded border border-rule p-3" data-section-id={section.id}>
+              <li key={section.id} className="rounded-card border border-rule p-3" data-section-id={section.id}>
                 <h3 className="font-bold">{name}</h3>
                 <p className="label mt-2 text-ink">Original text</p>
                 {hasText ? (
-                  <p className="whitespace-pre-wrap text-sm text-ink-soft" {...lang}>
+                  <p className="whitespace-pre-wrap text-base text-ink-soft" {...lang}>
                     {original}
                   </p>
                 ) : (
@@ -156,17 +160,17 @@ export function RewriteReviewView({
                     ) : (
                       <button
                         type="button"
-                        className="btn-quiet text-sm"
+                        className="btn-quiet btn-sm"
                         aria-label={`Approve rewrite of ${name}`}
                         disabled={working !== undefined}
                         onClick={() => onApprove(section.id)}
                       >
-                        Approve rewrite
+                        Step 1: Approve the rewrite
                       </button>
                     )}
                     <button
                       type="button"
-                      className="btn-quiet text-sm"
+                      className="btn-quiet btn-sm"
                       aria-label={`Write new copy for ${name}`}
                       aria-describedby={approved ? undefined : `${id}-approve-first`}
                       disabled={!approved || working !== undefined}
@@ -174,7 +178,7 @@ export function RewriteReviewView({
                         if (approved) onWrite(section.id);
                       }}
                     >
-                      Write new copy
+                      Step 2: Write new copy
                     </button>
                     {!approved && (
                       <span id={`${id}-approve-first`} className="text-sm text-ink-soft">
@@ -200,7 +204,7 @@ export function RewriteReviewView({
                       <textarea
                         id={id}
                         rows={6}
-                        className="field w-full text-sm"
+                        className="field w-full"
                         value={draft}
                         onChange={(e) => onDraft(section.id, e.target.value)}
                         {...lang}
@@ -208,7 +212,7 @@ export function RewriteReviewView({
                       <div className="flex flex-wrap items-center gap-3">
                         <button
                           type="button"
-                          className="btn-primary text-sm"
+                          className="btn-quiet btn-sm"
                           aria-label={`Accept new copy for ${name}`}
                           disabled={working !== undefined || draft.trim() === ''}
                           onClick={() => onAccept(section.id)}

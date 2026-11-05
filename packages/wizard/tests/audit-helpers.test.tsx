@@ -312,9 +312,10 @@ describe('Helper sign-in screen', () => {
       })
     );
     expect(html).toContain('Signed in as asha@gmail.com');
-    expect(html).toContain('Website Audit audit001');
+    expect(html).toContain('A Website Audit given to you (loading its name…)');
+    expect(html).not.toContain('audit001');
     expect(html).toContain('You can: View, Export');
-    expect(html.match(/Website Audit audit/g)).toHaveLength(1);
+    expect(html.match(/A Website Audit given to you/g)).toHaveLength(1);
     expect(html).toMatch(/<button type="button"[^>]*>Sign out<\/button>/);
   });
 
@@ -528,7 +529,9 @@ describe('Helper role, host, address and ways back', () => {
     expect(withHost).toContain('Website Audit of shop.example.org');
     expect(withHost).not.toContain('audit001');
     expect(withHost).not.toContain('btn-secondary');
-    expect(renderToStaticMarkup(createElement(HelperSignInView, props))).toContain('Website Audit audit001');
+    const unknown = renderToStaticMarkup(createElement(HelperSignInView, props));
+    expect(unknown).toContain('A Website Audit given to you (loading its name…)');
+    expect(unknown).not.toContain('audit001');
   });
 
   it('gives the off state a link home', () => {
@@ -555,7 +558,8 @@ describe('Helper role, host, address and ways back', () => {
   it('links back to the Website Audit from the Helpers screen', () => {
     const html = renderToStaticMarkup(createElement(HelpersScreen, { auditId: AUDIT_ID }));
     expect(html).toContain(`href="/audits/${AUDIT_ID}"`);
-    expect(textOf(html)).toContain('Back to this Website Audit');
+    expect(textOf(html)).toContain('All Website Audits');
+    expect(html).toContain('href="/audits"');
   });
 });
 

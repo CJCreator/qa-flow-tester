@@ -26,6 +26,7 @@ import { addressForPhase } from './lib/phase-address';
 import { StepBar, type Step } from './components/StepBar';
 import { Notice, Spinner } from './components/text';
 import { TopBar } from './components/TopBar';
+import { AreaNav } from './components/AreaNav';
 import { hasFinishedCheckup } from './lib/onboarding';
 import { CommandPalette } from './components/CommandPalette';
 import { useRunnerConnection } from './hooks/useRunnerConnection';
@@ -87,11 +88,12 @@ const POLL_MS = 5000;
 
 const IN_PROGRESS = new Set(['scanning', 'awaiting-review', 'testing']);
 
-/** The step bar's position for a screen, when it has one. Scanning is when the plan is made. */
+/**
+ * The step bar's position for a screen, when it has one. Scanning is when the plan is made. The new check-up
+ * screen shows the Check-ups row instead (ADR 0041).
+ */
 function stepOf(route: Route): Step | null {
   switch (route.name) {
-    case 'new':
-      return 'address';
     case 'scan':
     case 'plan':
       return 'plan';
@@ -106,7 +108,7 @@ function stepOf(route: Route): Step | null {
 
 function Loading({ label }: { label: string }) {
   return (
-    <div className="mx-auto max-w-prose px-4 py-16 text-ink-soft sm:px-6">
+    <div className="mx-auto w-full max-w-form px-4 py-16 text-ink-soft sm:px-6 lg:px-8">
       <Spinner label={label} />
     </div>
   );
@@ -808,7 +810,7 @@ export default function App() {
               confirm={confirm}
             />
           ) : status?.phase === 'awaiting-review' && planError ? (
-            <div className="mx-auto max-w-prose px-4 py-16 sm:px-6">
+            <div className="mx-auto w-full max-w-form px-4 py-16 sm:px-6 lg:px-8">
               <Notice
                 title="The plan couldn’t be opened"
                 actions={
@@ -910,10 +912,9 @@ export default function App() {
         break;
       case 'audit-settings':
         body = (
-          <>
-            <DocumentSettingsScreen />
+          <DocumentSettingsScreen>
             <AuditAiModelsPanel />
-          </>
+          </DocumentSettingsScreen>
         );
         break;
       case 'audit-shortlist':
@@ -923,7 +924,7 @@ export default function App() {
         body = <HelperSignInScreen onOpenAudit={(auditId) => navigate(PATHS.audit(auditId))} />;
         break;
       default:
-        body = <NotFoundScreen />;
+        body = <NotFoundScreen beta={!!status?.beta} />;
     }
   }
 
@@ -934,7 +935,7 @@ export default function App() {
     <div className="min-h-screen bg-paper text-ink">
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-2 focus:z-[60] focus:inline-flex focus:min-h-[44px] focus:items-center rounded bg-stamp px-4 py-2 font-bold text-surface"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-2 focus:z-menu focus:inline-flex focus:min-h-[44px] focus:items-center rounded-control bg-stamp px-4 py-2 font-bold text-on-stamp"
       >
         Skip to the content
       </a>
@@ -946,7 +947,12 @@ export default function App() {
           beta={!!status?.beta}
         />
       )}
-      {step && <StepBar current={step} links={{ address: PATHS.new }} />}
+      {step ? (
+        <StepBar current={step} links={{ address: PATHS.new }} />
+      ) : (
+        // From the first paint, not once connected: a row inserted later pushes the whole page down (layout shift).
+        !landing && <AreaNav route={route} beta={!!status?.beta} />
+      )}
       <main id="main">
         {lostContact && (
           <div className="mx-auto max-w-prose px-4 pt-4 sm:px-6">

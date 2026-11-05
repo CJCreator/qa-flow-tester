@@ -24,6 +24,10 @@ A diagnosis on 2026-11-05 (local runner, `example.com`, `htmx.org` and the owner
   - **Sanity flag.** When 1 page was recorded but the sitemap or the start page's links list more on the same site, the result carries a note: "Only 1 page was read; the rest could not be reached". The wizard shows the note on the results.
 - **Specific errors, logged.** New codes: `ERR_SITE_BLOCKED`, `ERR_DNS`, `ERR_BROWSER_LAUNCH` and `ERR_PIPELINE`, beside `ERR_UNREACHABLE` and `ERR_PRIVATE_ADDRESS`. Every crawl and pipeline failure writes one structured log line: code, stage, message and the redacted address. AI failures keep a reason: `key-expired` (401/403), `quota` (429), `timeout` or `provider-error`, with the provider's message, redacted.
 - **Private addresses on a local runner.** `localhost`, loopback and private LAN addresses are accepted when the runner is local: not a beta copy and bound to a loopback host. The hosted copy keeps public addresses only. This amends 0033's Q-22 rule.
+  - The runner sets this, never the start body. A shared machine's browser policy still turns it off.
+  - A local crawl pins no address, so Chromium reaches `localhost` on `::1` or `127.0.0.1`, whichever the server listens on.
+  - On a local run, `safeGet` tries a name's other addresses when one refuses. Vite dev servers often listen on `::1` only while the resolver prefers `127.0.0.1`. A public name keeps one pinned address.
+- **Audit-only time limits.** One page load may take 30 s (its retry 45 s), the whole crawl 60 min, and the start address check 30 s. The Check-up keeps 10 s and 10 min. `QA_CRAWL_MAX_MINUTES` still overrides the crawl limit. A dev server behind a tunnel took 10 to 25 s per page, so the old limits skipped half a site and refused the start with a 422.
 - **AI notes on every recorded page** (amends 0033). Notes run 4 at a time. Before the crawl starts, a pre-flight call checks the key and shows the result as "AI: ready", "AI: key expired" or "AI: no key".
 - **Template text when AI cannot run.** Without a working key, the Proposal, the Pitch Glimpse, the Owner Audit and the AI preview use template text filled from the findings. AI improves the wording when a key works. A failed AI step never leaves an Audit Document empty and never returns a bare 502.
 - **Speed without a PageSpeed key** (amends 0035):
@@ -48,7 +52,18 @@ A diagnosis on 2026-11-05 (local runner, `example.com`, `htmx.org` and the owner
 
 ## Consequences
 - Audits of tunnels and local dev servers read the real site. A local runner can audit the owner's own App without a tunnel.
-- AI cost grows with page count: about one request per recorded page plus one for the whole site. The start screen's "More options" shows an estimate before starting.
+- AI cost grows with page count: about one request per recorded page plus one for the whole site. The start screen's "Limits (optional)" panel shows an estimate before starting.
 - A second speed source exists. Reports must name it, and "lab, one run" is never presented as real-visitor data (0035, 0018).
 - Opening the hosted copy to anyone beyond `AUDIT_OWNER_EMAILS` needs a later decision: each person's own Website Audit list and a daily limit. This is not built now.
-- Built by T-79 to T-89 in [WEBSITE-AUDIT-RELIABILITY-PLAN.md](../tickets/WEBSITE-AUDIT-RELIABILITY-PLAN.md).
+- The rest is built by T-79 to T-90 in [WEBSITE-AUDIT-RELIABILITY-PLAN.md](../tickets/WEBSITE-AUDIT-RELIABILITY-PLAN.md).
+
+## Already built (2026-11-05)
+- **`feaa7f9`** (merged through `aed2615`, Prettier fix in #57):
+  - the tunnel skip headers, on same-site requests only;
+  - a start page that is still a tunnel warning or a bot check fails the audit with a plain sentence (`AuditCrawlBlockedError`, `core/src/audit/crawl/interstitial.ts`); it is sent as `ERR_INVALID_REQUEST` until T-79 adds `ERR_SITE_BLOCKED`;
+  - the audit-only time limits.
+- **#58 (`5bef5e9`):**
+  - private addresses on a local runner (`AuditWiring.localRun` → `allowPrivateAddresses`);
+  - the `safeGet` address fallback;
+  - `makeRequestGuard(deps, { allowPrivate })`.
+- **Verified on the owner's app behind devtunnels:** 19 of 24 pages recorded, against 1 before. On a Vite dev server listening on `[::1]` only, through `http://localhost:3002/`: 11 pages, robots.txt read, no false broken links.

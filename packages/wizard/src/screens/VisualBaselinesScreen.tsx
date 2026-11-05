@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   acceptVisualBaseline,
   deleteVisualBaseline,
@@ -6,12 +6,14 @@ import {
   RunnerError,
   type VisualBaselineItem,
 } from '../api';
-import { ErrorMessage, FocusHeading, Notice, Spinner } from '../components/text';
-import { formatWhen } from '../lib/format';
+import { useConfirm } from '../components/ConfirmDialog';
+import { Notice, Spinner } from '../components/text';
+import { Badge, EmptyState, LoadError, Page, PageHeader } from '../components/ui';
+import { formatWhen, scrollBehavior } from '../lib/format';
 import { Link, PATHS } from '../lib/router';
 import { useDocumentTitle } from '../lib/title';
 
-/** A test case's id as a name a person can read: "tc-home-hero" becomes "Home hero". */
+/** A check's id as a name a person can read: "tc-home-hero" becomes "Home hero". */
 export function baselineName(testCaseId: string): string {
   const words = testCaseId
     .replace(/^(tc|test|case)[-_:]+/i, '')
@@ -25,7 +27,9 @@ type BreakpointFilter = 'all' | '375px' | '768px' | '1440px';
 type ViewMode = 'split' | 'overlay' | 'diff-only';
 
 export function VisualBaselinesScreen() {
-  useDocumentTitle('Visual Baselines');
+  useDocumentTitle('Visual baselines');
+  const { confirm, dialog } = useConfirm();
+  const inspectorRef = useRef<HTMLDivElement>(null);
   const [baselines, setBaselines] = useState<VisualBaselineItem[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +48,7 @@ export function VisualBaselinesScreen() {
       setBaselines(items);
       setError(null);
     } catch (err) {
-      setError(err instanceof RunnerError ? err.message : 'Could not load visual baselines.');
+      setError(err instanceof RunnerError ? err.message : 'The visual baselines couldn’t be loaded. Try again.');
     } finally {
       setLoading(false);
     }
@@ -76,9 +80,20 @@ export function VisualBaselinesScreen() {
     });
   }, [baselines, breakpointFilter, searchQuery]);
 
+  /** Choosing an item: on a phone the inspector sits below the list, so bring it into view and focus it. */
+  const select = (item: VisualBaselineItem) => {
+    setActiveItem(item);
+    if (window.matchMedia?.('(max-width: 1023px)').matches) {
+      window.requestAnimationFrame(() => {
+        inspectorRef.current?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
+        inspectorRef.current?.focus({ preventScroll: true });
+      });
+    }
+  };
+
   const handleAccept = async (item: VisualBaselineItem) => {
     if (!item.currentUrl) {
-      setActionMessage({ tone: 'warn', text: 'No current run screenshot available to accept as baseline.' });
+      setActionMessage({ tone: 'warn', text: 'This check-up has no new screenshot to keep as the baseline.' });
       return;
     }
     setProcessingId(item.id);
@@ -86,376 +101,351 @@ export function VisualBaselinesScreen() {
       await acceptVisualBaseline(item.id, item.currentUrl);
       setActionMessage({
         tone: 'pass',
-        text: `Baseline updated for ${baselineName(item.testCaseId)} (${item.breakpoint}).`,
+        text: `New baseline kept for ${baselineName(item.testCaseId)} (${item.breakpoint}).`,
       });
       await loadBaselines();
     } catch (err) {
-      setActionMessage({ tone: 'fail', text: err instanceof RunnerError ? err.message : 'Failed to update baseline.' });
+      setActionMessage({
+        tone: 'fail',
+        text: err instanceof RunnerError ? err.message : 'The baseline couldn’t be updated. Try again.',
+      });
     } finally {
       setProcessingId(null);
     }
   };
 
   const handleDelete = async (item: VisualBaselineItem) => {
-    if (!window.confirm(`Delete baseline snapshot for ${baselineName(item.testCaseId)} (${item.breakpoint})?`)) return;
+    const ok = await confirm({
+      title: 'Delete this baseline?',
+      body: (
+        <p>
+          The saved screenshot of {baselineName(item.testCaseId)} at {item.breakpoint} is deleted. The next check-up
+          saves a new one. This can’t be undone.
+        </p>
+      ),
+      confirmLabel: 'Delete the baseline',
+      danger: true,
+    });
+    if (!ok) return;
     setProcessingId(item.id);
     try {
       await deleteVisualBaseline(item.id);
       setActionMessage({
         tone: 'pass',
-        text: `Baseline ${baselineName(item.testCaseId)} (${item.breakpoint}) deleted.`,
+        text: `Baseline for ${baselineName(item.testCaseId)} (${item.breakpoint}) deleted.`,
       });
       if (activeItem?.id === item.id) setActiveItem(null);
       await loadBaselines();
     } catch (err) {
-      setActionMessage({ tone: 'fail', text: err instanceof RunnerError ? err.message : 'Failed to delete baseline.' });
+      setActionMessage({
+        tone: 'fail',
+        text: err instanceof RunnerError ? err.message : 'The baseline couldn’t be deleted. Try again.',
+      });
     } finally {
       setProcessingId(null);
     }
   };
 
+  const viewButton = (mode: ViewMode, label: string) => (
+    <button type="button" aria-pressed={viewMode === mode} onClick={() => setViewMode(mode)}>
+      {label}
+    </button>
+  );
+
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6 sm:py-10">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <FocusHeading className="text-3xl font-bold tracking-tight">Visual Regression Baselines</FocusHeading>
-          <p className="mt-1 text-ink-soft">
-            Review reference snapshots, compare current run screenshots, and accept or reject visual changes.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => void loadBaselines()}
-            className="btn-quiet rounded-control px-3 py-1.5 text-sm"
-            disabled={loading}
-          >
+    <Page width="workspace">
+      {dialog}
+      <PageHeader
+        title="Visual baselines"
+        lede="Saved screenshots that each check-up is compared with. See what changed, then keep the new screenshot as the baseline, or leave it."
+        actions={
+          <button type="button" onClick={() => void loadBaselines()} className="btn-quiet btn-sm" disabled={loading}>
             {loading ? 'Refreshing…' : 'Refresh'}
           </button>
-        </div>
-      </header>
+        }
+      />
 
-      {actionMessage && (
-        <Notice
-          tone={actionMessage.tone}
-          title={actionMessage.text}
-          actions={
-            <button
-              type="button"
-              onClick={() => setActionMessage(null)}
-              className="btn-quiet px-2 py-0.5 text-xs font-bold"
-            >
-              Dismiss
-            </button>
-          }
-        />
-      )}
-
-      {error && (
-        <div className="flex flex-wrap items-center gap-3">
-          <ErrorMessage>{error}</ErrorMessage>
-          <button type="button" className="btn-quiet" onClick={() => void loadBaselines()} disabled={loading}>
-            Retry
-          </button>
-        </div>
-      )}
-
-      {/* Filter and Search Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-panel border border-rule bg-surface p-3 shadow-level-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-ink-soft">Breakpoint:</span>
-          {(['all', '375px', '768px', '1440px'] as BreakpointFilter[]).map((bp) => (
-            <button
-              key={bp}
-              type="button"
-              onClick={() => setBreakpointFilter(bp)}
-              className={`rounded-control px-3 py-1 text-xs font-bold transition-colors ${
-                breakpointFilter === bp
-                  ? 'bg-stamp text-surface shadow-level-1'
-                  : 'bg-panel text-ink-soft hover:text-ink'
-              }`}
-            >
-              {bp === 'all' ? 'All Sizes' : bp}
-            </button>
-          ))}
-        </div>
-
-        <div className="w-full sm:w-72">
-          <input
-            type="search"
-            placeholder="Search test case or file…"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-control border border-edge/80 bg-panel px-3 py-1.5 text-sm text-ink placeholder:text-ink-soft focus:border-stamp focus:outline-none"
+      <div className="space-y-6">
+        {actionMessage && (
+          <Notice
+            tone={actionMessage.tone}
+            title={actionMessage.text}
+            actions={
+              <button type="button" onClick={() => setActionMessage(null)} className="btn-quiet btn-sm">
+                Dismiss
+              </button>
+            }
           />
-        </div>
-      </div>
+        )}
 
-      {loading && !baselines ? (
-        <div className="py-16 text-center text-ink-soft">
-          <Spinner label="Loading visual baselines…" />
-        </div>
-      ) : filteredBaselines.length === 0 ? (
-        <div className="rounded-card border border-edge/60 bg-surface/40 p-12 text-center">
-          <div className="mx-auto mb-3 text-3xl">📸</div>
-          <h2 className="text-lg font-bold text-ink">No visual baselines found</h2>
-          <p className="mx-auto mt-1 max-w-md text-sm text-ink-soft">
-            {baselines && baselines.length > 0
-              ? 'No baselines match the current breakpoint or search filter.'
-              : 'Baselines are saved by a check-up that includes visual checks. Run a check-up, and its screenshots are kept here to compare with the next one.'}
-          </p>
-          {!(baselines && baselines.length > 0) && (
-            <Link to={PATHS.new} className="btn-primary mt-4 inline-flex">
-              Start a check-up
-            </Link>
-          )}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-          {/* List / Cards */}
-          <div className="space-y-3 lg:col-span-5">
-            <div className="text-xs font-bold uppercase tracking-wider text-ink-soft">
-              Baselines ({filteredBaselines.length})
-            </div>
-            <div className="space-y-2.5 max-h-[46rem] overflow-y-auto pr-1">
-              {filteredBaselines.map((item) => {
-                const isSelected = activeItem?.id === item.id;
-                const hasDiff = item.hasRegression || (item.diffPercent !== undefined && item.diffPercent > 0);
-                return (
-                  <div
-                    key={item.id}
-                    onClick={() => setActiveItem(item)}
-                    className={`cursor-pointer rounded-card border p-3.5 transition-all ${
-                      isSelected
-                        ? 'border-stamp bg-stamp/5 shadow-level-2 ring-1 ring-stamp'
-                        : 'border-edge/70 bg-surface hover:border-ink-soft/50 shadow-level-1'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-bold text-stamp">{item.breakpoint}</span>
-                          <span className="truncate font-bold text-ink text-sm" title={item.testCaseId}>
-                            {baselineName(item.testCaseId)}
-                          </span>
-                        </div>
-                        <p className="truncate text-xs text-ink-soft mt-0.5" title={item.fileName}>
-                          {item.fileName}
-                        </p>
-                      </div>
-                      <div>
-                        {hasDiff ? (
-                          <span className="inline-flex items-center rounded-full bg-fail/15 px-2 py-0.5 text-xs font-bold text-fail">
-                            {item.diffPercent != null && Number.isFinite(item.diffPercent)
-                              ? `${item.diffPercent.toFixed(1)}% diff`
-                              : 'Changed'}
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center rounded-full bg-pass/15 px-2 py-0.5 text-xs font-bold text-pass">
-                            Matches
-                          </span>
-                        )}
-                      </div>
-                    </div>
+        {error && (
+          <LoadError title="Visual baselines" onRetry={() => void loadBaselines()}>
+            {error}
+          </LoadError>
+        )}
 
-                    <div className="mt-2.5 flex items-center justify-between text-xs text-ink-soft border-t border-rule/50 pt-2">
-                      <span>{(Number(item.fileSizeBytes || 0) / 1024).toFixed(0)} KB</span>
-                      <span>{formatWhen(item.updatedAt)}</span>
-                    </div>
-                  </div>
-                );
-              })}
+        <div className="flex flex-wrap items-end justify-between gap-4 border-b border-rule pb-4">
+          <div role="group" aria-label="Screen size" className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-semibold text-ink-soft">Screen size</span>
+            <div className="segmented [&>button]:min-h-[44px]">
+              {(['all', '375px', '768px', '1440px'] as BreakpointFilter[]).map((bp) => (
+                <button
+                  key={bp}
+                  type="button"
+                  aria-pressed={breakpointFilter === bp}
+                  onClick={() => setBreakpointFilter(bp)}
+                >
+                  {bp === 'all' ? 'All sizes' : bp}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Inspector Panel */}
-          <div className="lg:col-span-7">
-            {activeItem ? (
-              <div className="rounded-card border border-edge bg-surface shadow-level-2 p-5 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-rule pb-3">
-                  <div>
-                    <h3 className="text-lg font-bold text-ink flex items-center gap-2">
-                      <span title={activeItem.testCaseId}>{baselineName(activeItem.testCaseId)}</span>
-                      <span className="rounded bg-panel px-2 py-0.5 font-mono text-xs text-stamp border border-edge">
-                        {activeItem.breakpoint}
-                      </span>
-                    </h3>
-                    <p className="text-xs text-ink-soft">
-                      Updated {formatWhen(activeItem.updatedAt)} ·{' '}
-                      {(Number(activeItem.fileSizeBytes || 0) / 1024).toFixed(1)} KB
-                    </p>
-                  </div>
+          <div className="w-full sm:w-72">
+            <label htmlFor="baseline-search" className="label">
+              Search by name or file
+            </label>
+            <input
+              id="baseline-search"
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="field"
+            />
+          </div>
+        </div>
 
-                  <div className="flex items-center gap-2">
-                    {activeItem.currentUrl && (
+        {loading && !baselines ? (
+          <div className="py-16 text-center text-ink-soft">
+            <Spinner label="Loading visual baselines…" />
+          </div>
+        ) : filteredBaselines.length === 0 ? (
+          <EmptyState
+            title="No visual baselines found"
+            action={
+              !(baselines && baselines.length > 0) ? (
+                <Link to={PATHS.new} className="btn-primary">
+                  Start a check-up
+                </Link>
+              ) : undefined
+            }
+          >
+            {baselines && baselines.length > 0
+              ? 'No baselines match the screen size or search. Change them to see more.'
+              : 'Baselines are saved by a check-up that includes visual checks. Run a check-up, and its screenshots are kept here to compare with the next one.'}
+          </EmptyState>
+        ) : (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+            <div className="space-y-3 lg:col-span-5">
+              <h2 className="text-xl font-bold">Baselines ({filteredBaselines.length})</h2>
+              <ul className="max-h-[46rem] space-y-2.5 overflow-y-auto pr-1">
+                {filteredBaselines.map((item) => {
+                  const isSelected = activeItem?.id === item.id;
+                  const hasDiff = item.hasRegression || (item.diffPercent !== undefined && item.diffPercent > 0);
+                  const hasPercent = item.diffPercent != null && Number.isFinite(item.diffPercent);
+                  return (
+                    <li key={item.id}>
                       <button
                         type="button"
-                        onClick={() => void handleAccept(activeItem)}
-                        disabled={processingId === activeItem.id}
-                        className="btn-primary rounded-control px-3 py-1.5 text-xs font-bold shadow-level-1"
-                      >
-                        {processingId === activeItem.id ? 'Accepting…' : '✓ Accept as Baseline'}
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => void handleDelete(activeItem)}
-                      disabled={processingId === activeItem.id}
-                      className="btn-quiet rounded-control border border-fail/40 px-3 py-1.5 text-xs font-bold text-fail hover:bg-fail/10"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-
-                {/* View Mode Controls */}
-                <div className="flex items-center justify-between gap-2 text-xs">
-                  <div className="flex items-center gap-1 rounded-control border border-edge/60 bg-panel p-0.5">
-                    <button
-                      type="button"
-                      onClick={() => setViewMode('split')}
-                      className={`rounded px-2.5 py-1 font-bold ${
-                        viewMode === 'split' ? 'bg-stamp text-surface shadow-level-1' : 'text-ink-soft hover:text-ink'
-                      }`}
-                    >
-                      Side by Side
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setViewMode('overlay')}
-                      className={`rounded px-2.5 py-1 font-bold ${
-                        viewMode === 'overlay' ? 'bg-stamp text-surface shadow-level-1' : 'text-ink-soft hover:text-ink'
-                      }`}
-                    >
-                      Slider Overlay
-                    </button>
-                    {activeItem.diffUrl && (
-                      <button
-                        type="button"
-                        onClick={() => setViewMode('diff-only')}
-                        className={`rounded px-2.5 py-1 font-bold ${
-                          viewMode === 'diff-only'
-                            ? 'bg-stamp text-surface shadow-level-1'
-                            : 'text-ink-soft hover:text-ink'
+                        aria-pressed={isSelected}
+                        onClick={() => select(item)}
+                        className={`block min-h-[44px] w-full rounded-card border p-3.5 text-left transition-colors duration-fast ${
+                          isSelected
+                            ? 'border-stamp bg-stamp-tint ring-1 ring-stamp'
+                            : 'border-edge bg-surface hover:border-ink-soft'
                         }`}
                       >
-                        Diff Map
+                        <span className="flex items-start justify-between gap-2">
+                          <span className="block min-w-0">
+                            <span className="flex items-center gap-2">
+                              <span className="font-mono text-xs font-bold text-stamp">{item.breakpoint}</span>
+                              <span className="truncate text-sm font-bold text-ink" title={item.testCaseId}>
+                                {baselineName(item.testCaseId)}
+                              </span>
+                            </span>
+                            <span className="mt-0.5 block truncate text-xs text-ink-soft" title={item.fileName}>
+                              {item.fileName}
+                            </span>
+                          </span>
+                          <span className="shrink-0">
+                            {hasDiff ? <Badge tone="fail">Changed</Badge> : <Badge tone="pass">Matches</Badge>}
+                          </span>
+                        </span>
+                        {hasDiff && hasPercent && (
+                          <span className="mt-1 block text-xs text-ink-soft">
+                            {item.diffPercent!.toFixed(1)}% of the screen changed
+                          </span>
+                        )}
+                        <span className="mt-2.5 flex items-center justify-between border-t border-rule pt-2 text-xs text-ink-soft">
+                          <span>{(Number(item.fileSizeBytes || 0) / 1024).toFixed(0)} KB</span>
+                          <span>{formatWhen(item.updatedAt)}</span>
+                        </span>
                       </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+
+            <div
+              ref={inspectorRef}
+              tabIndex={-1}
+              role="region"
+              className="rounded-card lg:col-span-7"
+              aria-label="Selected baseline"
+            >
+              {activeItem ? (
+                <div className="space-y-4 rounded-card border border-rule bg-surface p-5">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-rule pb-3">
+                    <div>
+                      <h3 className="flex items-center gap-2 text-lg font-bold text-ink">
+                        <span title={activeItem.testCaseId}>{baselineName(activeItem.testCaseId)}</span>
+                        <span className="rounded-control border border-edge bg-panel px-2 py-0.5 font-mono text-xs text-stamp">
+                          {activeItem.breakpoint}
+                        </span>
+                      </h3>
+                      <p className="text-xs text-ink-soft">
+                        Updated {formatWhen(activeItem.updatedAt)} ·{' '}
+                        {(Number(activeItem.fileSizeBytes || 0) / 1024).toFixed(1)} KB
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      {activeItem.currentUrl && (
+                        <button
+                          type="button"
+                          onClick={() => void handleAccept(activeItem)}
+                          disabled={processingId === activeItem.id}
+                          className="btn-primary btn-sm"
+                        >
+                          {processingId === activeItem.id ? 'Saving…' : 'Keep the new screenshot as the baseline'}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => void handleDelete(activeItem)}
+                        disabled={processingId === activeItem.id}
+                        className="btn-quiet btn-sm border-fail text-fail hover:border-fail hover:bg-fail-tint"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                    <div className="segmented [&>button]:min-h-[44px]" role="group" aria-label="How to compare">
+                      {viewButton('split', 'Side by side')}
+                      {viewButton('overlay', 'Slider')}
+                      {activeItem.diffUrl && viewButton('diff-only', 'What changed')}
+                    </div>
+
+                    {activeItem.diffPercent != null && Number.isFinite(activeItem.diffPercent) && (
+                      <span className="font-bold text-fail">
+                        {activeItem.diffPercent.toFixed(1)}% of the screen changed
+                      </span>
                     )}
                   </div>
 
-                  {activeItem.diffPercent != null && Number.isFinite(activeItem.diffPercent) && (
-                    <div className="text-right">
-                      <span className="font-bold text-fail">{activeItem.diffPercent.toFixed(2)}% difference</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Visual View Display */}
-                <div className="overflow-hidden rounded-control border border-edge bg-canvas/40 p-2">
-                  {viewMode === 'split' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <div className="mb-1 text-center font-mono text-xs font-bold text-ink-soft">
-                          Baseline Snapshot
+                  <div className="overflow-hidden rounded-control border border-edge bg-canvas p-2">
+                    {viewMode === 'split' && (
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div>
+                          <div className="mb-1 text-center text-xs font-bold text-ink-soft">Baseline</div>
+                          <div className="flex max-h-[30rem] items-center justify-center overflow-auto rounded-control border border-rule bg-panel p-2">
+                            <img
+                              src={activeItem.previewUrl}
+                              alt={`Baseline for ${baselineName(activeItem.testCaseId)}`}
+                              className="max-h-[28rem] rounded-control object-contain"
+                            />
+                          </div>
                         </div>
-                        <div className="overflow-auto max-h-[30rem] rounded border border-rule bg-panel flex items-center justify-center p-2">
+
+                        <div>
+                          <div className="mb-1 text-center text-xs font-bold text-ink-soft">This check-up</div>
+                          <div className="flex max-h-[30rem] items-center justify-center overflow-auto rounded-control border border-rule bg-panel p-2">
+                            {activeItem.currentUrl ? (
+                              <img
+                                src={activeItem.currentUrl}
+                                alt={`This check-up, ${baselineName(activeItem.testCaseId)}`}
+                                className="max-h-[28rem] rounded-control object-contain"
+                              />
+                            ) : (
+                              <div className="p-8 text-center text-xs text-ink-soft">
+                                No screenshot from a check-up is attached.
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {viewMode === 'overlay' && (
+                      <div className="space-y-3">
+                        <div className="relative mx-auto flex max-h-[32rem] select-none items-center justify-center overflow-hidden rounded-control border border-rule bg-panel">
                           <img
                             src={activeItem.previewUrl}
-                            alt={`Baseline for ${baselineName(activeItem.testCaseId)}`}
-                            className="max-h-[28rem] object-contain rounded"
+                            alt="Baseline"
+                            className="block max-h-[30rem] object-contain"
+                          />
+                          {activeItem.currentUrl && (
+                            <div
+                              className="absolute inset-0 overflow-hidden"
+                              style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
+                            >
+                              <img
+                                src={activeItem.currentUrl}
+                                alt="This check-up"
+                                className="block h-full max-h-[30rem] w-full object-contain"
+                              />
+                            </div>
+                          )}
+                          <div
+                            className="pointer-events-none absolute bottom-0 top-0 w-0.5 bg-stamp shadow-level-2"
+                            style={{ left: `${sliderPosition}%` }}
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-3 px-2">
+                          <span className="text-xs text-ink-soft">Baseline</span>
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={sliderPosition}
+                            onChange={(e) => setSliderPosition(Number(e.target.value))}
+                            aria-label="How much of this check-up to show over the baseline"
+                            className="min-h-[44px] flex-1 accent-stamp"
+                          />
+                          <span className="text-xs text-ink-soft">This check-up</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {viewMode === 'diff-only' && activeItem.diffUrl && (
+                      <div>
+                        <div className="mb-1 text-center text-xs font-bold text-fail">What changed, highlighted</div>
+                        <div className="flex max-h-[32rem] items-center justify-center overflow-auto rounded-control border border-rule bg-panel p-2">
+                          <img
+                            src={activeItem.diffUrl}
+                            alt={`What changed in ${baselineName(activeItem.testCaseId)}`}
+                            className="max-h-[30rem] rounded-control object-contain"
                           />
                         </div>
                       </div>
-
-                      <div>
-                        <div className="mb-1 text-center font-mono text-xs font-bold text-ink-soft">
-                          Current Run Screenshot
-                        </div>
-                        <div className="overflow-auto max-h-[30rem] rounded border border-rule bg-panel flex items-center justify-center p-2">
-                          {activeItem.currentUrl ? (
-                            <img
-                              src={activeItem.currentUrl}
-                              alt={`Current run for ${baselineName(activeItem.testCaseId)}`}
-                              className="max-h-[28rem] object-contain rounded"
-                            />
-                          ) : (
-                            <div className="p-8 text-center text-xs text-ink-soft">
-                              No current run screenshot attached.
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {viewMode === 'overlay' && (
-                    <div className="space-y-3">
-                      <div className="relative mx-auto max-h-[32rem] overflow-hidden rounded border border-rule bg-panel flex items-center justify-center select-none">
-                        {/* Baseline background */}
-                        <img
-                          src={activeItem.previewUrl}
-                          alt="Baseline"
-                          className="max-h-[30rem] object-contain block"
-                        />
-                        {/* Current screenshot clipped */}
-                        {activeItem.currentUrl && (
-                          <div
-                            className="absolute inset-0 overflow-hidden"
-                            style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
-                          >
-                            <img
-                              src={activeItem.currentUrl}
-                              alt="Current run"
-                              className="max-h-[30rem] object-contain block h-full w-full"
-                            />
-                          </div>
-                        )}
-                        <div
-                          className="absolute top-0 bottom-0 w-0.5 bg-stamp pointer-events-none shadow-level-2"
-                          style={{ left: `${sliderPosition}%` }}
-                        />
-                      </div>
-
-                      <div className="flex items-center gap-3 px-2">
-                        <span className="font-mono text-xs text-ink-soft">Baseline</span>
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
-                          value={sliderPosition}
-                          onChange={(e) => setSliderPosition(Number(e.target.value))}
-                          className="flex-1 accent-[#6C9BF2]"
-                        />
-                        <span className="font-mono text-xs text-ink-soft">Current</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {viewMode === 'diff-only' && activeItem.diffUrl && (
-                    <div>
-                      <div className="mb-1 text-center font-mono text-xs font-bold text-fail">
-                        Pixel Difference Mask (Highlighting Visual Changes)
-                      </div>
-                      <div className="overflow-auto max-h-[32rem] rounded border border-rule bg-panel flex items-center justify-center p-2">
-                        <img
-                          src={activeItem.diffUrl}
-                          alt={`Diff mask for ${baselineName(activeItem.testCaseId)}`}
-                          className="max-h-[30rem] object-contain rounded"
-                        />
-                      </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="rounded-card border border-edge/60 bg-surface/30 p-12 text-center text-ink-soft">
-                <p>Select a baseline from the list to inspect pixel comparisons and approve changes.</p>
-              </div>
-            )}
+              ) : (
+                <div className="rounded-card border border-dashed border-edge bg-surface p-12 text-center text-ink-soft">
+                  <p>
+                    Choose a baseline from the list to see what changed and decide whether to keep the new screenshot.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </Page>
   );
 }

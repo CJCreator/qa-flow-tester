@@ -11,6 +11,7 @@ import os from 'os';
 import path from 'path';
 import { AUDIT_API, AUDIT_ID_PATTERN, type AuditProgressEvent, type AuditRequest, type AuditResult } from '@qa/types';
 import {
+  AuditCrawlBlockedError,
   AuditPipelineError,
   AuditStore,
   LocalAuditStoreBackend,
@@ -290,6 +291,18 @@ describe('POST /api/audits', () => {
     await expect(fs.stat(workDirs[0])).rejects.toThrow();
   });
 
+  it("passes a local runner's permission for private addresses to the crawl, and nothing by default (ADR 0042)", async () => {
+    const local = await serve(createAuditCrawlRoutes(deps({ allowPrivateAddresses: true })));
+    const first = await post(local, VALID);
+    await waitFor(runEnded(first.json.auditId));
+    expect(crawlCalls[0].opts.allowPrivateAddresses).toBe(true);
+
+    const hosted = await serve(createAuditCrawlRoutes(deps()));
+    const second = await post(hosted, VALID);
+    await waitFor(runEnded(second.json.auditId));
+    expect(crawlCalls[1].opts.allowPrivateAddresses).toBeUndefined();
+  });
+
   it.each([
     ['does not resolve', 'The site name could not be found. Check the address for typos.'],
     ['does not answer', 'The site did not answer in time.'],
@@ -475,6 +488,29 @@ describe('run outcomes', () => {
     expect(v?.error).toBe(AUDIT_CRAWL_FAILED);
     expect(slot.kind).toBeNull();
     await expect(fs.stat(workDirs[0])).rejects.toThrow();
+  });
+
+  it('a start page that is a tunnel warning fails the version with its own sentence, which the wizard shows as-is', async () => {
+    crawlImpl = async () => {
+      throw new AuditCrawlBlockedError('tunnel-warning');
+    };
+    const base = await serve(createAuditCrawlRoutes(deps()));
+    const { json } = await post(base, VALID);
+    await waitFor(runEnded(json.auditId));
+
+    const expected = new AuditCrawlBlockedError('tunnel-warning').message;
+    expect(runs.get(json.auditId)!.lastEvent).toEqual({
+      type: 'failed',
+      auditId: json.auditId,
+      version: 1,
+      error: expected,
+      // No wizard sentence for this code, so the wizard shows `error` (audit-start-api.ts auditErrorText).
+      code: 'ERR_INVALID_REQUEST',
+    });
+    const v = await store.getVersion(json.auditId, 1);
+    expect(v?.status).toBe('failed');
+    expect(v?.error).toBe(expected);
+    expect(slot.kind).toBeNull();
   });
 
   it("a 'save-failed' pipeline error marks the version failed", async () => {
