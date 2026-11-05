@@ -234,13 +234,16 @@ describe('browser-timing: page-recorder integration', () => {
           raw: { url: 'https://example.com/' } as any,
           content: { title: 'Home', language: { htmlLang: 'en' }, sections: [] } as any,
         })),
-        accessibilityBasics: vi.fn(async () => null),
-        recordPhoneLayout: vi.fn(async () => null),
+        accessibilityBasics: vi.fn(async () => ({ basics: null, findings: [] })),
+        recordPhoneLayout: vi.fn(async () => ({
+          phone: { widthPx: 390, screenshotPath: null, overflow: null, findingIds: [] },
+          findings: [],
+        })),
         measureBrowserTiming: mockMeasureTiming,
       },
     });
 
-    const page1: AuditCrawlPage = { urlPath: '/', title: 'Home', depth: 0 };
+    const page1: AuditCrawlPage = { urlPath: '/', title: 'Home', depth: 0, links: [] };
     await recorder.onRenderedPage({ url: () => 'https://example.com/' } as unknown as Page, page1);
 
     expect(mockMeasureTiming).toHaveBeenCalledTimes(1);
@@ -262,8 +265,11 @@ describe('browser-timing: page-recorder integration', () => {
           raw: { url: 'https://example.com/p' } as any,
           content: { title: 'P', language: { htmlLang: 'en' }, sections: [] } as any,
         })),
-        accessibilityBasics: vi.fn(async () => null),
-        recordPhoneLayout: vi.fn(async () => null),
+        accessibilityBasics: vi.fn(async () => ({ basics: null, findings: [] })),
+        recordPhoneLayout: vi.fn(async () => ({
+          phone: { widthPx: 390, screenshotPath: null, overflow: null, findingIds: [] },
+          findings: [],
+        })),
         measureBrowserTiming: mockMeasureTiming,
       },
     });
@@ -275,6 +281,7 @@ describe('browser-timing: page-recorder integration', () => {
         title: `Item ${i}`,
         depth: 1,
         layoutGroup: 'items-:id',
+        links: [],
       });
     }
 
@@ -296,9 +303,15 @@ describe('browser-timing: page-recorder integration', () => {
     const recorder = createPageRecorder({
       workDir: 'tmp/test-recorder',
       stages: {
-        readPage: vi.fn(async () => null),
-        accessibilityBasics: vi.fn(async () => null),
-        recordPhoneLayout: vi.fn(async () => null),
+        readPage: vi.fn(async () => ({
+          raw: { url: 'https://example.com/' } as any,
+          content: { title: 'Home', language: { htmlLang: 'en' }, sections: [] } as any,
+        })),
+        accessibilityBasics: vi.fn(async () => ({ basics: null, findings: [] })),
+        recordPhoneLayout: vi.fn(async () => ({
+          phone: { widthPx: 390, screenshotPath: null, overflow: null, findingIds: [] },
+          findings: [],
+        })),
         measureBrowserTiming: failingMeasureTiming,
       },
     });
@@ -308,6 +321,7 @@ describe('browser-timing: page-recorder integration', () => {
         urlPath: '/',
         title: 'Home',
         depth: 0,
+        links: [],
       })
     ).resolves.not.toThrow();
 

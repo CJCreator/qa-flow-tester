@@ -104,7 +104,9 @@ describe('preflightAuditAi (ADR 0042, T-81)', () => {
 
     const status = await preflightAuditAi({
       setup: { provider: 'mock' },
-      keys: { resolveKey: async () => ({ provider: 'mock' as AIProviderType, apiKey: TEST_KEY }) },
+      keys: {
+        resolveKey: async () => ({ provider: 'mock' as AIProviderType, apiKey: TEST_KEY, source: 'cli' as const }),
+      },
       createProvider,
     });
 
