@@ -183,11 +183,17 @@ _Avoid_: Login page, auth wall, bounce
 **Skipped Page**:
 A page the crawl found but did not record, with one reason: `page-limit`, `depth-limit`, `excluded`, `payment`, `did-not-load`, `robots`, `sign-in`, `http-error`, `timeout`, `off-site-redirect`, `time-limit`, `trap-limit`, `session-lost` or `duplicate`. The Plan lists them under what was not reached, and a Website Audit flags them in its output; a Skipped Page is never a failure, and it is never a clean result either: it was not checked. The crawl-limit and payment reasons mean:
 
-- `depth-limit`: the page is more link steps from the start address than the max depth allows (8 unless the person sets another number).
+- `depth-limit`: the page is more link steps from the start address than the max depth allows (8 for a Check-up and 5 for a Website Audit, unless the person sets another number).
 - `excluded`: the path starts with an exclude path, or, when include paths are set, starts with none of them. The start page is never excluded.
 - `payment`: the page is a payment area (a card-number field, a payment-provider frame or a checkout path). Nothing on it is clicked or sent, and its links are not followed.
 
-_Avoid_: Ignored page, missing page
+In a Website Audit, a page is retried once before it becomes a Skipped Page with reason `http-error`, `timeout` or `did-not-load`. When the site caused it, it is also a finding in the Findings Audit Document (ADR 0042).
+
+_Avoid_: Ignored page, missing page, failed page
+
+**Interstitial Page**:
+A page that stands between the tool and the site: a tunnel's warning page (devtunnels, ngrok), a bot challenge ("checking your browser") or an empty body. A Website Audit never records an Interstitial Page as the site: it retries with skip headers in a real browser, and if the page is still in the way, the Website Audit fails with "This site blocks automated visitors" (ADR 0042).
+_Avoid_: Splash page, captcha page, blocker
 
 **Route Telemetry**:
 One row per route the crawl attempted: the path asked for (redacted), the HTTP status, where it landed, the outcome (`recorded` or `skipped`), the skip reason when skipped, how many attempts, how long it took, and which Role or visitor it was. Route Telemetry is the crawl's own account of itself, so the page count and the Plan's map can be checked against it.
@@ -318,7 +324,7 @@ Per WCAG criterion, one of "violated", "no violation found by automation", "need
 _Avoid_: Accessibility score, compliance percentage
 
 **Website Audit**:
-One pass of the tool over a public website, usually one the tool user does not own, to find what could be repaired or redesigned, often to offer that work to its owner. It starts from its own screen beside the Check-up and reuses the same engine: a read-only crawl within the tool user's limits, Page Content from every crawled page, checks and AI notes on Sample Pages, and the Audit Documents, which the tool user edits before export. It has no Plan, no Plan Review and no release verdict. It never signs in, fills in or sends a form, and it refuses private and local addresses. Each re-run is a new version; everything is kept until the tool user deletes the Website Audit. See ADR 0033.
+One pass of the tool over a public website, usually one the tool user does not own, to find what could be repaired or redesigned, often to offer that work to its owner. It starts from its own screen beside the Check-up and reuses the same engine: a read-only crawl within the tool user's limits, Page Content from every crawled page, checks and AI notes on every recorded page, and the Audit Documents, written when the audit finishes, which the tool user edits before export. It has no Plan, no Plan Review and no release verdict. It never signs in, fills in or sends a form. The hosted copy refuses private and local addresses; a local runner accepts them. Each re-run is a new version; everything is kept until the tool user deletes the Website Audit. See ADR 0033, 0041 and 0042.
 _Avoid_: Check-up (that is for a team's own App), scan, run, site review, teardown, project
 
 **Page Content**:
