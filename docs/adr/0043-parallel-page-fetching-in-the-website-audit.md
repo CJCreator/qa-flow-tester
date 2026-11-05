@@ -26,3 +26,16 @@ A Website Audit fetches pages one at a time per host with at least 500 ms betwee
 - `HostPacer` gains concurrency logic shared with the Check-up's code path. Its default of 1 and a unit test keep the Check-up's behaviour fixed.
 - Memory: 3 open pages in one Chromium fit the hosted 2 GiB instance. The run slot still allows one run at a time on a runner.
 - Built by T-80 (crawl and pacer) and T-81/T-84 (AI pool and pipeline), in [WEBSITE-AUDIT-RELIABILITY-PLAN.md](../tickets/WEBSITE-AUDIT-RELIABILITY-PLAN.md).
+
+## In review (#59, `feat/audit-parallel-crawl`)
+Not merged. Parts of T-80 and T-81 are built on that branch.
+- `HostPacer` takes `maxInFlight` (the Website Audit passes 3; the default stays 1). Starts stay spaced by the 500 ms gap. A robots Crawl-delay keeps the host at 1.
+- `slowDown(host, retryAfterMs)` answers a 429 or 503. `Retry-After` is capped at 60 s. A repeat doubles the gap, up to 10 s.
+- `retryBusyHost` retries the page once after a 429 or 503. Audit only.
+- AI page assessments run 4 at a time.
+
+Measured:
+- htmx.org, 15 pages: crawl 39.5 s before, 19.9 s after.
+- The owner's app via dev tunnel, 50-page limit: 824 s with 19 of 24 pages before; 83 s with 24 of 24 after. The dev server was warm on the second run.
+
+Not built yet: the outage handling (A13) and the 5 s wait before a network-error retry.

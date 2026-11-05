@@ -29,6 +29,12 @@ A diagnosis on 2026-11-05 (local runner, `example.com`, `htmx.org` and the owner
   - On a local run, `safeGet` tries a name's other addresses when one refuses. Vite dev servers often listen on `::1` only while the resolver prefers `127.0.0.1`. A public name keeps one pinned address.
 - **Audit-only time limits.** One page load may take 30 s (its retry 45 s), the whole crawl 60 min, and the start address check 30 s. The Check-up keeps 10 s and 10 min. `QA_CRAWL_MAX_MINUTES` still overrides the crawl limit. A dev server behind a tunnel took 10 to 25 s per page, so the old limits skipped half a site and refused the start with a 422.
 - **AI notes on every recorded page** (amends 0033). Notes run 4 at a time. Before the crawl starts, a pre-flight call checks the key and shows the result as "AI: ready", "AI: key expired" or "AI: no key".
+- **AI keys that cannot be used** (added 2026-11-05, after every AI step failed with a Gemini key and Google sign-in both on the computer):
+  - **Gemini model from the key.** Saving a Gemini key lists the models that key can use, tries them, and keeps the first that answers, free-tier Flash models first. Settings offers "Choose automatically (recommended)" and the key's own list. A key that no model answers is refused with the reason, and is not saved. A `-latest` alias is never sent to Vertex AI, which does not know it.
+  - **Gemini falls back to Google sign-in.** When the AI Studio key is refused (401, 402, 403, 429, or an invalid key) and the computer has Application Default Credentials, the same request goes to Vertex AI. If both fail, the error names both.
+  - **The audit falls back to Google sign-in, on a local runner only.** With no saved key, or a saved key the provider refuses (401, 402, 403, expired, out of credit), the audit uses Gemini through Google sign-in for the rest of the run. Parallel requests share one switch. A beta copy never uses the host's credentials.
+  - **OpenRouter reasoning.** When the free router picks a model that cannot turn reasoning off, the request is sent once more with low reasoning, left out of the answer.
+  - **One log line per AI failure:** `[Website Audit] AI request failed (provider): <message>`. Keys and tokens are redacted, and the line is capped at 300 characters.
 - **Template text when AI cannot run.** Without a working key, the Proposal, the Pitch Glimpse, the Owner Audit and the AI preview use template text filled from the findings. AI improves the wording when a key works. A failed AI step never leaves an Audit Document empty and never returns a bare 502.
 - **Speed without a PageSpeed key** (amends 0035):
   - When PageSpeed Insights cannot answer (no key, quota, error), the Sample Pages are measured in the audit's own Chromium.
@@ -66,4 +72,9 @@ A diagnosis on 2026-11-05 (local runner, `example.com`, `htmx.org` and the owner
   - private addresses on a local runner (`AuditWiring.localRun` → `allowPrivateAddresses`);
   - the `safeGet` address fallback;
   - `makeRequestGuard(deps, { allowPrivate })`.
+- **In review, #59 (`feat/audit-parallel-crawl`, not merged):**
+  - the "AI keys that cannot be used" decision above, in full;
+  - AI notes 4 at a time;
+  - a local run of htmx.org, 5 pages: 30 of 30 page areas and 6 of 6 site areas done, 5 of 5 recommendations decided by AI, no AI failure logged.
+  - Not built yet: `classifyAiError`, the pre-flight call and the template preview (T-81).
 - **Verified on the owner's app behind devtunnels:** 19 of 24 pages recorded, against 1 before. On a Vite dev server listening on `[::1]` only, through `http://localhost:3002/`: 11 pages, robots.txt read, no false broken links.

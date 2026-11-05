@@ -15,11 +15,11 @@ The Website Audit never crashed. It finished `done` with wrong or empty content 
 |---|---|---|---|---|
 | A1 | A dev-tunnel audit recorded Microsoft's tunnel warning page as the whole site: 1 page, 0 links | the owner's saved audits; `core/src/audit/crawl/interstitial.ts` | blocker | **fixed** in `feaa7f9`: 19 of 24 pages now |
 | A2 | Local and LAN addresses were refused, which pushed the owner to a tunnel | `ERR_PRIVATE_ADDRESS`; `runner/src/server.ts` `AuditWiring.localRun` | blocker | **fixed** in #58: a local runner audits `localhost` |
-| A3 | Every AI step fails and the reason is thrown away. The OpenRouter key answered `401 API key expired`; the UI says "The AI did not answer"; the preview answers 502 | `core/src/audit/ai/assessment.ts:234`, `ai/page-recommendation.ts:257`, `audit/preview/generate.ts:97`; `pipeline.ts:307-322` notes only a missing key | major | open: T-81, T-84 |
+| A3 | Every AI step fails and the reason is thrown away. The OpenRouter key answered `401 API key expired`; the UI says "The AI did not answer"; the preview answers 502 | `core/src/audit/ai/assessment.ts:234`, `ai/page-recommendation.ts:257`, `audit/preview/generate.ts:97`; `pipeline.ts:307-322` notes only a missing key | major | **partly fixed** in #59 (Gemini model picked from the key, Google sign-in fallback, OpenRouter reasoning retry, one log line per failure); open: T-81, T-84 |
 | A4 | Speed is never measured: the keyless PageSpeed Insights quota answers 429 | `core/src/audit/ai/pagespeed.ts` | major | open: T-82 |
 | A5 | Crawl failures share one generic message and are not logged | `runner/src/routes/audit-crawl.ts:318` (`AUDIT_CRAWL_FAILED`); the blocked start page has its own sentence but borrows `ERR_INVALID_REQUEST` | major | **partly fixed**: T-79, T-80, T-85 |
 | A6 | A home page answering 4xx or 5xx, including bot-blocking sites, is refused before a browser tries | `core/src/audit/crawl/reachability.ts:102` | major | open: T-80 |
-| A7 | Fetching is serial (one request per host, 500 ms gap), AI notes run one at a time, and the defaults are 200 pages and depth 8 | `core/src/host-pacer.ts`; `discovery/deterministic-spider.ts:352`; `ai/assessment.ts:84`; `types/src/discovery.ts:26-29` | major | **partly fixed**: audit page limit 30 s, crawl limit 60 min (`feaa7f9`); parallel work in T-79, T-80, T-81 |
+| A7 | Fetching is serial (one request per host, 500 ms gap), AI notes run one at a time, and the defaults are 200 pages and depth 8 | `core/src/host-pacer.ts`; `discovery/deterministic-spider.ts:352`; `ai/assessment.ts:84`; `types/src/discovery.ts:26-29` | major | **partly fixed**: audit page limit 30 s, crawl limit 60 min (`feaa7f9`); 3 pages per host at once and AI notes 4 at a time in #59; the rest in T-79, T-80, T-81 |
 | A8 | The hosted copy closes every audit row, and the redesign also hides Website Audits from its navigation | `.github/workflows/deploy.yml:160` (`RUNNER_BETA=1`); `runner/src/routes/route.ts:181`; `wizard/src/components/AreaNav.tsx:52-55`, `TopBar.tsx:121` | major (hosted) | open: T-86 |
 | A9 | A runner restart leaves a version `running`; the stream then answers 404 and the wizard hangs | `runner/src/session/audit-run.ts:83` (in memory, last 20 runs) | minor | open: T-85 |
 | A10 | Progress shows a stepper and three counts, with no per-page view; the stream replays only the last event | `wizard/src/screens/audit/start/AuditProgress.tsx:40-50, 86-130`; `types/src/website-audit.ts:955` | minor | open: T-79, T-85, T-87 |
@@ -29,7 +29,7 @@ The Website Audit never crashed. It finished `done` with wrong or empty content 
 | A14 | A runner bound to an IPv6 address (`RUNNER_HOST=::1`) answers every request with 500 `Invalid URL` | `runner/src/server.ts:1035` builds `http://${host}:${port}` without brackets | minor | open: T-90 |
 
 **Owner actions, outside the code:**
-- Renew the OpenRouter key in Audit settings (A3).
+- Give the audit a working AI key (A3): an OpenRouter key; a Gemini key saved with "Choose automatically"; or, on a local runner, `adc` for Google sign-in (#59).
 - Optionally, add a free PageSpeed Insights key (A4); T-82 removes the need for it.
 - For the fullest results, audit a production build: a dev server behind a tunnel loads the same page in anywhere from 0.65 s to 24 s.
 
@@ -108,6 +108,8 @@ Already on `main`, so not part of this ticket:
 - the 30 s page limit and the 60 min crawl limit;
 - the test seams `deps.launchBrowser` and `deps.browserManager`.
 
+Built in #59 (in review): `HostPacer` `maxInFlight` (the audit passes 3), `slowDown` with `Retry-After`, and the spider's one paced retry after a 429 or 503 (`retryBusyHost`, audit only). Still open: the 4xx home page, typed errors, the 5 s network-error retry, the outage pause, and per-page progress.
+
 **Files:** `packages/core/src/audit/crawl/crawl.ts`, `crawl/reachability.ts`, `crawl/interstitial.ts`, `packages/core/src/host-pacer.ts`, `packages/core/src/discovery/deterministic-spider.ts`, `packages/core/src/navigate.ts`, and their tests under `packages/core/tests/`:
 - `audit-reachability`, `audit-interstitial`;
 - `host-pacer.test.ts`;
@@ -146,6 +148,14 @@ Already on `main`, so not part of this ticket:
 ## T-81: AI notes on every page, in parallel, with the real reason
 
 Findings: A3, A7. Priority P0, size M, wave 2, depends on T-79. ADR 0042.
+
+Built in #59 (in review):
+- the assessment pool of 4 (`AUDIT_AI_IN_FLIGHT`), with page order kept;
+- `logAiFailure`, one redacted log line per failure;
+- `isKeyRefused` and the Google sign-in fallback in `stage-ai.ts` (`hasAdc`, local runner only);
+- the Gemini model picker (`ai/gemini-models.ts`).
+
+Still open: `classifyAiError` and `AuditAiStatus`, the per-page callback, `preflightAuditAi`, and the template preview.
 
 **Files:** `packages/core/src/audit/ai/assessment.ts`, `ai/page-recommendation.ts`, `ai/stage-ai.ts`, `ai/preflight.ts` (new), `ai/index.ts`, `packages/core/src/audit/preview/generate.ts`, `preview/template.ts` (new), and tests under `packages/core/tests/`: `audit-assessment`, `audit-ai-flow`, the preview test, and the new `audit-ai-preflight.test.ts`.
 
