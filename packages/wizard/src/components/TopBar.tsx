@@ -60,6 +60,7 @@ export function TopBar({
   checkupInProgress,
   showDeveloperShortcuts = false,
   beta = false,
+  auditOwner = false,
 }: {
   route: Route;
   checkupInProgress: boolean;
@@ -67,6 +68,8 @@ export function TopBar({
   showDeveloperShortcuts?: boolean;
   /** The shared copy: the owner's Website Audits are hidden. */
   beta?: boolean;
+  /** The caller is an audit owner on the shared copy (ADR 0042 / T-86). */
+  auditOwner?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -118,7 +121,9 @@ export function TopBar({
           <nav aria-label="Main" className="hidden sm:block">
             <ul className="flex items-center gap-1">
               <li>{top(PATHS.new, AREA_TITLES.checkups, area === 'checkups' ? 'true' : undefined, dot)}</li>
-              {!beta && <li>{top(PATHS.audits, AREA_TITLES.audits, area === 'audits' ? 'true' : undefined)}</li>}
+              {(!beta || auditOwner) && (
+                <li>{top(PATHS.audits, AREA_TITLES.audits, area === 'audits' ? 'true' : undefined)}</li>
+              )}
             </ul>
           </nav>
         </div>
@@ -164,6 +169,7 @@ export function TopBar({
             id={menuId}
             route={route}
             beta={beta}
+            auditOwner={auditOwner}
             checkupInProgress={dot}
             onNavigate={() => setMenuOpen(false)}
           />
@@ -178,19 +184,21 @@ export function MobileMenu({
   id,
   route,
   beta = false,
+  auditOwner = false,
   checkupInProgress,
   onNavigate,
 }: {
   id: string;
   route: Route;
   beta?: boolean;
+  auditOwner?: boolean;
   /** Show the in-progress dot on New check-up. */
   checkupInProgress: boolean;
   onNavigate: () => void;
 }) {
   return (
     <nav id={id} aria-label="Main" className="basis-full border-t border-rule pb-3 sm:hidden">
-      {menuGroups(beta).map((group) => {
+      {menuGroups(beta, auditOwner).map((group) => {
         const headingId = `${id}-${group.title.replace(/\W+/g, '-').toLowerCase()}`;
         return (
           <div key={group.title} className="pt-3">

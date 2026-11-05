@@ -93,7 +93,15 @@ function KeyList({ title, keys }: { title: string; keys: Array<[string, string]>
   );
 }
 
-export function CommandPalette({ route, beta = false }: { route: Route; beta?: boolean }) {
+export function CommandPalette({
+  route,
+  beta = false,
+  auditOwner = false,
+}: {
+  route: Route;
+  beta?: boolean;
+  auditOwner?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<'command' | 'shortcuts'>('command');
   const [query, setQuery] = useState('');
@@ -215,7 +223,7 @@ export function CommandPalette({ route, beta = false }: { route: Route; beta?: b
         keywords: ['config', 'ai', 'keys', 'models', 'gates', 'schedules'],
         run: () => navigate(PATHS.settings),
       },
-      ...(beta
+      ...(beta && !auditOwner
         ? []
         : AUDIT_COMMANDS.map((c): CommandAction => ({
             id: c.id,
@@ -343,7 +351,7 @@ export function CommandPalette({ route, beta = false }: { route: Route; beta?: b
     }
 
     return actions;
-  }, [route, beta]);
+  }, [route, beta, auditOwner]);
 
   const filteredActions = useMemo(() => {
     const q = query.trim().toLowerCase();

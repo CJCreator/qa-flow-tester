@@ -44,7 +44,15 @@ import {
   MAX_BODY_CHARS,
   type PlanRouteContext,
 } from './routes/index.js';
-import { allows, createHelperAccess, helperSettingsFromEnv, type HelperAccess } from './helpers/index.js';
+import type { AuditCrawl, AuditAddressCheck } from './routes/audit-crawl.js';
+import {
+  allows,
+  createHelperAccess,
+  helperSettingsFromEnv,
+  parseOwnerEmails,
+  AuditDailyLimiter,
+  type HelperAccess,
+} from './helpers/index.js';
 import type {
   RunSummary,
   SiteMapSummary,
@@ -444,6 +452,14 @@ export interface RunnerServerOptions {
    * SCHEDULER_SERVICE_ACCOUNT, audience = this runner's allowed origins; none when unset, which keeps the tick closed.
    */
   schedulerAuth?: GoogleOidcVerifier;
+  /** Comma-separated list of Google emails or array of emails for owners of the hosted beta copy (T-86). */
+  auditOwnerEmails?: string[] | string;
+  /** Daily cap of audit starts per owner email per UTC day (T-86). */
+  auditDailyLimit?: number;
+  /** Test seam: custom crawl function for audit runs. Default runAuditCrawl. */
+  auditCrawl?: AuditCrawl;
+  /** Test seam: custom address check function for audit start. Default checkAuditAddress. */
+  auditCheckAddress?: AuditAddressCheck;
 }
 
 /**
@@ -468,6 +484,12 @@ export interface AuditWiring {
    * localhost and LAN addresses. False on the hosted copy and on any runner reachable from other machines.
    */
   readonly localRun: boolean;
+  /** Checks and claims an audit start against AUDIT_DAILY_LIMIT (T-86). */
+  claimAuditLimit?: (email?: string) => { allowed: boolean; error?: string };
+  /** Test seam: custom crawl function for audit runs. */
+  readonly crawl?: AuditCrawl;
+  /** Test seam: custom address check function for audit start. */
+  readonly checkAddress?: AuditAddressCheck;
 }
 
 /** Plans saved before Intent carry the old Denial kind; read them as `intent: 'denied'`. */
@@ -617,6 +639,9 @@ export class RunnerServer {
   private helperGrants: RunnerServerOptions['helperGrants'];
   /** The Helper access dispatch uses: given, or this runner's own when Helper sign-in is on. */
   private helperAccess: HelperAccess | undefined;
+  readonly auditOwnerEmails: readonly string[];
+  readonly auditDailyLimit?: number;
+  private auditLimiter: AuditDailyLimiter;
   private readonly wiring: AuditWiring;
 
   public readonly session: CheckupSession;
@@ -848,11 +873,19 @@ export class RunnerServer {
         (auditStore.backend.kind === 'gcs' ? new BackendScheduleStore(auditStore.backend) : this.dataDir)
     );
     this.schedulerAuth = options.schedulerAuth ?? schedulerAuthFromEnv(process.env, () => [...this.allowedOrigins]);
+    this.auditOwnerEmails = parseOwnerEmails(options.auditOwnerEmails ?? process.env.AUDIT_OWNER_EMAILS);
+    const rawDailyLimit =
+      options.auditDailyLimit ??
+      (process.env.AUDIT_DAILY_LIMIT ? parseInt(process.env.AUDIT_DAILY_LIMIT, 10) : undefined);
+    this.auditDailyLimit = rawDailyLimit && rawDailyLimit > 0 ? rawDailyLimit : undefined;
+    this.auditLimiter = new AuditDailyLimiter({ limit: this.auditDailyLimit });
     // Helper sign-in takes this runner's own access key: with none, every local caller is the owner (DEC-004).
     const ownHelperAccess = createHelperAccess({
       ...helperSettingsFromEnv(),
       accessToken: this.accessToken,
       store: auditStore,
+      auditOwnerEmails: this.auditOwnerEmails,
+      auditDailyLimit: this.auditDailyLimit,
     });
     this.helperAccess = options.helperAccess ?? (ownHelperAccess.enabled ? ownHelperAccess : undefined);
     this.helperGrants = options.helperGrants ?? this.helperAccess?.helperGrants;
@@ -865,8 +898,11 @@ export class RunnerServer {
         const { provider, text, vision } = await this.readAiModels();
         return { provider, text, vision };
       },
-      isOwnerRequest: (req) => this.carriesAccessKey(req),
+      isOwnerRequest: (req) => this.isAuditOwner(req),
       localRun: !this.beta && isLoopbackBindHost(this.host),
+      claimAuditLimit: (email) => this.auditLimiter.claim(email),
+      ...(options.auditCrawl ? { crawl: options.auditCrawl } : {}),
+      ...(options.auditCheckAddress ? { checkAddress: options.auditCheckAddress } : {}),
     };
     this.wiring = Object.freeze(wiring);
     this.checkupRun = createCheckupRun(this.session, {
@@ -1008,11 +1044,28 @@ export class RunnerServer {
   ): Promise<{ status: number; error: string; code: string } | null> {
     // The scheduler row has its own 401; a Helper session means nothing there.
     if (!this.helperAccess || this.carriesAccessKey(req) || route.access === 'scheduler') return null;
+    if (this.isAuditOwner(req)) return null;
     try {
       return await this.helperAccess.refusal(req, route.access, params);
     } catch {
       return null;
     }
+  }
+
+  /**
+   * Whether the request is from an audit owner (holds the access key, or is a signed-in Google account in
+   * AUDIT_OWNER_EMAILS, ADR 0042 / T-86).
+   */
+  public isAuditOwner(req: http.IncomingMessage): boolean {
+    if (this.carriesAccessKey(req)) return true;
+    const session = this.helperAccess?.session(req);
+    if (!session?.email) return false;
+    return this.isAuditOwnerEmail(session.email);
+  }
+
+  public isAuditOwnerEmail(email?: string): boolean {
+    if (!email) return false;
+    return this.auditOwnerEmails.includes(email.trim().toLowerCase());
   }
 
   /**
@@ -1158,7 +1211,14 @@ export class RunnerServer {
           // reduced status; it passes nothing else here, so every other unmatched or owner path keeps the gate.
           const helperLoadsWizard =
             !matched && !url.searchParams.has('access') && this.helperMayLoadWizard(req, pathname);
-          if ((!matched || matched.route.access === 'owner') && !helperLoadsWizard && !this.grantAccess(req, res, url))
+          const isAuditOwner = this.isAuditOwner(req);
+          const ownerAllowed = matched?.route.access === 'owner' && isAuditOwner;
+          if (
+            (!matched || matched.route.access === 'owner') &&
+            !helperLoadsWizard &&
+            !ownerAllowed &&
+            !this.grantAccess(req, res, url)
+          )
             return;
           if (matched) {
             // Closed by default: a row without an access level, or one this caller doesn't meet, is refused.
@@ -1176,6 +1236,7 @@ export class RunnerServer {
               beta: this.beta,
               helper: (permission) => granted.has(permission),
               scheduler,
+              auditOwner: isAuditOwner,
             });
             if (!decision.allow) {
               const refusal = await this.helperRefusal(req, matched.route, matched.params);
@@ -1296,6 +1357,7 @@ export class RunnerServer {
                 reportRunId: null,
                 beta: this.beta,
                 helper: true,
+                auditOwner: this.isAuditOwner(req),
               });
               return;
             }
@@ -1316,6 +1378,7 @@ export class RunnerServer {
                 reportRunId: this.lastReport?.runId ?? null,
                 // A copy shared with other people: their check-ups and reports are visible to each other.
                 beta: this.beta,
+                auditOwner: this.isAuditOwner(req),
               })
             );
             return;
@@ -1589,6 +1652,7 @@ export class RunnerServer {
         reportRunId: null,
         beta: true,
         busy,
+        auditOwner: this.isAuditOwner(req),
       });
       return true;
     }

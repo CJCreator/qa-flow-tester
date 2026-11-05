@@ -40,8 +40,8 @@ Reworked 2026-11-05 against `main` at `5bef5e9`, after the redesign (#56) and th
 | [T-90](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-90-a-runner-bound-to-an-ipv6-address) | A runner bound to an IPv6 address | A14 | P2 | S | 2 | built | - |
 | [T-84](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-84-pipeline-wiring) | Pipeline wiring | A3, A4, A7, A11, A13 | P0 | M | 3 | built | T-79, T-80, T-81, T-82, T-83 |
 | [T-85](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-85-runner-specific-errors-logs-recovery) | Runner: specific errors, logs, recovery | A5, A9, A10, A11 | P0 | M | 3 | built | T-79, T-80, T-81, T-83 |
-| [T-86](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-86-hosted-audits-for-the-signed-in-owner) | Hosted audits for the signed-in owner | A8 | P1 | M | 4 | todo | T-85 |
-| [T-89](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-89-proving-the-audit-works) | Proving the audit works | A12 | P1 | M | 4 | todo | T-84, T-85, T-87, T-88 |
+| [T-86](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-86-hosted-audits-for-the-signed-in-owner) | Hosted audits for the signed-in owner | A8 | P1 | M | 4 | human | T-85 |
+| [T-89](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-89-proving-the-audit-works) | Proving the audit works | A12 | P1 | M | 4 | built | T-84, T-85, T-87, T-88 |
 
 ## Open: frontend enhancement (T-65 to T-78)
 

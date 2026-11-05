@@ -2,8 +2,14 @@ import { EmptyState, Page, PageHeader } from '../components/ui';
 import { Link, PATHS } from '../lib/router';
 import { useDocumentTitle } from '../lib/title';
 
-/** An address the app doesn't know. The shared (beta) copy has no Website Audits, so no link to them. */
-export function NotFoundScreen({ beta = false }: { beta?: boolean }) {
+/** An address the app doesn't know. The shared (beta) copy has no Website Audits unless the visitor is an audit owner. */
+export function NotFoundScreen({
+  beta = false,
+  auditOwner = false,
+}: {
+  beta?: boolean;
+  auditOwner?: boolean;
+}) {
   useDocumentTitle('Page not found');
   return (
     <Page width="prose">
@@ -18,7 +24,7 @@ export function NotFoundScreen({ beta = false }: { beta?: boolean }) {
             <Link to={PATHS.reports} className="btn-quiet">
               Past check-ups
             </Link>
-            {!beta && (
+            {(!beta || auditOwner) && (
               <Link to={PATHS.audits} className="btn-quiet">
                 Website Audits
               </Link>

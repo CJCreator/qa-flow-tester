@@ -141,6 +141,8 @@ export interface AuditCrawlRouteDeps extends AuditRunServices {
   checkAddress?: AuditAddressCheck;
   /** Running and recently ended audits. Share one instance with the re-run route. */
   runs?: AuditRuns;
+  /** Test seam / wiring: check and claim an audit start against AUDIT_DAILY_LIMIT (T-86). */
+  claimAuditLimit?: (email?: string) => { allowed: boolean; error?: string };
 }
 
 /** What the production rows add: the pieces the default pipeline step needs. */
@@ -484,6 +486,13 @@ export function createAuditCrawlRoutes(deps: AuditCrawlRouteDeps): Route[] {
     const { req, res } = context;
     const caller = await deps.caller(context);
     if (!caller.owner) return refuse(res, 403, 'ERR_FORBIDDEN', AUDIT_FORBIDDEN_START);
+
+    if (deps.claimAuditLimit && caller.helperEmail) {
+      const claim = deps.claimAuditLimit(caller.helperEmail);
+      if (!claim.allowed) {
+        return refuse(res, 429, 'ERR_BETA_LIMIT', claim.error ?? 'Daily limit of audit starts reached.');
+      }
+    }
 
     let body: unknown;
     try {

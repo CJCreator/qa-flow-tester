@@ -35,9 +35,10 @@ const ROUTES: Route[] = [
   { name: 'not-found', path: '/x' },
 ];
 
-const topBar = (route: Route, beta = false, checkupInProgress = false) =>
-  renderToStaticMarkup(createElement(TopBar, { route, checkupInProgress, beta }));
-const areaNav = (route: Route, beta = false) => renderToStaticMarkup(createElement(AreaNav, { route, beta }));
+const topBar = (route: Route, beta = false, checkupInProgress = false, auditOwner = false) =>
+  renderToStaticMarkup(createElement(TopBar, { route, checkupInProgress, beta, auditOwner }));
+const areaNav = (route: Route, beta = false, auditOwner = false) =>
+  renderToStaticMarkup(createElement(AreaNav, { route, beta, auditOwner }));
 const CHECKUP_NAMES: Route['name'][] = [
   'new',
   'scan',
@@ -116,6 +117,12 @@ describe('top bar: two areas and Settings', () => {
     expect(html).not.toContain(`href="${PATHS.audits}"`);
     expect(html).toContain('>Check-ups<');
   });
+
+  it('on a beta copy shows Website Audits to an audit owner', () => {
+    const html = topBar({ name: 'new' }, true, false, true);
+    expect(html).toContain('>Website Audits<');
+    expect(html).toContain(`href="${PATHS.audits}"`);
+  });
 });
 
 describe('area row', () => {
@@ -171,6 +178,10 @@ describe('area row', () => {
   it('on a beta copy there is no Website Audits row', () => {
     expect(areaNav({ name: 'audit', auditId: 'a1' }, true)).toBe('');
     expect(areaNav({ name: 'reports' }, true)).toContain('aria-label="Check-ups"');
+  });
+
+  it('on a beta copy shows Website Audits row to an audit owner', () => {
+    expect(areaNav({ name: 'audit', auditId: 'a1' }, true, true)).toContain('aria-label="Website Audits"');
   });
 });
 
@@ -274,6 +285,19 @@ describe('beta Website Audit notice', () => {
     for (const name of AUDIT_ROUTE_NAMES) expect(showsBetaAuditNotice(name, false, false), name).toBe(false);
     expect(showsBetaAuditNotice('new', true, false)).toBe(false);
     expect(showsBetaAuditNotice('settings', true, false)).toBe(false);
+  });
+
+  it('never shows to an audit owner on a beta copy (T-86)', () => {
+    for (const name of AUDIT_ROUTE_NAMES) {
+      expect(showsBetaAuditNotice(name, true, false, true), name).toBe(false);
+      expect(showsBetaAuditNotice(name, true, true, true), name).toBe(false);
+    }
+  });
+
+  it('offers a Sign in with Google action leading to Helper sign-in (T-86)', () => {
+    const html = renderToStaticMarkup(createElement(BetaAuditNotice));
+    expect(html).toContain('Sign in with Google');
+    expect(html).toContain(`href="${PATHS.helperSignIn}"`);
   });
 
   it('says why and where to go', () => {

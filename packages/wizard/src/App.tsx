@@ -756,7 +756,7 @@ export default function App() {
     body = <LandingScreen />;
   } else if (!reachable) {
     body = checks > 0 ? <ConnectionScreen checks={checks} /> : <Loading label="Connecting…" />;
-  } else if (showsBetaAuditNotice(route.name, !!status?.beta, !!status?.helper)) {
+  } else if (showsBetaAuditNotice(route.name, !!status?.beta, !!status?.helper, !!status?.auditOwner)) {
     body = <BetaAuditNotice />;
   } else {
     switch (route.name) {
@@ -924,7 +924,7 @@ export default function App() {
         body = <HelperSignInScreen onOpenAudit={(auditId) => navigate(PATHS.audit(auditId))} />;
         break;
       default:
-        body = <NotFoundScreen beta={!!status?.beta} />;
+        body = <NotFoundScreen beta={!!status?.beta} auditOwner={!!status?.auditOwner} />;
     }
   }
 
@@ -945,13 +945,14 @@ export default function App() {
           checkupInProgress={inProgress}
           showDeveloperShortcuts={hasFinishedCheckup(recent)}
           beta={!!status?.beta}
+          auditOwner={!!status?.auditOwner}
         />
       )}
       {step ? (
         <StepBar current={step} links={{ address: PATHS.new }} />
       ) : (
         // From the first paint, not once connected: a row inserted later pushes the whole page down (layout shift).
-        !landing && <AreaNav route={route} beta={!!status?.beta} />
+        !landing && <AreaNav route={route} beta={!!status?.beta} auditOwner={!!status?.auditOwner} />
       )}
       <main id="main">
         {lostContact && (
@@ -977,7 +978,7 @@ export default function App() {
         )}
         {body}
       </main>
-      {!landing && <CommandPalette route={route} beta={!!status?.beta} />}
+      {!landing && <CommandPalette route={route} beta={!!status?.beta} auditOwner={!!status?.auditOwner} />}
       {dialog}
     </div>
   );

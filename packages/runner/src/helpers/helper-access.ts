@@ -38,6 +38,17 @@ export interface HelperAccessSettings {
   webApiKey?: string;
   /** FIREBASE_AUTH_DOMAIN. Default `<projectId>.firebaseapp.com`. */
   authDomain?: string;
+  /** AUDIT_OWNER_EMAILS: emails of Google accounts that pass owner audit rows on a beta copy. */
+  auditOwnerEmails?: readonly string[];
+  /** AUDIT_DAILY_LIMIT: daily audit starts per owner email per UTC day. */
+  auditDailyLimit?: number;
+}
+
+/** Parses comma-separated owner emails from string or array into normalized, lower-cased array. */
+export function parseOwnerEmails(raw?: string | readonly string[]): string[] {
+  if (!raw) return [];
+  const list: readonly string[] = typeof raw === 'string' ? raw.split(',') : raw;
+  return list.map((s: string) => s.trim().toLowerCase()).filter(Boolean);
 }
 
 /** The settings from the environment, by name. Values are only passed on, never printed. */
@@ -47,6 +58,8 @@ export function helperSettingsFromEnv(env: NodeJS.ProcessEnv = process.env): Hel
     accessToken: env.RUNNER_ACCESS_TOKEN,
     webApiKey: env.FIREBASE_WEB_API_KEY,
     authDomain: env.FIREBASE_AUTH_DOMAIN,
+    auditOwnerEmails: parseOwnerEmails(env.AUDIT_OWNER_EMAILS),
+    auditDailyLimit: env.AUDIT_DAILY_LIMIT ? parseInt(env.AUDIT_DAILY_LIMIT, 10) : undefined,
   };
 }
 
@@ -104,6 +117,8 @@ export class HelperAccess {
   readonly firebaseWeb: FirebaseWebSettings | null;
   readonly store: HelperGrantSource;
   readonly now: () => Date;
+  readonly auditOwnerEmails: readonly string[];
+  readonly auditDailyLimit?: number;
   private readonly key: Buffer | null;
 
   constructor(options: HelperAccessOptions) {
@@ -111,6 +126,8 @@ export class HelperAccess {
     const accessToken = options.accessToken?.trim() || '';
     this.store = options.store;
     this.now = options.now ?? (() => new Date());
+    this.auditOwnerEmails = parseOwnerEmails(options.auditOwnerEmails);
+    this.auditDailyLimit = options.auditDailyLimit;
     this.enabled = projectId !== '' && accessToken !== '';
     if (this.enabled && options.sessionKey && options.sessionKey.length < HELPER_SESSION_KEY_BYTES) {
       throw new Error('A Helper session key needs at least 32 bytes.');
@@ -128,6 +145,12 @@ export class HelperAccess {
   sessionKey(): Buffer {
     if (!this.key) throw new Error('Helper sign-in is off.');
     return this.key;
+  }
+
+  /** Whether this email is in AUDIT_OWNER_EMAILS. */
+  isAuditOwner(email?: string): boolean {
+    if (!email) return false;
+    return this.auditOwnerEmails.includes(email.trim().toLowerCase());
   }
 
   /** The signed-in Helper, or null (off, no cookie, tampered or expired). */
@@ -170,6 +193,7 @@ export class HelperAccess {
   ): Promise<HelperRefusal | null> {
     const session = this.session(req);
     if (!session) return null;
+    if (this.isAuditOwner(session.email)) return null;
     if (access === 'owner') return { status: 403, code: 'ERR_FORBIDDEN', error: FORBIDDEN_REFUSAL };
     if (!isHelperPermission(access)) return null;
     const auditId = params.id;

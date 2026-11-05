@@ -192,6 +192,11 @@ export interface RunnerStatusReply {
    * carries no run details: phase 'idle', every run field null or false.
    */
   helper?: boolean;
+  /**
+   * True when the caller is an audit owner: holds the access key or is signed in via Google with an
+   * email in AUDIT_OWNER_EMAILS (ADR 0042, T-86).
+   */
+  auditOwner?: boolean;
 }
 
 /**

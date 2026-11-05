@@ -120,6 +120,40 @@ describe('authorizeRoute: beta policy (REQ-048 AC-5, D-004, D-005)', () => {
   it('a missing access level is refused before the beta policy is looked at', () => {
     expect(authorizeRoute({ beta: 'allow' }, BETA_OWNER)).toMatchObject({ code: 'ERR_ROUTE_CLOSED' });
   });
+
+  describe('audit owner on beta (T-86, ADR 0042)', () => {
+    const AUDIT_OWNER: RouteCaller = { hasAccessKey: false, beta: true, auditOwner: true };
+    const NON_OWNER: RouteCaller = { hasAccessKey: false, beta: true, auditOwner: false };
+
+    it('an allow-listed audit owner passes owner and audit rows on beta', () => {
+      expect(authorizeRoute({ access: 'owner' }, AUDIT_OWNER)).toEqual({ allow: true });
+      expect(authorizeRoute({ access: 'owner', beta: 'closed' }, AUDIT_OWNER)).toEqual({ allow: true });
+      expect(authorizeRoute({ access: 'view' }, AUDIT_OWNER)).toEqual({ allow: true });
+      expect(authorizeRoute({ access: 'edit' }, AUDIT_OWNER)).toEqual({ allow: true });
+      expect(authorizeRoute({ access: 'export' }, AUDIT_OWNER)).toEqual({ allow: true });
+    });
+
+    it('a non-owner on beta without access key is refused on owner rows', () => {
+      expect(authorizeRoute({ access: 'owner' }, NON_OWNER)).toMatchObject({
+        allow: false,
+        status: 401,
+        code: 'ERR_ACCESS_KEY',
+      });
+    });
+
+    it('Helper permissions are unchanged: granted permission passes in beta, other permissions and owner rows are refused', () => {
+      const helper = helperWith('view');
+      expect(authorizeRoute({ access: 'view' }, { ...NON_OWNER, helper })).toEqual({ allow: true });
+      expect(authorizeRoute({ access: 'edit' }, { ...NON_OWNER, helper })).toMatchObject({
+        allow: false,
+        status: 401,
+      });
+      expect(authorizeRoute({ access: 'owner' }, { ...NON_OWNER, helper })).toMatchObject({
+        allow: false,
+        status: 401,
+      });
+    });
+  });
 });
 
 describe('resolveRoute: :id / :linkId parameters', () => {

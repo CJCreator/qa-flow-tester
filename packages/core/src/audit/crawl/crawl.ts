@@ -181,6 +181,14 @@ export interface AuditCrawlDeps {
   requestGuard?: (url: string, redirected: boolean) => Promise<boolean>;
   /** Name lookup and connection for the guard, robots.txt and sitemaps. Default: the real network. */
   netDeps?: NetDeps;
+  /** Test seam: clock function. Default: Date.now. */
+  now?: () => number;
+  /** Test seam: minimum gap between starts in ms. Default: AUDIT_MIN_GAP_MS (500). */
+  minGapMs?: number;
+  /** Test seam: sleep function for pacing and outage checks. */
+  sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
+  /** Test seam: pause in ms before retrying a network error. Default: 5000. */
+  retryDelayMs?: number;
 }
 
 export interface AuditCrawlOptions {
@@ -290,9 +298,11 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
   );
   // One pacer per Website Audit: page loads, robots.txt and sitemaps take turns on the host.
   const pacer = new HostPacer({
-    minGapMs: AUDIT_MIN_GAP_MS,
+    minGapMs: deps.minGapMs ?? AUDIT_MIN_GAP_MS,
     crawlDelayMs: robots.crawlDelayMs,
     maxInFlight: AUDIT_FETCH_IN_FLIGHT,
+    ...(deps.sleep ? { sleep: deps.sleep } : {}),
+    ...(deps.now ? { now: deps.now } : {}),
   });
   const siteFetch = makeCheckerFetch({
     allowPrivate,
@@ -363,7 +373,9 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
       // One worker per page the pacer lets through at once, so all of them are used (ADR 0043).
       concurrency: pacer.maxInFlight,
       retryBusyHost: true,
-      retryDelayMs: 5000,
+      retryDelayMs: deps.retryDelayMs ?? 5000,
+      ...(deps.sleep ? { sleep: deps.sleep } : {}),
+      ...(deps.now ? { now: deps.now } : {}),
       onPageProgress: (event) => opts.onProgress?.(event),
       ...(process.env.QA_CRAWL_MAX_MINUTES ? {} : { maxDurationMs: AUDIT_MAX_CRAWL_MS }),
       exploreClicks: false,

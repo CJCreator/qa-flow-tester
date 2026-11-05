@@ -11,7 +11,14 @@ import { promises as fs } from 'fs';
 import { createHmac, hkdfSync, randomBytes } from 'crypto';
 import type { AuditRequest } from '@qa/types';
 import { AuditStore, LocalAuditStoreBackend } from '../../core/src/audit/store/index.js';
-import { allows, createHelperAccess, grantedPermissions, type HelperAccess } from '../src/helpers/helper-access.js';
+import {
+  allows,
+  createHelperAccess,
+  grantedPermissions,
+  parseOwnerEmails,
+  type HelperAccess,
+} from '../src/helpers/helper-access.js';
+import { AuditDailyLimiter } from '../src/helpers/audit-limit.js';
 import { HELPER_COOKIE, signHelperSession } from '../src/helpers/helper-session.js';
 import { RunnerServer } from '../src/server.js';
 import { sendJson, type Route } from '../src/routes/index.js';
@@ -229,6 +236,56 @@ describe('Helper session key (F-045, DEC-011)', () => {
     expect(() => off.sessionKey()).toThrow();
     expect(off.session(reqWith(cookie))).toBeNull();
   });
+
+  it('identifies audit owners from AUDIT_OWNER_EMAILS and allows them on owner rows (T-86)', async () => {
+    expect(parseOwnerEmails(' Alice@example.com , Bob@example.com ')).toEqual([
+      'alice@example.com',
+      'bob@example.com',
+    ]);
+    expect(parseOwnerEmails(['User@example.com'])).toEqual(['user@example.com']);
+    expect(parseOwnerEmails()).toEqual([]);
+
+    const ownerEmail = 'owner@example.com';
+    const otherEmail = 'stranger@example.com';
+    const ownerAccess = createHelperAccess({
+      projectId: 'proj',
+      accessToken: ACCESS,
+      store,
+      auditOwnerEmails: [ownerEmail],
+      now: () => NOW,
+    });
+    expect(ownerAccess.isAuditOwner(ownerEmail)).toBe(true);
+    expect(ownerAccess.isAuditOwner('OWNER@EXAMPLE.COM')).toBe(true);
+    expect(ownerAccess.isAuditOwner(otherEmail)).toBe(false);
+
+    const ownerReq = reqWith(helperCookie(ownerEmail, NOW, ownerAccess));
+    const otherReq = reqWith(helperCookie(otherEmail, NOW, ownerAccess));
+
+    expect(await ownerAccess.refusal(ownerReq, 'owner', { id: auditA })).toBeNull();
+    expect(await ownerAccess.refusal(otherReq, 'owner', { id: auditA })).toEqual({
+      status: 403,
+      code: 'ERR_FORBIDDEN',
+      error: 'A Helper cannot do this.',
+    });
+  });
+
+  it('AuditDailyLimiter caps starts per email per UTC day (T-86)', () => {
+    let now = Date.parse('2026-11-05T10:00:00Z');
+    const limiter = new AuditDailyLimiter({ limit: 2, now: () => now });
+
+    expect(limiter.claim('owner@example.com')).toEqual({ allowed: true });
+    expect(limiter.claim('owner@example.com')).toEqual({ allowed: true });
+    const blocked = limiter.claim('owner@example.com');
+    expect(blocked.allowed).toBe(false);
+    expect(blocked.error).toContain('used your 2 audit starts');
+
+    // Different email has their own limit
+    expect(limiter.claim('other@example.com')).toEqual({ allowed: true });
+
+    // Next day resets
+    now += 86_400_000;
+    expect(limiter.claim('owner@example.com')).toEqual({ allowed: true });
+  });
 });
 
 describe('Helper access through the runner dispatch (REQ-033, BE-102)', () => {
@@ -303,5 +360,174 @@ describe('Helper access through the runner dispatch (REQ-033, BE-102)', () => {
     await store.removeHelper(auditA, HELPER);
     const after = await get(`/api/t/audits/${auditA}`, cookie);
     expect(after.status).not.toBe(200);
+  });
+});
+
+describe('Hosted audits for the signed-in owner on a beta copy (T-86, ADR 0042)', () => {
+  const BETA_PORT = 3698;
+  const OWNER_EMAIL = 'owner@example.com';
+  const OTHER_EMAIL = 'stranger@example.com';
+  let betaServer: RunnerServer;
+  let betaScratch: string;
+  let betaAccess: HelperAccess;
+
+  const betaRows: readonly Route[] = [
+    {
+      method: 'GET',
+      path: '/api/t/audits/:id',
+      access: 'view',
+      handle: (c) => sendJson(c.res, 200, { audit: c.params?.id }),
+    },
+    {
+      method: 'POST',
+      path: '/api/t/owner',
+      access: 'owner',
+      handle: (c) => sendJson(c.res, 200, { ok: true }),
+    },
+    {
+      method: 'POST',
+      path: '/api/t/start',
+      access: 'owner',
+      handle: async (c) => {
+        const caller = c.server.isAuditOwner(c.req)
+          ? { owner: true, helperEmail: betaAccess.session(c.req)?.email }
+          : { owner: false };
+        if (c.server.wiring.claimAuditLimit && caller.helperEmail) {
+          const claim = c.server.wiring.claimAuditLimit(caller.helperEmail);
+          if (!claim.allowed) {
+            return sendJson(c.res, 429, { error: claim.error, code: 'ERR_BETA_LIMIT' });
+          }
+        }
+        sendJson(c.res, 202, { started: true });
+      },
+    },
+  ];
+
+  function call(
+    method: string,
+    pathname: string,
+    cookie?: string,
+    accessKey?: string
+  ): Promise<{ status: number; body: string }> {
+    return new Promise((resolve, reject) => {
+      const headers: Record<string, string> = { host: `localhost:${BETA_PORT}` };
+      if (cookie) headers.cookie = cookie;
+      if (accessKey) headers['x-qa-access'] = accessKey;
+      const req = http.request(
+        {
+          host: 'localhost',
+          port: BETA_PORT,
+          path: pathname,
+          method,
+          headers,
+        },
+        (res) => {
+          let body = '';
+          res.on('data', (chunk) => (body += chunk));
+          res.on('end', () => resolve({ status: res.statusCode || 0, body }));
+        }
+      );
+      req.on('error', reject);
+      req.end();
+    });
+  }
+
+  function betaCookie(email: string): string {
+    return `${HELPER_COOKIE}=${signHelperSession(betaAccess.sessionKey(), { email, sub: 'uid-test' }, new Date())}`;
+  }
+
+  beforeEach(async () => {
+    betaScratch = await fs.mkdtemp(path.join(os.tmpdir(), 'qa-beta-owner-'));
+    betaAccess = createHelperAccess({
+      projectId: 'proj',
+      accessToken: ACCESS,
+      store,
+      auditOwnerEmails: [OWNER_EMAIL],
+    });
+    betaServer = new RunnerServer({
+      port: BETA_PORT,
+      outputDir: path.join(betaScratch, 'report'),
+      dataDir: path.join(betaScratch, 'data'),
+      accessToken: ACCESS,
+      beta: true,
+      routes: betaRows,
+      helperAccess: betaAccess,
+      auditOwnerEmails: [OWNER_EMAIL],
+      auditDailyLimit: 2,
+    });
+    await betaServer.start();
+  });
+
+  afterEach(async () => {
+    await betaServer?.stop();
+    await fs.rm(betaScratch, { recursive: true, force: true });
+  });
+
+  it('an allow-listed email passes owner checks and another email is refused on beta', async () => {
+    const ownerCookie = betaCookie(OWNER_EMAIL);
+    const otherCookie = betaCookie(OTHER_EMAIL);
+
+    // Allow-listed owner passes owner route
+    const ownerRes = await call('POST', '/api/t/owner', ownerCookie);
+    expect(ownerRes.status).toBe(200);
+    expect(JSON.parse(ownerRes.body)).toEqual({ ok: true });
+
+    // Non-owner helper is refused on owner route with 403 ERR_FORBIDDEN
+    const otherRes = await call('POST', '/api/t/owner', otherCookie);
+    expect(otherRes.status).toBe(403);
+    expect(JSON.parse(otherRes.body).code).toBe('ERR_FORBIDDEN');
+
+    // Unauthenticated caller is refused with 401
+    const anonRes = await call('POST', '/api/t/owner');
+    expect(anonRes.status).toBe(401);
+  });
+
+  it('reports auditOwner: true on /api/runner/status for allow-listed owner', async () => {
+    const ownerRes = await call('GET', '/api/runner/status', betaCookie(OWNER_EMAIL));
+    expect(ownerRes.status).toBe(200);
+    const ownerStatus = JSON.parse(ownerRes.body);
+    expect(ownerStatus.auditOwner).toBe(true);
+    expect(ownerStatus.helper).toBe(true);
+    expect(ownerStatus.beta).toBe(true);
+
+    const otherRes = await call('GET', '/api/runner/status', betaCookie(OTHER_EMAIL));
+    expect(otherRes.status).toBe(200);
+    const otherStatus = JSON.parse(otherRes.body);
+    expect(otherStatus.auditOwner).toBe(false);
+    expect(otherStatus.helper).toBe(true);
+
+    const keyRes = await call('GET', '/api/runner/status', undefined, ACCESS);
+    expect(keyRes.status).toBe(200);
+    expect(JSON.parse(keyRes.body).auditOwner).toBe(true);
+
+    const anonRes = await call('GET', '/api/runner/status');
+    expect(anonRes.status).toBe(401);
+  });
+
+  it('Helper permissions are unchanged on beta: granted audit is served, ungranted refused', async () => {
+    await store.grantHelper(auditA, OTHER_EMAIL, ['view']);
+    const otherCookie = betaCookie(OTHER_EMAIL);
+
+    const granted = await call('GET', `/api/t/audits/${auditA}`, otherCookie);
+    expect(granted.status).toBe(200);
+
+    const ungranted = await call('GET', `/api/t/audits/${auditB}`, otherCookie);
+    expect(ungranted.status).toBe(404);
+  });
+
+  it('daily limit triggers ERR_BETA_LIMIT when cap is reached', async () => {
+    const ownerCookie = betaCookie(OWNER_EMAIL);
+
+    const run1 = await call('POST', '/api/t/start', ownerCookie);
+    expect(run1.status).toBe(202);
+
+    const run2 = await call('POST', '/api/t/start', ownerCookie);
+    expect(run2.status).toBe(202);
+
+    const run3 = await call('POST', '/api/t/start', ownerCookie);
+    expect(run3.status).toBe(429);
+    const err = JSON.parse(run3.body);
+    expect(err.code).toBe('ERR_BETA_LIMIT');
+    expect(err.error).toContain('used your 2 audit starts');
   });
 });

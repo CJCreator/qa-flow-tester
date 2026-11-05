@@ -99,9 +99,9 @@ export function buildAuditRoutes(server: RunnerServer): Route[] {
   auditRunsByServer.set(server, runs);
 
   const caller = (context: RouteContext): AuditCaller => {
-    if (wiring.isOwnerRequest(context.req)) return { owner: true };
+    const isOwner = wiring.isOwnerRequest(context.req);
     const email = helperAccess.session(context.req)?.email;
-    return email ? { owner: false, helperEmail: email } : { owner: false };
+    return { owner: isOwner, helperEmail: email };
   };
 
   const readModels = () => modelsStore.read();
@@ -151,8 +151,28 @@ export function buildAuditRoutes(server: RunnerServer): Route[] {
 
   return [
     // A local runner may audit localhost and LAN addresses (ADR 0042); the hosted copy never.
-    ...auditCrawlRoutes({ store, caller, runs, resolveAi, resolveServiceKey, allowPrivateAddresses: wiring.localRun }),
-    ...auditRerunRoutes({ store, caller, runs, resolveAi, resolveServiceKey, allowPrivateAddresses: wiring.localRun }),
+    ...auditCrawlRoutes({
+      store,
+      caller,
+      runs,
+      resolveAi,
+      resolveServiceKey,
+      allowPrivateAddresses: wiring.localRun,
+      claimAuditLimit: wiring.claimAuditLimit,
+      ...(wiring.crawl ? { crawl: wiring.crawl } : {}),
+      ...(wiring.checkAddress ? { checkAddress: wiring.checkAddress } : {}),
+    }),
+    ...auditRerunRoutes({
+      store,
+      caller,
+      runs,
+      resolveAi,
+      resolveServiceKey,
+      allowPrivateAddresses: wiring.localRun,
+      claimAuditLimit: wiring.claimAuditLimit,
+      ...(wiring.crawl ? { crawl: wiring.crawl } : {}),
+      ...(wiring.checkAddress ? { checkAddress: wiring.checkAddress } : {}),
+    }),
     ...auditStoreRoutes({
       store,
       caller,

@@ -19,6 +19,7 @@ const BROWSER_TESTS: Record<string, string[]> = {
     'small-fixes',
     'visual-capture',
     // Website audit (REQ-033, REQ-048...): each launches Chromium through `playwright` or the Spider.
+    'audit-crawl-browser',
     'audit-doc-pdf',
     'audit-phone-layout',
   ],
@@ -41,6 +42,7 @@ const BROWSER_TESTS: Record<string, string[]> = {
     'spec-override-endpoint',
     // Website audit: each starts a RunnerServer, and some drive Chromium.
     'audit-documents-flow',
+    'audit-flow-browser',
     'audit-helpers-routes',
     'audit-persistence-integration',
     'audit-preview-browser',

@@ -63,6 +63,8 @@ export interface AuditRerunRouteDeps extends Omit<AuditRunServices, 'store'> {
   isRunning?: (auditId: string) => boolean | Promise<boolean>;
   /** Test seam: the audit starter. Default: runAuditVersion. */
   start?: AuditStarter;
+  /** Test seam / wiring: check and claim an audit start against AUDIT_DAILY_LIMIT (T-86). */
+  claimAuditLimit?: (email?: string) => { allowed: boolean; error?: string };
 }
 
 function refuse(
@@ -94,6 +96,13 @@ export function createAuditRerunRoutes(deps: AuditRerunRouteDeps): Route[] {
     const { res } = context;
     const caller = await deps.caller(context);
     if (!caller.owner) return refuse(res, 403, 'ERR_FORBIDDEN', AUDIT_RERUN_FORBIDDEN);
+
+    if (deps.claimAuditLimit && caller.helperEmail) {
+      const claim = deps.claimAuditLimit(caller.helperEmail);
+      if (!claim.allowed) {
+        return refuse(res, 429, 'ERR_BETA_LIMIT', claim.error ?? 'Daily limit of audit starts reached.');
+      }
+    }
 
     const auditId = context.params?.id ?? '';
     if (!AUDIT_ID_PATTERN.test(auditId)) return refuse(res, 404, 'ERR_AUDIT_NOT_FOUND', AUDIT_NOT_FOUND_STREAM);

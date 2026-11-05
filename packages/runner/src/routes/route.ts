@@ -135,6 +135,11 @@ export interface RouteCaller {
   helper?: (permission: HelperPermission) => boolean;
   /** The request carries a valid Google-signed scheduler token (ADR 0039). Missing means no. */
   scheduler?: boolean;
+  /**
+   * The caller is an audit owner (holds the access key, or a Google sign-in whose email is in
+   * AUDIT_OWNER_EMAILS, ADR 0042 / T-86). Passes 'owner' and audit rows on a beta copy.
+   */
+  auditOwner?: boolean;
 }
 
 export type RouteDecision = { allow: true } | { allow: false; status: 401 | 403; code: string; error: string };
@@ -162,11 +167,12 @@ export function authorizeRoute(route: Pick<Route, 'access' | 'beta'>, caller: Ro
   if (!access) return { allow: false, status: 403, code: 'ERR_ROUTE_CLOSED', error: CLOSED_REFUSAL };
 
   let helperGranted = false;
+  const isOwner = caller.hasAccessKey || caller.auditOwner === true;
   if (access === 'owner') {
-    if (!caller.hasAccessKey) return { allow: false, status: 401, code: 'ERR_ACCESS_KEY', error: ACCESS_KEY_REFUSAL };
+    if (!isOwner) return { allow: false, status: 401, code: 'ERR_ACCESS_KEY', error: ACCESS_KEY_REFUSAL };
   } else if (isHelperPermission(access)) {
     helperGranted = caller.helper?.(access) === true;
-    if (!caller.hasAccessKey && !helperGranted) {
+    if (!isOwner && !helperGranted) {
       return { allow: false, status: 401, code: 'ERR_ACCESS_KEY', error: ACCESS_KEY_REFUSAL };
     }
   } else if (access === 'scheduler') {
@@ -179,7 +185,8 @@ export function authorizeRoute(route: Pick<Route, 'access' | 'beta'>, caller: Ro
   }
 
   if (caller.beta) {
-    const servedInBeta = route.beta === 'allow' || access === 'sign-in' || helperGranted;
+    const auditOwnerAllowed = caller.auditOwner === true && (access === 'owner' || isHelperPermission(access));
+    const servedInBeta = route.beta === 'allow' || access === 'sign-in' || helperGranted || auditOwnerAllowed;
     if (!servedInBeta) return { allow: false, status: 403, code: 'ERR_BETA', error: BETA_REFUSAL };
   }
   return ALLOW;

@@ -31,29 +31,44 @@ const OWNER_ONLY: readonly Name[] = [
 ];
 
 /**
- * Whether the shared (beta) copy shows the notice instead of this screen. A signed-in Helper still opens the
- * Website Audits given to them; everyone else on the shared copy gets the notice on every audit screen
- * except the Helper sign-in.
+ * Whether the shared (beta) copy shows the notice instead of this screen. An audit owner (auditOwner = true)
+ * reaches every audit screen. A signed-in Helper still opens the Website Audits given to them; everyone
+ * else on the shared copy gets the notice on every audit screen except the Helper sign-in.
  */
-export function showsBetaAuditNotice(name: Name, beta: boolean, helper: boolean): boolean {
-  if (!beta || name === 'helper-sign-in' || !AUDIT_ROUTE_NAMES.includes(name)) return false;
+export function showsBetaAuditNotice(name: Name, beta: boolean, helper: boolean, auditOwner = false): boolean {
+  if (!beta || auditOwner || name === 'helper-sign-in' || !AUDIT_ROUTE_NAMES.includes(name)) return false;
   return helper ? OWNER_ONLY.includes(name) : true;
 }
 
-export function BetaAuditNotice() {
+export interface BetaAuditNoticeProps {
+  onSignIn?: () => void;
+}
+
+export function BetaAuditNotice({ onSignIn }: BetaAuditNoticeProps = {}) {
   return (
     <Page width="prose">
       <PageHeader
         title="Website Audits run on your own copy of Release check-up"
         actions={
-          <Link to={PATHS.new} className="btn-primary">
-            Start a check-up
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            {onSignIn ? (
+              <button type="button" className="btn-primary" onClick={onSignIn}>
+                Sign in with Google
+              </button>
+            ) : (
+              <Link to={PATHS.helperSignIn} className="btn-primary">
+                Sign in with Google
+              </Link>
+            )}
+            <Link to={PATHS.new} className="btn-quiet">
+              Start a check-up
+            </Link>
+          </div>
         }
       />
       <Notice tone="stamp" title="This shared copy has no Website Audits of its own">
         This shared copy opens Shared Links and Website Audits given to a Helper, and it runs check-ups. To run Website
-        Audits, run your own copy of Release check-up. The steps for hosting it are in{' '}
+        Audits, sign in with Google if you are the owner, or run your own copy of Release check-up. The steps for hosting it are in{' '}
         <a
           href={`${REPO_URL}/blob/main/docs/DEPLOYMENT.md`}
           target="_blank"

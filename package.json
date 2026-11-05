@@ -12,6 +12,7 @@
     "tunnel": "node scripts/tunnel.mjs",
     "bootstrap": "pnpm install && pnpm --filter @qa/core exec playwright install chromium && pnpm -r run build",
     "smoke": "node scripts/smoke.mjs",
+    "smoke:audit": "node scripts/smoke-audit.mjs",
     "dev": "pnpm --filter @qa/wizard dev",
     "dev:wizard": "pnpm --filter @qa/wizard dev",
     "runner": "node packages/runner/dist/cli.js",

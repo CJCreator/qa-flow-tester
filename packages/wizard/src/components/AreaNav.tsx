@@ -48,17 +48,17 @@ export function areaOf(route: Route): Area | null {
   return null;
 }
 
-/** The places of an area. The shared (beta) copy has no Website Audits. */
-export function areaLinks(area: Area, beta = false): readonly AreaLink[] {
+/** The places of an area. The shared (beta) copy has no Website Audits unless the caller is an audit owner. */
+export function areaLinks(area: Area, beta = false, auditOwner = false): readonly AreaLink[] {
   if (area === 'checkups') return CHECKUP_LINKS;
-  return beta ? [] : AUDIT_LINKS;
+  return beta && !auditOwner ? [] : AUDIT_LINKS;
 }
 
-/** The phone menu's groups, in order: Check-ups, Website Audits (not on beta), Settings. */
-export function menuGroups(beta = false): { title: string; links: readonly AreaLink[] }[] {
+/** The phone menu's groups, in order: Check-ups, Website Audits (not on beta unless audit owner), Settings. */
+export function menuGroups(beta = false, auditOwner = false): { title: string; links: readonly AreaLink[] }[] {
   const groups = [
-    { title: AREA_TITLES.checkups, links: areaLinks('checkups', beta) },
-    { title: AREA_TITLES.audits, links: areaLinks('audits', beta) },
+    { title: AREA_TITLES.checkups, links: areaLinks('checkups', beta, auditOwner) },
+    { title: AREA_TITLES.audits, links: areaLinks('audits', beta, auditOwner) },
     {
       title: 'Settings',
       links: [{ to: PATHS.settings, label: 'Settings', names: ['settings'] }] as readonly AreaLink[],
@@ -78,11 +78,19 @@ export const areaTone = (current: boolean) =>
  * The area's row of places, under the top bar. Not shown on the landing page, Settings, Helper sign-in or
  * Page not found; the check-up's own screens show the step bar instead (App decides).
  */
-export function AreaNav({ route, beta = false }: { route: Route; beta?: boolean }) {
+export function AreaNav({
+  route,
+  beta = false,
+  auditOwner = false,
+}: {
+  route: Route;
+  beta?: boolean;
+  auditOwner?: boolean;
+}) {
   if (route.name === 'helper-sign-in') return null;
   const area = areaOf(route);
   if (!area) return null;
-  const links = areaLinks(area, beta);
+  const links = areaLinks(area, beta, auditOwner);
   if (links.length === 0) return null;
   return (
     <nav aria-label={AREA_TITLES[area]} className="border-b border-rule bg-canvas" data-area={area}>

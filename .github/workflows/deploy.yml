@@ -7,7 +7,7 @@
 # Set once (Settings > Secrets and variables > Actions > Variables), already done:
 #   GCP_WORKLOAD_IDENTITY_PROVIDER, GCP_DEPLOY_SERVICE_ACCOUNT
 # Optional variables for Website Audits on the hosted copy (docs/DEPLOYMENT.md, "Website Audit storage and Helper sign-in"):
-#   AUDIT_STORE_BUCKET, FIREBASE_PROJECT_ID, FIREBASE_WEB_API_KEY, FIREBASE_AUTH_DOMAIN
+#   AUDIT_STORE_BUCKET, FIREBASE_PROJECT_ID, FIREBASE_WEB_API_KEY, FIREBASE_AUTH_DOMAIN, AUDIT_OWNER_EMAILS
 # Optional variable for scheduled Check-ups on the hosted copy (docs/DEPLOYMENT.md, "Scheduled Check-ups on the hosted copy"):
 #   SCHEDULER_SERVICE_ACCOUNT
 # The runner's access token is in Secret Manager as qa-access-token.
@@ -152,12 +152,13 @@ jobs:
           FIREBASE_WEB_API_KEY: ${{ vars.FIREBASE_WEB_API_KEY }}
           FIREBASE_AUTH_DOMAIN: ${{ vars.FIREBASE_AUTH_DOMAIN }}
           SCHEDULER_SERVICE_ACCOUNT: ${{ vars.SCHEDULER_SERVICE_ACCOUNT }}
+          AUDIT_OWNER_EMAILS: ${{ vars.AUDIT_OWNER_EMAILS }}
         run: |
           gcloud run deploy "$SERVICE" --project "$GCP_PROJECT" --region "$GCP_REGION" \
             --image "$IMAGE" --port 8080 --memory 2Gi --cpu 1 \
             --min-instances 1 --max-instances 1 --timeout 3600 \
             --allow-unauthenticated \
-            --set-env-vars "^#^RUNNER_BETA=1#RUNNER_HOST=0.0.0.0#RUNNER_DATA_DIR=/tmp/qa-data#RUNNER_OUTPUT_DIR=/tmp/qa-data/reports#RUNNER_ALLOWED_ORIGINS=$RUNNER_URL,https://qa-check-up-cnhl7suwnq-uc.a.run.app#AUDIT_STORE_BUCKET=$AUDIT_STORE_BUCKET#FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID#FIREBASE_WEB_API_KEY=$FIREBASE_WEB_API_KEY#FIREBASE_AUTH_DOMAIN=$FIREBASE_AUTH_DOMAIN#SCHEDULER_SERVICE_ACCOUNT=$SCHEDULER_SERVICE_ACCOUNT" \
+            --set-env-vars "^#^RUNNER_BETA=1#RUNNER_HOST=0.0.0.0#RUNNER_DATA_DIR=/tmp/qa-data#RUNNER_OUTPUT_DIR=/tmp/qa-data/reports#RUNNER_ALLOWED_ORIGINS=$RUNNER_URL,https://qa-check-up-cnhl7suwnq-uc.a.run.app#AUDIT_STORE_BUCKET=$AUDIT_STORE_BUCKET#FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID#FIREBASE_WEB_API_KEY=$FIREBASE_WEB_API_KEY#FIREBASE_AUTH_DOMAIN=$FIREBASE_AUTH_DOMAIN#SCHEDULER_SERVICE_ACCOUNT=$SCHEDULER_SERVICE_ACCOUNT#AUDIT_OWNER_EMAILS=$AUDIT_OWNER_EMAILS" \
             --set-secrets "RUNNER_ACCESS_TOKEN=qa-access-token:latest"
 
       # Cloud Run's front end answers /healthz with its own 404 and never reaches the container, so this

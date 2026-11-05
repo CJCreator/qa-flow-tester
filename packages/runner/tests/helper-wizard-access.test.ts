@@ -145,6 +145,7 @@ describe('T-68: a Helper session loads the hosted wizard', () => {
       reportRunId: null,
       beta: false,
       helper: true,
+      auditOwner: false,
     });
   });
 
@@ -225,6 +226,7 @@ describe('T-68 on the hosted copy (access key and beta)', () => {
       reportRunId: null,
       beta: true,
       helper: true,
+      auditOwner: false,
     });
   });
 
