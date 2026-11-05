@@ -219,7 +219,7 @@ function checksRun(
     checks.push({ checker: 'ux-quality', name: 'Accessible and easy to use', outcome: outcome('ux-quality') });
   if (ran.pageLevel) {
     checks.push(
-      { checker: 'security', name: 'Secure connections and headers', outcome: outcome('security') },
+      { checker: 'security', name: 'Protected connections and headers', outcome: outcome('security') },
       { checker: 'performance', name: 'Fast and mobile-ready', outcome: outcome('performance') }
     );
     if (ran.search) checks.push({ checker: 'seo', name: 'Search and link health', outcome: outcome('seo') });

@@ -9,13 +9,13 @@ import { mergeSameRecommendation, Report, reportHeadline } from '../src/screens/
 describe('mergeSameRecommendation', () => {
   it('shows the same advice for the same area once, with every page, in first-seen order', () => {
     const merged = mergeSameRecommendation([
-      { title: 'Missing header', aspect: 'Secure', affectedPages: ['/'] },
+      { title: 'Missing header', aspect: 'Protected', affectedPages: ['/'] },
       { title: 'No way back', aspect: 'Accessible', affectedPages: ['/a'] },
-      { title: 'Missing header', aspect: 'Secure', affectedPages: ['/b', '/'] },
+      { title: 'Missing header', aspect: 'Protected', affectedPages: ['/b', '/'] },
       { title: 'Missing header', aspect: 'Works', affectedPages: ['/c'] },
     ]);
     expect(merged.map((r) => [r.title, r.aspect, r.affectedPages])).toEqual([
-      ['Missing header', 'Secure', ['/', '/b']],
+      ['Missing header', 'Protected', ['/', '/b']],
       ['No way back', 'Accessible', ['/a']],
       ['Missing header', 'Works', ['/c']],
     ]);
@@ -202,12 +202,12 @@ describe('reportHeadline', () => {
     expect(
       reportHeadline({
         ready: false,
-        mustFix: [{ aspect: 'Secure' }, { aspect: 'Secure' }, { aspect: 'Fast and mobile' }, { aspect: 'Works' }],
+        mustFix: [{ aspect: 'Protected' }, { aspect: 'Protected' }, { aspect: 'Fast and mobile' }, { aspect: 'Works' }],
         total: 6,
         lowAreas: [],
       })
     ).toBe('4 problems must be fixed first, mostly in security and in speed and phone layout.');
-    expect(reportHeadline({ ready: false, mustFix: [{ aspect: 'Secure' }], total: 1, lowAreas: [] })).toBe(
+    expect(reportHeadline({ ready: false, mustFix: [{ aspect: 'Protected' }], total: 1, lowAreas: [] })).toBe(
       '1 problem must be fixed first, all in security.'
     );
   });

@@ -83,7 +83,7 @@ flowchart TD
 
 Before starting, ensure you have:
 
-- **Node.js**: `v20.x` or `v22.x` (`node -v`)
+- **Node.js**: `22.9.0` or newer (`node -v`)
 - **Package Manager**: `pnpm` v9+ (`npm install -g pnpm` or `corepack enable`)
 - **Browsers**: Playwright browser binaries
 

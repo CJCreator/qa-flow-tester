@@ -77,7 +77,7 @@ export class SiteHistoryManager {
       'Accessible',
       'Fast and mobile',
       'Findable',
-      'Secure',
+      'Protected',
       'Looks and reads well',
     ];
 

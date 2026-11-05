@@ -49,7 +49,7 @@ export async function generateSingleFileHtmlReport(
     'Accessible',
     'Fast and mobile',
     'Findable',
-    'Secure',
+    'Protected',
     'Looks and reads well',
   ];
 

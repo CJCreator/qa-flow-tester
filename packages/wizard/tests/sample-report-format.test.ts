@@ -16,7 +16,7 @@ const SAMPLE = fileURLToPath(new URL('../public/sample-report.html', import.meta
 const OUT_OF_DATE =
   'sample-report.html is out of date with the report format: regenerate it (see landing spec section 11)';
 
-const AREAS = ['Works', 'Accessible', 'Fast and mobile', 'Findable', 'Secure', 'Looks and reads well'] as const;
+const AREAS = ['Works', 'Accessible', 'Fast and mobile', 'Findable', 'Protected', 'Looks and reads well'] as const;
 
 function fixture(withBlocker: boolean): ReleaseReport {
   return {
@@ -52,7 +52,7 @@ function fixture(withBlocker: boolean): ReleaseReport {
       : [],
     grades: {
       aspects: Object.fromEntries(
-        AREAS.map((a) => [a, { grade: 'A', score: 100, findings: withBlocker && a === 'Secure' ? ['F-001'] : [] }])
+        AREAS.map((a) => [a, { grade: 'A', score: 100, findings: withBlocker && a === 'Protected' ? ['F-001'] : [] }])
       ) as NonNullable<ReleaseReport['grades']>['aspects'],
       overallGrade: 'A',
       overallScore: 100,
@@ -173,7 +173,7 @@ describe('sample report format', () => {
     expect(problemsWith(ready, ref)).toEqual([]);
     expect(problemsWith(ready.replaceAll('aspects-grid', 'x-grid'), ref)).not.toEqual([]);
     expect(problemsWith(ready.replace('<span class="aspect-title">Works</span>', ''), ref)).not.toEqual([]);
-    expect(problemsWith(ready.replace('class="aspect-title">Secure<', 'class="aspect-title">Safe<'), ref)).not.toEqual(
+    expect(problemsWith(ready.replace('class="aspect-title">Protected<', 'class="aspect-title">Safe<'), ref)).not.toEqual(
       []
     );
     expect(

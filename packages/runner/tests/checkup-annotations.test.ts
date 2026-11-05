@@ -96,7 +96,7 @@ describe('exitCodeFor', () => {
         Accessible: area,
         'Fast and mobile': area,
         Findable: area,
-        Secure: area,
+        Protected: area,
         'Looks and reads well': area,
       },
       overallGrade: worst ?? 'A',

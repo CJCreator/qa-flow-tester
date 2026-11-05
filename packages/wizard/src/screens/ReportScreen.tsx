@@ -176,7 +176,7 @@ const AREA_WORDS: Record<AspectType, string> = {
   Accessible: 'accessibility',
   'Fast and mobile': 'speed and phone layout',
   Findable: 'search',
-  Secure: 'security',
+  Protected: 'security',
   'Looks and reads well': 'looks and wording',
 };
 

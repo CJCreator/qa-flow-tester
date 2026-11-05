@@ -1,6 +1,6 @@
 import type { FindingSeverity, Breakpoint } from './test-case.js';
 
-export type AspectType = 'Works' | 'Accessible' | 'Fast and mobile' | 'Findable' | 'Secure' | 'Looks and reads well';
+export type AspectType = 'Works' | 'Accessible' | 'Fast and mobile' | 'Findable' | 'Protected' | 'Looks and reads well';
 
 export type AspectGrade = 'A' | 'B' | 'C' | 'D' | 'F';
 

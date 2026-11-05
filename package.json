@@ -30,7 +30,7 @@
     "typecheck": "tsc -p tsconfig.test.json --noEmit"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22.9.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

@@ -91,7 +91,7 @@ export function calculateSiteAspectGrades(findings: Finding[], options: ScoringO
     Accessible: { grade: 'A', score: 100, findings: [] },
     'Fast and mobile': { grade: 'A', score: 100, findings: [] },
     Findable: { grade: 'A', score: 100, findings: [] },
-    Secure: { grade: 'A', score: 100, findings: [] },
+    Protected: { grade: 'A', score: 100, findings: [] },
     'Looks and reads well': { grade: 'A', score: 100, findings: [] },
   };
 
@@ -100,7 +100,7 @@ export function calculateSiteAspectGrades(findings: Finding[], options: ScoringO
     'Accessible',
     'Fast and mobile',
     'Findable',
-    'Secure',
+    'Protected',
     'Looks and reads well',
   ];
   const ran = options.checkersRun ? new Set(options.checkersRun) : undefined;

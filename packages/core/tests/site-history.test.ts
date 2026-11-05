@@ -24,7 +24,7 @@ describe('Site History & Delta Tracking (site-history.ts)', () => {
       Accessible: { grade: 'A', score: 95, findings: [] },
       'Fast and mobile': { grade: 'A', score: 95, findings: [] },
       Findable: { grade: 'A', score: 95, findings: [] },
-      Secure: { grade: 'B', score: 85, findings: ['F-002'] },
+      Protected: { grade: 'B', score: 85, findings: ['F-002'] },
       'Looks and reads well': { grade: 'A', score: 100, findings: [] },
     },
     overallGrade: 'B',

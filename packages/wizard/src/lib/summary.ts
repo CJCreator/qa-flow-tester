@@ -325,7 +325,7 @@ const WHY_BY_ASPECT: Record<AspectType, string> = {
     'Some people, such as those using a screen reader, a keyboard or large text, can’t use this part of the site.',
   'Fast and mobile': 'People on phones get a slow, cramped or broken page, and many leave.',
   Findable: 'Fewer people find the site through search engines and AI assistants.',
-  Secure: 'People’s data or accounts could be put at risk.',
+  Protected: 'People’s data or accounts could be put at risk.',
   'Looks and reads well': 'The page looks unfinished or is hard to read, which costs trust.',
 };
 
