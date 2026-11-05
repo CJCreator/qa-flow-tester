@@ -122,6 +122,14 @@ export function releaseVerdict(
   if (minorsBreached)
     breaches.push(`${counts.Minor} minor ${counts.Minor === 1 ? 'problem' : 'problems'} (${maxMinors} allowed)`);
 
+  // Zero checks executed (OPEN_ISSUES C5): a gate that enforces all areas never passes a run that
+  // checked no area at all. Lenient does not enforce areas, so it keeps its 0-Blockers rule.
+  const noChecks =
+    grades !== undefined &&
+    gate.enforceAllAreas === true &&
+    !Object.values(grades.aspects || {}).some((a) => !!a && a.checked !== false && a.grade !== null);
+  if (noChecks) breaches.push('no checks ran, so nothing was checked');
+
   // Area score and grade evaluations per PRD FR-8.2
   const notChecked: AspectType[] = [];
   if (grades) {
@@ -175,6 +183,8 @@ export function releaseVerdict(
       others === 0
         ? 'No problems found.'
         : `Nothing blocks release under active quality gates. ${others} smaller ${others === 1 ? 'problem is' : 'problems are'} worth fixing.`;
+  } else if (noChecks) {
+    reason = 'No checks ran, so nothing can be called ready.';
   } else {
     reason =
       !customGate && breaches.length === 1 && blockersBreached

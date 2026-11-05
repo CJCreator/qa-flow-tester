@@ -281,3 +281,43 @@ describe('A–F Aspect Grading (scoring.ts)', () => {
     expect(grades.aspects.Works.grade).toBe('A');
   });
 });
+
+describe('scoring counts problems, not findings (OPEN_ISSUES C1, C4)', () => {
+  const at = (id: string, urlPath: string, extra: Partial<Finding> = {}): Finding => ({
+    id,
+    title: 'Dead End Page: No back button',
+    severity: 'Major',
+    checker: 'bug-detection',
+    where: { urlPath, role: 'visitor', breakpoint: '1440px' },
+    expectedVsActual: { expected: '', actual: '' },
+    stepsToReproduce: [],
+    evidence: {},
+    resolution: '',
+    ...extra,
+  });
+
+  it('counts one page-wide Major on two pages once, with the spread multiplier', () => {
+    const grades = calculateSiteAspectGrades([at('F-1', '/a'), at('F-2', '/b')]);
+    // One problem on two pages: 20 x 1.25 = 25 off, one Major, so Grade B (not two Majors to C).
+    expect(grades.aspects.Works.score).toBe(75);
+    expect(grades.aspects.Works.grade).toBe('B');
+  });
+
+  it('counts a site-wide problem once per site, never spread across pages', () => {
+    const missing = (urlPath: string, id: string): Finding => ({
+      ...at(id, urlPath),
+      title: 'Site is missing a robots.txt file at domain root',
+      checker: 'seo',
+    });
+    const grades = calculateSiteAspectGrades([missing('/a', 'F-1'), missing('/b', 'F-2'), missing('/c', 'F-3')]);
+    // 20 off once (not 20 x 1.5 over three pages): Findable 80.
+    expect(grades.aspects.Findable.score).toBe(80);
+  });
+
+  it('does not give Grade F for a crash named only in the title (no structured 5xx)', () => {
+    for (const title of ['Uncaught Exception: boom', 'Application crash on load']) {
+      const grades = calculateSiteAspectGrades([at('F-1', '/', { title, is5xx: false })]);
+      expect(grades.aspects.Works.grade).not.toBe('F');
+    }
+  });
+});

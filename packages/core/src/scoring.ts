@@ -8,6 +8,7 @@ import type {
   SiteAspectGrades,
 } from '@qa/types';
 import { ASPECT_CHECKERS, aspectOfFinding, problemKey } from '@qa/types';
+import { isSiteScopedFinding } from './finding-groups.js';
 
 export { ASPECT_CHECKERS };
 
@@ -20,6 +21,8 @@ const SEVERITY_DEDUCTIONS: Record<FindingSeverity, number> = {
   Minor: 5,
   Suggestion: 2,
 };
+
+const SEVERITY_RANK: Record<FindingSeverity, number> = { Blocker: 0, Major: 1, Minor: 2, Suggestion: 3 };
 
 const FLAKY_STABILITY_PENALTY = 3;
 
@@ -122,39 +125,56 @@ export function calculateSiteAspectGrades(findings: Finding[], options: ScoringO
     let majorCount = 0;
     const findingIds: string[] = [];
 
-    // Group duplicate findings by title/code to avoid double penalizing the same recurring bug
+    // Group duplicate findings by problem, so one recurring bug is one problem on however many pages.
+    // Its severity is the most serious of its graded members.
     const grouped = new Map<
       string,
-      { severity: FindingSeverity; pages: Set<string>; ids: string[]; opinion: boolean }
+      {
+        severity: FindingSeverity;
+        pages: Set<string>;
+        ids: string[];
+        opinion: boolean;
+        graded: boolean;
+        siteScoped: boolean;
+      }
     >();
     for (const f of aspectFindings) {
       findingIds.push(f.id);
       const key = problemKey(f);
+      // AI-advisory findings never feed the grade caps.
+      const advisory = !!f.advisory || f.checker === 'ai-review';
       if (!grouped.has(key)) {
         grouped.set(key, {
           severity: f.severity,
           pages: new Set(),
           ids: [],
           opinion: f.checker === 'ai-review' || !!f.advisory,
+          graded: false,
+          siteScoped: true,
         });
       }
       const entry = grouped.get(key)!;
       entry.pages.add(f.where.urlPath);
+      for (const page of f.seenAt?.pages ?? []) entry.pages.add(page);
       entry.ids.push(f.id);
-      // AI-advisory findings never feed the grade caps.
-      if (f.advisory || f.checker === 'ai-review') continue;
-      if (f.severity === 'Blocker') {
-        blockerCount++;
-      } else if (f.severity === 'Major') {
-        majorCount++;
-      }
+      entry.siteScoped = entry.siteScoped && isSiteScopedFinding(f);
+      if (advisory) continue;
+      if (!entry.graded || SEVERITY_RANK[f.severity] < SEVERITY_RANK[entry.severity]) entry.severity = f.severity;
+      entry.graded = true;
     }
 
-    // AI visual review operates strictly as non-graded advisory commentary per PRD FR-8.1 / ADR 0009
-    for (const [, group] of grouped.entries()) {
-      if (group.opinion) continue; // Non-graded advisory commentary
+    // AI visual review operates strictly as non-graded advisory commentary per PRD FR-8.1 / ADR 0009.
+    // A problem counts once toward the grade caps and the deduction; a site-wide problem is never
+    // spread across pages (it is one problem per site).
+    for (const group of grouped.values()) {
+      if (group.opinion || !group.graded) continue; // Non-graded advisory commentary
+      if (group.severity === 'Blocker') {
+        blockerCount++;
+      } else if (group.severity === 'Major') {
+        majorCount++;
+      }
       const baseDeduction = SEVERITY_DEDUCTIONS[group.severity] || 5;
-      const multiplier = getSpreadMultiplier(group.pages.size);
+      const multiplier = group.siteScoped ? 1 : getSpreadMultiplier(group.pages.size);
       totalDeduction += baseDeduction * multiplier;
     }
 
@@ -163,16 +183,9 @@ export function calculateSiteAspectGrades(findings: Finding[], options: ScoringO
       totalDeduction += options.flakyCount * FLAKY_STABILITY_PENALTY;
     }
 
-    // Unhandled first-party 500s or runtime crash triggers automatic Grade F per PRD FR-8.1
-    const hasFirstPartyCrash =
-      aspect === 'Works' &&
-      aspectFindings.some(
-        (f) =>
-          !f.thirdParty &&
-          (f.is5xx === true ||
-            f.title.toLowerCase().includes('uncaught exception') ||
-            f.title.toLowerCase().includes('application crash'))
-      );
+    // An unhandled first-party HTTP 500 triggers automatic Grade F per PRD FR-8.1. Only the structured
+    // status counts (ADR 0029): a title that mentions a crash does not.
+    const hasFirstPartyCrash = aspect === 'Works' && aspectFindings.some((f) => !f.thirdParty && f.is5xx === true);
 
     const finalScore = Math.max(0, Math.round(100 - totalDeduction));
     const checked = ran ? [...relevantCheckers].some((c) => ran.has(c)) || findingIds.length > 0 : true;
