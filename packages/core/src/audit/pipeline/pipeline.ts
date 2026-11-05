@@ -171,7 +171,7 @@ export interface AuditPipelineOutcome {
  */
 export class AuditPipelineError extends Error {
   readonly code: 'save-failed' | 'status-not-updated' | 'ERR_PIPELINE';
-  readonly errorCode: 'ERR_PIPELINE' = 'ERR_PIPELINE';
+  readonly errorCode = 'ERR_PIPELINE' as const;
   constructor(code: 'save-failed' | 'status-not-updated' | 'ERR_PIPELINE' = 'save-failed') {
     super(
       code === 'status-not-updated'

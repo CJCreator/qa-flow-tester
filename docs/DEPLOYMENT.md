@@ -83,7 +83,7 @@ checked read-only; any other is a test copy). The user's secret is `QA_AI_API_KE
 
 ## Website Audit storage and Helper sign-in
 
-Local runs need none of this. Without `AUDIT_STORE_BUCKET` the runner keeps Website Audits, Shared Links and Helper grants
+Local runs need none of this and no cloud account. Without `AUDIT_STORE_BUCKET` the runner keeps Website Audits, Shared Links and Helper grants
 as files under `<RUNNER_DATA_DIR>/audit-store/`. Without `FIREBASE_PROJECT_ID` Helper sign-in is off.
 
 On the hosted copy, Website Audits and Shared Links live in one Cloud Storage bucket

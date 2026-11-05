@@ -278,4 +278,3 @@ export function aiStatusNoteText(status: AuditAiStatus, reason?: string): string
   }
   return 'AI status: not available.';
 }
-

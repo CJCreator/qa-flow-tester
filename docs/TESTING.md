@@ -45,11 +45,11 @@ Output (`report.html`, `report.md`, `findings.json`) lands in `.tmp-self-checkup
 
 ## What to run
 
-| Situation             | Command                                                     |
-| --------------------- | ----------------------------------------------------------- |
-| While editing         | `pnpm test:watch` or `pnpm exec vitest run <file>`          |
-| Before a pull request | `pnpm build`, then `pnpm test`                              |
-| Before a release      | `pnpm test:all`, `pnpm smoke`, and the real-website check   |
+| Situation             | Command                                                   |
+| --------------------- | --------------------------------------------------------- |
+| While editing         | `pnpm test:watch` or `pnpm exec vitest run <file>`        |
+| Before a pull request | `pnpm build`, then `pnpm test`                            |
+| Before a release      | `pnpm test:all`, `pnpm smoke`, and the real-website check |
 
 Browser files: run only the changed ones with `--no-file-parallelism`. A parallel `pnpm test:browser` can time out under load; re-run the file alone before calling it a failure.
 

@@ -80,8 +80,7 @@ const BLOCKED_TEXT: Record<InterstitialKind, string> = {
     "The address showed the tunnel's warning page instead of the website. Check that the tunnel allows anonymous access and that the app behind it is running, then start the audit again.",
   'bot-check':
     'The website showed a bot check instead of its pages, so it blocks automated visitors. A Website Audit cannot read it.',
-  'empty':
-    'The website showed an empty page instead of its content. A Website Audit cannot read it.',
+  empty: 'The website showed an empty page instead of its content. A Website Audit cannot read it.',
 };
 
 /** The start page was a tunnel warning or a bot check, so the audit read nothing of the site. Plain message. */

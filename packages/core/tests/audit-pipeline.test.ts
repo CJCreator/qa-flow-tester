@@ -432,7 +432,16 @@ describe('audit pipeline: runAuditPipeline', () => {
 
     // Stage order (calls after the crawl hook) and progress events.
     const after = calls.filter((c) => !/^(read|a11y|phone):/.test(c));
-    expect(after).toEqual(['analyse', 'speed', 'assessPages', 'assessSite', 'recommend', 'roadmap', 'documents', 'save']);
+    expect(after).toEqual([
+      'analyse',
+      'speed',
+      'assessPages',
+      'assessSite',
+      'recommend',
+      'roadmap',
+      'documents',
+      'save',
+    ]);
     expect(events.filter((e) => e.type === 'progress').map((e) => (e as any).stage)).toEqual([
       'checking-pages',
       'measuring-speed',
@@ -892,9 +901,7 @@ describe('audit pipeline: runAuditPipeline', () => {
     const { outcome } = await run({}, siteStages(), crawl);
     const { result } = await outcome;
 
-    const skipFindings = result.findings.filter((f) =>
-      ['http-error', 'timeout', 'did-not-load'].includes(f.rule)
-    );
+    const skipFindings = result.findings.filter((f) => ['http-error', 'timeout', 'did-not-load'].includes(f.rule));
     expect(skipFindings).toHaveLength(3);
     expect(skipFindings.find((f) => f.rule === 'http-error')).toMatchObject({
       urlPath: '/server-err',

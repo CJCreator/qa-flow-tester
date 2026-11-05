@@ -8,14 +8,14 @@ Teams that release a web app without a QA person, and people who look at someone
 
 ## Two areas
 
-| | Check-up | Website Audit |
-|---|---|---|
-| For | An App the team releases | A public website, usually not the user's own |
-| Starts at | New check-up | `/audits/new` |
-| Plan and Plan Review | Yes | No |
-| Release verdict | Yes | Never |
-| Signs in, fills in forms | Yes, with Roles, on a Test Copy | Never |
-| Output | Report | Audit Documents |
+|                          | Check-up                        | Website Audit                                |
+| ------------------------ | ------------------------------- | -------------------------------------------- |
+| For                      | An App the team releases        | A public website, usually not the user's own |
+| Starts at                | New check-up                    | `/audits/new`                                |
+| Plan and Plan Review     | Yes                             | No                                           |
+| Release verdict          | Yes                             | Never                                        |
+| Signs in, fills in forms | Yes, with Roles, on a Test Copy | Never                                        |
+| Output                   | Report                          | Audit Documents                              |
 
 Both reuse one engine (crawl, checks, AI providers). Decisions: ADR 0033, 0041.
 
@@ -45,17 +45,17 @@ With a Product Context, each item carries its Source. Items whose Source the Spi
 
 Each check feeds one of six areas (`ASPECT_CHECKERS`, `packages/types/src/problems.ts`). Checks are automatic and report what they saw; none claims a site is accessible or safe (ADR 0018). A check that could not run is "Could not verify": never a defect, never a pass (`could-not-verify.ts`).
 
-| Area | Checker | Reports |
-|---|---|---|
-| Works | `bug-detection` | Uncaught exceptions, console errors, failed requests (4xx/5xx), broken links, failed steps |
-| Works | `spec-conformance` | Journeys and forms against Intent and Source |
-| Accessible | `ux-quality` | axe-core WCAG 2.2 AA with the criterion named, touch targets (24 px minimum), labels. `keyboard-a11y.ts`: unreachable elements, focus hidden under fixed content, focus traps, sideways scroll at 320 px. Per WCAG criterion: violated, no violation found by automation, or needs human judgment |
-| Fast and mobile | `performance` | LCP, CLS, INP in a throttled lab browser (median of loads; `SPEED_THRESHOLDS`: LCP 2.5 s, CLS 0.1, INP 200 ms good; slow request 2 s; page weight 4 MB), viewport tag, horizontal overflow |
-| Findable | `seo` | Title, description, `h1` and heading order, canonical, noindex, viewport, favicon, image alt, OpenGraph, broken links; structured data and answer readiness (`aeo.ts`); AI-readable structure and credibility (`geo.ts`); home-page marketing basics (`marketing.ts`: call to action, contact, privacy or terms link, analytics, cookie notice, social links, pricing, reviews, email capture). Site-wide facts are reported once |
-| Secure | `security` | Insecure content, cookie flags, CSRF token on forms, CSP, nosniff, clickjacking, Referrer-Policy, HSTS, CORS, stack traces, secrets in addresses. `security-depth.ts`: missing integrity attributes, reachable source maps, `security.txt` |
-| Secure | `permission-matrix` | Role access against the Source |
-| Looks and reads well | `design-standards` | Computed styles against `design-tokens.json` (Token Baseline); perceptual visual diff against approved baselines |
-| Looks and reads well | `ai-review` | Advisory visual review |
+| Area                 | Checker             | Reports                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| -------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Works                | `bug-detection`     | Uncaught exceptions, console errors, failed requests (4xx/5xx), broken links, failed steps                                                                                                                                                                                                                                                                                                                                        |
+| Works                | `spec-conformance`  | Journeys and forms against Intent and Source                                                                                                                                                                                                                                                                                                                                                                                      |
+| Accessible           | `ux-quality`        | axe-core WCAG 2.2 AA with the criterion named, touch targets (24 px minimum), labels. `keyboard-a11y.ts`: unreachable elements, focus hidden under fixed content, focus traps, sideways scroll at 320 px. Per WCAG criterion: violated, no violation found by automation, or needs human judgment                                                                                                                                 |
+| Fast and mobile      | `performance`       | LCP, CLS, INP in a throttled lab browser (median of loads; `SPEED_THRESHOLDS`: LCP 2.5 s, CLS 0.1, INP 200 ms good; slow request 2 s; page weight 4 MB), viewport tag, horizontal overflow                                                                                                                                                                                                                                        |
+| Findable             | `seo`               | Title, description, `h1` and heading order, canonical, noindex, viewport, favicon, image alt, OpenGraph, broken links; structured data and answer readiness (`aeo.ts`); AI-readable structure and credibility (`geo.ts`); home-page marketing basics (`marketing.ts`: call to action, contact, privacy or terms link, analytics, cookie notice, social links, pricing, reviews, email capture). Site-wide facts are reported once |
+| Secure               | `security`          | Insecure content, cookie flags, CSRF token on forms, CSP, nosniff, clickjacking, Referrer-Policy, HSTS, CORS, stack traces, secrets in addresses. `security-depth.ts`: missing integrity attributes, reachable source maps, `security.txt`                                                                                                                                                                                        |
+| Secure               | `permission-matrix` | Role access against the Source                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Looks and reads well | `design-standards`  | Computed styles against `design-tokens.json` (Token Baseline); perceptual visual diff against approved baselines                                                                                                                                                                                                                                                                                                                  |
+| Looks and reads well | `ai-review`         | Advisory visual review                                                                                                                                                                                                                                                                                                                                                                                                            |
 
 Security checks only read what the App already sends, plus same-site GETs. Security Probes and Active check consent are decided in ADR 0030; no probe runs today.
 

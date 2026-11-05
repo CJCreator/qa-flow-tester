@@ -81,8 +81,8 @@ async function rerun(base: string, id: string): Promise<{ status: number; json: 
   return { status: res.status, json: await res.json() };
 }
 
-function expectErrorReply(json: Record<string, unknown>): void {
-  for (const key of Object.keys(json)) expect(['error', 'code']).toContain(key);
+function expectErrorReply(json: Record<string, unknown>, extraKeys: string[] = []): void {
+  for (const key of Object.keys(json)) expect(['error', 'code', ...extraKeys]).toContain(key);
   expect(JSON.stringify(json)).not.toMatch(/\bat \w|stack|node:|ECONN/);
 }
 
@@ -171,7 +171,8 @@ describe('POST /api/audits/:id/rerun', () => {
     const { status, json } = await rerun(base, auditId);
     expect(status).toBe(409);
     expect(json.code).toBe('ERR_RUN_IN_PROGRESS');
-    expectErrorReply(json);
+    expectErrorReply(json, ['running']);
+    expect(json.running).toEqual({ kind: expect.stringMatching(/^(checkup|audit)$/), href: expect.any(String) });
     expect(addressCalls).toEqual([]);
     expect(startCalls).toEqual([]);
     expect((await store.getAudit(auditId))?.versions).toHaveLength(1);

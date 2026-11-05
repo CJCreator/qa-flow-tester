@@ -56,15 +56,13 @@ export function DocumentsReady({ version, auditId }: DocumentsReadyProps) {
           <h2 id="audit-documents-title" className="text-xl font-bold">
             Audit Documents ready
           </h2>
-          <p className="text-sm text-ink-soft">
-            The 7 documents prepared for this Website Audit version.
-          </p>
+          <p className="text-sm text-ink-soft">The 7 documents prepared for this Website Audit version.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link to={reviewUrl} className="btn-quiet btn-sm">
             Open
           </Link>
-          <Link to={exportUrl} className="btn-secondary btn-sm">
+          <Link to={exportUrl} className="btn-quiet btn-sm">
             Download all
           </Link>
         </div>
