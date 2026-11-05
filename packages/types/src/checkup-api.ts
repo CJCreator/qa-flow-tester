@@ -141,6 +141,8 @@ export interface RunStartReply {
  * runner validates the values and refuses unknown ones.
  */
 export interface PlanPatchBody {
+  /** The planGeneration the client loaded. Older than the stored one: refused with 409 ERR_PLAN_STALE. */
+  generation?: number;
   flows?: DiscoveredFlow[];
   questions?: Array<{ id: string; selectedAnswer: string }>;
   answers?: Record<string, string>;

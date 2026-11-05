@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';
-import { writeJsonAtomic, readJsonSafe } from '../src/atomic-write.js';
+import { writeJsonAtomic, readJsonSafe, purgeStaleTempFiles, STALE_TEMP_MS } from '../src/atomic-write.js';
 
 describe('atomic-write (writeJsonAtomic and readJsonSafe)', () => {
   let tmpDir: string;
@@ -124,5 +124,72 @@ describe('atomic-write (writeJsonAtomic and readJsonSafe)', () => {
     expect(result.data).toEqual({ legacy: true });
     expect(result.readOnly).toBe(false);
     expect(result.version).toBe(0);
+  });
+});
+
+describe('atomic-write fsync and stale temp purge (R6)', () => {
+  let tmpDir: string;
+
+  beforeEach(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'atomic-fsync-test-'));
+  });
+
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+  });
+
+  it('flushes the temp file to disk (fsync) before renaming it over the target', async () => {
+    const target = path.join(tmpDir, 'synced.json');
+    const realOpen = fs.open.bind(fs);
+    const syncSpy = vi.fn();
+    vi.spyOn(fs, 'open').mockImplementation(async (...args: Parameters<typeof fs.open>) => {
+      const fh = await realOpen(...args);
+      const realSync = fh.sync.bind(fh);
+      fh.sync = async () => {
+        syncSpy();
+        return realSync();
+      };
+      return fh;
+    });
+
+    await writeJsonAtomic(target, { a: 1 });
+
+    expect(syncSpy).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(await fs.readFile(target, 'utf8'))).toEqual({ a: 1 });
+  });
+
+  it('purges temp files of this file older than the threshold, and keeps fresh and foreign ones', async () => {
+    const target = path.join(tmpDir, 'plan.json');
+    const now = Date.now();
+    const old = `plan.json.tmp-4242-${now - STALE_TEMP_MS - 5000}-abc123`;
+    const fresh = `plan.json.tmp-4242-${now - 1000}-abc123`;
+    const otherFile = `other.json.tmp-4242-${now - STALE_TEMP_MS - 5000}-abc123`;
+    const notPattern = 'plan.json.tmp-notes.txt';
+    for (const name of [old, fresh, otherFile, notPattern]) {
+      await fs.writeFile(path.join(tmpDir, name), 'partial', 'utf8');
+    }
+
+    const removed = await purgeStaleTempFiles(target, now);
+
+    expect(removed).toBe(1);
+    const left = (await fs.readdir(tmpDir)).sort();
+    expect(left).toEqual([fresh, notPattern, otherFile].sort());
+  });
+
+  it('a write removes a stale temp left by a crashed earlier write', async () => {
+    const target = path.join(tmpDir, 'state.json');
+    const stale = `state.json.tmp-999-${Date.now() - STALE_TEMP_MS - 60000}-zzz999`;
+    await fs.writeFile(path.join(tmpDir, stale), 'half', 'utf8');
+
+    await writeJsonAtomic(target, { ok: true });
+
+    const files = await fs.readdir(tmpDir);
+    expect(files).not.toContain(stale);
+    expect(files).toContain('state.json');
+  });
+
+  it('purge never throws when the folder does not exist', async () => {
+    await expect(purgeStaleTempFiles(path.join(tmpDir, 'missing', 'x.json'))).resolves.toBe(0);
   });
 });

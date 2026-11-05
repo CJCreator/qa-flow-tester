@@ -20,6 +20,8 @@ export interface StoredPlanRecord {
   schemaVersion?: number;
   /** Current state of the plan: awaiting-review, approved, or done. */
   status?: 'awaiting-review' | 'approved' | 'done';
+  /** Bumped before each approved save. A plan write that carries an older generation is stale (409 ERR_PLAN_STALE). */
+  planGeneration?: number;
   plan: ReviewPlan;
   context: {
     targetUrl: string;
@@ -296,6 +298,7 @@ export class DefaultPlanStore implements PlanStore {
     return new Redactor([...roles, ...sessionSecrets, ...headerSecrets]).deep({
       schemaVersion: 1,
       status: record.status ?? 'awaiting-review',
+      planGeneration: record.planGeneration,
       plan: record.plan,
       context: {
         ...context,
