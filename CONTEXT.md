@@ -201,22 +201,27 @@ _Avoid_: Crawl log, request log, trace
 
 **Canonical Finding**:
 A unique, deduplicated defect or non-conformance record maintained by the Report Hub, representing an underlying issue across multiple developer runs and releases.
+_Status: future specification. The Report Hub it belongs to is retired (ADR 0005); no code implements this term yet._
 _Avoid_: Bug ticket, report item, merged issue
 
 **Structural Fingerprint**:
 A deterministic hash generated from invariant finding attributes (`productId`, `normalizedRoute`, `checkerId`, `ruleCode`, `targetElementSelector`) used to recognize identical issues regardless of run environment, developer, or timestamp.
+_Status: in use for grouping findings within one run (ADR 0004). The cross-machine dedupe it was built for is not built._
 _Avoid_: Error hash, bug signature, checksum
 
 **Run Finding**:
 The concrete occurrence of a finding captured during a single test execution run on an individual machine, preserving raw run-level evidence (screenshots, DOM snapshots, network logs).
+_Status: future specification. The Report Hub it belongs to is retired (ADR 0005); no code implements this term yet._
 _Avoid_: Local bug, run result, raw failure
 
 **Report Hub**:
 The centralized service and persistent datastore aggregating test executions from distributed developer machines into unified product releases and tracking canonical defects.
+_Status: future specification. The Report Hub it belongs to is retired (ADR 0005); no code implements this term yet._
 _Avoid_: Central server, test backend, QA portal
 
 **Run Ingestion**:
 The authenticated transmission protocol where a Local Runner uploads an executed run bundle (metadata, results, findings, and evidence references) to the Report Hub.
+_Status: future specification. The Report Hub it belongs to is retired (ADR 0005); no code implements this term yet._
 _Avoid_: Test sync, upload job, push
 
 **Evidence Bundle**:
@@ -225,14 +230,17 @@ _Avoid_: Artifact zip, logs folder, media attachments
 
 **Two-Phase Ingestion**:
 The handshake protocol where the runner initializes a run manifest with the Hub, receives pre-signed direct-upload URLs to object storage for the Evidence Bundle, and notifies the Hub upon upload completion to finalize consolidation.
+_Status: future specification. The Report Hub it belongs to is retired (ADR 0005); no code implements this term yet._
 _Avoid_: Upload flow, chunked push, direct upload
 
 **Targeted Verification**:
 The rule requiring that a Canonical Finding only transitions to `VERIFIED_FIXED` when the specific flow and step associated with its Structural Fingerprint is actively executed in a subsequent run and passes cleanly.
+_Status: future specification. The Report Hub it belongs to is retired (ADR 0005); no code implements this term yet._
 _Avoid_: Auto-resolve, blind closure, sweep resolution
 
 **Finding Lifecycle State**:
 The discrete status of a Canonical Finding within a release (`OPEN`, `VERIFIED_FIXED`, `REGRESSED`, `ACCEPTED_RISK`).
+_Status: future specification. The Report Hub it belongs to is retired (ADR 0005); no code implements this term yet._
 _Avoid_: Bug status, ticket workflow
 
 **Design Token Conformance**:
@@ -277,18 +285,22 @@ _Avoid_: Step repeat, in-place retry, blind re-click
 
 **Flaky Passed**:
 An execution outcome where an initial attempt failed due to transient conditions but a clean retry succeeded; persisted in the Report Hub as an instability signal without triggering a blocking regression.
+_Status: future specification. The Report Hub it belongs to is retired (ADR 0005); no code implements this term yet._
 _Avoid_: Soft pass, intermittent green, pass on retry
 
 **Product-Scoped Ingest Token**:
 An authentication credential restricted to a specific product that authorizes local runners and CI pipelines to transmit run bundles to the Report Hub without cross-product interference.
+_Status: future specification. The Report Hub it belongs to is retired (ADR 0005); no code implements this term yet._
 _Avoid_: Master API key, runner secret, system token
 
 **Release Target**:
 The designated candidate version, milestone, or deployment branch (e.g. `v1.2.0-rc1`) under which canonical findings are consolidated, verified, and gated.
+_Status: future specification. The Report Hub it belongs to is retired (ADR 0005); no code implements this term yet._
 _Avoid_: Test environment, build tag, run group
 
 **Outbox Queue**:
 A persistent local SQLite datastore buffering completed run bundles and evidence references when the Report Hub is unreachable, enabling automatic deferred ingestion once network connectivity is restored.
+_Status: future specification. The Report Hub it belongs to is retired (ADR 0005); no code implements this term yet._
 _Avoid_: Offline cache, sync buffer, pending uploads
 
 **Reference Flow**:

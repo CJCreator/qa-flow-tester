@@ -9,7 +9,7 @@ pnpm bootstrap     # install, Playwright Chromium, build everything
 pnpm start         # http://localhost:3001
 ```
 
-Requires Node 22.9 or newer and pnpm 11 (the exact version is pinned in `package.json`).
+Requires Node.js 22.9.0 or newer and pnpm 11 (the exact version is pinned in `package.json`).
 
 ## Workflow
 

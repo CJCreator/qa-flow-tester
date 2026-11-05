@@ -30,7 +30,7 @@ describe('A–F Aspect Grading (scoring.ts)', () => {
     expect(grades.aspects.Accessible.grade).toBe('A');
     expect(grades.aspects['Fast and mobile'].grade).toBe('A');
     expect(grades.aspects.Findable.grade).toBe('A');
-    expect(grades.aspects.Secure.grade).toBe('A');
+    expect(grades.aspects.Protected.grade).toBe('A');
     expect(grades.aspects['Looks and reads well'].grade).toBe('A');
   });
 
@@ -121,7 +121,7 @@ describe('A–F Aspect Grading (scoring.ts)', () => {
     expect(grades.aspects.Works).toMatchObject({ grade: 'A', checked: true });
     expect(grades.aspects.Accessible).toMatchObject({ score: 95, checked: true });
     // A checker that found something ran, whatever the list says.
-    expect(grades.aspects.Secure).toMatchObject({ score: 95, checked: true });
+    expect(grades.aspects.Protected).toMatchObject({ score: 95, checked: true });
     for (const aspect of ['Fast and mobile', 'Findable', 'Looks and reads well'] as const) {
       expect(grades.aspects[aspect].checked, aspect).toBe(false);
       // Never an A, never 100: no grade at all.
@@ -173,8 +173,8 @@ describe('A–F Aspect Grading (scoring.ts)', () => {
     ];
 
     const grades = calculateSiteAspectGrades(criticalFindings);
-    expect(grades.aspects.Secure.score).toBeLessThanOrEqual(50);
-    expect(grades.aspects.Secure.grade).toBe('F');
+    expect(grades.aspects.Protected.score).toBeLessThanOrEqual(50);
+    expect(grades.aspects.Protected.grade).toBe('F');
     // The overall grade is never better than the worst area grade
     expect(grades.overallGrade).toBe('F');
   });
@@ -254,7 +254,7 @@ describe('A–F Aspect Grading (scoring.ts)', () => {
     };
     // Five areas at A and one at D would average above C; the cap holds the overall at D.
     const grades = calculateSiteAspectGrades([major]);
-    expect(grades.aspects.Secure.grade).toBe('D');
+    expect(grades.aspects.Protected.grade).toBe('D');
     expect(grades.overallGrade).toBe('D');
 
     const none = calculateSiteAspectGrades([], { checkersRun: [] });

@@ -18,7 +18,7 @@ const grades = (worst: AspectGrade | null): SiteAspectGrades => {
       Accessible: ok,
       'Fast and mobile': ok,
       Findable: ok,
-      Secure: ok,
+      Protected: ok,
       'Looks and reads well': ok,
     },
     overallGrade: worst ?? 'A',

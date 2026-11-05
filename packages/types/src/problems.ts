@@ -14,7 +14,7 @@ export const ASPECT_CHECKERS: Record<AspectType, CheckerType[]> = {
   Accessible: ['ux-quality'],
   'Fast and mobile': ['performance'],
   Findable: ['seo'],
-  Secure: ['security', 'permission-matrix'],
+  Protected: ['security', 'permission-matrix'],
   'Looks and reads well': ['design-standards', 'ai-review'],
 };
 
@@ -23,7 +23,7 @@ export const ASPECTS: AspectType[] = [
   'Accessible',
   'Fast and mobile',
   'Findable',
-  'Secure',
+  'Protected',
   'Looks and reads well',
 ];
 

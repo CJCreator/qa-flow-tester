@@ -51,10 +51,7 @@ To close an item, fix it, then delete its row. A row marked "Unclear" needs the 
 | D5     | The repo's `qa-check.yml` checks out the tool at `ref: main` while it receives `QA_AI_API_KEY`.                                                     | `.github/workflows/qa-check.yml:49`                                                           | Medium   |
 | D6     | Target URLs are logged as typed, including any `user:pass@`.                                                                                        | `packages/core/src/orchestrator.ts:369`; `packages/core/src/discovery/discovery-agent.ts:503` | Medium   |
 | D8     | `/healthz` answers `ok` before any check, and Cloud Run never routes it to the container.                                                           | `packages/runner/src/server.ts:1056-1059`                                                     | Medium   |
-| DOC-1  | `QA_DELAY_MS=0` becomes 100 ms (`Number(raw) \|\| 100`), but the doc says `0` is no delay.                                                          | `packages/runner/src/checkup.ts:203`; `docs/CONFIGURATION.md:87`                              | —        |
-| DOC-2  | README says Node `v20.x` or `v22.x` while engines is `>=22`, and the 22.9 minimum in README and CONTRIBUTING is not enforced.                       | `README.md:86`, `:96`; `CONTRIBUTING.md:12`; `package.json:31-32`                             | —        |
-| DOC-3  | `CONTEXT.md` still defines Report Hub terms with no retired mark, and avoids "Spec" while code and routes use it.                                   | `CONTEXT.md:41`, `:196-280`                                                                   | —        |
-| DOC-4  | ADR 0018 forbids "Secure", but it is still an area label.                                                                                           | `docs/adr/0018-claim-wording.md:3`; `packages/types/src/aspects.ts:3`                         | —        |
+| DOC-3  | `CONTEXT.md` avoids "Spec" while code and routes use it. The Report Hub terms are now marked as future specifications.                              | `CONTEXT.md:41`                                                                               | —        |
 
 ## Wizard
 

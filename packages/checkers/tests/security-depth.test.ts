@@ -26,8 +26,8 @@ function expectClaimWording(findings: Finding[]) {
   const banned = /\b(compliant|compliance|certified|secure|safe|hack-proof|accessible|passes WCAG)\b/i;
   for (const f of findings) expect(JSON.stringify(f)).not.toMatch(banned);
 }
-/** Security-depth findings feed the Secure aspect through checker 'security'. */
-const aspectOfFinding = (f: Finding) => (f.checker === 'security' ? 'Secure' : 'other');
+/** Security-depth findings feed the Protected aspect through checker 'security'. */
+const aspectOfFinding = (f: Finding) => (f.checker === 'security' ? 'Protected' : 'other');
 
 function mockPage(tags: unknown, url = `${ORIGIN}/`): Page {
   return { url: () => url, evaluate: vi.fn().mockResolvedValue(tags) } as unknown as Page;
@@ -52,7 +52,7 @@ describe('SRI', () => {
     expect(findings[0].severity).toBe('Minor');
     expect(findings[1].severity).toBe('Suggestion');
     expect(JSON.stringify(findings)).not.toContain('v=3');
-    expect(aspectOfFinding(findings[0])).toBe('Secure');
+    expect(aspectOfFinding(findings[0])).toBe('Protected');
     expectClaimWording(findings);
   });
 
@@ -91,7 +91,7 @@ describe('source maps', () => {
     expect(all).toContain('/static/app.js.map');
     expect(all).not.toContain('secret/file.ts');
     expect(all).not.toContain('v=9');
-    expect(aspectOfFinding(findings[0])).toBe('Secure');
+    expect(aspectOfFinding(findings[0])).toBe('Protected');
     expectClaimWording(findings);
     // Second time on the same run: already reported.
     expect(await checker.checkSourceMaps(mockPage(scripts), c, fetchFn)).toEqual([]);
@@ -225,7 +225,7 @@ describe('Content-Security-Policy', () => {
       'Content-Security-Policy allows unsafe-eval',
     ]);
     expect(f.every((x) => x.severity === 'Minor')).toBe(true);
-    expect(aspectOfFinding(f[0])).toBe('Secure');
+    expect(aspectOfFinding(f[0])).toBe('Protected');
     expectClaimWording(f);
   });
 

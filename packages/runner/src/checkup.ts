@@ -200,7 +200,13 @@ export function parseArgs(argv: string[], env: NodeJS.ProcessEnv = process.env):
   const rawConcurrency = flag('--concurrency') ?? env.QA_CONCURRENCY;
   const crawlConcurrency = rawConcurrency ? Math.max(1, Math.min(5, Number(rawConcurrency) || 2)) : undefined;
   const rawDelay = flag('--delay') ?? env.QA_DELAY_MS;
-  const crawlDelayMs = rawDelay ? Math.max(0, Math.min(2000, Number(rawDelay) || 100)) : undefined;
+  // 0 means no delay. Only an unset or non-numeric value falls back to 100.
+  const delayNumber = rawDelay ? Number(rawDelay) : NaN;
+  const crawlDelayMs = rawDelay
+    ? Number.isFinite(delayNumber)
+      ? Math.max(0, Math.min(2000, delayNumber))
+      : 100
+    : undefined;
   const customHeaders: Record<string, string> = {};
   if (env.QA_CUSTOM_HEADERS) {
     try {

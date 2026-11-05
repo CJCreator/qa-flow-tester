@@ -38,8 +38,8 @@ export const GRADED_CHECKS: PlanGradedCheck[] = [
   },
   {
     id: 'check:secure',
-    name: 'Secure',
-    description: 'A secure connection and headers, and no passwords in page addresses.',
+    name: 'Protected',
+    description: 'A protected connection and headers, and no passwords in page addresses.',
   },
   {
     id: 'check:looks',

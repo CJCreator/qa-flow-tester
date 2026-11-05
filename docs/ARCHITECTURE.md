@@ -4,7 +4,7 @@ Developer map of the code. Product description: `PRODUCT_GUIDE.md`. Reasons behi
 
 ## Packages
 
-pnpm workspace (`pnpm-workspace.yaml`: `packages/*`), TypeScript, Node 22. Build order: types, then checkers and core, then runner.
+pnpm workspace (`pnpm-workspace.yaml`: `packages/*`), TypeScript, Node.js 22.9.0 or newer. Build order: types, then checkers and core, then runner.
 
 - `@qa/types` (`packages/types/src`): shared types and pure logic. `index.ts` re-exports the area files. Notable: `plan.ts` and `review-plan.ts` (Plan), `evidence-finding.ts` (`Finding`), `verdict.ts` (`releaseVerdict`), `problems.ts`, `checkup-api.ts`, `website-audit.ts` (Website Audit types, `AUDIT_API`, access levels, error codes), `ai.ts` (`AUDIT_AI_API`). The wizard imports single browser-safe modules from `@qa/types/src/...`, so keep Node-only code out of them.
 - `@qa/checkers` (`packages/checkers/src`): deterministic audits, one file per area (`bug-detection`, `security`, `security-depth`, `keyboard-a11y`, `seo`, `aeo`, `geo`, `performance`, `design-standards`, `ux-quality`, `marketing`, `permission-matrix`, `spec-conformance`, `site-root`).

@@ -51,7 +51,7 @@ describe('Single-File Offline HTML Report (html-report.ts)', () => {
         Accessible: { grade: 'A', score: 95, findings: [] },
         'Fast and mobile': { grade: 'A', score: 90, findings: [] },
         Findable: { grade: 'B', score: 85, findings: [] },
-        Secure: { grade: 'B', score: 85, findings: ['F-001'] },
+        Protected: { grade: 'B', score: 85, findings: ['F-001'] },
         'Looks and reads well': { grade: 'A', score: 100, findings: [] },
       },
       overallGrade: 'A',
@@ -62,7 +62,7 @@ describe('Single-File Offline HTML Report (html-report.ts)', () => {
         id: 'REC-001',
         category: 'quick-win',
         title: 'Configure Content-Security-Policy header',
-        aspect: 'Secure',
+        aspect: 'Protected',
         severity: 'Major',
         effort: 'Low',
         impact: 'High',
@@ -90,7 +90,7 @@ describe('Single-File Offline HTML Report (html-report.ts)', () => {
     expect(content).toContain('Accessible');
     expect(content).toContain('Fast and mobile');
     expect(content).toContain('Findable');
-    expect(content).toContain('Secure');
+    expect(content).toContain('Protected');
     expect(content).toContain('Looks and reads well');
 
     // Recommendations present
@@ -161,7 +161,7 @@ describe('Single-File Offline HTML Report (html-report.ts)', () => {
       },
     };
     const content = await fs.readFile(await generateSingleFileHtmlReport(report, { outputDir: tempDir }), 'utf8');
-    const findable = content.slice(content.indexOf('>Findable<'), content.indexOf('>Secure<'));
+    const findable = content.slice(content.indexOf('>Findable<'), content.indexOf('>Protected<'));
     expect(findable).toContain('Not checked');
     expect(findable).not.toContain('Grade A');
   });
