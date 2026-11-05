@@ -1,8 +1,6 @@
 # Product review: resolution (archived)
 
-Archived from `PRODUCT_REVIEW.md` on 2026-11-05. Every item in the review was addressed in the code. The issue text and the "Fix first" table stay in `PRODUCT_REVIEW.md`.
-
-Every item above was addressed in the code.
+Archived from `PRODUCT_REVIEW.md` on 2026-11-05. The 33 items in the review were addressed in the code. The issue text and the "Fix first" table stay in `PRODUCT_REVIEW.md`.
 
 **Live check (Oct 1, fixture app, OpenRouter free tier, `dots-3-note-preview:free`):**
 

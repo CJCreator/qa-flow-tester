@@ -446,4 +446,4 @@ their own pass.
 
 ---
 
-**Status: all 49 items resolved (Oct 1, 2026).** The per-item resolution table and the live check are in [docs/archive/PRODUCT_REVIEW_RESOLUTION.md](docs/archive/PRODUCT_REVIEW_RESOLUTION.md).
+**Status: all 33 items resolved (Oct 1, 2026).** The per-item resolution table and the live check are in [docs/archive/PRODUCT_REVIEW_RESOLUTION.md](docs/archive/PRODUCT_REVIEW_RESOLUTION.md).
