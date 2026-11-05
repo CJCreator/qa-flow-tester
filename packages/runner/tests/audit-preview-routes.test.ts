@@ -17,7 +17,6 @@ import { auditDocContents, auditDocResult, PATHS } from '../../core/tests/helper
 import {
   auditPreviewRoutes,
   previewHeaders,
-  PREVIEW_FAILED,
   type AuditPreviewRouteDeps,
   type PreviewGenerator,
 } from '../src/routes/audit-preview.js';
@@ -182,14 +181,15 @@ describe('preview rows', () => {
     expect(res.json().preview).toMatchObject({ version: 1, language: 'en' });
   });
 
-  it('an AI failure answers fixed wording and stores nothing', async () => {
+  it('an AI failure falls back to template text with fixed wording: no provider text or key anywhere (ADR 0042)', async () => {
     providerAnswer = new Error('provider said: internal detail 12345');
     const res = await call(auditPreviewRoutes(deps()), 'createPreview', auditId, { body: '{}' });
-    expect(res.statusCode).toBe(502);
-    expect(res.json()).toEqual({ error: PREVIEW_FAILED, code: 'ERR_AI_FAILED' });
+    expect(res.statusCode).toBe(200);
     expect(res.body).not.toContain('internal detail');
     expect(res.body).not.toContain(TEST_KEY);
-    expect(await storedPreview()).toBeNull();
+    const page = new TextDecoder().decode((await storedPreview())!);
+    expect(page).not.toContain('internal detail');
+    expect(page).not.toContain(TEST_KEY);
   });
 
   it('a generator that throws is the same fixed failure', async () => {
