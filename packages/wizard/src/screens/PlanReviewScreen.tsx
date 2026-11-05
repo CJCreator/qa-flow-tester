@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Breakpoint, PlanIntent, ReviewPlan, RoleCredential } from '@qa/types';
 import { withIntentSwitched } from '../lib/intent-view';
 import { SiteMap } from '../components/SiteMap';
-import { FocusHeading, Notice, Spinner } from '../components/text';
+import { Notice, Spinner } from '../components/text';
+import { BottomActionBar, Disclosure, Page, PageHeader } from '../components/ui';
 import { count } from '../lib/format';
 import { siteTypeName } from '../lib/translate';
 import { approveRolesOf, SIGN_IN_AGAIN_TEXT } from '../lib/form';
@@ -24,7 +25,7 @@ import {
 } from '../api';
 import type { ConfirmOptions } from '../components/ConfirmDialog';
 
-/** A background change to the plan (re-planning, adding pages), as the QA Tool reports it. */
+/** A background change to the plan (re-planning, adding pages), as Release check-up reports it. */
 export interface PlanUpdateState {
   running: boolean;
   what?: string;
@@ -60,7 +61,7 @@ export interface PlanReviewScreenProps {
 }
 
 /**
- * The plan as the person sees it: switches they just flipped show at once, before the QA Tool has
+ * The plan as the person sees it: switches they just flipped show at once, before Release check-up has
  * saved them. An item's `skipped` comes from `switched`; the screen sizes from `sizes`.
  */
 function withChanges(plan: ReviewPlan, switched: Record<string, boolean>, sizes: Breakpoint[] | null): ReviewPlan {
@@ -79,9 +80,12 @@ function withChanges(plan: ReviewPlan, switched: Record<string, boolean>, sizes:
 }
 
 const TABS = [
-  ['plan', 'Full plan'],
-  ['map', 'Map'],
+  ['plan', 'Plan'],
+  ['map', 'Site map'],
 ] as const;
+
+/** The one label for approving; phones show a shorter one. */
+const APPROVE_LABEL = 'Approve the plan and start testing';
 
 /**
  * The Plan Review. Leaving it keeps the plan waiting (the new check-up screen offers it again), so
@@ -122,6 +126,7 @@ export function PlanReviewScreen({
   const [sizes, setSizes] = useState<Breakpoint[] | null>(null);
   // The Intents switched off: the Plan's own list, shown at once while a change is saved.
   const [sentOff, setSentOff] = useState<PlanIntent[] | null>(null);
+  const [signInReady, setSignInReady] = useState(false);
   const intentsOff = sentOff ?? plan.intentsOff ?? [];
   const shown = useMemo(() => withChanges(plan, switched, sizes), [plan, switched, sizes]);
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -133,7 +138,7 @@ export function PlanReviewScreen({
   const pendingTogglesRef = useRef<Map<string, boolean>>(new Map());
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // A background change started here waits until the QA Tool says it has finished or failed.
+  // A background change started here waits until Release check-up says it has finished or failed.
   // Any PLAN_UPDATE_* event also ends the wait, and so does a timeout: Approve is never stuck disabled.
   useEffect(() => {
     if (!update.running) setPending(false);
@@ -177,7 +182,7 @@ export function PlanReviewScreen({
     const affectedIds = items.map((i) => i.id);
     const ok = await edit(() => patchPlan({ items }));
     if (!ok) {
-      setError('Could not save that change on the server. Your changes have been rolled back.');
+      setError('That change wasn’t saved, so it’s back as it was. Try it again.');
     }
     setSwitched((s) => Object.fromEntries(Object.entries(s).filter(([id]) => !affectedIds.includes(id))));
   };
@@ -310,16 +315,6 @@ export function PlanReviewScreen({
   const minutes = plan.summary?.minutes;
   useDocumentTitle(`Plan for ${host}`);
 
-  const approveButton = (
-    <button
-      type="button"
-      className="btn-primary shrink-0"
-      disabled={busy || approving || !!plan.noTests}
-      onClick={() => onApprove()}
-    >
-      {approving ? <Spinner label="Starting the tests…" /> : 'Approve the plan and start testing'}
-    </button>
-  );
   const moveTab = (from: 'plan' | 'map', by: number) => {
     const i = TABS.findIndex(([id]) => id === from);
     const next = TABS[(i + by + TABS.length) % TABS.length][0];
@@ -346,170 +341,210 @@ export function PlanReviewScreen({
       </div>
     );
 
-  return (
-    <div className="flex min-h-[calc(100vh-7rem)] w-full flex-col bg-canvas">
-      <div className="border-b border-rule bg-surface px-4 py-4 sm:px-6">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-3">
-          <div className="min-w-0">
-            <FocusHeading className="break-words text-2xl font-bold text-ink sm:text-3xl">
-              Review the plan for {host}
-            </FocusHeading>
-            <p className="text-sm text-ink-soft">
-              {plan.siteType ? `${siteTypeName(plan.siteType)} · ` : ''}
-              {count(plan.planPages?.length ?? plan.pages.length, 'page', 'pages')} ·{' '}
-              {count(plan.navigation?.length ?? 0, 'link', 'links')} · {count(plan.flows.length, 'journey', 'journeys')}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div
-              role="tablist"
-              aria-label="How to show the plan"
-              className="flex rounded border border-rule bg-panel p-0.5 text-sm"
-            >
-              {TABS.map(([id, name]) => (
-                <button
-                  key={id}
-                  ref={(el) => {
-                    tabRefs.current[id] = el;
-                  }}
-                  type="button"
-                  role="tab"
-                  id={`plan-tab-${id}`}
-                  aria-controls="plan-tabpanel"
-                  aria-selected={tab === id}
-                  tabIndex={tab === id ? 0 : -1}
-                  onClick={() => selectTab(id)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-                      e.preventDefault();
-                      moveTab(id, 1);
-                    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-                      e.preventDefault();
-                      moveTab(id, -1);
-                    }
-                  }}
-                  className={`min-h-[44px] rounded px-3 font-bold ${tab === id ? 'bg-stamp text-surface' : 'text-ink-soft hover:text-ink'}`}
-                >
-                  {name}
-                </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              className="btn-quiet min-h-[44px] px-3 text-sm"
-              onClick={() => downloadPlanMarkdown().catch((err: Error) => setError(err.message))}
-            >
-              Download the plan
-            </button>
-            <button
-              type="button"
-              className="btn-quiet min-h-[44px] px-3 text-sm"
-              title="Download the Plan as a Playwright project"
-              onClick={() => downloadPlaywrightExport().catch((err: Error) => setError(err.message))}
-            >
-              Export as Playwright tests
-            </button>
-          </div>
-        </div>
-        {notice && (
-          <div className="mx-auto mt-4 max-w-6xl">
-            <Notice tone={notice.tone} title={notice.title}>
-              {notice.body}
-            </Notice>
-          </div>
-        )}
-        {plan.noTests && (
-          <div className="mx-auto mt-4 max-w-6xl">
-            <Notice tone="warn" title="Nothing to test">
-              {plan.noTests}
-            </Notice>
-          </div>
-        )}
-        {busy && (
-          <p role="status" className="mx-auto mt-3 flex max-w-6xl items-center gap-2 text-sm text-stamp">
-            <Spinner label={`Updating the plan: ${update.step || update.what || 'starting'}…`} />
-          </p>
-        )}
-        {(update.error || error) && (
-          <p role="alert" className="mx-auto mt-3 max-w-6xl text-sm text-fail">
-            {update.error || error}
-          </p>
-        )}
-      </div>
+  const pageCount = plan.planPages?.length ?? plan.pages.length;
+  const about = `${count(pageCount, 'page', 'pages')}, ${count(plan.navigation?.length ?? 0, 'link', 'links')} and ${count(plan.flows.length, 'journey', 'journeys')}.`;
+  const signingIn = !!needsSignIn;
+  // Why Approve can't be pressed right now, said next to it.
+  const approveOff = plan.noTests
+    ? 'Nothing in the plan runs yet, so there is nothing to approve.'
+    : busy
+      ? 'Approve waits until the plan is updated.'
+      : null;
+  const editError = update.error || error;
+  // The sign-in form already says why it's there: the same sentence isn't shown twice.
+  const shownApproveError = signingIn && approveError === SIGN_IN_AGAIN_TEXT ? null : approveError;
 
-      <div className="flex-1" role="tabpanel" id="plan-tabpanel" aria-labelledby={`plan-tab-${tab}`}>
+  return (
+    <Page width="workspace">
+      <PageHeader
+        title={<span className="break-words">Review the plan for {host}</span>}
+        lede={
+          <p className="text-base">
+            {plan.siteType ? `${siteTypeName(plan.siteType)}, with ${about}` : about} Nothing runs until you approve.
+          </p>
+        }
+        actions={
+          <div role="tablist" aria-label="How to show the plan" className="segmented">
+            {TABS.map(([id, name]) => (
+              <button
+                key={id}
+                ref={(el) => {
+                  tabRefs.current[id] = el;
+                }}
+                type="button"
+                role="tab"
+                id={`plan-tab-${id}`}
+                aria-controls="plan-tabpanel"
+                aria-selected={tab === id}
+                tabIndex={tab === id ? 0 : -1}
+                onClick={() => selectTab(id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    moveTab(id, 1);
+                  } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    moveTab(id, -1);
+                  }
+                }}
+                className="min-h-[44px]"
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+        }
+      />
+      {notice && (
+        <div className="mb-6">
+          <Notice tone={notice.tone} title={notice.title}>
+            {notice.body}
+          </Notice>
+        </div>
+      )}
+      {plan.noTests && (
+        <div className="mb-6">
+          <Notice tone="warn" title="Nothing to test">
+            {plan.noTests}
+          </Notice>
+        </div>
+      )}
+
+      <div role="tabpanel" id="plan-tabpanel" aria-labelledby={`plan-tab-${tab}`}>
         {panel}
       </div>
 
-      <div className="sticky bottom-0 z-40 border-t border-rule bg-surface/95 px-4 py-2 backdrop-blur sm:px-6 sm:py-3">
-        {/* Phones: one row, then a link to the full summary in the plan. */}
-        <div className="sm:hidden">
-          <div className="flex items-center justify-between gap-3">
-            <p className="min-w-0 flex-1 text-sm font-bold text-ink">
-              {tests !== undefined
-                ? `${count(tests, 'test', 'tests')}${minutes ? `, about ${minutes} min` : ''}`
-                : 'Ready to test'}
-            </p>
-            <button
-              type="button"
-              className="btn-primary min-h-[44px] shrink-0 px-4"
-              disabled={busy || approving || !!plan.noTests}
-              onClick={() => onApprove()}
-            >
-              {approving ? <Spinner label="Starting…" /> : 'Approve the plan and start testing'}
-            </button>
+      <PlanFile />
+
+      <BottomActionBar
+        summary={
+          <div className="grid gap-1">
+            {busy && (
+              <p className="flex items-center gap-2 font-bold text-stamp">
+                <Spinner label={`Updating the plan: ${update.step || update.what || 'starting'}…`} />
+              </p>
+            )}
+            {editError && (
+              <p role="alert" className="font-bold text-fail">
+                {editError}
+              </p>
+            )}
+            {shownApproveError && (
+              <p role="alert" className="font-bold text-fail">
+                {shownApproveError}
+              </p>
+            )}
+            {signingIn ? (
+              <SignInAgain
+                needsSignIn={needsSignIn}
+                onReadyChange={setSignInReady}
+                onSubmit={(roles) => onApprove(roles)}
+              />
+            ) : (
+              <>
+                <p className="font-bold text-ink">
+                  {lines[0]?.text ?? (tests !== undefined ? count(tests, 'test', 'tests') : 'Ready to test')}
+                  {minutes ? <span className="font-normal text-ink-soft">, about {minutes} min</span> : null}
+                </p>
+                {approving ? (
+                  <p role="status">Starting the tests…</p>
+                ) : (
+                  approveOff && <p id="approve-off-reason">{approveOff}</p>
+                )}
+              </>
+            )}
           </div>
+        }
+      >
+        {signingIn ? (
+          <button
+            type="submit"
+            form="plan-sign-in-again"
+            className="btn-primary"
+            disabled={busy || approving || !signInReady}
+            aria-describedby={signInReady ? undefined : 'sign-in-again-reason'}
+          >
+            {approving ? <Spinner label="Starting the tests…" announce={false} /> : 'Approve with these details'}
+          </button>
+        ) : (
           <button
             type="button"
-            className="inline-flex min-h-[44px] items-center text-sm font-bold text-stamp underline"
-            onClick={() => {
-              selectTab('plan');
-              requestAnimationFrame(() =>
-                requestAnimationFrame(() => document.getElementById('plan-summary')?.scrollIntoView({ block: 'start' }))
-              );
-            }}
+            className="btn-primary shrink-0"
+            disabled={busy || approving || !!plan.noTests}
+            aria-describedby={approveOff && !approving ? 'approve-off-reason' : undefined}
+            onClick={() => onApprove()}
           >
-            What approving runs
+            {approving ? (
+              <Spinner label="Starting the tests…" announce={false} />
+            ) : (
+              <>
+                <span className="sm:hidden">Approve and test</span>
+                <span className="hidden sm:inline">{APPROVE_LABEL}</span>
+              </>
+            )}
           </button>
+        )}
+      </BottomActionBar>
+    </Page>
+  );
+}
+
+/** The plan as a file: a readable copy, and for developers a Playwright project. Quiet, at the end. */
+function PlanFile() {
+  const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
+  const run = (download: () => Promise<unknown>, done: string) => {
+    setStatus(null);
+    download()
+      .then(() => setStatus({ ok: true, text: done }))
+      .catch((err: unknown) =>
+        setStatus({
+          ok: false,
+          text: `${err instanceof Error ? err.message : 'The file couldn’t be downloaded.'} Try again.`,
+        })
+      );
+  };
+  return (
+    <Disclosure summary="Plan file" hint="Download the plan or export it" className="mt-12">
+      <div className="grid gap-4">
+        <div>
+          <button
+            type="button"
+            className="btn-quiet btn-sm"
+            onClick={() => run(downloadPlanMarkdown, 'Plan downloaded.')}
+          >
+            Download the plan
+          </button>
+          <p className="hint mt-1 text-sm">A readable copy of everything above.</p>
         </div>
-        <div className="mx-auto hidden max-w-6xl flex-wrap items-center justify-between gap-3 sm:flex">
-          <div className="min-w-0 flex-1 text-sm text-ink">
-            <p className="font-bold">
-              {lines[0]?.text ?? 'Ready to test'}
-              {minutes ? <span className="font-normal text-ink-soft"> · about {minutes} min</span> : null}
-            </p>
-            <p className="text-ink-soft">
-              {lines.length > 1
-                ? lines
-                    .slice(1)
-                    .map((l) => l.text)
-                    .join(' · ')
-                : 'Nothing runs until you approve.'}
-            </p>
-          </div>
-          {approveButton}
-        </div>
-        {approveError && (
-          <p role="alert" className="mx-auto max-w-6xl text-sm font-bold text-fail">
-            {approveError}
+        <Disclosure summary="Details for developers">
+          <button
+            type="button"
+            className="btn-quiet btn-sm"
+            onClick={() => run(downloadPlaywrightExport, 'Playwright tests downloaded.')}
+          >
+            Export as Playwright tests
+          </button>
+          <p className="hint mt-1 text-sm">The plan as a Playwright project you can run in your own pipeline.</p>
+        </Disclosure>
+        {status && (
+          <p role={status.ok ? 'status' : 'alert'} className={`text-sm ${status.ok ? 'text-pass' : 'text-fail'}`}>
+            {status.text}
           </p>
         )}
-        {needsSignIn && (
-          <SignInAgain busy={busy || approving} needsSignIn={needsSignIn} onSubmit={(roles) => onApprove(roles)} />
-        )}
       </div>
-    </div>
+    </Disclosure>
   );
 }
 
 /** The sign-in fields shown again at approval. Typed values live here only and are cleared once sent. */
 function SignInAgain({
-  busy,
   needsSignIn,
+  onReadyChange,
   onSubmit,
 }: {
-  busy: boolean;
   needsSignIn?: boolean | string[];
+  /** Whether every field is filled in: the bar's Approve button waits for it. */
+  onReadyChange: (ready: boolean) => void;
   onSubmit: (roles: RoleCredential[]) => void;
 }) {
   const pendingRoles = Array.isArray(needsSignIn) && needsSignIn.length > 0 ? needsSignIn : ['member'];
@@ -524,10 +559,12 @@ function SignInAgain({
     .filter((r) => r.username && r.password);
 
   const canSubmit = allRoles.length === pendingRoles.length && allRoles.length > 0;
+  useEffect(() => onReadyChange(canSubmit), [canSubmit, onReadyChange]);
 
   return (
     <form
-      className="mx-auto mt-2 max-w-6xl space-y-3"
+      id="plan-sign-in-again"
+      className="grid gap-3 text-base text-ink"
       onSubmit={(e) => {
         e.preventDefault();
         if (!canSubmit) return;
@@ -535,14 +572,14 @@ function SignInAgain({
         setRoleInputs({});
       }}
     >
-      <p className="text-sm font-bold text-ink">{SIGN_IN_AGAIN_TEXT}</p>
+      <p className="font-bold">{SIGN_IN_AGAIN_TEXT}</p>
       {pendingRoles.map((role) => (
-        <fieldset key={role} className="flex flex-wrap items-end gap-3 rounded-md border border-rule p-3">
-          {pendingRoles.length > 1 && <legend className="px-1 text-sm font-bold">Role: {role}</legend>}
-          <label className="text-sm font-bold text-ink">
-            Sign-in username
+        <fieldset key={role} className="grid gap-3 sm:grid-cols-2">
+          {pendingRoles.length > 1 && <legend className="mb-1 text-sm font-bold">Role: {role}</legend>}
+          <label className="block">
+            <span className="label text-sm">Sign-in username</span>
             <input
-              className="input mt-1 block"
+              className="field py-2"
               autoComplete="off"
               value={roleInputs[role]?.username || ''}
               onChange={(e) =>
@@ -553,10 +590,10 @@ function SignInAgain({
               }
             />
           </label>
-          <label className="text-sm font-bold text-ink">
-            Sign-in password
+          <label className="block">
+            <span className="label text-sm">Sign-in password</span>
             <input
-              className="input mt-1 block"
+              className="field py-2"
               type="password"
               autoComplete="off"
               value={roleInputs[role]?.password || ''}
@@ -570,9 +607,11 @@ function SignInAgain({
           </label>
         </fieldset>
       ))}
-      <button type="submit" className="btn-primary" disabled={busy || !canSubmit}>
-        Approve with these details
-      </button>
+      {!canSubmit && (
+        <p id="sign-in-again-reason" className="text-sm text-ink-soft">
+          Fill in every field to approve.
+        </p>
+      )}
     </form>
   );
 }
