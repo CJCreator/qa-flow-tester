@@ -59,7 +59,7 @@ export function PageContentView({ content }: PageContentViewProps) {
             const text = sectionText(content, section);
             const heading = section.heading?.trim() ? section.heading : SECTION_KIND_LABEL[section.kind];
             return (
-              <li key={section.id} className="rounded border border-rule p-3">
+              <li key={section.id} className="rounded-card border border-rule p-3">
                 <h4 className="font-bold" {...(section.heading ? as(section.heading) : {})}>
                   {heading}
                 </h4>
@@ -82,7 +82,7 @@ export function PageContentView({ content }: PageContentViewProps) {
         <Empty>No headings were found.</Empty>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="table-plain">
             <thead>
               <tr>
                 <th scope="col">Level</th>
@@ -106,7 +106,7 @@ export function PageContentView({ content }: PageContentViewProps) {
         <Empty>No images were found.</Empty>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="table-plain">
             <thead>
               <tr>
                 <th scope="col">Image address</th>
@@ -136,7 +136,7 @@ export function PageContentView({ content }: PageContentViewProps) {
         <Empty>No links were found.</Empty>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="table-plain">
             <thead>
               <tr>
                 <th scope="col">Link text</th>
@@ -176,7 +176,7 @@ export function PageContentView({ content }: PageContentViewProps) {
                 <Empty>No fields.</Empty>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
+                  <table className="table-plain">
                     <thead>
                       <tr>
                         <th scope="col">Field</th>
@@ -208,7 +208,7 @@ export function PageContentView({ content }: PageContentViewProps) {
         <Empty>No calls to action were found.</Empty>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="table-plain">
             <thead>
               <tr>
                 <th scope="col">Text</th>

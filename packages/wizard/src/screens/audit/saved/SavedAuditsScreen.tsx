@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { AuditSummary } from '@qa/types/src/browser.js';
-import { ErrorMessage, FocusHeading, Spinner } from '../../../components/text';
+import { Spinner } from '../../../components/text';
+import { EmptyState, LoadError, Page, PageHeader } from '../../../components/ui';
 import { count, formatWhen } from '../../../lib/format';
-import { Link, PATHS } from '../../../lib/router';
+import { Link } from '../../../lib/router';
 import { useDocumentTitle } from '../../../lib/title';
 import { AUDIT_PATHS, STATUS_LABEL, latestVersion, listAudits, shortlistMarkText, type Fetch } from './saved-api';
 
@@ -14,44 +15,48 @@ export interface SavedAuditsViewProps {
   onRetry: () => void;
 }
 
-/** The screen's header actions: a way to start another Website Audit (when some exist) and to its settings. */
+/**
+ * The screen's one primary action: start another Website Audit. Left out while the list is empty, where the
+ * empty state carries the same action. Shortlist and settings live in the area row above the screen.
+ */
 export function SavedAuditsActions({ load }: { load: SavedAuditsLoad }) {
+  if (load.status === 'loaded' && load.audits.length === 0) return null;
   return (
-    <div className="mb-6 flex flex-wrap items-center gap-4">
-      {load.status === 'loaded' && load.audits.length > 0 && (
-        <Link to={AUDIT_PATHS.start} className="btn-primary min-h-[44px] px-4 text-sm">
-          Start a Website Audit
-        </Link>
-      )}
-      <Link to={PATHS.auditSettings} className="btn-link text-sm">
-        Website Audit settings
-      </Link>
-    </div>
+    <Link to={AUDIT_PATHS.start} className="btn-primary btn-sm">
+      Start a Website Audit
+    </Link>
   );
 }
 
-/** One saved Website Audit: host, address, versions, latest status and Shortlist mark. */
+/** One saved Website Audit: host, address, versions, latest status and Shortlist mark. The whole row opens it. */
 function AuditItem({ audit }: { audit: AuditSummary }) {
   const latest = latestVersion(audit);
   return (
-    <li className="card-1 bg-surface p-4" data-audit={audit.auditId}>
-      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+    <li
+      className="relative rounded-card border border-rule bg-surface p-4 transition-colors duration-fast hover:border-edge focus-within:border-stamp"
+      data-audit={audit.auditId}
+    >
+      <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h2 className="break-all text-lg font-bold text-ink">{audit.host}</h2>
-          <p className="break-all text-sm text-ink-soft">{audit.url}</p>
-          <p className="text-sm text-ink">
+          <h2 className="break-all text-lg font-bold text-ink">
+            <Link
+              to={AUDIT_PATHS.history(audit.auditId)}
+              className="after:absolute after:inset-0 after:rounded-card hover:underline"
+              aria-label={`Open the Website Audit of ${audit.host}`}
+            >
+              {audit.host}
+            </Link>
+          </h2>
+          <p className="break-all font-mono text-sm text-ink-soft">{audit.url}</p>
+          <p className="mt-1 text-sm text-ink">
             {count(audit.versions.length, 'version', 'versions')}
             {latest && ` · Latest: ${STATUS_LABEL[latest.status]}, started ${formatWhen(latest.startedAt)}`}
           </p>
           <p className="text-sm text-ink-soft">{shortlistMarkText(audit.shortlist)}</p>
         </div>
-        <Link
-          to={AUDIT_PATHS.history(audit.auditId)}
-          className="btn-primary min-h-[44px] px-4 text-sm"
-          aria-label={`Open the Website Audit of ${audit.host}`}
-        >
-          Open
-        </Link>
+        <span aria-hidden="true" className="mt-1 shrink-0 text-xl text-ink-soft">
+          →
+        </span>
       </div>
     </li>
   );
@@ -63,26 +68,24 @@ export function SavedAuditsView({ load, onRetry }: SavedAuditsViewProps) {
     <>
       {load.status === 'loading' && <Spinner label="Loading your Website Audits…" />}
       {load.status === 'failed' && (
-        <>
-          <ErrorMessage>{load.message}</ErrorMessage>
-          <button type="button" className="btn-quiet mt-3" onClick={onRetry}>
-            Retry
-          </button>
-        </>
+        <LoadError title="Your Website Audits could not be loaded" onRetry={onRetry}>
+          {load.message}
+        </LoadError>
       )}
       {load.status === 'loaded' && load.audits.length === 0 && (
-        <div className="card-1 bg-surface p-6">
-          <p className="mb-4 font-bold">No Website Audits yet.</p>
-          <p className="mb-4 max-w-prose text-ink-soft">
-            To start one, enter the address of a public website and how many pages to read.
-          </p>
-          <Link to={AUDIT_PATHS.start} className="btn-primary">
-            Start a Website Audit
-          </Link>
-        </div>
+        <EmptyState
+          title="No Website Audits yet."
+          action={
+            <Link to={AUDIT_PATHS.start} className="btn-primary btn-sm">
+              Start a Website Audit
+            </Link>
+          }
+        >
+          To start one, enter the address of a public website and how many pages to read.
+        </EmptyState>
       )}
       {load.status === 'loaded' && load.audits.length > 0 && (
-        <ul className="space-y-3" aria-label="Saved Website Audits">
+        <ul className="grid gap-3" aria-label="Saved Website Audits">
           {load.audits.map((audit) => (
             <AuditItem key={audit.auditId} audit={audit} />
           ))}
@@ -108,19 +111,16 @@ export function SavedAuditsScreen({ fetchImpl }: SavedAuditsScreenProps = {}) {
     );
   }, [fetchImpl]);
   useEffect(refresh, [refresh]);
-  useDocumentTitle('Saved Website Audits');
+  useDocumentTitle('Website Audits');
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
-      <FocusHeading className="mb-2 text-question font-bold">Saved Website Audits</FocusHeading>
-      <p className="mb-4 max-w-prose text-ink-soft">
-        Every Website Audit is kept, with each version, until you delete it.{' '}
-        <Link to={AUDIT_PATHS.shortlist} className="btn-link">
-          Open the Shortlist
-        </Link>
-      </p>
-      <SavedAuditsActions load={load} />
+    <Page width="prose">
+      <PageHeader
+        title="Website Audits"
+        lede="Every Website Audit is kept, with each version, until you delete it."
+        actions={<SavedAuditsActions load={load} />}
+      />
       <SavedAuditsView load={load} onRetry={refresh} />
-    </div>
+    </Page>
   );
 }

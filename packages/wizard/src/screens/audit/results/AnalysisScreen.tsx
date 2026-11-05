@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AuditGetReply, AuditPage, PageContent, RouteSkipReason } from '@qa/types/src/browser.js';
-import { ErrorMessage, FocusHeading, Notice, Spinner } from '../../../components/text';
+import { ErrorMessage, Notice, Spinner } from '../../../components/text';
+import { Page, PageHeader } from '../../../components/ui';
+import { formatDay, scrollBehavior } from '../../../lib/format';
 import { Link, PATHS } from '../../../lib/router';
+import { AuditTabs } from '../AuditTabs';
 import { useDocumentTitle } from '../../../lib/title';
 import { AuditSummary, NotesBanner } from './AuditSummary';
 import { FindingsList } from './FindingsList';
@@ -9,7 +12,7 @@ import { InternalLinkingView, LeavingSiteView, RoadmapView } from './RoadmapView
 import { SiteAreasView } from './SiteAreasView';
 import { HierarchyView } from './HierarchyView';
 import { PageContentView } from './PageContentView';
-import { PageFactsView } from './PageFactsView';
+import { PageFactsView, SiteSignalsView } from './PageFactsView';
 import { loadCallerIsHelper } from '../saved/caller-access';
 import { getAuditResult, getPageContent } from './analysis-client';
 import { titleText } from './analysis-text';
@@ -107,8 +110,8 @@ function PageList({
                     type="button"
                     aria-pressed={selected}
                     onClick={() => onSelect(page.urlPath)}
-                    className={`w-full rounded-md border px-3 py-2 text-left ${
-                      selected ? 'border-stamp bg-panel' : 'border-edge'
+                    className={`min-h-[44px] w-full rounded-control border px-3 py-2 text-left transition-colors duration-fast ${
+                      selected ? 'border-stamp bg-stamp-tint' : 'border-edge bg-surface hover:border-ink'
                     }`}
                   >
                     <span className="block break-all font-mono text-sm font-bold">{page.urlPath}</span>
@@ -177,13 +180,7 @@ function SelectedPage({
           Its checks, notes and recommendation come from that Sample Page, which shares its layout.
         </Notice>
       )}
-      <PageFactsView
-        page={page}
-        technology={result.technology}
-        signals={result.marketing.signals}
-        auditId={reply.version.auditId}
-        version={reply.version.version}
-      />
+      <PageFactsView page={page} auditId={reply.version.auditId} version={reply.version.version} />
       {content.status === 'loading' && (
         <p className="text-sm text-ink-soft">
           <Spinner label={`Loading the Page Content of ${content.urlPath}…`} />
@@ -217,24 +214,55 @@ export function AnalysisView({
   isHelper = false,
 }: AnalysisViewProps) {
   useDocumentTitle(load.status === 'loaded' ? resultsTitle(load.reply) : 'Website Audit results');
-  const backTo = PATHS.audit(auditId ?? (load.status === 'loaded' ? load.reply.version.auditId : ''));
+  const id = auditId ?? (load.status === 'loaded' ? load.reply.version.auditId : '');
+  const backTo = PATHS.audit(id);
+  const reply = load.status === 'loaded' ? load.reply : null;
+  const result = reply?.result ?? null;
+  const owner = isHelper === false;
+  const meta = reply && (
+    <>
+      <span className="break-all font-mono">{reply.version.url}</span>
+      {` · version ${reply.version.version}`}
+      {reply.version.finishedAt ? ` · ${formatDay(reply.version.finishedAt)}` : ''}
+    </>
+  );
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
-      <FocusHeading className="mb-2 break-words text-question font-bold">Website Audit analysis</FocusHeading>
+    <Page width="workspace">
+      <PageHeader
+        back={{ to: PATHS.audits, label: 'All Website Audits' }}
+        meta={meta}
+        title="Website Audit results"
+        actions={
+          reply &&
+          result && (
+            <Link to={PATHS.auditReview(reply.version.auditId, reply.version.version)} className="btn-primary btn-sm">
+              Review documents
+            </Link>
+          )
+        }
+      />
+      {id && (
+        <AuditTabs
+          auditId={id}
+          version={reply?.version.version}
+          current="results"
+          hide={owner ? [] : ['share', 'helpers']}
+        />
+      )}
       {load.status === 'loading' && (
         <p className="text-ink-soft">
           <Spinner label="Loading the Website Audit…" />
         </p>
       )}
       {load.status === 'error' && (
-        <div className="mt-6 max-w-prose">
+        <div className="max-w-prose">
           <Notice
             title={load.message}
             actions={
               <>
                 {onRetry && (
-                  <button type="button" className="btn-quiet" onClick={onRetry}>
-                    Retry
+                  <button type="button" className="btn-quiet btn-sm" onClick={onRetry}>
+                    Try again
                   </button>
                 )}
                 {auditId && (
@@ -247,82 +275,104 @@ export function AnalysisView({
           />
         </div>
       )}
-      {load.status === 'loaded' && (
-        <>
-          <p className="break-all text-ink-soft">
-            {`${load.reply.version.url} · version ${load.reply.version.version}`}
+      {reply && result === null && (
+        <div className="max-w-prose">
+          <Notice tone="stamp" title={versionStatusText(reply)} />
+          <p className="mt-3">
+            <Link to={backTo} className="btn-link">
+              Back to this Website Audit
+            </Link>
           </p>
-          {load.reply.result === null ? (
-            <div className="mt-6 max-w-prose">
-              <Notice tone="stamp" title={versionStatusText(load.reply)} />
-              <p className="mt-3">
-                <Link to={backTo} className="btn-link">
-                  Back to this Website Audit
-                </Link>
-              </p>
-            </div>
-          ) : (
-            <>
-              <nav aria-label="Next steps" className="mt-6 flex flex-wrap items-center gap-3">
-                <Link
-                  to={PATHS.auditReview(load.reply.version.auditId, load.reply.version.version)}
-                  className="btn-primary"
-                >
-                  Review Audit Documents
-                </Link>
-                <Link
-                  to={PATHS.auditExport(load.reply.version.auditId, load.reply.version.version)}
-                  className="btn-quiet"
-                >
-                  Export
-                </Link>
-                {isHelper === false && (
-                  <Link to={PATHS.auditShare(load.reply.version.auditId)} className="btn-quiet">
-                    Preview and Shared Links
-                  </Link>
-                )}
-                <Link to={backTo} className="btn-link">
-                  Back to this Website Audit
-                </Link>
-              </nav>
-              {load.reply.result.notes.length > 0 && (
-                <div className={CARD}>
-                  <NotesBanner notes={load.reply.result.notes} />
-                </div>
-              )}
-              <div className={CARD}>
-                <AuditSummary result={load.reply.result} />
-              </div>
-              <div className={CARD}>
-                <SiteAreasView areas={load.reply.result.siteAreas} />
-              </div>
-              <div className={CARD}>
-                <RoadmapView roadmap={load.reply.result.roadmap} />
-              </div>
-              <div className={CARD}>
-                <HierarchyView hierarchy={load.reply.result.hierarchy} />
-              </div>
-              <PageList pages={load.reply.result.pages} selectedPath={selectedPath} onSelect={onSelect} />
-              <SkippedPages reply={load.reply} />
-              <SelectedPage reply={load.reply} selectedPath={selectedPath} content={content} />
-              <div className={CARD}>
-                <FindingsList
-                  findings={load.reply.result.findings}
-                  auditId={load.reply.version.auditId}
-                  version={load.reply.version.version}
-                />
-              </div>
-              <div className={CARD}>
-                <InternalLinkingView linking={load.reply.result.internalLinking} />
-              </div>
-              <div className={CARD}>
-                <LeavingSiteView links={load.reply.result.leavingSite ?? []} />
-              </div>
-            </>
-          )}
-        </>
+        </div>
       )}
-    </div>
+      {reply && result && (
+        <div className="lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-10">
+          <SectionIndex />
+          <div className="min-w-0">
+            {result.notes.length > 0 && (
+              <div className="mb-8">
+                <NotesBanner notes={result.notes} />
+              </div>
+            )}
+            <div>
+              <AuditSummary result={result} />
+            </div>
+            <div className={CARD}>
+              <FindingsList
+                findings={result.findings}
+                auditId={reply.version.auditId}
+                version={reply.version.version}
+              />
+            </div>
+            <div className={CARD}>
+              <SiteAreasView areas={result.siteAreas} />
+            </div>
+            <div className={CARD}>
+              <RoadmapView roadmap={result.roadmap} />
+            </div>
+            <div className={CARD}>
+              <SiteSignalsView technology={result.technology} signals={result.marketing.signals} />
+            </div>
+            <div className={CARD}>
+              <HierarchyView hierarchy={result.hierarchy} />
+            </div>
+            <PageList pages={result.pages} selectedPath={selectedPath} onSelect={onSelect} />
+            <SkippedPages reply={reply} />
+            <SelectedPage reply={reply} selectedPath={selectedPath} content={content} />
+            <div className={CARD}>
+              <InternalLinkingView linking={result.internalLinking} />
+            </div>
+            <div className={CARD}>
+              <LeavingSiteView links={result.leavingSite ?? []} />
+            </div>
+          </div>
+        </div>
+      )}
+    </Page>
+  );
+}
+
+/** The sections of the results, in page order, by the id of each heading. */
+export const RESULT_SECTIONS: ReadonlyArray<{ id: string; label: string }> = [
+  { id: 'audit-summary-title', label: 'Summary' },
+  { id: 'audit-findings-title', label: 'Findings' },
+  { id: 'audit-areas-title', label: 'Site areas' },
+  { id: 'audit-roadmap-title', label: 'Improvement Roadmap' },
+  { id: 'audit-site-signals-title', label: 'Technology and marketing' },
+  { id: 'audit-hierarchy-title', label: 'Page hierarchy' },
+  { id: 'audit-pages-title', label: 'Pages' },
+  { id: 'audit-skipped-title', label: 'Skipped Pages' },
+  { id: 'audit-linking-title', label: 'Internal linking' },
+  { id: 'audit-leaving-title', label: 'Links that leave the website' },
+];
+
+/** Scrolls to a section and moves focus to its heading, so keyboard and screen-reader users land there too. */
+function goToSection(id: string) {
+  const heading = document.getElementById(id);
+  if (!heading) return;
+  if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1');
+  heading.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
+  heading.focus({ preventScroll: true });
+}
+
+/** An index of the sections: a sticky column on wide screens, a row that scrolls sideways on phones. */
+function SectionIndex() {
+  return (
+    <nav aria-label="Sections of the results" className="mb-8 lg:mb-0">
+      <ul className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0 lg:sticky lg:top-24 lg:grid lg:gap-0 lg:overflow-visible lg:pb-0">
+        {RESULT_SECTIONS.map((section) => (
+          <li key={section.id} className="shrink-0">
+            <button
+              type="button"
+              onClick={() => goToSection(section.id)}
+              className="inline-flex min-h-[44px] items-center whitespace-nowrap rounded-control border border-edge bg-surface px-3 text-sm font-semibold text-ink hover:border-ink lg:w-full lg:border-0 lg:border-l-2 lg:border-rule lg:bg-transparent lg:text-ink-soft lg:hover:border-stamp lg:hover:text-ink"
+            >
+              {section.label}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </nav>
   );
 }
 

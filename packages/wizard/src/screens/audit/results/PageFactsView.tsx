@@ -6,6 +6,7 @@ import type {
   PhoneLayout,
   TechnologyResult,
 } from '@qa/types/src/browser.js';
+import { formatWhen } from '../../../lib/format';
 import { auditFileUrl } from './analysis-client';
 import {
   SPEED_LIMITS,
@@ -32,9 +33,12 @@ export interface PageFactsViewProps {
   /** The page whose language, SEO basics and accessibility basics are shown. */
   page: AuditPage;
   /** What the whole site is built with. */
-  technology: TechnologyResult;
-  /** The ten marketing signals of the whole site, in report order. */
-  signals: MarketingSignal[];
+  technology?: TechnologyResult;
+  /**
+   * The ten marketing signals of the whole site, in report order. With `technology`, shown under the page's
+   * facts; the results screen leaves both out and shows them once at site level (SiteSignalsView).
+   */
+  signals?: MarketingSignal[];
   /** With the version, lets the phone screenshot load through the file endpoint. Without an id it is left out. */
   auditId?: string;
   version?: number;
@@ -55,7 +59,7 @@ function SpeedResult({ title, speed }: { title: string; speed: ExternalSpeed }) 
               </div>
             ))}
           </dl>
-          <p className="text-xs text-ink-soft">{`Measured ${speed.measuredAt}.`}</p>
+          <p className="text-xs text-ink-soft">{`Measured ${formatWhen(speed.measuredAt)}.`}</p>
         </>
       ) : (
         <p className="text-sm">{`Not measured: ${SPEED_NOT_MEASURED_TEXT[speed.reason]}.`}</p>
@@ -109,7 +113,7 @@ function PhoneFacts({
             loading="lazy"
             src={auditFileUrl(auditId, phone.screenshotPath, version)}
             alt={`${page.urlPath} at ${phone.widthPx} px wide, as a phone shows it`}
-            className="max-h-96 rounded border border-rule"
+            className="max-h-96 rounded-card border border-rule"
           />
         )
       )}
@@ -191,6 +195,29 @@ export function PageFactsView({ page, technology, signals, auditId, version }: P
         </p>
       )}
 
+      {technology && signals && <SiteSignals technology={technology} signals={signals} />}
+    </section>
+  );
+}
+
+/**
+ * What the whole site is built with and its marketing signals, as a section of its own. The results screen
+ * shows it once at site level, not again under every page.
+ */
+export function SiteSignalsView({ technology, signals }: { technology: TechnologyResult; signals: MarketingSignal[] }) {
+  return (
+    <section aria-labelledby="audit-site-signals-title" className="space-y-4">
+      <h2 id="audit-site-signals-title" className="text-xl font-bold">
+        Technology and marketing
+      </h2>
+      <SiteSignals technology={technology} signals={signals} />
+    </section>
+  );
+}
+
+function SiteSignals({ technology, signals }: { technology: TechnologyResult; signals: MarketingSignal[] }) {
+  return (
+    <>
       <h3 className="text-lg font-bold">Technology (whole site)</h3>
       {technology.status === 'not-identified' || technology.technologies.length === 0 ? (
         <p className="text-sm">{NOT_IDENTIFIED}</p>
@@ -213,7 +240,7 @@ export function PageFactsView({ page, technology, signals, auditId, version }: P
         <p className="text-sm text-ink-soft">Not checked</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="table-plain">
             <thead>
               <tr>
                 <th scope="col">Signal</th>
@@ -240,6 +267,6 @@ export function PageFactsView({ page, technology, signals, auditId, version }: P
           </table>
         </div>
       )}
-    </section>
+    </>
   );
 }

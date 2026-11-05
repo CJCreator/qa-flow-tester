@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { AuditStartErrors, AuditStartReply } from '@qa/types/src/browser.js';
-import { ErrorMessage, FocusHeading, Spinner } from '../../../components/text';
+import { ErrorMessage, Spinner } from '../../../components/text';
+import { Disclosure, Page, PageHeader } from '../../../components/ui';
+import { count } from '../../../lib/format';
 import { Link, PATHS } from '../../../lib/router';
 import { useDocumentTitle } from '../../../lib/title';
 import {
@@ -11,6 +13,7 @@ import {
   firstErrorField,
   hintId,
   initialAuditStartForm,
+  pathLines,
   type AuditFormField,
   type AuditStartForm,
 } from './audit-start-form';
@@ -22,6 +25,19 @@ import {
   type AuditStartOutcome,
 } from './audit-start-api';
 import { applyAuditEvent, AuditProgress, type AuditProgressState } from './AuditProgress';
+
+/** The fields inside "Limits (optional)": the disclosure opens when one of them has a message. */
+const LIMIT_FIELDS: readonly AuditFormField[] = ['maxPages', 'maxDepth', 'includePaths', 'excludePaths'];
+
+/** The current limits in words, beside the closed disclosure: "200 pages · 8 links deep". */
+function limitsHint(form: AuditStartForm): string {
+  const parts = [`${form.maxPages.trim() || '?'} pages`, `${form.maxDepth.trim() || '?'} links deep`];
+  const only = pathLines(form.includePaths).length;
+  const skip = pathLines(form.excludePaths).length;
+  if (only > 0) parts.push(`only ${count(only, 'path', 'paths')}`);
+  if (skip > 0) parts.push(`${count(skip, 'path', 'paths')} skipped`);
+  return parts.join(' · ');
+}
 
 /** `aria-describedby` for a field: its hint, then its error when it has one. */
 function describedBy(field: AuditFormField, errors: AuditStartErrors): string {
@@ -114,71 +130,78 @@ export function AuditStartFields({
         />
       </Field>
 
-      <div className="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
-        <Field field="maxPages" label="Max pages" errors={errors}>
-          <input
-            id={fieldId('maxPages')}
-            name="maxPages"
-            type="number"
-            inputMode="numeric"
-            min={b.minPages}
-            max={b.maxPages}
-            step={1}
-            className="field w-32 py-1.5"
-            value={form.maxPages}
-            onChange={set('maxPages')}
-            aria-invalid={errors.maxPages ? true : undefined}
-            aria-describedby={describedBy('maxPages', errors)}
-          />
-        </Field>
-        <Field field="maxDepth" label="Max depth" errors={errors}>
-          <input
-            id={fieldId('maxDepth')}
-            name="maxDepth"
-            type="number"
-            inputMode="numeric"
-            min={b.minDepth}
-            max={b.maxDepth}
-            step={1}
-            className="field w-32 py-1.5"
-            value={form.maxDepth}
-            onChange={set('maxDepth')}
-            aria-invalid={errors.maxDepth ? true : undefined}
-            aria-describedby={describedBy('maxDepth', errors)}
-          />
-        </Field>
-      </div>
+      <Disclosure
+        summary="Limits (optional)"
+        hint={limitsHint(form)}
+        defaultOpen={LIMIT_FIELDS.some((field) => errors[field])}
+        className="mt-8"
+      >
+        <div className="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
+          <Field field="maxPages" label="Most pages to read" errors={errors}>
+            <input
+              id={fieldId('maxPages')}
+              name="maxPages"
+              type="number"
+              inputMode="numeric"
+              min={b.minPages}
+              max={b.maxPages}
+              step={1}
+              className="field w-32"
+              value={form.maxPages}
+              onChange={set('maxPages')}
+              aria-invalid={errors.maxPages ? true : undefined}
+              aria-describedby={describedBy('maxPages', errors)}
+            />
+          </Field>
+          <Field field="maxDepth" label="How many links deep" errors={errors}>
+            <input
+              id={fieldId('maxDepth')}
+              name="maxDepth"
+              type="number"
+              inputMode="numeric"
+              min={b.minDepth}
+              max={b.maxDepth}
+              step={1}
+              className="field w-32"
+              value={form.maxDepth}
+              onChange={set('maxDepth')}
+              aria-invalid={errors.maxDepth ? true : undefined}
+              aria-describedby={describedBy('maxDepth', errors)}
+            />
+          </Field>
+        </div>
 
-      <div className="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
-        <Field field="includePaths" label="Include paths" errors={errors}>
-          <textarea
-            id={fieldId('includePaths')}
-            name="includePaths"
-            rows={3}
-            spellCheck={false}
-            className="field w-full font-mono text-sm"
-            placeholder="/blog"
-            value={form.includePaths}
-            onChange={set('includePaths')}
-            aria-invalid={errors.includePaths ? true : undefined}
-            aria-describedby={describedBy('includePaths', errors)}
-          />
-        </Field>
-        <Field field="excludePaths" label="Exclude paths" errors={errors}>
-          <textarea
-            id={fieldId('excludePaths')}
-            name="excludePaths"
-            rows={3}
-            spellCheck={false}
-            className="field w-full font-mono text-sm"
-            placeholder="/admin"
-            value={form.excludePaths}
-            onChange={set('excludePaths')}
-            aria-invalid={errors.excludePaths ? true : undefined}
-            aria-describedby={describedBy('excludePaths', errors)}
-          />
-        </Field>
-      </div>
+        <div className="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
+          <Field field="includePaths" label="Only read pages under these paths" errors={errors}>
+            <textarea
+              id={fieldId('includePaths')}
+              name="includePaths"
+              rows={3}
+              spellCheck={false}
+              className="field w-full font-mono text-sm"
+              placeholder="/blog"
+              value={form.includePaths}
+              onChange={set('includePaths')}
+              aria-invalid={errors.includePaths ? true : undefined}
+              aria-describedby={describedBy('includePaths', errors)}
+            />
+          </Field>
+          <Field field="excludePaths" label="Skip pages under these paths" errors={errors}>
+            <textarea
+              id={fieldId('excludePaths')}
+              name="excludePaths"
+              rows={3}
+              spellCheck={false}
+              className="field w-full font-mono text-sm"
+              placeholder="/admin"
+              value={form.excludePaths}
+              onChange={set('excludePaths')}
+              aria-invalid={errors.excludePaths ? true : undefined}
+              aria-describedby={describedBy('excludePaths', errors)}
+            />
+          </Field>
+        </div>
+      </Disclosure>
 
       {message && (
         <div id="audit-start-message">
@@ -189,23 +212,26 @@ export function AuditStartFields({
       <div className="mt-8">
         <button
           type="submit"
-          className="btn-primary min-h-[44px] px-8 font-bold"
+          className="btn-primary w-full px-8 sm:w-auto"
           disabled={starting}
           aria-describedby={message ? 'audit-start-message' : undefined}
         >
-          {starting ? <Spinner label="Starting…" /> : 'Start the Website Audit'}
+          {starting ? <Spinner label="Starting…" announce={false} /> : 'Start the Website Audit'}
         </button>
       </div>
     </form>
   );
 }
 
-/** A link to the audit's own page: the results of `version` when it is done, its history otherwise. */
+/**
+ * The next step once the audit ends, as the screen's one primary action: the results of `version` when it is
+ * done, its history otherwise.
+ */
 export function AuditFollowUpLink({ auditId, done, version }: { auditId: string; done: boolean; version?: number }) {
   const to = done && version !== undefined ? PATHS.auditVersion(auditId, version) : PATHS.audit(auditId);
   return (
-    <Link to={to} className="font-semibold text-stamp underline">
-      {done ? 'Open the results of this Website Audit' : "Open this Website Audit's history"}
+    <Link to={to} className="btn-primary btn-sm">
+      {done ? 'See the results' : "Open this Website Audit's history"}
     </Link>
   );
 }
@@ -237,7 +263,11 @@ export function AuditStartScreen({ submit = submitAuditStart, openSource }: Audi
     const field = focusAfterRefusal.current;
     if (!field) return;
     focusAfterRefusal.current = null;
-    document.getElementById(fieldId(field))?.focus();
+    const input = document.getElementById(fieldId(field));
+    // A limit field sits inside "Limits (optional)": open it first, so the field can take focus.
+    const details = input?.closest('details');
+    if (details) details.open = true;
+    input?.focus();
   }, [errors]);
 
   useEffect(() => {
@@ -281,12 +311,12 @@ export function AuditStartScreen({ submit = submitAuditStart, openSource }: Audi
   const finished = progress.status === 'done' || progress.status === 'stopped';
 
   return (
-    <div className="mx-auto max-w-prose px-4 py-10 sm:px-6 sm:py-14">
-      <FocusHeading className="mb-2 break-words text-question font-bold">Start a Website Audit</FocusHeading>
-      <p className="mb-6 max-w-prose text-ink-soft">
-        A Website Audit reads a public website, page by page, to find what could be repaired or redesigned. It never
-        signs in, fills in or sends a form. Pages it finds but does not record are listed as Skipped Pages.
-      </p>
+    <Page width="form">
+      <PageHeader
+        back={{ to: PATHS.audits, label: 'All Website Audits' }}
+        title="Start a Website Audit"
+        lede="A Website Audit reads a public website, page by page, to find what could be repaired or redesigned. It never signs in, fills in or sends a form. Pages it finds but does not record are listed as Skipped Pages."
+      />
 
       {started ? (
         <>
@@ -297,7 +327,7 @@ export function AuditStartScreen({ submit = submitAuditStart, openSource }: Audi
             streamEnded={streamEnded}
           />
           {(finished || streamEnded) && (
-            <div className="mt-6 flex flex-wrap items-center gap-4">
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
               <AuditFollowUpLink
                 auditId={started.reply.auditId}
                 done={progress.status === 'done'}
@@ -305,7 +335,7 @@ export function AuditStartScreen({ submit = submitAuditStart, openSource }: Audi
               />
               <button
                 type="button"
-                className="btn-primary"
+                className="btn-quiet btn-sm"
                 onClick={() => {
                   setStarted(null);
                   setProgress({ status: 'starting' });
@@ -328,6 +358,6 @@ export function AuditStartScreen({ submit = submitAuditStart, openSource }: Audi
           onSubmit={() => void onSubmit()}
         />
       )}
-    </div>
+    </Page>
   );
 }
