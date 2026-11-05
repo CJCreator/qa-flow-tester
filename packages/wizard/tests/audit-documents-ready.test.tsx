@@ -13,13 +13,54 @@ const AUDIT_ID = 'audit_ready_123';
 const VERSION_NUM = 2;
 
 const READY_DOCUMENTS: StoredAuditDocument[] = [
-  { kind: 'structure', status: 'ready', title: 'Structure', formats: ['markdown', 'html'], updatedAt: '2026-11-01T10:05:00.000Z' },
-  { kind: 'content', status: 'ready', title: 'Content', formats: ['markdown', 'html'], updatedAt: '2026-11-01T10:05:00.000Z' },
-  { kind: 'findings', status: 'ready', title: 'Findings', formats: ['markdown', 'html'], updatedAt: '2026-11-01T10:05:00.000Z' },
-  { kind: 'roadmap', status: 'ready', title: 'Improvement Roadmap', formats: ['markdown', 'html'], updatedAt: '2026-11-01T10:05:00.000Z' },
-  { kind: 'proposal', status: 'not-written', title: 'Proposal', reason: 'Proposal template not configured in Settings.' },
-  { kind: 'pitch-glimpse', status: 'ready', title: 'Pitch Glimpse', formats: ['markdown', 'html'], updatedAt: '2026-11-01T10:05:00.000Z' },
-  { kind: 'owner-audit', status: 'ready', title: 'Website Audit', formats: ['markdown', 'html'], updatedAt: '2026-11-01T10:05:00.000Z' },
+  {
+    kind: 'structure',
+    status: 'ready',
+    title: 'Structure',
+    formats: ['markdown', 'html'],
+    updatedAt: '2026-11-01T10:05:00.000Z',
+  },
+  {
+    kind: 'content',
+    status: 'ready',
+    title: 'Content',
+    formats: ['markdown', 'html'],
+    updatedAt: '2026-11-01T10:05:00.000Z',
+  },
+  {
+    kind: 'findings',
+    status: 'ready',
+    title: 'Findings',
+    formats: ['markdown', 'html'],
+    updatedAt: '2026-11-01T10:05:00.000Z',
+  },
+  {
+    kind: 'roadmap',
+    status: 'ready',
+    title: 'Improvement Roadmap',
+    formats: ['markdown', 'html'],
+    updatedAt: '2026-11-01T10:05:00.000Z',
+  },
+  {
+    kind: 'proposal',
+    status: 'not-written',
+    title: 'Proposal',
+    reason: 'Proposal template not configured in Settings.',
+  },
+  {
+    kind: 'pitch-glimpse',
+    status: 'ready',
+    title: 'Pitch Glimpse',
+    formats: ['markdown', 'html'],
+    updatedAt: '2026-11-01T10:05:00.000Z',
+  },
+  {
+    kind: 'owner-audit',
+    status: 'ready',
+    title: 'Website Audit',
+    formats: ['markdown', 'html'],
+    updatedAt: '2026-11-01T10:05:00.000Z',
+  },
 ];
 
 function sampleVersion(documents?: StoredAuditDocument[]): AuditVersion {
@@ -106,10 +147,7 @@ describe('DocumentsReady component (T-88, ADR 0042)', () => {
   });
 
   it('conforms to ADR 0018 claim wording (never compliant, never secure)', () => {
-    const source = readFileSync(
-      new URL('../src/screens/audit/results/DocumentsReady.tsx', import.meta.url),
-      'utf8'
-    );
+    const source = readFileSync(new URL('../src/screens/audit/results/DocumentsReady.tsx', import.meta.url), 'utf8');
     const CLAIM_WORDS = /\b(compliant|compliance|certified|secure|safe|hack-proof|passes WCAG|fully accessible)\b/i;
     expect(source).not.toMatch(CLAIM_WORDS);
 
@@ -118,10 +156,7 @@ describe('DocumentsReady component (T-88, ADR 0042)', () => {
   });
 
   it('imports @qa/types only through @qa/types/src/browser.js', () => {
-    for (const file of [
-      '../src/screens/audit/results/DocumentsReady.tsx',
-      './audit-documents-ready.test.tsx',
-    ]) {
+    for (const file of ['../src/screens/audit/results/DocumentsReady.tsx', './audit-documents-ready.test.tsx']) {
       const source = readFileSync(new URL(file, import.meta.url), 'utf8');
       const specifiers = [...source.matchAll(/from '(@qa\/types[^']*)'/g)].map((m) => m[1]);
       expect(specifiers.length, file).toBeGreaterThan(0);

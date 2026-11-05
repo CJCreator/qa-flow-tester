@@ -44,10 +44,7 @@ export function formatWaitTime(detail?: string): string {
 /**
  * Creates an unscored audit finding for a site-caused skipped page with ADR 0018 wording.
  */
-export function createSkippedPageFinding(
-  skip: SkippedPageInfo,
-  id: string
-): UnscoredAuditFinding {
+export function createSkippedPageFinding(skip: SkippedPageInfo, id: string): UnscoredAuditFinding {
   let title = 'Page failed to load';
   let detail = `The page at ${skip.urlPath} could not be loaded.`;
   let suggestion = 'Check network connectivity and ensure the web server is answering requests.';

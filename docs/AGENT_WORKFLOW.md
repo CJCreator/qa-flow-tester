@@ -6,14 +6,14 @@ A local pipeline that turns a request into reviewed code with Claude Code subage
 
 `/ship <request>` runs the subagents in `.claude/agents/` in order and hands work over through `.claude/work/<slug>/`:
 
-| Stage | Agent             | Output                                         |
-| ----- | ----------------- | ---------------------------------------------- |
-| 1     | `prompt-enhancer` | `01-brief.md`                                  |
-| 2     | `planner`         | `02-plan.md`                                   |
-| gate  | you               | approve, change or cancel                      |
-| 3     | `developer`       | `03-dev-notes.md`                              |
-| 4     | `tester`          | `04-test-report.md` (PASS or FAIL)             |
-| loop  | developer, tester | at most 3 rounds; stops if failures repeat     |
+| Stage | Agent             | Output                                     |
+| ----- | ----------------- | ------------------------------------------ |
+| 1     | `prompt-enhancer` | `01-brief.md`                              |
+| 2     | `planner`         | `02-plan.md`                               |
+| gate  | you               | approve, change or cancel                  |
+| 3     | `developer`       | `03-dev-notes.md`                          |
+| 4     | `tester`          | `04-test-report.md` (PASS or FAIL)         |
+| loop  | developer, tester | at most 3 rounds; stops if failures repeat |
 
 Subagents cannot spawn subagents, so the main session orchestrates. `/ship resume <slug>` continues a run; `/build-next [slug]` builds one item in the current session.
 
@@ -28,14 +28,14 @@ Each item runs in a fresh headless session (`claude -p`, `acceptEdits`, prompts 
 
 Flags (`scripts/ship-loop.mjs`):
 
-| Flag               | Default | Meaning                                                                         |
-| ------------------ | ------- | ------------------------------------------------------------------------------- |
-| `--max-iterations` | 5       | Most items to try                                                               |
-| `--budget`         | 3       | USD cap per item                                                                |
+| Flag               | Default | Meaning                                                                        |
+| ------------------ | ------- | ------------------------------------------------------------------------------ |
+| `--max-iterations` | 5       | Most items to try                                                              |
+| `--budget`         | 3       | USD cap per item                                                               |
 | `--total-budget`   | 15      | USD cap for the run; counts each item at its cap and stops before exceeding it |
-| `--verify-at-end`  | off     | When nothing is left to build, run `.claude/commands/verify-all.md`             |
-| `--verify-budget`  | 8       | USD cap for that verification run                                               |
-| `--dry-run`        | off     | Print the command, run nothing                                                  |
+| `--verify-at-end`  | off     | When nothing is left to build, run `.claude/commands/verify-all.md`            |
+| `--verify-budget`  | 8       | USD cap for that verification run                                              |
+| `--dry-run`        | off     | Print the command, run nothing                                                 |
 
 The loop counts items whose backlog row says `approved`. It stops on `QUEUE_EMPTY`, on a non-zero `claude` exit, or at a cap. Headless runs cannot ask questions: an item needing a decision ends `blocked` with the question recorded.
 

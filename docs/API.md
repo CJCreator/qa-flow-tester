@@ -6,13 +6,13 @@
 
 Levels are declared per route row (`Route.access` in `routes/route.ts`, ADR 0037). A row with no level is refused.
 
-| Level | Who |
-| --- | --- |
-| `owner` | The access key (cookie, `?access=` on first visit, or header `X-QA-Access`). With no key set, a request from the local machine. Never a Helper. |
-| `view`, `edit`, `export` | The owner, or a signed-in Helper holding that permission on the audit named by `:id`. |
-| `sign-in` | Helper sign-in, before any access. |
-| `public` | Anyone (Shared Links). |
-| `scheduler` | Cloud Scheduler only: `Authorization: Bearer <Google OIDC token>`; the key is not accepted (ADR 0039). |
+| Level                    | Who                                                                                                                                             |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `owner`                  | The access key (cookie, `?access=` on first visit, or header `X-QA-Access`). With no key set, a request from the local machine. Never a Helper. |
+| `view`, `edit`, `export` | The owner, or a signed-in Helper holding that permission on the audit named by `:id`.                                                           |
+| `sign-in`                | Helper sign-in, before any access.                                                                                                              |
+| `public`                 | Anyone (Shared Links).                                                                                                                          |
+| `scheduler`              | Cloud Scheduler only: `Authorization: Bearer <Google OIDC token>`; the key is not accepted (ADR 0039).                                          |
 
 Inline endpoints (not yet table rows) are all `owner`.
 
@@ -33,17 +33,17 @@ Every request: a non-loopback `Host` is refused unless it matches `RUNNER_ALLOWE
 
 ## Check-up (inline, owner)
 
-| Endpoint | Returns |
-| --- | --- |
-| `POST /api/runner/preflight` | Whether the address answers (`reachable`, `statusCode`, `startWarning`). No browser, no run. |
-| `POST /api/runner/ai-estimate` | About how many AI requests a scan needs, against what is left today. |
-| `POST /api/runner/context/docx` | A Word file (`{ name, base64 }`) as Markdown. Stateless; open in beta. |
-| `POST /api/runner/domain-proof` | The Verified Domain line to publish, and whether it is there now (ADR 0014). Open in beta. |
-| `POST /api/runner/run` | Starts a Check-up. `409 ERR_PLAN_WAITING` while an unapproved Plan waits; `409 ERR_RUN_IN_PROGRESS` when the run slot is busy. |
-| `GET /api/runner/stream` | Server-sent events of the current run, replaying earlier events on reconnect. |
-| `GET /api/runner/status` | Phase, `isRunning`, whether a Plan and report exist, last error. A Helper session without the key gets a reduced reply with `helper: true`. |
-| `POST /api/runner/abort`, `/stop` | Stops the current run. |
-| `POST /api/runner/ai/finish` | Finishes the visual review on remaining screens. |
+| Endpoint                          | Returns                                                                                                                                     |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /api/runner/preflight`      | Whether the address answers (`reachable`, `statusCode`, `startWarning`). No browser, no run.                                                |
+| `POST /api/runner/ai-estimate`    | About how many AI requests a scan needs, against what is left today.                                                                        |
+| `POST /api/runner/context/docx`   | A Word file (`{ name, base64 }`) as Markdown. Stateless; open in beta.                                                                      |
+| `POST /api/runner/domain-proof`   | The Verified Domain line to publish, and whether it is there now (ADR 0014). Open in beta.                                                  |
+| `POST /api/runner/run`            | Starts a Check-up. `409 ERR_PLAN_WAITING` while an unapproved Plan waits; `409 ERR_RUN_IN_PROGRESS` when the run slot is busy.              |
+| `GET /api/runner/stream`          | Server-sent events of the current run, replaying earlier events on reconnect.                                                               |
+| `GET /api/runner/status`          | Phase, `isRunning`, whether a Plan and report exist, last error. A Helper session without the key gets a reduced reply with `helper: true`. |
+| `POST /api/runner/abort`, `/stop` | Stops the current run.                                                                                                                      |
+| `POST /api/runner/ai/finish`      | Finishes the visual review on remaining screens.                                                                                            |
 
 ## Plan Review (table rows, owner, beta allow)
 
@@ -67,13 +67,13 @@ Every request: a non-loopback `Host` is refused unless it matches `RUNNER_ALLOWE
 
 ## Schedules (table rows)
 
-| Endpoint | Access | Returns |
-| --- | --- | --- |
-| `GET /api/runner/schedules` | owner | The schedules. |
-| `POST /api/runner/schedules` | owner | Adds one. |
-| `POST /api/runner/schedules/:id/toggle` | owner | Pauses or resumes (`{ enabled }`). |
-| `DELETE /api/runner/schedules/:id` | owner | Deletes. |
-| `POST /api/runner/schedules/tick` | scheduler | Runs due schedules, holding the request until each finishes; replies `{ started, failed, skipped, busy }`. |
+| Endpoint                                | Access    | Returns                                                                                                    |
+| --------------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------- |
+| `GET /api/runner/schedules`             | owner     | The schedules.                                                                                             |
+| `POST /api/runner/schedules`            | owner     | Adds one.                                                                                                  |
+| `POST /api/runner/schedules/:id/toggle` | owner     | Pauses or resumes (`{ enabled }`).                                                                         |
+| `DELETE /api/runner/schedules/:id`      | owner     | Deletes.                                                                                                   |
+| `POST /api/runner/schedules/tick`       | scheduler | Runs due schedules, holding the request until each finishes; replies `{ started, failed, skipped, busy }`. |
 
 All served in beta (ADR 0039).
 
@@ -87,41 +87,41 @@ All served in beta (ADR 0039).
 
 Declared once in `AUDIT_API` and `AUDIT_AI_API` (`packages/types`), which also hold each route's query, body and reply types. `:id` is an audit id, `:linkId` a Shared Link id; a malformed id is a 404. Closed on beta except the `public`, `sign-in` and Helper rows noted above.
 
-| Endpoint | Access | Returns |
-| --- | --- | --- |
-| `POST /api/audits` | owner | `202`: starts a version. `400 ERR_INVALID_AUDIT`, `ERR_PRIVATE_ADDRESS`; `422 ERR_UNREACHABLE`, `ERR_SITE_BLOCKED`, `ERR_DNS`; `409 ERR_RUN_IN_PROGRESS`. |
-| `GET /api/audits` | view | The audits the caller may see, with versions. |
-| `GET /api/audits/:id` | view | One audit. |
-| `DELETE /api/audits/:id` | owner | Deletes every version, edit, file, Shortlist entry, Shared Link and Helper grant. |
-| `GET /api/audits/:id/stream` | view | Server-sent `AuditProgressEvent` (`progress`, `page`, `status`, `done`, `failed`). A finished version sends its final event and closes. |
-| `POST /api/audits/:id/rerun` | owner | `202`: new version, same address and limits. |
-| `GET /api/audits/:id/content` | view | Page Content for `?path=`. |
-| `GET /api/audits/:id/file` | view | A screenshot by `?path=` (download). |
-| `GET /api/audits/:id/edits` | view | The edit overlay. |
-| `PATCH /api/audits/:id/edits` | edit | Updates it. |
-| `GET /api/audit-settings` | owner | Audit settings. |
-| `PUT /api/audit-settings` | owner | Updates them (including the PageSpeed key). |
-| `GET /api/audits/:id/export` | export | Document bundle (download). |
-| `GET /api/audits/:id/pitch` | export | Pitch Glimpse (download). |
-| `GET /api/audits/:id/owner` | export | Owner-facing audit (download). |
-| `POST /api/audits/:id/preview` | owner | Writes the improved homepage with AI; `409 ERR_NO_AI_KEY` without a key. |
-| `GET /api/audits/:id/preview` | view | The preview page (HTML). |
-| `GET /api/audits/:id/share` | view | Shared Links of the audit. |
-| `POST /api/audits/:id/share` | owner | Makes a Shared Link. |
-| `DELETE /api/audits/:id/share/:linkId` | owner | Revokes it. |
-| `GET /s/:linkId` | public | The shared snapshot (HTML). `noindex`, strict CSP, `no-store`; `410` when expired, revoked or deleted. Any other `/s/...` path is 404. |
-| `GET /api/audits/:id/rewrite` | view | Rewrite state per Section. |
-| `POST /api/audits/:id/rewrite/approve` | edit | Approves a Section. |
-| `POST /api/audits/:id/rewrite` | owner | Writes copy for an approved Section; `409 ERR_NOT_APPROVED`, `ERR_NO_AI_KEY`; `502 ERR_AI_FAILED`. |
-| `POST /api/audits/:id/rewrite/accept` | edit | Puts the copy in the edit overlay; `422 ERR_OVERLAP`. |
-| `GET /api/audits/:id/shortlist`, `PUT` | view, edit | The Shortlist entry. |
-| `GET /api/shortlist` | view | The Shortlist across audits. |
-| `GET /api/audits/:id/helpers`, `PUT`, `DELETE` | owner | List, grant, remove Helpers. |
-| `GET /api/helper/status` | sign-in | Whether Helper sign-in is set up (`404 ERR_HELPERS_OFF` when not). |
-| `POST /api/helper/session` | sign-in | Verifies a Google ID token and sets the Helper session cookie. |
-| `GET /api/helper/session`, `DELETE` | sign-in | Current Helper session; sign out. |
-| `GET /api/audit-ai/models` | owner | Model chosen per AI stage. |
-| `PUT /api/audit-ai/models` | owner | Changes it. |
+| Endpoint                                       | Access     | Returns                                                                                                                                                   |
+| ---------------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /api/audits`                             | owner      | `202`: starts a version. `400 ERR_INVALID_AUDIT`, `ERR_PRIVATE_ADDRESS`; `422 ERR_UNREACHABLE`, `ERR_SITE_BLOCKED`, `ERR_DNS`; `409 ERR_RUN_IN_PROGRESS`. |
+| `GET /api/audits`                              | view       | The audits the caller may see, with versions.                                                                                                             |
+| `GET /api/audits/:id`                          | view       | One audit.                                                                                                                                                |
+| `DELETE /api/audits/:id`                       | owner      | Deletes every version, edit, file, Shortlist entry, Shared Link and Helper grant.                                                                         |
+| `GET /api/audits/:id/stream`                   | view       | Server-sent `AuditProgressEvent` (`progress`, `page`, `status`, `done`, `failed`). A finished version sends its final event and closes.                   |
+| `POST /api/audits/:id/rerun`                   | owner      | `202`: new version, same address and limits.                                                                                                              |
+| `GET /api/audits/:id/content`                  | view       | Page Content for `?path=`.                                                                                                                                |
+| `GET /api/audits/:id/file`                     | view       | A screenshot by `?path=` (download).                                                                                                                      |
+| `GET /api/audits/:id/edits`                    | view       | The edit overlay.                                                                                                                                         |
+| `PATCH /api/audits/:id/edits`                  | edit       | Updates it.                                                                                                                                               |
+| `GET /api/audit-settings`                      | owner      | Audit settings.                                                                                                                                           |
+| `PUT /api/audit-settings`                      | owner      | Updates them (including the PageSpeed key).                                                                                                               |
+| `GET /api/audits/:id/export`                   | export     | Document bundle (download).                                                                                                                               |
+| `GET /api/audits/:id/pitch`                    | export     | Pitch Glimpse (download).                                                                                                                                 |
+| `GET /api/audits/:id/owner`                    | export     | Owner-facing audit (download).                                                                                                                            |
+| `POST /api/audits/:id/preview`                 | owner      | Writes the improved homepage with AI; `409 ERR_NO_AI_KEY` without a key.                                                                                  |
+| `GET /api/audits/:id/preview`                  | view       | The preview page (HTML).                                                                                                                                  |
+| `GET /api/audits/:id/share`                    | view       | Shared Links of the audit.                                                                                                                                |
+| `POST /api/audits/:id/share`                   | owner      | Makes a Shared Link.                                                                                                                                      |
+| `DELETE /api/audits/:id/share/:linkId`         | owner      | Revokes it.                                                                                                                                               |
+| `GET /s/:linkId`                               | public     | The shared snapshot (HTML). `noindex`, strict CSP, `no-store`; `410` when expired, revoked or deleted. Any other `/s/...` path is 404.                    |
+| `GET /api/audits/:id/rewrite`                  | view       | Rewrite state per Section.                                                                                                                                |
+| `POST /api/audits/:id/rewrite/approve`         | edit       | Approves a Section.                                                                                                                                       |
+| `POST /api/audits/:id/rewrite`                 | owner      | Writes copy for an approved Section; `409 ERR_NOT_APPROVED`, `ERR_NO_AI_KEY`; `502 ERR_AI_FAILED`.                                                        |
+| `POST /api/audits/:id/rewrite/accept`          | edit       | Puts the copy in the edit overlay; `422 ERR_OVERLAP`.                                                                                                     |
+| `GET /api/audits/:id/shortlist`, `PUT`         | view, edit | The Shortlist entry.                                                                                                                                      |
+| `GET /api/shortlist`                           | view       | The Shortlist across audits.                                                                                                                              |
+| `GET /api/audits/:id/helpers`, `PUT`, `DELETE` | owner      | List, grant, remove Helpers.                                                                                                                              |
+| `GET /api/helper/status`                       | sign-in    | Whether Helper sign-in is set up (`404 ERR_HELPERS_OFF` when not).                                                                                        |
+| `POST /api/helper/session`                     | sign-in    | Verifies a Google ID token and sets the Helper session cookie.                                                                                            |
+| `GET /api/helper/session`, `DELETE`            | sign-in    | Current Helper session; sign out.                                                                                                                         |
+| `GET /api/audit-ai/models`                     | owner      | Model chosen per AI stage.                                                                                                                                |
+| `PUT /api/audit-ai/models`                     | owner      | Changes it.                                                                                                                                               |
 
 Not yet built (ADR 0042, T-86): owner sign-in on the hosted copy (`AUDIT_OWNER_EMAILS`).
 
