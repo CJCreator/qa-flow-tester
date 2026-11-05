@@ -142,8 +142,9 @@ export function buildAuditRoutes(server: RunnerServer): Route[] {
   };
 
   return [
-    ...auditCrawlRoutes({ store, caller, runs, resolveAi, resolveServiceKey }),
-    ...auditRerunRoutes({ store, caller, runs, resolveAi, resolveServiceKey }),
+    // A local runner may audit localhost and LAN addresses (ADR 0042); the hosted copy never.
+    ...auditCrawlRoutes({ store, caller, runs, resolveAi, resolveServiceKey, allowPrivateAddresses: wiring.localRun }),
+    ...auditRerunRoutes({ store, caller, runs, resolveAi, resolveServiceKey, allowPrivateAddresses: wiring.localRun }),
     ...auditStoreRoutes({
       store,
       caller,

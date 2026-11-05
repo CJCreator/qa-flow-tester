@@ -123,6 +123,8 @@ export interface AuditCrawlResult {
   crawlDelayMs: number | null;
   /** The robots.txt policy the crawl followed, so the link check refuses the same addresses (ADR 0015). */
   robots?: Pick<RobotsPolicy, 'isAllowed'>;
+  /** The crawl ran on a local runner with private addresses allowed (ADR 0042); the link check follows it. */
+  allowPrivateAddresses?: boolean;
 }
 
 export interface AuditCrawlProgress {
@@ -160,6 +162,12 @@ export interface AuditCrawlOptions {
   onRenderedPage?: (page: Page, info: AuditCrawlPage) => Promise<void>;
   /** Folder for a small screenshot of each recorded page. None when absent. */
   screenshotDir?: string;
+  /**
+   * A local runner only (ADR 0042: not a beta copy, bound to this computer), set by the runner and never from
+   * the start body: localhost and LAN addresses are crawled, nothing is pinned, and the browser guard lets any
+   * web address through. A shared machine's browser policy still applies when one is set.
+   */
+  allowPrivateAddresses?: boolean;
   deps?: AuditCrawlDeps;
 }
 
@@ -232,16 +240,20 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
   const netDeps = deps.netDeps ?? defaultNetDeps;
   const start = new URL(request.url);
   const startPath = start.pathname;
+  // A local runner may audit this computer and its network; a shared machine's browser policy still wins.
+  const allowPrivate = opts.allowPrivateAddresses === true && getBrowserPolicy() === null;
 
-  // Before any request: the start host must still be public, and the browser gets exactly that address.
-  const pins = await pinSiteHosts(start, netDeps);
+  // Before any request: the start host must still be public, and the browser gets exactly that address. A
+  // local run pins nothing: the browser resolves `localhost` itself and reaches ::1 or 127.0.0.1, whichever
+  // the dev server listens on.
+  const pins = allowPrivate ? [] : await pinSiteHosts(start, netDeps);
 
-  // robots.txt first, through the pinned outbound path: public addresses only (ADR 0031).
+  // robots.txt first, through the pinned outbound path: public addresses only, unless local (ADR 0031).
   const robots = await RobotsPolicy.fetch(
     start.origin,
     AUDIT_ROBOTS_TOKEN,
     makeCheckerFetch({
-      allowPrivate: false,
+      allowPrivate,
       maxRedirects: SITE_FILE_REDIRECTS,
       timeoutMs: SITE_FILE_TIMEOUT_MS,
       deps: netDeps,
@@ -250,7 +262,7 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
   // One pacer per Website Audit: page loads, robots.txt and sitemaps take turns on the host.
   const pacer = new HostPacer({ minGapMs: AUDIT_MIN_GAP_MS, crawlDelayMs: robots.crawlDelayMs });
   const siteFetch = makeCheckerFetch({
-    allowPrivate: false,
+    allowPrivate,
     maxRedirects: SITE_FILE_REDIRECTS,
     timeoutMs: SITE_FILE_TIMEOUT_MS,
     pacer,
@@ -301,7 +313,7 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
       if (policyGuard) await installRequestGuard(context, policyGuard);
     }
     // The guard is the first route; blockChanges, added after, runs first and falls back to it.
-    await installRequestGuard(context, deps.requestGuard ?? makeRequestGuard(netDeps));
+    await installRequestGuard(context, deps.requestGuard ?? makeRequestGuard(netDeps, { allowPrivate }));
     await blockChanges(context);
     // Added last, so it runs first: same-site requests carry the tunnel skip headers into the routes above.
     await addTunnelSkipHeaders(context, start);
@@ -399,6 +411,7 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
       pacer,
       crawlDelayMs: robots.crawlDelayMs ?? null,
       robots,
+      allowPrivateAddresses: allowPrivate,
     };
   } finally {
     await context?.close().catch(() => {});

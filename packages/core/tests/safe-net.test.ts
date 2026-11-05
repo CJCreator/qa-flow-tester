@@ -77,6 +77,49 @@ describe('resolvePublic', () => {
 });
 
 describe('safeGet', () => {
+  /** `localhost` resolves to ::1 and 127.0.0.1; this dev server listens on ::1 only, as Vite often does. */
+  const ipv6Only = (r: PinnedRequest): RawResponse => {
+    if (r.address !== '::1') throw new Error('connect ECONNREFUSED 127.0.0.1:3000');
+    return ok('<title>Dev app</title>');
+  };
+
+  it('allowPrivate: tries the next address of the name when one refuses (a dev server on ::1 only)', async () => {
+    const f = fake({ localhost: ['::1', '127.0.0.1'] }, { 'http://localhost:3000/': ipv6Only });
+    const got = await safeGet('http://localhost:3000/', { allowPrivate: true }, f.deps);
+    expect(got).toMatchObject({ ok: true, status: 200 });
+    expect(f.connects.map((c) => c.address)).toEqual(['127.0.0.1', '::1']);
+  });
+
+  it('allowPrivate: a timeout is not retried on another address', async () => {
+    const f = fake(
+      { localhost: ['::1', '127.0.0.1'] },
+      {
+        'http://localhost:3000/': () => {
+          throw new Error('timeout');
+        },
+      }
+    );
+    expect(await safeGet('http://localhost:3000/', { allowPrivate: true }, f.deps)).toEqual({
+      ok: false,
+      reason: 'timeout',
+    });
+    expect(f.connects).toHaveLength(1);
+  });
+
+  it('a public name is one pinned address: no other address is tried when it refuses', async () => {
+    const f = fake(
+      { 'two.test': ['93.184.216.34', '93.184.216.35'] },
+      {
+        'http://two.test/': (r) => {
+          if (r.address === '93.184.216.34') throw new Error('refused');
+          return ok();
+        },
+      }
+    );
+    expect(await safeGet('http://two.test/', {}, f.deps)).toEqual({ ok: false, reason: 'error' });
+    expect(f.connects).toHaveLength(1);
+  });
+
   it('isTestHost: a redirect to 169.254.169.254 is refused and never connected to', async () => {
     const f = fake(
       { 'good.test': ['93.184.216.34'], 'internal.test': ['169.254.169.254'] },
@@ -274,6 +317,17 @@ describe('makeRequestGuard', () => {
     expect(await guard('http://169.254.169.254/latest/meta-data', false)).toBe(false);
     expect(await guard('file:///etc/passwd', false)).toBe(false);
     expect(await guard('not a url', false)).toBe(false);
+  });
+
+  it('with allowPrivate (a local run) lets any web address through and still refuses other schemes', async () => {
+    const f = fake({}, {});
+    const guard = makeRequestGuard(f.deps, { allowPrivate: true });
+    expect(await guard('http://localhost:3000/', false)).toBe(true);
+    expect(await guard('http://[::1]:3000/@vite/client', false)).toBe(true);
+    expect(await guard('ws://localhost:3000/', false)).toBe(true);
+    expect(await guard('file:///etc/passwd', false)).toBe(false);
+    expect(await guard('chrome://settings', false)).toBe(false);
+    expect(f.lookups).toEqual([]);
   });
 
   it('fails closed on a DNS error and does not cache an answer', async () => {

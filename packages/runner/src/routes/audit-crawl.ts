@@ -113,6 +113,11 @@ export interface AuditRunServices {
   /** A fresh local working folder for the run. Default: a temp folder. */
   makeWorkDir?: () => Promise<string>;
   now?: () => Date;
+  /**
+   * The runner is local (ADR 0042: not a beta copy, bound to this computer): localhost and LAN addresses may
+   * be audited. Set from the runner's own settings, never from the start body. Default false.
+   */
+  allowPrivateAddresses?: boolean;
 }
 
 export interface AuditCrawlRouteDeps extends AuditRunServices {
@@ -279,6 +284,7 @@ export async function runAuditVersion(
           ...(p.currentPath !== undefined ? { currentPath: p.currentPath } : {}),
         }),
       onRenderedPage: recorder.onRenderedPage,
+      ...(services.allowPrivateAddresses ? { allowPrivateAddresses: true } : {}),
     });
     crawled = true;
     if (signal.aborted) throw Object.assign(new Error('stopped'), { name: 'AbortError' });
@@ -337,7 +343,9 @@ function versionQuery(url: URL): number | undefined | 'invalid' {
 export function createAuditCrawlRoutes(deps: AuditCrawlRouteDeps): Route[] {
   const runs = deps.runs ?? new AuditRuns();
   const slotOf = deps.slot ?? ((context: RouteContext) => context.server.session.run);
-  const checkAddress = deps.checkAddress ?? ((url: string) => checkAuditAddress(url));
+  const checkAddress =
+    deps.checkAddress ??
+    ((url: string) => checkAuditAddress(url, { allowPrivateAddresses: deps.allowPrivateAddresses === true }));
 
   const start = row('start', async (context) => {
     const { req, res } = context;

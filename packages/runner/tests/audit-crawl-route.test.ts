@@ -291,6 +291,18 @@ describe('POST /api/audits', () => {
     await expect(fs.stat(workDirs[0])).rejects.toThrow();
   });
 
+  it("passes a local runner's permission for private addresses to the crawl, and nothing by default (ADR 0042)", async () => {
+    const local = await serve(createAuditCrawlRoutes(deps({ allowPrivateAddresses: true })));
+    const first = await post(local, VALID);
+    await waitFor(runEnded(first.json.auditId));
+    expect(crawlCalls[0].opts.allowPrivateAddresses).toBe(true);
+
+    const hosted = await serve(createAuditCrawlRoutes(deps()));
+    const second = await post(hosted, VALID);
+    await waitFor(runEnded(second.json.auditId));
+    expect(crawlCalls[1].opts.allowPrivateAddresses).toBeUndefined();
+  });
+
   it.each([
     ['does not resolve', 'The site name could not be found. Check the address for typos.'],
     ['does not answer', 'The site did not answer in time.'],
