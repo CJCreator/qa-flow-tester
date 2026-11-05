@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { lightPalette, palette } from '../tailwind.config.js';
+import { darkPalette, palette } from '../tailwind.config.js';
 import { GRADE_TOKENS } from '../src/lib/grades';
 
 /** WCAG relative luminance and contrast ratio. */
@@ -26,8 +26,16 @@ const TEXT_PAIRS: Array<[Token, Token]> = [
   ),
   ['ink', 'stamp-tint'],
   ['stamp', 'stamp-tint'],
-  ['paper', 'stamp'], // text on a primary button
-  ['paper', 'stamp-dark'], // …while hovered
+  ['ink', 'raised'],
+  ['ink-soft', 'raised'],
+  ['stamp', 'raised'],
+  ['ink-soft', 'canvas'],
+  ['on-stamp', 'stamp'], // text on a primary button
+  ['on-stamp', 'stamp-dark'], // …while hovered
+  ['on-stamp', 'fail'], // text on a danger button
+  ['ink-soft', 'rule'], // a disabled button
+  ['surface', 'ink'], // the chosen option in a segmented control
+  ['ink', 'pass-tint'],
   ['pass', 'pass-tint'],
   ['fail', 'fail-tint'],
   ['warn', 'warn-tint'],
@@ -54,8 +62,8 @@ const NON_TEXT_PAIRS: Array<[Token, Token]> = [
 ];
 
 describe.each([
-  ['dark board', palette],
-  ['light, printable', lightPalette],
+  ['light, the default and print', palette],
+  ['dark', darkPalette],
 ])('wizard palette (%s) meets WCAG 2.2 AA', (_name, colors: Record<Token, string>) => {
   it.each(TEXT_PAIRS)('text %s on %s is at least 4.5:1', (fg, bg) => {
     expect(contrast(colors[fg], colors[bg])).toBeGreaterThanOrEqual(4.5);
@@ -66,11 +74,18 @@ describe.each([
   });
 });
 
-describe('grade colours use the palette only', () => {
+describe.each([
+  ['light', palette],
+  ['dark', darkPalette],
+])('grade colours use the palette only (%s)', (_name, colors: Record<Token, string>) => {
   it.each(Object.entries(GRADE_TOKENS))('grade %s is readable on its tint and on a card', (_grade, { text, tint }) => {
-    expect(contrast(palette[text], palette[tint])).toBeGreaterThanOrEqual(4.5);
-    expect(contrast(palette[text], palette.surface)).toBeGreaterThanOrEqual(4.5);
-    // Its border marks the grade against the card.
-    expect(contrast(palette[text], palette.surface)).toBeGreaterThanOrEqual(3);
+    expect(contrast(colors[text], colors[tint])).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(colors[text], colors.surface)).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
+describe('both palettes name the same tokens', () => {
+  it('dark has every light token and no others', () => {
+    expect(Object.keys(darkPalette).sort()).toEqual(Object.keys(palette).sort());
   });
 });

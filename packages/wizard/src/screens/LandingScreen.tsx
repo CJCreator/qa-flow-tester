@@ -7,7 +7,7 @@ import { WakeNote } from '../components/WakeNote';
 import { useWakeOnline } from '../hooks/useWakeOnline';
 import { startAddress } from '../lib/online';
 import { PATHS } from '../lib/router';
-import { applyTheme, readTheme, saveTheme, toggled, type Theme } from '../lib/theme';
+import { applyTheme, effectiveTheme, readTheme, saveTheme, toggled, type Theme } from '../lib/theme';
 import { LANDING_TITLE, useDocumentTitle } from '../lib/title';
 
 /** Where the Website Audit link leads: on the static site, the online copy's origin, like the check-up call to action. */
@@ -80,24 +80,27 @@ function StartButton({ className, children }: { className: string; children: Rea
 }
 
 /**
- * Light or dark, for this page only. A plain token swap (see tailwind.config.js); the app's working
- * screens stay dark, so the attribute is removed when this page goes away.
+ * Dark or light for every page: a plain token swap (see tailwind.config.js). Until it is pressed the
+ * page follows the device; pressing it saves the choice, which the app's screens use too.
  */
 function ThemeToggle({ className }: { className: string }) {
   const [theme, setTheme] = useState<Theme>(() => readTheme());
+  const [changed, setChanged] = useState(false);
   useEffect(() => {
     applyTheme(theme, document.documentElement);
-    saveTheme(theme);
-    return () => applyTheme('dark', document.documentElement);
-  }, [theme]);
+    if (changed) saveTheme(theme);
+  }, [theme, changed]);
   return (
     <button
       type="button"
-      aria-pressed={theme === 'light'}
+      aria-pressed={effectiveTheme(theme) === 'dark'}
       className={className}
-      onClick={() => setTheme(toggled(theme))}
+      onClick={() => {
+        setChanged(true);
+        setTheme(toggled(theme));
+      }}
     >
-      Light theme
+      Dark theme
     </button>
   );
 }

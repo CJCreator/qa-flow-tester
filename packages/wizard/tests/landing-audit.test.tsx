@@ -142,8 +142,8 @@ describe('landing page', () => {
     }
   });
 
-  it('has a Light theme button that starts unpressed', async () => {
+  it('has a Dark theme button that starts unpressed (light is the default)', async () => {
     const html = await landingMarkup();
-    expect(html).toMatch(/<button[^>]*aria-pressed="false"[^>]*>Light theme<\/button>/);
+    expect(html).toMatch(/<button[^>]*aria-pressed="false"[^>]*>Dark theme<\/button>/);
   });
 });
