@@ -38,6 +38,11 @@ export class DefaultReportStore implements ReportStore {
   private lastRunError: string | null = null;
   private lastErrorCode: string | null = null;
   private readonly getProtectedRunIds?: () => string[];
+  /**
+   * Run summaries by run folder name (LAT-2). Valid while the `runs/` folder keeps the mtime it had when read:
+   * a run folder added or removed changes it. keep() and prune() drop the index on their own writes.
+   */
+  private runIndex: { rootMtimeMs: number; byName: Map<string, RunSummary> } | null = null;
 
   constructor(paths: SessionPaths, getProtectedRunIds?: () => string[]) {
     this.paths = paths;
@@ -80,17 +85,24 @@ export class DefaultReportStore implements ReportStore {
 
   async list(): Promise<RunSummary[]> {
     const root = path.join(this.paths.outputDir, 'runs');
-    const names = await fs.readdir(root).catch(() => [] as string[]);
-    const runs: RunSummary[] = [];
-    for (const name of names) {
-      if (!isRunId(name)) continue;
-      try {
-        runs.push(JSON.parse(await fs.readFile(path.join(root, name, 'summary.json'), 'utf8')) as RunSummary);
-      } catch {
-        // not finished
+    const rootMtimeMs = await fs.stat(root).then(
+      (s) => s.mtimeMs,
+      () => -1
+    );
+    if (!this.runIndex || this.runIndex.rootMtimeMs !== rootMtimeMs) {
+      const names = await fs.readdir(root).catch(() => [] as string[]);
+      const byName = new Map<string, RunSummary>();
+      for (const name of names) {
+        if (!isRunId(name)) continue;
+        try {
+          byName.set(name, JSON.parse(await fs.readFile(path.join(root, name, 'summary.json'), 'utf8')) as RunSummary);
+        } catch {
+          // not finished
+        }
       }
+      this.runIndex = { rootMtimeMs, byName };
     }
-    return runs.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+    return [...this.runIndex.byName.values()].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
   }
 
   async keep(report: ReleaseReport, typedTargetUrl: string, siteHost: string | undefined): Promise<void> {
@@ -118,6 +130,7 @@ export class DefaultReportStore implements ReportStore {
       testedWithApprovedPlan: report.testedWithApprovedPlan,
     };
     await fs.writeFile(path.join(dir, 'summary.json'), JSON.stringify(summary, null, 2), 'utf8');
+    this.runIndex = null;
     for (const name of ['findings.json', 'fix-these.md', 'known-findings.json', 'AGENTS.snippet.md']) {
       await fs.copyFile(path.join(dir, name), path.join(this.paths.outputDir, name)).catch(() => {});
     }
@@ -128,6 +141,7 @@ export class DefaultReportStore implements ReportStore {
     const runs = await this.list();
     const old = runs.filter((r) => r.host === host).slice(RUNS_KEPT_PER_SITE);
     for (const run of old) await fs.rm(this.dirFor(run.runId), { recursive: true, force: true }).catch(() => {});
+    if (old.length) this.runIndex = null;
     const finished = new Set(runs.map((r) => r.runId));
     const root = path.join(this.paths.outputDir, 'runs');
     const protectedIds = new Set(this.getProtectedRunIds ? this.getProtectedRunIds() : []);

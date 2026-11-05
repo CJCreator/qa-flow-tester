@@ -2,6 +2,7 @@ import http from 'http';
 import { timingSafeEqual } from 'crypto';
 import { promises as fs } from 'fs';
 import path from 'path';
+import { evidenceContentType, sendEvidenceFile } from './evidence-file.js';
 import {
   journeyPages,
   releaseVerdict,
@@ -1540,16 +1541,7 @@ export class RunnerServer {
                 res.end('Not a file');
                 return;
               }
-              const ext = path.extname(targetFile).toLowerCase();
-              let mime = 'application/octet-stream';
-              if (ext === '.png') mime = 'image/png';
-              else if (ext === '.jpg' || ext === '.jpeg') mime = 'image/jpeg';
-              else if (ext === '.html') mime = 'text/html; charset=utf-8';
-              else if (ext === '.json') mime = 'application/json';
-              else if (ext === '.webm') mime = 'video/webm';
-              const content = await fs.readFile(targetFile);
-              res.writeHead(200, { 'Content-Type': mime });
-              res.end(content);
+              sendEvidenceFile(req, res, targetFile, stat, evidenceContentType(path.extname(targetFile)));
             } catch {
               if (relPath.endsWith('product-context.md')) {
                 res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
