@@ -3,6 +3,7 @@ import { contactLinks, REPO_URL } from '../lib/contact';
 import { COUNTER_EVENTS, sendCounterEvent, sendCounterEventOnce } from '../lib/counter';
 import { HOME_FAQ, HOME_STEPS } from '../lib/faq';
 import { Mark } from '../components/TopBar';
+import { Badge } from '../components/ui';
 import { WakeNote } from '../components/WakeNote';
 import { useWakeOnline } from '../hooks/useWakeOnline';
 import { startAddress } from '../lib/online';
@@ -108,31 +109,20 @@ function ThemeToggle({ className }: { className: string }) {
 /** The real sample report in a browser-style frame. Not a mock-up: the report shows its own verdict stamp. */
 function SampleReportFrame() {
   return (
-    <figure className="relative">
-      <div className="overflow-hidden rounded-panel border border-rule/80 bg-canvas shadow-level-4 ring-1 ring-stamp/20 transition-all duration-300 hover:shadow-[0_0_25px_rgba(108,155,242,0.15)]">
-        <div className="flex items-center justify-between border-b border-rule bg-panel px-4 py-2 font-mono text-xs text-ink-soft">
-          <div className="flex items-center gap-2">
-            <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-fail/60" />
-            <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-warn/60" />
-            <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-pass/60" />
-            <span className="ml-2 font-mono text-[11px] text-ink-soft">Sample report</span>
-          </div>
-          <span className="badge-tech text-[10px] py-0 px-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-pass" />
-            VERDICT PREVIEW
-          </span>
-        </div>
+    <figure className="min-w-0 max-w-full">
+      <div className="overflow-hidden rounded-panel border border-rule bg-canvas shadow-level-2">
+        <div className="border-b border-rule bg-panel px-4 py-2 text-sm font-semibold text-ink-soft">Sample report</div>
         <iframe
           src={SAMPLE_REPORT_URL}
           title="A real sample report"
           loading="lazy"
-          className="block h-[24rem] w-full bg-canvas sm:h-[28rem] lg:h-[34rem]"
+          className="block h-[24rem] w-full max-w-full bg-canvas sm:h-[28rem] lg:h-[34rem]"
         />
       </div>
-      <figcaption className="mt-2.5 flex items-center justify-between text-xs text-ink-soft">
+      <figcaption className="mt-2 flex flex-wrap items-center justify-between gap-x-4 text-xs text-ink-soft">
         <span>Real check-up of a demo site with known findings.</span>
         <a href={SAMPLE_REPORT_URL} className="btn-link text-xs">
-          Open full size ↗
+          Open full size
         </a>
       </figcaption>
     </figure>
@@ -158,12 +148,9 @@ function AddressForm() {
         inputMode="url"
         autoComplete="url"
         placeholder="https://your-site.com"
-        className="field min-h-[52px] flex-1 font-mono text-base placeholder:font-sans focus:border-stamp focus:ring-2 focus:ring-stamp/40 shadow-level-1"
+        className="field min-h-[48px] min-w-0 flex-1 font-mono placeholder:font-sans"
       />
-      <button
-        type="submit"
-        className="btn-primary min-h-[52px] whitespace-nowrap px-8 font-bold shadow-level-2 hover:shadow-level-3"
-      >
+      <button type="submit" className="btn-primary whitespace-nowrap px-8">
         Start a free check-up
       </button>
     </form>
@@ -173,7 +160,7 @@ function AddressForm() {
 function SectionTitle({ id, children, lead }: { id: string; children: ReactNode; lead?: string }) {
   return (
     <>
-      <h2 id={id} className="max-w-prose text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
+      <h2 id={id} className="max-w-prose font-stamp text-3xl font-bold leading-tight sm:text-4xl">
         {children}
       </h2>
       {lead && <p className="mt-3 max-w-prose text-ink-soft">{lead}</p>}
@@ -183,7 +170,7 @@ function SectionTitle({ id, children, lead }: { id: string; children: ReactNode;
 
 const SECTION = 'mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20';
 const NAV_LINK =
-  'inline-flex min-h-[44px] items-center rounded px-2 text-sm font-bold text-ink-soft transition-colors hover:text-ink';
+  'inline-flex min-h-[44px] items-center rounded-control px-2 text-sm font-semibold text-ink-soft transition-colors duration-fast hover:text-ink';
 
 /**
  * The menu for narrow screens: a disclosure. The button says whether it is open, Esc and choosing a
@@ -205,14 +192,14 @@ function MobileMenu() {
   }, [open]);
 
   return (
-    <div className="sm:hidden">
+    <div className="lg:hidden">
       <button
         ref={button}
         type="button"
         aria-expanded={open}
         aria-controls="landing-menu"
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-1.5 rounded px-2 text-sm font-bold text-ink hover:bg-panel"
+        className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-1.5 rounded-control px-2 text-sm font-semibold text-ink hover:bg-panel"
       >
         <svg
           aria-hidden="true"
@@ -240,12 +227,15 @@ function MobileMenu() {
                 <a
                   href={n.href}
                   onClick={() => setOpen(false)}
-                  className="flex min-h-[48px] items-center border-b border-rule/60 text-base font-bold text-ink last:border-b-0"
+                  className="flex min-h-[48px] items-center border-b border-rule text-base font-semibold text-ink"
                 >
                   {n.label}
                 </a>
               </li>
             ))}
+            <li className="pt-3">
+              <ThemeToggle className="btn-quiet btn-sm" />
+            </li>
           </ul>
         </nav>
       )}
@@ -271,19 +261,15 @@ export function LandingScreen() {
             Release check-up
           </span>
           <div className="flex items-center gap-1 sm:gap-3">
-            <nav aria-label="Main" className="hidden items-center gap-x-1 sm:flex">
+            <nav aria-label="Main" className="hidden items-center gap-x-1 lg:flex">
               {NAV.map((n) => (
-                <a
-                  key={n.href}
-                  href={n.href}
-                  className={`${NAV_LINK} hidden lg:inline-flex ${n.label === 'Sample report' || n.label === 'Pricing' ? 'sm:inline-flex' : ''}`}
-                >
+                <a key={n.href} href={n.href} className={NAV_LINK}>
                   {n.label}
                 </a>
               ))}
-              <ThemeToggle className={`${NAV_LINK} rounded border border-rule`} />
+              <ThemeToggle className={`${NAV_LINK} border-[1.5px] border-edge`} />
             </nav>
-            <StartButton className="btn-primary min-h-[44px] whitespace-nowrap px-2.5 text-xs sm:px-4 sm:text-sm">
+            <StartButton className="btn-primary btn-sm whitespace-nowrap px-3 sm:px-4">
               <span className="sm:hidden">
                 Start<span className="sr-only"> a free check-up</span>
               </span>
@@ -294,35 +280,28 @@ export function LandingScreen() {
         </div>
       </header>
 
-      <main className="overflow-x-clip">
-        <section
-          aria-labelledby="hero-title"
-          className="border-b border-rule/80 bg-canvas bg-blueprint-grid relative overflow-hidden"
-        >
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-canvas/80" />
-          <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14">
-            <div>
-              <div className="mb-4 inline-flex items-center gap-2 rounded-control border border-stamp/40 bg-stamp-tint/80 px-3 py-1 font-mono text-xs font-bold text-stamp shadow-level-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-stamp animate-pulse" />
-                <span>Release check-up · free during the beta</span>
-              </div>
+      <div className="overflow-x-clip">
+        <section aria-labelledby="hero-title" className="border-b border-rule bg-canvas">
+          <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14">
+            <div className="min-w-0">
+              <Badge>Free during the beta</Badge>
               <h1
                 id="hero-title"
-                className="text-[clamp(2.5rem,1.6rem+4vw,4.25rem)] font-bold leading-[1.05] tracking-tight text-ink"
+                className="mt-4 font-stamp text-[clamp(2.5rem,1.6rem+4vw,4.25rem)] font-bold leading-[1.05] text-ink"
               >
                 QA without a QA team.
               </h1>
-              <p className="mb-8 mt-5 max-w-prose text-xl text-ink-soft leading-relaxed">
+              <p className="mb-8 mt-5 max-w-prose text-xl leading-relaxed text-ink-soft">
                 Find out whether your site is ready to release before your users do. Paste its address and get a
                 plain-words verdict, with the problems in priority order.
               </p>
               <AddressForm />
-              <div className="mt-3 flex flex-wrap items-center gap-4">
+              <p className="mt-2">
                 <a href={SAMPLE_REPORT_URL} className="btn-link text-sm">
                   See a sample report
                 </a>
-              </div>
-              <p className="mt-3 text-sm text-ink-soft">
+              </p>
+              <p className="mt-2 text-sm text-ink-soft">
                 No sign-up. On a live site it only looks: nothing is filled in, sent or changed.
               </p>
               <p className="mt-1 text-sm text-ink-soft">
@@ -334,19 +313,16 @@ export function LandingScreen() {
           </div>
         </section>
 
-        {/* What it will and won't do, as one compact strip: the reassurance, not a section of its own. */}
-        <section aria-labelledby="promise-title" className="border-b border-rule/80 bg-surface/90 backdrop-blur-sm">
+        {/* What it will and won't do: the reassurance, as plain text, not a section of its own. */}
+        <section aria-labelledby="promise-title" className="border-b border-rule bg-surface">
           <h2 id="promise-title" className="sr-only">
             What it will and won’t do to your site
           </h2>
-          <ul className="mx-auto grid max-w-6xl divide-y divide-rule/80 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          <ul className="mx-auto grid max-w-6xl gap-6 px-4 py-8 sm:grid-cols-3 sm:px-6">
             {PROMISES.map((p) => (
-              <li key={p.title} className="corner-ticks px-6 py-6 transition-colors hover:bg-panel/40">
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-pass" />
-                  <p className="font-bold text-ink">{p.title}</p>
-                </div>
-                <p className="mt-2 text-sm text-ink-soft leading-relaxed">{p.text}</p>
+              <li key={p.title} className="min-w-0">
+                <p className="font-bold text-ink">{p.title}</p>
+                <p className="mt-1 text-sm leading-relaxed text-ink-soft">{p.text}</p>
               </li>
             ))}
           </ul>
@@ -356,34 +332,25 @@ export function LandingScreen() {
           <SectionTitle id="how-title" lead="You don’t write a single test. You read a plan and say yes.">
             Four steps from address to verdict
           </SectionTitle>
-          <ol className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <ol className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {HOME_STEPS.map((s, i) => (
-              <li
-                key={s.name}
-                className="blueprint-card p-6 flex flex-col justify-between hover:border-stamp/60 transition-all duration-200"
-              >
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span aria-hidden="true" className="block font-stamp text-6xl leading-none text-stamp/90">
-                      {i + 1}
-                    </span>
-                    <span className="badge-tech font-mono text-[10px]">STEP 0{i + 1}</span>
-                  </div>
-                  <p className="mt-4 text-lg font-bold text-ink">
-                    <span className="sr-only">Step {i + 1}: </span>
-                    {s.name}
-                  </p>
-                  <p className="mt-2 text-sm text-ink-soft leading-relaxed">{s.text}</p>
-                </div>
-                {i < 3 && <div className="mt-4 hidden lg:block text-right font-mono text-xs text-edge/40">──────→</div>}
+              <li key={s.name} className="min-w-0 border-t border-edge pt-4">
+                <span aria-hidden="true" className="block font-stamp text-6xl leading-none text-stamp">
+                  {i + 1}
+                </span>
+                <p className="mt-4 text-lg font-bold text-ink">
+                  <span className="sr-only">Step {i + 1}: </span>
+                  {s.name}
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-ink-soft">{s.text}</p>
               </li>
             ))}
           </ol>
         </section>
 
-        <section id="checks" aria-labelledby="areas-title" className="scroll-mt-16 border-y border-rule/80 bg-panel/70">
+        <section id="checks" aria-labelledby="areas-title" className="scroll-mt-16 border-y border-rule bg-canvas">
           <div className={`${SECTION} grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16`}>
-            <div>
+            <div className="min-w-0">
               <SectionTitle
                 id="areas-title"
                 lead="One verdict across the things a release can get wrong, with a grade for each."
@@ -391,22 +358,16 @@ export function LandingScreen() {
                 What it looks at
               </SectionTitle>
             </div>
-            <ul className="grid gap-4 sm:grid-cols-2">
+            <ul className="grid min-w-0 gap-x-10 sm:grid-cols-2">
               {AREAS.map((a) => (
-                <li
-                  key={a.name}
-                  className="blueprint-card p-5 border-l-4 border-l-stamp transition-all duration-200 hover:-translate-y-0.5 hover:shadow-level-3"
-                >
+                <li key={a.name} className="min-w-0 border-t border-rule py-4">
                   <p className="font-bold text-ink">
-                    <a
-                      href={SAMPLE_REPORT_URL}
-                      className="btn-link min-h-0 font-bold text-ink hover:text-stamp transition-colors"
-                    >
+                    <a href={SAMPLE_REPORT_URL} className="btn-link min-h-0 font-bold text-ink">
                       {a.name}
                       <span className="sr-only">, in the sample report</span>
                     </a>
                   </p>
-                  <p className="mt-1 text-sm text-ink-soft leading-relaxed">{a.text}</p>
+                  <p className="mt-1 text-sm leading-relaxed text-ink-soft">{a.text}</p>
                 </li>
               ))}
             </ul>
@@ -428,37 +389,27 @@ export function LandingScreen() {
             tabIndex={0}
             role="region"
             aria-label="Where it runs"
-            className="mt-10 max-w-full overflow-x-auto rounded-panel border border-rule/80 bg-surface/80 shadow-level-2 focus:outline-none"
+            className="mt-10 max-w-full overflow-x-auto rounded-control"
           >
-            <table className="w-full min-w-[40rem] border-collapse text-left text-sm">
-              <caption className="border-b border-rule/80 bg-panel/50 px-5 py-3 text-left font-bold text-ink">
-                Where it runs
-              </caption>
+            <table className="table-plain min-w-[40rem]">
+              <caption className="pb-3 text-left font-bold text-ink">Where it runs</caption>
               <thead>
-                <tr className="border-b border-rule/80 text-ink-soft font-mono text-xs">
-                  <th scope="col" className="px-5 py-3 font-bold">
-                    Option
-                  </th>
-                  <th scope="col" className="px-5 py-3 font-bold">
-                    Sites it can check
-                  </th>
-                  <th scope="col" className="px-5 py-3 font-bold">
-                    How it runs
-                  </th>
-                  <th scope="col" className="px-5 py-3 font-bold">
-                    To start
-                  </th>
+                <tr>
+                  <th scope="col">Option</th>
+                  <th scope="col">Sites it can check</th>
+                  <th scope="col">How it runs</th>
+                  <th scope="col">To start</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-rule/60">
+              <tbody>
                 {WHERE_IT_RUNS.map((r) => (
-                  <tr key={r.name} className="align-top hover:bg-panel/30 transition-colors">
-                    <th scope="row" className="px-5 py-4 font-bold text-ink">
+                  <tr key={r.name}>
+                    <th scope="row" className="!font-bold !text-ink">
                       {r.name}
                     </th>
-                    <td className="px-5 py-4 text-ink-soft">{r.sites}</td>
-                    <td className="px-5 py-4 text-ink-soft leading-relaxed">{r.where}</td>
-                    <td className="px-5 py-4 text-ink font-mono text-xs">{r.setup}</td>
+                    <td className="text-ink-soft">{r.sites}</td>
+                    <td className="leading-relaxed text-ink-soft">{r.where}</td>
+                    <td className="text-ink">{r.setup}</td>
                   </tr>
                 ))}
               </tbody>
@@ -466,56 +417,35 @@ export function LandingScreen() {
           </div>
         </section>
 
-        <section id="faq" aria-labelledby="faq-title" className="scroll-mt-16 border-t border-rule/80 bg-panel/60">
+        <section id="faq" aria-labelledby="faq-title" className="scroll-mt-16 border-t border-rule bg-canvas">
           <div className={`${SECTION} grid gap-8 lg:grid-cols-[0.7fr_1.3fr] lg:gap-16`}>
             <SectionTitle id="faq-title">Questions people ask first</SectionTitle>
-            <div className="space-y-3">
-              {HOME_FAQ.map((item, i) => (
-                <details
-                  key={item.q}
-                  className="rounded-control border border-rule/80 bg-surface/60 px-5 py-2.5 transition-colors hover:border-edge"
-                >
-                  <summary className="min-h-[44px] cursor-pointer py-1 font-bold text-ink flex items-center">
-                    <span className="badge-tech mr-3 text-[10px] font-mono shrink-0">FAQ-0{i + 1}</span>
-                    <span>{item.q}</span>
-                  </summary>
-                  <p className="mb-2 mt-2 max-w-prose text-ink-soft text-sm leading-relaxed border-t border-rule/40 pt-3">
-                    {item.a}
-                  </p>
+            <div className="min-w-0">
+              {HOME_FAQ.map((item) => (
+                <details key={item.q} className="disclosure border-t border-rule last:border-b">
+                  <summary className="py-1 text-ink">{item.q}</summary>
+                  <p className="mb-4 mt-1 max-w-prose text-sm leading-relaxed text-ink-soft">{item.a}</p>
                 </details>
               ))}
             </div>
           </div>
         </section>
 
-        <section
-          aria-labelledby="final-title"
-          className="border-t border-rule/80 bg-canvas bg-blueprint-grid relative overflow-hidden"
-        >
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-transparent to-canvas/60" />
-          <div className={`${SECTION} relative text-center`}>
-            <div className="mb-4 inline-flex items-center gap-2 rounded-control border border-stamp/40 bg-stamp-tint/80 px-3 py-1 font-mono text-xs font-bold text-stamp shadow-level-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-stamp animate-pulse" />
-              <span>READY TO SHIP?</span>
-            </div>
-            <h2
-              id="final-title"
-              className="mx-auto max-w-prose text-3xl font-bold leading-tight tracking-tight sm:text-5xl text-ink"
-            >
+        <section aria-labelledby="final-title" className="border-t border-rule bg-surface">
+          <div className={`${SECTION} text-center`}>
+            <h2 id="final-title" className="mx-auto max-w-prose font-stamp text-3xl font-bold leading-tight sm:text-5xl">
               Find out if you’re ready to ship
             </h2>
-            <p className="mx-auto mt-4 max-w-prose text-ink-soft text-lg">
+            <p className="mx-auto mt-4 max-w-prose text-lg text-ink-soft">
               It takes an address and a few minutes of reading.
             </p>
             <p className="mt-8">
-              <StartButton className="btn-primary px-10 shadow-level-3 hover:shadow-level-4 font-bold">
-                Start a free check-up
-              </StartButton>
+              <StartButton className="btn-primary px-10">Start a free check-up</StartButton>
             </p>
           </div>
         </section>
 
-        <section aria-labelledby="audit-title" className="border-t border-rule/80 bg-panel/60">
+        <section aria-labelledby="audit-title" className="border-t border-rule bg-canvas">
           <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12">
             <h2 id="audit-title" className="text-xl font-bold text-ink">
               Looking at someone else’s website?
@@ -525,13 +455,13 @@ export function LandingScreen() {
               English or Tamil. It is free for now.
             </p>
             <p className="mt-4">
-              <a href={auditAddress()} className="btn-link font-bold">
+              <a href={auditAddress()} className="btn-quiet">
                 Open the Website Audit
               </a>
             </p>
           </div>
         </section>
-      </main>
+      </div>
 
       <footer className="border-t border-rule bg-surface">
         <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 text-sm text-ink-soft sm:px-6 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
