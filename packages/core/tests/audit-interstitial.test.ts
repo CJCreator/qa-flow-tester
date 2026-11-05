@@ -28,7 +28,9 @@ describe('classifyInterstitial', () => {
   it('names the ngrok browser warning', () => {
     const text = 'You are about to visit: abcd-1-2-3.ngrok-free.app\nVisit Site\nERR_NGROK_6024';
     expect(classifyInterstitial({ title: '', text })).toBe('tunnel-warning');
-    expect(classifyInterstitial({ title: '', text: 'You are about to visit: abcd.ngrok-free.app' })).toBe('tunnel-warning');
+    expect(classifyInterstitial({ title: '', text: 'You are about to visit: abcd.ngrok-free.app' })).toBe(
+      'tunnel-warning'
+    );
   });
 
   it('names a bot check by its title or its text', () => {
