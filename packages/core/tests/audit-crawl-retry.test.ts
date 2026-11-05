@@ -374,7 +374,9 @@ describe('DeterministicSpider retries on subpages', () => {
       true
     );
     expect(
-      progress.some((p) => p.type === 'page' && p.path === '/page1' && p.state === 'skipped' && p.reason === 'http-error')
+      progress.some(
+        (p) => p.type === 'page' && p.path === '/page1' && p.state === 'skipped' && p.reason === 'http-error'
+      )
     ).toBe(true);
   });
 
@@ -444,9 +446,33 @@ describe('Outage resilience (ADR 0043)', () => {
         title: 'Home',
         text: 'Home page',
         elements: [
-          { role: 'link', name: 'p1', selector: 'a[href="/p1"]', href: '/p1', visible: true, enabled: true, tagName: 'a' },
-          { role: 'link', name: 'p2', selector: 'a[href="/p2"]', href: '/p2', visible: true, enabled: true, tagName: 'a' },
-          { role: 'link', name: 'p3', selector: 'a[href="/p3"]', href: '/p3', visible: true, enabled: true, tagName: 'a' },
+          {
+            role: 'link',
+            name: 'p1',
+            selector: 'a[href="/p1"]',
+            href: '/p1',
+            visible: true,
+            enabled: true,
+            tagName: 'a',
+          },
+          {
+            role: 'link',
+            name: 'p2',
+            selector: 'a[href="/p2"]',
+            href: '/p2',
+            visible: true,
+            enabled: true,
+            tagName: 'a',
+          },
+          {
+            role: 'link',
+            name: 'p3',
+            selector: 'a[href="/p3"]',
+            href: '/p3',
+            visible: true,
+            enabled: true,
+            tagName: 'a',
+          },
         ],
       },
       'https://example.com/p1': () => {
@@ -505,10 +531,42 @@ describe('Outage resilience (ADR 0043)', () => {
         title: 'Home',
         text: 'Home page',
         elements: [
-          { role: 'link', name: 'p1', selector: 'a[href="/p1"]', href: '/p1', visible: true, enabled: true, tagName: 'a' },
-          { role: 'link', name: 'p2', selector: 'a[href="/p2"]', href: '/p2', visible: true, enabled: true, tagName: 'a' },
-          { role: 'link', name: 'p3', selector: 'a[href="/p3"]', href: '/p3', visible: true, enabled: true, tagName: 'a' },
-          { role: 'link', name: 'p4', selector: 'a[href="/p4"]', href: '/p4', visible: true, enabled: true, tagName: 'a' },
+          {
+            role: 'link',
+            name: 'p1',
+            selector: 'a[href="/p1"]',
+            href: '/p1',
+            visible: true,
+            enabled: true,
+            tagName: 'a',
+          },
+          {
+            role: 'link',
+            name: 'p2',
+            selector: 'a[href="/p2"]',
+            href: '/p2',
+            visible: true,
+            enabled: true,
+            tagName: 'a',
+          },
+          {
+            role: 'link',
+            name: 'p3',
+            selector: 'a[href="/p3"]',
+            href: '/p3',
+            visible: true,
+            enabled: true,
+            tagName: 'a',
+          },
+          {
+            role: 'link',
+            name: 'p4',
+            selector: 'a[href="/p4"]',
+            href: '/p4',
+            visible: true,
+            enabled: true,
+            tagName: 'a',
+          },
         ],
       },
       'https://example.com/p1': {

@@ -88,9 +88,7 @@ export function SkippedPagesView({ coverage, findings }: SkippedPagesViewProps) 
           <div className="space-y-4">
             {[...groupMap.entries()].map(([why, pages]) => (
               <div key={why} data-skip-group={why} className="space-y-1">
-                <h3 className="font-bold text-ink">
-                  {`${SKIP_REASON_GROUP_LABEL[why] ?? why} (${pages.length})`}
-                </h3>
+                <h3 className="font-bold text-ink">{`${SKIP_REASON_GROUP_LABEL[why] ?? why} (${pages.length})`}</h3>
                 <ul className="space-y-1 text-sm">
                   {pages.map((page, i) => {
                     const finding = isSiteCaused(page.why) ? findFindingForPage(page.urlPath, findings) : undefined;

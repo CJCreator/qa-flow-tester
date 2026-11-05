@@ -30,4 +30,3 @@ We rejected two alternatives:
 - Studio's Hub views go. Team history lives in the Hub's own dashboard.
 - ADR 0008's single server, port and loopback rules stand. The Docker image builds one UI.
 - DESIGN.md's reason for the Wizard's look ("the opposite of Studio on purpose") no longer applies. The Blueprint direction stays on its own merits.
-- The work is planned in [E2E_PLATFORM_IMPLEMENTATION_PLAN.md](../E2E_PLATFORM_IMPLEMENTATION_PLAN.md).

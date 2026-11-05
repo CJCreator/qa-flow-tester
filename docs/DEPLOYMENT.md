@@ -1,79 +1,99 @@
 # Deployment
 
-Ways the tool reaches people (ADR 0012, and ADR 0032 for hosting). Everything runs on Google Cloud, on the project
-`qa-flow-tester-512310`, region `us-central1`. Render and Vercel are retired.
+How the tool reaches people ([ADR 0012](adr/0012-hosted-runner-github-actions.md), hosting in
+[ADR 0032](adr/0032-google-cloud-only-hosting.md)). Everything hosted runs on Google Cloud, project
+`qa-flow-tester-512310`, region `us-central1`.
 
-| Surface                                                           | What                                                                                                                              | Where it is defined                                                                |
-| ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| **Cloud Run `qa-check-up-site`**: landing page and wizard         | Static files behind nginx (`nginxinc/nginx-unprivileged`), public, 256 MiB, scales to zero                                        | `site/Dockerfile`, `site/nginx.conf`, `scripts/site-output.mjs`, `pnpm site-build` |
-| **Cloud Run `qa-check-up`**: the full app as a shared online copy | Runner image, 2 GiB, 1 CPU, 1 warm instance, `RUNNER_BETA=1`, behind the access key (Secret Manager `qa-access-token`)            | `packages/runner/Dockerfile`, `.github/workflows/deploy.yml`                       |
-| **The user's own GitHub Actions**: the main way to run a check-up | The wizard generates a workflow from `templates/qa-check.yml`; the job builds the tool and runs `packages/runner/dist/checkup.js` | `templates/qa-check.yml`, `.github/workflows/qa-check.yml`                         |
+| Surface                                                           | What                                                                                                                                                                   | Defined in                                                                         |
+| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| **Cloud Run `qa-check-up-site`**: landing page and wizard         | Static files behind nginx (`nginxinc/nginx-unprivileged`), public, 256 MiB, 0 to 2 instances                                                                           | `site/Dockerfile`, `site/nginx.conf`, `scripts/site-output.mjs`, `pnpm site-build` |
+| **Cloud Run `qa-check-up`**: the full app as a shared online copy | Runner image, 2 GiB, 1 CPU, exactly 1 instance (warm, [ADR 0038](adr/0038-warm-runner-instance.md)), `RUNNER_BETA=1`, access key from Secret Manager `qa-access-token` | `packages/runner/Dockerfile`, `.github/workflows/deploy.yml`                       |
+| **The user's own GitHub Actions**: the main way to run a check-up | The wizard generates a workflow from `templates/qa-check.yml`; the job builds the tool and runs `packages/runner/dist/checkup.js`                                      | `templates/qa-check.yml`, `.github/workflows/qa-check.yml`                         |
 
-Both Cloud Run services get their address from the project number, so it is fixed before the first deploy:
-`https://qa-check-up-809804736896.us-central1.run.app` (runner) and `https://qa-check-up-site-809804736896.us-central1.run.app` (site).
+Cloud Run addresses are fixed by the project number, so they are known before the first deploy:
+`https://qa-check-up-809804736896.us-central1.run.app` (runner) and
+`https://qa-check-up-site-809804736896.us-central1.run.app` (site).
 
 ## How a change ships
 
-1. Work on a branch and open a pull request. `.github/workflows/ci.yml` builds and tests it.
-2. Merge to `main`. `.github/workflows/deploy.yml` then:
-   - **build-and-smoke**: lint, the Playwright version check, `pnpm site-build` (with `VITE_ONLINE_APP_URL` set to the runner), the runner build, the smoke check, and uploads the built site.
-   - **test**: the four shards of the test suite (`tests.yml`). Both deploys wait for it.
-   - **cloud-run**: builds and pushes the runner image to Artifact Registry (`us-central1-docker.pkg.dev/qa-flow-tester-512310/qa/runner:$GITHUB_SHA`), deploys `qa-check-up`, and verifies the root answers 401 (the access-key gate). `/healthz` is not used here: Cloud Run's front end answers it with its own 404 and never reaches the container.
-   - **site**: builds and pushes the site image (`.../qa/site:$GITHUB_SHA`), deploys `qa-check-up-site`, and verifies `version.json` names this commit.
-3. A newer push to `main` cancels an older deploy that is still running (`concurrency: deploy`).
+1. Work on a branch and open a pull request. `.github/workflows/ci.yml` runs lint, format check, typecheck, the unit tests (2 shards via `tests.yml`), a dependency audit, a secret scan of the repo history, and a secret scan of the wizard bundle and the runner image.
+2. Merge to `main`. `.github/workflows/deploy.yml` then runs:
+   - **build-and-smoke**: install, the Playwright version check, lint, `pnpm site-build` (with `VITE_ONLINE_APP_URL` set to the runner), the runner build, `pnpm smoke`, and uploads the built site.
+   - **test**: the unit tests, 2 shards (`tests.yml`). Both deploy jobs wait for it.
+   - **cloud-run**: builds and pushes `us-central1-docker.pkg.dev/qa-flow-tester-512310/qa/runner:$GITHUB_SHA`, deploys `qa-check-up`, and checks that the root answers 401 or 200. `/healthz` is not used here: Cloud Run's front end answers it itself and never reaches the container.
+   - **site**: builds and pushes `.../qa/site:$GITHUB_SHA`, deploys `qa-check-up-site`, and checks that `/version.json` names this commit.
+3. A newer push to `main` cancels an older deploy still running (`concurrency: deploy`).
 
-To deploy without the test suite (for example, to pick up changed repository variables), run it by hand:
-Actions > Deploy > **Run workflow**, tick **skip_tests**, or `gh workflow run deploy.yml --ref main -f skip_tests=true`.
-build-and-smoke still runs (the site job needs its build). A push to `main` always runs the tests.
+To deploy without the tests (for example to pick up changed repository variables): Actions > Deploy > **Run workflow** with
+**skip_tests** ticked, or `gh workflow run deploy.yml --ref main -f skip_tests=true`. build-and-smoke still runs. A push to
+`main` always runs the tests.
 
-Sign-in is keyless: Workload Identity Federation with the variables `GCP_WORKLOAD_IDENTITY_PROVIDER` and `GCP_DEPLOY_SERVICE_ACCOUNT`
-(Settings > Secrets and variables > Actions > Variables). No GitHub secret holds a GCP key.
+Deploy sign-in is keyless (Workload Identity Federation). Repository variables (Settings > Secrets and variables >
+Actions > **Variables**): `GCP_WORKLOAD_IDENTITY_PROVIDER` and `GCP_DEPLOY_SERVICE_ACCOUNT`. No GitHub secret holds a Google
+Cloud key. The runner's access key is only in Secret Manager as `qa-access-token`.
+
+Manual deploy from a machine signed in with `gcloud auth login`: `node scripts/deploy-cloud-run.mjs`. It builds, pushes
+and deploys both services, but sets only the base runner environment. It leaves out the audit bucket, Firebase and
+scheduler variables, so use the workflow for anything that needs them.
+
+Other workflows: `release.yml` (tags `v*`: checks the tag equals the `package.json` version, then lint, format, audit and
+builds; publishes nothing) and `e2e-nightly.yml` (browser tests, nightly).
+
+## Runner environment on Cloud Run
+
+`deploy.yml` sets: `RUNNER_BETA=1`, `RUNNER_HOST=0.0.0.0`, `RUNNER_DATA_DIR=/tmp/qa-data`,
+`RUNNER_OUTPUT_DIR=/tmp/qa-data/reports`, `RUNNER_ALLOWED_ORIGINS`, and from repository variables `AUDIT_STORE_BUCKET`,
+`FIREBASE_PROJECT_ID`, `FIREBASE_WEB_API_KEY`, `FIREBASE_AUTH_DOMAIN`, `SCHEDULER_SERVICE_ACCOUNT`. An unset variable
+reaches the runner empty, which it treats as off. Meanings: [CONFIGURATION.md](CONFIGURATION.md). The container port is
+8080; the runner reads `PORT` because Cloud Run sets `K_SERVICE`.
 
 ## Docker
 
-`packages/runner/Dockerfile` builds on Playwright's image. **Its version (`v1.63.0-noble`) must match the
-`playwright` version in `pnpm-lock.yaml`**; bump both together. It installs only the runner and wizard chains,
-copies `templates/` (the wizard embeds the workflow file), and runs `node packages/runner/dist/cli.js` on port 3001
-with data in `/data` (or port 8080 with `/tmp/qa-data` on Cloud Run where root is read-only). The build stops if
-the base image's Node major differs from `.nvmrc`. The runner runs as the image's non-root `pwuser`, and Docker's
-`HEALTHCHECK` calls `/healthz`, which answers 503 when the data folder is not writable or Chromium does not launch.
-Chromium runs with `--no-sandbox` (flag in `packages/core/src/browser.ts`, `launch()`), each target host in its own
-browser process.
+`packages/runner/Dockerfile` builds on Playwright's image. **Its version (`v1.63.0-noble`) must match the `playwright`
+version in `pnpm-lock.yaml`**; bump both together. It installs the runner and wizard chains, copies `templates/` (the
+wizard embeds the workflow file), builds both, and runs `node packages/runner/dist/cli.js` on port 3001, bound to
+`0.0.0.0`, with data in `/data` and reports in `/data/reports`. The three `VITE_COUNTER_URL`, `VITE_CONTACT_EMAIL` and
+`VITE_SIGNUP_URL` build args set the landing values. `/healthz` answers 200 `ok` and shows no data.
+
+Because the image binds `0.0.0.0`, `RUNNER_ACCESS_TOKEN` is required: the runner exits at start without it. Open the
+copy once as `https://<host>/?access=<key>` to set the cookie.
 
 `node scripts/check-playwright-version.mjs` compares the Dockerfile tag with every `playwright@` version in
-`pnpm-lock.yaml`. It exits 1 on a mismatch or if either version is missing. CI runs it right after Install; run it
-locally after bumping.
+`pnpm-lock.yaml` and the package manifests. It exits 1 on a mismatch. CI and the release workflow run it; run it locally
+after bumping. Dependabot ignores Playwright (`.github/dependabot.yml`). To upgrade, change the `playwright` and
+`playwright-core` versions in `pnpm-workspace.yaml` (`overrides`) and in the `package.json` files that list them, run
+`pnpm install`, change the Dockerfile tag to match, then run the check.
 
-Dependabot does not propose Playwright bumps (`.github/dependabot.yml` ignores them): a bump that changes only the
-lockfile or only the Dockerfile fails this check. To upgrade, change the `playwright` and `playwright-core` versions in `pnpm-workspace.yaml` (`overrides`) and in the
-`package.json` files that list `playwright`, run `pnpm install`, change the Dockerfile tag to match, then run the check.
+Local runner image: `docker build -f packages/runner/Dockerfile -t qa-check-up .`, then
+`docker run -p 3001:3001 -e RUNNER_ACCESS_TOKEN=<key> -v qa-data:/data qa-check-up`.
 
-Local build: `docker build -f packages/runner/Dockerfile -t qa-check-up .`
-Run: `docker run -p 3001:3001 -e RUNNER_ACCESS_TOKEN=<key> -v qa-data:/data qa-check-up`
+Local site image: `pnpm site-build`, then `docker build -f site/Dockerfile -t qa-check-up-site .` and
+`docker run -p 8080:8080 qa-check-up-site`. `site/nginx.conf` caches `/assets/` for a year and serves `index.html` for
+unknown paths.
 
-Local site build: `pnpm site-build`, then `docker build -f site/Dockerfile -t qa-check-up-site .` and
-`docker run -p 8080:8080 qa-check-up-site`.
+## The user's own GitHub Actions
 
-The image binds `0.0.0.0`, so `RUNNER_ACCESS_TOKEN` is required: the runner exits at start without it. On Cloud Run the
-token comes from Secret Manager; open the copy once as `https://<host>/?access=<key>` to set the cookie.
+The wizard fills `templates/qa-check.yml` (`__DEFAULT_URL__`, `__QA_TOOL_REF__` from `TOOL_REF` in
+`packages/wizard/src/lib/workflow.ts`). The job checks out this repo at that ref, installs and builds the runner chain,
+installs Chromium, runs `node .qa-tool/packages/runner/dist/checkup.js`, and uploads `qa-report` (14 days). It runs on
+request, and when a preview or staging deployment reports success (a deployment of the `Production` environment is
+checked read-only; any other is a test copy). The user's secret is `QA_AI_API_KEY`. Settings:
+[CONFIGURATION.md](CONFIGURATION.md#one-check-up-from-ci-packagesrunnersrccheckupts).
+`.github/workflows/qa-check.yml` is this repo's own copy, run on request only.
 
 ## Website Audit storage and Helper sign-in
 
-**Local runs need none of this.** Without `AUDIT_STORE_BUCKET` the runner keeps every Website Audit, its Shared
-Links and Helper grants as plain files under the data folder (`<RUNNER_DATA_DIR>/audit-store/`), with no cloud
-account. Without `FIREBASE_PROJECT_ID` Helper sign-in is simply off.
+Local runs need none of this and no cloud account. Without `AUDIT_STORE_BUCKET` the runner keeps Website Audits, Shared Links and Helper grants
+as files under `<RUNNER_DATA_DIR>/audit-store/`. Without `FIREBASE_PROJECT_ID` Helper sign-in is off.
 
-**On the hosted copy** (`qa-check-up`), Website Audits and Shared Links live in one Cloud Storage bucket
-([ADR 0036](adr/0036-hosted-audit-storage-and-shared-links.md)), because `/tmp` is wiped on every redeploy. Helper
-sign-in uses Firebase Authentication (Google sign-in) in the same project. It turns on only when both
-`FIREBASE_PROJECT_ID` and `RUNNER_ACCESS_TOKEN` are set.
+On the hosted copy, Website Audits and Shared Links live in one Cloud Storage bucket
+([ADR 0036](adr/0036-hosted-audit-storage-and-shared-links.md)) because `/tmp` is wiped on every redeploy. Helper sign-in
+uses Firebase Authentication (Google sign-in) in the same project, and turns on only when `FIREBASE_PROJECT_ID` and
+`RUNNER_ACCESS_TOKEN` are both set.
 
-One-time setup, run by hand by someone with owner rights on `qa-flow-tester-512310`. The bucket name below is an
-example; bucket names are global, so pick your own.
+One-time setup, by someone with owner rights on the project. The bucket name is an example; bucket names are global.
 
-1. Create the bucket in the runner's region, on the always-free tier (Standard storage in `us-central1`; `us-east1`
-   and `us-west1` are also free, but keep it in the runner's region). Uniform bucket-level access on, public access
-   prevention enforced, soft delete off (0 days):
+1. Create the bucket in the runner's region on the always-free tier, with uniform access, public access prevention and soft delete off:
 
    ```bash
    gcloud storage buckets create gs://qa-check-up-audits --project qa-flow-tester-512310 \
@@ -81,8 +101,7 @@ example; bucket names are global, so pick your own.
      --uniform-bucket-level-access --public-access-prevention --soft-delete-duration=0
    ```
 
-2. Keep object versioning off and add no lifecycle rule, so deleting a Website Audit removes its data at once and
-   nothing else expires it (Q-30). New buckets start this way; check, and turn off anything that is on:
+2. Keep versioning off and add no lifecycle rule, so deleting a Website Audit removes its data at once. There are no backups. Check:
 
    ```bash
    gcloud storage buckets describe gs://qa-check-up-audits \
@@ -90,11 +109,7 @@ example; bucket names are global, so pick your own.
    gcloud storage buckets update gs://qa-check-up-audits --no-versioning --clear-lifecycle --clear-soft-delete
    ```
 
-   There are no backups: a deleted Website Audit cannot be recovered.
-
-3. Give the runner's runtime service account `roles/storage.objectAdmin` on this bucket only (never a project-wide
-   storage role). Find the account first; an empty answer means the default compute account
-   `809804736896-compute@developer.gserviceaccount.com`:
+3. Give the runner's runtime service account `roles/storage.objectAdmin` on this bucket only. An empty answer from the first command means the default compute account `809804736896-compute@developer.gserviceaccount.com`:
 
    ```bash
    gcloud run services describe qa-check-up --region us-central1 --project qa-flow-tester-512310 \
@@ -103,9 +118,9 @@ example; bucket names are global, so pick your own.
      --member "serviceAccount:<runtime service account>" --role roles/storage.objectAdmin
    ```
 
-   The runner reaches the bucket keylessly through that account. No storage key or signed URL is created.
+   The runner reaches the bucket keylessly through that account.
 
-4. Add Firebase to the same project and turn on Google sign-in ([Firebase CLI](https://firebase.google.com/docs/cli)):
+4. Add Firebase to the project and turn on Google sign-in ([Firebase CLI](https://firebase.google.com/docs/cli)):
 
    ```bash
    gcloud services enable firebase.googleapis.com identitytoolkit.googleapis.com --project qa-flow-tester-512310
@@ -114,69 +129,66 @@ example; bucket names are global, so pick your own.
    firebase apps:sdkconfig web <app id from the line above> --project qa-flow-tester-512310
    ```
 
-   `apps:sdkconfig` prints the public web settings: `projectId`, `apiKey` and `authDomain`
-   (`qa-flow-tester-512310.firebaseapp.com`). Then, in the Firebase console, under Authentication: Sign-in method,
-   enable **Google**; Settings, Authorized domains, add the runner's host
+   `apps:sdkconfig` prints the public web settings (`projectId`, `apiKey`, `authDomain`). In the Firebase console,
+   Authentication > Sign-in method: enable **Google**; Settings > Authorized domains: add
    `qa-check-up-809804736896.us-central1.run.app` (and the site's host if the wizard is opened from there).
 
-5. Set the repository variables (Settings > Secrets and variables > Actions > **Variables**, not secrets; all four
-   are public values): `AUDIT_STORE_BUCKET` (the bucket name, without `gs://`), `FIREBASE_PROJECT_ID`,
-   `FIREBASE_WEB_API_KEY`, `FIREBASE_AUTH_DOMAIN`. `deploy.yml` passes them to the runner on the next deploy. A
-   variable left unset reaches the runner empty, which it treats as off (local files, Helper sign-in off).
+5. Set the repository variables (Variables, not secrets; all public values): `AUDIT_STORE_BUCKET` (name without `gs://`),
+   `FIREBASE_PROJECT_ID`, `FIREBASE_WEB_API_KEY`, `FIREBASE_AUTH_DOMAIN`. The next deploy passes them to the runner.
 
-The runner sends the Firebase web settings to the wizard at run time. A wizard build can also bake them in as a
-fallback with `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_WEB_API_KEY` and `VITE_FIREBASE_AUTH_DOMAIN`
-(see `.env.example`); the deploy does not need them.
+A wizard build can also bake the Firebase values in as `VITE_FIREBASE_*` ([CONFIGURATION.md](CONFIGURATION.md)); the deploy does not need them.
 
 ## Scheduled Check-ups on the hosted copy
 
-The owner can create, pause and delete scheduled Check-ups on the hosted copy (Settings, with the access key). Google Cloud Scheduler is the clock: it calls `POST /api/runner/schedules/tick` every few minutes and the runner starts the schedules that are due ([ADR 0039](adr/0039-cloud-scheduler-owner-schedules.md)). The job proves who it is with a Google-signed token; the runner's access key is never given to Cloud Scheduler. Local runs need none of this (the runner has its own 60 second timer). Replace `PROJECT`, `PROJECT_NUMBER`, `REGION` and `RUNNER_URL` (no trailing slash; it must equal one URL in `RUNNER_ALLOWED_ORIGINS`). Do this once, after the deploy that carries this feature:
+Cloud Scheduler is the clock: it calls `POST /api/runner/schedules/tick` every few minutes and the runner starts the
+schedules that are due ([ADR 0039](adr/0039-cloud-scheduler-owner-schedules.md)). The job proves who it is with a
+Google-signed token; the runner's access key is never given to Cloud Scheduler. Local runs need none of this (the runner
+has its own 60 second timer). Replace `PROJECT`, `PROJECT_NUMBER`, `REGION` and `RUNNER_URL` (no trailing slash; it must
+equal one URL in `RUNNER_ALLOWED_ORIGINS`). Do this once:
 
-1. Turn on the API: `gcloud services enable cloudscheduler.googleapis.com --project PROJECT`
+1. `gcloud services enable cloudscheduler.googleapis.com --project PROJECT`
 
-2. Create a service account only for the job. It needs no project roles (the runner is `--allow-unauthenticated` and checks the token itself, so it does not need `roles/run.invoker`):
+2. Create a service account only for the job. It needs no project roles (the runner checks the token itself):
    `gcloud iam service-accounts create qa-scheduler --display-name "QA check-up scheduler" --project PROJECT`
 
-3. Allow identities to mint its token:
-   - Whoever creates the job needs act-as permission on that service account: `roles/iam.serviceAccountUser` on `qa-scheduler`.
-   - The Cloud Scheduler service agent signs the token as the service account. For a service account in the same project the agent normally already has this; if the job is refused, grant it explicitly:
-     `gcloud iam service-accounts add-iam-policy-binding qa-scheduler@PROJECT.iam.gserviceaccount.com --member serviceAccount:service-PROJECT_NUMBER@gcp-sa-cloudscheduler.iam.gserviceaccount.com --role roles/iam.serviceAccountTokenCreator --project PROJECT`
+3. Allow minting its token. Whoever creates the job needs `roles/iam.serviceAccountUser` on `qa-scheduler`. The Cloud Scheduler service agent normally already may sign as it; if the job is refused, grant it:
+   `gcloud iam service-accounts add-iam-policy-binding qa-scheduler@PROJECT.iam.gserviceaccount.com --member serviceAccount:service-PROJECT_NUMBER@gcp-sa-cloudscheduler.iam.gserviceaccount.com --role roles/iam.serviceAccountTokenCreator --project PROJECT`
 
-4. Set the repository variable `SCHEDULER_SERVICE_ACCOUNT` to `qa-scheduler@PROJECT.iam.gserviceaccount.com` (Settings > Secrets and variables > Actions > **Variables**, not secrets; the email is a public value). Then deploy (push to `main` or run the Deploy workflow). Use the workflow, not `scripts/deploy-cloud-run.mjs`: the script replaces all env vars and leaves out the bucket, Firebase and scheduler settings. While the variable is unset the tick route stays closed (401).
+4. Set the repository variable `SCHEDULER_SERVICE_ACCOUNT` to `qa-scheduler@PROJECT.iam.gserviceaccount.com`, then deploy with the workflow (not `scripts/deploy-cloud-run.mjs`, which leaves the variable out). While it is unset the tick route answers 401.
 
-5. Create the job. The audience must be the runner's URL exactly. `--attempt-deadline 1800s` is the longest an HTTP job may wait, and the tick holds its request open while the runs finish. Retries are off, because a repeat tick would only find nothing due. Use a Cloud Scheduler region (for example `us-central1`, like the runner):
+5. Create the job. The audience must be the runner's URL exactly. `--attempt-deadline 1800s` is the longest an HTTP job may wait, and the tick holds its request open while runs finish. Retries are off:
    `gcloud scheduler jobs create http qa-check-up-tick --project PROJECT --location REGION --schedule "*/5 * * * *" --time-zone "Etc/UTC" --uri "RUNNER_URL/api/runner/schedules/tick" --http-method POST --oidc-service-account-email qa-scheduler@PROJECT.iam.gserviceaccount.com --oidc-token-audience "RUNNER_URL" --attempt-deadline 1800s --max-retry-attempts 0`
 
-6. Check it: `gcloud scheduler jobs run qa-check-up-tick --project PROJECT --location REGION`, then read the job's last attempt status in the Cloud console. A 401 means the audience or the service account email does not match the runner's settings.
+6. Check: `gcloud scheduler jobs run qa-check-up-tick --project PROJECT --location REGION`, then read the job's last attempt status in the Cloud console. A 401 means the audience or the service account email does not match the runner's settings.
 
 To stop: `gcloud scheduler jobs pause qa-check-up-tick --project PROJECT --location REGION`, or unset the variable and redeploy.
 
-Cost: Cloud Scheduler gives 3 jobs per billing account free; this uses 1. Beyond the free jobs a job is about 0.10 US dollars a month. The runner is already billed warm (ADR 0038); a due Check-up holds one request open for as long as it runs, up to 30 minutes.
-
-Schedules live in the audit bucket (`schedules/schedules.json`), so `AUDIT_STORE_BUCKET` must be set (the section above). Without it they sit in `/tmp` and are lost on each redeploy. The hour of a schedule is in UTC on the hosted copy.
+Schedules live in the audit bucket (`schedules/schedules.json`), so `AUDIT_STORE_BUCKET` must be set; without it they sit
+in `/tmp` and are lost on each redeploy. The hour of a schedule is in UTC. Cloud Scheduler gives 3 jobs per billing
+account free; this uses 1.
 
 ## Release checklist
 
-- [ ] CI green on the PR; `pnpm test` and `pnpm build` pass locally
-- [ ] One check-up run by hand on a real site (see `docs/TESTING.md`, Checking against real websites)
+- [ ] CI green on the PR
+- [ ] One check-up run by hand on a real site ([TESTING.md](TESTING.md), Checking against real websites)
 - [ ] `CHANGELOG.md` updated
-- [ ] Tag `vX.Y.Z` equal to the `package.json` version; "Release build" workflow green (builds only, publishes nothing)
-- [ ] After merge: deploy workflow green, both services answer, open the online app and run one check-up on a public site
+- [ ] Tag `vX.Y.Z` equal to the `package.json` version; the Release build workflow is green
+- [ ] After merge: Deploy workflow green, both services answer, open the online app and run one check-up on a public site
 - [ ] Rotate anything that was exposed during development
 
-Bumping the version means updating every `package.json`, `TOOL_REF` in `packages/wizard/src/lib/workflow.ts`, and
+Bumping the version means updating every `package.json`, `TOOL_REF` in `packages/wizard/src/lib/workflow.ts` and
 `CHANGELOG.md`; a test fails on drift. Tag before deploying a wizard that pins the new ref.
 
 ## Rollback
 
 Revert the merge commit on `main` and push; the deploy redeploys both services. Cloud Run also keeps earlier revisions:
-`gcloud run services update-traffic <service> --to-revisions <revision>=100 --region us-central1` moves traffic back at once.
+`gcloud run services update-traffic <service> --to-revisions <revision>=100 --region us-central1` moves traffic back at
+once. Artifact Registry `qa` keeps only the 3 newest versions of each image ([ADR 0038](adr/0038-warm-runner-instance.md)),
+so a rollback to an older revision fails once its image is deleted.
 
-## Known risks
+## Limits of the hosted copy
 
-- The runner keeps one warm instance (`--min-instances 1`, [ADR 0038](adr/0038-warm-runner-instance.md)), so it answers at once but is billed while idle (roughly 15 to 20 US dollars a month). The site still scales to zero; its first request after idle waits for a short cold start.
-- Artifact Registry `qa` keeps only the 3 newest versions of each image (cleanup policy, ADR 0038). A rollback to an older revision fails once its image is deleted.
-- Beta limits (per visitor and per day) are in memory: a restart or redeploy resets all counters. Set `RUNNER_BETA_RUNS_PER_VISITOR` (default 5) and `RUNNER_BETA_RUNS_PER_DAY` (default 40). Clearing the cookie gives a visitor a fresh count (and loses their AI key); the daily cap is the backstop.
-- The runner's data folder is `/tmp` on Cloud Run and is wiped on every redeploy, restart or scale-down. Do not store anything there that must survive. Website Audits and Shared Links survive only because they live in the `AUDIT_STORE_BUCKET` bucket; without it they are lost on each redeploy.
-- The runner runs at most one instance (`--max-instances 1`), because limits and sessions are held in memory.
-- Scheduled Check-ups: the hour is UTC; one tick holds a request open for up to 30 minutes (a longer run is recorded as failed and keeps running); schedules live in the audit bucket and are lost on redeploy without `AUDIT_STORE_BUCKET` (ADR 0039).
+- One instance only (`--max-instances 1`): beta limits and sessions are held in memory, and a restart or redeploy resets the per-visitor and per-day counters. Clearing the cookie gives a visitor a fresh count (and loses their AI key); the daily cap is the backstop.
+- The runner stays warm (`--min-instances 1`), so it answers at once but is billed while idle (roughly 15 to 20 US dollars a month). The site scales to zero; its first request after idle waits for a short cold start.
+- The data folder is `/tmp`, wiped on every redeploy, restart or scale-down. Only Website Audits, Shared Links and schedules survive, and only with `AUDIT_STORE_BUCKET`.
+- A scheduled tick holds one request open for up to 30 minutes; a longer run is recorded as failed and keeps running ([ADR 0039](adr/0039-cloud-scheduler-owner-schedules.md)).

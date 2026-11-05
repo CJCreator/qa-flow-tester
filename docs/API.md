@@ -1,181 +1,130 @@
 # Runner API
 
-The server in `packages/runner/src/server.ts` serves the wizard at `/` and a JSON API under `/api`. The wizard
-calls it through `packages/wizard/src/api.ts`, which is the best worked example of each call. This page lists the
-routes and what they are for; **request and response bodies are defined by the handler and the types in
-`@qa/types`**, so read the handler before relying on a field.
+`packages/runner/src/server.ts` serves the wizard at `/` and a JSON API under `/api`. The wizard calls it through `packages/wizard/src/api.ts`. Request and reply bodies are defined by the handlers and `@qa/types` (`checkup-api.ts`, `website-audit.ts`, `ai.ts`); this page lists the endpoints and who may call them. Configuration: `CONFIGURATION.md`. Hosting: `DEPLOYMENT.md`. Design: `ARCHITECTURE.md`.
 
-## Access rules
+## Access
 
-- Requests must have a loopback `Host` header unless `RUNNER_ALLOWED_ORIGINS` is set. Browser requests from other origins are refused (CORS), so a web page cannot trigger runs.
-- With `RUNNER_ACCESS_TOKEN`, every request must carry the key: open a page with `?access=<key>` (kept in a cookie) or send header `X-QA-Access`.
-- Beta mode (`RUNNER_BETA=1`) closes the routes that change shared state (deleting runs and baselines) and keeps keys per session.
-- Schedule routes (`/api/runner/schedules`) are owner-only: they need the access key, and they are served in beta mode too. A Helper session answers `403 ERR_FORBIDDEN`; no key answers `401 ERR_ACCESS_KEY` (ADR 0039).
-- `POST /api/runner/context/docx` stays open in beta mode (stateless; the size and ZIP caps bound the work).
-- `POST /api/runner/domain-proof` stays open in beta mode (it changes nothing shared; the token and the throttle are per session). In beta mode a Test Copy needs a passing Verified Domain proof, checked at `POST /api/runner/run` and again when a waiting plan is approved (ADR 0014).
-- Beta mode also limits starts per visitor session and per UTC day (`RUNNER_BETA_RUNS_PER_VISITOR`, `RUNNER_BETA_RUNS_PER_DAY`). Over a limit, `POST /api/runner/run` and `POST /api/runner/benchmark` answer `429 ERR_BETA_LIMIT` with `error`, `suggestion`, `scope` (`visitor` or `day`) and `resetsAt` (ISO time of the next 00:00 UTC). Preflight and the plan routes are not counted.
-- `GET /healthz` needs no token and is used by the Docker `HEALTHCHECK`. Cloud Run's front end does not forward it, so the deploy checks `/` instead (ADR 0032).
+Levels are declared per route row (`Route.access` in `routes/route.ts`, ADR 0037). A row with no level is refused.
 
-### Closed on the shared beta copy
+| Level                    | Who                                                                                                                                             |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `owner`                  | The access key (cookie, `?access=` on first visit, or header `X-QA-Access`). With no key set, a request from the local machine. Never a Helper. |
+| `view`, `edit`, `export` | The owner, or a signed-in Helper holding that permission on the audit named by `:id`.                                                           |
+| `sign-in`                | Helper sign-in, before any access.                                                                                                              |
+| `public`                 | Anyone (Shared Links).                                                                                                                          |
+| `scheduler`              | Cloud Scheduler only: `Authorization: Bearer <Google OIDC token>`; the key is not accepted (ADR 0039).                                          |
 
-With `RUNNER_BETA=1` these answer `403 { code: 'ERR_BETA' }`. The list is `closedInBeta` in `server.ts`; `beta-privacy.test.ts` verifies these write routes return 403 `ERR_BETA`.
+Inline endpoints (not yet table rows) are all `owner`.
 
-- `POST /api/runner/spec-override`
-- `GET /api/runner/spec-overrides`
-- `POST /api/settings/defaults`
-- `POST /api/runs/<runId>/triage`
-- `POST /api/runs/<runId>/accept-judgement`
-- `DELETE /api/runs/<runId>`, and any other path under `/api/runs/`
-- `DELETE /api/runner/baselines/<id>`
+Refusals: `401 ERR_ACCESS_KEY`, `401 ERR_SCHEDULER_AUTH`, `403 ERR_FORBIDDEN` (Helper without the permission), `403 ERR_ROUTE_CLOSED`, `403 ERR_BETA`. Audit refusals are `{ error, code }` with `code` from `AUDIT_ERROR_CODES`.
 
-Everything not listed here stays open on beta. A beta visitor sees only their own comparisons (`/api/runner/benchmarks`, `/api/runner/benchmark/<id>`); `DELETE` of another visitor's comparison answers `404` and removes nothing, and deleting a running one of your own answers `409`.
+Every request: a non-loopback `Host` is refused unless it matches `RUNNER_ALLOWED_ORIGINS` (or `*.run.app` on Cloud Run); browser requests from other origins are refused.
 
-## Check-up lifecycle
+### Beta copy (`RUNNER_BETA=1`)
 
-| Route                                    | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST /api/runner/preflight`             | Check an address (and sign-ins) before starting                                                                                                                                                                                                                                                                                                                                                                                                         |
-| `POST /api/runner/context/docx`          | One Word file as Markdown for the Product Context. Body `{ name, base64 }` (`name` ends `.docx`, file at most 2 MB); answers `200 { text, warnings, summary: { requirements, journeys, tables, rules } }`. Not a ZIP, over 2 MB, too many parts, or over 20 MB unpacked answers `400 { error, code: 'ERR_INVALID_CONTEXT' }`. Stateless: nothing is stored or logged; password values typed in the file are replaced with `[hidden]`. Open in beta mode |
-| `POST /api/runner/domain-proof`          | Shared copy: body `{ targetUrl }`; answers `{ required, verified, origin, proofUrl, line, reason? }`. `line` is what to publish at `proofUrl`. One check per address per 10 s per session (`429 ERR_RATE`); a private address answers `400 ERR_PRIVATE_TARGET`; the fetched file is never returned. On your own computer: `required: false`                                                                                                             |
-| `POST /api/runner/ai-estimate`           | Estimate AI requests for a scan                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| `POST /api/runner/run`                   | Start a check-up. Refused with `409 ERR_PLAN_WAITING` while an unapproved plan is waiting. Beta: `429 ERR_BETA_LIMIT` over a limit                                                                                                                                                                                                                                                                                                                      |
-| `GET /api/runner/stream`                 | Server-sent events: progress of the current run                                                                                                                                                                                                                                                                                                                                                                                                         |
-| `GET /api/runner/status`                 | Phase (`idle`, `scanning`, `testing`...), whether a plan and report exist, last error                                                                                                                                                                                                                                                                                                                                                                   |
-| `POST /api/runner/abort` (alias `/stop`) | Stop the current run                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `POST /api/runner/ai/finish`             | Finish AI work for the current run                                                                                                                                                                                                                                                                                                                                                                                                                      |
+- Table rows are served only when their beta policy is `allow`. Every Website Audit row is closed, except `public` rows and Helper rows (`sign-in`, and `view`, `edit`, `export` for a signed-in Helper with a grant). Plan and schedule rows are `allow`.
+- Each visitor sees only their own run: status, stream, report, evidence and plan answer as empty or not found for anyone else. Visual baselines are not offered.
+- Closed with `403 ERR_BETA`: `POST /api/runner/spec-override`, `POST /api/settings/defaults`, `POST /api/runs/:runId/triage`, `POST /api/runs/:runId/accept-judgement`, `DELETE /api/runs/:runId`, `DELETE /api/runner/baselines/:id` (`closedInBeta` in `server.ts`).
+- `POST /api/runner/run` and `POST /api/runner/benchmark` answer `429 ERR_BETA_LIMIT` over the per-visitor or per-day limit. Private addresses are refused.
 
-`POST /api/runner/preflight` answers `{ reachable, statusCode, ...about }`. A 4xx start address is still `reachable: true` and carries `startWarning: 'start-4xx'` (the same literal the core uses): the address answered, but not with the page the person expected, so the wizard shows it as a warning and still lets the Check-up start. A 401 or 403 is `reachable: true` with **no** warning — a site that asks for a sign-in is a real site. `reachable: false` carries `reason` (`unreachable` or `server-error`), `code` and a fixed `suggestion`.
+## Health
 
-### Sources, saved sessions and caps (ADR 0020, 0021)
+- `GET /healthz`: `200 ok`, no key, no data. Cloud Run's front end does not forward it; the deploy checks `/`.
 
-All additive; no new route. Wizard types: `StartRunRequest`, `PatchPlanBody`, `AiEstimate` in `packages/wizard/src/api.ts`.
+## Check-up (inline, owner)
 
-- `POST /api/runner/run` body:
-  - `contextDocuments: [{ name, text }]` (`.md`/`.txt`/`.docx`, at most 10, 500 KB of text each; a `.docx` is sent as the Markdown text from `POST /api/runner/context/docx`; PDF and `.doc` are refused).
-  - `contextUrl` (docs address, at most 20 same-host pages; a failure is a plan note).
-  - `savedSessions: { <role>: { cookies, origins } }` (at most 256 KB, cookie domains must match the target; held in runner memory only, never saved, returned or logged; after a restart approval asks again).
-  - `aiCap: { requests?, dollars? }` (positive numbers; dollars only act when the provider reports a price).
-  - `customHeaders`: `Record<string, string>` or raw string (`"Name: value\nOther: val"`). Up to 20 headers (`MAX_CUSTOM_HEADERS`). Sent only to the target host and allowlisted hosts. Values are secrets; never stored in plans or reports. Invalid headers return 400 `{ code: 'ERR_INVALID_HEADERS' }`.
-  - `crawlConcurrency`: 1 to 5 concurrent page evaluations (default 2 per FR-1.7).
-  - `crawlDelayMs`: 0 to 2000 ms pacing delay between page navigations (default 100 ms per FR-1.7).
-  - `maxPages`: maximum pages to crawl (clamped to 1..1000, default 50 in CI check-up, 200 in discovery engine).
-  - `skipReview`: boolean. Default differs per caller: `true` in headless `checkup.ts` (runs straight through); `false` in interactive Wizard (pauses for Plan Review).
-  - `roles`: `[{ role, username, password?, token?, loginPath?, usernameSelector?, passwordSelector?, submitSelector?, postLoginSelector?, postLoginUrl? }]`. Up to 10 roles, fields under 500 characters. Invalid role format or duplicate roles return 400 `{ code: 'ERR_INVALID_ROLES' }`. `loginPath` must stay on the target origin; invalid paths return 400 `{ code: 'ERR_INVALID_LOGIN_PATH' }`.
-- `POST /api/runner/run` takes `roles` and `signInConsent: true`. The headless check-up (`checkup.ts`) sends them when `QA_USERNAME` and `QA_PASSWORD` are set in its environment. Without `signInConsent` the sign-in details do not unlock full testing ([ADR 0022](adr/0022-test-sign-in-as-consent.md)).
-  - Consent needs all of: `owner: true` sent explicitly (an omitted `owner` is never consent), `signInConsent: true`, at least one role with both `username` and `password`, and not the shared online copy (beta ignores it). Otherwise the run is read-only unless the address is a Test Copy. Consent is for that run only and is not saved to site memory.
-  - A failed sign-in stops the run before the crawl: `RUN_FAILED` carries `code: 'ERR_SIGN_IN_FAILED'` and `signInReason` (`wrong-details`, `no-form`, `unreachable`, `needs-more` or `session-expired`). `error` is fixed text for the reason and never contains the username or password.
-  - The consent is kept with the saved Plan. `POST /api/runner/plan/approve` answers `409` with `code: 'ERR_SIGN_IN_REQUIRED'` when that Plan was made with consent but credentials are missing, returning `needsSignIn: string[]` and `needsSignInDetails: Array<{ role: string, loginPath?: string }>`.
-  - If custom headers are missing on plan approval after a runner restart, answers `409` with `code: 'ERR_HEADERS_NOT_SAVED'` and `needsHeaders: string[]`.
-  - If saved sessions are missing on plan approval after a runner restart, answers `409` with `code: 'ERR_SESSION_NOT_SAVED'` and `needsSession: string[]`.
-- `GET /api/runner/plan` may carry `plannedWhileCrawling`, `notFound`, `documentedItems`, `rolesNotTested`, `contextDocuments` (names only); Plan Items may carry `docSource`, `proposedRoles`, `rolesConfirmed`, `kind: 'denial'`, `origin`.
-- `PATCH /api/runner/plan` accepts `sourceEdits: [{ itemId, roles?, severity?, stale?, confirm? }]` and `notFoundEdits: [{ id, remove? }]`.
-- Intent ([ADR 0024](adr/0024-intent-and-refusal-rule.md)): journey and form Plan Items carry `intent` (`works`, `rejects`, `limits` or `denied`; replaces the old `kind: 'denial'`, which saved Plans still load as `denied`) and, for forms inside a modal, drawer or tab, `openingSteps` (steps flagged `opening: true`). `PATCH /api/runner/plan` also accepts `intentsOff: Intent[]` (whole Intents switched off as a Scope Exclusion; all on by default; unknown values or a non-list are refused with 400 `{ code: 'ERR_INVALID_INTENTS' }`; duplicates are removed). `GET /api/runner/plan` summary adds `intents` (`{ <intent>: { items, tests } }`) and `overCap` (Tests switched off by the Test cap), and the plan adds `testCap`. No new route.
-- `POST /api/runner/run` takes optional `testCap`: a positive whole number, the most Tests the Check-up may run (default 2000). Items over it stay in the Plan, switched off with "Over the Test cap.". Fractions are floored and the value is clamped to 1..100000. Anything invalid is ignored and the default is used.
-- `POST /api/runner/ai-estimate` response adds `estimatedUsd` (only with a reported price), `concurrency` and the `cap` echo.
-- `GET /api/report/download/<file>` also serves `issues.md` and `issues.html`.
-- `POST /api/runs/<runId>/accept-judgement` body `{ titles: string[], accept?: boolean }`: counts the named "Needs your judgement" findings as problems (`accept: false` puts them back); grades, recommendations and the issues files are recomputed; responds with the report. `400` without titles, `404` when the report is gone.
-- The `crawling` progress event adds `plannedSoFar`; the planning total can grow while the scan runs.
+| Endpoint                          | Returns                                                                                                                                     |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /api/runner/preflight`      | Whether the address answers (`reachable`, `statusCode`, `startWarning`). No browser, no run.                                                |
+| `POST /api/runner/ai-estimate`    | About how many AI requests a scan needs, against what is left today.                                                                        |
+| `POST /api/runner/context/docx`   | A Word file (`{ name, base64 }`) as Markdown. Stateless; open in beta.                                                                      |
+| `POST /api/runner/domain-proof`   | The Verified Domain line to publish, and whether it is there now (ADR 0014). Open in beta.                                                  |
+| `POST /api/runner/run`            | Starts a Check-up. `409 ERR_PLAN_WAITING` while an unapproved Plan waits; `409 ERR_RUN_IN_PROGRESS` when the run slot is busy.              |
+| `GET /api/runner/stream`          | Server-sent events of the current run, replaying earlier events on reconnect.                                                               |
+| `GET /api/runner/status`          | Phase, `isRunning`, whether a Plan and report exist, last error. A Helper session without the key gets a reduced reply with `helper: true`. |
+| `POST /api/runner/abort`, `/stop` | Stops the current run.                                                                                                                      |
+| `POST /api/runner/ai/finish`      | Finishes the visual review on remaining screens.                                                                                            |
 
-## Plan Review
+## Plan Review (table rows, owner, beta allow)
 
-The eleven routes below are the first rows in the runner's route table (`packages/runner/src/routes/plan.ts` and `routes/index.ts`), implemented as functions over the Check-up Session ([ADR 0027](adr/0027-checkup-session-module-and-route-table.md)). Other areas below remain in the `RunnerServer.start()` dispatch chain until the follow-up plan.
+- `GET /api/runner/plan`, `PATCH /api/runner/plan`
+- `POST /api/runner/plan/approve`, `/interpret`, `/replan`, `/add-page`, `/add-sign-in`, `/include-host`
+- `GET /api/runner/plan/markdown`, `/export`
+- any method on `/api/runner/waiting-plans`: Plans kept aside for other sites, and bringing one back
 
-| Route                                | Purpose                                                                                                                            |
-| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /api/runner/plan`               | The current Plan                                                                                                                   |
-| `PATCH /api/runner/plan`             | Edit Plan Items (switch off, change)                                                                                               |
-| `GET /api/runner/plan/markdown`      | The Plan as markdown                                                                                                               |
-| `GET /api/runner/plan/export`        | The approved Plan as a Playwright project (zip). 404 `No plan awaiting review` outside Plan Review; 409 when the Plan has no tests |
-| `POST /api/runner/plan/approve`      | Approve; testing starts                                                                                                            |
-| `POST /api/runner/plan/interpret`    | Turn a typed request into a Plan change                                                                                            |
-| `POST /api/runner/plan/replan`       | Ask the planner again for some items                                                                                               |
-| `POST /api/runner/plan/add-page`     | Add a page to the Plan                                                                                                             |
-| `POST /api/runner/plan/add-sign-in`  | Add a role's sign-in                                                                                                               |
-| `POST /api/runner/plan/include-host` | Include another host in scope                                                                                                      |
-| `GET /api/runner/waiting-plans`      | Plans paused for review                                                                                                            |
+## Reports and history (inline, owner)
 
-## Reports and history
+- `GET /api/report`: the last completed report (404 before any). `GET /api/report/download/<file>`.
+- `GET /api/runs`, `GET /api/runs/:runId`, `DELETE /api/runs/:runId`, `POST /api/runs/:runId/triage`, `POST /api/runs/:runId/accept-judgement`, `GET /api/runs/:runId/download/<file>`. Downloadable files: `report.html`, `report.md`, `findings.json`, `issues.md`, `issues.html`.
+- `GET /api/evidence/<path>`: files under the runner's output folder (saved sessions refused).
+- `GET /api/sites`, `GET /api/sites/<host>`, `POST /api/sites/<host>`: per-site choices and saved sign-ins.
+- `GET/POST /api/settings/defaults`: default screen sizes.
+- `GET /api/runner/baselines`, `POST /api/runner/baselines/accept`, `DELETE /api/runner/baselines/:id`, `GET /api/baselines/<path>` (image).
+- `POST /api/runner/benchmark`, `GET /api/runner/benchmarks`, `GET/DELETE /api/runner/benchmark/:id`.
+- `POST /api/runner/spec-override`, `GET /api/runner/spec-overrides`.
 
-| Route                                                                      | Purpose                                                                                  |
-| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `GET /api/report`                                                          | The latest report                                                                        |
-| `GET /api/report/download/<file>`                                          | Download a report file                                                                   |
-| `GET /api/runs`, `GET/DELETE /api/runs/<runId>` (+ `/triage`, `/download`) | Past check-ups; triage marks a finding intended or false positive. Handler: `handleRuns` |
-| `GET /api/evidence/<path>`                                                 | Screenshots and other evidence                                                           |
-| `GET /api/sites`, `/api/sites/<host>...`                                   | Per-site memory and history. Handler: `handleSites`                                      |
-| `GET/POST /api/settings/defaults`                                          | Screen sizes a check-up starts with                                                      |
+`findings.json` contract: [ADR 0017](adr/0017-findings-contract.md), [`findings.schema.json`](findings.schema.json).
 
-`POST /api/sites/<host>` with `addSignIn` or `testSignIn` signs in to check the details. On failure the response is `{ verified: false, reason, error }` with `reason` one of `wrong-details`, `no-form`, `unreachable`, `needs-more`, `session-expired`: status `422` when adding, `200` when testing a saved sign-in. `error` is fixed text for that reason and never contains the username or password. A success has no `reason`. Handles two-step and modal sign-ins; CAPTCHA, one-time codes and single sign-on answer `needs-more`.
+## Schedules (table rows)
 
-The report carries `pageCoverage: { found, reached, skipped: [{ urlPath, why, status?, finalPath?, detail? }], routes?: RouteTelemetry[] }`: pages found while exploring, how many were reached, and why the rest were skipped (`why` is `page-limit`, `did-not-load`, `robots`, `sign-in`, `http-error`, `timeout`, `off-site-redirect`, `time-limit`, `trap-limit`, `session-lost`, or `duplicate`). `routes` provides per-route traversal telemetry with requestedPath, status, finalPath, redirectChain, attempts, and durationMs.
+| Endpoint                                | Access    | Returns                                                                                                    |
+| --------------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------- |
+| `GET /api/runner/schedules`             | owner     | The schedules.                                                                                             |
+| `POST /api/runner/schedules`            | owner     | Adds one.                                                                                                  |
+| `POST /api/runner/schedules/:id/toggle` | owner     | Pauses or resumes (`{ enabled }`).                                                                         |
+| `DELETE /api/runner/schedules/:id`      | owner     | Deletes.                                                                                                   |
+| `POST /api/runner/schedules/tick`       | scheduler | Runs due schedules, holding the request until each finishes; replies `{ started, failed, skipped, busy }`. |
 
-`findings.json` (the report) may carry `slowerThanLastTime`: pages whose speed is worse than the last check-up by 20% and 300 ms. It is not part of `findings`, so grades and the verdict ignore it.
+All served in beta (ADR 0039).
 
-### findings.json contract
+## AI settings (inline, owner)
 
-Decision: [ADR 0017](adr/0017-findings-contract.md). Schema: [`findings.schema.json`](findings.schema.json).
+- `GET /api/ai/settings`, `POST /api/ai/settings`: provider, models, key (never returned).
+- `GET /api/ai/usage`, `POST /api/ai/test-model`, `GET /api/ai/gemini/models`.
+- `POST /api/ai/openrouter/validate`, `GET|POST /api/ai/openrouter/key`, `GET /api/ai/openrouter/free-models` (key from `Authorization: Bearer`, else the saved key).
 
-- `schemaVersion` (integer, now `1`) is at the top. A file without it is version 0 (before the contract) and is still read. Adding an optional field or a new file is not a bump. Removing, renaming or retyping a field, or changing the fingerprint inputs, is a bump with a changelog entry. Ignore unknown fields.
-- Each finding has `fingerprint` (`fp_` plus 16 hex): the Structural Fingerprint from [ADR 0004](adr/0004-structural-fingerprint-deduplication.md). Inputs: `productId`, `where.urlPath`, `checker`, `title`, and `cssSelector` or `dataTestId`. Not run id, time, host, breakpoint or role. It is not unique in `findings`: the same problem at several widths or roles shares one. Rewording a title changes it.
-- Written beside `findings.json` in the same call:
-  - `fix-these.md`: active Blocker and Major problems, sorted by severity, page, fingerprint.
-  - `known-findings.json`: `{ schemaVersion, productId, findings: [{ fingerprint, severity, checker, title, urlPath }] }`, active findings, unique and sorted by fingerprint.
-  - `AGENTS.snippet.md`: static text for a repo's agent instructions. No finding data.
-- Text in these files comes from the checked site. It is sanitized (one line, capped) and kept in code spans, and never built from `evidence`. This is not a redaction guarantee.
-- The CI command (`checkup.ts`) prints one GitHub annotation per active Blocker (`::error`) or Major (`::warning`) when `GITHUB_ACTIONS=true`, at most 50, with `%`, CR and LF escaped. The exit code is unchanged.
-- `GET /api/report` and `report.json` do not carry `schemaVersion` or `fingerprint` yet; only the written `findings.json` does.
+## Website Audit (table rows)
 
-## Visual baselines
+Declared once in `AUDIT_API` and `AUDIT_AI_API` (`packages/types`), which also hold each route's query, body and reply types. `:id` is an audit id, `:linkId` a Shared Link id; a malformed id is a 404. Closed on beta except the `public`, `sign-in` and Helper rows noted above.
 
-`GET /api/runner/baselines`, `POST /api/runner/baselines/accept`, `DELETE /api/runner/baselines/<id>`,
-`GET /api/baselines/<path>` (the image).
+| Endpoint                                       | Access     | Returns                                                                                                                                                   |
+| ---------------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /api/audits`                             | owner      | `202`: starts a version. `400 ERR_INVALID_AUDIT`, `ERR_PRIVATE_ADDRESS`; `422 ERR_UNREACHABLE`, `ERR_SITE_BLOCKED`, `ERR_DNS`; `409 ERR_RUN_IN_PROGRESS`. |
+| `GET /api/audits`                              | view       | The audits the caller may see, with versions.                                                                                                             |
+| `GET /api/audits/:id`                          | view       | One audit.                                                                                                                                                |
+| `DELETE /api/audits/:id`                       | owner      | Deletes every version, edit, file, Shortlist entry, Shared Link and Helper grant.                                                                         |
+| `GET /api/audits/:id/stream`                   | view       | Server-sent `AuditProgressEvent` (`progress`, `page`, `status`, `done`, `failed`). A finished version sends its final event and closes.                   |
+| `POST /api/audits/:id/rerun`                   | owner      | `202`: new version, same address and limits.                                                                                                              |
+| `GET /api/audits/:id/content`                  | view       | Page Content for `?path=`.                                                                                                                                |
+| `GET /api/audits/:id/file`                     | view       | A screenshot by `?path=` (download).                                                                                                                      |
+| `GET /api/audits/:id/edits`                    | view       | The edit overlay.                                                                                                                                         |
+| `PATCH /api/audits/:id/edits`                  | edit       | Updates it.                                                                                                                                               |
+| `GET /api/audit-settings`                      | owner      | Audit settings.                                                                                                                                           |
+| `PUT /api/audit-settings`                      | owner      | Updates them (including the PageSpeed key).                                                                                                               |
+| `GET /api/audits/:id/export`                   | export     | Document bundle (download).                                                                                                                               |
+| `GET /api/audits/:id/pitch`                    | export     | Pitch Glimpse (download).                                                                                                                                 |
+| `GET /api/audits/:id/owner`                    | export     | Owner-facing audit (download).                                                                                                                            |
+| `POST /api/audits/:id/preview`                 | owner      | Writes the improved homepage with AI; `409 ERR_NO_AI_KEY` without a key.                                                                                  |
+| `GET /api/audits/:id/preview`                  | view       | The preview page (HTML).                                                                                                                                  |
+| `GET /api/audits/:id/share`                    | view       | Shared Links of the audit.                                                                                                                                |
+| `POST /api/audits/:id/share`                   | owner      | Makes a Shared Link.                                                                                                                                      |
+| `DELETE /api/audits/:id/share/:linkId`         | owner      | Revokes it.                                                                                                                                               |
+| `GET /s/:linkId`                               | public     | The shared snapshot (HTML). `noindex`, strict CSP, `no-store`; `410` when expired, revoked or deleted. Any other `/s/...` path is 404.                    |
+| `GET /api/audits/:id/rewrite`                  | view       | Rewrite state per Section.                                                                                                                                |
+| `POST /api/audits/:id/rewrite/approve`         | edit       | Approves a Section.                                                                                                                                       |
+| `POST /api/audits/:id/rewrite`                 | owner      | Writes copy for an approved Section; `409 ERR_NOT_APPROVED`, `ERR_NO_AI_KEY`; `502 ERR_AI_FAILED`.                                                        |
+| `POST /api/audits/:id/rewrite/accept`          | edit       | Puts the copy in the edit overlay; `422 ERR_OVERLAP`.                                                                                                     |
+| `GET /api/audits/:id/shortlist`, `PUT`         | view, edit | The Shortlist entry.                                                                                                                                      |
+| `GET /api/shortlist`                           | view       | The Shortlist across audits.                                                                                                                              |
+| `GET /api/audits/:id/helpers`, `PUT`, `DELETE` | owner      | List, grant, remove Helpers.                                                                                                                              |
+| `GET /api/helper/status`                       | sign-in    | Whether Helper sign-in is set up (`404 ERR_HELPERS_OFF` when not).                                                                                        |
+| `POST /api/helper/session`                     | sign-in    | Verifies a Google ID token and sets the Helper session cookie.                                                                                            |
+| `GET /api/helper/session`, `DELETE`            | sign-in    | Current Helper session; sign out.                                                                                                                         |
+| `GET /api/audit-ai/models`                     | owner      | Model chosen per AI stage.                                                                                                                                |
+| `PUT /api/audit-ai/models`                     | owner      | Changes it.                                                                                                                                               |
 
-## Benchmarks and schedules
+Not yet built (ADR 0042, T-86): owner sign-in on the hosted copy (`AUDIT_OWNER_EMAILS`).
 
-- `POST /api/runner/benchmark` (beta: `429 ERR_BETA_LIMIT` over a limit), `GET /api/runner/benchmarks`, `GET/DELETE /api/runner/benchmark/<id>`
-- `GET/POST /api/runner/schedules`, `POST /api/runner/schedules/<id>/toggle`, `DELETE /api/runner/schedules/<id>` (owner only; see Access rules)
-- `POST /api/runner/schedules/tick`: scheduler only. Send `Authorization: Bearer <Google OIDC token>` from the Cloud Scheduler service account; the access key is not accepted. Anything else answers `401 ERR_SCHEDULER_AUTH`, and the route is closed while `SCHEDULER_SERVICE_ACCOUNT` is unset. It starts the enabled schedules that are due, one at a time, and holds the request open until they finish (up to 29 minutes). Reply `200 { started, failed, skipped, busy }` (counts, and `busy` true when another tick is running). See `docs/DEPLOYMENT.md`.
+## Adding a route
 
-## AI settings (`handleAiSettings`, `handleOpenRouter`)
-
-Under `/api/ai/`: `settings` (GET/POST), `usage`, `test-model`, `gemini/models`, `validate`, `key` (GET/POST), and
-`openrouter/free-models`. Keys are write-only from the UI's point of view: never log or return one in full.
-
-Google Gemini (AI Studio keys; the key `adc` means Google sign-in through Vertex AI and skips all of this):
-
-- `POST /api/ai/settings` with `provider: 'gemini'` and an `apiKey` checks the key by picking a model it can use
-  (`pickGeminiModel` in `@qa/core`: the key's model list, ranked with stable Flash and Flash-Lite first, newest first,
-  then one tiny `generateContent` per candidate, at most 4, until one answers). A key AI Studio rejects answers
-  `400 { saved: false, reason, code: 'key-invalid' }` (`reason` is a sentence for people) and is not saved. Otherwise the
-  key is saved; when the body names no model (`model` absent or `null`) or names a `-latest` alias, the picked model
-  is saved as the text and vision model, chosen automatically (`chosenBy` `auto`). The reply is the usual
-  `{ saved, provider, configured, model, visionModel }`, plus `modelNote` (a sentence) when no model answered: no
-  credit left, no usable model, or AI Studio not reachable. With no `apiKey` and `model: null`, the saved key is
-  picked for again the same way. Beta still saves no model choice.
-- `GET /api/ai/gemini/models`: `200 { models: [{ id, recommended }], current, chosenBy }`: the saved key's models,
-  ranked as above, the first `recommended` (listed only, not tried); `current` is the saved model or `null`, and
-  `chosenBy` is `'auto' | 'person'`. `400 { error }` when no Gemini key is saved or AI Studio rejects it, `502 { error }`
-  when AI Studio cannot be reached. For the key `adc`: the default model only, without calling AI Studio.
-- During a check-up, an AI Studio answer of 404 (or a 400 saying the model is not found or not supported) is retried
-  once with a model the key can use (`workingGeminiModel`, remembered per key for 30 minutes), and the answer names
-  that model.
-
-## Website Audit API
-
-Website Audits run through `packages/runner/src/routes/audit-crawl.ts` and associated audit routes (`AUDIT_API` in `@qa/types`):
-- `POST /api/audits`: Starts a new audit. Sends preflight check for AI readiness (`status` event) before crawling.
-- `GET /api/audits/:id/stream`: Server-Sent Events stream. On connect, immediately dispatches a `snapshot` event (`stage`, `counts`, `pages` with `AuditPageState`, `ai`, and `speed`). For completed runs no longer in memory, emits the stored terminal event (`done` or `failed`) and finishes.
-- Error codes: 1:1 mapped to HTTP replies and stream `failed` events: `ERR_SITE_BLOCKED` (422), `ERR_DNS` (422), `ERR_BROWSER_LAUNCH` (500), `ERR_UNREACHABLE` (422), `ERR_PRIVATE_ADDRESS` (400), `ERR_RUN_IN_PROGRESS` (409, with running `{ kind, href }`), and `ERR_PIPELINE` (500).
-- Startup recovery: On server boot, stored audits remaining in `status: 'running'` are recovered to `status: 'stopped'` with `stoppedReason: 'tool-restarted'`.
-- Document export: `GET /api/audits/:id/export/:kind.:format` direct-serves stored Markdown and HTML generated at audit completion when available.
-
-## Adding or changing a route
-
-The runner is migrating from a dispatch chain in `server.ts` to a data-driven route table (`packages/runner/src/routes/`, [ADR 0027](adr/0027-checkup-session-module-and-route-table.md)). The eleven plan routes (`/api/runner/plan*` and `/api/runner/waiting-plans`) are in the route table today; remaining routes are still in `server.ts:start()`'s dispatch chain until the follow-up plan.
-
-1. **Register the route**: Add a `Route` entry in `packages/runner/src/routes/index.ts` (or the area's module, such as `routes/plan.ts`), specifying `{ method, path, handle }` (with `prefix: true` or `anyMethod: true` if needed).
-2. **Implement the handler**: Write a handler function taking the route context (`RouteContext` / `PlanRouteContext`) that operates over the `CheckupSession`. The session owns state and operations; transport and policy stay in `server.ts`.
-3. **Respect the gate order**: All incoming requests pass security gates in `server.ts` before route matching: access token / cookie, allowed origin check, beta closed routes, and beta visitor scoping. Do not bypass or reorder these gates.
-4. **Update the client**: Add or update the client method and shared contracts in `packages/wizard/src/api.ts` (using shared types from `@qa/types`).
-5. **Pin reachability**: Add or update test coverage in `packages/runner/tests/route-inventory.test.ts` (to pin reachability) and in the area's test suite (e.g. `packages/runner/tests/plan-routes.test.ts`).
-6. **Update this page**.
+Add a row to the table in `routes/` with `access` and `beta`. For an audit route add the entry to `AUDIT_API` (and its shape in `AuditApi`) first; the build fails without it. Do not add inline routes to `server.ts`.

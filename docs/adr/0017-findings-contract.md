@@ -54,7 +54,7 @@ Trend strip, release record, Playwright export, fail-only-on-new, a wizard downl
 3. **Fingerprint input is the finding `title`, so rewording changes it. Accept?** Recommended: yes, it matches 0004 and history today. Alternative: add a stable rule code to every checker first (bigger change, separate ticket).
 4. **Fingerprint not unique in `findings`. Accept?** Recommended: yes. Alternative: add breakpoint and role to the input, which breaks equality with history.
 5. **No redaction claim until 0016 is accepted. Accept?** Recommended: yes. T-20 owns it.
-6. **Hand-written schema validator for tests, no `ajv`?** Recommended: yes for now. Adding `ajv` as a `@qa/core` devDependency needs your approval; listed in `docs/tickets/HUMAN_TODO.md` as optional.
+6. **Hand-written schema validator for tests, no `ajv`?** Recommended: yes for now. Adding `ajv` as a `@qa/core` devDependency needs your approval; listed as optional.
 7. **`AGENTS.snippet.md` is static text with no finding data. Accept?** Recommended: yes, so no page text can reach an agent's instructions.
 
 ## Consequences
