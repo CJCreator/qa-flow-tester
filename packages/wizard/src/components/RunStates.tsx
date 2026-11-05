@@ -1,5 +1,6 @@
 import { Link, PATHS } from '../lib/router';
-import { FocusHeading, Notice } from './text';
+import { Notice } from './text';
+import { EmptyState, Page, PageHeader } from './ui';
 
 /**
  * A scan or test run that stopped: what happened, in plain words, and what to do next. The scan
@@ -38,25 +39,36 @@ export function RunFailure({
   );
 }
 
-/** A check-up address opened when no check-up is at that step, e.g. from a bookmark. */
+/** A check-up address opened when no check-up is at that step, e.g. from a bookmark. One next action: start one. */
 export function NothingInProgress({ what, reportRunId }: { what: string; reportRunId?: string | null }) {
   return (
-    <div className="mx-auto max-w-prose px-4 py-12 sm:px-6">
-      <FocusHeading className="mb-4 text-3xl font-bold">{what}</FocusHeading>
-      <p className="mb-6 text-ink-soft">No check-up is at this step right now.</p>
-      <div className="flex flex-wrap gap-3">
-        <Link to={PATHS.new} className="btn-primary">
-          Start a new check-up
-        </Link>
-        {reportRunId && (
-          <Link to={PATHS.report(reportRunId)} className="btn-quiet">
-            Open the last report
+    <Page width="prose">
+      <PageHeader title={what} />
+      <EmptyState
+        title="No check-up is at this step right now"
+        action={
+          <Link to={PATHS.new} className="btn-primary">
+            Start a new check-up
           </Link>
-        )}
-        <Link to={PATHS.reports} className="btn-quiet">
-          Past check-ups
-        </Link>
-      </div>
-    </div>
+        }
+      >
+        <p>
+          {reportRunId ? (
+            <>
+              <Link to={PATHS.report(reportRunId)} className="btn-link">
+                Open the last report
+              </Link>{' '}
+              or see{' '}
+            </>
+          ) : (
+            'See '
+          )}
+          <Link to={PATHS.reports} className="btn-link">
+            {reportRunId ? 'past check-ups' : 'Past check-ups'}
+          </Link>
+          .
+        </p>
+      </EmptyState>
+    </Page>
   );
 }

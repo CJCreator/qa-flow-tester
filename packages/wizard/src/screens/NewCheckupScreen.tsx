@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { RunSummary } from '@qa/types';
 import {
   checkDomainProof,
@@ -15,6 +15,7 @@ import {
 } from '../api';
 import { KeyField } from '../components/KeyField';
 import { ErrorMessage, Notice, Question, Spinner } from '../components/text';
+import { Badge, Disclosure, Page } from '../components/ui';
 import { capLine } from '../lib/cap';
 import {
   describeSummary,
@@ -38,14 +39,13 @@ import {
   rememberSignInsOf,
   scanBlockedHint,
   settleConsent,
-  signInConsentGiven,
   withAddress,
   resetSignInChoices,
   type CheckupForm,
+  type SignInEntry,
 } from '../lib/form';
 import { SignInRow } from '../components/SignInRow';
-import { formatWhen } from '../lib/format';
-import { hasNonDefaultOptions } from '../lib/onboarding';
+import { formatWhen, scrollBehavior } from '../lib/format';
 import { Link, PATHS } from '../lib/router';
 import { useDocumentTitle } from '../lib/title';
 import { hostOf, normalizeUrl } from '../lib/url';
@@ -70,12 +70,50 @@ export interface StartFacts {
   noAI?: boolean;
 }
 
+type Visibility = NonNullable<StartFacts['visibility']>;
+
 const CHECK_DELAY_MS = 600;
+
+/** Ids the Start reason can take the person to, inside "Adjust the check-up". */
+const CONSENT_BOX_ID = 'sign-in-consent-box';
+const HEADERS_ID = 'custom-headers';
+const AI_LIMIT_ID = 'ai-request-limit';
+
+/**
+ * Takes the person to a control inside "Adjust the check-up": opens the disclosure it sits in, scrolls it
+ * into view and moves focus to it.
+ */
+function reveal(id: string) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const details = el.closest('details');
+  if (details) details.open = true;
+  el.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
+  el.focus({ preventScroll: true });
+}
 
 /** The runner's own site facts decide whether the address is a Test Copy; the person can mark a live-looking one. */
 function testCopyOf(facts: SiteFacts, form: CheckupForm): { natural: boolean; showMark: boolean; isTestCopy: boolean } {
   const natural = !!facts.testCopy && !facts.remembered?.markedTestCopy;
   return { natural, showMark: !natural, isTestCopy: natural || form.markedTestCopy };
+}
+
+/** About how many AI requests the scan needs, asked a moment after the address or page count settles. */
+function useAiEstimate(url: string | null, maxPages: number): AiEstimate | null {
+  const [estimate, setEstimate] = useState<AiEstimate | null>(null);
+  useEffect(() => {
+    setEstimate(null);
+    if (!url) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      void estimateAi(url, maxPages).then((e) => !cancelled && setEstimate(e));
+    }, CHECK_DELAY_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [url, maxPages]);
+  return estimate;
 }
 
 export function NewCheckupScreen({
@@ -213,7 +251,7 @@ export function NewCheckupScreen({
   const kind = check.state === 'ok' ? testCopyOf(check.facts, form) : null;
   // Search is checked on a live site and not on a test copy, unless the person says otherwise.
   const searchChecksOn = form.searchChecks ?? !(kind?.isTestCopy && form.owner);
-  const visibilityOn = form.visibility ?? {
+  const visibilityOn: Visibility = form.visibility ?? {
     search: searchChecksOn,
     answers: searchChecksOn,
     aiSearch: searchChecksOn,
@@ -255,7 +293,7 @@ export function NewCheckupScreen({
             : needsProdConfirmation
               ? 'Say whether this is a test copy first.'
               : headerErrors.length > 0
-                ? 'Fix the custom headers first.'
+                ? 'Fix the custom headers first, under Details for developers.'
                 : null;
   const start = () => {
     if (check.state !== 'ok' || !kind || !canStart) return;
@@ -269,33 +307,85 @@ export function NewCheckupScreen({
     });
   };
 
+  const estimate = useAiEstimate(keyReady && check.state === 'ok' ? check.url : null, form.maxPages);
+  const estimateShort = !!estimate && estimate.left !== null && estimate.left < estimate.high;
+
   const added =
     [form.specs, form.designNotes, form.journeys, form.contextUrl].filter((t) => t.trim()).length +
     (readCount(form.contextFiles) > 0 ? 1 : 0);
+  const signInCount = form.signIns.filter((s) => s.username.trim()).length;
+  const usingSaved = !!remembered?.signIns?.length && form.useSavedSignIns && form.signIns.length === 0;
+  // The current values, so a closed "Adjust the check-up" still says what it holds.
+  const adjustHint = [
+    `${form.maxPages} pages`,
+    `search checks ${searchChecksOn ? 'on' : 'off'}`,
+    signInCount > 0 ? `${signInCount} ${signInCount === 1 ? 'sign-in' : 'sign-ins'}` : usingSaved ? 'saved sign-ins' : '',
+    added > 0 ? 'Product context added' : '',
+    form.capRequests.trim() ? `up to ${form.capRequests.trim()} AI requests` : '',
+  ]
+    .filter(Boolean)
+    .join(', ');
+
+  const setVisibility = (next: Visibility) =>
+    onFormChange((f) => ({
+      ...f,
+      searchChecks: next.search || next.answers || next.aiSearch || next.marketing,
+      visibility: next,
+    }));
+
+  // Folded into the chosen "test copy" card: the confirmation for a live-looking address, and on the shared copy
+  // the Verified Domain line.
+  const testCardExtra = (
+    <>
+      {needsProdConfirmation && (
+        <div>
+          <p className="font-bold text-warn">This looks like a live site</p>
+          <p className="mt-1 text-sm text-ink">
+            The address doesn’t look like a copy made for testing. Forms stay untouched unless you confirm it is a test
+            copy.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <button type="button" className="btn-quiet btn-sm" onClick={() => setConfirmedProd(true)}>
+              Yes, this is a test copy
+            </button>
+            <button
+              type="button"
+              className="btn-link text-sm"
+              onClick={() => setChoice({ owner: false, markedTestCopy: false })}
+            >
+              Only look at it instead: nothing is sent or changed
+            </button>
+          </div>
+        </div>
+      )}
+      {shared && check.state === 'ok' && form.owner && form.markedTestCopy && !kind?.natural && (
+        <DomainProofPanel url={check.url} />
+      )}
+    </>
+  );
+  const hasTestCardExtra =
+    needsProdConfirmation || (shared && check.state === 'ok' && form.owner && form.markedTestCopy && !kind?.natural);
 
   return (
-    <div className="mx-auto max-w-[44rem] px-4 py-10 sm:px-6 sm:py-14">
+    <Page width="form">
       {inProgress && <ResumeCard status={inProgress} />}
       {waitingPlans.length > 0 && (
-        <aside
-          aria-label="Plans waiting for review"
-          className="mb-10 space-y-2 rounded-lg border-2 border-edge bg-surface px-5 py-4"
-        >
+        <aside aria-label="Plans waiting for review" className="mb-10 rounded-card border border-rule bg-surface px-5 py-4">
           <p className="font-bold text-ink">
             {waitingPlans.length === 1
               ? 'A plan is also waiting for your review'
               : 'Plans are also waiting for your review'}
           </p>
-          <ul className="space-y-1">
+          <ul className="mt-1 divide-y divide-rule">
             {waitingPlans.map((w) => (
-              <li key={w.host} className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-ink">
-                  <span className="font-bold">{w.host}</span>{' '}
+              <li key={w.host} className="flex flex-wrap items-center justify-between gap-x-3">
+                <span className="min-w-0 text-ink">
+                  <span className="break-all font-bold">{w.host}</span>{' '}
                   <span className="text-sm text-ink-soft">
                     · {w.pages} pages · scanned {formatWhen(w.discoveredAt)}
                   </span>
                 </span>
-                <button type="button" className="btn-link" onClick={() => onResumePlan?.(w.host)}>
+                <button type="button" className="btn-link text-sm" onClick={() => onResumePlan?.(w.host)}>
                   Open this plan
                 </button>
               </li>
@@ -326,15 +416,8 @@ export function NewCheckupScreen({
         </div>
       )}
 
-      {keyJustSaved && keyReady && (
-        <div className="mb-6">
-          <Notice tone="pass" title="The AI is connected.">
-            You can change the key any time in Settings.
-          </Notice>
-        </div>
-      )}
-
       <form
+        id="new-checkup-form"
         noValidate
         onSubmit={(e) => {
           e.preventDefault();
@@ -342,12 +425,12 @@ export function NewCheckupScreen({
           else setRecheck((n) => n + 1);
         }}
       >
-        <label htmlFor="url-input" className="label text-ink flex items-center justify-between">
-          <span>Site address</span>
-          <span className="text-ink-soft normal-case font-sans font-normal">
-            A public address, or one on your computer
-          </span>
+        <label htmlFor="url-input" className="label text-ink">
+          Site address
         </label>
+        <p id="url-hint" className="-mt-1 mb-2 text-sm text-ink-soft">
+          {shared ? 'A public address' : 'A public address, or one on your computer'}
+        </p>
         <input
           id="url-input"
           type="text"
@@ -355,8 +438,8 @@ export function NewCheckupScreen({
           inputMode="url"
           autoComplete="url"
           spellCheck={false}
-          className="field h-14 text-lg font-mono placeholder:font-sans focus:border-stamp focus:ring-2 focus:ring-stamp/40 shadow-inner"
-          placeholder="shop.example.com or localhost:5173"
+          className="field h-14 text-lg"
+          placeholder={shared ? 'shop.example.com' : 'shop.example.com or localhost:5173'}
           value={form.address}
           onChange={(e) => {
             const address = e.target.value;
@@ -366,28 +449,23 @@ export function NewCheckupScreen({
             };
             onFormChange((f) => withAddress(f, address, hostFor));
           }}
-          aria-describedby="url-status"
+          aria-describedby="url-hint url-status"
           aria-invalid={check.state === 'invalid' || check.state === 'unreachable'}
         />
         <div id="url-status" role="status" className="mt-2 min-h-[1.6em] text-sm">
-          {check.state === 'checking' && <Spinner label="Checking the address…" />}
-          {check.state === 'invalid' && <span className="text-fail font-medium">{check.reason}</span>}
+          {check.state === 'checking' && <Spinner label="Checking the address…" announce={false} />}
+          {check.state === 'invalid' && <span className="font-medium text-fail">{check.reason}</span>}
           {check.state === 'ok' && kind && (
             <div className="flex flex-wrap items-center gap-2 pt-1">
-              <span className="badge-tech-pass">
-                <span className="h-1.5 w-1.5 rounded-full bg-pass" />
-                Reachable
-              </span>
-              <span className="font-mono text-xs text-ink break-all px-2 py-0.5 rounded bg-panel border border-rule">
-                {check.url}
-              </span>
-              <span className={kind.isTestCopy && form.owner ? 'badge-tech-warn' : 'badge-tech'}>
+              <Badge tone="pass">Reachable</Badge>
+              <span className="break-all font-mono text-xs text-ink">{check.url}</span>
+              <Badge tone={kind.isTestCopy && form.owner ? 'warn' : 'neutral'}>
                 {kind.isTestCopy && form.owner
                   ? 'Test copy: forms are filled in and sent'
                   : kind.isTestCopy
                     ? 'Only looks: nothing is sent or changed'
                     : 'Live site: only looks, nothing is sent or changed'}
-              </span>
+              </Badge>
             </div>
           )}
           {check.state === 'ok' && check.startWarning && (
@@ -408,230 +486,85 @@ export function NewCheckupScreen({
           </ErrorMessage>
         )}
 
-        {consentFlow && <ConsentNotice form={form} onFormChange={onFormChange} />}
-
-        {kind && !consentFlow && <AccessChoice isTestCopyHost={kind.natural} form={form} onChange={setChoice} />}
-
-        {shared && check.state === 'ok' && form.owner && form.markedTestCopy && !kind?.natural && (
-          <DomainProofPanel url={check.url} />
-        )}
-
-        {needsProdConfirmation && (
-          <div className="mt-4">
-            <Notice tone="warn" title="This looks like a live site">
-              <p>
-                The address doesn’t look like a copy made for testing. Forms stay untouched unless you say it is a test
-                copy.
-              </p>
-              <div className="mt-3 flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  className="btn-quiet rounded-control min-h-[44px] border border-stamp/50 px-4 py-2.5 text-xs font-bold text-stamp hover:text-stamp-dark"
-                  onClick={() => setConfirmedProd(true)}
-                >
-                  Yes, this is a test copy
-                </button>
-                <button
-                  type="button"
-                  className="min-h-[44px] px-2 py-2.5 text-xs text-ink-soft hover:underline"
-                  onClick={() => setChoice({ owner: false, markedTestCopy: false })}
-                >
-                  Only look at it instead: nothing is sent or changed
-                </button>
-              </div>
-            </Notice>
+        {consentFlow && (
+          <div className="mt-6 rounded-card border border-edge bg-surface p-4">
+            <p className="font-bold">Forms are filled in and sent with your sign-in details</p>
+            <p className="mt-1 text-sm text-ink-soft">
+              You added sign-in details, so the check-up acts as that user. The notice to accept is under “Sign in to
+              test pages behind a login”.
+            </p>
+            {!form.signInConsent && (
+              <button type="button" className="btn-link text-sm" onClick={() => reveal(CONSENT_BOX_ID)}>
+                Go to the notice
+              </button>
+            )}
           </div>
         )}
 
-        <details
-          className="mt-6 blueprint-card overflow-hidden"
-          open={hasNonDefaultOptions(form) || undefined}
-          data-testid="more-options"
+        {kind && !consentFlow && (
+          <AccessChoice
+            isTestCopyHost={kind.natural}
+            form={form}
+            onChange={setChoice}
+            testCardExtra={hasTestCardExtra ? testCardExtra : undefined}
+          />
+        )}
+
+        <Disclosure
+          className="mt-8"
+          summary={
+            <h2 className="text-lg font-bold" data-testid="more-options">
+              Adjust the check-up
+            </h2>
+          }
+          hint={adjustHint}
         >
-          <summary className="flex min-h-[48px] cursor-pointer flex-wrap items-center gap-x-2 px-5 py-3.5 font-bold hover:bg-panel/40 transition-colors">
-            <span>More options</span>
-            <span className="font-normal text-xs text-ink-soft font-mono">(optional)</span>
-          </summary>
-          <div className="border-t border-rule px-4 pb-4">
-            <div className="mt-6 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-              <label htmlFor="max-pages">Explore up to</label>
-              <input
-                id="max-pages"
-                type="number"
-                inputMode="numeric"
-                min={1}
-                max={MAX_PAGES_LIMIT}
-                className="field w-24 py-1.5 text-sm"
-                value={maxPagesText}
-                // The number is kept as typed, so it can be cleared and retyped; it's checked on leaving the box.
-                onChange={(e) => setMaxPagesText(e.target.value)}
-                onBlur={() => {
-                  const n = clampMaxPages(maxPagesText);
-                  setMaxPagesText(String(n));
-                  onFormChange((f) => ({ ...f, maxPages: n }));
-                }}
-                aria-describedby="max-pages-hint"
-              />
-              <span>pages</span>
-              <span id="max-pages-hint" className="basis-full text-ink-soft">
-                Pages that share a layout are tested through a few samples, so big sites stay quick.
-              </span>
-            </div>
-
-            <SignInsSection
-              form={form}
-              saved={remembered?.signIns}
-              consentFlow={consentFlow}
-              onFormChange={onFormChange}
-            />
-
-            {kind && (
-              <div className="mt-4 rounded-lg border border-edge bg-surface p-4">
-                <label className="flex cursor-pointer items-start gap-3 text-sm">
-                  <input
-                    type="checkbox"
-                    className="mt-0.5 h-5 w-5 shrink-0 accent-[#6C9BF2]"
-                    checked={searchChecksOn}
-                    onChange={(e) => {
-                      const on = e.target.checked;
-                      onFormChange((f) => ({
-                        ...f,
-                        searchChecks: on,
-                        visibility: { search: on, answers: on, aiSearch: on, marketing: on },
-                      }));
-                    }}
-                  />
-                  <span className="flex-1">
-                    <span className="block font-bold text-ink">
-                      Look at how search engines and AI assistants find the site
-                    </span>
-                    <span className="block text-xs font-medium text-ink-soft">
-                      Search engines · AI answers · AI search · Marketing basics
-                    </span>
-                    <span className="mt-1 block text-xs text-ink-soft">
-                      {kind.isTestCopy && form.owner
-                        ? 'Off by default for test copies on your computer, but you can turn it on any time.'
-                        : 'Looks at search tags, what AI assistants can read, and marketing basics.'}
-                    </span>
-                  </span>
-                </label>
-
-                {searchChecksOn && (
-                  <details className="mt-3 border-t border-rule pt-3 text-sm" open>
-                    <summary className="cursor-pointer text-xs font-semibold text-stamp hover:underline">
-                      Choose which to check
-                    </summary>
-                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                      <label className="flex cursor-pointer items-start gap-2.5 text-xs">
-                        <input
-                          type="checkbox"
-                          className="mt-0.5 h-4 w-4 shrink-0 accent-[#6C9BF2]"
-                          checked={visibilityOn.search}
-                          onChange={(e) => {
-                            const next = { ...visibilityOn, search: e.target.checked };
-                            onFormChange((f) => ({
-                              ...f,
-                              searchChecks: next.search || next.answers || next.aiSearch || next.marketing,
-                              visibility: next,
-                            }));
-                          }}
-                        />
-                        <div>
-                          <span className="font-semibold text-ink">Search engines</span>
-                          <span className="block text-ink-soft">
-                            Titles, descriptions, headings, robots and sitemap
-                          </span>
-                        </div>
-                      </label>
-
-                      <label className="flex cursor-pointer items-start gap-2.5 text-xs">
-                        <input
-                          type="checkbox"
-                          className="mt-0.5 h-4 w-4 shrink-0 accent-[#6C9BF2]"
-                          checked={visibilityOn.answers}
-                          onChange={(e) => {
-                            const next = { ...visibilityOn, answers: e.target.checked };
-                            onFormChange((f) => ({
-                              ...f,
-                              searchChecks: next.search || next.answers || next.aiSearch || next.marketing,
-                              visibility: next,
-                            }));
-                          }}
-                        />
-                        <div>
-                          <span className="font-semibold text-ink">AI answers</span>
-                          <span className="block text-ink-soft">
-                            Question-and-answer markup that AI assistants read
-                          </span>
-                        </div>
-                      </label>
-
-                      <label className="flex cursor-pointer items-start gap-2.5 text-xs">
-                        <input
-                          type="checkbox"
-                          className="mt-0.5 h-4 w-4 shrink-0 accent-[#6C9BF2]"
-                          checked={visibilityOn.aiSearch}
-                          onChange={(e) => {
-                            const next = { ...visibilityOn, aiSearch: e.target.checked };
-                            onFormChange((f) => ({
-                              ...f,
-                              searchChecks: next.search || next.answers || next.aiSearch || next.marketing,
-                              visibility: next,
-                            }));
-                          }}
-                        />
-                        <div>
-                          <span className="font-semibold text-ink">AI search</span>
-                          <span className="block text-ink-soft">
-                            A guide file for AI assistants, whether they may visit, and sources
-                          </span>
-                        </div>
-                      </label>
-
-                      <label className="flex cursor-pointer items-start gap-2.5 text-xs">
-                        <input
-                          type="checkbox"
-                          className="mt-0.5 h-4 w-4 shrink-0 accent-[#6C9BF2]"
-                          checked={visibilityOn.marketing}
-                          onChange={(e) => {
-                            const next = { ...visibilityOn, marketing: e.target.checked };
-                            onFormChange((f) => ({
-                              ...f,
-                              searchChecks: next.search || next.answers || next.aiSearch || next.marketing,
-                              visibility: next,
-                            }));
-                          }}
-                        />
-                        <div>
-                          <span className="font-semibold text-ink">Marketing basics</span>
-                          <span className="block text-ink-soft">
-                            Share previews, picture, call to action, contact and privacy
-                          </span>
-                        </div>
-                      </label>
-                    </div>
-                  </details>
-                )}
+          <div className="grid gap-10">
+            <OptionGroup title="Pages to explore">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <label htmlFor="max-pages">Explore up to</label>
+                <input
+                  id="max-pages"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={MAX_PAGES_LIMIT}
+                  className="field w-28"
+                  value={maxPagesText}
+                  // The number is kept as typed, so it can be cleared and retyped; it's checked on leaving the box.
+                  onChange={(e) => setMaxPagesText(e.target.value)}
+                  onBlur={() => {
+                    const n = clampMaxPages(maxPagesText);
+                    setMaxPagesText(String(n));
+                    onFormChange((f) => ({ ...f, maxPages: n }));
+                  }}
+                  aria-describedby="max-pages-hint"
+                />
+                <span>pages</span>
               </div>
-            )}
+              <p id="max-pages-hint" className="mt-2 text-sm text-ink-soft">
+                Pages that share a layout are tested through a few samples, so big sites stay quick.
+              </p>
+            </OptionGroup>
 
-            <details
-              className="mt-6 rounded-card border border-rule/80 bg-surface/60 overflow-hidden"
-              open={added > 0 || undefined}
-            >
-              <summary className="flex min-h-[48px] cursor-pointer flex-wrap items-center gap-x-2 px-5 py-3 font-bold hover:bg-panel/40 transition-colors">
-                <span>Add notes, design rules or journeys</span>
-                <span className="font-normal text-xs text-ink-soft font-mono">(optional)</span>
-                {added > 0 && <span className="badge-tech-pass text-[10px] py-0 px-2">Added</span>}
-              </summary>
-              <div className="space-y-5 border-t border-rule p-4">
+            <OptionGroup title="Sign in to test pages behind a login">
+              <SignInsSection
+                form={form}
+                saved={remembered?.signIns}
+                consentFlow={consentFlow}
+                onFormChange={onFormChange}
+              />
+            </OptionGroup>
+
+            <OptionGroup title="Product context and design notes">
+              <div className="space-y-6">
                 <p className="text-sm text-ink-soft">
                   The AI plans with these, so the plan tests what the site is meant to do.
                 </p>
                 <MaterialField
                   id="specs"
-                  label="Product Context"
-                  hint="Requirements or user stories the site must meet, as text."
+                  label="Product context"
+                  hint="Notes, requirements or user stories the site must meet, as text."
                   placeholder={
                     'For example:\n- Only managers can see reports\n- A new invoice needs a client name and an amount above zero'
                   }
@@ -658,39 +591,106 @@ export function NewCheckupScreen({
                 />
                 <ReferenceDocuments form={form} onFormChange={onFormChange} keyReady={keyReady} />
               </div>
-            </details>
+            </OptionGroup>
 
-            <details
-              className="mt-6 rounded-card border border-rule/80 bg-surface/60 overflow-hidden"
-              open={!!form.testCap || !!form.customHeaders.trim() || undefined}
-            >
-              <summary className="flex min-h-[48px] cursor-pointer items-center px-5 py-3 font-bold hover:bg-panel/40 transition-colors">
-                For developers
-              </summary>
-              <div className="space-y-4 border-t border-rule p-4 text-sm">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <label htmlFor="test-cap">Test cap</label>
-                  <input
-                    id="test-cap"
-                    type="number"
-                    inputMode="numeric"
-                    min={1}
-                    max={100000}
-                    placeholder="2000"
-                    className="field w-24 py-1.5 text-sm"
-                    value={form.testCap}
-                    onChange={(e) => onFormChange((f) => ({ ...f, testCap: e.target.value }))}
-                    aria-describedby="test-cap-hint"
-                  />
-                  <span>tests at most</span>
-                  <span id="test-cap-hint" className="basis-full text-ink-soft">
+            <OptionGroup title="Search and AI visibility checks">
+              {kind ? (
+                <>
+                  <label className="flex min-h-[44px] cursor-pointer items-start gap-3">
+                    <input
+                      type="checkbox"
+                      className="mt-1 h-5 w-5 shrink-0 accent-stamp"
+                      checked={searchChecksOn}
+                      onChange={(e) => {
+                        const on = e.target.checked;
+                        onFormChange((f) => ({
+                          ...f,
+                          searchChecks: on,
+                          visibility: { search: on, answers: on, aiSearch: on, marketing: on },
+                        }));
+                      }}
+                      aria-describedby="search-checks-hint"
+                    />
+                    <span>
+                      <span className="block font-bold text-ink">
+                        Look at how search engines and AI assistants find the site
+                      </span>
+                      <span id="search-checks-hint" className="block text-sm text-ink-soft">
+                        {kind.isTestCopy && form.owner
+                          ? 'Off by default for test copies on your computer, but you can turn it on any time.'
+                          : 'Looks at search tags, what AI assistants can read, and marketing basics.'}
+                      </span>
+                    </span>
+                  </label>
+                  {searchChecksOn && (
+                    <fieldset className="mt-4 border-t border-rule pt-3">
+                      <legend className="sr-only">Choose which to check</legend>
+                      <p aria-hidden="true" className="mb-2 font-semibold text-ink">
+                        Choose which to check
+                      </p>
+                      <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
+                        {VISIBILITY_CHECKS.map((v) => (
+                          <label key={v.key} className="flex min-h-[44px] cursor-pointer items-start gap-3 py-1">
+                            <input
+                              type="checkbox"
+                              className="mt-1 h-5 w-5 shrink-0 accent-stamp"
+                              checked={visibilityOn[v.key]}
+                              onChange={(e) => setVisibility({ ...visibilityOn, [v.key]: e.target.checked })}
+                            />
+                            <span>
+                              <span className="block font-semibold text-ink">{v.title}</span>
+                              <span className="block text-sm text-ink-soft">{v.hint}</span>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </fieldset>
+                  )}
+                </>
+              ) : (
+                <p className="text-ink-soft">You can choose these once the address is checked.</p>
+              )}
+            </OptionGroup>
+
+            {keyReady && (
+              <OptionGroup title="AI requests limit" id={AI_LIMIT_ID}>
+                {check.state === 'ok' && estimate ? (
+                  <AiEstimateLine estimate={estimate} form={form} onFormChange={onFormChange} />
+                ) : (
+                  <p className="text-ink-soft">
+                    How many AI requests the plan needs is shown once the address is checked.
+                  </p>
+                )}
+              </OptionGroup>
+            )}
+
+            <OptionGroup title="Details for developers">
+              <div className="space-y-6">
+                <div>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                    <label htmlFor="test-cap">Test cap</label>
+                    <input
+                      id="test-cap"
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      max={100000}
+                      placeholder="2000"
+                      className="field w-28"
+                      value={form.testCap}
+                      onChange={(e) => onFormChange((f) => ({ ...f, testCap: e.target.value }))}
+                      aria-describedby="test-cap-hint"
+                    />
+                    <span>tests at most</span>
+                  </div>
+                  <p id="test-cap-hint" className="mt-2 text-sm text-ink-soft">
                     Past this many tests, the rest are switched off in the plan. Leave it empty for 2000.
-                  </span>
+                  </p>
                 </div>
 
-                <div>
-                  <span className="block font-semibold text-ink">Exploring speed</span>
-                  <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+                <fieldset>
+                  <legend className="font-semibold text-ink">Exploring speed</legend>
+                  <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-3">
                     <div className="flex items-center gap-2">
                       <label htmlFor="crawl-concurrency">Pages at once</label>
                       <input
@@ -698,14 +698,14 @@ export function NewCheckupScreen({
                         type="number"
                         min={1}
                         max={5}
-                        className="field w-20 py-1.5 text-sm"
+                        className="field w-20"
                         value={form.crawlConcurrency}
                         onChange={(e) => {
                           const val = Math.max(1, Math.min(5, Number(e.target.value) || 2));
                           onFormChange((f) => ({ ...f, crawlConcurrency: val }));
                         }}
                       />
-                      <span className="text-xs text-ink-soft">(1–5)</span>
+                      <span className="text-sm text-ink-soft">1 to 5</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <label htmlFor="crawl-delay">Wait between pages</label>
@@ -715,123 +715,144 @@ export function NewCheckupScreen({
                         min={0}
                         max={2000}
                         step={50}
-                        className="field w-24 py-1.5 text-sm"
+                        className="field w-28"
                         value={form.crawlDelayMs}
                         onChange={(e) => {
                           const val = Math.max(0, Math.min(2000, Number(e.target.value) || 0));
                           onFormChange((f) => ({ ...f, crawlDelayMs: val }));
                         }}
                       />
-                      <span className="text-xs text-ink-soft">ms (0–2000)</span>
+                      <span className="text-sm text-ink-soft">ms, 0 to 2000</span>
                     </div>
                   </div>
-                </div>
+                </fieldset>
 
                 <div>
-                  <label htmlFor="custom-headers" className="block font-semibold text-ink">
+                  <label htmlFor={HEADERS_ID} className="block font-semibold text-ink">
                     Custom headers
                   </label>
-                  <p id="custom-headers-hint" className="text-ink-soft">
+                  <p id="custom-headers-hint" className="text-sm text-ink-soft">
                     For sites behind bot protection: headers sent with every request, such as an allowlist token.
                   </p>
                   <textarea
-                    id="custom-headers"
+                    id={HEADERS_ID}
                     rows={2}
                     aria-describedby="custom-headers-hint"
+                    aria-invalid={headerErrors.length > 0}
                     placeholder="X-QA-Bypass-Token: your-token&#10;User-Agent: MyCustomAgent"
-                    className="field mt-1 w-full font-mono text-xs"
+                    className="field mt-2 w-full font-mono text-sm"
                     value={form.customHeaders}
                     onChange={(e) => onFormChange((f) => ({ ...f, customHeaders: e.target.value }))}
                   />
                   {headerErrors.map((err, idx) => (
-                    <p key={idx} role="alert" className="mt-1 text-xs text-fail">
+                    <p key={idx} role="alert" className="mt-1 text-sm text-fail">
                       {err}
                     </p>
                   ))}
                 </div>
               </div>
-            </details>
+            </OptionGroup>
           </div>
-        </details>
-
-        {keyReady && check.state === 'ok' && (
-          <AiEstimateLine url={check.url} maxPages={form.maxPages} form={form} onFormChange={onFormChange} />
-        )}
-
-        {startError && (
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            <ErrorMessage>{startError}</ErrorMessage>
-            {ai === null && onRetryAi && (
-              <button type="button" className="btn-quiet" onClick={onRetryAi}>
-                Retry
-              </button>
-            )}
-          </div>
-        )}
-
-        <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2">
-          <button
-            type="submit"
-            className="btn-primary min-h-[50px] px-8 font-bold shadow-level-2 hover:shadow-level-3"
-            disabled={starting || !canStart}
-            aria-describedby={blockedHint ? 'scan-blocked-hint' : 'start-hint'}
-          >
-            {starting ? <Spinner label="Starting…" /> : 'Start the check-up'}
-          </button>
-          {blockedHint ? (
-            <p id="scan-blocked-hint" role="alert" className="text-sm font-semibold text-warn">
-              {blockedHint}
-            </p>
-          ) : startOffReason ? (
-            <p id="start-hint" className="text-sm text-ink-soft">
-              {startOffReason}
-            </p>
-          ) : (
-            <p id="start-hint" className="text-sm text-ink-soft">
-              {consentFlow && !form.reviewFirst
-                ? 'With these sign-in details, testing starts as soon as the plan is written. You will not review the plan first.'
-                : ai && !keyReady
-                  ? 'No AI key yet, so fixed rules will write the plan. Nothing is tested until you approve it.'
-                  : 'Nothing is tested until you approve the plan.'}
-            </p>
-          )}
-        </div>
+        </Disclosure>
       </form>
 
       {ai && !keyReady && (
-        <details className="mt-8 blueprint-card overflow-hidden">
-          <summary className="flex min-h-[48px] cursor-pointer flex-wrap items-center gap-x-2 px-5 py-3.5 font-bold hover:bg-panel/40 transition-colors">
-            <span>Connect the AI for a smarter plan</span>
-            <span className="font-normal text-xs text-ink-soft font-mono">(optional)</span>
-          </summary>
-          <div className="border-t border-rule p-5">
-            <p className="mb-4 text-sm text-ink-soft">
-              Without it, fixed rules write the plan and you can start now. With it, the AI writes a plan that fits your
-              site. It uses your own AI key, and Settings lets you pick the service.
-              {' What you send may be kept and used to learn when the key is a free one (Settings explains). '}
-              You only do this once, and anything you typed above is kept.
-            </p>
-            <KeyField
-              onSaved={(model) => {
-                setKeyJustSaved(true);
-                onKeySaved(model);
-              }}
-            />
-          </div>
-        </details>
+        <Disclosure className="mt-8" summary="Connect the AI for a smarter plan" hint="Optional">
+          <p className="mb-4 text-sm text-ink-soft">
+            Without it, fixed rules write the plan and you can start now. With it, the AI writes a plan that fits your
+            site. It uses your own AI key, and Settings lets you pick the service.
+            {' What you send may be kept and used to learn when the key is a free one (Settings explains). '}
+            You only do this once, and anything you typed above is kept.
+          </p>
+          <KeyField
+            primary={false}
+            onSaved={(model) => {
+              setKeyJustSaved(true);
+              onKeySaved(model);
+            }}
+          />
+        </Disclosure>
+      )}
+      {keyJustSaved && keyReady && (
+        <div className="mt-8">
+          <Notice tone="pass" title="The AI is connected.">
+            You can change the key any time in Settings.
+          </Notice>
+        </div>
       )}
 
+      {startError && (
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <ErrorMessage>{startError}</ErrorMessage>
+          {ai === null && onRetryAi && (
+            <button type="button" className="btn-quiet" onClick={onRetryAi}>
+              Retry
+            </button>
+          )}
+        </div>
+      )}
+
+      {estimateShort && !form.planWithoutAI && (
+        <p className="mt-6 text-sm text-warn">
+          Fewer AI requests are left today than the plan may need. Past that, fixed rules plan the rest.{' '}
+          <button type="button" className="btn-link text-sm" onClick={() => reveal(AI_LIMIT_ID)}>
+            See the AI requests limit
+          </button>
+        </p>
+      )}
+
+      <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <button
+          type="submit"
+          form="new-checkup-form"
+          className="btn-primary"
+          disabled={starting || !canStart}
+          aria-describedby={blockedHint ? 'scan-blocked-hint' : 'start-hint'}
+        >
+          {starting ? <Spinner label="Starting…" announce={false} /> : 'Start the check-up'}
+        </button>
+        {blockedHint ? (
+          <p id="scan-blocked-hint" role="alert" className="text-sm font-semibold text-warn">
+            {blockedHint}
+            {', under “Sign in to test pages behind a login”. '}
+            <button type="button" className="btn-link text-sm" onClick={() => reveal(CONSENT_BOX_ID)}>
+              Go to the box
+            </button>
+          </p>
+        ) : startOffReason ? (
+          <p id="start-hint" className="text-sm text-ink-soft">
+            {startOffReason}
+            {headerErrors.length > 0 && check.state === 'ok' && ai !== null && !needsProdConfirmation && (
+              <>
+                {' '}
+                <button type="button" className="btn-link text-sm" onClick={() => reveal(HEADERS_ID)}>
+                  Go to the headers
+                </button>
+              </>
+            )}
+          </p>
+        ) : (
+          <p id="start-hint" className="text-sm text-ink-soft">
+            {consentFlow && !form.reviewFirst
+              ? 'With these sign-in details, testing starts as soon as the plan is written. You will not review the plan first.'
+              : ai && !keyReady
+                ? 'No AI key yet, so fixed rules will write the plan. Nothing is tested until you approve it.'
+                : 'Nothing is tested until you approve the plan.'}
+          </p>
+        )}
+      </div>
+
       {recent && recent.length > 0 && (
-        <section aria-labelledby="recent-title" className="mt-14">
-          <h2 id="recent-title" className="mb-3 text-lg font-bold">
+        <section aria-labelledby="recent-title" className="mt-16">
+          <h2 id="recent-title" className="mb-3 text-xl font-bold">
             Recent check-ups
           </h2>
-          <ul className="divide-y divide-rule rounded-lg border border-rule bg-surface/60">
+          <ul className="divide-y divide-rule rounded-card border border-rule bg-surface">
             {recent.slice(0, 5).map((run) => (
               <li key={run.runId}>
                 <Link
                   to={PATHS.report(run.runId)}
-                  className="flex min-h-[48px] flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2 hover:bg-surface"
+                  className="flex min-h-[48px] flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2 transition-colors duration-fast hover:bg-canvas"
                 >
                   <span className="min-w-0">
                     <span className="block truncate font-bold text-ink">{run.host}</span>
@@ -847,7 +868,24 @@ export function NewCheckupScreen({
           </Link>
         </section>
       )}
-    </div>
+    </Page>
+  );
+}
+
+const VISIBILITY_CHECKS: Array<{ key: keyof Visibility; title: string; hint: string }> = [
+  { key: 'search', title: 'Search engines', hint: 'Titles, descriptions, headings, robots and sitemap' },
+  { key: 'answers', title: 'AI answers', hint: 'Question-and-answer markup that AI assistants read' },
+  { key: 'aiSearch', title: 'AI search', hint: 'A guide file for AI assistants, whether they may visit, and sources' },
+  { key: 'marketing', title: 'Marketing basics', hint: 'Share previews, picture, call to action, contact and privacy' },
+];
+
+/** One flat, headed group inside "Adjust the check-up". */
+function OptionGroup({ title, id, children }: { title: string; id?: string; children: ReactNode }) {
+  return (
+    <section id={id} tabIndex={id ? -1 : undefined} aria-label={title} className="outline-none">
+      <h3 className="mb-3 text-lg font-bold">{title}</h3>
+      {children}
+    </section>
   );
 }
 
@@ -867,15 +905,19 @@ function ResumeCard({ status }: { status: RunnerStatus }) {
     <aside
       data-transient="true"
       aria-label="Check-up in progress"
-      className="mb-10 flex flex-wrap items-center justify-between gap-3 rounded-lg border-2 border-stamp bg-stamp-tint px-5 py-4"
+      className="mb-10 flex flex-wrap items-center justify-between gap-3 rounded-card border border-stamp/40 bg-stamp-tint px-5 py-4"
     >
       <p className="font-bold text-ink">{card.text}</p>
-      <Link to={card.to} className="btn-primary">
+      <Link to={card.to} className="btn-quiet btn-sm">
         {card.action} <span aria-hidden="true">→</span>
       </Link>
     </aside>
   );
 }
+
+/** The label that opens a file picker: keyboard users see where focus is. */
+const FILE_LABEL =
+  'inline-flex min-h-[44px] cursor-pointer items-center rounded-control text-sm font-bold text-stamp underline underline-offset-4 hover:text-stamp-dark focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-stamp';
 
 /** A text box for reference material, with a file to add to it. */
 function MaterialField({
@@ -896,11 +938,11 @@ function MaterialField({
   const [fileError, setFileError] = useState<string | null>(null);
   return (
     <div>
-      <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-x-3">
         <label htmlFor={id} className="font-bold">
           {label}
         </label>
-        <label className="cursor-pointer text-sm font-bold text-stamp underline underline-offset-4 hover:text-stamp-dark focus-within:outline focus-within:outline-2 focus-within:outline-stamp">
+        <label className={FILE_LABEL}>
           Add a file
           <input
             type="file"
@@ -934,7 +976,7 @@ function MaterialField({
       <textarea
         id={id}
         rows={4}
-        className="field text-sm"
+        className="field"
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -966,9 +1008,9 @@ function ReferenceDocuments({
   const [rejected, setRejected] = useState<string[]>([]);
   return (
     <div className="space-y-3 border-t border-rule pt-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <span className="font-bold">Product Context files</span>
-        <label className="cursor-pointer text-sm font-bold text-stamp underline underline-offset-4 hover:text-stamp-dark focus-within:outline focus-within:outline-2 focus-within:outline-stamp">
+      <div className="flex flex-wrap items-center justify-between gap-x-3">
+        <span className="font-bold">Product context files</span>
+        <label className={FILE_LABEL}>
           Add files
           <input
             type="file"
@@ -1004,7 +1046,7 @@ function ReferenceDocuments({
         <ul className="space-y-1 text-sm">
           {form.contextFiles.map((file) => (
             <li key={file.name} className="flex flex-wrap items-center gap-x-3">
-              <span className="font-mono text-ink">{file.name}</span>
+              <span className="break-all font-mono text-ink">{file.name}</span>
               {file.summary && !file.unread && <span className="text-ink-soft">{describeSummary(file.summary)}</span>}
               {file.unread && (
                 <span role="alert" className="text-fail">
@@ -1043,20 +1085,23 @@ function ReferenceDocuments({
           ))}
         </ul>
       )}
-      <label className="block text-sm">
-        <span className="mb-1 block font-bold">Docs address (optional)</span>
+      <div>
+        <label htmlFor="context-url" className="mb-1 block font-bold">
+          Docs address <span className="font-normal text-ink-soft">Optional</span>
+        </label>
         <input
+          id="context-url"
           type="url"
-          className="field py-2 text-sm"
+          className="field"
           placeholder="https://docs.example.com/guide"
           value={form.contextUrl}
           onChange={(e) => onFormChange((f) => ({ ...f, contextUrl: e.target.value }))}
           aria-describedby="context-url-hint"
         />
-        <span id="context-url-hint" className="mt-1 block text-ink-soft">
+        <p id="context-url-hint" className="mt-1 text-sm text-ink-soft">
           Up to 20 pages on that site are read. Pages that need a sign-in are skipped.
-        </span>
-      </label>
+        </p>
+      </div>
     </div>
   );
 }
@@ -1065,16 +1110,19 @@ type Access = 'look' | 'live' | 'test';
 
 /**
  * One question for what the check-up may do. On an address that is a test copy by nature (this
- * computer, a private network), two answers; on a live-looking one, three.
+ * computer, a private network), two answers; on a live-looking one, three. Each answer is a card;
+ * anything the chosen "test" answer still needs (a confirmation, the Verified Domain line) sits in its card.
  */
 function AccessChoice({
   isTestCopyHost,
   form,
   onChange,
+  testCardExtra,
 }: {
   isTestCopyHost: boolean;
   form: CheckupForm;
   onChange: (change: Partial<Pick<CheckupForm, 'owner' | 'markedTestCopy'>>) => void;
+  testCardExtra?: ReactNode;
 }) {
   const access: Access = !form.owner ? 'look' : isTestCopyHost || form.markedTestCopy ? 'test' : 'live';
   const options: Array<{
@@ -1118,29 +1166,41 @@ function AccessChoice({
         },
       ];
   return (
-    <fieldset className="mt-6 space-y-3">
+    <fieldset className="mt-6">
       <legend className="label">What may the check-up do?</legend>
-      {options.map((o) => (
-        <label
-          key={o.id}
-          className="flex cursor-pointer items-start gap-3 rounded-lg border-2 border-edge bg-surface p-4 hover:border-stamp"
-        >
-          <input
-            type="radio"
-            name="access"
-            className="mt-1 h-5 w-5 shrink-0 accent-[#6C9BF2]"
-            checked={access === o.id}
-            onChange={() => onChange(o.set)}
-            aria-describedby={`access-${o.id}-hint`}
-          />
-          <span>
-            <span className="block font-bold">{o.title}</span>
-            <span id={`access-${o.id}-hint`} className="block text-sm text-ink-soft">
-              {o.hint}
-            </span>
-          </span>
-        </label>
-      ))}
+      <div className="grid gap-3">
+        {options.map((o) => {
+          const chosen = access === o.id;
+          return (
+            <div
+              key={o.id}
+              className={`rounded-card border bg-surface transition-colors duration-fast focus-within:ring-2 focus-within:ring-stamp/30 ${
+                chosen ? 'border-ink' : 'border-edge hover:border-ink-soft'
+              }`}
+            >
+              <label className="flex min-h-[44px] cursor-pointer items-start gap-3 p-4">
+                <input
+                  type="radio"
+                  name="access"
+                  className="mt-1 h-5 w-5 shrink-0 accent-stamp"
+                  checked={chosen}
+                  onChange={() => onChange(o.set)}
+                  aria-describedby={`access-${o.id}-hint`}
+                />
+                <span>
+                  <span className="block font-bold">{o.title}</span>
+                  <span id={`access-${o.id}-hint`} className="block text-sm text-ink-soft">
+                    {o.hint}
+                  </span>
+                </span>
+              </label>
+              {chosen && o.id === 'test' && testCardExtra && (
+                <div className="space-y-4 border-t border-rule px-4 pb-4 pt-3">{testCardExtra}</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </fieldset>
   );
 }
@@ -1171,13 +1231,11 @@ function DomainProofPanel({ url }: { url: string }) {
 
   if (status && (!status.required || status.verified)) {
     return status.verified && status.required ? (
-      <p className="mt-4 text-sm text-pass">
-        Verified Domain: the line was found, so this test copy can be tested fully.
-      </p>
+      <p className="text-sm text-pass">Verified Domain: the line was found, so this test copy can be tested fully.</p>
     ) : null;
   }
   return (
-    <div className="mt-4 rounded-lg border-2 border-edge bg-surface p-4" role="region" aria-label="Verified Domain">
+    <div role="region" aria-label="Verified Domain">
       <p className="font-bold">This test copy isn’t verified yet, so it is only looked at</p>
       {status?.line ? (
         <>
@@ -1196,7 +1254,11 @@ function DomainProofPanel({ url }: { url: string }) {
           </p>
         )
       )}
-      {problem && <p className="mt-2 text-sm text-fail">{problem}</p>}
+      {problem && (
+        <p role="alert" className="mt-2 text-sm text-fail">
+          {problem}
+        </p>
+      )}
       <button type="button" className="btn-link mt-2 text-sm" disabled={busy} onClick={() => void run()}>
         {busy ? 'Checking…' : 'Check again'}
       </button>
@@ -1204,7 +1266,19 @@ function DomainProofPanel({ url }: { url: string }) {
   );
 }
 
-/** Sign-ins to explore and test the signed-in pages with, from the start: one or more roles. */
+/** A sign-in row that sets more than the username and password, so only the full rows can show it. */
+function hasRowDetails(s: SignInEntry | undefined): boolean {
+  return (
+    !!s &&
+    !!(s.role.trim() || s.loginPath.trim() || s.usernameSelector?.trim() || s.passwordSelector?.trim() || s.submitSelector?.trim())
+  );
+}
+
+/**
+ * Sign-ins to explore and test the signed-in pages with, from the start: one or more roles. Either the
+ * quick username and password, or the full rows (role, sign-in page...): never both for the same sign-in.
+ * The consent notice sits right after the fields it is about.
+ */
 function SignInsSection({
   form,
   saved,
@@ -1217,70 +1291,74 @@ function SignInsSection({
   consentFlow: boolean;
   onFormChange: (update: (form: CheckupForm) => CheckupForm) => void;
 }) {
-  const filled = form.signIns.filter((s) => s.username.trim()).length;
-  const usingSaved = !!saved?.length && form.useSavedSignIns && form.signIns.length === 0;
-  const set = (i: number, change: Partial<CheckupForm['signIns'][number]>) =>
+  const [detailed, setDetailed] = useState(false);
+  const rows = detailed || form.signIns.length > 1 || hasRowDetails(form.signIns[0]);
+  const set = (i: number, change: Partial<SignInEntry>) =>
     onFormChange((f) => ({ ...f, signIns: f.signIns.map((s, n) => (n === i ? { ...s, ...change } : s)) }));
   return (
-    <details className="mt-6 rounded-lg border-2 border-edge bg-surface" open={filled > 0 || undefined}>
-      <summary className="flex min-h-[48px] cursor-pointer flex-wrap items-center gap-x-2 px-4 py-3 font-bold">
-        Sign in to test pages behind a login
-        <span className="font-normal text-ink-soft">(optional)</span>
-        {(filled > 0 || usingSaved) && (
-          <span className="rounded border border-pass px-1.5 text-xs text-pass">{usingSaved ? 'Saved' : 'Added'}</span>
-        )}
-      </summary>
-      <div className="space-y-4 border-t border-rule p-4">
-        <p className="text-sm text-ink-soft">
-          The check-up signs in as each role and explores what it sees, so pages behind the sign-in are planned and
-          tested too.
-        </p>
-        <SignInFields form={form} onFormChange={onFormChange} />
-        {!!saved?.length && (
-          <label className="flex cursor-pointer items-start gap-3 text-sm">
-            <input
-              type="checkbox"
-              className="mt-0.5 h-5 w-5 shrink-0 accent-[#6C9BF2]"
-              checked={form.useSavedSignIns}
-              onChange={(e) => onFormChange((f) => ({ ...f, useSavedSignIns: e.target.checked }))}
-            />
-            <span>Sign in as saved for this site: {saved.map((s) => `${s.role} (${s.username})`).join(', ')}</span>
-          </label>
-        )}
-        {form.signIns.map((s, i) => (
+    <div className="space-y-4">
+      <p className="text-ink-soft">
+        The check-up signs in as each role and explores what it sees, so pages behind the sign-in are planned and tested
+        too.
+      </p>
+      {rows ? (
+        form.signIns.map((s, i) => (
           <SignInRow
             key={i}
             value={s}
             legend={`Sign-in ${i + 1}`}
             rolePlaceholder={i === 0 ? 'member' : 'admin'}
             onChange={(patch) => set(i, patch)}
-            onRemove={() => onFormChange((f) => ({ ...f, signIns: f.signIns.filter((_, n) => n !== i) }))}
+            onRemove={() => {
+              setDetailed(true);
+              onFormChange((f) => ({ ...f, signIns: f.signIns.filter((_, n) => n !== i) }));
+            }}
           />
-        ))}
+        ))
+      ) : (
+        <SignInFields form={form} onFormChange={onFormChange} />
+      )}
+      {consentFlow && <ConsentNotice form={form} onFormChange={onFormChange} />}
+      {!!saved?.length && (
+        <label className="flex min-h-[44px] cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            className="mt-1 h-5 w-5 shrink-0 accent-stamp"
+            checked={form.useSavedSignIns}
+            onChange={(e) => onFormChange((f) => ({ ...f, useSavedSignIns: e.target.checked }))}
+          />
+          <span>Sign in as saved for this site: {saved.map((s) => `${s.role} (${s.username})`).join(', ')}</span>
+        </label>
+      )}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <button
           type="button"
-          className="btn-quiet"
-          onClick={() => onFormChange((f) => ({ ...f, signIns: [...f.signIns, { ...EMPTY_SIGN_IN }] }))}
+          className="btn-quiet btn-sm"
+          onClick={() => {
+            setDetailed(true);
+            onFormChange((f) => ({
+              ...f,
+              signIns: rows || f.signIns.length > 0 ? [...f.signIns, { ...EMPTY_SIGN_IN }] : [{ ...EMPTY_SIGN_IN }],
+            }));
+          }}
         >
-          {form.signIns.length === 0 ? 'Add a sign-in' : 'Add another sign-in'}
+          {!rows ? 'Add a role or another sign-in' : form.signIns.length === 0 ? 'Add a sign-in' : 'Add another sign-in'}
         </button>
         <ImportRoles onFormChange={onFormChange} />
-        <SavedSessions form={form} onFormChange={onFormChange} />
-        {form.signIns.length > 0 && (
-          <label className="flex cursor-pointer items-start gap-3 text-sm">
-            <input
-              type="checkbox"
-              className="mt-0.5 h-5 w-5 shrink-0 accent-[#6C9BF2]"
-              checked={rememberSignInsOf(form, consentFlow)}
-              onChange={(e) =>
-                onFormChange((f) => ({ ...f, rememberSignIns: e.target.checked, rememberTouched: true }))
-              }
-            />
-            <span>Remember these sign-ins for this site (passwords are kept in this computer’s keychain)</span>
-          </label>
-        )}
       </div>
-    </details>
+      <SavedSessions form={form} onFormChange={onFormChange} />
+      {form.signIns.length > 0 && (
+        <label className="flex min-h-[44px] cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            className="mt-1 h-5 w-5 shrink-0 accent-stamp"
+            checked={rememberSignInsOf(form, consentFlow)}
+            onChange={(e) => onFormChange((f) => ({ ...f, rememberSignIns: e.target.checked, rememberTouched: true }))}
+          />
+          <span>Remember these sign-ins for this site (passwords are kept in this computer’s keychain)</span>
+        </label>
+      )}
+    </div>
   );
 }
 
@@ -1310,27 +1388,29 @@ function ImportRoles({ onFormChange }: { onFormChange: (update: (form: CheckupFo
     );
   }
   return (
-    <div className="space-y-2 rounded-md border border-rule p-3">
-      <label className="block text-sm">
-        <span className="mb-1 block font-bold">Roles to import</span>
-        <textarea
-          className="field py-2 font-mono text-sm"
-          rows={4}
-          autoComplete="off"
-          spellCheck={false}
-          placeholder="role,username,password"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-        />
+    <div className="w-full space-y-2 rounded-card border border-rule p-4">
+      <label htmlFor="import-roles" className="block font-bold">
+        Roles to import
       </label>
-      <p className="text-sm text-ink-soft">
+      <textarea
+        id="import-roles"
+        className="field font-mono text-sm"
+        rows={4}
+        autoComplete="off"
+        spellCheck={false}
+        placeholder="role,username,password"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        aria-describedby="import-roles-hint"
+      />
+      <p id="import-roles-hint" className="text-sm text-ink-soft">
         One role per line: role,username,password. Used for this check-up only; nothing is saved from here.
       </p>
-      <div className="flex flex-wrap items-center gap-3">
-        <button type="button" className="btn-quiet" disabled={!text.trim()} onClick={() => apply(text)}>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <button type="button" className="btn-quiet btn-sm" disabled={!text.trim()} onClick={() => apply(text)}>
           Fill in roles
         </button>
-        <label className="cursor-pointer text-sm font-bold text-stamp underline underline-offset-4 hover:text-stamp-dark focus-within:outline focus-within:outline-2 focus-within:outline-stamp">
+        <label className={FILE_LABEL}>
           Pick a list file
           <input
             type="file"
@@ -1363,7 +1443,7 @@ function ImportRoles({ onFormChange }: { onFormChange: (update: (form: CheckupFo
         </button>
       </div>
       {note && (
-        <p role="alert" className="text-sm">
+        <p role="status" className="text-sm">
           {note}
         </p>
       )}
@@ -1371,7 +1451,7 @@ function ImportRoles({ onFormChange }: { onFormChange: (update: (form: CheckupFo
   );
 }
 
-/** Username and password at the top of the sign-in section: the first sign-in (role `member` unless named). */
+/** The quick username and password: the first sign-in (role `member` unless named). */
 function SignInFields({
   form,
   onFormChange,
@@ -1380,37 +1460,39 @@ function SignInFields({
   onFormChange: (update: (form: CheckupForm) => CheckupForm) => void;
 }) {
   const first = primarySignInOf(form);
-  const set = (change: Partial<CheckupForm['signIns'][number]>) =>
+  const set = (change: Partial<SignInEntry>) =>
     onFormChange((f) => {
       const signIns = f.signIns.length > 0 ? f.signIns : [{ ...EMPTY_SIGN_IN }];
       return { ...f, signIns: signIns.map((s, n) => (n === 0 ? { ...s, ...change } : s)) };
     });
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      <label className="text-sm">
-        <span className="mb-1 block font-bold">
-          Email or username <span className="font-normal text-ink-soft">(optional)</span>
-        </span>
+    <div className="grid gap-4 sm:grid-cols-2">
+      <div>
+        <label htmlFor="sign-in-username" className="mb-1 block font-bold">
+          Email or username
+        </label>
         <input
-          className="field py-2 text-sm"
+          id="sign-in-username"
+          className="field"
           autoComplete="off"
           spellCheck={false}
           value={first.username}
           onChange={(e) => set({ username: e.target.value })}
         />
-      </label>
-      <label className="text-sm">
-        <span className="mb-1 block font-bold">
-          Password <span className="font-normal text-ink-soft">(optional)</span>
-        </span>
+      </div>
+      <div>
+        <label htmlFor="sign-in-password" className="mb-1 block font-bold">
+          Password
+        </label>
         <input
-          className="field py-2 text-sm"
+          id="sign-in-password"
+          className="field"
           type="password"
           autoComplete="off"
           value={first.password}
           onChange={(e) => set({ password: e.target.value })}
         />
-      </label>
+      </div>
     </div>
   );
 }
@@ -1424,34 +1506,34 @@ function ConsentNotice({
   onFormChange: (update: (form: CheckupForm) => CheckupForm) => void;
 }) {
   return (
-    <div className="mt-4" data-testid="sign-in-consent">
-      <Notice tone="warn" title="Fill in and send forms with these sign-in details">
-        <p>
-          The check-up will fill in and send forms on this App with these sign-in details. Sensitive Actions, such as
-          deleting or paying, are skipped.
-        </p>
-        <label className="mt-3 flex cursor-pointer items-start gap-3 text-sm">
-          <input
-            type="checkbox"
-            className="mt-0.5 h-5 w-5 shrink-0 accent-[#6C9BF2]"
-            checked={form.signInConsent}
-            onChange={(e) => onFormChange((f) => ({ ...f, signInConsent: e.target.checked }))}
-          />
-          <span className="font-bold">I accept this</span>
-        </label>
-        <label className="mt-2 flex cursor-pointer items-start gap-3 text-sm">
-          <input
-            type="checkbox"
-            className="mt-0.5 h-5 w-5 shrink-0 accent-[#6C9BF2]"
-            checked={form.reviewFirst}
-            onChange={(e) => onFormChange((f) => ({ ...f, reviewFirst: e.target.checked }))}
-          />
-          <span>Let me review the plan before testing starts</span>
-        </label>
-        <button type="button" className="btn-link mt-3 text-sm" onClick={() => onFormChange(lookOnly)}>
-          Only look at it instead: nothing is sent or changed
-        </button>
-      </Notice>
+    <div className="rounded-card border border-warn/40 bg-warn-tint px-4 py-3" data-testid="sign-in-consent">
+      <p className="font-bold text-warn">Fill in and send forms with these sign-in details</p>
+      <p className="mt-1 text-sm text-ink">
+        The check-up will fill in and send forms on this App with these sign-in details. Sensitive Actions, such as
+        deleting or paying, are skipped.
+      </p>
+      <label className="mt-2 flex min-h-[44px] cursor-pointer items-start gap-3">
+        <input
+          id={CONSENT_BOX_ID}
+          type="checkbox"
+          className="mt-1 h-5 w-5 shrink-0 accent-stamp"
+          checked={form.signInConsent}
+          onChange={(e) => onFormChange((f) => ({ ...f, signInConsent: e.target.checked }))}
+        />
+        <span className="font-bold">I accept this</span>
+      </label>
+      <label className="flex min-h-[44px] cursor-pointer items-start gap-3">
+        <input
+          type="checkbox"
+          className="mt-1 h-5 w-5 shrink-0 accent-stamp"
+          checked={form.reviewFirst}
+          onChange={(e) => onFormChange((f) => ({ ...f, reviewFirst: e.target.checked }))}
+        />
+        <span>Let me review the plan before testing starts</span>
+      </label>
+      <button type="button" className="btn-link text-sm" onClick={() => onFormChange(lookOnly)}>
+        Only look at it instead: nothing is sent or changed
+      </button>
     </div>
   );
 }
@@ -1470,8 +1552,10 @@ function SavedSessions({
   const [role, setRole] = useState('');
   const [error, setError] = useState<string | null>(null);
   return (
-    <div className="space-y-2 border-t border-rule pt-3">
-      <p className="text-sm font-bold">Use a saved session instead of a password (optional)</p>
+    <div className="space-y-2 border-t border-rule pt-4">
+      <p className="font-bold">
+        Use a saved session instead of a password <span className="font-normal text-ink-soft">Optional</span>
+      </p>
       <p className="text-sm text-ink-soft">
         For sites with two-step sign-in. The file is used for this check-up only and is never saved.
       </p>
@@ -1488,17 +1572,20 @@ function SavedSessions({
           </button>
         </p>
       ))}
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="text-sm">
-          <span className="mb-1 block font-bold">Role name</span>
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
+        <div>
+          <label htmlFor="saved-session-role" className="mb-1 block text-sm font-bold">
+            Role name
+          </label>
           <input
-            className="field py-2 text-sm"
+            id="saved-session-role"
+            className="field w-48"
             value={role}
             placeholder="admin"
             onChange={(e) => setRole(e.target.value)}
           />
-        </label>
-        <label className="cursor-pointer text-sm font-bold text-stamp underline underline-offset-4">
+        </div>
+        <label className={FILE_LABEL}>
           Add a saved session
           <input
             type="file"
@@ -1545,32 +1632,17 @@ function SavedSessions({
 
 /**
  * About how many AI requests the scan needs, against what's left today, said before it starts; with
- * the choice to plan with fixed rules now and re-plan with the AI later.
+ * a limit, and the choice to plan with fixed rules now and re-plan with the AI later.
  */
 function AiEstimateLine({
-  url,
-  maxPages,
+  estimate,
   form,
   onFormChange,
 }: {
-  url: string;
-  maxPages: number;
+  estimate: AiEstimate;
   form: CheckupForm;
   onFormChange: (update: (form: CheckupForm) => CheckupForm) => void;
 }) {
-  const [estimate, setEstimate] = useState<AiEstimate | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    setEstimate(null);
-    const timer = setTimeout(() => {
-      void estimateAi(url, maxPages).then((e) => !cancelled && setEstimate(e));
-    }, CHECK_DELAY_MS);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [url, maxPages]);
-  if (!estimate) return null;
   const needed = estimate.low === estimate.high ? `${estimate.low}` : `${estimate.low} to ${estimate.high}`;
   const short = estimate.left !== null && estimate.left < estimate.high;
   const leftText =
@@ -1580,49 +1652,52 @@ function AiEstimateLine({
         ? ''
         : 'Your AI account is charged for them.';
   return (
-    <div
-      className={`mt-6 rounded-md border-l-4 px-4 py-3 text-sm ${short ? 'border-warn bg-warn-tint' : 'border-rule bg-surface'}`}
-      role="status"
-    >
+    <div className="space-y-3">
       <p className="text-ink">
         Planning needs about {needed} AI requests{estimate.seenBefore ? ' (fewer where the site hasn’t changed)' : ''},
         and looking over the screens afterwards up to {estimate.visualReview} more. {leftText}
       </p>
       {short && (
-        <p className="mt-1 text-ink">
+        <p className="text-warn">
           Past that, fixed rules plan the rest. You can re-plan any part with the AI once requests are available again.
         </p>
       )}
-      <div className="mt-2 flex flex-wrap items-end gap-3">
-        <label>
-          <span className="mb-1 block font-bold">Limit AI requests (optional)</span>
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
+        <div>
+          <label htmlFor="cap-requests" className="mb-1 block font-bold">
+            Limit AI requests <span className="font-normal text-ink-soft">Optional</span>
+          </label>
           <input
+            id="cap-requests"
             type="number"
             min={1}
-            className="field w-28 py-1.5 text-sm"
+            className="field w-32"
             value={form.capRequests}
             onChange={(e) => onFormChange((f) => ({ ...f, capRequests: e.target.value }))}
           />
-        </label>
+        </div>
         {estimate.estimatedUsd != null && (
-          <label>
-            <span className="mb-1 block font-bold">Limit spend in dollars (optional)</span>
+          <div>
+            <label htmlFor="cap-dollars" className="mb-1 block font-bold">
+              Limit spend in dollars <span className="font-normal text-ink-soft">Optional</span>
+            </label>
             <input
+              id="cap-dollars"
               type="number"
               min={0}
               step="0.01"
-              className="field w-28 py-1.5 text-sm"
+              className="field w-32"
               value={form.capDollars}
               onChange={(e) => onFormChange((f) => ({ ...f, capDollars: e.target.value }))}
             />
-          </label>
+          </div>
         )}
       </div>
-      <p className="mt-1 text-ink">{capLine(estimate, capOf(form))}</p>
-      <label className="mt-2 flex cursor-pointer items-start gap-3">
+      <p className="text-sm text-ink">{capLine(estimate, capOf(form))}</p>
+      <label className="flex min-h-[44px] cursor-pointer items-start gap-3">
         <input
           type="checkbox"
-          className="mt-0.5 h-5 w-5 shrink-0 accent-[#6C9BF2]"
+          className="mt-1 h-5 w-5 shrink-0 accent-stamp"
           checked={form.planWithoutAI}
           onChange={(e) => onFormChange((f) => ({ ...f, planWithoutAI: e.target.checked }))}
         />

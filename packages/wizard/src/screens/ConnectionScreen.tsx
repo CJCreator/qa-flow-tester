@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ErrorMessage, Lead, Question } from '../components/text';
+import { ErrorMessage } from '../components/text';
+import { Page, PageHeader } from '../components/ui';
 import { WakeNote } from '../components/WakeNote';
 import { useWakeOnline } from '../hooks/useWakeOnline';
 import { useDocumentTitle } from '../lib/title';
@@ -33,32 +34,31 @@ export function ConnectionScreen({ checks }: { checks: number }) {
   };
 
   return (
-    <section className="mx-auto max-w-prose px-4 py-12 sm:px-6">
-      <Question>How do you want to run the check-up?</Question>
-      <Lead>
-        Release check-up tests a site in a real browser and tells you whether it is ready to release. Pick where it
-        runs.
-      </Lead>
+    <Page width="prose">
+      <PageHeader
+        title="How do you want to run the check-up?"
+        lede="Release check-up tests a site in a real browser and tells you whether it is ready to release. Pick where it runs."
+      />
 
       {ONLINE_APP_URL && (
         <>
-          <h2 className="mb-2 text-lg font-bold">Online: nothing to install</h2>
+          <h2 className="mb-2 text-xl font-bold">Online: nothing to install</h2>
           <p className="mb-4 max-w-prose text-ink-soft">
             Open the full app, add your own AI key in Settings, and check a public site. Your key is kept in memory for
             your visit only. It is a free shared copy: it sleeps when nobody is using it, so the first page can take
             about a minute, and only one check-up runs at a time. Sites on your own computer or network can&rsquo;t be
             reached from here: use one of the options below for those.
           </p>
-          <p className="mb-10">
-            <a className="btn-primary inline-block" href={ONLINE_APP_URL} rel="noreferrer">
+          <div className="mb-12">
+            <a className="btn-primary" href={ONLINE_APP_URL} rel="noreferrer">
               Open the online app
             </a>
             <WakeNote state={wake} />
-          </p>
+          </div>
         </>
       )}
 
-      <h2 className="mb-2 text-lg font-bold">In your GitHub repo: nothing to install</h2>
+      <h2 className="mb-2 text-xl font-bold">In your GitHub repo: nothing to install</h2>
       <p className="mb-4 max-w-prose text-ink-soft">
         The check-up runs on your own GitHub Actions minutes (free for public repos, 2,000 minutes a month for private
         ones on the free plan). Your site, your AI key and the report stay with you. A site that is only reachable from
@@ -68,11 +68,11 @@ export function ConnectionScreen({ checks }: { checks: number }) {
       <ol className="mb-6 list-decimal space-y-4 pl-6">
         <li>
           <label htmlFor="gh-url" className="block font-bold">
-            Address to check (optional)
+            Address to check <span className="font-normal text-ink-soft">Optional</span>
           </label>
           <input
             id="gh-url"
-            className="field mt-1 w-full"
+            className="field mt-1 w-full font-mono"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="https://preview.example.com"
@@ -82,22 +82,28 @@ export function ConnectionScreen({ checks }: { checks: number }) {
         </li>
         <li>
           Copy this file into your repo as{' '}
-          <code className="rounded bg-surface px-1.5 py-0.5 font-bold">{WORKFLOW_PATH}</code>:
+          <code className="break-all rounded-control bg-surface px-1.5 py-0.5 font-mono font-bold">{WORKFLOW_PATH}</code>:
           <pre
-            className="mt-2 max-h-72 overflow-auto rounded-md border-2 border-edge bg-surface px-4 py-3 text-sm"
+            className="mt-2 max-h-72 overflow-auto rounded-card border border-rule bg-surface px-4 py-3 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-stamp"
             tabIndex={0}
             aria-label="Workflow file"
           >
             <code>{workflow}</code>
           </pre>
-          <button type="button" className="btn-primary mt-2" onClick={copy}>
-            {copied ? 'Copied' : 'Copy the file'}
-          </button>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            {/* The online app is the screen's primary action when there is one. */}
+            <button type="button" className={ONLINE_APP_URL ? 'btn-quiet' : 'btn-primary'} onClick={copy}>
+              Copy the file
+            </button>
+            <span role="status" className="text-sm font-bold text-pass">
+              {copied ? 'File copied' : ''}
+            </span>
+          </div>
           {copyFailed && <ErrorMessage>The copy didn’t work. Select the file above and copy it by hand.</ErrorMessage>}
         </li>
         <li>
           In your repo, open <strong>Settings, Secrets and variables, Actions</strong> and add a secret named{' '}
-          <code className="rounded bg-surface px-1.5 py-0.5 font-bold">QA_AI_API_KEY</code> with your AI key. Without a
+          <code className="break-all rounded-control bg-surface px-1.5 py-0.5 font-mono font-bold">QA_AI_API_KEY</code> with your AI key. Without a
           key the plan is written by fixed rules and no AI is used.
         </li>
         <li>
@@ -121,24 +127,24 @@ export function ConnectionScreen({ checks }: { checks: number }) {
           ) : null}
         </li>
       </ol>
-      <p className="mb-10 max-w-prose text-ink-soft">
+      <p className="mb-12 max-w-prose text-ink-soft">
         When the run ends, its summary page shows the verdict. The full report is in the run&rsquo;s{' '}
         <strong>qa-report</strong> download: open{' '}
-        <code className="rounded bg-surface px-1.5 py-0.5 font-bold">report.html</code> with a double-click. It also
+        <code className="break-all rounded-control bg-surface px-1.5 py-0.5 font-mono font-bold">report.html</code> with a double-click. It also
         runs by itself when a preview or staging deployment succeeds.
       </p>
 
-      <h2 className="mb-2 text-lg font-bold">On your computer</h2>
+      <h2 className="mb-2 text-xl font-bold">On your computer</h2>
       <ol className="mb-8 list-decimal space-y-4 pl-6">
         <li>Open a terminal in the Release check-up folder.</li>
-        <li>Start the QA Tool (see the README).</li>
+        <li>Start Release check-up (see the README).</li>
         <li>Leave the terminal open while you use this page.</li>
       </ol>
 
-      <details className="mb-8">
-        <summary className="btn-link cursor-pointer">Using Docker?</summary>
-        <p className="mt-2">
-          Run <code className="rounded bg-surface px-1.5 py-0.5 font-bold">docker compose up</code> in the same folder
+      <details className="disclosure mb-8 border-y border-rule">
+        <summary>Using Docker?</summary>
+        <p className="pb-4">
+          Run <code className="break-all rounded-control bg-surface px-1.5 py-0.5 font-mono font-bold">docker compose up</code> in the same folder
           instead.
         </p>
       </details>
@@ -152,6 +158,6 @@ export function ConnectionScreen({ checks }: { checks: number }) {
           ? 'Looking for Release check-up on this computer…'
           : 'Not running on this computer yet. Checking again every 3 seconds.'}
       </p>
-    </section>
+    </Page>
   );
 }
