@@ -28,34 +28,42 @@ function ConfirmDialog({ options, onClose }: { options: ConfirmOptions; onClose:
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
+    // Focus goes back to what opened the dialog when it closes.
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     if (!dialog.open) dialog.showModal();
     // The safe choice has focus, so Enter on its own never throws anything away.
     cancelRef.current?.focus();
+    return () => {
+      if (opener?.isConnected) opener.focus();
+    };
   }, []);
 
   return (
     <dialog
       ref={ref}
       aria-labelledby="confirm-title"
+      aria-describedby="confirm-body"
       onCancel={(e) => {
         e.preventDefault();
         onClose('cancel');
       }}
-      className="w-[min(32rem,calc(100vw-2rem))] rounded-lg border-2 border-edge bg-surface p-0 text-ink shadow-2xl backdrop:bg-canvas/80"
+      className="dialog-in w-[min(32rem,calc(100vw-2rem))] rounded-panel border border-rule bg-raised p-0 text-ink shadow-level-4 backdrop:bg-ink/40"
     >
       <div className="p-6">
         <h2 id="confirm-title" className="text-xl font-bold">
           {options.title}
         </h2>
-        <div className="mt-3 text-ink-soft">{options.body}</div>
-        <div className="mt-6 flex flex-wrap justify-end gap-3">
+        <div id="confirm-body" className="mt-3 text-ink-soft">
+          {options.body}
+        </div>
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
           <button ref={cancelRef} type="button" className="btn-quiet" onClick={() => onClose('cancel')}>
             {options.cancelLabel ?? 'Cancel'}
           </button>
           {options.altLabel && (
             <button
               type="button"
-              className={options.altDanger ? 'btn bg-fail text-surface hover:opacity-90' : 'btn-quiet'}
+              className={options.altDanger ? 'btn-danger' : 'btn-quiet'}
               onClick={() => onClose('alt')}
             >
               {options.altLabel}
@@ -63,7 +71,7 @@ function ConfirmDialog({ options, onClose }: { options: ConfirmOptions; onClose:
           )}
           <button
             type="button"
-            className={options.danger ? 'btn bg-fail text-surface hover:opacity-90' : 'btn-primary'}
+            className={options.danger ? 'btn-danger' : 'btn-primary'}
             onClick={() => onClose('confirm')}
           >
             {options.confirmLabel}
