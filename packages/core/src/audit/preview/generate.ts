@@ -9,6 +9,7 @@ import type { AuditAi } from '../ai/stage-ai.js';
 import { findClaimWords } from '../ai/claim-words.js';
 import { sameSiteUrl } from '../../safe-net.js';
 import { previewFacts, previewMessages, previewRetryPrompt, type PreviewFacts, type PreviewInput } from './prompt.js';
+import { buildTemplateHtml } from './template.js';
 import {
   previewNodesText,
   renderPreviewDocument,
@@ -39,7 +40,7 @@ export interface PreviewImageResponse {
 export type PreviewImageFetch = (url: string) => Promise<PreviewImageResponse | null>;
 
 export interface GeneratePreviewOptions {
-  ai: AuditAi;
+  ai?: AuditAi;
   /** Absent: no image is requested and each image shows its alt text. */
   fetchImage?: PreviewImageFetch;
   signal?: AbortSignal;
@@ -50,28 +51,49 @@ export type PreviewProblem = 'budget-spent' | 'failed' | 'claim-words';
 
 export type GeneratedPreview = { ok: true; html: string } | { ok: false; problem: PreviewProblem };
 
-/** Writes the improved homepage. A failure stores nothing: the caller saves only an `ok` page. */
+/**
+ * Writes the improved homepage (REQ-024, ADR 0042, T-81).
+ * When AI succeeds, the AI-improved preview is rendered.
+ * When AI fails, has claim words, or no AI key is configured, falls back to the template.
+ */
 export async function generatePreview(input: PreviewInput, options: GeneratePreviewOptions): Promise<GeneratedPreview> {
   const facts = previewFacts(input);
-  const base = previewMessages(facts);
 
-  const first = await askOnce(options, base);
-  if (!first.ok) return first;
-  let page = buildNodes(first.text, facts);
-  let claims = findClaimWords(previewNodesText(page.nodes));
+  let pageText: string | null = null;
+  if (options.ai) {
+    const base = previewMessages(facts);
+    try {
+      const first = await askOnce(options, base);
+      if (first.ok && first.text.trim()) {
+        const candidate = buildNodes(first.text, facts);
+        const claims = findClaimWords(previewNodesText(candidate.nodes));
 
-  if (claims.length > 0) {
-    const retry = await askOnce(options, [
-      ...base,
-      { role: 'assistant', content: first.text.slice(0, MAX_ANSWER_ECHO_CHARS) },
-      { role: 'user', content: previewRetryPrompt(claims) },
-    ]);
-    if (!retry.ok) return retry;
-    page = buildNodes(retry.text, facts);
-    claims = findClaimWords(previewNodesText(page.nodes));
-    if (claims.length > 0) return { ok: false, problem: 'claim-words' };
+        if (claims.length > 0) {
+          const retry = await askOnce(options, [
+            ...base,
+            { role: 'assistant', content: first.text.slice(0, MAX_ANSWER_ECHO_CHARS) },
+            { role: 'user', content: previewRetryPrompt(claims) },
+          ]);
+          if (retry.ok && retry.text.trim()) {
+            const retriedCandidate = buildNodes(retry.text, facts);
+            const retryClaims = findClaimWords(previewNodesText(retriedCandidate.nodes));
+            if (retryClaims.length === 0) {
+              pageText = retry.text;
+            }
+          }
+        } else {
+          pageText = first.text;
+        }
+      }
+    } catch (err) {
+      if (options.signal?.aborted) throw err;
+      // AI failure: falls through to template fallback
+    }
   }
 
+  // Fall back to template when AI fails or key is missing
+  const html = pageText ?? buildTemplateHtml(facts);
+  const page = buildNodes(html, facts);
   const nodes = await inlineImages(page.nodes, facts, options);
   return {
     ok: true,
@@ -83,6 +105,7 @@ async function askOnce(
   options: GeneratePreviewOptions,
   messages: AIMessage[]
 ): Promise<{ ok: true; text: string } | { ok: false; problem: 'budget-spent' | 'failed' }> {
+  if (!options.ai) return { ok: false, problem: 'failed' };
   try {
     const answer = await options.ai.ask('preview', messages, {
       signal: options.signal,

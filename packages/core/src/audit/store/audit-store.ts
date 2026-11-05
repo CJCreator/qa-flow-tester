@@ -24,12 +24,15 @@ import {
   type ShortlistEntry,
   type ShortlistListItem,
   type ShortlistUpdate,
+  type StoredAuditDocument,
+  type StoredDocumentKind,
 } from '@qa/types';
 import type { AuditStoreBackend } from './backend.js';
 import {
   AUDITS_FOLDER,
   assertAuditId,
   assertVersion,
+  auditDocPath,
   auditFolder,
   auditRecordKey,
   invalidInput,
@@ -61,6 +64,7 @@ export interface AuditVersionUpdate {
   pagesSkipped?: number;
   findings?: number;
   edited?: boolean;
+  documents?: StoredAuditDocument[];
 }
 
 export interface AuditStoreOptions {
@@ -198,6 +202,32 @@ function checkVersionUpdate(input: unknown): AuditVersionUpdate {
   if (update.edited !== undefined) {
     if (typeof update.edited !== 'boolean') throw invalidInput('The edited flag is not valid.');
     out.edited = update.edited;
+  }
+  if (update.documents !== undefined) {
+    if (!Array.isArray(update.documents)) throw invalidInput('The documents list is not valid.');
+    out.documents = update.documents.map((d) => {
+      if (!d || typeof d !== 'object') throw invalidInput('The stored document is not valid.');
+      const doc = d as Partial<StoredAuditDocument>;
+      if (!doc.kind || !doc.title || !doc.status) throw invalidInput('The stored document is not valid.');
+      if (doc.status === 'ready') {
+        return {
+          kind: doc.kind,
+          status: 'ready' as const,
+          title: String(doc.title),
+          formats: Array.isArray(doc.formats) ? [...doc.formats] : ['markdown', 'html'],
+          updatedAt: typeof doc.updatedAt === 'string' ? doc.updatedAt : new Date().toISOString(),
+        };
+      }
+      if (doc.status === 'not-written') {
+        return {
+          kind: doc.kind,
+          status: 'not-written' as const,
+          title: String(doc.title),
+          reason: typeof doc.reason === 'string' ? doc.reason : 'Document could not be written.',
+        };
+      }
+      throw invalidInput('The stored document status is not valid.');
+    });
   }
   return out;
 }
@@ -394,6 +424,37 @@ export class AuditStore implements AuditStoreContext {
 
   async getVersionFile(auditId: string, version: number, name: string): Promise<Uint8Array | null> {
     return this.backend.getBytes(versionFileKey(auditId, version, name));
+  }
+
+  /**
+   * Saves an Audit Document for one version in Markdown or HTML (T-83, ADR 0042).
+   */
+  async saveAuditDocument(
+    auditId: string,
+    version: number,
+    kind: StoredDocumentKind,
+    format: 'markdown' | 'html',
+    content: string
+  ): Promise<void> {
+    const key = auditDocPath(auditId, version, kind, format);
+    if (typeof content !== 'string') throw invalidInput('The document content is not valid.');
+    const bytes = new TextEncoder().encode(content);
+    await this.writeToVersion(auditId, version, () => this.backend.putBytes(key, bytes));
+  }
+
+  /**
+   * Reads an Audit Document for one version; null when not stored (T-83, ADR 0042).
+   */
+  async readAuditDocument(
+    auditId: string,
+    version: number,
+    kind: StoredDocumentKind,
+    format: 'markdown' | 'html'
+  ): Promise<string | null> {
+    const key = auditDocPath(auditId, version, kind, format);
+    const bytes = await this.backend.getBytes(key);
+    if (!bytes) return null;
+    return new TextDecoder().decode(bytes);
   }
 
   // -------------------------------------------------------------------------------------------------

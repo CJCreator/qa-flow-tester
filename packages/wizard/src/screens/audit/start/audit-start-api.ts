@@ -19,16 +19,23 @@ import { checkAuditStartForm, type AuditStartForm } from './audit-start-form';
 
 const NOT_ANSWERING = 'The tool is not answering. Make sure it is still open in its terminal, then try again.';
 
-/** Plain sentences for the refusals the start screen expects (REQ-001 AC-2). */
+/** Plain sentences for the refusals the start screen expects (REQ-001 AC-2, ADR 0042). */
 const START_REFUSALS: Partial<Record<AuditErrorCode, string>> = {
   ERR_UNREACHABLE:
     'This address cannot be audited: the website did not answer, or answered with an error. Check the address and that the website is online, then try again.',
+  ERR_SITE_BLOCKED:
+    'This website blocks automated visitors. A Website Audit cannot read sites behind a challenge or bot screen.',
+  ERR_DNS: 'The website address could not be found. Check the domain name and try again.',
+  ERR_BROWSER_LAUNCH: 'The browser could not start for this Website Audit. Try again in a moment.',
+  ERR_PIPELINE: 'The Website Audit could not finish saving its results. Try again.',
   ERR_PRIVATE_ADDRESS:
     'This address cannot be audited: it points to a private or local network. A Website Audit only reads public websites.',
   ERR_INVALID_AUDIT: 'Some fields need a change. See the message next to each one.',
   ERR_RUN_IN_PROGRESS:
     'Another Check-up, benchmark or Website Audit is in progress. Start this Website Audit when it has finished.',
 };
+
+export type RunningInfo = { kind: 'checkup' | 'audit'; href: string };
 
 function isAuditErrorCode(value: unknown): value is AuditErrorCode {
   return typeof value === 'string' && (AUDIT_ERROR_CODES as readonly string[]).includes(value);
@@ -38,8 +45,13 @@ function isAuditErrorCode(value: unknown): value is AuditErrorCode {
 export function auditErrorText(
   code: unknown,
   error?: unknown,
-  fallback = 'The Website Audit could not start. Try again.'
+  fallback = 'The Website Audit could not start. Try again.',
+  running?: RunningInfo
 ): string {
+  if (code === 'ERR_RUN_IN_PROGRESS' && running) {
+    const kind = running.kind === 'checkup' ? 'A Check-up' : 'A Website Audit';
+    return `${kind} is in progress. Start this Website Audit when it has finished.`;
+  }
   if (isAuditErrorCode(code) && START_REFUSALS[code]) return START_REFUSALS[code]!;
   if (typeof error === 'string' && error.trim() !== '') return error.trim();
   return fallback;
@@ -50,7 +62,13 @@ export type AuditStartOutcome =
   /** Refused before any request: the form's own check. */
   | { kind: 'invalid'; errors: AuditStartErrors }
   /** Refused by the runner, or the runner did not answer. */
-  | { kind: 'refused'; message: string; code?: AuditErrorCode; errors?: AuditStartErrors };
+  | {
+      kind: 'refused';
+      message: string;
+      code?: AuditErrorCode;
+      errors?: AuditStartErrors;
+      running?: RunningInfo;
+    };
 
 type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -99,12 +117,27 @@ export async function startAudit(body: AuditStartBody, fetchImpl: Fetch = fetch)
   }
   const refusal = asErrorReply(reply);
   const code = isAuditErrorCode(refusal.code) ? refusal.code : undefined;
+  const running = refusal.running;
   return {
     kind: 'refused',
-    message: auditErrorText(code, refusal.error),
+    message: auditErrorText(code, refusal.error, undefined, running),
     code,
     errors: code === 'ERR_INVALID_AUDIT' ? asFieldErrors(refusal.fields) : undefined,
+    running,
   };
+}
+
+/** Stops the active audit or Check-up by calling `POST /api/runner/stop`. */
+export async function stopAudit(fetchImpl: Fetch = fetch): Promise<{ ok: boolean; message?: string }> {
+  try {
+    const res = await fetchImpl('/api/runner/stop', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    return { ok: res.ok };
+  } catch {
+    return { ok: false, message: NOT_ANSWERING };
+  }
 }
 
 /** Checks the form, then starts the Website Audit. A form that fails the check sends nothing (REQ-001 AC-3). */
@@ -128,6 +161,25 @@ export function parseAuditEvent(data: string): AuditProgressEvent | null {
   if (e.type === 'progress') {
     const counts = [e.pagesFound, e.pagesRecorded, e.pagesSkipped];
     if (typeof e.stage !== 'string' || !counts.every((n) => typeof n === 'number' && Number.isFinite(n))) return null;
+    return event as AuditProgressEvent;
+  }
+  if (e.type === 'snapshot') {
+    const counts = e.counts as Record<string, unknown> | undefined;
+    const hasCounts =
+      counts &&
+      typeof counts === 'object' &&
+      [counts.pagesFound, counts.pagesRecorded, counts.pagesSkipped].every(
+        (n) => typeof n === 'number' && Number.isFinite(n)
+      );
+    if (typeof e.stage !== 'string' || !hasCounts || !Array.isArray(e.pages)) return null;
+    return event as AuditProgressEvent;
+  }
+  if (e.type === 'page') {
+    if (typeof e.path !== 'string' || typeof e.state !== 'string') return null;
+    return event as AuditProgressEvent;
+  }
+  if (e.type === 'status') {
+    if (typeof e.ai !== 'string' || typeof e.speed !== 'string') return null;
     return event as AuditProgressEvent;
   }
   if (e.type === 'done') return event as AuditProgressEvent;

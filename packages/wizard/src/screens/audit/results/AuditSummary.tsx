@@ -3,7 +3,7 @@ import { AUDIT_SCALE } from '@qa/types/src/browser.js';
 import { Notice } from '../../../components/text';
 import { count } from '../../../lib/format';
 import { Link, PATHS } from '../../../lib/router';
-import { SCALE_LABEL, fixFirst } from './analysis-text';
+import { SCALE_LABEL, fixFirst, isAiNote } from './analysis-text';
 
 /** What was recorded and found, in numbers that say how they were counted. No verdict on the whole site (ADR 0033). */
 export function AuditSummary({ result }: { result: AuditResult }) {
@@ -60,16 +60,16 @@ export function AuditSummary({ result }: { result: AuditResult }) {
 /** The plain sentences the tool left for its user, such as "AI notes need an AI key", with the way to fix it. */
 export function NotesBanner({ notes }: { notes: string[] }) {
   if (notes.length === 0) return null;
-  // The way to Settings only helps when a note is about a missing AI key.
-  const aboutKey = notes.some((note) => /\bAI key\b/i.test(note));
+  // Any note about AI links to Audit settings (T-88).
+  const aboutAi = notes.some(isAiNote);
   return (
     <Notice
       tone="warn"
       title="Notes about this Website Audit"
       actions={
-        aboutKey && (
-          <Link to={PATHS.settings} className="btn-link">
-            Add an AI key in Settings
+        aboutAi && (
+          <Link to={PATHS.auditSettings} className="btn-link">
+            Audit settings
           </Link>
         )
       }

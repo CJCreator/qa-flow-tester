@@ -11,6 +11,7 @@ import {
   measurePageSpeed,
   measureSampleSpeeds,
   mapPsiResponse,
+  psiNotMeasuredReason,
   PSI_ENDPOINT,
   type PageSpeedDeps,
 } from '../src/audit/ai/pagespeed.js';
@@ -54,12 +55,12 @@ const json = (name: string, status = 200): RawResponse => ({
   body: fixture(name),
 });
 
+const withKey = { resolveServiceKey: async () => ({ apiKey: FAKE_KEY }) };
+
 function deps(net: NetDeps, extra: Partial<PageSpeedDeps> = {}): PageSpeedDeps & { lines: string[] } {
   const lines: string[] = [];
-  return { net, now: () => NOW, log: (l) => lines.push(l), lines, ...extra };
+  return { net, ...withKey, now: () => NOW, log: (l) => lines.push(l), lines, ...extra };
 }
-
-const withKey = { resolveServiceKey: async () => ({ apiKey: FAKE_KEY }) };
 const byMetric = (values: SpeedValue[]) => Object.fromEntries(values.map((v) => [v.metric, [v.value, v.unit]]));
 
 function expectNotMeasured(speed: PageSpeed, reason: string, fieldReason = reason) {
@@ -90,9 +91,22 @@ describe('measurePageSpeed: request', () => {
     expect(f.connects[0].address).toBe('142.250.183.10');
   });
 
-  it('without a key the request is keyless (free tier); with a key it goes in a header, never the address', async () => {
+  it('without a key it reports no-key without connecting; allowKeyless sends a keyless request; with a key it goes in a header', async () => {
+    const nokeyNet = fakeNet([json('page-field.json')]);
+    const nokeySpeed = await measurePageSpeed(
+      'https://shop.example.in/',
+      deps(nokeyNet.net, { resolveServiceKey: async () => null })
+    );
+    expect(nokeySpeed.lab.status).toBe('not-measured');
+    expect(nokeySpeed.notMeasuredReason).toBe('no-key');
+    expect(psiNotMeasuredReason(nokeySpeed)).toBe('no-key');
+    expect(nokeyNet.connects).toHaveLength(0);
+
     const keyless = fakeNet([json('page-field.json')]);
-    await measurePageSpeed('https://shop.example.in/', deps(keyless.net));
+    await measurePageSpeed(
+      'https://shop.example.in/',
+      deps(keyless.net, { resolveServiceKey: async () => null, allowKeyless: true })
+    );
     expect(keyless.connects[0].url.searchParams.has('key')).toBe(false);
     expect(Object.keys(keyless.connects[0].headers).map((h) => h.toLowerCase())).not.toContain('x-goog-api-key');
 
@@ -102,13 +116,15 @@ describe('measurePageSpeed: request', () => {
     expect(keyed.connects[0].url.toString()).not.toContain(FAKE_KEY);
   });
 
-  it('a resolver that returns null or throws gives a keyless request', async () => {
+  it('a resolver that returns null or throws reports no-key without a request (ADR 0042)', async () => {
     for (const resolveServiceKey of [async () => null, async () => Promise.reject(new Error(`bad ${FAKE_KEY}`))]) {
       const f = fakeNet([json('page-field.json')]);
       const d = deps(f.net, { resolveServiceKey });
       const speed = await measurePageSpeed('https://shop.example.in/', d);
-      expect(speed.lab.status).toBe('measured');
-      expect(f.connects[0].headers['x-goog-api-key']).toBeUndefined();
+      expect(speed.lab.status).toBe('not-measured');
+      expect(speed.notMeasuredReason).toBe('no-key');
+      expect(psiNotMeasuredReason(speed)).toBe('no-key');
+      expect(f.connects).toHaveLength(0);
       expect(d.lines.join('\n')).not.toContain(FAKE_KEY);
     }
   });
@@ -293,14 +309,35 @@ describe('measureSampleSpeeds', () => {
     );
     expect(f.connects).toHaveLength(2);
     expect(out[0].speed.lab.status).toBe('measured');
-    for (const o of out.slice(1)) expectNotMeasured(o.speed, 'quota');
+    expect(out[0].notMeasuredReason).toBeUndefined();
+    for (const o of out.slice(1)) {
+      expectNotMeasured(o.speed, 'quota');
+      expect(o.notMeasuredReason).toBe('quota');
+      expect(psiNotMeasuredReason(o)).toBe('quota');
+    }
   });
 
   it('a failed page does not stop the rest', async () => {
     const f = fakeNet([new Error('timeout'), json('page-field.json')]);
     const out = await measureSampleSpeeds(['https://a.example.in/', 'https://b.example.in/'], deps(f.net));
     expectNotMeasured(out[0].speed, 'timeout');
+    expect(out[0].notMeasuredReason).toBe('error');
+    expect(psiNotMeasuredReason(out[0])).toBe('error');
     expect(out[1].speed.lab.status).toBe('measured');
+    expect(out[1].notMeasuredReason).toBeUndefined();
+  });
+
+  it('measureSampleSpeeds without a key returns no-key for every page without requests', async () => {
+    const f = fakeNet([json('page-field.json')]);
+    const out = await measureSampleSpeeds(
+      ['https://a.example.in/', 'https://b.example.in/'],
+      deps(f.net, { resolveServiceKey: async () => null })
+    );
+    expect(out).toHaveLength(2);
+    expect(out[0].notMeasuredReason).toBe('no-key');
+    expect(out[1].notMeasuredReason).toBe('no-key');
+    expect(psiNotMeasuredReason(out[0])).toBe('no-key');
+    expect(f.connects).toHaveLength(0);
   });
 
   it('no pages: no key lookup and no request', async () => {

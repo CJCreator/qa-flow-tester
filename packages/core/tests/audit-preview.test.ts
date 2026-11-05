@@ -194,17 +194,39 @@ describe('preview generator', () => {
     expect(fake.calls[1].messages.at(-1)?.content).toMatch(/secure/i);
   });
 
-  it('claim words in both answers: refused, nothing returned', async () => {
+  it('claim words in both answers: falls back to template text without claim words', async () => {
     const fake = fakeAi(['<p>Certified and safe</p>']);
     const out = await generatePreview(input(), { ai: await fake.ai() });
-    expect(out).toEqual({ ok: false, problem: 'claim-words' });
+    expect(out.ok).toBe(true);
+    if (!out.ok) throw new Error('expected ok');
+    expect(out.html).toContain('Preview of suggested changes');
+    expect(out.html).not.toContain('Certified');
+    expect(out.html).not.toContain('safe');
+    expect(out.html).toContain('href="https://shop.example.in/about"');
   });
 
-  it('a failed or empty AI answer is a failure with no provider text', async () => {
+  it('a failed or empty AI answer falls back to template text with no provider text', async () => {
     const failing = fakeAi([new Error('upstream said: secret detail')]);
-    expect(await generatePreview(input(), { ai: await failing.ai() })).toEqual({ ok: false, problem: 'failed' });
+    const failedOut = await generatePreview(input(), { ai: await failing.ai() });
+    expect(failedOut.ok).toBe(true);
+    if (!failedOut.ok) throw new Error('expected ok');
+    expect(failedOut.html).not.toContain('secret detail');
+    expect(failedOut.html).toContain('href="https://shop.example.in/about"');
+
     const empty = fakeAi(['   ']);
-    expect(await generatePreview(input(), { ai: await empty.ai() })).toEqual({ ok: false, problem: 'failed' });
+    const emptyOut = await generatePreview(input(), { ai: await empty.ai() });
+    expect(emptyOut.ok).toBe(true);
+    if (!emptyOut.ok) throw new Error('expected ok');
+    expect(emptyOut.html).toContain('href="https://shop.example.in/about"');
+  });
+
+  it('no AI provided: builds preview copy from findings and Page Content (ADR 0018 template)', async () => {
+    const out = await generatePreview(input(), {});
+    expect(out.ok).toBe(true);
+    if (!out.ok) throw new Error('expected ok');
+    expect(out.html).toContain('Preview of suggested changes');
+    expect(out.html).toContain('href="https://shop.example.in/about"');
+    expect(out.html).toContain('Suggested improvements');
   });
 
   it('works without stored homepage content: the menu links still appear', async () => {

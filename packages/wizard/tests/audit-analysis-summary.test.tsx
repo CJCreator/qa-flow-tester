@@ -231,14 +231,33 @@ describe('site areas', () => {
 });
 
 describe('notes, roadmap and links', () => {
-  it('shows result.notes in a banner that links to Settings, where the AI key is added', () => {
+  it('shows result.notes in a banner that links to Audit settings for any AI reason', () => {
     expect(text).toContain('AI notes need an AI key.');
-    expect(html).toMatch(/<a [^>]*href="\/settings"[^>]*>Add an AI key in Settings<\/a>/);
-    // A note about something else does not send the person to Settings.
-    const other = renderToStaticMarkup(createElement(NotesBanner, { notes: ['Speed was not measured.'] }));
-    expect(other).not.toContain('Add an AI key in Settings');
-    expect(NOT_DONE_REASON_TEXT['no-ai-key']).toContain('Add one in Settings.');
-    expect(NOT_DONE_REASON_TEXT['no-ai-key']).not.toContain('Website Audit settings');
+    expect(html).toMatch(/<a [^>]*href="\/audit-settings"[^>]*>Audit settings<\/a>/);
+
+    // Any AI note links to Audit settings (T-88)
+    for (const aiNote of [
+      'AI notes need an AI key.',
+      'The AI key expired. Update it in Audit settings.',
+      'The AI quota was reached.',
+      'The AI did not answer in time.',
+    ]) {
+      const banner = renderToStaticMarkup(createElement(NotesBanner, { notes: [aiNote] }));
+      expect(banner).toContain('Audit settings');
+      expect(banner).toContain('/audit-settings');
+    }
+
+    // Non-AI notes (speed source, only 1 page, site stopped answering) show in the banner without linking to Audit settings
+    for (const otherNote of [
+      'Speed was not measured.',
+      'Speed was measured by this tool.',
+      'Only 1 page was read.',
+      'The site stopped answering after 5 pages.',
+    ]) {
+      const other = renderToStaticMarkup(createElement(NotesBanner, { notes: [otherNote] }));
+      expect(other).not.toContain('Audit settings');
+      expect(other).toContain(otherNote);
+    }
   });
 
   it('has no banner without notes', () => {

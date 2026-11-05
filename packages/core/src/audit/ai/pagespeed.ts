@@ -23,8 +23,12 @@ export const PSI_TIMEOUT_MS = 90_000;
 export const PSI_MAX_BYTES = 16 * 1024 * 1024;
 
 export interface PageSpeedDeps {
-  /** The key resolver's `resolveServiceKey`. Null, missing or failing means a keyless request. */
+  /** The key resolver's `resolveServiceKey`. Null, missing or failing means no key. */
   resolveServiceKey?: (service: ServiceKeyName) => Promise<{ apiKey: string } | null>;
+  /** Explicit API key override (e.g. for tests). */
+  apiKey?: string;
+  /** Explicitly allow keyless requests (e.g. for tests). Default: false (ADR 0042). */
+  allowKeyless?: boolean;
   /** Network seam (tests). Defaults to the real pinned lookup and connect. */
   net?: NetDeps;
   timeoutMs?: number;
@@ -33,9 +37,17 @@ export interface PageSpeedDeps {
   log?: (line: string) => void;
 }
 
+/** Why PageSpeed Insights did not measure (ADR 0042). */
+export type PageSpeedNotMeasuredReason = 'no-key' | 'quota' | 'error';
+
+export interface PageSpeedMeasurement extends PageSpeed {
+  notMeasuredReason?: PageSpeedNotMeasuredReason;
+}
+
 export interface SampleSpeed {
   url: string;
   speed: PageSpeed;
+  notMeasuredReason?: PageSpeedNotMeasuredReason;
 }
 
 const SOURCE = 'pagespeed-insights' as const;
@@ -45,6 +57,29 @@ function notMeasured(reason: SpeedNotMeasuredReason): PageSpeed {
     lab: { status: 'not-measured', source: SOURCE, method: 'lab', reason },
     field: { status: 'not-measured', source: SOURCE, method: 'field', reason },
   };
+}
+
+function notMeasuredWithReason(
+  notMeasuredReason: PageSpeedNotMeasuredReason,
+  reason: SpeedNotMeasuredReason = notMeasuredReason === 'quota' ? 'quota' : 'failed'
+): PageSpeedMeasurement {
+  return {
+    ...notMeasured(reason),
+    notMeasuredReason,
+  };
+}
+
+/**
+ * Returns why PageSpeed Insights did not measure, or null if measured (ADR 0042).
+ */
+export function psiNotMeasuredReason(speed: PageSpeed | SampleSpeed): PageSpeedNotMeasuredReason | null {
+  if ('notMeasuredReason' in speed && speed.notMeasuredReason) {
+    return speed.notMeasuredReason;
+  }
+  const ps = 'speed' in speed ? speed.speed : speed;
+  if (ps.lab.status === 'measured') return null;
+  if (ps.lab.reason === 'quota') return 'quota';
+  return 'error';
 }
 
 /** Lighthouse audit ids for the lab values; the score comes from the performance category. */
@@ -183,13 +218,16 @@ export function psiRequestUrl(pageUrl: string): string {
 }
 
 async function resolveKey(deps: PageSpeedDeps): Promise<string | null> {
+  if (typeof deps.apiKey === 'string' && deps.apiKey.trim()) {
+    return deps.apiKey.trim();
+  }
   if (!deps.resolveServiceKey) return null;
   try {
     const found = await deps.resolveServiceKey('pagespeed');
     const key = typeof found?.apiKey === 'string' ? found.apiKey.trim() : '';
     return key || null;
   } catch {
-    deps.log?.('PageSpeed Insights: the saved key could not be read; asking without a key.');
+    deps.log?.('PageSpeed Insights: the saved key could not be read; no key available.');
     return null;
   }
 }
@@ -203,9 +241,13 @@ function isHttpUrl(url: string): boolean {
   }
 }
 
-async function measureWithKey(pageUrl: string, apiKey: string | null, deps: PageSpeedDeps): Promise<PageSpeed> {
+async function measureWithKey(
+  pageUrl: string,
+  apiKey: string | null,
+  deps: PageSpeedDeps
+): Promise<PageSpeedMeasurement> {
   const log = deps.log ?? (() => {});
-  if (!isHttpUrl(pageUrl)) return notMeasured('failed');
+  if (!isHttpUrl(pageUrl)) return notMeasuredWithReason('error', 'failed');
   // Record why the request could not be made: makeOutboundFetch only answers null.
   const base = deps.net ?? defaultNetDeps;
   let networkFailure: 'timeout' | 'no-network' | null = null;
@@ -239,47 +281,72 @@ async function measureWithKey(pageUrl: string, apiKey: string | null, deps: Page
   if (!res) {
     const reason = networkFailure ?? 'failed';
     log(`PageSpeed Insights: no answer (${reason}).`);
-    return notMeasured(reason);
+    return notMeasuredWithReason('error', reason);
   }
   const text = await res.text().catch(() => '');
   if (res.status !== 200) {
     const quota = isQuotaAnswer(res.status, text);
     log(`PageSpeed Insights: HTTP ${res.status}${quota ? ' (quota)' : ''}.`);
-    return notMeasured(quota ? 'quota' : 'failed');
+    return notMeasuredWithReason(quota ? 'quota' : 'error', quota ? 'quota' : 'failed');
   }
   let body: unknown;
   try {
     body = JSON.parse(text);
   } catch {
     log('PageSpeed Insights: the answer was not JSON.');
-    return notMeasured('failed');
+    return notMeasuredWithReason('error', 'failed');
   }
-  return mapPsiResponse(body, deps.now);
+  const mapped = mapPsiResponse(body, deps.now);
+  if (mapped.lab.status === 'not-measured') {
+    return { ...mapped, notMeasuredReason: 'error' };
+  }
+  return mapped;
 }
 
 /** Lab and field speed of one public page, never throwing; a failure is 'not-measured' with a reason. */
-export async function measurePageSpeed(pageUrl: string, deps: PageSpeedDeps = {}): Promise<PageSpeed> {
-  return measureWithKey(pageUrl, await resolveKey(deps), deps);
+export async function measurePageSpeed(pageUrl: string, deps: PageSpeedDeps = {}): Promise<PageSpeedMeasurement> {
+  const apiKey = await resolveKey(deps);
+  if (!apiKey && !deps.allowKeyless) {
+    deps.log?.('PageSpeed Insights: no API key configured (no-key).');
+    return notMeasuredWithReason('no-key', 'failed');
+  }
+  return measureWithKey(pageUrl, apiKey, deps);
 }
 
-const wasQuota = (s: PageSpeed) => s.lab.status === 'not-measured' && s.lab.reason === 'quota';
+const wasQuota = (s: PageSpeedMeasurement | PageSpeed) =>
+  (s.lab.status === 'not-measured' && s.lab.reason === 'quota') ||
+  ('notMeasuredReason' in s && s.notMeasuredReason === 'quota');
 
 /**
  * One request at a time, in the given order. The key is resolved once. After a quota answer no further request
  * is made: the remaining pages are 'not-measured' with reason 'quota'.
+ * Without a key, pages are reported as 'no-key' without requests (ADR 0042).
  */
 export async function measureSampleSpeeds(pages: readonly string[], deps: PageSpeedDeps = {}): Promise<SampleSpeed[]> {
-  const apiKey = pages.length ? await resolveKey(deps) : null;
+  if (pages.length === 0) return [];
+  const apiKey = await resolveKey(deps);
+  if (!apiKey && !deps.allowKeyless) {
+    deps.log?.('PageSpeed Insights: no API key configured (no-key).');
+    return pages.map((url) => ({
+      url,
+      speed: notMeasured('failed'),
+      notMeasuredReason: 'no-key',
+    }));
+  }
   const out: SampleSpeed[] = [];
   let quotaHit = false;
   for (const url of pages) {
     if (quotaHit) {
-      out.push({ url, speed: notMeasured('quota') });
+      out.push({ url, speed: notMeasured('quota'), notMeasuredReason: 'quota' });
       continue;
     }
     const speed = await measureWithKey(url, apiKey, deps);
     quotaHit = wasQuota(speed);
-    out.push({ url, speed });
+    out.push({
+      url,
+      speed,
+      ...(speed.notMeasuredReason ? { notMeasuredReason: speed.notMeasuredReason } : {}),
+    });
   }
   return out;
 }

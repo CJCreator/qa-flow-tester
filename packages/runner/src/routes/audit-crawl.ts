@@ -272,17 +272,29 @@ export async function runAuditVersion(
     const crawl = await crawlFn(request, {
       signal,
       // The crawl redacts currentPath; the run adds the audit id and version.
-      onProgress: (p) =>
-        run.emit({
-          type: 'progress',
-          auditId: run.auditId,
-          version: run.version,
-          stage: p.stage,
-          pagesFound: p.pagesFound,
-          pagesRecorded: p.pagesRecorded,
-          pagesSkipped: p.pagesSkipped,
-          ...(p.currentPath !== undefined ? { currentPath: p.currentPath } : {}),
-        }),
+      onProgress: (p) => {
+        if ('stage' in p) {
+          run.emit({
+            type: 'progress',
+            auditId: run.auditId,
+            version: run.version,
+            stage: p.stage,
+            pagesFound: p.pagesFound,
+            pagesRecorded: p.pagesRecorded,
+            pagesSkipped: p.pagesSkipped,
+            ...(p.currentPath !== undefined ? { currentPath: p.currentPath } : {}),
+          });
+        } else {
+          run.emit({
+            type: 'page',
+            auditId: run.auditId,
+            version: run.version,
+            path: p.path,
+            state: p.state,
+            ...(p.reason !== undefined ? { reason: p.reason } : {}),
+          });
+        }
+      },
       onRenderedPage: recorder.onRenderedPage,
       ...(services.allowPrivateAddresses ? { allowPrivateAddresses: true } : {}),
     });

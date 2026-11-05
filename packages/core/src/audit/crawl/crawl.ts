@@ -12,7 +12,7 @@
  * passes the guard.
  */
 import { chromium, type Browser, type BrowserContext, type LaunchOptions, type Page } from 'playwright';
-import type { AuditRequest, PageCoverage, PageLink, SkippedPageInfo } from '@qa/types';
+import type { AuditRequest, PageCoverage, PageLink, RouteSkipReason, SkippedPageInfo } from '@qa/types';
 import { BREAKPOINT_VIEWPORTS, getBrowserPolicy, installRequestGuard, type BrowserManager } from '../../browser.js';
 import { isIpLiteral } from '../../address-class.js';
 import { blockChanges } from '../../live-site.js';
@@ -72,7 +72,8 @@ const RULE_SAFE_HOST = /^[a-z0-9_-]+(\.[a-z0-9_-]+)*\.?$/;
 const REFUSALS: Record<AuditAddressCode, string> = {
   ERR_PRIVATE_ADDRESS:
     'This address points to a private or local network. A Website Audit only checks public websites.',
-  ERR_UNREACHABLE: 'The site name could not be found. Check the address for typos.',
+  ERR_UNREACHABLE: 'The site could not be reached.',
+  ERR_DNS: 'The site name could not be found. Check the address for typos.',
 };
 
 /**
@@ -81,10 +82,19 @@ const REFUSALS: Record<AuditAddressCode, string> = {
  */
 export class AuditCrawlRefusedError extends Error {
   readonly code: AuditAddressCode;
-  constructor(code: AuditAddressCode) {
-    super(REFUSALS[code]);
+  constructor(code: AuditAddressCode, message?: string) {
+    super(message ?? REFUSALS[code]);
     this.name = 'AuditCrawlRefusedError';
     this.code = code;
+  }
+}
+
+/** Thrown when the headless browser could not be launched. */
+export class AuditBrowserLaunchError extends Error {
+  readonly code = 'ERR_BROWSER_LAUNCH' as const;
+  constructor(message = 'The browser could not be launched.') {
+    super(message);
+    this.name = 'AuditBrowserLaunchError';
   }
 }
 
@@ -131,9 +141,20 @@ export interface AuditCrawlResult {
   robots?: Pick<RobotsPolicy, 'isAllowed'>;
   /** The crawl ran on a local runner with private addresses allowed (ADR 0042); the link check follows it. */
   allowPrivateAddresses?: boolean;
+  /** When host stopped answering after an outage: number of pages recorded before stopping (ADR 0043). */
+  stoppedAnsweringAfter?: number;
 }
 
-export interface AuditCrawlProgress {
+export type AuditCrawlPageState = 'queued' | 'loading' | 'recorded' | 'retrying' | 'skipped';
+
+export interface AuditCrawlPageProgress {
+  type: 'page';
+  path: string;
+  state: AuditCrawlPageState;
+  reason?: RouteSkipReason;
+}
+
+export interface AuditCrawlSummaryProgress {
   stage: 'crawling';
   pagesFound: number;
   pagesRecorded: number;
@@ -141,6 +162,8 @@ export interface AuditCrawlProgress {
   /** The page just recorded or skipped (redacted). */
   currentPath?: string;
 }
+
+export type AuditCrawlProgress = AuditCrawlSummaryProgress | AuditCrawlPageProgress;
 
 /**
  * In-process seams for tests only (the fixture runs on 127.0.0.1). Nothing in an AuditRequest reaches
@@ -217,7 +240,7 @@ async function pinSiteHosts(start: URL, deps: Pick<NetDeps, 'lookup'>): Promise<
   if (!literal && !RULE_SAFE_HOST.test(host)) throw new AuditCrawlRefusedError('ERR_UNREACHABLE');
   const checked = await resolvePublic(host, deps);
   if (!checked.ok) {
-    throw new AuditCrawlRefusedError(checked.reason === 'private-address' ? 'ERR_PRIVATE_ADDRESS' : 'ERR_UNREACHABLE');
+    throw new AuditCrawlRefusedError(checked.reason === 'private-address' ? 'ERR_PRIVATE_ADDRESS' : 'ERR_DNS');
   }
   if (literal) return [];
   const rules = [`MAP ${host} ${ruleAddress(checked.address)}`];
@@ -299,6 +322,7 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
   let startRecorded = false;
   // A start page that is a tunnel warning or a bot check stops the crawl: the site itself was never read.
   let blocked: InterstitialKind | null = null;
+  let startError: { code: AuditAddressCode; message: string } | null = null;
   const blockedStop = new AbortController();
   const crawlSignal = opts.signal ? AbortSignal.any([opts.signal, blockedStop.signal]) : blockedStop.signal;
 
@@ -307,10 +331,14 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
       context = await deps.browserManager.createContext({ baseUrl: request.url });
     } else {
       // The audit's own Chromium: never the shared BrowserManager, whose pins belong to another run.
-      browser = await launch({
-        headless: true,
-        args: [...CHROMIUM_ARGS, ...(pins.length ? [`--host-resolver-rules=${pins.join(', ')}`] : [])],
-      });
+      try {
+        browser = await launch({
+          headless: true,
+          args: [...CHROMIUM_ARGS, ...(pins.length ? [`--host-resolver-rules=${pins.join(', ')}`] : [])],
+        });
+      } catch (err) {
+        throw new AuditBrowserLaunchError(err instanceof Error ? err.message : undefined);
+      }
       context = await browser.newContext({
         viewport: BREAKPOINT_VIEWPORTS['1440px'],
         baseURL: request.url,
@@ -335,6 +363,8 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
       // One worker per page the pacer lets through at once, so all of them are used (ADR 0043).
       concurrency: pacer.maxInFlight,
       retryBusyHost: true,
+      retryDelayMs: 5000,
+      onPageProgress: (event) => opts.onProgress?.(event),
       ...(process.env.QA_CRAWL_MAX_MINUTES ? {} : { maxDurationMs: AUDIT_MAX_CRAWL_MS }),
       exploreClicks: false,
       followFormActions: false,
@@ -351,6 +381,34 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
         return undefined;
       },
       inspectPage: pageAreaVerdict,
+      onStartPage: async (page, navRes) => {
+        finalUrl = withoutHash(page.url());
+        const signals = await readInterstitialSignals(page);
+        const kind = classifyInterstitial(signals);
+        if (kind) {
+          blocked = kind;
+          blockedStop.abort();
+          return { blocked: kind };
+        }
+        if (!navRes.ok) {
+          const isDns =
+            navRes.error?.kind === 'net' &&
+            (/name_not_resolved|enotfound|dns|getaddrinfo/i.test(navRes.error?.detail ?? '') ||
+              /name_not_resolved|enotfound|dns|getaddrinfo/i.test(navRes.finalUrl));
+          const code: AuditAddressCode = isDns ? 'ERR_DNS' : 'ERR_UNREACHABLE';
+          const message = isDns ? REFUSALS.ERR_DNS : REFUSALS.ERR_UNREACHABLE;
+          startError = { code, message };
+          blockedStop.abort();
+          return { startError: { code, message } };
+        }
+        if (navRes.status && navRes.status >= 400) {
+          const message = `The site answered with error ${navRes.status}.`;
+          startError = { code: 'ERR_UNREACHABLE', message };
+          blockedStop.abort();
+          return { startError: { code: 'ERR_UNREACHABLE', message } };
+        }
+        startRecorded = true;
+      },
       onPage: (page) => {
         recordedKeys.add(skipKey(page.urlPath));
         report(page.urlPath);
@@ -373,7 +431,11 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
         if (opts.onRenderedPage) await opts.onRenderedPage(page, toAuditPage(item));
       },
     });
-    if (blocked) throw new AuditCrawlBlockedError(blocked);
+    if (blocked || result.blocked) throw new AuditCrawlBlockedError((blocked || result.blocked)!);
+    if (startError || result.startRefused) {
+      const err = (startError || result.startRefused)!;
+      throw new AuditCrawlRefusedError(err.code as AuditAddressCode, err.message);
+    }
 
     const pages = result.pages.map(toAuditPage);
     const recorded = new Set(pages.map((p) => skipKey(p.urlPath)));
@@ -425,6 +487,7 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
       crawlDelayMs: robots.crawlDelayMs ?? null,
       robots,
       allowPrivateAddresses: allowPrivate,
+      ...(result.stoppedAnsweringAfter !== undefined ? { stoppedAnsweringAfter: result.stoppedAnsweringAfter } : {}),
     };
   } finally {
     await context?.close().catch(() => {});

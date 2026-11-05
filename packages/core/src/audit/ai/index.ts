@@ -5,7 +5,7 @@
  */
 export { AITimeoutError } from '../../ai/timeout.js';
 
-export { resolveAuditAi, auditAiRequestBudget, isKeyRefused } from './stage-ai.js';
+export { resolveAuditAi, auditAiRequestBudget, isKeyRefused, classifyAiError, redactAiMessage } from './stage-ai.js';
 export type {
   AuditAi,
   AuditAiAnswer,
@@ -15,6 +15,14 @@ export type {
   AuditAiSetup,
   ResolveAuditAiDeps,
 } from './stage-ai.js';
+
+export { preflightAuditAi } from './preflight.js';
+export type {
+  PreflightAuditAiOptions,
+  PreflightKeyResolver,
+  PreflightAiResolver,
+  PreflightTarget,
+} from './preflight.js';
 
 export { AuditAiModelsStore, AUDIT_AI_MODELS_FILE } from './stage-models-store.js';
 export type { AuditAiModelsSave } from './stage-models-store.js';
@@ -48,11 +56,12 @@ export {
   mapPsiResponse,
   isQuotaAnswer,
   psiRequestUrl,
+  psiNotMeasuredReason,
   PSI_ENDPOINT,
   PSI_TIMEOUT_MS,
   PSI_MAX_BYTES,
 } from './pagespeed.js';
-export type { PageSpeedDeps, SampleSpeed } from './pagespeed.js';
+export type { PageSpeedDeps, SampleSpeed, PageSpeedMeasurement, PageSpeedNotMeasuredReason } from './pagespeed.js';
 
 export { assessPages, assessSite } from './assessment.js';
 export type {

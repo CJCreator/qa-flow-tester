@@ -120,12 +120,23 @@ describe('Website Audit start screen: messages next to their fields (REQ-001 AC-
     expect(html).not.toMatch(/<details[^>]*open=""/);
     expect(html).toContain('Limits (optional)');
     expect(html).toContain('50 pages · 5 links deep');
+    expect(html).toContain('This audit will make about 51 AI requests.');
     const details = html.slice(html.indexOf('<details'), html.indexOf('</details>'));
     for (const id of ['audit-maxPages', 'audit-maxDepth', 'audit-includePaths', 'audit-excludePaths'])
       expect(details).toContain(`id="${id}"`);
     expect(details).not.toContain('id="audit-url"');
     const withError = fields({ errors: { maxDepth: 'Max depth must be a whole number from 0 to 100.' } });
     expect(withError).toMatch(/<details[^>]*open=""/);
+  });
+
+  it('shows a link to the active check-up or audit on ERR_RUN_IN_PROGRESS with running info', () => {
+    const html = fields({
+      message: auditErrorText('ERR_RUN_IN_PROGRESS', undefined, undefined, { kind: 'checkup', href: '/check' }),
+      busyRun: { kind: 'checkup', href: '/check' },
+    });
+    expect(html).toContain('href="/check"');
+    expect(html).toContain('Open the Check-up');
+    expect(html).toContain('A Check-up is in progress.');
   });
 
   it('shows the starting state on the button while the request is out', () => {
@@ -208,8 +219,21 @@ describe('Website Audit start screen: progress from the stream', () => {
 
   it('has a label for every stage and a status sentence for every state', () => {
     for (const label of Object.values(AUDIT_STAGE_LABELS)) expect(label).not.toBe('');
+    expect(AUDIT_STAGE_LABELS['writing-documents']).toBe('Writing documents');
+    expect(AUDIT_STAGE_LABELS.ready).toBe('Ready');
     expect(auditStatusText({ status: 'done', progress: null })).toBe('The Website Audit is done.');
     expect(auditStatusText({ status: 'stopped', progress: null, message: 'x' })).toBe('The Website Audit stopped.');
+  });
+
+  it('shows the keep-tab-open notice while working or starting, not when finished', () => {
+    const working = render({ status: 'working', progress });
+    expect(working).toContain('Keep this tab open until the audit finishes.');
+    const starting = render({ status: 'starting' });
+    expect(starting).toContain('Keep this tab open until the audit finishes.');
+    const done = render({ status: 'done', progress });
+    expect(done).not.toContain('Keep this tab open until the audit finishes.');
+    const stopped = render({ status: 'stopped', progress, message: 'Failed' });
+    expect(stopped).not.toContain('Keep this tab open until the audit finishes.');
   });
 });
 
@@ -234,9 +258,18 @@ describe('Website Audit start screen: wording (CONTEXT.md, ADR 0029, ADR 0033)',
           createElement(AuditProgress, { address: 'https://example.com/', state, reconnecting: true })
         )
       ),
-      ...['ERR_UNREACHABLE', 'ERR_PRIVATE_ADDRESS', 'ERR_INVALID_AUDIT', 'ERR_RUN_IN_PROGRESS'].map((code) =>
-        auditErrorText(code)
-      ),
+      ...[
+        'ERR_UNREACHABLE',
+        'ERR_SITE_BLOCKED',
+        'ERR_DNS',
+        'ERR_BROWSER_LAUNCH',
+        'ERR_PIPELINE',
+        'ERR_PRIVATE_ADDRESS',
+        'ERR_INVALID_AUDIT',
+        'ERR_RUN_IN_PROGRESS',
+      ].map((code) => auditErrorText(code)),
+      auditErrorText('ERR_RUN_IN_PROGRESS', undefined, undefined, { kind: 'checkup', href: '/check' }),
+      auditErrorText('ERR_RUN_IN_PROGRESS', undefined, undefined, { kind: 'audit', href: '/audits/123' }),
       auditErrorText(undefined),
     ];
     for (const html of texts) {
@@ -252,6 +285,8 @@ describe('Website Audit start screen: wording (CONTEXT.md, ADR 0029, ADR 0033)',
     expect(files.sort()).toEqual([
       'AuditProgress.tsx',
       'AuditStartScreen.tsx',
+      'AuditStatusChips.tsx',
+      'LivePageList.tsx',
       'audit-start-api.ts',
       'audit-start-form.ts',
     ]);

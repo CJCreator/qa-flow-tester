@@ -4,7 +4,13 @@ import { AUDIT_AREAS } from '@qa/types';
 import type { AIProvider } from '../src/ai/ai-provider.js';
 import { MockAIProvider } from '../src/ai/providers/mock.js';
 import { AITimeoutError } from '../src/ai/timeout.js';
-import { auditAiRequestBudget, resolveAuditAi, type AuditAiRequestBudget } from '../src/audit/ai/stage-ai.js';
+import {
+  auditAiRequestBudget,
+  classifyAiError,
+  redactAiMessage,
+  resolveAuditAi,
+  type AuditAiRequestBudget,
+} from '../src/audit/ai/stage-ai.js';
 import { findClaimWords } from '../src/audit/ai/claim-words.js';
 import {
   assessPages,
@@ -427,5 +433,101 @@ describe('assessPages and assessSite', () => {
       assessPages(pagesInput([page('/a', [])], { signal: controller.signal }), resolution)
     ).rejects.toMatchObject({ name: 'AbortError' });
     expect(fake.requests).toHaveLength(0);
+  });
+
+  describe('classifyAiError (ADR 0042, T-81)', () => {
+    it('maps 401 and 403 to key-expired', () => {
+      expect(classifyAiError(new Error('Request failed with status code 401'))).toBe('key-expired');
+      expect(classifyAiError(new Error('403 Forbidden'))).toBe('key-expired');
+      expect(classifyAiError(new Error('Invalid API key: api key expired'))).toBe('key-expired');
+      expect(classifyAiError({ status: 401, message: 'Unauthorized' })).toBe('key-expired');
+      expect(classifyAiError({ statusCode: 403, message: 'Forbidden' })).toBe('key-expired');
+    });
+
+    it('maps 429 to quota', () => {
+      expect(classifyAiError(new Error('429 Too Many Requests'))).toBe('quota');
+      expect(classifyAiError(new Error('Resource has been exhausted: quota exceeded'))).toBe('quota');
+      expect(classifyAiError(new Error('rate limit reached'))).toBe('quota');
+      expect(classifyAiError({ status: 429, message: 'rate limit' })).toBe('quota');
+    });
+
+    it('maps abort and timeout to timeout', () => {
+      expect(classifyAiError(new AITimeoutError('timed out', 5000))).toBe('timeout');
+      expect(classifyAiError(new DOMException('The user aborted a request.', 'AbortError'))).toBe('timeout');
+      expect(classifyAiError(new Error('Request aborted'))).toBe('timeout');
+      expect(classifyAiError(new Error('Connection timed out'))).toBe('timeout');
+    });
+
+    it('maps 500 and other unexpected errors to provider-error', () => {
+      expect(classifyAiError(new Error('500 Internal Server Error'))).toBe('provider-error');
+      expect(classifyAiError(new Error('upstream 502 Bad Gateway'))).toBe('provider-error');
+      expect(classifyAiError(new Error('Network reset'))).toBe('provider-error');
+      expect(classifyAiError(null)).toBe('provider-error');
+      expect(classifyAiError(undefined)).toBe('provider-error');
+    });
+  });
+
+  describe('redactAiMessage', () => {
+    it('trims to 200 characters and redacts secrets', () => {
+      const msg = redactAiMessage(
+        new Error('Error with key=AIzaSySecretKey123456789 and Bearer ya29.secretToken987654')
+      );
+      expect(msg).toContain('key=[hidden]');
+      expect(msg).toContain('Bearer [hidden]');
+      expect(msg).not.toContain('AIzaSySecretKey');
+      expect(msg).not.toContain('ya29.secretToken');
+
+      const long = 'x'.repeat(300);
+      expect(redactAiMessage(new Error(long))).toBe('x'.repeat(200));
+    });
+  });
+
+  describe('assessPages pool, limiter & onPageAiProgress callback (T-81)', () => {
+    it('calls onPageAiProgress per page with done or not-done', async () => {
+      const fake = scripted([answer([]), new Error('upstream 500')]);
+      const { resolution } = await aiWith(fake.provider);
+      const progress: Array<[string, string]> = [];
+      const onPageAiProgress = vi.fn((path: string, status: 'done' | 'not-done') => {
+        progress.push([path, status]);
+      });
+
+      const results = await assessPages(
+        pagesInput([page('/success', []), page('/failed', [])], { onPageAiProgress }),
+        resolution
+      );
+
+      expect(results).toHaveLength(2);
+      expect(onPageAiProgress).toHaveBeenCalledTimes(2);
+      expect(progress).toEqual([
+        ['/success', 'done'],
+        ['/failed', 'not-done'],
+      ]);
+    });
+
+    it('uses injectable limiter when provided', async () => {
+      const fake = scripted([answer([]), answer([])]);
+      const { resolution } = await aiWith(fake.provider);
+      const limiterCalls: number[] = [];
+      const limiter = vi.fn(async <T>(fn: () => Promise<T>): Promise<T> => {
+        limiterCalls.push(Date.now());
+        return fn();
+      });
+
+      const results = await assessPages(pagesInput([page('/p1', []), page('/p2', [])], { limiter }), resolution);
+
+      expect(results).toHaveLength(2);
+      expect(limiter).toHaveBeenCalledTimes(2);
+    });
+
+    it('respects custom aiInFlight concurrency', async () => {
+      const fake = scripted([answer([]), answer([]), answer([]), answer([])]);
+      const { resolution } = await aiWith(fake.provider);
+      const results = await assessPages(
+        pagesInput([page('/a', []), page('/b', []), page('/c', []), page('/d', [])], { aiInFlight: 2 }),
+        resolution
+      );
+      expect(results).toHaveLength(4);
+      expect(fake.maxInFlight()).toBe(2);
+    });
   });
 });

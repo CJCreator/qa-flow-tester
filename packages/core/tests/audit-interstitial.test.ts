@@ -49,7 +49,11 @@ describe('classifyInterstitial', () => {
     expect(
       classifyInterstitial({ title: 'Blog', text: 'How we use ngrok and dev tunnels to demo our app to clients.' })
     ).toBeNull();
-    expect(classifyInterstitial({ title: '', text: '' })).toBeNull();
+  });
+
+  it('names an empty body as empty', () => {
+    expect(classifyInterstitial({ title: '', text: '' })).toBe('empty');
+    expect(classifyInterstitial({ title: 'App', text: '   \n  ' })).toBe('empty');
   });
 });
 
@@ -107,9 +111,16 @@ describe('AuditCrawlBlockedError', () => {
   it('carries a plain sentence for each kind, with no address or page text', () => {
     const tunnel = new AuditCrawlBlockedError('tunnel-warning');
     const bot = new AuditCrawlBlockedError('bot-check');
+    const empty = new AuditCrawlBlockedError('empty');
     expect(tunnel.kind).toBe('tunnel-warning');
+    expect(tunnel.code).toBe('ERR_SITE_BLOCKED');
     expect(tunnel.message).toMatch(/tunnel's warning page/);
+    expect(bot.kind).toBe('bot-check');
+    expect(bot.code).toBe('ERR_SITE_BLOCKED');
     expect(bot.message).toMatch(/blocks automated visitors/);
+    expect(empty.kind).toBe('empty');
+    expect(empty.code).toBe('ERR_SITE_BLOCKED');
+    expect(empty.message).toMatch(/empty page/);
     expect(tunnel.message).not.toMatch(/devtunnels\.ms|http/);
   });
 });

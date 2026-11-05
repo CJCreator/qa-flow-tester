@@ -22,6 +22,7 @@ export * from './proposal.js';
 export * from './pitch.js';
 export * from './owner-audit.js';
 export * from './generate.js';
+export * from './write-all.js';
 export * from './site-json.js';
 export * from './bundle.js';
 export * from './render-markdown.js';

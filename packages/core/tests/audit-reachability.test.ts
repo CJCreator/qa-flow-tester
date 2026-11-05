@@ -120,21 +120,21 @@ describe('checkAuditAddress', () => {
     expect(net.connects).toHaveLength(1);
   });
 
-  it('reports a name that does not resolve as unreachable (AC-2)', async () => {
+  it('reports a name that does not resolve as ERR_DNS (ADR 0042)', async () => {
     const net = fake({}, {});
     const res = await checkAuditAddress('https://nowhere.test/', { netDeps: net.deps });
-    expect(res).toEqual({ ok: false, code: 'ERR_UNREACHABLE', reason: expect.stringMatching(/could not be found/) });
+    expect(res).toEqual({ ok: false, code: 'ERR_DNS', reason: expect.stringMatching(/could not be found/) });
     const empty = fake({ 'empty.test': [] }, {});
     expect(await checkAuditAddress('https://empty.test/', { netDeps: empty.deps })).toMatchObject({
-      code: 'ERR_UNREACHABLE',
+      code: 'ERR_DNS',
     });
   });
 
-  it('reports 400 and above as unreachable with the status (AC-2)', async () => {
-    for (const status of [400, 404, 500, 503]) {
+  it('passes 400 and above, including 403, to the crawl (ADR 0042)', async () => {
+    for (const status of [400, 403, 404, 500, 503]) {
       const net = fake({ 'site.test': PUBLIC }, { 'https://site.test/': ok(status) });
       const res = await checkAuditAddress('https://site.test/', { netDeps: net.deps });
-      expect(res).toEqual({ ok: false, code: 'ERR_UNREACHABLE', reason: `The site answered with error ${status}.` });
+      expect(res).toEqual({ ok: true, finalUrl: 'https://site.test/', status });
     }
   });
 
@@ -146,14 +146,15 @@ describe('checkAuditAddress', () => {
     });
   });
 
-  it('a final 4xx after a redirect is unreachable', async () => {
+  it('a final 4xx after a redirect passes to the crawl with its status', async () => {
     const net = fake(
       { 'site.test': PUBLIC },
       { 'https://site.test/': redirect('/gone'), 'https://site.test/gone': ok(410) }
     );
-    expect(await checkAuditAddress('https://site.test/', { netDeps: net.deps })).toMatchObject({
-      code: 'ERR_UNREACHABLE',
-      reason: 'The site answered with error 410.',
+    expect(await checkAuditAddress('https://site.test/', { netDeps: net.deps })).toEqual({
+      ok: true,
+      finalUrl: 'https://site.test/gone',
+      status: 410,
     });
   });
 
@@ -216,14 +217,15 @@ describe('checkAuditAddress', () => {
     });
   });
 
-  it('a response cut at the byte cap with 400 or above is unreachable', async () => {
+  it('a response cut at the byte cap with 400 or above passes to the crawl with its status', async () => {
     const net = fake(
       { 'site.test': PUBLIC },
       { 'https://site.test/': { status: 500, headers: {}, body: '', tooLarge: true } }
     );
-    expect(await checkAuditAddress('https://site.test/', { netDeps: net.deps })).toMatchObject({
-      code: 'ERR_UNREACHABLE',
-      reason: 'The site answered with error 500.',
+    expect(await checkAuditAddress('https://site.test/', { netDeps: net.deps })).toEqual({
+      ok: true,
+      finalUrl: 'https://site.test/',
+      status: 500,
     });
   });
 

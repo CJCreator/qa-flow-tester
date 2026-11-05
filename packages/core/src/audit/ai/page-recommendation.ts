@@ -22,6 +22,7 @@
 import type {
   AIMessage,
   AspectGrade,
+  AuditAiStatus,
   AuditArea,
   AuditFinding,
   AuditFindingGroup,
@@ -34,7 +35,13 @@ import { stopIfAborted } from '../../abort.js';
 import { parseJsonAnswer } from '../../plan/ai-planner.js';
 import { logAiFailure, type AreaGrades } from './assessment.js';
 import { findClaimWords } from './claim-words.js';
-import type { AuditAi, AuditAiAnswer, AuditAiResolution } from './stage-ai.js';
+import {
+  classifyAiError,
+  redactAiMessage,
+  type AuditAi,
+  type AuditAiAnswer,
+  type AuditAiResolution,
+} from './stage-ai.js';
 
 /** The rule's first test: this many high-impact findings or more… */
 export const REDESIGN_MIN_HIGH_IMPACT = 3;
@@ -239,13 +246,13 @@ function check(text: string, knownIds: Set<string>): Checked {
 
 /**
  * One request. A caller's stop is passed on (AbortError); any other error (provider, AITimeoutError) is
- * a failure, and no error text is kept. A spent budget is a failure too.
+ * classified into AuditAiStatus and the message is redacted and trimmed. A spent budget is a failure too.
  */
 async function askSafely(
   ai: AuditAi,
   messages: AIMessage[],
   run: RecommendPagesInput
-): Promise<Extract<AuditAiAnswer, { ok: true }> | { ok: false }> {
+): Promise<Extract<AuditAiAnswer, { ok: true }> | { ok: false; status?: AuditAiStatus; error?: string }> {
   stopIfAborted(run.signal);
   try {
     return await ai.ask('assessment', messages, {
@@ -256,8 +263,10 @@ async function askSafely(
     });
   } catch (err) {
     if (run.signal?.aborted) throw err;
+    const status = classifyAiError(err);
+    const error = redactAiMessage(err, 200);
     logAiFailure(ai.provider, err);
-    return { ok: false };
+    return { ok: false, status, error };
   }
 }
 

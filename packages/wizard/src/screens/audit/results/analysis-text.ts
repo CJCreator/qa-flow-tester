@@ -8,6 +8,7 @@ import {
   isDocumentLanguage,
   AUDIT_SCALE,
   type AssessmentNotDoneReason,
+  type AuditAiStatus,
   type AuditArea,
   type AuditFinding,
   type AuditMarketing,
@@ -238,3 +239,43 @@ export function fixFirst(findings: AuditFinding[], limit = 5): AuditFinding[] {
     .slice(0, limit)
     .map((entry) => entry.finding);
 }
+
+// ---------------------------------------------------------------------------------------------------
+// Result notes (T-88, ADR 0042)
+// ---------------------------------------------------------------------------------------------------
+
+/** Whether a note is about AI status or configuration (T-88). */
+export function isAiNote(note: string): boolean {
+  return /\bAI\b/i.test(note);
+}
+
+/** "Only 1 page was read" note text (T-88, ADR 0042). */
+export function onlyOnePageNoteText(): string {
+  return 'Only 1 page was read.';
+}
+
+/** "The site stopped answering after N pages" note text (T-88, ADR 0042). */
+export function siteStoppedAnsweringNoteText(pages: number): string {
+  return `The site stopped answering after ${pages} ${pages === 1 ? 'page' : 'pages'}.`;
+}
+
+/** Speed source note text (T-88, ADR 0042). */
+export function speedSourceNoteText(source: 'pagespeed-insights' | 'this-tool' | 'not-measured'): string {
+  if (source === 'pagespeed-insights') return 'Speed was measured by Google PageSpeed Insights.';
+  if (source === 'this-tool') return 'Speed was measured by this tool.';
+  return 'Speed was not measured.';
+}
+
+/** AI status note text with its reason (T-88, ADR 0042). */
+export function aiStatusNoteText(status: AuditAiStatus, reason?: string): string {
+  if (status === 'ready') return 'AI: ready.';
+  if (status === 'no-key') return 'AI notes need an AI key.';
+  if (status === 'key-expired') return 'The AI key expired. Update it in Audit settings.';
+  if (status === 'quota') return 'The AI quota was reached.';
+  if (status === 'timeout') return 'The AI did not answer in time.';
+  if (status === 'provider-error') {
+    return reason ? `The AI provider returned an error: ${reason}.` : 'The AI provider returned an error.';
+  }
+  return 'AI status: not available.';
+}
+

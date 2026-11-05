@@ -7,6 +7,7 @@ import type {
   AuditMarketing,
   AuditPage,
   PageContent,
+  PageCoverage,
   PageHierarchy,
   TechnologyResult,
 } from '@qa/types/src/browser.js';
@@ -14,6 +15,7 @@ import { FindingsList } from '../src/screens/audit/results/FindingsList';
 import { HierarchyView } from '../src/screens/audit/results/HierarchyView';
 import { PageContentView } from '../src/screens/audit/results/PageContentView';
 import { PageFactsView } from '../src/screens/audit/results/PageFactsView';
+import { SkippedPagesView } from '../src/screens/audit/results/SkippedPagesView';
 
 type Signal = AuditMarketing['signals'][number];
 
@@ -242,6 +244,11 @@ function allViews(): Record<string, string> {
     ),
     findings: render(createElement(FindingsList, { findings })),
     findingsEmpty: render(createElement(FindingsList, { findings: [] })),
+    skipped: render(
+      createElement(SkippedPagesView, {
+        coverage: { found: 2, reached: 1, skipped: [{ urlPath: '/a', why: 'payment' }] },
+      })
+    ),
   };
 }
 
@@ -468,6 +475,94 @@ describe('FindingsList', () => {
   });
 });
 
+describe('SkippedPagesView (T-88, ADR 0018)', () => {
+  const coverage: PageCoverage = {
+    found: 10,
+    reached: 5,
+    skipped: [
+      { urlPath: '/error-500', why: 'http-error' },
+      { urlPath: '/slow-page', why: 'timeout' },
+      { urlPath: '/checkout', why: 'payment' },
+      { urlPath: '/admin', why: 'sign-in' },
+      { urlPath: '/secret', why: 'robots' },
+    ],
+  };
+
+  const sampleFindings: AuditFinding[] = [
+    {
+      id: 'AF-ERR-500',
+      rule: 'http-error',
+      group: 'content',
+      area: 'content',
+      title: 'Server answered with 500 error',
+      detail: 'The page returned HTTP 500.',
+      suggestion: 'Fix server error.',
+      impact: 'high',
+      effort: 'medium',
+      urlPath: '/error-500',
+      sectionId: null,
+      source: 'checker',
+    },
+    {
+      id: 'AF-TIMEOUT',
+      rule: 'timeout',
+      group: 'content',
+      area: 'speed',
+      title: 'Page took over 30s to load',
+      detail: 'The page timed out.',
+      suggestion: 'Improve page loading speed.',
+      impact: 'high',
+      effort: 'medium',
+      urlPath: '/slow-page',
+      sectionId: null,
+      source: 'checker',
+    },
+  ];
+
+  it('groups skipped pages by reason with group headings', () => {
+    const html = render(createElement(SkippedPagesView, { coverage, findings: sampleFindings }));
+    expect(html).toContain('data-skip-group="http-error"');
+    expect(html).toContain('data-skip-group="timeout"');
+    expect(html).toContain('data-skip-group="payment"');
+    expect(html).toContain('data-skip-group="sign-in"');
+    expect(html).toContain('data-skip-group="robots"');
+
+    expect(html).toContain('Website error (HTTP status) (1)');
+    expect(html).toContain('Timed out loading (1)');
+    expect(html).toContain('Payment page (1)');
+    expect(html).toContain('Sign-in required (1)');
+    expect(html).toContain('Excluded by robots.txt (1)');
+  });
+
+  it('links site-caused skipped pages to their finding', () => {
+    const html = render(createElement(SkippedPagesView, { coverage, findings: sampleFindings }));
+    expect(html).toContain('href="#AF-ERR-500"');
+    expect(html).toContain('Finding: Server answered with 500 error');
+    expect(html).toContain('href="#AF-TIMEOUT"');
+    expect(html).toContain('Finding: Page took over 30s to load');
+
+    const paymentGroup = html.slice(
+      html.indexOf('data-skip-group="payment"'),
+      html.indexOf('data-skip-group="sign-in"')
+    );
+    expect(paymentGroup).not.toContain('href="#');
+    expect(paymentGroup).not.toContain('Finding:');
+  });
+
+  it('shows empty message when no pages are skipped', () => {
+    const emptyCoverage: PageCoverage = { found: 5, reached: 5, skipped: [] };
+    const html = render(createElement(SkippedPagesView, { coverage: emptyCoverage, findings: [] }));
+    expect(html).toContain('No pages were skipped.');
+    expect(html).not.toContain('data-skip-group');
+  });
+
+  it('conforms to ADR 0018 wording (no claim words)', () => {
+    const html = render(createElement(SkippedPagesView, { coverage, findings: sampleFindings }));
+    const CLAIM_WORDS = /\b(compliant|compliance|certified|secure|safe|hack-proof|passes WCAG|fully accessible)\b/i;
+    expect(html).not.toMatch(CLAIM_WORDS);
+  });
+});
+
 describe('wording and markup of every view', () => {
   const views = allViews();
 
@@ -513,6 +608,7 @@ describe('wording and markup of every view', () => {
       'PageContentView.tsx',
       'PageFactsView.tsx',
       'FindingsList.tsx',
+      'SkippedPagesView.tsx',
       'analysis-text.ts',
     ]) {
       const source = readFileSync(new URL(`../src/screens/audit/results/${file}`, import.meta.url), 'utf8');

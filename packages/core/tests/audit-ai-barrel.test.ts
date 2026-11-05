@@ -20,6 +20,7 @@ const FUNCTIONS = [
   'mapPsiResponse',
   'isQuotaAnswer',
   'psiRequestUrl',
+  'psiNotMeasuredReason',
   'assessPages',
   'assessSite',
   'recommendPages',

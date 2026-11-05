@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { validateAuditStartBody, type AuditProgressEvent } from '@qa/types/src/browser.js';
+import { validateAuditStartBody, type AuditPageState, type AuditProgressEvent } from '@qa/types/src/browser.js';
 import {
   AUDIT_FIELD_HINTS,
   AUDIT_LIMIT_BOUNDS,
   checkAuditStartForm,
+  estimateAiRequests,
   firstErrorField,
   initialAuditStartForm,
   pathLines,
@@ -14,6 +15,7 @@ import {
   auditStoppedText,
   parseAuditEvent,
   startAudit,
+  stopAudit,
   submitAuditStart,
   watchAudit,
   type AuditEventSource,
@@ -91,6 +93,13 @@ describe('Website Audit start form: defaults and bounds (REQ-002)', () => {
       includePaths: ['/a', '/b'],
       excludePaths: [],
     });
+  });
+
+  it('estimates AI requests as pages + 1', () => {
+    expect(estimateAiRequests(50)).toBe(51);
+    expect(estimateAiRequests('10')).toBe(11);
+    expect(estimateAiRequests('')).toBe(51);
+    expect(estimateAiRequests('invalid')).toBe(51);
   });
 });
 
@@ -221,6 +230,55 @@ describe('Website Audit start request: POST /api/audits (REQ-001 AC-2)', () => {
     );
   });
 
+  it('refuses blocked sites, DNS failures, browser launch failures, and pipeline errors', async () => {
+    const blocked = await startAudit(toAuditStartBody(form()), async () =>
+      reply(422, { error: 'challenge page', code: 'ERR_SITE_BLOCKED' })
+    );
+    expect(blocked.kind === 'refused' && blocked.message).toMatch(/^This website blocks automated visitors/);
+
+    const dns = await startAudit(toAuditStartBody(form()), async () =>
+      reply(422, { error: 'ENOTFOUND', code: 'ERR_DNS' })
+    );
+    expect(dns.kind === 'refused' && dns.message).toMatch(/domain name and try again/);
+
+    const launch = await startAudit(toAuditStartBody(form()), async () =>
+      reply(500, { error: 'browser launch failed', code: 'ERR_BROWSER_LAUNCH' })
+    );
+    expect(launch.kind === 'refused' && launch.message).toMatch(/browser could not start/);
+
+    const pipeline = await startAudit(toAuditStartBody(form()), async () =>
+      reply(500, { error: 'pipeline failed', code: 'ERR_PIPELINE' })
+    );
+    expect(pipeline.kind === 'refused' && pipeline.message).toMatch(/could not finish saving/);
+  });
+
+  it('includes running info and specific message on 409 ERR_RUN_IN_PROGRESS', async () => {
+    const checkupBusy = await startAudit(toAuditStartBody(form()), async () =>
+      reply(409, { error: 'busy', code: 'ERR_RUN_IN_PROGRESS', running: { kind: 'checkup', href: '/check' } })
+    );
+    expect(checkupBusy.kind).toBe('refused');
+    if (checkupBusy.kind !== 'refused') return;
+    expect(checkupBusy.message).toBe('A Check-up is in progress. Start this Website Audit when it has finished.');
+    expect(checkupBusy.running).toEqual({ kind: 'checkup', href: '/check' });
+
+    const auditBusy = await startAudit(toAuditStartBody(form()), async () =>
+      reply(409, { error: 'busy', code: 'ERR_RUN_IN_PROGRESS', running: { kind: 'audit', href: '/audits/123' } })
+    );
+    expect(auditBusy.kind === 'refused' && auditBusy.message).toBe(
+      'A Website Audit is in progress. Start this Website Audit when it has finished.'
+    );
+  });
+
+  it('stops a running audit via stopAudit (POST /api/runner/stop)', async () => {
+    const fetchImpl = vi.fn(async () => reply(200, { aborted: true }));
+    const result = await stopAudit(fetchImpl);
+    expect(result.ok).toBe(true);
+    expect(fetchImpl).toHaveBeenCalledWith('/api/runner/stop', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+  });
+
   it('keeps the runner message for other codes, and a plain sentence when nothing answers', async () => {
     const other = await startAudit(toAuditStartBody(form()), async () =>
       reply(429, { error: 'The shared copy limit is reached for today.', code: 'ERR_BETA_LIMIT' })
@@ -324,10 +382,40 @@ describe('Website Audit progress stream: /api/audits/:id/stream', () => {
     expect(second.closed).toBe(true);
   });
 
-  it('parses only well-formed events', () => {
+  it('parses only well-formed events including snapshot, page, and status', () => {
     expect(parseAuditEvent(JSON.stringify(progressEvent()))).toEqual(progressEvent());
     expect(parseAuditEvent('{"type":"connected","auditId":"abcd1234"}')).toBeNull();
     expect(parseAuditEvent('null')).toBeNull();
+
+    const snapshot = {
+      type: 'snapshot' as const,
+      auditId: 'abcd1234',
+      version: 1,
+      stage: 'crawling' as const,
+      counts: { pagesFound: 10, pagesRecorded: 3, pagesSkipped: 1 },
+      pages: [{ path: '/about', state: 'recorded' as const }],
+      ai: 'ready' as const,
+      speed: 'pagespeed-insights' as const,
+    };
+    expect(parseAuditEvent(JSON.stringify(snapshot))).toEqual(snapshot);
+
+    const page = {
+      type: 'page' as const,
+      auditId: 'abcd1234',
+      version: 1,
+      path: '/contact',
+      state: 'queued' as const,
+    };
+    expect(parseAuditEvent(JSON.stringify(page))).toEqual(page);
+
+    const status = {
+      type: 'status' as const,
+      auditId: 'abcd1234',
+      version: 1,
+      ai: 'key-expired' as const,
+      speed: 'this-tool' as const,
+    };
+    expect(parseAuditEvent(JSON.stringify(status))).toEqual(status);
   });
 
   it('moves the state from starting to working to done or stopped', () => {
@@ -348,5 +436,77 @@ describe('Website Audit progress stream: /api/audits/:id/stream', () => {
       progress: progressEvent(),
       message: 'The Website Audit stopped before it finished.',
     });
+  });
+
+  it('handles snapshot, page, and status in applyAuditEvent', () => {
+    let state: AuditProgressState = { status: 'starting' };
+
+    // snapshot event initialises progress, pages, ai and speed
+    const snapshotEvent: AuditProgressEvent = {
+      type: 'snapshot',
+      auditId: 'abcd1234',
+      version: 1,
+      stage: 'crawling',
+      counts: { pagesFound: 5, pagesRecorded: 2, pagesSkipped: 1 },
+      pages: [
+        { path: '/', state: 'recorded' },
+        { path: '/blog', state: 'loading' },
+      ],
+      ai: 'ready',
+      speed: 'pagespeed-insights',
+    };
+    state = applyAuditEvent(state, snapshotEvent, auditStoppedText);
+    expect(state.status).toBe('working');
+    if (state.status !== 'working') return;
+    expect(state.progress.pagesFound).toBe(5);
+    expect(state.pages).toHaveLength(2);
+    expect(state.ai).toBe('ready');
+    expect(state.speed).toBe('pagespeed-insights');
+
+    // page event updates existing page or appends new
+    const pageUpdate: AuditProgressEvent = {
+      type: 'page',
+      auditId: 'abcd1234',
+      version: 1,
+      path: '/blog',
+      state: 'recorded',
+      ai: 'done',
+    };
+    state = applyAuditEvent(state, pageUpdate, auditStoppedText);
+    expect(state.pages?.find((p) => p.path === '/blog')).toEqual({
+      path: '/blog',
+      state: 'recorded',
+      reason: undefined,
+      ai: 'done',
+    });
+
+    // page event with skip reason
+    const skippedPage: AuditProgressEvent = {
+      type: 'page',
+      auditId: 'abcd1234',
+      version: 1,
+      path: '/admin',
+      state: 'skipped',
+      reason: 'excluded',
+    };
+    state = applyAuditEvent(state, skippedPage, auditStoppedText);
+    expect(state.pages?.find((p) => p.path === '/admin')).toEqual({
+      path: '/admin',
+      state: 'skipped',
+      reason: 'excluded',
+      ai: undefined,
+    });
+
+    // status event updates ai and speed
+    const statusUpdate: AuditProgressEvent = {
+      type: 'status',
+      auditId: 'abcd1234',
+      version: 1,
+      ai: 'key-expired',
+      speed: 'this-tool',
+    };
+    state = applyAuditEvent(state, statusUpdate, auditStoppedText);
+    expect(state.ai).toBe('key-expired');
+    expect(state.speed).toBe('this-tool');
   });
 });

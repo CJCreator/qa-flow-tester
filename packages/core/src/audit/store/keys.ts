@@ -9,8 +9,24 @@
  * Objects that must be removable on their own are kept in a folder of their own, because a backend
  * only deletes whole folders (`deletePrefix`).
  */
-import { AUDIT_ID_PATTERN, SHARE_LINK_ID_PATTERN } from '@qa/types';
+import {
+  AUDIT_DOCUMENT_KINDS,
+  AUDIT_ID_PATTERN,
+  SHARE_LINK_ID_PATTERN,
+  type AuditDocumentKind,
+  type StoredDocumentKind,
+} from '@qa/types';
 import { AuditStoreError } from './backend.js';
+
+export const STORED_DOCUMENT_KINDS: readonly StoredDocumentKind[] = [
+  ...AUDIT_DOCUMENT_KINDS,
+  'pitch-glimpse',
+  'owner-audit',
+];
+
+export function isStoredDocumentKind(value: unknown): value is StoredDocumentKind {
+  return typeof value === 'string' && (STORED_DOCUMENT_KINDS as readonly string[]).includes(value);
+}
 
 export const AUDITS_FOLDER = 'audits';
 export const SHARE_INDEX_FOLDER = 'share-index';
@@ -100,6 +116,18 @@ export function assertVersionFileName(name: unknown): asserts name is string {
   }
 }
 
+export function assertStoredDocumentKind(kind: unknown): asserts kind is StoredDocumentKind {
+  if (!isStoredDocumentKind(kind)) throw refused('document kind');
+}
+
+export type AuditDocFormat = 'markdown' | 'html' | 'md';
+
+export function assertAuditDocFormat(format: unknown): asserts format is AuditDocFormat {
+  if (format !== 'markdown' && format !== 'html' && format !== 'md') {
+    throw refused('document format');
+  }
+}
+
 /** `audits/<auditId>` (a folder). */
 export function auditFolder(auditId: string): string {
   assertAuditId(auditId);
@@ -138,6 +166,23 @@ export function versionFileKey(auditId: string, version: number, name: string): 
   assertVersionFileName(name);
   return `${versionFolder(auditId, version)}/${name}`;
 }
+
+/** Per-version stored audit document: `audits/<auditId>/v<n>/docs/<kind>.<md|html>` (T-83, ADR 0042). */
+export function auditDocPath(
+  auditId: string,
+  version: number,
+  kind: StoredDocumentKind,
+  format: 'markdown' | 'html' | 'md'
+): string {
+  assertAuditId(auditId);
+  assertVersion(version);
+  assertStoredDocumentKind(kind);
+  assertAuditDocFormat(format);
+  const ext = format === 'markdown' || format === 'md' ? 'md' : 'html';
+  return `${versionFolder(auditId, version)}/docs/${kind}.${ext}`;
+}
+
+export const auditDocumentKey = auditDocPath;
 
 /** The Shortlist entry: `audits/<auditId>/shortlist.json`. */
 export function shortlistKey(auditId: string): string {

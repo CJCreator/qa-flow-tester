@@ -384,9 +384,10 @@ describe('AnalysisScreen: the loaded result', () => {
     expect(text).toContain('No page is picked yet.');
   });
 
-  it('puts Findings second, right after the summary, with an index of the sections', () => {
+  it('puts Audit Documents ready right after the summary, followed by Findings, with an index of the sections', () => {
     const at = (id: string) => html.indexOf(`<h2 id="${id}"`);
-    expect(at('audit-summary-title')).toBeLessThan(at('audit-findings-title'));
+    expect(at('audit-summary-title')).toBeLessThan(at('audit-documents-title'));
+    expect(at('audit-documents-title')).toBeLessThan(at('audit-findings-title'));
     for (const id of ['audit-areas-title', 'audit-roadmap-title', 'audit-hierarchy-title', 'audit-pages-title'])
       expect(at('audit-findings-title'), id).toBeLessThan(at(id));
     expect(html).toContain('aria-label="Sections of the results"');
@@ -519,6 +520,8 @@ describe('imports', () => {
   it('reaches @qa/types only through @qa/types/src/browser.js', () => {
     for (const file of [
       '../src/screens/audit/results/AnalysisScreen.tsx',
+      '../src/screens/audit/results/DocumentsReady.tsx',
+      '../src/screens/audit/results/SkippedPagesView.tsx',
       '../src/screens/audit/results/analysis-client.ts',
       './audit-analysis-screen.test.tsx',
     ]) {

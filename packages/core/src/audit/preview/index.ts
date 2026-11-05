@@ -12,6 +12,7 @@ export {
   type PreviewImageResponse,
   type PreviewProblem,
 } from './generate.js';
+export { buildTemplateHtml } from './template.js';
 export {
   previewFacts,
   previewMessages,

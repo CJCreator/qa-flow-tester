@@ -28,6 +28,10 @@ const REFUSALS: Partial<Record<AuditErrorCode, string>> = {
   ERR_AUDIT_NOT_FOUND: 'This Website Audit, version or page was not found. It may have been deleted.',
   ERR_AUDIT_RUNNING: 'This Website Audit is still in progress. Its analysis shows once it has finished.',
   ERR_FORBIDDEN: 'You do not have access to this Website Audit.',
+  ERR_SITE_BLOCKED: 'This site blocks automated visitors.',
+  ERR_DNS: 'The website address could not be resolved.',
+  ERR_BROWSER_LAUNCH: 'The browser could not be launched.',
+  ERR_PIPELINE: 'The Website Audit pipeline encountered an error.',
 };
 
 function isAuditErrorCode(value: unknown): value is AuditErrorCode {

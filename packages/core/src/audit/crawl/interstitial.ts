@@ -45,7 +45,7 @@ export async function addTunnelSkipHeaders(context: Pick<BrowserContext, 'route'
   });
 }
 
-export type InterstitialKind = 'tunnel-warning' | 'bot-check';
+export type InterstitialKind = 'tunnel-warning' | 'bot-check' | 'empty';
 
 /** Text that only a tunnel's warning page or a bot check shows. Matched on the start page only. */
 const TUNNEL_MARKERS = [
@@ -56,12 +56,13 @@ const TUNNEL_MARKERS = [
 const BOT_TITLE = [/^just a moment\.{0,3}$/i, /^attention required!? \| cloudflare$/i];
 const BOT_TEXT = [/checking your browser before accessing/i, /enable javascript and cookies to continue/i];
 
-/** What the start page is, when it is not the site: a tunnel's warning page or a bot check. Null otherwise. */
+/** What the start page is, when it is not the site: a tunnel's warning page, a bot check, or an empty body. Null otherwise. */
 export function classifyInterstitial(page: { title: string; text: string }): InterstitialKind | null {
   const title = page.title.trim();
   const text = page.text.slice(0, 8000);
   if (TUNNEL_MARKERS.some((re) => re.test(text) || re.test(title))) return 'tunnel-warning';
   if (BOT_TITLE.some((re) => re.test(title)) || BOT_TEXT.some((re) => re.test(text))) return 'bot-check';
+  if (text.trim() === '') return 'empty';
   return null;
 }
 
@@ -79,11 +80,14 @@ const BLOCKED_TEXT: Record<InterstitialKind, string> = {
     "The address showed the tunnel's warning page instead of the website. Check that the tunnel allows anonymous access and that the app behind it is running, then start the audit again.",
   'bot-check':
     'The website showed a bot check instead of its pages, so it blocks automated visitors. A Website Audit cannot read it.',
+  'empty':
+    'The website showed an empty page instead of its content. A Website Audit cannot read it.',
 };
 
 /** The start page was a tunnel warning or a bot check, so the audit read nothing of the site. Plain message. */
 export class AuditCrawlBlockedError extends Error {
   readonly kind: InterstitialKind;
+  readonly code = 'ERR_SITE_BLOCKED' as const;
   constructor(kind: InterstitialKind) {
     super(BLOCKED_TEXT[kind]);
     this.name = 'AuditCrawlBlockedError';

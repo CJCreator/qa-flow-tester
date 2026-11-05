@@ -68,7 +68,7 @@ server
   .start()
   .then((url) => {
     // Bound to every address (as in Docker), it's still opened as localhost.
-    const address = url.replace('://0.0.0.0', '://localhost');
+    const address = url.replace('://0.0.0.0', '://localhost').replace('://[::]', '://localhost');
     console.log(`[Release check-up] Open ${address}/ in your browser`);
   })
   .catch((err) => {

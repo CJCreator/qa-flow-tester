@@ -14,6 +14,7 @@ import { createFindingIdAllocator } from '../analysis/finding-ids.js';
 import { readPage, type ReadPageResult } from '../analysis/read-page.js';
 import { accessibilityBasics, type AccessibilityBasicsResult } from '../analysis/accessibility-basics.js';
 import { recordPhoneLayout, type PhoneLayoutRecord } from '../phone-layout.js';
+import { measureBrowserTiming, type BrowserTimingResult } from '../speed/browser-timing.js';
 import type { AuditCrawlPage } from '../crawl/crawl.js';
 import { GroupTracker } from '../../plan/sampling.js';
 
@@ -22,9 +23,15 @@ export interface PageStages {
   readPage: typeof readPage;
   accessibilityBasics: typeof accessibilityBasics;
   recordPhoneLayout: typeof recordPhoneLayout;
+  measureBrowserTiming: typeof measureBrowserTiming;
 }
 
-export const DEFAULT_PAGE_STAGES: PageStages = { readPage, accessibilityBasics, recordPhoneLayout };
+export const DEFAULT_PAGE_STAGES: PageStages = {
+  readPage,
+  accessibilityBasics,
+  recordPhoneLayout,
+  measureBrowserTiming,
+};
 
 export interface PageRecorderOptions {
   /** Local working folder of the version: phone screenshots are written under it, then saved to the store. */
@@ -46,6 +53,8 @@ export interface RecordedPage {
   accessibility?: AccessibilityBasicsResult | null;
   /** Sample Pages only. Null when the step threw. */
   phone?: PhoneLayoutRecord | null;
+  /** Sample Pages only. Lab speed measured by this tool directly in the browser (ADR 0042). Null when the step threw. */
+  timing?: BrowserTimingResult | null;
 }
 
 export class AuditPageRecorder {
@@ -101,6 +110,11 @@ export class AuditPageRecorder {
       });
     } catch {
       entry.accessibility = null;
+    }
+    try {
+      entry.timing = await this.stages.measureBrowserTiming(page);
+    } catch {
+      entry.timing = null;
     }
     try {
       entry.phone = await this.stages.recordPhoneLayout(page, {

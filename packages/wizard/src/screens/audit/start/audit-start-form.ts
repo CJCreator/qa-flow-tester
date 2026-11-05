@@ -68,6 +68,15 @@ export function initialAuditStartForm(): AuditStartForm {
   };
 }
 
+/**
+ * Estimated number of AI requests for an audit: one per page plus one for the whole audit (REQ-002, ADR 0042).
+ */
+export function estimateAiRequests(pages: number | string): number {
+  const n = typeof pages === 'number' ? pages : parseInt(pages.trim(), 10);
+  const valid = Number.isFinite(n) && n > 0 ? n : AUDIT_LIMIT_BOUNDS.defaultPages;
+  return valid + 1;
+}
+
 /** The element id of a field's input. */
 export function fieldId(field: AuditFormField): string {
   return `audit-${field}`;

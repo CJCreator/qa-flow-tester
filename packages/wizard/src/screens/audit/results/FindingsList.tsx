@@ -35,7 +35,7 @@ export function FindingsList({ findings, auditId, version }: FindingsListProps) 
             const isAi = finding.source === 'ai' || finding.advisory === true;
             const pages = finding.pages && finding.pages.length > 1 ? finding.pages : null;
             return (
-              <li key={finding.id} className="card-1 bg-surface p-4" data-finding-id={finding.id}>
+              <li key={finding.id} id={finding.id} className="card-1 bg-surface p-4" data-finding-id={finding.id}>
                 <h3 className="font-bold">{finding.title}</h3>
                 <p className="mt-2 flex flex-wrap items-center gap-2">
                   <span className={`${CHIP} ${IMPACT_CHIP[finding.impact]}`}>

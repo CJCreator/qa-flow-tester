@@ -8,6 +8,7 @@ import { useDocumentTitle } from '../../../lib/title';
 import {
   AUDIT_FIELD_HINTS,
   AUDIT_LIMIT_BOUNDS,
+  estimateAiRequests,
   errorId,
   fieldId,
   firstErrorField,
@@ -23,6 +24,7 @@ import {
   watchAudit,
   type AuditEventSourceFactory,
   type AuditStartOutcome,
+  type RunningInfo,
 } from './audit-start-api';
 import { applyAuditEvent, AuditProgress, type AuditProgressState } from './AuditProgress';
 
@@ -87,6 +89,7 @@ export function AuditStartFields({
   form,
   errors,
   message,
+  busyRun,
   starting,
   onChange,
   onSubmit,
@@ -95,6 +98,8 @@ export function AuditStartFields({
   errors: AuditStartErrors;
   /** A refusal for the whole form, in plain words. */
   message: string | null;
+  /** Info on another active check-up or audit refusing this start. */
+  busyRun?: RunningInfo | null;
   starting: boolean;
   onChange: (form: AuditStartForm) => void;
   onSubmit: () => void;
@@ -201,11 +206,24 @@ export function AuditStartFields({
             />
           </Field>
         </div>
+
+        <p className="mt-4 text-sm text-ink-soft">
+          This audit will make about {estimateAiRequests(form.maxPages)} AI requests.
+        </p>
       </Disclosure>
 
       {message && (
         <div id="audit-start-message">
-          <ErrorMessage>{message}</ErrorMessage>
+          <ErrorMessage>
+            {message}
+            {busyRun && (
+              <span className="mt-2 block">
+                <Link to={busyRun.href} className="font-semibold underline">
+                  {busyRun.kind === 'checkup' ? 'Open the Check-up' : 'Open the Website Audit'}
+                </Link>
+              </span>
+            )}
+          </ErrorMessage>
         </div>
       )}
 
@@ -250,6 +268,7 @@ export function AuditStartScreen({ submit = submitAuditStart, openSource }: Audi
   const [form, setForm] = useState<AuditStartForm>(initialAuditStartForm);
   const [errors, setErrors] = useState<AuditStartErrors>({});
   const [message, setMessage] = useState<string | null>(null);
+  const [busyRun, setBusyRun] = useState<RunningInfo | null>(null);
   const [starting, setStarting] = useState(false);
   const [started, setStarted] = useState<{ reply: AuditStartReply; address: string } | null>(null);
   const [progress, setProgress] = useState<AuditProgressState>({ status: 'starting' });
@@ -293,6 +312,7 @@ export function AuditStartScreen({ submit = submitAuditStart, openSource }: Audi
   const onSubmit = async () => {
     setStarting(true);
     setMessage(null);
+    setBusyRun(null);
     const outcome = await submit(form);
     setStarting(false);
     if (outcome.kind === 'started') {
@@ -305,7 +325,10 @@ export function AuditStartScreen({ submit = submitAuditStart, openSource }: Audi
     const fieldErrors = outcome.errors ?? {};
     focusAfterRefusal.current = firstErrorField(fieldErrors);
     setErrors(fieldErrors);
-    if (outcome.kind === 'refused') setMessage(outcome.message);
+    if (outcome.kind === 'refused') {
+      setMessage(outcome.message);
+      setBusyRun(outcome.running ?? null);
+    }
   };
 
   const finished = progress.status === 'done' || progress.status === 'stopped';
@@ -353,6 +376,7 @@ export function AuditStartScreen({ submit = submitAuditStart, openSource }: Audi
           form={form}
           errors={errors}
           message={message}
+          busyRun={busyRun}
           starting={starting}
           onChange={setForm}
           onSubmit={() => void onSubmit()}

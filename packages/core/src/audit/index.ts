@@ -8,4 +8,5 @@ export * from './documents/index.js';
 export * from './store/index.js';
 export * from './pipeline/index.js';
 export * from './phone-layout.js';
+export * from './speed/index.js';
 export * from './preview/index.js';

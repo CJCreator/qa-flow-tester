@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { AuditGetReply, AuditPage, PageContent, RouteSkipReason } from '@qa/types/src/browser.js';
+import type { AuditGetReply, AuditPage, PageContent } from '@qa/types/src/browser.js';
 import { ErrorMessage, Notice, Spinner } from '../../../components/text';
 import { Page, PageHeader } from '../../../components/ui';
 import { formatDay, scrollBehavior } from '../../../lib/format';
@@ -7,15 +7,19 @@ import { Link, PATHS } from '../../../lib/router';
 import { AuditTabs } from '../AuditTabs';
 import { useDocumentTitle } from '../../../lib/title';
 import { AuditSummary, NotesBanner } from './AuditSummary';
+import { DocumentsReady } from './DocumentsReady';
 import { FindingsList } from './FindingsList';
 import { InternalLinkingView, LeavingSiteView, RoadmapView } from './RoadmapView';
 import { SiteAreasView } from './SiteAreasView';
 import { HierarchyView } from './HierarchyView';
 import { PageContentView } from './PageContentView';
 import { PageFactsView, SiteSignalsView } from './PageFactsView';
+import { SKIP_REASON_TEXT, SkippedPagesView } from './SkippedPagesView';
 import { loadCallerIsHelper } from '../saved/caller-access';
 import { getAuditResult, getPageContent } from './analysis-client';
 import { titleText } from './analysis-text';
+
+export { SKIP_REASON_TEXT, SkippedPagesView };
 
 type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -28,32 +32,10 @@ export type ContentLoad =
   | { status: 'error'; urlPath: string; message: string }
   | { status: 'loaded'; urlPath: string; content: PageContent };
 
-/** Why a Skipped Page was not recorded, in plain words. Every reason says the page was not checked. */
-export const SKIP_REASON_TEXT: Readonly<Record<RouteSkipReason, string>> = {
-  'page-limit': 'over the max pages limit',
-  'depth-limit': 'more link steps from the start address than the max depth allows',
-  excluded: 'left out by the include or exclude paths',
-  payment: 'a payment page: nothing on it is clicked or sent',
-  'did-not-load': 'it did not load',
-  robots: 'robots.txt asks tools not to open it',
-  'sign-in': 'it needs a sign-in, and a Website Audit never signs in',
-  'http-error': 'the website answered with an error',
-  timeout: 'it took too long to load',
-  'off-site-redirect': 'it sends visitors to another website',
-  'time-limit': 'the time limit was reached',
-  'trap-limit': 'stopped to avoid an endless loop of pages',
-  'session-lost': 'the visit was cut off part-way',
-  duplicate: 'the same page as another one',
-};
-
 /** What a page list entry says about where its checks come from. */
 export function pageCheckText(page: AuditPage): string {
   if (page.coverage === 'sample') return 'Sample Page: checked itself';
   return page.sampleUrlPath ? `Checked on its Sample Page ${page.sampleUrlPath}` : 'Checked on its Sample Page';
-}
-
-function skipText(why: RouteSkipReason): string {
-  return SKIP_REASON_TEXT[why] ?? 'reason not recorded';
 }
 
 export interface AnalysisViewProps {
@@ -121,37 +103,6 @@ function PageList({
                 </li>
               );
             })}
-          </ul>
-        </>
-      )}
-    </section>
-  );
-}
-
-function SkippedPages({ reply }: { reply: AuditGetReply }) {
-  const coverage = reply.result!.coverage;
-  return (
-    <section aria-labelledby="audit-skipped-title" className={`${CARD} space-y-3`}>
-      <h2 id="audit-skipped-title" className="text-xl font-bold">
-        Skipped Pages
-      </h2>
-      <p className="text-sm text-ink-soft">
-        {`Pages found: ${coverage.found} · recorded: ${coverage.reached} · skipped: ${coverage.skipped.length}`}
-      </p>
-      {coverage.skipped.length === 0 ? (
-        <p className="text-sm text-ink-soft">No pages were skipped.</p>
-      ) : (
-        <>
-          <p className="text-sm text-ink-soft">
-            A Skipped Page was found but not recorded, so it was not checked: it is not a clean result.
-          </p>
-          <ul className="space-y-1 text-sm">
-            {coverage.skipped.map((page, i) => (
-              <li key={`${page.urlPath}-${i}`}>
-                <span className="break-all font-mono">{page.urlPath}</span>
-                {` · Not checked: ${skipText(page.why)}`}
-              </li>
-            ))}
           </ul>
         </>
       )}
@@ -303,6 +254,9 @@ export function AnalysisView({
               <AuditSummary result={result} />
             </div>
             <div className={CARD}>
+              <DocumentsReady version={reply.version} auditId={reply.version.auditId} />
+            </div>
+            <div className={CARD}>
               <FindingsList
                 findings={result.findings}
                 auditId={reply.version.auditId}
@@ -322,7 +276,7 @@ export function AnalysisView({
               <HierarchyView hierarchy={result.hierarchy} />
             </div>
             <PageList pages={result.pages} selectedPath={selectedPath} onSelect={onSelect} />
-            <SkippedPages reply={reply} />
+            <SkippedPagesView coverage={result.coverage} findings={result.findings} />
             <SelectedPage reply={reply} selectedPath={selectedPath} content={content} />
             <div className={CARD}>
               <InternalLinkingView linking={result.internalLinking} />
@@ -340,6 +294,7 @@ export function AnalysisView({
 /** The sections of the results, in page order, by the id of each heading. */
 export const RESULT_SECTIONS: ReadonlyArray<{ id: string; label: string }> = [
   { id: 'audit-summary-title', label: 'Summary' },
+  { id: 'audit-documents-title', label: 'Audit Documents ready' },
   { id: 'audit-findings-title', label: 'Findings' },
   { id: 'audit-areas-title', label: 'Site areas' },
   { id: 'audit-roadmap-title', label: 'Improvement Roadmap' },

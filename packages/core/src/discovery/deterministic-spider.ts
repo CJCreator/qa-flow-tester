@@ -23,7 +23,8 @@ import type { RobotsPolicy } from '../competitive/robots.js';
 import type { HostPacer } from '../host-pacer.js';
 import { exploreInteractiveStates, type ReadForm } from './interactive-states.js';
 import { inferCrud, readCrudStructure, probeDeleteConfirm } from './crud-facts.js';
-import { navigate, toTelemetry, looksLikeLogin } from '../navigate.js';
+import { navigate, toTelemetry, looksLikeLogin, type NavigateResult } from '../navigate.js';
+import type { InterstitialKind } from '../audit/crawl/interstitial.js';
 import { debugLog } from '../debug-log.js';
 import { normalizeRoute, CrawlFrontier } from './frontier.js';
 import { dismissOverlays } from './overlay.js';
@@ -82,6 +83,10 @@ export interface SpiderResult {
   routes?: RouteTelemetry[];
   sessionLost?: boolean;
   startRedirectedOffSite?: boolean;
+  /** When host stopped answering after an outage: number of pages recorded before stopping (ADR 0043). */
+  stoppedAnsweringAfter?: number;
+  blocked?: InterstitialKind;
+  startRefused?: { code: string; message: string };
 }
 
 export type SkippedPage = SkippedPageInfo;
@@ -167,6 +172,26 @@ export interface CrawlOptions {
   onRecordedPage?: (page: Page, item: SpiderPageInventoryItem) => Promise<void>;
   /** Told about each Skipped Page as it is listed, for progress. */
   onSkipped?: (info: SkippedPageInfo) => void;
+  /** Pause in ms before retrying a network error (ADR 0043), default 0. */
+  retryDelayMs?: number;
+  /** Per-page progress events (ADR 0042 / T-79). */
+  onPageProgress?: (event: {
+    type: 'page';
+    path: string;
+    state: 'queued' | 'loading' | 'recorded' | 'retrying' | 'skipped';
+    reason?: RouteSkipReason;
+  }) => void;
+  /** Clock seam for tests. */
+  now?: () => number;
+  /** Timer seam for tests. */
+  sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
+  /** Check start address during outage probe (default: probes startUrl with outboundFetch). */
+  outageCheck?: (url: string) => Promise<boolean>;
+  /** Called when the start page is loaded to check for interstitial or refusal before crawl proceeds. */
+  onStartPage?: (
+    page: Page,
+    navRes: NavigateResult
+  ) => Promise<{ blocked?: InterstitialKind; startError?: { code: string; message: string } } | void>;
 }
 
 /** Links and buttons that would end a signed-in session. */
@@ -377,11 +402,28 @@ export class DeterministicSpider {
     const defaultMaxDurationMs = envMinutes && !isNaN(envMinutes) ? envMinutes * 60 * 1000 : 10 * 60 * 1000;
     const maxDurationMs = options.maxDurationMs ?? defaultMaxDurationMs;
     const pageTimeoutMs = options.pageTimeoutMs ?? 10_000;
-    const startTime = Date.now();
+    const clockNow = options.now ?? Date.now;
+    const clockSleep =
+      options.sleep ??
+      ((ms: number, sig?: AbortSignal) =>
+        new Promise<void>((resolve, reject) => {
+          if (sig?.aborted) return reject(sig.reason ?? new DOMException('Aborted', 'AbortError'));
+          const onAb = () => {
+            clearTimeout(t);
+            reject(sig?.reason ?? new DOMException('Aborted', 'AbortError'));
+          };
+          const t = setTimeout(() => {
+            sig?.removeEventListener('abort', onAb);
+            resolve();
+          }, ms);
+          sig?.addEventListener('abort', onAb, { once: true });
+        }));
+
+    const startTime = clockNow();
     const deadline = Math.min(options.deadlineAt ?? Infinity, startTime + maxDurationMs);
     let timedOut = false;
     /** Milliseconds left before the deadline (Infinity when there is none). */
-    const timeLeft = () => deadline - Date.now();
+    const timeLeft = () => deadline - clockNow();
     /** A wait or timeout cut to the time left, so work started near the deadline cannot overrun it. */
     const capToDeadline = (ms: number) => Math.max(1, Math.min(ms, timeLeft()));
     /** Navigation limits that fit inside the time left: no retry, and a shorter settle, once time is short. */
@@ -398,7 +440,7 @@ export class DeterministicSpider {
     const pacer = options.pacer;
     const pacerSignal = pacer
       ? AbortSignal.any([
-          AbortSignal.timeout(Math.max(0, Math.min(deadline - Date.now(), 2 ** 31 - 1))),
+          AbortSignal.timeout(Math.max(0, Math.min(deadline - clockNow(), 2 ** 31 - 1))),
           ...(options.signal ? [options.signal] : []),
         ])
       : undefined;
@@ -425,6 +467,16 @@ export class DeterministicSpider {
     }
     const queue: QueueItem[] = [];
 
+    let consecutiveNetFailures = 0;
+    let isOutagePaused = false;
+    let stoppedAnswering = false;
+    let stoppedAnsweringAfter: number | undefined;
+    let startBlocked: InterstitialKind | undefined;
+    let startRefused: { code: string; message: string } | undefined;
+    const outageFailedPages: Array<{ item: QueueItem; path: string; asAsked: string }> = [];
+    const outageRetriedKeys = new Set<string>();
+    const requeuedKeys = new Set<string>();
+
     let activeWorkers = 0;
     let attemptsCount = 0;
     let idleResolvers: (() => void)[] = [];
@@ -441,6 +493,7 @@ export class DeterministicSpider {
     const skip = (info: SkippedPageInfo) => {
       skipped.push(info);
       options.onSkipped?.(info);
+      options.onPageProgress?.({ type: 'page', path: info.urlPath, state: 'skipped', reason: info.why });
     };
     /** Route keys `admitPath` turned away: asked once per address, listed once. */
     const refusedKeys = new Set<string>();
@@ -451,8 +504,8 @@ export class DeterministicSpider {
     const tooDeep = new Map<string, string>();
 
     const enqueue = (rawUrl: string, depth: number, isStart = false) => {
-      if (options.signal?.aborted || sessionLost || startRedirectedOffSite) return;
-      if (Date.now() >= deadline) {
+      if (options.signal?.aborted || sessionLost || startRedirectedOffSite || stoppedAnswering) return;
+      if (clockNow() >= deadline) {
         timedOut = true;
         return;
       }
@@ -500,6 +553,7 @@ export class DeterministicSpider {
       }
 
       queue.push({ url: u.toString(), depth });
+      options.onPageProgress?.({ type: 'page', path: redactUrl(u.pathname), state: 'queued' });
       notifyWork();
     };
 
@@ -610,11 +664,11 @@ export class DeterministicSpider {
     let lastLoadAt = 0;
     const waitForPacing = async () => {
       if (pageDelayMs > 0) {
-        const now = Date.now();
+        const now = clockNow();
         const waitMs = Math.max(0, lastLoadAt + pageDelayMs - now);
         if (waitMs > 0) {
           lastLoadAt = Math.max(lastLoadAt, now) + pageDelayMs;
-          await new Promise((res) => setTimeout(res, Math.max(0, Math.min(waitMs, timeLeft()))));
+          await clockSleep(Math.max(0, Math.min(waitMs, timeLeft())), options.signal);
         } else {
           lastLoadAt = now;
         }
@@ -683,6 +737,13 @@ export class DeterministicSpider {
       let recorded = false;
       let exploreErrors = 0;
 
+      while (isOutagePaused && !options.signal?.aborted && !stoppedAnswering) {
+        await waitForWork();
+      }
+      if (stoppedAnswering || options.signal?.aborted || startBlocked || startRefused) return;
+
+      options.onPageProgress?.({ type: 'page', path: requestedAsAsked, state: 'loading' });
+
       try {
         if (!pacer) await waitForPacing();
         // Opened after the deadline: not loaded, counted with the rest of the time-limit skips.
@@ -700,6 +761,10 @@ export class DeterministicSpider {
               ...navLimits(pageTimeoutMs),
               needLinks: true,
               who: options.role || (isRoleSignedIn ? 'signed-in' : 'visitor'),
+              retryDelayMs: options.retryDelayMs,
+              onRetry: () => {
+                options.onPageProgress?.({ type: 'page', path: requestedAsAsked, state: 'retrying' });
+              },
             })
           );
         } catch (err: unknown) {
@@ -733,16 +798,39 @@ export class DeterministicSpider {
           return;
         }
 
-        // The host says it is busy (ADR 0043): it is asked less often from now on, and this page is loaded once
-        // more after the wait it asked for. A failed retry keeps the first answer.
-        if (pacer && options.retryBusyHost && navRes.ok && (navRes.status === 429 || navRes.status === 503)) {
-          pacer.slowDown(new URL(fullUrl).host, navRes.retryAfterMs);
+        if (requestedDepth === 0 && options.onStartPage) {
+          const check = await options.onStartPage(page, navRes);
+          if (check?.blocked) {
+            startBlocked = check.blocked;
+            return;
+          }
+          if (check?.startError) {
+            startRefused = check.startError;
+            return;
+          }
+        }
+
+        // The host says it is busy or answers 5xx (ADR 0043): slow down on 429/503, retry once
+        if (
+          pacer &&
+          options.retryBusyHost &&
+          navRes.ok &&
+          (navRes.status === 429 || (navRes.status !== undefined && navRes.status >= 500 && navRes.status < 600))
+        ) {
+          if (navRes.status === 429 || navRes.status === 503) {
+            pacer.slowDown(new URL(fullUrl).host, navRes.retryAfterMs);
+          }
+          options.onPageProgress?.({ type: 'page', path: requestedAsAsked, state: 'retrying' });
           try {
             const again = await paced(fullUrl, () =>
               navigate(page, fullUrl, {
                 ...navLimits(pageTimeoutMs),
                 needLinks: true,
                 who: options.role || (isRoleSignedIn ? 'signed-in' : 'visitor'),
+                retryDelayMs: options.retryDelayMs,
+                onRetry: () => {
+                  options.onPageProgress?.({ type: 'page', path: requestedAsAsked, state: 'retrying' });
+                },
               })
             );
             navRes = { ...again, attempts: navRes.attempts + again.attempts };
@@ -778,11 +866,23 @@ export class DeterministicSpider {
 
         // Classification 1: Navigation did not succeed (timeout, network error)
         if (!navRes.ok) {
+          if (navRes.error?.kind === 'net') {
+            consecutiveNetFailures++;
+            outageFailedPages.push({
+              item: { url: requested, depth: requestedDepth },
+              path: requestedPath,
+              asAsked: requestedAsAsked,
+            });
+          } else {
+            consecutiveNetFailures = 0;
+            outageFailedPages.length = 0;
+          }
+
           // A load cut short by the crawl's own deadline is a time-limit skip, not a slow page.
           const skipWhy: RouteSkipReason =
             timeLeft() <= 0 ? 'time-limit' : navRes.error?.kind === 'timeout' ? 'timeout' : 'did-not-load';
           if (skipWhy === 'time-limit') timedOut = true;
-          const detail = navRes.error?.kind || 'net';
+          const detail = navRes.error?.kind === 'timeout' ? `${navRes.durationMs}ms` : navRes.error?.kind || 'net';
           telemetry.outcome = 'skipped';
           telemetry.skipReason = skipWhy;
           telemetry.detail = detail;
@@ -797,8 +897,70 @@ export class DeterministicSpider {
             attempts: telemetry.attempts,
             ms: telemetry.durationMs,
           });
+
+          if (consecutiveNetFailures >= 3 && !isOutagePaused) {
+            isOutagePaused = true;
+            const probeFn =
+              options.outageCheck ??
+              (async (u: string) => {
+                const fetchFn =
+                  options.outboundFetch ??
+                  makeOutboundFetch({
+                    timeoutMs: 5000,
+                  });
+                try {
+                  const r = await fetchFn(u);
+                  return r !== null && r.status > 0;
+                } catch {
+                  return false;
+                }
+              });
+            let answered = false;
+            const intervalMs = 10_000;
+            const maxWaitMs = 60_000;
+            let elapsed = 0;
+            while (elapsed < maxWaitMs && !options.signal?.aborted) {
+              await clockSleep(intervalMs, options.signal);
+              elapsed += intervalMs;
+              if (options.signal?.aborted) break;
+              try {
+                const ok = await probeFn(targetUrl);
+                if (ok) {
+                  answered = true;
+                  break;
+                }
+              } catch {}
+            }
+
+            if (answered) {
+              consecutiveNetFailures = 0;
+              isOutagePaused = false;
+              for (const failed of outageFailedPages) {
+                if (!outageRetriedKeys.has(failed.path)) {
+                  outageRetriedKeys.add(failed.path);
+                  requeuedKeys.add(failed.path);
+                  queue.unshift(failed.item);
+                  const sIdx = skipped.findIndex((s) => s.urlPath === failed.asAsked);
+                  if (sIdx !== -1) skipped.splice(sIdx, 1);
+                  const rIdx = routes.findIndex((r) => r.requestedPath === redactUrl(failed.path));
+                  if (rIdx !== -1) routes.splice(rIdx, 1);
+                  options.onPageProgress?.({ type: 'page', path: failed.asAsked, state: 'queued' });
+                }
+              }
+              outageFailedPages.length = 0;
+              notifyWork();
+            } else {
+              stoppedAnswering = true;
+              stoppedAnsweringAfter = pages.length;
+              isOutagePaused = false;
+              notifyWork();
+            }
+          }
           return;
         }
+
+        consecutiveNetFailures = 0;
+        outageFailedPages.length = 0;
 
         // Classification 2: Bounce / sign-in wall / session loss (Scope 6)
         // Must be checked before first-landing rebase so a start URL sent to another host's sign-in
@@ -1147,6 +1309,7 @@ export class DeterministicSpider {
         telemetry.skipReason = undefined;
         if (retried) telemetry.detail = 'session-recovered';
         routes.push(telemetry);
+        options.onPageProgress?.({ type: 'page', path: currentPath, state: 'recorded' });
         debugLog('crawl', 'route recorded', {
           path: telemetry.requestedPath,
           status: telemetry.status,
@@ -1296,7 +1459,10 @@ export class DeterministicSpider {
           !sessionLost &&
           !startRedirectedOffSite &&
           !timedOut &&
-          Date.now() < deadline &&
+          !stoppedAnswering &&
+          !startBlocked &&
+          !startRefused &&
+          clockNow() < deadline &&
           pages.length < this.maxPages &&
           attemptsCount < maxAttempts
         ) {
@@ -1306,7 +1472,8 @@ export class DeterministicSpider {
           while (queue.length > 0) {
             const item = queue.shift()!;
             const norm = normRoute(item.url);
-            if (!frontier.isVisited(norm.key)) {
+            if (!frontier.isVisited(norm.key) || requeuedKeys.has(norm.key)) {
+              requeuedKeys.delete(norm.key);
               frontier.markVisited(norm.key);
               requestedItem = item;
               requestedPath = norm.key;
@@ -1331,7 +1498,10 @@ export class DeterministicSpider {
               sessionLost ||
               startRedirectedOffSite ||
               timedOut ||
-              Date.now() >= deadline ||
+              stoppedAnswering ||
+              startBlocked ||
+              startRefused ||
+              clockNow() >= deadline ||
               options.signal?.aborted
             ) {
               break;
@@ -1349,7 +1519,7 @@ export class DeterministicSpider {
     options.signal?.removeEventListener('abort', onAbort);
 
     // If deadline passed, session was lost, or maxPages reached: drain remaining queue entries
-    if (timedOut || Date.now() >= deadline) {
+    if (timedOut || clockNow() >= deadline) {
       let count = 0;
       for (const left of queue) {
         const norm = normRoute(left.url);
@@ -1404,6 +1574,9 @@ export class DeterministicSpider {
       routes,
       sessionLost,
       startRedirectedOffSite,
+      ...(stoppedAnsweringAfter !== undefined ? { stoppedAnsweringAfter } : {}),
+      ...(startBlocked ? { blocked: startBlocked } : {}),
+      ...(startRefused ? { startRefused } : {}),
     };
   }
 

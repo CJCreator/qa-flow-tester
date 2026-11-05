@@ -261,11 +261,23 @@ async function exists(file: string): Promise<boolean> {
 
 export { redactedMessage };
 
+/** Encloses an IPv6 host in square brackets if not already bracketed so it can be used in a URL. */
+export function bracketHost(host: string): string {
+  const trimmed = host.trim();
+  return trimmed.includes(':') && !trimmed.startsWith('[') ? `[${trimmed}]` : trimmed;
+}
+
 /** The Host header names this computer. A page that points a name it controls at this port (DNS rebinding) doesn't. */
 function isLoopbackHost(host: string | undefined): boolean {
   if (!host) return false;
   try {
-    return LOOPBACK_HOSTS.includes(new URL(`http://${host}`).hostname);
+    const raw = host.trim();
+    const formatted =
+      raw.includes(':') && !raw.startsWith('[') && !raw.includes(']') && (raw.match(/:/g) || []).length > 1
+        ? `[${raw}]`
+        : raw;
+    const hostname = new URL(`http://${formatted}`).hostname;
+    return LOOPBACK_HOSTS.includes(hostname) || isLoopbackBindHost(hostname);
   } catch {
     return false;
   }
@@ -1037,7 +1049,7 @@ export class RunnerServer {
     return new Promise((resolve, reject) => {
       this.server = http.createServer(async (req, res) => {
         try {
-          const url = new URL(req.url || '/', `http://${this.host}:${this.port}`);
+          const url = new URL(req.url || '/', `http://${bracketHost(this.host)}:${this.port}`);
           const pathname = url.pathname;
 
           // A host's health check asks this and nothing else: it says the server is up and shows no data.
@@ -1450,7 +1462,7 @@ export class RunnerServer {
       });
 
       this.server.listen(this.port, this.host, () => {
-        resolve(`http://${this.host}:${this.port}`);
+        resolve(`http://${bracketHost(this.host)}:${this.port}`);
       });
       this.server.on('error', reject);
     });

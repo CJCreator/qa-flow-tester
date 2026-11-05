@@ -20,7 +20,7 @@ export const AUDIT_ADDRESS_TIMEOUT_MS = 30_000;
 /** The body is not needed; a small cap keeps the check cheap. */
 const MAX_BYTES = 64 * 1024;
 
-export type AuditAddressCode = 'ERR_PRIVATE_ADDRESS' | 'ERR_UNREACHABLE';
+export type AuditAddressCode = 'ERR_PRIVATE_ADDRESS' | 'ERR_UNREACHABLE' | 'ERR_DNS';
 
 export type AuditAddressResult =
   { ok: true; finalUrl: string; status: number } | { ok: false; code: AuditAddressCode; reason: string };
@@ -98,23 +98,20 @@ export async function checkAuditAddress(url: string, opts: AuditAddressOptions =
   }
 
   if (res.ok) {
-    if (res.status > 0 && res.status < 400) return { ok: true, finalUrl: res.finalUrl, status: res.status };
-    return unreachable(res.status >= 400 ? `The site answered with error ${res.status}.` : MESSAGES.error);
+    if (res.status > 0) return { ok: true, finalUrl: res.finalUrl, status: res.status };
+    return unreachable(MESSAGES.error);
   }
   switch (res.reason) {
     case 'private-address':
       return { ok: false, code: 'ERR_PRIVATE_ADDRESS', reason: MESSAGES.private };
     case 'too-large':
-      // Cut at the byte cap: the status line arrived, so the site answered. A cut 3xx was not followed
-      // (safeGet stops before reading Location), so only a 2xx counts here.
-      if (res.status !== undefined && res.status >= 200 && res.status < 300 && lastUrl) {
+      // Cut at the byte cap: the status line arrived, so the site answered.
+      if (res.status !== undefined && res.status >= 200 && lastUrl) {
         return { ok: true, finalUrl: lastUrl, status: res.status };
       }
-      return unreachable(
-        res.status !== undefined && res.status >= 400 ? `The site answered with error ${res.status}.` : MESSAGES.error
-      );
+      return unreachable(MESSAGES.error);
     case 'dns-failed':
-      return unreachable(timedOut ? MESSAGES.timeout : MESSAGES.dns);
+      return timedOut ? unreachable(MESSAGES.timeout) : { ok: false, code: 'ERR_DNS', reason: MESSAGES.dns };
     case 'timeout':
       return unreachable(MESSAGES.timeout);
     case 'redirected':

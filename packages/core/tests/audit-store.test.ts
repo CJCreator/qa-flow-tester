@@ -7,12 +7,14 @@ import {
   AuditRecordError,
   AuditStore,
   AuditStoreError,
+  auditDocPath,
   auditRecordKey,
   helperIndexKey,
   LocalAuditStoreBackend,
   resultKey,
   shareIndexKey,
   shortlistKey,
+  STORED_DOCUMENT_KINDS,
   versionFileKey,
   versionJsonKey,
   versionRecordKey,
@@ -80,6 +82,9 @@ describe('key layout', () => {
     expect(versionJsonKey(id, 2, 'pages/home')).toBe('audits/AbCdEf12_-/v2/pages/home.json');
     expect(versionFileKey(id, 2, 'preview.html')).toBe('audits/AbCdEf12_-/v2/preview.html');
     expect(versionFileKey(id, 2, 'screenshots/home-phone.png')).toBe('audits/AbCdEf12_-/v2/screenshots/home-phone.png');
+    expect(auditDocPath(id, 2, 'structure', 'markdown')).toBe('audits/AbCdEf12_-/v2/docs/structure.md');
+    expect(auditDocPath(id, 2, 'structure', 'html')).toBe('audits/AbCdEf12_-/v2/docs/structure.html');
+    expect(auditDocPath(id, 2, 'pitch-glimpse', 'markdown')).toBe('audits/AbCdEf12_-/v2/docs/pitch-glimpse.md');
     expect(shortlistKey(id)).toBe('audits/AbCdEf12_-/shortlist.json');
     const linkId = 'A'.repeat(22);
     expect(shareIndexKey(linkId)).toBe(`share-index/${linkId}`);
@@ -99,6 +104,12 @@ describe('key layout', () => {
     }
     for (const bad of ['../x.png', '.hidden', 'a/../b.png', 'page.json', 'a/b/c/d.png', '', 'a\\b.png']) {
       expect(() => versionFileKey('abcdefgh', 1, bad)).toThrow(AuditStoreError);
+    }
+    for (const bad of ['invalid', 'pdf', 'docx', 'bundle', ''] as const) {
+      expect(() => auditDocPath('abcdefgh', 1, bad as any, 'markdown')).toThrow(AuditStoreError);
+    }
+    for (const bad of ['pdf', 'docx', 'png', 'txt', ''] as const) {
+      expect(() => auditDocPath('abcdefgh', 1, 'structure', bad as any)).toThrow(AuditStoreError);
     }
   });
 });
@@ -210,6 +221,61 @@ describe('AuditStore: audits and versions (REQ-028)', () => {
     await expect(store.writeVersionJson(auditId, 3, 'edits', {})).rejects.toMatchObject({ code: 'not-found' });
   });
 
+  it('saves and reads audit documents in markdown and html (T-83)', async () => {
+    const { auditId } = await store.createAudit(REQUEST);
+    await store.saveAuditDocument(auditId, 1, 'structure', 'markdown', '# Structure\n');
+    await store.saveAuditDocument(auditId, 1, 'structure', 'html', '<h1>Structure</h1>');
+    expect(await store.readAuditDocument(auditId, 1, 'structure', 'markdown')).toBe('# Structure\n');
+    expect(await store.readAuditDocument(auditId, 1, 'structure', 'html')).toBe('<h1>Structure</h1>');
+    expect(await store.readAuditDocument(auditId, 1, 'findings', 'markdown')).toBeNull();
+
+    // Round trip with Tamil characters
+    const tamilText = '# கட்டமைப்பு\n';
+    await store.saveAuditDocument(auditId, 1, 'content', 'markdown', tamilText);
+    expect(await store.readAuditDocument(auditId, 1, 'content', 'markdown')).toBe(tamilText);
+  });
+
+  it('refuses invalid document kind, format or missing version (T-83)', async () => {
+    const { auditId } = await store.createAudit(REQUEST);
+    await expect(store.saveAuditDocument(auditId, 1, 'bad-kind' as any, 'markdown', 'text')).rejects.toThrow(
+      AuditStoreError
+    );
+    await expect(store.saveAuditDocument(auditId, 1, 'structure', 'docx' as any, 'text')).rejects.toThrow(
+      AuditStoreError
+    );
+    await expect(store.saveAuditDocument(auditId, 1, 'structure', 'markdown', 123 as any)).rejects.toThrow(
+      AuditRecordError
+    );
+    await expect(store.saveAuditDocument(auditId, 2, 'structure', 'markdown', 'text')).rejects.toMatchObject({
+      code: 'not-found',
+    });
+    await expect(store.readAuditDocument(auditId, 1, 'bad-kind' as any, 'markdown')).rejects.toThrow(AuditStoreError);
+  });
+
+  it('records stored documents on version update (T-83)', async () => {
+    const { auditId } = await store.createAudit(REQUEST);
+    const updated = await store.updateVersion(auditId, 1, {
+      documents: [
+        {
+          kind: 'structure',
+          status: 'ready',
+          title: 'Structure',
+          formats: ['markdown', 'html'],
+          updatedAt: '2026-11-03T10:00:00.000Z',
+        },
+        {
+          kind: 'findings',
+          status: 'not-written',
+          title: 'Findings',
+          reason: 'Render error',
+        },
+      ],
+    });
+    expect(updated.documents).toHaveLength(2);
+    expect(updated.documents![0]).toMatchObject({ kind: 'structure', status: 'ready' });
+    expect(updated.documents![1]).toMatchObject({ kind: 'findings', status: 'not-written', reason: 'Render error' });
+  });
+
   it('refuses bad ids, versions and names before touching the backend', async () => {
     const watched = spy(backend);
     const s = new AuditStore(watched);
@@ -227,6 +293,8 @@ describe('AuditStore: audits and versions (REQ-028)', () => {
       () => s.writeVersionJson('abcdefgh', 1, 'version', {}),
       () => s.putVersionFile('abcdefgh', 1, '../x.png', new Uint8Array(1)),
       () => s.getVersionFile('abcdefgh', 1, 'a/../b'),
+      () => s.saveAuditDocument(bad, 1, 'structure', 'markdown', 'x'),
+      () => s.readAuditDocument(bad, 1, 'structure', 'markdown'),
       () => s.getShortlist(bad),
       () => s.putShortlist(bad, { mark: 'pitch' }),
       () => s.createShare(bad, { version: 1, kind: 'pitch', language: 'en' }),

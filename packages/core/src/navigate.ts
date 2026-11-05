@@ -13,6 +13,10 @@ export interface NavigateOptions {
   needLinks?: boolean;
   /** 'visitor' or a role name (copied into telemetry) */
   who?: string;
+  /** Pause in ms before retrying a network error (ADR 0043), default 0 */
+  retryDelayMs?: number;
+  /** Called before a retry attempt */
+  onRetry?: () => void;
 }
 
 export interface NavigateResult {
@@ -33,7 +37,7 @@ export interface NavigateResult {
   /** The main response's Retry-After, in ms (seconds or an HTTP date), when it sent one. */
   retryAfterMs?: number;
   /** Kind only, never message text */
-  error?: { kind: 'timeout' | 'net' | 'aborted' | 'other' };
+  error?: { kind: 'timeout' | 'net' | 'aborted' | 'other'; detail?: string };
 }
 
 /** A Retry-After value in ms: delay-seconds or an HTTP date. Undefined when absent or unreadable. */
@@ -163,6 +167,7 @@ export async function navigate(page: Page, url: string, options?: NavigateOption
   const retries = options?.retries ?? 1;
   const settleMs = options?.settleMs ?? 3000;
   const needLinks = options?.needLinks ?? false;
+  const retryDelayMs = options?.retryDelayMs ?? 0;
 
   const startTime = Date.now();
   const maxAttempts = 1 + Math.max(0, retries);
@@ -213,12 +218,20 @@ export async function navigate(page: Page, url: string, options?: NavigateOption
           attempts: attempt,
           durationMs: Date.now() - startTime,
           settled: false,
-          error: { kind: errInfo.kind },
+          error: { kind: errInfo.kind, detail: err instanceof Error ? err.message : undefined },
         };
       }
+      options?.onRetry?.();
       // On retryable errors (timeout, net, other), reset the pending navigation with about:blank
       if (!page.isClosed()) {
         await page.goto('about:blank', { timeout: 2000 }).catch(() => {});
+      }
+      if (retryDelayMs > 0 && errInfo.kind === 'net' && !page.isClosed()) {
+        if (typeof page.waitForTimeout === 'function') {
+          await page.waitForTimeout(retryDelayMs).catch(() => {});
+        } else {
+          await new Promise((r) => setTimeout(r, retryDelayMs));
+        }
       }
     }
   }

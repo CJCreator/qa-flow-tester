@@ -11,10 +11,12 @@ import type {
   AIProviderType,
   AuditAiModels,
   AuditAiStage,
+  AuditAiStatus,
 } from '@qa/types';
 import { modelForStage } from '@qa/types';
 import { completeWith, createAIProvider, type AIProvider } from '../../ai/ai-provider.js';
 import type { KeyResolver } from '../../ai/key-resolver.js';
+import { AITimeoutError } from '../../ai/timeout.js';
 import { stopIfAborted } from '../../abort.js';
 import { findClaimWords } from './claim-words.js';
 
@@ -71,6 +73,71 @@ export function isKeyRefused(err: unknown): boolean {
       message
     )
   );
+}
+
+/**
+ * Redacts secrets (API keys, Bearer tokens, URLs with key=) from an error message,
+ * collapses whitespace, and trims to `maxChars` (default 200).
+ */
+export function redactAiMessage(raw: unknown, maxChars = 200): string {
+  const text = raw instanceof Error ? raw.message : String(raw ?? '');
+  return text
+    .replace(/key=[^&\s"']+/gi, 'key=[hidden]')
+    .replace(/Bearer\s+[\w.-]+/gi, 'Bearer [hidden]')
+    .replace(/\b(sk-[\w-]{8,}|AIza[\w-]{20,}|ya29\.[\w.-]{8,})/g, '[hidden]')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, maxChars);
+}
+
+/**
+ * Maps an error to `AuditAiStatus` (ADR 0042, T-81):
+ * - 401/403 -> 'key-expired'
+ * - 429 -> 'quota'
+ * - abort or timeout -> 'timeout'
+ * - other -> 'provider-error'
+ */
+export function classifyAiError(err: unknown): AuditAiStatus {
+  if (err == null) return 'provider-error';
+
+  if (
+    err instanceof AITimeoutError ||
+    (typeof err === 'object' &&
+      'name' in err &&
+      (err.name === 'AITimeoutError' || err.name === 'AbortError' || err.name === 'TimeoutError'))
+  ) {
+    return 'timeout';
+  }
+
+  const raw = err instanceof Error ? `${err.name} ${err.message}` : String(err);
+  const status =
+    typeof err === 'object' && err !== null
+      ? ((err as { status?: unknown; statusCode?: unknown }).status ?? (err as { statusCode?: unknown }).statusCode)
+      : undefined;
+  const statusNum = typeof status === 'number' ? status : Number(status);
+
+  if (/\b(timeout|timed out|abort|aborted)\b/i.test(raw)) {
+    return 'timeout';
+  }
+
+  if (
+    statusNum === 401 ||
+    statusNum === 403 ||
+    /\b(401|403)\b/.test(raw) ||
+    /api key (expired|invalid|not valid)|unauthorized|forbidden/i.test(raw)
+  ) {
+    return 'key-expired';
+  }
+
+  if (
+    statusNum === 429 ||
+    /\b429\b/.test(raw) ||
+    /quota|rate limit|too many requests|insufficient (credits|balance|quota)|billing/i.test(raw)
+  ) {
+    return 'quota';
+  }
+
+  return 'provider-error';
 }
 
 export interface AuditAiAskOptions {

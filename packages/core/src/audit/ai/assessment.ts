@@ -10,6 +10,7 @@ import type {
   AreaAssessment,
   AspectGrade,
   AssessmentNotDoneReason,
+  AuditAiStatus,
   AuditArea,
   AuditFinding,
   DocumentLanguage,
@@ -21,7 +22,13 @@ import { AUDIT_AREAS, DOCUMENT_LANGUAGE_INFO } from '@qa/types';
 import { stopIfAborted } from '../../abort.js';
 import { parseJsonAnswer } from '../../plan/ai-planner.js';
 import { findClaimWords } from './claim-words.js';
-import type { AuditAi, AuditAiAnswer, AuditAiResolution } from './stage-ai.js';
+import {
+  classifyAiError,
+  redactAiMessage,
+  type AuditAi,
+  type AuditAiAnswer,
+  type AuditAiResolution,
+} from './stage-ai.js';
 
 /** The deterministic grade of each area; null or missing when nothing in the area was checked. */
 export type AreaGrades = Partial<Record<AuditArea, AspectGrade | null>>;
@@ -46,6 +53,12 @@ export interface AssessmentRunOptions {
 
 export interface AssessPagesInput extends AssessmentRunOptions {
   pages: AssessmentPageInput[];
+  /** Concurrency limit; defaults to AUDIT_AI_IN_FLIGHT (4). */
+  aiInFlight?: number;
+  /** Optional custom limiter/pool function. */
+  limiter?: <T>(fn: () => Promise<T>) => Promise<T>;
+  /** Optional per-page progress callback (ADR 0042, T-81). */
+  onPageAiProgress?: (path: string, status: 'done' | 'not-done') => void;
 }
 
 export interface AssessSiteInput extends AssessmentRunOptions {
@@ -87,15 +100,31 @@ export const AUDIT_AI_IN_FLIGHT = 4;
 /** Assesses each page, AUDIT_AI_IN_FLIGHT at a time; the answers keep the pages' order. */
 export async function assessPages(input: AssessPagesInput, ai: AuditAiResolution): Promise<PageAssessment[]> {
   const out: PageAssessment[] = new Array(input.pages.length);
+
+  const assessPageAtIndex = async (index: number): Promise<PageAssessment> => {
+    stopIfAborted(input.signal);
+    const page = input.pages[index];
+    const res = await assessOnePage(page, input, ai);
+    out[index] = res;
+    const pageStatus: 'done' | 'not-done' = res.areas.some((a) => a.status === 'done') ? 'done' : 'not-done';
+    input.onPageAiProgress?.(page.urlPath, pageStatus);
+    return res;
+  };
+
+  if (input.limiter) {
+    await Promise.all(input.pages.map((_, index) => input.limiter!(() => assessPageAtIndex(index))));
+    return out;
+  }
+
+  const poolSize = input.aiInFlight ?? AUDIT_AI_IN_FLIGHT;
   let next = 0;
   const worker = async () => {
     while (next < input.pages.length) {
       const index = next++;
-      stopIfAborted(input.signal);
-      out[index] = await assessOnePage(input.pages[index], input, ai);
+      await assessPageAtIndex(index);
     }
   };
-  const workers = Math.min(AUDIT_AI_IN_FLIGHT, input.pages.length);
+  const workers = Math.min(Math.max(1, poolSize), input.pages.length);
   await Promise.all(Array.from({ length: workers }, worker));
   return out;
 }
@@ -232,13 +261,17 @@ async function askParsed(
 
 /**
  * One request. A caller's stop is passed on (AbortError); any other error (provider, AITimeoutError)
- * is 'ai-failed', and no error text is kept.
+ * is classified into AuditAiStatus and the message is redacted and trimmed.
  */
 async function askSafely(
   ai: AuditAi,
   messages: AIMessage[],
   run: AssessmentRunOptions
-): Promise<Extract<AuditAiAnswer, { ok: true }> | { ok: false; reason: 'ai-failed' | 'budget-spent' }> {
+): Promise<
+  | Extract<AuditAiAnswer, { ok: true }>
+  | { ok: false; reason: 'ai-failed'; status: AuditAiStatus; error: string }
+  | { ok: false; reason: 'budget-spent' }
+> {
   stopIfAborted(run.signal);
   try {
     const answer = await ai.ask('assessment', messages, {
@@ -250,8 +283,10 @@ async function askSafely(
     return answer;
   } catch (err) {
     if (run.signal?.aborted) throw err;
+    const status = classifyAiError(err);
+    const error = redactAiMessage(err, 200);
     logAiFailure(ai.provider, err);
-    return { ok: false, reason: 'ai-failed' };
+    return { ok: false, reason: 'ai-failed', status, error };
   }
 }
 

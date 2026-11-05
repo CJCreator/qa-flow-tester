@@ -1,16 +1,42 @@
-import type { AuditProgressEvent, AuditStage } from '@qa/types/src/browser.js';
+import type { AuditAiStatus, AuditPageState, AuditProgressEvent, AuditStage } from '@qa/types/src/browser.js';
 import { count } from '../../../lib/format';
+import { AuditStatusChips, type AuditSpeedSource } from './AuditStatusChips';
+import { LivePageList } from './LivePageList';
 
 export type AuditProgressSnapshot = Extract<AuditProgressEvent, { type: 'progress' }>;
 
 /** Where a Website Audit stands, as the start screen shows it. */
 export type AuditProgressState =
-  | { status: 'starting' }
-  | { status: 'working'; progress: AuditProgressSnapshot }
-  | { status: 'done'; progress: AuditProgressSnapshot | null }
-  | { status: 'stopped'; progress: AuditProgressSnapshot | null; message: string };
+  | {
+      status: 'starting';
+      pages?: AuditPageState[];
+      ai?: AuditAiStatus;
+      speed?: AuditSpeedSource;
+    }
+  | {
+      status: 'working';
+      progress: AuditProgressSnapshot;
+      pages?: AuditPageState[];
+      ai?: AuditAiStatus;
+      speed?: AuditSpeedSource;
+    }
+  | {
+      status: 'done';
+      progress: AuditProgressSnapshot | null;
+      pages?: AuditPageState[];
+      ai?: AuditAiStatus;
+      speed?: AuditSpeedSource;
+    }
+  | {
+      status: 'stopped';
+      progress: AuditProgressSnapshot | null;
+      message: string;
+      pages?: AuditPageState[];
+      ai?: AuditAiStatus;
+      speed?: AuditSpeedSource;
+    };
 
-export const AUDIT_STAGE_LABELS: Readonly<Record<AuditStage, string>> = {
+export const AUDIT_STAGE_LABELS: Readonly<Record<AuditStage | 'ready', string>> = {
   'checking-address': 'Checking the address',
   crawling: 'Reading the pages',
   'checking-pages': 'Checking the Sample Pages',
@@ -19,9 +45,20 @@ export const AUDIT_STAGE_LABELS: Readonly<Record<AuditStage, string>> = {
   ranking: 'Ranking what to repair first',
   'writing-documents': 'Writing documents',
   saving: 'Saving the results',
+  ready: 'Ready',
 };
 
-const STAGE_ORDER = Object.keys(AUDIT_STAGE_LABELS) as AuditStage[];
+export const STAGE_ORDER: readonly (AuditStage | 'ready')[] = [
+  'checking-address',
+  'crawling',
+  'checking-pages',
+  'measuring-speed',
+  'assessing',
+  'ranking',
+  'writing-documents',
+  'saving',
+  'ready',
+];
 
 /** The sentence the live region reads out: the stage only, so path changes do not chatter. */
 export function auditStatusText(state: AuditProgressState): string {
@@ -45,21 +82,131 @@ export function applyAuditEvent(
 ): AuditProgressState {
   if (state.status === 'done' || state.status === 'stopped') return state;
   const last = state.status === 'starting' ? null : state.progress;
-  if (event.type === 'progress') return { status: 'working', progress: event };
-  if (event.type === 'done') return { status: 'done', progress: last };
-  if (event.type === 'failed') return { status: 'stopped', progress: last, message: stoppedText(event) };
+  const pages = 'pages' in state && state.pages ? state.pages : undefined;
+  const ai = 'ai' in state ? state.ai : undefined;
+  const speed = 'speed' in state ? state.speed : undefined;
+
+  if (event.type === 'snapshot') {
+    const progress: AuditProgressSnapshot = {
+      type: 'progress',
+      auditId: event.auditId,
+      version: event.version,
+      stage: event.stage,
+      pagesFound: event.counts.pagesFound,
+      pagesRecorded: event.counts.pagesRecorded,
+      pagesSkipped: event.counts.pagesSkipped,
+      currentPath: last?.currentPath,
+    };
+    return {
+      status: 'working',
+      progress,
+      pages: [...event.pages],
+      ai: event.ai ?? ai,
+      speed: event.speed ?? speed,
+    };
+  }
+
+  if (event.type === 'page') {
+    const existing = pages ?? [];
+    const index = existing.findIndex((p) => p.path === event.path);
+    const updatedPage: AuditPageState = {
+      path: event.path,
+      state: event.state,
+      reason: event.reason,
+      ai: event.ai,
+    };
+    const nextPages =
+      index >= 0
+        ? [...existing.slice(0, index), { ...existing[index], ...updatedPage }, ...existing.slice(index + 1)]
+        : [...existing, updatedPage];
+
+    const updatedProgress = last
+      ? {
+          ...last,
+          currentPath: event.state === 'loading' ? event.path : last.currentPath,
+        }
+      : null;
+
+    if (!updatedProgress) {
+      return {
+        ...state,
+        pages: nextPages,
+        ...(ai ? { ai } : {}),
+        ...(speed ? { speed } : {}),
+      };
+    }
+    return {
+      status: 'working',
+      progress: updatedProgress,
+      pages: nextPages,
+      ...(ai ? { ai } : {}),
+      ...(speed ? { speed } : {}),
+    };
+  }
+
+  if (event.type === 'status') {
+    if (state.status === 'starting') {
+      return {
+        status: 'starting',
+        ...(pages ? { pages } : {}),
+        ai: event.ai,
+        speed: event.speed,
+      };
+    }
+    return {
+      ...state,
+      ...(pages ? { pages } : {}),
+      ai: event.ai,
+      speed: event.speed,
+    };
+  }
+
+  if (event.type === 'progress') {
+    return {
+      status: 'working',
+      progress: event,
+      ...(pages ? { pages } : {}),
+      ...(ai ? { ai } : {}),
+      ...(speed ? { speed } : {}),
+    };
+  }
+
+  if (event.type === 'done') {
+    return {
+      status: 'done',
+      progress: last,
+      ...(pages ? { pages } : {}),
+      ...(ai ? { ai } : {}),
+      ...(speed ? { speed } : {}),
+    };
+  }
+
+  if (event.type === 'failed') {
+    return {
+      status: 'stopped',
+      progress: last,
+      message: stoppedText(event),
+      ...(pages ? { pages } : {}),
+      ...(ai ? { ai } : {}),
+      ...(speed ? { speed } : {}),
+    };
+  }
+
   return state;
 }
 
 /**
- * A Website Audit's progress from its stream: the stage, the pages recorded and the Skipped Pages so far,
- * then done or stopped. Counts only; there is no verdict on the website.
+ * A Website Audit's progress from its stream: the stage stepper, live status chips, counters,
+ * live page list with skip reasons and AI state, then done or stopped.
+ * English only (ADR 0033). Never judges the website.
  */
 export function AuditProgress({
   address,
   state,
   reconnecting = false,
   streamEnded = false,
+  elapsedMs,
+  onStop,
 }: {
   address: string;
   state: AuditProgressState;
@@ -67,10 +214,16 @@ export function AuditProgress({
   streamEnded?: boolean;
   /** The stream dropped and the browser is reconnecting. */
   reconnecting?: boolean;
+  /** Elapsed time in milliseconds for testing or fixed displays. */
+  elapsedMs?: number;
+  /** Callback to stop the audit. */
+  onStop?: () => void | Promise<void>;
 }) {
   const progress = state.status === 'starting' ? null : state.progress;
   const stageIndex = progress ? STAGE_ORDER.indexOf(progress.stage) : -1;
   const finished = state.status === 'done';
+  const stopped = state.status === 'stopped';
+  const running = !finished && !stopped;
 
   return (
     <section
@@ -85,7 +238,7 @@ export function AuditProgress({
         {auditStatusText(state)}
       </div>
 
-      <ol className="mb-6 mt-4 space-y-2" aria-label="Stages">
+      <ol className="mb-4 mt-4 space-y-2" aria-label="Stages">
         {STAGE_ORDER.map((stage, i) => {
           const step =
             finished || i < stageIndex ? 'done' : i === stageIndex && state.status === 'working' ? 'current' : 'todo';
@@ -112,7 +265,11 @@ export function AuditProgress({
         })}
       </ol>
 
-      <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3" data-testid="audit-counts">
+      {running && <p className="mt-2 text-sm text-ink-soft">Keep this tab open until the audit finishes.</p>}
+
+      <AuditStatusChips ai={'ai' in state ? state.ai : undefined} speed={'speed' in state ? state.speed : undefined} />
+
+      <dl className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3" data-testid="audit-counts">
         <div>
           <dt className="text-sm text-ink-soft">Pages found</dt>
           <dd className="text-xl font-bold">{progress?.pagesFound ?? 0}</dd>
@@ -127,29 +284,36 @@ export function AuditProgress({
         </div>
       </dl>
 
+      <LivePageList
+        pages={'pages' in state && state.pages ? state.pages : []}
+        elapsedMs={elapsedMs}
+        onStop={onStop}
+        stopped={!running}
+      />
+
       {state.status === 'working' && progress?.currentPath && (
         <p className="mt-4 break-all font-mono text-sm text-ink-soft">Reading {progress.currentPath}</p>
       )}
 
-      {streamEnded && state.status !== 'done' && state.status !== 'stopped' ? (
+      {streamEnded && !finished && !stopped ? (
         <p role="alert" className="mt-4 text-sm text-warn">
           The progress stream ended, so this page cannot show more. Open the Website Audit's history to see where it
           stands.
         </p>
       ) : (
         reconnecting &&
-        state.status !== 'done' &&
-        state.status !== 'stopped' && <p className="mt-4 text-sm text-warn">The connection dropped. Reconnecting…</p>
+        !finished &&
+        !stopped && <p className="mt-4 text-sm text-warn">The connection dropped. Reconnecting…</p>
       )}
 
-      {state.status === 'done' && (
+      {finished && (
         <p className="mt-6 rounded-card border border-stamp bg-stamp-tint px-4 py-3 font-semibold text-ink">
           The Website Audit is done: {count(progress?.pagesRecorded ?? 0, 'page', 'pages')} recorded,{' '}
           {count(progress?.pagesSkipped ?? 0, 'Skipped Page', 'Skipped Pages')}. A Skipped Page was not checked.
         </p>
       )}
 
-      {state.status === 'stopped' && (
+      {stopped && (
         <div role="alert" className="mt-6 rounded-card border border-fail bg-fail-tint px-4 py-3 text-fail">
           <p className="font-semibold">The Website Audit stopped.</p>
           <p className="mt-1">{state.message}</p>

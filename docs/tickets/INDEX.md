@@ -31,13 +31,13 @@ Reworked 2026-11-05 against `main` at `5bef5e9`, after the redesign (#56) and th
 | id | title | gaps | priority | size | wave | status | depends on |
 |---|---|---|---|---|---|---|---|
 | [T-79](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-79-website-audit-contract) | Website Audit contract | A3, A5, A7, A9, A10, A11, A13 | P0 | M | 1 | built | - |
-| [T-80](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-80-the-crawl-specific-errors-3-pages-at-a-time-rides-out-an-outage) | The crawl: specific errors, 3 pages at a time, rides out an outage | A5, A6, A7, A13 | P0 | L | 2 | todo | T-79 |
-| [T-81](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-81-ai-notes-on-every-page-in-parallel-with-the-real-reason) | AI notes on every page, in parallel, with the real reason | A3, A7 | P0 | M | 2 | todo | T-79 |
-| [T-82](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-82-speed-without-a-pagespeed-key) | Speed without a PageSpeed key | A4 | P1 | M | 2 | todo | T-79 |
-| [T-83](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-83-audit-documents-written-when-the-audit-ends) | Audit Documents written when the audit ends | A11 | P1 | M | 2 | todo | T-79 |
-| [T-87](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-87-start-screen-and-live-progress-on-the-redesigned-screens) | Start screen and live progress (on the redesigned screens) | A5, A8, A10 | P0 | L | 2 | todo | T-79 |
-| [T-88](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-88-results-landing-on-the-redesigned-workspace) | Results landing (on the redesigned workspace) | A3, A4, A11 | P1 | M | 2 | todo | T-79 |
-| [T-90](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-90-a-runner-bound-to-an-ipv6-address) | A runner bound to an IPv6 address | A14 | P2 | S | 2 | todo | - |
+| [T-80](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-80-the-crawl-specific-errors-3-pages-at-a-time-rides-out-an-outage) | The crawl: specific errors, 3 pages at a time, rides out an outage | A5, A6, A7, A13 | P0 | L | 2 | built | T-79 |
+| [T-81](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-81-ai-notes-on-every-page-in-parallel-with-the-real-reason) | AI notes on every page, in parallel, with the real reason | A3, A7 | P0 | M | 2 | built | T-79 |
+| [T-82](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-82-speed-without-a-pagespeed-key) | Speed without a PageSpeed key | A4 | P1 | M | 2 | built | T-79 |
+| [T-83](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-83-audit-documents-written-when-the-audit-ends) | Audit Documents written when the audit ends | A11 | P1 | M | 2 | built | T-79 |
+| [T-87](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-87-start-screen-and-live-progress-on-the-redesigned-screens) | Start screen and live progress (on the redesigned screens) | A5, A8, A10 | P0 | L | 2 | built | T-79 |
+| [T-88](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-88-results-landing-on-the-redesigned-workspace) | Results landing (on the redesigned workspace) | A3, A4, A11 | P1 | M | 2 | built | T-79 |
+| [T-90](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-90-a-runner-bound-to-an-ipv6-address) | A runner bound to an IPv6 address | A14 | P2 | S | 2 | built | - |
 | [T-84](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-84-pipeline-wiring) | Pipeline wiring | A3, A4, A7, A11, A13 | P0 | M | 3 | todo | T-79, T-80, T-81, T-82, T-83 |
 | [T-85](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-85-runner-specific-errors-logs-recovery) | Runner: specific errors, logs, recovery | A5, A9, A10, A11 | P0 | M | 3 | todo | T-79, T-80, T-81, T-83 |
 | [T-86](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-86-hosted-audits-for-the-signed-in-owner) | Hosted audits for the signed-in owner | A8 | P1 | M | 4 | todo | T-85 |
