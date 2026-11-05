@@ -100,8 +100,8 @@ describe('top bar: two areas and Settings', () => {
   });
 
   it('keeps the in-progress dot with its spoken label, off the check-up screens', () => {
-    expect(topBar({ name: 'settings' }, false, true)).toContain('aria-label="(a check-up is in progress)"');
-    expect(topBar({ name: 'audits' }, false, true)).toContain('aria-label="(a check-up is in progress)"');
+    expect(topBar({ name: 'settings' }, false, true)).toContain('aria-label="A check-up is in progress" role="status"');
+    expect(topBar({ name: 'audits' }, false, true)).toContain('aria-label="A check-up is in progress" role="status"');
     for (const name of ['new', 'scan', 'plan', 'testing'] as const) {
       expect(topBar({ name }, false, true), name).not.toContain('a check-up is in progress');
     }

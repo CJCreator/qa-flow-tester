@@ -35,7 +35,7 @@ const CHECKUP_SCREENS: Route['name'][] = ['new', 'scan', 'plan', 'testing'];
 /** A check-up is running somewhere else: a small cobalt dot with a spoken label. */
 function InProgressDot() {
   return (
-    <span className="relative ml-2 flex h-2 w-2" aria-label="(a check-up is in progress)" role="img">
+    <span className="relative ml-2 flex h-2 w-2" aria-label="A check-up is in progress" role="status">
       <span className="absolute inline-flex h-full w-full rounded-full bg-stamp motion-safe:animate-ping" />
       <span className="relative inline-flex h-2 w-2 rounded-full bg-stamp" />
     </span>
@@ -144,7 +144,7 @@ export function TopBar({
                 onClick={() => openPalette('shortcuts')}
                 className={`${SHORTCUT_BUTTON} min-w-[44px] justify-center`}
                 title="Keyboard shortcuts (?)"
-                aria-label="Keyboard shortcuts"
+                aria-label="Keyboard shortcuts (?)"
               >
                 <kbd className={KEY_CAP}>?</kbd>
               </button>

@@ -27,7 +27,7 @@ export function isDenial(test: Parameters<typeof intentOf>[0]): boolean {
 
 /** Whether the item was planned during the scan or added once it ended; nothing for older plans. */
 export function originLabel(origin: 'while-crawling' | 'after-crawl' | undefined): string | null {
-  if (origin === 'while-crawling') return 'Planned while scanning';
+  if (origin === 'while-crawling') return 'Planned during the check-up';
   if (origin === 'after-crawl') return 'Added after the scan';
   return null;
 }

@@ -31,12 +31,18 @@ export function ErrorMessage({ children }: { children: ReactNode }) {
 }
 
 /**
- * A working indicator with its words. `announce` (default) makes it a status message; inside a button or another
- * live region pass `announce={false}`, so screen readers don't hear it twice.
+ * A working indicator with its words. It is always a status message with an accessible label, so screen readers
+ * announce what is in progress.
  */
-export function Spinner({ label, announce = true }: { label: string; announce?: boolean }) {
+export function Spinner({
+  label,
+}: {
+  label: string;
+  /** @deprecated Ignored: every indicator is a labelled status. Kept so existing callers still compile. */
+  announce?: boolean;
+}) {
   return (
-    <span className="inline-flex items-center gap-2" role={announce ? 'status' : undefined}>
+    <span className="inline-flex items-center gap-2" role="status" aria-label={label}>
       <svg aria-hidden="true" className="h-5 w-5 animate-spin motion-reduce:animate-none" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeOpacity="0.3" strokeWidth="3" />
         <path d="M21 12a9 9 0 0 0-9-9" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />

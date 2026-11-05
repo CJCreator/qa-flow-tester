@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { navigate, PATHS, type Route } from '../lib/router';
 import { scrollBehavior } from '../lib/format';
+import { readSingleKeyShortcuts, writeSingleKeyShortcuts } from '../lib/shortcuts';
 import { downloadPlanMarkdown } from '../api';
 
 export interface CommandAction {
@@ -74,6 +75,27 @@ const PLAN_KEYS: Array<[string, string]> = [
 const KEY_CAP = 'rounded-control border border-edge bg-surface px-1.5 py-0.5 font-mono text-xs text-ink';
 const TAB =
   'inline-flex min-h-[44px] items-center rounded-control px-3 text-sm font-bold transition-colors duration-fast';
+
+/** Switches the single-key shortcuts (j, k, g, G) on or off. The choice is saved on this computer. */
+function SingleKeyToggle() {
+  const [on, setOn] = useState(() => readSingleKeyShortcuts());
+  return (
+    <section>
+      <label className="flex min-h-[44px] items-center gap-3 text-sm">
+        <input
+          type="checkbox"
+          className="h-5 w-5 accent-stamp"
+          checked={on}
+          onChange={(e) => {
+            setOn(e.target.checked);
+            writeSingleKeyShortcuts(e.target.checked);
+          }}
+        />
+        <span>Single-key shortcuts (j, k, g, G) on the plan</span>
+      </label>
+    </section>
+  );
+}
 
 function KeyList({ title, keys }: { title: string; keys: Array<[string, string]> }) {
   return (
@@ -530,6 +552,7 @@ export function CommandPalette({
         >
           <KeyList title="Everywhere" keys={GENERAL_KEYS} />
           <KeyList title="On the plan" keys={PLAN_KEYS} />
+          <SingleKeyToggle />
         </div>
       )}
     </dialog>

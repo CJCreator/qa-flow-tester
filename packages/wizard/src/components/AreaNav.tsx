@@ -95,7 +95,7 @@ export function AreaNav({
   return (
     <nav aria-label={AREA_TITLES[area]} className="border-b border-rule bg-canvas" data-area={area}>
       <div className="mx-auto max-w-workspace px-4 sm:px-6 lg:px-8">
-        <ul className="-mx-3 flex items-center gap-1 overflow-x-auto">
+        <ul className="-mx-4 flex items-center gap-1 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           {links.map((l) => {
             const current = l.names.includes(route.name);
             return (

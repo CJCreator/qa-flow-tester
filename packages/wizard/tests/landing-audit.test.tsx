@@ -187,7 +187,7 @@ describe('top bar', () => {
   it('TopBar hides Commands and Keyboard shortcuts by default', async () => {
     for (const html of [await topBar(), await topBar(false)]) {
       expect(html).not.toContain('Commands');
-      expect(html).not.toContain('aria-label="Keyboard shortcuts"');
+      expect(html).not.toContain('aria-label="Keyboard shortcuts (?)"');
       expect(html).toContain('Check-ups');
     }
   });
@@ -195,7 +195,7 @@ describe('top bar', () => {
   it('shows them when showDeveloperShortcuts', async () => {
     const html = await topBar(true);
     expect(html).toContain('Commands');
-    expect(html).toContain('aria-label="Keyboard shortcuts"');
+    expect(html).toContain('aria-label="Keyboard shortcuts (?)"');
   });
 });
 

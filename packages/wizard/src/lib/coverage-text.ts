@@ -83,6 +83,6 @@ export function statusText(progress: ScanProgress | null): string {
       }
       return progress.what ?? 'Writing the plan…';
     default:
-      return 'Scanning…';
+      return 'Looking at the site…';
   }
 }

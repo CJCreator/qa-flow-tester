@@ -89,7 +89,7 @@ const POLL_MS = 5000;
 const IN_PROGRESS = new Set(['scanning', 'awaiting-review', 'testing']);
 
 /**
- * The step bar's position for a screen, when it has one. Scanning is when the plan is made. The new check-up
+ * The step bar's position for a screen, when it has one. The scan is when the plan is made. The new check-up
  * screen shows the Check-ups row instead (ADR 0041).
  */
 function stepOf(route: Route): Step | null {
@@ -620,7 +620,7 @@ export default function App() {
 
   const stopScan = async () => {
     const choice = await choose({
-      title: 'Stop scanning?',
+      title: 'Stop the check-up?',
       body: (
         <p>
           Plan the {scan?.pagesFound ? count(scan.pagesFound, 'page', 'pages') : 'pages'} found so far, and review them,
@@ -630,7 +630,7 @@ export default function App() {
       confirmLabel: 'Stop and plan what’s found',
       altLabel: 'Throw it away',
       altDanger: true,
-      cancelLabel: 'Keep scanning',
+      cancelLabel: 'Keep going',
     });
     if (choice === 'cancel') return;
     if (choice === 'confirm') {
@@ -735,7 +735,7 @@ export default function App() {
       : route.name === 'new'
         ? 'New check-up'
         : route.name === 'scan'
-          ? `Scanning ${host}`
+          ? `Check-up of ${host}`
           : route.name === 'testing'
             ? `Testing ${host}`
             : route.name === 'plan' && !(plan && status?.phase === 'awaiting-review')

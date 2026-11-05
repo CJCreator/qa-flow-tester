@@ -91,7 +91,7 @@ export function DeveloperDetails({
         )}
 
         <dl className="grid gap-x-4 gap-y-1 sm:grid-cols-[10rem_1fr]">
-          <dt className="text-ink-soft">Run ID</dt>
+          <dt className="text-ink-soft">Check-up ID</dt>
           <dd className="break-all font-mono text-sm text-ink">{runId}</dd>
           <dt className="text-ink-soft">Page</dt>
           <dd className="break-all font-mono text-sm text-ink">
@@ -162,7 +162,7 @@ export function DeveloperDetails({
         )}
 
         <div className="flex flex-wrap gap-4">
-          <CopyButton label="Copy run ID" getText={async () => runId} />
+          <CopyButton label="Copy check-up ID" getText={async () => runId} />
           <CopyButton label="Copy bug report" getText={async () => bugReportMarkdown(f, targetUrl)} />
           <CopyButton
             label="Copy Playwright test"

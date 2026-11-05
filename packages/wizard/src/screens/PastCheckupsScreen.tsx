@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FindingSeverity, RunSummary } from '@qa/types';
 import { deleteRun, listRuns, RunnerError } from '../api';
 import type { ConfirmOptions } from '../components/ConfirmDialog';
 import { ErrorMessage, Spinner } from '../components/text';
 import { Badge, EmptyState, LoadError, Page, PageHeader } from '../components/ui';
+import { neighbourAfterDelete } from '../lib/checkup-focus';
 import { count, formatDay, formatWhen } from '../lib/format';
 import { Link, PATHS } from '../lib/router';
 import { useDocumentTitle } from '../lib/title';
@@ -43,6 +44,9 @@ export function PastCheckupsScreen({
   useDocumentTitle('Past check-ups');
   const [runs, setRuns] = useState<RunSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  // Where focus goes after a delete: a check-up id, '' for the page heading, or null for nothing pending.
+  const pendingFocus = useRef<string | null>(null);
 
   const load = useCallback(() => {
     listRuns()
@@ -55,6 +59,20 @@ export function PastCheckupsScreen({
       );
   }, []);
   useEffect(load, [load]);
+
+  // After a delete the row is gone, so focus moves to the next row of the site, else to the heading.
+  useEffect(() => {
+    const target = pendingFocus.current;
+    if (target === null) return;
+    pendingFocus.current = null;
+    const row = target
+      ? Array.from(listRef.current?.querySelectorAll<HTMLElement>('[data-run-id]') ?? []).find(
+          (el) => el.dataset.runId === target
+        )
+      : undefined;
+    if (row) row.querySelector<HTMLElement>('a')?.focus();
+    else document.querySelector<HTMLElement>('h1')?.focus();
+  }, [runs]);
 
   const remove = async (run: RunSummary) => {
     const ok = await confirm({
@@ -69,10 +87,12 @@ export function PastCheckupsScreen({
       danger: true,
     });
     if (!ok) return;
+    pendingFocus.current = neighbourAfterDelete(runs ?? [], run.runId) ?? '';
     try {
       await deleteRun(run.runId);
       setRuns((list) => list?.filter((r) => r.runId !== run.runId) ?? null);
     } catch (err) {
+      pendingFocus.current = null;
       setError(err instanceof RunnerError ? err.message : 'The check-up couldn’t be deleted. Try again.');
     }
   };
@@ -121,7 +141,7 @@ export function PastCheckupsScreen({
         </EmptyState>
       )}
 
-      <div className="space-y-10">
+      <div className="space-y-10" ref={listRef}>
         {sites.map((site) => {
           const ofSite = runs!.filter((r) => r.host === site);
           return (
@@ -134,7 +154,7 @@ export function PastCheckupsScreen({
               </h2>
               <ul className="space-y-3">
                 {ofSite.map((run) => (
-                  <li key={run.runId} className="rounded-card border border-rule bg-surface p-4">
+                  <li key={run.runId} data-run-id={run.runId} className="rounded-card border border-rule bg-surface p-4">
                     <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
                       <div className="min-w-0">
                         <Link
@@ -164,7 +184,7 @@ export function PastCheckupsScreen({
                           disabled={starting}
                           title={starting ? STARTING_REASON : undefined}
                           onClick={() => onTestAgain(run)}
-                          aria-label={`New check-up of ${run.host}`}
+                          aria-label={`New check-up of this site, ${run.host}`}
                         >
                           New check-up of this site
                         </button>

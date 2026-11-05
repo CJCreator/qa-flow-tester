@@ -1,7 +1,7 @@
 /**
  * Optional, cookie-free landing counter (T-13). Off unless VITE_COUNTER_URL is set at build time.
  * No third-party script is loaded: each event is one small GET to a GoatCounter-style endpoint.
- * The request carries the event name only: no address, no run id, no referrer, no credentials,
+ * The request carries the event name only: no address, no check-up ID, no referrer, no credentials,
  * and nothing is kept in the browser.
  */
 
