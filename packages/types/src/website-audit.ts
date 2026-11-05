@@ -1134,6 +1134,8 @@ export interface AuditEndpoint {
   /** 'json': a JSON reply. 'file': a download. 'html': a page to open. 'sse': an event stream. */
   replies: 'json' | 'file' | 'html' | 'sse';
   access: AuditAccess;
+  /** True for a prefix row: it matches every path that starts with `path`. */
+  prefix?: boolean;
 }
 
 /** Every audit route. Request and reply types per route are in `AuditApi`. */
@@ -1166,6 +1168,8 @@ export const AUDIT_API = {
   revokeShare: { method: 'DELETE', path: '/api/audits/:id/share/:linkId', replies: 'json', access: 'owner' },
   /** Public, noindex, strict Content-Security-Policy; 410 when expired or revoked. */
   sharedPage: { method: 'GET', path: '/s/:linkId', replies: 'html', access: 'public' },
+  /** Prefix row: any other GET under `/s` (a malformed id) gets the same public 404 page, never a 401. */
+  sharedPageFallback: { method: 'GET', path: '/s', replies: 'html', access: 'public', prefix: true },
   listRewrites: { method: 'GET', path: '/api/audits/:id/rewrite', replies: 'json', access: 'view' },
   approveRewrite: { method: 'POST', path: '/api/audits/:id/rewrite/approve', replies: 'json', access: 'edit' },
   /** Writes new copy for an approved Section (rewrite stage); 409 ERR_NOT_APPROVED / ERR_NO_AI_KEY. */
@@ -1413,6 +1417,7 @@ interface AuditApiShapes {
   createShare: { query: NoQuery; body: ShareCreateBody; reply: ShareLinkReply };
   revokeShare: { query: NoQuery; body: undefined; reply: ShareLinkReply };
   sharedPage: { query: NoQuery; body: undefined; reply: HtmlReply };
+  sharedPageFallback: { query: NoQuery; body: undefined; reply: HtmlReply };
   listRewrites: { query: VersionQuery; body: undefined; reply: RewriteListReply };
   approveRewrite: { query: NoQuery; body: RewriteSectionBody; reply: RewriteReply };
   runRewrite: { query: NoQuery; body: RewriteRunBody; reply: RewriteReply };

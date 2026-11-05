@@ -608,6 +608,7 @@ describe('AUDIT_API', () => {
       ['GET', '/api/audits/:id/share'],
       ['DELETE', '/api/audits/:id/share/:linkId'],
       ['GET', '/s/:linkId'],
+      ['GET', '/s'],
       // BE-024 rewrite
       ['GET', '/api/audits/:id/rewrite'],
       ['POST', '/api/audits/:id/rewrite/approve'],
@@ -635,11 +636,25 @@ describe('AUDIT_API', () => {
     const keys = endpoints.map(([, e]) => `${e.method} ${e.path}`);
     expect(new Set(keys).size).toBe(keys.length);
     for (const [, e] of endpoints)
-      expect(e.path.startsWith('/api/') || e.path.startsWith(SHARED_LINK_PREFIX)).toBe(true);
+      expect(e.path.startsWith('/api/') || e.path.startsWith(SHARED_LINK_PREFIX) || e.path === '/s').toBe(true);
+  });
+
+  it('declares the /s prefix row as public, so a malformed Shared Link id is a 404 page, not a 401', () => {
+    expect(AUDIT_API.sharedPageFallback).toEqual({
+      method: 'GET',
+      path: '/s',
+      replies: 'html',
+      access: 'public',
+      prefix: true,
+    });
+    expect(AUDIT_API.sharedPageFallback.path).toBe(SHARED_LINK_PREFIX.replace(/\/$/, ''));
   });
 
   it('opens only the Shared Link without the access key, and keeps Helpers off owner-only routes (REQ-033)', () => {
-    expect(endpoints.filter(([, e]) => e.access === 'public').map(([name]) => name)).toEqual(['sharedPage']);
+    expect(endpoints.filter(([, e]) => e.access === 'public').map(([name]) => name)).toEqual([
+      'sharedPage',
+      'sharedPageFallback',
+    ]);
     const ownerOnly = endpoints.filter(([, e]) => e.access === 'owner').map(([name]) => name);
     for (const name of ['remove', 'getSettings', 'putSettings', 'listHelpers', 'grantHelper', 'removeHelper']) {
       expect(ownerOnly).toContain(name);

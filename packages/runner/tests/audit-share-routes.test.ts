@@ -413,6 +413,15 @@ describe('GET /s/:linkId', () => {
   });
 });
 
+describe('GET /s/bad (malformed id, no key)', () => {
+  it('answers 404 with the shared not-found page, never 401, from the AUDIT_API prefix row', async () => {
+    expect(AUDIT_API.sharedPageFallback.access).toBe('public');
+    const res = await call('GET', '/s/bad');
+    expect(res.status).toBe(404);
+    expect(res.text).toBe(SHARED_NOT_FOUND_PAGE);
+  });
+});
+
 describe('DELETE /api/audits/:id/share/:linkId', () => {
   it('revokes the link and the next GET /s/:linkId answers 410', async () => {
     const id = await seedDone();

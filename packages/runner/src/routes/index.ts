@@ -227,9 +227,10 @@ function rowsFor(server: RunnerServer): Map<string, Route> {
  */
 function contractRows(): Route[] {
   const entries = Object.entries({ ...AUDIT_API, ...AUDIT_AI_API }) as Array<[string, AuditEndpoint]>;
-  return entries.map(([, { method, path, access }]) => ({
+  return entries.map(([, { method, path, access, prefix }]) => ({
     method,
     path,
+    ...(prefix ? { prefix: true } : {}),
     access,
     beta: access === 'public' ? ('allow' as const) : ('closed' as const),
     handle: (context: RouteContext) => {
