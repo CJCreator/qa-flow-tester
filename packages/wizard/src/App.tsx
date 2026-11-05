@@ -950,7 +950,8 @@ export default function App() {
       {step ? (
         <StepBar current={step} links={{ address: PATHS.new }} />
       ) : (
-        reachable && !landing && <AreaNav route={route} beta={!!status?.beta} />
+        // From the first paint, not once connected: a row inserted later pushes the whole page down (layout shift).
+        !landing && <AreaNav route={route} beta={!!status?.beta} />
       )}
       <main id="main">
         {lostContact && (

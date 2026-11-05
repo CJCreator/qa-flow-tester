@@ -518,6 +518,8 @@ export function CommandPalette({ route, beta = false }: { route: Route; beta?: b
           role="tabpanel"
           id={ids.panel('shortcuts')}
           aria-labelledby={ids.tab('shortcuts')}
+          // It scrolls and holds no controls, so it takes focus itself (keyboard users can scroll it).
+          tabIndex={0}
           className="max-h-[30rem] space-y-6 overflow-y-auto p-5"
         >
           <KeyList title="Everywhere" keys={GENERAL_KEYS} />

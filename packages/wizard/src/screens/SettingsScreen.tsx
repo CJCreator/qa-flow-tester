@@ -153,7 +153,7 @@ export function SettingsScreen({ onKeySaved }: { onKeySaved: (model: string) => 
           <ul className="flex flex-wrap gap-x-5 gap-y-0 lg:grid lg:gap-0">
             {SECTIONS.map((s) => (
               <li key={s.id}>
-                <a href={`#${s.id}`} onClick={goTo(s.id)} className="btn-link min-h-[44px] items-center">
+                <a href={`#${s.id}`} onClick={goTo(s.id)} className="btn-link min-h-[44px] min-w-[44px] items-center">
                   {s.label}
                 </a>
               </li>
@@ -1340,7 +1340,7 @@ function Sites() {
               <label className="mt-2 flex flex-wrap items-center gap-2 text-sm">
                 Check how search engines see it:
                 <select
-                  className="field w-auto"
+                  className="field w-auto min-w-0 max-w-full"
                   value={site.searchChecks === undefined ? 'default' : site.searchChecks ? 'on' : 'off'}
                   onChange={(e) =>
                     void change(
