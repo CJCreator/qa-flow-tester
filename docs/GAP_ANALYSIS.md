@@ -1,6 +1,6 @@
 # Gap analysis: intended use vs what exists
 
-_Written 2026-10-07 from the plans (`docs/E2E_PLATFORM_IMPLEMENTATION_PLAN.md`, `docs/research/e2e-platform-roadmap.md`,
+_Written 2026-10-07 from the plans (`docs/E2E_PLATFORM_IMPLEMENTATION_PLAN.md`, its research roadmap,
 `docs/adr/`, `PRODUCT_REVIEW.md`) checked against the code in `packages/`.
 "Not found" means a search of `packages/*/src`, `scripts`, `templates` and `.github` found no trace. I could not run the test
 suite or the app (see G1), so "built" means the code exists, not that it passes._
@@ -102,7 +102,7 @@ Size: S = a day or two, M = about a week, L = several weeks (the plan's scale).
 **Built.** (1) A marketing checker (`checkers/src/marketing.ts`) runs on the site being tested: share previews, call to action, contact route, privacy/terms link,
 analytics, social links, pricing, trust signals, email capture, cookie notice. It feeds a "marketing basics" checklist and a sub-score in the report.
 (2) The product's own public page: landing page with sample report, FAQ, a pricing section, JSON-LD, `llms.txt`, `robots.txt`, `sitemap.xml`, Open Graph and Twitter tags
-(`docs/SEO_AEO_GEO_STRATEGY.md`, `docs/design/landing-and-home-spec.md`).
+(`packages/wizard/index.html`, `packages/wizard/src/lib/faq.ts`).
 
 | ID  | Gap                                                                                                                                                                                                                                                                                                               | Evidence                                                         | P     | Size         |
 | --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ----- | ------------ |
@@ -113,7 +113,7 @@ analytics, social links, pricing, trust signals, email capture, cookie notice. I
 | G44 | No go-to-market plan: target customer, positioning against Playwright/axe/Lighthouse and paid tools, launch channels, content plan. The roadmap holds market research, not a marketing plan                                                                                                                       | not found in `docs/`                                             | P1    | M (thinking) |
 | G45 | Only one public page plus the sample report (the sitemap lists two URLs). No docs site, blog, changelog page, case studies or testimonials                                                                                                                                                                        | `public/sitemap.xml`                                             | P2    | M            |
 | G46 | landing audit items still open: sample report goes stale when the report format changes (P1-3), long form above the fold (P1-4), developer shortcuts shown to first-time visitors (P1-5), wake-time limit fixed at 90 s, area list not linked to the sample, no theme toggle, no screen-reader or Lighthouse pass | audit P1-3 to P2-4                                               | P1-P2 | S-M          |
-| G47 | Not yet used on itself: the product's own landing page was never run through its own check-up, and it would likely trip its own marketing checks (no analytics, no contact route, no testimonials). The strategy doc says to do this                                                                              | `SEO_AEO_GEO_STRATEGY.md` last bullet                            | P1    | S            |
+| G47 | Not yet used on itself: the product's own landing page was never run through its own check-up, and it would likely trip its own marketing checks (no analytics, no contact route, no testimonials). `docs/TESTING.md` has the steps                                                                               | `docs/TESTING.md`, self check-up of the landing page             | P1    | S            |
 | G48 | The marketing checker is a checklist of 11 present-or-missing facts read from the home page. Not found in it: message and copy quality, signup or checkout funnel tests, tag and pixel validation, UTM handling, consent behavior (plan item 3.5, not built), email deliverability                                | `marketing.ts` rules list                                        | P3    | M            |
 
 ## Suggested order

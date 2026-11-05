@@ -6,7 +6,7 @@ Optional, cookie-free counter for the landing page and the check-up flow. Off by
 
 GoatCounter (pixel/GET only). No third-party script is loaded: the wizard sends one small GET per event to the
 endpoint in `VITE_COUNTER_URL` (`https://CODE.goatcounter.com/count`). The hosted free tier is for non-commercial
-use; self-hosting is free. The owner confirms which (see `docs/tickets/HUMAN_TODO.md`).
+use; self-hosting is free. The owner confirms which.
 
 ## Events
 
