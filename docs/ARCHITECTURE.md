@@ -1,56 +1,76 @@
 # Architecture
 
-A developer's map of the code. The product-level description is in `PRODUCT_GUIDE.md`; the reasons behind the
-shape are in `adr/`.
+Developer map of the code. Product description: `PRODUCT_GUIDE.md`. Reasons behind the shape: `adr/`. Terms: `../CONTEXT.md`.
 
 ## Packages
 
-pnpm workspace (`packages/*`), TypeScript (`strict`, NodeNext modules), Node 22.
+pnpm workspace (`pnpm-workspace.yaml`: `packages/*`), TypeScript, Node 22. Build order: types, then checkers and core, then runner.
 
-| Package        | Role                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@qa/types`    | Shared types and pure logic. `index.ts` is a barrel of `export *` over area files (`test-case.ts`, `evidence-finding.ts` (`Finding`), `run-report.ts`, `aspects.ts`, `ai.ts`, `discovery.ts`, `hub.ts`, `review-plan.ts`); plan types (`plan.ts`), `releaseVerdict` (`verdict.ts`), grouping findings into problems (`problems.ts`), structural fingerprints. Browser-safe parts are imported by the wizard from source (`@qa/types/src/x.js`), so keep Node-only code (e.g. `node:crypto`) out of those files |
-| `@qa/checkers` | Deterministic audits, one file each: `bug-detection`, `security`, `security-depth`, `keyboard-a11y`, `seo`, `aeo`, `geo`, `performance`, `design-standards`, `ux-quality`, `marketing`, `permission-matrix`, `spec-conformance`, `site-root`                                                                                                                                                                                                                                                                   |
-| `@qa/core`     | The engine: `orchestrator.ts` (runs a Plan), `discovery/` (spider, discovery agent, safety filter, page sweep), `plan/` (AI planner, expansion, sampling, re-plan, site graph), `ai/` (providers, key resolver, OpenRouter, visual review), `scoring.ts`, `recommendations.ts`, `reporter.ts`, `html-report.ts`, `site-memory.ts`, `site-history.ts`, `evidence.ts`, `redact.ts`, `safe-scan.ts`, `competitive/` (benchmarking)                                                                                |
-| `@qa/runner`   | The HTTP server (`server.ts`), route table (`routes/`), and Check-up Session (`session/`) that expose the engine over HTTP + server-sent events and serve the built wizard on one port (3001). `cli.ts` starts it. `checkup.ts` runs one check-up with no UI, for CI. `beta.ts` holds per-session secrets for the shared beta. `scheduler.ts` runs scheduled check-ups                                                                                                                                         |
-| `@qa/wizard`   | The Vite + React UI. Screens in `src/screens/` follow the flow: new check-up, scanning, Plan Review, report, past check-ups, benchmark. `src/api.ts` is the runner client                                                                                                                                                                                                                                                                                                                                      |
+- `@qa/types` (`packages/types/src`): shared types and pure logic. `index.ts` re-exports the area files. Notable: `plan.ts` and `review-plan.ts` (Plan), `evidence-finding.ts` (`Finding`), `verdict.ts` (`releaseVerdict`), `problems.ts`, `checkup-api.ts`, `website-audit.ts` (Website Audit types, `AUDIT_API`, access levels, error codes), `ai.ts` (`AUDIT_AI_API`). The wizard imports single browser-safe modules from `@qa/types/src/...`, so keep Node-only code out of them.
+- `@qa/checkers` (`packages/checkers/src`): deterministic audits, one file per area (`bug-detection`, `security`, `security-depth`, `keyboard-a11y`, `seo`, `aeo`, `geo`, `performance`, `design-standards`, `ux-quality`, `marketing`, `permission-matrix`, `spec-conformance`, `site-root`).
+- `@qa/core` (`packages/core/src`): the engine.
+  - Check-up: `orchestrator.ts`, `discovery/` (spider, discovery agent, safety filter), `plan/` (AI planner, expansion, re-plan), `ai/` (providers, `key-resolver.ts`, OpenRouter, visual review), `preflight.ts`, `scoring.ts`, `reporter.ts`, `html-report.ts`, `site-memory.ts`, `site-history.ts`, `evidence.ts`, `redact.ts`.
+  - Website Audit: `audit/` with `crawl/`, `analysis/`, `ai/`, `speed/`, `documents/`, `preview/`, `pipeline/`, `store/`.
+  - Shared network safety: `safe-net.ts`, `host-pacer.ts`, `checker-fetch.ts` (ADR 0031).
+- `@qa/runner` (`packages/runner/src`): one HTTP + server-sent-events server (`server.ts`) on port 3001 that also serves the built wizard (`ui-static.ts`). `routes/` is the route table, `session/` holds the run slot, Check-up Session, audit runs and run events, `helpers/` Helper sign-in (Google ID token, session cookie), `beta.ts` per-visitor sessions and limits, `scheduler.ts` schedules, `host-policy.ts` and `bind-host.ts` address rules. `cli.ts` starts the server; `checkup.ts` runs one Check-up with no UI, for CI.
+- `@qa/wizard` (`packages/wizard/src`): Vite + React UI. `api.ts` is the client of the runner API; `screens/` has one file per screen, `screens/audit/` the Website Audit screens.
 
-Build order follows the dependency chain: `types` → `checkers` and `core` → `runner`; `wizard` builds after `types`.
+## Life of a Check-up
 
-## Life of a check-up
+1. Start: `POST /api/runner/run`. The runner claims the run slot (`session/run-slot.ts`: one run at a time, kinds `checkup`, `benchmark`, `audit`).
+2. Preflight (`preflight.ts`): the address answers and any sign-in works.
+3. Discovery: the Deterministic Spider (`discovery/deterministic-spider.ts`), driven per Role by `discovery/discovery-agent.ts`, records pages, links, forms. `discovery/safety-filter.ts` skips destructive actions.
+4. Planning: `plan/ai-planner.ts` writes every Plan Item from those facts, validated by `discovery/plan-validator.ts`; with no AI key, fixed rules write the Plan. Planning overlaps discovery (`plan/pipeline.ts`, ADR 0020).
+5. Plan Review: the Plan waits in the Check-up Session until approved (`POST /api/runner/plan/approve`). Nothing runs that is not in the Plan.
+6. Run: `orchestrator.ts` executes each Test with Playwright, calls the checkers, retries flaky steps (`retry-runner.ts`), captures evidence. Progress streams on `GET /api/runner/stream`.
+7. Judge: findings are grouped into problems; `scoring.ts` grades the areas deterministically; `releaseVerdict` gives the verdict from the release gate.
+8. Report: `reporter.ts` and `html-report.ts` write `report.md`, `findings.json`, `report.html`, `issues.md`, `issues.html` into the run folder. `redact.ts` strips secrets first.
+9. Remember: `site-memory.ts` and `site-history.ts` keep per-site memory and past Check-ups.
 
-1. **Start.** The wizard (or `checkup.ts` in CI) posts the address and options to `POST /api/runner/run`.
-2. **Preflight.** `core/preflight.ts` checks the address answers (and that any sign-in details work) before a scan starts. Same-site and robots.txt rules live in `core/same-site.ts` and `competitive/robots.ts`; beta mode also refuses private addresses.
-3. **Discovery.** The Deterministic Spider crawls the site per role, recording pages, links, buttons and forms (up to 200 pages in the UI; `QA_MAX_PAGES` caps CI runs, default 50). It gathers facts and never decides what to test. The safety filter (`discovery/safety-filter.ts`) skips destructive actions deterministically.
-4. **Planning.** The AI Planner (`plan/ai-planner.ts`) writes every Plan Item from those facts, batched by Layout Group, within an AI request budget (`plan/ai-budget.ts`). Output is validated for coverage, real selectors and safety (`discovery/plan-validator.ts`). Anything the AI could not plan becomes a Fixed-Rule Fallback item. With no AI key the whole plan is written by fixed rules.
-   Planning and discovery overlap (ADR 0020): `plan/pipeline.ts` takes pages from the Spider as they arrive and plans full batches while the crawl goes on. Early items are never changed; later ones are marked as added after the scan. Product Context (several files or a docs URL, `discovery/context-parser.ts`, `discovery/docs-fetch.ts`) gives Plan Items a Source; the Planner proposes roles per Source, and Denial Plan Items and "Not found in app" entries are derived by code (`plan/sources.ts`). Without an AI key the old sequential path runs.
-   Product Context ingestion (ADR 0023): `.docx` is converted to Markdown on the server (`discovery/docx-to-markdown.ts`, mammoth, size and ZIP caps; wizard route `POST /api/runner/context/docx`, CLI in-process). The pure parser (`@qa/types/src/context-parse.ts`, re-exported by `discovery/context-parser.ts`) reads headings, User Flow blocks, tables, numbered steps and flow diagrams. `plan/spec-plan.ts` (`planFromSpec`) maps those units and the crawl to Plan Items by fixed rules, with or without an AI (with one, only for units it did not reach). Free-text expectations become "Needs your judgement", not pass or fail.
-   Intent and the refusal rule (ADR 0024): journey and form Plan Items carry an Intent (Works, Rejects, Limits, Denied; `@qa/types/src/intent.ts` also reads saved Plans that still say `kind: 'denial'`). `plan/rejects.ts` plans Rejects from form attributes by fixed rules, with or without an AI key; Limits come from the AI Planner or a Source. Both submit forms, so they are flagged `needsTestCopy` and `plan/expand.ts` switches them off on a non-test-copy App without consent. `expandPlan` also applies the Test cap (only Rejects and Limits are trimmed, last planned first) and `intentsOff`, and writes the per-Intent counts. At run time the refusal rule lives in one place, `checkers/src/refusal-rule.ts`: `SpecConformanceChecker` judges the page against a baseline the orchestrator captures before the submit click, and the export embeds the same source in its `expectRefused` helper so the two cannot drift. A form behind an opener (modal, drawer, tab) carries `openingSteps`, replayed first by the run and the export; a missing opener gives "Could not verify", not a form failure.
-   Spider deep exploration (ADR 0025): under Safe Interaction Mode the Spider opens tabs, accordions, drawers and modals to record forms and their opening steps, and infers CRUD facts (list, Add, edit from a row, Delete behind a confirm) from structure. Nothing is submitted; the Delete probe runs with mutating requests aborted and dialogs dismissed.
-5. **Plan Review.** The plan waits for the person to read, edit (`PATCH /api/runner/plan`), answer questions, re-plan and approve (`POST /api/runner/plan/approve`). Nothing runs that is not in the plan. Waiting plans survive restarts in the data folder.
-6. **Run.** The Check-up Session owns the run and the Plan under review. `core/orchestrator.ts` executes each Test (one Plan Item, one role, one screen size) with Playwright, calling the checkers, retrying flaky steps (`retry-runner.ts`), and capturing evidence (`evidence.ts`). Progress streams over `GET /api/runner/stream`.
-7. **Judge.** Findings are de-duplicated and grouped into problems; `scoring.ts` grades six areas A to F deterministically (same findings, same grades); `releaseVerdict` produces the single "Ready to release" or "Not ready yet" verdict from the release gate (`strict`, `standard`, `lenient`). Findings marked intended or false positive, and unconfirmed AI guesses, do not count.
-8. **Report.** `reporter.ts` and `html-report.ts` write `report.md`, `findings.json` and a self-contained `report.html`. Sensitive values are removed by `redact.ts` before anything is emitted or written.
-9. **Remember.** `site-memory.ts` and `site-history.ts` keep per-site memory and past check-ups so "Test again" can reuse the approved plan and show whether a fix worked.
+The AI plans and reads; it never drives the browser or decides pass or fail (ADRs 0001, 0003, 0009).
 
-## Sign-in and crawling
+## Life of a Website Audit (ADR 0033, 0042)
 
-- **The sign-in step.** `core/preflight.ts` (`PreFlightChecker`) is the one place that signs in: `checkUrlReachable` checks the address (a 4xx answers reachable with `startWarning: 'start-4xx'`; 401/403 means the App asks for a sign-in), `signIn` runs the fixed step order in [ADR 0026](adr/0026-deterministic-sign-in-and-session-handling.md), and `runPreFlight` checks the address and every Role before a scan starts. A Role reaches `roleAuthResults` as signed in only when its sign-in ran and succeeded.
-- **The Deterministic Spider.** `discovery/deterministic-spider.ts` walks the App (`crawl` → `evaluatePage` → `runWorker`), recording pages, links, buttons and forms as `RouteTelemetry` rows — one per route attempted, with the path asked for, the outcome and the reason it was skipped. A page that shows a password field is a Sign-in Wall only when it really is the way in. When a Role's session dies mid-crawl, `CrawlOptions.reloginHandler` supplies a fresh one and the route is retried once.
-- **The Discovery Agent.** `discovery/discovery-agent.ts` drives the Spider: once as a visitor, then once per Role from the page that Role landed on, then merges the crawls into one draft and writes the notes the person reads. `restoreSession(context, state)` (exported from that module, and from the `@qa/core` barrel) is the one path that puts a saved session back — cookies **and** per-origin `localStorage` — used by the Spider's re-login handler and by the orchestrator's mid-run re-login.
-- **Robots.** `competitive/robots.ts` (`RobotsPolicy`) holds the rules; the Discovery Agent fetches them for the start origin, and only for a site the person does not own, and the Spider asks the policy about each route's **path and query** before the page opens. On the person's own machine no policy is sent (`isPrivateHost`).
+No Plan, no verdict. `POST /api/audits` (owner) validates the request, claims the run slot and starts a version. Progress streams on `GET /api/audits/:id/stream` (`AuditStage` in `@qa/types`).
+
+1. `checking-address`: reachability and address rules (`audit/crawl/reachability.ts`, `limits.ts`).
+2. `crawling` (`audit/crawl/crawl.ts`): pages fetched in parallel (ADR 0043), robots and Crawl-delay honoured. While each page is open, `pipeline/page-recorder.ts` reads it, runs accessibility basics and the phone layout check (`phone-layout.ts`).
+3. `checking-pages`: `analysis/analyse-site.ts` (links, content problems, SEO basics, marketing signals, technology), paced by the crawl's `HostPacer`.
+4. `measuring-speed`: `ai/pagespeed.ts` on the Sample Pages.
+5. `assessing`: deterministic area grades (`pipeline/grades.ts`), then AI `assessPages`, `assessSite`, `recommendPages` (`audit/ai/`). Without an AI key these steps are recorded as not done.
+6. `ranking`: `scoreFindings` and `rankFindings`, then `documents/roadmap.ts`.
+7. `writing-documents`: `documents/write-all.ts` writes the seven audit documents.
+8. `saving`: Page Content, phone screenshots and the result go through the audit store.
+
+`pipeline/pipeline.ts` records a failed stage as not done, never as a clean result; later stages still run. A stop ends the run and saves nothing. On start-up the runner marks versions left running as stopped, reason `tool-restarted` (`recoverRunningAudits` in `server.ts`). Later steps are separate routes: edits overlay, rewrites, improved-homepage preview (`audit/preview/`), exports, Shared Links, Shortlist, Helpers (`docs/API.md`). AI model per stage is chosen with `GET/PUT /api/audit-ai/models`; on a local runner, Google sign-in (ADC) stands in when no key works (ADR 0042).
+
+Not yet built (ADR 0042, T-86): signed-in owner access on the hosted copy (`AUDIT_OWNER_EMAILS`).
+
+## Routes and access
+
+`routes/index.ts` builds `allRoutes`: plan rows (`plan.ts`), schedule rows (`schedules.ts`), and one row per `AUDIT_API` and `AUDIT_AI_API` entry. Every row declares an access level and a beta policy; a row without one is refused (`authorizeRoute`, `routes/route.ts`, ADR 0037). Endpoints not yet in the table stay inline in `server.ts` and sit behind the access-key gate. Full list: `API.md`.
 
 ## State and storage
 
-- **Data folder** (`RUNNER_DATA_DIR`, default `.qa-data/`, or `/tmp/qa-data` on Google Cloud Run where the root filesystem is read-only): per-site memory and history, waiting plans, saved model choices. Git-ignored.
-- **Report output** (`RUNNER_OUTPUT_DIR`, default `.qa-runner-report`; CI default `qa-report`; Cloud Run `/tmp/qa-data/reports`). Git-ignored.
-- **Baselines** (`.qa-baselines/`): approved visual baselines. These are committed on purpose.
-- **Secrets:** a saved AI key goes to the OS keychain through `core/ai/key-resolver.ts`. Only when no keychain exists (e.g. headless Linux) does it fall back to the plaintext `.qa-keys.json` (git-ignored). Site sign-ins go through `core/credentials.ts`. In beta mode both live only in process memory per session (`runner/src/beta.ts`).
-- **Sessions and custom headers:** test sign-in sessions in headless CI live in an ephemeral per-run auth directory outside the report folder and are deleted when the run ends. Custom headers (`customHeaders`, `QA_CUSTOM_HEADERS`) are held in runner memory, never saved to disk plans or reports, and scoped strictly to the target origin and allowlisted hosts.
+Paths and variables: `CONFIGURATION.md`.
 
-## Boundaries worth protecting
+- Data folder (`RUNNER_DATA_DIR`, default `.qa-data/`): per-site memory and history under `sessions/`, waiting Plans, `.qa-ai-models.json`, `.qa-settings.json`, `schedules.json`, `audit-store/` (local Website Audits). Git-ignored.
+- Report output (`RUNNER_OUTPUT_DIR`, default `.qa-runner-report`): one folder per run.
+- Visual baselines: `.qa-baselines/`, committed on purpose.
+- Website Audits: `audit/store/` has two backends behind one interface, chosen by `select-backend.ts`: local files, or a Cloud Storage bucket when `AUDIT_STORE_BUCKET` is set (ADR 0036). One folder per audit, one sub-folder per version; Shared Link and Helper-grant records live under the audit. Schedules use the same bucket when set (ADR 0039).
+- Secrets: AI keys go to the OS keychain via `core/ai/key-resolver.ts`, falling back to `.qa-keys.json` only without a keychain. In beta they live in process memory per visitor session (`beta.ts`).
+- Run state is in memory (one run slot, `session/run-events.ts` keeps the last 200 events for reconnecting pages).
 
-- The AI plans; it never drives the browser and never decides pass or fail. Verdicts and grades are deterministic (ADRs 0001, 0003, 0009).
-- The wizard must work as a static site with no runner (ADR 0012), so it cannot import Node-only modules.
-- One run at a time per runner (single run slot).
-- The Check-up Session owns state and operations, never policy. Access tokens, allowed origins, beta limits, closed routes and host policy stay in the transport (`RunnerServer`, `beta.ts`, `host-policy.ts`). See [ADR 0027](adr/0027-checkup-session-module-and-route-table.md).
+## Local and hosted
+
+- Local (ADR 0008): one process serves API and wizard on port 3001, bound to loopback. Only loopback `Host` headers are answered unless `RUNNER_ALLOWED_ORIGINS` lists more. The local user is the owner and may audit localhost and LAN addresses.
+- Hosted beta (ADR 0032): Google Cloud Run service `qa-check-up` runs the runner with `RUNNER_BETA=1`; `qa-check-up-site` serves the static site. Deploys: `.github/workflows/deploy.yml`, see `DEPLOYMENT.md`. Render and Vercel are not used.
+- Beta behaviour (`beta.ts`, `server.ts`): each visitor gets a session cookie and sees only their own run; only public addresses are accepted (ADR 0014); starts are limited per visitor and per day; routes that change shared state answer `ERR_BETA`; Website Audit rows are closed except Shared Links (`public`) and Helper rows for a signed-in Helper (ADR 0037).
+- Hosted instance (ADR 0038): `--min-instances 1 --max-instances 1`, because beta limits and sessions are in memory. Schedules on the hosted copy are fired by Cloud Scheduler calling `POST /api/runner/schedules/tick` with a Google OIDC token (ADR 0039); locally a 60-second timer does it.
+- CI: `checkup.ts` runs one Check-up in the user's own GitHub Actions (ADR 0012).
+
+## Boundaries
+
+- The wizard works with no Node-only imports.
+- The Check-up Session owns state and operations, not policy; tokens, origins, beta limits and host policy stay in the transport (ADR 0027).
+- Every outbound request from a checker or the audit uses the pinned resolver (ADR 0031).

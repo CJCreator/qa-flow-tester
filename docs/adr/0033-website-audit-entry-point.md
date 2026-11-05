@@ -26,7 +26,7 @@ There is a precedent for a read-only flow on someone else's site: the Competitiv
 - **Free tier.** The Website Audit is part of the free tier for now (Q-05). Per-site pricing (FR-31, REQ-031) is deferred, and the recorded product pricing is unchanged.
 - **Words.** `CONTEXT.md` adds Website Audit, Page Content, Section, Audit Document, Improvement Roadmap, Pitch Glimpse, Shared Link, Owner Audit, Shortlist and Helper, and the Skipped Page reasons `depth-limit`, `excluded` and `payment`. FR-26's "Enhancement plan" is the Improvement Roadmap and is never called a Plan.
 
-Alternatives considered (`engineering/architecture.md`, "Positioning options"):
+Alternatives considered ("Positioning options"):
 - **A mode inside the Check-up** (a purpose flag on the run). One engine and one history, but it puts a release verdict and a Plan Review on someone else's site, as described above.
 - **Owner-side features only**, dropping the pitch rows. Rejected: the developer kept the pitch requirements in scope (Q-01).
 - **A separate product** using `@qa/core` and `@qa/checkers` as libraries. It would have its own pricing, accounts and legal posture, but it costs the most: the packages are private workspace packages, not a library API, and deploys, sign-in and storage would be built twice.

@@ -48,10 +48,10 @@ These are the behaviour today. None is a bug report; each closure is a change to
 - These limits are not covered by a test, nor are `safe-scan.ts`, `planForDisk` or the spider calls. Existing coverage is `packages/core/tests/redaction.test.ts`: "hides passwords, tokens and email usernames, as typed and as they appear in addresses", "hides secret-looking URL parameters even when the secret is unknown", "redacts every string inside nested data", "keeps sign-in details out of plans and fills them in only when a step runs", and "flags the GET sign-in form, and no output file or event contains the password".
 
 ### Planned, not shipped
-Platform plan item 1.3 (gap G14) adds API traffic capture. Its intended rules: keep the shape of API responses instead of raw bodies, strip the `Cookie`, `Set-Cookie`, `Authorization` and `Proxy-Authorization` headers, detect JWT and API-key patterns, and never store a raw HAR. None of this exists in code: the evidence capture has no response capture. The plan says redaction ships in the same commit as the capture, so that work must extend or supersede this record and add tests first. This paragraph is intent, not a decision.
+API traffic capture is planned and not yet built. Its intended rules: keep the shape of API responses instead of raw bodies, strip the `Cookie`, `Set-Cookie`, `Authorization` and `Proxy-Authorization` headers, detect JWT and API-key patterns, and never store a raw HAR. None of this exists in code: the evidence capture has no response capture. Redaction is to ship in the same commit as the capture, so that work must extend or supersede this record and add tests first. This paragraph is intent, not a decision.
 
 ### Other ADR numbers
-0014 is written (Accepted 2026-10-07, with T-12, built in wave 1). 0013 (opt-in AI explorer, selector fixes) and 0015 (live-site GraphQL and GET/HEAD replay rules) are deferred records with no decision yet (2026-10-21, T-63); they come with G22 (self-healing, item 3.1) and G14 (API traffic, item 1.3). 0017 (findings contract) is written and accepted.
+0014 is written (Accepted 2026-10-07, with T-12, built in wave 1). 0013 (opt-in AI explorer, selector fixes) and 0015 (live-site GraphQL and GET/HEAD replay rules) are deferred records with no decision yet (2026-10-21, T-63); they come with self-healing and API traffic capture. 0017 (findings contract) is written and accepted.
 
 ## Consequences
 - A new field that can hold a sign-in value needs a test in `packages/core/tests/redaction.test.ts` (SECURITY.md).
