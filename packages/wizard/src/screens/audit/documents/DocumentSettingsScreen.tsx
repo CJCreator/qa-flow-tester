@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { AuditSettingsReply, AuditSettingsUpdate, CompanyDetails } from '@qa/types/src/browser.js';
-import { ErrorMessage, FocusHeading, Spinner } from '../../../components/text';
-import { Link, PATHS } from '../../../lib/router';
+import { useConfirm } from '../../../components/ConfirmDialog';
+import { Spinner } from '../../../components/text';
+import { BottomActionBar, LoadError, Page, PageHeader } from '../../../components/ui';
+import { PATHS } from '../../../lib/router';
 import { useDocumentTitle } from '../../../lib/title';
 import {
   COMPANY_FIELDS,
@@ -66,38 +68,35 @@ export function DocumentSettingsView({
   onReset,
 }: DocumentSettingsViewProps) {
   const pending = !isUpdateEmpty(settingsUpdate(reply, draft));
+  const { confirm, dialog } = useConfirm();
+  /** Put-the-default-back and remove save at once, so they ask first. */
+  const ask = async (what: string, body: string, update: AuditSettingsUpdate) => {
+    const yes = await confirm({
+      title: what === '' ? 'Remove the PageSpeed key?' : `Put ${what} back?`,
+      body,
+      confirmLabel: what === '' ? 'Remove the key' : 'Put the default back',
+      danger: true,
+    });
+    if (yes) onReset(update);
+  };
+  const discard = async () => {
+    const yes = await confirm({
+      title: 'Discard your changes?',
+      body: 'Every edit you have not saved is thrown away. Saved settings stay.',
+      confirmLabel: 'Discard changes',
+      cancelLabel: 'Keep editing',
+      danger: true,
+    });
+    if (yes) onDiscard();
+  };
   return (
     <div className="space-y-10">
-      <h2 id="settings-documents-title" className="text-2xl font-bold">
+      <h2 id="settings-documents-title" className="-mb-4 text-xl font-bold">
         Audit Documents
       </h2>
-      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-3 border-b border-rule bg-canvas py-3">
-        <button
-          type="button"
-          className="btn-primary min-h-[44px] px-6 font-bold"
-          disabled={!pending || saving}
-          onClick={onSave}
-        >
-          {saving ? <Spinner label="Saving…" /> : 'Save document settings'}
-        </button>
-        <button type="button" className="btn-quiet" disabled={!pending || saving} onClick={onDiscard}>
-          Discard unsaved changes
-        </button>
-        <p className="text-sm text-ink-soft" aria-live="polite">
-          {pending ? 'You have changes that are not saved yet.' : 'Every change is saved.'}
-        </p>
-        {message &&
-          (message.tone === 'fail' ? (
-            <ErrorMessage>{message.text}</ErrorMessage>
-          ) : (
-            <p role="status" className="text-sm font-semibold text-pass">
-              {message.text}
-            </p>
-          ))}
-      </div>
 
       <section aria-labelledby="settings-proposal-title" className="space-y-3">
-        <h3 id="settings-proposal-title" className="text-xl font-bold">
+        <h3 id="settings-proposal-title" className="text-lg font-bold">
           Proposal template
         </h3>
         <p className="max-w-prose text-sm text-ink-soft">
@@ -111,17 +110,23 @@ export function DocumentSettingsView({
           <textarea
             id="settings-proposal-template"
             rows={16}
-            className="field w-full font-mono text-sm"
+            className="field w-full font-mono"
             value={draft.proposalTemplate}
             onChange={(e) => onDraft({ ...draft, proposalTemplate: e.target.value })}
           />
         </div>
         <button
           type="button"
-          className="btn-quiet text-sm"
+          className="btn-quiet btn-sm"
           disabled={saving}
           aria-label="Put the default Proposal template back"
-          onClick={() => onReset(resetProposalTemplate())}
+          onClick={() =>
+            void ask(
+              'the default Proposal template',
+              'Your own template is replaced and this saves at once.',
+              resetProposalTemplate()
+            )
+          }
         >
           Put the default back
         </button>
@@ -144,7 +149,7 @@ export function DocumentSettingsView({
       </section>
 
       <section aria-labelledby="settings-optout-title" className="space-y-3">
-        <h3 id="settings-optout-title" className="text-xl font-bold">
+        <h3 id="settings-optout-title" className="text-lg font-bold">
           Opt-out text
         </h3>
         <p className="max-w-prose text-sm text-ink-soft">
@@ -156,7 +161,7 @@ export function DocumentSettingsView({
           const id = `settings-optout-${language}`;
           const fallback = reply.defaults.optOutText[language] ?? '';
           return (
-            <div key={language} className="rounded border border-rule p-3" data-language={language}>
+            <div key={language} className="rounded-card border border-rule p-3" data-language={language}>
               <label htmlFor={id} className="label text-ink">
                 {`Opt-out text in ${LANGUAGE_LABEL[language]}`}
               </label>
@@ -164,7 +169,7 @@ export function DocumentSettingsView({
                 id={id}
                 rows={4}
                 lang={language}
-                className="field w-full text-sm"
+                className="field w-full"
                 value={draft.optOutText[language]}
                 onChange={(e) => onDraft({ ...draft, optOutText: { ...draft.optOutText, [language]: e.target.value } })}
               />
@@ -174,10 +179,16 @@ export function DocumentSettingsView({
               </p>
               <button
                 type="button"
-                className="btn-quiet mt-2 text-sm"
+                className="btn-quiet btn-sm mt-2"
                 disabled={saving}
                 aria-label={`Put the default ${LANGUAGE_LABEL[language]} opt-out text back`}
-                onClick={() => onReset(resetOptOutText(language))}
+                onClick={() =>
+                  void ask(
+                    `the default ${LANGUAGE_LABEL[language]} opt-out text`,
+                    'Your own text is replaced and this saves at once.',
+                    resetOptOutText(language)
+                  )
+                }
               >
                 Put the default back
               </button>
@@ -187,7 +198,7 @@ export function DocumentSettingsView({
       </section>
 
       <section aria-labelledby="settings-company-title" className="space-y-3">
-        <h3 id="settings-company-title" className="text-xl font-bold">
+        <h3 id="settings-company-title" className="text-lg font-bold">
           Company details
         </h3>
         <p className="max-w-prose text-sm text-ink-soft">Saved once and put in every Proposal.</p>
@@ -204,7 +215,7 @@ export function DocumentSettingsView({
                   <textarea
                     id={id}
                     rows={field === 'terms' ? 6 : 3}
-                    className="field w-full text-sm"
+                    className="field w-full"
                     value={draft.company[field]}
                     onChange={(e) => onChange(e.target.value)}
                   />
@@ -212,7 +223,7 @@ export function DocumentSettingsView({
                   <input
                     id={id}
                     type={COMPANY_INPUT_TYPE[field] ?? 'text'}
-                    className="field w-full text-sm"
+                    className="field w-full"
                     value={draft.company[field]}
                     onChange={(e) => onChange(e.target.value)}
                   />
@@ -224,9 +235,9 @@ export function DocumentSettingsView({
       </section>
 
       <section aria-labelledby="settings-rewrite-title" className="space-y-3">
-        <h3 id="settings-rewrite-title" className="text-xl font-bold">
+        <h2 id="settings-rewrite-title" className="text-xl font-bold">
           Section rewrite
-        </h3>
+        </h2>
         <div>
           <label htmlFor="settings-rewrite-overlap" className="label text-ink">
             Copied phrase length (words)
@@ -237,7 +248,7 @@ export function DocumentSettingsView({
             inputMode="numeric"
             min={1}
             max={MAX_REWRITE_OVERLAP_WORDS}
-            className="field w-32 text-sm"
+            className="field w-32"
             aria-describedby="settings-rewrite-overlap-hint"
             value={draft.rewriteOverlapWords}
             onChange={(e) => onDraft({ ...draft, rewriteOverlapWords: e.target.value })}
@@ -254,9 +265,9 @@ export function DocumentSettingsView({
       </section>
 
       <section aria-labelledby="settings-pagespeed-title" className="space-y-3">
-        <h3 id="settings-pagespeed-title" className="text-xl font-bold">
+        <h2 id="settings-pagespeed-title" className="text-xl font-bold">
           PageSpeed key
-        </h3>
+        </h2>
         <p className="max-w-prose text-sm text-ink-soft">
           Used to measure speed in a Website Audit. The key is kept with your AI keys and never shown again.
         </p>
@@ -275,7 +286,7 @@ export function DocumentSettingsView({
             type="password"
             autoComplete="off"
             spellCheck={false}
-            className="field w-full max-w-md text-sm"
+            className="field w-full max-w-md"
             value={draft.pagespeedKey}
             onChange={(e) => onDraft({ ...draft, pagespeedKey: e.target.value })}
           />
@@ -283,15 +294,45 @@ export function DocumentSettingsView({
         {reply.settings.pagespeedKeySaved && (
           <button
             type="button"
-            className="btn-quiet min-h-[44px] text-sm"
+            className="btn-quiet btn-sm"
             disabled={saving}
             aria-label="Remove the saved PageSpeed key"
-            onClick={() => onReset(removePagespeedKey())}
+            onClick={() =>
+              void ask('', 'The saved PageSpeed key is deleted and this saves at once.', removePagespeedKey())
+            }
           >
             Remove the key
           </button>
         )}
       </section>
+
+      <BottomActionBar
+        summary={
+          <>
+            <span aria-live="polite">
+              {pending ? 'You have changes that are not saved yet.' : 'Every change is saved.'}
+            </span>
+            {message &&
+              (message.tone === 'fail' ? (
+                <span role="alert" className="mt-1 block font-semibold text-fail">
+                  {message.text}
+                </span>
+              ) : (
+                <span role="status" className="mt-1 block font-semibold text-pass">
+                  {message.text}
+                </span>
+              ))}
+          </>
+        }
+      >
+        <button type="button" className="btn-quiet" disabled={!pending || saving} onClick={() => void discard()}>
+          Discard changes
+        </button>
+        <button type="button" className="btn-primary" disabled={!pending || saving} onClick={onSave}>
+          {saving ? <Spinner label="Saving…" announce={false} /> : 'Save document settings'}
+        </button>
+      </BottomActionBar>
+      {dialog}
     </div>
   );
 }
@@ -299,21 +340,26 @@ export function DocumentSettingsView({
 export interface DocumentSettingsScreenProps {
   /** For tests: the requests. */
   fetchImpl?: Fetch;
+  /** More settings shown below, inside the same page column (the AI models panel). */
+  children?: ReactNode;
 }
 
 type Loaded =
   { status: 'loading' } | { status: 'failed'; message: string } | { status: 'loaded'; reply: AuditSettingsReply };
 
 /** Edit the Proposal template, the opt-out text and the company details (REQ-027, REQ-019, REQ-018). */
-export function DocumentSettingsScreen({ fetchImpl }: DocumentSettingsScreenProps) {
-  useDocumentTitle('Website Audit settings');
+export function DocumentSettingsScreen({ fetchImpl, children }: DocumentSettingsScreenProps) {
+  useDocumentTitle('Audit settings');
   const [loaded, setLoaded] = useState<Loaded>({ status: 'loading' });
   const [draft, setDraft] = useState<SettingsDraft | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<SettingsMessage>(null);
 
+  const [attempt, setAttempt] = useState(0);
+
   useEffect(() => {
     let live = true;
+    setLoaded({ status: 'loading' });
     void loadSettings(fetchImpl).then((outcome) => {
       if (!live) return;
       if (outcome.ok) {
@@ -326,7 +372,7 @@ export function DocumentSettingsScreen({ fetchImpl }: DocumentSettingsScreenProp
     return () => {
       live = false;
     };
-  }, [fetchImpl]);
+  }, [fetchImpl, attempt]);
 
   const reply = loaded.status === 'loaded' ? loaded.reply : null;
 
@@ -358,19 +404,18 @@ export function DocumentSettingsScreen({ fetchImpl }: DocumentSettingsScreenProp
   };
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
-      <p className="mb-4 text-sm">
-        <Link to={PATHS.audits} className="btn-link min-h-[44px]">
-          Back to Saved Website Audits
-        </Link>
-      </p>
-      <FocusHeading className="mb-2 break-words text-question font-bold">Website Audit settings</FocusHeading>
-      <p className="mb-6 max-w-prose text-ink-soft">
-        The Proposal template, the opt-out text of the Pitch Glimpse, your company details and the keys used by every
-        Website Audit you run or export.
-      </p>
+    <Page width="form">
+      <PageHeader
+        back={{ to: PATHS.audits, label: 'All Website Audits' }}
+        title="Audit settings"
+        lede="The Proposal template, the opt-out text of the Pitch Glimpse, your company details and the keys used by every Website Audit you run or download."
+      />
       {loaded.status === 'loading' && <Spinner label="Loading the document settings…" />}
-      {loaded.status === 'failed' && <ErrorMessage>{loaded.message}</ErrorMessage>}
+      {loaded.status === 'failed' && (
+        <LoadError title="The settings could not be loaded" onRetry={() => setAttempt((n) => n + 1)}>
+          {loaded.message}
+        </LoadError>
+      )}
       {reply && draft && (
         <DocumentSettingsView
           reply={reply}
@@ -389,6 +434,7 @@ export function DocumentSettingsScreen({ fetchImpl }: DocumentSettingsScreenProp
           onReset={(update) => void save(update, true)}
         />
       )}
-    </div>
+      {children && <div className="mt-14">{children}</div>}
+    </Page>
   );
 }

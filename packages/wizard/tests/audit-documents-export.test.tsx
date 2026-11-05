@@ -152,16 +152,16 @@ describe('Audit Documents download link (REQ-021, REQ-022)', () => {
 // ---------------------------------------------------------------------------------------------------
 
 describe('what the export panel offers (REQ-019, REQ-025)', () => {
-  it('offers Markdown, HTML, PDF, Word and the Claude Code bundle for the Audit Documents', () => {
+  it('offers Markdown, HTML, PDF, Word and the bundle for AI coding tools for the Audit Documents', () => {
     const html = view();
     for (const [format, label] of [
       ['md', 'Markdown'],
       ['html', 'HTML'],
       ['pdf', 'PDF'],
       ['docx', 'Word'],
-      ['bundle', 'Claude Code bundle'],
+      ['bundle', 'A bundle for AI coding tools'],
     ]) {
-      expect(html).toContain(`<label for="export-format-${format}">${label}</label>`);
+      expect(html).toMatch(new RegExp(`<label for="export-format-${format}"[^>]*>${label}</label>`));
     }
     for (const kind of AUDIT_DOCUMENT_KINDS) expect(html).toContain(`id="export-document-${kind}"`);
     for (const name of ['Structure', 'Content', 'Findings', 'Improvement Roadmap', 'Proposal'])
@@ -170,10 +170,10 @@ describe('what the export panel offers (REQ-019, REQ-025)', () => {
 
   it('offers a Pitch Glimpse download in English or Tamil, as HTML or PDF', () => {
     const html = view();
-    expect(html).toContain('<label for="pitch-language-en">English</label>');
-    expect(html).toContain('<label for="pitch-language-ta">Tamil</label>');
-    expect(html).toContain('<label for="pitch-format-html">HTML</label>');
-    expect(html).toContain('<label for="pitch-format-pdf">PDF</label>');
+    expect(html).toMatch(/<label for="pitch-language-en"[^>]*>English<\/label>/);
+    expect(html).toMatch(/<label for="pitch-language-ta"[^>]*>Tamil<\/label>/);
+    expect(html).toMatch(/<label for="pitch-format-html"[^>]*>HTML<\/label>/);
+    expect(html).toMatch(/<label for="pitch-format-pdf"[^>]*>PDF<\/label>/);
     expect(downloadButton(html, 'Download the Pitch Glimpse').text).toBe('Download the Pitch Glimpse (PDF, English)');
     expect(queryOf(pitchUrl(AUDIT_ID, defaultPitchChoice()))).toEqual({
       path: `/api/audits/${AUDIT_ID}/pitch`,
@@ -376,20 +376,35 @@ describe('saving a download (T-70)', () => {
     }
   });
 
-  it('shows the read failure with a Retry and keeps every download off', () => {
+  it('shows the read failure with a Try again and keeps every download off', () => {
     const html = view({ loadError: 'The tool is not answering.', onRetry: noop });
     expect(textOf(html)).toContain('The tool is not answering.');
-    expect(buttons(html).some((b) => b.text === 'Retry')).toBe(true);
+    expect(buttons(html).some((b) => b.text === 'Try again')).toBe(true);
     for (const text of ['Download the Audit Documents', 'Download the Pitch Glimpse', 'Download the Owner Audit']) {
       expect(downloadButton(html, text).attrs).toContain('disabled=""');
     }
     expect(textOf(view())).not.toContain('Checking this version…');
   });
 
-  it('shows Back links to the Website Audit and to the review', () => {
+  it('goes back to this Website Audit and shows only tabs a Helper may open', () => {
     const screen = renderToStaticMarkup(createElement(ExportDocumentsScreen, { auditId: AUDIT_ID, version: 2 }));
-    expect(links(screen).find((l) => l.text === 'Back to this Website Audit')?.href).toBe(`/audits/${AUDIT_ID}`);
-    expect(links(screen).some((l) => l.text === 'Review the Audit Documents')).toBe(true);
+    // The list of all audits, Share, Helpers and Audit settings are the owner's: a Helper would be refused there.
+    expect(links(screen).find((l) => l.text.endsWith('Back to this Website Audit'))?.href).toBe(`/audits/${AUDIT_ID}`);
+    expect(links(screen).find((l) => l.text === 'Documents')?.href).toBe(`/audits/${AUDIT_ID}/versions/2/review`);
+    for (const ownerOnly of ['Share', 'Helpers', 'Audit settings']) {
+      expect(links(screen).some((l) => l.text === ownerOnly)).toBe(false);
+    }
+    expect(screen).toMatch(/<h1[^>]*>Download documents<\/h1>/);
+  });
+
+  it('shows the result beside the button that was pressed, and names the bundle plainly', () => {
+    const done = view({ done: { kind: 'pitch', fileName: 'pitch-glimpse.pdf' } });
+    expect(textOf(done)).toContain('Downloaded: pitch-glimpse.pdf');
+    expect(done.match(/role="status"/g)?.length).toBe(1);
+    const failed = view({ error: 'The file could not be made. Try again.', errorKind: 'owner' });
+    expect(failed.match(/role="alert"/g)?.length).toBe(1);
+    expect(textOf(view())).toContain('Details for developers');
+    expect(textOf(view())).not.toMatch(/Claude Code bundle/);
   });
 });
 

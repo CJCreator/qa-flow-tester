@@ -281,11 +281,17 @@ describe('HierarchyView', () => {
     for (const label of ['Menu', 'Footer', 'Breadcrumb', 'Internal link']) {
       expect(html).toContain(`<h4 class="font-bold">${label}</h4>`);
     }
-    expect(text).toMatch(/On page Link text Goes to Where it sits/);
-    expect(text).toContain('/ Services /services Menu');
-    expect(text).toContain('/ Contact /contact Footer');
-    expect(text).toContain('/services/repair Services /services Breadcrumb');
-    expect(text).toContain('/services Talk to us /contact Internal link');
+    expect(text).toMatch(/On page Link text Goes to/);
+    // The group's heading says where the links sit; no column repeats it on every row.
+    expect(text).not.toContain('Where it sits');
+    const group = (label: string) => {
+      const start = html.indexOf(`<h4 class="font-bold">${label}</h4>`);
+      return textOf(html.slice(start, html.indexOf('</table>', start)));
+    };
+    expect(group('Menu')).toContain('/ Services /services');
+    expect(group('Footer')).toContain('/ Contact /contact');
+    expect(group('Breadcrumb')).toContain('/services/repair Services /services');
+    expect(group('Internal link')).toContain('/services Talk to us /contact');
   });
 
   it('says so when there are no links', () => {

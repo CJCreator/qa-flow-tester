@@ -17,7 +17,7 @@ afterAll(() => {
 });
 
 describe('new check-up screen: Sources', () => {
-  it('lists the Product Context files and the docs address under More options', async () => {
+  it('lists the Product context files and the docs address under Adjust the check-up', async () => {
     const { NewCheckupScreen } = await import('../src/screens/NewCheckupScreen');
     const html = renderToStaticMarkup(
       createElement(NewCheckupScreen, {
@@ -38,7 +38,7 @@ describe('new check-up screen: Sources', () => {
     );
     expect(html).toContain('admin-guide.md');
     expect(html).toContain('aria-label="Remove admin-guide.md"');
-    expect(html).toContain('Docs address (optional)');
+    expect(html).toContain('Docs address <span class="font-normal text-ink-soft">Optional</span>');
     expect(html).toContain('http://docs.example/guide');
   });
 });
@@ -253,8 +253,10 @@ describe('T-37a copy, group A', () => {
 
   it('uses the glossary terms and drops the overclaims on the check-up screen', () => {
     const newCheckup = read('../src/screens/NewCheckupScreen.tsx');
-    expect(newCheckup).toContain('label="Product Context"');
-    expect(newCheckup).toContain('Product Context files');
+    expect(newCheckup).toContain('label="Product context"');
+    expect(newCheckup).toContain('Product context files');
+    expect(newCheckup).toContain('label="Design notes"');
+    expect(newCheckup).toContain('Details for developers');
     expect(newCheckup).toContain('Exploring speed');
     expect(newCheckup).toContain('What you send may be kept and used to learn');
     expect(newCheckup).not.toContain('Documents (Sources)');
@@ -275,15 +277,17 @@ describe('T-37a copy, group A', () => {
     const testing = read('../src/screens/TestingScreen.tsx');
     expect(testing).not.toContain('{left} LEFT');
     expect(testing).not.toContain("'HIGH' : 'WARN'");
-    expect(testing).toContain('{problem.severity}');
+    expect(testing).toContain('{problem.label}');
+    expect(testing).toContain("'Must fix'");
   });
 
   it('keeps the run stop copy and the sign-in labels plain', () => {
     expect(read('../src/lib/translate.ts')).not.toContain('Run was stopped');
     const signIn = read('../src/components/SignInRow.tsx');
-    expect(signIn).toContain('Username field (optional)');
-    expect(signIn).toContain('Sign-in button (optional)');
-    expect(signIn).not.toContain('selector (optional)');
+    expect(signIn).toContain('Username field {OPTIONAL}');
+    expect(signIn).toContain('Sign-in button {OPTIONAL}');
+    expect(signIn).not.toMatch(/selector \{OPTIONAL\}|selector \(optional\)/i);
+    expect(signIn).not.toContain('(optional)');
   });
 });
 
@@ -310,7 +314,8 @@ describe('recovery wiring', () => {
     expect(baselineName('tc-home-hero')).toBe('Home hero');
     expect(baselineName('checkout_form')).toBe('Checkout form');
     expect(baselineName('---')).toBe('---');
-    expect(read('../src/screens/VisualBaselinesScreen.tsx')).toContain('Retry');
+    // LoadError carries the Try again button.
+    expect(read('../src/screens/VisualBaselinesScreen.tsx')).toContain('<LoadError');
   });
 });
 
@@ -325,17 +330,21 @@ describe('T-37b: wizard copy, labels and accessibility', () => {
     }
   });
 
-  it('Report uses Check-up #id, Requirements and a stable Light view label', () => {
+  it('Report keeps the check-up id for developers, uses Requirements, and leaves theming to the app', () => {
     const report = read('../src/screens/ReportScreen.tsx');
-    expect(report).toContain('Check-up #');
+    // The id is technical: only under Details for developers, never a crumb.
+    expect(report).not.toContain('Check-up #');
+    expect(report).toMatch(/Details for developers[\s\S]*?<dt className="text-ink-soft">Check-up<\/dt>/);
     expect(report).not.toContain('run #');
     expect(report).not.toContain('Spec Override');
     expect(report).not.toContain('Spec Drift Override');
     expect(report).toContain('How the site matches its requirements');
     expect(report).toContain('Record a requirement override');
-    // The Light view button keeps one label; aria-pressed carries the state.
-    expect(report).toMatch(/aria-pressed=\{light\}[\s\S]*?Light view/);
+    // The app has one theme setting and print is always light: no report-only Light view toggle.
+    expect(report).not.toContain('Light view');
+    expect(report).not.toContain('qa-report-light');
     expect(report).not.toContain("'Dark view'");
+    expect(report).toContain('window.print()');
   });
 
   it('Report explains SEO, AEO and GEO as visible text, not only in a tooltip', () => {
@@ -354,10 +363,14 @@ describe('T-37b: wizard copy, labels and accessibility', () => {
 
   it('Report and Connection announce a failed copy', () => {
     const report = read('../src/screens/ReportScreen.tsx');
-    expect(report).toContain('setCopyFailed(true)');
-    expect(report).toContain('The copy didn’t work. Try again.');
+    // Copy as Markdown reuses DeveloperDetails' CopyButton: a live region, and the text to copy by hand on failure.
+    expect(report).toContain('<CopyButton label="Copy as Markdown"');
     expect(report).not.toContain('// fallback');
     expect(report).not.toContain('(${group.bucket})');
+    const details = read('../src/components/DeveloperDetails.tsx');
+    expect(details).toContain('export function CopyButton(');
+    expect(details).toContain('role="status"');
+    expect(details).toContain('Your browser wouldn’t copy it. Select the text below and copy it yourself.');
 
     const connection = read('../src/screens/ConnectionScreen.tsx');
     expect(connection).toContain('setCopyFailed(true)');
@@ -366,7 +379,7 @@ describe('T-37b: wizard copy, labels and accessibility', () => {
 
   it('Connection names the start step in words, not a command', () => {
     const connection = read('../src/screens/ConnectionScreen.tsx');
-    expect(connection).toContain('Start the QA Tool (see the README).');
+    expect(connection).toContain('Start Release check-up (see the README).');
     expect(connection).not.toContain('pnpm start');
   });
 
@@ -378,15 +391,23 @@ describe('T-37b: wizard copy, labels and accessibility', () => {
     expect(landing).not.toContain('>Product</p>');
   });
 
-  it('Settings: Standard shows no major limit, sign-in wording and plain labels', () => {
+  it('Settings: an unset limit reads "No limit", sign-in wording and plain labels', () => {
     const settings = read('../src/screens/SettingsScreen.tsx');
-    expect(settings).toContain('No limit (Standard)');
-    expect(settings).toContain("preset === 'standard' ? (");
+    expect(settings).toContain('No limit');
+    expect(settings).toContain('unlimitedWhenUnset');
     expect(settings).toContain('The stamp on every report always uses the Standard rule.');
     expect(settings).toContain('Site address');
-    expect(settings).toContain('Quick check (faster)');
+    expect(settings).toContain('Shorter check-up (faster)');
     expect(settings).toContain('Use a test sign-in, not a real person’s.');
-    for (const old of ['Target Website URL', 'Quick smoke scan', 'Failed to', 'Use a test account']) {
+    for (const old of [
+      'Target Website URL',
+      'Quick smoke scan',
+      'Quick check',
+      'window.confirm',
+      'accent-[#',
+      'Failed to',
+      'Use a test account',
+    ]) {
       expect(settings, old).not.toContain(old);
     }
   });
@@ -399,24 +420,25 @@ describe('T-37b: wizard copy, labels and accessibility', () => {
     expect(read('../src/components/SiteMap.tsx')).not.toContain('Serious problems');
   });
 
-  it('TopBar: Visual Baselines, Compare with another site and Visibility', () => {
-    const topbar = read('../src/components/TopBar.tsx');
-    expect(topbar).toContain("label: 'Visual Baselines'");
-    expect(topbar).toContain("'Visual Baselines'");
-    expect(topbar).toContain("label: 'Compare with another site'");
-    expect(topbar).toContain("'Visibility'");
-    expect(topbar).not.toContain("'Baselines'");
-    expect(topbar).not.toContain("'Compare sites'");
+  it('Check-ups row: Visual baselines and Compare sites (ADR 0041, DESIGN.md)', () => {
+    const areaNav = read('../src/components/AreaNav.tsx');
+    expect(areaNav).toContain("label: 'Visual baselines'");
+    expect(areaNav).toContain("label: 'Compare sites'");
+    expect(areaNav).not.toContain("'Baselines'");
+    expect(areaNav).not.toContain("'Visual Baselines'");
+    expect(areaNav).not.toContain("'Compare with another site'");
   });
 
-  it('Command palette: Requirements, Leave out and Compare with another site', () => {
+  it('Command palette: Product context, Leave out, Visual baselines and Compare sites', () => {
     const palette = read('../src/components/CommandPalette.tsx');
     expect(palette).toContain('Jump to Product context and design notes');
     expect(palette).not.toContain('Jump to Requirements and design notes');
     expect(palette).toContain('Toggle Leave out item');
     expect(palette).not.toContain('Jump to Specs');
     expect(palette).not.toContain('Run / Skip item');
-    expect(palette).not.toContain('Compare sites');
+    expect(palette).toContain('Go to Visual baselines');
+    expect(palette).toContain('Go to Compare sites');
+    expect(palette).not.toContain('Visual Baselines');
   });
 
   it('Plan Review heading is Product context and design notes', () => {
@@ -425,10 +447,10 @@ describe('T-37b: wizard copy, labels and accessibility', () => {
     expect(plan).not.toContain('Specs and design notes');
   });
 
-  it('Show key button keeps one label and carries its state in aria-pressed', () => {
+  it('Show key button names what it does next (Show key / Hide key), so it carries no aria-pressed', () => {
     const keyField = read('../src/components/KeyField.tsx');
-    expect(keyField).toContain('aria-pressed={reveal}');
-    expect(keyField).toContain('Show key');
+    expect(keyField).toContain("{reveal ? 'Hide key' : 'Show key'}");
+    expect(keyField).not.toContain('aria-pressed={reveal}');
     expect(keyField).not.toContain("reveal ? 'Hide' : 'Show'");
   });
 });

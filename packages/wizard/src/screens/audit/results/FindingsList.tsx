@@ -51,7 +51,7 @@ export function FindingsList({ findings, auditId, version }: FindingsListProps) 
                     src={auditFileUrl(auditId, finding.screenshotPath, version)}
                     alt={`Screenshot of the page ${finding.urlPath} showing: ${finding.title}`}
                     loading="lazy"
-                    className="mt-2 max-h-72 max-w-full rounded-md border border-edge"
+                    className="mt-2 max-h-72 max-w-full rounded-card border border-rule"
                   />
                 )}
                 <details className="mt-2 text-sm">

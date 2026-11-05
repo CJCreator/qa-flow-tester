@@ -1,15 +1,37 @@
-/** The landing page's colour theme. Dark is the default; the app's working screens are always dark. */
-export type Theme = 'dark' | 'light';
+/**
+ * The colour theme of every page. Light is the default look; "system" follows the device, and a
+ * saved choice of light or dark wins over the device (DESIGN.md, Theming).
+ */
+export type Theme = 'system' | 'light' | 'dark';
 
-export const THEME_KEY = 'qa-theme';
+/**
+ * A new key on purpose: the old landing page saved its default ('dark') under `qa-theme` on every visit, so
+ * that value says nothing about what the person chose. Starting fresh lets everyone get the new default.
+ */
+export const THEME_KEY = 'qa-color-theme';
 
-/** Anything but 'light' is dark, so a missing or damaged value never breaks the page. */
+/** Anything but 'light' or 'dark' follows the device, so a missing or damaged value never breaks the page. */
 export function parseTheme(raw: string | null | undefined): Theme {
-  return raw === 'light' ? 'light' : 'dark';
+  return raw === 'light' || raw === 'dark' ? raw : 'system';
 }
 
-export function toggled(theme: Theme): Theme {
-  return theme === 'light' ? 'dark' : 'light';
+/** Whether the device asks for dark. False where it can't be read. */
+export function prefersDark(): boolean {
+  try {
+    return typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+  } catch {
+    return false;
+  }
+}
+
+/** What the page actually shows for a theme. */
+export function effectiveTheme(theme: Theme, dark: boolean = prefersDark()): 'light' | 'dark' {
+  return theme === 'system' ? (dark ? 'dark' : 'light') : theme;
+}
+
+/** A toggle flips what is on screen, and that becomes the saved choice. */
+export function toggled(theme: Theme, dark: boolean = prefersDark()): Theme {
+  return effectiveTheme(theme, dark) === 'dark' ? 'light' : 'dark';
 }
 
 function defaultStorage(): Storage | undefined {
@@ -24,7 +46,7 @@ export function readTheme(storage: Pick<Storage, 'getItem'> | undefined = defaul
   try {
     return parseTheme(storage?.getItem(THEME_KEY));
   } catch {
-    return 'dark';
+    return 'system';
   }
 }
 
@@ -36,7 +58,8 @@ export function saveTheme(theme: Theme, storage: Pick<Storage, 'setItem'> | unde
   }
 }
 
+/** "system" leaves the choice to the stylesheet's prefers-color-scheme rule. */
 export function applyTheme(theme: Theme, root: Pick<Element, 'setAttribute' | 'removeAttribute'>): void {
-  if (theme === 'light') root.setAttribute('data-theme', 'light');
-  else root.removeAttribute('data-theme');
+  if (theme === 'system') root.removeAttribute('data-theme');
+  else root.setAttribute('data-theme', theme);
 }

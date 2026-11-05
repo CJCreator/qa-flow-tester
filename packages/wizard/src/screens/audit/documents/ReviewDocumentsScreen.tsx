@@ -1,9 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { AuditGetReply, EditOverlay, PageAction, PageContent } from '@qa/types/src/browser.js';
 import { getAiSetup } from '../../../api';
-import { ErrorMessage, FocusHeading, Notice, Spinner } from '../../../components/text';
-import { count } from '../../../lib/format';
-import { Link, PATHS } from '../../../lib/router';
+import { useConfirm } from '../../../components/ConfirmDialog';
+import { ErrorMessage, Notice, Spinner } from '../../../components/text';
+import { Badge, BottomActionBar, LoadError, Page, PageHeader } from '../../../components/ui';
+import { count, scrollBehavior } from '../../../lib/format';
+import { Link, navigate, PATHS } from '../../../lib/router';
+import { AuditTabs } from '../AuditTabs';
 import { useDocumentTitle } from '../../../lib/title';
 import { RewriteReview } from '../ai/RewriteReview';
 import {
@@ -57,7 +60,11 @@ const UNSAVED = 'Not saved yet';
 
 function UnsavedTag({ show }: { show: boolean }) {
   if (!show) return null;
-  return <span className="ml-2 rounded-full bg-warn-tint px-2 text-xs font-semibold text-warn">{UNSAVED}</span>;
+  return (
+    <span className="ml-2 align-middle">
+      <Badge tone="warn">{UNSAVED}</Badge>
+    </span>
+  );
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -97,7 +104,7 @@ function PageItem({
         {node.removed ? (
           <button
             type="button"
-            className="btn-quiet text-sm"
+            className="btn-quiet btn-sm"
             aria-label={`Restore ${node.urlPath} to the Audit Documents`}
             onClick={() => onRemove(node.urlPath, false)}
           >
@@ -107,7 +114,7 @@ function PageItem({
           !isRoot && (
             <button
               type="button"
-              className="btn-quiet text-sm"
+              className="btn-quiet btn-sm"
               aria-label={`Remove ${node.urlPath} from the Audit Documents`}
               onClick={() => onRemove(node.urlPath, true)}
             >
@@ -164,6 +171,16 @@ function SectionsEditor({
   draft: ReviewDraft;
   onDraft: (draft: ReviewDraft) => void;
 }) {
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  // Picking a page opens its Sections here: scroll to them and move focus, so the change is not silent.
+  useEffect(() => {
+    if (urlPath === null) return;
+    const heading = headingRef.current;
+    if (!heading) return;
+    heading.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
+    heading.focus({ preventScroll: true });
+  }, [urlPath]);
+
   let body;
   if (urlPath === null) {
     body = <p className="text-sm text-ink-soft">Pick a page in the hierarchy with Edit Sections to change its text.</p>;
@@ -184,7 +201,7 @@ function SectionsEditor({
             const name = sectionName(row);
             const lang = textLangAttrs(row.original, content.language.primary);
             return (
-              <li key={row.section.id} className="rounded border border-rule p-3" data-section-id={row.section.id}>
+              <li key={row.section.id} className="rounded-card border border-rule p-3" data-section-id={row.section.id}>
                 <h3 className="font-bold">
                   {name}
                   <UnsavedTag show={row.unsaved} />
@@ -200,7 +217,7 @@ function SectionsEditor({
                     <textarea
                       id={id}
                       rows={6}
-                      className="field w-full text-sm"
+                      className="field w-full"
                       value={row.shown}
                       onChange={(e) => onDraft(setSectionText(draft, content.urlPath, row.section.id, e.target.value))}
                       {...lang}
@@ -209,12 +226,12 @@ function SectionsEditor({
                   {row.edited && (
                     <div>
                       <p className="label text-ink">Original text</p>
-                      <p className="whitespace-pre-wrap text-sm text-ink-soft" {...lang}>
+                      <p className="whitespace-pre-wrap text-base text-ink-soft" {...lang}>
                         {row.original}
                       </p>
                       <button
                         type="button"
-                        className="btn-quiet mt-2 text-sm"
+                        className="btn-quiet btn-sm mt-2"
                         aria-label={`Reset ${name} to the original text`}
                         onClick={() => onDraft(resetSection(draft, content.urlPath, row.section.id))}
                       >
@@ -231,7 +248,12 @@ function SectionsEditor({
   }
   return (
     <section aria-labelledby="review-sections-title" className="space-y-3">
-      <h2 id="review-sections-title" className="text-xl font-bold">
+      <h2
+        id="review-sections-title"
+        ref={headingRef}
+        tabIndex={-1}
+        className="break-all text-xl font-bold outline-none"
+      >
         {urlPath === null ? 'Page Content by Section' : `Page Content by Section: ${urlPath}`}
       </h2>
       {body}
@@ -300,31 +322,6 @@ export function ReviewDocumentsView({
 
   return (
     <div className="space-y-10">
-      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-3 border-b border-rule bg-canvas py-3">
-        <button
-          type="button"
-          className="btn-primary min-h-[44px] px-6 font-bold"
-          disabled={!pending || saving}
-          onClick={onSave}
-        >
-          {saving ? <Spinner label="Saving…" /> : 'Save changes'}
-        </button>
-        <button type="button" className="btn-quiet" disabled={!pending || saving} onClick={onDiscard}>
-          Discard unsaved changes
-        </button>
-        <p className="text-sm text-ink-soft" aria-live="polite">
-          {pending ? 'You have changes that are not saved yet.' : 'Every change is saved.'}
-        </p>
-        {message &&
-          (message.tone === 'fail' ? (
-            <ErrorMessage>{message.text}</ErrorMessage>
-          ) : (
-            <p role="status" className="text-sm font-semibold text-pass">
-              {message.text}
-            </p>
-          ))}
-      </div>
-
       <section aria-labelledby="review-hierarchy-title" className="space-y-3">
         <h2 id="review-hierarchy-title" className="text-xl font-bold">
           Page hierarchy
@@ -380,7 +377,7 @@ export function ReviewDocumentsView({
               const { finding } = row;
               const isAi = finding.source === 'ai' || finding.advisory === true;
               return (
-                <li key={finding.id} className="rounded border border-rule p-3" data-finding-id={finding.id}>
+                <li key={finding.id} className="rounded-card border border-rule p-3" data-finding-id={finding.id}>
                   <h3 className="font-bold">
                     {`${finding.id}: ${row.shown.title}`}
                     <UnsavedTag show={row.unsaved} />
@@ -424,7 +421,7 @@ export function ReviewDocumentsView({
                             <textarea
                               id={id}
                               rows={3}
-                              className="field w-full text-sm"
+                              className="field w-full"
                               value={row.shown[field]}
                               onChange={(e) => onDraft(setFindingField(draft, finding.id, field, e.target.value))}
                             />
@@ -442,7 +439,7 @@ export function ReviewDocumentsView({
                   {row.changed.length > 0 && (
                     <button
                       type="button"
-                      className="btn-quiet mt-3 text-sm"
+                      className="btn-quiet btn-sm mt-3"
                       aria-label={`Reset finding ${finding.id} to the original text`}
                       onClick={() => onDraft(resetFinding(draft, finding.id))}
                     >
@@ -468,7 +465,7 @@ export function ReviewDocumentsView({
         ) : (
           <ul className="space-y-4">
             {recommendations.map((row, i) => (
-              <li key={row.urlPath} className="rounded border border-rule p-3">
+              <li key={row.urlPath} className="rounded-card border border-rule p-3">
                 <fieldset>
                   <legend className="font-bold">
                     {`Redesign or repair: ${row.urlPath}`}
@@ -481,7 +478,7 @@ export function ReviewDocumentsView({
                     {ACTIONS.map((action) => {
                       const id = `review-action-${i}-${action}`;
                       return (
-                        <span key={action} className="inline-flex items-center gap-2">
+                        <span key={action} className="inline-flex min-h-[44px] items-center gap-2">
                           <input
                             id={id}
                             type="radio"
@@ -489,8 +486,11 @@ export function ReviewDocumentsView({
                             value={action}
                             checked={row.chosen === action}
                             onChange={() => onDraft(chooseAction(draft, row.urlPath, action))}
+                            className="h-5 w-5 accent-stamp"
                           />
-                          <label htmlFor={id}>{ACTION_LABEL[action]}</label>
+                          <label htmlFor={id} className="py-3 pr-3">
+                            {ACTION_LABEL[action]}
+                          </label>
                         </span>
                       );
                     })}
@@ -498,7 +498,7 @@ export function ReviewDocumentsView({
                   {row.edited && (
                     <button
                       type="button"
-                      className="btn-quiet mt-2 text-sm"
+                      className="btn-quiet btn-sm mt-2"
                       aria-label={`Reset ${row.urlPath} to the proposed choice`}
                       onClick={() => onDraft(resetAction(draft, row.urlPath))}
                     >
@@ -511,6 +511,32 @@ export function ReviewDocumentsView({
           </ul>
         )}
       </section>
+      <BottomActionBar
+        summary={
+          <>
+            <span aria-live="polite">
+              {pending ? 'You have changes that are not saved yet.' : 'Every change is saved.'}
+            </span>
+            {message &&
+              (message.tone === 'fail' ? (
+                <span role="alert" className="mt-1 block font-semibold text-fail">
+                  {message.text}
+                </span>
+              ) : (
+                <span role="status" className="mt-1 block font-semibold text-pass">
+                  {message.text}
+                </span>
+              ))}
+          </>
+        }
+      >
+        <button type="button" className="btn-quiet" disabled={!pending || saving} onClick={onDiscard}>
+          Discard changes
+        </button>
+        <button type="button" className="btn-primary" disabled={!pending || saving} onClick={onSave}>
+          {saving ? <Spinner label="Saving…" announce={false} /> : 'Save changes'}
+        </button>
+      </BottomActionBar>
     </div>
   );
 }
@@ -539,7 +565,7 @@ export function ReviewDocumentsScreen({
   fetchImpl,
   aiSetup = getAiSetup,
 }: ReviewDocumentsScreenProps) {
-  useDocumentTitle('Review Audit Documents');
+  useDocumentTitle('Review the Audit Documents');
   const [aiConfigured, setAiConfigured] = useState<boolean | null>(null);
   const [loaded, setLoaded] = useState<Loaded>({ status: 'loading' });
   const [edits, setEdits] = useState<EditOverlay | null>(null);
@@ -548,6 +574,7 @@ export function ReviewDocumentsScreen({
   const [contents, setContents] = useState<Record<string, PageContentState>>({});
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<ReviewDocumentsViewProps['message']>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let live = true;
@@ -564,7 +591,7 @@ export function ReviewDocumentsScreen({
     return () => {
       live = false;
     };
-  }, [auditId, version, fetchImpl]);
+  }, [auditId, version, fetchImpl, reloadKey]);
 
   // Whether an AI key is set up decides if the Section rewrite shows. Unknown (a failed read) shows neither.
   useEffect(() => {
@@ -613,29 +640,77 @@ export function ReviewDocumentsScreen({
     setSaving(false);
   };
 
+  const dirty = !isDraftEmpty(draft);
+  const { confirm, dialog } = useConfirm();
+
+  // Unsaved edits: the browser asks before the tab closes or reloads, and a click on a link inside the app
+  // asks first (the capture listener runs before the router's own click handling).
+  useEffect(() => {
+    if (!dirty) return;
+    const beforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    const onClick = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const link = e.target instanceof Element ? e.target.closest('a[href]') : null;
+      if (!(link instanceof HTMLAnchorElement) || link.target === '_blank') return;
+      const href = link.getAttribute('href') ?? '';
+      if (!href.startsWith('/') || href.startsWith('//')) return;
+      e.preventDefault();
+      void confirm({
+        title: 'Leave without saving?',
+        body: 'Your edits are not saved yet. If you leave now, they are lost.',
+        confirmLabel: 'Leave and lose the edits',
+        cancelLabel: 'Stay and keep editing',
+        danger: true,
+      }).then((leave) => {
+        if (leave) navigate(href);
+      });
+    };
+    window.addEventListener('beforeunload', beforeUnload);
+    document.addEventListener('click', onClick, true);
+    return () => {
+      window.removeEventListener('beforeunload', beforeUnload);
+      document.removeEventListener('click', onClick, true);
+    };
+  }, [dirty, confirm]);
+
+  const discard = async () => {
+    const yes = await confirm({
+      title: 'Discard your changes?',
+      body: 'Every edit you have not saved is thrown away. Saved edits stay.',
+      confirmLabel: 'Discard changes',
+      cancelLabel: 'Keep editing',
+      danger: true,
+    });
+    if (!yes) return;
+    setDraft(emptyDraft());
+    setMessage(null);
+  };
+
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
-      <p className="mb-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
-        <Link to={PATHS.audit(auditId)} className="btn-link min-h-[44px]">
-          Back to this Website Audit
-        </Link>
-        {versionNumber !== undefined && (
-          <Link to={PATHS.auditExport(auditId, versionNumber)} className="btn-link min-h-[44px]">
-            Export the Audit Documents
-          </Link>
-        )}
-      </p>
-      <FocusHeading className="mb-2 break-words text-question font-bold">Review the Audit Documents</FocusHeading>
-      <p className="mb-6 max-w-prose text-ink-soft">
-        Change the text of Sections and findings, remove pages, and pick redesign or repair before you export. Edits
-        change the Audit Documents only: the Website Audit keeps every original, and you can reset an edit at any time.
-      </p>
-      {reply && (
-        <p className="mb-6 break-all text-sm text-ink-soft">{`${reply.summary.url}, version ${reply.version.version}`}</p>
-      )}
+    <Page width="workspace">
+      <PageHeader
+        // Back to this audit, which a Helper may open too (the list of all audits is the owner's).
+        back={{ to: PATHS.audit(auditId), label: 'Back to this Website Audit' }}
+        meta={
+          reply ? (
+            <span className="break-all">{`${reply.summary.url}, version ${reply.version.version}`}</span>
+          ) : undefined
+        }
+        title="Review the Audit Documents"
+        lede="Change the text of Sections and findings, remove pages, and pick redesign or repair before you download. Edits change the Audit Documents only: the Website Audit keeps every original, and you can reset an edit at any time."
+      />
+      {/* This screen doesn't know whether the caller is a Helper, so the owner-only tabs are left out. */}
+      <AuditTabs auditId={auditId} version={versionNumber} current="documents" hide={['share', 'helpers']} />
 
       {loaded.status === 'loading' && <Spinner label="Loading the Website Audit…" />}
-      {loaded.status === 'failed' && <ErrorMessage>{loaded.message}</ErrorMessage>}
+      {loaded.status === 'failed' && (
+        <LoadError title="The Website Audit could not be loaded" onRetry={() => setReloadKey((k) => k + 1)}>
+          {loaded.message}
+        </LoadError>
+      )}
       {reply && edits && (
         <ReviewDocumentsView
           reply={reply}
@@ -653,12 +728,10 @@ export function ReviewDocumentsScreen({
           fetchImpl={fetchImpl}
           onSelectPage={selectPage}
           onSave={() => void save()}
-          onDiscard={() => {
-            setDraft(emptyDraft());
-            setMessage(null);
-          }}
+          onDiscard={() => void discard()}
         />
       )}
-    </div>
+      {dialog}
+    </Page>
   );
 }

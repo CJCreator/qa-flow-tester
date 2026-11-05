@@ -12,6 +12,7 @@ import type {
   TestCaseExpectations,
 } from '@qa/types';
 import { stepToSentence, expectationsToChecks } from '../../lib/plan-translate';
+import { scrollBehavior } from '../../lib/format';
 import type { InterpretResult, PatchPlanBody } from '../../api';
 import {
   confirmRolesEdit,
@@ -56,7 +57,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-/** What the person can do to the plan from the document. Each change goes to the QA Tool. */
+/** What the person can do to the plan from the document. Each change goes to Release check-up. */
 export interface PlanActions {
   /** A change is being made: controls wait. */
   busy: boolean;
@@ -116,6 +117,8 @@ interface View {
   intent?: PlanIntent | null;
 }
 const ViewContext = createContext<View>({ query: '', needsMe: false });
+/** Whether an AI is set up: without one, "Re-plan with the AI" shows once in the summary, not on every item. */
+const AiContext = createContext(true);
 
 function matches(view: View, text: string): boolean {
   const q = view.query.trim().toLowerCase();
@@ -151,7 +154,7 @@ function Section({
 }: {
   id: string;
   title: string;
-  count?: number;
+  count?: number | string;
   intro?: string;
   /** Starts collapsed when long, unless the reader is looking for something. */
   collapsible?: boolean;
@@ -173,7 +176,9 @@ function Section({
     const shouldOpen =
       view.expandAll !== undefined && view.expandAll !== null
         ? view.expandAll
-        : (count ?? 0) <= COLLAPSE_OVER || !!view.query.trim() || view.needsMe;
+        : (typeof count === 'number' ? count : parseInt(count ?? '0', 10)) <= COLLAPSE_OVER ||
+          !!view.query.trim() ||
+          view.needsMe;
     const [open, setOpen] = useState(shouldOpen);
 
     useEffect(() => {
@@ -185,19 +190,19 @@ function Section({
     }, [view.expandAll, view.query, view.needsMe]);
 
     return (
-      <section
-        id={id}
-        aria-labelledby={`${id}-title`}
-        className="scroll-mt-4 rounded-card border border-rule bg-surface/70 shadow-level-2"
-      >
-        <details open={open} onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
-          <summary className="flex min-h-[56px] cursor-pointer items-center px-5 py-3">
-            <h2 id={`${id}-title`} className="text-lg font-bold text-ink">
+      <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-24">
+        <details
+          className="disclosure border-t border-rule"
+          open={open}
+          onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}
+        >
+          <summary className="py-3">
+            <h2 id={`${id}-title`} className="text-xl font-bold text-ink">
               {heading}
             </h2>
           </summary>
           {open && (
-            <div className="px-5 pb-5">
+            <div className="pb-2 pt-1">
               {intro && <p className="mb-4 max-w-prose text-sm text-ink-soft">{intro}</p>}
               {children}
             </div>
@@ -207,12 +212,8 @@ function Section({
     );
   }
   return (
-    <section
-      id={id}
-      aria-labelledby={`${id}-title`}
-      className="scroll-mt-4 rounded-card border border-rule bg-surface/70 shadow-level-2 p-5"
-    >
-      <h2 id={`${id}-title`} className="mb-1 text-lg font-bold text-ink">
+    <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-24 border-t border-rule pt-6">
+      <h2 id={`${id}-title`} className="mb-2 text-xl font-bold text-ink">
         {heading}
       </h2>
       {intro && <p className="mb-4 max-w-prose text-sm text-ink-soft">{intro}</p>}
@@ -249,7 +250,7 @@ function CollapsibleGroup({
 
   return (
     <details
-      className="mb-2 rounded-card border border-rule bg-surface/50 shadow-level-1"
+      className="mb-2 rounded-card border border-rule bg-surface"
       open={open}
       onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}
     >
@@ -284,11 +285,7 @@ function ChunkedList<T>({
       <ul className={className}>{visibleItems.map(renderItem)}</ul>
       {!showAll && remaining > 0 && (
         <div className="pt-2 text-center">
-          <button
-            type="button"
-            className="btn-quiet rounded-control min-h-[36px] px-4 py-1 text-sm font-bold text-stamp hover:text-stamp-dark"
-            onClick={() => setVisibleCount((c) => c + chunkSize)}
-          >
+          <button type="button" className="btn-quiet btn-sm" onClick={() => setVisibleCount((c) => c + chunkSize)}>
             Show {Math.min(remaining, chunkSize)} more ({remaining} remaining)
           </button>
         </div>
@@ -334,12 +331,13 @@ export function EditableTitle({
           }
           setEditing(false);
         }}
-        className="inline-flex items-center gap-1.5"
+        className="flex flex-wrap items-center gap-2"
       >
         <input
           ref={inputRef}
           type="text"
-          className="field rounded-control px-2 py-0.5 text-sm font-bold"
+          aria-label={`New name for ${value}`}
+          className="field w-auto min-w-0 flex-1 py-2 text-sm font-bold"
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
@@ -357,16 +355,12 @@ export function EditableTitle({
           }}
           disabled={disabled}
         />
-        <button
-          type="submit"
-          className="btn-quiet rounded-control px-2 py-0.5 text-xs font-bold text-stamp hover:text-stamp-dark"
-          disabled={disabled || !text.trim()}
-        >
+        <button type="submit" className="btn-quiet btn-sm" disabled={disabled || !text.trim()}>
           Save
         </button>
         <button
           type="button"
-          className="btn-quiet rounded-control px-2 py-0.5 text-xs text-ink-soft hover:text-ink"
+          className="btn-link text-sm"
           onClick={() => {
             setText(value);
             setEditing(false);
@@ -379,17 +373,17 @@ export function EditableTitle({
   }
 
   return (
-    <span className="group/edit inline-flex items-center gap-1.5">
+    <span className="inline-flex items-center gap-1">
       <span className={className}>{value}</span>
       {!disabled && (
         <button
           type="button"
           aria-label={`Edit name: ${value}`}
-          title="Click to rename"
-          className="rounded-control p-1 text-ink-soft opacity-0 transition-opacity hover:bg-panel hover:text-stamp group-hover/edit:opacity-100 focus:opacity-100"
+          title="Rename"
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-control text-ink-soft hover:bg-panel hover:text-stamp"
           onClick={() => setEditing(true)}
         >
-          <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
           </svg>
         </button>
@@ -431,7 +425,7 @@ function Expected({
         <div className="mt-1 flex flex-wrap gap-x-4">
           <button
             type="button"
-            className="min-h-[32px] font-bold text-stamp hover:underline disabled:opacity-50"
+            className="btn-link text-sm disabled:cursor-not-allowed disabled:text-ink-soft"
             disabled={actions.busy}
             onClick={() => actions.setExpectation(itemId)}
           >
@@ -439,7 +433,7 @@ function Expected({
           </button>
           <button
             type="button"
-            className="min-h-[32px] font-bold text-stamp hover:underline disabled:opacity-50"
+            className="btn-link text-sm disabled:cursor-not-allowed disabled:text-ink-soft"
             disabled={actions.busy}
             onClick={() => {
               setText(expectations.text?.contains ?? '');
@@ -460,22 +454,14 @@ function Expected({
             setEditing(false);
           }}
         >
-          <input
-            className="field flex-1 py-2 text-sm"
-            aria-label="The wording that should show"
-            placeholder="The wording that should show afterwards"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            autoFocus
-          />
-          <button
-            type="submit"
-            className="btn-primary min-h-[44px] px-4 text-sm"
-            disabled={actions.busy || !text.trim()}
-          >
+          <label className="grid flex-1 gap-1">
+            <span className="font-bold">The wording that should show afterwards</span>
+            <input className="field py-2 text-sm" value={text} onChange={(e) => setText(e.target.value)} autoFocus />
+          </label>
+          <button type="submit" className="btn-quiet btn-sm self-end" disabled={actions.busy || !text.trim()}>
             Save
           </button>
-          <button type="button" className="btn-link text-sm" onClick={() => setEditing(false)}>
+          <button type="button" className="btn-link self-end text-sm" onClick={() => setEditing(false)}>
             Cancel
           </button>
         </form>
@@ -497,19 +483,14 @@ function AddSignIn({ actions }: { actions: PlanActions }) {
   const [error, setError] = useState<string | null>(null);
   if (!open) {
     return (
-      <button
-        type="button"
-        className="btn-quiet mt-3 min-h-[44px] px-4 text-sm"
-        disabled={actions.busy}
-        onClick={() => setOpen(true)}
-      >
+      <button type="button" className="btn-quiet btn-sm mt-3" disabled={actions.busy} onClick={() => setOpen(true)}>
         Add a sign-in
       </button>
     );
   }
   return (
     <form
-      className="mt-3 grid gap-3 rounded-md border border-rule p-3 sm:grid-cols-2"
+      className="mt-3 grid gap-3 rounded-card border border-rule p-4 sm:grid-cols-2"
       onSubmit={async (e) => {
         e.preventDefault();
         setError(null);
@@ -534,7 +515,8 @@ function AddSignIn({ actions }: { actions: PlanActions }) {
       }}
     >
       <p className="text-sm text-ink-soft sm:col-span-2">
-        The QA Tool signs in, explores what that role sees, and adds it to the plan. The details stay in memory only.
+        Release check-up signs in, explores what that role sees, and adds it to the plan. The details stay in memory
+        only.
       </p>
       <label className="text-sm">
         <span className="mb-1 block font-bold">Role name</span>
@@ -565,7 +547,9 @@ function AddSignIn({ actions }: { actions: PlanActions }) {
         />
       </label>
       <details className="col-span-full space-y-3">
-        <summary className="cursor-pointer text-sm font-bold text-stamp hover:underline">Advanced</summary>
+        <summary className="flex min-h-[44px] cursor-pointer items-center text-sm font-bold text-stamp hover:underline">
+          Advanced
+        </summary>
         <div className="grid gap-3 pt-2 sm:grid-cols-2">
           <label className="text-sm">
             <span className="mb-1 block font-bold">Sign-in page</span>
@@ -578,7 +562,7 @@ function AddSignIn({ actions }: { actions: PlanActions }) {
             />
           </label>
           <label className="text-sm">
-            <span className="mb-1 block font-bold">Username selector (optional)</span>
+            <span className="mb-1 block font-bold">Username field (optional)</span>
             <input
               className="field py-2 text-sm"
               placeholder='input[name="user"]'
@@ -587,7 +571,7 @@ function AddSignIn({ actions }: { actions: PlanActions }) {
             />
           </label>
           <label className="text-sm">
-            <span className="mb-1 block font-bold">Password selector (optional)</span>
+            <span className="mb-1 block font-bold">Password field (optional)</span>
             <input
               className="field py-2 text-sm"
               placeholder='input[type="password"]'
@@ -596,7 +580,7 @@ function AddSignIn({ actions }: { actions: PlanActions }) {
             />
           </label>
           <label className="text-sm">
-            <span className="mb-1 block font-bold">Submit selector (optional)</span>
+            <span className="mb-1 block font-bold">Sign-in button (optional)</span>
             <input
               className="field py-2 text-sm"
               placeholder='button[type="submit"]'
@@ -612,11 +596,7 @@ function AddSignIn({ actions }: { actions: PlanActions }) {
         </p>
       )}
       <div className="flex flex-wrap gap-3 sm:col-span-2">
-        <button
-          type="submit"
-          className="btn-primary min-h-[44px] px-4 text-sm"
-          disabled={actions.busy || !username.trim() || !password}
-        >
+        <button type="submit" className="btn-quiet btn-sm" disabled={actions.busy || !username.trim() || !password}>
           Sign in and explore
         </button>
         <button type="button" className="btn-link text-sm" onClick={() => setOpen(false)}>
@@ -652,7 +632,10 @@ function IntentSummary({ plan, actions }: { plan: ReviewPlan; actions: PlanActio
       )}
       {present.length > 0 && (
         <fieldset className="mt-3">
-          <legend className="label mb-2">Intents to run</legend>
+          <legend className="label mb-1">Intents to run</legend>
+          <p className="mb-2 max-w-prose text-sm text-ink-soft">
+            An Intent is what a test expects to happen. Switch one off to leave its tests out of this check-up.
+          </p>
           <div className="flex flex-wrap gap-x-5 gap-y-1">
             {present.map((c) => {
               const off = actions.intentsOff.includes(c.intent);
@@ -664,7 +647,7 @@ function IntentSummary({ plan, actions }: { plan: ReviewPlan; actions: PlanActio
                 >
                   <input
                     type="checkbox"
-                    className="h-5 w-5 accent-[#6C9BF2]"
+                    className="h-5 w-5 accent-stamp"
                     data-testid={`intent-switch-${c.intent}`}
                     checked={!off}
                     disabled={actions.busy}
@@ -688,8 +671,10 @@ function SummarySection({ plan, actions }: { plan: ReviewPlan; actions: PlanActi
     (plan.wontRun || []).some((w) => /behind a sign-in/i.test(w.reason)) ||
     (plan.notes || []).some((n) => /sign-in|sign in/i.test(n));
   const tokens = Object.entries(budget?.tokens || {});
+  const scanningLine = plannedWhileScanningLine(plan);
   return (
     <Section id="plan-summary" title="What approving runs">
+      {scanningLine && <p className="mb-3 text-sm text-ink-soft">{scanningLine}</p>}
       <ul className="space-y-1.5">
         {(plan.summary?.lines || []).map((line, i) => (
           <li key={i} className="flex items-start justify-between gap-3 text-base text-ink">
@@ -718,7 +703,7 @@ function SummarySection({ plan, actions }: { plan: ReviewPlan; actions: PlanActi
               <label key={size} className="flex min-h-[44px] cursor-pointer items-center gap-2 text-base text-ink">
                 <input
                   type="checkbox"
-                  className="h-5 w-5 accent-[#6C9BF2]"
+                  className="h-5 w-5 accent-stamp"
                   checked={on}
                   disabled={actions.busy || (on && sizes.length === 1)}
                   onChange={(e) =>
@@ -757,37 +742,41 @@ function SummarySection({ plan, actions }: { plan: ReviewPlan; actions: PlanActi
       </dl>
       {tokens.length > 0 && (
         <details className="mt-3 text-sm">
-          <summary className="min-h-[32px] cursor-pointer text-ink-soft">AI tokens used</summary>
-          <table className="mt-2 text-left text-sm">
-            <thead className="text-ink-soft">
-              <tr>
-                <th className="pr-4 font-normal">Stage</th>
-                <th className="pr-4 font-normal">Requests</th>
-                <th className="pr-4 font-normal">Sent</th>
-                <th className="pr-4 font-normal">Answered</th>
-                <th className="font-normal">Of which thinking</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tokens.map(([stage, u]) => (
-                <tr key={stage}>
-                  <td className="pr-4">{TOKEN_STAGES[stage] ?? stage}</td>
-                  <td className="pr-4">
-                    {u!.requests}
-                    {u!.truncated ? ` (${u!.truncated} cut off)` : ''}
-                  </td>
-                  <td className="pr-4">{u!.promptTokens.toLocaleString()}</td>
-                  <td className="pr-4">{u!.completionTokens.toLocaleString()}</td>
-                  <td>{u!.reasoningTokens.toLocaleString()}</td>
+          <summary className="flex min-h-[44px] cursor-pointer items-center text-ink-soft">AI tokens used</summary>
+          <div className="overflow-x-auto">
+            <table className="table-plain mt-2">
+              <thead>
+                <tr>
+                  <th>Stage</th>
+                  <th>Requests</th>
+                  <th>Sent</th>
+                  <th>Answered</th>
+                  <th>Of which thinking</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {tokens.map(([stage, u]) => (
+                  <tr key={stage}>
+                    <td>{TOKEN_STAGES[stage] ?? stage}</td>
+                    <td>
+                      {u!.requests}
+                      {u!.truncated ? ` (${u!.truncated} cut off)` : ''}
+                    </td>
+                    <td>{u!.promptTokens.toLocaleString()}</td>
+                    <td>{u!.completionTokens.toLocaleString()}</td>
+                    <td>{u!.reasoningTokens.toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </details>
       )}
 
       {plan.readOnlyReason && (
-        <p className="mt-4 rounded border border-warn/40 bg-warn-tint/40 p-3 text-sm text-ink">{plan.readOnlyReason}</p>
+        <p className="mt-4 rounded-card border border-warn/40 bg-warn-tint p-3 text-sm text-ink">
+          {plan.readOnlyReason}
+        </p>
       )}
       {(plan.notes || []).length > 0 && (
         <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-ink">
@@ -797,10 +786,16 @@ function SummarySection({ plan, actions }: { plan: ReviewPlan; actions: PlanActi
         </ul>
       )}
       {notReached && <AddSignIn actions={actions} />}
-      <div>
+      <div className="mt-4 grid gap-2">
+        {plan.aiAvailable === false && (
+          <p className="max-w-prose text-sm text-ink-soft" data-testid="replan-once">
+            No AI is set up for this plan, so items can’t be re-planned one by one. Connect an AI, then re-plan
+            everything here.
+          </p>
+        )}
         <button
           type="button"
-          className="btn-quiet mt-4 min-h-[44px] px-4 text-sm"
+          className="btn-quiet btn-sm w-fit"
           disabled={actions.busy}
           onClick={actions.replanEverything}
         >
@@ -817,11 +812,12 @@ function QuestionsSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAc
     (q) => matches(view, `${q.question} ${q.urlPath}`) && (!view.needsMe || !q.selectedAnswer)
   );
   if (plan.questions.length === 0) return null;
+  const unanswered = plan.questions.filter((q) => !q.selectedAnswer).length;
   return (
     <Section
       id="plan-questions"
-      title="Questions before testing"
-      count={plan.questions.length}
+      title={unanswered > 0 ? 'Needs your answer' : 'Your answers'}
+      count={unanswered > 0 ? unanswered : plan.questions.length}
       collapsible
       intro="Anything you leave unanswered gets the cautious answer: nothing is sent or deleted."
     >
@@ -831,7 +827,7 @@ function QuestionsSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAc
             key={q.id}
             id={itemDomId(q.id)}
             data-plan-item={q.id}
-            className="rounded border border-rule p-3 transition-all"
+            className="rounded-card border border-rule p-4 transition-all"
           >
             <p className="mb-2 text-base font-bold text-ink">
               {q.question} {q.isNew && <Badge tone="stamp">New</Badge>}
@@ -846,7 +842,7 @@ function QuestionsSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAc
                     aria-pressed={picked}
                     disabled={actions.busy}
                     onClick={() => actions.answer(q.id, option)}
-                    className={`min-h-[44px] rounded px-3 py-2 text-sm ${picked ? 'bg-stamp font-bold text-surface' : 'border border-rule text-ink hover:border-edge'}`}
+                    className={`min-h-[44px] rounded-control border-[1.5px] px-3 py-2 text-sm ${picked ? 'border-ink bg-ink font-bold text-surface' : 'border-edge text-ink hover:border-ink'}`}
                   >
                     {option}
                     {!q.selectedAnswer && option === q.safeAnswer ? ' (used if you don’t answer)' : ''}
@@ -881,10 +877,9 @@ function SourceDetails({ test, actions }: { test: PlanPageTest; actions: PlanAct
   if (!test.docSource) return null;
   const roles = rolesLine(test);
   return (
-    <div className="mt-2 space-y-1.5 rounded border border-rule bg-surface/60 p-2 text-sm" data-source-for={test.id}>
+    <div className="mt-2 space-y-1.5 rounded-card border border-rule p-3 text-sm" data-source-for={test.id}>
       <p className="text-ink">
-        <span className="rounded border border-stamp/50 px-1.5 py-0.5 text-xs font-bold text-stamp">Source</span>{' '}
-        {docSourceLabel(test.docSource)}
+        <Badge tone="stamp">Source</Badge> {docSourceLabel(test.docSource)}
       </p>
       {roles && (
         <p className="text-ink-soft">
@@ -916,11 +911,11 @@ function SourceDetails({ test, actions }: { test: PlanPageTest; actions: PlanAct
         <div className="flex flex-wrap items-end gap-2">
           <label className="text-sm">
             <span className="mb-1 block font-bold">Roles, separated by commas</span>
-            <input className="field py-1.5 text-sm" value={typed} onChange={(e) => setTyped(e.target.value)} />
+            <input className="field py-2 text-sm" value={typed} onChange={(e) => setTyped(e.target.value)} />
           </label>
           <button
             type="button"
-            className="btn-quiet min-h-[36px] px-3 text-sm"
+            className="btn-quiet btn-sm"
             disabled={actions.busy || parseRoles(typed).length === 0}
             onClick={() => {
               actions.editSource(confirmRolesEdit(test.id, parseRoles(typed)));
@@ -935,7 +930,7 @@ function SourceDetails({ test, actions }: { test: PlanPageTest; actions: PlanAct
         <label className="flex items-center gap-2">
           <span className="font-bold">Severity if it differs</span>
           <select
-            className="field py-1 text-sm"
+            className="field w-auto py-2 text-sm"
             value={test.docSeverity ?? 'Major'}
             disabled={actions.busy}
             onChange={(e) => actions.editSource(severityEdit(test.id, e.target.value as FindingSeverity))}
@@ -947,10 +942,10 @@ function SourceDetails({ test, actions }: { test: PlanPageTest; actions: PlanAct
             ))}
           </select>
         </label>
-        <label className="flex cursor-pointer items-center gap-2">
+        <label className="flex min-h-[44px] cursor-pointer items-center gap-2">
           <input
             type="checkbox"
-            className="h-4 w-4 accent-[#6C9BF2]"
+            className="h-5 w-5 accent-stamp"
             checked={!!test.docStale}
             disabled={actions.busy}
             onChange={(e) => actions.editSource(staleEdit(test.id, e.target.checked))}
@@ -964,11 +959,7 @@ function SourceDetails({ test, actions }: { test: PlanPageTest; actions: PlanAct
 
 function TestRow({ test, page, actions }: { test: PlanPageTest; page: PlanPage; actions: PlanActions }) {
   return (
-    <li
-      id={itemDomId(test.id)}
-      data-plan-item={test.id}
-      className={`rounded bg-canvas/60 p-2 transition-all ${test.skipped ? 'opacity-60' : ''}`}
-    >
+    <li id={itemDomId(test.id)} data-plan-item={test.id} className="rounded-control bg-canvas p-2 transition-all">
       <div className="flex items-start gap-2">
         <ItemToggle
           label={`Run the test “${test.name}”`}
@@ -978,7 +969,8 @@ function TestRow({ test, page, actions }: { test: PlanPageTest; page: PlanPage; 
         />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2 text-base text-ink">
-            {test.name}
+            <span className={test.skipped ? 'text-ink-soft line-through' : undefined}>{test.name}</span>
+            {test.skipped && <Badge>Left out</Badge>}
             <SourceBadge source={test.source} />
             {test.needsTestCopy && (
               <Badge tone="warn" title="It sends a form or changes data, so it only runs on a test copy">
@@ -1021,14 +1013,11 @@ function TestRow({ test, page, actions }: { test: PlanPageTest; page: PlanPage; 
 
 function PageRow({ page, actions }: { page: PlanPage; actions: PlanActions }) {
   const view = useContext(ViewContext);
+  const ai = useContext(AiContext);
   const covered = page.coverage === 'covered';
   const tests = filterByIntent(page.tests, view.intent);
   return (
-    <li
-      id={itemDomId(page.id)}
-      data-plan-item={page.id}
-      className={`rounded border border-rule p-3 transition-all ${page.skipped ? 'opacity-60' : ''}`}
-    >
+    <li id={itemDomId(page.id)} data-plan-item={page.id} className="rounded-card border border-rule p-3 transition-all">
       <div className="flex items-start gap-3">
         {!covered && (
           <ItemToggle
@@ -1040,8 +1029,13 @@ function PageRow({ page, actions }: { page: PlanPage; actions: PlanActions }) {
         )}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="break-all font-mono text-base font-bold text-ink">{page.urlPath}</span>
+            <span
+              className={`break-all font-mono text-base font-bold ${page.skipped ? 'text-ink-soft line-through' : 'text-ink'}`}
+            >
+              {page.urlPath}
+            </span>
             <span className="text-base text-ink-soft">{page.title}</span>
+            {page.skipped && <Badge>Left out</Badge>}
             {page.coverage === 'sample' && <Badge tone="stamp">Sample page</Badge>}
             {page.coverage === 'promoted' && !page.added && <Badge tone="stamp">Tested on its own</Badge>}
             {page.added && <Badge tone="stamp">Added by you</Badge>}
@@ -1078,19 +1072,19 @@ function PageRow({ page, actions }: { page: PlanPage; actions: PlanActions }) {
             {covered ? (
               <button
                 type="button"
-                className="min-h-[32px] text-sm font-bold text-stamp hover:underline disabled:opacity-50"
+                className="btn-link text-sm disabled:cursor-not-allowed disabled:text-ink-soft"
                 disabled={actions.busy}
                 onClick={() => actions.promote(page.id)}
               >
                 Test this page too
               </button>
-            ) : (
+            ) : ai ? (
               <ReplanControl
                 label={`Re-plan ${page.urlPath} with the AI`}
                 disabled={actions.busy}
                 onReplan={(text) => actions.replan(page.id, text)}
               />
-            )}
+            ) : null}
           </div>
         </div>
       </div>
@@ -1115,7 +1109,7 @@ function BulkSwitch({
   return (
     <button
       type="button"
-      className="min-h-[32px] text-sm font-bold text-stamp hover:underline disabled:opacity-50"
+      className="btn-link text-sm disabled:cursor-not-allowed disabled:text-ink-soft"
       disabled={actions.busy}
       onClick={(e) => {
         e.preventDefault();
@@ -1143,7 +1137,7 @@ function PagesSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAction
     <Section
       id="plan-pages"
       title="Pages"
-      count={plan.planPages?.length ?? 0}
+      count={`${plan.planPages?.length ?? 0}, ${(plan.planPages ?? []).filter((p) => p.coverage !== 'covered').length} tested`}
       collapsible
       intro="Every page found. Each tested page is visited at every screen size, as everyone who reached it, and every check runs on it; the tests under it run too. Pages built from one layout are tested through a few Sample Pages."
     >
@@ -1183,7 +1177,7 @@ function PagesSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAction
       })}
       {pages.length === 0 && <p className="text-sm text-ink-soft">No pages match.</p>}
       <form
-        className="mt-4 flex flex-col gap-2 sm:flex-row"
+        className="mt-6 grid gap-2"
         onSubmit={async (e) => {
           e.preventDefault();
           setError(null);
@@ -1195,23 +1189,21 @@ function PagesSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAction
           }
         }}
       >
-        <label className="sr-only" htmlFor="add-page-address">
-          Add a page by its address
+        <label className="font-bold" htmlFor="add-page-address">
+          Add a page no link reaches
         </label>
-        <input
-          id="add-page-address"
-          className="field flex-1 py-2 text-sm"
-          placeholder="Add a page no link reaches, e.g. /admin"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-        />
-        <button
-          type="submit"
-          className="btn-quiet min-h-[44px] px-4 text-sm"
-          disabled={actions.busy || !address.trim()}
-        >
-          Add page
-        </button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <input
+            id="add-page-address"
+            className="field flex-1 py-2 text-sm"
+            placeholder="For example: /admin"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+          />
+          <button type="submit" className="btn-quiet btn-sm" disabled={actions.busy || !address.trim()}>
+            Add page
+          </button>
+        </div>
       </form>
       {error && (
         <p role="alert" className="mt-2 text-sm text-fail">
@@ -1223,13 +1215,10 @@ function PagesSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAction
 }
 
 function NavRow({ nav, actions }: { nav: NavigationCheck; actions: PlanActions }) {
+  const ai = useContext(AiContext);
   const menuSizes = (nav.menuSteps || []).flatMap((s) => s.onlyAt || []);
   return (
-    <li
-      id={itemDomId(nav.id)}
-      data-plan-item={nav.id}
-      className={`rounded border border-rule p-2.5 transition-all ${nav.skipped ? 'opacity-60' : ''}`}
-    >
+    <li id={itemDomId(nav.id)} data-plan-item={nav.id} className="rounded-card border border-rule p-3 transition-all">
       <div className="flex items-start gap-2">
         <ItemToggle
           label={`Check the link: ${nav.name}`}
@@ -1239,7 +1228,8 @@ function NavRow({ nav, actions }: { nav: NavigationCheck; actions: PlanActions }
         />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2 text-base text-ink">
-            {nav.name}
+            <span className={nav.skipped ? 'text-ink-soft line-through' : undefined}>{nav.name}</span>
+            {nav.skipped && <Badge>Left out</Badge>}
             <SourceBadge source={nav.source} />
             {nav.isNew && <Badge tone="stamp">New</Badge>}
           </div>
@@ -1268,11 +1258,13 @@ function NavRow({ nav, actions }: { nav: NavigationCheck; actions: PlanActions }
           {nav.roles.some((r) => roleName(r) !== 'visitor') && (
             <p className="text-sm text-ink-soft">As {nav.roles.map(roleName).join(', ')}</p>
           )}
-          <ReplanControl
-            label={`Re-plan the check “${nav.name}” with the AI`}
-            disabled={actions.busy}
-            onReplan={(text) => actions.replan(nav.id, text)}
-          />
+          {ai && (
+            <ReplanControl
+              label={`Re-plan the check “${nav.name}” with the AI`}
+              disabled={actions.busy}
+              onReplan={(text) => actions.replan(nav.id, text)}
+            />
+          )}
         </div>
       </div>
     </li>
@@ -1301,7 +1293,7 @@ function NavigationSection({ plan, actions }: { plan: ReviewPlan; actions: PlanA
       {shared.length > 0 && (
         <>
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-base font-bold text-ink">Shared menus</h3>
+            <h3 className="text-lg font-bold text-ink">Shared menus</h3>
             <BulkSwitch
               ids={shared.map((n) => n.id)}
               skippedCount={shared.filter((n) => n.skipped).length}
@@ -1318,7 +1310,7 @@ function NavigationSection({ plan, actions }: { plan: ReviewPlan; actions: PlanA
       )}
       {starts.length > 0 && (
         <>
-          <h3 className="mb-2 text-base font-bold text-ink">Links on pages</h3>
+          <h3 className="mb-2 text-lg font-bold text-ink">Links on pages</h3>
           {starts.map((start) => {
             const links = inPage.filter((n) => n.startPage === start);
             return (
@@ -1351,13 +1343,13 @@ function NavigationSection({ plan, actions }: { plan: ReviewPlan; actions: PlanA
       )}
       {(leaving.length > 0 || hosts.length > 0) && (
         <>
-          <h3 className="mb-2 mt-4 text-base font-bold text-ink">Links that leave the site</h3>
+          <h3 className="mb-2 mt-4 text-lg font-bold text-ink">Links that leave the site</h3>
           {hosts.length > 0 && (
             <ul className="mb-3 space-y-1.5">
               {hosts.map((host) => (
                 <li
                   key={host.host}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded bg-canvas/60 px-3 py-2 text-base text-ink"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-control bg-canvas px-3 py-2 text-base text-ink"
                 >
                   <span>
                     <span className="font-mono">{host.host}</span> · {host.links} {host.links === 1 ? 'link' : 'links'}
@@ -1396,38 +1388,41 @@ function DescribeTest({ plan, actions }: { plan: ReviewPlan; actions: PlanAction
   const [error, setError] = useState<string | null>(null);
   if (plan.aiAvailable === false) return null;
   return (
-    <div className="mt-4 rounded border border-rule bg-canvas/60 p-4">
-      <h3 className="mb-1 text-base font-bold text-ink">Add a test by describing it</h3>
+    <div className="mt-6 rounded-card border border-rule p-4">
+      <h3 className="mb-1 text-lg font-bold text-ink">Add a test by describing it</h3>
       <p className="mb-3 text-sm text-ink-soft">For example: “Save with an empty amount — it should show an error”.</p>
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <label className="sr-only" htmlFor="describe-page">
-          On the page
-        </label>
-        <select
-          id="describe-page"
-          className="field py-2 text-sm sm:w-48"
-          value={urlPath}
-          onChange={(e) => setUrlPath(e.target.value)}
-        >
-          {pages.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
-        <label className="sr-only" htmlFor="describe-sentence">
-          Describe the test
-        </label>
-        <input
-          id="describe-sentence"
-          className="field flex-1 py-2 text-sm"
-          value={sentence}
-          onChange={(e) => setSentence(e.target.value)}
-          placeholder="What to do, and what should happen"
-        />
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+        <div className="grid gap-1 sm:w-48">
+          <label className="text-sm font-bold" htmlFor="describe-page">
+            On the page
+          </label>
+          <select
+            id="describe-page"
+            className="field py-2 text-sm"
+            value={urlPath}
+            onChange={(e) => setUrlPath(e.target.value)}
+          >
+            {pages.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="grid flex-1 gap-1">
+          <label className="text-sm font-bold" htmlFor="describe-sentence">
+            What to do, and what should happen
+          </label>
+          <input
+            id="describe-sentence"
+            className="field py-2 text-sm"
+            value={sentence}
+            onChange={(e) => setSentence(e.target.value)}
+          />
+        </div>
         <button
           type="button"
-          className="btn-quiet min-h-[44px] px-4 text-sm"
+          className="btn-quiet btn-sm"
           disabled={working || actions.busy || !sentence.trim()}
           onClick={async () => {
             setWorking(true);
@@ -1453,7 +1448,7 @@ function DescribeTest({ plan, actions }: { plan: ReviewPlan; actions: PlanAction
         </p>
       )}
       {result?.flow && (
-        <div className="mt-3 rounded border border-pass/40 bg-pass-tint/30 p-3 text-sm">
+        <div className="mt-3 rounded-card border border-pass/40 bg-pass-tint p-3 text-sm">
           <p className="font-bold text-pass">{result.flow.name}</p>
           <ol className="mt-1 list-decimal pl-5 text-ink-soft">
             {result.flow.steps.map((s, i) => (
@@ -1462,7 +1457,7 @@ function DescribeTest({ plan, actions }: { plan: ReviewPlan; actions: PlanAction
           </ol>
           <button
             type="button"
-            className="btn-primary mt-2 min-h-[44px] px-4 text-sm"
+            className="btn-quiet btn-sm mt-2"
             disabled={actions.busy}
             onClick={async () => {
               await actions.addJourney(result.flow!);
@@ -1481,6 +1476,7 @@ function DescribeTest({ plan, actions }: { plan: ReviewPlan; actions: PlanAction
 function SortableJourneyItem({ flow, actions }: { flow: DiscoveredFlow; actions: PlanActions }) {
   const id = `journey:${flow.id}`;
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: flow.id });
+  const ai = useContext(AiContext);
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -1494,9 +1490,9 @@ function SortableJourneyItem({ flow, actions }: { flow: DiscoveredFlow; actions:
       style={style}
       id={itemDomId(id)}
       data-plan-item={id}
-      className={`rounded-card border border-rule bg-surface/80 p-3.5 shadow-level-1 transition-all hover:shadow-level-2 ${
-        flow.outOfScope ? 'opacity-60' : ''
-      } ${isDragging ? 'opacity-85 ring-2 ring-stamp shadow-level-4 bg-panel' : ''}`}
+      className={`rounded-card border border-rule bg-surface p-3.5 transition-all ${
+        isDragging ? 'bg-panel shadow-level-4 ring-2 ring-stamp' : ''
+      }`}
     >
       <div className="flex items-start gap-2.5">
         <button
@@ -1505,7 +1501,7 @@ function SortableJourneyItem({ flow, actions }: { flow: DiscoveredFlow; actions:
           {...listeners}
           aria-label={`Drag to reorder journey: ${flow.name}`}
           title="Drag to reorder"
-          className="mt-0.5 inline-flex h-8 w-6 cursor-grab items-center justify-center rounded-control text-ink-soft opacity-60 transition-opacity hover:opacity-100 hover:text-ink active:cursor-grabbing focus:opacity-100"
+          className="-my-1.5 inline-flex h-11 w-8 shrink-0 cursor-grab items-center justify-center rounded-control text-ink-soft hover:bg-panel hover:text-ink active:cursor-grabbing"
         >
           <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <circle cx="7" cy="4" r="1.5" />
@@ -1528,8 +1524,9 @@ function SortableJourneyItem({ flow, actions }: { flow: DiscoveredFlow; actions:
               value={flow.name}
               onSave={(nextName) => void actions.renameJourney?.(flow.id, nextName)}
               disabled={actions.busy}
-              className="text-base font-bold text-ink"
+              className={`text-base font-bold ${flow.outOfScope ? 'text-ink-soft line-through' : 'text-ink'}`}
             />
+            {flow.outOfScope && <Badge>Left out</Badge>}
             {roleName(flow.role) !== 'visitor' && (
               <span className="font-normal text-ink-soft">as {roleName(flow.role)}</span>
             )}
@@ -1554,13 +1551,15 @@ function SortableJourneyItem({ flow, actions }: { flow: DiscoveredFlow; actions:
               {help}
             </p>
           ))}
-          <div className="mt-2">
-            <ReplanControl
-              label={`Re-plan the journey “${flow.name}” with the AI`}
-              disabled={actions.busy}
-              onReplan={(text) => actions.replan(id, text)}
-            />
-          </div>
+          {ai && (
+            <div className="mt-2">
+              <ReplanControl
+                label={`Re-plan the journey “${flow.name}” with the AI`}
+                disabled={actions.busy}
+                onReplan={(text) => actions.replan(id, text)}
+              />
+            </div>
+          )}
         </div>
       </div>
     </li>
@@ -1680,7 +1679,7 @@ function NotFoundSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAct
     >
       {groups.map((group) => (
         <div key={group.document} className="mb-3">
-          <h4 className="mb-1 text-base font-bold text-ink">{group.document}</h4>
+          <h3 className="mb-1 text-lg font-bold text-ink">{group.document}</h3>
           <ul className="space-y-1.5 text-base">
             {group.items.map((item) => (
               <li key={item.id} id={itemDomId(item.id)} className="flex items-start justify-between gap-3">
@@ -1762,7 +1761,7 @@ function DocsSection({ plan, actions }: { plan: ReviewPlan; actions: PlanActions
       />
       <button
         type="button"
-        className="btn-primary min-h-[44px] px-4 text-sm"
+        className="btn-quiet btn-sm"
         disabled={actions.busy}
         onClick={() => actions.saveDocsAndReplan(productContext, designNotes)}
       >
@@ -1772,7 +1771,6 @@ function DocsSection({ plan, actions }: { plan: ReviewPlan; actions: PlanActions
   );
 }
 
-/** The plan at a glance: how many of each, and how many need the reader, each a link to its section. */
 /** Filter chips: show only the items with one Intent. Pressing the chosen one again shows all. */
 function IntentChips({ plan, view, setView }: { plan: ReviewPlan; view: View; setView: (v: View) => void }) {
   const present = intentsInPlan(plan);
@@ -1784,6 +1782,7 @@ function IntentChips({ plan, view, setView }: { plan: ReviewPlan; view: View; se
       aria-label="Show by Intent"
       data-testid="intent-chips"
     >
+      <span className="text-sm text-ink-soft">Show only one Intent:</span>
       {present.map((c) => {
         const pressed = view.intent === c.intent;
         return (
@@ -1793,7 +1792,7 @@ function IntentChips({ plan, view, setView }: { plan: ReviewPlan; view: View; se
             aria-pressed={pressed}
             title={INTENT_HINTS[c.intent]}
             data-testid={`intent-chip-${c.intent}`}
-            className={`min-h-[44px] rounded-control border px-3 text-sm font-bold ${pressed ? 'border-stamp bg-stamp text-white' : 'border-rule text-ink hover:border-stamp'}`}
+            className={`min-h-[44px] rounded-control border-[1.5px] px-3 text-sm font-bold ${pressed ? 'border-ink bg-ink text-surface' : 'border-edge text-ink hover:border-ink'}`}
             onClick={() => setView({ ...view, intent: pressed ? null : c.intent })}
           >
             {c.label} ({c.items})
@@ -1804,7 +1803,8 @@ function IntentChips({ plan, view, setView }: { plan: ReviewPlan; view: View; se
   );
 }
 
-function Overview({ plan, view, setView }: { plan: ReviewPlan; view: View; setView: (v: View) => void }) {
+/** Narrowing the plan: find words, show only what needs the reader, one Intent, open or close every section. */
+function PlanFinder({ plan, view, setView }: { plan: ReviewPlan; view: View; setView: (v: View) => void }) {
   const pages = plan.planPages || [];
   const navigation = plan.navigation || [];
   const unanswered = plan.questions.filter((q) => !q.selectedAnswer).length;
@@ -1813,40 +1813,17 @@ function Overview({ plan, view, setView }: { plan: ReviewPlan; view: View; setVi
     pages.filter((p) => p.coverage !== 'covered' && pageNeedsMe(p)).length +
     navigation.filter(navNeedsMe).length +
     plan.flows.filter(flowNeedsMe).length;
-  const cards: Array<[string, string, string]> = [
-    ['plan-pages', 'Pages', `${pages.length} (${pages.filter((p) => p.coverage !== 'covered').length} tested)`],
-    ['plan-navigation', 'Links', String(navigation.length)],
-    ['plan-journeys', 'Journeys', String(plan.flows.length)],
-    ...(plan.questions.length > 0
-      ? ([['plan-questions', 'Questions', `${unanswered} unanswered`]] as Array<[string, string, string]>)
-      : []),
-    ['plan-wontrun', 'Won’t run', String(plan.wontRun?.length ?? 0)],
-  ];
   return (
-    <div className="space-y-3">
-      <nav aria-label="Plan contents" className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-        {cards.map(([id, name, value]) => (
-          <a
-            key={id}
-            href={`#${id}`}
-            className="interactive flex min-h-[56px] flex-col justify-center rounded-card border border-rule bg-surface/80 px-3 py-2 shadow-level-1 hover:border-stamp hover:shadow-level-2"
-          >
-            <span className="text-sm text-ink-soft">{name}</span>
-            <span className="font-bold text-ink">{value}</span>
-          </a>
-        ))}
-      </nav>
-      {plannedWhileScanningLine(plan) && <p className="text-sm text-ink-soft">{plannedWhileScanningLine(plan)}</p>}
-      <IntentChips plan={plan} view={view} setView={setView} />
+    <div className="grid gap-3 border-t border-rule pt-6">
+      <label className="font-bold" htmlFor="plan-filter">
+        Find in the plan
+      </label>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <label className="sr-only" htmlFor="plan-filter">
-          Find in the plan
-        </label>
         <input
           id="plan-filter"
           type="search"
           className="field flex-1 py-2 text-base"
-          placeholder="Find a page, link or journey"
+          placeholder="A page, link or journey"
           value={view.query}
           onChange={(e) => setView({ ...view, query: e.target.value })}
         />
@@ -1854,7 +1831,7 @@ function Overview({ plan, view, setView }: { plan: ReviewPlan; view: View; setVi
           <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-base text-ink">
             <input
               type="checkbox"
-              className="h-5 w-5 accent-[#6C9BF2]"
+              className="h-5 w-5 accent-stamp"
               checked={view.needsMe}
               onChange={(e) => setView({ ...view, needsMe: e.target.checked })}
             />
@@ -1862,14 +1839,14 @@ function Overview({ plan, view, setView }: { plan: ReviewPlan; view: View; setVi
           </label>
           <button
             type="button"
-            className="btn-quiet rounded-control min-h-[44px] px-3 text-sm font-bold text-ink hover:text-stamp"
+            className="btn-quiet btn-sm"
             onClick={() => setView({ ...view, expandAll: view.expandAll ? false : true })}
-            title={view.expandAll ? 'Collapse all plan sections' : 'Expand all plan sections'}
           >
-            {view.expandAll ? 'Collapse all' : 'Expand all'}
+            {view.expandAll ? 'Close every section' : 'Open every section'}
           </button>
         </div>
       </div>
+      <IntentChips plan={plan} view={view} setView={setView} />
     </div>
   );
 }
@@ -1895,6 +1872,18 @@ function usePlanKeyboardNavigation() {
 
       if (e.metaKey || e.ctrlKey || e.altKey) return;
 
+      // Esc lets go of the item that j or k picked.
+      if (e.key === 'Escape') {
+        if (activeItemId) setActiveItemId(null);
+        return;
+      }
+
+      // Enter and Space belong to the control that has focus: a button, link, tab or disclosure works as usual.
+      const onControl =
+        activeEl instanceof Element &&
+        !!activeEl.closest('button, a[href], [role="tab"], [role="button"], input, textarea, select, summary');
+      if ((e.key === 'Enter' || e.key === ' ') && onControl) return;
+
       // Handle 'g' chords
       if (chordRef.current === 'g') {
         if (chordTimerRef.current) clearTimeout(chordTimerRef.current);
@@ -1913,7 +1902,7 @@ function usePlanKeyboardNavigation() {
 
         if (e.key === 'g') {
           e.preventDefault();
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          window.scrollTo({ top: 0, behavior: scrollBehavior() });
           return;
         }
 
@@ -1921,7 +1910,7 @@ function usePlanKeyboardNavigation() {
         if (targetId) {
           e.preventDefault();
           const targetEl = document.getElementById(targetId) || document.getElementById(`${targetId}-title`);
-          targetEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          targetEl?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
           return;
         }
       }
@@ -1937,7 +1926,7 @@ function usePlanKeyboardNavigation() {
 
       if (e.key === 'G') {
         e.preventDefault();
-        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        window.scrollTo({ top: document.body.scrollHeight, behavior: scrollBehavior() });
         return;
       }
 
@@ -1954,7 +1943,7 @@ function usePlanKeyboardNavigation() {
         const nextItem = items[nextIndex];
         const nextId = nextItem.dataset.planItem || null;
         setActiveItemId(nextId);
-        nextItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        nextItem.scrollIntoView({ behavior: scrollBehavior(), block: 'nearest' });
         return;
       }
 
@@ -1964,7 +1953,7 @@ function usePlanKeyboardNavigation() {
         const prevItem = items[prevIndex];
         const prevId = prevItem.dataset.planItem || null;
         setActiveItemId(prevId);
-        prevItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        prevItem.scrollIntoView({ behavior: scrollBehavior(), block: 'nearest' });
         return;
       }
 
@@ -2005,9 +1994,9 @@ function usePlanKeyboardNavigation() {
     if (!activeItemId) return;
     const target = document.querySelector<HTMLElement>(`[data-plan-item="${activeItemId}"]`);
     if (target) {
-      target.classList.add('ring-2', 'ring-stamp', 'bg-stamp-tint/10');
+      target.classList.add('ring-2', 'ring-stamp', 'bg-stamp-tint');
       return () => {
-        target.classList.remove('ring-2', 'ring-stamp', 'bg-stamp-tint/10');
+        target.classList.remove('ring-2', 'ring-stamp', 'bg-stamp-tint');
       };
     }
   }, [activeItemId]);
@@ -2035,10 +2024,10 @@ export function PlanDocument({ plan, actions }: { plan: ReviewPlan; actions: Pla
           if (parent instanceof HTMLDetailsElement) parent.open = true;
           parent = parent.parentElement;
         }
-        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        target.classList.add('ring-2', 'ring-stamp', 'shadow-level-3', 'transition-all', 'duration-300');
+        target.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
+        target.classList.add('ring-2', 'ring-stamp', 'transition-all', 'duration-slow');
         window.setTimeout(() => {
-          target.classList.remove('ring-2', 'ring-stamp', 'shadow-level-3');
+          target.classList.remove('ring-2', 'ring-stamp');
         }, 3000);
       }
     };
@@ -2053,19 +2042,22 @@ export function PlanDocument({ plan, actions }: { plan: ReviewPlan; actions: Pla
 
   return (
     <ViewContext.Provider value={view}>
-      <div className="mx-auto w-full max-w-4xl space-y-5 px-4 py-6 sm:px-6">
-        <Overview plan={plan} view={view} setView={setView} />
-        <SummarySection plan={plan} actions={actions} />
-        <QuestionsSection plan={plan} actions={actions} />
-        <PagesSection plan={plan} actions={actions} />
-        <NavigationSection plan={plan} actions={actions} />
-        <JourneysSection plan={plan} actions={actions} />
-        <ChecksSection plan={plan} />
-        <WontRunSection plan={plan} />
-        <RolesNotTestedSection plan={plan} />
-        <NotFoundSection plan={plan} actions={actions} />
-        <DocsSection plan={plan} actions={actions} />
-      </div>
+      <AiContext.Provider value={plan.aiAvailable !== false}>
+        {/* What needs an answer first, then the summary, then everything that runs, then what doesn't. */}
+        <div className="w-full space-y-10">
+          <QuestionsSection plan={plan} actions={actions} />
+          <SummarySection plan={plan} actions={actions} />
+          <PlanFinder plan={plan} view={view} setView={setView} />
+          <PagesSection plan={plan} actions={actions} />
+          <NavigationSection plan={plan} actions={actions} />
+          <JourneysSection plan={plan} actions={actions} />
+          <ChecksSection plan={plan} />
+          <WontRunSection plan={plan} />
+          <RolesNotTestedSection plan={plan} />
+          <NotFoundSection plan={plan} actions={actions} />
+          <DocsSection plan={plan} actions={actions} />
+        </div>
+      </AiContext.Provider>
     </ViewContext.Provider>
   );
 }

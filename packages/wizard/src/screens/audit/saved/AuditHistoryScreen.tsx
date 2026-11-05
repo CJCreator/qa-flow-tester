@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import type { AuditGetReply, AuditSummary, AuditVersion, ShortlistEntry } from '@qa/types/src/browser.js';
-import { ErrorMessage, FocusHeading, Notice, Spinner } from '../../../components/text';
+import { useConfirm, type ConfirmOptions } from '../../../components/ConfirmDialog';
+import { Notice, Spinner } from '../../../components/text';
+import { Badge, Disclosure, LoadError, Page, PageHeader } from '../../../components/ui';
 import { count, formatWhen } from '../../../lib/format';
 import { Link } from '../../../lib/router';
 import { useDocumentTitle } from '../../../lib/title';
+import { AuditTabs } from '../AuditTabs';
 import { loadCallerIsHelper } from './caller-access';
 import {
   AUDIT_PATHS,
@@ -14,6 +17,7 @@ import {
   loadVersion,
   rerunAndReload,
   runningVersion,
+  shortlistMarkText,
   versionCounts,
   versionsOldestFirst,
   type Fetch,
@@ -25,6 +29,17 @@ import { ShortlistPanel } from './ShortlistPanel';
 export const DELETE_WARNING =
   'This removes every version, edit, Shortlist entry, Shared Link and Helper access of this Website Audit. It cannot be undone.';
 
+/** The question asked before a Website Audit is deleted. */
+export function deleteConfirmOptions(host: string): ConfirmOptions {
+  return {
+    title: `Delete the Website Audit of ${host}?`,
+    body: DELETE_WARNING,
+    confirmLabel: 'Delete the Website Audit',
+    cancelLabel: 'Keep it',
+    danger: true,
+  };
+}
+
 /** One version opened through `GET /api/audits/:id?version=n`. */
 export type OpenedVersion =
   | { status: 'loading'; version: number }
@@ -35,79 +50,48 @@ export interface AuditHistoryViewProps {
   summary: AuditSummary;
   opened: OpenedVersion | null;
   rerunning: boolean;
-  confirmingDelete: boolean;
   deleting: boolean;
   /** The outcome of the last re-run or delete. */
   message: { tone: 'pass' | 'fail'; text: string } | null;
+  /** Opens a version's details in place, or closes them when that version is already open. */
   onOpen: (version: number) => void;
   onRerun: () => void;
+  /** Asks before deleting (the screen shows the confirm dialog). */
   onAskDelete: () => void;
-  onCancelDelete: () => void;
-  onConfirmDelete: () => void;
-  /** The Shortlist panel; a slot so the view renders without requests. */
+  /** The Shortlist panel; a slot so the view renders without requests. Never shown to a Helper. */
   shortlist?: ReactNode;
-  /** The caller is a Helper: the owner's actions (Re-run, Delete, Helpers, Shared Links) are not shown (ADR 0037). */
+  /** The caller is a Helper: the owner's actions (Audit again, Delete, Helpers, Share) are not shown (ADR 0037). */
   isHelper?: boolean | null;
 }
 
-function VersionItem({
-  version,
-  isOpen,
-  onOpen,
-}: {
-  version: AuditVersion;
-  isOpen: boolean;
-  onOpen: (n: number) => void;
-}) {
+/** Details of one opened version, shown in place under its row. */
+function OpenedDetails({ auditId, opened }: { auditId: string; opened: OpenedVersion }) {
+  const id = `version-${opened.version}-details`;
   return (
-    <li className="card-1 bg-surface p-4" data-version={version.version}>
-      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-        <div className="min-w-0">
-          <h3 className="font-bold text-ink">{`Version ${version.version}`}</h3>
-          <p className="text-sm text-ink">{`Started ${formatWhen(version.startedAt)} · Status: ${STATUS_LABEL[version.status]}`}</p>
-          <p className="text-sm text-ink-soft">{versionCounts(version)}</p>
-          {version.edited && <p className="text-sm text-ink-soft">Has edits</p>}
-          {version.status === 'failed' && version.error && (
-            <p className="text-sm text-fail">{`Failed: ${version.error}`}</p>
-          )}
-        </div>
-        <button
-          type="button"
-          className="btn-quiet min-h-[44px] px-4 text-sm"
-          aria-label={`Open version ${version.version}`}
-          aria-pressed={isOpen}
-          onClick={() => onOpen(version.version)}
-        >
-          Open
-        </button>
-      </div>
-    </li>
-  );
-}
-
-function OpenedPanel({ auditId, opened }: { auditId: string; opened: OpenedVersion }) {
-  return (
-    <section aria-labelledby="opened-version-title" className="card-1 bg-surface p-4">
-      <h2 id="opened-version-title" className="text-xl font-bold">{`Version ${opened.version}`}</h2>
+    <div id={id} className="mt-4 border-t border-rule pt-4">
       {opened.status === 'loading' && <Spinner label={`Opening version ${opened.version}…`} />}
-      {opened.status === 'failed' && <ErrorMessage>{opened.message}</ErrorMessage>}
+      {opened.status === 'failed' && (
+        <p role="alert" className="text-sm text-fail">
+          {opened.message}
+        </p>
+      )}
       {opened.status === 'loaded' && (
         <>
-          <p className="break-all text-sm text-ink-soft">{opened.reply.version.url}</p>
+          <p className="break-all font-mono text-sm text-ink-soft">{opened.reply.version.url}</p>
           <p className="text-sm text-ink">
             {`Status: ${STATUS_LABEL[opened.reply.version.status]} · ${versionCounts(opened.reply.version)}`}
             {opened.reply.version.finishedAt ? ` · Finished ${formatWhen(opened.reply.version.finishedAt)}` : ''}
           </p>
           {opened.reply.version.status === 'done' ? (
             <nav aria-label={`Screens of version ${opened.version}`} className="mt-3 flex flex-wrap gap-3">
-              <Link to={AUDIT_PATHS.version(auditId, opened.version)} className="btn-primary min-h-[44px] px-4 text-sm">
+              <Link to={AUDIT_PATHS.version(auditId, opened.version)} className="btn-quiet btn-sm">
                 See the results
               </Link>
-              <Link to={AUDIT_PATHS.review(auditId, opened.version)} className="btn-quiet min-h-[44px] px-4 text-sm">
+              <Link to={AUDIT_PATHS.review(auditId, opened.version)} className="btn-quiet btn-sm">
                 Review the Audit Documents
               </Link>
-              <Link to={AUDIT_PATHS.export(auditId, opened.version)} className="btn-quiet min-h-[44px] px-4 text-sm">
-                Export the Audit Documents
+              <Link to={AUDIT_PATHS.export(auditId, opened.version)} className="btn-quiet btn-sm">
+                Download the Audit Documents
               </Link>
             </nav>
           ) : (
@@ -115,7 +99,53 @@ function OpenedPanel({ auditId, opened }: { auditId: string; opened: OpenedVersi
           )}
         </>
       )}
-    </section>
+    </div>
+  );
+}
+
+function VersionItem({
+  auditId,
+  version,
+  opened,
+  onOpen,
+}: {
+  auditId: string;
+  version: AuditVersion;
+  opened: OpenedVersion | null;
+  onOpen: (n: number) => void;
+}) {
+  const isOpen = opened?.version === version.version;
+  return (
+    <li className="rounded-card border border-rule bg-surface p-4" data-version={version.version}>
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+        <div className="min-w-0">
+          <h3 className="text-lg font-bold text-ink">{`Version ${version.version}`}</h3>
+          <p className="text-sm text-ink">{`Started ${formatWhen(version.startedAt)} · Status: ${STATUS_LABEL[version.status]}`}</p>
+          <p className="text-sm text-ink-soft">{versionCounts(version)}</p>
+          {version.edited && <p className="text-sm text-ink-soft">Has edits</p>}
+          {version.status === 'failed' && (
+            <p className="mt-1 text-sm text-fail">This version stopped before it finished.</p>
+          )}
+        </div>
+        <button
+          type="button"
+          className="btn-quiet btn-sm"
+          aria-label={`${isOpen ? 'Close' : 'Open'} version ${version.version}`}
+          aria-expanded={isOpen}
+          aria-controls={isOpen ? `version-${version.version}-details` : undefined}
+          onClick={() => onOpen(version.version)}
+        >
+          {isOpen ? 'Close' : 'Open'}
+        </button>
+      </div>
+      {isOpen && opened && <OpenedDetails auditId={auditId} opened={opened} />}
+      {version.status === 'failed' && version.error && (
+        <Disclosure summary="Details for developers" className="mt-3">
+          <p className="break-all font-mono text-sm text-ink-soft">{version.error}</p>
+          <p className="mt-1 font-mono text-sm text-ink-soft">{`Audit ${auditId}, version ${version.version}`}</p>
+        </Disclosure>
+      )}
+    </li>
   );
 }
 
@@ -124,14 +154,11 @@ export function AuditHistoryView({
   summary,
   opened,
   rerunning,
-  confirmingDelete,
   deleting,
   message,
   onOpen,
   onRerun,
   onAskDelete,
-  onCancelDelete,
-  onConfirmDelete,
   shortlist,
   isHelper = false,
 }: AuditHistoryViewProps) {
@@ -141,96 +168,57 @@ export function AuditHistoryView({
   const latestDone = latestFinishedVersion(summary);
   const running = runningVersion(summary);
   return (
-    <div className="space-y-8">
-      <div>
-        <p className="break-all text-ink-soft">{summary.url}</p>
-        {latestDone && (
-          <p className="mt-3">
-            <Link
-              to={AUDIT_PATHS.version(summary.auditId, latestDone.version)}
-              className="btn-primary min-h-[44px] px-4 text-sm"
-            >
+    <div className="grid gap-8">
+      <AuditTabs
+        auditId={summary.auditId}
+        version={latestDone?.version}
+        current="history"
+        hide={owner ? [] : ['share', 'helpers']}
+      />
+
+      <div className="-mt-4 grid gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {latestDone && (
+            <Link to={AUDIT_PATHS.version(summary.auditId, latestDone.version)} className="btn-primary btn-sm">
               Open the results
             </Link>
-            <span className="ml-3 text-sm text-ink-soft">{`Version ${latestDone.version}, the latest finished`}</span>
-          </p>
-        )}
-        {owner && (
-          <>
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                className="btn-quiet min-h-[44px] px-4 text-sm"
-                disabled={rerunning}
-                onClick={onRerun}
-              >
-                {rerunning ? 'Starting…' : 'Re-run'}
+          )}
+          {owner && (
+            <>
+              <button type="button" className="btn-quiet btn-sm" disabled={rerunning} onClick={onRerun}>
+                {rerunning ? 'Starting…' : 'Audit again'}
               </button>
-              <Link to={AUDIT_PATHS.previewShare(summary.auditId)} className="btn-quiet min-h-[44px] px-4 text-sm">
-                Preview and Shared Links
-              </Link>
-              <Link to={AUDIT_PATHS.helpers(summary.auditId)} className="btn-quiet min-h-[44px] px-4 text-sm">
-                Helpers
-              </Link>
               <button
                 type="button"
-                className="btn-quiet min-h-[44px] border-fail px-4 text-sm text-fail hover:border-fail hover:bg-fail-tint"
+                className="btn-quiet btn-sm border-fail text-fail hover:border-fail hover:bg-fail-tint"
                 aria-label={`Delete the Website Audit of ${summary.host}`}
+                disabled={deleting}
                 onClick={onAskDelete}
               >
-                Delete
+                {deleting ? 'Deleting…' : 'Delete'}
               </button>
-            </div>
-            <p className="mt-2 max-w-prose text-sm text-ink-soft">
-              Re-run makes a new version with the same address and limits.
-            </p>
-          </>
+            </>
+          )}
+          {owner && (
+            <Badge tone={summary.shortlist?.mark === 'pitch' ? 'stamp' : 'neutral'}>
+              {shortlistMarkText(summary.shortlist)}
+            </Badge>
+          )}
+        </div>
+        <p className="max-w-prose text-sm text-ink-soft">
+          {latestDone && `Version ${latestDone.version} is the latest finished. `}
+          {owner && 'Audit again makes a new version with the same address and limits.'}
+        </p>
+        {message && (
+          <Notice tone={message.tone} title={message.tone === 'pass' ? 'Done' : 'That did not work'}>
+            {message.text}
+          </Notice>
         )}
       </div>
 
       {running && (
         <Notice tone="stamp" title={`Version ${running.version} is running`}>
           This page updates by itself when it ends.
-        </Notice>
-      )}
-
-      {confirmingDelete && owner && (
-        <section
-          role="alertdialog"
-          aria-labelledby="delete-audit-title"
-          aria-describedby="delete-audit-body"
-          className="rounded-md border-l-4 border-fail bg-fail-tint px-4 py-3"
-        >
-          <h2 id="delete-audit-title" className="font-bold text-fail">
-            {`Delete the Website Audit of ${summary.host}?`}
-          </h2>
-          <p id="delete-audit-body" className="mt-1 text-sm text-ink">
-            {DELETE_WARNING}
-          </p>
-          <div className="mt-3 flex flex-wrap gap-3">
-            <button
-              type="button"
-              className="btn-quiet min-h-[44px] border-fail px-4 text-sm text-fail"
-              disabled={deleting}
-              onClick={onConfirmDelete}
-            >
-              {deleting ? 'Deleting…' : 'Delete the Website Audit'}
-            </button>
-            <button
-              type="button"
-              className="btn-quiet min-h-[44px] px-4 text-sm"
-              disabled={deleting}
-              onClick={onCancelDelete}
-            >
-              Keep it
-            </button>
-          </div>
-        </section>
-      )}
-
-      {message && (
-        <Notice tone={message.tone} title={message.tone === 'pass' ? 'Done' : 'That did not work'}>
-          {message.text}
         </Notice>
       )}
 
@@ -241,12 +229,13 @@ export function AuditHistoryView({
         {versions.length === 0 ? (
           <p className="text-sm text-ink-soft">This Website Audit has no versions.</p>
         ) : (
-          <ol className="space-y-3">
+          <ol className="grid gap-3">
             {versions.map((version) => (
               <VersionItem
                 key={version.version}
+                auditId={summary.auditId}
                 version={version}
-                isOpen={opened?.version === version.version}
+                opened={opened}
                 onOpen={onOpen}
               />
             ))}
@@ -254,9 +243,7 @@ export function AuditHistoryView({
         )}
       </section>
 
-      {opened && <OpenedPanel auditId={summary.auditId} opened={opened} />}
-
-      {shortlist}
+      {owner && shortlist}
     </div>
   );
 }
@@ -277,11 +264,11 @@ export function AuditHistoryScreen({ auditId, fetchImpl, openSource }: AuditHist
   const [loaded, setLoaded] = useState<Loaded>({ status: 'loading' });
   const [opened, setOpened] = useState<OpenedVersion | null>(null);
   const [rerunning, setRerunning] = useState(false);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleted, setDeleted] = useState(false);
   const [message, setMessage] = useState<AuditHistoryViewProps['message']>(null);
   const [isHelper, setIsHelper] = useState<boolean | null>(null);
+  const { confirm, dialog } = useConfirm();
 
   useEffect(() => {
     let live = true;
@@ -316,6 +303,11 @@ export function AuditHistoryScreen({ auditId, fetchImpl, openSource }: AuditHist
   }, [watching, auditId, openSource, reload]);
 
   const open = (version: number) => {
+    // A second press on the open version closes its details.
+    if (opened?.version === version) {
+      setOpened(null);
+      return;
+    }
     setOpened({ status: 'loading', version });
     void loadVersion(auditId, version, fetchImpl).then((outcome) =>
       setOpened((now) =>
@@ -347,9 +339,12 @@ export function AuditHistoryScreen({ auditId, fetchImpl, openSource }: AuditHist
     setMessage(null);
     const outcome = await deleteAudit(auditId, fetchImpl);
     setDeleting(false);
-    setConfirmingDelete(false);
     if (outcome.ok) setDeleted(true);
     else setMessage({ tone: 'fail', text: outcome.message });
+  };
+
+  const askDelete = async (host: string) => {
+    if (await confirm(deleteConfirmOptions(host))) await remove();
   };
 
   const setShortlist = (entry: ShortlistEntry) =>
@@ -361,15 +356,12 @@ export function AuditHistoryScreen({ auditId, fetchImpl, openSource }: AuditHist
   useDocumentTitle(summary ? `Website Audit of ${summary.host}` : 'Website Audit');
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
-      <FocusHeading className="mb-2 break-words text-question font-bold">
-        {summary ? `Website Audit of ${summary.host}` : 'Website Audit'}
-      </FocusHeading>
-      <p className="mb-6">
-        <Link to={AUDIT_PATHS.list} className="btn-link text-sm">
-          All saved Website Audits
-        </Link>
-      </p>
+    <Page width="workspace">
+      <PageHeader
+        back={{ to: AUDIT_PATHS.list, label: 'All Website Audits' }}
+        meta={summary && <span className="break-all font-mono">{summary.url}</span>}
+        title={<span className="break-words">{summary ? `Website Audit of ${summary.host}` : 'Website Audit'}</span>}
+      />
 
       {deleted ? (
         <Notice tone="pass" title="Website Audit deleted">
@@ -379,26 +371,20 @@ export function AuditHistoryScreen({ auditId, fetchImpl, openSource }: AuditHist
         <>
           {loaded.status === 'loading' && <Spinner label="Loading the Website Audit…" />}
           {loaded.status === 'failed' && (
-            <>
-              <ErrorMessage>{loaded.message}</ErrorMessage>
-              <button type="button" className="btn-quiet mt-3" onClick={refresh}>
-                Retry
-              </button>
-            </>
+            <LoadError title="This Website Audit could not be loaded" onRetry={refresh}>
+              {loaded.message}
+            </LoadError>
           )}
           {summary && (
             <AuditHistoryView
               summary={summary}
               opened={opened}
               rerunning={rerunning}
-              confirmingDelete={confirmingDelete}
               deleting={deleting}
               message={message}
               onOpen={open}
               onRerun={() => void rerun()}
-              onAskDelete={() => setConfirmingDelete(true)}
-              onCancelDelete={() => setConfirmingDelete(false)}
-              onConfirmDelete={() => void remove()}
+              onAskDelete={() => void askDelete(summary.host)}
               isHelper={isHelper}
               shortlist={
                 <ShortlistPanel
@@ -412,6 +398,7 @@ export function AuditHistoryScreen({ auditId, fetchImpl, openSource }: AuditHist
           )}
         </>
       )}
-    </div>
+      {dialog}
+    </Page>
   );
 }

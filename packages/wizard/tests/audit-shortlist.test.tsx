@@ -248,6 +248,13 @@ describe('Shortlist screen filters (REQ-023 AC-3)', () => {
     expect(textOf(html)).toContain('Mark: Skip · Outcome: none yet');
     expect(html).toContain(`href="/audits/${AUDIT_ID}"`);
     expect(html).toContain('aria-label="Open the Website Audit of shop.example.org"');
+    // The whole row is the link; no primary button per row.
+    expect(html).not.toContain('btn-primary');
+  });
+
+  it('gives the mark radios and the filters 44px rows', () => {
+    expect(panel()).toMatch(/<span class="[^"]*min-h-\[44px\][^"]*"><input id="shortlist-mark-pitch"/);
+    expect(list()).toMatch(/id="shortlist-filter-mark" class="[^"]*min-h-\[44px\]/);
   });
 
   it('says why the list is empty: nothing on it, or nothing matching', () => {

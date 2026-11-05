@@ -53,10 +53,10 @@ describe('Website Audit start screen: the form (REQ-002)', () => {
     expect(html).toContain('Start a Website Audit');
     for (const [id, label] of [
       ['audit-url', 'Website address'],
-      ['audit-maxPages', 'Max pages'],
-      ['audit-maxDepth', 'Max depth'],
-      ['audit-includePaths', 'Include paths'],
-      ['audit-excludePaths', 'Exclude paths'],
+      ['audit-maxPages', 'Most pages to read'],
+      ['audit-maxDepth', 'How many links deep'],
+      ['audit-includePaths', 'Only read pages under these paths'],
+      ['audit-excludePaths', 'Skip pages under these paths'],
     ]) {
       expect(html, label).toContain(`<label for="${id}" class="label text-ink">${label}</label>`);
       expect(tagWithId(html, id), id).toContain(`aria-describedby="${id}-hint"`);
@@ -112,6 +112,20 @@ describe('Website Audit start screen: messages next to their fields (REQ-001 AC-
       /<div id="audit-start-message"><p role="alert"[^>]*>This address cannot be audited: it points to a private/
     );
     expect(html).toContain('aria-describedby="audit-start-message"');
+  });
+
+  it('puts the four limits inside a closed "Limits (optional)" disclosure, opened when one has a message', () => {
+    const html = fields();
+    expect(html).toMatch(/<details class="disclosure[^"]*">/);
+    expect(html).not.toMatch(/<details[^>]*open=""/);
+    expect(html).toContain('Limits (optional)');
+    expect(html).toContain('200 pages · 8 links deep');
+    const details = html.slice(html.indexOf('<details'), html.indexOf('</details>'));
+    for (const id of ['audit-maxPages', 'audit-maxDepth', 'audit-includePaths', 'audit-excludePaths'])
+      expect(details).toContain(`id="${id}"`);
+    expect(details).not.toContain('id="audit-url"');
+    const withError = fields({ errors: { maxDepth: 'Max depth must be a whole number from 0 to 100.' } });
+    expect(withError).toMatch(/<details[^>]*open=""/);
   });
 
   it('shows the starting state on the button while the request is out', () => {
@@ -174,7 +188,8 @@ describe('Website Audit start screen: progress from the stream', () => {
   it('links to the audit page: results when done, history otherwise', () => {
     const done = renderToStaticMarkup(createElement(AuditFollowUpLink, { auditId: 'abcd1234', done: true }));
     expect(done).toContain('href="/audits/abcd1234"');
-    expect(done).toContain('Open the results of this Website Audit');
+    expect(done).toContain('See the results');
+    expect(done).toContain('btn-primary');
     const ended = renderToStaticMarkup(createElement(AuditFollowUpLink, { auditId: 'abcd1234', done: false }));
     expect(ended).toContain('href="/audits/abcd1234"');
     expect(ended).toContain('history');

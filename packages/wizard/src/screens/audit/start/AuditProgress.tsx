@@ -71,7 +71,10 @@ export function AuditProgress({
   const finished = state.status === 'done';
 
   return (
-    <section aria-labelledby="audit-progress-title" className="blueprint-card mt-8 p-6 shadow-level-2">
+    <section
+      aria-labelledby="audit-progress-title"
+      className="mt-2 rounded-card border border-rule bg-surface p-4 sm:p-6"
+    >
       <h2 id="audit-progress-title" className="mb-1 break-words text-lg font-bold">
         Website Audit of {address}
       </h2>
@@ -90,10 +93,10 @@ export function AuditProgress({
                 aria-hidden="true"
                 className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold ${
                   step === 'done'
-                    ? 'border-stamp bg-stamp text-surface'
+                    ? 'border-stamp bg-stamp text-on-stamp'
                     : step === 'current'
                       ? 'border-stamp bg-surface text-stamp ring-2 ring-stamp/40'
-                      : 'border-edge/50 bg-panel text-ink-soft'
+                      : 'border-edge bg-panel text-ink-soft'
                 }`}
               >
                 {step === 'done' ? '✓' : i + 1}
@@ -138,14 +141,14 @@ export function AuditProgress({
       )}
 
       {state.status === 'done' && (
-        <p className="mt-6 rounded-md border-l-4 border-stamp bg-panel px-4 py-3 font-semibold text-ink">
+        <p className="mt-6 rounded-card border border-stamp bg-stamp-tint px-4 py-3 font-semibold text-ink">
           The Website Audit is done: {count(progress?.pagesRecorded ?? 0, 'page', 'pages')} recorded,{' '}
           {count(progress?.pagesSkipped ?? 0, 'Skipped Page', 'Skipped Pages')}. A Skipped Page was not checked.
         </p>
       )}
 
       {state.status === 'stopped' && (
-        <div role="alert" className="mt-6 rounded-md border-l-4 border-fail bg-fail-tint px-4 py-3 text-fail">
+        <div role="alert" className="mt-6 rounded-card border border-fail bg-fail-tint px-4 py-3 text-fail">
           <p className="font-semibold">The Website Audit stopped.</p>
           <p className="mt-1">{state.message}</p>
         </div>

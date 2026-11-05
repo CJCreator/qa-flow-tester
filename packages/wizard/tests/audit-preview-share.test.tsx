@@ -176,7 +176,12 @@ describe('Improved homepage preview', () => {
   it('Open preview opens GET /api/audits/:id/preview?version=n in a new tab', () => {
     expect(previewUrl(AUDIT_ID, 3)).toBe(`/api/audits/${AUDIT_ID}/preview?version=3`);
     expect(AUDIT_API.getPreview).toMatchObject({ method: 'GET', path: '/api/audits/:id/preview' });
-    const html = render({ version: 1 });
+    // A preview made in an earlier visit can still be opened, so the link is always there, with a hint.
+    const idle = render({ version: 1 });
+    expect(idle).toMatch(/<a [^>]*>Open preview<\/a>/);
+    expect(idle).not.toMatch(/<button[^>]*>Open preview<\/button>/);
+    expect(textOf(idle)).toContain('If there isn’t one yet, make it first');
+    const html = render({ version: 1, preview: { status: 'made', createdAt: '2026-11-03T10:00:00Z' } });
     const anchor = html.match(/<a [^>]*>Open preview<\/a>/)?.[0] ?? '';
     expect(anchor).toContain(`href="/api/audits/${AUDIT_ID}/preview?version=1"`);
     expect(anchor).toContain('target="_blank"');

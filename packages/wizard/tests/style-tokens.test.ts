@@ -29,6 +29,7 @@ const NON_COLOUR = new Set([
   'ellipsis',
   'clip',
   'question',
+  'verdict',
   // bg
   'none',
   'cover',

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ErrorMessage, Spinner } from '../../../components/text';
+import { LoadError } from '../../../components/ui';
 import {
   AUDIT_AI_STAGES,
   STAGE_TEXT,
@@ -56,7 +57,7 @@ export function AuditAiModelsView({
           const fallback = defaultModel(reply, stage);
           const inUse = reply.effective[stage];
           return (
-            <div key={stage} className="rounded border border-rule p-3" data-stage={stage}>
+            <div key={stage} className="rounded-card border border-rule p-3" data-stage={stage}>
               <label htmlFor={id} className="label text-ink">
                 {STAGE_TEXT[stage].label}
               </label>
@@ -66,7 +67,7 @@ export function AuditAiModelsView({
               <input
                 id={id}
                 type="text"
-                className="field mt-2 w-full font-mono text-sm"
+                className="field mt-2 w-full font-mono"
                 value={draft[stage]}
                 placeholder={fallback ?? undefined}
                 autoComplete="off"
@@ -88,8 +89,8 @@ export function AuditAiModelsView({
         })}
       </div>
       <div className="flex flex-wrap items-center gap-3">
-        <button type="button" className="btn-primary px-6 font-bold" disabled={!pending || saving} onClick={onSave}>
-          {saving ? <Spinner label="Saving…" /> : 'Save AI models'}
+        <button type="button" className="btn-quiet" disabled={!pending || saving} onClick={onSave}>
+          {saving ? <Spinner label="Saving…" announce={false} /> : 'Save AI models'}
         </button>
         <button type="button" className="btn-quiet" disabled={!pending || saving} onClick={onDiscard}>
           Discard unsaved changes
@@ -126,9 +127,11 @@ type Loaded = { status: 'loading' } | { status: 'failed'; message: string } | { 
 export function AuditAiModelsPanel({ fetchImpl }: AuditAiModelsPanelProps) {
   const [loaded, setLoaded] = useState<Loaded>({ status: 'loading' });
   const [saving, setSaving] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let live = true;
+    setLoaded({ status: 'loading' });
     void loadModels(fetchImpl).then((outcome) => {
       if (!live) return;
       if (outcome.ok) {
@@ -143,10 +146,15 @@ export function AuditAiModelsPanel({ fetchImpl }: AuditAiModelsPanelProps) {
     return () => {
       live = false;
     };
-  }, [fetchImpl]);
+  }, [fetchImpl, attempt]);
 
   if (loaded.status === 'loading') return <Spinner label="Loading the AI models…" />;
-  if (loaded.status === 'failed') return <ErrorMessage>{loaded.message}</ErrorMessage>;
+  if (loaded.status === 'failed')
+    return (
+      <LoadError title="The AI models could not be loaded" onRetry={() => setAttempt((n) => n + 1)}>
+        {loaded.message}
+      </LoadError>
+    );
   const state = loaded.state;
 
   const update = (next: ModelsState) => setLoaded({ status: 'loaded', state: next });

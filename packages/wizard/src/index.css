@@ -2,61 +2,73 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Certificate (DESIGN.md): quiet paper, green-grey ink, cobalt for actions. One bold element per screen
+ * (the verdict tag on the report); everything else is calm. Colours, type, radii, shadows, motion and
+ * layers are tokens in tailwind.config.js.
+ */
 @layer base {
-  /* The board is dark, so the browser's own checkboxes, number fields and selects are drawn dark too. */
-  :root:not([data-theme='light']) {
-    color-scheme: dark;
+  html {
+    -webkit-text-size-adjust: 100%;
+    /* Jumps to a section (index links, deep links, scrollIntoView) land below the sticky top bar. */
+    scroll-padding-top: 6rem;
   }
 
   body {
     @apply bg-paper font-sans text-base text-ink antialiased;
     min-height: 100vh;
+    text-rendering: optimizeLegibility;
   }
 
-  /* One focus style everywhere: a blue ring with a gap, visible on any background. */
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  /* Tamil needs room above and below its letters. */
+  :lang(ta) {
+    line-height: 1.8;
+  }
+
+  /* One focus style everywhere: a cobalt ring with a gap, visible on any background. */
   :focus-visible {
-    outline: 3px solid theme('colors.stamp');
-    outline-offset: 3px;
+    outline: 3px solid rgb(var(--c-stamp));
+    outline-offset: 2px;
     border-radius: 4px;
   }
 }
 
 @layer components {
   .interactive {
-    @apply transition-colors duration-150 
+    @apply transition-colors duration-fast ease-standard
            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stamp focus-visible:ring-offset-2 focus-visible:ring-offset-paper
            hover:border-stamp hover:bg-stamp/5
            active:bg-stamp/10;
   }
+
+  /* Buttons: one height (48px), one radius. Small buttons keep a 44px tap target. */
   .btn {
-    @apply inline-flex min-h-[48px] items-center justify-center gap-2 rounded-control px-6 text-base font-bold transition-all duration-150 disabled:cursor-not-allowed;
+    @apply inline-flex min-h-[48px] items-center justify-center gap-2 rounded-control px-5 text-base font-bold leading-tight transition-[background-color,border-color,color,box-shadow] duration-fast ease-standard disabled:cursor-not-allowed;
   }
-  /* Depth without a gradient: a 1px inner highlight on the top edge keeps text contrast identical to the flat fill. */
   .btn-primary {
-    @apply btn bg-stamp text-surface shadow-level-2 hover:-translate-y-px hover:bg-stamp-dark hover:shadow-level-3 active:translate-y-0 active:shadow-level-1 disabled:translate-y-0 disabled:bg-edge disabled:shadow-none;
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.18),
-      theme('boxShadow.level-2');
-  }
-  .btn-primary:hover:not(:disabled) {
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.18),
-      theme('boxShadow.level-3');
-  }
-  .btn-primary:active:not(:disabled) {
-    box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.25);
-  }
-  .btn-primary:disabled {
-    box-shadow: none;
+    @apply btn bg-stamp text-on-stamp shadow-level-1 hover:bg-stamp-dark active:shadow-none disabled:bg-rule disabled:text-ink-soft disabled:shadow-none;
   }
   .btn-quiet {
-    @apply btn border-2 border-edge bg-surface text-ink shadow-level-1 hover:-translate-y-px hover:border-ink hover:shadow-level-2 active:translate-y-0 active:shadow-none disabled:translate-y-0 disabled:shadow-none;
+    @apply btn border-[1.5px] border-edge bg-surface text-ink hover:border-ink hover:bg-canvas active:bg-rule disabled:border-rule disabled:bg-surface disabled:text-ink-soft;
+  }
+  .btn-danger {
+    @apply btn bg-fail text-on-stamp shadow-level-1 hover:opacity-90 active:shadow-none disabled:bg-rule disabled:text-ink-soft disabled:shadow-none;
+  }
+  .btn-sm {
+    @apply min-h-[44px] px-4 text-sm;
   }
   .btn-link {
-    @apply inline-flex min-h-[44px] items-center font-bold text-stamp underline decoration-2 underline-offset-4 hover:text-stamp-dark;
+    @apply inline-flex min-h-[44px] items-center font-semibold text-stamp underline decoration-2 underline-offset-4 hover:text-stamp-dark;
   }
+
   .field {
-    @apply block w-full rounded-control border-2 border-edge bg-surface px-4 py-3 text-base text-ink placeholder:text-ink-soft shadow-inner transition-[border-color,box-shadow] duration-150 hover:border-ink-soft focus:border-stamp focus:outline-none focus:ring-2 focus:ring-stamp/40;
+    @apply block w-full rounded-control border-[1.5px] border-edge bg-surface px-4 py-3 text-base text-ink placeholder:text-ink-soft transition-[border-color,box-shadow] duration-fast ease-standard hover:border-ink-soft focus:border-stamp focus:outline-none focus:ring-2 focus:ring-stamp/30;
   }
   .label {
     @apply mb-2 block font-bold;
@@ -64,92 +76,146 @@
   .hint {
     @apply text-ink-soft;
   }
+
+  /* Cards by role: a hairline for a group, a lift only for things that float. */
   .card-1 {
-    @apply rounded-card shadow-level-1 border border-rule;
+    @apply rounded-card border border-rule;
   }
   .card-2 {
-    @apply rounded-card shadow-level-2 border border-rule transition-shadow duration-200 hover:shadow-level-3;
+    @apply rounded-card border border-rule shadow-level-1;
   }
   .card-3 {
-    @apply rounded-panel shadow-level-3 border border-rule transition-shadow duration-200 hover:shadow-level-4;
+    @apply rounded-panel border border-rule shadow-level-2;
   }
   .card-4 {
-    @apply rounded-panel shadow-level-4 border border-rule;
+    @apply rounded-panel border border-rule shadow-level-4;
   }
 
-  /* Blueprint drafting grid backgrounds */
+  /* The drawing board: only behind the site map, where it means something. */
   .bg-blueprint-grid {
     background-image:
-      linear-gradient(to right, rgb(var(--c-rule) / 0.4) 1px, transparent 1px),
-      linear-gradient(to bottom, rgb(var(--c-rule) / 0.4) 1px, transparent 1px);
+      linear-gradient(to right, rgb(var(--c-rule) / 0.6) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(var(--c-rule) / 0.6) 1px, transparent 1px);
     background-size: 28px 28px;
   }
   .bg-blueprint-grid-dense {
     background-image:
-      linear-gradient(to right, rgb(var(--c-rule) / 0.25) 1px, transparent 1px),
-      linear-gradient(to bottom, rgb(var(--c-rule) / 0.25) 1px, transparent 1px);
+      linear-gradient(to right, rgb(var(--c-rule) / 0.4) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(var(--c-rule) / 0.4) 1px, transparent 1px);
     background-size: 14px 14px;
   }
   .bg-blueprint-dots {
-    background-image: radial-gradient(rgb(var(--c-edge) / 0.3) 1px, transparent 1px);
+    background-image: radial-gradient(rgb(var(--c-edge) / 0.35) 1px, transparent 1px);
     background-size: 18px 18px;
   }
 
-  /* Telemetry Badges */
+  /* Badges: sentence case, the body face, a tone from the palette. */
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-pill border border-rule bg-canvas px-2.5 py-0.5 text-xs font-semibold text-ink;
+  }
+  .badge-stamp {
+    @apply badge border-stamp/40 bg-stamp-tint text-stamp;
+  }
+  .badge-pass {
+    @apply badge border-pass/40 bg-pass-tint text-pass;
+  }
+  .badge-warn {
+    @apply badge border-warn/40 bg-warn-tint text-warn;
+  }
+  .badge-fail {
+    @apply badge border-fail/40 bg-fail-tint text-fail;
+  }
+  /* Older names for the same badges. */
   .badge-tech {
-    @apply inline-flex items-center gap-1.5 rounded-control border border-edge/40 bg-surface/80 px-2.5 py-0.5 font-mono text-xs font-semibold text-ink-soft shadow-level-1 backdrop-blur-sm;
+    @apply badge text-ink-soft;
   }
   .badge-tech-stamp {
-    @apply badge-tech border-stamp/50 bg-stamp-tint text-stamp font-bold;
+    @apply badge-stamp;
   }
   .badge-tech-pass {
-    @apply badge-tech border-pass/50 bg-pass-tint text-pass font-bold;
+    @apply badge-pass;
   }
   .badge-tech-warn {
-    @apply badge-tech border-warn/50 bg-warn-tint text-warn font-bold;
+    @apply badge-warn;
   }
   .badge-tech-fail {
-    @apply badge-tech border-fail/50 bg-fail-tint text-fail font-bold;
+    @apply badge-fail;
   }
 
-  /* Blueprint Card */
   .blueprint-card {
-    @apply rounded-panel border border-rule bg-surface/90 shadow-level-2 transition-all duration-200 hover:border-edge hover:shadow-level-3 relative;
+    @apply relative rounded-panel border border-rule bg-surface shadow-level-1;
   }
-
-  /* Corner registration crosshairs / ticks */
+  /* Registration ticks are retired: the class stays so old markup still lays out. */
   .corner-ticks {
     position: relative;
   }
-  .corner-ticks::before,
-  .corner-ticks::after {
-    content: '+';
-    position: absolute;
-    font-family: ui-monospace, 'Cascadia Mono', monospace;
-    font-size: 12px;
-    line-height: 1;
-    color: rgb(var(--c-edge) / 0.5);
-    pointer-events: none;
+
+  /* A disclosure: <details class="disclosure"><summary>…</summary>…</details>. */
+  .disclosure > summary {
+    @apply flex min-h-[48px] cursor-pointer list-none items-center justify-between gap-3 font-semibold;
   }
-  .corner-ticks::before {
-    top: 6px;
-    left: 8px;
+  .disclosure > summary::-webkit-details-marker {
+    display: none;
   }
-  .corner-ticks::after {
-    top: 6px;
-    right: 8px;
+  /* The title takes the room; a hint and the chevron sit at the end. */
+  .disclosure > summary > :first-child {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .disclosure > summary::after {
+    content: '';
+    @apply h-2.5 w-2.5 shrink-0 border-b-2 border-r-2 border-ink-soft transition-transform duration-base ease-standard;
+    transform: rotate(45deg) translate(-2px, -2px);
+  }
+  .disclosure[open] > summary::after {
+    transform: rotate(-135deg) translate(-2px, -2px);
+  }
+
+  /* Two or three choices side by side (aria-pressed or aria-selected marks the chosen one). */
+  .segmented {
+    @apply inline-flex rounded-control border-[1.5px] border-edge bg-surface p-0.5;
+  }
+  .segmented > button,
+  .segmented > a {
+    @apply inline-flex min-h-[44px] items-center rounded-[4px] px-3.5 text-sm font-semibold text-ink-soft transition-colors duration-fast ease-standard hover:text-ink;
+  }
+  .segmented > [aria-pressed='true'],
+  .segmented > [aria-selected='true'],
+  .segmented > [aria-current='page'] {
+    @apply bg-ink text-surface hover:text-surface;
+  }
+
+  /* Plain data tables: room in each cell, a hairline between rows. */
+  .table-plain {
+    @apply w-full border-collapse text-left text-sm;
+  }
+  .table-plain th {
+    @apply border-b border-edge px-3 py-2 font-semibold text-ink-soft;
+  }
+  .table-plain td {
+    @apply border-b border-rule px-3 py-2.5 align-top;
   }
 
   /* Screen mount: a short fade and rise when a screen appears. */
   .screen-in {
-    animation: screen-in 240ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+    animation: screen-in 320ms cubic-bezier(0.05, 0.7, 0.1, 1) both;
   }
+}
+
+/* A dialog opens with a short fade and rise. */
+.dialog-in[open] {
+  animation: screen-in 200ms cubic-bezier(0.05, 0.7, 0.1, 1) both;
+}
+
+/* The verdict and headings use Anek condensed. */
+.font-stamp {
+  font-stretch: 75%;
 }
 
 @keyframes screen-in {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -160,7 +226,8 @@
 /* High contrast support */
 @media (prefers-contrast: more) {
   .btn-primary,
-  .btn-quiet {
+  .btn-quiet,
+  .btn-danger {
     @apply border-2 border-current;
   }
   .field {
@@ -168,25 +235,20 @@
   }
 }
 
-/* The verdict stamp is the one moment of motion: it lands once when the report appears. */
+/* The verdict lands once when the report appears. */
 @keyframes stamp-land {
   0% {
     opacity: 0;
-    transform: scale(1.35) rotate(-9deg);
-  }
-  70% {
-    opacity: 1;
-    transform: scale(0.97) rotate(-4deg);
+    transform: translateY(-6px);
   }
   100% {
     opacity: 1;
-    transform: scale(1) rotate(-4deg);
+    transform: none;
   }
 }
 
 .stamp {
-  transform: rotate(-4deg);
-  animation: stamp-land 420ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  animation: stamp-land 320ms cubic-bezier(0.05, 0.7, 0.1, 1) both;
 }
 
 @keyframes working {
@@ -202,10 +264,11 @@
   animation: working 1.6s ease-in-out infinite;
 }
 
-/* With reduced motion, nothing moves: not the stamp, not the progress bars, not the pulse on the map. */
+/* With reduced motion, nothing moves: not the verdict, not the progress bars, not the pulse on the map. */
 @media (prefers-reduced-motion: reduce) {
   .stamp,
-  .progress-indeterminate {
+  .progress-indeterminate,
+  .screen-in {
     animation: none;
   }
   .progress-indeterminate {
