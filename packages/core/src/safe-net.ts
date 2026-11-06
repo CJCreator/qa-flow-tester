@@ -69,6 +69,7 @@ function defaultConnect(req: PinnedRequest): Promise<RawResponse> {
     let settled = false;
     // eslint-disable-next-line prefer-const
     let timer: NodeJS.Timeout | undefined;
+    // eslint-disable-next-line prefer-const -- assigned after `done` closes over it
     let onAbort: (() => void) | undefined;
     const done = (fn: () => void) => {
       if (settled) return;
