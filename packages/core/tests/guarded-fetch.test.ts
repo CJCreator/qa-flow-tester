@@ -1,5 +1,14 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { GuardedFetchBlockedError, makeGuardedFetch, defaultNetDeps, type NetDeps, type PinnedRequest, type RawResponse } from '../src/safe-net.js';
+import http from 'http';
+import type { AddressInfo } from 'net';
+import {
+  GuardedFetchBlockedError,
+  makeGuardedFetch,
+  defaultNetDeps,
+  type NetDeps,
+  type PinnedRequest,
+  type RawResponse,
+} from '../src/safe-net.js';
 import { setBrowserPolicy } from '../src/browser.js';
 import { PreFlightChecker } from '../src/preflight.js';
 
@@ -79,10 +88,7 @@ describe('makeGuardedFetch (S1)', () => {
   });
 
   it('redirect: manual returns the 3xx itself, with its Location header, and sends no second hop', async () => {
-    const net = fakeNet(
-      { 'a.test': [PUBLIC] },
-      { 'https://a.test/old': redirect('https://a.test/new') }
-    );
+    const net = fakeNet({ 'a.test': [PUBLIC] }, { 'https://a.test/old': redirect('https://a.test/new') });
     const f = makeGuardedFetch({ deps: net.deps });
     const res = await f('https://a.test/old', { redirect: 'manual' });
     expect(res.status).toBe(302);
@@ -99,7 +105,7 @@ describe('makeGuardedFetch (S1)', () => {
   });
 
   it('allowPrivate (a local run) lets a loopback address through, but still refuses other schemes', async () => {
-    const net = fakeNet({ 'localhost': ['127.0.0.1'] });
+    const net = fakeNet({ localhost: ['127.0.0.1'] });
     const f = makeGuardedFetch({ allowPrivate: true, deps: net.deps });
     expect((await f('http://localhost:3000/')).status).toBe(200);
     await expect(f('file:///etc/passwd')).rejects.toBeInstanceOf(GuardedFetchBlockedError);
@@ -131,6 +137,85 @@ describe('makeGuardedFetch (S1)', () => {
       name: 'AbortError',
     });
     expect(net.sent).toEqual([]);
+  });
+
+  it('an abort during the lookup, before connect, sends nothing', async () => {
+    const net = fakeNet({});
+    const ac = new AbortController();
+    const deps: NetDeps = {
+      ...net.deps,
+      lookup: async () => {
+        ac.abort();
+        return [PUBLIC];
+      },
+    };
+    await expect(makeGuardedFetch({ deps })('https://a.test/', { signal: ac.signal })).rejects.toMatchObject({
+      name: 'AbortError',
+    });
+    expect(net.sent).toEqual([]);
+  });
+
+  it('an abort mid-request destroys the pinned socket and sends no further request', async () => {
+    const ac = new AbortController();
+    const sent: string[] = [];
+    const socket = { destroyed: false };
+    let onStart!: () => void;
+    const started = new Promise<void>((resolve) => (onStart = resolve));
+    const deps: NetDeps = {
+      lookup: names({ 'a.test': [PUBLIC] }).lookup,
+      connect: (req) => {
+        sent.push(req.url.toString());
+        onStart();
+        return new Promise<RawResponse>((_, reject) =>
+          req.signal?.addEventListener(
+            'abort',
+            () => {
+              socket.destroyed = true;
+              reject(new Error('socket closed'));
+            },
+            { once: true }
+          )
+        );
+      },
+    };
+    const pending = makeGuardedFetch({ deps })('https://a.test/slow', { signal: ac.signal });
+    await started;
+    ac.abort();
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+    expect(socket.destroyed).toBe(true);
+    expect(sent).toEqual(['https://a.test/slow']);
+  });
+
+  it('the real pinned connect destroys its socket on abort', async () => {
+    const server = http.createServer(() => {
+      /* never answers */
+    });
+    const closed = new Promise<void>((resolve) => server.on('connection', (s) => s.on('close', () => resolve())));
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const port = (server.address() as AddressInfo).port;
+    const ac = new AbortController();
+    const pending = defaultNetDeps.connect({
+      url: new URL(`http://a.test:${port}/`),
+      address: '127.0.0.1',
+      headers: {},
+      timeoutMs: 10_000,
+      maxBytes: 1000,
+      signal: ac.signal,
+    });
+    setTimeout(() => ac.abort(), 50);
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+    await closed;
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
+  it('a live signal that is never aborted lets a normal request through', async () => {
+    const net = fakeNet({ 'a.test': [PUBLIC] });
+    const res = await makeGuardedFetch({ deps: net.deps })('https://a.test/ok', {
+      signal: new AbortController().signal,
+    });
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe('ok');
+    expect(net.sent).toEqual([{ url: 'https://a.test/ok', address: PUBLIC }]);
   });
 });
 

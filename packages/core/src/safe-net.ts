@@ -22,6 +22,8 @@ export interface PinnedRequest {
   headers: Record<string, string>;
   timeoutMs: number;
   maxBytes: number;
+  /** Aborting destroys the pinned socket. Nothing is sent after the abort. */
+  signal?: AbortSignal;
 }
 
 export interface RawResponse {
@@ -55,17 +57,24 @@ function defaultLookup(host: string): Promise<string[]> {
   });
 }
 
+function abortError(): DOMException {
+  return new DOMException('The operation was aborted.', 'AbortError');
+}
+
 function defaultConnect(req: PinnedRequest): Promise<RawResponse> {
   return new Promise((resolve, reject) => {
+    if (req.signal?.aborted) return reject(abortError());
     const secure = req.url.protocol === 'https:';
     const mod = secure ? https : http;
     let settled = false;
     // eslint-disable-next-line prefer-const
     let timer: NodeJS.Timeout | undefined;
+    let onAbort: (() => void) | undefined;
     const done = (fn: () => void) => {
       if (settled) return;
       settled = true;
       if (timer) clearTimeout(timer);
+      if (onAbort) req.signal?.removeEventListener('abort', onAbort);
       fn();
     };
     const request = mod.request(
@@ -104,6 +113,11 @@ function defaultConnect(req: PinnedRequest): Promise<RawResponse> {
       request.destroy();
       done(() => reject(new Error('timeout')));
     }, req.timeoutMs);
+    onAbort = () => {
+      request.destroy();
+      done(() => reject(abortError()));
+    };
+    req.signal?.addEventListener('abort', onAbort, { once: true });
     request.on('error', (err) => done(() => reject(err)));
     request.end();
   });
@@ -204,6 +218,8 @@ export interface SafeGetOptions {
   allowPrivate?: boolean;
   /** When the redirect limit is reached, return the 3xx itself (ok, with its status and headers) instead of failing. */
   redirectAsResponse?: boolean;
+  /** Aborting throws AbortError: no lookup or request starts after the abort, and a request in flight is destroyed. */
+  signal?: AbortSignal;
 }
 
 /** GET with the checks above on every hop. `maxRedirects` 0 means any 3xx fails as 'redirected'. */
@@ -222,10 +238,12 @@ export async function safeGet(
   }
   const firstOrigin = current.origin;
   for (let hop = 0; ; hop++) {
+    if (opts.signal?.aborted) throw abortError();
     if (current.protocol !== 'http:' && current.protocol !== 'https:') return { ok: false, reason: 'bad-scheme' };
     const resolved = opts.allowPrivate
       ? await resolveAny(current.hostname, deps)
       : await resolvePublic(current.hostname, deps);
+    if (opts.signal?.aborted) throw abortError();
     if (!resolved.ok) return { ok: false, reason: resolved.reason };
     // A local run tries the name's other addresses when one refuses: `localhost` is ::1 and 127.0.0.1, and a
     // dev server often listens on only one of them. A public address is one pinned address, as before.
@@ -242,9 +260,12 @@ export async function safeGet(
           headers: headersFor(opts.headers || {}, current.origin === firstOrigin),
           timeoutMs: opts.timeoutMs ?? CONNECT_TIMEOUT_MS,
           maxBytes,
+          signal: opts.signal,
         });
         break;
       } catch (err) {
+        // An abort ends the whole fetch: no other address is tried.
+        if (opts.signal?.aborted) throw abortError();
         // A timeout means the time is spent: no other address is tried.
         if (err instanceof Error && err.message === 'timeout') {
           failure = 'timeout';
@@ -253,6 +274,7 @@ export async function safeGet(
         failure = 'error';
       }
     }
+    if (opts.signal?.aborted) throw abortError();
     if (!raw) return { ok: false, reason: failure };
     if (raw.tooLarge) return { ok: false, reason: 'too-large', status: raw.status };
     const location = raw.headers.location;
@@ -473,7 +495,11 @@ export interface GuardedFetchOptions {
 const NULL_BODY_STATUS = new Set([204, 205, 304]);
 
 /** A `Response` built from a pinned `safeGet` result. Only GET responses in the final status range. */
-function toResponse(status: number, body: ArrayBuffer, headers: Record<string, string | string[] | undefined>): Response {
+function toResponse(
+  status: number,
+  body: ArrayBuffer,
+  headers: Record<string, string | string[] | undefined>
+): Response {
   if (!Number.isInteger(status) || status < 200 || status > 599) throw new Error('unusable response status');
   const h = new Headers();
   for (const [k, v] of Object.entries(headers)) {
@@ -499,21 +525,12 @@ function headersFromInit(init: HeadersInit | undefined): Record<string, string> 
   return out;
 }
 
-/** Rejects with AbortError when `signal` fires first. The pinned request itself is left to its own timeout. */
-function raceAbort<T>(work: Promise<T>, signal: AbortSignal): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const onAbort = () => reject(new DOMException('The operation was aborted.', 'AbortError'));
-    signal.addEventListener('abort', onAbort, { once: true });
-    work.then(resolve, reject).finally(() => signal.removeEventListener('abort', onAbort));
-  });
-}
-
 /**
  * `fetch`-shaped GET on the pinned client (`safeGet`, ADR 0031). There is no native fetch here: each hop is resolved
  * once, connected to the checked address, and every redirect hop is checked again. `redirect: 'manual'` returns the
  * 3xx itself, so the caller follows (and checks) it on its own. A refused address, a failed lookup or a non-http(s)
  * URL throws GuardedFetchBlockedError and nothing is sent. Network failure or timeout throws a plain Error. An
- * aborted `signal` rejects with AbortError. A body over the size cap returns its status with an empty body.
+ * aborted `signal` rejects with AbortError, the pinned socket is destroyed, and nothing is sent after the abort. A body over the size cap returns its status with an empty body.
  */
 export function makeGuardedFetch(opts: GuardedFetchOptions = {}): GuardedFetch {
   const deps = opts.deps ?? defaultNetDeps;
@@ -523,9 +540,9 @@ export function makeGuardedFetch(opts: GuardedFetchOptions = {}): GuardedFetch {
     const method = (init?.method ?? 'GET').toUpperCase();
     if (method !== 'GET') throw new Error('guarded fetch sends GET only');
     const signal = init?.signal ?? undefined;
-    if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
+    if (signal?.aborted) throw abortError();
     const manual = init?.redirect === 'manual';
-    const work = safeGet(
+    const got = await safeGet(
       url,
       {
         // Read at call time: a browser guard (shared machine) makes this public only, whatever the caller passed.
@@ -533,10 +550,10 @@ export function makeGuardedFetch(opts: GuardedFetchOptions = {}): GuardedFetch {
         maxRedirects: manual ? 0 : maxRedirects,
         headers: headersFromInit(init?.headers),
         redirectAsResponse: true,
+        signal,
       },
       deps
     );
-    const got = signal ? await raceAbort(work, signal) : await work;
     if (got.ok) return toResponse(got.status, copyBuffer(got.bytes), got.headers);
     if (got.reason === 'too-large' && got.status !== undefined) return toResponse(got.status, new ArrayBuffer(0), {});
     if (got.reason === 'dns-failed' || got.reason === 'private-address' || got.reason === 'bad-scheme') {
