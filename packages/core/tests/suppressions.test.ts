@@ -111,4 +111,18 @@ describe('SuppressionsManager', () => {
     const delta = await new SuppressionsManager(tmpDir).computeDelta([mk('F-2', 'Still here')]);
     expect(delta).toEqual({ newFindings: 0, fixedFindings: 0, openFindings: 1, suppressedFindings: 0 });
   });
+
+  it('computeDelta keys a route with query noise and trailing slash to the same route (C7)', async () => {
+    const at = (id: string, urlPath: string): Finding => ({
+      ...mk(id, 'Same problem'),
+      where: { urlPath, role: 'anonymous', breakpoint: '1440px' },
+    });
+    await fs.writeFile(
+      path.join(tmpDir, 'findings.json'),
+      JSON.stringify({ findings: [at('F-1', '/a?utm=ad&ref=x')] }),
+      'utf8'
+    );
+    const delta = await new SuppressionsManager(tmpDir).computeDelta([at('F-2', '/a/#top')]);
+    expect(delta).toEqual({ newFindings: 0, fixedFindings: 0, openFindings: 1, suppressedFindings: 0 });
+  });
 });

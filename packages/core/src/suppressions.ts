@@ -1,5 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
+import { normalizeRoute } from '@qa/types';
 import type { Finding, SuppressionRule, RunDelta, ReleaseReport } from '@qa/types';
 
 export class SuppressionsManager {
@@ -89,15 +90,19 @@ export class SuppressionsManager {
       // First run, no previous findings
     }
 
-    const prevTitles = new Set(previousFindings.map((f) => `${f.checker}:${f.title}:${f.where.urlPath}`));
-    const currTitles = new Set(currentFindings.map((f) => `${f.checker}:${f.title}:${f.where.urlPath}`));
+    const prevTitles = new Set(
+      previousFindings.map((f) => `${f.checker}:${f.title}:${normalizeRoute(f.where.urlPath)}`)
+    );
+    const currTitles = new Set(
+      currentFindings.map((f) => `${f.checker}:${f.title}:${normalizeRoute(f.where.urlPath)}`)
+    );
 
     let newCount = 0;
     let openCount = 0;
     let suppressedCount = 0;
 
     for (const f of currentFindings) {
-      const key = `${f.checker}:${f.title}:${f.where.urlPath}`;
+      const key = `${f.checker}:${f.title}:${normalizeRoute(f.where.urlPath)}`;
       if (f.triageStatus === 'Intended' || f.triageStatus === 'False Positive') {
         suppressedCount++;
       } else if (prevTitles.has(key)) {
@@ -109,7 +114,7 @@ export class SuppressionsManager {
 
     let fixedCount = 0;
     for (const prev of previousFindings) {
-      const key = `${prev.checker}:${prev.title}:${prev.where.urlPath}`;
+      const key = `${prev.checker}:${prev.title}:${normalizeRoute(prev.where.urlPath)}`;
       if (!currTitles.has(key)) {
         fixedCount++;
       }
