@@ -449,3 +449,99 @@ export function makeRequestGuard(
     return (await resolvePublic(parsed.hostname, deps)).ok;
   };
 }
+
+/** A request the address rule refused, or a name that did not resolve. Nothing was sent. Callers treat it as no answer. */
+export class GuardedFetchBlockedError extends Error {
+  readonly code = 'ERR_ADDRESS_BLOCKED';
+  constructor() {
+    super('The address is not a public web address.');
+    this.name = 'GuardedFetchBlockedError';
+  }
+}
+
+export type GuardedFetch = (input: string | URL, init?: RequestInit) => Promise<Response>;
+
+export interface GuardedFetchOptions {
+  /** Local run only (ADR 0031): private addresses allowed. Narrowed to false when a browser guard is set. Never from request input. */
+  allowPrivate?: boolean;
+  /** Redirect hops, each checked (default 5). The last 3xx is returned as the response. */
+  maxRedirects?: number;
+  deps?: NetDeps;
+}
+
+/** Statuses that must not carry a body in a `Response`. */
+const NULL_BODY_STATUS = new Set([204, 205, 304]);
+
+/** A `Response` built from a pinned `safeGet` result. Only GET responses in the final status range. */
+function toResponse(status: number, body: ArrayBuffer, headers: Record<string, string | string[] | undefined>): Response {
+  if (!Number.isInteger(status) || status < 200 || status > 599) throw new Error('unusable response status');
+  const h = new Headers();
+  for (const [k, v] of Object.entries(headers)) {
+    if (v === undefined) continue;
+    for (const item of Array.isArray(v) ? v : [v]) h.append(k, item);
+  }
+  return new Response(NULL_BODY_STATUS.has(status) ? null : body, { status, headers: h });
+}
+
+/** A plain ArrayBuffer copy of the bytes (a `Response` body takes ArrayBuffer-backed data). */
+function copyBuffer(bytes: Uint8Array): ArrayBuffer {
+  const out = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(out).set(bytes);
+  return out;
+}
+
+function headersFromInit(init: HeadersInit | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!init) return out;
+  new Headers(init).forEach((value, key) => {
+    out[key] = value;
+  });
+  return out;
+}
+
+/** Rejects with AbortError when `signal` fires first. The pinned request itself is left to its own timeout. */
+function raceAbort<T>(work: Promise<T>, signal: AbortSignal): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(new DOMException('The operation was aborted.', 'AbortError'));
+    signal.addEventListener('abort', onAbort, { once: true });
+    work.then(resolve, reject).finally(() => signal.removeEventListener('abort', onAbort));
+  });
+}
+
+/**
+ * `fetch`-shaped GET on the pinned client (`safeGet`, ADR 0031). There is no native fetch here: each hop is resolved
+ * once, connected to the checked address, and every redirect hop is checked again. `redirect: 'manual'` returns the
+ * 3xx itself, so the caller follows (and checks) it on its own. A refused address, a failed lookup or a non-http(s)
+ * URL throws GuardedFetchBlockedError and nothing is sent. Network failure or timeout throws a plain Error. An
+ * aborted `signal` rejects with AbortError. A body over the size cap returns its status with an empty body.
+ */
+export function makeGuardedFetch(opts: GuardedFetchOptions = {}): GuardedFetch {
+  const deps = opts.deps ?? defaultNetDeps;
+  const maxRedirects = opts.maxRedirects ?? DEFAULT_MAX_REDIRECTS;
+  return async (input, init) => {
+    const url = typeof input === 'string' ? input : input.toString();
+    const method = (init?.method ?? 'GET').toUpperCase();
+    if (method !== 'GET') throw new Error('guarded fetch sends GET only');
+    const signal = init?.signal ?? undefined;
+    if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
+    const manual = init?.redirect === 'manual';
+    const work = safeGet(
+      url,
+      {
+        // Read at call time: a browser guard (shared machine) makes this public only, whatever the caller passed.
+        allowPrivate: opts.allowPrivate !== false && getBrowserPolicy() === null,
+        maxRedirects: manual ? 0 : maxRedirects,
+        headers: headersFromInit(init?.headers),
+        redirectAsResponse: true,
+      },
+      deps
+    );
+    const got = signal ? await raceAbort(work, signal) : await work;
+    if (got.ok) return toResponse(got.status, copyBuffer(got.bytes), got.headers);
+    if (got.reason === 'too-large' && got.status !== undefined) return toResponse(got.status, new ArrayBuffer(0), {});
+    if (got.reason === 'dns-failed' || got.reason === 'private-address' || got.reason === 'bad-scheme') {
+      throw new GuardedFetchBlockedError();
+    }
+    throw new Error(got.reason);
+  };
+}
