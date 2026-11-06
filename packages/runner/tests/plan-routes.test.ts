@@ -409,9 +409,7 @@ describe('Plan generation: stale writes refused, approval bumps it (R9, R10)', (
 
     expect(res.statusCode).toBe(409);
     expect(res.json().code).toBe('ERR_PLAN_STALE');
-    const testItem = session.plan.currentRecord?.context.draft.plan?.pages[0].tests.find(
-      (t) => t.id === 'test-item-1'
-    );
+    const testItem = session.plan.currentRecord?.context.draft.plan?.pages[0].tests.find((t) => t.id === 'test-item-1');
     expect(testItem?.skipped).not.toBe(true);
   });
 

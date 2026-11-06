@@ -154,7 +154,11 @@ export function PastCheckupsScreen({
               </h2>
               <ul className="space-y-3">
                 {ofSite.map((run) => (
-                  <li key={run.runId} data-run-id={run.runId} className="rounded-card border border-rule bg-surface p-4">
+                  <li
+                    key={run.runId}
+                    data-run-id={run.runId}
+                    className="rounded-card border border-rule bg-surface p-4"
+                  >
                     <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
                       <div className="min-w-0">
                         <Link

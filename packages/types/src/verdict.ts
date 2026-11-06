@@ -49,10 +49,7 @@ function deepEqualValue(a: unknown, b: unknown): boolean {
   if (a === b) return true;
   if (Array.isArray(a) || Array.isArray(b)) {
     return (
-      Array.isArray(a) &&
-      Array.isArray(b) &&
-      a.length === b.length &&
-      a.every((item, i) => deepEqualValue(item, b[i]))
+      Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((item, i) => deepEqualValue(item, b[i]))
     );
   }
   if (a !== null && b !== null && typeof a === 'object' && typeof b === 'object') {

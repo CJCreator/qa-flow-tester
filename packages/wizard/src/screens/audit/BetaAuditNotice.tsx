@@ -68,7 +68,8 @@ export function BetaAuditNotice({ onSignIn }: BetaAuditNoticeProps = {}) {
       />
       <Notice tone="stamp" title="This shared copy has no Website Audits of its own">
         This shared copy opens Shared Links and Website Audits given to a Helper, and it runs check-ups. To run Website
-        Audits, sign in with Google if you are the owner, or run your own copy of Release check-up. The steps for hosting it are in{' '}
+        Audits, sign in with Google if you are the owner, or run your own copy of Release check-up. The steps for
+        hosting it are in{' '}
         <a
           href={`${REPO_URL}/blob/main/docs/DEPLOYMENT.md`}
           target="_blank"

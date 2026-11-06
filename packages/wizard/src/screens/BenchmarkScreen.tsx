@@ -346,7 +346,10 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
 
       {job?.status === 'failed' && (
         <ErrorMessage>
-          {plainMessage(job.error, 'The comparison couldn’t finish. Try again in a minute. If it keeps failing, check the QA Tool’s terminal.')}
+          {plainMessage(
+            job.error,
+            'The comparison couldn’t finish. Try again in a minute. If it keeps failing, check the QA Tool’s terminal.'
+          )}
         </ErrorMessage>
       )}
 

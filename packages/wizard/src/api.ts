@@ -49,7 +49,9 @@ async function call(path: string, init: RequestInit = {}, timeoutMs = 15000): Pr
       ...init,
       headers: init.body ? { 'Content-Type': 'application/json', ...init.headers } : init.headers,
       // A caller's signal (a check for an address that has since changed) cancels the request too.
-      signal: init.signal ? AbortSignal.any([init.signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs),
+      signal: init.signal
+        ? AbortSignal.any([init.signal, AbortSignal.timeout(timeoutMs)])
+        : AbortSignal.timeout(timeoutMs),
     });
   } catch {
     throw new RunnerError(
@@ -950,7 +952,8 @@ const BENCHMARK_START_FAILED =
  */
 export function plainMessage(raw: string | null | undefined, fallback: string): string {
   if (!raw || raw.length > 240) return fallback;
-  if (/\n|\bError:|\bERR_[A-Z_]+|\bat\s+\S+:\d+|[A-Za-z]:\\|\/[\w.-]+\/[\w.-]+\.(ts|js|tsx)\b/.test(raw)) return fallback;
+  if (/\n|\bError:|\bERR_[A-Z_]+|\bat\s+\S+:\d+|[A-Za-z]:\\|\/[\w.-]+\/[\w.-]+\.(ts|js|tsx)\b/.test(raw))
+    return fallback;
   return raw.trim() || fallback;
 }
 

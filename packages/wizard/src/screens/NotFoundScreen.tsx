@@ -3,13 +3,7 @@ import { Link, PATHS } from '../lib/router';
 import { useDocumentTitle } from '../lib/title';
 
 /** An address the app doesn't know. The shared (beta) copy has no Website Audits unless the visitor is an audit owner. */
-export function NotFoundScreen({
-  beta = false,
-  auditOwner = false,
-}: {
-  beta?: boolean;
-  auditOwner?: boolean;
-}) {
+export function NotFoundScreen({ beta = false, auditOwner = false }: { beta?: boolean; auditOwner?: boolean }) {
   useDocumentTitle('Page not found');
   return (
     <Page width="prose">

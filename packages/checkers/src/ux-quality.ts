@@ -1,6 +1,12 @@
 import type { Page } from 'playwright';
 import axePlaywright from '@axe-core/playwright';
-import { normalizeRoute, type Finding, type Breakpoint, type WcagCoverageEntry, type WcagCriterionStatus } from '@qa/types';
+import {
+  normalizeRoute,
+  type Finding,
+  type Breakpoint,
+  type WcagCoverageEntry,
+  type WcagCriterionStatus,
+} from '@qa/types';
 import { couldNotVerifyFinding } from './could-not-verify.js';
 
 // Support both ESM default and CJS named export

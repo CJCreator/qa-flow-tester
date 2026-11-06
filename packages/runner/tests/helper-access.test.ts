@@ -238,10 +238,7 @@ describe('Helper session key (F-045, DEC-011)', () => {
   });
 
   it('identifies audit owners from AUDIT_OWNER_EMAILS and allows them on owner rows (T-86)', async () => {
-    expect(parseOwnerEmails(' Alice@example.com , Bob@example.com ')).toEqual([
-      'alice@example.com',
-      'bob@example.com',
-    ]);
+    expect(parseOwnerEmails(' Alice@example.com , Bob@example.com ')).toEqual(['alice@example.com', 'bob@example.com']);
     expect(parseOwnerEmails(['User@example.com'])).toEqual(['user@example.com']);
     expect(parseOwnerEmails()).toEqual([]);
 

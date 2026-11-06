@@ -69,13 +69,9 @@ function fakeGlobals(state: FakePage) {
 function fakePage(state: FakePage): Page {
   const g = fakeGlobals(state);
   const evaluate = async (src: string) => {
-    const run = new Function(
-      'document',
-      'location',
-      'performance',
-      'getComputedStyle',
-      `return ${src};`
-    ) as (...args: unknown[]) => unknown;
+    const run = new Function('document', 'location', 'performance', 'getComputedStyle', `return ${src};`) as (
+      ...args: unknown[]
+    ) => unknown;
     return run(g.document, g.location, g.performance, g.getComputedStyle);
   };
   return {
@@ -185,11 +181,7 @@ describe('the shown text prefers the page alert over the native message (C6)', (
       controls: [el({ innerText: '', invalid: true, validationMessage: 'Please include an "@"' })],
     });
     const observations: string[] = [];
-    const findings = await check(
-      page,
-      submitTest({ message: 'valid email address' }),
-      context(observations, before())
-    );
+    const findings = await check(page, submitTest({ message: 'valid email address' }), context(observations, before()));
     expect(findings).toHaveLength(0);
     expect(observations.join(' ')).toContain('Enter a valid email address');
     expect(observations.join(' ')).not.toContain('Please include');

@@ -173,9 +173,9 @@ describe('sample report format', () => {
     expect(problemsWith(ready, ref)).toEqual([]);
     expect(problemsWith(ready.replaceAll('aspects-grid', 'x-grid'), ref)).not.toEqual([]);
     expect(problemsWith(ready.replace('<span class="aspect-title">Works</span>', ''), ref)).not.toEqual([]);
-    expect(problemsWith(ready.replace('class="aspect-title">Protected<', 'class="aspect-title">Safe<'), ref)).not.toEqual(
-      []
-    );
+    expect(
+      problemsWith(ready.replace('class="aspect-title">Protected<', 'class="aspect-title">Safe<'), ref)
+    ).not.toEqual([]);
     expect(
       problemsWith(ready.replace(/class="overall-grade">[^<]*</, 'class="overall-grade">Maybe<'), ref)
     ).not.toEqual([]);

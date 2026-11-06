@@ -27,7 +27,10 @@ export function readSingleKeyShortcuts(storage: Pick<Store, 'getItem'> | undefin
 }
 
 /** Saves the choice. If storage is blocked the choice lasts until the page is closed. */
-export function writeSingleKeyShortcuts(on: boolean, storage: Pick<Store, 'setItem'> | undefined = defaultStore()): void {
+export function writeSingleKeyShortcuts(
+  on: boolean,
+  storage: Pick<Store, 'setItem'> | undefined = defaultStore()
+): void {
   try {
     storage?.setItem(STORAGE_KEY, on ? 'on' : 'off');
   } catch {

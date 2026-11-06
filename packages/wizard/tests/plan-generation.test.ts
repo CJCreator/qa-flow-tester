@@ -42,7 +42,10 @@ describe('plan generation on save', () => {
   });
 
   it('on 409 ERR_PLAN_STALE shows the friendly text and does not return a plan', async () => {
-    stubPlan(5, 409, { error: 'The plan changed after you loaded it. Reload it and try again.', code: 'ERR_PLAN_STALE' });
+    stubPlan(5, 409, {
+      error: 'The plan changed after you loaded it. Reload it and try again.',
+      code: 'ERR_PLAN_STALE',
+    });
     await getPlan();
     const failed = await patchPlan({ answers: {} }).then(
       () => null,
