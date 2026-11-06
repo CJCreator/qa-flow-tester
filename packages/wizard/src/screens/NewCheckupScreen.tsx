@@ -171,6 +171,8 @@ export function NewCheckupScreen({
     }
     const normal = normalizeUrl(typed);
     const id = ++latest.current;
+    // The last result is dropped at once: a changed address never shows the old "Reachable" while it is checked.
+    setCheck({ state: 'checking', url: normal.ok ? normal.url : typed });
     if (!normal.ok) {
       const timer = setTimeout(
         () => id === latest.current && setCheck({ state: 'invalid', reason: normal.reason }),
@@ -178,7 +180,6 @@ export function NewCheckupScreen({
       );
       return () => clearTimeout(timer);
     }
-    setCheck({ state: 'checking', url: normal.url });
     const timer = setTimeout(async () => {
       try {
         const result = await checkReachable(normal.url);
@@ -700,34 +701,28 @@ export function NewCheckupScreen({
                   <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-3">
                     <div className="flex items-center gap-2">
                       <label htmlFor="crawl-concurrency">Pages at once</label>
-                      <input
+                      <ClampedNumberField
                         id="crawl-concurrency"
-                        type="number"
+                        value={form.crawlConcurrency}
                         min={1}
                         max={5}
+                        fallback={2}
                         className="field w-20"
-                        value={form.crawlConcurrency}
-                        onChange={(e) => {
-                          const val = Math.max(1, Math.min(5, Number(e.target.value) || 2));
-                          onFormChange((f) => ({ ...f, crawlConcurrency: val }));
-                        }}
+                        onCommit={(val) => onFormChange((f) => ({ ...f, crawlConcurrency: val }))}
                       />
                       <span className="text-sm text-ink-soft">1 to 5</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <label htmlFor="crawl-delay">Wait between pages</label>
-                      <input
+                      <ClampedNumberField
                         id="crawl-delay"
-                        type="number"
+                        value={form.crawlDelayMs}
                         min={0}
                         max={2000}
                         step={50}
+                        fallback={0}
                         className="field w-28"
-                        value={form.crawlDelayMs}
-                        onChange={(e) => {
-                          const val = Math.max(0, Math.min(2000, Number(e.target.value) || 0));
-                          onFormChange((f) => ({ ...f, crawlDelayMs: val }));
-                        }}
+                        onCommit={(val) => onFormChange((f) => ({ ...f, crawlDelayMs: val }))}
                       />
                       <span className="text-sm text-ink-soft">ms, 0 to 2000</span>
                     </div>
@@ -1220,21 +1215,28 @@ function DomainProofPanel({ url }: { url: string }) {
   const [status, setStatus] = useState<DomainProofStatus | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const run = async () => {
-    setBusy(true);
-    setProblem(null);
-    try {
-      setStatus(await checkDomainProof(url));
-    } catch (err) {
-      setProblem(err instanceof RunnerError ? err.message : 'The Verified Domain line couldn’t be checked.');
-    } finally {
-      setBusy(false);
-    }
-  };
+  // Each check gets its own controller. When the address changes (or the person checks again) the old request is
+  // aborted, so a late answer for an old address is dropped instead of shown for the new one.
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
+    const controller = new AbortController();
     setStatus(null);
-    void run();
-  }, [url]);
+    setProblem(null);
+    setBusy(true);
+    checkDomainProof(url, controller.signal).then(
+      (next) => {
+        if (controller.signal.aborted) return;
+        setStatus(next);
+        setBusy(false);
+      },
+      (err: unknown) => {
+        if (controller.signal.aborted) return;
+        setProblem(err instanceof RunnerError ? err.message : 'The Verified Domain line couldn’t be checked.');
+        setBusy(false);
+      }
+    );
+    return () => controller.abort();
+  }, [url, attempt]);
 
   if (status && (!status.required || status.verified)) {
     return status.verified && status.required ? (
@@ -1266,10 +1268,58 @@ function DomainProofPanel({ url }: { url: string }) {
           {problem}
         </p>
       )}
-      <button type="button" className="btn-link mt-2 text-sm" disabled={busy} onClick={() => void run()}>
+      <button type="button" className="btn-link mt-2 text-sm" disabled={busy} onClick={() => setAttempt((n) => n + 1)}>
         {busy ? 'Checking…' : 'Check again'}
       </button>
     </div>
+  );
+}
+
+/**
+ * A number box that keeps what is typed while the person types (so it can be cleared and retyped) and keeps it
+ * between `min` and `max` only when they leave the box. Nothing empty or non-numeric reaches the form: it falls
+ * back to `fallback`.
+ */
+function ClampedNumberField({
+  id,
+  value,
+  min,
+  max,
+  step,
+  fallback,
+  className,
+  onCommit,
+}: {
+  id: string;
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  fallback: number;
+  className?: string;
+  onCommit: (n: number) => void;
+}) {
+  const [text, setText] = useState(String(value));
+  useEffect(() => setText(String(value)), [value]);
+  return (
+    <input
+      id={id}
+      type="number"
+      inputMode="numeric"
+      min={min}
+      max={max}
+      step={step}
+      className={className}
+      value={text}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={() => {
+        const n = Number(text);
+        const clamped =
+          text.trim() === '' || !Number.isFinite(n) ? fallback : Math.min(max, Math.max(min, Math.round(n)));
+        setText(String(clamped));
+        onCommit(clamped);
+      }}
+    />
   );
 }
 
@@ -1424,9 +1474,20 @@ function ImportRoles({ onFormChange }: { onFormChange: (update: (form: CheckupFo
         One role per line: role,username,password. Used for this check-up only; nothing is saved from here.
       </p>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <button type="button" className="btn-quiet btn-sm" disabled={!text.trim()} onClick={() => apply(text)}>
+        <button
+          type="button"
+          className="btn-quiet btn-sm"
+          disabled={!text.trim()}
+          onClick={() => apply(text)}
+          aria-describedby={text.trim() ? undefined : 'import-roles-off-reason'}
+        >
           Fill in roles
         </button>
+        {!text.trim() && (
+          <span id="import-roles-off-reason" className="text-sm text-ink-soft">
+            Type or paste at least one role first.
+          </span>
+        )}
         <label className={FILE_LABEL}>
           Pick a list file
           <input

@@ -60,6 +60,17 @@ export function KeyField({
     return () => clearTimeout(timer);
   }, [key]);
 
+  // Why Save is off, in words (a disabled button alone does not say).
+  const saveOffReason: string | null = saving
+    ? null
+    : status.kind === 'empty'
+      ? 'Paste your key first.'
+      : status.kind === 'checking'
+        ? 'Wait until the key has been checked.'
+        : status.kind === 'invalid'
+          ? 'Save is off until the key works.'
+          : null;
+
   const save = async () => {
     setSaving(true);
     setError(null);
@@ -137,9 +148,15 @@ export function KeyField({
           className={primary ? 'btn-primary' : 'btn-quiet'}
           disabled={status.kind !== 'valid' || saving}
           onClick={() => void save()}
+          aria-describedby={saveOffReason ? 'ai-key-save-reason' : undefined}
         >
           {saving ? <Spinner label="Saving your key…" announce={false} /> : saveLabel}
         </button>
+        {saveOffReason && (
+          <span id="ai-key-save-reason" className="text-sm text-ink-soft">
+            {saveOffReason}
+          </span>
+        )}
         {onCancel && (
           <button type="button" className="btn-link" onClick={onCancel}>
             {cancelLabel ?? 'Cancel'}

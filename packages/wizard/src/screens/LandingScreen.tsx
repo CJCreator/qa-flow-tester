@@ -520,6 +520,15 @@ export function LandingScreen() {
               </li>
               <li>
                 <a
+                  href={contact.feedbackHref}
+                  className="btn-link text-sm no-underline hover:underline"
+                  rel="noreferrer"
+                >
+                  Send feedback
+                </a>
+              </li>
+              <li>
+                <a
                   href={`${REPO_URL}/blob/main/PRIVACY.md`}
                   className="btn-link text-sm no-underline hover:underline"
                   rel="noreferrer"

@@ -258,7 +258,8 @@ export function PlanReviewScreen({
     },
     describeTest: (sentence, urlPath) => interpretSentence({ sentence, urlPath }),
     addJourney: async (flow) => {
-      await edit(() => patchPlan({ flows: [...plan.flows, flow] }));
+      // Read the latest list when the change is made, not the list of the render that created this handler.
+      await edit(() => patchPlan({ flows: [...latest.current.flows, flow] }));
     },
     reorderJourneys: async (fromIndex: number, toIndex: number) => {
       const currentFlows = latest.current.flows;

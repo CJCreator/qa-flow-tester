@@ -48,7 +48,8 @@ async function call(path: string, init: RequestInit = {}, timeoutMs = 15000): Pr
     return await fetch(path, {
       ...init,
       headers: init.body ? { 'Content-Type': 'application/json', ...init.headers } : init.headers,
-      signal: AbortSignal.timeout(timeoutMs),
+      // A caller's signal (a check for an address that has since changed) cancels the request too.
+      signal: init.signal ? AbortSignal.any([init.signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs),
     });
   } catch {
     throw new RunnerError(
@@ -296,8 +297,12 @@ export interface DomainProofStatus {
   reason?: string;
 }
 
-export async function checkDomainProof(targetUrl: string): Promise<DomainProofStatus> {
-  const res = await call('/api/runner/domain-proof', { method: 'POST', body: JSON.stringify({ targetUrl }) }, 20000);
+export async function checkDomainProof(targetUrl: string, signal?: AbortSignal): Promise<DomainProofStatus> {
+  const res = await call(
+    '/api/runner/domain-proof',
+    { method: 'POST', body: JSON.stringify({ targetUrl }), signal },
+    20000
+  );
   const body = await json<Partial<DomainProofStatus> & { error?: string; code?: string }>(res);
   if (res.status === 429) {
     throw new RunnerError(
