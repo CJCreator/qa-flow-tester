@@ -101,6 +101,12 @@ export function clampMaxPages(typed: string): number {
   return Number.isFinite(n) && typed.trim() !== '' ? Math.min(MAX_PAGES_LIMIT, Math.max(1, n)) : DEFAULT_MAX_PAGES;
 }
 
+/** The value a submit must use: the typed page limit clamped, and whether it differs from the stored one. */
+export function committedMaxPages(typed: string, stored: number): { value: number; changed: boolean } {
+  const value = clampMaxPages(typed);
+  return { value, changed: value !== stored };
+}
+
 export const EMPTY_SIGN_IN: SignInEntry = {
   role: '',
   username: '',
