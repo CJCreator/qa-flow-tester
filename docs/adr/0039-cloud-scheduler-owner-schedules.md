@@ -44,3 +44,7 @@ The owner wants to create, pause and delete schedules on the hosted copy, and ha
 ## Amendment, 2026-11-06 (R2 / R7 test wave): the scheduler token also authorizes the visitor cleanup
 
 The sentence in Decision that says only `POST /api/runner/schedules/tick` has the `scheduler` access level is out of date. `POST /api/runner/sessions/cleanup` (`packages/runner/src/routes/sessions.ts`, the Cloud Scheduler's visitor cleanup, ADR 0039 M3) also has `access: 'scheduler'` and `beta: 'allow'`. It takes the same Google OIDC token check as the tick: RS256, `iss`, `aud`, `email_verified`, and `email` equal to `SCHEDULER_SERVICE_ACCOUNT`. The access key is not accepted on it, and the tick's beta quota exemption applies to it. Nothing else changes.
+
+## Amendment, 2026-11-06 (single instance): the scheduler lock is per-process by design
+
+The runner stays at one instance (`--max-instances 1`, ADR 0036). The in-memory scheduler lock in `packages/runner/src/scheduler.ts` (the `ticking` flag and the locked queue) is therefore sufficient. It is not a cross-instance lock. Scaling out past one instance needs a shared lease (for example in Cloud Storage) first; this decision must be revisited before that happens.
