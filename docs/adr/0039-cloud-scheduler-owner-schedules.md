@@ -40,3 +40,7 @@ The owner wants to create, pause and delete schedules on the hosted copy, and ha
 - **An inline handler before the gate.** Rejected: 0027 and 0037 say no inline routes, and the table test would not see it.
 - **Keep the in-process timer and run with `--no-cpu-throttling` or always-on CPU.** Rejected: monthly cost, and 0038 chose a warm instance only.
 - **A Cloud Run Job per schedule.** Rejected: a second deploy target and image for one small feature.
+
+## Amendment, 2026-11-06 (R2 / R7 test wave): the scheduler token also authorizes the visitor cleanup
+
+The sentence in Decision that says only `POST /api/runner/schedules/tick` has the `scheduler` access level is out of date. `POST /api/runner/sessions/cleanup` (`packages/runner/src/routes/sessions.ts`, the Cloud Scheduler's visitor cleanup, ADR 0039 M3) also has `access: 'scheduler'` and `beta: 'allow'`. It takes the same Google OIDC token check as the tick: RS256, `iss`, `aud`, `email_verified`, and `email` equal to `SCHEDULER_SERVICE_ACCOUNT`. The access key is not accepted on it, and the tick's beta quota exemption applies to it. Nothing else changes.
