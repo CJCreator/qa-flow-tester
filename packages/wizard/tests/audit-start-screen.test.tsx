@@ -171,7 +171,7 @@ describe('Website Audit start screen: progress from the stream', () => {
 
     const stopped = render({ status: 'stopped', progress, message: 'The Website Audit stopped before it finished.' });
     expect(stopped).toMatch(
-      /<div role="alert"[^>]*><p[^>]*>The Website Audit stopped\.<\/p><p[^>]*>The Website Audit stopped before it finished\.<\/p>/
+      /<p role="alert"[^>]*><span[^>]*>The Website Audit stopped\.<\/span><span[^>]*>The Website Audit stopped before it finished\.<\/span>/
     );
   });
 

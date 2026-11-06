@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { HELPER_PERMISSIONS, type HelperGrant, type HelperPermission } from '@qa/types/src/browser.js';
 import { useConfirm } from '../../../components/ConfirmDialog';
-import { Spinner } from '../../../components/text';
+import { ErrorMessage, Spinner } from '../../../components/text';
 import { LoadError, Page, PageHeader } from '../../../components/ui';
 import { PATHS } from '../../../lib/router';
 import { useDocumentTitle } from '../../../lib/title';
@@ -158,9 +158,7 @@ export function HelpersView({
           </button>
           {message &&
             (message.tone === 'fail' ? (
-              <p role="alert" className="max-w-prose text-sm font-semibold text-fail">
-                {message.text}
-              </p>
+              <ErrorMessage>{message.text}</ErrorMessage>
             ) : (
               <p role="status" className="text-sm font-semibold text-pass">
                 {message.text}

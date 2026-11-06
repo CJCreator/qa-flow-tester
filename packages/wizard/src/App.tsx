@@ -65,18 +65,6 @@ import { headersNotice } from './lib/coverage-text';
 import { TestingScreen } from './screens/TestingScreen';
 import { splitStoredContext } from './lib/context';
 import { BetaAuditNotice, showsBetaAuditNotice } from './screens/audit/BetaAuditNotice';
-import { AuditStartScreen } from './screens/audit/start/AuditStartScreen';
-import { SavedAuditsScreen } from './screens/audit/saved/SavedAuditsScreen';
-import { AuditHistoryScreen } from './screens/audit/saved/AuditHistoryScreen';
-import { ShortlistScreen } from './screens/audit/saved/ShortlistScreen';
-import { PreviewShareScreen } from './screens/audit/saved/PreviewShareScreen';
-import { HelpersScreen } from './screens/audit/saved/HelpersScreen';
-import { HelperSignInScreen } from './screens/audit/saved/HelperSignInScreen';
-import { AnalysisScreen } from './screens/audit/results/AnalysisScreen';
-import { ReviewDocumentsScreen } from './screens/audit/documents/ReviewDocumentsScreen';
-import { ExportDocumentsScreen } from './screens/audit/documents/ExportDocumentsScreen';
-import { DocumentSettingsScreen } from './screens/audit/documents/DocumentSettingsScreen';
-import { AuditAiModelsPanel } from './screens/audit/ai/AuditAiModelsPanel';
 
 /** How often the runner's state is read while a check-up is in progress, besides its events. */
 const POLL_MS = 5000;
@@ -91,12 +79,51 @@ const PastCheckupsScreen = lazy(() =>
   import('./screens/PastCheckupsScreen').then((m) => ({ default: m.PastCheckupsScreen }))
 );
 const ReportScreen = lazy(() => import('./screens/ReportScreen').then((m) => ({ default: m.ReportScreen })));
-const VisibilityScreen = lazy(() => import('./screens/VisibilityScreen').then((m) => ({ default: m.VisibilityScreen })));
+const VisibilityScreen = lazy(() =>
+  import('./screens/VisibilityScreen').then((m) => ({ default: m.VisibilityScreen }))
+);
 const VisualBaselinesScreen = lazy(() =>
   import('./screens/VisualBaselinesScreen').then((m) => ({ default: m.VisualBaselinesScreen }))
 );
 const BenchmarkScreen = lazy(() => import('./screens/BenchmarkScreen').then((m) => ({ default: m.BenchmarkScreen })));
 const SettingsScreen = lazy(() => import('./screens/SettingsScreen').then((m) => ({ default: m.SettingsScreen })));
+// The Website Audit screens are opened from their own addresses, so a Check-up never loads them (LAT-11).
+const AuditStartScreen = lazy(() =>
+  import('./screens/audit/start/AuditStartScreen').then((m) => ({ default: m.AuditStartScreen }))
+);
+const SavedAuditsScreen = lazy(() =>
+  import('./screens/audit/saved/SavedAuditsScreen').then((m) => ({ default: m.SavedAuditsScreen }))
+);
+const AuditHistoryScreen = lazy(() =>
+  import('./screens/audit/saved/AuditHistoryScreen').then((m) => ({ default: m.AuditHistoryScreen }))
+);
+const ShortlistScreen = lazy(() =>
+  import('./screens/audit/saved/ShortlistScreen').then((m) => ({ default: m.ShortlistScreen }))
+);
+const PreviewShareScreen = lazy(() =>
+  import('./screens/audit/saved/PreviewShareScreen').then((m) => ({ default: m.PreviewShareScreen }))
+);
+const HelpersScreen = lazy(() =>
+  import('./screens/audit/saved/HelpersScreen').then((m) => ({ default: m.HelpersScreen }))
+);
+const HelperSignInScreen = lazy(() =>
+  import('./screens/audit/saved/HelperSignInScreen').then((m) => ({ default: m.HelperSignInScreen }))
+);
+const AnalysisScreen = lazy(() =>
+  import('./screens/audit/results/AnalysisScreen').then((m) => ({ default: m.AnalysisScreen }))
+);
+const ReviewDocumentsScreen = lazy(() =>
+  import('./screens/audit/documents/ReviewDocumentsScreen').then((m) => ({ default: m.ReviewDocumentsScreen }))
+);
+const ExportDocumentsScreen = lazy(() =>
+  import('./screens/audit/documents/ExportDocumentsScreen').then((m) => ({ default: m.ExportDocumentsScreen }))
+);
+const DocumentSettingsScreen = lazy(() =>
+  import('./screens/audit/documents/DocumentSettingsScreen').then((m) => ({ default: m.DocumentSettingsScreen }))
+);
+const AuditAiModelsPanel = lazy(() =>
+  import('./screens/audit/ai/AuditAiModelsPanel').then((m) => ({ default: m.AuditAiModelsPanel }))
+);
 
 /**
  * The step bar's position for a screen, when it has one. The scan is when the plan is made. The new check-up

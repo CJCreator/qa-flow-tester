@@ -342,9 +342,7 @@ export function PreviewShareView(props: PreviewShareViewProps) {
         </div>
         {message &&
           (message.tone === 'fail' ? (
-            <p role="alert" className="mt-3 max-w-prose text-sm font-semibold text-fail">
-              {message.text}
-            </p>
+            <ErrorMessage>{message.text}</ErrorMessage>
           ) : (
             <p role="status" className="mt-3 text-sm font-semibold text-pass">
               {message.text}
