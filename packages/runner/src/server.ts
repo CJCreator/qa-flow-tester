@@ -321,6 +321,17 @@ function matchesSecret(given: string | null | undefined, secret: string): boolea
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+/**
+ * The event id a reconnecting page last saw (LAT-10): the Last-Event-ID header, or `?lastEventId=` (the wizard's
+ * way, since a browser EventSource cannot set headers on its own reconnect). Null when absent or not a whole number.
+ */
+function lastEventIdOf(req: http.IncomingMessage, url: URL): number | null {
+  const header = req.headers['last-event-id'];
+  const raw = (Array.isArray(header) ? header[0] : header) ?? url.searchParams.get('lastEventId');
+  if (typeof raw !== 'string' || !/^\d{1,15}$/.test(raw.trim())) return null;
+  return Number(raw.trim());
+}
+
 /** Token use per stage, added together. */
 function addTokens(a: AIRequestBudget['tokens'], b: AIRequestBudget['tokens']): AIRequestBudget['tokens'] {
   if (!b || Object.keys(b).length === 0) return a;
@@ -965,7 +976,9 @@ export class RunnerServer {
 
   /** Sends one event to the open event streams (SSE). Does not log it: see recordRunEvent. */
   private streamRunnerEvent(event: OrchestratorEvent | Record<string, unknown>): void {
-    const payload = `data: ${JSON.stringify(event)}\n\n`;
+    // The id the event got when the session logged it (LAT-10): a reconnecting page resumes after it.
+    const id = typeof event === 'object' && event ? this.session.events.idOf(event) : undefined;
+    const payload = `${id === undefined ? '' : `id: ${id}\n`}data: ${JSON.stringify(event)}\n\n`;
     const eventRun =
       typeof (event as Record<string, unknown>).runId === 'string'
         ? ((event as Record<string, unknown>).runId as string)
@@ -1320,11 +1333,16 @@ export class RunnerServer {
               Connection: 'keep-alive',
               'X-Accel-Buffering': 'no',
             });
-            res.write(`data: ${JSON.stringify({ type: 'connected', timestamp: Date.now() })}\n\n`);
+            // `head` is the newest id this process has given out: a page holding a larger id has reached a restarted runner.
+            res.write(
+              `data: ${JSON.stringify({ type: 'connected', timestamp: Date.now(), head: this.session.events.lastId })}\n\n`
+            );
             // A page that opens or reconnects mid-run catches up: this run's events so far, in order (beta: only the visitor's own run).
+            // LAT-10: a reconnecting page says the last id it saw; only the events after it are replayed. Without an id, the whole log.
+            // If that id has fallen off the replay cap, what remains is replayed and the gap is not announced.
             if (this.isMine(this.currentRunId))
-              for (const event of this.session.events.log)
-                res.write(`data: ${JSON.stringify({ ...event, replayed: true })}\n\n`);
+              for (const { id, event } of this.session.events.since(lastEventIdOf(req, url) ?? 0))
+                res.write(`id: ${id}\ndata: ${JSON.stringify({ ...event, replayed: true })}\n\n`);
             this.streamClients.add(res);
             if (this.beta) this.streamSessions.set(res, currentSessionId());
             req.on('close', () => {
