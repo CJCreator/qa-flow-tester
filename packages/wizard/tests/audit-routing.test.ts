@@ -98,9 +98,16 @@ describe('App.tsx shows every Website Audit screen', () => {
       // A file may also export its stateless view; only the stateful screen or panel is mounted.
       expect(exported.length).toBeGreaterThan(0);
       for (const name of exported) {
-        expect(app, `${name} imported`).toMatch(
-          new RegExp(`import \\{[^}]*\\b${name}\\b[^}]*\\} from '\\./screens/audit/`)
+        // Static import, or lazy (LAT-11) with the named export mapped to `default` from the same audit file.
+        const staticImport = new RegExp(`import \\{[^}]*\\b${name}\\b[^}]*\\} from '\\./screens/audit/`);
+        const from = file
+          .slice(AUDIT_DIR.length + 1)
+          .replace(/\\/g, '/')
+          .replace(/\.tsx$/, '');
+        const lazyImport = new RegExp(
+          `const ${name} = lazy\\(\\(\\) =>\\s*import\\('\\./screens/audit/${from.replace(/\./g, '\\.')}'\\)\\.then\\(\\(m\\) => \\(\\{ default: m\\.${name} \\}\\)\\)\\s*\\)`
         );
+        expect(staticImport.test(app) || lazyImport.test(app), `${name} imported`).toBe(true);
         expect(app, `${name} rendered`).toMatch(new RegExp(`<${name}[\\s/>]`));
       }
     }

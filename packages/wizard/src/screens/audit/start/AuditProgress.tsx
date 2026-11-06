@@ -1,4 +1,5 @@
 import type { AuditAiStatus, AuditPageState, AuditProgressEvent, AuditStage } from '@qa/types/src/browser.js';
+import { ErrorMessage } from '../../../components/text';
 import { count } from '../../../lib/format';
 import { AuditStatusChips, type AuditSpeedSource } from './AuditStatusChips';
 import { LivePageList } from './LivePageList';
@@ -314,10 +315,10 @@ export function AuditProgress({
       )}
 
       {stopped && (
-        <div role="alert" className="mt-6 rounded-card border border-fail bg-fail-tint px-4 py-3 text-fail">
-          <p className="font-semibold">The Website Audit stopped.</p>
-          <p className="mt-1">{state.message}</p>
-        </div>
+        <ErrorMessage>
+          <span className="block font-semibold">The Website Audit stopped.</span>
+          <span className="mt-1 block">{state.message}</span>
+        </ErrorMessage>
       )}
     </section>
   );

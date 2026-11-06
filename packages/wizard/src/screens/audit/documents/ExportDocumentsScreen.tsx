@@ -5,7 +5,7 @@ import {
   type AuditStatus,
   type ExportFormat,
 } from '@qa/types/src/browser.js';
-import { Notice, Spinner } from '../../../components/text';
+import { ErrorMessage, Notice, Spinner } from '../../../components/text';
 import { Disclosure, LoadError, Page, PageHeader, Section } from '../../../components/ui';
 import { PATHS } from '../../../lib/router';
 import { useDocumentTitle } from '../../../lib/title';
@@ -139,12 +139,7 @@ function DownloadStatus({
   errorKind: DownloadKind | null;
 }): ReactNode {
   if (busy === kind) return <Spinner label="Making the file…" />;
-  if (error !== null && errorKind === kind)
-    return (
-      <p role="alert" className="max-w-prose text-sm font-semibold text-fail">
-        {error}
-      </p>
-    );
+  if (error !== null && errorKind === kind) return <ErrorMessage>{error}</ErrorMessage>;
   if (done && done.kind === kind)
     return (
       <p role="status" className="break-all text-sm font-semibold text-pass">
@@ -221,11 +216,7 @@ export function ExportDocumentsView({
           {loadError}
         </LoadError>
       )}
-      {error !== null && errorKind === null && (
-        <p role="alert" className="max-w-prose rounded-card border border-fail/40 bg-fail-tint px-4 py-3 text-fail">
-          {error}
-        </p>
-      )}
+      {error !== null && errorKind === null && <ErrorMessage>{error}</ErrorMessage>}
 
       <Section id="export-documents" title="Audit Documents">
         <fieldset>

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import type { AuditGetReply, AuditSummary, AuditVersion, ShortlistEntry } from '@qa/types/src/browser.js';
 import { useConfirm, type ConfirmOptions } from '../../../components/ConfirmDialog';
-import { Notice, Spinner } from '../../../components/text';
+import { ErrorMessage, Notice, Spinner } from '../../../components/text';
 import { Badge, Disclosure, LoadError, Page, PageHeader } from '../../../components/ui';
 import { count, formatWhen } from '../../../lib/format';
 import { Link } from '../../../lib/router';
@@ -70,11 +70,7 @@ function OpenedDetails({ auditId, opened }: { auditId: string; opened: OpenedVer
   return (
     <div id={id} className="mt-4 border-t border-rule pt-4">
       {opened.status === 'loading' && <Spinner label={`Opening version ${opened.version}…`} />}
-      {opened.status === 'failed' && (
-        <p role="alert" className="text-sm text-fail">
-          {opened.message}
-        </p>
-      )}
+      {opened.status === 'failed' && <ErrorMessage>{opened.message}</ErrorMessage>}
       {opened.status === 'loaded' && (
         <>
           <p className="break-all font-mono text-sm text-ink-soft">{opened.reply.version.url}</p>
