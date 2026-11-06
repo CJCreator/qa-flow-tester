@@ -446,6 +446,23 @@ describe('Plan generation: stale writes refused, approval bumps it (R9, R10)', (
     expect(res.statusCode).toBe(200);
   });
 
+  it('GET returns the stored planGeneration so the client can send it back on PATCH', async () => {
+    await session.plan.save({ ...makeStoredPlan(), planGeneration: 4 });
+
+    const req = createMockRequest(undefined, {}, 'GET');
+    const res = new MockResponse();
+    await getPlan({
+      session,
+      req,
+      res: res as unknown as http.ServerResponse,
+      url: new URL('http://localhost/api/runner/plan'),
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().planGeneration).toBe(4);
+    expect(res.json().runId).toBe('run-test-1');
+  });
+
   it('approving bumps planGeneration before the approved plan is saved to disk', async () => {
     await session.plan.save({ ...makeStoredPlan(), planGeneration: 3 });
 
