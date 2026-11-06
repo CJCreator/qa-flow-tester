@@ -251,7 +251,8 @@ export async function getPlan(c: PlanRouteContext): Promise<void> {
     sendJson(res, 404, { error: 'No plan awaiting review' });
     return;
   }
-  sendJson(res, 200, session.plan.forClient(record.plan));
+  // planGeneration is sent so the client can echo it on PATCH (stale-write guard, R10).
+  sendJson(res, 200, { ...session.plan.forClient(record.plan), planGeneration: record.planGeneration });
 }
 
 export async function patchPlan(c: PlanRouteContext): Promise<void> {
