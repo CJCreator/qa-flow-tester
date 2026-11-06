@@ -83,6 +83,10 @@ export * from './audit-store.js';
 
 /** One shared AuditRuns per runner: the start and re-run rows, and a stop at shutdown, see the same runs. */
 const auditRunsByServer = new WeakMap<RunnerServer, AuditRuns>();
+
+export function getAuditRunsForServer(server: RunnerServer): AuditRuns | undefined {
+  return auditRunsByServer.get(server);
+}
 const auditRowsByServer = new WeakMap<RunnerServer, Map<string, Route>>();
 
 const rowKey = (method: string, path: string) => `${method} ${path}`;

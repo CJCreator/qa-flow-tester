@@ -30,6 +30,8 @@ export interface MarketingPageDetails {
   hasTrustSignals?: boolean;
   hasLeadCapture?: boolean;
   hasCookieNotice?: boolean;
+  hasA11yStatement?: boolean;
+  hasCompleteSocialCard?: boolean;
 }
 
 /** What the run found for each basic, kept as pages are read. */
@@ -205,6 +207,34 @@ const RULES: Rule[] = [
     actual: 'Analytics were found on the home page, but no cookie or consent notice appeared',
     resolution:
       'If people in the EU, UK or similar places visit, ask for consent before analytics start. A notice that appears late may have been missed.',
+  },
+  {
+    key: 'A11Y_STATEMENT',
+    label: 'Accessibility statement or commitment',
+    kind: 'opinion',
+    homeOnly: true,
+    found: (d) => d.hasA11yStatement,
+    severity: 'Suggestion',
+    title: 'No accessibility statement or policy link was found',
+    expected:
+      'A link to an accessibility policy or statement (e.g. /accessibility), describing conformance with WCAG and contact options',
+    actual: 'No accessibility statement link was found on the home page',
+    resolution:
+      'Add an Accessibility link in the footer describing conformance targets (WCAG 2.2 AA) and how users with disabilities can request accommodations.',
+  },
+  {
+    key: 'SOCIAL_CARD',
+    label: 'Social card description completeness',
+    kind: 'fact',
+    homeOnly: false,
+    found: (d) => d.hasCompleteSocialCard,
+    severity: 'Suggestion',
+    title: 'Social card description meta tag is missing',
+    expected:
+      'OpenGraph (og:description) or Twitter (twitter:description) tags providing summary text for rich link previews',
+    actual: 'The page has title tags but lacks og:description or twitter:description',
+    resolution:
+      'Add og:description and twitter:description meta tags with 1-2 sentence summaries for social link previews.',
   },
 ];
 
@@ -413,6 +443,20 @@ export class MarketingChecker {
               /accept|agree|allow|got it|ok|manage|reject|decline/i.test(textOf(el))
           );
 
+        // Accessibility statement link (G20)
+        const hasA11yStatement = links.some(
+          (a) =>
+            /\b(accessibility|a11y|wcag)\b/i.test(textOf(a)) ||
+            /\/(accessibility|a11y)(\/|$|\?)/i.test(a.getAttribute('href') || '')
+        );
+
+        // Social preview description completeness (G48)
+        const hasOgDesc = metaContent('meta[property="og:description"], meta[name="og:description"]');
+        const hasTwDesc = metaContent('meta[name="twitter:description"]');
+        const hasCompleteSocialCard =
+          (metaContent('meta[property="og:title"]') && hasOgDesc) ||
+          (metaContent('meta[name="twitter:title"]') && hasTwDesc);
+
         return {
           hasTwitterCard: meta('meta[name="twitter:card"]'),
           hasOgTitle: metaContent('meta[property="og:title"]'),
@@ -426,6 +470,8 @@ export class MarketingChecker {
           hasTrustSignals,
           hasLeadCapture,
           hasCookieNotice,
+          hasA11yStatement,
+          hasCompleteSocialCard,
         };
       });
       return details && typeof details === 'object' ? details : null;

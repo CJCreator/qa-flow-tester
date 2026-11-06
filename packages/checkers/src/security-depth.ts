@@ -132,6 +132,7 @@ export class SecurityDepthChecker {
     const steps: Array<() => Promise<Finding[]> | Finding[]> = [
       () => this.checkSri(page, context),
       () => this.checkCsp(context.cspHeader, context),
+      () => this.checkTls(page.url(), context),
     ];
     if (onTarget && fetchFn) {
       steps.push(
@@ -427,6 +428,32 @@ export class SecurityDepthChecker {
         'The policy sets object-src (or default-src), base-uri and frame-ancestors',
         `Not set: ${absent.join(', ')} (automatic check only)`
       );
+    }
+    return findings;
+  }
+
+  // --- TLS & HTTPS Enforcement (G21) ----------------------------------------------------
+
+  checkTls(pageUrl: string, context: SecurityDepthContext): Finding[] {
+    const findings: Finding[] = [];
+    try {
+      const u = new URL(pageUrl);
+      const isLocal = u.hostname === 'localhost' || u.hostname === '127.0.0.1' || u.hostname.endsWith('.local');
+      if (u.protocol === 'http:' && !isLocal) {
+        findings.push(
+          this.finding('TLS-MISSING', 1, context, {
+            title: 'Connection is not encrypted with TLS (plain HTTP)',
+            severity: 'Major',
+            expected: 'All production web traffic should use HTTPS encryption with valid TLS certificates',
+            actual: `Page was accessed over unencrypted ${pageUrl}`,
+            steps: [`Navigate to ${pageUrl}`, 'Observe protocol in address bar'],
+            resolution:
+              "Enforce HTTPS redirects on your web server and configure TLS certificates (e.g. Let's Encrypt).",
+          })
+        );
+      }
+    } catch {
+      // invalid url skipped
     }
     return findings;
   }

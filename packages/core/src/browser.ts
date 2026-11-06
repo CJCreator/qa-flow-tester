@@ -2,7 +2,7 @@ import { chromium, webkit, firefox, type Browser, type BrowserContext, type Page
 import type { Breakpoint, StorageStateData } from '@qa/types';
 import { isSameSite } from './same-site.js';
 
-export type BrowserEngine = 'chromium' | 'webkit' | 'firefox';
+export type BrowserEngine = 'chromium' | 'webkit' | 'firefox' | 'android-chrome';
 
 /** PRD FR-1.4 multi-browser engine display label. */
 export function browserEngineLabel(engine: BrowserEngine): string {
@@ -13,6 +13,8 @@ export function browserEngineLabel(engine: BrowserEngine): string {
       return 'WebKit (Playwright build)';
     case 'firefox':
       return 'Firefox (Playwright build)';
+    case 'android-chrome':
+      return 'Android Chrome (Mobile Emulation)';
     default:
       return engine;
   }
@@ -115,7 +117,7 @@ export class BrowserManager {
         ([host, ip]) => `MAP ${host} ${ip.includes(':') ? `[${ip.replace(/^\[|\]$/g, '')}]` : ip}`
       );
       const args =
-        engine === 'chromium'
+        engine === 'chromium' || engine === 'android-chrome'
           ? [
               '--no-sandbox',
               '--disable-setuid-sandbox',
@@ -130,7 +132,7 @@ export class BrowserManager {
         args,
       });
       this.browsers.set(engine, b);
-      if (engine === 'chromium') {
+      if (engine === 'chromium' || engine === 'android-chrome') {
         this.browser = b;
       }
     }
@@ -141,10 +143,18 @@ export class BrowserManager {
     const engine = options.engine ?? 'chromium';
     const browser = await this.launch(engine, options.headless ?? true);
 
-    const viewport = options.viewport || BREAKPOINT_VIEWPORTS['1440px'];
+    const isAndroid = engine === 'android-chrome';
+    const defaultViewport = isAndroid ? { width: 412, height: 915 } : BREAKPOINT_VIEWPORTS['1440px'];
+    const viewport = options.viewport || defaultViewport;
     const contextOptions = {
       viewport,
-      userAgent: options.userAgent,
+      isMobile: isAndroid ? true : undefined,
+      hasTouch: isAndroid ? true : undefined,
+      userAgent:
+        options.userAgent ??
+        (isAndroid
+          ? 'Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36'
+          : undefined),
       baseURL: options.baseUrl,
       ignoreHTTPSErrors: true,
       storageState: options.storageState as NonNullable<Parameters<Browser['newContext']>[0]>['storageState'],

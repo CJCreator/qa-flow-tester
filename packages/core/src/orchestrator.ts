@@ -283,6 +283,8 @@ export interface RunOptions {
   runId?: string;
   /** Sentences to show in the report about coverage, e.g. from discovery ("pages behind the sign-in were not reached"). */
   reportNotes?: string[];
+  /** Optional filter to rerun only specific test cases that failed or changed (G19). */
+  rerunTestCaseIds?: string[];
   /** Documented items the Plan could not match to anything in the app (shown as "Not found in app", never a failure). */
   documentedNotFound?: Array<{ docSource: DocSource; reason: string }>;
   /** The AI models that planned this run, named in the report. */
@@ -368,7 +370,11 @@ export class FlowTestOrchestrator {
     // Expand validation rules into synthetic test cases up front so RUN_STARTED can report
     // an accurate test case count and subscribers know a run has begun before pre-flight
     // (which can itself take several seconds, or fail outright).
-    const testCasesToRun = expandValidationTestCases(options.specTestCases);
+    const allExpanded = expandValidationTestCases(options.specTestCases);
+    const testCasesToRun =
+      options.rerunTestCaseIds && options.rerunTestCaseIds.length > 0
+        ? allExpanded.filter((tc) => options.rerunTestCaseIds!.includes(tc.id))
+        : allExpanded;
     onEvent({
       type: 'RUN_STARTED',
       runId,

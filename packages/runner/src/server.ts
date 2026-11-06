@@ -2,6 +2,7 @@ import http from 'http';
 import { timingSafeEqual } from 'crypto';
 import { promises as fs } from 'fs';
 import path from 'path';
+import { handleHealthRoute } from './routes/health.js';
 import { evidenceContentType, sendEvidenceFile } from './evidence-file.js';
 import {
   journeyPages,
@@ -44,6 +45,7 @@ import {
   sendJson,
   MAX_BODY_CHARS,
   type PlanRouteContext,
+  getAuditRunsForServer,
 } from './routes/index.js';
 import type { AuditCrawl, AuditAddressCheck } from './routes/audit-crawl.js';
 import {
@@ -1161,18 +1163,8 @@ export class RunnerServer {
           const url = new URL(req.url || '/', `http://${bracketHost(this.host)}:${this.port}`);
           const pathname = url.pathname;
 
-          // A host's health check asks this and nothing else: it says the server is up and shows no data.
-          // /healthz stays plain text "ok" (scripts/smoke.mjs and the route inventory read that exact body).
-          if (pathname === '/healthz') {
-            res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
-            res.end('ok');
-            return;
-          }
-
-          // /health: the same no-data liveness check, as JSON for dashboards and uptime monitors. GET only.
-          if (pathname === '/health' && req.method === 'GET') {
-            res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
-            res.end(JSON.stringify({ status: 'ok', uptimeSeconds: Math.round(process.uptime()) }));
+          // Liveness & health check routes (/health, /healthz)
+          if (handleHealthRoute(req, res, pathname)) {
             return;
           }
 
@@ -3531,6 +3523,19 @@ export class RunnerServer {
     );
     // A stop that arrives while a start is still under way waits for the start, then stops that run.
     if (this.runStartDone) await this.runStartDone;
+
+    // Check if an active Website Audit run is present and stop it (STK-001)
+    const activeAudit = getAuditRunsForServer(this)?.active;
+    if (activeAudit) {
+      activeAudit.controller.abort();
+      this.sendJson(res, 200, {
+        aborted: true,
+        code: 'ERR_RUN_ABORTED',
+        message: 'Website Audit stopped successfully',
+      });
+      return;
+    }
+
     const result = await this.checkupRun.stop(body);
     if (result.finishing) {
       this.sendJson(res, 200, { aborted: false, finishing: true });

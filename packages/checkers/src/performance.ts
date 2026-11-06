@@ -19,6 +19,15 @@ export interface PerformanceContext {
    * throttled repeat loads. Never called for a single un-slowed load. Does not change findings.
    */
   onSpeed?: (sample: PageSpeedSample) => void;
+  /**
+   * Chrome UX Report (CrUX) 75th percentile real-user field data (G16 / ADR 0035).
+   */
+  cruxFieldMetrics?: {
+    lcpP75Ms?: number;
+    inpP75Ms?: number;
+    clsP75?: number;
+    scope?: 'page' | 'origin';
+  };
 }
 
 /** What the page's own performance observers reported. */
@@ -277,6 +286,35 @@ export class PerformanceChecker {
         evidence: { measurements: { weight } },
         resolution: 'Compress and resize images, drop unused scripts and fonts, and lazy-load what is below the fold.',
       });
+    }
+
+    // 4b. Chrome UX Report (CrUX) real-user field data (G16 / ADR 0035)
+    if (context.cruxFieldMetrics) {
+      const { lcpP75Ms, inpP75Ms, clsP75, scope } = context.cruxFieldMetrics;
+      const scopeLabel = scope === 'origin' ? 'whole origin' : 'this page';
+      if ((lcpP75Ms && lcpP75Ms > SPEED_THRESHOLDS.LCP_GOOD_MS) || (clsP75 && clsP75 > SPEED_THRESHOLDS.CLS_GOOD)) {
+        findings.push({
+          id: `${idPrefix}-CRUX-${findings.length + 1}`,
+          ...base,
+          severity:
+            (lcpP75Ms && lcpP75Ms >= SPEED_THRESHOLDS.LCP_POOR_MS) || (clsP75 && clsP75 >= SPEED_THRESHOLDS.CLS_POOR)
+              ? 'Major'
+              : 'Minor',
+          title: `Chrome UX Report (CrUX) real-user vitals exceed thresholds (${scopeLabel})`,
+          where,
+          expectedVsActual: {
+            expected: `75th percentile real Chrome visitors should experience LCP < 2.5s and CLS < 0.1`,
+            actual: `CrUX field data (${scopeLabel}) reports 75th percentile LCP: ${lcpP75Ms ? `${(lcpP75Ms / 1000).toFixed(2)}s` : 'N/A'}, INP: ${inpP75Ms ? `${inpP75Ms}ms` : 'N/A'}, CLS: ${clsP75 ?? 'N/A'}.`,
+          },
+          stepsToReproduce: [
+            `Inspect Chrome UX Report field dataset for ${context.urlPath}`,
+            'Review 75th percentile real-user distribution',
+          ],
+          evidence: { measurements: { crux: context.cruxFieldMetrics } },
+          resolution:
+            'Address real-world mobile latency bottlenecks, slow server responses (TTFB), and layout instability seen by live visitors.',
+        });
+      }
     }
 
     // 4. Slow network requests (> 2s)

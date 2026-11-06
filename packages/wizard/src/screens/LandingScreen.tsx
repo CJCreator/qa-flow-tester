@@ -383,14 +383,82 @@ export function LandingScreen() {
         <section id="pricing" aria-labelledby="pricing-title" className={`${SECTION} scroll-mt-16`}>
           <SectionTitle
             id="pricing-title"
-            lead="Free check-ups, nothing to pay today. Paid plans are planned for heavier use, and we’ll say so well before anything is charged."
+            lead="Free check-ups for developers and open-source teams, with transparent hosted tiers for continuous release monitoring."
           >
-            Free while we’re in beta
+            Transparent, developer-first pricing
           </SectionTitle>
           <p className="mt-3 max-w-prose text-ink-soft leading-relaxed">
-            The AI that writes your plan uses your own AI key (a free one works, or a paid one from the service you
-            pick), or you can skip AI and let fixed rules write the plan.
+            The AI that writes your plan uses your own AI key (a free key works, or a paid key from your provider), or
+            you can skip AI and let fixed deterministic rules write the entire plan.
           </p>
+
+          <div className="mt-8 grid gap-6 sm:grid-cols-3">
+            <div className="flex flex-col justify-between rounded-control border border-rule bg-canvas p-6 shadow-sm">
+              <div>
+                <span className="inline-block rounded-full bg-accent-soft px-3 py-1 text-xs font-bold text-accent">
+                  Community
+                </span>
+                <div className="mt-4 flex items-baseline">
+                  <span className="text-3xl font-bold text-ink">$0</span>
+                  <span className="ml-1 text-sm text-ink-soft">/ month</span>
+                </div>
+                <p className="mt-2 text-sm text-ink-soft">For individual engineers and open source repositories.</p>
+                <ul className="mt-4 space-y-2 text-sm text-ink">
+                  <li className="flex items-center gap-2">✓ Unlimited local & CI runs</li>
+                  <li className="flex items-center gap-2">✓ All 6 release quality areas</li>
+                  <li className="flex items-center gap-2">✓ Deterministic rules & BYOK AI</li>
+                  <li className="flex items-center gap-2">✓ Self-contained HTML exports</li>
+                </ul>
+              </div>
+              <a href="#address-input" className="btn-secondary mt-6 w-full text-center">
+                Start for free
+              </a>
+            </div>
+
+            <div className="flex flex-col justify-between rounded-control border-2 border-accent bg-canvas p-6 shadow-md">
+              <div>
+                <span className="inline-block rounded-full bg-accent px-3 py-1 text-xs font-bold text-canvas">
+                  Pro Continuous
+                </span>
+                <div className="mt-4 flex items-baseline">
+                  <span className="text-3xl font-bold text-ink">$49</span>
+                  <span className="ml-1 text-sm text-ink-soft">/ month</span>
+                </div>
+                <p className="mt-2 text-sm text-ink-soft">For fast-shipping teams needing scheduled hosted audits.</p>
+                <ul className="mt-4 space-y-2 text-sm text-ink">
+                  <li className="flex items-center gap-2">✓ Everything in Community</li>
+                  <li className="flex items-center gap-2">✓ Hosted Google Cloud Run execution</li>
+                  <li className="flex items-center gap-2">✓ Cloud Scheduler 5-minute ticks</li>
+                  <li className="flex items-center gap-2">✓ CrUX real-user metrics & SARIF</li>
+                </ul>
+              </div>
+              <a href="#address-input" className="btn-primary mt-6 w-full text-center">
+                Start Pro check-up
+              </a>
+            </div>
+
+            <div className="flex flex-col justify-between rounded-control border border-rule bg-canvas p-6 shadow-sm">
+              <div>
+                <span className="inline-block rounded-full bg-rule px-3 py-1 text-xs font-bold text-ink">
+                  Team & Enterprise
+                </span>
+                <div className="mt-4 flex items-baseline">
+                  <span className="text-3xl font-bold text-ink">$199</span>
+                  <span className="ml-1 text-sm text-ink-soft">/ month</span>
+                </div>
+                <p className="mt-2 text-sm text-ink-soft">For teams requiring high concurrency, VPC peering & SLAs.</p>
+                <ul className="mt-4 space-y-2 text-sm text-ink">
+                  <li className="flex items-center gap-2">✓ Everything in Pro</li>
+                  <li className="flex items-center gap-2">✓ Up to 10 parallel runner slots</li>
+                  <li className="flex items-center gap-2">✓ Custom VPC peering & SSO</li>
+                  <li className="flex items-center gap-2">✓ Dedicated engineering support</li>
+                </ul>
+              </div>
+              <a href="mailto:contact@techgramam.com" className="btn-secondary mt-6 w-full text-center">
+                Contact us
+              </a>
+            </div>
+          </div>
           <div
             tabIndex={0}
             role="region"

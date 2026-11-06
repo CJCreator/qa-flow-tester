@@ -7,7 +7,8 @@ on:
       - 'v*'
 
 permissions:
-  contents: read
+  contents: write
+  packages: write
 
 jobs:
   build:
@@ -70,3 +71,31 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Release Runner Image
+        run: |
+          IMAGE_NAME="ghcr.io/${{ github.repository }}/runner"
+          docker build -f packages/runner/Dockerfile -t "${IMAGE_NAME}:${GITHUB_REF_NAME}" -t "${IMAGE_NAME}:latest" .
+          docker push "${IMAGE_NAME}:${GITHUB_REF_NAME}"
+          docker push "${IMAGE_NAME}:latest"
+
+      - name: Build and Push Release Site Image
+        run: |
+          IMAGE_NAME="ghcr.io/${{ github.repository }}/site"
+          docker build -f site/Dockerfile -t "${IMAGE_NAME}:${GITHUB_REF_NAME}" -t "${IMAGE_NAME}:latest" .
+          docker push "${IMAGE_NAME}:${GITHUB_REF_NAME}"
+          docker push "${IMAGE_NAME}:latest"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          draft: false
+          prerelease: false
