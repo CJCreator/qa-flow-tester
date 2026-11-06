@@ -30,6 +30,7 @@ import { parseSessionFile } from '../lib/session-file';
 import {
   capOf,
   clampMaxPages,
+  committedMaxPages,
   EMPTY_SIGN_IN,
   hasSignInDetails,
   headerErrorsOf,
@@ -161,6 +162,8 @@ export function NewCheckupScreen({
   const [keyJustSaved, setKeyJustSaved] = useState(false);
   const [maxPagesText, setMaxPagesText] = useState(String(form.maxPages));
   useEffect(() => setMaxPagesText(String(form.maxPages)), [form.maxPages]);
+  // Enter with an uncommitted page limit: the value is committed first, and the submit runs once the form has it.
+  const [pendingMax, setPendingMax] = useState<number | null>(null);
 
   // The address is checked a moment after typing stops, like the key.
   useEffect(() => {
@@ -307,6 +310,16 @@ export function NewCheckupScreen({
       noAI: ai && !keyReady ? true : undefined,
     });
   };
+  const submitNow = () => {
+    if (check.state === 'ok') start();
+    else setRecheck((n) => n + 1);
+  };
+  // Runs the submit once the committed page limit has reached the form (App reads it from there).
+  useEffect(() => {
+    if (pendingMax === null || form.maxPages !== pendingMax) return;
+    setPendingMax(null);
+    submitNow();
+  }, [pendingMax, form.maxPages]);
 
   const estimate = useAiEstimate(keyReady && check.state === 'ok' ? check.url : null, form.maxPages);
   const estimateShort = !!estimate && estimate.left !== null && estimate.left < estimate.high;
@@ -429,8 +442,15 @@ export function NewCheckupScreen({
         noValidate
         onSubmit={(e) => {
           e.preventDefault();
-          if (check.state === 'ok') start();
-          else setRecheck((n) => n + 1);
+          // The page limit may be typed but not yet committed (commits on blur): commit it, then submit.
+          const typedMax = committedMaxPages(maxPagesText, form.maxPages);
+          if (typedMax.changed) {
+            setMaxPagesText(String(typedMax.value));
+            onFormChange((f) => ({ ...f, maxPages: typedMax.value }));
+            setPendingMax(typedMax.value);
+            return;
+          }
+          submitNow();
         }}
       >
         <label htmlFor="url-input" className="label text-ink">

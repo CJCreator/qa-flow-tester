@@ -487,12 +487,21 @@ export async function abortRun(
   }
 }
 
+/** The planGeneration of the plan last loaded; every plan PATCH carries it so a stale write is refused. */
+let loadedPlanGeneration: number | undefined;
+
 export async function getPlan(): Promise<ReviewPlan> {
   const res = await call('/api/runner/plan');
   if (res.status === 404) throw new RunnerError('No plan is waiting for review right now.', 'ERR_NO_PLAN');
   if (!res.ok) throw new RunnerError('Couldn’t fetch the plan. Try again.');
-  return normalizePlanIntents(await json<ReviewPlan>(res));
+  const loaded = await json<ReviewPlan & { planGeneration?: unknown }>(res);
+  loadedPlanGeneration = typeof loaded.planGeneration === 'number' ? loaded.planGeneration : undefined;
+  return normalizePlanIntents(loaded);
 }
+
+/** Shown when the runner refuses a change made on a plan that has since changed (ERR_PLAN_STALE). */
+export const PLAN_STALE_TEXT =
+  'The plan changed since you loaded it, so this change wasn’t saved. Reload the plan, then make the change again.';
 
 /** The Plan-change body the runner accepts: the shared shape (T-201), under the name the wizard uses. */
 export type PatchPlanBody = PlanPatchBody;
@@ -578,7 +587,16 @@ export async function downloadPlaywrightExport(): Promise<void> {
 }
 
 export async function patchPlan(body: PatchPlanBody): Promise<ReviewPlan | PlanDelta> {
-  const res = await call('/api/runner/plan', { method: 'PATCH', body: JSON.stringify(body) });
+  const sent: PatchPlanBody =
+    body.generation === undefined && loadedPlanGeneration !== undefined
+      ? { ...body, generation: loadedPlanGeneration }
+      : body;
+  const res = await call('/api/runner/plan', { method: 'PATCH', body: JSON.stringify(sent) });
+  if (res.status === 409) {
+    const err = await json<{ code?: string }>(res);
+    if (err.code === 'ERR_PLAN_STALE') throw new RunnerError(PLAN_STALE_TEXT, 'ERR_PLAN_STALE');
+    throw new RunnerError('Couldn’t update the plan. Try again.', err.code);
+  }
   if (res.status === 422) {
     const err = await json<{ error: string; issues?: string[] }>(res);
     throw new RunnerError(err.error || 'Some steps are aimed at things that aren’t on the page.');
