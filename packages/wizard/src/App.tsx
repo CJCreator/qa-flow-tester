@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { ReleaseReport, ReviewPlan, RoleCredential, RunSummary } from '@qa/types';
 import {
   abortRun,
@@ -31,6 +31,7 @@ import { hasFinishedCheckup } from './lib/onboarding';
 import { CommandPalette } from './components/CommandPalette';
 import { useRunnerConnection } from './hooks/useRunnerConnection';
 import { useRunnerStream } from './hooks/useRunnerStream';
+import { usePollBackoff } from './hooks/usePollBackoff';
 import {
   DEFAULT_MAX_PAGES,
   EMPTY_FORM,
@@ -58,16 +59,10 @@ import { ConnectionScreen } from './screens/ConnectionScreen';
 import { NewCheckupScreen, type StartFacts } from './screens/NewCheckupScreen';
 import { NotFoundScreen } from './screens/NotFoundScreen';
 import { LandingScreen } from './screens/LandingScreen';
-import { PastCheckupsScreen } from './screens/PastCheckupsScreen';
 import { PlanReviewScreen, type PlanNotice, type PlanUpdateState } from './screens/PlanReviewScreen';
-import { ReportScreen } from './screens/ReportScreen';
-import { VisibilityScreen } from './screens/VisibilityScreen';
 import { ScanningScreen, isScanProgress, type ScanProgress } from './screens/ScanningScreen';
 import { headersNotice } from './lib/coverage-text';
-import { SettingsScreen } from './screens/SettingsScreen';
 import { TestingScreen } from './screens/TestingScreen';
-import { VisualBaselinesScreen } from './screens/VisualBaselinesScreen';
-import { BenchmarkScreen } from './screens/BenchmarkScreen';
 import { splitStoredContext } from './lib/context';
 import { BetaAuditNotice, showsBetaAuditNotice } from './screens/audit/BetaAuditNotice';
 import { AuditStartScreen } from './screens/audit/start/AuditStartScreen';
@@ -85,8 +80,23 @@ import { AuditAiModelsPanel } from './screens/audit/ai/AuditAiModelsPanel';
 
 /** How often the runner's state is read while a check-up is in progress, besides its events. */
 const POLL_MS = 5000;
+/** The longest wait between those reads; the wait doubles from POLL_MS while nothing new arrives (LAT-9). */
+const POLL_MAX_MS = 30000;
 
 const IN_PROGRESS = new Set(['scanning', 'awaiting-review', 'testing']);
+
+// Screens that a first visit does not need are loaded when they are first opened (LAT-11), so the first
+// paint stays small. Their Suspense fallback is the body's, below.
+const PastCheckupsScreen = lazy(() =>
+  import('./screens/PastCheckupsScreen').then((m) => ({ default: m.PastCheckupsScreen }))
+);
+const ReportScreen = lazy(() => import('./screens/ReportScreen').then((m) => ({ default: m.ReportScreen })));
+const VisibilityScreen = lazy(() => import('./screens/VisibilityScreen').then((m) => ({ default: m.VisibilityScreen })));
+const VisualBaselinesScreen = lazy(() =>
+  import('./screens/VisualBaselinesScreen').then((m) => ({ default: m.VisualBaselinesScreen }))
+);
+const BenchmarkScreen = lazy(() => import('./screens/BenchmarkScreen').then((m) => ({ default: m.BenchmarkScreen })));
+const SettingsScreen = lazy(() => import('./screens/SettingsScreen').then((m) => ({ default: m.SettingsScreen })));
 
 /**
  * The step bar's position for a screen, when it has one. The scan is when the plan is made. The new check-up
@@ -230,10 +240,17 @@ export default function App() {
   useEffect(() => {
     if (!reachable) return;
     if (checkAddress) void reconcile();
-    if (!checkAddress && !inProgress) return;
-    const timer = window.setInterval(() => void reconcile(), POLL_MS);
-    return () => window.clearInterval(timer);
   }, [reachable, pathname, checkAddress, inProgress, reconcile]);
+  // Polling backs off while nothing changes, and goes back to POLL_MS on each event or phase change. It stops
+  // once the run is done or failed.
+  const runSettled = status?.phase === 'done' || status?.phase === 'failed';
+  usePollBackoff(
+    () => void reconcile(),
+    reachable && (inProgress || (checkAddress && !runSettled)),
+    POLL_MS,
+    POLL_MAX_MS,
+    [status?.phase, feed]
+  );
 
   // The plan waiting for review (or being tested), fetched whenever the runner has one this page doesn't.
   useEffect(() => {
@@ -976,7 +993,7 @@ export default function App() {
             </Notice>
           </div>
         )}
-        {body}
+        <Suspense fallback={<Loading label="Opening…" />}>{body}</Suspense>
       </main>
       {!landing && <CommandPalette route={route} beta={!!status?.beta} auditOwner={!!status?.auditOwner} />}
       {dialog}
