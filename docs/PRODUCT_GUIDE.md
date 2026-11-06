@@ -107,6 +107,14 @@ Reads a public website and writes documents the user edits and exports. No Plan,
 - **Keeping work.** A new version per re-run, Shortlist with notes and outcome, Shared Links (30-day expiry, revocable), Helpers on the hosted copy. Everything stays until the user deletes the audit (ADR 0036).
 - **Wording.** Findings state what was seen, never a claim about the whole site (ADR 0018).
 
+## Disabled actions
+
+A disabled button says why in a line next to it (the button's `aria-describedby` points at that line).
+
+- **Start the check-up** (New check-up): waiting for the AI setup; enter the address first; checking the address; the address cannot be reached; say whether it is a test copy; fix the custom headers.
+- **Compare the two sites** (Benchmark): a comparison is running; enter your site's address; enter the other site's address.
+- **Save key** (AI key field): off until the key checks as valid. No reason line yet; the status line under the field shows the error for a wrong key (OPEN_ISSUES W20, the rest of the screens).
+
 ## Safety
 
 In brief; the model is in [../SECURITY.md](../SECURITY.md).
