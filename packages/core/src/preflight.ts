@@ -13,6 +13,10 @@ import type { SignInStep } from '@qa/types/src/signin.js';
 import type { BrowserManager } from './browser.js';
 import { debugLog } from './debug-log.js';
 import { navigate } from './navigate.js';
+import { GuardedFetchBlockedError, makeGuardedFetch } from './safe-net.js';
+
+/** The plain URL check's fetch: the browser guard's address rule on every hop (ADR 0031). */
+const guardedFetch = makeGuardedFetch();
 
 /** A required sign-in failed. The message is the fixed wording for the reason: never any typed detail. */
 export class SignInFailedError extends Error {
@@ -160,7 +164,7 @@ export class PreFlightChecker {
           const got = await get(url, headers);
           res = { status: got.status, headers: { get: (name) => got.headers[name.toLowerCase()] ?? null } };
         } else {
-          res = await fetch(url, {
+          res = await guardedFetch(url, {
             method: 'GET',
             headers,
             signal: controller.signal,
@@ -182,6 +186,7 @@ export class PreFlightChecker {
           ...(startWarning ? { startWarning } : {}),
         };
       } catch (err: unknown) {
+        if (err instanceof GuardedFetchBlockedError) return { ok: false, error: err.message };
         lastErr = err;
         if (attempt === 1) {
           await new Promise((resolve) => setTimeout(resolve, 4000));

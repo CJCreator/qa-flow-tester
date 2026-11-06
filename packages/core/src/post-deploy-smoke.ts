@@ -2,6 +2,7 @@ import type { Finding, FindingSeverity, ReleaseReport, TestPointResult } from '@
 import { isPrivateHost } from './competitive/safe-crawler.js';
 import { isTestHost, MUTATING_METHODS } from './live-site.js';
 import { redactUrl } from './redact.js';
+import { GuardedFetchBlockedError, makeGuardedFetch, type GuardedFetch } from './safe-net.js';
 
 /**
  * Smoke Check-up: the quick preset that only reads a few known paths of a deployed App, health first.
@@ -106,7 +107,8 @@ export async function runPostDeploySmoke(options: SmokeOptions): Promise<SmokeRe
     return done();
   }
 
-  const doFetch = options.fetchImpl ?? fetch;
+  // Every hop passes the address rule; a shared machine (beta) is public only (ADR 0014, 0031).
+  const doFetch: GuardedFetch = options.fetchImpl ?? makeGuardedFetch({ allowPrivate: !options.beta });
   const perRequest = options.requestTimeoutMs ?? 10_000;
   const budget = new AbortController();
   const timer = setTimeout(() => budget.abort(), options.totalBudgetMs ?? 120_000);
@@ -126,7 +128,8 @@ export async function runPostDeploySmoke(options: SmokeOptions): Promise<SmokeRe
           redirect: 'manual',
           signal: AbortSignal.any([budget.signal, AbortSignal.timeout(perRequest)]),
         });
-      } catch {
+      } catch (err) {
+        if (err instanceof GuardedFetchBlockedError) throw new Unreachable('the address is not a public web address');
         throw new Unreachable(budget.signal.aborted ? 'the time budget ran out' : 'no answer in time');
       }
       const loc = res.headers.get('location');

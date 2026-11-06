@@ -42,11 +42,6 @@ const EXCEPTIONS: Array<{ file: string; rule: string; reason: string }> = [
     reason: 'AI provider endpoint, fixed address',
   },
   {
-    file: 'packages/core/src/preflight.ts',
-    rule: 'node fetch',
-    reason: 'user-provided target address, not page-derived; the caller can pass the pinned getter',
-  },
-  {
     file: 'packages/core/src/discovery/docs-fetch.ts',
     rule: 'node fetch',
     reason: 'localDocsGet: user-provided address, not page-derived',
