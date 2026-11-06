@@ -101,6 +101,14 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
   const [pollTry, setPollTry] = useState(0);
 
   const running = starting || job?.status === 'running';
+  // Why the Compare button is off, in words: a disabled button alone never says.
+  const compareOff: string | null = running
+    ? 'A comparison is running. Wait for it to finish.'
+    : !ourUrl.trim()
+      ? 'Enter the address of your site first.'
+      : !refUrl.trim()
+        ? 'Enter the address of the other site first.'
+        : null;
   const result = job?.status === 'done' ? (job.result ?? null) : null;
 
   const refreshHistory = useCallback(async () => setHistory(await listBenchmarks()), []);
@@ -322,11 +330,17 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
         <div className="pt-2">
           <button
             type="submit"
-            disabled={running || !ourUrl.trim() || !refUrl.trim()}
+            disabled={compareOff !== null}
+            aria-describedby={compareOff ? 'compare-off-reason' : undefined}
             className={result ? 'btn-quiet' : 'btn-primary'}
           >
             {running ? <Spinner label={job?.stage || 'Starting…'} /> : 'Compare the two sites'}
           </button>
+          {compareOff && (
+            <p id="compare-off-reason" className="mt-2 text-sm text-ink-soft">
+              {compareOff}
+            </p>
+          )}
         </div>
       </form>
 
