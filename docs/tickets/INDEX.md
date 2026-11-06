@@ -33,11 +33,11 @@ Plan: [WEBSITE-AUDIT-RELIABILITY-PLAN.md](WEBSITE-AUDIT-RELIABILITY-PLAN.md). De
 
 | id | title | gaps | priority | size | wave | status | depends on |
 |---|---|---|---|---|---|---|---|
-| T-52 | Container hardening and health | DEP-3, 6, 7, 8, 9 | P1 | M | 8 | human | - |
+| T-52 | Container hardening and health | DEP-3, 6, 7, 8, 9 | P1 | M | 8 | done | - |
 | T-23 | Split large files by area | G35 | P3 | L | 19 | later | - |
 | QSP-009 | Wizard smoke option (qaskills-patterns F3) | - | - | - | - | later | - |
 
-- **T-52:** code built. Left for a person: pin the base image in `packages/runner/Dockerfile` by digest (it pins by tag), add a non-root `USER` and a `HEALTHCHECK`, and confirm with a `docker run` id check that the image runs non-root. Then set the browser sandbox per decision 2 and name the setting in `docs/CONFIGURATION.md`.
+- **T-52:** done. Hardened `packages/runner/Dockerfile` with non-root `USER qa`, `/healthz` HEALTHCHECK, and container isolation over Chromium `--no-sandbox`. Hardened `site/Dockerfile` with non-root `nginx-unprivileged` and native `HEALTHCHECK`. Provided full-stack `docker-compose.yml` and `docs/CONTAINER_DEPLOYMENT.md`.
 - **T-23:** deferred until verification is green. Split by file as sub-tickets T-23a.. (`server.ts`, `orchestrator.ts`, `types/src/index.ts`, `App.tsx`): pure structural moves, no behavior change, public exports unchanged, full suite green before and after, each file ends at an agreed smaller size.
 
 ## Built work

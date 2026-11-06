@@ -52,6 +52,12 @@ const WHERE_IT_RUNS: Array<{ name: string; sites: string; where: string; setup: 
     setup: 'Copy one workflow file',
   },
   {
+    name: 'Docker & Private Cloud',
+    sites: 'Any address your server can reach',
+    where: 'On your own server, VM or private cloud. Persistent reports and full browser testing.',
+    setup: 'docker compose up',
+  },
+  {
     name: 'Your own computer',
     sites: 'Any address your computer can reach',
     where: 'Everything stays on your machine.',

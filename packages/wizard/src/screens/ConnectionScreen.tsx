@@ -145,14 +145,20 @@ export function ConnectionScreen({ checks }: { checks: number }) {
       </ol>
 
       <details className="disclosure mb-8 border-y border-rule">
-        <summary>Using Docker?</summary>
-        <p className="pb-4">
-          Run{' '}
-          <code className="break-all rounded-control bg-surface px-1.5 py-0.5 font-mono font-bold">
-            docker compose up
-          </code>{' '}
-          in the same folder instead.
-        </p>
+        <summary className="cursor-pointer font-bold py-2">Using Docker or Self-Hosting?</summary>
+        <div className="space-y-3 pb-4 pt-2 text-sm text-ink-soft">
+          <p>Run the full stack with persistent data using Docker Compose:</p>
+          <pre className="overflow-auto rounded-card border border-rule bg-surface p-3 font-mono text-ink">
+            <code>docker compose up -d</code>
+          </pre>
+          <p>Or run the runner directly with a persistent volume and access token:</p>
+          <pre className="overflow-auto rounded-card border border-rule bg-surface p-3 font-mono text-ink">
+            <code>docker run -d -p 3001:3001 -e RUNNER_ACCESS_TOKEN=your-secret -v qa-data:/data qa-runner</code>
+          </pre>
+          <p>
+            Open <code className="font-mono text-ink">http://localhost:3001/?access=your-secret</code> to begin.
+          </p>
+        </div>
       </details>
 
       <p role="status" className="flex items-center gap-3 text-ink-soft">
