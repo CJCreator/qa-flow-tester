@@ -250,8 +250,9 @@ export function expandPlan(
     wontRun.push({ what: `Page ${path}`, reason: 'It’s behind a sign-in no role could get past.' });
   }
 
-  // The Test cap: only Rejects and Limits are dropped, the last planned first. Works, Denied, pages
-  // and Navigation Checks always stay.
+  // The Test cap is one total across every kind of item: only Rejects and Limits are dropped, of any
+  // kind (page test or journey), the last planned first. Works, Denied, pages and Navigation Checks
+  // always stay.
   const cap =
     options.testCap !== undefined && Number.isFinite(options.testCap) && options.testCap >= 1
       ? Math.floor(options.testCap)
@@ -260,7 +261,7 @@ export function expandPlan(
   let overCap = 0;
   for (let i = testCases.length - 1; i >= 0 && total > cap; i--) {
     const tc = testCases[i];
-    if (tc.kind !== 'page-test' || (tc.intent !== 'rejects' && tc.intent !== 'limits')) continue;
+    if (tc.intent !== 'rejects' && tc.intent !== 'limits') continue;
     const weight = testsOf(tc, sizes);
     testCases.splice(i, 1);
     total -= weight;
