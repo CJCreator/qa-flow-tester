@@ -26,20 +26,18 @@ Plan: [WEBSITE-AUDIT-RELIABILITY-PLAN.md](WEBSITE-AUDIT-RELIABILITY-PLAN.md). De
 
 | id | title | gaps | priority | size | wave | status | depends on |
 |---|---|---|---|---|---|---|---|
-| [T-86](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-86-hosted-audits-for-the-signed-in-owner) | Hosted audits for the signed-in owner | A8 | P1 | M | 4 | todo | - |
+| [T-86](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-86-hosted-audits-for-the-signed-in-owner) | Hosted audits for the signed-in owner | A8 | P1 | M | 4 | built | - |
 | [T-89](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-89-proving-the-audit-works) | Proving the audit works | A12 | P1 | M | 4 | todo | - |
 
 ## Open: carried over
 
 | id | title | gaps | priority | size | wave | status | depends on |
 |---|---|---|---|---|---|---|---|
-| T-52 | Container hardening and health | DEP-3, 6, 7, 8, 9 | P1 | M | 8 | done | - |
-| T-23 | Split large files by area | G35 | P3 | L | 19 | done | - |
+| T-23 | Split large files by area | G35 | P3 | L | 19 | later | - |
 | QSP-009 | Wizard smoke option (qaskills-patterns F3) | - | - | - | - | later | - |
 
-- **T-52:** done. Hardened `packages/runner/Dockerfile` with non-root `USER qa`, `/healthz` HEALTHCHECK, and container isolation over Chromium `--no-sandbox`. Hardened `site/Dockerfile` with non-root `nginx-unprivileged` and native `HEALTHCHECK`. Provided full-stack `docker-compose.yml` and `docs/CONTAINER_DEPLOYMENT.md`.
-- **T-23:** done. Modularized `server.ts` route handlers into dedicated controllers under `packages/runner/src/routes/` (`health.ts`), decoupled network intelligence and self-healing modules in `@qa/core`, maintaining 100% backward-compatible public exports and green test suites.
+- **T-23:** later. Partly done: the plan, schedule, Website Audit and health routes live under `packages/runner/src/routes/`. `packages/runner/src/server.ts` is still about 4,100 lines and keeps the inline endpoints listed in `docs/API.md`. Splitting the rest is not scheduled.
 
 ## Built work
 
-Built work is in git. Website Audit T-79 to T-85, T-87, T-88, T-90: `fdf287f`, `a4cb689`, `b237983`. Earlier tracks (demo readiness, review remediation, qaskills-patterns) are in earlier history.
+Built work is in git. Website Audit T-79 to T-85, T-87, T-88, T-90: `fdf287f`, `a4cb689`, `b237983`. Earlier tracks (demo readiness, review remediation, qaskills-patterns) are in earlier history. T-52 (container hardening and health): non-root runner and site images, `/healthz` health checks, `docker-compose.yml`, `docs/CONTAINER_DEPLOYMENT.md`.

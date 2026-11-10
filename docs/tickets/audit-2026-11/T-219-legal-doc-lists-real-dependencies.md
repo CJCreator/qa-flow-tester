@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P2 | S | docs | docs | todo |
+| P2 | S | docs | docs | built |
 
 **Files you may edit (no others):**
 - `docs/LEGAL_AND_LICENSES.md`
@@ -100,9 +100,9 @@ grep -n "\"@axe-core/playwright\"\|\"pixelmatch\"\|\"pngjs\"\|\"yaml\"\|\"mammot
 ```
 
 ## Done when
-- [ ] The table lists only packages that appear in a `packages/*/package.json` `dependencies` block.
-- [ ] No "Fully Compliant" claim and no claim that a notice file exists.
-- [ ] `pnpm format:check` passes.
+- [x] The table lists only packages that appear in a `packages/*/package.json` `dependencies` block.
+- [x] No "Fully Compliant" claim and no claim that a notice file exists.
+- [x] `pnpm format:check` passes.
 
 ## Notes
 - Licences above were read from the `license` field of the installed packages on 2026-11-10

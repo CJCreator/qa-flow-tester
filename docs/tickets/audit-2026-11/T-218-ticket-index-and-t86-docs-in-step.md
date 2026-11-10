@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P2 | S | docs | inconsistency | todo |
+| P2 | S | docs | inconsistency | built |
 
 **Files you may edit (no others):**
 - `docs/tickets/INDEX.md`
@@ -84,10 +84,10 @@ grep -n "T-52 |\|self-healing\|network intelligence" docs/tickets/INDEX.md
 ```
 
 ## Done when
-- [ ] T-86 is `built`; T-52 is out of the open table and named under "Built work"; T-23 is `later` with a note
+- [x] T-86 is `built`; T-52 is out of the open table and named under "Built work"; T-23 is `later` with a note
       that matches the code.
-- [ ] Neither `docs/API.md` nor `docs/ARCHITECTURE.md` says T-86 is not yet built.
-- [ ] Both greps print nothing; `pnpm format:check` passes.
+- [x] Neither `docs/API.md` nor `docs/ARCHITECTURE.md` says T-86 is not yet built.
+- [x] Both greps print nothing; `pnpm format:check` passes.
 
 ## Notes
 - `built` is the right status, not `done`: per the index's own table, only `/verify-all` sets `done`.

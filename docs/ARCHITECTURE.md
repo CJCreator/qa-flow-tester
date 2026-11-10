@@ -44,8 +44,6 @@ No Plan, no verdict. `POST /api/audits` (owner) validates the request, claims th
 
 `pipeline/pipeline.ts` records a failed stage as not done, never as a clean result; later stages still run. A stop ends the run and saves nothing. On start-up the runner marks versions left running as stopped, reason `tool-restarted` (`recoverRunningAudits` in `server.ts`). Later steps are separate routes: edits overlay, rewrites, improved-homepage preview (`audit/preview/`), exports, Shared Links, Shortlist, Helpers (`docs/API.md`). AI model per stage is chosen with `GET/PUT /api/audit-ai/models`; on a local runner, Google sign-in (ADC) stands in when no key works (ADR 0042).
 
-Not yet built (ADR 0042, T-86): signed-in owner access on the hosted copy (`AUDIT_OWNER_EMAILS`).
-
 ## Routes and access
 
 `routes/index.ts` builds `allRoutes`: plan rows (`plan.ts`), schedule rows (`schedules.ts`), and one row per `AUDIT_API` and `AUDIT_AI_API` entry. Every row declares an access level and a beta policy; a row without one is refused (`authorizeRoute`, `routes/route.ts`, ADR 0037). Endpoints not yet in the table stay inline in `server.ts` and sit behind the access-key gate. Full list: `API.md`.

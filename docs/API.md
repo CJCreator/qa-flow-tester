@@ -124,8 +124,6 @@ Declared once in `AUDIT_API` and `AUDIT_AI_API` (`packages/types`), which also h
 | `GET /api/audit-ai/models`                     | owner      | Model chosen per AI stage.                                                                                                                                |
 | `PUT /api/audit-ai/models`                     | owner      | Changes it.                                                                                                                                               |
 
-Not yet built (ADR 0042, T-86): owner sign-in on the hosted copy (`AUDIT_OWNER_EMAILS`).
-
 ## Adding a route
 
 Add a row to the table in `routes/` with `access` and `beta`. For an audit route add the entry to `AUDIT_API` (and its shape in `AuditApi`) first; the build fails without it. Do not add inline routes to `server.ts`.
