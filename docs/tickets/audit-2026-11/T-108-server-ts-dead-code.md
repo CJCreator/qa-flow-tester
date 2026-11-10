@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P3 | M | runner | dead-code | todo |
+| P3 | M | runner | dead-code | blocked |
 
 **Files you may edit (no others):**
 - `packages/runner/src/server.ts`
@@ -129,3 +129,4 @@ No new test. Run the whole runner unit suite: `pnpm exec vitest run --project un
 - Three public members (`savedSessions` at 743, `runAuthDir` at 752, `cleanAuthDir` at 756) also look unused. Apply the two checks from step 2 to them; delete only on zero hits.
 - Delete only. Do not rename, move or rewrite anything else.
 - If a test fails after a deletion, restore that one member and list it in your notes.
+- BLOCKED: all four groups applied (32 deletions by AST script, busy check removed, comment fixed, 7 unused imports removed). `pnpm build` passed, runner unit tests 603/603 passed, eslint `never used` count 0. `pnpm typecheck` fails only on `packages/core/tests/audit-pipeline.test.ts` (11 errors) and `packages/wizard/tests/finish-ai-review.test.ts` (2 errors), outside this ticket's files and being changed by another session on this branch. Edit reverted; the diff is kept outside the repo at `C:\Users\HP\AppData\Local\Temp\qa-t108\T-108-server-ts.patch`.
