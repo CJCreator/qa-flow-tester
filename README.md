@@ -6,7 +6,7 @@
 
 ---
 
-## 📑 Table of Contents
+## Table of Contents
 
 - [Overview & Architecture](#overview--architecture)
 - [Monorepo Structure](#monorepo-structure)
@@ -26,7 +26,7 @@
 
 ---
 
-## 🏗️ Overview & Architecture
+## Overview & Architecture
 
 The platform has three layers: the Wizard you use, the server that runs checks, and the engine behind it.
 
@@ -44,7 +44,7 @@ flowchart TD
     end
 
     subgraph Target ["Target Under Test"]
-        App["Target Web Application\n(Staging / Dev / Public Site)"]
+        App["Target Web Application\n(Your test copy or a public site)"]
     end
 
     Wizard -->|POST /api/runner/run| Runner
@@ -67,7 +67,7 @@ flowchart TD
 
 ---
 
-## 📦 Monorepo Structure
+## Monorepo Structure
 
 | Package / Directory                      | Purpose                                                                                                                                                          |
 | :--------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -79,7 +79,7 @@ flowchart TD
 
 ---
 
-## 📋 Prerequisites
+## Prerequisites
 
 Before starting, ensure you have:
 
@@ -89,7 +89,7 @@ Before starting, ensure you have:
 
 ---
 
-## ⚡ Quick Start
+## Quick Start
 
 ### 1. Clone and Set Up
 
@@ -151,7 +151,7 @@ RUNNER_PORT=3001
 
 ---
 
-## 🖥️ Running the Applications
+## Running the Applications
 
 ### One Command (`pnpm start`)
 
@@ -166,7 +166,7 @@ Data is kept in `.qa-data/` in the working folder (git ignores it): each site's 
 Only needed when you change the Wizard's code. Keep the QA Tool running (`pnpm start`), then:
 
 ```bash
-pnpm dev   # http://localhost:3002, API calls passed on to the QA Tool on 3001
+pnpm dev:wizard   # http://localhost:3002, API calls passed on to the QA Tool on 3001
 ```
 
 ---
@@ -225,20 +225,20 @@ It prints a **Public** link. Send each tester that link (it carries a private ac
 
 - Each tester adds **their own AI key** in Settings. It is kept in memory for their session only: never saved to disk, never shared with other testers, gone when you stop the tunnel. Your own saved key and sign-ins are not used.
 - Only **public sites** can be checked. Addresses on your computer or network (`localhost`, `192.168.x.x`) are refused.
-- One check-up runs at a time. Everyone with the link sees the same reports, and deleting check-ups, schedules and comparisons are closed.
+- One check-up runs at a time. Each tester sees only their own check-ups and reports. Deleting check-ups, schedules and comparisons is closed.
 - Testers should only check sites they own. Do not give the link to strangers: there are no accounts; check-ups are limited per visitor and per day.
 
 Without `--beta`, `pnpm tunnel` shares **your** saved AI key with whoever has the link.
 
 ---
 
-## 🧪 End-to-End (E2E) Testing Guide
+## End-to-End (E2E) Testing Guide
 
 Follow this walkthrough to run and verify a complete test flow end-to-end against a real site.
 
 ### Step 1: Pick a Site to Check
 
-Use your own staging or dev App, or a public site you are allowed to scan. The repository has no built-in test site; real sites are the test target.
+Use a test copy of your own App, or a public site you are allowed to check. The repository has no built-in test site; real sites are the test target.
 
 ---
 
@@ -278,7 +278,7 @@ The plan needs an AI key: set one up on the new check-up screen or in **Settings
 
 ---
 
-## 🧪 Testing & Quality Checks
+## Testing & Quality Checks
 
 Run the automated test suites:
 
@@ -298,24 +298,15 @@ pnpm format
 
 ---
 
-## 🔍 Troubleshooting & FAQ
+## Troubleshooting & FAQ
 
-### 1. `Cannot find module '...telemetry_hook_bundle.js'`
-
-This occurs if the local Google Cloud telemetry plugin on Windows has invalid path quoting.
-
-- **Fix**: Blank out the hooks file in PowerShell:
-  ```powershell
-  Set-Content -Path "$HOME\.gemini\config\plugins\googlecloudtools.datacloud_telemetry\hooks.json" -Value "{}"
-  ```
-
-### 2. `TimeoutError: waiting for selector ... failed: timeout 30000ms exceeded`
+### 1. `TimeoutError: waiting for selector ... failed: timeout 30000ms exceeded`
 
 - Check that the target web application is actually running at the specified URL.
 - If testing locally via Docker, use `host.docker.internal` instead of `localhost`.
 - Check if elements are housed inside an `iframe`.
 
-### 3. `Port 3001 is used by another program`
+### 2. `Port 3001 is used by another program`
 
 `pnpm start` says so when something other than the QA Tool holds the port (if the QA Tool is already running, it just opens it).
 
@@ -326,13 +317,13 @@ This occurs if the local Google Cloud telemetry plugin on Windows has invalid pa
   ```
 - Or use another port: `$env:RUNNER_PORT=3055; pnpm start`.
 
-### 4. The check-up stopped, or its screen says nothing is in progress
+### 3. The check-up stopped, or its screen says nothing is in progress
 
 - A scan that fails says why, with **Start a new check-up**; what you typed is still there.
 - Testing that fails part-way goes back to the plan with what happened above it. Approve the plan again once the site is working.
 - Addresses like `/check/plan` only show the check-up in progress. When there's none, open **Past check-ups** for finished ones.
 
-### 5. Playwright Browser Launch Errors
+### 4. Playwright Browser Launch Errors
 
 - `pnpm start` stops with a message when the browser is missing. `pnpm bootstrap` installs it. On Linux, system libraries may also be needed:
   ```bash
@@ -341,6 +332,6 @@ This occurs if the local Google Cloud telemetry plugin on Windows has invalid pa
 
 ---
 
-## 📄 License
+## License
 
 This project is source-available under the [Functional Source License, Version 1.1, MIT Future License](LICENSE) (FSL-1.1-MIT). You can use, copy, modify and redistribute it for any purpose except offering a competing commercial product or service. Each version becomes available under the plain MIT License two years after it is released.

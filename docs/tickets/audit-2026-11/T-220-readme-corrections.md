@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P2 | S | docs | docs | todo |
+| P2 | S | docs | docs | built |
 
 **Files you may edit (no others):**
 - `README.md`
@@ -112,10 +112,10 @@ grep -n "pnpm dev  " README.md
 (The second grep finds any `##` heading that still has a non-ASCII character.)
 
 ## Done when
-- [ ] The ten `##` headings have no emoji, and every Table of Contents link matches a heading's anchor.
-- [ ] Troubleshooting has four items, numbered 1 to 4.
-- [ ] The beta bullet says each tester sees only their own check-ups.
-- [ ] `config-docs.test.ts` passes (it checks every `pnpm` command and link in the README).
+- [x] The ten `##` headings have no emoji, and every Table of Contents link matches a heading's anchor.
+- [x] Troubleshooting has four items, numbered 1 to 4.
+- [x] The beta bullet says each tester sees only their own check-ups.
+- [x] `config-docs.test.ts` passes (it checks every `pnpm` command and link in the README).
 
 ## Notes
 - GitHub anchors: lowercase the heading, drop punctuation, turn each space into `-`. `Overview & Architecture`

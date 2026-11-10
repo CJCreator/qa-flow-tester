@@ -8,7 +8,7 @@
  *
  * Environment variables:
  *   RUNNER_URL: Runner base URL (default: http://localhost:3001)
- *   RUNNER_ACCESS_TOKEN / QA_ACCESS_TOKEN: Access token if server requires authentication
+ *   RUNNER_ACCESS_TOKEN: Access token if server requires authentication
  *
  * Exits non-zero on `failed` or on `done` with an `only-one-page` note.
  */
@@ -37,7 +37,7 @@ if (!targetUrl) {
 }
 
 const runnerUrl = (process.env.RUNNER_URL || 'http://localhost:3001').replace(/\/+$/, '');
-const token = process.env.RUNNER_ACCESS_TOKEN || process.env.QA_ACCESS_TOKEN || '';
+const token = process.env.RUNNER_ACCESS_TOKEN || '';
 const authHeaders = token ? { 'x-qa-access': token } : {};
 
 console.log(`Starting Website Audit smoke test against runner at ${runnerUrl}`);

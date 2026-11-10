@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P2 | S | docs | docs | todo |
+| P2 | S | docs | docs | built |
 
 **Files you may edit (no others):**
 - `docs/CONFIGURATION.md`
@@ -95,9 +95,9 @@ grep -rn "WIZARD_SCREENSHOTS\|QA_ACCESS_TOKEN" docs .env.example scripts package
 ```
 
 ## Done when
-- [ ] `PAGESPEED_API_KEY` is in both `docs/CONFIGURATION.md` and `.env.example`, once each.
-- [ ] `WIZARD_SCREENSHOTS` and `QA_ACCESS_TOKEN` appear nowhere outside `docs/tickets/`.
-- [ ] `config-docs.test.ts` passes (it requires every `.env.example` name to be documented, exactly once).
+- [x] `PAGESPEED_API_KEY` is in both `docs/CONFIGURATION.md` and `.env.example`, once each.
+- [x] `WIZARD_SCREENSHOTS` and `QA_ACCESS_TOKEN` appear nowhere outside `docs/tickets/`.
+- [x] `config-docs.test.ts` passes (it requires every `.env.example` name to be documented, exactly once).
 
 ## Notes
 - `.env.example` is the example file and may be read and edited. Never open or print `.env`.

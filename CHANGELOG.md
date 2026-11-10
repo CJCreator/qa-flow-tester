@@ -7,7 +7,7 @@ All notable changes. Format follows [Keep a Changelog](https://keepachangelog.co
 
 ### Removed
 
-- Finished `.pipeline/e2e-url-credentials-crawl` records, unused `yaml` dependency from `@qa/core`, duplicate `.gitignore` lines; details in `docs/handoffs/codebase-cleanup-summary.md`
+- Finished `.pipeline/e2e-url-credentials-crawl` records, unused `yaml` dependency from `@qa/core`, duplicate `.gitignore` lines
 
 ### Added
 
@@ -56,7 +56,7 @@ All notable changes. Format follows [Keep a Changelog](https://keepachangelog.co
 
 - Release build workflow on `v*` tags (no publish); generated workflow pins the tool to `v0.1.0` (T-19)
 - Docs: ADR 0016 records how sign-in details and secret URL parameters are hidden, what is not covered, and what is planned (T-20)
-- Docs: repeatable self Check-up of the landing page (`docs/TESTING.md`) and its summary in `docs/research/` (T-15)
+- Docs: repeatable self Check-up of the landing page (`docs/TESTING.md`) (T-15)
 - Landing: areas link to the sample report; light/dark toggle; wake limit configurable (`VITE_WAKE_LIMIT_SECONDS`). New check-up: extra options behind one "More options"; command palette and shortcuts buttons appear after the first check-up. Tests: sample report format check, axe check (T-14)
 - Landing: optional cookie-free counter (landing view, start of a check-up, completed check-up), 1200x630 PNG share image, contact link and email-updates control driven by `VITE_COUNTER_URL`, `VITE_CONTACT_EMAIL`, `VITE_SIGNUP_URL` (T-13)
 - Verified Domains: a file per exact address (`/.well-known/qa-verify.txt`, token per session), plus DNS-aware, redirect- and rebinding-safe host checks and a per-request browser guard on shared machines; new route `POST /api/runner/domain-proof` (T-12, ADR 0014)

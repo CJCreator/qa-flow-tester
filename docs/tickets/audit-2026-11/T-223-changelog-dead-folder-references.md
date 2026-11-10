@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P2 | S | docs | docs | todo |
+| P2 | S | docs | docs | built |
 
 **Files you may edit (no others):**
 - `CHANGELOG.md`
@@ -47,8 +47,8 @@ grep -n "docs/handoffs\|docs/research" CHANGELOG.md
 ```
 
 ## Done when
-- [ ] Neither folder is named in `CHANGELOG.md`.
-- [ ] `release-workflow.test.ts` still passes (it requires a `## [0.1.0]` section in the CHANGELOG).
+- [x] Neither folder is named in `CHANGELOG.md`.
+- [x] `release-workflow.test.ts` still passes (it requires a `## [0.1.0]` section in the CHANGELOG).
 
 ## Notes
 - The entries are history: keep what was done, drop only the pointer to a file that is gone.
