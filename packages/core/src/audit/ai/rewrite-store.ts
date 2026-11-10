@@ -18,16 +18,12 @@ import {
   type SectionEdit,
 } from '@qa/types';
 import { readJsonSafe, writeJsonAtomic } from '../../atomic-write.js';
-import { MAX_SECTION_EDIT_CHARS, editPathProblem } from '../documents/edits.js';
+import { BAD_CONTROL, ID_PATTERN as SECTION_ID, MAX_SECTION_EDIT_CHARS, editPathProblem } from '../documents/edits.js';
 import { findOverlaps, overlapThreshold, writeRewrite, type RewriteAiProblem } from './rewrite.js';
 import type { AuditAiResolution } from './stage-ai.js';
 
 export const REWRITES_FILE = 'rewrites.json';
 const SCHEMA_VERSION = 1;
-
-const SECTION_ID = /^[A-Za-z0-9_.:-]{1,64}$/;
-// eslint-disable-next-line no-control-regex
-const BAD_CONTROL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/;
 
 interface StoredFile {
   schemaVersion: number;

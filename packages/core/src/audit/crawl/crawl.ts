@@ -17,7 +17,7 @@ import { BREAKPOINT_VIEWPORTS, getBrowserPolicy, installRequestGuard, type Brows
 import { isIpLiteral } from '../../address-class.js';
 import { blockChanges } from '../../live-site.js';
 import { defaultNetDeps, makeRequestGuard, resolvePublic, type NetDeps } from '../../safe-net.js';
-import type { AuditAddressCode } from './reachability.js';
+import { START_ADDRESS_MESSAGES, type AuditAddressCode } from './reachability.js';
 import { makeCheckerFetch } from '../../checker-fetch.js';
 import { RobotsPolicy } from '../../competitive/robots.js';
 import { HostPacer } from '../../host-pacer.js';
@@ -72,10 +72,9 @@ const CHROMIUM_ARGS = [
 const RULE_SAFE_HOST = /^[a-z0-9_-]+(\.[a-z0-9_-]+)*\.?$/;
 /** The words of the start address check (reachability.ts), for the same refusals. */
 const REFUSALS: Record<AuditAddressCode, string> = {
-  ERR_PRIVATE_ADDRESS:
-    'This address points to a private or local network. A Website Audit only checks public websites.',
-  ERR_UNREACHABLE: 'The site could not be reached.',
-  ERR_DNS: 'The site name could not be found. Check the address for typos.',
+  ERR_PRIVATE_ADDRESS: START_ADDRESS_MESSAGES.private,
+  ERR_UNREACHABLE: START_ADDRESS_MESSAGES.error,
+  ERR_DNS: START_ADDRESS_MESSAGES.dns,
 };
 
 /**

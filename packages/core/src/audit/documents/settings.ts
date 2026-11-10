@@ -25,6 +25,7 @@ import {
 import { DEFAULT_OPT_OUT_TEXT } from './templates/opt-out.js';
 import { PROPOSAL_TEMPLATE_EN } from './templates/proposal-en.js';
 import { PROPOSAL_TEMPLATE_TA } from './templates/proposal-ta.js';
+import { BAD_CONTROL } from './edits.js';
 
 // ---------------------------------------------------------------------------------------------------
 // Limits
@@ -130,10 +131,6 @@ type Obj = Record<string, unknown>;
 function isObject(value: unknown): value is Obj {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
-
-/** Control characters other than tab, line feed and carriage return. */
-// eslint-disable-next-line no-control-regex
-const BAD_CONTROL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/;
 
 function textProblem(value: unknown, max: number, allowEmpty: boolean): string | undefined {
   if (typeof value !== 'string') return 'must be text.';

@@ -32,7 +32,7 @@ export interface AuditAddressOptions {
   allowPrivateAddresses?: boolean;
 }
 
-const MESSAGES = {
+export const START_ADDRESS_MESSAGES = {
   private: 'This address points to a private or local network. A Website Audit only checks public websites.',
   dns: 'The site name could not be found. Check the address for typos.',
   timeout: 'The site did not answer in time.',
@@ -94,31 +94,33 @@ export async function checkAuditAddress(url: string, opts: AuditAddressOptions =
       deps
     );
   } catch {
-    return unreachable(timedOut ? MESSAGES.timeout : MESSAGES.error);
+    return unreachable(timedOut ? START_ADDRESS_MESSAGES.timeout : START_ADDRESS_MESSAGES.error);
   }
 
   if (res.ok) {
     if (res.status > 0) return { ok: true, finalUrl: res.finalUrl, status: res.status };
-    return unreachable(MESSAGES.error);
+    return unreachable(START_ADDRESS_MESSAGES.error);
   }
   switch (res.reason) {
     case 'private-address':
-      return { ok: false, code: 'ERR_PRIVATE_ADDRESS', reason: MESSAGES.private };
+      return { ok: false, code: 'ERR_PRIVATE_ADDRESS', reason: START_ADDRESS_MESSAGES.private };
     case 'too-large':
       // Cut at the byte cap: the status line arrived, so the site answered.
       if (res.status !== undefined && res.status >= 200 && lastUrl) {
         return { ok: true, finalUrl: lastUrl, status: res.status };
       }
-      return unreachable(MESSAGES.error);
+      return unreachable(START_ADDRESS_MESSAGES.error);
     case 'dns-failed':
-      return timedOut ? unreachable(MESSAGES.timeout) : { ok: false, code: 'ERR_DNS', reason: MESSAGES.dns };
+      return timedOut
+        ? unreachable(START_ADDRESS_MESSAGES.timeout)
+        : { ok: false, code: 'ERR_DNS', reason: START_ADDRESS_MESSAGES.dns };
     case 'timeout':
-      return unreachable(MESSAGES.timeout);
+      return unreachable(START_ADDRESS_MESSAGES.timeout);
     case 'redirected':
-      return unreachable(MESSAGES.redirects);
+      return unreachable(START_ADDRESS_MESSAGES.redirects);
     case 'bad-scheme':
-      return unreachable(MESSAGES.scheme);
+      return unreachable(START_ADDRESS_MESSAGES.scheme);
     default:
-      return unreachable(timedOut ? MESSAGES.timeout : MESSAGES.error);
+      return unreachable(timedOut ? START_ADDRESS_MESSAGES.timeout : START_ADDRESS_MESSAGES.error);
   }
 }

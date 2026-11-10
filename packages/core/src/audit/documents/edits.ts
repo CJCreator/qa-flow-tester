@@ -27,7 +27,7 @@ import {
   type RecommendationEdit,
   type SectionEdit,
 } from '@qa/types';
-import { ROADMAP_PHASE } from './roadmap.js';
+import { highestScale, ROADMAP_PHASE } from './roadmap.js';
 
 // ---------------------------------------------------------------------------------------------------
 // Limits
@@ -49,7 +49,7 @@ export const MAX_PROPOSAL_FIELD_CHARS = 2000;
 export const MAX_NOT_INCLUDED_ITEMS = 30;
 export const MAX_NOT_INCLUDED_CHARS = 300;
 
-const ID_PATTERN = /^[A-Za-z0-9_.:-]{1,64}$/;
+export const ID_PATTERN = /^[A-Za-z0-9_.:-]{1,64}$/;
 const PAGE_ACTIONS: readonly PageAction[] = ['redesign', 'repair'];
 
 // ---------------------------------------------------------------------------------------------------
@@ -69,7 +69,7 @@ function isObject(value: unknown): value is Obj {
 
 /** Control characters other than tab, line feed and carriage return. */
 // eslint-disable-next-line no-control-regex
-const BAD_CONTROL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/;
+export const BAD_CONTROL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/;
 
 function textProblem(value: unknown, max: number, allowEmpty: boolean): string | undefined {
   if (typeof value !== 'string') return 'must be text.';
@@ -452,13 +452,6 @@ function withoutRemovedPages(finding: AuditFinding, removed: ReadonlySet<string>
   }
   return out;
 }
-
-/**
- * `buildRoadmap`'s rule (roadmap.ts, not exported there): an item's priority is the highest impact of its
- * findings and its effort the highest effort. Lower rank is more: high 0, medium 1, low 2.
- */
-const SCALE_RANK: Record<AuditScale, number> = { high: 0, medium: 1, low: 2 };
-const highestScale = (a: AuditScale, b: AuditScale): AuditScale => (SCALE_RANK[a] <= SCALE_RANK[b] ? a : b);
 
 /**
  * Applies `overlay` to one finished version (REQ-020). Removed pages are dropped from the pages, the

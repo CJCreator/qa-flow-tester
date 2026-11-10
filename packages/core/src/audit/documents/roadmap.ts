@@ -21,7 +21,8 @@ const RANK: Record<AuditScale, number> = { high: 0, medium: 1, low: 2 };
 /** The phase an item of each priority goes in. */
 export const ROADMAP_PHASE: Record<AuditScale, number> = { high: 1, medium: 2, low: 3 };
 
-const highest = (a: AuditScale, b: AuditScale): AuditScale => (RANK[a] <= RANK[b] ? a : b);
+/** The higher of two scales (high beats medium beats low). Shared with the edit overlay. */
+export const highestScale = (a: AuditScale, b: AuditScale): AuditScale => (RANK[a] <= RANK[b] ? a : b);
 
 interface Group {
   firstRank: number;
@@ -55,8 +56,8 @@ export function buildRoadmap(rankedFindings: readonly AuditFinding[]): RoadmapIt
       };
       groups.set(finding.rule, group);
     }
-    group.priority = highest(group.priority, finding.impact);
-    group.effort = highest(group.effort, finding.effort);
+    group.priority = highestScale(group.priority, finding.impact);
+    group.effort = highestScale(group.effort, finding.effort);
     group.findingIds.push(finding.id);
     for (const page of finding.pages && finding.pages.length > 0 ? finding.pages : [finding.urlPath]) {
       if (!group.pages.includes(page)) group.pages.push(page);
