@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | runner | bug | todo |
+| P1 | S | runner | bug | built |
 
 **Files you may edit (no others):**
 - `packages/runner/src/session/run-slot.ts`
@@ -58,8 +58,8 @@ Run: `pnpm exec vitest run packages/runner/tests/run-slot.test.ts packages/runne
 
 ## Done when
 
-- [ ] `setRunId` no longer writes `_runId` while `_other` is set.
-- [ ] New test passes; the two test files pass.
+- [x] `setRunId` no longer writes `_runId` while `_other` is set.
+- [x] New test passes; the two test files pass.
 
 ## Notes
 

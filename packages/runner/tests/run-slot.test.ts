@@ -79,6 +79,15 @@ describe('RunSlot kinds', () => {
     expect(slot.runId).toBe('run-1');
   });
 
+  it('setRunId during an audit leaves the Check-up run id alone', () => {
+    const slot = new DefaultRunSlot();
+    slot.setRunId('run-1');
+    expect(slot.begin('audit-tmp', 'https://example.com', 'audit')).toBe(true);
+    slot.setRunId('audit_00001');
+    expect(slot.runId).toBe('run-1');
+    expect(slot.running).toEqual({ kind: 'audit', href: '/audits/audit_00001' });
+  });
+
   it('AC-4: of two starts of different kinds issued together, exactly one claims the slot', async () => {
     const kinds: RunKind[] = ['checkup', 'benchmark', 'audit'];
     for (const first of kinds) {

@@ -98,4 +98,14 @@ describe('R2: stop waits for teardown before the slot is freed', () => {
     expect(session.run.isRunning).toBe(false);
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('did not finish tearing down in time'));
   });
+
+  it('a stop after a Check-up ended is not an abort', async () => {
+    const { session, run } = makeRun();
+    session.run.setPhase('failed');
+    session.report.setError('Site unreachable', 'ERR_UNREACHABLE');
+
+    const result = await run.stop();
+    expect(result).toEqual({ aborted: false });
+    expect(session.report.error()).toEqual({ message: 'Site unreachable', code: 'ERR_UNREACHABLE' });
+  });
 });

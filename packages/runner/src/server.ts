@@ -1573,6 +1573,8 @@ export class RunnerServer {
    * then the server closes.
    */
   public async shutdown(): Promise<void> {
+    // A running Website Audit is stopped too: its browser must not outlive the server.
+    getAuditRunsForServer(this)?.active?.controller.abort();
     await this.checkupRun.stop().catch(() => {});
     await this.stop();
   }
@@ -1586,6 +1588,8 @@ export class RunnerServer {
     return new Promise((resolve) => {
       if (this.server) {
         this.server.close(() => resolve());
+        // Website Audit streams and idle keep-alive connections would keep close() waiting.
+        this.server.closeAllConnections?.();
       } else {
         resolve();
       }
@@ -2839,13 +2843,16 @@ export class RunnerServer {
     ]);
     const models = keepOrPickModels(free, current, record);
     const chosenBy = current.chosenBy === 'person' && current.text === models.text ? 'person' : undefined;
-    await this.writeAiModels({
-      ...current,
-      provider: 'openrouter',
-      text: models.text,
-      vision: models.vision,
-      chosenBy,
-    });
+    // The models file is shared by everyone on a beta copy: a tester's Check-up must not rewrite it.
+    if (!this.beta) {
+      await this.writeAiModels({
+        ...current,
+        provider: 'openrouter',
+        text: models.text,
+        vision: models.vision,
+        chosenBy,
+      });
+    }
     return { ...models, fallbacks: fallbackModels(free, models.text, record) };
   }
 
@@ -3152,7 +3159,9 @@ export class RunnerServer {
       await this.keyResolver.saveByokKey('openrouter', apiKey!.trim());
       // Choose the free models now; a null model means none is free right now.
       const current = await this.readAiModels();
-      if ((current.provider ?? 'openrouter') !== 'openrouter') await this.writeAiModels({ provider: 'openrouter' });
+      if (!this.beta && (current.provider ?? 'openrouter') !== 'openrouter') {
+        await this.writeAiModels({ provider: 'openrouter' });
+      }
       const models = await this.refreshAiModels(apiKey!.trim()).catch(() => ({ text: null, vision: null }));
       this.sendJson(res, 200, { saved: true, model: models.text, visionModel: models.vision });
       return;

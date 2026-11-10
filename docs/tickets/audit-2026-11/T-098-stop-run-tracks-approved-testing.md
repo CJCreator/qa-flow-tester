@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | runner | bug | todo |
+| P1 | S | runner | bug | built |
 
 **Files you may edit (no others):**
 - `packages/runner/src/session/checkup-run.ts`
@@ -80,9 +80,9 @@ Run: `pnpm exec vitest run packages/runner/tests/checkup-run-teardown.test.ts pa
 
 ## Done when
 
-- [ ] `executeTesting` in the returned object records its promise in `currentRunPromise`.
-- [ ] `stopRun` returns `{ aborted: false }` whenever `isRunning` is false.
-- [ ] Test 1 passes; both test files and `pnpm build` pass.
+- [x] `executeTesting` in the returned object records its promise in `currentRunPromise`.
+- [x] `stopRun` returns `{ aborted: false }` whenever `isRunning` is false.
+- [x] Test 1 passes; both test files and `pnpm build` pass.
 
 ## Notes
 

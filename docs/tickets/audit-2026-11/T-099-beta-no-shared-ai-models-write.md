@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | runner | bug | todo |
+| P1 | S | runner | bug | built |
 
 **Files you may edit (no others):**
 - `packages/runner/src/server.ts`
@@ -89,9 +89,9 @@ Then run every runner AI test: `pnpm exec vitest run --project unit packages/run
 
 ## Done when
 
-- [ ] On beta neither path calls `writeAiModels`.
-- [ ] Off beta both behave as before.
-- [ ] Build and the listed tests pass.
+- [x] On beta neither path calls `writeAiModels`.
+- [x] Off beta both behave as before.
+- [x] Build and the listed tests pass.
 
 ## Notes
 

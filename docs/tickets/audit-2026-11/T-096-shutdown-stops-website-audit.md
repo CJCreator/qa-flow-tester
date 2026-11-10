@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | runner | bug | todo |
+| P1 | S | runner | bug | built |
 
 **Files you may edit (no others):**
 - `packages/runner/src/server.ts`
@@ -90,9 +90,9 @@ Add no new test file.
 
 ## Done when
 
-- [ ] `shutdown()` aborts the active Website Audit before stopping the server.
-- [ ] `stop()` calls `closeAllConnections` after `close`.
-- [ ] Build and the three test files pass.
+- [x] `shutdown()` aborts the active Website Audit before stopping the server.
+- [x] `stop()` calls `closeAllConnections` after `close`.
+- [x] Build and the three test files pass.
 
 ## Notes
 

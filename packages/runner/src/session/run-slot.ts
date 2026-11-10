@@ -124,10 +124,12 @@ export class DefaultRunSlot implements RunSlot {
   }
 
   setRunId(runId: string | null): void {
-    this._runId = runId;
-    if (this._other && runId) {
-      this._other.runId = runId;
+    // While an audit (or another non-Check-up run) holds the slot, the id is that run's: the Check-up's stays.
+    if (this._other) {
+      if (runId) this._other.runId = runId;
+      return;
     }
+    this._runId = runId;
   }
 
   setTargetUrl(targetUrl: string | null): void {

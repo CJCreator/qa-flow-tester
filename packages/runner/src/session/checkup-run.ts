@@ -975,7 +975,15 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
       }
     },
 
-    executeTesting,
+    // Tracked like a run started here, so a stop waits for its teardown before freeing the slot.
+    executeTesting: (...args: Parameters<typeof executeTesting>) => {
+      const run = executeTesting(...args);
+      currentRunPromise = run.then(
+        () => undefined,
+        () => undefined
+      );
+      return run;
+    },
   };
 
   async function startRun(
@@ -1118,7 +1126,8 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
         });
         return { aborted: false, finishing: true };
       }
-      if (!session.run.isRunning && session.run.phase === 'idle') {
+      // Nothing is running (idle, or a Check-up that already ended): leave its result and error as they are.
+      if (!session.run.isRunning) {
         return { aborted: false };
       }
       // Nothing is running while a plan waits for review. Stop keeps that plan; only an explicit discard clears it.
