@@ -176,7 +176,7 @@ export class PerformanceChecker {
 
     // 1. Largest Contentful Paint (LCP). Only the browser's own LCP entry counts as LCP.
     if (vitals?.lcpMs !== undefined && vitals.lcpMs > SPEED_THRESHOLDS.LCP_GOOD_MS) {
-      const isPoor = vitals.lcpMs >= SPEED_THRESHOLDS.LCP_POOR_MS;
+      const isPoor = vitals.lcpMs > SPEED_THRESHOLDS.LCP_POOR_MS;
       const severity: FindingSeverity = isPoor ? 'Major' : 'Minor';
       findings.push({
         id: `${idPrefix}-LCP-${findings.length + 1}`,
@@ -222,7 +222,7 @@ export class PerformanceChecker {
 
     // 2. Cumulative Layout Shift (CLS)
     if (vitals?.cls !== undefined && vitals.cls > SPEED_THRESHOLDS.CLS_GOOD) {
-      const isPoor = vitals.cls >= SPEED_THRESHOLDS.CLS_POOR;
+      const isPoor = vitals.cls > SPEED_THRESHOLDS.CLS_POOR;
       const severity: FindingSeverity = isPoor ? 'Major' : 'Minor';
       findings.push({
         id: `${idPrefix}-CLS-${findings.length + 1}`,
@@ -245,7 +245,7 @@ export class PerformanceChecker {
 
     // 3. Interaction to Next Paint (INP): how long the page took to respond to a click or key press.
     if (vitals?.inpMs !== undefined && vitals.inpMs > SPEED_THRESHOLDS.INP_GOOD_MS) {
-      const isPoor = vitals.inpMs >= SPEED_THRESHOLDS.INP_POOR_MS;
+      const isPoor = vitals.inpMs > SPEED_THRESHOLDS.INP_POOR_MS;
       findings.push({
         id: `${idPrefix}-INP-${findings.length + 1}`,
         ...base,
@@ -297,7 +297,7 @@ export class PerformanceChecker {
           id: `${idPrefix}-CRUX-${findings.length + 1}`,
           ...base,
           severity:
-            (lcpP75Ms && lcpP75Ms >= SPEED_THRESHOLDS.LCP_POOR_MS) || (clsP75 && clsP75 >= SPEED_THRESHOLDS.CLS_POOR)
+            (lcpP75Ms && lcpP75Ms > SPEED_THRESHOLDS.LCP_POOR_MS) || (clsP75 && clsP75 > SPEED_THRESHOLDS.CLS_POOR)
               ? 'Major'
               : 'Minor',
           title: `Chrome UX Report (CrUX) real-user vitals exceed thresholds (${scopeLabel})`,

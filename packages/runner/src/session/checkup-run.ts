@@ -11,8 +11,6 @@ import type {
   ProviderLimits,
   RunCap,
   ProductProfile,
-  SignInFailureReason,
-  DiscoveredFlow,
 } from '@qa/types';
 import {
   emptyPlan,
@@ -33,7 +31,6 @@ import {
   Redactor,
   redactUrl,
   applySafeAnswers,
-  isTestHost,
   setBrowserPolicy,
   makeRequestGuard,
   resolvePublic,
@@ -54,7 +51,6 @@ import {
   type ModelRecord,
   type OrchestratorEvent,
 } from '@qa/core';
-import { signInReasonText } from '@qa/types';
 import {
   checkAiCap,
   checkContextDocuments,

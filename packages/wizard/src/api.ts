@@ -450,6 +450,10 @@ export async function startRun(request: StartRunRequest): Promise<string> {
   if (request.crawlConcurrency) body.crawlConcurrency = request.crawlConcurrency;
   if (request.crawlDelayMs !== undefined) body.crawlDelayMs = request.crawlDelayMs;
   if (request.customHeaders) body.customHeaders = request.customHeaders;
+  if (request.contextDocuments?.length) body.contextDocuments = request.contextDocuments;
+  if (request.contextUrl) body.contextUrl = request.contextUrl;
+  if (request.savedSessions) body.savedSessions = request.savedSessions;
+  if (request.aiCap) body.aiCap = request.aiCap;
 
   interface ApiErrorPayload {
     error?: string;

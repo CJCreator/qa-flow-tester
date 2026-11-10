@@ -47,6 +47,9 @@ export interface SiteMapProps {
 }
 
 // Journey colours come from the palette (j1 to j5); written out so Tailwind sees every class.
+/** One shared empty list: a new [] default on every render re-ran the path effect forever. */
+const NO_FLOWS: DiscoveredFlow[] = [];
+
 const JOURNEY_TEXT = ['text-j1', 'text-j2', 'text-j3', 'text-j4', 'text-j5'];
 const JOURNEY_FILL = ['bg-j1', 'bg-j2', 'bg-j3', 'bg-j4', 'bg-j5'];
 
@@ -76,7 +79,7 @@ function statusText(node: PageNode): string {
 
 export function SiteMap({
   pages,
-  flows = [],
+  flows = NO_FLOWS,
   journeys: givenJourneys,
   mode,
   selectedPagePath,

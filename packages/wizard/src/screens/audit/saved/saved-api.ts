@@ -293,7 +293,7 @@ export function followRunningVersion(
     {
       onEvent: (event) => {
         handlers.onProgress?.();
-        if (event.type !== 'progress') handlers.onEnd();
+        if (event.type === 'done' || event.type === 'failed') handlers.onEnd();
       },
       onEnd: handlers.onEnd,
     },

@@ -1,4 +1,4 @@
-import type { Finding, PermissionMatrix, PermissionRule, Breakpoint } from '@qa/types';
+import type { Finding, PermissionMatrix, Breakpoint } from '@qa/types';
 import YAML from 'yaml';
 
 export class PermissionMatrixChecker {
@@ -69,8 +69,11 @@ export class PermissionMatrixChecker {
   }): Finding | undefined {
     const { target, role, breakpoint = '1440px', statusCode, redirectedToLogin, testCaseId } = params;
 
-    // Find rule for this target (exact match or prefix)
-    const rule = this.matrix.find((r) => r.target === target || target.startsWith(r.target));
+    // Find rule for this target: an exact match first, then the longest prefix (so "/invoices/new"
+    // is not answered by the "/invoices" rule when it has a rule of its own).
+    const rule =
+      this.matrix.find((r) => r.target === target) ??
+      this.matrix.filter((r) => target.startsWith(r.target)).sort((a, b) => b.target.length - a.target.length)[0];
     if (!rule) return undefined;
 
     const expected = rule.roles[role];

@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import type { Finding, ReleaseReport, RunCoverage } from '@qa/types';
+import type { Finding, ReleaseReport } from '@qa/types';
 import { releaseVerdict } from '@qa/types';
 import { notChecked } from './not-checked.js';
 import { AGENTS_SNIPPET, buildFixThese, buildKnownFindings, withFindingsContract } from './findings-contract.js';
@@ -177,7 +177,7 @@ export class ReportGenerator {
     // Coverage statistics
     lines.push(`## 📊 Test Coverage & Execution Summary`);
     lines.push(``);
-    lines.push(`| Total Test Points | Passed | Failed | Blocked | Skipped | Could not verify | Passed |`);
+    lines.push(`| Total Test Points | Passed | Failed | Blocked | Skipped | Could not verify | Completion |`);
     lines.push(`| :---: | :---: | :---: | :---: | :---: | :---: | :---: |`);
     lines.push(
       `| **${coverage.totalTestPoints}** | ✅ ${coverage.passed} | ❌ ${coverage.failed} | ⛔ ${coverage.blocked} | ⏭️ ${coverage.skipped} | ❓ ${coverage.couldNotVerify} | **${coverage.completionRate.toFixed(1)}%** |`

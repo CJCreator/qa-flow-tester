@@ -1,4 +1,4 @@
-import type { Page, Locator } from 'playwright';
+import type { Page } from 'playwright';
 
 /**
  * Self-healing selector suggestion engine (ADR 0013 / G22).

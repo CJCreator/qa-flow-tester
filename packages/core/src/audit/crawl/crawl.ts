@@ -405,8 +405,8 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
         if (!navRes.ok) {
           const isDns =
             navRes.error?.kind === 'net' &&
-            (/name_not_resolved|enotfound|dns|getaddrinfo/i.test(navRes.error?.detail ?? '') ||
-              /name_not_resolved|enotfound|dns|getaddrinfo/i.test(navRes.finalUrl));
+            // The error text includes the address, so a bare "dns" would match a host like dnschecker.org.
+            /ERR_NAME_NOT_RESOLVED|ENOTFOUND|getaddrinfo/i.test(navRes.error?.detail ?? '');
           const code: AuditAddressCode = isDns ? 'ERR_DNS' : 'ERR_UNREACHABLE';
           const message = isDns ? REFUSALS.ERR_DNS : REFUSALS.ERR_UNREACHABLE;
           startError = { code, message };

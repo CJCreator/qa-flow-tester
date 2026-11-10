@@ -13,9 +13,9 @@ Runner: vitest. Node environment, 30 s test and hook timeouts, tests in `package
 
 `pnpm test:all` runs both. A file is `browser` only if the `BROWSER_TESTS` list in `vitest.workspace.ts` names it; every other file is `unit`. Add a file to that list when it launches Chromium or a runner.
 
-Other commands: `pnpm test:watch`; one file: `pnpm exec vitest run <file>`; `pnpm typecheck` (`tsc -p tsconfig.test.json --noEmit`, includes tests; non-blocking in `ci.yml`); `pnpm test:plugin` (the `plugins/repo-orchestrator` checks).
+Other commands: `pnpm test:watch`; one file: `pnpm exec vitest run <file>`; `pnpm typecheck` (`tsc -p tsconfig.test.json --noEmit`, includes tests; blocking in `ci.yml`); `pnpm test:plugin` (the `plugins/repo-orchestrator` checks).
 
-`release.yml` runs `pnpm exec vitest run --exclude "**/wizard-e2e.test.ts"` (both tiers, after installing Chromium).
+`release.yml` runs `pnpm exec vitest run` (both tiers, after installing Chromium).
 
 ## No fabricated websites
 

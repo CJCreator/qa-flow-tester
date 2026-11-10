@@ -28,7 +28,8 @@ import {
   type RememberedSite,
   type ScreenSize,
 } from '../api';
-import { DEFAULT_RELEASE_GATES, type ReleaseGateCriteria } from '@qa/types';
+import type { ReleaseGateCriteria } from '@qa/types';
+import { DEFAULT_RELEASE_GATES } from '@qa/types/src/browser.js';
 import { useConfirm } from '../components/ConfirmDialog';
 import { GeminiModelSelect } from '../components/GeminiModelSelect';
 import { KeyField } from '../components/KeyField';

@@ -16,7 +16,7 @@ The simplest way to run QA Flow Tester locally or on a private virtual machine i
 
 1. Copy the example environment file:
    ```bash
-   cp .env.docker.example .env
+   cp .env.example .env
    ```
 2. Edit `.env` and set `RUNNER_ACCESS_TOKEN` to a secure secret.
 3. Start the full stack in the background:

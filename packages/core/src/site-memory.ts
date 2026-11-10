@@ -154,7 +154,8 @@ export async function listSiteMemories(dataDir: string): Promise<SiteMemory[]> {
   const dir = path.join(dataDir, 'sites');
   const names = await fs.readdir(dir).catch(() => [] as string[]);
   const sites: SiteMemory[] = [];
-  for (const name of names.filter((n) => n.endsWith('.json'))) {
+  // The site history files (<host>.history.json) live in the same folder and are not site memories.
+  for (const name of names.filter((n) => n.endsWith('.json') && !n.endsWith('.history.json'))) {
     const result = await readJsonSafe<SiteMemory>(path.join(dir, name), { currentVersion: 1 });
     if (result.data?.host) {
       sites.push({

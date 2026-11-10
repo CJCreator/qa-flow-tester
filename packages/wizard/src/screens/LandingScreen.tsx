@@ -395,7 +395,7 @@ export function LandingScreen() {
           <div className="mt-8 grid gap-6 sm:grid-cols-3">
             <div className="flex flex-col justify-between rounded-control border border-rule bg-canvas p-6 shadow-sm">
               <div>
-                <span className="inline-block rounded-full bg-accent-soft px-3 py-1 text-xs font-bold text-accent">
+                <span className="inline-block rounded-full bg-stamp-tint px-3 py-1 text-xs font-bold text-stamp">
                   Community
                 </span>
                 <div className="mt-4 flex items-baseline">
@@ -410,14 +410,14 @@ export function LandingScreen() {
                   <li className="flex items-center gap-2">✓ Self-contained HTML exports</li>
                 </ul>
               </div>
-              <a href="#address-input" className="btn-secondary mt-6 w-full text-center">
+              <a href="#hero-url" className="btn-quiet mt-6 w-full text-center">
                 Start for free
               </a>
             </div>
 
-            <div className="flex flex-col justify-between rounded-control border-2 border-accent bg-canvas p-6 shadow-md">
+            <div className="flex flex-col justify-between rounded-control border-2 border-stamp bg-canvas p-6 shadow-md">
               <div>
-                <span className="inline-block rounded-full bg-accent px-3 py-1 text-xs font-bold text-canvas">
+                <span className="inline-block rounded-full bg-stamp px-3 py-1 text-xs font-bold text-on-stamp">
                   Pro Continuous
                 </span>
                 <div className="mt-4 flex items-baseline">
@@ -432,7 +432,7 @@ export function LandingScreen() {
                   <li className="flex items-center gap-2">✓ CrUX real-user metrics & SARIF</li>
                 </ul>
               </div>
-              <a href="#address-input" className="btn-primary mt-6 w-full text-center">
+              <a href="#hero-url" className="btn-primary mt-6 w-full text-center">
                 Start Pro check-up
               </a>
             </div>
@@ -454,7 +454,7 @@ export function LandingScreen() {
                   <li className="flex items-center gap-2">✓ Dedicated engineering support</li>
                 </ul>
               </div>
-              <a href="mailto:contact@techgramam.com" className="btn-secondary mt-6 w-full text-center">
+              <a href={contact.contactHref} className="btn-quiet mt-6 w-full text-center">
                 Contact us
               </a>
             </div>

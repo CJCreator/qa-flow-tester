@@ -1399,7 +1399,8 @@ export class DeterministicSpider {
             await paced(pageUrl, () => navigate(page, pageUrl, navLimits(pageTimeoutMs)));
           };
           try {
-            clickBudget -= await exploreInteractiveStates({
+            // Subtract after the await: `x -= await f()` reads x first and loses the other worker's spend.
+            const spent = await exploreInteractiveStates({
               page,
               pageUrl,
               currentPath,
@@ -1410,6 +1411,7 @@ export class DeterministicSpider {
               reload,
               budget: clickBudget,
             });
+            clickBudget -= spent;
             if (page.url() !== pageUrl) await reload();
             if (timeLeft() <= 0) throw new Error('time-limit');
             const structure = await readCrudStructure(page);

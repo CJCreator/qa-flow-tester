@@ -436,11 +436,16 @@ export class MarketingChecker {
             '#onetrust-banner-sdk, #CybotCookiebotDialog, .cc-window, .cookie-banner, [id*="cookie" i], [class*="cookie" i], [id*="consent" i], [class*="consent" i], [aria-label*="cookie" i]'
           ) ||
           Array.from(document.querySelectorAll('[role="dialog"], [role="alertdialog"], aside, footer, div')).some(
-            (el) =>
-              visible(el) &&
-              /\bcookies?\b/i.test(textOf(el)) &&
-              textOf(el).length < 600 &&
-              /accept|agree|allow|got it|ok|manage|reject|decline/i.test(textOf(el))
+            (el) => {
+              if (!visible(el)) return false;
+              const text = textOf(el);
+              // Word boundaries: without them "ok" matches inside "cookie" and every mention counts.
+              return (
+                /\bcookies?\b/i.test(text) &&
+                text.length < 600 &&
+                /\b(?:accept|agree|allow|got it|ok(?:ay)?|manage|reject|decline)\b/i.test(text)
+              );
+            }
           );
 
         // Accessibility statement link (G20)
@@ -453,9 +458,11 @@ export class MarketingChecker {
         // Social preview description completeness (G48)
         const hasOgDesc = metaContent('meta[property="og:description"], meta[name="og:description"]');
         const hasTwDesc = metaContent('meta[name="twitter:description"]');
+        // Not checked when the page has no social title at all: the og:title rule covers that case.
+        const hasOgCardTitle = metaContent('meta[property="og:title"]');
+        const hasTwCardTitle = metaContent('meta[name="twitter:title"]');
         const hasCompleteSocialCard =
-          (metaContent('meta[property="og:title"]') && hasOgDesc) ||
-          (metaContent('meta[name="twitter:title"]') && hasTwDesc);
+          hasOgCardTitle || hasTwCardTitle ? (hasOgCardTitle && hasOgDesc) || (hasTwCardTitle && hasTwDesc) : undefined;
 
         return {
           hasTwitterCard: meta('meta[name="twitter:card"]'),

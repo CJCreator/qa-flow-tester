@@ -57,7 +57,8 @@ export class SourceLocator {
       } else if (/\.(tsx|jsx|ts|js|vue|svelte|html)$/.test(entry)) {
         try {
           const content = await fs.readFile(fullPath, 'utf8');
-          const regex = new RegExp(`data-testid=["']${testId}["']`, 'g');
+          // The id comes from the checked site's page: escape it, and no `g` flag (test() would keep state).
+          const regex = new RegExp(`data-testid=["']${testId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']`);
           const lines = content.split('\n');
           for (let i = 0; i < lines.length; i++) {
             if (regex.test(lines[i])) {

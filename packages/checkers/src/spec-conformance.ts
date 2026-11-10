@@ -32,7 +32,8 @@ export function urlMatchesPattern(pattern: string, addresses: string[]): boolean
   const asWildcard = new RegExp('^' + pattern.split('*').map(escape).join('.*') + '$');
   let asRegex: RegExp | null = null;
   try {
-    asRegex = new RegExp('^' + pattern.replace(/\*/g, '.*').replace(/\//g, '\\/') + '$');
+    // Grouped, so the anchors bind to every alternative of "/dashboard|/account".
+    asRegex = new RegExp('^(?:' + pattern.replace(/\*/g, '.*').replace(/\//g, '\\/') + ')$');
   } catch {
     // Not a valid regular expression: the plain reading is all there is.
   }
@@ -546,11 +547,6 @@ export class SpecConformanceChecker {
     // 3. API Call expectation
     if (testCase.expectations.apiCall) {
       const { method, path: apiPath, status } = testCase.expectations.apiCall;
-      const allNetwork = stepEvidenceList.flatMap((s) => s.failedRequests); // plus recorded
-      // Check if matched
-      const matched = stepEvidenceList.some((s) =>
-        s.failedRequests.some((r) => r.method === method && r.url.includes(apiPath) && r.status === status)
-      );
       // If the expected API call failed with a different status
       const failedMatch = stepEvidenceList
         .flatMap((s) => s.failedRequests)

@@ -17,6 +17,8 @@ const COMPLETE = {
   hasTrustSignals: true,
   hasLeadCapture: true,
   hasCookieNotice: true,
+  hasA11yStatement: true,
+  hasCompleteSocialCard: true,
 };
 
 const at = (urlPath: string, log = newMarketingLog(), extra: Record<string, unknown> = {}) => ({
@@ -47,7 +49,7 @@ describe('The marketing checklist', () => {
     expect(await checker.checkPage(page(COMPLETE), at('/', log))).toEqual([]);
     const review = marketingReview(log)!;
     expect(review.readPages).toEqual(['/']);
-    expect(review.checks).toHaveLength(11);
+    expect(review.checks).toHaveLength(13);
     expect(review.checks.every((c) => c.status === 'ok')).toBe(true);
     expect(log.homeRead).toBe(true);
   });
@@ -113,6 +115,7 @@ describe('The suggestions that depend on what the site is for', () => {
       'gap',
       'gap',
       'gap',
+      'ok',
     ]);
   });
 

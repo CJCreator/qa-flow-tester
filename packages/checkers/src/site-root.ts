@@ -264,8 +264,4 @@ export class SiteRootAuditor {
     this.cache.set(origin, result);
     return result;
   }
-
-  clearCache() {
-    this.cache.clear();
-  }
 }

@@ -468,9 +468,9 @@ export class DiscoveryAgent {
     // A site we don't own: honour its robots.txt and pause between pages. A live site: send nothing.
     const targetOrigin = new URL(options.targetUrl);
     const ownMachine = isPrivateHost(targetOrigin.hostname);
-    const defaultBudgetMinutes = process.env.QA_DISCOVERY_MAX_MINUTES
-      ? Number(process.env.QA_DISCOVERY_MAX_MINUTES)
-      : 20;
+    // A value that is not a positive number would make the deadline NaN, and the crawl would never time out.
+    const envMinutes = Number(process.env.QA_DISCOVERY_MAX_MINUTES);
+    const defaultBudgetMinutes = Number.isFinite(envMinutes) && envMinutes > 0 ? envMinutes : 20;
     const deadlineAt = options.deadlineAt ?? Date.now() + defaultBudgetMinutes * 60 * 1000;
 
     const crawlOptions: CrawlOptions = {

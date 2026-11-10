@@ -1016,7 +1016,8 @@ export class FlowTestOrchestrator {
             maxRetries: testCase.kind === 'link' ? 0 : Math.max(0, Math.floor(options.flakyReruns ?? 3)),
             sentAny: () => sendGuard?.hasSentAny() === true,
             // Once a form was sent, a second try would send it twice: decline the retry.
-            shouldRetry: (err) => !isAbortError(err) && !sendGuard?.hasSentAny(),
+            // A failed sign-in fails the same way every time: retrying only relaunches the browser.
+            shouldRetry: (err) => !isAbortError(err) && !(err instanceof SignInFailedError) && !sendGuard?.hasSentAny(),
           });
           if (
             attemptResult.outcome === 'FAILED' &&

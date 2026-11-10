@@ -296,10 +296,11 @@ Respond with ONLY the JSON object.
     console.warn(`[JourneyPlanner] Fixed-rule journeys instead: ${aiErr instanceof Error ? aiErr.message : aiErr}`);
     const overBudget = aiErr instanceof BudgetSpentError;
     notes.push(
-      overBudget
-        ? 'The AI Request Budget ran out before the journeys, so fixed rules chose them. Re-plan them with the AI when requests are available again.'
-        : aiErr instanceof StoppedEarlyError
-          ? 'You stopped the scan early, so fixed rules chose the journeys.'
+      // StoppedEarlyError extends BudgetSpentError, so it is tested first.
+      aiErr instanceof StoppedEarlyError
+        ? 'You stopped the scan early, so fixed rules chose the journeys.'
+        : overBudget
+          ? 'The AI Request Budget ran out before the journeys, so fixed rules chose them. Re-plan them with the AI when requests are available again.'
           : aiErr instanceof AITruncatedError
             ? 'The AI model stopped before it finished planning the journeys (it used its whole answer allowance), so fixed rules chose them. Choose another model in Settings, then re-plan them.'
             : 'The AI service didn’t answer for the journeys, so fixed rules chose them.'

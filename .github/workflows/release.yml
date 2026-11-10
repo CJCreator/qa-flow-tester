@@ -67,7 +67,7 @@ jobs:
         run: pnpm --filter @qa/core exec playwright install-deps chromium
 
       - name: Tests
-        run: pnpm exec vitest run --exclude "**/wizard-e2e.test.ts"
+        run: pnpm exec vitest run
 
       - name: Build
         run: pnpm build
@@ -81,14 +81,14 @@ jobs:
 
       - name: Build and Push Release Runner Image
         run: |
-          IMAGE_NAME="ghcr.io/${{ github.repository }}/runner"
+          IMAGE_NAME="ghcr.io/${GITHUB_REPOSITORY,,}/runner"
           docker build -f packages/runner/Dockerfile -t "${IMAGE_NAME}:${GITHUB_REF_NAME}" -t "${IMAGE_NAME}:latest" .
           docker push "${IMAGE_NAME}:${GITHUB_REF_NAME}"
           docker push "${IMAGE_NAME}:latest"
 
       - name: Build and Push Release Site Image
         run: |
-          IMAGE_NAME="ghcr.io/${{ github.repository }}/site"
+          IMAGE_NAME="ghcr.io/${GITHUB_REPOSITORY,,}/site"
           docker build -f site/Dockerfile -t "${IMAGE_NAME}:${GITHUB_REF_NAME}" -t "${IMAGE_NAME}:latest" .
           docker push "${IMAGE_NAME}:${GITHUB_REF_NAME}"
           docker push "${IMAGE_NAME}:latest"

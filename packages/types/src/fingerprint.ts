@@ -66,9 +66,6 @@ export function normalizeRoute(rawRoute: string): string {
   return route.toLowerCase();
 }
 
-/** Canonical URL path normalizer alias (re-exported for consistency across packages) */
-export const normalizeUrlPath = normalizeRoute;
-
 /**
  * Normalizes an element selector:
  * - Standardizes attribute quoting (single to double quotes)

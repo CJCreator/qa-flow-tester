@@ -118,7 +118,7 @@ log(`Starting Cloudflare Quick Tunnel for http://localhost:${port}…`);
 
 // On Windows, .cmd files require shell:true. To avoid DEP0190 (args + shell), we
 // build a single command string when on Windows.
-const tunnelCmd = isWin ? 'pnpm' : 'pnpm';
+const tunnelCmd = 'pnpm';
 const tunnelArgs = ['dlx', 'untun', 'tunnel', '--port', String(port), '--', '--http-host-header', `localhost:${port}`];
 const tunnelProc = spawn(tunnelCmd, tunnelArgs, {
   cwd: root,

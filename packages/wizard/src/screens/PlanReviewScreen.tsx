@@ -6,7 +6,7 @@ import { Notice, Spinner } from '../components/text';
 import { BottomActionBar, Disclosure, Page, PageHeader } from '../components/ui';
 import { count } from '../lib/format';
 import { siteTypeName } from '../lib/translate';
-import { approveRolesOf, SIGN_IN_AGAIN_TEXT } from '../lib/form';
+import { SIGN_IN_AGAIN_TEXT } from '../lib/form';
 import { useDocumentTitle } from '../lib/title';
 import { PlanDocument, type PlanActions } from '../components/plan/PlanDocument';
 import { showItem } from '../components/plan/parts';

@@ -11,7 +11,6 @@
  * Not registered here: BE-190 adds `...auditRerunRoutes({ store, caller, runs, resolveAi, resolveServiceKey })`
  * to allRoutes, with the same `runs` instance as the start route.
  */
-import { randomUUID } from 'node:crypto';
 import {
   AUDIT_API,
   AUDIT_ID_PATTERN,
@@ -27,7 +26,6 @@ import { sendJson } from './body.js';
 import type { AuditCaller } from './audit-store.js';
 import {
   AUDIT_BUSY,
-  AUDIT_FORBIDDEN_START,
   AUDIT_NOT_FOUND_STREAM,
   AUDIT_START_FAILED,
   AUDIT_UNREACHABLE,

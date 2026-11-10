@@ -13,12 +13,10 @@ import {
   type DiscoveryDraft,
   type PageInventoryItem,
   type StorageStateData,
-  type SignInFailureReason,
   type PlanPatchBody,
   type ProviderLimits,
   type AIStage,
   type AIStageUsage,
-  signInReasonText,
 } from '@qa/types';
 import {
   planValidatorFor,

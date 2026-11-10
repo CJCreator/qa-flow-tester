@@ -16,8 +16,6 @@ import { CRAWL_LIMIT_BOUNDS, type CrawlLimits } from './discovery.js';
 import type { PageCoverage, RouteSkipReason } from './route-telemetry.js';
 import type { FindingSeverity } from './test-case.js';
 
-export type SkippedReason = RouteSkipReason;
-
 // ---------------------------------------------------------------------------------------------------
 // Languages
 // ---------------------------------------------------------------------------------------------------

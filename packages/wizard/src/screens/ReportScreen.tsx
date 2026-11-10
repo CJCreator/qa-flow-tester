@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { flushSync } from 'react-dom';
-import { releaseVerdict, type AspectType, type Finding, type FindingSeverity, type ReleaseReport } from '@qa/types';
+import type { AspectType, Finding, FindingSeverity, ReleaseReport } from '@qa/types';
+import { releaseVerdict } from '@qa/types/src/browser.js';
 import {
   acceptJudgement,
   downloadRunFile,

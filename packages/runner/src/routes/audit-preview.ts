@@ -117,6 +117,8 @@ function versionQuery(url: URL): number | undefined | 'invalid' {
 }
 
 async function readBody(req: http.IncomingMessage): Promise<string> {
+  // Decode as one UTF-8 stream: joining Buffer chunks one by one breaks a character split across two.
+  if (typeof req.setEncoding === 'function') req.setEncoding('utf8');
   let body = '';
   for await (const chunk of req) {
     body += chunk;

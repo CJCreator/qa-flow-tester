@@ -99,7 +99,14 @@ export async function replanPage(
     ai
   );
   const fresh = out.pages[0];
-  Object.assign(planned, { coverage, coveredBy: undefined, tests: fresh.tests, source: fresh.source, skipped: false });
+  Object.assign(planned, {
+    coverage,
+    coveredBy: undefined,
+    tests: fresh.tests,
+    source: fresh.source,
+    fallbackReason: fresh.fallbackReason,
+    skipped: false,
+  });
   const others = plan.navigation.filter((n) => n.shared || n.startPage !== urlPath);
   plan.navigation = [...others, ...keepSwitchedOff(out.navigation, plan.navigation)];
   return out.notes;

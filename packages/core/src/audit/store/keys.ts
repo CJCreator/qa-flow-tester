@@ -9,13 +9,7 @@
  * Objects that must be removable on their own are kept in a folder of their own, because a backend
  * only deletes whole folders (`deletePrefix`).
  */
-import {
-  AUDIT_DOCUMENT_KINDS,
-  AUDIT_ID_PATTERN,
-  SHARE_LINK_ID_PATTERN,
-  type AuditDocumentKind,
-  type StoredDocumentKind,
-} from '@qa/types';
+import { AUDIT_DOCUMENT_KINDS, AUDIT_ID_PATTERN, SHARE_LINK_ID_PATTERN, type StoredDocumentKind } from '@qa/types';
 import { AuditStoreError } from './backend.js';
 
 export const STORED_DOCUMENT_KINDS: readonly StoredDocumentKind[] = [

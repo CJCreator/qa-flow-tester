@@ -286,7 +286,7 @@ async function revealIfInsideDetails(locator: Locator): Promise<void> {
  */
 export async function locateElement(page: Page, selector: string): Promise<Locator> {
   // If explicitly formatted as a data-testid selector
-  if (selector.startsWith('[data-testid=') || selector.startsWith('[data-testid=')) {
+  if (selector.startsWith('[data-testid=')) {
     const loc = page.locator(selector);
     await revealIfInsideDetails(loc);
     return loc;

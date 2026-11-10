@@ -605,7 +605,10 @@ export class SeoChecker {
         const res = await fetchFn(fullUrl);
         const response = res ? { status: () => res.status } : null;
 
-        if (response && response.status() >= 400 && response.status() !== 403 && response.status() !== 401) {
+        // Broken means gone or failing (404, 410, 5xx), the same rule as core's checker-fetch.
+        // 429, 400 or 405 say the server refused this request, not that the link is dead.
+        const status = response?.status();
+        if (status !== undefined && (status === 404 || status === 410 || (status >= 500 && status <= 599))) {
           findings.push({
             id: `F-SEO-${context.testCaseId || 'GEN'}-BROKENLINK-${findings.length + 1}`,
             testCaseId: context.testCaseId,
@@ -614,11 +617,11 @@ export class SeoChecker {
             checker: 'seo',
             // A broken link is something broken, whoever the site is for.
             aspect: 'Works',
-            title: `Broken link found: ${linkPath} returned HTTP ${response.status()}`,
+            title: `Broken link found: ${linkPath} returned HTTP ${status}`,
             where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
             expectedVsActual: {
               expected: `All internal links should resolve to valid pages (HTTP 200/300)`,
-              actual: `Link to ${linkPath} responded with HTTP ${response.status()}`,
+              actual: `Link to ${linkPath} responded with HTTP ${status}`,
             },
             stepsToReproduce: [`Visit ${context.urlPath}`, `Click or request link to ${linkPath}`],
             evidence: {},

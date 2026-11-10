@@ -146,8 +146,11 @@ export function VisualBaselinesScreen() {
     }
   };
 
+  // "What changed" carries over from the last baseline; one without a diff falls back to side by side.
+  const shownMode: ViewMode = viewMode === 'diff-only' && !activeItem?.diffUrl ? 'split' : viewMode;
+
   const viewButton = (mode: ViewMode, label: string) => (
-    <button type="button" aria-pressed={viewMode === mode} onClick={() => setViewMode(mode)}>
+    <button type="button" aria-pressed={shownMode === mode} onClick={() => setViewMode(mode)}>
       {label}
     </button>
   );
@@ -347,7 +350,7 @@ export function VisualBaselinesScreen() {
                   </div>
 
                   <div className="overflow-hidden rounded-control border border-edge bg-canvas p-2">
-                    {viewMode === 'split' && (
+                    {shownMode === 'split' && (
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div>
                           <div className="mb-1 text-center text-xs font-bold text-ink-soft">Baseline</div>
@@ -379,7 +382,7 @@ export function VisualBaselinesScreen() {
                       </div>
                     )}
 
-                    {viewMode === 'overlay' && (
+                    {shownMode === 'overlay' && (
                       <div className="space-y-3">
                         <div className="relative mx-auto flex max-h-[32rem] select-none items-center justify-center overflow-hidden rounded-control border border-rule bg-panel">
                           <img
@@ -421,7 +424,7 @@ export function VisualBaselinesScreen() {
                       </div>
                     )}
 
-                    {viewMode === 'diff-only' && activeItem.diffUrl && (
+                    {shownMode === 'diff-only' && activeItem.diffUrl && (
                       <div>
                         <div className="mb-1 text-center text-xs font-bold text-fail">What changed, highlighted</div>
                         <div className="flex max-h-[32rem] items-center justify-center overflow-auto rounded-control border border-rule bg-panel p-2">

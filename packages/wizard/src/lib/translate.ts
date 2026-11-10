@@ -138,11 +138,11 @@ function stepSentence(event: RunnerEvent, mode: RunMode): string {
 export function plainFailure(error: unknown, mode: RunMode): string {
   const text = typeof error === 'string' ? error : '';
   if (/robots\.txt/i.test(text)) {
-    return 'This website asks automated tools not to look around it, so the check stopped without looking at anything.';
+    return 'This website asks automated tools not to look around it, so the check-up stopped without looking at anything.';
   }
   if (/pre-flight|unreachable|ECONNREFUSED|ENOTFOUND|ERR_NAME_NOT_RESOLVED|ERR_CONNECTION|net::/i.test(text)) {
     return mode === 'website'
-      ? 'The site stopped responding, so the check couldn’t finish. Make sure the address is right and try again.'
+      ? 'The site stopped responding, so the check-up couldn’t finish. Make sure the address is right and try again.'
       : 'Your site couldn’t be reached. Make sure it’s running and the address is right, then try again.';
   }
   if (/No OpenRouter key/i.test(text)) {
@@ -155,12 +155,12 @@ export function plainFailure(error: unknown, mode: RunMode): string {
     return 'No free AI models are available right now. Try again later.';
   }
   if (/timeout|timed out/i.test(text)) {
-    return 'Your site took too long to respond, so the check stopped. Try again when it’s less busy.';
+    return 'Your site took too long to respond, so the check-up stopped. Try again when it’s less busy.';
   }
   if (/abort|stopped by user|was stopped/i.test(text)) {
     return 'The check-up was stopped.';
   }
-  return 'Something went wrong and the check stopped before it finished. Try again. If it happens again, ask whoever set up this tool to look at its terminal for details.';
+  return 'Something went wrong and the check-up stopped before it finished. Try again. If it happens again, ask whoever set up this tool to look at its terminal for details.';
 }
 
 /** Seconds left in the testing, estimated from how long each test has taken so far. */
