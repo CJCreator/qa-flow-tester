@@ -846,6 +846,57 @@ describe('audit pipeline: runAuditPipeline', () => {
     expect(result.notes).toContain('Only 1 page was read.');
   });
 
+  it('the timing reload runs in the pacer turn of the page host', async () => {
+    const timingSpy = vi.fn(async () => ({
+      status: 'measured' as const,
+      source: 'this-tool' as const,
+      method: 'lab' as const,
+      strategy: 'mobile' as const,
+      values: [],
+      measuredAt: '2026-11-03T00:00:00.000Z',
+    }));
+    const recorder = createPageRecorder({
+      workDir,
+      stages: pageStages({ measureBrowserTiming: timingSpy }),
+    });
+    const fakePage = {
+      url: () => 'https://example.com/a',
+      urlPath: '/a',
+    } as unknown as Page;
+    const info = { urlPath: '/a', title: 'A', depth: 0 };
+    const pacer = { run: vi.fn((_host: string, task: () => any) => task()) };
+
+    await recorder.onRenderedPage(fakePage, info, { pacer } as never);
+
+    expect(pacer.run).toHaveBeenCalledTimes(1);
+    expect(pacer.run).toHaveBeenCalledWith('example.com', expect.any(Function));
+    expect(timingSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('without a context the timing still runs', async () => {
+    const timingSpy = vi.fn(async () => ({
+      status: 'measured' as const,
+      source: 'this-tool' as const,
+      method: 'lab' as const,
+      strategy: 'mobile' as const,
+      values: [],
+      measuredAt: '2026-11-03T00:00:00.000Z',
+    }));
+    const recorder = createPageRecorder({
+      workDir,
+      stages: pageStages({ measureBrowserTiming: timingSpy }),
+    });
+    const fakePage = {
+      url: () => 'https://example.com/b',
+      urlPath: '/b',
+    } as unknown as Page;
+    const info = { urlPath: '/b', title: 'B', depth: 0 };
+
+    await recorder.onRenderedPage(fakePage, info);
+
+    expect(timingSpy).toHaveBeenCalledTimes(1);
+  });
+
   it('emits site-stopped-answering note from crawl stoppedAnsweringAfter count', async () => {
     const crawl = crawlResult();
     crawl.stoppedAnsweringAfter = 3;

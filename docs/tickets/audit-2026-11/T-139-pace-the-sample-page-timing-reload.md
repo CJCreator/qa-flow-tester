@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | core/audit | bug | todo |
+| P1 | S | core/audit | bug | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/audit/crawl/crawl.ts`
@@ -117,8 +117,8 @@ Run: `pnpm exec vitest run <that test file>`, then `pnpm build` (the runner pass
 
 ## Done when
 
-- [ ] `measureBrowserTiming` is called inside `pacer.run` when the crawl passes its pacer.
-- [ ] Both new tests pass; `pnpm build` passes.
+- [x] `measureBrowserTiming` is called inside `pacer.run` when the crawl passes its pacer.
+- [x] Both new tests pass; `pnpm build` passes.
 
 ## Notes
 

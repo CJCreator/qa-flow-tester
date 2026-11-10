@@ -191,12 +191,17 @@ export interface AuditCrawlDeps {
   retryDelayMs?: number;
 }
 
+/** What the crawl hands to `onRenderedPage` besides the page: its pacer, so extra requests take turns too. */
+export interface RenderedPageContext {
+  pacer: HostPacer;
+}
+
 export interface AuditCrawlOptions {
   /** Once aborted, no more pages are opened and the crawl returns what it found so far. */
   signal?: AbortSignal;
   onProgress?: (progress: AuditCrawlProgress) => void;
   /** Awaited for each recorded page while it is still rendered (Page Content extraction, REQ-005). */
-  onRenderedPage?: (page: Page, info: AuditCrawlPage) => Promise<void>;
+  onRenderedPage?: (page: Page, info: AuditCrawlPage, context: RenderedPageContext) => Promise<void>;
   /** Folder for a small screenshot of each recorded page. None when absent. */
   screenshotDir?: string;
   /**
@@ -440,7 +445,7 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
             return;
           }
         }
-        if (opts.onRenderedPage) await opts.onRenderedPage(page, toAuditPage(item));
+        if (opts.onRenderedPage) await opts.onRenderedPage(page, toAuditPage(item), { pacer });
       },
     });
     if (blocked || result.blocked) throw new AuditCrawlBlockedError((blocked || result.blocked)!);

@@ -15,7 +15,7 @@ import { readPage, type ReadPageResult } from '../analysis/read-page.js';
 import { accessibilityBasics, type AccessibilityBasicsResult } from '../analysis/accessibility-basics.js';
 import { recordPhoneLayout, type PhoneLayoutRecord } from '../phone-layout.js';
 import { measureBrowserTiming, type BrowserTimingResult } from '../speed/browser-timing.js';
-import type { AuditCrawlPage } from '../crawl/crawl.js';
+import type { AuditCrawlPage, RenderedPageContext } from '../crawl/crawl.js';
 import { GroupTracker } from '../../plan/sampling.js';
 
 /** The page-level stage functions; the defaults are the real modules. Tests pass fakes. */
@@ -73,7 +73,7 @@ export class AuditPageRecorder {
   }
 
   /** Pass as `runAuditCrawl(request, { onRenderedPage: recorder.onRenderedPage })`. Never throws. */
-  readonly onRenderedPage = async (page: Page, info: AuditCrawlPage): Promise<void> => {
+  readonly onRenderedPage = async (page: Page, info: AuditCrawlPage, context?: RenderedPageContext): Promise<void> => {
     // A path recorded twice is the same page: the first wins (as in the analysis).
     if (this.byPath.has(info.urlPath)) return;
     this.byPath.add(info.urlPath);
@@ -112,7 +112,10 @@ export class AuditPageRecorder {
       entry.accessibility = null;
     }
     try {
-      entry.timing = await this.stages.measureBrowserTiming(page);
+      // The timing reloads the page: a second request to the site, so it takes the crawl's turn (ADR 0043).
+      const measure = () => this.stages.measureBrowserTiming(page);
+      const host = context?.pacer ? new URL(page.url()).host : null;
+      entry.timing = context?.pacer && host ? await context.pacer.run(host, measure) : await measure();
     } catch {
       entry.timing = null;
     }
