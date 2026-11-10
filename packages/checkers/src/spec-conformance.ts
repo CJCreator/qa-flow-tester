@@ -5,7 +5,6 @@ import {
   judgeRefusal,
   readRefusal,
   type RefusalBaseline,
-  type RefusalExpectation,
 } from './refusal-rule.js';
 
 /** Elements sites commonly use to show a validation or error message. */
@@ -145,7 +144,7 @@ export class SpecConformanceChecker {
     }
 
     // 0b. Refusal rule: a form sent with a value it should not accept must be refused.
-    const refusal = (testCase.expectations as { refusal?: RefusalExpectation }).refusal;
+    const refusal = testCase.expectations.refusal;
     // A probe-only Rejects item has no submit click, so the orchestrator took no baseline: take it here,
     // before the probe is read (as the Playwright export does).
     const refusalBaseline =

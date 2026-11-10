@@ -311,8 +311,6 @@ Disallow: /
         wordCount: 400,
         listCount: 0,
         tableCount: 0,
-        hasAuthorByline: false,
-        hasDatePublished: false,
       }),
     } as unknown as Page;
 

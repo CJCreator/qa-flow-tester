@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P3 | S | checkers | dead-code | todo |
+| P3 | S | checkers | dead-code | built |
 
 **Files you may edit (no others):**
 - `packages/checkers/src/site-root.ts`
@@ -72,8 +72,8 @@ No new test: behaviour is unchanged.
 - `pnpm build` and `pnpm typecheck`
 
 ## Done when
-- [ ] Grep for `RefusalExpectation` under `packages/` finds nothing.
-- [ ] The test runs, `pnpm build` and `pnpm typecheck` pass.
+- [x] Grep for `RefusalExpectation` under `packages/` finds nothing.
+- [x] The test runs, `pnpm build` and `pnpm typecheck` pass.
 
 ## Notes
 - If the build reports that `testCase.expectations.refusal` does not exist on the type of `testCase` in `spec-conformance.ts`, the parameter there is typed with a narrower local type. In that case keep the cast but point it at the shared type: `(testCase.expectations as TestCaseExpectations).refusal`, importing `type TestCaseExpectations` from `@qa/types`.

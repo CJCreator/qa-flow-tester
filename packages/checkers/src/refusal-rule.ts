@@ -37,14 +37,6 @@ export interface RefusalResult {
   crashed: boolean;
 }
 
-/** Local mirror of `TestCaseExpectations.refusal`. */
-export interface RefusalExpectation {
-  formPath: string;
-  submitSelector?: string;
-  message?: string;
-  probeOnly?: boolean;
-}
-
 /** Function expression: `(baseline) => RefusalBaseline-like`, runs in the page. */
 export const CAPTURE_BASELINE_SOURCE = String.raw`() => {
   const visibleTexts = () => {

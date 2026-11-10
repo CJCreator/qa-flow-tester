@@ -20,8 +20,6 @@ export interface AeoPageDetails {
   wordCount: number;
   listCount: number;
   tableCount: number;
-  hasAuthorByline: boolean;
-  hasDatePublished: boolean;
 }
 
 export class AeoChecker {
@@ -253,15 +251,6 @@ export class AeoChecker {
         const listCount = document.querySelectorAll('ul, ol').length;
         const tableCount = document.querySelectorAll('table').length;
 
-        // Author / Date attribution in DOM
-        const authorEl = document.querySelector('[rel="author"], [class*="author" i], [itemprop="author"]');
-        const hasAuthorByline = !!authorEl;
-
-        const dateEl = document.querySelector(
-          'time[datetime], [itemprop="datePublished"], meta[property="article:published_time"]'
-        );
-        const hasDatePublished = !!dateEl;
-
         return {
           jsonLdScripts,
           hasBreadcrumbsNav,
@@ -269,8 +258,6 @@ export class AeoChecker {
           wordCount,
           listCount,
           tableCount,
-          hasAuthorByline,
-          hasDatePublished,
         };
       });
     } catch {

@@ -171,7 +171,7 @@ export class SiteRootAuditor {
       if (sitemapRes && sitemapRes.status() >= 200 && sitemapRes.status() < 300) {
         hasSitemap = true;
         sitemapUrl = probeUrl;
-      } else if (!hasSitemap) {
+      } else {
         findings.push({
           id: `F-SEO-${tcId}-SITEMAP-MISSING`,
           testCaseId: context.testCaseId,

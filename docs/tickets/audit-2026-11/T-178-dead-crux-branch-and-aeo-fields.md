@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P3 | S | checkers | dead-code | todo |
+| P3 | S | checkers | dead-code | built |
 
 **Files you may edit (no others):**
 - `packages/checkers/src/performance.ts`
@@ -95,9 +95,9 @@ No new test: this removes code that cannot run.
 - `pnpm build` and `pnpm typecheck`
 
 ## Done when
-- [ ] Grep for `cruxFieldMetrics` and `CRUX` under `packages/checkers` finds nothing.
-- [ ] Grep for `hasAuthorByline` under `packages/checkers/src/aeo.ts` finds nothing; `geo.ts` still has it.
-- [ ] The test runs, `pnpm build` and `pnpm typecheck` pass.
+- [x] Grep for `cruxFieldMetrics` and `CRUX` under `packages/checkers` finds nothing.
+- [x] Grep for `hasAuthorByline` under `packages/checkers/src/aeo.ts` finds nothing; `geo.ts` still has it.
+- [x] The test runs, `pnpm build` and `pnpm typecheck` pass.
 
 ## Notes
 - Do not touch `packages/checkers/src/geo.ts`.
