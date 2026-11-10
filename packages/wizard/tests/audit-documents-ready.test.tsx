@@ -95,6 +95,8 @@ describe('DocumentsReady component (T-88, ADR 0042)', () => {
     const html = renderDocs(sampleVersion(READY_DOCUMENTS));
     expect(html).toContain('id="audit-documents-title"');
     expect(textOf(html)).toContain('Audit Documents ready');
+    expect(textOf(html)).toContain('The 5 Audit Documents, the Pitch Glimpse and the Owner Audit');
+    expect(textOf(html)).not.toContain('The 7 documents');
   });
 
   it('lists all 7 document kinds', () => {

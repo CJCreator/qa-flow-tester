@@ -36,7 +36,7 @@ export interface DocumentsReadyProps {
   auditId?: string;
 }
 
-/** Lists the 7 documents produced by a Website Audit with their readiness state (T-88, ADR 0042). */
+/** Lists the 5 Audit Documents, the Pitch Glimpse and the Owner Audit produced by a Website Audit with their readiness state (T-88, ADR 0042). */
 export function DocumentsReady({ version, auditId }: DocumentsReadyProps) {
   const id = auditId ?? version.auditId;
   const versionNum = version.version;
@@ -56,7 +56,9 @@ export function DocumentsReady({ version, auditId }: DocumentsReadyProps) {
           <h2 id="audit-documents-title" className="text-xl font-bold">
             Audit Documents ready
           </h2>
-          <p className="text-sm text-ink-soft">The 7 documents prepared for this Website Audit version.</p>
+          <p className="text-sm text-ink-soft">
+            The 5 Audit Documents, the Pitch Glimpse and the Owner Audit prepared for this Website Audit version.
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link to={reviewUrl} className="btn-quiet btn-sm">

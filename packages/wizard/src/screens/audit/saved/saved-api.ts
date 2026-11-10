@@ -51,9 +51,9 @@ export const AUDIT_PATHS = {
 
 const NOT_ANSWERING = 'The tool is not answering. Make sure it is still open in its terminal, then try again.';
 
-/** Shown when a re-run is refused because the run slot is busy (REQ-028 AC-3). */
+/** Shown when a request is refused because the runner is busy (REQ-028 AC-3). */
 export const RUN_IN_PROGRESS_TEXT =
-  'Another run is in progress: a Check-up, a benchmark or a Website Audit. Wait for it to finish, then try again.';
+  'Another Check-up, benchmark or Website Audit is in progress. Wait for it to finish, then try again.';
 
 const REFUSALS: Partial<Record<AuditErrorCode, string>> = {
   ERR_RUN_IN_PROGRESS: RUN_IN_PROGRESS_TEXT,

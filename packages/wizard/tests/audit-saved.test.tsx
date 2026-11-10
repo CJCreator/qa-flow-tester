@@ -341,11 +341,12 @@ describe('re-run (REQ-028 AC-3)', () => {
     const outcome = await rerunAndReload(AUDIT_ID, impl);
     expect(calls).toHaveLength(1);
     expect(outcome).toEqual({ ok: false, code: 'ERR_RUN_IN_PROGRESS', message: RUN_IN_PROGRESS_TEXT });
-    expect(RUN_IN_PROGRESS_TEXT).toMatch(/^Another run is in progress/);
+    expect(RUN_IN_PROGRESS_TEXT).toMatch(/^Another Check-up, benchmark or Website Audit is in progress/);
+    expect(RUN_IN_PROGRESS_TEXT).not.toMatch(/\brun\b/i);
 
     const html = historyView({ message: { tone: 'fail', text: RUN_IN_PROGRESS_TEXT } });
     expect(html).toContain('role="alert"');
-    expect(textOf(html)).toContain('Another run is in progress');
+    expect(textOf(html)).toContain('Another Check-up, benchmark or Website Audit is in progress');
   });
 
   it('disables Audit again while it starts', () => {

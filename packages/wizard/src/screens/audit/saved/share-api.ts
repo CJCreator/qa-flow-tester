@@ -14,6 +14,7 @@ import {
   type ShareLink,
   type ShareLinkKind,
 } from '@qa/types/src/browser.js';
+import { RUN_IN_PROGRESS_TEXT } from './saved-api';
 
 /**
  * The preview and Shared Link screen's calls to the runner (REQ-024): make the improved-homepage preview
@@ -43,8 +44,7 @@ const REFUSALS: Partial<Record<AuditErrorCode, string>> = {
   ERR_AUDIT_RUNNING: 'This version of the Website Audit is still running. Try again when it has finished.',
   ERR_FORBIDDEN: 'You do not have permission to do this on this Website Audit.',
   ERR_LINK_GONE: 'This Shared Link has already expired or been revoked.',
-  ERR_RUN_IN_PROGRESS:
-    'Another run is in progress: a Check-up, a benchmark or a Website Audit. Wait for it to finish, then try again.',
+  ERR_RUN_IN_PROGRESS: RUN_IN_PROGRESS_TEXT,
 };
 
 /** The languages offered for the preview and the Pitch Glimpse. */
