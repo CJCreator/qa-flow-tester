@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P2 | S | wizard | bug | todo |
+| P2 | S | wizard | bug | built |
 
 **Files you may edit (no others):**
 - `packages/wizard/src/screens/NewCheckupScreen.tsx`

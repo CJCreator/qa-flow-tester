@@ -27,6 +27,7 @@ import {
 } from '../lib/context';
 import { fillRoleRows, parseRoleList } from '../lib/import-roles';
 import { parseSessionFile } from '../lib/session-file';
+import { RowKeys } from '../lib/row-keys';
 import {
   capOf,
   clampMaxPages,
@@ -1378,6 +1379,8 @@ function SignInsSection({
   const rows = detailed || form.signIns.length > 1 || hasRowDetails(form.signIns[0]);
   const set = (i: number, change: Partial<SignInEntry>) =>
     onFormChange((f) => ({ ...f, signIns: f.signIns.map((s, n) => (n === i ? { ...s, ...change } : s)) }));
+  const rowKeys = useRef(new RowKeys()).current;
+  const keys = rowKeys.for(form.signIns.length);
   return (
     <div className="space-y-4">
       <p className="text-ink-soft">
@@ -1387,13 +1390,14 @@ function SignInsSection({
       {rows ? (
         form.signIns.map((s, i) => (
           <SignInRow
-            key={i}
+            key={keys[i]}
             value={s}
             legend={`Sign-in ${i + 1}`}
             rolePlaceholder={i === 0 ? 'member' : 'admin'}
             onChange={(patch) => set(i, patch)}
             onRemove={() => {
               setDetailed(true);
+              rowKeys.remove(i);
               onFormChange((f) => ({ ...f, signIns: f.signIns.filter((_, n) => n !== i) }));
             }}
           />
