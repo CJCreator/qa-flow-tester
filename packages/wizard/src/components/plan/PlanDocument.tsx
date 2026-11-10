@@ -39,7 +39,7 @@ import {
   overCapLine,
   wontRunReason,
 } from '../../lib/intent-view';
-import { Badge, ItemToggle, ReplanControl, SourceBadge, itemDomId, showItem } from './parts';
+import { Badge, ItemToggle, OPEN_ALL_EVENT, ReplanControl, SourceBadge, itemDomId, safeDecodeHash, showItem } from './parts';
 import {
   DndContext,
   closestCenter,
@@ -2010,14 +2010,23 @@ export function PlanDocument({ plan, actions }: { plan: ReviewPlan; actions: Pla
   usePlanKeyboardNavigation();
 
   useEffect(() => {
+    const openAll = () => setView((v) => ({ ...v, expandAll: true }));
+    window.addEventListener(OPEN_ALL_EVENT, openAll);
+    return () => window.removeEventListener(OPEN_ALL_EVENT, openAll);
+  }, []);
+
+  useEffect(() => {
     const handleHash = () => {
       const raw = window.location.hash.slice(1);
       if (!raw) return;
-      const decoded = decodeURIComponent(raw);
+      const decoded = safeDecodeHash(raw);
+      if (decoded === null) return;
       const target =
         document.getElementById(decoded) ||
         document.getElementById(itemDomId(decoded)) ||
-        document.querySelector<HTMLElement>(`[data-plan-item="${decoded}"]`);
+        Array.from(document.querySelectorAll<HTMLElement>('[data-plan-item]')).find(
+          (el) => el.dataset.planItem === decoded
+        );
       if (target) {
         let parent = target.parentElement;
         while (parent) {

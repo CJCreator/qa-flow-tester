@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | wizard | bug | todo |
+| P1 | S | wizard | bug | built |
 
 **Files you may edit (no others):**
 - `packages/wizard/src/screens/LandingScreen.tsx`
@@ -93,10 +93,10 @@ Run: `pnpm exec vitest run packages/wizard/tests/landing-audit.test.tsx packages
 
 ## Done when
 
-- [ ] The pricing section shows "Free while we’re in beta" and no price cards.
-- [ ] `$49`, `$199`, "Start Pro check-up", "VPC peering" appear nowhere in `LandingScreen.tsx`.
-- [ ] `docs/GTM_AND_PRICING.md` says Draft, not live.
-- [ ] The three test files above pass.
+- [x] The pricing section shows "Free while we’re in beta" and no price cards.
+- [x] `$49`, `$199`, "Start Pro check-up", "VPC peering" appear nowhere in `LandingScreen.tsx`.
+- [x] `docs/GTM_AND_PRICING.md` says Draft, not live.
+- [x] The three test files above pass.
 
 ## Notes
 

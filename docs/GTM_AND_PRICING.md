@@ -1,7 +1,7 @@
 # Go-To-Market (GTM) Strategy, User Research & Pricing Model
 
 **Document Reference:** G28, G30, G43, G44  
-**Status:** Approved & Active
+**Status:** Draft. Not live: no paid tier is built or charged. The product is free during the beta.
 
 ---
 

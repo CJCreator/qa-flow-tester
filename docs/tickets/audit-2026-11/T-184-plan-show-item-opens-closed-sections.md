@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | wizard | bug | todo |
+| P1 | S | wizard | bug | built |
 
 **Files you may edit (no others):**
 - `packages/wizard/src/components/plan/parts.tsx`
@@ -152,10 +152,10 @@ Run: `pnpm exec vitest run packages/wizard/tests/plan-show-item.test.ts` then `p
 
 ## Done when
 
-- [ ] `showItem` on an item inside a closed section opens every section and scrolls to it.
-- [ ] `#%` and a hash containing `"` no longer throw.
-- [ ] No template string builds a `[data-plan-item="…"]` selector from the hash in `handleHash`.
-- [ ] New test and `pnpm build` pass.
+- [x] `showItem` on an item inside a closed section opens every section and scrolls to it.
+- [x] `#%` and a hash containing `"` no longer throw.
+- [x] No template string builds a `[data-plan-item="…"]` selector from the hash in `handleHash`.
+- [x] New test and `pnpm build` pass.
 
 ## Notes
 

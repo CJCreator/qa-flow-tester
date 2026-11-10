@@ -225,4 +225,12 @@ describe('landing page', () => {
     const html = await landingMarkup();
     expect(html).toMatch(/<button[^>]*aria-pressed="false"[^>]*>Dark theme<\/button>/);
   });
+
+  it('the pricing section offers no paid tier', async () => {
+    const html = await landingMarkup();
+    expect(html).toContain('Free while we’re in beta');
+    expect(html).not.toContain('$49');
+    expect(html).not.toContain('$199');
+    expect(html).not.toContain('Start Pro check-up');
+  });
 });

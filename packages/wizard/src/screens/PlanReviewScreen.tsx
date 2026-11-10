@@ -175,8 +175,13 @@ export function PlanReviewScreen({
     }
   };
 
-  const flushToggles = async () => {
-    if (pendingTogglesRef.current.size === 0) return;
+  /** Saves the queued switches now. True when nothing was queued or the save worked. */
+  const flushToggles = async (): Promise<boolean> => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+    if (pendingTogglesRef.current.size === 0) return true;
     const items = Array.from(pendingTogglesRef.current.entries()).map(([id, skipped]) => ({ id, skipped }));
     pendingTogglesRef.current.clear();
     const affectedIds = items.map((i) => i.id);
@@ -185,6 +190,13 @@ export function PlanReviewScreen({
       setError('That change wasn’t saved, so it’s back as it was. Try it again.');
     }
     setSwitched((s) => Object.fromEntries(Object.entries(s).filter(([id]) => !affectedIds.includes(id))));
+    return ok;
+  };
+
+  /** Approves only after every switch is saved: an unsaved switch-off would still run. */
+  const approve = async (roles?: RoleCredential[]) => {
+    if (!(await flushToggles())) return;
+    onApprove(roles);
   };
 
   const switchItems = (ids: string[], skipped: boolean) => {
@@ -203,10 +215,7 @@ export function PlanReviewScreen({
 
   useEffect(() => {
     return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-        void flushToggles();
-      }
+      void flushToggles();
     };
   }, []);
 
@@ -439,7 +448,7 @@ export function PlanReviewScreen({
               <SignInAgain
                 needsSignIn={needsSignIn}
                 onReadyChange={setSignInReady}
-                onSubmit={(roles) => onApprove(roles)}
+                onSubmit={(roles) => void approve(roles)}
               />
             ) : (
               <>
@@ -473,7 +482,7 @@ export function PlanReviewScreen({
             className="btn-primary shrink-0"
             disabled={busy || approving || !!plan.noTests}
             aria-describedby={approveOff && !approving ? 'approve-off-reason' : undefined}
-            onClick={() => onApprove()}
+            onClick={() => void approve()}
           >
             {approving ? (
               <Spinner label="Starting the tests…" announce={false} />

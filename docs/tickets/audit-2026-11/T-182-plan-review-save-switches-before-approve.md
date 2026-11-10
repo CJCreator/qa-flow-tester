@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | wizard | bug | todo |
+| P1 | S | wizard | bug | built |
 
 **Files you may edit (no others):**
 - `packages/wizard/src/screens/PlanReviewScreen.tsx`
@@ -133,10 +133,10 @@ Run: `pnpm exec vitest run packages/wizard/tests/plan-review-approve.test.ts` th
 
 ## Done when
 
-- [ ] `flushToggles` returns `Promise<boolean>` and clears the debounce timer itself.
-- [ ] Both approve controls call `approve`, not `onApprove`.
-- [ ] A failed save shows the existing error and does not approve.
-- [ ] The new test and `pnpm build` pass.
+- [x] `flushToggles` returns `Promise<boolean>` and clears the debounce timer itself.
+- [x] Both approve controls call `approve`, not `onApprove`.
+- [x] A failed save shows the existing error and does not approve.
+- [x] The new test and `pnpm build` pass.
 
 ## Notes
 

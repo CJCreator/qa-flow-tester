@@ -7,10 +7,19 @@ export function itemDomId(itemId: string): string {
   return `item-${itemId.replace(/[^A-Za-z0-9_-]+/g, '_')}`;
 }
 
-/** Scrolls to a Plan Item and briefly marks it. */
-export function showItem(itemId: string): void {
-  const el = document.getElementById(itemDomId(itemId));
-  if (!el) return;
+/** Fired when a Plan Item is not on the page yet: the Plan opens every section, then the item is found. */
+export const OPEN_ALL_EVENT = 'plan:open-all';
+
+/** Decodes an address hash; null when it is not valid percent-encoding. */
+export function safeDecodeHash(raw: string): string | null {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return null;
+  }
+}
+
+function reveal(el: HTMLElement): void {
   // A collapsed section opens first so the item can be seen.
   let parent = el.parentElement;
   while (parent) {
@@ -18,8 +27,23 @@ export function showItem(itemId: string): void {
     parent = parent.parentElement;
   }
   el.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
-  el.classList.add('ring-2', 'ring-stamp');
-  window.setTimeout(() => el.classList.remove('ring-2', 'ring-stamp'), 2500);
+}
+
+/** Scrolls to a Plan Item. An item inside a closed section or past the first 35 is opened first. */
+export function showItem(itemId: string): void {
+  const el = document.getElementById(itemDomId(itemId));
+  if (el) {
+    reveal(el);
+    return;
+  }
+  window.dispatchEvent(new Event(OPEN_ALL_EVENT));
+  // Two frames: one for the Plan to open its sections, one for their children to render.
+  window.requestAnimationFrame(() =>
+    window.requestAnimationFrame(() => {
+      const later = document.getElementById(itemDomId(itemId));
+      if (later) reveal(later);
+    })
+  );
 }
 
 /** The plan's badge: the shared Badge, with the plan's older tone name 'quiet' for neutral. */
