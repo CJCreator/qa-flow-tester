@@ -50,7 +50,7 @@ export function defaultTestCase(): TestCase {
     id: 'TC-DEFAULT-001',
     flowId: 'landing-verification',
     name: 'Home page sanity check',
-    role: 'anonymous',
+    role: 'visitor',
     startPage: '/',
     steps: [{ action: 'wait', name: 'Wait for page load' }],
     expectations: { url: { pattern: '/*' } },

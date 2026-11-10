@@ -254,7 +254,19 @@ export class BrowserManager {
   async close(): Promise<void> {
     const closes: Promise<void>[] = [];
     for (const b of this.browsers.values()) {
-      closes.push(Promise.race([b.close().catch(() => {}), new Promise<void>((resolve) => setTimeout(resolve, 3000))]));
+      closes.push(
+        (async () => {
+          let timer: ReturnType<typeof setTimeout> | undefined;
+          const giveUp = new Promise<void>((resolve) => {
+            timer = setTimeout(resolve, 3000);
+          });
+          try {
+            await Promise.race([b.close().catch(() => {}), giveUp]);
+          } finally {
+            if (timer) clearTimeout(timer);
+          }
+        })()
+      );
     }
     await Promise.all(closes);
     this.browsers.clear();

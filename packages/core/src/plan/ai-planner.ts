@@ -26,6 +26,7 @@ import { linkKey, pathOf, type SharedLink, type SiteGraph } from './site-graph.j
 import type { PageCoverageInfo } from './sampling.js';
 import type { ParsedRequirementHint } from '../discovery/context-parser.js';
 import { selectorForStep } from './selector-order.js';
+import { hostOf } from './markdown.js';
 import {
   BIND_BATCH,
   defaultBinding,
@@ -246,14 +247,6 @@ export function parseJsonAnswer(text: string): any {
 function plannedAs(page: PageInventoryItem): string {
   const reached = page.reachedBy?.length ? page.reachedBy : ['visitor'];
   return reached[reached.length - 1];
-}
-
-function hostOf(address: string): string {
-  try {
-    return new URL(address).host;
-  } catch {
-    return address;
-  }
 }
 
 /** A Navigation Check's name when the AI didn't give one. */

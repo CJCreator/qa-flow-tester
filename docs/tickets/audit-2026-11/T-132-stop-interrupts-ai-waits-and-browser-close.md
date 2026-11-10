@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P2 | S | core | bug | todo |
+| P2 | S | core | bug | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/plan/ai-budget.ts`
@@ -145,10 +145,10 @@ Commands: `pnpm exec vitest run packages/core/tests/ai-budget-pacing.test.ts pac
 
 ## Done when
 
-- [ ] `await this.sleep(` appears only inside `pause`
-- [ ] The new test passes; existing pacing tests pass (their recorded `waits` are unchanged)
-- [ ] `BrowserManager.close()` clears its timer
-- [ ] `pnpm build` passes
+- [x] `await this.sleep(` appears only inside `pause`
+- [x] The new test passes; existing pacing tests pass (their recorded `waits` are unchanged)
+- [x] `BrowserManager.close()` clears its timer
+- [x] `pnpm build` passes
 
 ## Notes
 

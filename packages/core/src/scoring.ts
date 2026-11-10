@@ -7,7 +7,7 @@ import type {
   FindingSeverity,
   SiteAspectGrades,
 } from '@qa/types';
-import { ASPECT_CHECKERS, aspectOfFinding, problemKey } from '@qa/types';
+import { ASPECT_CHECKERS, ASPECTS, aspectOfFinding, problemKey } from '@qa/types';
 import { isSiteScopedFinding } from './finding-groups.js';
 
 export { ASPECT_CHECKERS };
@@ -98,14 +98,7 @@ export function calculateSiteAspectGrades(findings: Finding[], options: ScoringO
     'Looks and reads well': { grade: 'A', score: 100, findings: [] },
   };
 
-  const aspectList: AspectType[] = [
-    'Works',
-    'Accessible',
-    'Fast and mobile',
-    'Findable',
-    'Protected',
-    'Looks and reads well',
-  ];
+  const aspectList = ASPECTS;
   const ran = options.checkersRun ? new Set(options.checkersRun) : undefined;
 
   for (const aspect of aspectList) {

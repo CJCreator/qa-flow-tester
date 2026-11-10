@@ -15,6 +15,7 @@ import { needsTestCopy } from '../live-site.js';
 import type { PlannerForm } from './ai-planner.js';
 import { pathOf } from './site-graph.js';
 import { normaliseRoleText, personaName, resolveRole, resolveRoleList } from './spec-roles.js';
+import { UNIT_KINDS } from './sources.js';
 
 /**
  * The Fixed-Rule Fallback reading the Product Context (ADR 0009, 0020, 0023). Pure and deterministic:
@@ -68,7 +69,6 @@ export interface PlanFromSpecOutput {
   documented: { total: number; reachedIds: string[] };
 }
 
-const UNIT_KINDS = new Set(['journey', 'route', 'negative']);
 /** Roles of controls a step may click. Fields are never filled: values are never invented. */
 const NOT_CLICKABLE = new Set(['textbox', 'searchbox', 'spinbutton', 'combobox', 'slider']);
 /** Words that finish something for good; the Safety Filter's own list does not name them all. */

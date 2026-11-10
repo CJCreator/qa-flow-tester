@@ -143,14 +143,6 @@ export class ReportGenerator {
       lines.push(``);
     }
 
-    if (report.usedFallbackDiscovery) {
-      lines.push(`> [!WARNING]`);
-      lines.push(
-        `> **AI discovery did not run for this release.** Test cases below came from the generic template fallback, not real AI-driven flow analysis. This verdict may not reflect the app's actual behavior — check your AI provider/API key and re-run.`
-      );
-      lines.push(``);
-    }
-
     // Which roles were not tested, and how much of the document was reached (only when there is something to say).
     const documentedLine = documentedItemsLine(report.documentedItems);
     if ((report.rolesNotTested?.length ?? 0) > 0 || documentedLine) {

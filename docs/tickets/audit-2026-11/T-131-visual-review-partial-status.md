@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | core | bug | todo |
+| P1 | S | core | bug | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/ai/visual-review.ts`
@@ -106,9 +106,9 @@ Command: `pnpm exec vitest run packages/core/tests/visual-review.test.ts`, then 
 
 ## Done when
 
-- [ ] The new test passes and the six existing tests still pass
-- [ ] `TEST_MOCK_AI` no longer appears in `visual-review.ts`
-- [ ] `pnpm build` passes
+- [x] The new test passes and the six existing tests still pass
+- [x] `TEST_MOCK_AI` no longer appears in `visual-review.ts`
+- [x] `pnpm build` passes
 
 ## Notes
 

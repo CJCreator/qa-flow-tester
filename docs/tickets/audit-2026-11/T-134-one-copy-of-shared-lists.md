@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P3 | S | core | inconsistency | todo |
+| P3 | S | core | inconsistency | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/scoring.ts`
@@ -113,9 +113,9 @@ No new test: the values do not change. Run:
 
 ## Done when
 
-- [ ] The six area names appear as a literal list nowhere in `packages/core/src`
-- [ ] `MUTATING_METHODS`, `UNIT_KINDS` and `hostOf` are each declared once in `packages/core/src`
-- [ ] `pnpm build` and the core unit tests pass
+- [x] The six area names appear as a literal list nowhere in `packages/core/src`
+- [x] `MUTATING_METHODS`, `UNIT_KINDS` and `hostOf` are each declared once in `packages/core/src`
+- [x] `pnpm build` and the core unit tests pass
 
 ## Notes
 

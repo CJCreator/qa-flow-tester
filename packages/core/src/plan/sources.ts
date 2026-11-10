@@ -131,7 +131,7 @@ export function deriveDenials(
   return out;
 }
 
-const UNIT_KINDS = new Set(['journey', 'route', 'negative']);
+export const UNIT_KINDS = new Set(['journey', 'route', 'negative']);
 
 /**
  * What "documented items" counts: the User Flows, route rows and Negative specs, once the documents

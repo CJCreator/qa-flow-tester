@@ -70,7 +70,7 @@ describe('Plan Quality Baseline (G6)', () => {
   it('generates a default sanity test case when no journeys exist', () => {
     const defaultTc = defaultTestCase();
     expect(defaultTc.id).toBe('TC-DEFAULT-001');
-    expect(defaultTc.role).toBe('anonymous');
+    expect(defaultTc.role).toBe('visitor');
     expect(defaultTc.steps.length).toBeGreaterThan(0);
     expect(defaultTc.steps[0].name).toBeTruthy();
   });

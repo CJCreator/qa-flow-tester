@@ -1,6 +1,6 @@
 import type { NavigationCheck, PlanPage, ReviewPlan, TestCaseExpectations } from '@qa/types';
 
-function hostOf(address: string): string {
+export function hostOf(address: string): string {
   try {
     return new URL(address).host;
   } catch {

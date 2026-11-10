@@ -45,24 +45,20 @@ export class VisualReviewer {
   ): Promise<VisualReviewResult> {
     const totalCount = screens.length;
 
-    // Graceful skip if no AI provider / key available
-    if (!aiProvider || (aiProvider.providerType === 'mock' && !process.env.TEST_MOCK_AI)) {
-      // In production without real key, or mock when not testing mock
-      if (!aiProvider) {
-        return {
-          status: 'skipped',
-          reviewedCount: 0,
-          totalCount,
-          findings: [],
-          remainingScreens: screens,
-          note: 'AI visual review skipped — no AI API key configured',
-        };
-      }
+    // No AI: nothing is looked at.
+    if (!aiProvider) {
+      return {
+        status: 'skipped',
+        reviewedCount: 0,
+        totalCount,
+        findings: [],
+        remainingScreens: screens,
+        note: 'AI visual review skipped — no AI API key configured',
+      };
     }
 
     const maxCalls = options?.maxCalls ?? 10;
     const toReview = screens.slice(0, maxCalls);
-    const remaining = screens.slice(maxCalls);
     const findings: Finding[] = [];
     let reviewedCount = 0;
     /** Why the review stopped early, when it did. */
@@ -118,7 +114,8 @@ export class VisualReviewer {
     }
 
     const looked = reviewedCount + unreadable;
-    const isPartial = looked < totalCount && remaining.length > 0;
+    // Partial whenever a screen is left, whether the cap or a failure stopped the review.
+    const isPartial = looked < totalCount;
     const note = isPartial
       ? `The AI looked at ${reviewedCount} of ${totalCount} screens; the rest can be finished from the report.`
       : `The AI looked at ${reviewedCount} of ${totalCount} screens.`;

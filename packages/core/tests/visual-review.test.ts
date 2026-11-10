@@ -150,4 +150,23 @@ describe('AI Visual and Copy Review (visual-review.ts)', () => {
     };
     expect(releaseVerdict([ai]).ready).toBe(true);
   });
+
+  it('is partial when the AI fails part-way, even under the cap', async () => {
+    let callCount = 0;
+    const failingProvider: AIProvider = {
+      providerType: 'mock',
+      generateText: async () => {
+        callCount++;
+        if (callCount === 2) throw new Error('AI service connection dropped');
+        return JSON.stringify({ issues: [] });
+      },
+    };
+
+    const result = await reviewer.reviewScreens(mockScreens, failingProvider, { maxCalls: 10 });
+    expect(result.status).toBe('partial');
+    expect(result.reviewedCount).toBe(1);
+    expect(result.remainingScreens).toHaveLength(2);
+    expect(result.note).toContain('the rest can be finished from the report');
+    expect(result.stoppedBy).toBeInstanceOf(Error);
+  });
 });

@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P2 | S | core | inconsistency | todo |
+| P2 | S | core | inconsistency | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/html-report.ts`
@@ -101,9 +101,9 @@ then `pnpm exec vitest run packages/core/tests` and `pnpm build`.
 
 ## Done when
 
-- [ ] None of the old strings remains in `packages/core/src`
-- [ ] `defaultTestCase().role` is `'visitor'`
-- [ ] Core unit tests and `pnpm build` pass
+- [x] None of the old strings remains in `packages/core/src`
+- [x] `defaultTestCase().role` is `'visitor'`
+- [x] Core unit tests and `pnpm build` pass
 
 ## Notes
 

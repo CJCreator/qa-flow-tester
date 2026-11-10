@@ -27,7 +27,7 @@ describe('Plan building in @qa/core (T-208)', () => {
     const tc = defaultTestCase();
     expect(tc.id).toBe('TC-DEFAULT-001');
     expect(tc.flowId).toBe('landing-verification');
-    expect(tc.role).toBe('anonymous');
+    expect(tc.role).toBe('visitor');
     expect(tc.startPage).toBe('/');
   });
 

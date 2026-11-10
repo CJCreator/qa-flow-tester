@@ -1,7 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import type { AspectGradeDelta, AspectType, Finding, PageSpeedMap, SiteAspectGrades, SiteHistoryDiff } from '@qa/types';
-import { findingFingerprint } from '@qa/types';
+import { findingFingerprint, ASPECTS } from '@qa/types';
 
 export interface SiteHistoryEntry {
   runId: string;
@@ -72,14 +72,7 @@ export class SiteHistoryManager {
     const openFindings = currentFpList.filter((fp) => prevFpSet.has(fp));
     const fixedFindings = Array.from(prevFpSet).filter((fp) => !currentFingerprints.has(fp));
 
-    const aspectList: AspectType[] = [
-      'Works',
-      'Accessible',
-      'Fast and mobile',
-      'Findable',
-      'Protected',
-      'Looks and reads well',
-    ];
+    const aspectList = ASPECTS;
 
     const aspectDeltas: Record<AspectType, AspectGradeDelta> = {} as any;
     for (const aspect of aspectList) {

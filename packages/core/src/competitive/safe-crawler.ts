@@ -7,6 +7,7 @@ import { EvidenceCollector } from '../evidence.js';
 import { isSameSite } from '../same-site.js';
 import { RobotsPolicy } from './robots.js';
 import { getBrowserPolicy, installRequestGuard } from '../browser.js';
+import { MUTATING_METHODS } from '../live-site.js';
 
 export interface SafeCrawlerOptions {
   entryUrl: string;
@@ -47,7 +48,6 @@ const MAX_CRAWL_STEPS = 5;
 const DEFAULT_SCAN_PAGES = 25;
 const MAX_SCAN_PAGES = 60;
 const DEFAULT_PAGE_DELAY_MS = 2000;
-const MUTATING_METHODS = ['POST', 'PUT', 'DELETE', 'PATCH'];
 /** Links to files rather than pages. */
 const NOT_A_PAGE =
   /\.(pdf|zip|gz|rar|7z|jpe?g|png|gif|webp|svg|ico|mp4|webm|mp3|wav|docx?|xlsx?|pptx?|csv|exe|dmg|apk)$/i;

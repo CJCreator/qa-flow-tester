@@ -161,6 +161,22 @@ export class PacedAI implements AIProvider {
 
   private sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
+  /** A wait that ends early when the run is stopped or asked to finish. The caller's next check stops it. */
+  private async pause(ms: number): Promise<void> {
+    const signals = [this.signal, this.finishSignal].filter((s): s is AbortSignal => !!s);
+    if (signals.some((s) => s.aborted)) return;
+    let wake: (() => void) | undefined;
+    const woken = new Promise<void>((resolve) => {
+      wake = resolve;
+    });
+    for (const s of signals) s.addEventListener('abort', wake!, { once: true });
+    try {
+      await Promise.race([this.sleep(ms), woken]);
+    } finally {
+      for (const s of signals) s.removeEventListener('abort', wake!);
+    }
+  }
+
   /** Requests still allowed. */
   get left(): number {
     return Math.max(0, Math.min(this.allowance, this.cap?.requests ?? Infinity) - this.used);
@@ -224,8 +240,9 @@ export class PacedAI implements AIProvider {
       this.used++;
       const wait = start - now;
       try {
-        if (wait > 0) await this.sleep(wait);
+        if (wait > 0) await this.pause(wait);
         stopIfAborted(this.signal);
+        if (this.finishSignal?.aborted) throw new StoppedEarlyError();
       } catch (err) {
         this.used--; // stopped before the request was sent
         throw err;
@@ -255,7 +272,9 @@ export class PacedAI implements AIProvider {
           continue;
         }
         if (rateLimited >= RATE_LIMIT_WAITS_MS.length) throw err;
-        await this.sleep(RATE_LIMIT_WAITS_MS[rateLimited++]);
+        await this.pause(RATE_LIMIT_WAITS_MS[rateLimited++]);
+        stopIfAborted(this.signal);
+        if (this.finishSignal?.aborted) throw new StoppedEarlyError();
         continue;
       }
       this.tally(options.stage ?? 'other', result);

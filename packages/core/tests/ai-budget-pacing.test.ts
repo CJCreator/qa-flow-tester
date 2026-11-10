@@ -102,6 +102,36 @@ describe('PacedAI concurrency', () => {
     // The second and third requests are reserved one and two gaps after the first.
     expect(sorted[1] - sorted[0]).toBeGreaterThanOrEqual(900);
   });
+
+  it('ends a rate-limit wait as soon as the run is stopped', async () => {
+    const stop = new AbortController();
+    let release: (() => void) | undefined;
+    let attempts = 0;
+    const provider: AIProvider = {
+      providerType: 'openai',
+      complete: async () => {
+        attempts++;
+        if (attempts === 1) throw new Error('429 rate limit exceeded');
+        return { text: 'ok', model: 'mock', finishReason: 'stop' };
+      },
+      generateText: async () => {
+        attempts++;
+        if (attempts === 1) throw new Error('429 rate limit exceeded');
+        return 'ok';
+      },
+    };
+    const paced = new PacedAI(provider, Infinity, {
+      gapMs: 0,
+      signal: stop.signal,
+      sleep: () => new Promise<void>((resolve) => { release = resolve; }),
+    });
+    const asking = paced.generateText([{ role: 'user', content: 'x' }]).catch((e) => e);
+    await Promise.resolve();
+    stop.abort();
+    const outcome = await asking;
+    expect(outcome).toBeInstanceOf(Error);
+    release?.();
+  }, 2000);
 });
 
 describe('PacedAI cap', () => {
