@@ -16,12 +16,14 @@ export class SourceLocator {
       return cached ?? undefined;
     }
 
-    const result = await this.scanDirectory(this.repoRoot, testId);
+    // The id comes from the checked site's page: escape it, and no `g` flag (test() would keep state).
+    const pattern = new RegExp(`data-testid=["']${testId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']`);
+    const result = await this.scanDirectory(this.repoRoot, pattern);
     this.cache.set(testId, result || null);
     return result;
   }
 
-  private async scanDirectory(dir: string, testId: string, depth = 0): Promise<SourceLocation | undefined> {
+  private async scanDirectory(dir: string, pattern: RegExp, depth = 0): Promise<SourceLocation | undefined> {
     if (depth > 8) return undefined;
 
     let entries: string[];
@@ -52,16 +54,14 @@ export class SourceLocator {
       }
 
       if (stat.isDirectory()) {
-        const found = await this.scanDirectory(fullPath, testId, depth + 1);
+        const found = await this.scanDirectory(fullPath, pattern, depth + 1);
         if (found) return found;
       } else if (/\.(tsx|jsx|ts|js|vue|svelte|html)$/.test(entry)) {
         try {
           const content = await fs.readFile(fullPath, 'utf8');
-          // The id comes from the checked site's page: escape it, and no `g` flag (test() would keep state).
-          const regex = new RegExp(`data-testid=["']${testId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']`);
           const lines = content.split('\n');
           for (let i = 0; i < lines.length; i++) {
-            if (regex.test(lines[i])) {
+            if (pattern.test(lines[i])) {
               const relativePath = path.relative(this.repoRoot, fullPath).replace(/\\/g, '/');
               return {
                 file: relativePath,

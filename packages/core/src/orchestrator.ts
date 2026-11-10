@@ -1566,8 +1566,9 @@ export class FlowTestOrchestrator {
 
     // Build Traceability Matrix
     const traceability: TraceabilityEntry[] = [];
+    const testById = new Map(testCasesToRun.map((t) => [t.id, t]));
     for (const r of results) {
-      const tc = testCasesToRun.find((t) => t.id === r.testCaseId);
+      const tc = testById.get(r.testCaseId);
       const reqId = tc?.requirementId || `REQ-${tc?.flowId || r.flowId}`;
       const lastStep = r.stepEvidence[r.stepEvidence.length - 1];
       const name = tc?.name ?? options.notRun?.find((n) => n.id === r.testCaseId)?.name;
@@ -1620,11 +1621,11 @@ export class FlowTestOrchestrator {
     // "N of M documented items reached": a documented item is reached when its test actually ran.
     const documented = testCasesToRun.filter((tc) => tc.docSource);
     const notFoundDocs = options.documentedNotFound ?? [];
+    const ranIds = new Set(results.filter((r) => r.status !== 'Skipped').map((r) => r.testCaseId));
     const documentedItems =
       documented.length + notFoundDocs.length > 0
         ? {
-            reached: documented.filter((tc) => results.some((r) => r.testCaseId === tc.id && r.status !== 'Skipped'))
-              .length,
+            reached: documented.filter((tc) => ranIds.has(tc.id)).length,
             total: documented.length + notFoundDocs.length,
             notFound: notFoundDocs,
           }

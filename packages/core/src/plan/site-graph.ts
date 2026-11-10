@@ -50,12 +50,15 @@ export function linkKey(link: Pick<PageLink, 'name' | 'to'>): string {
  * Click paths follow links breadth-first from the start page, so each is the shortest one.
  */
 export function buildSiteGraph(pages: PageInventoryItem[], startPath: string): SiteGraph {
-  const onPages = new Map<string, { link: PageLink; pages: string[]; seenBy: Set<string> }>();
+  const onPages = new Map<string, { link: PageLink; pages: string[]; has: Set<string>; seenBy: Set<string> }>();
   for (const page of pages) {
     for (const link of page.links || []) {
       const key = linkKey(link);
-      const entry = onPages.get(key) ?? { link, pages: [], seenBy: new Set<string>() };
-      if (!entry.pages.includes(page.urlPath)) entry.pages.push(page.urlPath);
+      const entry = onPages.get(key) ?? { link, pages: [], has: new Set<string>(), seenBy: new Set<string>() };
+      if (!entry.has.has(page.urlPath)) {
+        entry.has.add(page.urlPath);
+        entry.pages.push(page.urlPath);
+      }
       for (const who of link.seenBy || page.reachedBy || ['visitor']) entry.seenBy.add(who);
       onPages.set(key, entry);
     }
@@ -87,8 +90,8 @@ export function buildSiteGraph(pages: PageInventoryItem[], startPath: string): S
   if (start) {
     clickPaths.set(start.urlPath, []);
     const queue = [start];
-    while (queue.length > 0) {
-      const page = queue.shift()!;
+    for (let head = 0; head < queue.length; head++) {
+      const page = queue[head];
       const route = clickPaths.get(page.urlPath)!;
       for (const link of page.links || []) {
         if (link.leavesSite) continue;

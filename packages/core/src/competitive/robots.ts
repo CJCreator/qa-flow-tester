@@ -111,7 +111,7 @@ export class RobotsPolicy {
   isAllowed(pathAndQuery: string): boolean {
     let best: { allow: boolean; length: number } | null = null;
     for (const rule of this.rules) {
-      if (!matches(rule.pattern, pathAndQuery)) continue;
+      if (!patternRegex(rule.pattern).test(pathAndQuery)) continue;
       const length = rule.pattern.length;
       // Longest pattern wins; on a tie, Allow wins.
       if (!best || length > best.length || (length === best.length && rule.allow)) {
@@ -122,12 +122,20 @@ export class RobotsPolicy {
   }
 }
 
-function matches(pattern: string, target: string): boolean {
-  const anchored = pattern.endsWith('$');
-  const body = anchored ? pattern.slice(0, -1) : pattern;
-  const regex = body
-    .split('*')
-    .map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&'))
-    .join('.*');
-  return new RegExp(`^${regex}${anchored ? '$' : ''}`).test(target);
+/** The compiled form of each robots pattern, built once (isAllowed runs for every link and request). */
+const compiled = new Map<string, RegExp>();
+
+function patternRegex(pattern: string): RegExp {
+  let regex = compiled.get(pattern);
+  if (!regex) {
+    const anchored = pattern.endsWith('$');
+    const body = anchored ? pattern.slice(0, -1) : pattern;
+    const source = body
+      .split('*')
+      .map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&'))
+      .join('.*');
+    regex = new RegExp(`^${source}${anchored ? '$' : ''}`);
+    compiled.set(pattern, regex);
+  }
+  return regex;
 }

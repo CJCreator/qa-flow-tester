@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P3 | S | core | speed | todo |
+| P3 | S | core | speed | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/competitive/robots.ts`
@@ -182,9 +182,9 @@ No new test: results are unchanged. Run:
 
 ## Done when
 
-- [ ] `new RegExp(` is not called inside `isAllowed`'s loop or inside `scanDirectory`'s loop
-- [ ] `queue.shift()` and `entry.pages.includes(` are gone from `site-graph.ts`
-- [ ] `pnpm build` and the core unit tests pass
+- [x] `new RegExp(` is not called inside `isAllowed`'s loop or inside `scanDirectory`'s loop
+- [x] `queue.shift()` and `entry.pages.includes(` are gone from `site-graph.ts`
+- [x] `pnpm build` and the core unit tests pass
 
 ## Notes
 
