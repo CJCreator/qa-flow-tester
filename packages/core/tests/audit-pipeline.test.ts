@@ -961,7 +961,7 @@ describe('audit pipeline: runAuditPipeline', () => {
     crawl.coverage.skipped = [
       { urlPath: '/server-err', why: 'http-error', status: 503 },
       { urlPath: '/hanging', why: 'timeout', detail: '30000ms' },
-      { urlPath: '/conn-reset', why: 'did-not-load' },
+      { urlPath: '/conn-reset', why: 'did-not-load', detail: 'net' },
       { urlPath: '/excess', why: 'page-limit' },
       { urlPath: '/deep', why: 'depth-limit' },
       { urlPath: '/admin', why: 'sign-in' },

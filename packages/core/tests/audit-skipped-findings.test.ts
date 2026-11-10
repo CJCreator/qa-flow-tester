@@ -5,6 +5,7 @@ import {
   createSkippedPageFindings,
   formatWaitTime,
   isSiteCausedSkip,
+  isSiteCausedSkippedPage,
   SITE_CAUSED_SKIP_REASONS,
 } from '../src/audit/pipeline/skipped-findings.js';
 import { hasClaimWords } from '../src/audit/ai/claim-words.js';
@@ -34,6 +35,21 @@ describe('skipped-findings (T-84, ADR 0018)', () => {
       for (const reason of toolCaused) {
         expect(isSiteCausedSkip(reason)).toBe(false);
       }
+    });
+  });
+
+  describe('isSiteCausedSkippedPage', () => {
+    it.each([
+      [{ why: 'http-error' as const }, true],
+      [{ why: 'timeout' as const, detail: '30000ms' }, true],
+      [{ why: 'did-not-load' as const, detail: 'net' }, true],
+      [{ why: 'did-not-load' as const, detail: 'aborted' }, false],
+      [{ why: 'did-not-load' as const, detail: 'other' }, false],
+      [{ why: 'did-not-load' as const, detail: 'Error' }, false],
+      [{ why: 'did-not-load' as const }, false],
+      [{ why: 'robots' as const }, false],
+    ])('evaluates %o as %s', (skip, expected) => {
+      expect(isSiteCausedSkippedPage(skip)).toBe(expected);
     });
   });
 
@@ -120,7 +136,7 @@ describe('skipped-findings (T-84, ADR 0018)', () => {
         { urlPath: '/secret-admin', why: 'sign-in' },
         { urlPath: '/cart/pay', why: 'payment' },
         { urlPath: '/blocked-by-robots', why: 'robots' },
-        { urlPath: '/net-down', why: 'did-not-load' },
+        { urlPath: '/net-down', why: 'did-not-load', detail: 'net' },
       ];
 
       let id = 1;
@@ -134,6 +150,19 @@ describe('skipped-findings (T-84, ADR 0018)', () => {
         'Page timed out after 30s',
         'Page failed to load',
       ]);
+    });
+
+    it('filters out tool-caused did-not-load skips without net detail', () => {
+      const skips: SkippedPageInfo[] = [
+        { urlPath: '/a', why: 'did-not-load', detail: 'net' },
+        { urlPath: '/b', why: 'did-not-load', detail: 'aborted' },
+        { urlPath: '/c', why: 'did-not-load' },
+      ];
+      let id = 1;
+      const ids = { next: () => `AF-${String(id++).padStart(3, '0')}` };
+      const findings = createSkippedPageFindings(skips, ids);
+      expect(findings).toHaveLength(1);
+      expect(findings[0].urlPath).toBe('/a');
     });
   });
 });

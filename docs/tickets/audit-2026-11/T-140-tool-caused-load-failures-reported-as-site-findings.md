@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | core/audit | bug | todo |
+| P1 | S | core/audit | bug | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/audit/pipeline/skipped-findings.ts`
@@ -117,9 +117,9 @@ Run: `pnpm exec vitest run packages/core/tests/audit-skipped-findings.test.ts pa
 
 ## Done when
 
-- [ ] A `did-not-load` skip with `detail` other than `'net'` gives no finding.
-- [ ] The Skipped Page is still listed in `result.coverage.skipped` (no change there).
-- [ ] Tests and `pnpm build` pass.
+- [x] A `did-not-load` skip with `detail` other than `'net'` gives no finding.
+- [x] The Skipped Page is still listed in `result.coverage.skipped` (no change there).
+- [x] Tests and `pnpm build` pass.
 
 ## Notes
 

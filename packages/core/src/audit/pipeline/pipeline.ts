@@ -73,7 +73,7 @@ import {
 } from '../documents/write-all.js';
 import { areaGrades, labPerformanceScore, type CheckedAreas } from './grades.js';
 import type { AuditPageRecorder, RecordedPage } from './page-recorder.js';
-import { createSkippedPageFinding, isSiteCausedSkip } from './skipped-findings.js';
+import { createSkippedPageFinding, isSiteCausedSkip, isSiteCausedSkippedPage } from './skipped-findings.js';
 
 /** The site-level stage functions; the defaults are the real modules. Tests pass fakes. */
 export interface SiteStages {
@@ -488,7 +488,7 @@ export async function runAuditPipeline(
 
   // Site-caused Skipped Pages become findings (T-84, ADR 0018)
   for (const s of crawl.coverage.skipped) {
-    if (isSiteCausedSkip(s.why)) {
+    if (isSiteCausedSkippedPage(s)) {
       unscored.push(createSkippedPageFinding(s, ids.next()));
     }
   }

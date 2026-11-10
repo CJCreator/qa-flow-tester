@@ -24,6 +24,16 @@ export function isSiteCausedSkip(why: RouteSkipReason): boolean {
 }
 
 /**
+ * True when this Skipped Page failed because of the site. A `did-not-load` skip counts only when the
+ * Spider recorded a network failure (`detail: 'net'`); a closed page, a crashed browser or a page that was
+ * never requested is the tool's own failure and stays "not checked" (ADR 0042).
+ */
+export function isSiteCausedSkippedPage(skip: Pick<SkippedPageInfo, 'why' | 'detail'>): boolean {
+  if (skip.why === 'did-not-load') return skip.detail === 'net';
+  return isSiteCausedSkip(skip.why);
+}
+
+/**
  * Formats timeout duration from skip detail string (e.g. '30000ms' -> '30s', '10s' -> '10s').
  * Defaults to '30s' if unset or unparseable.
  */
@@ -86,7 +96,7 @@ export function createSkippedPageFindings(
 ): UnscoredAuditFinding[] {
   const findings: UnscoredAuditFinding[] = [];
   for (const s of skipped) {
-    if (isSiteCausedSkip(s.why)) {
+    if (isSiteCausedSkippedPage(s)) {
       findings.push(createSkippedPageFinding(s, ids.next()));
     }
   }
