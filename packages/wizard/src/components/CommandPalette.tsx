@@ -327,7 +327,14 @@ export function CommandPalette({
           title: 'Download the plan as Markdown',
           category: 'Plan Review',
           keywords: ['export', 'save', 'md'],
-          run: () => void downloadPlanMarkdown(),
+          run: () => {
+            downloadPlanMarkdown().catch((err: unknown) => {
+              console.warn(
+                '[Release check-up] The plan could not be downloaded:',
+                err instanceof Error ? err.message : err
+              );
+            });
+          },
         }
       );
     }

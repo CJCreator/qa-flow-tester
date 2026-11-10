@@ -261,6 +261,7 @@ export function Report({
   const { pages, statuses } = useMemo(() => pageResults(report), [report]);
   const [pageFilter, setPageFilter] = useState<string | null>(null);
   const [mapOpen, setMapOpen] = useState(pages.length <= 6);
+  const [fileError, setFileError] = useState<string | null>(null);
   const problemsRef = useRef<HTMLElement>(null);
   const coverage = report.coverage;
   const printing = usePrinting();
@@ -521,12 +522,18 @@ export function Report({
                   key={file}
                   type="button"
                   className="btn-quiet btn-sm"
-                  onClick={() => void downloadRunFile(report.runId, file)}
+                  onClick={() => {
+                    setFileError(null);
+                    downloadRunFile(report.runId, file).catch((err: unknown) =>
+                      setFileError(err instanceof Error ? err.message : 'That file couldn’t be downloaded. Try again.')
+                    );
+                  }}
                 >
                   Download {file}
                 </button>
               ))}
             </div>
+            {fileError && <ErrorMessage>{fileError}</ErrorMessage>}
             <dl className="grid gap-x-4 gap-y-1 sm:grid-cols-[12rem_1fr]">
               <dt className="text-ink-soft">Verdict, in full</dt>
               <dd className="text-ink">{summary.reason}</dd>
@@ -1003,6 +1010,7 @@ function Problems({
 }) {
   const [filters, setFilters] = useState<Filters>({ search: '', bucket: 'all', aspect: 'all' });
   const [showHidden, setShowHidden] = useState(false);
+  const [undoError, setUndoError] = useState<string | null>(null);
   const withFilters = report.findings.length > FILTER_ABOVE;
   const problemPages = useMemo(
     () => [...new Set(report.findings.map((f) => f.where.urlPath))].sort(),
@@ -1045,6 +1053,7 @@ function Problems({
       <h2 id="problems-title" className="mb-4 text-xl font-bold">
         Problems found
       </h2>
+      {undoError && <ErrorMessage>{undoError}</ErrorMessage>}
 
       {withFilters && (
         <div
@@ -1201,7 +1210,16 @@ function Problems({
                       ({f.triageStatus === 'Intended' ? 'intended' : 'not a problem'}
                       {f.triageReason ? `: ${f.triageReason}` : ''})
                     </span>
-                    <button type="button" className="btn-link text-sm" onClick={() => void triage([title], null)}>
+                    <button
+                      type="button"
+                      className="btn-link text-sm"
+                      onClick={() => {
+                        setUndoError(null);
+                        triage([title], null).catch((err: unknown) =>
+                          setUndoError(err instanceof Error ? err.message : 'That couldn’t be undone. Try again.')
+                        );
+                      }}
+                    >
                       Undo
                     </button>
                   </li>

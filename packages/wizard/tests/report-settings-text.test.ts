@@ -68,3 +68,13 @@ describe('Settings model picker', () => {
     expect(settings).toMatch(/<ModelChoice key=\{setup\.provider \?\? 'openrouter'\}/);
   });
 });
+
+describe('Report and palette handle failed downloads and undo', () => {
+  it('never starts a triage or a download without handling its failure', () => {
+    const report = readFileSync(new URL('../src/screens/ReportScreen.tsx', import.meta.url), 'utf8');
+    const palette = readFileSync(new URL('../src/components/CommandPalette.tsx', import.meta.url), 'utf8');
+    expect(report).not.toMatch(/void triage\(/);
+    expect(report).not.toMatch(/void downloadRunFile\(/);
+    expect(palette).not.toMatch(/void downloadPlanMarkdown\(/);
+  });
+});
