@@ -6,11 +6,10 @@ import {
   AUDIT_STAGE_LABELS,
   AuditProgress,
   applyAuditEvent,
-  auditStatusText,
   type AuditProgressState,
 } from '../src/screens/audit/start/AuditProgress';
 import { AuditStatusChips, aiStatusText, speedStatusText } from '../src/screens/audit/start/AuditStatusChips';
-import { LivePageList, pageAiText, pageStateLabel } from '../src/screens/audit/start/LivePageList';
+import { LivePageList } from '../src/screens/audit/start/LivePageList';
 import { auditStoppedText, stopAudit, STOP_DID_NOTHING } from '../src/screens/audit/start/audit-start-api';
 
 describe('Website Audit progress stepper (ADR 0042)', () => {
@@ -118,10 +117,11 @@ describe('LivePageList component', () => {
 
     expect(html).toContain('/pay');
     expect(html).toContain('Skipped');
-    expect(html).toContain('A payment area: nothing was clicked or sent');
+    expect(html).toContain('a payment page: nothing on it is clicked or sent');
 
     expect(html).toContain('/admin');
-    expect(html).toContain('Left out by your include or exclude paths');
+    expect(html).toContain('left out by the include or exclude paths');
+    expect(html).not.toContain('text-fail">(');
 
     expect(html).toContain('Elapsed: 15 s');
     expect(html).toContain('Stop');
@@ -198,7 +198,7 @@ describe('AuditProgress: scripted reducer sequence and live updates', () => {
     expect(html).toContain('AI: ready');
     expect(html).toContain('Speed: PageSpeed Insights');
     expect(html).toContain('Keep this tab open until the audit finishes.');
-    expect(html).toContain('Left out by your include or exclude paths');
+    expect(html).toContain('left out by the include or exclude paths');
     expect(html).toContain('Elapsed: 12 s');
 
     // 2. Incremental page update

@@ -1,15 +1,13 @@
 import { useEffect, useState } from 'react';
 import type { AuditPageState } from '@qa/types/src/browser.js';
-import { skipReasonText } from '../../../lib/coverage-text';
 import { formatDuration } from '../../../lib/format';
+import { skipText } from '../results/SkippedPagesView';
 import { stopAudit } from './audit-start-api';
 
 export interface LivePageListProps {
   pages: readonly AuditPageState[];
   /** Controlled elapsed time for testing or fixed displays. */
   elapsedMs?: number;
-  /** Timestamp when the audit started. */
-  startedAt?: number;
   /** Override the stop action for testing. */
   onStop?: () => void | Promise<void>;
   /** Set to true when the audit has completed or stopped. */
@@ -48,19 +46,19 @@ export function pageAiText(ai?: 'waiting' | 'done' | 'not-done'): string | null 
  * Live page list under counters: shows each page's crawl state, plain-words skip reason,
  * AI assessment status, live elapsed time, and a Stop button (ADR 0042).
  */
-export function LivePageList({ pages, elapsedMs, startedAt, onStop, stopped = false }: LivePageListProps) {
+export function LivePageList({ pages, elapsedMs, onStop, stopped = false }: LivePageListProps) {
   const [stopping, setStopping] = useState(false);
   const [liveElapsed, setLiveElapsed] = useState(0);
   const [stopMessage, setStopMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (elapsedMs !== undefined || stopped) return;
-    const start = startedAt ?? Date.now();
+    const start = Date.now();
     const interval = setInterval(() => {
       setLiveElapsed(Date.now() - start);
     }, 1000);
     return () => clearInterval(interval);
-  }, [elapsedMs, startedAt, stopped]);
+  }, [elapsedMs, stopped]);
 
   const elapsed = elapsedMs !== undefined ? elapsedMs : liveElapsed;
 
@@ -107,7 +105,7 @@ export function LivePageList({ pages, elapsedMs, startedAt, onStop, stopped = fa
       {pages.length > 0 ? (
         <ol className="mt-3 divide-y divide-rule/60 text-sm" aria-label="Audited pages">
           {pages.map((p) => {
-            const skipReason = p.state === 'skipped' && p.reason ? skipReasonText(p.reason) : null;
+            const skipReason = p.state === 'skipped' && p.reason ? skipText(p.reason) : null;
             const ai = pageAiText(p.ai);
             return (
               <li
@@ -118,7 +116,7 @@ export function LivePageList({ pages, elapsedMs, startedAt, onStop, stopped = fa
                 <span className="break-all font-mono text-ink">{p.path}</span>
                 <div className="flex flex-wrap items-center gap-2 text-xs">
                   <span className="font-semibold text-ink-soft">{pageStateLabel(p.state)}</span>
-                  {skipReason && <span className="text-fail">({skipReason})</span>}
+                  {skipReason && <span className="text-ink-soft">({skipReason})</span>}
                   {ai && <span className="text-ink-soft">· {ai}</span>}
                 </div>
               </li>
