@@ -14,6 +14,7 @@ import type { BrowserManager } from './browser.js';
 import { debugLog } from './debug-log.js';
 import { navigate } from './navigate.js';
 import { GuardedFetchBlockedError, makeGuardedFetch } from './safe-net.js';
+import { isSameSite } from './same-site.js';
 
 /** The plain URL check's fetch: the browser guard's address rule on every hop (ADR 0031). */
 const guardedFetch = makeGuardedFetch();
@@ -249,7 +250,21 @@ export class PreFlightChecker {
       ...(credential.token ? { Authorization: `Bearer ${credential.token}` } : {}),
     };
     if (Object.keys(roleHeaders).length > 0) {
-      await context.setExtraHTTPHeaders(roleHeaders).catch(() => {});
+      // Only the checked site gets the Role's headers: never a CDN, analytics or font host.
+      const siteHost = new URL(baseUrl).host.toLowerCase();
+      await context
+        .route('**/*', async (route) => {
+          let onSite = false;
+          try {
+            const host = new URL(route.request().url()).host.toLowerCase();
+            onSite = host === siteHost || isSameSite(host, siteHost);
+          } catch {
+            onSite = false;
+          }
+          if (!onSite) return route.fallback();
+          return route.fallback({ headers: { ...route.request().headers(), ...roleHeaders } });
+        })
+        .catch(() => {});
     }
     if (credential.localStorageEntries && Object.keys(credential.localStorageEntries).length > 0) {
       await context

@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P0 | S | core | security | todo |
+| P0 | S | core | security | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/preflight.ts`
@@ -93,9 +93,9 @@ Command: `pnpm exec vitest run packages/core/tests/preflight-role-headers.test.t
 
 ## Done when
 
-- [ ] `setExtraHTTPHeaders` no longer appears in `packages/core/src/preflight.ts`
-- [ ] The new test passes
-- [ ] `pnpm build` passes
+- [x] `setExtraHTTPHeaders` no longer appears in `packages/core/src/preflight.ts`
+- [x] The new test passes
+- [x] `pnpm build` passes
 
 ## Notes
 
