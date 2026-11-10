@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { RunnerError, SCHEDULES_OWNER_ONLY, listSchedules } from '../src/api';
+import { RunnerError, SCHEDULES_OWNER_ONLY, listBenchmarks, listSchedules } from '../src/api';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -21,8 +21,23 @@ describe('listSchedules', () => {
     expect(err.message).toBe(SCHEDULES_OWNER_ONLY);
   });
 
-  it('keeps returning [] on other failures', async () => {
+  it('throws a plain error on other failures, so the screen can show it', async () => {
     stubFetch(500, {});
-    expect(await listSchedules()).toEqual([]);
+    const err = await listSchedules().catch((e) => e);
+    expect(err).toBeInstanceOf(RunnerError);
+    expect(err.message).toBe('The scheduled check-ups couldn’t be read. Try again.');
+    expect(err.code).not.toBe('ERR_FORBIDDEN');
+  });
+});
+
+describe('listBenchmarks', () => {
+  it('returns the list', async () => {
+    stubFetch(200, []);
+    expect(await listBenchmarks()).toEqual([]);
+  });
+
+  it('throws when the runner refuses', async () => {
+    stubFetch(500, {});
+    await expect(listBenchmarks()).rejects.toThrow('The comparisons couldn’t be read. Try again.');
   });
 });

@@ -974,14 +974,11 @@ export async function getBenchmark(id: string): Promise<BenchmarkJob> {
   return json<BenchmarkJob>(res);
 }
 
-/** The running and kept comparisons, newest first, without their full results. */
+/** The running and kept comparisons, newest first, without their full results. Throws when they cannot be read. */
 export async function listBenchmarks(): Promise<BenchmarkJob[]> {
-  try {
-    const res = await call('/api/runner/benchmarks');
-    return res.ok ? json<BenchmarkJob[]>(res) : [];
-  } catch {
-    return [];
-  }
+  const res = await call('/api/runner/benchmarks');
+  if (!res.ok) throw new RunnerError('The comparisons couldn’t be read. Try again.');
+  return json<BenchmarkJob[]>(res);
 }
 
 export async function deleteBenchmark(id: string): Promise<void> {
@@ -1007,16 +1004,12 @@ export interface CheckupSchedule {
 export const SCHEDULES_OWNER_ONLY = 'Schedules are managed by the owner of this copy.';
 
 export async function listSchedules(): Promise<CheckupSchedule[]> {
-  try {
-    const res = await call('/api/runner/schedules');
-    if (res.status === 401 || res.status === 403) {
-      throw new RunnerError(SCHEDULES_OWNER_ONLY, 'ERR_FORBIDDEN');
-    }
-    return res.ok ? json<CheckupSchedule[]>(res) : [];
-  } catch (err) {
-    if (err instanceof RunnerError && err.code === 'ERR_FORBIDDEN') throw err;
-    return [];
+  const res = await call('/api/runner/schedules');
+  if (res.status === 401 || res.status === 403) {
+    throw new RunnerError(SCHEDULES_OWNER_ONLY, 'ERR_FORBIDDEN');
   }
+  if (!res.ok) throw new RunnerError('The scheduled check-ups couldn’t be read. Try again.');
+  return json<CheckupSchedule[]>(res);
 }
 
 export async function addSchedule(input: {

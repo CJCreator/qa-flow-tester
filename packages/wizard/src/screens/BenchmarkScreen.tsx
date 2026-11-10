@@ -111,7 +111,14 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
         : null;
   const result = job?.status === 'done' ? (job.result ?? null) : null;
 
-  const refreshHistory = useCallback(async () => setHistory(await listBenchmarks()), []);
+  // A refresh that fails keeps the list already shown: the action it follows has its own message.
+  const refreshHistory = useCallback(async () => {
+    try {
+      setHistory(await listBenchmarks());
+    } catch {
+      // keep the current list
+    }
+  }, []);
 
   // On opening: the kept comparisons, and the one still running if you left while it ran.
   const loadHistory = useCallback(() => {
