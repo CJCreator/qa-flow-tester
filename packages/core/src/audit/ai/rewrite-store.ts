@@ -165,9 +165,14 @@ function cleanStates(raw: unknown): RewriteState[] {
   return [...out.values()];
 }
 
+/**
+ * One save queue per rewrites file, shared by every RewriteStore of this process: the runner builds a new
+ * store for each request, so a queue kept on the instance would not stop two requests overwriting each other.
+ */
+const SAVE_QUEUES = new Map<string, Promise<unknown>>();
+
 export class RewriteStore {
   readonly file: string;
-  private queue: Promise<unknown> = Promise.resolve();
 
   /** `versionDir`: the audit version's folder, chosen and checked by the caller. */
   constructor(versionDir: string) {
@@ -269,7 +274,8 @@ export class RewriteStore {
 
   /** Applies one change to a Section's state; saves run one at a time. `undefined` means it is not approved. */
   private change(s: RewriteSection, apply: (state: RewriteState) => RewriteState | undefined): Promise<RewriteResult> {
-    const run = this.queue.then(async (): Promise<RewriteResult> => {
+    const waitFor = SAVE_QUEUES.get(this.file) ?? Promise.resolve();
+    const run = waitFor.then(async (): Promise<RewriteResult> => {
       const states = await this.list();
       const at = states.findIndex((r) => keyOf(r) === keyOf(s));
       const current: RewriteState =
@@ -284,7 +290,12 @@ export class RewriteStore {
       await writeJsonAtomic(this.file, stored);
       return { ok: true, rewrite: next };
     });
-    this.queue = run.catch(() => {});
+    const tail = run.catch(() => {});
+    SAVE_QUEUES.set(this.file, tail);
+    // Drop the entry once nothing newer is waiting, so the map does not grow with every version ever edited.
+    void tail.then(() => {
+      if (SAVE_QUEUES.get(this.file) === tail) SAVE_QUEUES.delete(this.file);
+    });
     return run;
   }
 }

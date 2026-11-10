@@ -93,6 +93,21 @@ describe('RewriteStore approval gate (REQ-030 AC-1)', () => {
     expect(requests).toHaveLength(0);
   });
 
+  it('two stores on the same version folder do not lose an update', async () => {
+    const a = new RewriteStore(dir);
+    const b = new RewriteStore(dir);
+    await Promise.all([
+      a.approve({ urlPath: '/about', sectionId: 's1' }, now),
+      b.approve({ urlPath: '/about', sectionId: 's2' }, now),
+    ]);
+    const reader = new RewriteStore(dir);
+    const list = await reader.list();
+    const s1 = list.find((s) => s.urlPath === '/about' && s.sectionId === 's1');
+    const s2 = list.find((s) => s.urlPath === '/about' && s.sectionId === 's2');
+    expect(s1?.approvedAt).toBeTruthy();
+    expect(s2?.approvedAt).toBeTruthy();
+  });
+
   it('refuses ERR_NO_AI_KEY when approved but there is no key', async () => {
     const store = new RewriteStore(dir);
     await store.approve(S2, now);

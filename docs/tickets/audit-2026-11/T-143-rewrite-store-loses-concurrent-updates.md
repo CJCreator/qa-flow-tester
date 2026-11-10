@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | core/audit | bug | todo |
+| P1 | S | core/audit | bug | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/audit/ai/rewrite-store.ts`
@@ -94,9 +94,9 @@ Run: `pnpm exec vitest run packages/core/tests/audit-rewrite-store.test.ts`, the
 
 ## Done when
 
-- [ ] The new test passes (it fails before the change, at least some of the time).
-- [ ] No `queue` field is left on the class.
-- [ ] Tests and `pnpm build` pass.
+- [x] The new test passes (it fails before the change, at least some of the time).
+- [x] No `queue` field is left on the class.
+- [x] Tests and `pnpm build` pass.
 
 ## Notes
 
