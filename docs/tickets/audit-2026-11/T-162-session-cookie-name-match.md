@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | checkers | bug | todo |
+| P1 | S | checkers | bug | built |
 
 **Files you may edit (no others):**
 - `packages/checkers/src/security.ts`
@@ -70,8 +70,8 @@ Run (this file is in the `browser` tier, see `BROWSER_TESTS` in `vitest.workspac
 If Chromium is not installed, run `pnpm --filter @qa/core exec playwright install chromium` first.
 
 ## Done when
-- [ ] The table test passes; existing tests in `security.test.ts` pass unchanged.
-- [ ] `pnpm build` passes.
+- [x] The table test passes; existing tests in `security.test.ts` pass unchanged.
+- [x] `pnpm build` passes.
 
 ## Notes
 - The Secure-flag and SameSite checks apply to every cookie and are not changed.

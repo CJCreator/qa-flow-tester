@@ -334,17 +334,48 @@ export class UXQualityChecker {
               const testId = el.getAttribute('data-testid');
               const text = (el.textContent || '').trim().substring(0, 30);
               const ariaLabel = el.getAttribute('aria-label');
+              // WCAG 2.5.8 inline exception: a link inside a sentence (its parent holds other text too).
+              const parentText = (el.parentElement?.textContent || '').trim();
+              const inSentence =
+                el.tagName === 'A' &&
+                window.getComputedStyle(el).display === 'inline' &&
+                parentText.length > (el.textContent || '').trim().length + 20;
               return {
                 width: rect.width,
                 height: rect.height,
+                left: rect.left,
+                top: rect.top,
                 testId,
                 text,
                 ariaLabel,
                 tagName: el.tagName.toLowerCase(),
                 visible: rect.width > 0 && rect.height > 0,
+                inSentence,
+                spaced: false,
               };
             })
-            .filter((item) => item.visible && (item.width < 44 || item.height < 44));
+            .filter((item) => item.visible && !item.inSentence)
+            .map((item, index, all) => {
+              // WCAG 2.5.8 spacing exception: a 24px circle centred on an undersized target must not
+              // touch another target, nor the 24px circle of another undersized target.
+              if (item.width >= 24 && item.height >= 24) return item;
+              const cx = item.left + item.width / 2;
+              const cy = item.top + item.height / 2;
+              const touches = all.some((other, j) => {
+                if (j === index) return false;
+                const otherSmall = other.width < 24 || other.height < 24;
+                if (otherSmall) {
+                  const ox = other.left + other.width / 2;
+                  const oy = other.top + other.height / 2;
+                  return Math.hypot(cx - ox, cy - oy) < 24;
+                }
+                const nearestX = Math.max(other.left, Math.min(cx, other.left + other.width));
+                const nearestY = Math.max(other.top, Math.min(cy, other.top + other.height));
+                return Math.hypot(cx - nearestX, cy - nearestY) < 12;
+              });
+              return { ...item, spaced: !touches };
+            })
+            .filter((item) => item.width < 44 || item.height < 44);
         });
 
         // Smallest first, so a tiny button isn't crowded out by ordinary text links; the same
@@ -353,7 +384,8 @@ export class UXQualityChecker {
         for (const target of smallestFirst.slice(0, 10)) {
           const label = target.text || target.ariaLabel || target.testId || `unlabeled <${target.tagName}>`;
           // WCAG 2.2 AA (2.5.8) asks for 24x24px. 44x44px is the AAA / platform guidance level.
-          const belowAA = target.width < WCAG_MIN_TARGET_PX || target.height < WCAG_MIN_TARGET_PX;
+          const belowAA =
+            (target.width < WCAG_MIN_TARGET_PX || target.height < WCAG_MIN_TARGET_PX) && !target.spaced;
           findings.push({
             id: `F-UX-TARGET-${context.testCaseId || 'GEN'}-${counter++}`,
             testCaseId: context.testCaseId,
@@ -437,40 +469,6 @@ export class UXQualityChecker {
           stepsToReproduce: [`Navigate directly to ${context.urlPath}`, `Observe lack of navigation options`],
           evidence: {},
           resolution: 'Add a persistent top navigation bar or back-button link to the page layout.',
-        });
-      }
-    } catch {
-      // Ignore
-    }
-
-    // 4. Rule: Horizontal Scroll Overflow
-    try {
-      const hasOverflow = await page.evaluate(() => {
-        return document.documentElement.scrollWidth > window.innerWidth + 2;
-      });
-
-      if (hasOverflow) {
-        findings.push({
-          id: `F-UX-OVERFLOW-${context.testCaseId || 'GEN'}-${counter++}`,
-          testCaseId: context.testCaseId,
-          severity: 'Major',
-          checker: 'ux-quality',
-          title: `Horizontal page overflow detected (${context.breakpoint})`,
-          where: {
-            urlPath: context.urlPath,
-            role: context.role,
-            breakpoint: context.breakpoint,
-          },
-          expectedVsActual: {
-            expected: `Page content fits within viewport width (${context.breakpoint}) without horizontal scrolling`,
-            actual: 'Page triggers horizontal scrollbar (scrollWidth > innerWidth)',
-          },
-          stepsToReproduce: [
-            `Navigate to ${context.urlPath} at ${context.breakpoint}`,
-            `Check for horizontal scrollbar`,
-          ],
-          evidence: {},
-          resolution: 'Ensure broad containers use max-w-full and overflow-x-hidden.',
         });
       }
     } catch {

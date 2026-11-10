@@ -35,6 +35,20 @@ const STACK_TRACE_PATTERN =
   /(?:at [a-zA-Z0-9_$./\\-]+\s*\([^)]+:[0-9]+:[0-9]+\)|node:internal\/|Traceback \(most recent call last\):|Exception in thread "[^"]+"|System\.[a-zA-Z0-9]+Exception:|SQLSTATE\[[0-9A-Z]+\])/i;
 
 /**
+ * Cookie names that hold a session or a sign-in: a known framework name, or a name with one of these
+ * words as a whole part (split on `_`, `-`, `.`). A bare "id" or "user" inside a longer name
+ * (`_gid`, `ajs_anonymous_id`) is an analytics cookie, not a session.
+ */
+const SESSION_COOKIE_NAME =
+  /^(?:PHPSESSID|JSESSIONID|connect\.sid|ASP\.NET_SessionId|sessionid|sid)$|(?:^|[_.-])(?:session|sess|auth|token|jwt)(?:$|[_.-])/i;
+
+/**
+ * Names that match the words above but must stay readable by page scripts: analytics and tag-manager
+ * cookies, and CSRF tokens (the page reads them to send them back in a header).
+ */
+const SCRIPT_READ_COOKIE_NAME = /^(?:_ga|_gid|_gat|_gcl|_fbp|_hj|ajs_|amp_|mp_|__utm|_clck|_clsk|__stripe_)|csrf|xsrf/i;
+
+/**
  * Passive security checks: they only read what a normal visit produced, and never probe or attack.
  * Covers headers, cookies, mixed content, stack traces, and passwords in addresses.
  */
@@ -194,7 +208,7 @@ export class SecurityChecker {
         .cookies(page.url())
         .catch(() => []);
       for (const cookie of cookies) {
-        const isAuthOrSession = /(?:session|auth|token|jwt|id|sid|user)/i.test(cookie.name);
+        const isAuthOrSession = SESSION_COOKIE_NAME.test(cookie.name) && !SCRIPT_READ_COOKIE_NAME.test(cookie.name);
         if (!cookie.secure && page.url().startsWith('https://')) {
           findings.push(
             this.finding(

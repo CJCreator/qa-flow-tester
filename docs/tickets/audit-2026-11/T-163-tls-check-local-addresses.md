@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | checkers | bug | todo |
+| P1 | S | checkers | bug | built |
 
 **Files you may edit (no others):**
 - `packages/checkers/src/security-depth.ts`
@@ -59,8 +59,8 @@ Edit `packages/checkers/tests/security-depth.test.ts`. Import `isLocalNetworkHos
 Run: `pnpm exec vitest run packages/checkers/tests/security-depth.test.ts`
 
 ## Done when
-- [ ] New tests pass; existing tests in `security-depth.test.ts` pass unchanged.
-- [ ] `pnpm build` passes.
+- [x] New tests pass; existing tests in `security-depth.test.ts` pass unchanged.
+- [x] `pnpm build` passes.
 
 ## Notes
 - `URL.hostname` for an IPv6 address includes the brackets (`[::1]`); the function strips them.

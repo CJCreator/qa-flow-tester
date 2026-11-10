@@ -4,6 +4,7 @@ import type { Finding } from '@qa/types';
 import {
   SecurityDepthChecker,
   findMissingSri,
+  isLocalNetworkHost,
   parseSecurityTxt,
   sameOriginGet,
   type FetchFn,
@@ -337,5 +338,49 @@ describe('checkPage', () => {
   it('AC-5: defaultFetch no longer exists', async () => {
     const mod: Record<string, unknown> = await import('../src/security-depth.js');
     expect(mod.defaultFetch).toBeUndefined();
+  });
+
+  describe('isLocalNetworkHost and TLS check (T-163)', () => {
+    it('isLocalNetworkHost correctly identifies local and private network addresses', () => {
+      const trueHosts = [
+        'localhost',
+        'app.localhost',
+        'printer.local',
+        '127.0.0.1',
+        '127.5.5.5',
+        '0.0.0.0',
+        '[::1]',
+        '::1',
+        '10.0.0.5',
+        '172.16.0.1',
+        '172.31.255.1',
+        '192.168.1.20',
+      ];
+      for (const host of trueHosts) {
+        expect(isLocalNetworkHost(host), `expected ${host} to be local`).toBe(true);
+      }
+
+      const falseHosts = [
+        'example.com',
+        '172.32.0.1',
+        '172.15.0.1',
+        '192.169.1.1',
+        '11.0.0.1',
+        'localhost.example.com',
+      ];
+      for (const host of falseHosts) {
+        expect(isLocalNetworkHost(host), `expected ${host} not to be local`).toBe(false);
+      }
+    });
+
+    it('checkTls skips local and private addresses but flags public plain HTTP', () => {
+      const checker = new SecurityDepthChecker();
+      expect(checker.checkTls('http://192.168.1.20:3000/', ctx())).toEqual([]);
+      expect(checker.checkTls('http://[::1]:3000/', ctx())).toEqual([]);
+      const findings = checker.checkTls('http://example.com/', ctx());
+      expect(findings).toHaveLength(1);
+      expect(findings[0].title).toContain('not encrypted with TLS');
+      expect(checker.checkTls('https://example.com/', ctx())).toEqual([]);
+    });
   });
 });

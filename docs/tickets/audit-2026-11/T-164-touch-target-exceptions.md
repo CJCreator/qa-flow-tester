@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | M | checkers, types | bug | todo |
+| P1 | M | checkers, types | bug | built |
 
 **Files you may edit (no others):**
 - `packages/checkers/src/ux-quality.ts`
@@ -163,9 +163,9 @@ describe('plainTitleText: touch targets', () => {
 4. `pnpm build`
 
 ## Done when
-- [ ] The new types test passes.
-- [ ] The three existing suites in step 2 pass unchanged.
-- [ ] `pnpm build` passes.
+- [x] The new types test passes.
+- [x] The three existing suites in step 2 pass unchanged.
+- [x] `pnpm build` passes.
 
 ## Notes
 - `WCAG_MIN_TARGET_PX` is 24 and already defined in `ux-quality.ts`. The numbers 24 and 12 inside the evaluate are written out because code inside `page.evaluate` cannot read variables from outside it.

@@ -386,6 +386,41 @@ describe('SecurityChecker', () => {
       expect(https.some((f) => f.title.includes('HttpOnly'))).toBe(true);
       expect(JSON.stringify(https)).not.toContain('SENTINEL-COOKIE-VALUE');
     });
+
+    it('session cookie recognition: flags session cookies for HttpOnly and ignores script-read/analytics cookies', async () => {
+      const cases: Array<[string, boolean]> = [
+        ['session_id', true],
+        ['session_token', true],
+        ['auth', true],
+        ['my-app.session', true],
+        ['PHPSESSID', true],
+        ['connect.sid', true],
+        ['jwt', true],
+        ['_gid', false],
+        ['__stripe_mid', false],
+        ['ajs_anonymous_id', false],
+        ['_hjSessionUser_123', false],
+        ['XSRF-TOKEN', false],
+        ['csrf_token', false],
+        ['user_theme', false],
+        ['grid_layout', false],
+      ];
+
+      for (const [name, shouldFlag] of cases) {
+        const mockPage = {
+          url: () => 'https://shop.test/',
+          evaluate: async () => [],
+          context: () => ({
+            cookies: async () => [
+              { name, value: 'v', secure: true, httpOnly: false, sameSite: 'Lax' },
+            ],
+          }),
+        } as unknown as Page;
+        const findings = await checker.checkPage(mockPage, { ...base });
+        const hasHttpOnly = findings.some((f) => f.title.includes('HttpOnly'));
+        expect(hasHttpOnly, `cookie "${name}" expected HttpOnly finding: ${shouldFlag}`).toBe(shouldFlag);
+      }
+    });
   });
 
   it('passes the main response headers to the HSTS and nosniff checks', async () => {

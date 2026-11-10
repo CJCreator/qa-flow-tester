@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P2 | S | checkers, types | inconsistency | todo |
+| P2 | S | checkers, types | inconsistency | built |
 
 **Files you may edit (no others):**
 - `packages/checkers/src/ux-quality.ts`
@@ -88,9 +88,9 @@ describe('plainTitleText: sideways scrolling', () => {
 4. `pnpm build`
 
 ## Done when
-- [ ] `ux-quality.ts` no longer contains `F-UX-OVERFLOW`.
-- [ ] The new test passes; `performance.test.ts` and `recommendations.test.ts` pass unchanged.
-- [ ] `pnpm build` passes.
+- [x] `ux-quality.ts` no longer contains `F-UX-OVERFLOW`.
+- [x] The new test passes; `performance.test.ts` and `recommendations.test.ts` pass unchanged.
+- [x] `pnpm build` passes.
 
 ## Notes
 - Do not touch `packages/checkers/src/performance.ts` or `keyboard-a11y.ts`.

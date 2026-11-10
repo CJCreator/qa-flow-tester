@@ -39,6 +39,18 @@ export interface ResourceTag {
 const MAX_SRI = 10;
 const MAX_MAP_SCRIPTS = 5;
 
+/** A host on this computer or a private network: plain HTTP there is a development set-up, not a fault. */
+export function isLocalNetworkHost(hostname: string): boolean {
+  const host = hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')) return true;
+  if (host === '::1' || host === '0.0.0.0') return true;
+  const m = host.match(/^(\d{1,3})\.(\d{1,3})\.\d{1,3}\.\d{1,3}$/);
+  if (!m) return false;
+  const a = Number(m[1]);
+  const b = Number(m[2]);
+  return a === 127 || a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+}
+
 /** Refuses (returns null without calling fetchFn) any URL whose origin differs from `origin`. */
 export async function sameOriginGet(fetchFn: FetchFn, url: string, origin: string): Promise<FetchedResponse | null> {
   let target: URL;
@@ -438,7 +450,7 @@ export class SecurityDepthChecker {
     const findings: Finding[] = [];
     try {
       const u = new URL(pageUrl);
-      const isLocal = u.hostname === 'localhost' || u.hostname === '127.0.0.1' || u.hostname.endsWith('.local');
+      const isLocal = isLocalNetworkHost(u.hostname);
       if (u.protocol === 'http:' && !isLocal) {
         findings.push(
           this.finding('TLS-MISSING', 1, context, {

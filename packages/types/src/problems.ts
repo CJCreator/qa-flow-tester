@@ -45,11 +45,16 @@ export function plainTitleText(t: string): string {
   if (/^Uncaught Exception/.test(t)) return 'The page crashed while it was running';
   if (/^Console Error/.test(t)) return 'The page reported an error behind the scenes';
   if ((m = t.match(/^Step failed: "(.+)"$/))) return `Couldn’t complete “${m[1]}”`;
-  if ((m = t.match(/^Touch target too small: (.+?) \(\d+x\d+px\)$/)))
+  if (
+    (m = t.match(
+      /^Touch target (?:too small|below WCAG 2\.5\.8 minimum|smaller than recommended): (.+?) \(\d+x\d+px\)$/
+    ))
+  )
     return `“${m[1].replace(/^["“]|["”]$/g, '')}” is too small to tap easily on a phone`;
-  if (/^Touch target too small/.test(t)) return 'A button is too small to tap easily on a phone';
+  if (/^Touch target/.test(t)) return 'A button is too small to tap easily on a phone';
   if (/^Dead End Page/.test(t)) return 'A page has no way back or menu to leave it';
-  if (/^Horizontal page overflow/.test(t)) return 'The page is wider than the screen and scrolls sideways';
+  if (/^Horizontal page overflow/.test(t) || /^Content overflows the screen horizontally/.test(t))
+    return 'The page is wider than the screen and scrolls sideways';
   if (/^Visual regression/.test(t)) return 'A screen looks different from its approved version';
   if (/^Design Token Mismatch/.test(t)) return 'A colour or shape doesn’t match the design';
   if ((m = t.match(/^\[AI Review\]\s*(.+)$/))) return m[1];
