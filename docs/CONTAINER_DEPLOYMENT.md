@@ -11,6 +11,7 @@ The simplest way to run QA Flow Tester locally or on a private virtual machine i
 ### Prerequisites
 
 - Docker Engine 24+ and Docker Compose v2+ installed.
+- Node.js 22.9 or newer and pnpm 11, to build the static site once (step 3). The runner image needs neither.
 
 ### Setup & Run
 
@@ -19,11 +20,16 @@ The simplest way to run QA Flow Tester locally or on a private virtual machine i
    cp .env.example .env
    ```
 2. Edit `.env` and set `RUNNER_ACCESS_TOKEN` to a secure secret.
-3. Start the full stack in the background:
+3. Build the static site into `./public`. The `site` image copies that folder, and it is not in git:
+   ```bash
+   pnpm install
+   pnpm site-build
+   ```
+4. Start the full stack in the background:
    ```bash
    docker compose up -d
    ```
-4. Access the services:
+5. Access the services:
    - **Static Site & Wizard UI**: [http://localhost:8080](http://localhost:8080)
    - **Runner Server**: [http://localhost:3001/?access=your-token](http://localhost:3001/?access=your-token)
 
@@ -118,11 +124,14 @@ spec:
     spec:
       securityContext:
         runAsNonRoot: true
-        runAsUser: 999
-        fsGroup: 999
+        # The uid and gid of the image's `qa` user. Read them from your image:
+        #   docker run --rm --entrypoint id <your image>
+        runAsUser: <uid of qa>
+        fsGroup: <gid of qa>
       containers:
         - name: runner
-          image: us-central1-docker.pkg.dev/qa-flow-tester-512310/qa/runner:latest
+          # deploy.yml pushes one tag per commit and no `latest`. Use the commit you deployed.
+          image: us-central1-docker.pkg.dev/qa-flow-tester-512310/qa/runner:<commit sha>
           ports:
             - containerPort: 3001
           env:

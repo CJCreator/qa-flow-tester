@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | docs | bug | todo |
+| P1 | S | docs | bug | built |
 
 **Files you may edit (no others):**
 - `docs/CONTAINER_DEPLOYMENT.md`
@@ -102,9 +102,9 @@ grep -n "runAsUser: 999\|fsGroup: 999\|runner:latest" docs/CONTAINER_DEPLOYMENT.
 ```
 
 ## Done when
-- [ ] The quick start has a "build the static site" step before `docker compose up -d`.
-- [ ] The Kubernetes example has no hard-coded 999 and no `:latest` tag.
-- [ ] `pnpm format:check` passes (run `pnpm exec prettier --write docs/CONTAINER_DEPLOYMENT.md` if it does not).
+- [x] The quick start has a "build the static site" step before `docker compose up -d`.
+- [x] The Kubernetes example has no hard-coded 999 and no `:latest` tag.
+- [x] `pnpm format:check` passes (run `pnpm exec prettier --write docs/CONTAINER_DEPLOYMENT.md` if it does not).
 
 ## Notes
 - `pnpm site-build` is a real script in the root `package.json`

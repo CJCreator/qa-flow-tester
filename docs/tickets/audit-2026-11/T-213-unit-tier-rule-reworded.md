@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P2 | S | docs | inconsistency | todo |
+| P2 | S | docs | inconsistency | built |
 
 **Files you may edit (no others):**
 - `docs/TESTING.md`
@@ -88,10 +88,10 @@ grep -n "no runner server\|or a runner\." docs/TESTING.md vitest.workspace.ts
 ```
 
 ## Done when
-- [ ] Neither file says a unit test starts "no runner server".
-- [ ] Both files say: no Chromium, no external network, loopback server on an OS-picked port allowed.
-- [ ] `BROWSER_TESTS` is unchanged (`git diff vitest.workspace.ts` shows comment lines only).
-- [ ] `pnpm format:check` passes.
+- [x] Neither file says a unit test starts "no runner server".
+- [x] Both files say: no Chromium, no external network, loopback server on an OS-picked port allowed.
+- [x] `BROWSER_TESTS` is unchanged (`git diff vitest.workspace.ts` shows comment lines only).
+- [x] `pnpm format:check` passes.
 
 ## Notes
 - `packages/runner/tests/helpers/free-port.ts` is created by T-206. The sentence in step 2 names it either way;

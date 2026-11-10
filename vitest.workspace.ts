@@ -2,12 +2,13 @@ import { defineWorkspace, configDefaults } from 'vitest/config';
 import { sharedTest, sharedResolve } from './vitest.config';
 
 // Two tiers. Every test file belongs to exactly one project.
-//   unit    : no browser, no runner server. `pnpm test` and PR CI run only this.
-//   browser : launches Chromium (directly, or through the Spider, a discovery agent or the orchestrator) or starts
-//             a runner (a RunnerServer, or the runner's CLI). `pnpm test:browser`; nightly only, never on PRs.
+//   unit    : no Chromium, no external network. A loopback server on a port the OS picks is allowed (a
+//             RunnerServer, or an http.createServer stub). `pnpm test` and PR CI run only this.
+//   browser : launches Chromium (directly, or through the Spider, a discovery agent, the orchestrator or the
+//             runner's CLI). `pnpm test:browser`; nightly only, never on PRs.
 // `pnpm test:all` runs both. Checked on 2026-11-03 by running `--project unit` with PLAYWRIGHT_BROWSERS_PATH
 // set to an empty folder: no unit file tried to launch Chromium.
-// A new test file lands in `unit` by default. Add it here when it launches Chromium or a runner.
+// A new test file lands in `unit` by default. Add it here when it launches Chromium.
 const BROWSER_TESTS: Record<string, string[]> = {
   checkers: ['alt-text-quality', 'design-ux-checkers', 'keyboard-a11y', 'performance', 'refusal-rule', 'security'],
   core: [

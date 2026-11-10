@@ -6,12 +6,12 @@ Runner: vitest. Node environment, 30 s test and hook timeouts, tests in `package
 
 `vitest.workspace.ts` assigns every test file to one project. Select one with `--project <name>`.
 
-| Tier      | Command             | Runs                                                                                     | Needs    | Where                                                                     |
-| --------- | ------------------- | ---------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------- |
-| `unit`    | `pnpm test`         | No browser, no runner server, no website: fake pages, in-memory inputs                   | Node     | Pull requests (`ci.yml`, 2 shards), `deploy.yml` before publishing, local |
-| `browser` | `pnpm test:browser` | Chromium on `setContent` or `route().fulfill()` pages, or a started runner; never a site | Chromium | Nightly (`e2e-nightly.yml`, 4 shards), local                              |
+| Tier      | Command             | Runs                                                                                                                | Needs    | Where                                                                     |
+| --------- | ------------------- | ------------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------- |
+| `unit`    | `pnpm test`         | No Chromium, no external network: fake pages, in-memory inputs. A loopback server on an OS-assigned port is allowed | Node     | Pull requests (`ci.yml`, 2 shards), `deploy.yml` before publishing, local |
+| `browser` | `pnpm test:browser` | Chromium on `setContent` or `route().fulfill()` pages, alone or through a started runner; never a site              | Chromium | Nightly (`e2e-nightly.yml`, 4 shards), local                              |
 
-`pnpm test:all` runs both. A file is `browser` only if the `BROWSER_TESTS` list in `vitest.workspace.ts` names it; every other file is `unit`. Add a file to that list when it launches Chromium or a runner.
+`pnpm test:all` runs both. A file is `browser` only if the `BROWSER_TESTS` list in `vitest.workspace.ts` names it; every other file is `unit`. Add a file to that list when it launches Chromium. A unit test may start a `RunnerServer` or an `http.createServer` stub on `127.0.0.1`, on a port the OS picks (`packages/runner/tests/helpers/free-port.ts`, or `listen(0)`), never on a fixed port.
 
 Other commands: `pnpm test:watch`; one file: `pnpm exec vitest run <file>`; `pnpm typecheck` (`tsc -p tsconfig.test.json --noEmit`, includes tests; blocking in `ci.yml`); `pnpm test:plugin` (the `plugins/repo-orchestrator` checks).
 
@@ -19,7 +19,7 @@ Other commands: `pnpm test:watch`; one file: `pnpm exec vitest run <file>`; `pnp
 
 ## No fabricated websites
 
-No fixture site, no inline `http.createServer` page to crawl. Do not add one ([ADR 0040](adr/0040-test-tiers-no-fabricated-websites.md)). Use:
+No fixture site, no inline `http.createServer` page to crawl. Do not add one ([ADR 0040](adr/0040-test-tiers-no-fabricated-websites.md)). A loopback stub that answers one fetch-level check, with no Chromium and no crawl, is not a fabricated website. Use:
 
 - a fake `{ evaluate }` Page for checkers;
 - recorded inputs and fakes for network paths (`fakeNet()` in `packages/core/tests/audit-pagespeed.test.ts`);
