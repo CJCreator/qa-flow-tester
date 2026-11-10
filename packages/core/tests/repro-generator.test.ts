@@ -56,4 +56,49 @@ describe('ReproScriptGenerator', () => {
     expect(fileContent).toContain("await page.locator('#save-btn').click();");
     expect(fileContent).toContain('http://localhost:3050');
   });
+
+  it('escapes quotes, backslashes, newlines and comment ends', async () => {
+    const generator = new ReproScriptGenerator(tempDir);
+
+    const mockFinding: Finding = {
+      id: 'F-TEST-002',
+      severity: 'Major',
+      checker: 'spec-conformance',
+      title: 'Ends a comment */ here',
+      where: {
+        urlPath: '/test',
+        role: 'manager',
+        breakpoint: '1440px',
+      },
+      expectedVsActual: {
+        expected: "it's fine\nsecond line",
+        actual: 'a\\b',
+      },
+      stepsToReproduce: [],
+      evidence: {},
+      resolution: '',
+    };
+
+    const mockTestCase: TestCase = {
+      id: 'TC-002',
+      flowId: 'flow-2',
+      role: 'manager',
+      startPage: '/test',
+      steps: [
+        { action: 'click', selector: "[aria-label='Close']", name: 'Close\nthe dialog' },
+      ],
+      expectations: {},
+    };
+
+    const scriptPath = await generator.generate(mockFinding, mockTestCase, 'http://localhost:3050');
+    const fileContent = await fs.readFile(scriptPath, 'utf8');
+
+    expect(fileContent).toContain("await page.locator('[aria-label=\\'Close\\']').click();");
+    expect(fileContent).toContain("'Expected: it\\'s fine\\nsecond line'");
+    expect(fileContent).toContain("'Actual:   a\\\\b'");
+    expect(fileContent).not.toContain('*/ here');
+    expect(fileContent).toContain('// Step: Close the dialog');
+
+    expect(() => new Function(fileContent.replace(/^import .*$/m, '').replace(/await /g, ''))).not.toThrow();
+  });
 });

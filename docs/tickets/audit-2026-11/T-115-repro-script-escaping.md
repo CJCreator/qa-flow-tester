@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P0 | S | core | security | todo |
+| P0 | S | core | security | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/repro-generator.ts`
@@ -140,9 +140,9 @@ Command: `pnpm exec vitest run packages/core/tests/repro-generator.test.ts`
 
 ## Done when
 
-- [ ] No `'${` remains in `repro-generator.ts`
-- [ ] Both tests pass
-- [ ] `pnpm build` passes
+- [x] No `'${` remains in `repro-generator.ts`
+- [x] Both tests pass
+- [x] `pnpm build` passes
 
 ## Notes
 
