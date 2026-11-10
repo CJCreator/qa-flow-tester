@@ -33,6 +33,13 @@ export function inferCrud(s: CrudStructure): CrudFacts | undefined {
   return { list: true, ...(add ? { add: add.trim() } : {}), ...(editFromRow ? { editFromRow: true } : {}) };
 }
 
+/** Whether a control's tag and href make it a link that navigates (never probed: a GET cannot be blocked). */
+export function isNavigatingLink(tagName: string, href: string | null | undefined): boolean {
+  if (tagName.toUpperCase() !== 'A') return false;
+  const value = (href || '').trim();
+  return value !== '' && !value.startsWith('#') && !/^javascript:/i.test(value);
+}
+
 /** Reads the page's list rows and controls. Marks the first single-row delete control so it can be found. */
 export async function readCrudStructure(
   page: Page
@@ -61,13 +68,19 @@ export async function readCrudStructure(
         const rows = [...tableRows, ...listRows];
         const rowControlNames: string[] = [];
         let marked = false;
+        // Same rule as isNavigatingLink. A link that goes somewhere is a GET the change-blocker cannot stop: never probe it.
+        const goesSomewhere = (el: Element) => {
+          if (el.tagName !== 'A') return false;
+          const href = (el.getAttribute('href') || '').trim();
+          return href !== '' && !href.startsWith('#') && !/^javascript:/i.test(href);
+        };
         const re = new RegExp(rowDelete, 'i');
         for (const row of rows) {
           for (const c of controlsIn(row)) {
             const n = nameOf(c);
             if (!n) continue;
             rowControlNames.push(n);
-            if (!marked && re.test(n)) {
+            if (!marked && !goesSomewhere(c) && re.test(n)) {
               c.setAttribute('data-qa-delete-probe', '1');
               marked = true;
             }

@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P0 | S | core | security | todo |
+| P0 | S | core | security | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/discovery/crud-facts.ts`
@@ -103,9 +103,9 @@ Command: `pnpm exec vitest run packages/core/tests/crud-facts.test.ts`, then `pn
 
 ## Done when
 
-- [ ] A row control that is `<a href="/something">Delete</a>` is never given `data-qa-delete-probe`
-- [ ] `<a href="#">Delete</a>` and `<button>Delete</button>` are still marked
-- [ ] The test passes; `pnpm build` passes
+- [x] A row control that is `<a href="/something">Delete</a>` is never given `data-qa-delete-probe`
+- [x] `<a href="#">Delete</a>` and `<button>Delete</button>` are still marked
+- [x] The test passes; `pnpm build` passes
 
 ## Notes
 
