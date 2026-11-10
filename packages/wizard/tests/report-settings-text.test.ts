@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { ROUTE_SKIP_REASONS } from '@qa/types/src/browser.js';
 import type { SlowerThanLastTime } from '@qa/types';
@@ -58,5 +59,12 @@ describe('slowerNote', () => {
     expect(note).toMatch(/page was ready/i);
     expect(note).toMatch(/1 load\b/);
     expect(note).toMatch(/connection was not slowed/i);
+  });
+});
+
+describe('Settings model picker', () => {
+  it('builds a new model picker for each AI service, so one service’s model id is never saved for another', () => {
+    const settings = readFileSync(new URL('../src/screens/SettingsScreen.tsx', import.meta.url), 'utf8');
+    expect(settings).toMatch(/<ModelChoice key=\{setup\.provider \?\? 'openrouter'\}/);
   });
 });

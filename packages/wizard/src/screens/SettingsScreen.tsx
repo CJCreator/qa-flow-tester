@@ -278,7 +278,9 @@ export function SettingsScreen({ onKeySaved }: { onKeySaved: (model: string) => 
                   </div>
                 )}
 
-                {!choosing && setup.configured && <ModelChoice setup={setup} onSaved={load} />}
+                {!choosing && setup.configured && (
+                  <ModelChoice key={setup.provider ?? 'openrouter'} setup={setup} onSaved={load} />
+                )}
                 {!choosing && setup.configured && provider === 'openrouter' && <Usage />}
               </>
             )}
