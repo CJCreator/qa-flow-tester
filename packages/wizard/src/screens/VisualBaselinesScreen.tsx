@@ -26,6 +26,16 @@ export function baselineName(testCaseId: string): string {
 type BreakpointFilter = 'all' | '375px' | '768px' | '1440px';
 type ViewMode = 'split' | 'overlay' | 'diff-only';
 
+/** The view to show: a chosen view the baseline cannot offer falls back to side by side. */
+export function viewFor(
+  chosen: 'split' | 'overlay' | 'diff-only',
+  item: { currentUrl?: string; diffUrl?: string } | null
+): 'split' | 'overlay' | 'diff-only' {
+  if (chosen === 'diff-only' && !item?.diffUrl) return 'split';
+  if (chosen === 'overlay' && !item?.currentUrl) return 'split';
+  return chosen;
+}
+
 export function VisualBaselinesScreen() {
   useDocumentTitle('Visual baselines');
   const { confirm, dialog } = useConfirm();
@@ -146,8 +156,8 @@ export function VisualBaselinesScreen() {
     }
   };
 
-  // "What changed" carries over from the last baseline; one without a diff falls back to side by side.
-  const shownMode: ViewMode = viewMode === 'diff-only' && !activeItem?.diffUrl ? 'split' : viewMode;
+  // A view carries over from the last baseline; one this baseline cannot offer falls back to side by side.
+  const shownMode: ViewMode = viewFor(viewMode, activeItem);
 
   const viewButton = (mode: ViewMode, label: string) => (
     <button type="button" aria-pressed={shownMode === mode} onClick={() => setViewMode(mode)}>
@@ -338,7 +348,7 @@ export function VisualBaselinesScreen() {
                   <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                     <div className="segmented [&>button]:min-h-[44px]" role="group" aria-label="How to compare">
                       {viewButton('split', 'Side by side')}
-                      {viewButton('overlay', 'Slider')}
+                      {activeItem.currentUrl && viewButton('overlay', 'Slider')}
                       {activeItem.diffUrl && viewButton('diff-only', 'What changed')}
                     </div>
 
