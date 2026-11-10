@@ -149,9 +149,8 @@ function onPageSeo(pages: MarketingPage[], findings: AuditFinding[]): SignalResu
   const withTitle = pages.filter((p) => nonEmpty(p.content.title));
   const withDescription = pages.filter((p) => nonEmpty(p.content.description));
   const withH1 = pages.filter((p) => p.content.headings.some((h) => h.level === 1 && nonEmpty(h.text)));
-  const found = pathsOf(
-    pages.filter((p) => withTitle.includes(p) || withDescription.includes(p) || withH1.includes(p))
-  );
+  const withAny = new Set([...withTitle, ...withDescription, ...withH1]);
+  const found = pathsOf(pages.filter((p) => withAny.has(p)));
   const read = new Set(pathsOf(pages));
   const findingIds = (findings ?? [])
     .filter((f) => ON_PAGE_SEO_RULES.has(f.rule) && [f.urlPath, ...(f.pages ?? [])].some((p) => read.has(p)))

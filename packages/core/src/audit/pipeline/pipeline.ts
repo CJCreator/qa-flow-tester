@@ -580,7 +580,13 @@ export async function runAuditPipeline(
   } catch {
     aiOrdered = scored;
   }
-  const findingsOf = (urlPath: string) => aiOrdered.filter((f) => f.urlPath === urlPath);
+  const findingsByPath = new Map<string, AuditFinding[]>();
+  for (const f of aiOrdered) {
+    const list = findingsByPath.get(f.urlPath);
+    if (list) list.push(f);
+    else findingsByPath.set(f.urlPath, [f]);
+  }
+  const findingsOf = (urlPath: string): AuditFinding[] => [...(findingsByPath.get(urlPath) ?? [])];
 
   const pageGrades = new Map<string, Required<AreaGrades>>();
   for (const p of pages) {

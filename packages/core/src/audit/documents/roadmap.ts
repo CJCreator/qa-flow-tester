@@ -39,6 +39,7 @@ interface Group {
  */
 export function buildRoadmap(rankedFindings: readonly AuditFinding[]): RoadmapItem[] {
   const groups = new Map<string, Group>();
+  const groupPages = new Map<string, Set<string>>();
   const seen = new Set<string>();
   rankedFindings.forEach((finding, index) => {
     if (seen.has(finding.id)) return;
@@ -59,8 +60,15 @@ export function buildRoadmap(rankedFindings: readonly AuditFinding[]): RoadmapIt
     group.priority = highestScale(group.priority, finding.impact);
     group.effort = highestScale(group.effort, finding.effort);
     group.findingIds.push(finding.id);
+    let seenInGroup = groupPages.get(finding.rule);
+    if (!seenInGroup) {
+      seenInGroup = new Set(group.pages);
+      groupPages.set(finding.rule, seenInGroup);
+    }
     for (const page of finding.pages && finding.pages.length > 0 ? finding.pages : [finding.urlPath]) {
-      if (!group.pages.includes(page)) group.pages.push(page);
+      if (seenInGroup.has(page)) continue;
+      seenInGroup.add(page);
+      group.pages.push(page);
     }
   });
 

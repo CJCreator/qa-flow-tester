@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P3 | S | core/audit | speed | todo |
+| P3 | S | core/audit | speed | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/audit/pipeline/pipeline.ts`

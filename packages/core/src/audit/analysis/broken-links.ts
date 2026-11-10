@@ -150,6 +150,7 @@ export async function checkLinks(
 
   // Internal link targets in page order, each once, with every page linking to it.
   const targets = new Map<string, Target>();
+  const seenPages = new Map<string, Set<string>>();
   const refused = new Set<string>();
   for (const page of pages) {
     for (const link of page.links) {
@@ -168,8 +169,13 @@ export async function checkLinks(
           pages: [page.urlPath],
           sectionId: link.sectionId ?? page.sections[0]?.id ?? null,
         });
-      } else if (!target.pages.includes(page.urlPath)) {
-        target.pages.push(page.urlPath);
+        seenPages.set(link.to, new Set([page.urlPath]));
+      } else {
+        const seen = seenPages.get(link.to)!;
+        if (!seen.has(page.urlPath)) {
+          seen.add(page.urlPath);
+          target.pages.push(page.urlPath);
+        }
       }
     }
   }

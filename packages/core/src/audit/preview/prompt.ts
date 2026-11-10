@@ -113,7 +113,8 @@ export function previewFacts(input: PreviewInput): PreviewFacts {
   }
 
   const onHome = result.findings.filter((f) => f.urlPath === rootPath || (f.pages ?? []).includes(rootPath));
-  const rest = result.findings.filter((f) => !onHome.includes(f));
+  const onHomeSet = new Set(onHome);
+  const rest = result.findings.filter((f) => !onHomeSet.has(f));
   const findings = [...onHome, ...rest]
     .slice(0, MAX_FINDINGS)
     .map((f) => ({ title: cap(f.title), suggestion: cap(f.suggestion, 600) }));

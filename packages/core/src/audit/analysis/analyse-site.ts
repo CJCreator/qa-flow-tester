@@ -12,7 +12,7 @@ import type {
 import type { FetchFn } from '@qa/checkers';
 import type { AccessibilityBasicsResult } from './accessibility-basics.js';
 import { checkLinks, type CheckLinksOptions } from './broken-links.js';
-import { contentProblems } from './content-problems.js';
+import { CONTENT_PROBLEM_RULES, contentProblems } from './content-problems.js';
 import { createFindingIdAllocator, type FindingIdAllocator } from './finding-ids.js';
 import { buildPageHierarchy, internalLinking } from './hierarchy.js';
 import { auditMarketing, marketingSignals } from './marketing-signals.js';
@@ -195,6 +195,7 @@ export async function analyseSite(input: AnalysisInput): Promise<SiteAnalysis> {
     a11yBasics.set(path, { ...result.basics, violations: findingIds.length, findingIds });
   }
 
+  const contentFindings = findings.filter((f) => (CONTENT_PROBLEM_RULES as readonly string[]).includes(f.rule));
   const analysed: AnalysedPage[] = pages.map((p) => {
     const entry: AnalysedPage = {
       urlPath: p.urlPath,
@@ -202,7 +203,7 @@ export async function analyseSite(input: AnalysisInput): Promise<SiteAnalysis> {
       depth: p.depth,
       language: p.content.language,
       sections: sectionSummaries(p.content),
-      seo: seoBasics(p.content, findings),
+      seo: seoBasics(p.content, contentFindings),
     };
     const basics = a11yBasics.get(p.urlPath);
     if (basics) entry.accessibility = basics;
