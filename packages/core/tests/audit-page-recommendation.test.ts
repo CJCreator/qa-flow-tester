@@ -259,6 +259,51 @@ describe('recommendPages with an AI key', () => {
     expect(findClaimWords(rec.reason)).toEqual([]);
   });
 
+  it('recommendations keep the input order when later pages answer first', async () => {
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    let calls = 0;
+    const provider: AIProvider = {
+      providerType: 'mock',
+      async generateText(messages) {
+        const k = calls++;
+        if (k === 0) await sleep(30);
+        const id = JSON.stringify(messages).match(/AF-00\d/)![0];
+        return answer('repair', 'Checked the page.', [id]);
+      },
+    };
+    const { resolution } = await aiWith(provider);
+    const pages = [1, 2, 3, 4, 5].map((n) => sample(`/p${n}`, [finding(`AF-00${n}`, `/p${n}`)]));
+
+    const recs = await recommendPages(input(pages), resolution);
+
+    expect(recs.map((r) => r.urlPath)).toEqual(['/p1', '/p2', '/p3', '/p4', '/p5']);
+    expect(recs.map((r) => r.findingIds)).toEqual([['AF-001'], ['AF-002'], ['AF-003'], ['AF-004'], ['AF-005']]);
+  });
+
+  it('at most four pages are asked at once', async () => {
+    let inFlight = 0;
+    let maxInFlight = 0;
+    const provider: AIProvider = {
+      providerType: 'mock',
+      async generateText(messages) {
+        inFlight++;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        await new Promise((r) => setTimeout(r, 5));
+        inFlight--;
+        const id = JSON.stringify(messages).match(/AF-0\d\d/)![0];
+        return answer('repair', 'Checked the page.', [id]);
+      },
+    };
+    const { resolution } = await aiWith(provider);
+    const pages = Array.from({ length: 10 }, (_, i) => sample(`/q${i}`, [finding(`AF-0${10 + i}`, `/q${i}`)]));
+
+    const recs = await recommendPages(input(pages), resolution);
+
+    expect(recs).toHaveLength(10);
+    expect(maxInFlight).toBeLessThanOrEqual(4);
+    expect(maxInFlight).toBeGreaterThan(1);
+  });
+
   it('passes a caller stop on', async () => {
     const fake = scripted([answer('repair', 'x', ['AF-001'])]);
     const { resolution } = await aiWith(fake.provider);

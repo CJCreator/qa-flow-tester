@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P3 | M | core/audit | speed | todo |
+| P3 | M | core/audit | speed | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/audit/ai/page-recommendation.ts`

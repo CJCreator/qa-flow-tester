@@ -228,7 +228,12 @@ export function pitchGlimpseDoc(view: EditedAuditView, options: PitchGlimpseOpti
 }
 
 /** The Pitch Glimpse as one self-contained HTML file laid out on one A4 page (REQ-019). */
-export function buildPitchGlimpse(view: EditedAuditView, options: PitchGlimpseOptions = {}): string {
-  const html = renderHtml(pitchGlimpseDoc(view, options));
+/** Renders an already-built Pitch Glimpse document to its HTML page (with the Pitch Glimpse styles). */
+export function renderPitchGlimpse(doc: AuditDoc): string {
+  const html = renderHtml(doc);
   return html.replace('</head>', () => `<style>${PITCH_CSS}</style>\n</head>`);
+}
+
+export function buildPitchGlimpse(view: EditedAuditView, options: PitchGlimpseOptions = {}): string {
+  return renderPitchGlimpse(pitchGlimpseDoc(view, options));
 }

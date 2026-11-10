@@ -83,21 +83,34 @@ const MAX_FINDINGS_SENT = 60;
 const MAX_FIELD_CHARS = 200;
 const MAX_REASON_CHARS = 800;
 
-/** Exactly one recommendation per Sample Page, in input order; one AI request at a time. */
+/** Pages asked at once (ADR 0043): the requests go to the AI Provider, not the audited site. */
+const RECOMMEND_IN_FLIGHT = 4;
+
+/** Exactly one recommendation per Sample Page, in input order; up to RECOMMEND_IN_FLIGHT pages are asked at once. */
 export async function recommendPages(input: RecommendPagesInput, ai: AuditAiResolution): Promise<PageRecommendation[]> {
-  const out: PageRecommendation[] = [];
   const seen = new Set<string>();
-  for (const page of input.pages) {
-    if (page.coverage !== 'sample' || seen.has(page.urlPath)) continue;
+  const pages = input.pages.filter((page) => {
+    if (page.coverage !== 'sample' || seen.has(page.urlPath)) return false;
     seen.add(page.urlPath);
-    stopIfAborted(input.signal);
-    if (page.findings.length === 0 || !ai.ok) {
-      out.push(ruleRecommendation(page));
-      continue;
+    return true;
+  });
+  const out: PageRecommendation[] = new Array(pages.length);
+  let next = 0;
+  const worker = async (): Promise<void> => {
+    for (;;) {
+      const i = next++;
+      if (i >= pages.length) return;
+      const page = pages[i];
+      stopIfAborted(input.signal);
+      if (page.findings.length === 0 || !ai.ok) {
+        out[i] = ruleRecommendation(page);
+        continue;
+      }
+      const proposed = await askForPage(ai.ai, page, input);
+      out[i] = proposed ?? ruleRecommendation(page);
     }
-    const proposed = await askForPage(ai.ai, page, input);
-    out.push(proposed ?? ruleRecommendation(page));
-  }
+  };
+  await Promise.all(Array.from({ length: Math.min(RECOMMEND_IN_FLIGHT, pages.length) }, () => worker()));
   return out;
 }
 

@@ -59,7 +59,7 @@ export type GeneratedPreview = { ok: true; html: string } | { ok: false; problem
 export async function generatePreview(input: PreviewInput, options: GeneratePreviewOptions): Promise<GeneratedPreview> {
   const facts = previewFacts(input);
 
-  let pageText: string | null = null;
+  let chosen: ReturnType<typeof buildNodes> | null = null;
   if (options.ai) {
     const base = previewMessages(facts);
     try {
@@ -78,11 +78,11 @@ export async function generatePreview(input: PreviewInput, options: GeneratePrev
             const retriedCandidate = buildNodes(retry.text, facts);
             const retryClaims = findClaimWords(previewNodesText(retriedCandidate.nodes));
             if (retryClaims.length === 0) {
-              pageText = retry.text;
+              chosen = retriedCandidate;
             }
           }
         } else {
-          pageText = first.text;
+          chosen = candidate;
         }
       }
     } catch (err) {
@@ -92,8 +92,7 @@ export async function generatePreview(input: PreviewInput, options: GeneratePrev
   }
 
   // Fall back to template when AI fails or key is missing
-  const html = pageText ?? buildTemplateHtml(facts);
-  const page = buildNodes(html, facts);
+  const page = chosen ?? buildNodes(buildTemplateHtml(facts), facts);
   const nodes = await inlineImages(page.nodes, facts, options);
   return {
     ok: true,

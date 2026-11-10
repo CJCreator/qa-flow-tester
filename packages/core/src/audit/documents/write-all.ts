@@ -25,7 +25,7 @@ import {
 } from '@qa/types';
 import { documentsFromView, editedViewOf, type DocumentSettings } from './generate.js';
 import { defaultProposalTemplate } from './settings.js';
-import { buildPitchGlimpse, pitchGlimpseDoc } from './pitch.js';
+import { pitchGlimpseDoc, renderPitchGlimpse } from './pitch.js';
 import { buildOwnerAudit } from './owner-audit.js';
 import { emptyOverlay } from './edits.js';
 import { labelsFor } from './labels/index.js';
@@ -215,7 +215,7 @@ export async function writeAllDocuments(
           ...(options.screenshots ? { screenshots: options.screenshots } : {}),
         };
         const doc = pitchGlimpseDoc(view, pitchOpts);
-        const customHtml = buildPitchGlimpse(view, pitchOpts);
+        const customHtml = renderPitchGlimpse(doc);
         return { doc, customHtml };
       },
     },
