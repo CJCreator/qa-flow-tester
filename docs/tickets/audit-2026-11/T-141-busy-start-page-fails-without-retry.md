@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | core/audit | bug | todo |
+| P1 | S | core/audit | bug | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/discovery/deterministic-spider.ts`
@@ -88,9 +88,9 @@ Run: `pnpm exec vitest run packages/core/tests/audit-crawl-retry.test.ts`, then 
 
 ## Done when
 
-- [ ] A start page that answers 503 then 200 is audited.
-- [ ] A start page that answers 5xx twice still fails with `ERR_UNREACHABLE`.
-- [ ] Tests and `pnpm build` pass.
+- [x] A start page that answers 503 then 200 is audited.
+- [x] A start page that answers 5xx twice still fails with `ERR_UNREACHABLE`.
+- [x] Tests and `pnpm build` pass.
 
 ## Notes
 

@@ -804,18 +804,6 @@ export class DeterministicSpider {
           return;
         }
 
-        if (requestedDepth === 0 && options.onStartPage) {
-          const check = await options.onStartPage(page, navRes);
-          if (check?.blocked) {
-            startBlocked = check.blocked;
-            return;
-          }
-          if (check?.startError) {
-            startRefused = check.startError;
-            return;
-          }
-        }
-
         // The host says it is busy or answers 5xx (ADR 0043): slow down on 429/503, retry once
         if (
           pacer &&
@@ -842,6 +830,19 @@ export class DeterministicSpider {
             navRes = { ...again, attempts: navRes.attempts + again.attempts };
           } catch {
             // The wait ended at the deadline or on abort: the first answer stands.
+          }
+        }
+
+        // After the busy-host retry, so a start page that answered 429 or 5xx once gets its one retry too.
+        if (requestedDepth === 0 && options.onStartPage) {
+          const check = await options.onStartPage(page, navRes);
+          if (check?.blocked) {
+            startBlocked = check.blocked;
+            return;
+          }
+          if (check?.startError) {
+            startRefused = check.startError;
+            return;
           }
         }
 

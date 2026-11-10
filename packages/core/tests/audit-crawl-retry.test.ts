@@ -62,8 +62,12 @@ function makeMockBrowser(routes: Record<string, MockRoute | ((attempt: number) =
         if (fnStr.includes('IGNORED')) {
           return 'mock-layout';
         }
+        if (fnStr.includes('frameSrcs')) {
+          return { inputs: [], frameSrcs: [] };
+        }
         return '';
       },
+      frames: () => [],
       $$eval: async (sel: string) => {
         return [];
       },
@@ -176,6 +180,30 @@ describe('runAuditCrawl start page and typed errors', () => {
       expect(err.message).toBe('The site answered with error 500.');
       return true;
     });
+  });
+
+  it('a start page answering 503 once is retried and the audit goes on', async () => {
+    const mock = makeMockBrowser({
+      'https://example.com/': (attempt) => {
+        if (attempt === 1) return { status: 503, title: 'Busy', text: 'Service Unavailable' };
+        return { status: 200, title: 'Home', text: 'Welcome Home' };
+      },
+    });
+
+    const result = await runAuditCrawl(
+      {
+        url: 'https://example.com/',
+        limits: { maxPages: 5, maxDepth: 2, includePaths: [], excludePaths: [] },
+        language: 'en',
+      },
+      {
+        allowPrivateAddresses: true,
+        deps: { browserManager: mock.browserManager },
+      }
+    );
+
+    expect(result.pages).toHaveLength(1);
+    expect(result.pages[0].urlPath).toBe('/');
   });
 
   it('start page showing bot challenge throws AuditCrawlBlockedError with ERR_SITE_BLOCKED', async () => {
