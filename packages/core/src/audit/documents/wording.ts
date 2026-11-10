@@ -35,3 +35,13 @@ const PATTERNS = CLAIM_WORDS.map((word) => ({
 export function findClaimWords(text: string): string[] {
   return PATTERNS.filter((p) => p.re.test(text)).map((p) => p.word);
 }
+
+/**
+ * `text` with every claim word removed, using the same matcher as `findClaimWords` (so what is found is what
+ * is removed). White space left behind is collapsed.
+ */
+export function stripClaimWords(text: string): string {
+  let cleaned = text;
+  for (const p of PATTERNS) cleaned = cleaned.replace(new RegExp(p.re.source, 'giu'), '');
+  return cleaned.replace(/\s+/g, ' ').trim();
+}

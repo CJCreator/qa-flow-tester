@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P2 | S | core/audit | bug | todo |
+| P2 | S | core/audit | bug | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/audit/documents/wording.ts`
@@ -112,8 +112,8 @@ Run: `pnpm exec vitest run packages/core/tests/audit-claim-words.test.ts package
 
 ## Done when
 
-- [ ] `template.ts` has no regular expression of its own for claim words.
-- [ ] Tests and `pnpm build` pass.
+- [x] `template.ts` has no regular expression of its own for claim words.
+- [x] Tests and `pnpm build` pass.
 
 ## Notes
 

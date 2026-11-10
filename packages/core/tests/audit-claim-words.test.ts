@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { findClaimWords, hasClaimWords } from '../src/audit/ai/claim-words.js';
+import { stripClaimWords } from '../src/audit/documents/wording.js';
 
 describe('findClaimWords (ADR 0018)', () => {
   it.each([
@@ -46,6 +47,23 @@ describe('findClaimWords (ADR 0018)', () => {
       ['letter-joined (Unicode)', 'secureé'],
     ])('%s', (_name, text) => {
       expect(findClaimWords(text)).toEqual([]);
+    });
+  });
+
+  describe('stripClaimWords', () => {
+    const cases: Array<[string, string]> = [
+      ['A secure shop', 'A shop'],
+      ['It passes  WCAG today', 'It today'],
+      ['It passes\nWCAG today', 'It today'],
+      ['Use our secure-checkout page', 'Use our secure-checkout page'],
+      ['An insecure page with safety notes', 'An insecure page with safety notes'],
+      ['Ready to release and Certified', 'and'],
+    ];
+
+    it.each(cases)('strips claim words from %j to %j', (input, expected) => {
+      const stripped = stripClaimWords(input);
+      expect(stripped).toBe(expected);
+      expect(findClaimWords(stripped)).toEqual([]);
     });
   });
 });

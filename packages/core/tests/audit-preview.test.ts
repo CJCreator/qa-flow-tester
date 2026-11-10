@@ -18,6 +18,8 @@ import {
   type PreviewImageFetch,
   type PreviewInput,
 } from '../src/audit/preview/index.js';
+import { buildTemplateHtml } from '../src/audit/preview/template.js';
+import { findClaimWords } from '../src/audit/ai/claim-words.js';
 import { makeOutboundFetch, type NetDeps, type PinnedRequest } from '../src/safe-net.js';
 import { auditDocContents, auditDocResult, PATHS } from './helpers/audit-doc-fixture.js';
 
@@ -317,6 +319,13 @@ describe('preview images through the real makeOutboundFetch (BE-101), network fa
     expect(net.connects).toHaveLength(0);
     expect(out.html).not.toMatch(/<img\b/);
     expect(out.html).toContain('Fresh vegetables');
+  });
+
+  it('the template removes a claim written across a line break', () => {
+    const facts = previewFacts(input());
+    facts.sections = [{ id: 's1', kind: 'section', heading: 'Our shop passes\nWCAG checks', text: 'Our shop passes\nWCAG checks' }];
+    const html = buildTemplateHtml(facts);
+    expect(findClaimWords(html)).toEqual([]);
   });
 });
 

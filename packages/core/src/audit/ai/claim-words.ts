@@ -7,9 +7,9 @@
  *
  * Derived forms are not claims and are not flagged: "securely", "insecure", "non-compliant", "safety".
  */
-import { ADR_0018_CLAIM_WORDS, CLAIM_WORDS, RELEASE_VERDICT_WORDS, findClaimWords } from '../documents/wording.js';
+import { ADR_0018_CLAIM_WORDS, CLAIM_WORDS, RELEASE_VERDICT_WORDS, findClaimWords, stripClaimWords } from '../documents/wording.js';
 
-export { ADR_0018_CLAIM_WORDS, CLAIM_WORDS, RELEASE_VERDICT_WORDS, findClaimWords };
+export { ADR_0018_CLAIM_WORDS, CLAIM_WORDS, RELEASE_VERDICT_WORDS, findClaimWords, stripClaimWords };
 
 /** True when `text` makes a claim ADR 0018 forbids. */
 export function hasClaimWords(text: string): boolean {

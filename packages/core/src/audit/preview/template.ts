@@ -4,7 +4,7 @@
  * directly from the findings and Page Content using ADR 0018 claim-free wording.
  */
 import type { PreviewFacts } from './prompt.js';
-import { findClaimWords } from '../ai/claim-words.js';
+import { stripClaimWords } from '../documents/wording.js';
 
 function escapeHtml(text: string): string {
   return text
@@ -17,13 +17,7 @@ function escapeHtml(text: string): string {
 
 /** Strips any ADR 0018 prohibited claim words from untrusted text. */
 function sanitizeClaimText(text: string): string {
-  let cleaned = text;
-  const claims = findClaimWords(cleaned);
-  for (const claim of claims) {
-    const re = new RegExp(`\\b${claim}\\b`, 'gi');
-    cleaned = cleaned.replace(re, '');
-  }
-  return cleaned.replace(/\s+/g, ' ').trim();
+  return stripClaimWords(text);
 }
 
 /**
