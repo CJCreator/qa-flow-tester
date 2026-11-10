@@ -125,7 +125,7 @@ describe('The scheduler tick (ADR 0039)', () => {
     await addDue('later', { nextRunAt: new Date(Date.now() + 3_600_000).toISOString() });
     await addDue('off', { enabled: false });
     const summary = await scheduler.tick(async (s) => s.name === 'ok');
-    expect(summary).toEqual({ started: 1, failed: 1, skipped: 1, busy: false });
+    expect(summary).toEqual({ started: 1, failed: 1, skipped: 1, retrying: 0, busy: false });
   });
 
   it('a second tick that overlaps the first answers busy, and the schedule fires once', async () => {
@@ -206,5 +206,48 @@ describe('The scheduler on a beta server', () => {
       start.mockRestore();
       await fs.rm(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('calculateNextRun uses UTC', () => {
+  let scheduler: SchedulerManager;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    scheduler = new SchedulerManager(scratch);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('calculates daily run before scheduled hour on the same day in UTC', () => {
+    vi.setSystemTime(new Date('2026-11-10T01:30:00.000Z'));
+    expect(scheduler.calculateNextRun('daily', 2)).toBe('2026-11-10T02:00:00.000Z');
+  });
+
+  it('calculates daily run at or after scheduled hour on the next day in UTC', () => {
+    vi.setSystemTime(new Date('2026-11-10T02:00:00.000Z'));
+    expect(scheduler.calculateNextRun('daily', 2)).toBe('2026-11-11T02:00:00.000Z');
+  });
+
+  it('calculates hourly run on the next UTC hour rollover', () => {
+    vi.setSystemTime(new Date('2026-11-10T23:59:00.000Z'));
+    expect(scheduler.calculateNextRun('hourly')).toBe('2026-11-11T00:00:00.000Z');
+  });
+
+  it('calculates weekly run for a different day of the week in UTC', () => {
+    vi.setSystemTime(new Date('2026-11-10T12:00:00.000Z'));
+    expect(scheduler.calculateNextRun('weekly', 9, 1)).toBe('2026-11-16T09:00:00.000Z');
+  });
+
+  it('calculates weekly run before scheduled hour on the same day of the week in UTC', () => {
+    vi.setSystemTime(new Date('2026-11-10T08:00:00.000Z'));
+    expect(scheduler.calculateNextRun('weekly', 9, 2)).toBe('2026-11-10T09:00:00.000Z');
+  });
+
+  it('calculates weekly run after scheduled hour on the same day of the week rolls over to next week in UTC', () => {
+    vi.setSystemTime(new Date('2026-11-10T10:00:00.000Z'));
+    expect(scheduler.calculateNextRun('weekly', 9, 2)).toBe('2026-11-17T09:00:00.000Z');
   });
 });

@@ -76,6 +76,32 @@ describe('DefaultReportStore.list index (LAT-2)', () => {
     await fs.utimes(runs, later, later);
     expect(await store.list()).toHaveLength(0);
   });
+
+  it('invalidate() makes list() re-read a summary rewritten in place', async () => {
+    const paths = {
+      outputDir: path.join(root, 'out'),
+      dataDir: path.join(root, 'data'),
+      authDir: path.join(root, 'auth'),
+    };
+    const runs = path.join(paths.outputDir, 'runs');
+    await fs.mkdir(path.join(runs, 'run-a'), { recursive: true });
+    await fs.writeFile(
+      path.join(runs, 'run-a', 'summary.json'),
+      JSON.stringify({ ...summary('run-a', '2026-01-01T00:00:00Z'), ready: false })
+    );
+    const store = new DefaultReportStore(paths);
+    const firstList = await store.list();
+    expect(firstList[0].ready).toBe(false);
+
+    await fs.writeFile(
+      path.join(runs, 'run-a', 'summary.json'),
+      JSON.stringify({ ...summary('run-a', '2026-01-01T00:00:00Z'), ready: true })
+    );
+
+    store.invalidate();
+    const secondList = await store.list();
+    expect(secondList[0].ready).toBe(true);
+  });
 });
 
 describe('DefaultPlanStore.waiting (LAT-3)', () => {

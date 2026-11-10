@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | runner | bug | todo |
+| P1 | S | runner | bug | built |
 
 **Files you may edit (no others):**
 - `packages/runner/src/scheduler.ts`
@@ -118,9 +118,9 @@ Run: `pnpm exec vitest run packages/runner/tests/scheduler.test.ts packages/runn
 
 ## Done when
 
-- [ ] `scheduler.ts` has no local-clock date call.
-- [ ] The six cases pass.
-- [ ] Both test files and `pnpm build` pass.
+- [x] `scheduler.ts` has no local-clock date call.
+- [x] The six cases pass.
+- [x] Both test files and `pnpm build` pass.
 
 ## Notes
 

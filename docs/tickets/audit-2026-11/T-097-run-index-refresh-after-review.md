@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | runner | bug | todo |
+| P1 | S | runner | bug | built |
 
 **Files you may edit (no others):**
 - `packages/runner/src/session/report-store.ts`
@@ -90,9 +90,9 @@ Run: `pnpm exec vitest run packages/runner/tests/store-indexes.test.ts`, then `p
 
 ## Done when
 
-- [ ] `ReportStore` has `invalidate()`.
-- [ ] `saveReviewedReport` calls it after writing the summary.
-- [ ] New test and `pnpm build` pass.
+- [x] `ReportStore` has `invalidate()`.
+- [x] `saveReviewedReport` calls it after writing the summary.
+- [x] New test and `pnpm build` pass.
 
 ## Notes
 

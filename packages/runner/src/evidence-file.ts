@@ -1,4 +1,5 @@
 import { createReadStream, type Stats } from 'fs';
+import path from 'path';
 import type http from 'http';
 
 /**
@@ -38,6 +39,20 @@ export function isNotModified(req: http.IncomingMessage, etag: string): boolean 
     .some((t) => t === '*' || strip(t) === want);
 }
 
+/** The tool's own HTML files. Every other .html under the output folder is a snapshot of the scanned site. */
+const OWN_HTML = new Set(['report.html', 'issues.html']);
+
+/**
+ * Extra headers for an evidence file. A snapshot of the scanned site is sandboxed: its scripts must not run
+ * on the runner's origin, where they could call the API with the owner's cookie.
+ */
+export function evidenceSafetyHeaders(filePath: string): Record<string, string> {
+  const headers: Record<string, string> = { 'X-Content-Type-Options': 'nosniff' };
+  const name = path.basename(filePath).toLowerCase();
+  if (name.endsWith('.html') && !OWN_HTML.has(name)) headers['Content-Security-Policy'] = 'sandbox';
+  return headers;
+}
+
 /** Sends a file already stat'ed by the caller: 304 when the client's copy is current, else the stream. */
 export function sendEvidenceFile(
   req: http.IncomingMessage,
@@ -47,7 +62,7 @@ export function sendEvidenceFile(
   contentType: string
 ): void {
   const etag = evidenceEtag(stat);
-  const headers = { ETag: etag, 'Cache-Control': 'no-cache' };
+  const headers = { ETag: etag, 'Cache-Control': 'no-cache', ...evidenceSafetyHeaders(filePath) };
   if (isNotModified(req, etag)) {
     res.writeHead(304, headers);
     res.end();

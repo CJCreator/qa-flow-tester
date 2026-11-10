@@ -26,6 +26,8 @@ export interface ReportStore {
   siteDirFor(): string;
   /** Today's `listRuns`. */
   list(): Promise<RunSummary[]>;
+  /** Forget the cached run index: call after a run's summary.json is rewritten in place. */
+  invalidate(): void;
   /** Today's `readRunReport`. */
   read(runId: string): Promise<ReleaseReport | null>;
   /** Today's `loadLatestReport`. */
@@ -81,6 +83,10 @@ export class DefaultReportStore implements ReportStore {
 
   siteDirFor(): string {
     return path.join(this.paths.dataDir, 'sites');
+  }
+
+  invalidate(): void {
+    this.runIndex = null;
   }
 
   async list(): Promise<RunSummary[]> {

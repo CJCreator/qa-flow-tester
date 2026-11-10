@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P0 | S | runner | security | todo |
+| P0 | S | runner | security | built |
 
 **Files you may edit (no others):**
 - `packages/runner/src/evidence-file.ts`
@@ -107,10 +107,10 @@ Run: `pnpm exec vitest run packages/runner/tests/evidence-file.test.ts`, then `p
 
 ## Done when
 
-- [ ] `step-*.html` evidence is answered with `Content-Security-Policy: sandbox`.
-- [ ] `report.html` and `issues.html` are not sandboxed.
-- [ ] Every evidence reply has `X-Content-Type-Options: nosniff`.
-- [ ] Tests and `pnpm build` pass.
+- [x] `step-*.html` evidence is answered with `Content-Security-Policy: sandbox`.
+- [x] `report.html` and `issues.html` are not sandboxed.
+- [x] Every evidence reply has `X-Content-Type-Options: nosniff`.
+- [x] Tests and `pnpm build` pass.
 
 ## Notes
 

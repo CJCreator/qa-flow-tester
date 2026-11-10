@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | runner | bug | todo |
+| P1 | S | runner | bug | built |
 
 **Files you may edit (no others):**
 - `packages/runner/src/server.ts`
@@ -50,8 +50,8 @@ Run: `pnpm exec vitest run packages/runner/tests/scheduler-busy-lock.test.ts pac
 
 ## Done when
 
-- [ ] `runSchedule` returns `'busy'` when the phase is `awaiting-review`.
-- [ ] Both scheduler test files and `pnpm build` pass.
+- [x] `runSchedule` returns `'busy'` when the phase is `awaiting-review`.
+- [x] Both scheduler test files and `pnpm build` pass.
 
 ## Notes
 

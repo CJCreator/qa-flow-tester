@@ -7,7 +7,13 @@ import http from 'http';
 import { promises as fs } from 'fs';
 import os from 'os';
 import path from 'path';
-import { evidenceContentType, evidenceEtag, isNotModified, sendEvidenceFile } from '../src/evidence-file.js';
+import {
+  evidenceContentType,
+  evidenceEtag,
+  evidenceSafetyHeaders,
+  isNotModified,
+  sendEvidenceFile,
+} from '../src/evidence-file.js';
 
 let dir: string;
 let server: http.Server;
@@ -87,5 +93,21 @@ describe('isNotModified', () => {
   it('does not match another tag or a missing header', () => {
     expect(isNotModified(req('W/"8-1a"'), tag)).toBe(false);
     expect(isNotModified(req(), tag)).toBe(false);
+  });
+});
+
+describe('evidenceSafetyHeaders', () => {
+  it('sandboxes a snapshot of the scanned site', () => {
+    expect(evidenceSafetyHeaders('/out/runs/r1/step-3-after.html')).toEqual({
+      'X-Content-Type-Options': 'nosniff',
+      'Content-Security-Policy': 'sandbox',
+    });
+  });
+  it("leaves the tool's own report pages unsandboxed", () => {
+    expect(evidenceSafetyHeaders('/out/runs/r1/report.html')).toEqual({ 'X-Content-Type-Options': 'nosniff' });
+    expect(evidenceSafetyHeaders('/out/runs/r1/issues.html')).toEqual({ 'X-Content-Type-Options': 'nosniff' });
+  });
+  it('adds nosniff to images', () => {
+    expect(evidenceSafetyHeaders('/out/runs/r1/shot.png')).toEqual({ 'X-Content-Type-Options': 'nosniff' });
   });
 });

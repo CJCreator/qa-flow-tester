@@ -113,32 +113,33 @@ export class SchedulerManager {
     return next;
   }
 
+  /** The next time a schedule is due. `hour` and `dayOfWeek` (0 = Sunday) are UTC, as the Settings form says. */
   calculateNextRun(cadence: 'daily' | 'weekly' | 'hourly', hour: number = 2, dayOfWeek: number = 1): string {
     const now = new Date();
     const next = new Date(now);
 
     if (cadence === 'hourly') {
-      next.setMinutes(0, 0, 0);
-      next.setHours(next.getHours() + 1);
+      next.setUTCMinutes(0, 0, 0);
+      next.setUTCHours(next.getUTCHours() + 1);
       return next.toISOString();
     }
 
     if (cadence === 'daily') {
-      next.setHours(hour, 0, 0, 0);
+      next.setUTCHours(hour, 0, 0, 0);
       if (next <= now) {
-        next.setDate(next.getDate() + 1);
+        next.setUTCDate(next.getUTCDate() + 1);
       }
       return next.toISOString();
     }
 
     if (cadence === 'weekly') {
-      next.setHours(hour, 0, 0, 0);
-      const currentDay = next.getDay();
+      next.setUTCHours(hour, 0, 0, 0);
+      const currentDay = next.getUTCDay();
       let daysUntil = (dayOfWeek - currentDay + 7) % 7;
       if (daysUntil === 0 && next <= now) {
         daysUntil = 7;
       }
-      next.setDate(next.getDate() + daysUntil);
+      next.setUTCDate(next.getUTCDate() + daysUntil);
       return next.toISOString();
     }
 

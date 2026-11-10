@@ -1527,7 +1527,8 @@ export class RunnerServer {
    * is spent). False when it could not start, for instance because a check-up is already running.
    */
   private async runSchedule(schedule: CheckupSchedule): Promise<RunOutcome> {
-    if (this.checkupStartRefused || this.runStartDone) return 'busy';
+    // A Plan awaiting review is the owner's work in progress: a schedule never sets it aside, it retries later.
+    if (this.checkupStartRefused || this.runStartDone || this.phase === 'awaiting-review') return 'busy';
     // resolveAuthorization({ beta: false }) below skips the public-address check, so the hosted copy does it here.
     if (this.beta && (await refusedTarget(schedule.targetUrl, this.hostChecks?.lookup))) return false;
     let finishStart!: () => void;
@@ -2773,6 +2774,8 @@ export class RunnerServer {
         'utf8'
       )
       .catch(() => {});
+    // The summary changed in place; the folder's time did not, so the cached index would stay stale.
+    this.session.report.invalidate();
   }
 
   /** The key saved on this machine for a provider, if any. Never returned to clients. */
