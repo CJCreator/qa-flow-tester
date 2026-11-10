@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | scripts | bug | todo |
+| P1 | S | scripts | bug | built |
 
 **Files you may edit (no others):**
 - `scripts/tunnel.mjs`
@@ -118,9 +118,9 @@ pnpm format:check
 Do not run `pnpm tunnel` to test: it opens a public link to this computer.
 
 ## Done when
-- [ ] The build step builds `@qa/runner...` and then `@qa/wizard`, each only when its output is missing.
-- [ ] `shutdown()` uses `taskkill /T /F` on Windows.
-- [ ] `node --check scripts/tunnel.mjs` passes; `pnpm lint` has 0 errors; `pnpm format:check` passes.
+- [x] The build step builds `@qa/runner...` and then `@qa/wizard`, each only when its output is missing.
+- [x] `shutdown()` uses `taskkill /T /F` on Windows.
+- [x] `node --check scripts/tunnel.mjs` passes; `pnpm lint` has 0 errors; `pnpm format:check` passes.
 
 ## Notes
 - `spawnSync`, `existsSync`, `path`, `root`, `isWin`, `noBuild`, `log` and `err` are all defined above line 102

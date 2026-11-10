@@ -1,4 +1,4 @@
-// Fails when the Playwright version in pnpm-lock.yaml or package manifests differs from the tag of the runner Docker image.
+// Fails when the Playwright version in pnpm-lock.yaml, a package manifest or the pnpm-workspace.yaml overrides differs from the tag of the runner Docker image.
 // Pure string parsing: no network, no pnpm. Usage: node scripts/check-playwright-version.mjs
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import path from 'node:path';
@@ -16,6 +16,22 @@ export function parseLockfileVersions(text) {
   const found = new Set();
   for (const m of text.matchAll(re)) found.add(m[1]);
   return [...found].sort();
+}
+
+/** `playwright` and `playwright-core` entries of the top-level `overrides:` block in pnpm-workspace.yaml. */
+export function parseWorkspaceOverrides(text) {
+  const out = [];
+  let inOverrides = false;
+  for (const line of text.split(/\r?\n/)) {
+    if (/^\S/.test(line)) {
+      inOverrides = /^overrides:\s*$/.test(line);
+      continue;
+    }
+    if (!inOverrides) continue;
+    const m = /^\s+['"]?(playwright(?:-core)?)['"]?:\s*['"]?([^'"\s#]+)['"]?/.exec(line);
+    if (m) out.push({ name: m[1], version: m[2] });
+  }
+  return out;
 }
 
 /** Finds Playwright versions or overrides in root and workspace package.json files. */
@@ -42,12 +58,17 @@ export function parseManifestVersions(root) {
       const data = JSON.parse(readFileSync(m.path, 'utf8'));
       const deps = data.dependencies?.playwright;
       const devDeps = data.devDependencies?.playwright;
-      const override = data.pnpm?.overrides?.playwright;
       if (deps) results.push({ file: m.relPath, field: 'dependencies.playwright', version: deps });
       if (devDeps) results.push({ file: m.relPath, field: 'devDependencies.playwright', version: devDeps });
-      if (override) results.push({ file: m.relPath, field: 'pnpm.overrides.playwright', version: override });
     } catch {
       // ignore parse error if any
+    }
+  }
+
+  const workspacePath = path.join(root, 'pnpm-workspace.yaml');
+  if (existsSync(workspacePath)) {
+    for (const o of parseWorkspaceOverrides(readFileSync(workspacePath, 'utf8'))) {
+      results.push({ file: 'pnpm-workspace.yaml', field: `overrides.${o.name}`, version: o.version });
     }
   }
   return results;

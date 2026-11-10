@@ -99,17 +99,23 @@ if (await portInUse(port)) {
   process.exit(1);
 }
 
-// ── 1. Ensure runner is built ──────────────────────────────────────────────
-if (!noBuild && !existsSync(path.join(root, 'packages/runner/dist/cli.js'))) {
-  log('Runner not built yet — building now (run with --no-build to skip)…');
-  const result = spawnSync('pnpm', ['--filter', '@qa/runner', 'build'], {
-    cwd: root,
-    stdio: 'inherit',
-    shell: isWin,
-  });
+// ── 1. Ensure the runner and the Wizard it serves are built (the same two steps as scripts/start.mjs) ──
+function buildOrExit(args) {
+  const result = spawnSync('pnpm', args, { cwd: root, stdio: 'inherit', shell: isWin });
   if (result.status !== 0) {
     err('Build failed. Run `pnpm bootstrap` to reinstall and rebuild everything.');
     process.exit(1);
+  }
+}
+if (!noBuild) {
+  const libraries = ['types/dist/index.js', 'checkers/dist/index.js', 'core/dist/index.js', 'runner/dist/cli.js'];
+  if (!libraries.every((file) => existsSync(path.join(root, 'packages', file)))) {
+    log('Runner not built yet — building now (run with --no-build to skip)…');
+    buildOrExit(['--filter', '@qa/runner...', 'run', 'build']);
+  }
+  if (!existsSync(path.join(root, 'packages/wizard/dist/index.html'))) {
+    log('Wizard not built yet — building now…');
+    buildOrExit(['--filter', '@qa/wizard', 'run', 'build']);
   }
 }
 
@@ -221,7 +227,13 @@ function shutdown() {
   isShuttingDown = true;
   log('Shutting down…');
   try {
-    tunnelProc?.kill();
+    // On Windows tunnelProc is cmd.exe (shell: true): kill() would leave `pnpm dlx untun` and cloudflared
+    // running. taskkill /T ends the whole tree.
+    if (isWin && tunnelProc?.pid) {
+      spawnSync('taskkill', ['/pid', String(tunnelProc.pid), '/T', '/F'], { stdio: 'ignore' });
+    } else {
+      tunnelProc?.kill();
+    }
   } catch {}
   try {
     runnerProc?.kill();

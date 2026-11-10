@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | scripts | bug | todo |
+| P1 | S | scripts | bug | built |
 
 **Files you may edit (no others):**
 - `scripts/check-playwright-version.mjs`
@@ -145,9 +145,9 @@ The second command must print `Playwright 1.63.0 matches the Docker image tag, l
 and exit 0.
 
 ## Done when
-- [ ] `parseWorkspaceOverrides` is exported and used by `parseManifestVersions`.
-- [ ] The test file passes, including the 3 new tests.
-- [ ] `node scripts/check-playwright-version.mjs` exits 0 on this repository.
+- [x] `parseWorkspaceOverrides` is exported and used by `parseManifestVersions`.
+- [x] The test file passes, including the 3 new tests.
+- [x] `node scripts/check-playwright-version.mjs` exits 0 on this repository.
 
 ## Notes
 - `path`, `existsSync` and `readFileSync` are already imported at the top of the script.

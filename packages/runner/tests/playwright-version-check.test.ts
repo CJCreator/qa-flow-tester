@@ -3,6 +3,7 @@ import {
   checkVersions,
   parseDockerfileVersion,
   parseLockfileVersions,
+  parseWorkspaceOverrides,
   // @ts-expect-error plain .mjs script without type declarations
 } from '../../../scripts/check-playwright-version.mjs';
 
@@ -88,5 +89,41 @@ describe('playwright version check', () => {
     const text =
       "packages:\r\n  'playwright@1.63.0':\r\n    x: 1\r\nsnapshots:\r\n  playwright@1.63.0(foo@1.0.0):\r\n    x: 1\r\n";
     expect(parseLockfileVersions(text)).toEqual(['1.63.0']);
+  });
+});
+
+describe('pnpm-workspace.yaml overrides', () => {
+  const workspace = [
+    'packages:',
+    "  - 'packages/*'",
+    'allowBuilds:',
+    '  esbuild: true',
+    'overrides:',
+    "  playwright: '1.63.0'",
+    "  playwright-core: '1.63.0'",
+    "  '@grpc/grpc-js': '>=1.13.6'",
+    '',
+  ].join('\n');
+
+  it('reads playwright and playwright-core from the overrides block', () => {
+    expect(parseWorkspaceOverrides(workspace)).toEqual([
+      { name: 'playwright', version: '1.63.0' },
+      { name: 'playwright-core', version: '1.63.0' },
+    ]);
+  });
+
+  it('ignores the same names outside the overrides block', () => {
+    expect(parseWorkspaceOverrides('allowBuilds:\n  playwright: false\npackages:\n  - x\n')).toEqual([]);
+  });
+
+  it('fails the check when an override differs from the Docker image tag', () => {
+    const r = checkVersions({
+      docker: '1.63.0',
+      locked: ['1.63.0'],
+      manifests: [{ file: 'pnpm-workspace.yaml', field: 'overrides.playwright', version: '1.62.0' }],
+    });
+    expect(r.ok).toBe(false);
+    expect(r.message).toContain('pnpm-workspace.yaml');
+    expect(r.message).toContain('1.62.0');
   });
 });

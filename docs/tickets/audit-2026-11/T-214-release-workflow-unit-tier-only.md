@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P2 | S | ci | speed | todo |
+| P2 | S | ci | speed | built |
 
 **Files you may edit (no others):**
 - `.github/workflows/release.yml`
@@ -75,10 +75,10 @@ grep -n "playwright install\|playwright-cache" .github/workflows/release.yml
 ```
 
 ## Done when
-- [ ] The `Tests` step runs `--project unit`.
-- [ ] No Chromium install or cache step is left in `release.yml`.
-- [ ] `release-workflow.test.ts` passes.
-- [ ] `docs/TESTING.md:18` matches the workflow.
+- [x] The `Tests` step runs `--project unit`.
+- [x] No Chromium install or cache step is left in `release.yml`.
+- [x] `release-workflow.test.ts` passes.
+- [x] `docs/TESTING.md:18` matches the workflow.
 
 ## Notes
 - Do not remove the last step, `Build` (`run: pnpm build`). It repeats earlier builds, but

@@ -15,7 +15,7 @@ Runner: vitest. Node environment, 30 s test and hook timeouts, tests in `package
 
 Other commands: `pnpm test:watch`; one file: `pnpm exec vitest run <file>`; `pnpm typecheck` (`tsc -p tsconfig.test.json --noEmit`, includes tests; blocking in `ci.yml`); `pnpm test:plugin` (the `plugins/repo-orchestrator` checks).
 
-`release.yml` runs `pnpm exec vitest run` (both tiers, after installing Chromium).
+`release.yml` runs `pnpm exec vitest run --project unit` (the unit tier; the browser tier runs nightly).
 
 ## No fabricated websites
 
