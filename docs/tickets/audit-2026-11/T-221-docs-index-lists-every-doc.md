@@ -60,7 +60,7 @@ are missing from it, so a reader never finds them:
    ```
 4. Add this row directly after the `../SECURITY.md` row:
    ```markdown
-   | [`../PRIVACY.md`](../PRIVACY.md) | What the tool stores and sends, and what it never does |
+   | [`../PRIVACY.md`](../PRIVACY.md) | What the software and the shared online copy store, for a self-hosted copy and for the hosted one |
    ```
 5. If the `OPEN_ISSUES.md` row is still present (T-217 not built yet), stop: build T-217 first.
 
@@ -83,5 +83,5 @@ for f in docs/*.md; do b=$(basename "$f"); [ "$b" = "README.md" ] || grep -q "($
 ## Notes
 - Prettier re-aligns the table columns; that is expected.
 - The `GTM_AND_PRICING.md` description matches T-225, which marks that doc as a draft.
-- Read `PRIVACY.md`'s first paragraph before writing: if its subject differs from the description in step 4,
-  use its own first sentence, shortened to one line.
+- `PRIVACY.md` opens: "This policy covers the QA Flow Tester (Release check-up) software and the shared online
+  copy of it." The description in step 4 is taken from that.
