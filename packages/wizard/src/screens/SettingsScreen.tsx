@@ -1114,10 +1114,20 @@ function CheckupSchedules() {
               </div>
 
               <div className="flex items-center gap-2">
-                <button type="button" onClick={() => void handleToggle(s)} className="btn-quiet btn-sm min-h-[44px]">
+                <button
+                  type="button"
+                  onClick={() => void handleToggle(s)}
+                  className="btn-quiet btn-sm min-h-[44px]"
+                  aria-label={`${s.enabled ? 'Pause' : 'Resume'} the scheduled check-up of ${s.targetUrl}`}
+                >
                   {s.enabled ? 'Pause' : 'Resume'}
                 </button>
-                <button type="button" onClick={() => void handleDelete(s)} className="btn-link min-h-[44px] text-fail">
+                <button
+                  type="button"
+                  onClick={() => void handleDelete(s)}
+                  className="btn-link min-h-[44px] text-fail"
+                  aria-label={`Delete the scheduled check-up of ${s.targetUrl}`}
+                >
                   Delete
                 </button>
               </div>
@@ -1408,6 +1418,7 @@ function Sites() {
                           type="button"
                           className="btn-link min-h-[44px] text-sm"
                           onClick={() => void test(site.host, s.role)}
+                          aria-label={`Test it: the ${s.role} sign-in for ${site.host}`}
                         >
                           Test it
                         </button>
@@ -1415,6 +1426,7 @@ function Sites() {
                           type="button"
                           className="btn-link min-h-[44px] text-sm text-fail"
                           onClick={() => void forget(site.host, s.role)}
+                          aria-label={`Forget the ${s.role} sign-in for ${site.host}`}
                         >
                           Forget
                         </button>

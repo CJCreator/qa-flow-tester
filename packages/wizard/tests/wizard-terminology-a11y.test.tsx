@@ -63,3 +63,15 @@ describe('terminology (W4)', () => {
     expect(hits).toEqual([]);
   });
 });
+
+describe('Settings row buttons name their row', () => {
+  const settings = readFileSync(new URL('../src/screens/SettingsScreen.tsx', import.meta.url), 'utf8');
+  it.each([
+    "aria-label={`${s.enabled ? 'Pause' : 'Resume'} the scheduled check-up of ${s.targetUrl}`}",
+    'aria-label={`Delete the scheduled check-up of ${s.targetUrl}`}',
+    'aria-label={`Test it: the ${s.role} sign-in for ${site.host}`}',
+    'aria-label={`Forget the ${s.role} sign-in for ${site.host}`}',
+  ])('has %s', (label) => {
+    expect(settings).toContain(label);
+  });
+});
