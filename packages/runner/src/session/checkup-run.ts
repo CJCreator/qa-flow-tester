@@ -398,8 +398,12 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
     );
 
   const broadcast = (event: OrchestratorEvent | Record<string, unknown>): void => {
-    session.events.publish(event.type === 'RUN_COMPLETED' ? { type: event.type, runId: (event as any).runId } : event);
-    if (deps.onEvent) deps.onEvent(event);
+    // RUN_COMPLETED is logged and streamed without its report (the page fetches that). One object for both,
+    // so the stream finds the id the log gave it.
+    const logged: OrchestratorEvent | Record<string, unknown> =
+      event.type === 'RUN_COMPLETED' ? { type: event.type, runId: (event as { runId?: string }).runId } : event;
+    session.events.publish(logged as Record<string, unknown>);
+    if (deps.onEvent) deps.onEvent(logged);
   };
 
   const forwardRunEvent = (event: OrchestratorEvent): void => {

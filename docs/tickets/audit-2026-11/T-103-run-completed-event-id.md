@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P2 | S | runner | bug | todo |
+| P2 | S | runner | bug | built |
 
 **Files you may edit (no others):**
 - `packages/runner/src/session/checkup-run.ts`
