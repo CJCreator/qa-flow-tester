@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | core | bug | todo |
+| P1 | S | core | bug | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/discovery/discovery-agent.ts`
@@ -102,9 +102,9 @@ test. Verify by:
 
 ## Done when
 
-- [ ] `reloginHandler` creates its context with `this.browserManager.createContext` and never calls `blockChanges`
-- [ ] The fresh context is closed on every path
-- [ ] `pnpm build` passes and the existing core tests pass
+- [x] `reloginHandler` creates its context with `this.browserManager.createContext` and never calls `blockChanges`
+- [x] The fresh context is closed on every path
+- [x] `pnpm build` passes and the existing core tests pass
 
 ## Notes
 

@@ -559,17 +559,27 @@ export class DiscoveryAgent {
       const roleMaxPages = Math.min(totalMaxPages, Math.max(20, Math.floor(totalMaxPages / 2)));
       const roleSpider = new DeterministicSpider(options.profile?.forbiddenActions || [], roleMaxPages);
       const reloginHandler = async (): Promise<boolean> => {
+        let freshContext: BrowserContext | undefined;
         try {
-          const freshContext = await newContext();
+          // Not newContext(): on a read-only site that blocks the sign-in POST itself. Signing in is the one
+          // request a read-only scan must send, exactly as pre-flight does.
+          freshContext = await this.browserManager.createContext({
+            baseUrl: options.targetUrl,
+            customHeaders: options.customHeaders,
+            userAgent: options.userAgent,
+            tunnelAuth: options.tunnelAuth,
+            headerHosts: options.headerHosts,
+          });
           const outcome = await new PreFlightChecker().signIn(freshContext, options.targetUrl, role);
           const freshState = outcome.ok ? await freshContext.storageState().catch(() => null) : null;
-          await freshContext.close().catch(() => {});
           if (!freshState) return false;
           // The whole session, not only its cookies: one restore path for every call site (LC-004).
           await restoreSession(roleContext, freshState);
           return true;
         } catch {
           return false;
+        } finally {
+          await freshContext?.close().catch(() => {});
         }
       };
       const roleResult = await roleSpider.crawl(roleContext, options.targetUrl, {
