@@ -1556,7 +1556,7 @@ export class FlowTestOrchestrator {
     // One problem, one finding, however many test points, widths or roles ran into it.
     const uniqueFindings = mergeDuplicateFindings(allFindings);
     await suppressionsManager.applySuppressions(uniqueFindings, siteHostOf(options.targetUrl));
-    const delta = await suppressionsManager.computeDelta(uniqueFindings);
+    const delta = await suppressionsManager.computeDelta(uniqueFindings, siteHostOf(options.targetUrl));
     const activeSuppressions = await suppressionsManager.loadSuppressions();
 
     // Build Traceability Matrix

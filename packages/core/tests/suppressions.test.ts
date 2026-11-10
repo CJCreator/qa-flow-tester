@@ -125,4 +125,37 @@ describe('SuppressionsManager', () => {
     const delta = await new SuppressionsManager(tmpDir).computeDelta([at('F-2', '/a/#top')]);
     expect(delta).toEqual({ newFindings: 0, fixedFindings: 0, openFindings: 1, suppressedFindings: 0 });
   });
+
+  it('computeDelta ignores the last report when it was for another site', async () => {
+    await fs.writeFile(
+      path.join(tmpDir, 'findings.json'),
+      JSON.stringify({ targetUrl: 'https://a.example.com/', findings: [mk('F-1', 'Old problem')] }),
+      'utf8'
+    );
+    const delta = await new SuppressionsManager(tmpDir).computeDelta([mk('F-2', 'New problem')], 'b.example.com');
+    expect(delta.fixedFindings).toBe(0);
+    expect(delta.newFindings).toBe(1);
+  });
+
+  it('computeDelta compares when the host is the same', async () => {
+    await fs.writeFile(
+      path.join(tmpDir, 'findings.json'),
+      JSON.stringify({ targetUrl: 'https://a.example.com/', findings: [mk('F-1', 'Old problem')] }),
+      'utf8'
+    );
+    const delta = await new SuppressionsManager(tmpDir).computeDelta([mk('F-2', 'New problem')], 'a.example.com');
+    expect(delta.fixedFindings).toBe(1);
+    expect(delta.newFindings).toBe(1);
+  });
+
+  it('computeDelta compares when no host is given', async () => {
+    await fs.writeFile(
+      path.join(tmpDir, 'findings.json'),
+      JSON.stringify({ targetUrl: 'https://a.example.com/', findings: [mk('F-1', 'Old problem')] }),
+      'utf8'
+    );
+    const delta = await new SuppressionsManager(tmpDir).computeDelta([mk('F-2', 'New problem')]);
+    expect(delta.fixedFindings).toBe(1);
+    expect(delta.newFindings).toBe(1);
+  });
 });

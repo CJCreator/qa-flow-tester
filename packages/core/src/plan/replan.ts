@@ -28,12 +28,22 @@ function startPathOf(draft: DiscoveryDraft): string {
   return draft.pages.some((p) => pathOf(p.urlPath) === typed) ? typed : draft.pages[0]?.urlPath || '/';
 }
 
-/** How each page is covered now, keeping pages the person promoted or added. */
-function currentCoverage(draft: DiscoveryDraft): Map<string, PageCoverageInfo> {
+/**
+ * How each page is covered now. The Plan's own choice wins for every page it already holds (so the Sample
+ * Pages of a Layout Group stay the same across a re-plan); only pages the Plan has not seen are sampled afresh.
+ */
+export function currentCoverage(draft: DiscoveryDraft): Map<string, PageCoverageInfo> {
   const coverage = sampleLayoutGroups(draft.pages).coverage;
   for (const page of draft.plan?.pages || []) {
-    if (page.coverage === 'promoted' || page.added)
+    if (page.coverage === 'promoted' || page.added) {
       coverage.set(page.urlPath, { coverage: 'promoted', layoutGroup: page.layoutGroup });
+    } else if (page.coverage) {
+      coverage.set(page.urlPath, {
+        coverage: page.coverage,
+        ...(page.layoutGroup ? { layoutGroup: page.layoutGroup } : {}),
+        ...(page.coveredBy?.length ? { coveredBy: page.coveredBy } : {}),
+      });
+    }
   }
   return coverage;
 }

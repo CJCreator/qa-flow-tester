@@ -104,6 +104,31 @@ export async function recordPhoneLayout(page: Page, opts: PhoneLayoutOptions): P
       findings = [];
     }
 
+    if (overflow && !findings.some((f) => f.id.startsWith('F-UX-OVERFLOW-'))) {
+      findings.unshift({
+        id: `F-UX-OVERFLOW-${opts.testCaseId || 'GEN'}-0`,
+        testCaseId: opts.testCaseId,
+        severity: 'Major',
+        checker: 'ux-quality',
+        title: 'Horizontal page overflow found (375px)',
+        where: {
+          urlPath: opts.urlPath,
+          role: opts.role ?? 'visitor',
+          breakpoint: '375px',
+        },
+        expectedVsActual: {
+          expected: 'Page content fits within viewport width (375px) without horizontal scrolling',
+          actual: 'Page triggers horizontal scrollbar (scrollWidth > innerWidth)',
+        },
+        stepsToReproduce: [
+          `Navigate to ${opts.urlPath} at 375px`,
+          'Check for horizontal scrollbar',
+        ],
+        evidence: {},
+        resolution: 'Ensure broad containers use max-w-full and overflow-x-hidden.',
+      });
+    }
+
     const rel = opts.screenshotFile ?? phoneScreenshotFile(opts.urlPath);
     const abs = resolveInside(opts.versionDir, rel);
     if (abs) {

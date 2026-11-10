@@ -22,9 +22,17 @@ export interface SiteGraph {
   otherHosts: PlanOtherHost[];
 }
 
-/** The path part of a page address: pages are told apart by it. */
+/**
+ * What tells one page from another. A page on the checked site is its path ("/pricing"). A page on another
+ * host is stored with its full address and keeps its origin ("https://help.example.org/"), so it can never
+ * take the place of the site's own page with the same path.
+ */
 export function pathOf(urlPath: string): string {
   try {
+    if (/^https?:\/\//i.test(urlPath)) {
+      const full = new URL(urlPath);
+      return `${full.origin}${full.pathname}`;
+    }
     return new URL(urlPath, 'http://x').pathname;
   } catch {
     return urlPath;

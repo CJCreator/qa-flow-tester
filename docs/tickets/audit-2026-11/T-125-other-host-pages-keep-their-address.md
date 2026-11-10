@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | core | bug | todo |
+| P1 | S | core | bug | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/plan/site-graph.ts`
@@ -110,9 +110,9 @@ Commands: `pnpm exec vitest run packages/core/tests/site-graph-other-host.test.t
 
 ## Done when
 
-- [ ] The new tests pass
-- [ ] The whole core unit tier still passes
-- [ ] `pnpm build` passes
+- [x] The new tests pass
+- [x] The whole core unit tier still passes
+- [x] `pnpm build` passes
 
 ## Notes
 

@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | core | bug | todo |
+| P1 | S | core | bug | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/suppressions.ts`
@@ -102,9 +102,9 @@ Command: `pnpm exec vitest run packages/core/tests/suppressions.test.ts`, then `
 
 ## Done when
 
-- [ ] The three new tests pass; the existing ones still pass
-- [ ] The orchestrator passes the checked site's host
-- [ ] `pnpm build` passes
+- [x] The three new tests pass; the existing ones still pass
+- [x] The orchestrator passes the checked site's host
+- [x] `pnpm build` passes
 
 ## Notes
 

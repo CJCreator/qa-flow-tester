@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P2 | S | core | inconsistency | todo |
+| P2 | S | core | inconsistency | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/plan/replan.ts`
@@ -84,8 +84,8 @@ Command: `pnpm exec vitest run packages/core/tests/replan-coverage.test.ts`, the
 
 ## Done when
 
-- [ ] The three cases pass
-- [ ] `pnpm build` passes
+- [x] The three cases pass
+- [x] `pnpm build` passes
 
 ## Notes
 

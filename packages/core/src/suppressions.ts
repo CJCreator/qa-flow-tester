@@ -80,12 +80,24 @@ export class SuppressionsManager {
     return { activeFindings, suppressedFindings };
   }
 
-  async computeDelta(currentFindings: Finding[]): Promise<RunDelta> {
+  /**
+   * What changed since the last Check-up. `host` is the checked site's host: a previous report for a
+   * different site is ignored (it is then a first Check-up: everything is new, nothing is fixed).
+   */
+  async computeDelta(currentFindings: Finding[], host?: string): Promise<RunDelta> {
     let previousFindings: Finding[] = [];
     try {
       const data = await fs.readFile(this.previousFindingsFilePath, 'utf8');
       const prevReport = JSON.parse(data) as ReleaseReport;
-      previousFindings = prevReport.findings || [];
+      let sameSite = true;
+      if (host && prevReport.targetUrl) {
+        try {
+          sameSite = new URL(prevReport.targetUrl).host.toLowerCase() === host.toLowerCase();
+        } catch {
+          sameSite = false;
+        }
+      }
+      previousFindings = sameSite ? prevReport.findings || [] : [];
     } catch {
       // First run, no previous findings
     }
