@@ -127,14 +127,19 @@ export async function startAudit(body: AuditStartBody, fetchImpl: Fetch = fetch)
   };
 }
 
-/** Stops the active audit or Check-up by calling `POST /api/runner/stop`. */
+/** Shown when the runner answered but stopped nothing. */
+export const STOP_DID_NOTHING = 'The Website Audit could not be stopped from here. It will finish on its own.';
+
+/** Stops the active Website Audit by calling `POST /api/runner/stop`. `ok` is true only when it was stopped. */
 export async function stopAudit(fetchImpl: Fetch = fetch): Promise<{ ok: boolean; message?: string }> {
   try {
     const res = await fetchImpl('/api/runner/stop', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
     });
-    return { ok: res.ok };
+    if (!res.ok) return { ok: false, message: STOP_DID_NOTHING };
+    const body = (await res.json().catch(() => null)) as { aborted?: unknown } | null;
+    return body?.aborted === true ? { ok: true } : { ok: false, message: STOP_DID_NOTHING };
   } catch {
     return { ok: false, message: NOT_ANSWERING };
   }

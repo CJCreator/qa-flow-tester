@@ -599,7 +599,7 @@ function VisualReview({
             setWorking(true);
             setMessage(null);
             try {
-              const result = await finishAiReview();
+              const result = await finishAiReview(report.runId);
               onReportChanged(await getRun(report.runId));
               setMessage(
                 result.remainingCount > 0

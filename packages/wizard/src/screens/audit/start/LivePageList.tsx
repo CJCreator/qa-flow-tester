@@ -51,6 +51,7 @@ export function pageAiText(ai?: 'waiting' | 'done' | 'not-done'): string | null 
 export function LivePageList({ pages, elapsedMs, startedAt, onStop, stopped = false }: LivePageListProps) {
   const [stopping, setStopping] = useState(false);
   const [liveElapsed, setLiveElapsed] = useState(0);
+  const [stopMessage, setStopMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (elapsedMs !== undefined || stopped) return;
@@ -66,11 +67,13 @@ export function LivePageList({ pages, elapsedMs, startedAt, onStop, stopped = fa
   const handleStop = async () => {
     if (stopping || stopped) return;
     setStopping(true);
+    setStopMessage(null);
     try {
       if (onStop) {
         await onStop();
       } else {
-        await stopAudit();
+        const outcome = await stopAudit();
+        if (!outcome.ok) setStopMessage(outcome.message ?? null);
       }
     } finally {
       setStopping(false);
@@ -95,6 +98,11 @@ export function LivePageList({ pages, elapsedMs, startedAt, onStop, stopped = fa
           </button>
         )}
       </div>
+      {stopMessage && (
+        <p role="alert" className="mt-2 text-sm text-fail" data-testid="audit-stop-message">
+          {stopMessage}
+        </p>
+      )}
 
       {pages.length > 0 ? (
         <ol className="mt-3 divide-y divide-rule/60 text-sm" aria-label="Audited pages">

@@ -143,7 +143,9 @@ export function fileNameFrom(disposition: string | null, fallback: string): stri
 /** The reason an export cannot start for a version with this status; null when it can. */
 export function exportBlockedReason(status: AuditStatus | undefined): string | null {
   if (status === 'running') return 'This version is still running. Download it when it has finished.';
-  if (status === 'failed') return 'This version did not finish, so there is nothing to download.';
+  if (status === 'failed' || status === 'stopped') {
+    return 'This version did not finish, so there is nothing to download.';
+  }
   return null;
 }
 

@@ -704,8 +704,8 @@ export async function readRunText(runId: string, relativePath: string): Promise<
   return res.text();
 }
 
-/** Finishes AI visual and copy review for screens remaining after a partial run. */
-export async function finishAiReview(): Promise<{
+/** Finishes the AI review of one Check-up. The id is sent so the runner can refuse a report that is not its last. */
+export async function finishAiReview(runId: string): Promise<{
   completed: boolean;
   reviewedCount: number;
   remainingCount: number;
@@ -713,8 +713,11 @@ export async function finishAiReview(): Promise<{
   grades?: ReleaseReport['grades'];
   note?: string;
 }> {
-  const res = await call('/api/runner/ai/finish', { method: 'POST' });
-  if (!res.ok) throw new RunnerError('Couldn’t finish the AI review. Try again.');
+  const res = await call('/api/runner/ai/finish', { method: 'POST', body: JSON.stringify({ runId }) });
+  if (!res.ok) {
+    const err = await json<{ error?: string }>(res).catch((): { error?: string } => ({}));
+    throw new RunnerError(err.error || 'Couldn’t finish the AI review. Try again.');
+  }
   return json(res);
 }
 

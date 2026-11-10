@@ -150,6 +150,11 @@ export interface ShortlistPanelProps {
   fetchImpl?: Fetch;
 }
 
+/** What tells two shortlist entries apart: the save time, or nothing when there is no entry. */
+export function entryVersion(entry: ShortlistEntry | null): string | null {
+  return entry?.updatedAt ?? null;
+}
+
 /** Saves through `PUT /api/audits/:id/shortlist` and shows the values the runner saved (REQ-023). */
 export function ShortlistPanel({ auditId, entry, onSaved, fetchImpl }: ShortlistPanelProps) {
   const [saved, setSaved] = useState<ShortlistEntry | null>(entry);
@@ -157,10 +162,12 @@ export function ShortlistPanel({ auditId, entry, onSaved, fetchImpl }: Shortlist
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<ShortlistPanelViewProps['message']>(null);
 
+  // Reset only when the saved entry really changed (a new save time), not on every re-read of the audit.
+  const version = entryVersion(entry);
   useEffect(() => {
     setSaved(entry);
     setDraft(draftFromEntry(entry));
-  }, [entry]);
+  }, [version]);
 
   const save = async () => {
     setSaving(true);

@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | wizard | bug | todo |
+| P1 | S | wizard | bug | built |
 
 **Files you may edit (no others):**
 - `packages/wizard/src/api.ts`
@@ -107,9 +107,9 @@ Run: `pnpm exec vitest run packages/wizard/tests/finish-ai-review.test.ts` then 
 
 ## Done when
 
-- [ ] The request body is `{"runId":"<id of the report on screen>"}`.
-- [ ] A refusal shows the runner's own `error` text.
-- [ ] `finishAiReview` has no caller without an argument (`pnpm build` proves it).
+- [x] The request body is `{"runId":"<id of the report on screen>"}`.
+- [x] A refusal shows the runner's own `error` text.
+- [x] `finishAiReview` has no caller without an argument (`pnpm build` proves it).
 
 ## Notes
 

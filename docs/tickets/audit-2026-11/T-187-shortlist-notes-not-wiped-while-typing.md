@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | wizard | bug | todo |
+| P1 | S | wizard | bug | built |
 
 **Files you may edit (no others):**
 - `packages/wizard/src/screens/audit/saved/ShortlistPanel.tsx`
@@ -81,10 +81,10 @@ Run: `pnpm exec vitest run packages/wizard/tests/audit-shortlist.test.tsx` then 
 
 ## Done when
 
-- [ ] The effect depends on the entry's save time, not on the object.
-- [ ] Typing notes during a running audit keeps the text across re-reads.
-- [ ] After Save, the panel still shows the values the runner saved.
-- [ ] Test and lint pass.
+- [x] The effect depends on the entry's save time, not on the object.
+- [x] Typing notes during a running audit keeps the text across re-reads.
+- [x] After Save, the panel still shows the values the runner saved.
+- [x] Test and lint pass.
 
 ## Notes
 

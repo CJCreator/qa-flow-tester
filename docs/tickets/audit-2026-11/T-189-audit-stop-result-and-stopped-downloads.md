@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | wizard | bug | todo |
+| P1 | S | wizard | bug | built |
 
 **Files you may edit (no others):**
 - `packages/wizard/src/screens/audit/start/audit-start-api.ts`
@@ -184,9 +184,9 @@ Run: `pnpm exec vitest run packages/wizard/tests/audit-documents-export.test.tsx
 
 ## Done when
 
-- [ ] A Stop that stops nothing shows the message under the button.
-- [ ] A `stopped` version shows the "did not finish" reason and no Download request is sent.
-- [ ] Tests and `pnpm build` pass.
+- [x] A Stop that stops nothing shows the message under the button.
+- [x] A `stopped` version shows the "did not finish" reason and no Download request is sent.
+- [x] Tests and `pnpm build` pass.
 
 ## Notes
 

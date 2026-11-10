@@ -360,6 +360,7 @@ describe('saving a download (T-70)', () => {
     const running = exportBlockedReason('running');
     expect(running).toMatch(/still running/);
     expect(exportBlockedReason('failed')).toMatch(/did not finish/);
+    expect(exportBlockedReason('stopped')).toMatch(/did not finish/);
     const html = view({ blockedReason: running });
     expect(textOf(html)).toContain(running!);
     for (const text of ['Download the Audit Documents', 'Download the Pitch Glimpse', 'Download the Owner Audit']) {

@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | wizard | bug | todo |
+| P1 | S | wizard | bug | built |
 
 **Files you may edit (no others):**
 - `packages/wizard/src/screens/audit/ai/RewriteReview.tsx`
@@ -160,9 +160,9 @@ Run: `pnpm exec vitest run packages/wizard/tests/audit-rewrite-review.test.tsx p
 
 ## Done when
 
-- [ ] After accepting new copy, the Section editor shows the accepted text without a page reload.
-- [ ] Unsaved hand edits in the draft are kept (only `edits` is replaced, never `draft`).
-- [ ] Tests and `pnpm build` pass.
+- [x] After accepting new copy, the Section editor shows the accepted text without a page reload.
+- [x] Unsaved hand edits in the draft are kept (only `edits` is replaced, never `draft`).
+- [x] Tests and `pnpm build` pass.
 
 ## Notes
 

@@ -282,6 +282,8 @@ export interface ReviewDocumentsViewProps {
   onDiscard: () => void;
   /** An AI key is set up: true shows the Section rewrite, false shows how to add a key, null (not known yet) shows neither. */
   aiConfigured?: boolean | null;
+  /** New copy was accepted for a Section: the stored edits are re-read. */
+  onRewriteAccepted?: () => void;
   /** For tests: the requests of the Section rewrite. */
   fetchImpl?: Fetch;
 }
@@ -304,6 +306,7 @@ export function ReviewDocumentsView({
   onSave,
   onDiscard,
   aiConfigured = null,
+  onRewriteAccepted,
   fetchImpl,
 }: ReviewDocumentsViewProps) {
   const result = reply.result;
@@ -348,6 +351,7 @@ export function ReviewDocumentsView({
             auditId={reply.summary.auditId}
             version={reply.version.version}
             content={content.content}
+            onAccepted={onRewriteAccepted}
             fetchImpl={fetchImpl}
           />
         ) : aiConfigured === false ? (
@@ -640,6 +644,12 @@ export function ReviewDocumentsScreen({
     setSaving(false);
   };
 
+  /** An accepted rewrite is a stored edit: show what is stored now, so a later hand edit starts from it. */
+  const reloadEdits = async () => {
+    const stored = await loadEdits(auditId, versionNumber, fetchImpl);
+    if (stored.ok) setEdits(stored.value);
+  };
+
   const dirty = !isDraftEmpty(draft);
   const { confirm, dialog } = useConfirm();
 
@@ -725,6 +735,7 @@ export function ReviewDocumentsScreen({
             setMessage(null);
           }}
           aiConfigured={aiConfigured}
+          onRewriteAccepted={() => void reloadEdits()}
           fetchImpl={fetchImpl}
           onSelectPage={selectPage}
           onSave={() => void save()}

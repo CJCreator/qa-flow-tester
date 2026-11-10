@@ -265,6 +265,8 @@ export interface RewriteReviewProps {
   content: PageContent;
   /** The language of the new copy; the page's own when it is a listed language. */
   language?: DocumentLanguage;
+  /** Called after new copy was accepted: the stored edits changed, so the caller re-reads them. */
+  onAccepted?: () => void;
   /** For tests: the requests. */
   fetchImpl?: Fetch;
 }
@@ -272,7 +274,7 @@ export interface RewriteReviewProps {
 type Loaded = { status: 'loading' } | { status: 'failed'; message: string } | { status: 'loaded' };
 
 /** Rewrite a page's Sections after approval (REQ-030). Mounted in the Website Audit result screen. */
-export function RewriteReview({ auditId, version, content, language, fetchImpl }: RewriteReviewProps) {
+export function RewriteReview({ auditId, version, content, language, onAccepted, fetchImpl }: RewriteReviewProps) {
   const [loaded, setLoaded] = useState<Loaded>({ status: 'loading' });
   const [rewrites, setRewrites] = useState<Record<string, RewriteState>>({});
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -349,6 +351,7 @@ export function RewriteReview({ auditId, version, content, language, fetchImpl }
         tone: 'pass',
         text: 'Accepted. The new copy is in the Audit Documents.',
       });
+      onAccepted?.();
     } else {
       // The edited copy stays as typed, so the marked phrases can be reworded.
       setFor<string>(setDrafts, sectionId, text);

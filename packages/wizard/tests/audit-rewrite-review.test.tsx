@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
@@ -438,5 +439,17 @@ describe('imports (T-211)', () => {
       const imports = [...source.matchAll(/(?:from|import)\s+'([^']+)'/g)].map((m) => m[1]);
       for (const specifier of imports) expect(specifier, file).toMatch(/^(react$|@qa\/types\/src\/browser\.js$|\.)/);
     }
+  });
+});
+
+describe('accepted rewrite reaches the Section editor', () => {
+  const review = readFileSync(resolve(__dirname, '../src/screens/audit/ai/RewriteReview.tsx'), 'utf8');
+  const screen = readFileSync(resolve(__dirname, '../src/screens/audit/documents/ReviewDocumentsScreen.tsx'), 'utf8');
+  it('tells the caller after an accept', () => {
+    expect(review).toMatch(/onAccepted\?\.\(\);/);
+  });
+  it('re-reads the stored edits', () => {
+    expect(screen).toMatch(/onAccepted=\{onRewriteAccepted\}/);
+    expect(screen).toMatch(/onRewriteAccepted=\{\(\) => void reloadEdits\(\)\}/);
   });
 });

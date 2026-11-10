@@ -11,7 +11,7 @@ import {
 } from '../src/screens/audit/start/AuditProgress';
 import { AuditStatusChips, aiStatusText, speedStatusText } from '../src/screens/audit/start/AuditStatusChips';
 import { LivePageList, pageAiText, pageStateLabel } from '../src/screens/audit/start/LivePageList';
-import { auditStoppedText } from '../src/screens/audit/start/audit-start-api';
+import { auditStoppedText, stopAudit, STOP_DID_NOTHING } from '../src/screens/audit/start/audit-start-api';
 
 describe('Website Audit progress stepper (ADR 0042)', () => {
   it('includes Write documents and Ready in AUDIT_STAGE_LABELS', () => {
@@ -287,5 +287,23 @@ describe('AuditProgress: scripted reducer sequence and live updates', () => {
     );
     const visible = html.replace(/<[^>]+>/g, ' ');
     expect(visible).not.toMatch(AVOID);
+  });
+});
+
+describe('stopAudit', () => {
+  const reply = (status: number, body: unknown) =>
+    (async () => new Response(JSON.stringify(body), { status })) as unknown as typeof fetch;
+
+  it('is ok only when the runner stopped something', async () => {
+    expect(await stopAudit(reply(200, { aborted: true }))).toEqual({ ok: true });
+  });
+  it('says so when the runner stopped nothing', async () => {
+    expect(await stopAudit(reply(200, { aborted: false, message: 'No run currently active' }))).toEqual({
+      ok: false,
+      message: STOP_DID_NOTHING,
+    });
+  });
+  it('says so on a refusal', async () => {
+    expect(await stopAudit(reply(403, { error: 'no' }))).toEqual({ ok: false, message: STOP_DID_NOTHING });
   });
 });
