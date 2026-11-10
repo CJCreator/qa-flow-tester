@@ -282,6 +282,8 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
       if (
         (format === 'md' || format === 'html') &&
         documents?.length === 1 &&
+        documents[0] !== 'proposal' &&
+        loaded.edits.updatedAt === null &&
         (!common.language || common.language === loaded.result.language)
       ) {
         const kind = documents[0]!;
@@ -333,18 +335,6 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
     try {
       const loaded = await load(store, c, common.version);
       if (!loaded) return;
-      if (format === 'html' && (!common.language || common.language === loaded.result.language)) {
-        const stored = await store.readAuditDocument(loaded.auditId, loaded.version, 'pitch-glimpse', 'html');
-        if (stored !== null) {
-          const name = `${exportBaseName(loaded.result.url, loaded.result.version)}-pitch-glimpse.html`;
-          sendFile(c.res, {
-            fileName: name,
-            contentType: 'text/html; charset=utf-8',
-            body: Buffer.from(stored, 'utf8'),
-          });
-          return;
-        }
-      }
       const { optOutText } = await loadSettings(settings);
       const file = await exportPitchGlimpse(
         format,
@@ -376,7 +366,11 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
     try {
       const loaded = await load(store, c, common.version);
       if (!loaded) return;
-      if ((format === 'md' || format === 'html') && (!common.language || common.language === loaded.result.language)) {
+      if (
+        (format === 'md' || format === 'html') &&
+        loaded.edits.updatedAt === null &&
+        (!common.language || common.language === loaded.result.language)
+      ) {
         const docFormat = format === 'md' ? 'markdown' : 'html';
         const stored = await store.readAuditDocument(loaded.auditId, loaded.version, 'owner-audit', docFormat);
         if (stored !== null) {

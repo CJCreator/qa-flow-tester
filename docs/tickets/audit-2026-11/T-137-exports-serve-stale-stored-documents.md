@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | core/audit | bug | todo |
+| P1 | S | core/audit | bug | built |
 
 **Files you may edit (no others):**
 - `packages/runner/src/routes/audit-export.ts`
@@ -110,9 +110,9 @@ Run: `pnpm exec vitest run packages/runner/tests/audit-export-routes.test.ts`, t
 
 ## Done when
 
-- [ ] The three new tests pass and the existing tests in the file still pass.
-- [ ] The Pitch Glimpse route no longer calls `store.readAuditDocument`.
-- [ ] `pnpm build` passes.
+- [x] The three new tests pass and the existing tests in the file still pass.
+- [x] The Pitch Glimpse route no longer calls `store.readAuditDocument`.
+- [x] `pnpm build` passes.
 
 ## Notes
 

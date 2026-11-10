@@ -191,6 +191,28 @@ describe('GET export', () => {
     expect(owner.text).toContain('My own edited title');
   });
 
+  it('a single document export ignores the stored copy once the version has edits', async () => {
+    const id = await seedDone();
+    await store.saveAuditDocument(id, 1, 'content', 'markdown', 'STALE COPY');
+    await store.writeVersionJson(id, 1, 'edits', {
+      findings: [],
+      sections: [{ urlPath: '/', sectionId: 's1', text: 'My own edited section text', by: 'person', editedAt: '2026-01-01T00:00:00.000Z' }],
+      recommendations: [],
+      removedPages: [],
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    });
+    const md = await get(exportPath(id, '?format=md&documents=content'));
+    expect(md.text).not.toContain('STALE COPY');
+    expect(md.text).toContain('My own edited section text');
+  });
+
+  it('the Proposal is never served from the stored copy', async () => {
+    const id = await seedDone();
+    await store.saveAuditDocument(id, 1, 'proposal', 'markdown', 'STALE COPY');
+    const md = await get(exportPath(id, '?format=md&documents=proposal'));
+    expect(md.text).not.toContain('STALE COPY');
+  });
+
   it('writes the document in the requested language, defaulting to the version language', async () => {
     const id = await seedDone();
     const en = await get(exportPath(id, '?format=html&documents=findings'));
@@ -247,6 +269,13 @@ describe('GET pitch', () => {
     const pdf = await get(`/api/audits/${id}/pitch?format=pdf`);
     expect(pdf.headers['content-type']).toBe('application/pdf');
     expect(pdf.headers['content-disposition']).toContain('pitch-glimpse.pdf');
+  });
+
+  it('the Pitch Glimpse html is always built on request', async () => {
+    const id = await seedDone();
+    await store.saveAuditDocument(id, 1, 'pitch-glimpse', 'html', 'STALE COPY');
+    const html = await get(`/api/audits/${id}/pitch?format=html`);
+    expect(html.text).not.toContain('STALE COPY');
   });
 
   it('is produced in ta or en', async () => {
