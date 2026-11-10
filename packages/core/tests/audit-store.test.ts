@@ -182,6 +182,43 @@ describe('AuditStore: audits and versions (REQ-028)', () => {
     expect((docs[1] as { reason: string }).reason).toHaveLength(300);
   });
 
+  it('writeVersionEntries saves JSON and files and reports each one', async () => {
+    const v1 = await store.createAudit(REQUEST);
+    const saved = await store.writeVersionEntries(v1.auditId, 1, [
+      { kind: 'json', name: 'pages/a', value: { a: 1 } },
+      { kind: 'file', name: 'phone/a.png', data: new Uint8Array([1, 2]) },
+    ]);
+    expect(saved).toEqual([true, true]);
+    expect(await store.readVersionJson(v1.auditId, 1, 'pages/a')).toEqual({ a: 1 });
+    expect([...(await store.getVersionFile(v1.auditId, 1, 'phone/a.png'))!]).toEqual([1, 2]);
+  });
+
+  it('writeVersionEntries refuses a version that does not exist', async () => {
+    const v1 = await store.createAudit(REQUEST);
+    await expect(
+      store.writeVersionEntries(v1.auditId, 99, [{ kind: 'json', name: 'pages/a', value: {} }])
+    ).rejects.toMatchObject({ code: 'not-found' });
+  });
+
+  it('writeVersionEntries reports a failed entry without failing the others', async () => {
+    const v1 = await store.createAudit(REQUEST);
+    const originalPutJson = backend.putJson.bind(backend);
+    backend.putJson = async (key: string, value: unknown) => {
+      if (key.includes('pages/bad')) throw new Error('storage down');
+      return originalPutJson(key, value);
+    };
+    try {
+      const saved = await store.writeVersionEntries(v1.auditId, 1, [
+        { kind: 'json', name: 'pages/bad', value: { x: 1 } },
+        { kind: 'json', name: 'pages/good', value: { y: 2 } },
+      ]);
+      expect(saved).toEqual([false, true]);
+      expect(await store.readVersionJson(v1.auditId, 1, 'pages/good')).toEqual({ y: 2 });
+    } finally {
+      backend.putJson = originalPutJson;
+    }
+  });
+
   it('refuses an invalid request and a URL with credentials', async () => {
     await expect(store.createAudit({ ...REQUEST, url: 'ftp://x.example' })).rejects.toThrow(AuditRecordError);
     await expect(store.createAudit({ ...REQUEST, url: 'https://u:p@x.example/' })).rejects.toThrow(AuditRecordError);

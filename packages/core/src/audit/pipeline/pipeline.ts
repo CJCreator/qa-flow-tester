@@ -123,7 +123,7 @@ export type AuditPipelineStore = Pick<
   AuditStore,
   'saveResult' | 'writeVersionJson' | 'putVersionFile' | 'updateVersion'
 > &
-  Partial<Pick<AuditStore, 'saveAuditDocument' | 'readVersionJson'>>;
+  Partial<Pick<AuditStore, 'saveAuditDocument' | 'readVersionJson' | 'writeVersionEntries'>>;
 
 export interface AuditPipelineDeps {
   auditId: string;
@@ -707,7 +707,8 @@ export async function runAuditPipeline(
     const aiNote = aiStatusNoteText(failed.status, failed.error);
     if (!notes.includes(aiNote)) notes.push(aiNote);
     // Nothing came back at all: the step did not finish.
-    const anyDone = pages.some((p) => p.areas?.some((a) => a.status === 'done')) || siteAreas.some((a) => a.status === 'done');
+    const anyDone =
+      pages.some((p) => p.areas?.some((a) => a.status === 'done')) || siteAreas.some((a) => a.status === 'done');
     if (!anyDone) assessed = false;
   }
   record('assessment', 'assessing', assessed, assessed ? undefined : NOTES.assessment);
@@ -831,22 +832,61 @@ export async function runAuditPipeline(
   stopIfAborted(signal);
   emit('saving');
   const saveNotes: string[] = [];
-  for (const p of readable) {
-    try {
-      await store.writeVersionJson(auditId, version, pageContentName(p.info.urlPath), p.read!.content);
-    } catch {
-      saveNotes.push(`The Page Content of ${p.info.urlPath} could not be saved.`);
+  if (typeof store.writeVersionEntries === 'function') {
+    // One lock and one version check for all of them, a few at a time.
+    const shots: Array<{ page: AuditPage; rel: string; data: Uint8Array | null }> = [];
+    for (const p of samples) {
+      const rel = p.phone?.screenshotPath;
+      if (!p.phone || !rel) continue;
+      let data: Uint8Array | null = null;
+      try {
+        data = new Uint8Array(await fs.readFile(path.join(deps.workDir, ...rel.split('/'))));
+      } catch {
+        data = null;
+      }
+      shots.push({ page: p, rel, data });
     }
-  }
-  for (const p of samples) {
-    const rel = p.phone?.screenshotPath;
-    if (!p.phone || !rel) continue;
+    const readableShots = shots.filter((s) => s.data !== null);
+    let saved: boolean[];
     try {
-      const data = await fs.readFile(path.join(deps.workDir, ...rel.split('/')));
-      await store.putVersionFile(auditId, version, rel, new Uint8Array(data));
+      saved = await store.writeVersionEntries(auditId, version, [
+        ...readable.map((p) => ({
+          kind: 'json' as const,
+          name: pageContentName(p.info.urlPath),
+          value: p.read!.content,
+        })),
+        ...readableShots.map((s) => ({ kind: 'file' as const, name: s.rel, data: s.data! })),
+      ]);
     } catch {
-      p.phone = { ...p.phone, screenshotPath: null };
-      saveNotes.push(`The phone screenshot of ${p.urlPath} could not be saved.`);
+      saved = new Array(readable.length + readableShots.length).fill(false);
+    }
+    readable.forEach((p, i) => {
+      if (!saved[i]) saveNotes.push(`The Page Content of ${p.info.urlPath} could not be saved.`);
+    });
+    const shotSaved = new Map(readableShots.map((s, i) => [s.rel, saved[readable.length + i]]));
+    for (const s of shots) {
+      if (s.data !== null && shotSaved.get(s.rel)) continue;
+      s.page.phone = { ...s.page.phone!, screenshotPath: null };
+      saveNotes.push(`The phone screenshot of ${s.page.urlPath} could not be saved.`);
+    }
+  } else {
+    for (const p of readable) {
+      try {
+        await store.writeVersionJson(auditId, version, pageContentName(p.info.urlPath), p.read!.content);
+      } catch {
+        saveNotes.push(`The Page Content of ${p.info.urlPath} could not be saved.`);
+      }
+    }
+    for (const p of samples) {
+      const rel = p.phone?.screenshotPath;
+      if (!p.phone || !rel) continue;
+      try {
+        const data = await fs.readFile(path.join(deps.workDir, ...rel.split('/')));
+        await store.putVersionFile(auditId, version, rel, new Uint8Array(data));
+      } catch {
+        p.phone = { ...p.phone, screenshotPath: null };
+        saveNotes.push(`The phone screenshot of ${p.urlPath} could not be saved.`);
+      }
     }
   }
   // A finding pointing at a screenshot that was not saved loses the pointer.

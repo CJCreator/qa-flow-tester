@@ -314,11 +314,25 @@ function siteStages(over: Partial<SiteStages> = {}): Partial<SiteStages> {
   };
 }
 
-function memoryStore() {
+function memoryStore(batch?: { failName?: string }) {
   const json = new Map<string, unknown>();
   const files = new Map<string, Uint8Array>();
   const results: AuditResult[] = [];
+  const writeVersionEntries = vi.fn(
+    async (
+      _id: string,
+      _v: number,
+      entries: Array<{ kind: 'json'; name: string; value: unknown } | { kind: 'file'; name: string; data: Uint8Array }>
+    ) =>
+      entries.map((e) => {
+        if (e.name === batch?.failName) return false;
+        if (e.kind === 'json') json.set(e.name, e.value);
+        else files.set(e.name, e.data);
+        return true;
+      })
+  );
   const store = {
+    ...(batch ? { writeVersionEntries } : {}),
     saveResult: vi.fn(async (_id: string, _v: number, result: AuditResult) => {
       calls.push('save');
       results.push(JSON.parse(JSON.stringify(result)));
@@ -345,10 +359,11 @@ async function recordCrawl(stages: Partial<PageStages> = pageStages()) {
 async function run(
   over: Partial<AuditPipelineDeps> = {},
   stages: Partial<SiteStages> = siteStages(),
-  crawl: AuditCrawlResult = crawlResult()
+  crawl: AuditCrawlResult = crawlResult(),
+  batch?: { failName?: string }
 ) {
   const recorder = over.recorder ?? (await recordCrawl());
-  const mem = memoryStore();
+  const mem = memoryStore(batch);
   const events: AuditProgressEvent[] = [];
   const steps: PipelineStepOutcome[] = [];
   const pacer = new HostPacer({ minGapMs: 0 });
@@ -595,6 +610,27 @@ describe('audit pipeline: runAuditPipeline', () => {
       leavingSite: [{ to: 'https://other.example/', from: ['/'] }],
     });
     expect(result.notes).toContain('AI notes need an AI key.');
+  });
+
+  it('the save step uses one batch write when the store has it', async () => {
+    const { outcome, mem } = await run({}, undefined, undefined, {});
+    await outcome;
+    // The batch path is the one under test; the double is a plain store with writeVersionEntries.
+    const writeVersionEntries = (mem.store as unknown as { writeVersionEntries: ReturnType<typeof vi.fn> })
+      .writeVersionEntries;
+    expect(writeVersionEntries).toHaveBeenCalledTimes(1);
+    const entries = writeVersionEntries.mock.calls[0][2] as Array<{ kind: string; name: string }>;
+    const pageNames = CRAWL_PAGES.map((p) => pageContentName(p.urlPath));
+    expect(entries.filter((e) => e.kind === 'json').map((e) => e.name)).toEqual(pageNames);
+    expect(mem.store.writeVersionJson.mock.calls.map((c) => c[2])).not.toEqual(expect.arrayContaining(pageNames));
+    expect(mem.store.writeVersionJson.mock.calls.map((c) => c[2])).toContain('stages');
+  });
+
+  it('the batch save step reports a page that was not saved', async () => {
+    const failName = pageContentName('/about');
+    const { outcome } = await run({}, undefined, undefined, { failName });
+    const { result } = await outcome;
+    expect(result.notes).toContain('The Page Content of /about could not be saved.');
   });
 
   it('records a failed analysis as not done and still runs the later stages', async () => {
@@ -887,8 +923,18 @@ describe('audit pipeline: runAuditPipeline', () => {
         return urls.map((url) => ({
           url,
           speed: {
-            lab: { status: 'not-measured' as const, source: 'pagespeed-insights' as const, method: 'lab' as const, reason: 'quota' as const },
-            field: { status: 'not-measured' as const, source: 'pagespeed-insights' as const, method: 'field' as const, reason: 'quota' as const },
+            lab: {
+              status: 'not-measured' as const,
+              source: 'pagespeed-insights' as const,
+              method: 'lab' as const,
+              reason: 'quota' as const,
+            },
+            field: {
+              status: 'not-measured' as const,
+              source: 'pagespeed-insights' as const,
+              method: 'field' as const,
+              reason: 'quota' as const,
+            },
           },
         }));
       }),

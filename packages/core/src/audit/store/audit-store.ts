@@ -94,6 +94,8 @@ const MAX_PATH_RULE_CHARS = 2048;
 export const MAX_VERSION_ERROR_CHARS = 300;
 const ISO_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/;
 const AUDIT_RECORD_KEY = /^audits\/([A-Za-z0-9_-]{8,64})\/audit\.json$/;
+/** Per-version objects written at once by `writeVersionEntries`. */
+const VERSION_WRITES_IN_FLIGHT = 6;
 
 /** Per backend, per audit: the tail of the queue of writes. Shared by every store on the same backend. */
 const auditLocks = new WeakMap<AuditStoreBackend, Map<string, Promise<void>>>();
@@ -440,6 +442,49 @@ export class AuditStore implements AuditStoreContext {
     const key = versionFileKey(auditId, version, name);
     if (!(data instanceof Uint8Array)) throw invalidInput('The version file is not valid.');
     await this.writeToVersion(auditId, version, () => this.backend.putBytes(key, data));
+  }
+
+  /**
+   * Writes several per-version objects under one audit lock and one version check, a few at a time. Returns,
+   * in input order, whether each entry was saved. Throws only when the version does not exist or an entry's
+   * name or value is not valid.
+   */
+  async writeVersionEntries(
+    auditId: string,
+    version: number,
+    entries: ReadonlyArray<
+      { kind: 'json'; name: string; value: unknown } | { kind: 'file'; name: string; data: Uint8Array }
+    >
+  ): Promise<boolean[]> {
+    const writes = entries.map((entry) => {
+      if (entry.kind === 'json') {
+        const key = versionJsonKey(auditId, version, entry.name);
+        if (entry.value === undefined) throw invalidInput('The version object is empty.');
+        return () => this.backend.putJson(key, entry.value);
+      }
+      const key = versionFileKey(auditId, version, entry.name);
+      if (!(entry.data instanceof Uint8Array)) throw invalidInput('The version file is not valid.');
+      return () => this.backend.putBytes(key, entry.data);
+    });
+    const saved: boolean[] = new Array(writes.length).fill(false);
+    await this.withAuditLock(auditId, async () => {
+      if (!(await this.readVersion(auditId, version))) throw notFound('version');
+      let next = 0;
+      const worker = async (): Promise<void> => {
+        for (;;) {
+          const i = next++;
+          if (i >= writes.length) return;
+          try {
+            await writes[i]();
+            saved[i] = true;
+          } catch {
+            saved[i] = false;
+          }
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(VERSION_WRITES_IN_FLIGHT, writes.length) }, () => worker()));
+    });
+    return saved;
   }
 
   async getVersionFile(auditId: string, version: number, name: string): Promise<Uint8Array | null> {
