@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P3 | M | runner | inconsistency | todo |
+| P3 | M | runner | inconsistency | blocked |
 
 **Files you may edit (no others):**
 - `packages/runner/src/server.ts`
@@ -132,3 +132,4 @@ No new test: behaviour is unchanged. Run the suites that cover remembered sign-i
 
 - If the type of the entry does not match `RememberedSignIn` (build error), type `list` as `Array<Record<string, unknown> & { role: string }>` is NOT acceptable; instead copy the element type the three call sites already use and say so in your notes.
 - Not in this ticket (they differ in signature or behaviour and need an owner review): the private methods `resolveTargetUrl`, `ensurePlanLoaded`, `signInAccount`; `addTokens` (server.ts vs routes/plan.ts); `hasCompleteSignIn`; `isInside` (server.ts vs ui-static.ts); the three cookie parsers; the three https checks.
+- BLOCKED: the edit applied cleanly and `pnpm build` and runner unit tests (603/603) passed, but `pnpm typecheck` fails on files this ticket does not touch: `packages/core/tests/audit-pipeline.test.ts` (12 errors, e.g. `(916,28): TS2322`, `(957,43): TS2552 Cannot find name 'rawPage'`) and `packages/wizard/tests/finish-ai-review.test.ts` (2 errors). Those files are being changed by another session on this branch. Edit reverted; the diff is kept outside the repo at `C:\Users\HP\AppData\Local\Temp\T-110-server-ts.patch`.
