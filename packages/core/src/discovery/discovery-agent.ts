@@ -331,24 +331,6 @@ export class DiscoveryAgent {
   private browserManager = new BrowserManager();
   private contextParser = new ContextParser();
 
-  static async discover(options: DiscoveryOptions): Promise<DiscoveryDraft> {
-    return new DiscoveryAgent().discover(options);
-  }
-
-  static async discoverWithSession(options: DiscoveryOptions): Promise<DiscoveryOutcome> {
-    return new DiscoveryAgent().discoverWithSession(options);
-  }
-
-  async discover(options: DiscoveryOptions): Promise<DiscoveryDraft> {
-    try {
-      const outcome = await this.discoverSite(options);
-      return outcome.draft;
-    } finally {
-      // Also when the scan is stopped or fails part-way: no browser is left running.
-      await this.browserManager.close().catch(() => {});
-    }
-  }
-
   async discoverWithSession(options: DiscoveryOptions): Promise<DiscoveryOutcome> {
     try {
       return await this.discoverSite(options);
@@ -369,10 +351,6 @@ export class DiscoveryAgent {
       : await this.contextParser.parseFile(options.contextFilePath);
 
     // 2. Explore: signed out first, then once per role that can sign in, starting where it landed.
-    const spider = new DeterministicSpider(
-      options.profile?.forbiddenActions || [],
-      options.maxPages ?? DEFAULT_MAX_PAGES
-    );
     const roles = options.profile?.roles || [];
     const redactor = new Redactor(roles);
     // Signing in with the roles' own details is allowed on any site; it happens here, before the guard.

@@ -21,6 +21,7 @@ describe('preflight role headers', () => {
     try {
       await checker.signIn(fakeContext, 'https://app.example.com', {
         role: 'member',
+        username: 'test-user',
         token: 'abc',
         headers: { 'X-Team': 'red' },
       });

@@ -203,15 +203,6 @@ export class PreFlightChecker {
     };
   }
 
-  async verifyRoleLogin(
-    context: BrowserContext,
-    baseUrl: string,
-    credential: RoleCredential,
-    saveStorageStatePath?: string
-  ): Promise<boolean> {
-    return (await this.signIn(context, baseUrl, credential, saveStorageStatePath)).ok;
-  }
-
   /**
    * Signs in on the role's sign-in page, in a fixed order with no AI: find the sign-in fields (inside a
    * dialog if one is open, after clicking a "Sign in" opener if none shows), fill the username, press Next

@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P3 | S | core | dead-code | todo |
+| P3 | S | core | dead-code | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/preflight.ts`
@@ -141,8 +141,8 @@ No new test. Deleting something that is used fails the build, so the build is th
 
 ## Done when
 
-- [ ] All ten items are deleted, or the PR names the ones left and why
-- [ ] `pnpm build`, `pnpm typecheck` and the core unit tests pass
+- [x] All ten items are deleted, or the PR names the ones left and why
+- [x] `pnpm build`, `pnpm typecheck` and the core unit tests pass
 
 ## Notes
 

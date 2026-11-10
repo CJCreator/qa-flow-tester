@@ -96,7 +96,6 @@ function tunnelHeaders(tunnelAuth?: string): Record<string, string> {
 }
 
 export class BrowserManager {
-  private browser: Browser | null = null;
   private browsers = new Map<BrowserEngine, Browser>();
 
   async launch(engineOrHeadless: BrowserEngine | boolean = 'chromium', headless = true): Promise<Browser> {
@@ -107,7 +106,6 @@ export class BrowserManager {
     if (existing && !existing.isConnected()) {
       await existing.close().catch(() => {});
       this.browsers.delete(engine);
-      if (engine === 'chromium') this.browser = null;
     }
 
     let b = this.browsers.get(engine);
@@ -132,9 +130,6 @@ export class BrowserManager {
         args,
       });
       this.browsers.set(engine, b);
-      if (engine === 'chromium' || engine === 'android-chrome') {
-        this.browser = b;
-      }
     }
     return b;
   }
@@ -246,7 +241,6 @@ export class BrowserManager {
         const dead = this.browsers.get(engine);
         await dead?.close().catch(() => {});
         this.browsers.delete(engine);
-        if (engine === 'chromium') this.browser = null;
       }
     }
   }
@@ -270,7 +264,6 @@ export class BrowserManager {
     }
     await Promise.all(closes);
     this.browsers.clear();
-    this.browser = null;
   }
 }
 

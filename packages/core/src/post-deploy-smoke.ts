@@ -1,6 +1,6 @@
 import type { Finding, FindingSeverity, ReleaseReport, TestPointResult } from '@qa/types';
 import { isPrivateHost } from './competitive/safe-crawler.js';
-import { isTestHost, MUTATING_METHODS } from './live-site.js';
+import { isTestHost } from './live-site.js';
 import { redactUrl } from './redact.js';
 import { GuardedFetchBlockedError, makeGuardedFetch, type GuardedFetch } from './safe-net.js';
 
@@ -118,7 +118,6 @@ export async function runPostDeploySmoke(options: SmokeOptions): Promise<SmokeRe
   /** GET only, same-site redirects followed up to 3 hops. Throws Unreachable on timeout or network error. */
   const get = async (p: string): Promise<Got> => {
     const method = 'GET';
-    if (MUTATING_METHODS.includes(method)) throw new Error('smoke is read-only');
     let url = new URL(p, base);
     for (let hop = 0; hop < 4; hop++) {
       let res: Response;

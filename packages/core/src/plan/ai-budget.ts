@@ -45,8 +45,6 @@ export class CapSpentError extends BudgetSpentError {
  * 20 requests a minute its free models have allowed; it makes no claim about the key's tier.
  */
 export const UNREPORTED_LIMIT_GAP_MS = 3100;
-/** @deprecated Old name of `UNREPORTED_LIMIT_GAP_MS`. */
-export const FREE_TIER_REQUEST_GAP_MS = UNREPORTED_LIMIT_GAP_MS;
 /** Most requests in flight at once, however much the service allows. */
 export const MAX_CONCURRENCY = 4;
 

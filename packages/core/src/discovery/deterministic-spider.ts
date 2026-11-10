@@ -89,8 +89,6 @@ export interface SpiderResult {
   startRefused?: { code: string; message: string };
 }
 
-export type SkippedPage = SkippedPageInfo;
-
 export interface CrawlOptions {
   /** Where to start besides the target URL, e.g. the page a role landed on after signing in. */
   startPaths?: string[];

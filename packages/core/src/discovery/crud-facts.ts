@@ -20,10 +20,6 @@ const ROW_DELETE = /^(delete|remove|trash)(\s+(row|item|entry|record))?$/i;
 const DELETE_ANY = /^(delete|remove|trash)\b/i;
 const ADD = /^(add|new|create)\b/i;
 
-export function isRowDeleteName(name: string): boolean {
-  return ROW_DELETE.test(name.trim());
-}
-
 /** Facts about a list-and-edit page, from structure only. Undefined when the page is no list with Add/Edit/Delete. */
 export function inferCrud(s: CrudStructure): CrudFacts | undefined {
   const add = s.addNames.find((n) => ADD.test(n.trim()));

@@ -1,4 +1,3 @@
-import { promises as fs } from 'fs';
 import type {
   AmbiguityQuestion,
   DiscoveredFlow,
@@ -123,9 +122,5 @@ export class TestPlanner {
       product: draft.productId,
       testCases,
     };
-  }
-
-  async saveSpecFile(spec: SpecFile, outputPath: string): Promise<void> {
-    await fs.writeFile(outputPath, JSON.stringify(spec, null, 2), 'utf8');
   }
 }

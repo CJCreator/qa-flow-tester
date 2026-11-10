@@ -163,8 +163,4 @@ export class CrawlFrontier {
       includeHash: this.includeHash,
     }).shape;
   }
-
-  getShapeCount(shape: string): number {
-    return this.shapeCounts.get(shape) ?? 0;
-  }
 }
