@@ -9,7 +9,7 @@
  *
  * Stored via the audit store as:
  * - `{ kind, status: 'ready', title, formats: ['markdown', 'html'], updatedAt }`
- * - or `{ kind, status: 'not-written', title, reason: error.message }`
+ * - or `{ kind, status: 'not-written', title, reason }` (fixed wording, never the error's message)
  *
  * PDF and Word stay on export (not generated at audit end).
  */
@@ -35,6 +35,10 @@ import { renderHtml } from './render-html.js';
 import { STORED_DOCUMENT_KINDS } from '../store/keys.js';
 import type { AuditVersionUpdate } from '../store/audit-store.js';
 import { pageContentName } from '../pipeline/pipeline.js';
+
+/** Fixed wording for the version record: never the error's own text (it can hold paths or storage details). */
+const NOT_BUILT = 'The document could not be built.';
+const NOT_SAVED = 'The document could not be saved.';
 
 export type { StoredAuditDocument, StoredDocumentKind };
 
@@ -124,13 +128,12 @@ export async function writeAllDocuments(
   let view;
   try {
     view = editedViewOf({ result, contents, edits });
-  } catch (err) {
-    const reason = err instanceof Error ? err.message : String(err);
+  } catch {
     return STORED_DOCUMENT_KINDS.map((kind) => ({
       kind,
       status: 'not-written' as const,
       title: lookup.labels.documentTitles[kind] ?? kind,
-      reason,
+      reason: NOT_BUILT,
     }));
   }
 
@@ -230,12 +233,12 @@ export async function writeAllDocuments(
     let generated: { doc: AuditDoc; customHtml?: string };
     try {
       generated = spec.generate();
-    } catch (err) {
+    } catch {
       return {
         kind: spec.kind,
         status: 'not-written',
         title: spec.title,
-        reason: err instanceof Error ? err.message : String(err),
+        reason: NOT_BUILT,
       };
     }
 
@@ -273,14 +276,11 @@ export async function writeAllDocuments(
       };
     }
 
-    const err = mdOutcome.status === 'rejected' ? mdOutcome.reason : (htmlOutcome as PromiseRejectedResult).reason;
-    const reason = err instanceof Error ? err.message : String(err) || 'Document could not be written.';
-
     return {
       kind: spec.kind,
       status: 'not-written',
       title,
-      reason,
+      reason: NOT_SAVED,
     };
   });
 

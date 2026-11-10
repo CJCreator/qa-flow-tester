@@ -154,6 +154,34 @@ describe('AuditStore: audits and versions (REQ-028)', () => {
     await expect(store.updateVersion(v1.auditId, 9, { status: 'done' })).rejects.toMatchObject({ code: 'not-found' });
   });
 
+  it('refuses a stored document of an unknown kind', async () => {
+    const v1 = await store.createAudit(REQUEST);
+    await expect(
+      store.updateVersion(v1.auditId, 1, { documents: [{ kind: 'nonsense', status: 'ready', title: 'x' } as never] })
+    ).rejects.toThrow(AuditRecordError);
+  });
+
+  it('keeps only markdown and html formats and caps the reason', async () => {
+    const v1 = await store.createAudit(REQUEST);
+    await store.updateVersion(v1.auditId, 1, {
+      documents: [
+        {
+          kind: 'findings',
+          status: 'ready',
+          title: 'Findings',
+          formats: ['markdown', 'exe'] as never,
+          updatedAt: '2026-11-03T10:00:00.000Z',
+        },
+        { kind: 'content', status: 'not-written', title: 'Content', reason: 'x'.repeat(1000) },
+      ],
+    });
+    const version = await store.getVersion(v1.auditId, 1);
+    const docs = version!.documents!;
+    expect(docs[0]).toMatchObject({ kind: 'findings', formats: ['markdown'] });
+    expect(docs[1]).toMatchObject({ kind: 'content' });
+    expect((docs[1] as { reason: string }).reason).toHaveLength(300);
+  });
+
   it('refuses an invalid request and a URL with credentials', async () => {
     await expect(store.createAudit({ ...REQUEST, url: 'ftp://x.example' })).rejects.toThrow(AuditRecordError);
     await expect(store.createAudit({ ...REQUEST, url: 'https://u:p@x.example/' })).rejects.toThrow(AuditRecordError);

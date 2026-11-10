@@ -133,8 +133,9 @@ describe('writeAllDocuments (T-83, ADR 0042)', () => {
       kind: 'findings',
       status: 'not-written',
       title: 'Findings',
-      reason: 'Findings HTML render exploded',
+      reason: 'The document could not be saved.',
     });
+    expect(findingsDoc.status === 'not-written' && findingsDoc.reason).not.toContain('exploded');
 
     // The other 6 documents were written successfully
     const otherDocs = docs.filter((d) => d.kind !== 'findings');
@@ -186,8 +187,9 @@ describe('writeAllDocuments (T-83, ADR 0042)', () => {
       kind: 'proposal',
       status: 'not-written',
       title: 'Website proposal for https://shop.example.in/',
-      reason: 'Proposal Markdown render failed',
+      reason: 'The document could not be saved.',
     });
+    expect(proposalDoc.status === 'not-written' && proposalDoc.reason).not.toContain('failed');
 
     const others = docs.filter((d) => d.kind !== 'proposal');
     for (const doc of others) {

@@ -36,6 +36,7 @@ import {
   auditFolder,
   auditRecordKey,
   invalidInput,
+  isStoredDocumentKind,
   notFound,
   resultKey,
   versionFileKey,
@@ -215,13 +216,18 @@ function checkVersionUpdate(input: unknown): AuditVersionUpdate {
     out.documents = update.documents.map((d) => {
       if (!d || typeof d !== 'object') throw invalidInput('The stored document is not valid.');
       const doc = d as Partial<StoredAuditDocument>;
-      if (!doc.kind || !doc.title || !doc.status) throw invalidInput('The stored document is not valid.');
+      if (!isStoredDocumentKind(doc.kind) || !doc.title || !doc.status) {
+        throw invalidInput('The stored document is not valid.');
+      }
+      const title = String(doc.title).slice(0, MAX_VERSION_ERROR_CHARS);
       if (doc.status === 'ready') {
         return {
           kind: doc.kind,
           status: 'ready' as const,
-          title: String(doc.title),
-          formats: Array.isArray(doc.formats) ? [...doc.formats] : ['markdown', 'html'],
+          title,
+          formats: Array.isArray(doc.formats)
+            ? doc.formats.filter((f): f is 'markdown' | 'html' => f === 'markdown' || f === 'html')
+            : ['markdown', 'html'],
           updatedAt: typeof doc.updatedAt === 'string' ? doc.updatedAt : new Date().toISOString(),
         };
       }
@@ -229,8 +235,11 @@ function checkVersionUpdate(input: unknown): AuditVersionUpdate {
         return {
           kind: doc.kind,
           status: 'not-written' as const,
-          title: String(doc.title),
-          reason: typeof doc.reason === 'string' ? doc.reason : 'Document could not be written.',
+          title,
+          reason:
+            typeof doc.reason === 'string' && doc.reason.trim() !== ''
+              ? doc.reason.slice(0, MAX_VERSION_ERROR_CHARS)
+              : 'Document could not be written.',
         };
       }
       throw invalidInput('The stored document status is not valid.');

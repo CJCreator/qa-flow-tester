@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | core/audit | security | todo |
+| P1 | S | core/audit | security | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/audit/store/audit-store.ts`
