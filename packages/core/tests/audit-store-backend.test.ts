@@ -251,4 +251,15 @@ describe('local backend specifics', () => {
     await backend.putBytes('audits/a1/meta.json', new TextEncoder().encode('{not json'));
     await expect(backend.getJson('audits/a1/meta.json')).rejects.toMatchObject({ code: 'invalid-data' });
   });
+
+  it('listFolders gives the folders directly inside a prefix', async () => {
+    const backend = new LocalAuditStoreBackend(dataDir);
+    await backend.putJson('audits/aaaaaaaa/audit.json', {});
+    await backend.putJson('audits/aaaaaaaa/v1/result.json', {});
+    await backend.putJson('audits/bbbbbbbb/audit.json', {});
+    await backend.putJson('other/x.json', {});
+    expect(await backend.listFolders!('audits')).toEqual(['aaaaaaaa', 'bbbbbbbb']);
+    expect(await backend.listFolders!('audits/aaaaaaaa')).toEqual(['v1']);
+    expect(await backend.listFolders!('missing')).toEqual([]);
+  });
 });

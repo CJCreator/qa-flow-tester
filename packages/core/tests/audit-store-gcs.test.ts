@@ -103,6 +103,32 @@ describe('Cloud Storage backend requests', () => {
     ]);
   });
 
+  it('listFolders asks with a delimiter and returns the folder names', async () => {
+    const { fetch, requests } = recordingFetch(
+      () => new Response(JSON.stringify({ prefixes: ['audits/aaaaaaaa/', 'audits/bbbbbbbb/'] }), { status: 200 })
+    );
+    expect(await backendWith(fetch).listFolders!('audits')).toEqual(['aaaaaaaa', 'bbbbbbbb']);
+    expect(requests[0].url).toContain('delimiter=%2F');
+    expect(requests[0].url).toContain('prefix=audits%2F');
+  });
+
+  it('deletePrefix deletes every object and treats 404 as gone', async () => {
+    const names = Array.from({ length: 20 }, (_, i) => ({ name: `audits/a1/f${i}.json` }));
+    const { fetch, requests } = recordingFetch((req) => {
+      if (req.method === 'GET') return new Response(JSON.stringify({ items: names }), { status: 200 });
+      return new Response(null, { status: req.url.endsWith('f3.json') ? 404 : 204 });
+    });
+    await expect(backendWith(fetch).deletePrefix('audits/a1')).resolves.toBeUndefined();
+    expect(requests.filter((r) => r.method === 'DELETE')).toHaveLength(20);
+
+    const failing = recordingFetch((req) =>
+      req.method === 'GET'
+        ? new Response(JSON.stringify({ items: names }), { status: 200 })
+        : new Response(null, { status: 500 })
+    );
+    await expect(backendWith(failing.fetch).deletePrefix('audits/a1')).rejects.toThrow();
+  });
+
   it('reads 404 as null', async () => {
     const { fetch } = recordingFetch(() => new Response(SECRET_BODY, { status: 404 }));
     const backend = backendWith(fetch);

@@ -21,6 +21,11 @@ export interface AuditStoreBackend {
    * sorted. An empty prefix lists the whole store.
    */
   list(prefix: string): Promise<string[]>;
+  /**
+   * The names of the folders directly inside a folder prefix, sorted, without the prefix and without slashes
+   * (`listFolders('audits')` gives the audit ids). Optional: a backend without it is listed with `list`.
+   */
+  listFolders?(prefix: string): Promise<string[]>;
   /** Removes every key under a folder prefix. The prefix must not be empty. */
   deletePrefix(prefix: string): Promise<void>;
 }

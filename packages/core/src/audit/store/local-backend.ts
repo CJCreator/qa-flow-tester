@@ -86,6 +86,21 @@ export class LocalAuditStoreBackend implements AuditStoreBackend {
     return keys.sort();
   }
 
+  async listFolders(prefix: string): Promise<string[]> {
+    const folder = normalizePrefix(prefix, { allowEmpty: true });
+    const start = folder === '' ? this.root : this.resolve(folder.slice(0, -1));
+    try {
+      const entries = await fs.readdir(start, { withFileTypes: true });
+      return entries
+        .filter((e) => e.isDirectory())
+        .map((e) => String(e.name))
+        .sort();
+    } catch (err) {
+      if (isMissing(err)) return [];
+      throw err;
+    }
+  }
+
   private async walk(dir: string, keyPrefix: string, out: string[]): Promise<void> {
     let entries: import('fs').Dirent[];
     try {

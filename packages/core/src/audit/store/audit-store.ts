@@ -377,8 +377,12 @@ export class AuditStore implements AuditStoreContext {
 
   /** Every saved audit, newest first, each with its versions (oldest first) and Shortlist entry. */
   async listAudits(): Promise<AuditSummary[]> {
-    const keys = await this.backend.list(AUDITS_FOLDER);
-    const ids = keys.map((key) => AUDIT_RECORD_KEY.exec(key)?.[1]).filter((id): id is string => !!id);
+    const AUDIT_ID = /^[A-Za-z0-9_-]{8,64}$/;
+    const ids = this.backend.listFolders
+      ? (await this.backend.listFolders(AUDITS_FOLDER)).filter((id) => AUDIT_ID.test(id))
+      : (await this.backend.list(AUDITS_FOLDER))
+          .map((key) => AUDIT_RECORD_KEY.exec(key)?.[1])
+          .filter((id): id is string => !!id);
     const audits = (await Promise.all(ids.map((id) => this.getAudit(id)))).filter((a): a is AuditSummary => a !== null);
     return audits.sort((a, b) => b.createdAt.localeCompare(a.createdAt) || a.auditId.localeCompare(b.auditId));
   }

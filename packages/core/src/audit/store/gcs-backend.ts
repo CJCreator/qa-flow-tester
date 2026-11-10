@@ -19,6 +19,9 @@ export const METADATA_TOKEN_URL =
 /** Refresh the cached token this long before it expires. */
 export const TOKEN_REFRESH_MARGIN_MS = 60_000;
 
+/** Object deletes sent at once by `deletePrefix`. */
+const DELETE_IN_FLIGHT = 8;
+
 /**
  * Cloud Storage bucket naming rules: 3-63 characters (up to 222 with dots, each dot-separated part at most 63),
  * lowercase letters, digits, dashes, underscores and dots, starting and ending with a letter or digit,
@@ -244,15 +247,51 @@ export class GcsAuditStoreBackend implements AuditStoreBackend {
     return keys.sort();
   }
 
+  async listFolders(prefix: string): Promise<string[]> {
+    const folder = normalizePrefix(prefix, { allowEmpty: true });
+    const names: string[] = [];
+    let pageToken: string | undefined;
+    do {
+      const params = new URLSearchParams({ fields: 'prefixes,nextPageToken', delimiter: '/' });
+      if (folder) params.set('prefix', folder);
+      if (pageToken) params.set('pageToken', pageToken);
+      const res = await this.request(`${this.apiBase}/storage/v1/b/${encodeURIComponent(this.bucket)}/o?${params}`);
+      if (!res.ok) {
+        await discardBody(res);
+        throw statusError(res.status);
+      }
+      let page: { prefixes?: unknown[]; nextPageToken?: unknown };
+      try {
+        page = (await res.json()) as typeof page;
+      } catch {
+        throw new AuditStoreError('invalid-data', 'Cloud Storage returned an unreadable object list.');
+      }
+      for (const p of page.prefixes ?? []) {
+        if (typeof p !== 'string') continue;
+        const name = p.slice(folder.length).replace(/\/$/, '');
+        if (name && !name.includes('/')) names.push(name);
+      }
+      pageToken = typeof page.nextPageToken === 'string' && page.nextPageToken ? page.nextPageToken : undefined;
+    } while (pageToken);
+    return names.sort();
+  }
+
   async deletePrefix(prefix: string): Promise<void> {
     normalizePrefix(prefix);
     const keys = await this.list(prefix);
-    for (const key of keys) {
-      const res = await this.request(this.objectUrl(key), { method: 'DELETE' });
-      await discardBody(res);
-      // 404: already gone (deleted concurrently); the goal state holds.
-      if (!res.ok && res.status !== 404) throw statusError(res.status);
-    }
+    // A few at once: an audit has hundreds of objects and the audit lock is held while they go.
+    let next = 0;
+    const worker = async (): Promise<void> => {
+      for (;;) {
+        const key = keys[next++];
+        if (key === undefined) return;
+        const res = await this.request(this.objectUrl(key), { method: 'DELETE' });
+        await discardBody(res);
+        // 404: already gone (deleted concurrently); the goal state holds.
+        if (!res.ok && res.status !== 404) throw statusError(res.status);
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(DELETE_IN_FLIGHT, keys.length) }, () => worker()));
   }
 }
 
