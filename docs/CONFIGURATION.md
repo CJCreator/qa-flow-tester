@@ -224,7 +224,7 @@ No variable. Retries apply to every Check-up, read-only or Test Copy.
 | `SKIP_BROWSER_CHECK` | none    | `1` skips the check that the browser is installed when `pnpm start` runs                                                                 |
 | `SMOKE_PORT`         | `3591`  | Port the smoke run (`pnpm smoke`) listens on                                                                                             |
 | `GITHUB_SHA`         | none    | Set by the build host. The commit that `scripts/site-output.mjs` writes into the site's `version.json`                                   |
-| `GCP_PROJECT`        | none    | Google Cloud project ID. Used by `scripts/deploy-cloud-run.mjs` (default `qa-flow-tester-512310`) and as the Gemini ADC project fallback |
+| `GCP_PROJECT`        | none    | Google Cloud project ID. Used by `scripts/deploy-cloud-run.mjs` (default `qa-flow-tester-512310`) and, with GOOGLE_CLOUD_PROJECT, as the project for Gemini through Google sign-in. There is no built-in default for that: without a project, Google sign-in is refused. |
 | `GCP_REGION`         | none    | Region for `scripts/deploy-cloud-run.mjs` (default `us-central1`)                                                                        |
 
 `CI` and `RUNNER_PORT` are read by the scripts too (`scripts/start.mjs`, `scripts/tunnel.mjs`). `CI` set stops

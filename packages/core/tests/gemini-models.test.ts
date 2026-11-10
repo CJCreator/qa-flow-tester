@@ -13,6 +13,7 @@ const STUDIO = 'https://generativelanguage.googleapis.com/v1beta';
 interface Call {
   url: string;
   method: string;
+  headers?: Record<string, string>;
   body?: string;
 }
 
@@ -31,7 +32,12 @@ function fakeStudio(setup: { list: Answer | Answer[]; probe?: Record<string, Ans
   };
   const fetchFn = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input);
-    calls.push({ url, method: init?.method ?? 'GET', body: init?.body as string | undefined });
+    calls.push({
+      url,
+      method: init?.method ?? 'GET',
+      headers: (init?.headers ?? {}) as Record<string, string>,
+      body: init?.body as string | undefined,
+    });
     if (url.startsWith(`${STUDIO}/models?`)) {
       const answers = Array.isArray(setup.list) ? setup.list : [setup.list];
       return respond(answers[Math.min(page++, answers.length - 1)]);
@@ -97,8 +103,10 @@ describe('listGeminiModels', () => {
     });
     expect(await listGeminiModels(KEY, { fetchFn: studio.fetchFn })).toEqual(['gemini-2.5-flash', 'gemini-2.0-flash']);
     const [first, second] = studio.listCalls();
-    expect(first.url).toBe(`${STUDIO}/models?key=${KEY}&pageSize=1000`);
-    expect(second.url).toBe(`${STUDIO}/models?key=${KEY}&pageSize=1000&pageToken=page%202`);
+    expect(first.url).toBe(`${STUDIO}/models?pageSize=1000`);
+    expect(first.headers?.['x-goog-api-key']).toBe(KEY);
+    expect(second.url).toBe(`${STUDIO}/models?pageSize=1000&pageToken=page%202`);
+    expect(second.headers?.['x-goog-api-key']).toBe(KEY);
     expect(studio.calls).toHaveLength(2);
   });
 
@@ -111,7 +119,7 @@ describe('listGeminiModels', () => {
   });
 
   it('keeps the key out of a failed fetch too', async () => {
-    const studio = fakeStudio({ list: new Error(`connect ECONNREFUSED ${STUDIO}/models?key=${KEY}`) });
+    const studio = fakeStudio({ list: new Error(`connect ECONNREFUSED ${STUDIO}/models`) });
     const err = (await listGeminiModels(KEY, { fetchFn: studio.fetchFn }).catch((e) => e)) as Error;
     expect(err.message).toContain('ECONNREFUSED');
     expect(err.message).not.toContain(KEY);
@@ -195,7 +203,8 @@ describe('pickGeminiModel', () => {
     });
     const probe = studio.probeCalls()[0];
     expect(probe.method).toBe('POST');
-    expect(probe.url).toBe(`${STUDIO}/models/gemini-2.5-flash:generateContent?key=${KEY}`);
+    expect(probe.url).toBe(`${STUDIO}/models/gemini-2.5-flash:generateContent`);
+    expect(probe.headers?.['x-goog-api-key']).toBe(KEY);
     expect(JSON.parse(probe.body!)).toEqual({
       contents: [{ role: 'user', parts: [{ text: 'Reply with OK' }] }],
       generationConfig: { maxOutputTokens: 8 },

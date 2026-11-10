@@ -99,7 +99,9 @@ describe('Gemini AI Studio key to Vertex AI (Google sign-in) fallback', () => {
   it('falls back to Vertex on AI Studio 402 and swaps the alias for the default model', async () => {
     const completion = await ask('gemini-flash-latest');
     expect(studioCalls()).toHaveLength(1);
-    expect(studioCalls()[0].url).toContain('gemini-flash-latest:generateContent?key=studio-key');
+    expect(studioCalls()[0].url).toContain('gemini-flash-latest:generateContent');
+    expect(studioCalls()[0].url).not.toContain('key=');
+    expect(studioCalls()[0].headers['x-goog-api-key']).toBe('studio-key');
     const v = vertexCalls();
     expect(v).toHaveLength(1);
     expect(v[0].url).toBe(
@@ -188,5 +190,21 @@ describe('Gemini AI Studio key to Vertex AI (Google sign-in) fallback', () => {
     expect(v[0].url).toContain('/projects/test-project/');
     expect(v[0].headers.Authorization).toBe('Bearer fake-token');
     expect(completion.model).toBe(DEFAULT);
+  });
+
+  it('throws NO_GOOGLE_PROJECT when ADC has no quota project and no env var is set', async () => {
+    await fs.writeFile(
+      adcPath,
+      JSON.stringify({
+        type: 'authorized_user',
+        client_id: 'fake-client-id',
+        client_secret: 'fake-client-secret',
+        refresh_token: 'fake-refresh-token',
+      })
+    );
+    delete process.env.GOOGLE_CLOUD_PROJECT;
+    delete process.env.GCP_PROJECT;
+    await expect(ask('gemini-pro-latest', 'adc')).rejects.toThrow(mod.NO_GOOGLE_PROJECT);
+    expect(vertexCalls()).toHaveLength(0);
   });
 });

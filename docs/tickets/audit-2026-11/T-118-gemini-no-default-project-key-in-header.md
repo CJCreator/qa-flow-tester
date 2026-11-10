@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P0 | S | core | security | todo |
+| P0 | S | core | security | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/ai/providers/gemini.ts`
@@ -130,9 +130,9 @@ Command: `pnpm exec vitest run packages/core/tests/gemini-adc-fallback.test.ts p
 
 ## Done when
 
-- [ ] `grep -rn "512310" packages/` finds nothing
-- [ ] `grep -rn "key=" packages/core/src/ai` finds no AI Studio address
-- [ ] Both test files pass; `pnpm build` passes
+- [x] `grep -rn "512310" packages/` finds nothing
+- [x] `grep -rn "key=" packages/core/src/ai` finds no AI Studio address
+- [x] Both test files pass; `pnpm build` passes
 
 ## Notes
 

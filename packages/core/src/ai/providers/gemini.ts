@@ -6,7 +6,7 @@ import type { AICompletion, AIMessage, AICompletionOptions, AIProviderType } fro
 
 interface AdcAuth {
   accessToken: string;
-  projectId: string;
+  projectId?: string;
 }
 
 let cachedAdc: { auth: AdcAuth; expiresAt: number } | null = null;
@@ -41,6 +41,10 @@ export async function hasGoogleAdc(): Promise<boolean> {
   }
 }
 
+/** Shown when Google sign-in is used and no project is named. Fixed wording: it is shown to the person. */
+export const NO_GOOGLE_PROJECT =
+  'Google sign-in needs a Google Cloud project. Set GOOGLE_CLOUD_PROJECT, or run "gcloud auth application-default set-quota-project <project>".';
+
 async function resolveAdcToken(signal?: AbortSignal): Promise<AdcAuth | null> {
   if (cachedAdc && Date.now() < cachedAdc.expiresAt) {
     return cachedAdc.auth;
@@ -51,8 +55,8 @@ async function resolveAdcToken(signal?: AbortSignal): Promise<AdcAuth | null> {
 
     const raw = await fs.readFile(credPath, 'utf8');
     const creds = JSON.parse(raw);
-    const projectId =
-      creds.quota_project_id || process.env.GOOGLE_CLOUD_PROJECT || process.env.GCP_PROJECT || 'qa-flow-tester-512310';
+    const projectId: string | undefined =
+      creds.quota_project_id || process.env.GOOGLE_CLOUD_PROJECT || process.env.GCP_PROJECT || undefined;
 
     if (creds.client_id && creds.client_secret && creds.refresh_token) {
       const res = await fetch('https://oauth2.googleapis.com/token', {
@@ -204,13 +208,14 @@ export class GeminiProvider implements AIProvider {
         );
       }
       const token = this.apiKey.startsWith('ya29.') ? this.apiKey : adc!.accessToken;
-      const proj = adc?.projectId || process.env.GOOGLE_CLOUD_PROJECT || 'qa-flow-tester-512310';
+      const proj = adc?.projectId || process.env.GOOGLE_CLOUD_PROJECT || process.env.GCP_PROJECT;
+      if (!proj) throw new Error(NO_GOOGLE_PROJECT);
       ({ res, model: usedModel } = await postVertex(token, proj, model, payload, signal));
     } else {
       const postStudio = (m: string) =>
-        fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${this.apiKey}`, {
+        fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': this.apiKey },
           body: payload,
           signal,
         });
@@ -231,7 +236,7 @@ export class GeminiProvider implements AIProvider {
           // The key cannot be used now (rejected, expired, out of credit or quota): Google sign-in (ADC) on
           // Vertex AI is tried when this computer has it. When that fails too, both answers are named.
           const adc = aiStudioKeyUnusable(res.status, studioText) ? await resolveAdcToken(signal) : null;
-          if (!adc) throw new Error(`Gemini API error (${res.status}): ${studioText}`);
+          if (!adc || !adc.projectId) throw new Error(`Gemini API error (${res.status}): ${studioText}`);
           const vertex = await postVertex(adc.accessToken, adc.projectId, usedModel, payload, signal);
           if (!vertex.res.ok) {
             const vertexText = await vertex.res.text();

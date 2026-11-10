@@ -109,9 +109,9 @@ export async function listGeminiModels(apiKey: string, opts?: GeminiModelOptions
   let pageToken: string | undefined;
   for (let page = 0; page < MAX_PAGES; page++) {
     const url =
-      `${STUDIO}/models?key=${encodeURIComponent(apiKey)}&pageSize=1000` +
+      `${STUDIO}/models?pageSize=1000` +
       (pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : '');
-    const res = await call(fetchFn, url, { method: 'GET' }, apiKey, opts?.signal);
+    const res = await call(fetchFn, url, { method: 'GET', headers: { 'x-goog-api-key': apiKey } }, apiKey, opts?.signal);
     if (!res.ok) {
       const body = await res.text().catch(() => '');
       throw new GeminiApiError(res.status, scrub(body, apiKey), summarize(body, apiKey));
@@ -240,8 +240,8 @@ export async function pickGeminiModel(apiKey: string, opts?: GeminiPickOptions):
     try {
       res = await call(
         fetchFn,
-        `${STUDIO}/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`,
-        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: probe },
+        `${STUDIO}/models/${encodeURIComponent(model)}:generateContent`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey }, body: probe },
         apiKey,
         signal
       );
