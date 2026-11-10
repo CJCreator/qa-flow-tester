@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | checkers | bug | todo |
+| P1 | S | checkers | bug | built |
 
 **Files you may edit (no others):**
 - `packages/checkers/src/site-root.ts`
@@ -155,8 +155,8 @@ Edit `packages/checkers/tests/seo.test.ts`. Copy the set-up of the existing test
 Run: `pnpm exec vitest run packages/checkers/tests/seo.test.ts`
 
 ## Done when
-- [ ] The three new tests pass and every existing test in `seo.test.ts` still passes.
-- [ ] `pnpm build` passes.
+- [x] The three new tests pass and every existing test in `seo.test.ts` still passes.
+- [x] `pnpm build` passes.
 
 ## Notes
 - Do not change the finding text or `KNOWN_AI_BOTS`.

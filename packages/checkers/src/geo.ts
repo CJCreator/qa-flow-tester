@@ -32,8 +32,7 @@ export class GeoChecker {
       context.urlPath === '/login' ||
       context.urlPath.includes('/auth') ||
       context.urlPath.includes('/signup') ||
-      context.urlPath.includes('/cart') ||
-      /^\/(settings|reports\/run-|check\/scan|check\/testing|baselines)/i.test(context.urlPath);
+      context.urlPath.includes('/cart');
 
     // 1. Machine Readability: Presence of <main> or <article> for unambiguous LLM extraction
     if (!details.hasMainOrArticle && !isSpecialPath && details.wordCount > 100) {
@@ -72,7 +71,7 @@ export class GeoChecker {
           where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
           expectedVsActual: {
             expected:
-              'Pages should maintain a healthy text-to-HTML ratio (> 8%) to ensure generative AI parsers can index meaningful content',
+              'Pages should maintain a healthy text-to-HTML ratio (> 5%) to ensure generative AI parsers can index meaningful content',
             actual: `Visible text ratio is ${(textRatio * 100).toFixed(1)}% (${details.wordCount} words across ${Math.round(details.totalHtmlLength / 1024)} KB of HTML)`,
           },
           stepsToReproduce: [`Visit ${context.urlPath}`, 'Compare innerText volume with outerHTML volume'],

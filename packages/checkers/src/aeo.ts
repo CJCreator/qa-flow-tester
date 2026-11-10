@@ -16,7 +16,13 @@ export interface AeoContext {
 export interface AeoPageDetails {
   jsonLdScripts: string[];
   hasBreadcrumbsNav: boolean;
-  questionHeadings: Array<{ text: string; nextParagraphWordCount: number; hasAnswerParagraph: boolean }>;
+  questionHeadings: Array<{
+    text: string;
+    nextParagraphWordCount: number;
+    hasAnswerParagraph: boolean;
+    /** True when the answer is a list or a table: its length is not judged. */
+    answerIsStructured?: boolean;
+  }>;
   wordCount: number;
   listCount: number;
   tableCount: number;
@@ -150,7 +156,9 @@ export class AeoChecker {
 
     // 4. Question Headings and Direct Answer Paragraphs
     for (const qh of details.questionHeadings) {
-      if (!qh.hasAnswerParagraph || qh.nextParagraphWordCount < 10 || qh.nextParagraphWordCount > 100) {
+      const wrongLength =
+        !qh.answerIsStructured && (qh.nextParagraphWordCount < 10 || qh.nextParagraphWordCount > 100);
+      if (!qh.hasAnswerParagraph || wrongLength) {
         findings.push({
           id: `F-AEO-${tcId}-DIRECT-ANSWER-${findings.length + 1}`,
           testCaseId: context.testCaseId,
@@ -162,10 +170,10 @@ export class AeoChecker {
           where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
           expectedVsActual: {
             expected:
-              'Question headings should be followed immediately by a concise direct answer paragraph (30–80 words) for answer snippet eligibility',
+              'Question headings should be followed immediately by a concise direct answer (a paragraph of 10–100 words, or a list or table) for answer snippet eligibility',
             actual: qh.hasAnswerParagraph
-              ? `Answer paragraph is ${qh.nextParagraphWordCount} words (ideal is 30–80 words)`
-              : 'Heading is not followed by an immediate answer paragraph',
+              ? `Answer paragraph is ${qh.nextParagraphWordCount} words (the check accepts 10–100 words)`
+              : 'Heading is not followed by an immediate answer',
           },
           stepsToReproduce: [`Visit ${context.urlPath}`, `Inspect element following heading "${qh.text}"`],
           evidence: {},
@@ -216,32 +224,32 @@ export class AeoChecker {
 
         // Check question headings
         const headings = document.querySelectorAll('h2, h3, h4');
-        const questionHeadings: Array<{ text: string; nextParagraphWordCount: number; hasAnswerParagraph: boolean }> =
-          [];
+        const questionHeadings: Array<{
+          text: string;
+          nextParagraphWordCount: number;
+          hasAnswerParagraph: boolean;
+          answerIsStructured?: boolean;
+        }> = [];
         headings.forEach((h) => {
           const text = (h.textContent || '').trim();
           const isQuestion = text.endsWith('?') || /^(what|how|why|when|where|who)\b/i.test(text);
           if (isQuestion && text.length > 8) {
+            // The answer is the first content block after the heading. Another heading ends the search:
+            // what follows it answers that heading, not this one.
+            const BLOCKS = ['P', 'DIV', 'UL', 'OL', 'TABLE', 'DL'];
             let nextEl = h.nextElementSibling;
-            // Skip over empty whitespace elements
-            while (nextEl && nextEl.tagName !== 'P' && nextEl.tagName !== 'DIV' && nextEl.tagName !== 'UL') {
+            while (nextEl && !BLOCKS.includes(nextEl.tagName) && !/^H[1-6]$/.test(nextEl.tagName)) {
               nextEl = nextEl.nextElementSibling;
             }
-            if (nextEl && nextEl.tagName === 'P') {
-              const pText = (nextEl.textContent || '').trim();
-              const words = pText ? pText.split(/\s+/).length : 0;
-              questionHeadings.push({
-                text,
-                nextParagraphWordCount: words,
-                hasAnswerParagraph: words > 0,
-              });
-            } else {
-              questionHeadings.push({
-                text,
-                nextParagraphWordCount: 0,
-                hasAnswerParagraph: false,
-              });
-            }
+            const tag = nextEl ? nextEl.tagName : '';
+            const answerText = nextEl && tag !== 'DIV' && !/^H[1-6]$/.test(tag) ? (nextEl.textContent || '').trim() : '';
+            const words = answerText ? answerText.split(/\s+/).length : 0;
+            questionHeadings.push({
+              text,
+              nextParagraphWordCount: words,
+              hasAnswerParagraph: words > 0,
+              answerIsStructured: words > 0 && tag !== 'P',
+            });
           }
         });
 

@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | checkers | bug | todo |
+| P1 | S | checkers | bug | built |
 
 **Files you may edit (no others):**
 - `packages/checkers/src/aeo.ts`
@@ -140,9 +140,9 @@ The in-page walk (step 4) runs inside `page.evaluate`, which the unit mock repla
 Run: `pnpm exec vitest run packages/checkers/tests/seo.test.ts`
 
 ## Done when
-- [ ] New tests pass; existing tests pass unchanged.
-- [ ] No "30–80" remains in `aeo.ts`.
-- [ ] `pnpm build` passes.
+- [x] New tests pass; existing tests pass unchanged.
+- [x] No "30–80" remains in `aeo.ts`.
+- [x] `pnpm build` passes.
 
 ## Notes
 - Owner decision made here: the text is aligned to the code (10–100 words); the threshold does not change.

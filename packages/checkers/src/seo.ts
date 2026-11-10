@@ -48,6 +48,20 @@ export interface SeoPageDetails {
   sameSiteLinks: string[];
 }
 
+/**
+ * The address requests are built from: the page as it loaded (after any redirect), else the address
+ * the Check-up was given. The checker's fetch follows no redirects, so the typed address can answer 301.
+ */
+function requestBaseOf(page: Page, context: SeoContext): string | undefined {
+  try {
+    const loaded = typeof page.url === 'function' ? page.url() : '';
+    if (/^https?:\/\//i.test(loaded)) return loaded;
+  } catch {
+    // A page that cannot say its address: use the given one.
+  }
+  return context.baseUrl;
+}
+
 export class SeoChecker {
   private siteRootAuditor = new SiteRootAuditor();
   private aeoChecker = new AeoChecker();
@@ -59,7 +73,8 @@ export class SeoChecker {
    * Link and site-root requests go only through `fetchFn` (ADR 0031: core builds it on the pinned,
    * redirect-checked path). With no `fetchFn` they make no request and are reported as not checked.
    */
-  async checkPage(page: Page, context: SeoContext, fetchFn?: FetchFn): Promise<Finding[]> {
+  async checkPage(page: Page, givenContext: SeoContext, fetchFn?: FetchFn): Promise<Finding[]> {
+    const context: SeoContext = { ...givenContext, baseUrl: requestBaseOf(page, givenContext) };
     const findings: Finding[] = [];
     const details = await this.collectDetails(page);
     if (!details) return [couldNotVerifyFinding('seo', 'search basics', context)];
@@ -263,9 +278,8 @@ export class SeoChecker {
         }
       }
 
-      // 6. Meta Robots Noindex Warning (only on public routes, not intentionally private/app screens)
-      const isPrivateOrAppRoute = /^\/(settings|check\/scan|check\/testing|reports\/run-)/i.test(context.urlPath);
-      if (!isPrivateOrAppRoute && details.metaRobots && details.metaRobots.toLowerCase().includes('noindex')) {
+      // 6. Meta Robots Noindex Warning
+      if (details.metaRobots && details.metaRobots.toLowerCase().includes('noindex')) {
         findings.push({
           id: `F-SEO-${tcId}-NOINDEX-${findings.length + 1}`,
           testCaseId: context.testCaseId,
@@ -523,9 +537,10 @@ export class SeoChecker {
           }
           try {
             const urlObj = new URL(href, window.location.href);
-            if (urlObj.origin === currentOrigin && !seen.has(urlObj.pathname)) {
-              seen.add(urlObj.pathname);
-              sameSiteLinks.push(urlObj.pathname);
+            const target = urlObj.pathname + urlObj.search;
+            if (urlObj.origin === currentOrigin && !seen.has(target)) {
+              seen.add(target);
+              sameSiteLinks.push(target);
             }
           } catch {
             // invalid URL
@@ -547,7 +562,7 @@ export class SeoChecker {
           ogImage,
           htmlLang,
           metaRobots,
-          sameSiteLinks: sameSiteLinks.slice(0, 10), // Limit to 10 links to avoid flooding
+          sameSiteLinks: sameSiteLinks.slice(0, 30), // Candidates only: at most 5 are requested per page
         };
       });
     } catch {
@@ -582,10 +597,12 @@ export class SeoChecker {
     };
   }
 
-  /** One GET per link (no HEAD first), up to 5 links, only through `fetchFn`. */
+  /** One GET per link (no HEAD first), up to 5 links a page that this run has not asked for yet, only through `fetchFn`. */
   private async checkBrokenLinks(paths: string[], context: SeoContext, fetchFn?: FetchFn): Promise<Finding[]> {
     const findings: Finding[] = [];
-    const toCheck = paths.slice(0, 5);
+    // A link already requested this run (the shared menu, on every page) is not asked for again.
+    const asked = (p: string) => context.siteWide?.has(`link:${p}`) === true;
+    const toCheck = paths.filter((p) => !asked(p)).slice(0, 5);
     if (!fetchFn) {
       if (toCheck.length === 0) return findings;
       return [
@@ -603,6 +620,7 @@ export class SeoChecker {
       try {
         const fullUrl = context.baseUrl ? new URL(linkPath, context.baseUrl).href : linkPath;
         const res = await fetchFn(fullUrl);
+        context.siteWide?.add(`link:${linkPath}`);
         const response = res ? { status: () => res.status } : null;
 
         // Broken means gone or failing (404, 410, 5xx), the same rule as core's checker-fetch.

@@ -18,6 +18,9 @@ describe('SeoChecker and Search/AI Suite', () => {
       },
     } as unknown as Page;
   }
+  function createMockPageAt(url: string, details: any): Page {
+    return { ...(createMockPage(details) as any), url: () => url } as unknown as Page;
+  }
   /** A recording FetchFn: every call is kept with its URL. */
   function recordingFetch(statusFor: (url: string) => number = () => 200) {
     const calls: string[] = [];
@@ -184,6 +187,32 @@ describe('SeoChecker and Search/AI Suite', () => {
     expect(findings.some((f) => f.title.includes('Images missing alt text descriptions'))).toBe(true);
   });
 
+  it('flags noindex on customer settings route', async () => {
+    const pageSettingsNoindex = createMockPage({
+      title: 'Settings',
+      metaDescription: 'User settings',
+      h1Count: 1,
+      headings: [{ level: 1, text: 'Settings' }],
+      htmlLang: 'en',
+      sameSiteLinks: [],
+      canonicalUrl: 'http://localhost/settings',
+      canonicalCount: 1,
+      metaRobots: 'noindex',
+      hasViewportMeta: true,
+      hasFavicon: true,
+      imagesWithoutAltCount: 0,
+    });
+
+    const findings = await checker.checkPage(pageSettingsNoindex, {
+      testCaseId: 'TC-SETTINGS',
+      role: 'visitor',
+      breakpoint: '1440px',
+      urlPath: '/settings',
+    });
+
+    expect(findings.some((f) => f.title.includes('noindex directive preventing search engine indexing'))).toBe(true);
+  });
+
   it('detects broken internal link returning HTTP 404', async () => {
     const pageWithLinks = createMockPage(linkPageDetails(['/dead-link']));
     const { fetchFn } = recordingFetch((url) => (url.includes('/dead-link') ? 404 : 200));
@@ -237,6 +266,87 @@ describe('SeoChecker and Search/AI Suite', () => {
     );
     expect(calls).toEqual(expect.arrayContaining(['https://example.com/robots.txt']));
     for (const url of calls) expect(new URL(url).origin).toBe('https://example.com');
+  });
+
+  it('site files follow the loaded address', async () => {
+    const { fetchFn, calls } = recordingFetch(() => 404);
+    await checker.checkPage(
+      createMockPageAt('https://www.example.com/', linkPageDetails([])),
+      { testCaseId: 'TC-WWW', role: 'visitor', breakpoint: '1440px', urlPath: '/', baseUrl: 'https://example.com' },
+      fetchFn
+    );
+    expect(calls).toContain('https://www.example.com/robots.txt');
+    for (const url of calls) expect(new URL(url).origin).toBe('https://www.example.com');
+  });
+
+  it('links follow the loaded address', async () => {
+    const { fetchFn, calls } = recordingFetch();
+    await checker.checkPage(
+      createMockPageAt('https://www.example.com/', linkPageDetails(['/a'])),
+      {
+        testCaseId: 'TC-WWW',
+        role: 'visitor',
+        breakpoint: '1440px',
+        urlPath: '/',
+        baseUrl: 'https://example.com',
+        searchChecks: false,
+        visibility: { search: false, answers: false, aiSearch: false, marketing: false },
+      },
+      fetchFn
+    );
+    expect(calls).toEqual(['https://www.example.com/a']);
+  });
+
+  it('a link is requested once per run across multiple pages sharing siteWide', async () => {
+    const siteWide = new Set<string>();
+    const { fetchFn, calls } = recordingFetch();
+    await checker.checkPage(
+      createMockPage(linkPageDetails(['/a', '/b'])),
+      {
+        testCaseId: 'TC-LINK1',
+        role: 'visitor',
+        breakpoint: '1440px',
+        urlPath: '/',
+        baseUrl: 'http://localhost:3050',
+        searchChecks: false,
+        visibility: { search: false, answers: false, aiSearch: false, marketing: false },
+        siteWide,
+      },
+      fetchFn
+    );
+    await checker.checkPage(
+      createMockPage(linkPageDetails(['/a', '/b', '/c'])),
+      {
+        testCaseId: 'TC-LINK2',
+        role: 'visitor',
+        breakpoint: '1440px',
+        urlPath: '/next',
+        baseUrl: 'http://localhost:3050',
+        searchChecks: false,
+        visibility: { search: false, answers: false, aiSearch: false, marketing: false },
+        siteWide,
+      },
+      fetchFn
+    );
+    expect(calls).toEqual(['http://localhost:3050/a', 'http://localhost:3050/b', 'http://localhost:3050/c']);
+  });
+
+  it('a link with a query string is requested with it', async () => {
+    const { fetchFn, calls } = recordingFetch();
+    await checker.checkPage(
+      createMockPage(linkPageDetails(['/product?id=4'])),
+      {
+        testCaseId: 'TC-QUERY',
+        role: 'visitor',
+        breakpoint: '1440px',
+        urlPath: '/',
+        baseUrl: 'http://localhost:3050',
+        searchChecks: false,
+        visibility: { search: false, answers: false, aiSearch: false, marketing: false },
+      },
+      fetchFn
+    );
+    expect(calls).toEqual(['http://localhost:3050/product?id=4']);
   });
 
   it('AC-5: with no FetchFn, broken links and site files make no request and are reported as not checked', async () => {
@@ -299,6 +409,52 @@ Disallow: /
     );
   });
 
+  it('groups with no blank line between them are parsed separately', async () => {
+    const rootAuditor = new SiteRootAuditor();
+    const mockRobots = 'User-agent: *\nDisallow: /admin\nUser-agent: GPTBot\nDisallow: /\n';
+    const result = await rootAuditor.audit(
+      async (url: string) => {
+        if (url.endsWith('/robots.txt')) {
+          return { status: () => 200, text: async () => mockRobots };
+        }
+        return { status: () => 404, text: async () => '' };
+      },
+      { baseUrl: 'https://example.com' }
+    );
+    expect(result.blockedAiBots).toEqual(['GPTBot']);
+  });
+
+  it('a crawler with its own Allow group is not blocked by wildcard', async () => {
+    const rootAuditor = new SiteRootAuditor();
+    const mockRobots = 'User-agent: GPTBot\nAllow: /\n\nUser-agent: *\nDisallow: /\n';
+    const result = await rootAuditor.audit(
+      async (url: string) => {
+        if (url.endsWith('/robots.txt')) {
+          return { status: () => 200, text: async () => mockRobots };
+        }
+        return { status: () => 404, text: async () => '' };
+      },
+      { baseUrl: 'https://example.com' }
+    );
+    expect(result.blockedAiBots).not.toContain('GPTBot');
+    expect(result.blockedAiBots).toEqual(expect.arrayContaining(['ClaudeBot', 'PerplexityBot', 'Google-Extended']));
+  });
+
+  it('two User-agent lines sharing one rule still share it', async () => {
+    const rootAuditor = new SiteRootAuditor();
+    const mockRobots = 'User-agent: GPTBot\nUser-agent: ClaudeBot\nDisallow: /\n';
+    const result = await rootAuditor.audit(
+      async (url: string) => {
+        if (url.endsWith('/robots.txt')) {
+          return { status: () => 200, text: async () => mockRobots };
+        }
+        return { status: () => 404, text: async () => '' };
+      },
+      { baseUrl: 'https://example.com' }
+    );
+    expect(result.blockedAiBots).toEqual(['GPTBot', 'ClaudeBot']);
+  });
+
   it('evaluates AEO features (JSON-LD syntax, entity schema, Q&A patterns)', async () => {
     const aeoChecker = new AeoChecker();
     const mockPage = {
@@ -328,6 +484,63 @@ Disallow: /
     expect(findings.every((f) => f.categoryTag === 'AEO')).toBe(true);
   });
 
+  it('accepts a list answer of any length for question headings', async () => {
+    const aeoChecker = new AeoChecker();
+    const mockPage = {
+      evaluate: async () => ({
+        jsonLdScripts: [],
+        hasBreadcrumbsNav: true,
+        questionHeadings: [
+          {
+            text: 'How do I reset my password?',
+            nextParagraphWordCount: 150,
+            hasAnswerParagraph: true,
+            answerIsStructured: true,
+          },
+        ],
+        wordCount: 400,
+        listCount: 1,
+        tableCount: 0,
+      }),
+    } as unknown as Page;
+
+    const findings = await aeoChecker.checkPage(mockPage, {
+      role: 'visitor',
+      breakpoint: '1440px',
+      urlPath: '/faq',
+      testCaseId: 'TC-FAQ',
+    });
+
+    expect(findings.some((f) => f.title.includes('lacks a concise direct answer'))).toBe(false);
+  });
+
+  it('flags a paragraph answer over 100 words with actual message', async () => {
+    const aeoChecker = new AeoChecker();
+    const mockPage = {
+      evaluate: async () => ({
+        jsonLdScripts: [],
+        hasBreadcrumbsNav: true,
+        questionHeadings: [
+          { text: 'How do I reset my password?', nextParagraphWordCount: 150, hasAnswerParagraph: true },
+        ],
+        wordCount: 400,
+        listCount: 1,
+        tableCount: 0,
+      }),
+    } as unknown as Page;
+
+    const findings = await aeoChecker.checkPage(mockPage, {
+      role: 'visitor',
+      breakpoint: '1440px',
+      urlPath: '/faq',
+      testCaseId: 'TC-FAQ',
+    });
+
+    const direct = findings.find((f) => f.title.includes('lacks a concise direct answer'));
+    expect(direct).toBeDefined();
+    expect(direct?.expectedVsActual.actual).toContain('10–100 words');
+  });
+
   it('evaluates GEO features (text density, citations, author bylines)', async () => {
     const geoChecker = new GeoChecker();
     const mockPage = {
@@ -350,6 +563,9 @@ Disallow: /
     });
 
     expect(findings.some((f) => f.title.includes('Low text-to-code ratio'))).toBe(true);
+    const lowDensity = findings.find((f) => f.title.includes('Low text-to-code ratio'));
+    expect(lowDensity).toBeDefined();
+    expect(lowDensity?.expectedVsActual.expected).toContain('> 5%');
     expect(findings.every((f) => f.categoryTag === 'GEO')).toBe(true);
   });
 

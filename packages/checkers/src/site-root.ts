@@ -69,25 +69,40 @@ export class SiteRootAuditor {
         // Parse robots.txt for AI bots and Sitemaps
         const lines = robotsTxtContent.split('\n');
         let currentUserAgents: string[] = [];
+        // True once the current group has a rule line: the next User-agent line then starts a new group.
+        let groupHasRules = false;
         let wildcardDisallowAll = false;
+        // AI crawlers that have a group of their own: the "*" group does not apply to them.
+        const ownGroup = new Set<string>();
 
         for (const rawLine of lines) {
           const line = rawLine.split('#')[0].trim();
           if (!line) {
             currentUserAgents = [];
+            groupHasRules = false;
             continue;
           }
 
           const uaMatch = line.match(/^User-agent:\s*(.+)$/i);
           if (uaMatch) {
-            currentUserAgents.push(uaMatch[1].trim());
+            if (groupHasRules) {
+              currentUserAgents = [];
+              groupHasRules = false;
+            }
+            const ua = uaMatch[1].trim();
+            currentUserAgents.push(ua);
+            const knownAi = KNOWN_AI_BOTS.find((bot) => bot.toLowerCase() === ua.toLowerCase());
+            if (knownAi) ownGroup.add(knownAi);
             continue;
           }
 
           const sitemapMatch = line.match(/^Sitemap:\s*(.+)$/i);
           if (sitemapMatch) {
             declaredSitemaps.push(sitemapMatch[1].trim());
+            continue;
           }
+
+          if (/^(?:Disallow|Allow|Crawl-delay):/i.test(line)) groupHasRules = true;
 
           const disallowMatch = line.match(/^Disallow:\s*(.*)$/i);
           if (disallowMatch) {
@@ -106,10 +121,10 @@ export class SiteRootAuditor {
           }
         }
 
-        // If wildcard disallows all and no specific AI bot overrides exist, flag them as blocked
+        // A wildcard "Disallow: /" blocks the AI crawlers that have no group of their own.
         if (wildcardDisallowAll) {
           for (const bot of ['GPTBot', 'ClaudeBot', 'PerplexityBot', 'Google-Extended']) {
-            if (!blockedAiBots.includes(bot)) {
+            if (!blockedAiBots.includes(bot) && !ownGroup.has(bot)) {
               blockedAiBots.push(bot);
             }
           }

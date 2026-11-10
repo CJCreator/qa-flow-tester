@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P2 | S | checkers | inconsistency | todo |
+| P2 | S | checkers | inconsistency | built |
 
 **Files you may edit (no others):**
 - `packages/checkers/src/seo.ts`
@@ -64,9 +64,9 @@ Edit `packages/checkers/tests/seo.test.ts`. Find the existing test that expects 
 Run: `pnpm exec vitest run packages/checkers/tests/seo.test.ts`
 
 ## Done when
-- [ ] No `check\/scan`, `reports\/run-` or `baselines` string remains in `packages/checkers/src/seo.ts` or `geo.ts`.
-- [ ] New tests pass; existing tests pass unchanged.
-- [ ] `pnpm build` passes.
+- [x] No `check\/scan`, `reports\/run-` or `baselines` string remains in `packages/checkers/src/seo.ts` or `geo.ts`.
+- [x] New tests pass; existing tests pass unchanged.
+- [x] `pnpm build` passes.
 
 ## Notes
 - Owner decision made here: the GEO text is aligned to the code (5%); the threshold does not change.

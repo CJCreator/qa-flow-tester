@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | checkers | bug | todo |
+| P1 | S | checkers | bug | built |
 
 **Files you may edit (no others):**
 - `packages/checkers/src/seo.ts`
@@ -79,8 +79,8 @@ The existing tests use a page with no `url`, so they keep using `baseUrl` and mu
 Run: `pnpm exec vitest run packages/checkers/tests/seo.test.ts`
 
 ## Done when
-- [ ] Both new tests pass; all existing tests in `seo.test.ts` pass unchanged.
-- [ ] `pnpm build` passes.
+- [x] Both new tests pass; all existing tests in `seo.test.ts` pass unchanged.
+- [x] `pnpm build` passes.
 
 ## Notes
 - Do not make the fetch follow redirects: ADR 0031 forbids it (a redirect could leave the site).

@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | checkers | bug | todo |
+| P1 | S | checkers | bug | built |
 
 **Files you may edit (no others):**
 - `packages/checkers/src/seo.ts`
@@ -97,8 +97,8 @@ The in-page part of step 1 (the `collectDetails` evaluate) is replaced by the mo
 Run: `pnpm exec vitest run packages/checkers/tests/seo.test.ts`
 
 ## Done when
-- [ ] New tests pass; existing tests in `seo.test.ts` pass unchanged.
-- [ ] `pnpm build` passes.
+- [x] New tests pass; existing tests in `seo.test.ts` pass unchanged.
+- [x] `pnpm build` passes.
 
 ## Notes
 - A broken link is still reported once; the report already records the other pages a problem was seen on.
