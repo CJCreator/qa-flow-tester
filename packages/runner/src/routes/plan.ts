@@ -26,7 +26,6 @@ import {
   planToPlaywrightProject,
   zipFiles,
   Redactor,
-  redactUrl,
   PacedAI,
   replanAll,
   replanJourneys,
@@ -67,6 +66,7 @@ import {
 import type { Route, RouteContext } from './route.js';
 import { readJsonBody, sendJson } from './body.js';
 import type { CheckupSession, StoredPlanRecord } from '../session/checkup-session.js';
+import { redactedMessage } from '../session/checkup-run.js';
 import { checkIntentsOff, checkCustomHeaders, checkSavedSessions } from '../run-inputs.js';
 
 export interface PlanRouteContext {
@@ -196,21 +196,12 @@ export function refreshPlan(record: StoredPlanRecord, session: CheckupSession): 
 }
 
 function redactError(err: unknown, record: StoredPlanRecord, session: CheckupSession): string {
-  const raw = err instanceof Error ? err.message : String(err);
-  const secrets: Array<Partial<RoleCredential>> = [...(record.context.profile?.roles || [])];
-  const customHeaders = record.context.customHeaders || session.secrets.headers;
-  if (customHeaders) {
-    for (const val of Object.values(customHeaders)) {
-      if (typeof val === 'string' && val.length >= 3) secrets.push({ token: val });
-    }
-  }
-  const tunnelAuth = record.context.tunnelAuth || session.secrets.tunnelAuth;
-  if (tunnelAuth && tunnelAuth.length >= 3) secrets.push({ token: tunnelAuth });
-  const redactor = new Redactor(secrets);
-  let out = redactor.text(raw);
-  out = redactUrl(out);
-  out = out.replace(/(https?:\/\/[^\s"'<>)]+)\?[^\s"'<>)]*/gi, '$1');
-  return out;
+  return redactedMessage(err, {
+    roles: record.context.profile?.roles,
+    customHeaders: record.context.customHeaders || session.secrets.headers,
+    tunnelAuth: record.context.tunnelAuth || session.secrets.tunnelAuth,
+    targetUrl: record.context.targetUrl,
+  });
 }
 
 export async function ensurePlanLoaded(session: CheckupSession): Promise<StoredPlanRecord | null> {
@@ -999,9 +990,11 @@ async function approveOnce(c: PlanRouteContext, idempotencyKey: string | undefin
     savedSessions?: unknown;
     customHeaders?: unknown;
   }>(req).catch(() => ({}));
-  if (body?.breakpoints) {
-    record.context.breakpoints = body.breakpoints as Breakpoint[];
-  }
+  // Only the three sizes the tool tests at, the same rule as PATCH.
+  const approvedSizes = (Array.isArray(body?.breakpoints) ? body.breakpoints : []).filter((s): s is Breakpoint =>
+    ['375px', '768px', '1440px'].includes(s)
+  );
+  if (approvedSizes.length > 0) record.context.breakpoints = approvedSizes;
 
   if (body?.customHeaders !== undefined) {
     const checked = checkCustomHeaders(body.customHeaders);

@@ -506,4 +506,35 @@ describe('Plan generation: stale writes refused, approval bumps it (R9, R10)', (
     expect(onDisk.planGeneration).toBe(4);
     expect(onDisk.status).toBe('approved');
   });
+
+  it('approve ignores screen sizes the tool does not test at', async () => {
+    await session.plan.save(makeStoredPlan());
+
+    const res = new MockResponse();
+    await approvePlan({
+      session,
+      req: createMockRequest({ breakpoints: ['375px', '9999px', 'x'] }),
+      res: res as unknown as http.ServerResponse,
+      url: new URL('http://localhost/api/runner/plan/approve'),
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(session.plan.currentRecord?.context.breakpoints).toEqual(['375px']);
+  });
+
+  it('approve keeps the Plan sizes when none sent is valid', async () => {
+    await session.plan.save(makeStoredPlan());
+    const before = session.plan.currentRecord?.context.breakpoints;
+
+    const res = new MockResponse();
+    await approvePlan({
+      session,
+      req: createMockRequest({ breakpoints: ['bogus'] }),
+      res: res as unknown as http.ServerResponse,
+      url: new URL('http://localhost/api/runner/plan/approve'),
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(session.plan.currentRecord?.context.breakpoints).toEqual(before);
+  });
 });

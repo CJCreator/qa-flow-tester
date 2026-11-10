@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P2 | S | runner | inconsistency | todo |
+| P2 | S | runner | inconsistency | built |
 
 **Files you may edit (no others):**
 - `packages/runner/src/routes/plan.ts`
