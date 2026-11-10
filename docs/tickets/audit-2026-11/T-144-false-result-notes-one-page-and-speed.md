@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | core/audit | bug | todo |
+| P1 | S | core/audit | bug | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/audit/pipeline/pipeline.ts`
@@ -94,9 +94,9 @@ Run: `pnpm exec vitest run packages/core/tests/audit-pipeline.test.ts`, then `pn
 
 ## Done when
 
-- [ ] The four new tests pass; existing tests pass.
-- [ ] The "speed step did not finish" note is written only when the speed step threw.
-- [ ] `pnpm build` passes.
+- [x] The four new tests pass; existing tests pass.
+- [x] The "speed step did not finish" note is written only when the speed step threw.
+- [x] `pnpm build` passes.
 
 ## Notes
 

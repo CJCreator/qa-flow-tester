@@ -49,6 +49,7 @@ import type { NetDeps } from '../../safe-net.js';
 import type { AuditStore } from '../store/audit-store.js';
 import type { AuditCrawlResult } from '../crawl/crawl.js';
 import { createFindingIdAllocator } from '../analysis/finding-ids.js';
+import { skipKey } from '../analysis/broken-links.js';
 import { analyseSite, type AnalysisPage, type SiteAnalysis } from '../analysis/analyse-site.js';
 import { auditMarketing } from '../analysis/marketing-signals.js';
 import { seoBasics } from '../analysis/seo-basics.js';
@@ -363,11 +364,11 @@ export async function runAuditPipeline(
   const notes: string[] = [];
   const steps: PipelineStepOutcome[] = [];
 
-  // Note for only 1 page recorded but more found / links seen (T-84, ADR 0042)
-  if (
-    crawl.pages.length === 1 &&
-    (crawl.coverage.found > 1 || (crawl.pages[0]?.links && crawl.pages[0].links.length > 0))
-  ) {
+  // Note for only 1 page recorded but more found, or links to other pages of the same site (T-84, ADR 0042)
+  const onlyPage = crawl.pages.length === 1 ? crawl.pages[0] : undefined;
+  const linksToOtherPages =
+    !!onlyPage && (onlyPage.links ?? []).some((l) => !l.leavesSite && skipKey(l.to) !== skipKey(onlyPage.urlPath));
+  if (onlyPage && (crawl.coverage.found > 1 || linksToOtherPages)) {
     const note = onlyOnePageNoteText();
     if (!notes.includes(note)) notes.push(note);
   }
@@ -548,12 +549,8 @@ export async function runAuditPipeline(
     else if (anyTool) speedSource = 'this-tool';
     else speedSource = 'not-measured';
 
-    record(
-      'speed',
-      'measuring-speed',
-      speedSource !== 'not-measured',
-      speedSource === 'not-measured' ? NOTES.speed : undefined
-    );
+    // The step ran to its end: when nothing could be measured, the "Speed was not measured." note below says so.
+    record('speed', 'measuring-speed', speedSource !== 'not-measured');
   } catch (err) {
     rethrowIfStopped(err, signal);
     for (const p of samples) {

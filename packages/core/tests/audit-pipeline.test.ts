@@ -846,6 +846,60 @@ describe('audit pipeline: runAuditPipeline', () => {
     expect(result.notes).toContain('Only 1 page was read.');
   });
 
+  it('a one-page site with only a link that leaves the site gets no one-page note', async () => {
+    const crawl = crawlResult();
+    crawl.pages = [{ ...crawl.pages[0], links: [{ to: 'https://facebook.com/shop', leavesSite: true } as any] }];
+    crawl.coverage = { ...crawl.coverage, found: 1 };
+
+    const { outcome } = await run({}, siteStages(), crawl);
+    const { result } = await outcome;
+
+    expect(result.notes).not.toContain('Only 1 page was read.');
+  });
+
+  it('a one-page site that only links to itself gets no one-page note', async () => {
+    const crawl = crawlResult();
+    crawl.pages = [{ ...crawl.pages[0], links: [{ to: '/' } as any] }];
+    crawl.coverage = { ...crawl.coverage, found: 1 };
+
+    const { outcome } = await run({}, siteStages(), crawl);
+    const { result } = await outcome;
+
+    expect(result.notes).not.toContain('Only 1 page was read.');
+  });
+
+  it('one page read but a link to another page of the site gets the note', async () => {
+    const crawl = crawlResult();
+    crawl.pages = [{ ...crawl.pages[0], links: [{ to: '/about' } as any] }];
+    crawl.coverage = { ...crawl.coverage, found: 1 };
+
+    const { outcome } = await run({}, siteStages(), crawl);
+    const { result } = await outcome;
+
+    expect(result.notes).toContain('Only 1 page was read.');
+  });
+
+  it('speed that could not be measured gives one note, not two', async () => {
+    const stages = siteStages({
+      measureSampleSpeeds: vi.fn(async (urls: readonly string[]) => {
+        return urls.map((url) => ({
+          url,
+          speed: {
+            lab: { status: 'not-measured' as const, source: 'pagespeed-insights' as const, method: 'lab' as const, reason: 'quota' as const },
+            field: { status: 'not-measured' as const, source: 'pagespeed-insights' as const, method: 'field' as const, reason: 'quota' as const },
+          },
+        }));
+      }),
+    });
+
+    const { outcome, steps } = await run({}, stages);
+    const { result } = await outcome;
+
+    expect(result.notes).toContain('Speed was not measured.');
+    expect(result.notes).not.toContain('The speed step did not finish, so speed was not measured.');
+    expect(steps.find((s) => s.step === 'speed')?.status).toBe('not-done');
+  });
+
   it('the timing reload runs in the pacer turn of the page host', async () => {
     const timingSpy = vi.fn(async () => ({
       status: 'measured' as const,
