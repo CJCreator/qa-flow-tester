@@ -111,7 +111,7 @@ Run `pnpm bootstrap` again after every `git pull`. (It isn't called `pnpm setup`
 pnpm start
 ```
 
-This builds anything that's missing and opens **Release check-up** at **`http://localhost:3001/`** in your browser. Every screen has its own address:
+This builds anything that's missing or older than its source, and opens **Release check-up** at **`http://localhost:3001/`** in your browser. Every screen has its own address:
 
 - `/`: a new check-up
 - `/reports`: past check-ups, and `/reports/<runId>` for one report

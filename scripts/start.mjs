@@ -1,6 +1,6 @@
-// pnpm start: builds whatever is missing, checks for the browser Release check-up drives, starts it
-// and opens it in your browser. After a git pull, run pnpm bootstrap first: this script only
-// builds what is missing, not what is out of date.
+// pnpm start: builds whatever is missing or older than its source, checks for the browser Release
+// check-up drives, starts it and opens it in your browser. It does not install packages: after a
+// git pull that changes dependencies, run pnpm bootstrap first.
 //
 //   pnpm start              start and open http://localhost:3001/
 //   pnpm start --no-open    start without opening a browser
@@ -8,7 +8,7 @@
 // RUNNER_PORT, RUNNER_HOST and the other RUNNER_* settings work as for the runner itself.
 // Values in .env load through the start script's node flag (--env-file-if-exists), so a value set only there is read.
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import net from 'node:net';
 import path from 'node:path';
@@ -31,6 +31,43 @@ function pnpm(args) {
 }
 
 const built = (file) => existsSync(path.join(root, file));
+
+/** When a file was last written, in ms; 0 when it is missing. */
+function modifiedAt(file) {
+  try {
+    return statSync(path.join(root, file)).mtimeMs;
+  } catch {
+    return 0;
+  }
+}
+
+/** The newest modification time of any file under these paths, skipping node_modules and dist. */
+function newestSource(paths) {
+  let newest = 0;
+  const visit = (full) => {
+    let stat;
+    try {
+      stat = statSync(full);
+    } catch {
+      return;
+    }
+    if (!stat.isDirectory()) {
+      newest = Math.max(newest, stat.mtimeMs);
+      return;
+    }
+    for (const name of readdirSync(full)) {
+      if (name !== 'node_modules' && name !== 'dist') visit(path.join(full, name));
+    }
+  };
+  for (const p of paths) visit(path.join(root, p));
+  return newest;
+}
+
+/** A build is out of date when its output is missing or any of its source files is newer (after a git pull, say). */
+const outOfDate = (output, sources) => {
+  const builtAt = modifiedAt(output);
+  return builtAt === 0 || newestSource(sources) > builtAt;
+};
 
 async function isQaTool() {
   try {
@@ -67,13 +104,34 @@ function open(url) {
 
 if (!built('node_modules')) fail('Nothing is installed yet. Run pnpm bootstrap first.');
 
-// 1. Build whatever is missing: the libraries it runs on, then the Wizard it serves.
-const libraries = ['types/dist/index.js', 'checkers/dist/index.js', 'core/dist/index.js', 'runner/dist/cli.js'];
-if (!libraries.every((file) => built(`packages/${file}`))) {
-  console.log('[QA Tool] Building the QA Tool (first start only)…');
+// 1. Build whatever is missing or out of date: the libraries it runs on, then the Wizard it serves.
+// tsc rewrites every output file on each build, so one file per package marks when it was last built.
+const packageSources = (name) => [`packages/${name}/src`, `packages/${name}/package.json`, `packages/${name}/tsconfig.json`];
+const libraries = [
+  ['types', 'index.js'],
+  ['checkers', 'index.js'],
+  ['core', 'index.js'],
+  ['runner', 'cli.js'],
+];
+if (
+  libraries.some(([name, entry]) =>
+    outOfDate(`packages/${name}/dist/${entry}`, [...packageSources(name), 'tsconfig.base.json']),
+  )
+) {
+  console.log('[QA Tool] Building the QA Tool…');
   pnpm(['--filter', '@qa/runner...', 'run', 'build']);
 }
-if (!built('packages/wizard/dist/index.html')) {
+// The Wizard imports single modules from @qa/types/src, so a change there rebuilds it too.
+const wizardSources = [
+  ...packageSources('wizard'),
+  'packages/wizard/index.html',
+  'packages/wizard/public',
+  'packages/wizard/vite.config.ts',
+  'packages/wizard/tailwind.config.js',
+  'packages/wizard/postcss.config.js',
+  'packages/types/src',
+];
+if (outOfDate('packages/wizard/dist/index.html', wizardSources)) {
   console.log('[QA Tool] Building the Wizard…');
   pnpm(['--filter', '@qa/wizard', 'run', 'build']);
 }
