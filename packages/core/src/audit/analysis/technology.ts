@@ -94,14 +94,13 @@ const SIGNATURES: Record<TechnologyName, readonly Signature[]> = {
   'GoDaddy Website Builder': [gen(/go ?daddy website builder/i), host('img1.wsimg.com'), host('img.secureserver.net')],
   React: [
     marker('data-reactroot'),
-    marker('_reactRootContainer'),
-    marker('__reactContainer'),
     path('/react.production.min.js'),
     path('/react-dom.production.min.js'),
   ],
   'Next.js': [
     gen(/^next\.js\b/i),
     marker('__NEXT_DATA__'),
+    marker('__next'),
     marker('next-route-announcer'),
     path('/_next/static/'),
     header('x-powered-by', /next\.js/i),
@@ -109,8 +108,8 @@ const SIGNATURES: Record<TechnologyName, readonly Signature[]> = {
   ],
   'Vue/Nuxt': [
     gen(/^nuxt\b/i),
-    marker('__NUXT__'),
     marker('__NUXT_DATA__'),
+    marker('__nuxt'),
     marker('data-v-app'),
     marker('data-server-rendered'),
     path('/_nuxt/'),

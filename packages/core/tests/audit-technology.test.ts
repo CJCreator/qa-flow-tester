@@ -101,10 +101,11 @@ const CASES: Case[] = [
     evidence: 'script from img1.wsimg.com',
   },
   { name: 'React', page: { frameworkMarkers: ['data-reactroot'] }, evidence: 'page marker data-reactroot' },
+  { name: 'Next.js', page: { frameworkMarkers: ['__next'] }, evidence: 'page marker __next' },
   { name: 'Next.js', page: { frameworkMarkers: ['__NEXT_DATA__'] }, evidence: 'page marker __NEXT_DATA__' },
   { name: 'Next.js', page: { scripts: ['/_next/static/chunks/main.js'] }, evidence: 'script from /_next/static/' },
   { name: 'Next.js', page: {}, headers: { 'x-powered-by': 'Next.js' }, evidence: 'x-powered-by header' },
-  { name: 'Vue/Nuxt', page: { frameworkMarkers: ['__NUXT__'] }, evidence: 'page marker __NUXT__' },
+  { name: 'Vue/Nuxt', page: { frameworkMarkers: ['__nuxt'] }, evidence: 'page marker __nuxt' },
   { name: 'Vue/Nuxt', page: { scripts: ['/_nuxt/entry.js'] }, evidence: 'script from /_nuxt/' },
   { name: 'Angular', page: { frameworkMarkers: ['ng-version'] }, evidence: 'page marker ng-version' },
   { name: 'Gatsby', page: { metaGenerator: 'Gatsby 5.13.0' }, evidence: 'meta generator' },
@@ -210,5 +211,13 @@ describe('detectTechnology', () => {
   it('technology: deterministic for the same facts', () => {
     const pages = [rawPage({ metaGenerator: 'WordPress 6.6.2', frameworkMarkers: ['__NEXT_DATA__'] })];
     expect(detectTechnology(pages)).toEqual(detectTechnology(pages));
+  });
+
+  it('technology: every marker signature is a marker the page reader can emit', () => {
+    const techSrc = readFileSync(new URL('../src/audit/analysis/technology.ts', import.meta.url), 'utf8');
+    const pageSrc = readFileSync(new URL('../src/audit/analysis/read-page.ts', import.meta.url), 'utf8');
+    const pageMarkers = new Set([...pageSrc.matchAll(/\['[^']+', '([^']+)'\]/g)].map((m) => m[1]));
+    const techMarkers = new Set([...techSrc.matchAll(/marker\('([^']+)'\)/g)].map((m) => m[1]));
+    expect(techMarkers).toEqual(pageMarkers);
   });
 });

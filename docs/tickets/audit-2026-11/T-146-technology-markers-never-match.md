@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P2 | S | core/audit | inconsistency | todo |
+| P2 | S | core/audit | inconsistency | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/audit/analysis/read-page.ts`
@@ -102,8 +102,8 @@ Run: `pnpm exec vitest run packages/core/tests/audit-technology.test.ts packages
 
 ## Done when
 
-- [ ] Every `marker(...)` name in `technology.ts` is emitted by `readDom`, and the reverse.
-- [ ] Tests and `pnpm build` pass.
+- [x] Every `marker(...)` name in `technology.ts` is emitted by `readDom`, and the reverse.
+- [x] Tests and `pnpm build` pass.
 
 ## Notes
 
