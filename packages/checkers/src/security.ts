@@ -1,5 +1,6 @@
 import type { Page } from 'playwright';
 import type { Breakpoint, Finding, FindingSeverity, StepEvidence } from '@qa/types';
+import { couldNotVerifyFinding } from './could-not-verify.js';
 
 /** URL parameter names whose values are secrets. Shared with the report redaction. */
 export const SECRET_PARAM_NAMES =
@@ -93,6 +94,15 @@ export class SecurityChecker {
   ): Promise<Finding[]> {
     const findings: Finding[] = [];
 
+    // Set when a page read fails: the check did not run, which is not the same as nothing found.
+    let unverified = false;
+    const failedWith =
+      <T>(fallback: T) =>
+      (): T => {
+        unverified = true;
+        return fallback;
+      };
+
     // 1. Sign-in forms on the current page that send passwords using GET: ones that
     // say method="get", or name a page to send to without saying how. A form with neither is usually
     // sent by the page's own script (a single-page app), which the markup can't tell us about;
@@ -105,7 +115,7 @@ export class SecurityChecker {
           return method === 'get' || (!method && !!f.getAttribute('action')?.trim());
         })
       )
-      .catch(() => false);
+      .catch(failedWith(false));
 
     if (hasGetPasswordForm) {
       findings.push(
@@ -158,7 +168,7 @@ export class SecurityChecker {
         }
         return results;
       })
-      .catch(() => []);
+      .catch(failedWith([] as Array<{ tag: string; src: string }>));
 
     for (const res of insecureResources) {
       findings.push(
@@ -181,7 +191,7 @@ export class SecurityChecker {
         const match = text.match(pattern);
         return match ? match[0] : null;
       }, STACK_TRACE_PATTERN.source)
-      .catch(() => null);
+      .catch(failedWith(null));
 
     if (exposedStackTrace) {
       findings.push(
@@ -201,12 +211,16 @@ export class SecurityChecker {
       );
     }
 
+    // Read once here, used again by the CSRF check.
+    let pageCookies: Array<{ sameSite?: string }> | undefined;
+
     // 4. Cookie flags (Secure, HttpOnly, SameSite)
     try {
       const cookies = await page
         .context()
         .cookies(page.url())
         .catch(() => []);
+      pageCookies = cookies;
       for (const cookie of cookies) {
         const isAuthOrSession = SESSION_COOKIE_NAME.test(cookie.name) && !SCRIPT_READ_COOKIE_NAME.test(cookie.name);
         if (!cookie.secure && page.url().startsWith('https://')) {
@@ -286,7 +300,7 @@ export class SecurityChecker {
     }
 
     // 4b. CSRF token on state-changing forms (heuristic, passive DOM read)
-    findings.push(...(await this.checkCsrf(page, context)));
+    findings.push(...(await this.checkCsrf(page, context, pageCookies)));
 
     // 5. Missing Security Headers
     if (context.responseHeaders) {
@@ -295,6 +309,10 @@ export class SecurityChecker {
         isHttps: page.url().startsWith('https://'),
       });
       findings.push(...headerFindings);
+    }
+
+    if (unverified) {
+      findings.push(couldNotVerifyFinding('security', 'the page-level security checks', context));
     }
 
     return findings;
@@ -306,7 +324,11 @@ export class SecurityChecker {
    * read-only (never submits). Sign-in forms are skipped. Token-in-header apps give false hits, so the
    * severity is Minor and the wording is "not found". Only field and cookie names are read, never values.
    */
-  async checkCsrf(page: Page, context: SecurityContext & { urlPath: string }): Promise<Finding[]> {
+  async checkCsrf(
+    page: Page,
+    context: SecurityContext & { urlPath: string },
+    knownCookies?: Array<{ sameSite?: string }>
+  ): Promise<Finding[]> {
     const raw: unknown = await page
       .evaluate((tokenPattern) => {
         const token = new RegExp(tokenPattern, 'i');
@@ -336,10 +358,12 @@ export class SecurityChecker {
       }, CSRF_TOKEN_NAME.source)
       .catch(() => []);
     if (!Array.isArray(raw) || raw.length === 0) return [];
-    const cookies = await page
-      .context()
-      .cookies(page.url())
-      .catch(() => []);
+    const cookies =
+      knownCookies ??
+      (await page
+        .context()
+        .cookies(page.url())
+        .catch(() => []));
     if (cookies.some((c) => /^(?:lax|strict)$/i.test(c.sameSite ?? ''))) return [];
     return raw.slice(0, 3).map((action, i) =>
       this.finding(`F-SEC-${context.testCaseId || 'GEN'}-CSRF-${i + 1}`, context, context.urlPath, {

@@ -4,6 +4,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import pixelmatch from 'pixelmatch';
 import { PNG } from 'pngjs';
+import { couldNotVerifyFinding } from './could-not-verify.js';
 
 export interface DesignTokens {
   colors?: Record<string, string>; // e.g. { "primary": "#2563eb", "danger": "#ef4444" }
@@ -205,7 +206,8 @@ export class DesignStandardsChecker {
         }
       }
     } catch {
-      // Ignore evaluation errors
+      // The page could not be read: say so, never read as a match.
+      findings.push(couldNotVerifyFinding('design-standards', 'whether the page matches the design tokens', context));
     }
 
     return findings;

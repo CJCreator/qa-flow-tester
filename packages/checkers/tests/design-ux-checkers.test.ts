@@ -226,5 +226,19 @@ describe('UXQualityChecker accessibility scan', () => {
         await page.context().close();
       }
     });
+
+    it('reports a check that could not run instead of a clean pass', async () => {
+      const checker = new DesignStandardsChecker();
+      const brokenPage = {
+        evaluate: async () => {
+          throw new Error('boom');
+        },
+      } as never;
+      const findings = await checker.check(brokenPage, { colors: { primary: '#ff0000' } }, ctx);
+      expect(findings).toHaveLength(1);
+      expect(findings[0].title).toBe('Could not verify: whether the page matches the design tokens');
+      expect(findings[0].needsConfirmation).toBe(true);
+      expect(findings[0].checker).toBe('design-standards');
+    });
   });
 });

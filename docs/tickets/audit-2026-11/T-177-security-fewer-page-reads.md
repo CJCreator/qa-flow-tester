@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P3 | S | checkers | speed | todo |
+| P3 | S | checkers | speed | built |
 
 **Files you may edit (no others):**
 - `packages/checkers/src/security.ts`
@@ -143,8 +143,8 @@ No new behaviour, so no new test. All existing tests must pass unchanged (they c
 - `pnpm build`
 
 ## Done when
-- [ ] `collectResources(` is called from exactly two places in `security-depth.ts` at run time for one `checkPage`: once through `tags()` (check by reading; the fallbacks inside `checkSri` and `checkSourceMaps` only run when a test calls them directly).
-- [ ] Both test files pass unchanged; `pnpm build` passes.
+- [x] `collectResources(` is called from exactly two places in `security-depth.ts` at run time for one `checkPage`: once through `tags()` (check by reading; the fallbacks inside `checkSri` and `checkSourceMaps` only run when a test calls them directly).
+- [x] Both test files pass unchanged; `pnpm build` passes.
 
 ## Notes
 - If `collectResources` rejects, `await tags()` rejects inside each step, and the existing per-step `try/catch` in `checkPage` handles it as before.

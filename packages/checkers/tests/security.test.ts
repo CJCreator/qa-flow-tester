@@ -438,4 +438,19 @@ describe('SecurityChecker', () => {
     });
     expect(findings.some((f) => f.title.includes('X-Content-Type-Options'))).toBe(true);
   });
+
+  it('reports page-level security checks that could not run instead of a clean pass', async () => {
+    const mockPage = {
+      url: () => 'https://shop.test/',
+      evaluate: async () => {
+        throw new Error('boom');
+      },
+      context: () => ({ cookies: async () => [] }),
+    } as unknown as Page;
+    const findings = await checker.checkPage(mockPage, { role: 'visitor', breakpoint: '1440px', urlPath: '/' });
+    const unverified = findings.filter((f) => f.title === 'Could not verify: the page-level security checks');
+    expect(unverified).toHaveLength(1);
+    expect(unverified[0].needsConfirmation).toBe(true);
+    expect(unverified[0].checker).toBe('security');
+  });
 });

@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P2 | M | checkers | inconsistency | todo |
+| P2 | M | checkers | inconsistency | built |
 
 **Files you may edit (no others):**
 - `packages/checkers/src/could-not-verify.ts`
@@ -132,8 +132,8 @@ Both test files are in the `browser` tier (real Chromium is launched in the file
 If an existing test now gets the extra "Could not verify" finding, its mock page throws inside `evaluate` by accident. Fix the mock so `evaluate` resolves (`async () => []` or `async () => false`); do not remove the new finding.
 
 ## Done when
-- [ ] Both new tests pass; all other tests in the two files pass.
-- [ ] `pnpm build` passes.
+- [x] Both new tests pass; all other tests in the two files pass.
+- [x] `pnpm build` passes.
 
 ## Notes
 - The finding is `Suggestion` with `needsConfirmation: true`: it is listed, and never counts toward the grades or the Release Verdict.

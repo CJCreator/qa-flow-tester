@@ -141,14 +141,18 @@ export class SecurityDepthChecker {
         onTarget = false;
       }
     }
+    // One read of the page's scripts and stylesheets, shared by the SRI and source-map checks.
+    let tagsOnce: Promise<ResourceTag[]> | undefined;
+    const tags = () => (tagsOnce ??= collectResources(page));
+
     const steps: Array<() => Promise<Finding[]> | Finding[]> = [
-      () => this.checkSri(page, context),
+      async () => this.checkSri(page, context, await tags()),
       () => this.checkCsp(context.cspHeader, context),
       () => this.checkTls(page.url(), context),
     ];
     if (onTarget && fetchFn) {
       steps.push(
-        () => this.checkSourceMaps(page, context, fetchFn),
+        async () => this.checkSourceMaps(page, context, fetchFn, await tags()),
         () => this.checkSecurityTxt(fetchFn, context, pageOrigin)
       );
     } else if (onTarget) {
@@ -167,10 +171,10 @@ export class SecurityDepthChecker {
 
   // --- SRI -------------------------------------------------------------------------------
 
-  async checkSri(page: Page, context: SecurityDepthContext): Promise<Finding[]> {
+  async checkSri(page: Page, context: SecurityDepthContext, knownTags?: ResourceTag[]): Promise<Finding[]> {
     const pageOrigin = pageOriginOf(page);
     if (!pageOrigin) return [];
-    const tags = await collectResources(page);
+    const tags = knownTags ?? (await collectResources(page));
     const missing = findMissingSri(tags, pageOrigin).slice(0, MAX_SRI);
     const seen = new Set<string>();
     const findings: Finding[] = [];
@@ -197,10 +201,15 @@ export class SecurityDepthChecker {
 
   // --- Source maps -----------------------------------------------------------------------
 
-  async checkSourceMaps(page: Page, context: SecurityDepthContext, get: FetchFn): Promise<Finding[]> {
+  async checkSourceMaps(
+    page: Page,
+    context: SecurityDepthContext,
+    get: FetchFn,
+    knownTags?: ResourceTag[]
+  ): Promise<Finding[]> {
     const pageOrigin = pageOriginOf(page);
     if (!pageOrigin) return [];
-    const tags = await collectResources(page);
+    const tags = knownTags ?? (await collectResources(page));
     const scripts: string[] = [];
     for (const t of tags) {
       if (t.tag !== 'script') continue;
