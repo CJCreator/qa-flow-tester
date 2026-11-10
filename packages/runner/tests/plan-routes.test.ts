@@ -373,6 +373,33 @@ describe('Plan handlers as functions over CheckupSession (T-207)', () => {
     expect(unparkBody.resumed).toBe(true);
     expect(unparkBody.runId).toBe('run-parked-1');
   });
+
+  it('two resume requests at once: one wins, one is refused, no Plan is lost', async () => {
+    // Plan A is awaiting review; plan B is kept aside for another site.
+    const planA = makeStoredPlan('run-a', 'http://a.example.com');
+    await session.plan.save(planA);
+    expect(session.run.begin(planA.plan.runId, planA.plan.targetUrl)).toBe(true);
+    session.run.setPhase('awaiting-review');
+    await session.plan.park(makeStoredPlan('run-b', 'http://b.example.com'));
+
+    const call = () => {
+      const res = new MockResponse();
+      const p = waitingPlans({
+        session,
+        req: createMockRequest({ host: 'b.example.com' }, {}, 'POST'),
+        res: res as unknown as http.ServerResponse,
+        url: new URL('http://localhost/api/runner/waiting-plans'),
+      });
+      return p.then(() => res);
+    };
+    const [first, second] = await Promise.all([call(), call()]);
+    expect([first.statusCode, second.statusCode].sort()).toEqual([200, 409]);
+
+    const refused = first.statusCode === 409 ? first : second;
+    expect(refused.json().code).toBe('ERR_RUN_IN_PROGRESS');
+    expect((await session.plan.current())?.plan.runId).toBe('run-b');
+    expect(session.plan.parked.has('a.example.com')).toBe(true);
+  });
 });
 
 describe('Plan generation: stale writes refused, approval bumps it (R9, R10)', () => {

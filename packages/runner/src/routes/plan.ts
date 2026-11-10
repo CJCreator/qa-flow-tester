@@ -926,6 +926,8 @@ const NO_TESTS_FALLBACK =
 
 /** Sessions with an approval in flight: a second approve while one is running is refused, key or not. */
 const approving = new WeakSet<CheckupSession>();
+/** Sessions with a "bring back a waiting plan" request under way: a second one is refused, not interleaved. */
+const resuming = new WeakSet<CheckupSession>();
 
 export async function approvePlan(c: PlanRouteContext): Promise<void> {
   const { session, req, res } = c;
@@ -1261,44 +1263,56 @@ export async function waitingPlans(c: PlanRouteContext): Promise<void> {
     sendJson(res, 404, { error: 'There’s no plan kept for that site.' });
     return;
   }
-  // The plan now waiting is set aside for the new one. On the shared copy that is only ever the
-  // asker's own: someone else's plan is never moved, and nothing is taken out of the kept-aside
-  // list until this is known.
-  const current = await ensurePlanLoaded(session);
-  const waitingNow = current && session.run.phase === 'awaiting-review' ? current : null;
-  if (c.isBeta && waitingNow && c.isMine && !c.isMine(waitingNow.plan.runId)) {
+  if (resuming.has(session)) {
     sendJson(res, 409, {
-      error: 'Someone else is reviewing a plan on this shared copy. Try again in a few minutes.',
+      error: 'A plan is already being brought back. Try again in a moment.',
       code: 'ERR_RUN_IN_PROGRESS',
     });
     return;
   }
-  const record = body.host ? await session.plan.unpark(body.host) : null;
-  if (!record) {
-    sendJson(res, 404, { error: 'There’s no plan kept for that site.' });
-    return;
-  }
-  // The slot is claimed through begin(), with no await since the plan was taken out of the kept-aside list:
-  // a run that began meanwhile keeps it, and the plan goes back where it was. begin() bumps the generation.
-  if (!session.run.begin(record.plan.runId, record.plan.targetUrl)) {
-    await session.plan.park(record);
-    sendJson(
-      res,
-      409,
-      otherRunBusy(session, c.isBeta) ?? {
-        error: 'A check-up is running. Wait for it to finish, or stop it first.',
+  resuming.add(session);
+  try {
+    // The plan now waiting is set aside for the new one. On the shared copy that is only ever the
+    // asker's own: someone else's plan is never moved, and nothing is taken out of the kept-aside
+    // list until this is known.
+    const current = await ensurePlanLoaded(session);
+    const waitingNow = current && session.run.phase === 'awaiting-review' ? current : null;
+    if (c.isBeta && waitingNow && c.isMine && !c.isMine(waitingNow.plan.runId)) {
+      sendJson(res, 409, {
+        error: 'Someone else is reviewing a plan on this shared copy. Try again in a few minutes.',
         code: 'ERR_RUN_IN_PROGRESS',
-      }
-    );
-    return;
+      });
+      return;
+    }
+    const record = body.host ? await session.plan.unpark(body.host) : null;
+    if (!record) {
+      sendJson(res, 404, { error: 'There’s no plan kept for that site.' });
+      return;
+    }
+    // The slot is claimed through begin(), with no await since the plan was taken out of the kept-aside list:
+    // a run that began meanwhile keeps it, and the plan goes back where it was. begin() bumps the generation.
+    if (!session.run.begin(record.plan.runId, record.plan.targetUrl)) {
+      await session.plan.park(record);
+      sendJson(
+        res,
+        409,
+        otherRunBusy(session, c.isBeta) ?? {
+          error: 'A check-up is running. Wait for it to finish, or stop it first.',
+          code: 'ERR_RUN_IN_PROGRESS',
+        }
+      );
+      return;
+    }
+    session.run.setPhase('awaiting-review');
+    if (waitingNow) await session.plan.park(waitingNow);
+    await session.plan.save(record);
+    session.events.clear();
+    const broadcast = c.broadcastRunnerEvent ?? ((event) => session.events.publish(event));
+    broadcast({ type: 'PLAN_READY', runId: record.plan.runId, resumed: true, timestamp: Date.now() });
+    sendJson(res, 200, { resumed: true, runId: record.plan.runId, targetUrl: record.plan.targetUrl });
+  } finally {
+    resuming.delete(session);
   }
-  session.run.setPhase('awaiting-review');
-  if (waitingNow) await session.plan.park(waitingNow);
-  await session.plan.save(record);
-  session.events.clear();
-  const broadcast = c.broadcastRunnerEvent ?? ((event) => session.events.publish(event));
-  broadcast({ type: 'PLAN_READY', runId: record.plan.runId, resumed: true, timestamp: Date.now() });
-  sendJson(res, 200, { resumed: true, runId: record.plan.runId, targetUrl: record.plan.targetUrl });
 }
 
 function toPlanContext(c: RouteContext): PlanRouteContext {

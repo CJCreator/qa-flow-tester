@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | runner | bug | todo |
+| P1 | S | runner | bug | built |
 
 **Files you may edit (no others):**
 - `packages/runner/src/routes/plan.ts`
