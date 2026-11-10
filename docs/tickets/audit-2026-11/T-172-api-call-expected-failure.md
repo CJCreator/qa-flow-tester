@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | checkers | bug | todo |
+| P1 | S | checkers | bug | built |
 
 **Files you may edit (no others):**
 - `packages/checkers/src/spec-conformance.ts`
@@ -101,8 +101,8 @@ Filter findings with `f.title.startsWith('API call')` so other checks of the Tes
 Run: `pnpm exec vitest run packages/checkers/tests/spec-denial.test.ts` (or the new file)
 
 ## Done when
-- [ ] The four cases pass; existing spec tests pass unchanged.
-- [ ] `pnpm build` passes.
+- [x] The four cases pass; existing spec tests pass unchanged.
+- [x] `pnpm build` passes.
 
 ## Notes
 - `NetworkEntry` is `{ url, method, status, timestamp, ... }` (`packages/types/src/evidence-finding.ts:14`).

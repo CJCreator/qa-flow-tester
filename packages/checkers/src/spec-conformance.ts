@@ -574,6 +574,30 @@ export class SpecConformanceChecker {
           },
           resolution: `Inspect API endpoint handler for ${method} ${apiPath}.`,
         });
+      } else if (!failedMatch && status >= 400) {
+        // The call was expected to be refused, and no refused request for it was recorded: it was
+        // accepted, or it was never made. Only failed requests are recorded, so the two cannot be told apart.
+        findings.push({
+          id: `F-SPEC-${testCase.id}-${counter++}`,
+          testCaseId: testCase.id,
+          flowId: testCase.flowId,
+          severity: 'Major',
+          checker: 'spec-conformance',
+          title: `API call was not refused: ${method} ${apiPath} did not return ${status}`,
+          where: {
+            urlPath: new URL(currentUrl).pathname,
+            role: context.role,
+            breakpoint: context.breakpoint,
+          },
+          expectedVsActual: {
+            expected: `${method} ${apiPath} should return HTTP ${status}`,
+            actual: `No refused ${method} request to ${apiPath} was seen during the steps: the call was accepted, or it was not made`,
+          },
+          stepsToReproduce: [`Navigate to ${testCase.startPage}`, ...testCase.steps.map((s) => `Execute "${s.name}"`)],
+          evidence: {},
+          resolution: `Check that the steps make the ${method} ${apiPath} request and that the endpoint refuses it with HTTP ${status}.`,
+          needsConfirmation: true,
+        });
       }
     }
 

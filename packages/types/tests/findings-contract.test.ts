@@ -53,4 +53,11 @@ describe('isActiveFinding', () => {
     expect(isActiveFinding({ triageStatus: 'Intended' })).toBe(false);
     expect(isActiveFinding({ triageStatus: 'False Positive' })).toBe(false);
   });
+
+  it('isActiveFinding excludes advisory findings and AI-review findings, like the verdict does', () => {
+    expect(isActiveFinding({ advisory: true })).toBe(false);
+    expect(isActiveFinding({ checker: 'ai-review' })).toBe(false);
+    expect(isActiveFinding({ checker: 'seo' })).toBe(true);
+    expect(isActiveFinding({ advisory: false, checker: 'security' })).toBe(true);
+  });
 });

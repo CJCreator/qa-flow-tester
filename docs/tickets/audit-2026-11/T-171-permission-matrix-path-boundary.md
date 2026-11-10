@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | checkers | bug | todo |
+| P1 | S | checkers | bug | built |
 
 **Files you may edit (no others):**
 - `packages/checkers/src/permission-matrix.ts`
@@ -88,9 +88,9 @@ target,admin,member
 3. Run: `pnpm exec vitest run packages/checkers/tests/permission-matrix.test.ts packages/checkers/tests/spec-denial.test.ts`
 
 ## Done when
-- [ ] `checkDirectUrlExposure` no longer exists anywhere under `packages/` (check with Grep).
-- [ ] New tests pass; the remaining existing tests pass unchanged.
-- [ ] `pnpm build` passes.
+- [x] `checkDirectUrlExposure` no longer exists anywhere under `packages/` (check with Grep).
+- [x] New tests pass; the remaining existing tests pass unchanged.
+- [x] `pnpm build` passes.
 
 ## Notes
 - If the matrix parser in this file writes the CSV header differently from the test above, copy the header format from the file's existing `csvMatrix`.

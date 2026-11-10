@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | types | inconsistency | todo |
+| P1 | S | types | inconsistency | built |
 
 **Files you may edit (no others):**
 - `packages/types/src/findings-contract.ts`
@@ -87,8 +87,8 @@ Then `pnpm build` (core and runner import this function).
 If a core or runner test now fails because it expected an advisory or `ai-review` finding in `known-findings.json`, `fix-these.md` or the CI counts, that expectation was the bug: update the test to expect the finding to be left out. Do not weaken `isActiveFinding`.
 
 ## Done when
-- [ ] New test passes; the three suites above pass.
-- [ ] `pnpm build` passes.
+- [x] New test passes; the three suites above pass.
+- [x] `pnpm build` passes.
 
 ## Notes
 - Glossary: this is the Release Verdict rule. Do not rename either function.

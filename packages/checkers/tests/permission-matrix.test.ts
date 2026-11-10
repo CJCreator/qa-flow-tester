@@ -49,18 +49,24 @@ target,admin,manager,member,viewer
     expect(finding?.title).toContain('Over-restriction: Role "manager" is blocked');
   });
 
-  it('detects direct URL exposure when forbidden route is hidden from UI but reachable', () => {
-    const finding = checker.checkDirectUrlExposure({
-      target: '/invoices/new',
-      role: 'member',
-      isNavVisible: false,
-      isReachable: true,
-      testCaseId: 'TC-PERM-03',
-    });
+  it('a rule covers its own path and what sits under it, not a path that only shares its first letters', () => {
+    const m = new PermissionMatrixChecker(`
+target,admin,member
+/admin,allow,deny
+`);
+    // Under the rule: member is denied, so a 200 is a leak.
+    expect(m.checkAccess({ target: '/admin/users', role: 'member', statusCode: 200 })).toBeDefined();
+    expect(m.checkAccess({ target: '/admin?tab=1', role: 'member', statusCode: 200 })).toBeDefined();
+    // Not under the rule: no rule applies, so nothing is reported.
+    expect(m.checkAccess({ target: '/administrator', role: 'member', statusCode: 200 })).toBeUndefined();
+    expect(m.checkAccess({ target: '/admin-help', role: 'member', statusCode: 200 })).toBeUndefined();
+  });
 
-    expect(finding).toBeDefined();
-    expect(finding?.severity).toBe('Blocker');
-    expect(finding?.title).toContain('Direct URL Access: Hidden route "/invoices/new" accessible directly by "member"');
+  it('the longer rule wins over the shorter one', () => {
+    // /invoices allows member, /invoices/new denies member (see csvMatrix above).
+    expect(checker.checkAccess({ target: '/invoices/new', role: 'member', statusCode: 200 })).toBeDefined();
+    expect(checker.checkAccess({ target: '/invoices/new/step-2', role: 'member', statusCode: 200 })).toBeDefined();
+    expect(checker.checkAccess({ target: '/invoices/42', role: 'member', statusCode: 200 })).toBeUndefined();
   });
 
   it('returns undefined when permissions match expected behavior', () => {

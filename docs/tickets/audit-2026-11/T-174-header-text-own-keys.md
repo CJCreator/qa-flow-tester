@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P2 | S | types | bug | todo |
+| P2 | S | types | bug | built |
 
 **Files you may edit (no others):**
 - `packages/types/src/input-rules.ts`
@@ -106,8 +106,8 @@ Edit `packages/types/tests/input-rules.test.ts`. There is an existing `describe`
 Run: `pnpm exec vitest run packages/types/tests/input-rules.test.ts`, then `pnpm build`.
 
 ## Done when
-- [ ] New tests pass; existing tests in the file pass unchanged.
-- [ ] `pnpm build` passes.
+- [x] New tests pass; existing tests in the file pass unchanged.
+- [x] `pnpm build` passes.
 
 ## Notes
 - The returned `headers` stays a plain `Record<string, string>`; callers are not changed.

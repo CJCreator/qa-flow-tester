@@ -1,6 +1,13 @@
 import type { Finding, PermissionMatrix, Breakpoint } from '@qa/types';
 import YAML from 'yaml';
 
+/** True when `target` is the rule's path or sits under it: "/admin" covers "/admin/users" and "/admin?tab=1", not "/administrator". */
+function ruleCovers(ruleTarget: string, target: string): boolean {
+  if (target === ruleTarget) return true;
+  const base = ruleTarget.endsWith('/') ? ruleTarget : `${ruleTarget}/`;
+  return target.startsWith(base) || target.startsWith(`${ruleTarget}?`) || target.startsWith(`${ruleTarget}#`);
+}
+
 export class PermissionMatrixChecker {
   private matrix: PermissionMatrix = [];
 
@@ -69,11 +76,12 @@ export class PermissionMatrixChecker {
   }): Finding | undefined {
     const { target, role, breakpoint = '1440px', statusCode, redirectedToLogin, testCaseId } = params;
 
-    // Find rule for this target: an exact match first, then the longest prefix (so "/invoices/new"
-    // is not answered by the "/invoices" rule when it has a rule of its own).
+    // Find rule for this target: an exact match first, then the longest rule whose path it sits under
+    // (so "/invoices/new" is not answered by the "/invoices" rule when it has a rule of its own, and
+    // "/administrator" is not answered by the "/admin" rule).
     const rule =
       this.matrix.find((r) => r.target === target) ??
-      this.matrix.filter((r) => target.startsWith(r.target)).sort((a, b) => b.target.length - a.target.length)[0];
+      this.matrix.filter((r) => ruleCovers(r.target, target)).sort((a, b) => b.target.length - a.target.length)[0];
     if (!rule) return undefined;
 
     const expected = rule.roles[role];
@@ -133,55 +141,6 @@ export class PermissionMatrixChecker {
         ],
         evidence: {},
         resolution: `Role "${role}" should have access to "${target}". Verify role authorization mappings in the backend.`,
-      };
-    }
-
-    return undefined;
-  }
-
-  /**
-   * Check direct URL access where a link is hidden in UI navigation but accessible via direct URL navigation
-   */
-  public checkDirectUrlExposure(params: {
-    target: string;
-    role: string;
-    isNavVisible: boolean;
-    isReachable: boolean;
-    breakpoint?: Breakpoint;
-    testCaseId?: string;
-  }): Finding | undefined {
-    const { target, role, isNavVisible, isReachable, breakpoint = '1440px', testCaseId } = params;
-
-    const rule = this.matrix.find((r) => r.target === target);
-    if (!rule) return undefined;
-
-    const expected = rule.roles[role];
-    // If permission says deny, checkAccess handles leak.
-    // If not in nav, but reachable directly when denied or unconfigured:
-    if (expected === 'deny' && isReachable && !isNavVisible) {
-      return {
-        id: `F-DIRECT-URL-${role}-${target.replace(/[^a-zA-Z0-9]/g, '_')}`,
-        testCaseId,
-        severity: 'Blocker',
-        checker: 'permission-matrix',
-        title: `Direct URL Access: Hidden route "${target}" accessible directly by "${role}"`,
-        where: {
-          urlPath: target,
-          role,
-          breakpoint,
-        },
-        expectedVsActual: {
-          expected: `Route "${target}" should be denied and inaccessible for "${role}"`,
-          actual: `Route is hidden from navigation bar but accessible via direct URL address bar`,
-        },
-        stepsToReproduce: [
-          `Log in as "${role}"`,
-          `Observe "${target}" is not present in navigation menus`,
-          `Type "${target}" directly in browser URL bar`,
-          `Observe page loads successfully`,
-        ],
-        evidence: {},
-        resolution: `Ensure backend middleware rejects unauthorized requests rather than relying on frontend navigation hiding (security through obscurity).`,
       };
     }
 

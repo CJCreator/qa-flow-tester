@@ -95,5 +95,31 @@ describe('input-rules contracts', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toContain(`Line ${MAX_CUSTOM_HEADERS + 1}`);
     });
+
+    it('counts names that every object inherits, and keeps them', () => {
+      const result = parseHeaderText('constructor: a\ntoString: b');
+      expect(result.errors).toEqual([]);
+      expect(Object.keys(result.headers).sort()).toEqual(['constructor', 'toString']);
+      expect(result.headers.constructor).toBe('a');
+    });
+
+    it('keeps __proto__ as an ordinary header', () => {
+      const result = parseHeaderText('__proto__: x');
+      expect(Object.keys(result.headers)).toEqual(['__proto__']);
+      expect(Object.getPrototypeOf(result.headers)).toBe(Object.prototype);
+    });
+
+    it('treats names that differ only in capitals as one header: the last wins', () => {
+      const result = parseHeaderText('X-A: 1\nx-a: 2');
+      expect(result.headers).toEqual({ 'x-a': '2' });
+      expect(result.errors).toEqual([]);
+    });
+
+    it('inherited names count toward the maximum', () => {
+      const lines = Array.from({ length: MAX_CUSTOM_HEADERS - 1 }, (_, i) => `X-H${i}: v`);
+      const result = parseHeaderText([...lines, 'constructor: a', 'X-Over: b'].join('\n'));
+      expect(Object.keys(result.headers)).toHaveLength(MAX_CUSTOM_HEADERS);
+      expect(result.errors).toHaveLength(1);
+    });
   });
 });

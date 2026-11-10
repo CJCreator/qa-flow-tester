@@ -29,6 +29,9 @@ export function parseHeaderText(text: string): { headers: Record<string, string>
 
   const lines = text.split(/\r?\n/);
   let count = 0;
+  // Lower-cased name -> the name as last written. Header names are case-insensitive, and a Map sees
+  // only what was added here (a plain object also "has" constructor, toString and __proto__).
+  const written = new Map<string, string>();
 
   for (let i = 0; i < lines.length; i++) {
     const rawLine = lines[i];
@@ -57,15 +60,23 @@ export function parseHeaderText(text: string): { headers: Record<string, string>
       continue;
     }
 
-    if (count >= MAX_CUSTOM_HEADERS && !(name in headers)) {
+    const key = name.toLowerCase();
+    const earlier = written.get(key);
+
+    if (count >= MAX_CUSTOM_HEADERS && earlier === undefined) {
       errors.push(`Line ${lineNum}: maximum of ${MAX_CUSTOM_HEADERS} headers exceeded`);
       continue;
     }
 
-    if (!(name in headers)) {
+    if (earlier === undefined) {
       count++;
+    } else if (earlier !== name) {
+      // The same header written with other capitals: the last one replaces it.
+      delete headers[earlier];
     }
-    headers[name] = value;
+    written.set(key, name);
+    // defineProperty, so a name like __proto__ becomes an ordinary own property.
+    Object.defineProperty(headers, name, { value, enumerable: true, writable: true, configurable: true });
   }
 
   return { headers, errors };
