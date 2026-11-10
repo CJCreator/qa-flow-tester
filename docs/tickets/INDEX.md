@@ -18,7 +18,7 @@ The status cell holds exactly one of these keywords:
 | `human` | Code built; manual steps left for a person | the builder |
 | `later` | Deferred by decision | the human |
 
-The order of work is `todo` → `planned` → `approved` → `building` → `built` → `done`. Waves order tickets within one plan only. Build a wave once every ticket in the waves before it is `built`. Gap ids and other ids resolve in the linked plan; open issues with no ticket are in [../OPEN_ISSUES.md](../OPEN_ISSUES.md).
+The order of work is `todo` → `planned` → `approved` → `building` → `built` → `done`. Waves order tickets within one plan only. Build a wave once every ticket in the waves before it is `built`. Gap ids and other ids resolve in the linked plan.
 
 ## Open: Website Audit reliability
 

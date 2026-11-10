@@ -3,7 +3,7 @@
 Status: Accepted, 2026-10-30 (DEC-001; the developer's answers to Q-01, Q-05 and Q-34; written in task DOC-001). Builds on [0007](0007-competitive-reference-flow-benchmarking.md), [0010](0010-one-app-with-details-on-demand.md), [0018](0018-claim-wording.md), [0029](0029-one-ready-to-release-rule.md) and [0030](0030-passive-vs-active-security-boundary.md). Amended by [0043](0043-parallel-page-fetching-in-the-website-audit.md) (parallel fetch) and [0042](0042-website-audit-reliability-and-access.md) (private addresses on a local runner, AI notes on every page).
 
 ## Context
-`Requirements.txt` (FR-1 to FR-33) describes a tool that audits other people's websites in order to pitch repair or redesign work: documents, a one-page pitch, a list of sites to pitch or skip, and a version for the owner on request. The Check-up serves someone else: a team checking its own App before a release. It is built around a Plan, a Plan Review and a release verdict ([0029](0029-one-ready-to-release-rule.md)).
+The requirements list FR-1 to FR-33 (`Requirements.txt`, removed in 2026-11, in git history) describes a tool that audits other people's websites in order to pitch repair or redesign work: documents, a one-page pitch, a list of sites to pitch or skip, and a version for the owner on request. The Check-up serves someone else: a team checking its own App before a release. It is built around a Plan, a Plan Review and a release verdict ([0029](0029-one-ready-to-release-rule.md)).
 
 Putting the audit inside the Check-up causes three problems:
 - A "Ready to release" stamp on someone else's site means nothing, and pitch documents invite exactly the claims [0018](0018-claim-wording.md) forbids, such as "insecure" or "not accessible" (RISK-009).

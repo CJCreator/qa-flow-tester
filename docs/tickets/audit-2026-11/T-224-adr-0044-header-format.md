@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P2 | S | docs | inconsistency | todo |
+| P2 | S | docs | inconsistency | built |
 
 **Files you may edit (no others):**
 - `docs/adr/0044-expansion-platform-scope-and-roadmap.md` (lines 3-9 only)
@@ -72,9 +72,9 @@ grep -n "^Status: " docs/adr/0044-expansion-platform-scope-and-roadmap.md
 ```
 
 ## Done when
-- [ ] Line 3 is a plain `Status:` line that says nothing is built.
-- [ ] No "Document Reference" line and no `OPEN_ISSUES` mention.
-- [ ] The body from `## 1. Context & Motivation` on is unchanged (`git diff` shows changes in lines 3-9 only).
+- [x] Line 3 is a plain `Status:` line that says nothing is built.
+- [x] No "Document Reference" line and no `OPEN_ISSUES` mention.
+- [x] The body from `## 1. Context & Motivation` on is unchanged (`git diff` shows changes in lines 3-9 only).
 
 ## Notes
 - If line 5 still names `docs/OPEN_ISSUES.md`, T-217 has not been built: build it first.

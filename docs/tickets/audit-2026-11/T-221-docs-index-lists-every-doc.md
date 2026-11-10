@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P2 | S | docs | docs | todo |
+| P2 | S | docs | docs | built |
 
 **Files you may edit (no others):**
 - `docs/README.md`
@@ -76,9 +76,9 @@ for f in docs/*.md; do b=$(basename "$f"); [ "$b" = "README.md" ] || grep -q "($
 ```
 
 ## Done when
-- [ ] The five rows are in the table and every link opens a file that exists.
-- [ ] The loop above prints nothing.
-- [ ] `config-docs.test.ts` passes (it checks every relative link in `docs/README.md`).
+- [x] The five rows are in the table and every link opens a file that exists.
+- [x] The loop above prints nothing.
+- [x] `config-docs.test.ts` passes (it checks every relative link in `docs/README.md`).
 
 ## Notes
 - Prettier re-aligns the table columns; that is expected.

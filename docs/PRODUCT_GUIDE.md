@@ -113,7 +113,7 @@ A disabled button says why in a line next to it (the button's `aria-describedby`
 
 - **Start the check-up** (New check-up): waiting for the AI setup; enter the address first; checking the address; the address cannot be reached; say whether it is a test copy; fix the custom headers.
 - **Compare the two sites** (Benchmark): a comparison is running; enter your site's address; enter the other site's address.
-- **Save key** (AI key field): off until the key checks as valid. No reason line yet; the status line under the field shows the error for a wrong key (OPEN_ISSUES W20, the rest of the screens).
+- **Save key** (AI key field): off until the key checks as valid. No reason line yet; the status line under the field shows the error for a wrong key (gap W20, the rest of the screens).
 
 ## Safety
 

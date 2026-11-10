@@ -3,7 +3,7 @@
 Amends [0009](0009-ai-plans-every-plan-item.md).
 
 ## Context and Decision
-The product review of 2026-09-30 (PRODUCT_REVIEW.md, T1–T3) found that free AI models rarely produced a usable plan:
+The product review of 2026-09-30 (findings T1–T3; the review file was removed in 2026-11 and is in git history) found that free AI models rarely produced a usable plan:
 - The chosen free model spent its whole 4,096-token answer allowance on hidden reasoning and answered nothing. The planner read that as bad JSON and asked again with the same allowance, which failed the same way.
 - Most of what the AI was asked to write, fixed rules already wrote as well: a name and an expectation for every link on every page.
 - Token use wasn't recorded, so the plan blamed the AI Request Budget for what was really truncation.

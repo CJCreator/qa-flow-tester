@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P2 | S | docs | dead-code | todo |
+| P2 | S | docs | dead-code | built |
 
 **Files you may edit (no others):**
 - `PRODUCT_REVIEW.md` (delete)
@@ -102,10 +102,10 @@ grep -n "\.\./OPEN_ISSUES" docs/tickets/INDEX.md
 one link in `INDEX.md`. `Requirements.txt` stays named once, in ADR 0033, as history.)
 
 ## Done when
-- [ ] The eight files are gone.
-- [ ] `config-docs.test.ts` passes (it checks every link in `docs/README.md`).
-- [ ] Both greps print nothing.
-- [ ] `pnpm format:check` passes.
+- [x] The eight files are gone.
+- [x] `config-docs.test.ts` passes (it checks every link in `docs/README.md`).
+- [x] Both greps print nothing.
+- [x] `pnpm format:check` passes.
 
 ## Notes
 - Leave these four code comments alone. They cite old issue ids (C1, C4, C5), not the file:

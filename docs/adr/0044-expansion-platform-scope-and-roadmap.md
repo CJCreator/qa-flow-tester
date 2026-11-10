@@ -1,8 +1,9 @@
 # 0044: Expansion Platform Scope and Architecture Roadmap
 
-**Document Reference:** G23, G24, G25, G26  
-**Status:** Accepted (Architectural Roadmap), 2026-11-06  
-**Context:** G23–G26 in `docs/OPEN_ISSUES.md` identify future platform expansion directions:
+Status: Accepted as a roadmap, 2026-11-06. Nothing in it is built. Each direction needs its own ADR before any code is written.
+
+Gaps G23 to G26 of the 2026-11 gap analysis name four directions this record scopes:
+
 - G23: Security Probes on verified test copies
 - G24: Phone apps (Maestro integration)
 - G25: Public API as an App (programmatic headless execution)
