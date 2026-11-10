@@ -797,7 +797,9 @@ describe('audit pipeline: runAuditPipeline', () => {
     const { result } = await outcome;
 
     expect(steps.find((s) => s.step === 'speed')).toMatchObject({ status: 'done' });
-    expect(result.notes).toContain('Speed was measured by this tool.');
+    expect(result.notes).toContain(
+      'Speed was measured by this tool. The speed area has no grade: a grade needs a Google PageSpeed Insights score.'
+    );
     const samples = result.pages.filter((p) => p.coverage === 'sample');
     for (const p of samples) {
       expect(p.speed?.lab.source).toBe('this-tool');

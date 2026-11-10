@@ -93,7 +93,7 @@ const AREA_MEANING: Record<AuditArea, string> = {
   usability: 'how easy the page is to use, on a phone too',
   content: 'how clear, complete and well structured the words are',
   accessibility: 'problems automatic WCAG 2.2 AA checks found (automatic checks find some problems only)',
-  speed: 'how fast the page loads, from PageSpeed Insights values',
+  speed: 'how fast the page loads, from the measured speed values (their source is named in the data)',
 };
 
 /** Pages assessed at once (ADR 0043): requests go to the AI Provider, not the audited site. */
@@ -411,7 +411,9 @@ function speedSummary(speed: PageSpeed) {
     s.status === 'measured'
       ? { method: s.method, values: s.values.map((v) => ({ metric: v.metric, value: v.value, unit: v.unit })) }
       : { method: s.method, notMeasured: s.reason };
-  return { source: 'PageSpeed Insights (mobile)', lab: one(speed.lab), field: one(speed.field) };
+  const source =
+    speed.lab.source === 'this-tool' ? 'measured by this tool (lab, one run)' : 'PageSpeed Insights (mobile)';
+  return { source, lab: one(speed.lab), field: one(speed.field) };
 }
 
 function clip(text: string): string {

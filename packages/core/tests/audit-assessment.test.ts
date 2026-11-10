@@ -196,6 +196,28 @@ describe('assessPages and assessSite', () => {
     expect(prompt).toContain('"notMeasured":"no-field-data"');
   });
 
+  it('names this tool as the speed source when it measured the values', async () => {
+    const fake = scripted([answer([])]);
+    const { resolution } = await aiWith(fake.provider);
+    const p = page('/pricing', []);
+    p.speed = {
+      lab: {
+        status: 'measured',
+        source: 'this-tool',
+        method: 'lab',
+        strategy: 'mobile',
+        values: [{ metric: 'lcp', value: 2400, unit: 'ms' }],
+        measuredAt: '2026-11-01T00:00:00.000Z',
+      },
+      field: { status: 'not-measured', source: 'this-tool', method: 'field', reason: 'failed' },
+    };
+    await assessPages(pagesInput([p]), resolution);
+
+    const prompt = fake.requests[0].map((m) => m.content).join('\n');
+    expect(prompt).toContain('measured by this tool (lab, one run)');
+    expect(prompt).not.toContain('PageSpeed Insights (mobile)');
+  });
+
   it("writes notes in the audit's document language", async () => {
     const fake = scripted([answer([]), answer([])]);
     const { resolution } = await aiWith(fake.provider);

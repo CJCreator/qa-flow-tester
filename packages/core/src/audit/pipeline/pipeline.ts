@@ -221,7 +221,9 @@ export function siteStoppedAnsweringNoteText(pages: number): string {
 /** Speed source note text (T-84, T-88, ADR 0042). */
 export function speedSourceNoteText(source: 'pagespeed-insights' | 'this-tool' | 'not-measured'): string {
   if (source === 'pagespeed-insights') return 'Speed was measured by Google PageSpeed Insights.';
-  if (source === 'this-tool') return 'Speed was measured by this tool.';
+  if (source === 'this-tool') {
+    return 'Speed was measured by this tool. The speed area has no grade: a grade needs a Google PageSpeed Insights score.';
+  }
   return 'Speed was not measured.';
 }
 

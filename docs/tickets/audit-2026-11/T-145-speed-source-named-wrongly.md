@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P2 | S | core/audit | inconsistency | todo |
+| P2 | S | core/audit | inconsistency | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/audit/ai/assessment.ts`
@@ -93,9 +93,9 @@ Run: `pnpm exec vitest run packages/core/tests/audit-assessment.test.ts packages
 
 ## Done when
 
-- [ ] AI input names this tool as the source when it measured the values.
-- [ ] The this-tool note explains the missing grade.
-- [ ] Tests and `pnpm build` pass.
+- [x] AI input names this tool as the source when it measured the values.
+- [x] The this-tool note explains the missing grade.
+- [x] Tests and `pnpm build` pass.
 
 ## Notes
 
