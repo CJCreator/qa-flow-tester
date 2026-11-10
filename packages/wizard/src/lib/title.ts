@@ -22,14 +22,10 @@ const metaByProperty = (property: string) => () => {
   return el;
 };
 
-const PUBLIC_TITLES = new Set([
-  LANDING_TITLE,
-  'New check-up',
-  'Past check-ups',
-  'Visual Baselines',
-  'Compare with another site',
-  'Get started',
-]);
+/** Only the landing page may be indexed: robots.txt and the runner's X-Robots-Tag say the same. */
+export function isPublicTitle(title: string): boolean {
+  return title === LANDING_TITLE;
+}
 
 /**
  * Names the browser tab after the screen, so tabs, history and bookmarks say where they lead. It also
@@ -41,7 +37,7 @@ export function useDocumentTitle(title: string | null): void {
   useEffect(() => {
     if (title === null) return;
     const isHome = title === LANDING_TITLE;
-    const isPublic = isHome || PUBLIC_TITLES.has(title);
+    const isPublic = isPublicTitle(title);
     document.title = isHome
       ? `${SITE} | QA without a QA team: know if your site is ready to ship`
       : title
