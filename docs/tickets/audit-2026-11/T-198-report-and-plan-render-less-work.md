@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P3 | S | wizard | speed | todo |
+| P3 | S | wizard | speed | built |
 
 **Files you may edit (no others):**
 - `packages/wizard/src/screens/ReportScreen.tsx`

@@ -800,6 +800,24 @@ function MarketingPanel({ report }: { report: ReleaseReport }) {
 }
 
 function AspectGrades({ report }: { report: ReleaseReport }) {
+  // Counted once per report, not on every render: a set of ids instead of includes() per finding.
+  const problemCounts = useMemo(() => {
+    const counts = new Map<AspectType, number>();
+    if (!report.grades) return counts;
+    for (const aspect of ASPECTS) {
+      const data = report.grades.aspects[aspect];
+      if (!data || data.checked === false || data.grade === null) continue;
+      const ids = new Set(data.findings);
+      const problems = groupProblems(report.findings.filter((f) => ids.has(f.id)));
+      counts.set(
+        aspect,
+        mergeSameProblem(problems['must-fix']).length +
+          mergeSameProblem(problems['should-fix']).length +
+          mergeSameProblem(problems.suggestion).length
+      );
+    }
+    return counts;
+  }, [report]);
   if (!report.grades) return null;
   return (
     <Section id="aspects" title="How each area did">
@@ -808,12 +826,7 @@ function AspectGrades({ report }: { report: ReleaseReport }) {
           const data = report.grades!.aspects[aspect];
           const checked = !!data && data.checked !== false && data.grade !== null;
           const sub = aspect === 'Findable' ? data?.subBreakdown : undefined;
-          const problems = checked ? groupProblems(report.findings.filter((f) => data.findings.includes(f.id))) : null;
-          const problemCount = problems
-            ? mergeSameProblem(problems['must-fix']).length +
-              mergeSameProblem(problems['should-fix']).length +
-              mergeSameProblem(problems.suggestion).length
-            : 0;
+          const problemCount = problemCounts.get(aspect) ?? 0;
           return (
             <li
               key={aspect}

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useContext, useDeferredValue, useEffect, useRef, useState } from 'react';
 import type {
   Breakpoint,
   DiscoveredFlow,
@@ -39,7 +39,16 @@ import {
   overCapLine,
   wontRunReason,
 } from '../../lib/intent-view';
-import { Badge, ItemToggle, OPEN_ALL_EVENT, ReplanControl, SourceBadge, itemDomId, safeDecodeHash, showItem } from './parts';
+import {
+  Badge,
+  ItemToggle,
+  OPEN_ALL_EVENT,
+  ReplanControl,
+  SourceBadge,
+  itemDomId,
+  safeDecodeHash,
+  showItem,
+} from './parts';
 import {
   DndContext,
   closestCenter,
@@ -2015,6 +2024,8 @@ function usePlanKeyboardNavigation() {
 /** The complete plan as one readable document: everything that will run, and everything that won't. */
 export function PlanDocument({ plan, actions }: { plan: ReviewPlan; actions: PlanActions }) {
   const [view, setView] = useState<View>({ query: '', needsMe: false });
+  // The search box updates at once; the sections follow when the browser has time, so typing never lags.
+  const deferredView = useDeferredValue(view);
   usePlanKeyboardNavigation();
 
   useEffect(() => {
@@ -2058,7 +2069,7 @@ export function PlanDocument({ plan, actions }: { plan: ReviewPlan; actions: Pla
   }, []);
 
   return (
-    <ViewContext.Provider value={view}>
+    <ViewContext.Provider value={deferredView}>
       <AiContext.Provider value={plan.aiAvailable !== false}>
         {/* What needs an answer first, then the summary, then everything that runs, then what doesn't. */}
         <div className="w-full space-y-10">
