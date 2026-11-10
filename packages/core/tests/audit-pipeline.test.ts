@@ -953,6 +953,33 @@ describe('audit pipeline: runAuditPipeline', () => {
     expect(timingSpy).toHaveBeenCalledTimes(1);
   });
 
+  it('the page response headers are passed to readPage', async () => {
+    const readPageSpy = vi.fn(async () => rawPage());
+    const recorder = createPageRecorder({
+      workDir,
+      stages: pageStages({ readPage: readPageSpy as any }),
+    });
+    const fakePage = { url: () => 'https://example.com/a', urlPath: '/a' } as unknown as Page;
+    const info = { urlPath: '/a', title: 'A', depth: 0 };
+    await recorder.onRenderedPage(fakePage, info, {
+      pacer: { run: (_h: string, t: () => unknown) => t() },
+      responseHeaders: { 'x-shopid': '1' },
+    } as never);
+    expect(readPageSpy).toHaveBeenCalledWith(fakePage, { responseHeaders: { 'x-shopid': '1' } });
+  });
+
+  it('without headers readPage gets empty options', async () => {
+    const readPageSpy = vi.fn(async () => rawPage());
+    const recorder = createPageRecorder({
+      workDir,
+      stages: pageStages({ readPage: readPageSpy as any }),
+    });
+    const fakePage = { url: () => 'https://example.com/b', urlPath: '/b' } as unknown as Page;
+    const info = { urlPath: '/b', title: 'B', depth: 0 };
+    await recorder.onRenderedPage(fakePage, info);
+    expect(readPageSpy).toHaveBeenCalledWith(fakePage, {});
+  });
+
   it('emits site-stopped-answering note from crawl stoppedAnsweringAfter count', async () => {
     const crawl = crawlResult();
     crawl.stoppedAnsweringAfter = 3;

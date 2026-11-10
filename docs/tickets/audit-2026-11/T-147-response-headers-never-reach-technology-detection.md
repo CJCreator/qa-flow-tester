@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P2 | M | core/audit | inconsistency | todo |
+| P2 | M | core/audit | inconsistency | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/audit/crawl/crawl.ts`
@@ -121,8 +121,8 @@ Run: `pnpm exec vitest run packages/core/tests/audit-pipeline.test.ts packages/c
 
 ## Done when
 
-- [ ] `readPage` receives the main response headers of each recorded page.
-- [ ] Tests and `pnpm build` pass.
+- [x] `readPage` receives the main response headers of each recorded page.
+- [x] Tests and `pnpm build` pass.
 
 ## Notes
 

@@ -196,6 +196,8 @@ export interface AuditCrawlDeps {
 /** What the crawl hands to `onRenderedPage` besides the page: its pacer, so extra requests take turns too. */
 export interface RenderedPageContext {
   pacer: HostPacer;
+  /** The headers of the page's own (main frame) response, when one was seen. For technology detection only. */
+  responseHeaders?: Record<string, string>;
 }
 
 export interface AuditCrawlOptions {
@@ -373,6 +375,22 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
     // Added last, so it runs first: same-site requests carry the tunnel skip headers into the routes above.
     await addTunnelSkipHeaders(context, start);
 
+    // The headers of each page's own response, for technology detection (never stored whole: readPage drops
+    // cookies and authorization).
+    const mainHeaders = new WeakMap<Page, Record<string, string>>();
+    if (typeof context.on === 'function') {
+      context.on('response', (response) => {
+        try {
+          const req = response.request();
+          const frame = req.frame();
+          if (!req.isNavigationRequest() || frame.parentFrame() !== null) return;
+          mainHeaders.set(frame.page(), response.headers());
+        } catch {
+          // A response of a page that is already closed: nothing to record.
+        }
+      });
+    }
+
     const spider = new DeterministicSpider([], request.limits.maxPages);
     const result = await spider.crawl(context, request.url, {
       maxDepth: request.limits.maxDepth,
@@ -455,7 +473,13 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
             return;
           }
         }
-        if (opts.onRenderedPage) await opts.onRenderedPage(page, toAuditPage(item), { pacer });
+        if (opts.onRenderedPage) {
+          const responseHeaders = mainHeaders.get(page);
+          await opts.onRenderedPage(page, toAuditPage(item), {
+            pacer,
+            ...(responseHeaders ? { responseHeaders } : {}),
+          });
+        }
       },
     });
     if (blocked || result.blocked) throw new AuditCrawlBlockedError((blocked || result.blocked)!);

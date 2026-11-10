@@ -95,7 +95,10 @@ export class AuditPageRecorder {
     this.recorded.push(entry);
 
     try {
-      entry.read = await this.stages.readPage(page);
+      entry.read = await this.stages.readPage(
+        page,
+        context?.responseHeaders ? { responseHeaders: context.responseHeaders } : {}
+      );
     } catch {
       entry.read = null;
     }
