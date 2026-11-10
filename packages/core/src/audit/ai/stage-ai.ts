@@ -76,6 +76,15 @@ export function isKeyRefused(err: unknown): boolean {
 }
 
 /**
+ * The key itself is invalid or expired (401, or the provider says so). Unlike a 403 or a missing credit, no
+ * later request with this key can work, so the audit stops asking.
+ */
+function isKeyInvalid(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err ?? '');
+  return /\(401\)/.test(message) || /api key (expired|invalid|not valid)/i.test(message);
+}
+
+/**
  * Redacts secrets (API keys, Bearer tokens, URLs with key=) from an error message,
  * collapses whitespace, and trims to `maxChars` (default 200).
  */
@@ -93,7 +102,7 @@ export function redactAiMessage(raw: unknown, maxChars = 200): string {
 /**
  * Maps an error to `AuditAiStatus` (ADR 0042, T-81):
  * - 401/403 -> 'key-expired'
- * - 429 -> 'quota'
+ * - 429, 402 or no credit left -> 'quota'
  * - abort or timeout -> 'timeout'
  * - other -> 'provider-error'
  */
@@ -131,8 +140,9 @@ export function classifyAiError(err: unknown): AuditAiStatus {
 
   if (
     statusNum === 429 ||
-    /\b429\b/.test(raw) ||
-    /quota|rate limit|too many requests|insufficient (credits|balance|quota)|billing/i.test(raw)
+    statusNum === 402 ||
+    /\b(429|402)\b/.test(raw) ||
+    /quota|rate limit|too many requests|insufficient (credits|balance|quota)|credits? (are )?depleted|billing/i.test(raw)
   ) {
     return 'quota';
   }
@@ -235,12 +245,16 @@ function auditAiOn(
     return { completion, model };
   };
 
+  /** Set once the provider said the key is invalid and no other sign-in could take over: later asks fail at once. */
+  let deadKeyError: unknown = null;
+
   return {
     get provider() {
       return providerType;
     },
     async ask(stage, messages, options = {}) {
       stopIfAborted(options.signal);
+      if (deadKeyError) throw deadKeyError;
       if (deps.budget && !deps.budget.take()) return { ok: false, reason: 'budget-spent' };
       const sentWith = provider;
       const sentAs = providerType;
@@ -253,7 +267,10 @@ function auditAiOn(
         const movedOn = provider !== sentWith;
         if (!movedOn) {
           const canSwitch = sentAs !== 'gemini' && hasAdc !== undefined && isKeyRefused(err);
-          if (!canSwitch || !(await switchToAdc())) throw err;
+          if (!canSwitch || !(await switchToAdc())) {
+            if (isKeyInvalid(err)) deadKeyError = err;
+            throw err;
+          }
         }
         stopIfAborted(options.signal);
         const { completion, model } = await send(stage, messages, options);

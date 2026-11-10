@@ -4,6 +4,7 @@ import type { AIProvider } from '../src/ai/ai-provider.js';
 import type { ResolvedKeyInfo } from '../src/ai/key-resolver.js';
 import {
   auditAiRequestBudget,
+  classifyAiError,
   isKeyRefused,
   resolveAuditAi,
   type ResolveAuditAiDeps,
@@ -383,5 +384,62 @@ describe('resolveAuditAi: parallel requests and the switch to Google sign-in (AD
     expect(results.every((r) => r.status === 'rejected')).toBe(true);
     expect(hasAdc).toHaveBeenCalledTimes(1);
     expect(createProvider).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('classifyAiError and invalid key behavior (T-149)', () => {
+  it('classifyAiError: 402 and depleted credits are quota', () => {
+    expect(classifyAiError(new Error('Request failed (402): credits are depleted'))).toBe('quota');
+    expect(classifyAiError({ status: 402, message: 'x' })).toBe('quota');
+    expect(classifyAiError(new Error('Request failed (401)'))).toBe('key-expired');
+    expect(classifyAiError(new Error('Request failed (500)'))).toBe('provider-error');
+  });
+
+  it('an invalid key is asked once: later requests fail without a provider call', async () => {
+    const calls: any[] = [];
+    const provider: AIProvider = {
+      providerType: 'openrouter',
+      async generateText(_m, o) {
+        calls.push(o);
+        throw new Error('Request failed (401): API key expired');
+      },
+    };
+    const deps: ResolveAuditAiDeps = {
+      setup: { provider: 'openrouter', text: 'default/text', vision: 'default/vision' },
+      keys: keysFor({ provider: 'openrouter', apiKey: TEST_KEY, source: 'keychain' }),
+      createProvider: () => provider,
+    };
+    const resolved = await resolveAuditAi(deps);
+    if (!resolved.ok) throw new Error('expected AI');
+
+    await expect(resolved.ai.ask('assessment', MESSAGES)).rejects.toThrow('API key expired');
+    await expect(resolved.ai.ask('assessment', MESSAGES)).rejects.toThrow('API key expired');
+    await expect(resolved.ai.ask('assessment', MESSAGES)).rejects.toThrow('API key expired');
+    expect(calls).toHaveLength(1);
+  });
+
+  it('a 429 does not stop later requests', async () => {
+    const calls: any[] = [];
+    let count = 0;
+    const provider: AIProvider = {
+      providerType: 'openrouter',
+      async generateText(_m, o) {
+        calls.push(o);
+        if (count++ === 0) throw new Error('Request failed (429)');
+        return 'success';
+      },
+    };
+    const deps: ResolveAuditAiDeps = {
+      setup: { provider: 'openrouter', text: 'default/text', vision: 'default/vision' },
+      keys: keysFor({ provider: 'openrouter', apiKey: TEST_KEY, source: 'keychain' }),
+      createProvider: () => provider,
+    };
+    const resolved = await resolveAuditAi(deps);
+    if (!resolved.ok) throw new Error('expected AI');
+
+    await expect(resolved.ai.ask('assessment', MESSAGES)).rejects.toThrow('(429)');
+    const second = await resolved.ai.ask('assessment', MESSAGES);
+    expect(second.ok).toBe(true);
+    expect(calls).toHaveLength(2);
   });
 });

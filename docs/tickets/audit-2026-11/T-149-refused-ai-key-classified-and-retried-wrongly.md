@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P2 | S | core/audit | inconsistency | todo |
+| P2 | S | core/audit | inconsistency | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/audit/ai/stage-ai.ts`
@@ -129,9 +129,9 @@ Run: `pnpm exec vitest run packages/core/tests/audit-ai-stage.test.ts packages/c
 
 ## Done when
 
-- [ ] 402 and "credits depleted" classify as `quota`.
-- [ ] After a 401 with no fallback, no further request reaches the provider in that audit.
-- [ ] Tests and `pnpm build` pass.
+- [x] 402 and "credits depleted" classify as `quota`.
+- [x] After a 401 with no fallback, no further request reaches the provider in that audit.
+- [x] Tests and `pnpm build` pass.
 
 ## Notes
 
