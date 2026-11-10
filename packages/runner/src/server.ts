@@ -30,6 +30,7 @@ import {
   allRoutes,
   resolveRoute,
   authorizeRoute,
+  ACCESS_KEY_REFUSAL,
   isLoopbackAddress,
   type Route,
   type RouteParams,
@@ -195,6 +196,15 @@ function hasDotDotSegment(rel: string): boolean {
 }
 
 /** Run ids are made here ("run-<time>"); anything else in an address is refused, so it can't leave the runs folder. */
+/** decodeURIComponent that answers null for a malformed escape instead of throwing (the caller sends 400). */
+function decodePath(part: string): string | null {
+  try {
+    return decodeURIComponent(part);
+  } catch {
+    return null;
+  }
+}
+
 function isRunId(value: string): boolean {
   return /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(value) && !value.includes('..');
 }
@@ -1069,7 +1079,7 @@ export class RunnerServer {
 
     if (url.pathname.startsWith('/api/')) {
       res.writeHead(401, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'This QA Tool is shared privately: send its access key.' }));
+      res.end(JSON.stringify({ error: ACCESS_KEY_REFUSAL, code: 'ERR_ACCESS_KEY' }));
     } else {
       res.writeHead(401, { 'Content-Type': 'text/plain; charset=utf-8' });
       res.end(
@@ -1135,8 +1145,8 @@ export class RunnerServer {
             res.setHeader('Access-Control-Allow-Origin', origin);
             res.setHeader('Access-Control-Allow-Credentials', 'true');
             res.setHeader('Vary', 'Origin');
-            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
-            res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-QA-Access');
+            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+            res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-QA-Access, Idempotency-Key');
           } else if (origin && req.method !== 'GET') {
             res.writeHead(403, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'Cross-origin requests are only accepted from localhost' }));
@@ -1347,11 +1357,12 @@ export class RunnerServer {
 
           // GET /api/sites, POST /api/sites/<host> — what's remembered per site: its choices and saved sign-ins
           if (pathname === '/api/sites' || pathname.startsWith('/api/sites/')) {
-            await this.handleSites(
-              decodeURIComponent(pathname.slice('/api/sites'.length).replace(/^\//, '')),
-              req,
-              res
-            );
+            const sitePath = decodePath(pathname.slice('/api/sites'.length).replace(/^\//, ''));
+            if (sitePath === null) {
+              this.sendJson(res, 400, { error: 'The address is not valid.', code: 'ERR_INVALID_REQUEST' });
+              return;
+            }
+            await this.handleSites(sitePath, req, res);
             return;
           }
 
@@ -1407,7 +1418,12 @@ export class RunnerServer {
 
           // GET /api/baselines/* — static visual baseline image serving
           if (pathname.startsWith('/api/baselines/') && req.method === 'GET') {
-            await this.handleServeBaseline(decodeURIComponent(pathname.replace('/api/baselines/', '')), res);
+            const baselineId = decodePath(pathname.replace('/api/baselines/', ''));
+            if (baselineId === null) {
+              this.sendJson(res, 400, { error: 'The address is not valid.', code: 'ERR_INVALID_REQUEST' });
+              return;
+            }
+            await this.handleServeBaseline(baselineId, res);
             return;
           }
 
@@ -1421,7 +1437,12 @@ export class RunnerServer {
             return;
           }
           if (pathname.startsWith('/api/runner/baselines/') && req.method === 'DELETE') {
-            await this.handleDeleteBaseline(decodeURIComponent(pathname.replace('/api/runner/baselines/', '')), res);
+            const baselineId = decodePath(pathname.replace('/api/runner/baselines/', ''));
+            if (baselineId === null) {
+              this.sendJson(res, 400, { error: 'The address is not valid.', code: 'ERR_INVALID_REQUEST' });
+              return;
+            }
+            await this.handleDeleteBaseline(baselineId, res);
             return;
           }
 
@@ -1435,11 +1456,12 @@ export class RunnerServer {
             return;
           }
           if (pathname.startsWith('/api/runner/benchmark/') && (req.method === 'GET' || req.method === 'DELETE')) {
-            await this.handleBenchmarkById(
-              decodeURIComponent(pathname.slice('/api/runner/benchmark/'.length)),
-              req.method,
-              res
-            );
+            const benchmarkId = decodePath(pathname.slice('/api/runner/benchmark/'.length));
+            if (benchmarkId === null) {
+              this.sendJson(res, 400, { error: 'The address is not valid.', code: 'ERR_INVALID_REQUEST' });
+              return;
+            }
+            await this.handleBenchmarkById(benchmarkId, req.method, res);
             return;
           }
 
@@ -1456,7 +1478,11 @@ export class RunnerServer {
           // GET /api/evidence/* — static evidence file serving, rooted at this runner's own output
           // dir. A run's files are under runs/<runId>/ (evidence, page thumbnails, its reports).
           if (pathname.startsWith('/api/evidence/') && req.method === 'GET') {
-            const relPath = decodeURIComponent(pathname.replace('/api/evidence/', ''));
+            const relPath = decodePath(pathname.replace('/api/evidence/', ''));
+            if (relPath === null) {
+              this.sendJson(res, 400, { error: 'The address is not valid.', code: 'ERR_INVALID_REQUEST' });
+              return;
+            }
             if (hasDotDotSegment(relPath)) {
               res.writeHead(403, { 'Content-Type': 'text/plain' });
               res.end('Forbidden');

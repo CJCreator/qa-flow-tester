@@ -234,6 +234,18 @@ describe('Route dispatch enforces access levels and the beta policy (REQ-048)', 
     expect(fallback.status).toBe(404);
     expect(JSON.parse(fallback.body)).toEqual({ error: 'Not found' });
   });
+
+  it('the access-key gate answers ERR_ACCESS_KEY', async () => {
+    const refused = await call(KEYED_PORT, 'GET', '/api/runner/status');
+    expect(refused.status).toBe(401);
+    expect(JSON.parse(refused.body).code).toBe('ERR_ACCESS_KEY');
+  });
+
+  it('a malformed % escape answers 400, not 500', async () => {
+    const bad = await call(KEYED_PORT, 'GET', '/api/sites/%E0%A4%A', { 'x-qa-access': KEY });
+    expect(bad.status).toBe(400);
+    expect(JSON.parse(bad.body).code).toBe('ERR_INVALID_REQUEST');
+  });
 });
 
 describe('DEC-004: with no access key set, only the local machine is the owner', () => {

@@ -1,4 +1,4 @@
-import { RunnerServer } from './server.js';
+import { RunnerServer, redactedMessage } from './server.js';
 import { defaultUiApps } from './ui-static.js';
 import { isLoopbackBindHost } from './bind-host.js';
 import { createShutdown } from './shutdown.js';
@@ -74,7 +74,7 @@ const shutdown = createShutdown({
 process.on('SIGTERM', () => void shutdown('SIGTERM', 0));
 process.on('SIGINT', () => void shutdown('SIGINT', 0));
 process.on('unhandledRejection', (reason) => {
-  console.error('[Release check-up] Unhandled promise rejection:', reason);
+  console.error('[Release check-up] Unhandled promise rejection:', redactedMessage(reason));
   void shutdown('Unhandled promise rejection', 1);
 });
 
