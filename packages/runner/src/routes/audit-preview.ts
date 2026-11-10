@@ -30,6 +30,7 @@ import {
   type AuditStore,
 } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
+import { versionQuery } from './audit-common.js';
 import { sendJson } from './body.js';
 import {
   AUDIT_FORBIDDEN,
@@ -105,15 +106,6 @@ function row(
 ): Route & { method: string; access: AuditAccess } {
   const { method, path, access } = AUDIT_API[key];
   return { method, path, access, handle };
-}
-
-const VERSION = /^[1-9][0-9]{0,6}$/;
-
-/** `?version=`: absent means the latest; anything but a whole number from 1 is refused. */
-function versionQuery(url: URL): number | undefined | 'invalid' {
-  const raw = url.searchParams.get('version');
-  if (raw === null) return undefined;
-  return VERSION.test(raw) ? Number(raw) : 'invalid';
 }
 
 async function readBody(req: http.IncomingMessage): Promise<string> {

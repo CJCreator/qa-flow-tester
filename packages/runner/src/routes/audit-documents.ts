@@ -19,6 +19,7 @@ import {
   type AuditStore,
 } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
+import { versionQuery } from './audit-common.js';
 import { readJsonBody, sendJson } from './body.js';
 
 /** What the Audit Document rows need: the Website Audit store (G6). */
@@ -48,14 +49,6 @@ function refuseStoreFailure(res: http.ServerResponse, err: unknown): void {
     return refuse(res, 400, 'ERR_INVALID_REQUEST', 'The request is not valid.');
   }
   sendJson(res, 500, { error: 'The edits could not be read or saved. Try again.' });
-}
-
-/** `?version=`: absent means the latest; anything but a whole number from 1 is refused. */
-function versionQuery(url: URL): number | undefined | 'invalid' {
-  const raw = url.searchParams.get('version');
-  if (raw === null) return undefined;
-  if (!/^[1-9][0-9]{0,6}$/.test(raw)) return 'invalid';
-  return Number(raw);
 }
 
 /** Writes to one version's edits go one at a time, so two saves never overwrite each other. */

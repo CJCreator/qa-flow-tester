@@ -12,6 +12,7 @@ import {
 } from '@qa/types';
 import { AuditRecordError, AuditStoreError, emptyOverlay, type AuditStore } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
+import { versionQuery } from './audit-common.js';
 import { sendJson } from './body.js';
 import { allows } from '../helpers/index.js';
 
@@ -76,14 +77,6 @@ export async function mayUseAudit(
 ): Promise<boolean> {
   const ids = await grantedAuditIds(store, caller, permission);
   return ids === null || ids.has(auditId);
-}
-
-/** `?version=`: absent means the latest; anything but a whole number from 1 is refused. */
-function versionQuery(url: URL): number | undefined | 'invalid' {
-  const raw = url.searchParams.get('version');
-  if (raw === null) return undefined;
-  if (!/^[1-9][0-9]{0,6}$/.test(raw)) return 'invalid';
-  return Number(raw);
 }
 
 /** Declared access comes from AUDIT_API, so a row can never drift from the contract. */

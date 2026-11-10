@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P3 | S | runner | inconsistency | todo |
+| P3 | S | runner | inconsistency | built |
 
 **Files you may edit (no others):**
 - `packages/runner/src/routes/audit-common.ts` (new)

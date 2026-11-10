@@ -1,6 +1,7 @@
 import { AUDIT_API, type AuditAccess, type AuditContentReply, type PageContent } from '@qa/types';
 import { pageContentName, type AuditStore } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
+import { versionQuery } from './audit-common.js';
 import { sendJson } from './body.js';
 import { AUDIT_NOT_FOUND, mayUseAudit, refuse, refuseStoreFailure, type AuditCaller } from './audit-store.js';
 
@@ -11,7 +12,6 @@ export interface AuditContentRouteDeps {
   caller: (context: RouteContext) => AuditCaller | Promise<AuditCaller>;
 }
 
-const VERSION = /^[1-9][0-9]{0,6}$/;
 const MAX_PATH_CHARS = 2000;
 const INVALID_VERSION = 'The version must be a whole number from 1.';
 const INVALID_PATH = 'The path is missing or not valid.';
@@ -25,13 +25,6 @@ const IMAGE_TYPES: Record<string, string> = {
   jpeg: 'image/jpeg',
   webp: 'image/webp',
 };
-
-/** `?version=`: absent means the latest; anything but a whole number from 1 is refused. */
-function versionQuery(url: URL): number | undefined | 'invalid' {
-  const raw = url.searchParams.get('version');
-  if (raw === null) return undefined;
-  return VERSION.test(raw) ? Number(raw) : 'invalid';
-}
 
 /** A page path as the audit records it: starts with '/', no control characters, bounded length. */
 function validPagePath(raw: string | null): raw is string {

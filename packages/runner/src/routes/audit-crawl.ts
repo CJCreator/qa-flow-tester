@@ -52,6 +52,7 @@ import {
   type PageSpeedDeps,
 } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
+import { versionQuery } from './audit-common.js';
 import { readJsonBody, sendJson } from './body.js';
 import { mayUseAudit, type AuditCaller } from './audit-store.js';
 import type { RunSlot } from '../session/run-slot.js';
@@ -465,13 +466,6 @@ export async function runAuditVersion(
       ? { type: 'done', auditId: run.auditId, version: run.version }
       : { type: 'failed', auditId: run.auditId, version: run.version, error: outcome.error, code: outcome.code }
   );
-}
-
-/** `?version=`: absent means the run's own; anything but a whole number from 1 is refused. */
-function versionQuery(url: URL): number | undefined | 'invalid' {
-  const raw = url.searchParams.get('version');
-  if (raw === null) return undefined;
-  return /^[1-9][0-9]{0,6}$/.test(raw) ? Number(raw) : 'invalid';
 }
 
 /** The start and stream rows with every dependency injectable (tests use a fake crawl and address check). */
