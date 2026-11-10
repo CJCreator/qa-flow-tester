@@ -78,6 +78,22 @@ describe('Redactor', () => {
       ok: true,
     });
   });
+
+  it('hides a Role’s header values and stored entries, and leaves short ordinary values', () => {
+    const redactor = new Redactor([
+      {
+        role: 'member',
+        headers: { 'X-Api-Key': 'k-9f3a77c2aa', Authorization: 'Bearer tok-1234567890', 'X-Lang': 'en' },
+        localStorageEntries: { authToken: 'eyJhbGciOi.abc.def', theme: 'dark' },
+      },
+    ]);
+    const out = redactor.text('key k-9f3a77c2aa bearer tok-1234567890 jwt eyJhbGciOi.abc.def lang en theme dark');
+    expect(out).not.toContain('k-9f3a77c2aa');
+    expect(out).not.toContain('tok-1234567890');
+    expect(out).not.toContain('eyJhbGciOi.abc.def');
+    expect(out).toContain('lang en');
+    expect(out).toContain('theme dark');
+  });
 });
 
 describe('Credential placeholders', () => {

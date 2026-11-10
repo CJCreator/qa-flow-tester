@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P0 | S | core | security | todo |
+| P0 | S | core | security | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/redact.ts`
@@ -87,8 +87,8 @@ Command: `pnpm exec vitest run packages/core/tests/redaction.test.ts`
 
 ## Done when
 
-- [ ] The new test passes and every existing test in the file still passes
-- [ ] `pnpm build` passes
+- [x] The new test passes and every existing test in the file still passes
+- [x] `pnpm build` passes
 
 ## Notes
 

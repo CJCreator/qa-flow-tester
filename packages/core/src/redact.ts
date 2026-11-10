@@ -67,6 +67,8 @@ function secretForms(v: string): string[] {
 
 /** Secrets shorter than this are not scrubbed (default 3). See the Redactor option for the tradeoff. */
 const DEFAULT_MIN_SECRET_LENGTH = 3;
+/** Header values and stored entries shorter than this are too ordinary to scrub ("true", "en", "1"). */
+const MIN_EXTRA_SECRET_LENGTH = 8;
 
 export interface RedactorOptions {
   /**
@@ -80,7 +82,7 @@ export interface RedactorOptions {
 /**
  * Keeps a run's credentials out of everything it writes or streams: passwords and tokens always,
  * usernames when they are email addresses (a plain username like "admin" would blank out ordinary
- * words), and the values of secret-looking URL parameters.
+ * words), a Role's header values and stored entries when they are 8 characters or longer, and the values of secret-looking URL parameters.
  */
 export class Redactor {
   private readonly secrets: string[];
@@ -91,6 +93,14 @@ export class Redactor {
     for (const c of credentials) {
       for (const secret of [c.password, c.token]) if (secret && secret.length >= minLength) values.add(secret);
       if (c.username && c.username.includes('@')) values.add(c.username);
+      // A Role's headers and stored entries are secrets too (an API key, a session token).
+      const extras = [...Object.values(c.headers ?? {}), ...Object.values(c.localStorageEntries ?? {})];
+      for (const extra of extras) {
+        if (typeof extra !== 'string') continue;
+        // "Bearer abc": hide the token part as well, so it is caught wherever it appears on its own.
+        const bare = extra.replace(/^(Bearer|Basic|Token)\s+/i, '');
+        for (const v of [extra, bare]) if (v.length >= Math.max(minLength, MIN_EXTRA_SECRET_LENGTH)) values.add(v);
+      }
     }
     // Longest first, so a secret that contains another is hidden whole. Encoded and escaped forms too.
     this.secrets = [...values]
