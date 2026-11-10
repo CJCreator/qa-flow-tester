@@ -7,7 +7,13 @@
  *
  * Derived forms are not claims and are not flagged: "securely", "insecure", "non-compliant", "safety".
  */
-import { ADR_0018_CLAIM_WORDS, CLAIM_WORDS, RELEASE_VERDICT_WORDS, findClaimWords, stripClaimWords } from '../documents/wording.js';
+import {
+  ADR_0018_CLAIM_WORDS,
+  CLAIM_WORDS,
+  RELEASE_VERDICT_WORDS,
+  findClaimWords,
+  stripClaimWords,
+} from '../documents/wording.js';
 
 export { ADR_0018_CLAIM_WORDS, CLAIM_WORDS, RELEASE_VERDICT_WORDS, findClaimWords, stripClaimWords };
 
@@ -15,3 +21,6 @@ export { ADR_0018_CLAIM_WORDS, CLAIM_WORDS, RELEASE_VERDICT_WORDS, findClaimWord
 export function hasClaimWords(text: string): boolean {
   return findClaimWords(text).length > 0;
 }
+
+/** The claim words as one lower-case list for a prompt: the same words `findClaimWords` flags, so none is missed. */
+export const CLAIM_WORDS_PROMPT = CLAIM_WORDS.map((w) => w.toLowerCase()).join(', ');

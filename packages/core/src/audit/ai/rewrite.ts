@@ -9,10 +9,10 @@
  * vowel signs and virama inside the word.
  */
 import type { AIMessage, DocumentLanguage, OverlapFlag } from '@qa/types';
-import { DEFAULT_REWRITE_OVERLAP_WORDS, DOCUMENT_LANGUAGE_INFO } from '@qa/types';
+import { DEFAULT_REWRITE_OVERLAP_WORDS } from '@qa/types';
 import { MAX_SECTION_EDIT_CHARS } from '../documents/edits.js';
-import { findClaimWords } from './claim-words.js';
-import type { AuditAi } from './stage-ai.js';
+import { CLAIM_WORDS_PROMPT as NOT_ALLOWED, findClaimWords } from './claim-words.js';
+import { languageName, type AuditAi } from './stage-ai.js';
 
 // ---------------------------------------------------------------------------------------------------
 // The word-overlap check
@@ -155,13 +155,7 @@ async function askOnce(
 // ---------------------------------------------------------------------------------------------------
 // Prompts
 
-const NOT_ALLOWED =
-  'compliant, compliance, certified, secure, safe, hack-proof, fully accessible, passes WCAG, ready to release, release-ready';
 const MAX_FLAGS_NAMED = 20;
-
-function languageName(language: DocumentLanguage): string {
-  return `${DOCUMENT_LANGUAGE_INFO[language]?.name ?? 'English'} (${language})`;
-}
 
 /** The first request: the Section text as data, the language, and the rules for the new copy. */
 export function rewriteMessages(sectionText: string, language: DocumentLanguage, minWords: number): AIMessage[] {

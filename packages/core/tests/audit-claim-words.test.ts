@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { findClaimWords, hasClaimWords } from '../src/audit/ai/claim-words.js';
+import { CLAIM_WORDS, findClaimWords, hasClaimWords, CLAIM_WORDS_PROMPT } from '../src/audit/ai/claim-words.js';
 import { stripClaimWords } from '../src/audit/documents/wording.js';
 
 describe('findClaimWords (ADR 0018)', () => {
@@ -65,5 +65,12 @@ describe('findClaimWords (ADR 0018)', () => {
       expect(stripped).toBe(expected);
       expect(findClaimWords(stripped)).toEqual([]);
     });
+  });
+
+  it('the prompt list names every claim word', () => {
+    const listed = CLAIM_WORDS_PROMPT.split(', ');
+    for (const w of CLAIM_WORDS) expect(listed).toContain(w.toLowerCase());
+    expect(listed).toContain('release verdict');
+    expect(listed).toContain('not ready yet');
   });
 });

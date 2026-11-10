@@ -30,13 +30,14 @@ import type {
   PageAction,
   PageRecommendation,
 } from '@qa/types';
-import { AUDIT_AREAS, DOCUMENT_LANGUAGE_INFO } from '@qa/types';
+import { AUDIT_AREAS } from '@qa/types';
 import { stopIfAborted } from '../../abort.js';
 import { parseJsonAnswer } from '../../plan/ai-planner.js';
 import { logAiFailure, type AreaGrades } from './assessment.js';
-import { findClaimWords } from './claim-words.js';
+import { CLAIM_WORDS_PROMPT as NOT_ALLOWED, findClaimWords } from './claim-words.js';
 import {
   classifyAiError,
+  languageName,
   redactAiMessage,
   type AuditAi,
   type AuditAiAnswer,
@@ -277,12 +278,6 @@ async function askSafely(
 // Prompts
 
 const ANSWER_SHAPE = '{"action":"redesign or repair","reason":"...","findingIds":["..."]}';
-const NOT_ALLOWED =
-  'compliant, compliance, certified, secure, safe, hack-proof, fully accessible, passes WCAG, ready to release, release-ready';
-
-function languageName(language: DocumentLanguage): string {
-  return `${DOCUMENT_LANGUAGE_INFO[language]?.name ?? 'English'} (${language})`;
-}
 
 function basePrompt(page: RecommendationPageInput, language: DocumentLanguage): AIMessage[] {
   const subject = {

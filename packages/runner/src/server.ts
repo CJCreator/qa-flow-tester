@@ -2896,9 +2896,18 @@ export class RunnerServer {
   }> {
     const settings = await this.readAiModels();
     const provider = settings.provider ?? 'openrouter';
-    const key = await this.storedKey(provider);
-    // Where that key is kept (never the key): the resolver's own answer for the same provider.
-    const keySource = key && provider !== 'mock' ? await this.storedKeySource(provider) : undefined;
+    // One lookup gives both the key and where it is kept (a keychain read can start an OS process).
+    let key: string | undefined;
+    let keySource: AiKeySource | undefined;
+    if (provider === 'mock') {
+      key = 'mock-key';
+    } else {
+      const resolved = await this.keyResolver.resolveKey(provider);
+      if (resolved?.provider === provider) {
+        key = resolved.apiKey;
+        keySource = key ? resolved.source : undefined;
+      }
+    }
     // Paid providers' models all read screenshots: the text model does the visual review too.
     const text =
       settings.text ??
@@ -2912,12 +2921,6 @@ export class RunnerServer {
       chosenBy: settings.chosenBy,
       keySource,
     };
-  }
-
-  /** Where the saved key for a provider is kept, or undefined. */
-  private async storedKeySource(provider: AIProviderType): Promise<AiKeySource | undefined> {
-    const resolved = await this.keyResolver.resolveKey(provider);
-    return resolved?.provider === provider ? resolved.source : undefined;
   }
 
   /**

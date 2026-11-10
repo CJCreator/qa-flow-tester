@@ -4,9 +4,11 @@
  * crawled site is untrusted: the prompt says so, and the answer is sanitised whatever it holds.
  */
 import type { AIMessage, AuditResult, DocumentLanguage, EditOverlay, PageContent } from '@qa/types';
-import { DOCUMENT_LANGUAGE_INFO, sectionText } from '@qa/types';
+import { sectionText } from '@qa/types';
 import { buildEditedView } from '../documents/edits.js';
 import { sameSiteUrl } from '../../safe-net.js';
+import { CLAIM_WORDS_PROMPT as NOT_ALLOWED } from '../ai/claim-words.js';
+import { languageName } from '../ai/stage-ai.js';
 
 export interface PreviewInput {
   /** The version's result. */
@@ -132,13 +134,6 @@ export function previewFacts(input: PreviewInput): PreviewFacts {
     menu,
     findings,
   };
-}
-
-const NOT_ALLOWED =
-  'compliant, compliance, certified, secure, safe, hack-proof, fully accessible, passes WCAG, ready to release, release-ready, release verdict, not ready yet';
-
-function languageName(language: DocumentLanguage): string {
-  return `${DOCUMENT_LANGUAGE_INFO[language]?.name ?? 'English'} (${language})`;
 }
 
 /** The first request: the facts as JSON data, and the rules for the page. */

@@ -194,15 +194,16 @@ async function load(store: AuditStore, c: RouteContext, wanted: number | undefin
     refuse(c.res, 404, 'ERR_AUDIT_NOT_FOUND', NO_RESULT);
     return null;
   }
-  const contents: PageContent[] = [];
-  for (const page of result.pages) {
-    try {
-      const content = await store.readVersionJson<PageContent>(auditId, version, pageContentName(page.urlPath));
-      if (content) contents.push(content);
-    } catch {
-      // A page without readable Page Content keeps its stored text.
-    }
-  }
+  // Read together: on the hosted copy each read is a Cloud Storage request. Order follows result.pages.
+  const read = await Promise.all(
+    result.pages.map((page) =>
+      store
+        .readVersionJson<PageContent>(auditId, version, pageContentName(page.urlPath))
+        // A page without readable Page Content keeps its stored text.
+        .catch(() => null)
+    )
+  );
+  const contents: PageContent[] = read.filter((content): content is PageContent => !!content);
   const edits = (await store.readVersionJson<EditOverlay>(auditId, version, EDITS_NAME)) ?? emptyOverlay();
   return { auditId, version, result, contents, edits };
 }

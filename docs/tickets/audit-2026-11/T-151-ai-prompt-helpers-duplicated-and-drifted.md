@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P2 | M | core/audit | inconsistency | todo |
+| P2 | M | core/audit | inconsistency | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/audit/ai/claim-words.ts`

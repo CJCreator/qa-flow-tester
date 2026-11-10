@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P3 | S | runner | speed | todo |
+| P3 | S | runner | speed | built |
 
 **Files you may edit (no others):**
 - `packages/runner/src/server.ts`

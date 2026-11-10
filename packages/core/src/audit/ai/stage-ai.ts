@@ -12,8 +12,9 @@ import type {
   AuditAiModels,
   AuditAiStage,
   AuditAiStatus,
+  DocumentLanguage,
 } from '@qa/types';
-import { modelForStage } from '@qa/types';
+import { DOCUMENT_LANGUAGE_INFO, modelForStage } from '@qa/types';
 import { completeWith, createAIProvider, type AIProvider } from '../../ai/ai-provider.js';
 import type { KeyResolver } from '../../ai/key-resolver.js';
 import { AITimeoutError } from '../../ai/timeout.js';
@@ -99,6 +100,11 @@ export function redactAiMessage(raw: unknown, maxChars = 200): string {
     .slice(0, maxChars);
 }
 
+/** A language as the prompts name it: "Tamil (ta)". */
+export function languageName(language: DocumentLanguage): string {
+  return `${DOCUMENT_LANGUAGE_INFO[language]?.name ?? 'English'} (${language})`;
+}
+
 /**
  * Maps an error to `AuditAiStatus` (ADR 0042, T-81):
  * - 401/403 -> 'key-expired'
@@ -142,7 +148,9 @@ export function classifyAiError(err: unknown): AuditAiStatus {
     statusNum === 429 ||
     statusNum === 402 ||
     /\b(429|402)\b/.test(raw) ||
-    /quota|rate limit|too many requests|insufficient (credits|balance|quota)|credits? (are )?depleted|billing/i.test(raw)
+    /quota|rate limit|too many requests|insufficient (credits|balance|quota)|credits? (are )?depleted|billing/i.test(
+      raw
+    )
   ) {
     return 'quota';
   }
