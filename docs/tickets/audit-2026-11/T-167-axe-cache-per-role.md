@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | checkers | bug | todo |
+| P1 | S | checkers | bug | built |
 
 **Files you may edit (no others):**
 - `packages/checkers/src/ux-quality.ts`
@@ -88,8 +88,8 @@ The existing tests keep one Role, so they pass unchanged (the test `does not cac
 Run: `pnpm exec vitest run packages/checkers/tests/ux-axe-cache.test.ts`
 
 ## Done when
-- [ ] The new test passes; existing tests in the file pass unchanged.
-- [ ] `pnpm build` passes (core imports only the `AxeCache` type, so no core change is needed).
+- [x] The new test passes; existing tests in the file pass unchanged.
+- [x] `pnpm build` passes (core imports only the `AxeCache` type, so no core change is needed).
 
 ## Notes
 - Out of scope: a page state left by a Test's steps on the same address and Role (an open dialog). That needs the Test id in the key and would remove most of the cache's benefit; it is not part of this ticket.

@@ -122,18 +122,19 @@ export const MEANINGLESS_ALT =
 export type AxeScan = { violations: AxeRule[]; incomplete?: AxeRule[]; [key: string]: unknown };
 
 /**
- * Per-run cache of axe results (PERF-2). Key: page URL and viewport (`axeCacheKey`). Share one Map across the
- * checks of one run; the checker deletes an entry whose scan failed so the next check runs it again.
+ * Per-run cache of axe results (PERF-2). Key: page URL, viewport and Role (`axeCacheKey`): two Roles can
+ * see different pages at one address. Share one Map across the checks of one run; the checker deletes an
+ * entry whose scan failed so the next check runs it again.
  */
 export type AxeCache = Map<string, Promise<AxeScan>>;
 
-export function axeCacheKey(page: Page): string {
+export function axeCacheKey(page: Page, role = ''): string {
   const vp = page.viewportSize();
-  return `${page.url()}|${vp ? `${vp.width}x${vp.height}` : 'no-viewport'}`;
+  return `${page.url()}|${vp ? `${vp.width}x${vp.height}` : 'no-viewport'}|${role}`;
 }
 
 export class UXQualityChecker {
-  private async axeScan(page: Page, cache?: AxeCache): Promise<AxeScan> {
+  private async axeScan(page: Page, cache?: AxeCache, role = ''): Promise<AxeScan> {
     const scan = async (): Promise<AxeScan> => {
       const axeResults = await new (AxeBuilder as any)({ page })
         .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
@@ -141,7 +142,7 @@ export class UXQualityChecker {
       return axeResults as AxeScan;
     };
     if (!cache) return scan();
-    const key = axeCacheKey(page);
+    const key = axeCacheKey(page, role);
     const hit = cache.get(key);
     if (hit) return hit;
     const pending = scan();
@@ -174,7 +175,7 @@ export class UXQualityChecker {
     // 1. Accessibility Check via axe-core
     if (context.enableAxe !== false) {
       try {
-        const axeResults = await this.axeScan(page, context.axeCache);
+        const axeResults = await this.axeScan(page, context.axeCache, context.role);
 
         for (const violation of axeResults.violations) {
           const firstNode = violation.nodes[0];

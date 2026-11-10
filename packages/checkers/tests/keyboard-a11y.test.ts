@@ -77,6 +77,23 @@ describe('KeyboardA11yChecker (browser)', () => {
       expect(f[0].where.cssSelector).toBe('#clicky');
       expectClaimWording(f);
     });
+
+    it('an unconfirmed onclick-only guess does not mark WCAG 2.1.1 violated', async () => {
+      const page = await open('<a href="/x">Link</a><div onclick="void 0" id="clicky">Click me</div>');
+      const seen: Array<{ criterion: string; status: string }> = [];
+      const f = await checker.checkKeyboard(page, { ...ctx, onCoverage: (entries) => seen.push(...entries) });
+      await page.close();
+      expect(f.some((x) => x.needsConfirmation && x.where.cssSelector === '#clicky')).toBe(true);
+      expect(seen.find((e) => e.criterion.includes('2.1.1'))?.status).toBe('none-found');
+    });
+
+    it('a confirmed unreachable control marks WCAG 2.1.1 violated', async () => {
+      const page = await open('<a href="/x">Link</a><div role="button" id="fake">Save</div>');
+      const seen: Array<{ criterion: string; status: string }> = [];
+      await checker.checkKeyboard(page, { ...ctx, onCoverage: (entries) => seen.push(...entries) });
+      await page.close();
+      expect(seen.find((e) => e.criterion.includes('2.1.1'))?.status).toBe('violated');
+    });
   });
 
   describe('safety', () => {

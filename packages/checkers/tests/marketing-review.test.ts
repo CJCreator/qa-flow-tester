@@ -39,6 +39,13 @@ describe('What counts as the home page', () => {
     expect(isHomePath('/start/here', 'https://example.com/start/here')).toBe(true);
     expect(isHomePath('/start/other', 'https://example.com/start/here')).toBe(false);
   });
+
+  it('does not treat every two-letter path as a language home', () => {
+    for (const path of ['/ai', '/go', '/us', '/hr', '/qa', '/xx-yy']) expect(isHomePath(path), path).toBe(false);
+    for (const path of ['/fr', '/de', '/ta', '/zh-cn', '/EN']) expect(isHomePath(path), path).toBe(true);
+    // The page the run started from is still the home page, whatever its name.
+    expect(isHomePath('/ai', 'https://example.com/ai')).toBe(true);
+  });
 });
 
 describe('The marketing checklist', () => {

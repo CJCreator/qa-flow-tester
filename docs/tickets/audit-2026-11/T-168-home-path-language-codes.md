@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | checkers | bug | todo |
+| P1 | S | checkers | bug | built |
 
 **Files you may edit (no others):**
 - `packages/checkers/src/marketing.ts`
@@ -64,8 +64,8 @@ Edit `packages/checkers/tests/marketing-review.test.ts`. The existing test `is t
 Run: `pnpm exec vitest run packages/checkers/tests/marketing-review.test.ts packages/checkers/tests/marketing.test.ts`
 
 ## Done when
-- [ ] The new test passes; both marketing test files pass unchanged otherwise.
-- [ ] `pnpm build` passes.
+- [x] The new test passes; both marketing test files pass unchanged otherwise.
+- [x] `pnpm build` passes.
 
 ## Notes
 - `hr` (Croatian) is left out on purpose: `/hr` is far more often a Human Resources page.

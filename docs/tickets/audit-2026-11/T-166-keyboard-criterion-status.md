@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | checkers | bug | todo |
+| P1 | S | checkers | bug | built |
 
 **Files you may edit (no others):**
 - `packages/checkers/src/keyboard-a11y.ts`
@@ -59,8 +59,8 @@ Run: `pnpm exec vitest run --project browser packages/checkers/tests/keyboard-a1
 If Chromium is not installed, run `pnpm --filter @qa/core exec playwright install chromium` first.
 
 ## Done when
-- [ ] The new test passes; existing tests in `keyboard-a11y.test.ts` pass unchanged.
-- [ ] `pnpm build` passes.
+- [x] The new test passes; existing tests in `keyboard-a11y.test.ts` pass unchanged.
+- [x] `pnpm build` passes.
 
 ## Notes
 - The finding itself is not changed: it is still listed for a person to confirm.

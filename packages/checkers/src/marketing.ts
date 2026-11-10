@@ -245,10 +245,56 @@ function normalise(pathname: string): string {
   return p === '' ? '/' : p;
 }
 
+/** Language codes sites commonly use for a language home (/en, /fr, /pt-br). Not every two letters: /ai, /go, /us are pages. */
+const LANGUAGE_HOME_CODES = new Set([
+  'en',
+  'es',
+  'fr',
+  'de',
+  'it',
+  'pt',
+  'nl',
+  'sv',
+  'da',
+  'no',
+  'nb',
+  'fi',
+  'pl',
+  'cs',
+  'sk',
+  'hu',
+  'ro',
+  'bg',
+  'el',
+  'tr',
+  'ru',
+  'uk',
+  'ar',
+  'he',
+  'hi',
+  'ta',
+  'te',
+  'bn',
+  'ur',
+  'th',
+  'vi',
+  'id',
+  'ms',
+  'ja',
+  'ko',
+  'zh',
+]);
+
+/** `/en`, `/pt-br`: a known language code, with an optional two-letter region. */
+function isLanguageHome(here: string): boolean {
+  const m = here.match(/^\/([a-z]{2})(?:-[a-z]{2})?$/i);
+  return !!m && LANGUAGE_HOME_CODES.has(m[1].toLowerCase());
+}
+
 /** The home page, or the page the run started from, or a language's home such as /en or /pt-br. */
 export function isHomePath(urlPath: string, baseUrl?: string): boolean {
   const here = normalise(urlPath);
-  if (HOME_PATHS.has(here) || /^\/[a-z]{2}(-[a-z]{2})?$/i.test(here)) return true;
+  if (HOME_PATHS.has(here) || isLanguageHome(here)) return true;
   if (!baseUrl) return false;
   try {
     return normalise(new URL(baseUrl).pathname) === here;

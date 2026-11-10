@@ -55,6 +55,16 @@ describe('UXQualityChecker axe cache (PERF-2)', () => {
     expect(axe.calls).toBe(2);
   });
 
+  it('runs axe again for another Role on the same URL and viewport', async () => {
+    const cache: AxeCache = new Map();
+    const p = fakePage('https://site.test/a', { width: 1440, height: 900 });
+    await checker.check(p, { ...ctx, role: 'admin', axeCache: cache }).catch(() => undefined);
+    await checker.check(p, { ...ctx, role: 'admin', axeCache: cache }).catch(() => undefined);
+    expect(axe.calls).toBe(1);
+    await checker.check(p, { ...ctx, role: 'member', axeCache: cache }).catch(() => undefined);
+    expect(axe.calls).toBe(2);
+  });
+
   it('does not cache a failed scan: the next check runs axe again', async () => {
     const cache: AxeCache = new Map();
     const p = fakePage('https://site.test/b', { width: 1440, height: 900 });
