@@ -38,6 +38,8 @@ import {
 export const AUDIT_ROBOTS_TOKEN = 'QA-Benchmarking-Bot';
 /** Least pause between two requests to the audited host, when robots.txt asks for none (ADR 0015). */
 export const AUDIT_MIN_GAP_MS = 500;
+/** How long an empty start page gets to render before it counts as an Interstitial Page. */
+const EMPTY_START_WAIT_MS = 5_000;
 /**
  * One page load's limit in a Website Audit (the Check-up keeps 10 s). Slow hosts, such as a dev server behind a
  * tunnel, took 10 to 25 s per page, so a 10 s limit skipped about half of a site as `timeout`.
@@ -400,8 +402,16 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
       inspectPage: pageAreaVerdict,
       onStartPage: async (page, navRes) => {
         finalUrl = withoutHash(page.url());
-        const signals = await readInterstitialSignals(page);
-        const kind = classifyInterstitial(signals);
+        let kind = classifyInterstitial(await readInterstitialSignals(page));
+        if (kind === 'empty') {
+          // A page that renders in the browser can be empty for a moment: wait once, then look again (ADR 0042).
+          await page
+            .waitForFunction(() => !!document.body && document.body.innerText.trim() !== '', null, {
+              timeout: EMPTY_START_WAIT_MS,
+            })
+            .catch(() => {});
+          kind = classifyInterstitial(await readInterstitialSignals(page));
+        }
         if (kind) {
           blocked = kind;
           blockedStop.abort();

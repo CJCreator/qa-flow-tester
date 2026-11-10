@@ -23,8 +23,10 @@ interface MockRoute {
   status?: number;
   title?: string;
   text?: string;
+  textFn?: () => string;
   elements?: ElementInventoryItem[];
   error?: Error;
+  waitForFunction?: () => Promise<void>;
 }
 
 function makeMockBrowser(routes: Record<string, MockRoute | ((attempt: number) => MockRoute)>) {
@@ -57,6 +59,7 @@ function makeMockBrowser(routes: Record<string, MockRoute | ((attempt: number) =
           return null;
         }
         if (fnStr.includes('innerText')) {
+          if (typeof currentRoute.textFn === 'function') return currentRoute.textFn();
           return currentRoute.text ?? '';
         }
         if (fnStr.includes('IGNORED')) {
@@ -95,6 +98,12 @@ function makeMockBrowser(routes: Record<string, MockRoute | ((attempt: number) =
       },
       waitForLoadState: async () => {},
       waitForTimeout: async () => {},
+      waitForFunction: async () => {
+        if (currentRoute.waitForFunction) return currentRoute.waitForFunction();
+        if (!currentRoute.text || currentRoute.text.trim() === '') {
+          throw new Error('timeout');
+        }
+      },
       locator: () => ({
         count: async () => 0,
         nth: () => ({ isVisible: async () => false }),
@@ -262,6 +271,36 @@ describe('runAuditCrawl start page and typed errors', () => {
       expect(err.kind).toBe('empty');
       return true;
     });
+  });
+
+  it('an empty start page that fills in is audited', async () => {
+    let calls = 0;
+    const mock = makeMockBrowser({
+      'https://example.com/': {
+        status: 200,
+        title: 'Shop',
+        textFn: () => {
+          calls++;
+          return calls === 1 ? '' : 'Welcome to the shop';
+        },
+        waitForFunction: async () => {},
+      },
+    });
+
+    const result = await runAuditCrawl(
+      {
+        url: 'https://example.com/',
+        limits: { maxPages: 5, maxDepth: 2, includePaths: [], excludePaths: [] },
+        language: 'en',
+      },
+      {
+        allowPrivateAddresses: true,
+        deps: { browserManager: mock.browserManager },
+      }
+    );
+
+    expect(result.pages).toHaveLength(1);
+    expect(result.pages[0].urlPath).toBe('/');
   });
 
   it('start host DNS failure throws AuditCrawlRefusedError with ERR_DNS', async () => {

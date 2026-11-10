@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | core/audit | bug | todo |
+| P1 | S | core/audit | bug | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/audit/crawl/crawl.ts`
@@ -71,10 +71,10 @@ Run: `pnpm exec vitest run packages/core/tests/audit-crawl-retry.test.ts package
 
 ## Done when
 
-- [ ] An empty start page is re-read once after waiting up to 5 s.
-- [ ] A start page that stays empty still throws `AuditCrawlBlockedError` with kind `'empty'`.
-- [ ] A tunnel warning or bot check is still blocked at once (no wait).
-- [ ] Tests and `pnpm build` pass.
+- [x] An empty start page is re-read once after waiting up to 5 s.
+- [x] A start page that stays empty still throws `AuditCrawlBlockedError` with kind `'empty'`.
+- [x] A tunnel warning or bot check is still blocked at once (no wait).
+- [x] Tests and `pnpm build` pass.
 
 ## Notes
 
