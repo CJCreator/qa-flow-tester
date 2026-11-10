@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P3 | M | wizard | inconsistency | todo |
+| P3 | M | wizard | inconsistency | blocked |
 
 **Files you may edit (no others):**
 - `packages/wizard/src/screens/audit/audit-call.ts` (new)
@@ -138,3 +138,5 @@ then `pnpm build` and `pnpm lint` (0 errors).
 
 - Existing tests match `/not answering/` or `'The tool is not answering'`, so the unified wording passes them. `audit-analysis-screen.test.tsx:308` uses the terminal wording only as sample data passed into a view; leave it.
 - Out of scope: merging the differing `call(...)` functions, `REFUSALS` tables and the two `languageName` functions. Their signatures differ per module.
+
+- BLOCKED (wizard agent): `packages/wizard/tests/audit-analysis-screen.test.tsx:306-308` expects the old terminal sentence ("Make sure it is still open in its terminal") with `toEqual`. That file is not in this ticket's file list, so the test cannot be updated here. Its line `expected ... to deeply equal ...` fails once the shared `NOT_ANSWERING` is adopted. Unblock by adding that test file to the list (or updating its expected sentence), then rebuild this ticket.
