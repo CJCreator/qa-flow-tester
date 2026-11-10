@@ -176,7 +176,7 @@ export function buildStructureDocument(view: EditedAuditView, options: Structure
   return {
     kind: 'structure',
     title: labels.documentTitles.structure,
-    language: lookup.requested ?? lookup.language,
+    language: lookup.requested,
     blocks,
   };
 }

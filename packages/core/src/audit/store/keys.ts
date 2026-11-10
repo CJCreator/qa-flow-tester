@@ -192,8 +192,6 @@ export function auditDocPath(
   return `${versionFolder(auditId, version)}/docs/${kind}.${ext}`;
 }
 
-export const auditDocumentKey = auditDocPath;
-
 /** The Shortlist entry: `audits/<auditId>/shortlist.json`. */
 export function shortlistKey(auditId: string): string {
   return `${auditFolder(auditId)}/shortlist.json`;

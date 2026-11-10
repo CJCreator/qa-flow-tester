@@ -144,7 +144,7 @@ export function buildOwnerAudit(view: EditedAuditView, lookup: LabelLookup): Aud
   return {
     kind: 'owner-audit',
     title: labels.documentTitles['owner-audit'],
-    language: lookup.requested ?? lookup.language,
+    language: lookup.requested,
     blocks: [...summaryBlocks(view, lookup), ...parts.flatMap(partBlocks)],
   };
 }

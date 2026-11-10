@@ -7,8 +7,8 @@
  *   without a request.
  * - The request goes through `makeOutboundFetch` (ADR 0031) to the fixed googleapis.com host, public addresses
  *   only. The audited page address is only a query parameter. The key (ADR 0034) goes in the `x-goog-api-key`
- *   header, never the address, and never into a returned value, error or log line. Without a key the request is
- *   keyless (free, lower limit).
+ *   header, never the address, and never into a returned value, error or log line. Without a key no request is
+ *   made (the pages come back 'no-key'), unless the caller sets `allowKeyless`.
  * - Nothing here throws for a failed measurement: it comes back 'not-measured' with a reason and no values, so it
  *   can never read as good (REQ-012 AC-2).
  */

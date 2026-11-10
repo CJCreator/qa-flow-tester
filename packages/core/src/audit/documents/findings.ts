@@ -151,5 +151,5 @@ export function buildFindingsDocument(view: EditedAuditView, options: FindingsDo
   });
   if (result.siteAreas.some((a) => a.status === 'done')) blocks.push({ type: 'note', text: labels.status.aiNote });
 
-  return { kind: 'findings', title: labels.documentTitles.findings, language: lookup.requested ?? language, blocks };
+  return { kind: 'findings', title: labels.documentTitles.findings, language: lookup.requested, blocks };
 }

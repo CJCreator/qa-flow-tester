@@ -160,7 +160,7 @@ export interface AuditPipelineDeps {
 export interface AuditPipelineOutcome {
   result: AuditResult;
   steps: PipelineStepOutcome[];
-  /** Findings whose page or Section citation does not hold (REQ-017 AC-2): recorded, never dropped. */
+  /** Findings whose page or Section citation does not hold (REQ-017 AC-2): returned to the caller, not stored. */
   citationProblems: CitationProblem[];
 }
 
@@ -171,9 +171,9 @@ export interface AuditPipelineOutcome {
  *    retry); the caller must not mark the version 'failed' and may retry the status update.
  */
 export class AuditPipelineError extends Error {
-  readonly code: 'save-failed' | 'status-not-updated' | 'ERR_PIPELINE';
+  readonly code: 'save-failed' | 'status-not-updated';
   readonly errorCode = 'ERR_PIPELINE' as const;
-  constructor(code: 'save-failed' | 'status-not-updated' | 'ERR_PIPELINE' = 'save-failed') {
+  constructor(code: 'save-failed' | 'status-not-updated' = 'save-failed') {
     super(
       code === 'status-not-updated'
         ? 'The audit result is saved, but its status could not be updated.'

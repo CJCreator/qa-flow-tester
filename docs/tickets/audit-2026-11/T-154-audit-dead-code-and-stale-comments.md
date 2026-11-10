@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P3 | S | core/audit | dead-code | todo |
+| P3 | S | core/audit | dead-code | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/audit/crawl/crawl.ts`

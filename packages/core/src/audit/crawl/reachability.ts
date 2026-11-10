@@ -5,7 +5,7 @@
  *   so Test Copies on local addresses keep working.
  * - A local runner (ADR 0042: not a beta copy, bound to this computer) passes `allowPrivateAddresses`, set by
  *   the runner and never from request input: localhost and LAN addresses are then accepted.
- * - Reachable: the final response after redirects is below 400 within the page timeout. Every hop goes
+ * - Reachable: the site answers with any HTTP status after redirects, within the page timeout. Every hop goes
  *   through `safeGet` (ADR 0031): resolved once, pinned, re-checked, so no request reaches a private address.
  * - A body cut at the byte cap still counts: only the status matters.
  * Messages are short and for people; no addresses, error codes or stack details.

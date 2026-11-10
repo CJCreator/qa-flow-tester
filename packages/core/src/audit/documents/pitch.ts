@@ -222,7 +222,7 @@ export function pitchGlimpseDoc(view: EditedAuditView, options: PitchGlimpseOpti
   return {
     kind: 'pitch-glimpse',
     title: labels.documentTitles['pitch-glimpse'],
-    language: lookup.requested ?? lookup.language,
+    language: lookup.requested,
     blocks,
   };
 }

@@ -230,7 +230,7 @@ export function buildContentDocument(view: EditedAuditView, options: ContentDocu
   return {
     kind: 'content',
     title: labels.documentTitles.content,
-    language: lookup.requested ?? lookup.language,
+    language: lookup.requested,
     blocks,
   };
 }

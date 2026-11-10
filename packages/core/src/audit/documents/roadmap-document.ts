@@ -74,7 +74,7 @@ export function buildRoadmapDocument(
 ): AuditDoc {
   const { labels } = lookup;
   // The document is in the requested language even when its labels fall back to English (DEC-005).
-  const language = lookup.requested ?? lookup.language;
+  const language = lookup.requested;
   const words = roadmapWording(lookup.language);
   const { showEffort } = options;
   const findings = new Map(view.result.findings.map((f) => [f.id, f]));

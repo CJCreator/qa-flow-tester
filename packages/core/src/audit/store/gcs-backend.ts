@@ -302,7 +302,3 @@ export function invalidBucketMessage(): string {
     'not starting with "goog" and not containing "google".'
   );
 }
-
-export function createGcsAuditStoreBackend(options: GcsAuditStoreOptions): GcsAuditStoreBackend {
-  return new GcsAuditStoreBackend(options);
-}

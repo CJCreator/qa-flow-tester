@@ -89,7 +89,7 @@ export function documentsFromView(
         options.settings.company,
         lookup.labels,
         {
-          language: lookup.requested ?? lookup.language,
+          language: lookup.requested,
           ...(options.now !== undefined ? { now: options.now } : {}),
         }
       ).doc,

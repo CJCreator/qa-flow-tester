@@ -337,7 +337,6 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
     });
 
   let finalUrl = request.url;
-  let startRecorded = false;
   // A start page that is a tunnel warning or a bot check stops the crawl: the site itself was never read.
   let blocked: InterstitialKind | null = null;
   let startError: { code: AuditAddressCode; message: string } | null = null;
@@ -451,7 +450,6 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
           blockedStop.abort();
           return { startError: { code: 'ERR_UNREACHABLE', message } };
         }
-        startRecorded = true;
       },
       onPage: (page) => {
         recordedKeys.add(skipKey(page.urlPath));
@@ -462,16 +460,6 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
         report(info.urlPath);
       },
       onRecordedPage: async (page, item) => {
-        if (!startRecorded && item.depth === 0) {
-          startRecorded = true;
-          finalUrl = withoutHash(page.url());
-          const kind = classifyInterstitial(await readInterstitialSignals(page));
-          if (kind) {
-            blocked = kind;
-            blockedStop.abort();
-            return;
-          }
-        }
         if (opts.onRenderedPage) {
           const responseHeaders = mainHeaders.get(page);
           await opts.onRenderedPage(page, toAuditPage(item), {
