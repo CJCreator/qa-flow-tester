@@ -660,12 +660,12 @@ export class FlowTestOrchestrator {
         const testCaseEvidenceDir = path.join(evidenceDir, `${testCase.id}-${bp}`);
         let evidenceCollector = new EvidenceCollector(testCaseEvidenceDir);
 
-        const storageState = roleStorageStates[testCase.role];
-
         let context: BrowserContext | undefined;
         // Set inside the retry attempt, which always opens it before anything below uses it.
         let page = undefined as unknown as Page;
         let testPointPassed = true;
+        // Set when an attempt ended only because the Role was signed in again: that retry is not flakiness.
+        let sessionRefreshed = false;
         let stepError: string | undefined;
         // The page as it was right before the submit click of a refusal test (reset per attempt).
         let refusalBaseline: RefusalBaseline | undefined;
@@ -712,7 +712,8 @@ export class FlowTestOrchestrator {
               viewport: BREAKPOINT_VIEWPORTS[bp],
               tunnelAuth: options.tunnelAuth,
               baseUrl: options.targetUrl,
-              storageState,
+              // Read per attempt: a re-sign-in in the last attempt changed it.
+              storageState: roleStorageStates[testCase.role],
               recordVideoDir: recordVideo ? testCaseEvidenceDir : undefined,
               customHeaders: options.customHeaders,
               userAgent: options.userAgent,
@@ -799,7 +800,10 @@ export class FlowTestOrchestrator {
                         });
                       });
                     }
-                    throw new StepsFailed('Session refreshed, retrying point');
+                    testPointPassed = false;
+                    stepError = 'The session had expired; signed in again.';
+                    sessionRefreshed = true;
+                    throw new StepsFailed(stepError);
                   }
                 }
 
@@ -1012,12 +1016,17 @@ export class FlowTestOrchestrator {
           const attemptResult = await RetryRunner.runWithCleanRetry(runAttempt, {
             flowId: testCase.flowId,
             testCaseId: testCase.id,
-            // A link check is one request, never repeated at a site we don't own.
-            maxRetries: testCase.kind === 'link' ? 0 : Math.max(0, Math.floor(options.flakyReruns ?? 3)),
+            // A link check is one request, never repeated at a site we don't own, except once after the
+            // Role was signed in again (the first try never reached the link).
+            maxRetries: testCase.kind === 'link' ? 1 : Math.max(0, Math.floor(options.flakyReruns ?? 3)),
             sentAny: () => sendGuard?.hasSentAny() === true,
             // Once a form was sent, a second try would send it twice: decline the retry.
             // A failed sign-in fails the same way every time: retrying only relaunches the browser.
-            shouldRetry: (err) => !isAbortError(err) && !(err instanceof SignInFailedError) && !sendGuard?.hasSentAny(),
+            shouldRetry: (err) =>
+              !isAbortError(err) &&
+              !(err instanceof SignInFailedError) &&
+              !sendGuard?.hasSentAny() &&
+              (testCase.kind !== 'link' || sessionRefreshed),
           });
           if (
             attemptResult.outcome === 'FAILED' &&
@@ -1035,7 +1044,7 @@ export class FlowTestOrchestrator {
           if (attemptResult.outcome === 'FAILED' && !(attemptResult.error instanceof StepsFailed)) {
             throw attemptResult.error;
           }
-          if (attemptResult.outcome === 'FLAKY_PASSED') flakyRetry = attemptResult.telemetry;
+          if (attemptResult.outcome === 'FLAKY_PASSED' && !sessionRefreshed) flakyRetry = attemptResult.telemetry;
 
           if (pointSkippedReason) {
             results.push({

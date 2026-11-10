@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | M | core | bug | todo |
+| P1 | M | core | bug | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/orchestrator.ts`
@@ -137,11 +137,11 @@ Write in the PR description which of the five steps you made and the line number
 
 ## Done when
 
-- [ ] `openPage` reads `roleStorageStates[testCase.role]` at call time
-- [ ] `testPointPassed` is `false` and `stepError` is set whenever the "session refreshed" throw happens
-- [ ] A Navigation Check gets exactly one retry, and only after a re-sign-in
-- [ ] A Test that passed after a re-sign-in is not recorded as flaky
-- [ ] `pnpm build` and the core unit tests pass
+- [x] `openPage` reads `roleStorageStates[testCase.role]` at call time
+- [x] `testPointPassed` is `false` and `stepError` is set whenever the "session refreshed" throw happens
+- [x] A Navigation Check gets exactly one retry, and only after a re-sign-in
+- [x] A Test that passed after a re-sign-in is not recorded as flaky
+- [x] `pnpm build` and the core unit tests pass
 
 ## Notes
 
