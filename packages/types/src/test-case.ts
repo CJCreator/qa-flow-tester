@@ -49,10 +49,6 @@ export type RuleOrigin = 'observed' | 'ai-guess' | 'user' | 'document';
 export interface TestCaseExpectations {
   origin?: RuleOrigin;
   /**
-   * Behaviour check for a guessed validation rule: after the steps, an error message or an
-   * invalid-field marker should appear. The exact wording isn't checked.
-   */
-  /**
    * Refusal rule (ADR 0024): after the steps the app must have refused the input. `message` is set
    * only when a Source states the wording.
    */
@@ -63,6 +59,10 @@ export interface TestCaseExpectations {
     /** Look only at the form's own checks; never click submit. */
     probeOnly?: boolean;
   };
+  /**
+   * Behaviour check for a guessed validation rule: after the steps, an error message or an
+   * invalid-field marker should appear. The exact wording isn't checked.
+   */
   validationError?: {
     field: string;
     selector?: string;

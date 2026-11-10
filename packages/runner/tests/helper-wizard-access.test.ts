@@ -12,10 +12,11 @@ import { KeyResolver, type SecretStore } from '@qa/core';
 import { createHelperAccess } from '../src/helpers/helper-access.js';
 import { HELPER_COOKIE, signHelperSession } from '../src/helpers/helper-session.js';
 import { RunnerServer } from '../src/server.js';
+import { freePort } from './helpers/free-port.js';
 
-const KEYED_PORT = 3571;
-const LOCAL_PORT = 3572;
-const BETA_PORT = 3573;
+let KEYED_PORT = 0;
+let LOCAL_PORT = 0;
+let BETA_PORT = 0;
 const ACCESS = 'wizard-access-key-0123456789';
 // A fake key, joined at runtime so the build's secret scan (scripts/scan-build-secrets.mjs) does not match the source.
 const SECRET = ['sk-or', 'secret-material-9876543210'].join('-');
@@ -85,6 +86,8 @@ beforeAll(async () => {
   expired = `${HELPER_COOKIE}=${signHelperSession(access.sessionKey(), who, new Date(now.getTime() - 3 * 86_400_000))}`;
   const other = createHelperAccess({ projectId: 'proj', accessToken: ACCESS, store });
   forged = `${HELPER_COOKIE}=${signHelperSession(other.sessionKey(), who, now)}`;
+
+  [KEYED_PORT, LOCAL_PORT, BETA_PORT] = await Promise.all([freePort(), freePort(), freePort()]);
 
   const keys = new MemoryStore();
   keys.secrets.set('openrouter', SECRET);

@@ -8,8 +8,7 @@ import http from 'http';
 import type { ProductProfile } from '@qa/types';
 import { PreFlightChecker } from '../src/preflight.js';
 
-const PORT = 3540;
-const BASE = `http://localhost:${PORT}`;
+let BASE = '';
 
 const html = (body: string) => `<!doctype html><html lang="en"><body>${body}</body></html>`;
 const SIGN_IN_FORM = `<form method="post" action="/login">
@@ -52,7 +51,9 @@ describe('pre-flight result truth (T-302)', () => {
           return send('Not found', 404);
       }
     });
-    await new Promise<void>((resolve) => server.listen(PORT, resolve));
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    const addr = server.address();
+    BASE = `http://localhost:${addr && typeof addr === 'object' ? addr.port : 0}`;
   });
 
   afterAll(async () => {

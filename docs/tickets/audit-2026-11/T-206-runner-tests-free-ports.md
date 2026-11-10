@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | tests | bug | todo |
+| P1 | S | tests | bug | built |
 
 **Files you may edit (no others):**
 - `packages/runner/tests/helpers/free-port.ts` (new file)
@@ -113,9 +113,9 @@ grep -n "357[1-3]\|3761" packages/runner/tests/helper-wizard-access.test.ts pack
 ```
 
 ## Done when
-- [ ] Both test files pass.
-- [ ] Neither file contains 3571, 3572, 3573 or 3761.
-- [ ] `pnpm typecheck` passes and `pnpm lint` reports no errors.
+- [x] Both test files pass.
+- [x] Neither file contains 3571, 3572, 3573 or 3761.
+- [x] `pnpm typecheck` passes and `pnpm lint` reports no errors.
 
 ## Notes
 - Every use of the three ports is inside an `it(...)` or inside `beforeAll`, so they are read after they are set.

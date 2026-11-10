@@ -14,8 +14,7 @@ import {
 import { setBrowserPolicy } from '../src/browser.js';
 import type { NetDeps, PinnedRequest } from '../src/safe-net.js';
 
-const PORT = 3097;
-const BASE = `http://127.0.0.1:${PORT}`;
+let BASE = '';
 const requests: Array<{ method?: string; headers: http.IncomingHttpHeaders; url?: string }> = [];
 
 const server = http.createServer((req, res) => {
@@ -47,7 +46,9 @@ const server = http.createServer((req, res) => {
 });
 
 beforeAll(async () => {
-  await new Promise<void>((r) => server.listen(PORT, '127.0.0.1', () => r()));
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', () => r()));
+  const addr = server.address();
+  BASE = `http://127.0.0.1:${addr && typeof addr === 'object' ? addr.port : 0}`;
 });
 afterAll(async () => {
   await new Promise<void>((r) => server.close(() => r()));

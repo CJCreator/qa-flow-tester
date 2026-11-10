@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P3 | S | types | dead-code | todo |
+| P3 | S | types | dead-code | built |
 
 **Files you may edit (no others):**
 - `packages/types/src/website-audit.ts`
@@ -153,8 +153,8 @@ export function problemKey(f: Pick<Finding, 'title'> & { issueKey?: string }): s
 - `pnpm build` and `pnpm typecheck`
 
 ## Done when
-- [ ] Grep for `AUDIT_NOTE_KINDS`, `AuditNoteKind` and `isDenied` under `packages/` finds nothing.
-- [ ] Both test files pass; `pnpm build` and `pnpm typecheck` pass.
+- [x] Grep for `AUDIT_NOTE_KINDS`, `AuditNoteKind` and `isDenied` under `packages/` finds nothing.
+- [x] Both test files pass; `pnpm build` and `pnpm typecheck` pass.
 
 ## Notes
 - Kept on purpose: `RunStartReply` and `ApprovalReply` in `checkup-api.ts`. They are used only by a test today, but they describe the wire shapes of the runner's replies; using them in the runner and wizard is separate work.

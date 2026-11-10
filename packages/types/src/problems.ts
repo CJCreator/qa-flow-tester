@@ -141,9 +141,10 @@ export function plainTitleText(t: string): string {
 }
 
 /**
- * The same problem, found by more than one check or on more than one page, has one key: the
- * checker's own `issueKey` when it gives one (a missing page title is both an accessibility and a
- * search problem), else its plain title.
+ * The key a problem is grouped by: its `issueKey` when it has one, else its plain title. A Check-up's
+ * findings always have one (core's `mergeDuplicateFindings` writes `checker|title|where`), so there the
+ * same problem found by two checkers stays two problems. The plain-title fallback serves findings that
+ * were never merged.
  */
 export function problemKey(f: Pick<Finding, 'title'> & { issueKey?: string }): string {
   return f.issueKey ?? plainTitleText(f.title).toLowerCase();

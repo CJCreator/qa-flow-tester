@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | tests | bug | todo |
+| P1 | S | tests | bug | built |
 
 **Files you may edit (no others):**
 - `packages/core/tests/access-control.test.ts`
@@ -77,9 +77,9 @@ grep -n "\bPORT\b\|3097\|3540" packages/core/tests/access-control.test.ts packag
 ```
 
 ## Done when
-- [ ] Both files pass.
-- [ ] No `PORT` constant and no fixed port number is left in either file.
-- [ ] `pnpm typecheck` passes.
+- [x] Both files pass.
+- [x] No `PORT` constant and no fixed port number is left in either file.
+- [x] `pnpm typecheck` passes.
 
 ## Notes
 - If `access-control.test.ts` reads `BASE` at module level (outside `it`, `beforeAll` or a function), stop and

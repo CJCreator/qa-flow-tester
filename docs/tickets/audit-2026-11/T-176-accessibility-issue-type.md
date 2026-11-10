@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P2 | S | types | inconsistency | todo |
+| P2 | S | types | inconsistency | built |
 
 **Files you may edit (no others):**
 - `packages/types/src/issue-type.ts`
@@ -75,8 +75,8 @@ Run:
 Then `pnpm build`, and search the wizard and runner tests for a pinned mapping: Grep `ux-quality` together with `UI/UX` under `packages/wizard/tests` and `packages/runner/tests`; update any test that expected a `ux-quality` finding under UI/UX to expect Accessibility.
 
 ## Done when
-- [ ] Updated test passes; `issues-document.test.ts` passes unchanged.
-- [ ] `pnpm build` passes.
+- [x] Updated test passes; `issues-document.test.ts` passes unchanged.
+- [x] `pnpm build` passes.
 
 ## Notes
 - Owner decision made here: the mapping follows the area the finding already counts toward, so the issues document and the grades agree.

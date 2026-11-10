@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { INTENTS, intentOf, isDenied, normalizePlanIntents } from '../src/intent.js';
+import { INTENTS, intentOf, normalizePlanIntents } from '../src/intent.js';
 
 const legacy = { kind: 'denial' };
 
@@ -10,7 +10,6 @@ describe('intent', () => {
 
   it('legacy kind:denial reads as Denied', () => {
     expect(intentOf(legacy)).toBe('denied');
-    expect(isDenied(legacy)).toBe(true);
     expect(intentOf({ kind: 'page-test' })).toBeUndefined();
     expect(intentOf({ intent: 'rejects', kind: 'denial' })).toBe('rejects');
   });

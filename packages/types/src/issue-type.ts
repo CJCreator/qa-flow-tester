@@ -38,8 +38,11 @@ export function issueTypeOf(f: IssueTypeInput): IssueType {
     case 'performance':
       return 'Performance';
     case 'design-standards':
-    case 'ux-quality':
       return 'UI/UX';
+    case 'ux-quality':
+      // ux-quality findings count toward the Accessible area unless they name another one
+      // (a touch target is about phones): only those others are UI/UX.
+      return f.aspect === undefined || f.aspect === 'Accessible' ? 'Accessibility' : 'UI/UX';
     case 'seo':
       return 'Other';
     case 'bug-detection':

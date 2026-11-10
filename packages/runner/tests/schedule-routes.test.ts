@@ -15,6 +15,7 @@ import type { KeysFetch } from '../src/helpers/firebase-token.js';
 import { createHelperAccess, helperSettingsFromEnv } from '../src/helpers/index.js';
 import { HELPER_COOKIE, signHelperSession } from '../src/helpers/helper-session.js';
 import type { CheckupSchedule, ScheduleStore } from '../src/scheduler.js';
+import { freePort } from './helpers/free-port.js';
 
 const SA = 'qa-scheduler@proj.iam.gserviceaccount.com';
 const AUD = 'https://qa.example.run.app';
@@ -111,7 +112,7 @@ afterAll(async () => {
 });
 
 describe('POST /api/runner/schedules/tick (non-beta)', () => {
-  const PORT = 3761;
+  let PORT = 0;
   const store = memoryStore([
     sched({ id: 'sched_1_due', name: 'due' }),
     sched({ id: 'sched_2_off', enabled: false }),
@@ -121,6 +122,7 @@ describe('POST /api/runner/schedules/tick (non-beta)', () => {
   let run: ReturnType<typeof vi.fn>;
 
   beforeAll(async () => {
+    PORT = await freePort();
     server = new RunnerServer({
       port: PORT,
       outputDir: path.join(scratch, 'a-report'),

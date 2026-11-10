@@ -107,13 +107,13 @@ export interface Finding {
   /** How many times the same problem was seen in this run, when more than once. */
   occurrences?: number;
   /** Where else the same problem was seen: pages, widths, roles and test points. */
+  seenAt?: { pages: string[]; breakpoints: Breakpoint[]; roles: string[]; testCaseIds: string[] };
   /** The document section the expectation came from, when the Plan Item had a Source. */
   docSource?: DocSource;
   /** An AI-judged logical-flow call: held out of the verdict until the person accepts it. Set with `needsConfirmation`. */
   needsJudgement?: boolean;
   /** The person accepted a judgement item: it now counts (`needsConfirmation` is cleared). */
   judgementAccepted?: boolean;
-  seenAt?: { pages: string[]; breakpoints: Breakpoint[]; roles: string[]; testCaseIds: string[] };
 }
 
 export interface PermissionRule {

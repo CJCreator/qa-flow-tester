@@ -16,7 +16,10 @@ describe('issueTypeOf', () => {
     expect(issueTypeOf({ checker: 'security' })).toBe('Security');
     expect(issueTypeOf({ checker: 'performance' })).toBe('Performance');
     expect(issueTypeOf({ checker: 'design-standards' })).toBe('UI/UX');
-    expect(issueTypeOf({ checker: 'ux-quality' })).toBe('UI/UX');
+    expect(issueTypeOf({ checker: 'ux-quality' })).toBe('Accessibility');
+    expect(issueTypeOf({ checker: 'ux-quality', aspect: 'Accessible' })).toBe('Accessibility');
+    expect(issueTypeOf({ checker: 'ux-quality', aspect: 'Fast and mobile' })).toBe('UI/UX');
+    expect(issueTypeOf({ checker: 'ux-quality', aspect: 'Looks and reads well' })).toBe('UI/UX');
     expect(issueTypeOf({ checker: 'seo' })).toBe('Other');
     expect(issueTypeOf({ checker: 'ai-review', categoryTag: 'GEO' })).toBe('Other');
   });

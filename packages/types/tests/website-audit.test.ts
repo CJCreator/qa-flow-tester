@@ -13,7 +13,6 @@ import {
   AUDIT_ERROR_CODES,
   AUDIT_ID_PATTERN,
   AUDIT_LIMIT_DEFAULTS,
-  AUDIT_NOTE_KINDS,
   DOCUMENT_LANGUAGES,
   DOCUMENT_LANGUAGE_INFO,
   EXPORT_CONTENT_TYPES,
@@ -455,10 +454,6 @@ describe('fixed lists', () => {
     expect(pageEvent.type).toBe('page');
     expect(statusEvent.type).toBe('status');
     expect(snapshotEvent.type).toBe('snapshot');
-  });
-
-  it('AUDIT_NOTE_KINDS includes expected note kinds', () => {
-    expect(AUDIT_NOTE_KINDS).toEqual(['ai-status', 'only-one-page', 'speed-source', 'site-stopped-answering']);
   });
 });
 

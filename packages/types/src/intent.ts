@@ -16,10 +16,6 @@ export function intentOf(item: { intent?: PlanIntent; kind?: string }): PlanInte
   return item.kind === LEGACY_DENIAL_KIND ? 'denied' : undefined;
 }
 
-export function isDenied(item: { intent?: PlanIntent; kind?: string }): boolean {
-  return intentOf(item) === 'denied';
-}
-
 /** A copy of the item with `intent` set and the legacy `kind` removed. Items without either come back as is. */
 export function normalizeIntentItem<T extends { intent?: PlanIntent; kind?: string }>(item: T): T {
   if (item.kind !== LEGACY_DENIAL_KIND) return item;

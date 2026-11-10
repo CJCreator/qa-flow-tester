@@ -671,10 +671,6 @@ export interface AuditResult {
   notes: string[];
 }
 
-/** Structured note kinds that can appear in result.notes (ADR 0042). */
-export const AUDIT_NOTE_KINDS = ['ai-status', 'only-one-page', 'speed-source', 'site-stopped-answering'] as const;
-export type AuditNoteKind = (typeof AUDIT_NOTE_KINDS)[number];
-
 // ---------------------------------------------------------------------------------------------------
 // Audit Documents and export (REQ-018, REQ-021, REQ-022)
 // ---------------------------------------------------------------------------------------------------
