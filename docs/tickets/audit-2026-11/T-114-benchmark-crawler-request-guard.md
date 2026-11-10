@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P0 | S | core | security | todo |
+| P0 | S | core | security | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/competitive/safe-crawler.ts`
@@ -118,10 +118,10 @@ Command: `pnpm exec vitest run packages/core/tests/safe-crawler-guard.test.ts pa
 
 ## Done when
 
-- [ ] `route.continue()` no longer appears in `safe-crawler.ts`
-- [ ] `installRequestGuard` is called when the policy has a guard
-- [ ] A throw in `newContext` closes the browser (test case 1)
-- [ ] Both test files pass; `pnpm build` passes
+- [x] `route.continue()` no longer appears in `safe-crawler.ts`
+- [x] `installRequestGuard` is called when the policy has a guard
+- [x] A throw in `newContext` closes the browser (test case 1)
+- [x] Both test files pass; `pnpm build` passes
 
 ## Notes
 

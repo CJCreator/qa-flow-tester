@@ -6,6 +6,7 @@ import { BugDetectionChecker, UXQualityChecker } from '@qa/checkers';
 import { EvidenceCollector } from '../evidence.js';
 import { isSameSite } from '../same-site.js';
 import { RobotsPolicy } from './robots.js';
+import { getBrowserPolicy, installRequestGuard } from '../browser.js';
 
 export interface SafeCrawlerOptions {
   entryUrl: string;
@@ -169,18 +170,26 @@ export class SafePublicCrawler {
       throw new Error(`robots.txt on ${targetUrlObj.origin} disallows crawling ${targetUrlObj.pathname}`);
     }
 
+    // The shared machine's policy (ADR 0014): the host stays pinned to the address that was checked.
+    const policy = getBrowserPolicy();
+    const pinned = Object.entries(policy?.pinned ?? {}).map(
+      ([host, ip]) => `MAP ${host} ${ip.includes(':') ? `[${ip.replace(/^\[|\]$/g, '')}]` : ip}`
+    );
     const browser = await chromium.launch({
       headless: options.headless !== false,
+      args: pinned.length ? [`--host-resolver-rules=${pinned.join(', ')}`] : [],
     });
 
-    const context = await browser.newContext({
-      viewport: { width: 1440, height: 900 },
-      userAgent: `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ${USER_AGENT_TOKEN}/1.0`,
-    });
-    await context.addInitScript(BLOCK_FORM_SUBMISSION_SCRIPT);
+    try {
+      const context = await browser.newContext({
+        viewport: { width: 1440, height: 900 },
+        userAgent: `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ${USER_AGENT_TOKEN}/1.0`,
+      });
+      if (policy?.guard) await installRequestGuard(context, policy.guard);
+      await context.addInitScript(BLOCK_FORM_SUBMISSION_SCRIPT);
 
-    const page = await context.newPage();
-    const blockedRequests: string[] = [];
+      const page = await context.newPage();
+      const blockedRequests: string[] = [];
 
     // 1. Strict Security Interceptor: Block mutating HTTP methods & external domain escapes
     await page.route('**/*', (route) => {
@@ -218,7 +227,7 @@ export class SafePublicCrawler {
         // Continue
       }
 
-      return route.continue();
+      return route.fallback();
     });
 
     const collector = new EvidenceCollector(evidenceDir);
@@ -312,8 +321,7 @@ export class SafePublicCrawler {
       }
     };
 
-    try {
-      let nextUrl: string | undefined = entryUrl;
+    let nextUrl: string | undefined = entryUrl;
       let lastLoadAt = 0;
       while (nextUrl && pages.length < maxPages) {
         const isEntry = pages.length === 0;
@@ -364,25 +372,25 @@ export class SafePublicCrawler {
 
         nextUrl = newShapes.shift() ?? others.shift();
       }
-    } finally {
-      await browser.close();
-    }
 
-    return {
-      flow: {
-        id: `ref_${targetHost}_${Date.now()}`,
-        targetDomain: targetHost,
-        entryUrl,
-        name: options.flowName || 'reference-flow',
-        steps,
-        timestamp: new Date().toISOString(),
-      },
-      findings,
-      stepEvidence,
-      blockedRequests,
-      pages,
-      skippedByRobots: [...new Set(skippedByRobots)],
-    };
+      return {
+        flow: {
+          id: `ref_${targetHost}_${Date.now()}`,
+          targetDomain: targetHost,
+          entryUrl,
+          name: options.flowName || 'reference-flow',
+          steps,
+          timestamp: new Date().toISOString(),
+        },
+        findings,
+        stepEvidence,
+        blockedRequests,
+        pages,
+        skippedByRobots: [...new Set(skippedByRobots)],
+      };
+    } finally {
+      await browser.close().catch(() => {});
+    }
   }
 
   private async checkStep(
