@@ -296,9 +296,13 @@ export async function readPageForms(page: Page): Promise<ReadForm[]> {
         const action = f.getAttribute('action') || '';
         const method = (f.getAttribute('method') || 'GET').toUpperCase();
         const clean = (s: string | null | undefined) => (s || '').replace(/\s+/g, ' ').trim();
+        // Quoted attribute value: a backslash or a double quote in it would end the selector early.
+        const quoted = (v: string | null) => `"${(v ?? '').replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+        // An id as a selector; ids like ":r1:" (React) need escaping.
+        const byId = (v: string) => `#${CSS.escape(v)}`;
         const testIdSelector = (el: Element) => {
           const attr = testIdAttributes.find((a) => el.hasAttribute(a));
-          return attr ? `[${attr}="${el.getAttribute(attr)}"]` : null;
+          return attr ? `[${attr}=${quoted(el.getAttribute(attr))}]` : null;
         };
         const inputs = Array.from(f.querySelectorAll('input:not([type="hidden"]), select, textarea')).map((inp) => {
           const name = inp.getAttribute('name') || '';
@@ -309,16 +313,16 @@ export async function readPageForms(page: Page): Promise<ReadForm[]> {
           const selector =
             testIdSelector(inp) ||
             (id
-              ? `#${id}`
+              ? byId(id)
               : name
-                ? `[name="${name}"]`
+                ? `[name=${quoted(name)}]`
                 : ariaLabel
-                  ? `[aria-label="${ariaLabel}"]`
+                  ? `[aria-label=${quoted(ariaLabel)}]`
                   : placeholder
-                    ? `[placeholder="${placeholder}"]`
-                    : `${inp.tagName.toLowerCase()}[type="${type}"]`);
+                    ? `[placeholder=${quoted(placeholder)}]`
+                    : `${inp.tagName.toLowerCase()}[type=${quoted(type)}]`);
           const required = inp.hasAttribute('required');
-          const forLabel = id ? document.querySelector(`label[for="${id}"]`) : null;
+          const forLabel = id ? document.querySelector(`label[for=${quoted(id)}]`) : null;
           const wrapping = inp.closest('label')?.cloneNode(true) as Element | undefined;
           wrapping?.querySelectorAll('input, select, textarea').forEach((c) => c.remove());
           // What a person would call the field: its label, then placeholder, then id, then name.
@@ -353,13 +357,17 @@ export async function readPageForms(page: Page): Promise<ReadForm[]> {
         if (submitBtn) {
           const sTestId = testIdSelector(submitBtn);
           const sId = submitBtn.getAttribute('id');
-          submitSelector = sTestId
-            ? sTestId
-            : sId
-              ? `#${sId}`
-              : submitBtn.tagName.toLowerCase() === 'input'
-                ? 'input[type="submit"]'
-                : 'button[type="submit"]';
+          // Tied to this form, so a page with two forms does not press the other one's button.
+          const formId = f.getAttribute('id');
+          const formAction = f.getAttribute('action');
+          const formScope = formId ? `form${byId(formId)} ` : formAction ? `form[action=${quoted(formAction)}] ` : '';
+          const kind =
+            submitBtn.tagName.toLowerCase() === 'input'
+              ? 'input[type="submit"]'
+              : submitBtn.hasAttribute('type')
+                ? 'button[type="submit"]'
+                : 'button:not([type])';
+          submitSelector = sTestId ? sTestId : sId ? byId(sId) : `${formScope}${kind}`;
         }
 
         // checkVisibility also sees through a closed <details>, which keeps its content out of the layout.
@@ -563,7 +571,7 @@ export class DeterministicSpider {
 
     // Sitemap seeding (crawls /sitemap.xml and robots.txt Sitemap: lines) through the pinned outbound
     // path (ADR 0031). Only addresses on the target's site are read; other hosts are logged and skipped.
-    if (options.seedSitemap !== false && timeLeft() > 0) {
+    if (options.seedSitemap !== false && timeLeft() > 0 && !options.signal?.aborted) {
       // Each default fetch's timeout is cut to the time left, so seeding cannot run past the deadline.
       const unpacedFetch: FetchFn =
         options.outboundFetch ??
@@ -609,7 +617,7 @@ export class DeterministicSpider {
 
         let locCount = 0;
         for (const smUrl of sitemapUrls) {
-          if (locCount >= 200 || timeLeft() <= 0) break;
+          if (locCount >= 200 || timeLeft() <= 0 || options.signal?.aborted) break;
           try {
             const res = await outboundFetch(smUrl);
             if (!res || res.status < 200 || res.status >= 300) continue;
@@ -919,10 +927,12 @@ export class DeterministicSpider {
             const intervalMs = 10_000;
             const maxWaitMs = 60_000;
             let elapsed = 0;
-            while (elapsed < maxWaitMs && !options.signal?.aborted) {
-              await clockSleep(intervalMs, options.signal);
-              elapsed += intervalMs;
-              if (options.signal?.aborted) break;
+            while (elapsed < maxWaitMs && !options.signal?.aborted && timeLeft() > 0) {
+              // Never sleep past the crawl deadline.
+              const wait = capToDeadline(intervalMs);
+              await clockSleep(wait, options.signal);
+              elapsed += wait;
+              if (options.signal?.aborted || timeLeft() <= 0) break;
               try {
                 const ok = await probeFn(targetUrl);
                 if (ok) {
@@ -1264,15 +1274,14 @@ export class DeterministicSpider {
         // 3. Discover Forms
         const pageForms = (await readPageForms(page)).map(({ visible: _v, ...f }) => f);
 
-        for (const f of pageForms) {
-          forms.push({
-            action: f.action,
-            method: f.method,
-            urlPath: currentPath,
-            inputs: f.inputs,
-            submitButtonSelector: f.submitButtonSelector,
-          });
-        }
+        // Kept local until the page has its slot: workers share `forms`, so its tail is not this page's.
+        const recordedForms = pageForms.map((f) => ({
+          action: f.action,
+          method: f.method,
+          urlPath: currentPath,
+          inputs: f.inputs,
+          submitButtonSelector: f.submitButtonSelector,
+        }));
 
         // The fingerprint itself names the group: the same template gets the same name in every
         // crawl (signed out or as any role) and on every run.
@@ -1294,6 +1303,7 @@ export class DeterministicSpider {
         // `pages.length` never passes the limit and no screenshot is left for a page that is not in `pages`.
         if (skipForPageLimit()) return;
         pages.push(pageItem);
+        forms.push(...recordedForms);
         if (options.screenshotDir) {
           screenshotIndex++;
           pageItem.screenshotPath = path.join(
@@ -1319,7 +1329,7 @@ export class DeterministicSpider {
           attempts: telemetry.attempts,
           ms: telemetry.durationMs,
         });
-        options.onPage?.(pageItem, pages.length, forms.slice(forms.length - pageForms.length));
+        options.onPage?.(pageItem, pages.length, recordedForms);
         // Still the rendered page, before any exploring click changes it. A failing hook costs the caller
         // its own extract, not the crawl.
         if (options.onRecordedPage) {
@@ -1441,8 +1451,8 @@ export class DeterministicSpider {
           pageItem.exploreErrors = exploreErrors;
         }
       } catch {
-        // Double-record fix: only record as skipped if page was not already recorded
-        if (!recorded) {
+        // Only a page that was asked for and did not arrive. After a Stop nothing was asked for.
+        if (!recorded && !options.signal?.aborted) {
           skip({ urlPath: requestedAsAsked, why: 'did-not-load' });
         }
       }

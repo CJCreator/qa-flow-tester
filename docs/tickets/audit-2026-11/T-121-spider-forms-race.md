@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | core | bug | todo |
+| P1 | S | core | bug | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/discovery/deterministic-spider.ts`
@@ -98,9 +98,9 @@ Commands: `pnpm build`, then `pnpm exec vitest run packages/core/tests/audit-cra
 
 ## Done when
 
-- [ ] `forms.slice(` no longer appears in the file
-- [ ] `forms.push(` for a page happens only after `pages.push(pageItem)`
-- [ ] `pnpm build` passes and the test file passes
+- [x] `forms.slice(` no longer appears in the file
+- [x] `forms.push(` for a page happens only after `pages.push(pageItem)`
+- [x] `pnpm build` passes and the test file passes
 
 ## Notes
 

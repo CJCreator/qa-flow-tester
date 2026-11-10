@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | core | bug | todo |
+| P1 | S | core | bug | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/discovery/deterministic-spider.ts`
@@ -119,10 +119,10 @@ Commands: `pnpm build`, then `pnpm exec vitest run packages/core/tests/audit-cra
 
 ## Done when
 
-- [ ] A stopped crawl adds no `did-not-load` Skipped Page for a page that was not recorded
-- [ ] The outage pause never sleeps past `deadline`
-- [ ] Sitemap seeding does not start, and stops between sitemaps, once the signal is aborted
-- [ ] `pnpm build` and the core unit tests pass
+- [x] A stopped crawl adds no `did-not-load` Skipped Page for a page that was not recorded
+- [x] The outage pause never sleeps past `deadline`
+- [x] Sitemap seeding does not start, and stops between sitemaps, once the signal is aborted
+- [x] `pnpm build` and the core unit tests pass
 
 ## Notes
 

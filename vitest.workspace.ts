@@ -15,6 +15,7 @@ const BROWSER_TESTS: Record<string, string[]> = {
     'browser-restart',
     'element-inventory',
     'finding-groups',
+    'form-selectors',
     'multi-browser-network',
     'small-fixes',
     'visual-capture',

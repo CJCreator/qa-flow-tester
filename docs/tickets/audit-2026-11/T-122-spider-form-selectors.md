@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | core | bug | todo |
+| P1 | S | core | bug | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/discovery/deterministic-spider.ts`
@@ -152,9 +152,9 @@ Commands: `pnpm build`, `pnpm exec vitest run --project browser packages/core/te
 
 ## Done when
 
-- [ ] No `"${` remains inside the `readPageForms` `$$eval` callback
-- [ ] The three cases pass
-- [ ] `pnpm build` passes
+- [x] No `"${` remains inside the `readPageForms` `$$eval` callback
+- [x] The three cases pass
+- [x] `pnpm build` passes
 
 ## Notes
 
