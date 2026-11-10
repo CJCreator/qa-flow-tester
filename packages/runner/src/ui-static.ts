@@ -64,8 +64,11 @@ async function readFileIfPresent(file: string): Promise<Buffer | null> {
 /** Files whose `%ORIGIN%` placeholder is filled in with the address the visitor used (canonical, sitemap, llms.txt). */
 const TEMPLATED = new Set(['.html', '.txt', '.xml', '.webmanifest']);
 
-/** Private screens (runs, plans, settings): kept out of search and AI indexes. Public marketing, docs, and report pages are indexed. */
-const PUBLIC_PATHS = new Set(['/', '/index.html', '/sample-report.html', '/docs', '/changelog', '/case-studies']);
+/**
+ * Private screens (runs, plans, settings): kept out of search and AI indexes. Only pages that exist are
+ * public: the landing page and the sample report. Add a path here only when the wizard has a screen for it.
+ */
+const PUBLIC_PATHS = new Set(['/', '/index.html', '/sample-report.html']);
 
 /**
  * The public address of this server, for absolute URLs in canonical links, structured data and the

@@ -62,3 +62,32 @@ describe('serveUi share image', () => {
     }
   });
 });
+
+describe('serveUi indexing', () => {
+  it('paths with no wizard screen are not indexable', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ui-robots-'));
+    fs.writeFileSync(path.join(dir, 'index.html'), '<title>app</title>');
+    const server = httpServer.createServer((rq, rs) => {
+      const pathname = new URL(rq.url ?? '/', 'http://x').pathname;
+      void serveUi([{ base: '/', dir, name: 't' }], rq, rs, pathname).then((ok) => {
+        if (!ok) {
+          rs.writeHead(404);
+          rs.end();
+        }
+      });
+    });
+    await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+    try {
+      const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+      for (const p of ['/docs', '/changelog', '/case-studies']) {
+        const res = await fetch(`${base}${p}`);
+        expect(res.headers.get('x-robots-tag')).toContain('noindex');
+      }
+      const home = await fetch(`${base}/`);
+      expect(home.headers.get('x-robots-tag')).toBeNull();
+    } finally {
+      await new Promise((r) => server.close(r));
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
