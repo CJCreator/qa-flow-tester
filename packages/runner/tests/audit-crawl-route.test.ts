@@ -3,7 +3,7 @@
  * plain http server with a fake crawl, a fake address check, a real RunSlot and a real audit store in a temp
  * folder: no Chromium, no RunnerServer, no network.
  */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import http from 'http';
 import type { AddressInfo } from 'net';
 import fs from 'fs/promises';
@@ -472,6 +472,40 @@ describe('the run slot', () => {
     expect(json.running).toEqual({ kind: 'checkup', href: '/check' });
     expect(slot.kind).toBe('checkup');
     expect(await store.listAudits()).toEqual([]);
+  });
+
+  it('a refused start does not use up the daily limit', async () => {
+    const claimAuditLimit = vi.fn(() => ({ allowed: true }));
+    const base = await serve(
+      createAuditCrawlRoutes(
+        deps({
+          caller: () => ({ owner: true, helperEmail: 'owner@example.com' }),
+          claimAuditLimit,
+          checkAddress: async () => ({ ok: false, code: 'ERR_DNS', reason: 'x' }),
+        })
+      )
+    );
+    const { status } = await post(base, VALID);
+    expect(status).toBe(422);
+    expect(claimAuditLimit).toHaveBeenCalledTimes(0);
+  });
+
+  it('a start over the limit answers 429', async () => {
+    const claimAuditLimit = vi.fn(() => ({ allowed: false, error: 'limit' }));
+    const base = await serve(
+      createAuditCrawlRoutes(
+        deps({
+          caller: () => ({ owner: true, helperEmail: 'owner@example.com' }),
+          claimAuditLimit,
+          checkAddress: async () => ({ ok: true, finalUrl: 'https://example.com/', status: 200 }),
+        })
+      )
+    );
+    const { status, json } = await post(base, VALID);
+    expect(status).toBe(429);
+    expect(json.code).toBe('ERR_BETA_LIMIT');
+    expect(claimAuditLimit).toHaveBeenCalledTimes(1);
+    expect(claimAuditLimit).toHaveBeenCalledWith('owner@example.com');
   });
 });
 

@@ -95,13 +95,6 @@ export function createAuditRerunRoutes(deps: AuditRerunRouteDeps): Route[] {
     const caller = await deps.caller(context);
     if (!caller.owner) return refuse(res, 403, 'ERR_FORBIDDEN', AUDIT_RERUN_FORBIDDEN);
 
-    if (deps.claimAuditLimit && caller.helperEmail) {
-      const claim = deps.claimAuditLimit(caller.helperEmail);
-      if (!claim.allowed) {
-        return refuse(res, 429, 'ERR_BETA_LIMIT', claim.error ?? 'Daily limit of audit starts reached.');
-      }
-    }
-
     const auditId = context.params?.id ?? '';
     if (!AUDIT_ID_PATTERN.test(auditId)) return refuse(res, 404, 'ERR_AUDIT_NOT_FOUND', AUDIT_NOT_FOUND_STREAM);
 
@@ -139,6 +132,14 @@ export function createAuditRerunRoutes(deps: AuditRerunRouteDeps): Route[] {
       if (address.code === 'ERR_PRIVATE_ADDRESS') return refuse(res, 400, 'ERR_PRIVATE_ADDRESS', address.reason);
       if (address.code === 'ERR_DNS') return refuse(res, 422, 'ERR_DNS', address.reason);
       return refuse(res, 422, 'ERR_UNREACHABLE', address.reason);
+    }
+
+    // The day's limit is claimed last, after every refusal above, so a refused start costs nothing.
+    if (deps.claimAuditLimit && caller.helperEmail) {
+      const claim = deps.claimAuditLimit(caller.helperEmail);
+      if (!claim.allowed) {
+        return refuse(res, 429, 'ERR_BETA_LIMIT', claim.error ?? 'Daily limit of audit starts reached.');
+      }
     }
 
     // Synchronous claim, no await before it after the check (BE-103).

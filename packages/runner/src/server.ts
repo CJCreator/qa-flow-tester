@@ -1190,7 +1190,8 @@ export class RunnerServer {
               beta: this.beta,
               helper: (permission) => granted.has(permission),
               scheduler,
-              auditOwner: isAuditOwner,
+              // Email only: on a beta copy every tester holds the access key, so the key is not ownership.
+              auditOwner: this.isAuditOwnerEmail(this.helperAccess?.session(req)?.email),
             });
             if (!decision.allow) {
               const refusal = await this.helperRefusal(req, matched.route, matched.params);
@@ -1203,8 +1204,9 @@ export class RunnerServer {
             }
           }
 
-          // The scheduler's call is no visitor: no session cookie, no visitor quota, no per-visitor scope.
-          if (this.beta && matched?.route.access !== 'scheduler') {
+          // A 'public' row (a Shared Link page) needs no visitor session: its viewer keeps no cookie, so each
+          // view would count as a new visitor and soon hit the per-address limit.
+          if (this.beta && matched?.route.access !== 'scheduler' && matched?.route.access !== 'public') {
             const proto = req.headers['x-forwarded-proto'];
             try {
               enterSession(sessionFor(req, res, (Array.isArray(proto) ? proto[0] : proto)?.includes('https') ?? false));

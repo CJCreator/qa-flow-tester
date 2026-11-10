@@ -201,6 +201,24 @@ describe('Route dispatch enforces access levels and the beta policy (REQ-048)', 
     expect(allowed.status).toBe(200);
   });
 
+  it('a beta caller with only the access key is not an audit owner', async () => {
+    const ownerClosed = await call(BETA_PORT, 'GET', '/api/t/owner-closed');
+    expect(ownerClosed.status).toBe(403);
+    expect(JSON.parse(ownerClosed.body).code).toBe('ERR_BETA');
+
+    const auditRow = await call(BETA_PORT, 'GET', `/api/t/audits/${AUDIT_ID}`);
+    expect(auditRow.status).toBe(403);
+    expect(JSON.parse(auditRow.body).code).toBe('ERR_BETA');
+  });
+
+  it('T-94: 25 views of a Shared Link from one address all answer 200 (no beta session created)', async () => {
+    for (let i = 0; i < 25; i++) {
+      const res = await call(BETA_PORT, 'GET', `/s/${LINK_ID}`);
+      expect(res.status).toBe(200);
+      expect(JSON.parse(res.body)).toEqual({ row: 'shared', params: { linkId: LINK_ID } });
+    }
+  });
+
   it('D-005: on a beta copy, Helper sign-in and a granted Helper pass the beta policy', async () => {
     const signIn = await call(BETA_PORT, 'POST', '/api/t/helper/session');
     expect(signIn.status).toBe(200);

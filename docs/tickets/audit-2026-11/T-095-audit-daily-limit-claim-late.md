@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | runner | bug | todo |
+| P1 | S | runner | bug | built |
 
 **Files you may edit (no others):**
 - `packages/runner/src/routes/audit-crawl.ts`
@@ -79,9 +79,9 @@ Run: `pnpm exec vitest run packages/runner/tests/audit-crawl-route.test.ts packa
 
 ## Done when
 
-- [ ] In both routes the claim sits immediately before `slot.begin`.
-- [ ] A start refused for a bad body, a busy runner or a bad address does not call `claimAuditLimit`.
-- [ ] Both test files pass.
+- [x] In both routes the claim sits immediately before `slot.begin`.
+- [x] A start refused for a bad body, a busy runner or a bad address does not call `claimAuditLimit`.
+- [x] Both test files pass.
 
 ## Notes
 

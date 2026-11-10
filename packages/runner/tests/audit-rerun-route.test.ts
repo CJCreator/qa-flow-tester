@@ -2,7 +2,7 @@
  * BE-603 (REQ-028 AC-3): POST /api/audits/:id/rerun on a plain http server with a fake audit starter, a real
  * RunSlot and a real audit store in a temp folder: no Chromium, no network.
  */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import http from 'http';
 import type { AddressInfo } from 'net';
 import fs from 'fs/promises';
@@ -290,5 +290,21 @@ describe('POST /api/audits/:id/rerun', () => {
     while (slot.kind !== null && Date.now() < until) await new Promise((r) => setTimeout(r, 10));
     expect((await store.getAudit(auditId))?.versions[1]).toMatchObject({ status: 'failed', error: AUDIT_START_FAILED });
     expect(slot.kind).toBeNull();
+  });
+
+  it('a refused start does not use up the daily limit', async () => {
+    const claimAuditLimit = vi.fn(() => ({ allowed: true }));
+    const base = await serve(
+      createAuditRerunRoutes(
+        deps({
+          caller: () => ({ owner: true, helperEmail: 'owner@example.com' }),
+          claimAuditLimit,
+          checkAddress: async () => ({ ok: false, code: 'ERR_DNS', reason: 'x' }),
+        })
+      )
+    );
+    const { status } = await rerun(base, auditId);
+    expect(status).toBe(422);
+    expect(claimAuditLimit).toHaveBeenCalledTimes(0);
   });
 });

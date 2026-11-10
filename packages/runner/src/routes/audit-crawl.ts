@@ -487,13 +487,6 @@ export function createAuditCrawlRoutes(deps: AuditCrawlRouteDeps): Route[] {
     const caller = await deps.caller(context);
     if (!caller.owner) return refuse(res, 403, 'ERR_FORBIDDEN', AUDIT_FORBIDDEN_START);
 
-    if (deps.claimAuditLimit && caller.helperEmail) {
-      const claim = deps.claimAuditLimit(caller.helperEmail);
-      if (!claim.allowed) {
-        return refuse(res, 429, 'ERR_BETA_LIMIT', claim.error ?? 'Daily limit of audit starts reached.');
-      }
-    }
-
     let body: unknown;
     try {
       body = await readJsonBody<unknown>(req, MAX_START_BODY_CHARS);
@@ -521,6 +514,14 @@ export function createAuditCrawlRoutes(deps: AuditCrawlRouteDeps): Route[] {
       if (address.code === 'ERR_PRIVATE_ADDRESS') return refuse(res, 400, 'ERR_PRIVATE_ADDRESS', address.reason);
       if (address.code === 'ERR_DNS') return refuse(res, 422, 'ERR_DNS', address.reason);
       return refuse(res, 422, 'ERR_UNREACHABLE', address.reason);
+    }
+
+    // The day's limit is claimed last, after every refusal above, so a refused start costs nothing.
+    if (deps.claimAuditLimit && caller.helperEmail) {
+      const claim = deps.claimAuditLimit(caller.helperEmail);
+      if (!claim.allowed) {
+        return refuse(res, 429, 'ERR_BETA_LIMIT', claim.error ?? 'Daily limit of audit starts reached.');
+      }
     }
 
     // Synchronous claim, no await before it after the check (BE-103).

@@ -136,8 +136,8 @@ export interface RouteCaller {
   /** The request carries a valid Google-signed scheduler token (ADR 0039). Missing means no. */
   scheduler?: boolean;
   /**
-   * The caller is an audit owner (holds the access key, or a Google sign-in whose email is in
-   * AUDIT_OWNER_EMAILS, ADR 0042 / T-86). Passes 'owner' and audit rows on a beta copy.
+   * The caller is signed in with a Google account whose email is in AUDIT_OWNER_EMAILS (ADR 0042 / T-86).
+   * The access key is `hasAccessKey`, never this. Passes 'owner' and audit rows on a beta copy.
    */
   auditOwner?: boolean;
 }

@@ -2,11 +2,12 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | runner | bug | todo |
+| P1 | S | runner | bug | built |
 
 **Files you may edit (no others):**
 - `packages/runner/src/server.ts`
 - `packages/runner/tests/audit-share-routes.test.ts`
+- `packages/runner/tests/route-access-server.test.ts`
 
 **Do not build in parallel with:** T-91, T-92, T-96, T-97, T-99, T-100, T-106, T-108, T-110, T-112 (all edit `server.ts`).
 
@@ -55,9 +56,9 @@ Run: `pnpm exec vitest run packages/runner/tests/route-access-server.test.ts pac
 
 ## Done when
 
-- [ ] A `public` row skips `sessionFor` on beta.
-- [ ] 25 views of one Shared Link from one address all answer 200.
-- [ ] Both test files pass.
+- [x] A `public` row skips `sessionFor` on beta.
+- [x] 25 views of one Shared Link from one address all answer 200.
+- [x] Both test files pass.
 
 ## Notes
 

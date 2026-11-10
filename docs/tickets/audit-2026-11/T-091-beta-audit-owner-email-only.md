@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P0 | S | runner | security | todo |
+| P0 | S | runner | security | built |
 
 **Files you may edit (no others):**
 - `packages/runner/src/server.ts`
@@ -95,9 +95,9 @@ Then `pnpm build`.
 
 ## Done when
 
-- [ ] The `authorizeRoute` call passes an email-only `auditOwner`.
-- [ ] The new test passes; every existing test in both files still passes.
-- [ ] `pnpm build` passes.
+- [x] The `authorizeRoute` call passes an email-only `auditOwner`.
+- [x] The new test passes; every existing test in both files still passes.
+- [x] `pnpm build` passes.
 
 ## Notes
 
