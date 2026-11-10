@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | wizard | bug | todo |
+| P1 | S | wizard | bug | built |
 
 **Files you may edit (no others):**
 - `packages/wizard/src/components/plan/PlanDocument.tsx`
@@ -101,10 +101,10 @@ Run: `pnpm exec vitest run packages/wizard/tests/plan-rename.test.ts` then `pnpm
 
 ## Done when
 
-- [ ] Typing a new name and pressing Cancel leaves the old name.
-- [ ] Tab from the field reaches Save, then Cancel, without closing the form.
-- [ ] Clicking elsewhere on the page still saves (unchanged).
-- [ ] New test and `pnpm build` pass.
+- [x] Typing a new name and pressing Cancel leaves the old name.
+- [x] Tab from the field reaches Save, then Cancel, without closing the form.
+- [x] Clicking elsewhere on the page still saves (unchanged).
+- [x] New test and `pnpm build` pass.
 
 ## Notes
 

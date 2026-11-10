@@ -58,6 +58,11 @@ const BUCKET_TONE: Record<Bucket, Tone> = {
   judgement: 'neutral',
 };
 
+/** The text on a Visibility tab: a part nothing checked is "Not checked", never 100%. */
+export function tabScoreText(part: { score: number; checked?: boolean } | null | undefined): string {
+  return !part || part.checked === false ? 'Not checked' : `${part.score}%`;
+}
+
 export function VisibilityScreen({ runId }: { runId: string }) {
   const [report, setReport] = useState<ReleaseReport | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -111,7 +116,8 @@ export function VisibilityScreen({ runId }: { runId: string }) {
   }
 
   const findable = report.grades?.aspects['Findable'];
-  const subBreakdown = findable?.subBreakdown;
+  // An area nothing checked has no sub-scores to show, even though scoring still fills them in.
+  const subBreakdown = findable?.checked === false ? undefined : findable?.subBreakdown;
 
   const getTabScore = (tab: LensTab) => {
     if (!subBreakdown) return null;
@@ -173,7 +179,7 @@ export function VisibilityScreen({ runId }: { runId: string }) {
           const meta = LENS_METADATA[tab];
           const part = getTabScore(tab);
           const isSelected = activeTab === tab;
-          const scoreDisplay = part?.checked === false ? 'Not checked' : `${part?.score ?? 100}%`;
+          const scoreDisplay = tabScoreText(part);
           const grade = part?.score !== undefined && part.checked !== false ? gradeForScore(part.score) : undefined;
 
           return (

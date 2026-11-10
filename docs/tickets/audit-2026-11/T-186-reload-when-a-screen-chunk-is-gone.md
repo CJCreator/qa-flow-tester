@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | wizard | bug | todo |
+| P1 | S | wizard | bug | built |
 
 **Files you may edit (no others):**
 - `packages/wizard/src/main.tsx`
@@ -124,9 +124,9 @@ Run: `pnpm exec vitest run packages/wizard/tests/chunk-reload.test.ts` then `pnp
 
 ## Done when
 
-- [ ] `main.tsx` calls `reloadOnMissingChunk()` before the first import.
-- [ ] A failed dynamic import reloads the page once; a second failure within 60 s does not reload.
-- [ ] New test and `pnpm build` pass.
+- [x] `main.tsx` calls `reloadOnMissingChunk()` before the first import.
+- [x] A failed dynamic import reloads the page once; a second failure within 60 s does not reload.
+- [x] New test and `pnpm build` pass.
 
 ## Notes
 

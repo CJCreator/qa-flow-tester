@@ -295,6 +295,11 @@ function ChunkedList<T>({
   );
 }
 
+/** True when focus moved to another control of the same rename form (Save or Cancel): not a reason to save. */
+export function staysInForm(form: { contains(node: Node | null): boolean } | null, next: EventTarget | null): boolean {
+  return !!form && !!next && form.contains(next as Node);
+}
+
 export function EditableTitle({
   value,
   onSave,
@@ -347,7 +352,9 @@ export function EditableTitle({
               setEditing(false);
             }
           }}
-          onBlur={() => {
+          onBlur={(e) => {
+            // Focus going to Save or Cancel is handled by that button, not by leaving the field.
+            if (staysInForm(e.currentTarget.form, e.relatedTarget)) return;
             const trimmed = text.trim();
             if (trimmed && trimmed !== value) {
               onSave(trimmed);
@@ -362,6 +369,7 @@ export function EditableTitle({
         <button
           type="button"
           className="btn-link text-sm"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => {
             setText(value);
             setEditing(false);

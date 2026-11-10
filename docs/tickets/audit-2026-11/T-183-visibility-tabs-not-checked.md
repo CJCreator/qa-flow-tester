@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | wizard | bug | todo |
+| P1 | S | wizard | bug | built |
 
 **Files you may edit (no others):**
 - `packages/wizard/src/screens/VisibilityScreen.tsx`
@@ -85,9 +85,9 @@ Run: `pnpm exec vitest run packages/wizard/tests/visibility-not-checked.test.ts`
 
 ## Done when
 
-- [ ] A report whose `Findable.checked` is `false` shows "Not checked" on all four tabs and no grade.
-- [ ] No `?? 100` remains in `VisibilityScreen.tsx`.
-- [ ] New test and `pnpm build` pass.
+- [x] A report whose `Findable.checked` is `false` shows "Not checked" on all four tabs and no grade.
+- [x] No `?? 100` remains in `VisibilityScreen.tsx`.
+- [x] New test and `pnpm build` pass.
 
 ## Notes
 
