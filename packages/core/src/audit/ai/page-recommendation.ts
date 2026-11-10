@@ -73,6 +73,8 @@ export interface RecommendPagesInput {
   pages: RecommendationPageInput[];
   signal?: AbortSignal;
   timeoutMs?: number;
+  /** Called for each AI request that failed at the provider, with its status and redacted message (ADR 0042). */
+  onAiFailure?: (status: AuditAiStatus, error: string) => void;
 }
 
 // Prompt size caps: page text is untrusted and unbounded.
@@ -266,6 +268,7 @@ async function askSafely(
     const status = classifyAiError(err);
     const error = redactAiMessage(err, 200);
     logAiFailure(ai.provider, err);
+    run.onAiFailure?.(status, error);
     return { ok: false, status, error };
   }
 }

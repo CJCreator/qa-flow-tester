@@ -290,6 +290,21 @@ describe('assessPages and assessSite', () => {
       }
     });
 
+    it('reports a provider failure through onAiFailure', async () => {
+      const onAiFailure = vi.fn();
+      const resolution = {
+        ok: true as const,
+        ai: {
+          provider: 'openai' as const,
+          ask: vi.fn(async () => {
+            throw new Error('Request failed (401)');
+          }),
+        },
+      };
+      await assessPages({ ...pagesInput([page('/pricing', [])]), onAiFailure }, resolution as any);
+      expect(onAiFailure).toHaveBeenCalledWith('key-expired', expect.any(String));
+    });
+
     it('provider error or timeout: that page is ai-failed, the next page is still assessed', async () => {
       const fake = scripted([
         new Error('upstream 500'),

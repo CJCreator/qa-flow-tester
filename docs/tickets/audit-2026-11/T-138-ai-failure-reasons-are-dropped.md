@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | M | core/audit | bug | todo |
+| P1 | M | core/audit | bug | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/audit/ai/assessment.ts`
@@ -172,9 +172,9 @@ Run: `pnpm exec vitest run packages/core/tests/audit-pipeline.test.ts packages/c
 
 ## Done when
 
-- [ ] `pipeline.ts` has no `(ai as any)`.
-- [ ] A run where every AI request fails with 401 ends with the "key expired" note and both AI steps `not-done`.
-- [ ] `pnpm build` passes.
+- [x] `pipeline.ts` has no `(ai as any)`.
+- [x] A run where every AI request fails with 401 ends with the "key expired" note and both AI steps `not-done`.
+- [x] `pnpm build` passes.
 
 ## Notes
 

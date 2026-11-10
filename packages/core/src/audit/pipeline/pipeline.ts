@@ -622,26 +622,19 @@ export async function runAuditPipeline(
   );
 
   if (!ai.ok) {
-    const rawStatus = (ai as any).status ?? (ai as any).reason;
-    const aiStatus: AuditAiStatus =
-      rawStatus === 'key-expired'
-        ? 'key-expired'
-        : rawStatus === 'quota'
-          ? 'quota'
-          : rawStatus === 'timeout'
-            ? 'timeout'
-            : rawStatus === 'no-ai-key' || rawStatus === 'no-key'
-              ? 'no-key'
-              : 'provider-error';
-    const aiReason =
-      (ai as any).message ??
-      ((ai as any).reason && !['no-ai-key', 'no-key', 'key-expired', 'quota', 'timeout'].includes((ai as any).reason)
-        ? (ai as any).reason
-        : undefined);
-    const aiNote = aiStatusNoteText(aiStatus, aiReason);
+    const aiNote = aiStatusNoteText('no-key');
     if (!notes.includes(aiNote)) notes.push(aiNote);
   }
-  const run = { language, signal, ...(deps.aiTimeoutMs !== undefined ? { timeoutMs: deps.aiTimeoutMs } : {}) };
+  // The first provider failure of the audit is kept with its reason (ADR 0042).
+  let aiFailure: { status: AuditAiStatus; error: string } | null = null;
+  const run = {
+    language,
+    signal,
+    ...(deps.aiTimeoutMs !== undefined ? { timeoutMs: deps.aiTimeoutMs } : {}),
+    onAiFailure: (status: AuditAiStatus, error: string) => {
+      if (!aiFailure) aiFailure = { status, error };
+    },
+  };
 
   let siteAreas: AreaAssessment[];
   let assessed = true;
@@ -710,6 +703,14 @@ export async function runAuditPipeline(
     if (!notes.includes(aiNote)) notes.push(aiNote);
     siteAreas = notDoneAreas(siteGrades, 'ai-failed');
   }
+  if (aiFailure) {
+    const failed = aiFailure as { status: AuditAiStatus; error: string };
+    const aiNote = aiStatusNoteText(failed.status, failed.error);
+    if (!notes.includes(aiNote)) notes.push(aiNote);
+    // Nothing came back at all: the step did not finish.
+    const anyDone = pages.some((p) => p.areas?.some((a) => a.status === 'done')) || siteAreas.some((a) => a.status === 'done');
+    if (!anyDone) assessed = false;
+  }
   record('assessment', 'assessing', assessed, assessed ? undefined : NOTES.assessment);
 
   let recommendations: PageRecommendation[];
@@ -722,7 +723,9 @@ export async function runAuditPipeline(
   }));
   try {
     recommendations = await stages.recommendPages({ ...run, pages: recommendationInputs }, ai);
-    record('recommendation', 'assessing', true);
+    const allByRule = recommendations.length > 0 && recommendations.every((r) => r.decidedBy === 'rule');
+    const recommended = !(aiFailure && ai.ok && allByRule);
+    record('recommendation', 'assessing', recommended, recommended ? undefined : NOTES.recommendation);
   } catch (err) {
     rethrowIfStopped(err, signal);
     recommendations = recommendationInputs.map((p) => ruleRecommendation(p));

@@ -49,6 +49,8 @@ export interface AssessmentRunOptions {
   language: DocumentLanguage;
   signal?: AbortSignal;
   timeoutMs?: number;
+  /** Called for each AI request that failed at the provider, with its status and redacted message (ADR 0042). */
+  onAiFailure?: (status: AuditAiStatus, error: string) => void;
 }
 
 export interface AssessPagesInput extends AssessmentRunOptions {
@@ -286,6 +288,7 @@ async function askSafely(
     const status = classifyAiError(err);
     const error = redactAiMessage(err, 200);
     logAiFailure(ai.provider, err);
+    run.onAiFailure?.(status, error);
     return { ok: false, reason: 'ai-failed', status, error };
   }
 }

@@ -856,35 +856,53 @@ describe('audit pipeline: runAuditPipeline', () => {
     expect(result.notes).toContain('The site stopped answering after 3 pages.');
   });
 
-  it('emits ai-status note with classified error and reason', async () => {
-    const testCases = [
-      {
-        ai: { ok: false as const, reason: 'key-expired' as const },
-        expectedNote: 'The AI key expired. Update it in Audit settings.',
-      },
-      {
-        ai: { ok: false as const, reason: 'quota' as const },
-        expectedNote: 'The AI quota was reached.',
-      },
-      {
-        ai: { ok: false as const, reason: 'timeout' as const },
-        expectedNote: 'The AI did not answer in time.',
-      },
-      {
-        ai: { ok: false as const, reason: 'provider-error' as const, message: 'model overloaded' },
-        expectedNote: 'The AI provider returned an error: model overloaded.',
-      },
-      {
-        ai: { ok: false as const, reason: 'no-ai-key' as const },
-        expectedNote: 'AI notes need an AI key.',
-      },
-    ];
+  it('emits ai-status note when reason is no-ai-key', async () => {
+    const { outcome } = await run({ ai: { ok: false as const, reason: 'no-ai-key' as const } });
+    const { result } = await outcome;
+    expect(result.notes).toContain('AI notes need an AI key.');
+  });
 
-    for (const tc of testCases) {
-      const { outcome } = await run({ ai: tc.ai as any });
-      const { result } = await outcome;
-      expect(result.notes).toContain(tc.expectedNote);
-    }
+  it('a provider failure on every request writes the AI note and marks the steps not done', async () => {
+    const stages = siteStages({
+      assessPages: vi.fn(async (input: AssessPagesInput) => {
+        input.onAiFailure?.('key-expired', 'HTTP 401');
+        return [];
+      }),
+      assessSite: vi.fn(async (input: AssessSiteInput) => {
+        return (AUDIT_AREAS as readonly AuditArea[]).map((area) => ({
+          area,
+          status: 'not-done' as const,
+          reason: 'ai-failed' as const,
+        }));
+      }),
+      recommendPages: vi.fn(async (input: RecommendPagesInput) => {
+        return input.pages.map((p) => ({
+          urlPath: p.urlPath,
+          action: 'repair' as const,
+          reason: 'Rule based',
+          findingIds: [],
+          decidedBy: 'rule' as const,
+        }));
+      }),
+    });
+
+    const { outcome, steps } = await run(
+      {
+        ai: {
+          ok: true,
+          ai: {
+            provider: 'openai',
+            ask: vi.fn(),
+          } as unknown as AuditAi,
+        },
+      },
+      stages
+    );
+    const { result } = await outcome;
+
+    expect(result.notes).toContain('The AI key expired. Update it in Audit settings.');
+    expect(steps.find((s) => s.step === 'assessment')?.status).toBe('not-done');
+    expect(steps.find((s) => s.step === 'recommendation')?.status).toBe('not-done');
   });
 
   it('turns site-caused skipped pages into findings and keeps tool-caused skips out of findings', async () => {
