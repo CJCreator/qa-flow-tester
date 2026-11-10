@@ -1,10 +1,10 @@
-import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import type { Page } from 'playwright';
 import type { Finding, PhoneLayout } from '@qa/types';
 import { UXQualityChecker } from '@qa/checkers';
 import { BREAKPOINT_VIEWPORTS } from '../browser.js';
+import { pageSlug } from './store/keys.js';
 
 /**
  * Phone layout of a Sample Page (REQ-037, Q-28): a phone-width screenshot plus the existing overflow and
@@ -37,14 +37,7 @@ export interface PhoneLayoutRecord {
 
 /** `phone/<slug>-<hash>.png`: readable, and two paths that slug alike still get different files. */
 export function phoneScreenshotFile(urlPath: string): string {
-  const slug =
-    urlPath
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 60) || 'home';
-  const hash = createHash('sha256').update(urlPath).digest('hex').slice(0, 8);
-  return `phone/${slug}-${hash}.png`;
+  return `phone/${pageSlug(urlPath)}.png`;
 }
 
 /** The absolute screenshot path, or null when `rel` would leave the version folder. */
@@ -120,10 +113,7 @@ export async function recordPhoneLayout(page: Page, opts: PhoneLayoutOptions): P
           expected: 'Page content fits within viewport width (375px) without horizontal scrolling',
           actual: 'Page triggers horizontal scrollbar (scrollWidth > innerWidth)',
         },
-        stepsToReproduce: [
-          `Navigate to ${opts.urlPath} at 375px`,
-          'Check for horizontal scrollbar',
-        ],
+        stepsToReproduce: [`Navigate to ${opts.urlPath} at 375px`, 'Check for horizontal scrollbar'],
         evidence: {},
         resolution: 'Ensure broad containers use max-w-full and overflow-x-hidden.',
       });

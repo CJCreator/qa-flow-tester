@@ -9,8 +9,24 @@
  * Objects that must be removable on their own are kept in a folder of their own, because a backend
  * only deletes whole folders (`deletePrefix`).
  */
+import { createHash } from 'node:crypto';
 import { AUDIT_DOCUMENT_KINDS, AUDIT_ID_PATTERN, SHARE_LINK_ID_PATTERN, type StoredDocumentKind } from '@qa/types';
 import { AuditStoreError } from './backend.js';
+
+/**
+ * A page path as a stable, file-safe name: a readable slug of at most 60 characters plus the first 8 hex
+ * characters of the path's SHA-256, so two paths that slug alike still differ. `/` gives `home-<hash>`.
+ */
+export function pageSlug(urlPath: string): string {
+  const slug =
+    urlPath
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 60) || 'home';
+  const hash = createHash('sha256').update(urlPath).digest('hex').slice(0, 8);
+  return `${slug}-${hash}`;
+}
 
 export const STORED_DOCUMENT_KINDS: readonly StoredDocumentKind[] = [
   ...AUDIT_DOCUMENT_KINDS,

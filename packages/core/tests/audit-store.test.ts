@@ -19,8 +19,11 @@ import {
   versionJsonKey,
   versionRecordKey,
   helperEmailHash,
+  pageSlug,
   type AuditStoreBackend,
 } from '../src/audit/store/index.js';
+import { pageContentName } from '../src/audit/pipeline/pipeline.js';
+import { phoneScreenshotFile } from '../src/audit/phone-layout.js';
 
 const REQUEST: AuditRequest = {
   url: 'https://example.com/',
@@ -217,6 +220,14 @@ describe('AuditStore: audits and versions (REQ-028)', () => {
     } finally {
       backend.putJson = originalPutJson;
     }
+  });
+
+  it('pageSlug: a readable slug plus a hash, the same names as before', () => {
+    expect(pageSlug('/')).toMatch(/^home-[0-9a-f]{8}$/);
+    expect(pageSlug('/About Us/')).toMatch(/^about-us-[0-9a-f]{8}$/);
+    expect(pageSlug('/a')).not.toBe(pageSlug('/A'));
+    expect(pageContentName('/pricing')).toBe(`pages/${pageSlug('/pricing')}`);
+    expect(phoneScreenshotFile('/pricing')).toBe(`phone/${pageSlug('/pricing')}.png`);
   });
 
   it('refuses an invalid request and a URL with credentials', async () => {

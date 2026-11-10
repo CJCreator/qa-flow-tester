@@ -19,7 +19,6 @@
  * ends the pipeline at once and nothing is saved. Only a failed save throws (`AuditPipelineError`).
  * The pipeline runs under the RunSlot the caller already holds.
  */
-import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import type {
@@ -54,7 +53,8 @@ import { analyseSite, type AnalysisPage, type SiteAnalysis } from '../analysis/a
 import { auditMarketing } from '../analysis/marketing-signals.js';
 import { seoBasics } from '../analysis/seo-basics.js';
 import { measureSampleSpeeds, type PageSpeedDeps } from '../ai/pagespeed.js';
-import { assessPages, assessSite, type AreaGrades } from '../ai/assessment.js';
+import { assessPages, assessSite, AUDIT_AI_IN_FLIGHT, type AreaGrades } from '../ai/assessment.js';
+import { pageSlug } from '../store/keys.js';
 import { recommendPages, ruleRecommendation } from '../ai/page-recommendation.js';
 import {
   checkCitations,
@@ -74,7 +74,7 @@ import {
 } from '../documents/write-all.js';
 import { areaGrades, labPerformanceScore, type CheckedAreas } from './grades.js';
 import type { AuditPageRecorder, RecordedPage } from './page-recorder.js';
-import { createSkippedPageFinding, isSiteCausedSkip, isSiteCausedSkippedPage } from './skipped-findings.js';
+import { createSkippedPageFindings, isSiteCausedSkip } from './skipped-findings.js';
 
 /** The site-level stage functions; the defaults are the real modules. Tests pass fakes. */
 export interface SiteStages {
@@ -186,14 +186,7 @@ export class AuditPipelineError extends Error {
 
 /** The per-version Page Content object name of a page: `pages/<slug>-<sha256-8>`. */
 export function pageContentName(urlPath: string): string {
-  const slug =
-    urlPath
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 60) || 'home';
-  const hash = createHash('sha256').update(urlPath).digest('hex').slice(0, 8);
-  return `pages/${slug}-${hash}`;
+  return `pages/${pageSlug(urlPath)}`;
 }
 
 const NOTES: Record<Exclude<PipelineStep, 'reading'>, string> = {
@@ -490,11 +483,7 @@ export async function runAuditPipeline(
   }
 
   // Site-caused Skipped Pages become findings (T-84, ADR 0018)
-  for (const s of crawl.coverage.skipped) {
-    if (isSiteCausedSkippedPage(s)) {
-      unscored.push(createSkippedPageFinding(s, ids.next()));
-    }
-  }
+  unscored.push(...createSkippedPageFindings(crawl.coverage.skipped, ids));
 
   const recordedByPath = new Map(readable.map((p) => [p.info.urlPath, p]));
   const groups = deps.recorder.layoutGroups();
@@ -641,7 +630,7 @@ export async function runAuditPipeline(
     const pageAreas = await stages.assessPages(
       {
         ...run,
-        aiInFlight: 4,
+        aiInFlight: AUDIT_AI_IN_FLIGHT,
         onPageAiProgress: (path, status) => {
           deps.onProgress?.({
             type: 'page',
