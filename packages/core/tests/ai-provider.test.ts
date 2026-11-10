@@ -152,6 +152,24 @@ describe('AIProvider and KeyResolver', () => {
     }
   });
 
+  it('returns finishReason "length" from complete() instead of throwing', async () => {
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (_url: string, _init: RequestInit) => {
+      return new Response(
+        JSON.stringify({ choices: [{ finish_reason: 'length', message: { content: '{"flows":[' } }] }),
+        { status: 200 }
+      );
+    }) as typeof fetch;
+    try {
+      const openRouter = createAIProvider('openrouter', 'test-key', undefined, 'some/model:free');
+      const answer = await openRouter.complete!([{ role: 'user', content: 'plan' }]);
+      expect(answer.finishReason).toBe('length');
+      expect(answer.text).toBe('{"flows":[');
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
   it('GeminiProvider uses default model gemini-3.8-flash and includes generationConfig', async () => {
     const realFetch = globalThis.fetch;
     let requestedUrl = '';

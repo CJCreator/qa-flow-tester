@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | core | bug | todo |
+| P1 | S | core | bug | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/reporter.ts`
@@ -143,10 +143,10 @@ Commands: `pnpm exec vitest run packages/core/tests/reporter.test.ts`, then `pnp
 
 ## Done when
 
-- [ ] Both new tests pass; the existing reporter tests pass (update a count in an existing test only if it
+- [x] Both new tests pass; the existing reporter tests pass (update a count in an existing test only if it
       counted a suppressed or unconfirmed Finding twice, and say so in the PR)
-- [ ] Both Skipped blocks push one result per screen size with the size on it
-- [ ] `pnpm build` passes
+- [x] Both Skipped blocks push one result per screen size with the size on it
+- [x] `pnpm build` passes
 
 ## Notes
 

@@ -193,4 +193,67 @@ describe('ReportGenerator findings contract', () => {
     const fps = async (p: string) => JSON.parse(await fs.readFile(p, 'utf8')).findings.map((f: any) => f.fingerprint);
     expect(await fps(a.jsonPath)).toEqual(await fps(b.jsonPath));
   });
+
+  it('lists a could-not-verify finding once', async () => {
+    const report: ReleaseReport = {
+      runId: 'run-cnv',
+      productId: 'p',
+      targetUrl: 'http://localhost:4000',
+      timestamp: '2026-09-26T12:00:00Z',
+      durationMs: 1000,
+      coverage: { totalTestPoints: 1, passed: 0, failed: 0, blocked: 0, skipped: 0, couldNotVerify: 1, completionRate: 100 },
+      results: [],
+      findings: [
+        {
+          id: 'F-CNV-001',
+          severity: 'Major',
+          needsConfirmation: true,
+          checker: 'bug-detection',
+          title: 'Maybe broken',
+          where: { urlPath: '/test', role: 'guest', breakpoint: '1440px' },
+          expectedVsActual: { expected: 'ok', actual: 'not verified' },
+          stepsToReproduce: [],
+          evidence: {},
+          resolution: 'Investigate',
+        },
+      ],
+    };
+    const { mdPath } = await new ReportGenerator(dirA).generate(report);
+    const md = await fs.readFile(mdPath, 'utf8');
+    expect(md).toContain('Maybe broken');
+    expect(md).toContain('Could not verify');
+    expect(md).toContain('🟠 0 Majors');
+    expect(md.split('[F-CNV-001]').length - 1).toBe(1);
+  });
+
+  it('lists a suppressed finding only in the suppressed section', async () => {
+    const report: ReleaseReport = {
+      runId: 'run-suppressed',
+      productId: 'p',
+      targetUrl: 'http://localhost:4000',
+      timestamp: '2026-09-26T12:00:00Z',
+      durationMs: 1000,
+      coverage: { totalTestPoints: 1, passed: 1, failed: 0, blocked: 0, skipped: 0, couldNotVerify: 0, completionRate: 100 },
+      results: [],
+      findings: [
+        {
+          id: 'F-SUP-001',
+          severity: 'Blocker',
+          triageStatus: 'Intended',
+          checker: 'bug-detection',
+          title: 'Known intent',
+          where: { urlPath: '/test', role: 'guest', breakpoint: '1440px' },
+          expectedVsActual: { expected: 'ok', actual: 'intended' },
+          stepsToReproduce: [],
+          evidence: {},
+          resolution: 'None',
+        },
+      ],
+    };
+    const { mdPath } = await new ReportGenerator(dirA).generate(report);
+    const md = await fs.readFile(mdPath, 'utf8');
+    expect(md).toContain('Active Findings: **0**');
+    expect(md).toContain('🔴 0 Blockers');
+    expect(md).toContain('Suppressed Findings (1)');
+  });
 });

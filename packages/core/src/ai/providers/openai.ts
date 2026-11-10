@@ -18,7 +18,11 @@ export class OpenAIProvider implements AIProvider {
   }
 
   async generateText(messages: AIMessage[], options: AICompletionOptions = {}): Promise<string> {
-    return (await this.complete(messages, options)).text;
+    const answer = await this.complete(messages, options);
+    if (answer.finishReason === 'length') {
+      throw new Error("The AI's answer was cut off at its length limit before it finished.");
+    }
+    return answer.text;
   }
 
   async complete(messages: AIMessage[], options: AICompletionOptions = {}): Promise<AICompletion> {
@@ -113,11 +117,6 @@ export class OpenAIProvider implements AIProvider {
 
     const data = (await res.json()) as any;
     const choice = data.choices?.[0];
-    if (choice?.finish_reason === 'length') {
-      throw new Error(
-        `The AI's answer was cut off at its length limit (${body.max_tokens} tokens) before it finished.`
-      );
-    }
     const usage = data.usage;
     return {
       text: choice?.message?.content || '',

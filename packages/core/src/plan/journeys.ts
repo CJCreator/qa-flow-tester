@@ -16,6 +16,7 @@ import { BudgetSpentError, StoppedEarlyError } from './ai-budget.js';
 import { fallbackReasonOf, parseJsonAnswer, PLANNING_MAX_TOKENS } from './ai-planner.js';
 import type { ParsedRequirementHint } from '../discovery/context-parser.js';
 import { docSourceOf } from './sources.js';
+import { fieldHint } from './fill-values.js';
 
 /** Documented User Flows shown to the AI, and the room each gets. */
 const DOCUMENTED_FLOWS = 12;
@@ -60,7 +61,7 @@ export interface JourneyPlannerOutput {
 
 /** A likely-looking value for a fill step the AI left empty: better an obvious test value than a blank field that passes silently. */
 function guessFillValue(step: { selector?: string; name: string }): string {
-  const hint = `${step.selector || ''} ${step.name}`.toLowerCase();
+  const hint = fieldHint(`${step.selector || ''} ${step.name}`);
   if (hint.includes('email')) return 'test.user@example.com';
   if (hint.includes('password') || hint.includes('pass')) return 'TestPassword123!';
   if (hint.includes('search') || hint.includes('query') || hint.includes('find')) return 'test';
@@ -76,10 +77,10 @@ function guessFillValue(step: { selector?: string; name: string }): string {
   )
     return 'https://example.com';
   if (hint.includes('phone') || hint.includes('tel') || hint.includes('mobile')) return '+15555550123';
+  if (hint.includes('number') || hint.includes('amount') || hint.includes('qty') || hint.includes('count')) return '1';
   if (hint.includes('first') && hint.includes('name')) return 'Alex';
   if (hint.includes('last') && hint.includes('name')) return 'Smith';
   if (hint.includes('name')) return 'Test User';
-  if (hint.includes('number') || hint.includes('amount') || hint.includes('qty') || hint.includes('count')) return '1';
   return 'Test Value';
 }
 
@@ -255,7 +256,8 @@ Respond with ONLY the JSON object.
 
     // One chance to repair its own output, told exactly what was wrong.
     console.warn(`[JourneyPlanner] AI response needs repair (${problems[0]}); retrying with a repair prompt...`);
-    const repairText = await ai.generateText(
+    const repair = await completeWith(
+      ai,
       [
         system,
         asking,
@@ -272,6 +274,9 @@ Respond with ONLY the JSON object.
       ],
       { ...asked, stage: 'repair', temperature: 0 }
     );
+    // A cut-off repair is "the model ran out of room", not "the service didn't answer".
+    if (repair.finishReason === 'length' && !firstParse) throw new AITruncatedError(repair.model);
+    const repairText = repair.text;
     let flows: DiscoveredFlow[];
     try {
       flows = parseFlows(repairText);

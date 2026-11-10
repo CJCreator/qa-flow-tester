@@ -79,12 +79,18 @@ export class ReportGenerator {
   private renderMarkdown(report: ReleaseReport): string {
     const { coverage, findings, targetUrl, productId, timestamp } = report;
 
-    // Group findings by severity
-    const blockers = findings.filter((f) => f.severity === 'Blocker');
-    const majors = findings.filter((f) => f.severity === 'Major');
-    const minors = findings.filter((f) => f.severity === 'Minor');
-    const suggestions = findings.filter((f) => f.severity === 'Suggestion' && !f.needsConfirmation);
-    const unconfirmed = findings.filter((f) => f.needsConfirmation);
+    // Triaged-away findings are listed once, in their own section; they are not active.
+    const activeFindings = findings.filter((f) => f.triageStatus !== 'Intended' && f.triageStatus !== 'False Positive');
+    const suppressedFindings = findings.filter(
+      (f) => f.triageStatus === 'Intended' || f.triageStatus === 'False Positive'
+    );
+    // Each active finding is in exactly one group: "could not verify" wins over its severity.
+    const unconfirmed = activeFindings.filter((f) => f.needsConfirmation);
+    const confirmed = activeFindings.filter((f) => !f.needsConfirmation);
+    const blockers = confirmed.filter((f) => f.severity === 'Blocker');
+    const majors = confirmed.filter((f) => f.severity === 'Major');
+    const minors = confirmed.filter((f) => f.severity === 'Minor');
+    const suggestions = confirmed.filter((f) => f.severity === 'Suggestion');
 
     const lines: string[] = [];
 
@@ -284,11 +290,6 @@ export class ReportGenerator {
     }
 
     // Findings section
-    const activeFindings = findings.filter((f) => f.triageStatus !== 'Intended' && f.triageStatus !== 'False Positive');
-    const suppressedFindings = findings.filter(
-      (f) => f.triageStatus === 'Intended' || f.triageStatus === 'False Positive'
-    );
-
     lines.push(`## 🚨 Findings Overview`);
     lines.push(
       `Active Findings: **${activeFindings.length}** (🔴 ${blockers.length} Blockers, 🟠 ${majors.length} Majors, 🟡 ${minors.length} Minors, 💡 ${suggestions.length} Suggestions, ❓ ${unconfirmed.length} Could not verify)`

@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | core | bug | todo |
+| P1 | S | core | bug | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/plan/playwright-export.ts`
@@ -86,9 +86,9 @@ Commands: `pnpm build`, `pnpm exec vitest run --project browser packages/core/te
 
 ## Done when
 
-- [ ] The exported helper passes `exact: true`
-- [ ] The browser test passes (with or without step 3) and the PR says which
-- [ ] `pnpm build` passes
+- [x] The exported helper passes `exact: true`
+- [x] The browser test passes (with or without step 3) and the PR says which
+- [x] `pnpm build` passes
 
 ## Notes
 

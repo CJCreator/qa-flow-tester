@@ -611,16 +611,20 @@ export class FlowTestOrchestrator {
       const sizes = sizesFor(testCase);
       if (notTestedRoles.has(testCase.role)) {
         const why = rolesNotTested.find((r) => r.role === testCase.role)!;
-        results.push({
-          testCaseId: testCase.id,
-          flowId: testCase.flowId,
-          role: testCase.role,
-          status: 'Skipped',
-          durationMs: 0,
-          findings: [],
-          stepEvidence: [],
-          skipReason: `Not tested: ${why.text}`,
-        });
+        // One per screen size, like every other result, so the Skipped count adds up with the planned total.
+        for (const bp of sizes) {
+          results.push({
+            testCaseId: testCase.id,
+            flowId: testCase.flowId,
+            role: testCase.role,
+            breakpoint: bp,
+            status: 'Skipped',
+            durationMs: 0,
+            findings: [],
+            stepEvidence: [],
+            skipReason: `Not tested: ${why.text}`,
+          });
+        }
         continue;
       }
       if (sessionLostRoles.has(testCase.role)) {
@@ -629,6 +633,7 @@ export class FlowTestOrchestrator {
             testCaseId: testCase.id,
             flowId: testCase.flowId,
             role: testCase.role,
+            breakpoint: bp,
             status: 'Skipped',
             durationMs: 0,
             findings: [],

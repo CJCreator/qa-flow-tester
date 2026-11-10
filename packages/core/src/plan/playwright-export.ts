@@ -351,7 +351,7 @@ const HELPERS = [
   `// getByText and getByTestId; anything else is CSS and stays page.locator.`,
   `export function locatorFor(page: Page, selector: string): Locator {`,
   `  const role = /^role=([\\w-]+)\\[name="(.*)"\\]$/.exec(selector);`,
-  `  if (role) return page.getByRole(role[1] as Parameters<Page['getByRole']>[0], { name: role[2] });`,
+  `  if (role) return page.getByRole(role[1] as Parameters<Page['getByRole']>[0], { name: role[2], exact: true });`,
   `  const text = /^text="(.*)"$/.exec(selector);`,
   `  if (text) return page.getByText(text[1], { exact: true });`,
   `  const id = /^\\[data-testid="([^"]*)"\\]$/.exec(selector) ?? (/^[\\w-]+$/.test(selector) ? [selector, selector] : null);`,

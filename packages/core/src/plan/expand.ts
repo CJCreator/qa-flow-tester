@@ -186,7 +186,9 @@ export function expandPlan(
     // plainly, and again only where a menu button has to be opened first to reach it.
     const viaMenu = visible.filter((s) => (nav.menuSteps || []).some((step) => step.onlyAt?.includes(s)));
     const plain = visible.filter((s) => !viaMenu.includes(s));
-    const at = visible.filter((s) => viaMenu.includes(s) || s === plain[plain.length - 1]);
+    // The widest by width, not by position: sizes arrive in the order the person chose them.
+    const widest = plain.reduce<Breakpoint | undefined>((a, s) => (a === undefined || parseInt(s, 10) > parseInt(a, 10) ? s : a), undefined);
+    const at = visible.filter((s) => viaMenu.includes(s) || s === widest);
     if (hidden.length > 0) {
       wontRun.push({
         itemId: nav.id,

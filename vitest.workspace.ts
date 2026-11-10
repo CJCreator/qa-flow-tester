@@ -17,6 +17,7 @@ const BROWSER_TESTS: Record<string, string[]> = {
     'finding-groups',
     'form-selectors',
     'multi-browser-network',
+    'role-selector-exact',
     'small-fixes',
     'visual-capture',
     // Website audit (REQ-033, REQ-048...): each launches Chromium through `playwright` or the Spider.

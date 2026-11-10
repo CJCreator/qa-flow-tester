@@ -132,6 +132,7 @@ describe('playwright export', () => {
     const text = all(files);
     const helpers = file(files, 'support/helpers.ts');
     expect(helpers).toContain('page.getByRole(');
+    expect(helpers).toContain('{ name: role[2], exact: true }');
     expect(helpers).toContain('page.getByText(');
     expect(helpers).toContain('page.getByTestId(');
     expect(text).toContain('(reason for CSS: no stable role, text or test id found)');

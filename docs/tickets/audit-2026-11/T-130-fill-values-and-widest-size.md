@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | core | bug | todo |
+| P1 | S | core | bug | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/plan/fill-values.ts`
@@ -149,9 +149,9 @@ Commands: `pnpm exec vitest run packages/core/tests/fill-values.test.ts packages
 
 ## Done when
 
-- [ ] `input[name="quantity"]` gets `1`, `[name="comment"]` gets `Test Value`
-- [ ] The Navigation Check size is the largest width in the list, whatever the order
-- [ ] The tests above and `pnpm build` pass
+- [x] `input[name="quantity"]` gets `1`, `[name="comment"]` gets `Test Value`
+- [x] The Navigation Check size is the largest width in the list, whatever the order
+- [x] The tests above and `pnpm build` pass
 
 ## Notes
 

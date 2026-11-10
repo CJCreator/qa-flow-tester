@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | core | bug | todo |
+| P1 | S | core | bug | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/ai/providers/openai.ts`
@@ -131,10 +131,10 @@ then `pnpm exec vitest run packages/core/tests` and `pnpm build`.
 
 ## Done when
 
-- [ ] `complete()` on the OpenAI/OpenRouter provider returns `finishReason: 'length'` and does not throw
-- [ ] `generateText()` still rejects with a "cut off" message
-- [ ] The journeys repair throws `AITruncatedError` when its answer was cut off and there is no usable first answer
-- [ ] Core unit tests and `pnpm build` pass
+- [x] `complete()` on the OpenAI/OpenRouter provider returns `finishReason: 'length'` and does not throw
+- [x] `generateText()` still rejects with a "cut off" message
+- [x] The journeys repair throws `AITruncatedError` when its answer was cut off and there is no usable first answer
+- [x] Core unit tests and `pnpm build` pass
 
 ## Notes
 
