@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P0 | S | ci | bug | todo |
+| P0 | S | ci | bug | built |
 
 **Files you may edit (no others):**
 - `.github/workflows/release.yml`
@@ -87,10 +87,10 @@ pnpm format:check
 Do not edit the test file. It must pass unchanged.
 
 ## Done when
-- [ ] `release-workflow.test.ts` passes, all 5 tests.
-- [ ] `release.yml` contains none of: `docker push`, `softprops`, `secrets.`, `contents: write`, `packages: write`.
-- [ ] `release.yml` still contains `pnpm install --frozen-lockfile`, `pnpm build`, `contents: read`.
-- [ ] `pnpm test` (the unit tier) has 0 failures.
+- [x] `release-workflow.test.ts` passes, all 5 tests.
+- [x] `release.yml` contains none of: `docker push`, `softprops`, `secrets.`, `contents: write`, `packages: write`.
+- [x] `release.yml` still contains `pnpm install --frozen-lockfile`, `pnpm build`, `contents: read`.
+- [x] `pnpm test` (the unit tier) has 0 failures.
 
 ## Notes
 - The test also forbids the words `branches`, `pull_request`, `workflow_dispatch`, `schedule`, `npm publish`,

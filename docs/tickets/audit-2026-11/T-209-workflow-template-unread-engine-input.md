@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | config | bug | todo |
+| P1 | S | config | bug | built |
 
 **Files you may edit (no others):**
 - `templates/qa-check.yml`
@@ -60,9 +60,9 @@ grep -n "engine" templates/qa-check.yml
 ```
 
 ## Done when
-- [ ] `templates/qa-check.yml` has no `engine` input.
-- [ ] `workflow.test.ts` passes.
-- [ ] `pnpm format:check` passes.
+- [x] `templates/qa-check.yml` has no `engine` input.
+- [x] `workflow.test.ts` passes.
+- [x] `pnpm format:check` passes.
 
 ## Notes
 - `.github/workflows/qa-check.yml` (this repository's own copy) never had the input. Do not edit it.

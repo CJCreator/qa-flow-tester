@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P1 | S | scripts | bug | todo |
+| P1 | S | scripts | bug | built |
 
 **Files you may edit (no others):**
 - `scripts/clean.mjs`
@@ -82,9 +82,9 @@ Expected: `.qa-baselines/keep-me` is still listed, and the last `ls` prints `scr
 Remove `.qa-baselines` afterwards only if it did not exist before this test (`rmdir .qa-baselines`).
 
 ## Done when
-- [ ] `.qa-baselines` and `.claude/work` are not in `EPHEMERAL_DIRS` and are in `PROTECTED`.
-- [ ] The hand check above leaves `.qa-baselines/keep-me` in place and removes `.scratch`.
-- [ ] `pnpm lint` and `pnpm format:check` pass.
+- [x] `.qa-baselines` and `.claude/work` are not in `EPHEMERAL_DIRS` and are in `PROTECTED`.
+- [x] The hand check above leaves `.qa-baselines/keep-me` in place and removes `.scratch`.
+- [x] `pnpm lint` and `pnpm format:check` pass.
 
 ## Notes
 - `removeSafe` already returns early for a `PROTECTED` path, so the two entries are safe even if someone adds
