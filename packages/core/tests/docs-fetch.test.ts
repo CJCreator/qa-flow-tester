@@ -65,6 +65,10 @@ describe('htmlToDoc', () => {
     expect(t).not.toContain('secret');
     expect(t).not.toContain('<');
   });
+
+  it('decodes each entity once', () => {
+    expect(htmlToDoc('<p>&#38;lt;b&#62; and &amp;amp;</p>')).toBe('&lt;b> and &amp;');
+  });
 });
 
 describe('fetchDocsPages', () => {
