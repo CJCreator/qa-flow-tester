@@ -15,7 +15,9 @@
 
 `CollapsibleGroup` puts its `headerRight` content inside the `<summary>` of a `<details>`. Both uses pass a `BulkSwitch`, which is a `<button>` ("Switch off this group’s pages", "Switch off every link on this page"). A button inside a `<summary>` is an interactive control inside interactive content: screen readers announce it badly, and `BulkSwitch` needs `e.preventDefault()` so the click does not also toggle the group.
 
-## Owner decision needed
+## Owner decision (settled)
+
+**Settled by the owner on 2026-11-11:** move the "Switch off" button inside the opened group. Build the Change below as written; the options are kept for the record.
 
 Where should the group button go?
 

@@ -65,4 +65,4 @@ export default defineConfig({
 
 ## Notes
 
-- If the owner would rather keep coverage, the other route is a CI step `pnpm exec vitest run --project unit --coverage`. That is a different ticket; do not do both.
+- Settled by the owner on 2026-11-11: delete the coverage setup. Running coverage in CI is not planned.

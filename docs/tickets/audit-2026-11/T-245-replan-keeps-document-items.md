@@ -20,7 +20,9 @@ Plan Items written from the person's documents carry a `docSource` (the document
 
 (T-126 left this open: "needs a decision on where to keep them and has no ticket yet".)
 
-## Owner decision needed
+## Owner decision (settled)
+
+**Settled by the owner on 2026-11-11:** carry the document Plan Items over into the new Plan as they are. No new stored data. Build the Change below as written; the options are kept for the record.
 
 Where do the document items live between a scan and a re-plan?
 

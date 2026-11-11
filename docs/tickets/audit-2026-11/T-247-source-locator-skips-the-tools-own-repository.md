@@ -18,7 +18,9 @@ After a Check-up finds a problem on an element with a `data-testid`, the orchest
 
 When the Check-up is run from CI inside the checked app's own repository (`checkup.ts`), `process.cwd()` is the right folder and the lookup is useful. That must keep working.
 
-## Owner decision needed
+## Owner decision (settled)
+
+**Settled by the owner on 2026-11-11:** skip the source locator only when the repository root is the tool's own repository. Build the Change below as written; the options are kept for the record.
 
 Which folder should the lookup search?
 

@@ -17,7 +17,9 @@
 
 T-202 moved the manifest and `index.html` to the Certificate palette (`#F4F6F4` paper) but left the favicon and the share image on the old dark-blue palette (`#111827` and a light-blue `#6C9BF2`). The tab icon and the link preview no longer match the app.
 
-## Owner decision needed
+## Owner decision (settled)
+
+**Settled by the owner on 2026-11-11:** use the dark Certificate palette from `DESIGN.md`. Build the Change below as written; the options are kept for the record.
 
 T-202 asked for design sign-off. Options for the colours:
 

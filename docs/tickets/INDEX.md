@@ -33,7 +33,7 @@ Plan: [WEBSITE-AUDIT-RELIABILITY-PLAN.md](WEBSITE-AUDIT-RELIABILITY-PLAN.md). De
 
 One file per ticket under [audit-2026-11/](audit-2026-11/). Each file names the files it may edit and the tickets it must not be built beside. These 54 tickets cover what the audit left over: findings that never got a ticket, and work that built tickets deferred in their Notes.
 
-The tickets are grouped into chains. Tickets in one chain edit the same files, so build them one after another in wave order. Different chains can be built at the same time, with two limits: T-240 also edits `packages/runner/src/routes/plan.ts`, so do not build it beside T-256, T-258 or T-260; and T-225 edits every workflow file, so build it after T-274 if both are in flight. "(owner decision)" marks a ticket written for a default the owner should confirm first.
+The tickets are grouped into chains. Tickets in one chain edit the same files, so build them one after another in wave order. Different chains can be built at the same time, with two limits: T-240 also edits `packages/runner/src/routes/plan.ts`, so do not build it beside T-256, T-258 or T-260; and T-225 edits every workflow file, so build it after T-274 if both are in flight. No ticket is waiting on a decision: the owner settled all eleven open choices on 2026-11-11, and each ticket records the answer.
 
 ### CI workflows
 
@@ -65,8 +65,8 @@ The tickets are grouped into chains. Tickets in one chain edit the same files, s
 | [T-259](audit-2026-11/T-259-one-copy-of-is-inside-and-cookie-reader.md) | One copy of `isInside` and one cookie reader | - | P3 | S | 3 | todo | T-256 |
 | [T-267](audit-2026-11/T-267-visual-baselines-send-the-new-screenshot.md) | The Visual Baselines list sends the new screenshot, so it can be kept | - | P2 | M | 4 | todo | T-259 |
 | [T-258](audit-2026-11/T-258-one-copy-of-target-url-sign-in-and-plan-load-helpers.md) | One copy each of `resolveTargetUrl`, `signInAccount`, `hasCompleteSignIn` and `ensurePlanLoaded` | - | P3 | S | 5 | todo | T-267 |
-| [T-260](audit-2026-11/T-260-one-add-tokens-for-ai-usage.md) | One `addTokens` for AI token use (owner decision) | - | P3 | S | 6 | todo | T-258 |
-| [T-261](audit-2026-11/T-261-one-https-check-for-cookie-secure-flag.md) | One "was this visit https" check for the cookie Secure flag (owner decision) | - | P3 | S | 7 | todo | T-260 |
+| [T-260](audit-2026-11/T-260-one-add-tokens-for-ai-usage.md) | One `addTokens` for AI token use | - | P3 | S | 6 | todo | T-258 |
+| [T-261](audit-2026-11/T-261-one-https-check-for-cookie-secure-flag.md) | One "was this visit https" check for the cookie Secure flag | - | P3 | S | 7 | todo | T-260 |
 | [T-265](audit-2026-11/T-265-ai-estimate-asks-openrouter-once.md) | The AI estimate asks OpenRouter for today's requests once | - | P3 | S | 8 | todo | T-261 |
 
 ### Website Audit routes, then the wizard and core text that follow them
@@ -95,7 +95,7 @@ The tickets are grouped into chains. Tickets in one chain edit the same files, s
 
 | id | title | gaps | priority | size | wave | status | depends on |
 |---|---|---|---|---|---|---|---|
-| [T-232](audit-2026-11/T-232-one-missing-title-problem-across-checks.md) | A missing page title counts as two problems (search check and accessibility scan) (owner decision) | - | P2 | S | 1 | todo | - |
+| [T-232](audit-2026-11/T-232-one-missing-title-problem-across-checks.md) | A missing page title counts as two problems (search check and accessibility scan) | - | P2 | S | 1 | todo | - |
 | [T-249](audit-2026-11/T-249-one-severity-order-and-one-doc-source-of.md) | One severity order and one `docSourceOf` in core | - | P3 | S | 2 | todo | T-232 |
 | [T-251](audit-2026-11/T-251-delete-six-unused-core-members.md) | Delete six unused members in core and types | - | P3 | M | 3 | todo | T-249 |
 
@@ -103,8 +103,8 @@ The tickets are grouped into chains. Tickets in one chain edit the same files, s
 
 | id | title | gaps | priority | size | wave | status | depends on |
 |---|---|---|---|---|---|---|---|
-| [T-247](audit-2026-11/T-247-source-locator-skips-the-tools-own-repository.md) | The source locator does not search the tool's own repository (owner decision) | - | P3 | S | 1 | todo | - |
-| [T-252](audit-2026-11/T-252-visual-baseline-recording-is-unreachable.md) | Recording masked visual baselines is unreachable (`RunOptions.updateBaselines`) (owner decision) | - | P3 | S | 2 | todo | T-247 |
+| [T-247](audit-2026-11/T-247-source-locator-skips-the-tools-own-repository.md) | The source locator does not search the tool's own repository | - | P3 | S | 1 | todo | - |
+| [T-252](audit-2026-11/T-252-visual-baseline-recording-is-unreachable.md) | Recording masked visual baselines is unreachable (`RunOptions.updateBaselines`) | - | P3 | S | 2 | todo | T-247 |
 
 ### Independent (any order, beside anything)
 
@@ -116,18 +116,18 @@ The tickets are grouped into chains. Tickets in one chain edit the same files, s
 | [T-234](audit-2026-11/T-234-security-csrf-and-depth-checks-that-fail-say-so.md) | The CSRF check and the security-depth checks that could not run read as a pass | - | P2 | S | 1 | todo | - |
 | [T-242](audit-2026-11/T-242-ux-gap-synthesizer-checks-provider-type.md) | The UX gap synthesizer checks `providerType`, not the class name | - | P3 | S | 1 | todo | - |
 | [T-243](audit-2026-11/T-243-one-zip-writer.md) | One ZIP writer: the Playwright export uses `writeZip` | - | P3 | S | 1 | todo | - |
-| [T-245](audit-2026-11/T-245-replan-keeps-document-items.md) | Re-planning keeps the Plan Items that came from documents (owner decision) | - | P2 | M | 1 | todo | - |
+| [T-245](audit-2026-11/T-245-replan-keeps-document-items.md) | Re-planning keeps the Plan Items that came from documents | - | P2 | M | 1 | todo | - |
 | [T-246](audit-2026-11/T-246-planning-batches-run-in-parallel.md) | Page planning batches run in parallel when the AI pacing allows | - | P3 | M | 1 | todo | - |
 | [T-250](audit-2026-11/T-250-delete-account-pool-figma-sync-and-unused-namespacer-methods.md) | Delete the account pool, the Figma sync and two unused `EntityNamespacer` methods | - | P3 | S | 1 | todo | - |
 | [T-272](audit-2026-11/T-272-ignore-files-list-generated-folders.md) | ESLint and Docker ignore the generated folders; `.gitignore` loses redundant lines | - | P3 | S | 1 | todo | - |
 | [T-273](audit-2026-11/T-273-site-nginx-gzip-and-one-csp.md) | Site nginx compresses text files and states the CSP once | - | P3 | S | 1 | todo | - |
 | [T-274](audit-2026-11/T-274-dependabot-watches-site-image.md) | Dependabot watches the site image | - | P3 | S | 1 | todo | - |
-| [T-276](audit-2026-11/T-276-manual-deploy-script-matches-ci.md) | The manual deploy script allows the same origins as CI and verifies the commit (owner decision) | - | P3 | S | 1 | todo | - |
-| [T-277](audit-2026-11/T-277-runner-dockerfile-single-stage-decision.md) | Record why the runner image stays single-stage (owner decision) | - | P4 | S | 1 | todo | - |
+| [T-276](audit-2026-11/T-276-manual-deploy-script-matches-ci.md) | The manual deploy script allows the same origins as CI and verifies the commit | - | P3 | S | 1 | todo | - |
+| [T-277](audit-2026-11/T-277-runner-dockerfile-single-stage-decision.md) | Record why the runner image stays single-stage | - | P4 | S | 1 | todo | - |
 | [T-285](audit-2026-11/T-285-wizard-delete-unused-plan-translate-functions.md) | Wizard: delete four unused Plan translation functions and their tests | - | P3 | S | 1 | todo | - |
 | [T-286](audit-2026-11/T-286-wizard-delete-unused-context-and-onboarding-helpers.md) | Wizard: delete `buildProductContext` and `hasNonDefaultOptions` and their tests | - | P3 | S | 1 | todo | - |
-| [T-287](audit-2026-11/T-287-plan-group-switch-outside-summary.md) | Plan Review: the group "Switch off" button leaves the `<summary>` (owner decision) | - | P3 | S | 1 | todo | - |
-| [T-288](audit-2026-11/T-288-favicon-and-share-image-use-current-palette.md) | Favicon and share image use the current palette (owner decision) | - | P4 | S | 1 | todo | - |
+| [T-287](audit-2026-11/T-287-plan-group-switch-outside-summary.md) | Plan Review: the group "Switch off" button leaves the `<summary>` | - | P3 | S | 1 | todo | - |
+| [T-288](audit-2026-11/T-288-favicon-and-share-image-use-current-palette.md) | Favicon and share image use the current palette | - | P4 | S | 1 | todo | - |
 
 ## Open: carried over
 

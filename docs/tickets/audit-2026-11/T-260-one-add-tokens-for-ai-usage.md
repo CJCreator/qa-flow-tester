@@ -17,7 +17,9 @@
 
 `addTokens` (adds the tokens each AI stage used) exists twice with different code: in `server.ts` (adds a visual review's use to the report) and in `routes/plan.ts` (adds a replan's use to the plan budget). The sums are the same. They differ in what they return when the second argument adds nothing.
 
-## Owner decision needed
+## Owner decision (settled)
+
+**Settled by the owner on 2026-11-11:** the single `addTokens` returns `undefined` when there is nothing to add, so no empty entry is saved. Build the Change below as written; the options are kept for the record.
 
 Case: the first argument is `undefined` and the second is an empty object `{}` (the AI made no request).
 

@@ -18,7 +18,9 @@
 1. **Allowed origins.** The script sets `RUNNER_ALLOWED_ORIGINS` to three origins: the runner URL, its hash URL and the static site URL. CI sets two: `$RUNNER_URL` and the hash URL. Whoever deploys last decides which origins the runner accepts, and which URLs are accepted as the Cloud Scheduler token audience.
 2. **Site check.** CI's "Verify the site serves this commit" step needs `version.json` to hold this commit's SHA. The script accepts any `version.json` that has a `commit` field, so an old image passes. Run locally, `site-build` also stamps `commit` as `unknown`, because `GITHUB_SHA` is not set. Also, when either check fails the script only prints a warning and exits 0.
 
-## Owner decision needed
+## Owner decision (settled)
+
+**Settled by the owner on 2026-11-11:** remove the extra origin from the manual deploy script so it matches the GitHub deploy. Build the Change below as written; the options are kept for the record.
 
 Which origin list is right?
 

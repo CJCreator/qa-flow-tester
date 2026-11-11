@@ -17,7 +17,9 @@ A page with no `<title>` is reported twice: by the search check ("Page is missin
 
 `problemKey` is meant to group them, but in a Check-up every finding already carries an `issueKey` written by core's `mergeDuplicateFindings` (`checker|title|where`), and that key includes the checker. So the plain-title grouping never happens. T-180 only corrected the comment.
 
-## Owner decision needed
+## Owner decision (settled)
+
+**Settled by the owner on 2026-11-11:** count a missing page title once. It still lowers both the Findable and Accessible grades. Build the Change below as written; the options are kept for the record.
 
 Which problems that two checks both report should count once?
 

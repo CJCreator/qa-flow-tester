@@ -24,7 +24,9 @@ Four places decide whether a visit came over https. Each is written differently:
 
 The results differ. Example: behind Cloudflare with no `X-Forwarded-Proto`, the beta session cookie is set without `Secure` while the Helper cookie is set with it. `X-Forwarded-Proto: http,https` counts as https for the two `server.ts` checks (substring match) but not for the others.
 
-## Owner decision needed
+## Owner decision (settled)
+
+**Settled by the owner on 2026-11-11:** use the shared `isHttpsRequest` check in both places. Build the Change below as written; the options are kept for the record.
 
 The `Secure` flag is a security setting, so the rule should be one rule. Options:
 

@@ -16,7 +16,9 @@
 
 T-212 decided "the site image stays single-stage" (its Notes). That was about `site/Dockerfile` only, and T-212 edited only `docs/CONTAINER_DEPLOYMENT.md`, so the runner image was never decided. The file has no comment saying whether single-stage is on purpose.
 
-## Owner decision needed
+## Owner decision (settled)
+
+**Settled by the owner on 2026-11-11:** keep the runner image single-stage and record why in the Dockerfile. Build the Change below as written; the options are kept for the record.
 
 Options:
 

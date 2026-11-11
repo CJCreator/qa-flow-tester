@@ -22,7 +22,9 @@ ADR 0019 says new visual baselines are taken with masks (dates, ads, password fi
 
 So no baseline in a normal install has a sidecar, every comparison runs unmasked, and the masking half of ADR 0019 never takes effect. T-135 left the option alone because wiring it is a product decision.
 
-## Owner decision needed
+## Owner decision (settled)
+
+**Settled by the owner on 2026-11-11:** delete the unreachable baseline-recording code and note it in ADR 0019. Wiring the feature through is not planned. Build the Change below as written; the options are kept for the record.
 
 - **A. Delete the unreachable recording code (recommended default, matches the standing "delete everything unused" decision).** Remove `updateBaselines`, its `if` branch and `writeVisualBaseline`. Keep the code that reads a sidecar, so a hand-placed masked baseline still compares masked. Amend ADR 0019 to say so. Cheap and reversible through git.
 - **B. Finish the feature.** Add a Check-up option "Record visual baselines" (a field in `packages/types/src/checkup-api.ts`, a stored-context field, `checkup-run.ts` passing it as `updateBaselines`, a CLI flag in `runner/src/checkup.ts`, a checkbox in the wizard, docs). About M to L, touches four packages. It makes ADR 0019 true. Needs its own plan and tickets.
