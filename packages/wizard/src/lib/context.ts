@@ -53,18 +53,6 @@ export function rejectReason(name: string, sizeBytes: number, options: { allowDo
   return null;
 }
 
-/**
- * Joins every file and the pasted notes into one Product Context document. Each source gets its
- * own top-level heading, so the heading-based context parser keeps them apart and still sees each
- * file's own headings as separate requirements. Returns undefined when there is nothing to send.
- */
-export function buildProductContext(files: ReferenceFile[], pasted: string): string | undefined {
-  const parts = files
-    .filter((f) => f.content.trim())
-    .map((f) => `# Reference file: ${f.name}\n\n${f.content.trim()}\n`);
-  if (pasted.trim()) parts.push(`# Pasted notes\n\n${pasted.trim()}\n`);
-  return parts.length > 0 ? parts.join('\n') : undefined;
-}
 
 /** What the file picker gives us; a browser `File` fits. */
 export interface PickedFile {

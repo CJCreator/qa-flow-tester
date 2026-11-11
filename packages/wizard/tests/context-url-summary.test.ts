@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { Finding, ReleaseReport } from '@qa/types';
 import { ContextParser } from '../../core/src/discovery/context-parser';
-import { buildProductContext, rejectReason } from '../src/lib/context';
+import { rejectReason } from '../src/lib/context';
 import { normalizeUrl } from '../src/lib/url';
 import { groupProblems, pageResults, summarizeReport } from '../src/lib/summary';
 import { EMPTY_FORM, productContextOf } from '../src/lib/form';
@@ -16,47 +16,6 @@ describe('reference materials', () => {
     expect(rejectReason('big.md', 2 * 1024 * 1024)).toMatch(/larger than 500 KB/);
     expect(rejectReason('flows.MD', 100)).toBeNull();
     expect(rejectReason('notes.txt', 100)).toBeNull();
-  });
-
-  it('returns nothing to send when no files or notes were added', () => {
-    expect(buildProductContext([], '')).toBeUndefined();
-    expect(buildProductContext([{ name: 'empty.md', content: '  \n' }], '   ')).toBeUndefined();
-  });
-
-  it('joins several files so the context parser still finds requirements from each one', () => {
-    const context = buildProductContext(
-      [
-        {
-          name: 'prd.md',
-          content: '# Checkout\n- Coupon codes are case-insensitive\n\n## Refunds\n- Refunds take 5 days',
-        },
-        { name: 'flows.txt', content: 'Users sign in with email\n- Password must be 8+ characters' },
-      ],
-      'Admins can export invoices'
-    )!;
-
-    expect(context).toContain('# Reference file: prd.md');
-    expect(context).toContain('# Reference file: flows.txt');
-    expect(context).toContain('# Pasted notes');
-
-    const parsed = new ContextParser().parseContent(context);
-    const names = parsed.requirements.map((r) => r.name);
-    expect(names).toEqual([
-      'Reference file: prd.md',
-      'Checkout',
-      'Refunds',
-      'Reference file: flows.txt',
-      'Pasted notes',
-    ]);
-    const rules = parsed.requirements.flatMap((r) => r.rules);
-    expect(rules).toEqual([
-      'Coupon codes are case-insensitive',
-      'Refunds take 5 days',
-      'Password must be 8+ characters',
-    ]);
-    // Prose outside bullet lists isn't a parsed rule, but the discovery prompt includes the raw text in full
-    expect(parsed.rawContent).toContain('Users sign in with email');
-    expect(parsed.rawContent).toContain('Admins can export invoices');
   });
 });
 
