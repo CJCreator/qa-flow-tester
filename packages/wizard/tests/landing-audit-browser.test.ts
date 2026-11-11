@@ -1,9 +1,9 @@
 /**
- * The landing page in Chromium: the light/dark toggle, an axe pass in both themes and at phone width,
+ * The landing page in Chromium: the light/dark toggle (light by default), an axe pass in both themes and at phone width,
  * and no third-party requests. Slow: builds the wizard and serves it from the QA Tool, like
  * wizard-e2e.test.ts. axe-core is taken from the checkers package, so nothing new is installed.
  */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { promises as fs } from 'fs';
 import { createRequire } from 'module';
 import path from 'path';
@@ -12,6 +12,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from 'playwrig
 import { build } from 'vite';
 import { RunnerServer } from '@qa/runner';
 import { KeyResolver, type SecretStore } from '@qa/core';
+import { THEME_KEY } from '../src/lib/theme';
 
 const TOOL_PORT = 3487;
 const toolUrl = `http://localhost:${TOOL_PORT}`;
@@ -45,6 +46,7 @@ describe('landing page in a browser', () => {
   const requested: string[] = [];
 
   const theme = (on: Page = page) => on.evaluate(() => document.documentElement.getAttribute('data-theme'));
+  const darkToggle = (on: Page = page) => on.getByRole('button', { name: 'Dark theme' });
 
   async function openLanding(on: Page = page): Promise<void> {
     await on.goto(`${toolUrl}/`);
@@ -101,52 +103,64 @@ describe('landing page in a browser', () => {
       await fs.rm(dir, { recursive: true, force: true }).catch(() => {});
   });
 
-  it('Light theme button sets data-theme=light on <html>, survives reload, switching back removes it', async () => {
+  beforeEach(async () => {
+    await page.goto(`${toolUrl}/`);
+    await page.evaluate((key) => localStorage.removeItem(key), THEME_KEY);
+  });
+
+  it('Dark theme button saves dark on <html>, survives reload, and pressing it again saves light', async () => {
     await openLanding();
     expect(await theme()).toBeNull();
-    const toggle = page.getByRole('button', { name: 'Light theme' });
+    const toggle = darkToggle();
     expect(await toggle.getAttribute('aria-pressed')).toBe('false');
     await toggle.click();
-    expect(await theme()).toBe('light');
+    expect(await theme()).toBe('dark');
     expect(await toggle.getAttribute('aria-pressed')).toBe('true');
 
     await page.reload();
     await page.getByRole('heading', { level: 1, name: 'QA without a QA team.' }).waitFor();
-    expect(await theme()).toBe('light');
+    expect(await theme()).toBe('dark');
 
-    await page.getByRole('button', { name: 'Light theme' }).click();
-    expect(await theme()).toBeNull();
+    await darkToggle().click();
+    expect(await theme()).toBe('light');
     await page.reload();
     await page.getByRole('heading', { level: 1, name: 'QA without a QA team.' }).waitFor();
-    expect(await theme()).toBeNull();
+    expect(await theme()).toBe('light');
   }, 60000);
 
-  it('app screens (/check) stay dark', async () => {
+  it('follows a dark device until a choice is saved', async () => {
+    await page.emulateMedia({ colorScheme: 'dark' });
+    try {
+      await openLanding();
+      expect(await theme()).toBeNull();
+      expect(await darkToggle().getAttribute('aria-pressed')).toBe('true');
+      await darkToggle().click();
+      expect(await theme()).toBe('light');
+    } finally {
+      await page.emulateMedia({ colorScheme: 'light' });
+    }
+  }, 60000);
+
+  it('app screens (/check) use the theme chosen on the landing page', async () => {
     await openLanding();
-    await page.getByRole('button', { name: 'Light theme' }).click();
-    expect(await theme()).toBe('light');
+    await darkToggle().click();
+    expect(await theme()).toBe('dark');
     await page.goto(`${toolUrl}/check`);
     await page.getByRole('heading', { level: 1 }).first().waitFor({ timeout: 15000 });
-    expect(await theme()).toBeNull();
-    // Back on the landing page the choice is still remembered; put it back for the next test.
+    expect(await theme()).toBe('dark');
+  }, 60000);
+
+  it('landing has no serious or critical axe violations (light, the default)', async () => {
     await openLanding();
-    expect(await theme()).toBe('light');
-    await page.getByRole('button', { name: 'Light theme' }).click();
     expect(await theme()).toBeNull();
+    expect(await seriousViolations()).toEqual([]);
   }, 60000);
 
   it('landing has no serious or critical axe violations (dark)', async () => {
     await openLanding();
-    expect(await theme()).toBeNull();
+    await darkToggle().click();
+    expect(await theme()).toBe('dark');
     expect(await seriousViolations()).toEqual([]);
-  }, 60000);
-
-  it('landing has no serious or critical axe violations (light)', async () => {
-    await openLanding();
-    await page.getByRole('button', { name: 'Light theme' }).click();
-    expect(await theme()).toBe('light');
-    expect(await seriousViolations()).toEqual([]);
-    await page.getByRole('button', { name: 'Light theme' }).click();
   }, 60000);
 
   it('landing has no serious or critical axe violations at 375 px, with no sideways scroll', async () => {
