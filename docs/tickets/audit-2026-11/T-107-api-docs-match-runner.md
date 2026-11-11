@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P2 | S | runner | docs | todo |
+| P2 | S | runner | docs | built |
 
 **Files you may edit (no others):**
 - `docs/API.md`
@@ -116,9 +116,9 @@ None. Check: `pnpm exec prettier --check docs/API.md docs/ARCHITECTURE.md`, and 
 
 ## Done when
 
-- [ ] All seven edits are in.
-- [ ] No "Not yet built" line about T-86 remains in either file.
-- [ ] Prettier check passes.
+- [x] All seven edits are in.
+- [x] No "Not yet built" line about T-86 remains in either file.
+- [x] Prettier check passes.
 
 ## Notes
 

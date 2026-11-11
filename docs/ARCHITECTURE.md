@@ -42,7 +42,7 @@ No Plan, no verdict. `POST /api/audits` (owner) validates the request, claims th
 7. `writing-documents`: `documents/write-all.ts` writes the seven audit documents.
 8. `saving`: Page Content, phone screenshots and the result go through the audit store.
 
-`pipeline/pipeline.ts` records a failed stage as not done, never as a clean result; later stages still run. A stop ends the run and saves nothing. On start-up the runner marks versions left running as stopped, reason `tool-restarted` (`recoverRunningAudits` in `server.ts`). Later steps are separate routes: edits overlay, rewrites, improved-homepage preview (`audit/preview/`), exports, Shared Links, Shortlist, Helpers (`docs/API.md`). AI model per stage is chosen with `GET/PUT /api/audit-ai/models`; on a local runner, Google sign-in (ADC) stands in when no key works (ADR 0042).
+`pipeline/pipeline.ts` records a failed stage as not done, never as a clean result; later stages still run. A stop ends the run and saves nothing. On start-up the runner marks versions left running as stopped, reason `tool-restarted` (`recoverRunningAudits` in `server.ts`). Later steps are separate routes: edits overlay, rewrites, improved-homepage preview (`audit/preview/`), exports, Shared Links, Shortlist, Helpers (`docs/API.md`). AI model per stage is chosen with `GET/PUT /api/audit-ai/models`; on a local runner, Google sign-in (ADC) stands in when no key works (ADR 0042). Signed-in owner access on the hosted copy (ADR 0042, T-86): a Google account whose email is in `AUDIT_OWNER_EMAILS` is an audit owner.
 
 ## Routes and access
 
