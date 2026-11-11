@@ -103,43 +103,15 @@ jobs:
       project: unit
       shard: ${{ matrix.shard }}
 
-  # Same as ci.yml's audit job, repeated here so a high or critical advisory blocks the deploy. A reusable
-  # workflow would need ci.yml to declare workflow_call; cross-workflow needs is not possible.
+  # Blocks the deploy on a finding.
   audit:
     if: github.repository == 'CJCreator/qa-flow-tester'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - name: Audit production dependencies
-        run: pnpm audit --prod --audit-level high
+    uses: ./.github/workflows/audit.yml
 
-  # Same as ci.yml's secret-scan job: gitleaks over the full history. Blocks the deploy on a finding.
+  # Blocks the deploy on a finding.
   secret-scan:
     if: github.repository == 'CJCreator/qa-flow-tester'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Install gitleaks
-        env:
-          GITLEAKS_VERSION: 8.30.1
-        run: |
-          base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
-          tarball="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
-          cd "$RUNNER_TEMP"
-          curl -sSfL -O "${base}/${tarball}"
-          curl -sSfL -O "${base}/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
-          sha256sum --ignore-missing -c "gitleaks_${GITLEAKS_VERSION}_checksums.txt"
-          tar -xzf "$tarball" gitleaks
-      - name: Scan history
-        run: '"$RUNNER_TEMP/gitleaks" git --config .gitleaks.toml --redact --no-banner --exit-code 1 .'
+    uses: ./.github/workflows/secret-scan.yml
 
   # The runner: the full app, behind its access key (RUNNER_ACCESS_TOKEN from Secret Manager).
   # A skipped job normally skips everything that needs it, so the deploys check the results themselves:
