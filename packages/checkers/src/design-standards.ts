@@ -39,6 +39,38 @@ export function normalizeColor(val: string): string {
   return trimmed.replace(/\s*,\s*/g, ', ');
 }
 
+/**
+ * PNG file signature: 137 80 78 71 13 10 26 10 (89 50 4E 47 0D 0A 1A 0A).
+ */
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+/**
+ * Reads PNG dimensions from the first 24 bytes of a buffer without decoding the image data.
+ * Returns null if the buffer is not a valid PNG or is too short.
+ */
+export function pngSize(buf: Buffer): { width: number; height: number } | null {
+  if (buf.length < 24) {
+    return null;
+  }
+  if (!buf.subarray(0, 8).equals(PNG_SIGNATURE)) {
+    return null;
+  }
+  if (buf.toString('ascii', 12, 16) !== 'IHDR') {
+    return null;
+  }
+  const width = buf.readUInt32BE(16);
+  const height = buf.readUInt32BE(20);
+  return { width, height };
+}
+
+/**
+ * Maximum number of pixels allowed for visual diff comparison (e.g. 5000x5000 = 25 MP).
+ * Each decoded RGBA image is 4 bytes per pixel (~100 MB), and comparing two images allocates
+ * up to three copies (~300 MB) synchronously on the Node event loop.
+ * Screens exceeding this limit are refused before decoding to avoid memory exhaustion and event loop stalls.
+ */
+export const MAX_VISUAL_DIFF_PIXELS = 25_000_000;
+
 export class DesignStandardsChecker {
   /**
    * Tier 1: Deterministic Computed CSS Design Token Check
@@ -226,11 +258,19 @@ export class DesignStandardsChecker {
   ): Promise<VisualDiffResult> {
     const maxDiff = options.maxDiffPercent ?? 0.01; // 1% of pixels
 
-    if (currentScreenshot.length === 0 || baselineScreenshot.length === 0) {
-      return { match: false, diffPercent: 1.0, diffPixels: 0, sizeMismatch: false };
-    }
     if (currentScreenshot.equals(baselineScreenshot)) {
       return { match: true, diffPercent: 0, diffPixels: 0, sizeMismatch: false };
+    }
+
+    const currentSize = pngSize(currentScreenshot);
+    const baselineSize = pngSize(baselineScreenshot);
+    if (
+      !currentSize ||
+      !baselineSize ||
+      currentSize.width * currentSize.height > MAX_VISUAL_DIFF_PIXELS ||
+      baselineSize.width * baselineSize.height > MAX_VISUAL_DIFF_PIXELS
+    ) {
+      return { match: false, diffPercent: 0, diffPixels: 0, sizeMismatch: false, tooLarge: true };
     }
 
     const current = PNG.sync.read(currentScreenshot);
@@ -269,6 +309,19 @@ export class DesignStandardsChecker {
       currentImagePath?: string;
     }
   ): Finding {
+    if (result.tooLarge) {
+      return couldNotVerifyFinding(
+        'design-standards',
+        'whether the page still matches its approved look (the screenshot is too large to compare)',
+        {
+          testCaseId: context.testCaseId,
+          role: context.role,
+          breakpoint: context.breakpoint,
+          urlPath: context.urlPath,
+        }
+      );
+    }
+
     const id = `F-VISUAL-${context.testCaseId}-${context.breakpoint}`;
     const actual = result.sizeMismatch
       ? 'Screenshot dimensions differ from baseline (layout shift)'
@@ -302,5 +355,7 @@ export interface VisualDiffResult {
   diffPercent: number;
   diffPixels: number;
   sizeMismatch: boolean;
+  /** Set to true when an image exceeds MAX_VISUAL_DIFF_PIXELS or is not a valid PNG. */
+  tooLarge?: boolean;
   diffImagePath?: string;
 }
