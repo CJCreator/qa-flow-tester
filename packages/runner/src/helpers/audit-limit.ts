@@ -9,8 +9,6 @@ export interface AuditLimitOutcome {
   resetsAt?: string;
 }
 
-export const AUDIT_DAILY_LIMIT_ERROR = 'Daily limit of audit starts reached for today.';
-
 export class AuditDailyLimiter {
   private limit?: number;
   private usage = new Map<string, { day: string; count: number }>();
@@ -44,9 +42,5 @@ export class AuditDailyLimiter {
     }
     record.count++;
     return { allowed: true };
-  }
-
-  reset(): void {
-    this.usage.clear();
   }
 }

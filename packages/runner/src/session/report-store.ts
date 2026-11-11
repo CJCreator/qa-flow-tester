@@ -22,8 +22,6 @@ export interface ReportStore {
   /** Today's `runDir` / `relativeToRun`. */
   dirFor(runId: string): string;
   relativePath(runId: string, file?: string): string | undefined;
-  /** Today's `siteDir`: the per-site memory/history folder. */
-  siteDirFor(): string;
   /** Today's `listRuns`. */
   list(): Promise<RunSummary[]>;
   /** Forget the cached run index: call after a run's summary.json is rewritten in place. */
@@ -79,10 +77,6 @@ export class DefaultReportStore implements ReportStore {
     if (!file) return undefined;
     const rel = path.relative(this.dirFor(runId), file);
     return rel && !rel.startsWith('..') && !path.isAbsolute(rel) ? rel.replace(/\\/g, '/') : undefined;
-  }
-
-  siteDirFor(): string {
-    return path.join(this.paths.dataDir, 'sites');
   }
 
   invalidate(): void {

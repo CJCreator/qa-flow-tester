@@ -673,7 +673,7 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
         (deps.readDefaults ? (await deps.readDefaults()).screenSizes : undefined) ||
         ALL_SCREEN_SIZES;
       const urlFirst = body.owner !== undefined;
-      const { readOnly, signInConsent: consent, testCopy: testHost, owner } = authorization;
+      const { readOnly, signInConsent: consent, testCopy: testHost } = authorization;
 
       if (deps.beta) {
         const checked = await resolvePublic(typed.hostname, deps.hostChecks);

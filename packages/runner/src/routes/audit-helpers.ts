@@ -219,4 +219,3 @@ export function auditHelperRoutes(deps: AuditHelperRouteDeps): Route[] {
   ];
 }
 
-export const createAuditHelperRoutes = auditHelperRoutes;

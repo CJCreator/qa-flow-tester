@@ -167,12 +167,6 @@ export function getRunningInfo(slot: RunSlot, runs?: AuditRuns): { kind: 'checku
   if (slot.running) {
     return slot.running;
   }
-  if (slot.kind === 'audit') {
-    return {
-      kind: 'audit',
-      href: '/audits',
-    };
-  }
   return {
     kind: 'checkup',
     href: '/check',

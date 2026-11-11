@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P3 | M | runner | dead-code | todo |
+| P3 | M | runner | dead-code | built |
 
 **Files you may edit (no others):**
 - `packages/runner/src/routes/audit-share.ts`
@@ -126,9 +126,9 @@ No new test. Run: `pnpm exec vitest run --project unit packages/runner/tests`, t
 
 ## Done when
 
-- [ ] All seven items are done, or listed in your notes with the hit that kept them.
-- [ ] `pnpm exec eslint packages/runner/src 2>&1 | grep -c "never used"` is lower than before and has no entry for the names above.
-- [ ] Runner unit tests, `pnpm build` and `pnpm typecheck` pass.
+- [x] All seven items are done, or listed in your notes with the hit that kept them.
+- [x] `pnpm exec eslint packages/runner/src 2>&1 | grep -c "never used"` is lower than before and has no entry for the names above.
+- [x] Runner unit tests, `pnpm build` and `pnpm typecheck` pass.
 
 ## Notes
 

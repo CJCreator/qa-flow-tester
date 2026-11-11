@@ -32,6 +32,7 @@ import {
   generatePitchGlimpse,
   pageContentName,
   previewCspForHtml,
+  PREVIEW_FILE_NAME,
   shareRecordKey,
   shareSnapshotKey,
   type AuditStore,
@@ -69,8 +70,6 @@ export function sharedPageHeaders(html: string): Record<string, string> {
 
 const ROBOTS_META = '<meta name="robots" content="noindex, nofollow">';
 
-/** The stored improved-homepage preview of a version (BE-605). */
-export const PREVIEW_FILE_NAME = 'preview.html';
 /** The edit overlay beside a version's result (BE-509). */
 const EDITS_NAME = 'edits';
 /** A share body is three short fields. */
