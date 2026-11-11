@@ -4,7 +4,7 @@ What the product does. Terms follow [CONTEXT.md](../CONTEXT.md). Settings: [CONF
 
 ## Who it is for
 
-Teams that release a web app without a QA person, and people who look at someone else's public website to find what to repair. It runs in the browser, with no test code to write. Open source and self-hosted; a hosted copy runs on Google Cloud Run.
+Teams that release a web app without a QA person, and people who look at someone else's public website to find what to repair. It runs in the browser, with no test code to write. Source-available (Functional Source License, MIT after two years) and self-hosted; a hosted copy runs on Google Cloud Run.
 
 ## Two areas
 
