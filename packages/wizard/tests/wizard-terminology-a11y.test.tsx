@@ -91,4 +91,3 @@ describe('glossary words in UI text (CONTEXT.md _Avoid_ lists)', () => {
     expect(read(file)).not.toContain(phrase);
   });
 });
-

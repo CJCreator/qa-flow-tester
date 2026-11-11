@@ -201,7 +201,15 @@ describe('ReportGenerator findings contract', () => {
       targetUrl: 'http://localhost:4000',
       timestamp: '2026-09-26T12:00:00Z',
       durationMs: 1000,
-      coverage: { totalTestPoints: 1, passed: 0, failed: 0, blocked: 0, skipped: 0, couldNotVerify: 1, completionRate: 100 },
+      coverage: {
+        totalTestPoints: 1,
+        passed: 0,
+        failed: 0,
+        blocked: 0,
+        skipped: 0,
+        couldNotVerify: 1,
+        completionRate: 100,
+      },
       results: [],
       findings: [
         {
@@ -233,7 +241,15 @@ describe('ReportGenerator findings contract', () => {
       targetUrl: 'http://localhost:4000',
       timestamp: '2026-09-26T12:00:00Z',
       durationMs: 1000,
-      coverage: { totalTestPoints: 1, passed: 1, failed: 0, blocked: 0, skipped: 0, couldNotVerify: 0, completionRate: 100 },
+      coverage: {
+        totalTestPoints: 1,
+        passed: 1,
+        failed: 0,
+        blocked: 0,
+        skipped: 0,
+        couldNotVerify: 0,
+        completionRate: 100,
+      },
       results: [],
       findings: [
         {

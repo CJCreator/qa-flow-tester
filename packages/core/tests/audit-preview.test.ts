@@ -323,7 +323,9 @@ describe('preview images through the real makeOutboundFetch (BE-101), network fa
 
   it('the template removes a claim written across a line break', () => {
     const facts = previewFacts(input());
-    facts.sections = [{ id: 's1', kind: 'section', heading: 'Our shop passes\nWCAG checks', text: 'Our shop passes\nWCAG checks' }];
+    facts.sections = [
+      { id: 's1', kind: 'section', heading: 'Our shop passes\nWCAG checks', text: 'Our shop passes\nWCAG checks' },
+    ];
     const html = buildTemplateHtml(facts);
     expect(findClaimWords(html)).toEqual([]);
   });

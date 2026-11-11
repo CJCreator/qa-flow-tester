@@ -3,9 +3,7 @@
  * the attribute word "name" says nothing about the field, only its value does.
  */
 export function fieldHint(target: string): string {
-  return target
-    .toLowerCase()
-    .replace(/\b(name|id|type|placeholder|aria-label|data-testid|for)\s*=/g, ' ');
+  return target.toLowerCase().replace(/\b(name|id|type|placeholder|aria-label|data-testid|for)\s*=/g, ' ');
 }
 
 /** A believable value for a form field, from its selector and label. */

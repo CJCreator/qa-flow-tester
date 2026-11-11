@@ -92,11 +92,7 @@ const SIGNATURES: Record<TechnologyName, readonly Signature[]> = {
   Blogger: [gen(/^blogger\b/i), host('blogger.com'), siteHost('blogspot.com')],
   Dukaan: [gen(/^dukaan\b/i), host('mydukaan.io'), host('dukaan.app'), siteHost('mydukaan.io')],
   'GoDaddy Website Builder': [gen(/go ?daddy website builder/i), host('img1.wsimg.com'), host('img.secureserver.net')],
-  React: [
-    marker('data-reactroot'),
-    path('/react.production.min.js'),
-    path('/react-dom.production.min.js'),
-  ],
+  React: [marker('data-reactroot'), path('/react.production.min.js'), path('/react-dom.production.min.js')],
   'Next.js': [
     gen(/^next\.js\b/i),
     marker('__NEXT_DATA__'),

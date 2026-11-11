@@ -106,7 +106,11 @@ if (!built('node_modules')) fail('Nothing is installed yet. Run pnpm bootstrap f
 
 // 1. Build whatever is missing or out of date: the libraries it runs on, then the Wizard it serves.
 // tsc rewrites every output file on each build, so one file per package marks when it was last built.
-const packageSources = (name) => [`packages/${name}/src`, `packages/${name}/package.json`, `packages/${name}/tsconfig.json`];
+const packageSources = (name) => [
+  `packages/${name}/src`,
+  `packages/${name}/package.json`,
+  `packages/${name}/tsconfig.json`,
+];
 const libraries = [
   ['types', 'index.js'],
   ['checkers', 'index.js'],
@@ -115,7 +119,7 @@ const libraries = [
 ];
 if (
   libraries.some(([name, entry]) =>
-    outOfDate(`packages/${name}/dist/${entry}`, [...packageSources(name), 'tsconfig.base.json']),
+    outOfDate(`packages/${name}/dist/${entry}`, [...packageSources(name), 'tsconfig.base.json'])
   )
 ) {
   console.log('[QA Tool] Building the QA Tool…');

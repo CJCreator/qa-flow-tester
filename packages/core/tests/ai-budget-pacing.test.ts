@@ -123,7 +123,10 @@ describe('PacedAI concurrency', () => {
     const paced = new PacedAI(provider, Infinity, {
       gapMs: 0,
       signal: stop.signal,
-      sleep: () => new Promise<void>((resolve) => { release = resolve; }),
+      sleep: () =>
+        new Promise<void>((resolve) => {
+          release = resolve;
+        }),
     });
     const asking = paced.generateText([{ role: 'user', content: 'x' }]).catch((e) => e);
     await Promise.resolve();

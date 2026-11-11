@@ -1,11 +1,6 @@
 import type { Page } from 'playwright';
 import type { Finding, TestCase, StepEvidence, Breakpoint } from '@qa/types';
-import {
-  captureRefusalBaseline,
-  judgeRefusal,
-  readRefusal,
-  type RefusalBaseline,
-} from './refusal-rule.js';
+import { captureRefusalBaseline, judgeRefusal, readRefusal, type RefusalBaseline } from './refusal-rule.js';
 
 /** Elements sites commonly use to show a validation or error message. */
 const ERROR_MESSAGE_SELECTOR = [

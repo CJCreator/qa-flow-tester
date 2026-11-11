@@ -385,8 +385,7 @@ export class UXQualityChecker {
         for (const target of smallestFirst.slice(0, 10)) {
           const label = target.text || target.ariaLabel || target.testId || `unlabeled <${target.tagName}>`;
           // WCAG 2.2 AA (2.5.8) asks for 24x24px. 44x44px is the AAA / platform guidance level.
-          const belowAA =
-            (target.width < WCAG_MIN_TARGET_PX || target.height < WCAG_MIN_TARGET_PX) && !target.spaced;
+          const belowAA = (target.width < WCAG_MIN_TARGET_PX || target.height < WCAG_MIN_TARGET_PX) && !target.spaced;
           findings.push({
             id: `F-UX-TARGET-${context.testCaseId || 'GEN'}-${counter++}`,
             testCaseId: context.testCaseId,

@@ -196,7 +196,15 @@ describe('GET export', () => {
     await store.saveAuditDocument(id, 1, 'content', 'markdown', 'STALE COPY');
     await store.writeVersionJson(id, 1, 'edits', {
       findings: [],
-      sections: [{ urlPath: '/', sectionId: 's1', text: 'My own edited section text', by: 'person', editedAt: '2026-01-01T00:00:00.000Z' }],
+      sections: [
+        {
+          urlPath: '/',
+          sectionId: 's1',
+          text: 'My own edited section text',
+          by: 'person',
+          editedAt: '2026-01-01T00:00:00.000Z',
+        },
+      ],
       recommendations: [],
       removedPages: [],
       updatedAt: '2026-01-01T00:00:00.000Z',
