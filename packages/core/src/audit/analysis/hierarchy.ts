@@ -1,5 +1,6 @@
 import type { HierarchyNode, InternalLinking, NavigationLink, PageContent, PageHierarchy } from '@qa/types';
 import { redactUrl } from '../../redact.js';
+import { isSameSite } from '../../same-site.js';
 import type { RawMenuItem, RawPage } from './raw-page.js';
 
 /**
@@ -170,7 +171,7 @@ function hrefToSitePath(href: string | null, pageUrl: string): string | null {
     return null;
   }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
-  if (url.host.toLowerCase() !== base.host.toLowerCase()) return null;
+  if (!isSameSite(url.host, base.host)) return null;
   return redactUrl(`${url.pathname}${url.search}`);
 }
 
