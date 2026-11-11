@@ -8,15 +8,6 @@ const FREE_TEXT = /^[A-Za-z][A-Za-z '.,-]{2,79}$/;
 
 export class EntityNamespacer {
   /**
-   * Generates a unique, collision-resistant identifier prefixed with worker ID.
-   */
-  static generateName(baseName: string, workerId: string | number): string {
-    const cleanBase = baseName.trim().replace(/[^a-zA-Z0-9_-]/g, '_');
-    const randomSuffix = Math.random().toString(36).substring(2, 7);
-    return `${cleanBase}_w${workerId}_${randomSuffix}`;
-  }
-
-  /**
    * Same run + Test + screen size always gives the same token, so a retry reuses it.
    * Six lowercase letters: safe in names and emails. Holds no secret.
    */
@@ -57,30 +48,5 @@ export class EntityNamespacer {
     if (UNSAFE_HINT.test(`${step.name ?? ''} ${step.selector ?? ''}`)) return value;
     if (FREE_TEXT.test(value)) return `${value} ${token}`;
     return value;
-  }
-
-  /**
-   * Replaces variables like `{{entityName}}` or `{{unique_id}}` inside test step values.
-   * With a run token the result is the same on every call; without one it is random.
-   */
-  static injectStepValues(step: TestCaseStep, workerId: string | number, runToken?: string): TestCaseStep {
-    if (!step.value) {
-      return step;
-    }
-
-    let modifiedValue = step.value;
-    if (modifiedValue.includes('{{unique}}') || modifiedValue.includes('{{entityName}}')) {
-      const uniqueToken = runToken
-        ? `w${workerId}_${runToken}`
-        : `w${workerId}_${Math.random().toString(36).substring(2, 7)}`;
-      modifiedValue = modifiedValue
-        .replace(/\{\{unique\}\}/g, uniqueToken)
-        .replace(/\{\{entityName\}\}/g, `entity_${uniqueToken}`);
-    }
-
-    return {
-      ...step,
-      value: modifiedValue,
-    };
   }
 }
