@@ -37,7 +37,8 @@ export class SiteRootAuditor {
 
   /**
    * Audit root assets (robots.txt, sitemap.xml, llms.txt, AI crawler directives).
-   * Results are cached per base URL to prevent redundant network requests.
+   * Results are cached per base URL for the lifetime of the checker (one Check-up)
+   * and only for complete answers (failed fetches or HTTP 5xx are not cached).
    */
   async audit(
     fetchFn: (url: string) => Promise<{ status: () => number; text?: () => Promise<string> } | null>,
@@ -47,6 +48,8 @@ export class SiteRootAuditor {
     if (this.cache.has(origin)) {
       return this.cache.get(origin)!;
     }
+
+    let complete = true;
 
     const findings: Finding[] = [];
     const role = context.role || 'visitor';
@@ -62,6 +65,9 @@ export class SiteRootAuditor {
     try {
       const robotsUrl = `${origin}/robots.txt`;
       const res = await fetchFn(robotsUrl);
+      if (!res || res.status() >= 500) {
+        complete = false;
+      }
       if (res && res.status() >= 200 && res.status() < 300 && res.text) {
         hasRobotsTxt = true;
         robotsTxtContent = await res.text();
@@ -77,11 +83,7 @@ export class SiteRootAuditor {
 
         for (const rawLine of lines) {
           const line = rawLine.split('#')[0].trim();
-          if (!line) {
-            currentUserAgents = [];
-            groupHasRules = false;
-            continue;
-          }
+          if (!line) continue;
 
           const uaMatch = line.match(/^User-agent:\s*(.+)$/i);
           if (uaMatch) {
@@ -173,6 +175,7 @@ export class SiteRootAuditor {
         });
       }
     } catch {
+      complete = false;
       // Ignore network errors
     }
 
@@ -183,6 +186,9 @@ export class SiteRootAuditor {
     try {
       const probeUrl = sitemapUrl || `${origin}/sitemap.xml`;
       const sitemapRes = await fetchFn(probeUrl);
+      if (!sitemapRes || sitemapRes.status() >= 500) {
+        complete = false;
+      }
       if (sitemapRes && sitemapRes.status() >= 200 && sitemapRes.status() < 300) {
         hasSitemap = true;
         sitemapUrl = probeUrl;
@@ -206,6 +212,7 @@ export class SiteRootAuditor {
         });
       }
     } catch {
+      complete = false;
       // Ignore
     }
 
@@ -216,6 +223,9 @@ export class SiteRootAuditor {
     try {
       const llmsUrl = `${origin}/llms.txt`;
       const llmsRes = await fetchFn(llmsUrl);
+      if (!llmsRes || llmsRes.status() >= 500) {
+        complete = false;
+      }
       if (llmsRes && llmsRes.status() >= 200 && llmsRes.status() < 300 && llmsRes.text) {
         hasLlmsTxt = true;
         llmsTxtContent = await llmsRes.text();
@@ -262,6 +272,7 @@ export class SiteRootAuditor {
         });
       }
     } catch {
+      complete = false;
       // Ignore
     }
 
@@ -276,7 +287,9 @@ export class SiteRootAuditor {
       findings,
     };
 
-    this.cache.set(origin, result);
+    if (complete) {
+      this.cache.set(origin, result);
+    }
     return result;
   }
 }
