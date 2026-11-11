@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P3 | M | runner | dead-code | blocked |
+| P3 | M | runner | dead-code | built |
 
 **Files you may edit (no others):**
 - `packages/runner/src/server.ts`
@@ -119,10 +119,10 @@ No new test. Run the whole runner unit suite: `pnpm exec vitest run --project un
 
 ## Done when
 
-- [ ] `pnpm exec eslint packages/runner/src/server.ts 2>&1 | grep -c "never used"` prints `0`.
-- [ ] Every member in Group 2 is deleted or listed in your notes with the hit that kept it.
-- [ ] The repeated busy check is gone from `startRunFromRequest`.
-- [ ] Runner unit tests, `pnpm build` and `pnpm typecheck` pass.
+- [x] `pnpm exec eslint packages/runner/src/server.ts 2>&1 | grep -c "never used"` prints `0`.
+- [x] Every member in Group 2 is deleted or listed in your notes with the hit that kept it.
+- [x] The repeated busy check is gone from `startRunFromRequest`.
+- [x] Runner unit tests, `pnpm build` and `pnpm typecheck` pass.
 
 ## Notes
 

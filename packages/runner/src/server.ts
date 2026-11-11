@@ -9,7 +9,6 @@ import {
   signInReasonText,
   summarizeDocument,
   type DocumentSummary,
-  type StorageStateData,
   type RunStartBody,
 } from '@qa/types';
 import { serveUi, type UiApp } from './ui-static.js';
@@ -53,14 +52,10 @@ import type {
   RunSummary,
   ReleaseReport,
   RoleCredential,
-  TestCase,
   AIProviderType,
   RunnerPhase,
-  ReviewPlan,
   Breakpoint,
-  DiscoveredFlow,
   DiscoveryDraft,
-  PageLink,
   AIRequestBudget,
   BenchmarkJob,
   SignInFailureReason,
@@ -68,7 +63,6 @@ import type {
   ProviderLimits,
   AiKeySource,
 } from '@qa/types';
-import { normalizePlanIntents, normalizeTestIntents } from '@qa/types';
 import {
   createAIProvider,
   KeyResolver,
@@ -310,10 +304,6 @@ const AI_PROVIDERS: Array<{ id: AIProviderType; name: string; free: boolean }> =
 ];
 /** AI requests the visual review of a finished run may use: part of the AI Request Budget estimate. */
 const VISUAL_REVIEW_CALLS = 20;
-/** Pages explored on another host the person includes from the review. */
-const INCLUDED_HOST_PAGES = 30;
-/** Pages explored for a sign-in added from the review. */
-const SIGNED_IN_PAGES = 60;
 const DOWNLOADABLE_REPORT_FILES: Record<string, string> = {
   'report.html': 'text/html; charset=utf-8',
   'report.md': 'text/markdown; charset=utf-8',
@@ -321,7 +311,6 @@ const DOWNLOADABLE_REPORT_FILES: Record<string, string> = {
   'issues.md': 'text/markdown; charset=utf-8',
   'issues.html': 'text/html; charset=utf-8',
 };
-const RUNS_KEPT_PER_SITE = 10;
 /** One scheduled run may hold the tick request this long (28 min); past it the run is left going and marked failed. */
 const SCHEDULE_RUN_CAP_MS = 28 * 60 * 1000;
 /** A tick starts no new run after this long (29 min): Cloud Scheduler gives up on a request at 30 min (ADR 0039). */
@@ -448,61 +437,7 @@ export interface AuditWiring {
   readonly checkAddress?: AuditAddressCheck;
 }
 
-/** Plans saved before Intent carry the old Denial kind; read them as `intent: 'denied'`. */
-function normalizeStoredPlan(record: StoredPlanRecord): StoredPlanRecord {
-  if (!record?.plan || !record.context) return record;
-  const draftPlan = record.context.draft?.plan;
-  return {
-    ...record,
-    status: record.status ?? 'awaiting-review',
-    plan: normalizePlanIntents(record.plan),
-    context: {
-      ...record.context,
-      draft: draftPlan
-        ? {
-            ...record.context.draft,
-            plan: { ...draftPlan, pages: draftPlan.pages.map((p) => ({ ...p, tests: normalizeTestIntents(p.tests) })) },
-          }
-        : record.context.draft,
-    },
-  };
-}
-
 export type { StoredPlanRecord };
-
-/**
- * The plan as the review screen needs it: without each page's raw inventory of controls, and with
- * its links cut down to where they go (the map's lines). The full plan stays on the server.
- */
-function planForClient(plan: ReviewPlan): ReviewPlan {
-  const { testCases: _testCases, ...rest } = plan;
-  return {
-    ...rest,
-    pages: plan.pages.map(({ elements: _elements, links, ...page }) => ({
-      ...page,
-      links: links?.filter((l) => !l.leavesSite).map((l) => ({ to: l.to, landsOn: l.landsOn }) as PageLink),
-    })),
-  };
-}
-
-/**
- * What a PATCH that only switched items, answered questions or changed sizes changed: the summary,
- * what won't run, the answers, the sizes, and the items touched (a page whole when one of its tests was).
- */
-function planDelta(plan: ReviewPlan, touched: Set<string>) {
-  const pageTouched = (p: NonNullable<ReviewPlan['planPages']>[number]) =>
-    touched.has(p.id) || p.tests.some((t) => touched.has(t.id));
-  return {
-    delta: true as const,
-    summary: plan.summary,
-    wontRun: plan.wontRun,
-    screenSizes: plan.screenSizes,
-    questions: plan.questions,
-    planPages: (plan.planPages || []).filter(pageTouched),
-    navigation: (plan.navigation || []).filter((n) => touched.has(n.id)),
-    flows: plan.flows.filter((f) => touched.has(`journey:${f.id}`)),
-  };
-}
 
 type RememberedSignIn = NonNullable<SiteMemory['signIns']>[number];
 
@@ -537,18 +472,6 @@ function upsertSignIn(
 }
 
 export { resolveReadOnly };
-
-/** A test case in the shape the plan check reads. */
-function asFlow(testCase: TestCase): DiscoveredFlow {
-  return {
-    id: testCase.id,
-    name: testCase.name || testCase.id,
-    role: testCase.role,
-    description: '',
-    startPage: testCase.startPage,
-    steps: testCase.steps || [],
-  };
-}
 
 /**
  * Scans stored audits and recovers any version left in 'running' status (ADR 0042, T-85).
@@ -672,23 +595,6 @@ export class RunnerServer {
   private get runGeneration(): number {
     return this.session.run.generation;
   }
-  private set runGeneration(val: number) {
-    this.session.run.setGeneration(val);
-  }
-
-  private get activeAbortController(): AbortController | null {
-    return this.session.run.abortController();
-  }
-  private set activeAbortController(val: AbortController | null) {
-    this.session.run.setAbortController(val);
-  }
-
-  private get finishController(): AbortController | null {
-    return this.session.run.finishController();
-  }
-  private set finishController(val: AbortController | null) {
-    this.session.run.setFinishController(val);
-  }
 
   private get lastReport(): ReleaseReport | null {
     return this.session.report.last;
@@ -714,78 +620,26 @@ export class RunnerServer {
   private get currentCustomHeaders(): Record<string, string> | undefined {
     return this.session.secrets.headers;
   }
-  private set currentCustomHeaders(val: Record<string, string> | undefined) {
-    this.session.secrets.set({
-      headers: val,
-      tunnelAuth: this.session.secrets.tunnelAuth,
-      headerHosts: this.session.secrets.headerHosts,
-      userAgent: this.session.secrets.userAgent,
-    });
-  }
 
   private get currentTunnelAuth(): string | undefined {
     return this.session.secrets.tunnelAuth;
-  }
-  private set currentTunnelAuth(val: string | undefined) {
-    this.session.secrets.set({
-      headers: this.session.secrets.headers,
-      tunnelAuth: val,
-      headerHosts: this.session.secrets.headerHosts,
-      userAgent: this.session.secrets.userAgent,
-    });
   }
 
   private get currentHeaderHosts(): string[] | undefined {
     return this.session.secrets.headerHosts;
   }
-  private set currentHeaderHosts(val: string[] | undefined) {
-    this.session.secrets.set({
-      headers: this.session.secrets.headers,
-      tunnelAuth: this.session.secrets.tunnelAuth,
-      headerHosts: val,
-      userAgent: this.session.secrets.userAgent,
-    });
-  }
 
   private get currentUserAgent(): string | undefined {
     return this.session.secrets.userAgent;
-  }
-  private set currentUserAgent(val: string | undefined) {
-    this.session.secrets.set({
-      headers: this.session.secrets.headers,
-      tunnelAuth: this.session.secrets.tunnelAuth,
-      headerHosts: this.session.secrets.headerHosts,
-      userAgent: val,
-    });
-  }
-
-  private get authDir(): string {
-    return this.session.paths.authDir;
-  }
-
-  private get planFile(): string {
-    return this.session.plan.file;
   }
 
   private get legacyDataDir(): string | undefined {
     return this.session.paths.legacyDataDir;
   }
 
-  get savedSessions(): Map<string, Record<string, StorageStateData>> {
-    return this.session.secrets.savedSessions;
-  }
-
   /** What the Website Audit routes use (BE-612): read-only, the same object on every read. */
   public get auditWiring(): AuditWiring {
     return this.wiring;
-  }
-
-  public runAuthDir(runId: string): string {
-    return this.session.secrets.authDirFor(runId);
-  }
-
-  public async cleanAuthDir(runId: string): Promise<void> {
-    await this.session.secrets.clean(runId);
   }
 
   private redactedMessage(err: unknown, extraRoles?: Array<Partial<RoleCredential>>): string {
@@ -843,7 +697,8 @@ export class RunnerServer {
     );
     this.accessToken = options.accessToken?.trim() || undefined;
     this.routes = options.routes ?? allRoutes;
-    // One audit store per runner (ADR 0036), shared by Helper access and the audit routes. No I/O here.
+    // One audit store per runner (ADR 0036), shared by Helper access and the audit routes. Recovery of
+    // versions left "running" by a crash starts here and is awaited before the first audit request.
     const auditStore = createAuditStore(selectAuditStoreBackend({ dataDir: this.dataDir }));
     this.auditRecoveryDone = recoverRunningAudits(auditStore);
     // Schedules follow the audit store: in the bucket on the hosted copy (they survive a redeploy), a file otherwise.
@@ -968,12 +823,6 @@ export class RunnerServer {
     if (!this.currentRunId) return;
     if (typeof event.runId === 'string' && event.runId !== this.currentRunId) return;
     this.session.events.publish(event.type === 'RUN_COMPLETED' ? { type: event.type, runId: event.runId } : event);
-  }
-
-  /** Stores the report before announcing completion, so a client reacting to RUN_COMPLETED gets this run's report. */
-  private forwardRunEvent(event: OrchestratorEvent): void {
-    if (event.type === 'RUN_COMPLETED') this.lastReport = event.report;
-    this.broadcastRunnerEvent(event);
   }
 
   /**
@@ -2414,28 +2263,9 @@ export class RunnerServer {
     return this.session.report.dirFor(runId);
   }
 
-  /** A path inside a run's folder, as the Wizard addresses it: /api/evidence/runs/<runId>/<path>. */
-  private relativeToRun(runId: string, file?: string): string | undefined {
-    return this.session.report.relativePath(runId, file);
-  }
-
   /** Every finished check-up, newest first. A folder without a summary is a run that never finished. */
   private async listRuns(): Promise<RunSummary[]> {
     return this.session.report.list();
-  }
-
-  /**
-   * Keeps a finished run: its full report and a short summary beside the files the run wrote. The
-   * newest findings also stay at the top of the report folder, where the next run's delta reads them.
-   * Then only the newest RUNS_KEPT_PER_SITE runs of the site are kept.
-   */
-  private async keepRun(report: ReleaseReport, typedTargetUrl: string, siteHost: string | undefined): Promise<void> {
-    return this.session.report.keep(report, typedTargetUrl, siteHost);
-  }
-
-  /** Deletes a site's runs past the newest RUNS_KEPT_PER_SITE, and folders of runs that never finished. */
-  private async pruneRuns(host: string): Promise<void> {
-    return this.session.report.prune(host);
   }
 
   /** The newest finished run's report, so a restart still has it. */
@@ -3243,20 +3073,6 @@ export class RunnerServer {
   }
 
   private async startRunFromRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
-    if (this.checkupStartRefused) {
-      this.sendJson(res, 409, {
-        error: this.beta
-          ? 'Someone else is running a check-up on this shared copy. Try again in a few minutes.'
-          : 'Another check-up is running. Wait for it to finish, or stop it first.',
-        code: 'ERR_RUN_IN_PROGRESS',
-        suggestion: this.beta
-          ? 'Only one check-up runs at a time here. Try again in a few minutes.'
-          : 'Wait for the check-up in progress to finish, or stop it, then start this one.',
-        running: this.session.run.running ?? { kind: 'checkup', href: '/check' },
-      });
-      return;
-    }
-
     let body: RunStartBody;
     try {
       body = await this.readJsonBody<RunStartBody>(req);
@@ -3633,51 +3449,6 @@ export class RunnerServer {
   /** The site a plan is for, as typed ("localhost:3050"). */
   private hostOfPlan(record: StoredPlanRecord): string {
     return this.session.plan.hostOf(record);
-  }
-
-  private parkedFile(host: string): string {
-    return this.session.plan.parkedFileFor(host);
-  }
-
-  /** Keeps a waiting plan aside while another site is checked: in memory (with its sign-ins) and on disk (without). */
-  private async parkPlan(record: StoredPlanRecord): Promise<void> {
-    return this.session.plan.park(record);
-  }
-
-  /** Takes a site's kept-aside plan back out, or null when there's none. */
-  private async unparkPlan(host: string): Promise<StoredPlanRecord | null> {
-    return this.session.plan.unpark(host);
-  }
-
-  /** Every plan kept aside, for the new check-up screen. */
-  private async listParkedPlans(): Promise<
-    Array<{ host: string; targetUrl: string; runId: string; discoveredAt: string; pages: number }>
-  > {
-    const waiting = await this.session.plan.waiting();
-    return waiting.map(({ host, record }) => ({
-      host,
-      targetUrl: record.plan.targetUrl,
-      runId: record.plan.runId,
-      discoveredAt: record.plan.discoveredAt,
-      pages: record.plan.planPages?.length ?? record.plan.pages.length,
-    }));
-  }
-
-  private async savePlan(record: StoredPlanRecord): Promise<void> {
-    return this.session.plan.save(record);
-  }
-
-  /**
-   * The plan as written to disk. Sign-in details stay in memory only; after a
-   * restart the approval has to send them again.
-   */
-  private planForDisk(record: StoredPlanRecord): StoredPlanRecord {
-    return this.session.plan.forDisk(record);
-  }
-
-  /** Forgets the paused plan; with a runId, only while it is still that run's plan (a newer run may have replaced it). */
-  private async clearPlan(runId?: string): Promise<void> {
-    return this.session.plan.clear(runId);
   }
 
   private async handleServeBaseline(fileName: string, res: http.ServerResponse): Promise<void> {
