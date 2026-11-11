@@ -30,6 +30,7 @@ import {
   type AuditRequest,
   type AuditStage,
   type AuditStartReply,
+  type AuditStopReply,
 } from '@qa/types';
 import {
   AuditBrowserLaunchError,
@@ -65,6 +66,8 @@ const MAX_START_BODY_CHARS = 16_384;
 export const AUDIT_INVALID = 'Some fields need a change. See the message next to each one.';
 export const AUDIT_BAD_BODY = 'The request body must be a JSON object.';
 export const AUDIT_FORBIDDEN_START = 'Only the owner of this QA Tool can start a Website Audit.';
+export const AUDIT_FORBIDDEN_STOP = 'Only the owner of this QA Tool can stop a Website Audit.';
+export const AUDIT_NOT_RUNNING = 'This Website Audit is not running, so there is nothing to stop.';
 export const AUDIT_UNREACHABLE = 'The site could not be reached.';
 export const AUDIT_BUSY =
   'Another Check-up, benchmark or Website Audit is in progress. Start this one when it has finished.';
@@ -199,7 +202,10 @@ function refuse(
   sendJson(res, status, body);
 }
 
-function row(key: 'start' | 'stream', handle: Route['handle']): Route & { method: string; access: AuditAccess } {
+function row(
+  key: 'start' | 'stream' | 'stop',
+  handle: Route['handle']
+): Route & { method: string; access: AuditAccess } {
   const { method, path: routePath, access } = AUDIT_API[key];
   // Closed on a beta copy (D-004): only 'public' Shared Link rows are served there.
   return { method, path: routePath, access, beta: 'closed', handle };
@@ -617,7 +623,21 @@ export function createAuditCrawlRoutes(deps: AuditCrawlRouteDeps): Route[] {
     req.on('close', unsubscribe);
   });
 
-  return [start, stream];
+  const stop = row('stop', async (context) => {
+    const { res } = context;
+    const caller = await deps.caller(context);
+    if (!caller.owner) return refuse(res, 403, 'ERR_FORBIDDEN', AUDIT_FORBIDDEN_STOP);
+    const run = runs.get(context.params?.id ?? '');
+    if (!run || run.finished) {
+      const reply: AuditStopReply = { stopped: false, message: AUDIT_NOT_RUNNING };
+      return sendJson(res, 200, reply);
+    }
+    run.stop();
+    const reply: AuditStopReply = { stopped: true };
+    sendJson(res, 202, reply);
+  });
+
+  return [start, stream, stop];
 }
 
 /**

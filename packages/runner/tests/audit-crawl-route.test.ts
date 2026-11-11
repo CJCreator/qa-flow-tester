@@ -9,7 +9,14 @@ import type { AddressInfo } from 'net';
 import fs from 'fs/promises';
 import os from 'os';
 import path from 'path';
-import { AUDIT_API, AUDIT_ID_PATTERN, type AuditProgressEvent, type AuditRequest, type AuditResult } from '@qa/types';
+import {
+  AUDIT_API,
+  AUDIT_ID_PATTERN,
+  type AuditProgressEvent,
+  type AuditRequest,
+  type AuditResult,
+  type AuditStopReply,
+} from '@qa/types';
 import {
   AuditCrawlBlockedError,
   AuditPipelineError,
@@ -22,6 +29,8 @@ import {
 } from '@qa/core';
 import {
   AUDIT_CRAWL_FAILED,
+  AUDIT_FORBIDDEN_STOP,
+  AUDIT_NOT_RUNNING,
   AUDIT_SAVE_FAILED,
   AUDIT_STOPPED,
   auditCrawlRoutes,
@@ -238,16 +247,18 @@ afterEach(async () => {
 describe('route rows', () => {
   it('declare AUDIT_API method, path and access, closed in beta', () => {
     for (const rows of [createAuditCrawlRoutes(deps()), auditCrawlRoutes({ ...deps(), store })]) {
-      expect(rows).toHaveLength(2);
-      const [start, stream] = rows;
+      expect(rows).toHaveLength(3);
+      const [start, stream, stop] = rows;
       expect([start.method, start.path, start.access]).toEqual([AUDIT_API.start.method, AUDIT_API.start.path, 'owner']);
       expect([stream.method, stream.path, stream.access]).toEqual([
         AUDIT_API.stream.method,
         AUDIT_API.stream.path,
         'view',
       ]);
+      expect([stop.method, stop.path, stop.access]).toEqual([AUDIT_API.stop.method, AUDIT_API.stop.path, 'owner']);
       expect(start.beta).toBe('closed');
       expect(stream.beta).toBe('closed');
+      expect(stop.beta).toBe('closed');
     }
   });
 });
@@ -776,5 +787,68 @@ describe('GET /api/audits/:id/stream', () => {
     expect(await stream.status).toBe(200);
     await stream.ended;
     expect(stream.events.at(-1)?.type).toBe('done');
+  });
+});
+
+// ---- stop -------------------------------------------------------------------------------------------
+
+describe('POST /api/audits/:id/stop', () => {
+  it('refuses a caller who is not the owner with 403 ERR_FORBIDDEN', async () => {
+    const base = await serve(createAuditCrawlRoutes(deps()));
+    caller = { owner: false, helperEmail: 'helper@example.com' };
+    const res = await fetch(`${base}/api/audits/audit-0000000000000000000001/stop`, { method: 'POST' });
+    expect(res.status).toBe(403);
+    const json = (await res.json()) as Record<string, unknown>;
+    expect(json).toEqual({ error: AUDIT_FORBIDDEN_STOP, code: 'ERR_FORBIDDEN' });
+    expectErrorReply(json);
+  });
+
+  it('answers 200 stopped: false when that audit is not running (unknown id)', async () => {
+    const base = await serve(createAuditCrawlRoutes(deps()));
+    const res = await fetch(`${base}/api/audits/audit-0000000000000000000001/stop`, { method: 'POST' });
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as AuditStopReply;
+    expect(json).toEqual({ stopped: false, message: AUDIT_NOT_RUNNING });
+  });
+
+  it('answers 200 stopped: false when that audit has already finished', async () => {
+    const base = await serve(createAuditCrawlRoutes(deps()));
+    const { json: started } = await post(base, VALID);
+    await waitFor(runEnded(started.auditId));
+
+    const res = await fetch(`${base}/api/audits/${started.auditId}/stop`, { method: 'POST' });
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as AuditStopReply;
+    expect(json).toEqual({ stopped: false, message: AUDIT_NOT_RUNNING });
+  });
+
+  it('answers 202 stopped: true and stops the running audit version', async () => {
+    gate = deferred();
+    const base = await serve(createAuditCrawlRoutes(deps()));
+    const { json: started } = await post(base, VALID);
+    await waitFor(() => crawlCalls.length === 1);
+
+    const res = await fetch(`${base}/api/audits/${started.auditId}/stop`, { method: 'POST' });
+    expect(res.status).toBe(202);
+    const json = (await res.json()) as AuditStopReply;
+    expect(json).toEqual({ stopped: true });
+
+    gate.resolve();
+    await waitFor(runEnded(started.auditId));
+    expect(runs.get(started.auditId)!.finished).toBe(true);
+    const last = runs.get(started.auditId)!.lastEvent;
+    expect(last.type === 'failed' && last.error).toBe(AUDIT_STOPPED);
+    const v = await store.getVersion(started.auditId, 1);
+    expect(v?.status).toBe('stopped');
+    expect(slot.kind).toBeNull();
+  });
+
+  it('stops only that audit and never touches a Check-up', async () => {
+    expect(slot.begin('checkup-run', 'http://localhost:4000/', 'checkup')).toBe(true);
+    const base = await serve(createAuditCrawlRoutes(deps()));
+    const res = await fetch(`${base}/api/audits/audit-0000000000000000000001/stop`, { method: 'POST' });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ stopped: false, message: AUDIT_NOT_RUNNING });
+    expect(slot.kind).toBe('checkup');
   });
 });

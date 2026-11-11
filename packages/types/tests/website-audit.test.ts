@@ -584,6 +584,7 @@ describe('AUDIT_API', () => {
       ['GET', '/api/audits/:id/stream'],
       ['DELETE', '/api/audits/:id'],
       ['POST', '/api/audits/:id/rerun'],
+      ['POST', '/api/audits/:id/stop'],
       ['GET', '/api/audits/:id/edits'],
       ['PATCH', '/api/audits/:id/edits'],
       ['GET', '/api/audit-settings'],
