@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { validateAuditStartBody, type AuditPageState, type AuditProgressEvent } from '@qa/types/src/browser.js';
+import { validateAuditStartBody, type AuditProgressEvent } from '@qa/types/src/browser.js';
 import {
   AUDIT_FIELD_HINTS,
   AUDIT_LIMIT_BOUNDS,

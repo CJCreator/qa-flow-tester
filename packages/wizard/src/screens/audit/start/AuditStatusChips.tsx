@@ -12,7 +12,7 @@ export function aiStatusText(ai?: AuditAiStatus): string | null {
     case 'ready':
       return 'AI: ready';
     case 'key-expired':
-      return 'AI: key expired: update in Audit settings';
+      return 'AI: key expired: update in Settings';
     case 'no-key':
       return 'AI: no key: template text';
     case 'quota':
