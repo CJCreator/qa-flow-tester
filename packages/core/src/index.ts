@@ -72,6 +72,3 @@ export { renderIssuesHtml } from './issues-html.js';
 export * from './ai/visual-review.js';
 export * from './atomic-write.js';
 export * from './audit/index.js';
-export * from './sarif-export.js';
-export * from './network-intel.js';
-export * from './self-healing.js';

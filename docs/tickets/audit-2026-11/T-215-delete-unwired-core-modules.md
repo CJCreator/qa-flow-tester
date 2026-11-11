@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P3 | S | config | dead-code | todo |
+| P3 | S | config | dead-code | built |
 
 **Files you may edit (no others):**
 - `packages/core/src/self-healing.ts` (delete)
@@ -56,9 +56,9 @@ pnpm exec vitest run packages/core/tests/plan-quality-baseline.test.ts
 The grep from step 1 must now print nothing.
 
 ## Done when
-- [ ] The three files are gone and `index.ts` no longer exports them.
-- [ ] `pnpm build` and `pnpm typecheck` pass.
-- [ ] The grep prints nothing.
+- [x] The three files are gone and `index.ts` no longer exports them.
+- [x] `pnpm build` and `pnpm typecheck` pass.
+- [x] The grep prints nothing.
 
 ## Notes
 - `packages/core/tests/plan-quality-baseline.test.ts` came in the same commit but does not import these
