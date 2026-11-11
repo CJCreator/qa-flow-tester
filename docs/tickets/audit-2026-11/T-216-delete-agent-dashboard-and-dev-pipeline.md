@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P3 | S | config | dead-code | todo |
+| P3 | S | config | dead-code | built |
 
 **Files you may edit (no others):**
 - `agent-dashboard/` (delete the whole folder)
@@ -84,9 +84,9 @@ grep -rn "agent-dashboard\|dev-pipeline" --include=*.md --include=*.mjs --includ
 ```
 
 ## Done when
-- [ ] `git ls-files agent-dashboard dev-pipeline` prints nothing.
-- [ ] `eslint.config.mjs` has no `agent-dashboard` block.
-- [ ] `pnpm lint` has 0 errors; `pnpm test:plugin` passes.
+- [x] `git ls-files agent-dashboard dev-pipeline` prints nothing.
+- [x] `eslint.config.mjs` has no `agent-dashboard` block.
+- [x] `pnpm lint` has 0 errors; `pnpm test:plugin` passes.
 
 ## Notes
 - Do not touch `plugins/repo-orchestrator/` or `.claude-plugin/marketplace.json`: that plugin is in use.
