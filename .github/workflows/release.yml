@@ -53,6 +53,3 @@ jobs:
       # Unit tier only: no Chromium. The browser tier runs every night (e2e-nightly.yml).
       - name: Tests
         run: pnpm exec vitest run --project unit
-
-      - name: Build
-        run: pnpm build
