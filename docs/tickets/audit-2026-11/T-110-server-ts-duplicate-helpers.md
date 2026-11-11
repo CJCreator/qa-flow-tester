@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P3 | M | runner | inconsistency | blocked |
+| P3 | M | runner | inconsistency | built |
 
 **Files you may edit (no others):**
 - `packages/runner/src/server.ts`
@@ -124,9 +124,9 @@ No new test: behaviour is unchanged. Run the suites that cover remembered sign-i
 
 ## Done when
 
-- [ ] `grep -n "^function isRunId\|^function hostOfAddress" packages/runner/src/server.ts` prints nothing.
-- [ ] `grep -c "upsertSignIn(" packages/runner/src/server.ts` prints `4` (one declaration, three calls).
-- [ ] Runner unit tests, `pnpm build` and `pnpm typecheck` pass.
+- [x] `grep -n "^function isRunId\|^function hostOfAddress" packages/runner/src/server.ts` prints nothing.
+- [x] `grep -c "upsertSignIn(" packages/runner/src/server.ts` prints `4` (one declaration, three calls).
+- [x] Runner unit tests, `pnpm build` and `pnpm typecheck` pass.
 
 ## Notes
 

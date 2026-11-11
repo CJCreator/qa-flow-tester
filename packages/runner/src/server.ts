@@ -162,6 +162,8 @@ import {
   type BetaLimits,
 } from './beta.js';
 import { purgeVisitorFolders } from './session/visitor-cleanup.js';
+import { isRunId } from './session/report-store.js';
+import { hostOfAddress } from './session/plan-store.js';
 import { testCopyFor } from './host-policy.js';
 import { isLoopbackBindHost } from './bind-host.js';
 import {
@@ -203,10 +205,6 @@ function decodePath(part: string): string | null {
   } catch {
     return null;
   }
-}
-
-function isRunId(value: string): boolean {
-  return /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(value) && !value.includes('..');
 }
 
 async function exists(file: string): Promise<boolean> {
@@ -506,13 +504,36 @@ function planDelta(plan: ReviewPlan, touched: Set<string>) {
   };
 }
 
-/** An address's host as typed ("localhost:3050"), or the address itself when it isn't one. */
-function hostOfAddress(address: string): string {
-  try {
-    return new URL(address).host;
-  } catch {
-    return address;
-  }
+type RememberedSignIn = NonNullable<SiteMemory['signIns']>[number];
+
+/** Adds a Role's sign-in details to the remembered list, or updates the entry for that Role. Never the password. */
+function upsertSignIn(
+  list: RememberedSignIn[],
+  role: Pick<
+    RoleCredential,
+    | 'role'
+    | 'username'
+    | 'loginPath'
+    | 'usernameSelector'
+    | 'passwordSelector'
+    | 'submitSelector'
+    | 'postLoginSelector'
+    | 'postLoginUrl'
+  >
+): void {
+  const entry = {
+    role: role.role,
+    username: role.username,
+    loginPath: role.loginPath,
+    usernameSelector: role.usernameSelector,
+    passwordSelector: role.passwordSelector,
+    submitSelector: role.submitSelector,
+    postLoginSelector: role.postLoginSelector,
+    postLoginUrl: role.postLoginUrl,
+  };
+  const idx = list.findIndex((s) => s.role === role.role);
+  if (idx >= 0) list[idx] = { ...list[idx], ...entry };
+  else list.push(entry);
 }
 
 export { resolveReadOnly };
@@ -2082,22 +2103,7 @@ export class RunnerServer {
               continue;
             }
           }
-          const idx = existingSignIns.findIndex((s) => s.role === role.role);
-          const entry = {
-            role: role.role,
-            username: role.username,
-            loginPath: role.loginPath,
-            usernameSelector: role.usernameSelector,
-            passwordSelector: role.passwordSelector,
-            submitSelector: role.submitSelector,
-            postLoginSelector: role.postLoginSelector,
-            postLoginUrl: role.postLoginUrl,
-          };
-          if (idx >= 0) {
-            existingSignIns[idx] = { ...existingSignIns[idx], ...entry };
-          } else {
-            existingSignIns.push(entry);
-          }
+          upsertSignIn(existingSignIns, role);
         }
         memory.signIns = existingSignIns;
         await saveSiteMemory(this.siteDir(), memory);
@@ -2236,22 +2242,7 @@ export class RunnerServer {
         return;
       }
       const existing = [...(memory.signIns ?? [])];
-      const idx = existing.findIndex((s) => s.role === credential.role);
-      const entry = {
-        role: credential.role,
-        username: credential.username,
-        loginPath: credential.loginPath,
-        usernameSelector: credential.usernameSelector,
-        passwordSelector: credential.passwordSelector,
-        submitSelector: credential.submitSelector,
-        postLoginSelector: credential.postLoginSelector,
-        postLoginUrl: credential.postLoginUrl,
-      };
-      if (idx >= 0) {
-        existing[idx] = { ...existing[idx], ...entry };
-      } else {
-        existing.push(entry);
-      }
+      upsertSignIn(existing, credential);
       memory.signIns = existing;
       await saveSiteMemory(this.siteDir(), memory);
     }
@@ -2315,22 +2306,7 @@ export class RunnerServer {
           notSaved.push(role.role);
           continue;
         }
-        const idx = currentSignIns.findIndex((s) => s.role === role.role);
-        const entry = {
-          role: role.role,
-          username: role.username,
-          loginPath: role.loginPath,
-          usernameSelector: role.usernameSelector,
-          passwordSelector: role.passwordSelector,
-          submitSelector: role.submitSelector,
-          postLoginSelector: role.postLoginSelector,
-          postLoginUrl: role.postLoginUrl,
-        };
-        if (idx >= 0) {
-          currentSignIns[idx] = { ...currentSignIns[idx], ...entry };
-        } else {
-          currentSignIns.push(entry);
-        }
+        upsertSignIn(currentSignIns, role);
       }
       const next = { ...(memory ?? emptySiteMemory(host)), signIns: currentSignIns };
       return {
