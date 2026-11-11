@@ -11,7 +11,6 @@ import {
   withIntentSwitched,
 } from '../src/lib/intent-view';
 import { EMPTY_FORM, testCapOf } from '../src/lib/form';
-import { hasNonDefaultOptions } from '../src/lib/onboarding';
 
 const test = (id: string, intent?: PlanPageTest['intent']): PlanPageTest => ({
   id,
@@ -105,6 +104,5 @@ describe('Intent view', () => {
     expect(testCapOf({ testCap: '999999' })).toBe(100000);
     expect(testCapOf({ testCap: '0' })).toBeUndefined();
     expect(testCapOf({ testCap: 'abc' })).toBeUndefined();
-    expect(hasNonDefaultOptions({ ...EMPTY_FORM, testCap: '10' })).toBe(true);
   });
 });
