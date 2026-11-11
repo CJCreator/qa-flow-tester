@@ -8,6 +8,7 @@ import path from 'node:path';
 import type { Page } from 'playwright';
 import type {
   AreaAssessment,
+  AuditArea,
   AuditFinding,
   AuditProgressEvent,
   AuditRequest,
@@ -35,6 +36,7 @@ import type { RawPage } from '../src/audit/analysis/raw-page.js';
 import type { PhoneLayoutRecord } from '../src/audit/phone-layout.js';
 import type { AssessPagesInput, AssessSiteInput, PageAssessment } from '../src/audit/ai/assessment.js';
 import type { RecommendPagesInput } from '../src/audit/ai/page-recommendation.js';
+import type { AuditAi } from '../src/audit/ai/stage-ai.js';
 import {
   AuditPipelineError,
   areaGrades,
@@ -950,22 +952,25 @@ describe('audit pipeline: runAuditPipeline', () => {
 
   it('the timing reload runs in the pacer turn of the page host', async () => {
     const timingSpy = vi.fn(async () => ({
-      status: 'measured' as const,
-      source: 'this-tool' as const,
-      method: 'lab' as const,
-      strategy: 'mobile' as const,
-      values: [],
-      measuredAt: '2026-11-03T00:00:00.000Z',
+      speed: {
+        status: 'measured' as const,
+        source: 'this-tool' as const,
+        method: 'lab' as const,
+        strategy: 'mobile' as const,
+        values: [],
+        measuredAt: '2026-11-03T00:00:00.000Z',
+      },
+      raw: {},
     }));
     const recorder = createPageRecorder({
       workDir,
-      stages: pageStages({ measureBrowserTiming: timingSpy }),
+      stages: pageStages({ measureBrowserTiming: timingSpy as any }),
     });
     const fakePage = {
       url: () => 'https://example.com/a',
       urlPath: '/a',
     } as unknown as Page;
-    const info = { urlPath: '/a', title: 'A', depth: 0 };
+    const info = crawlPage('/a', 0);
     const pacer = { run: vi.fn((_host: string, task: () => any) => task()) };
 
     await recorder.onRenderedPage(fakePage, info, { pacer } as never);
@@ -977,22 +982,25 @@ describe('audit pipeline: runAuditPipeline', () => {
 
   it('without a context the timing still runs', async () => {
     const timingSpy = vi.fn(async () => ({
-      status: 'measured' as const,
-      source: 'this-tool' as const,
-      method: 'lab' as const,
-      strategy: 'mobile' as const,
-      values: [],
-      measuredAt: '2026-11-03T00:00:00.000Z',
+      speed: {
+        status: 'measured' as const,
+        source: 'this-tool' as const,
+        method: 'lab' as const,
+        strategy: 'mobile' as const,
+        values: [],
+        measuredAt: '2026-11-03T00:00:00.000Z',
+      },
+      raw: {},
     }));
     const recorder = createPageRecorder({
       workDir,
-      stages: pageStages({ measureBrowserTiming: timingSpy }),
+      stages: pageStages({ measureBrowserTiming: timingSpy as any }),
     });
     const fakePage = {
       url: () => 'https://example.com/b',
       urlPath: '/b',
     } as unknown as Page;
-    const info = { urlPath: '/b', title: 'B', depth: 0 };
+    const info = crawlPage('/b', 0);
 
     await recorder.onRenderedPage(fakePage, info);
 
@@ -1000,13 +1008,13 @@ describe('audit pipeline: runAuditPipeline', () => {
   });
 
   it('the page response headers are passed to readPage', async () => {
-    const readPageSpy = vi.fn(async () => rawPage());
+    const readPageSpy = vi.fn(async () => null);
     const recorder = createPageRecorder({
       workDir,
       stages: pageStages({ readPage: readPageSpy as any }),
     });
     const fakePage = { url: () => 'https://example.com/a', urlPath: '/a' } as unknown as Page;
-    const info = { urlPath: '/a', title: 'A', depth: 0 };
+    const info = crawlPage('/a', 0);
     await recorder.onRenderedPage(fakePage, info, {
       pacer: { run: (_h: string, t: () => unknown) => t() },
       responseHeaders: { 'x-shopid': '1' },
@@ -1015,13 +1023,13 @@ describe('audit pipeline: runAuditPipeline', () => {
   });
 
   it('without headers readPage gets empty options', async () => {
-    const readPageSpy = vi.fn(async () => rawPage());
+    const readPageSpy = vi.fn(async () => null);
     const recorder = createPageRecorder({
       workDir,
       stages: pageStages({ readPage: readPageSpy as any }),
     });
     const fakePage = { url: () => 'https://example.com/b', urlPath: '/b' } as unknown as Page;
-    const info = { urlPath: '/b', title: 'B', depth: 0 };
+    const info = crawlPage('/b', 0);
     await recorder.onRenderedPage(fakePage, info);
     expect(readPageSpy).toHaveBeenCalledWith(fakePage, {});
   });
@@ -1048,9 +1056,10 @@ describe('audit pipeline: runAuditPipeline', () => {
         input.onAiFailure?.('key-expired', 'HTTP 401');
         return [];
       }),
-      assessSite: vi.fn(async (input: AssessSiteInput) => {
+      assessSite: vi.fn(async (_input: AssessSiteInput) => {
         return (AUDIT_AREAS as readonly AuditArea[]).map((area) => ({
           area,
+          grade: null,
           status: 'not-done' as const,
           reason: 'ai-failed' as const,
         }));

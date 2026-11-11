@@ -13,7 +13,8 @@ describe('finishAiReview', () => {
   it('sends the id of the Check-up on screen', async () => {
     const fetchMock = stubFetch(200, { completed: true, reviewedCount: 2, remainingCount: 0, addedFindingsCount: 0 });
     await finishAiReview('run-abc');
-    const [, init] = fetchMock.mock.calls[0];
+    const calls = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    const [, init] = calls;
     expect(JSON.parse(String(init.body))).toEqual({ runId: 'run-abc' });
   });
 
