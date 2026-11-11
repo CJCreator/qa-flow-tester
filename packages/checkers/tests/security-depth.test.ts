@@ -286,6 +286,26 @@ describe('Content-Security-Policy', () => {
 });
 
 describe('checkPage', () => {
+  it('says so when the page read for a check fails, with one finding per check and distinct ids', async () => {
+    const fetchFn = spy(async (url) => (url.endsWith('security.txt') ? res(404, '') : res(200, 'var a;')));
+    const throwing = {
+      url: () => `${ORIGIN}/`,
+      evaluate: vi.fn().mockRejectedValue(new Error('x')),
+    } as unknown as Page;
+    const f = await new SecurityDepthChecker().checkPage(throwing, ctx(), fetchFn);
+    const unverified = f.filter((x) => x.title.startsWith('Could not verify: '));
+    expect(unverified.map((x) => x.title)).toEqual([
+      'Could not verify: whether scripts and stylesheets from other sites carry an integrity attribute',
+      'Could not verify: whether the site’s own scripts expose source maps',
+    ]);
+    expect(new Set(unverified.map((x) => x.id)).size).toBe(2);
+    for (const x of unverified) {
+      expect(x.needsConfirmation).toBe(true);
+      expect(x.checker).toBe('security');
+    }
+    expectClaimWording(f);
+  });
+
   it('runs every check, tolerates a throwing one, and stays on the target origin', async () => {
     const fetchFn = spy(async (url) => (url.endsWith('security.txt') ? res(404, '') : res(200, 'var a;')));
     const page = mockPage([{ tag: 'script', url: 'https://cdn.other.com/a.js', hasIntegrity: false }]);

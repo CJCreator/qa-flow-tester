@@ -356,7 +356,16 @@ export class SecurityChecker {
         }
         return out;
       }, CSRF_TOKEN_NAME.source)
-      .catch(() => []);
+      .catch(() => null);
+    if (raw === null) {
+      // The forms could not be read: say so, never read as "every form has a token".
+      return [
+        {
+          ...couldNotVerifyFinding('security', 'whether forms carry a CSRF token', context),
+          id: `F-UNVERIFIED-security-CSRF-${context.testCaseId || 'GEN'}`,
+        },
+      ];
+    }
     if (!Array.isArray(raw) || raw.length === 0) return [];
     const cookies =
       knownCookies ??

@@ -1,5 +1,6 @@
 import type { Page } from 'playwright';
 import type { Breakpoint, Finding, FindingSeverity } from '@qa/types';
+import { couldNotVerifyFinding } from './could-not-verify.js';
 
 /**
  * Deeper passive security checks (T-22): missing integrity attributes, reachable source maps,
@@ -145,25 +146,45 @@ export class SecurityDepthChecker {
     let tagsOnce: Promise<ResourceTag[]> | undefined;
     const tags = () => (tagsOnce ??= collectResources(page));
 
-    const steps: Array<() => Promise<Finding[]> | Finding[]> = [
-      async () => this.checkSri(page, context, await tags()),
-      () => this.checkCsp(context.cspHeader, context),
-      () => this.checkTls(page.url(), context),
+    const steps: Array<{ key: string; what: string; run: () => Promise<Finding[]> | Finding[] }> = [
+      {
+        key: 'SRI',
+        what: 'whether scripts and stylesheets from other sites carry an integrity attribute',
+        run: async () => this.checkSri(page, context, await tags()),
+      },
+      { key: 'CSP', what: 'the Content-Security-Policy', run: () => this.checkCsp(context.cspHeader, context) },
+      { key: 'TLS', what: 'the connection to the page', run: () => this.checkTls(page.url(), context) },
     ];
     if (onTarget && fetchFn) {
       steps.push(
-        async () => this.checkSourceMaps(page, context, fetchFn, await tags()),
-        () => this.checkSecurityTxt(fetchFn, context, pageOrigin)
+        {
+          key: 'SOURCEMAP',
+          what: 'whether the site’s own scripts expose source maps',
+          run: async () => this.checkSourceMaps(page, context, fetchFn, await tags()),
+        },
+        {
+          key: 'TXT',
+          what: 'the security.txt file',
+          run: () => this.checkSecurityTxt(fetchFn, context, pageOrigin),
+        }
       );
     } else if (onTarget) {
       // No safe fetch was given (ADR 0031): no request at all, and the checks say so instead of passing.
-      steps.push(() => this.notChecked(context, pageOrigin));
+      steps.push({
+        key: 'NOTCHECKED',
+        what: 'security.txt and source maps',
+        run: () => this.notChecked(context, pageOrigin),
+      });
     }
     for (const step of steps) {
       try {
-        findings.push(...(await step()));
+        findings.push(...(await step.run()));
       } catch {
-        // A check that cannot run adds nothing; the others still report.
+        // A check that cannot run is said so, never read as a pass. One finding per check, with its own id.
+        findings.push({
+          ...couldNotVerifyFinding('security', step.what, context),
+          id: `F-UNVERIFIED-security-${step.key}-${context.testCaseId || 'GEN'}`,
+        });
       }
     }
     return findings;
