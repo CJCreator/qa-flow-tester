@@ -1,6 +1,7 @@
 import type { DiscoveredFlow, DiscoveryDraft, PageInventoryItem, TestCaseExpectations, TestCaseStep } from '@qa/types';
 import type { AIProvider } from '../ai/ai-provider.js';
 import { PlanValidator } from './plan-validator.js';
+import { parseJsonAnswer } from '../plan/ai-planner.js';
 
 /**
  * Turns a person's own words into something the tests can run: a whole test ("Save an invoice
@@ -57,12 +58,8 @@ function toExpectations(
 
 function parseJson<T>(text: string): T | null {
   try {
-    return JSON.parse(
-      text
-        .replace(/```json/gi, '')
-        .replace(/```/g, '')
-        .trim()
-    ) as T;
+    const value: unknown = parseJsonAnswer(text);
+    return value && typeof value === 'object' ? (value as T) : null;
   } catch {
     return null;
   }
