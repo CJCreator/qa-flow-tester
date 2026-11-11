@@ -107,9 +107,9 @@ Run: `pnpm exec vitest run packages/wizard/tests/title-robots.test.ts packages/w
 
 ## Done when
 
-- [ ] Only the landing page gets `index, follow`; every other screen gets `noindex, nofollow`.
-- [ ] The manifest colours are `#F4F6F4`.
-- [ ] Tests and `pnpm build` pass.
+- [x] Only the landing page gets `index, follow`; every other screen gets `noindex, nofollow`.
+- [x] The manifest colours are `#F4F6F4`.
+- [x] Tests and `pnpm build` pass.
 
 ## Notes
 

@@ -103,9 +103,9 @@ Run: `pnpm exec vitest run packages/wizard/tests/wizard-terminology-a11y.test.ts
 
 ## Done when
 
-- [ ] All four buttons have an `aria-label` that starts with the visible text and names the row.
-- [ ] Visible text is unchanged.
-- [ ] Tests and `pnpm build` pass.
+- [x] All four buttons have an `aria-label` that starts with the visible text and names the row.
+- [x] Visible text is unchanged.
+- [x] Tests and `pnpm build` pass.
 
 ## Notes
 

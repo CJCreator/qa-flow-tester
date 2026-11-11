@@ -104,9 +104,9 @@ No new test: results are the same, in the same order. Run:
 
 ## Done when
 
-- [ ] `aiSetup()` calls `resolveKey` once.
-- [ ] Both route files read Page Content with `Promise.all`.
-- [ ] Listed tests and `pnpm build` pass.
+- [x] `aiSetup()` calls `resolveKey` once.
+- [x] Both route files read Page Content with `Promise.all`.
+- [x] Listed tests and `pnpm build` pass.
 
 ## Notes
 

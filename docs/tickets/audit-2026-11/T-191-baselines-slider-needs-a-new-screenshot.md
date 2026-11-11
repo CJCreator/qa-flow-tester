@@ -94,9 +94,9 @@ Run: `pnpm exec vitest run packages/wizard/tests/visual-baselines-view.test.ts` 
 
 ## Done when
 
-- [ ] A baseline without `currentUrl` shows no Slider button.
-- [ ] Choosing Slider on one baseline, then opening one without `currentUrl`, shows side by side with "Side by side" pressed.
-- [ ] New test and `pnpm build` pass.
+- [x] A baseline without `currentUrl` shows no Slider button.
+- [x] Choosing Slider on one baseline, then opening one without `currentUrl`, shows side by side with "Side by side" pressed.
+- [x] New test and `pnpm build` pass.
 
 ## Notes
 

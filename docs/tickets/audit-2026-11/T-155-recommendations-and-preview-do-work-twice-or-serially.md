@@ -194,10 +194,10 @@ Run: `pnpm exec vitest run packages/core/tests/audit-page-recommendation.test.ts
 
 ## Done when
 
-- [ ] `recommendPages` returns the same recommendations in the same order as before, asking up to four pages at once.
-- [ ] `generatePreview` calls `buildNodes` once per AI answer and once for the template.
-- [ ] The Pitch Glimpse document is built once in `write-all.ts`.
-- [ ] Tests and `pnpm build` pass.
+- [x] `recommendPages` returns the same recommendations in the same order as before, asking up to four pages at once.
+- [x] `generatePreview` calls `buildNodes` once per AI answer and once for the template.
+- [x] The Pitch Glimpse document is built once in `write-all.ts`.
+- [x] Tests and `pnpm build` pass.
 
 ## Notes
 

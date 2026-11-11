@@ -125,10 +125,10 @@ Run: `pnpm exec vitest run packages/wizard/tests/row-keys.test.ts packages/wizar
 
 ## Done when
 
-- [ ] `key={i}` is gone from the sign-in rows.
-- [ ] Removing a row leaves the next row's extra fields as they were.
-- [ ] `SignInEntry` is unchanged.
-- [ ] Tests and `pnpm build` pass.
+- [x] `key={i}` is gone from the sign-in rows.
+- [x] Removing a row leaves the next row's extra fields as they were.
+- [x] `SignInEntry` is unchanged.
+- [x] Tests and `pnpm build` pass.
 
 ## Notes
 

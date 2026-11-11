@@ -124,10 +124,10 @@ Run: `pnpm exec vitest run packages/wizard/tests/audit-progress.test.tsx package
 
 ## Done when
 
-- [ ] The live list and the results show the same reason text for a Skipped Page.
-- [ ] The reason is not red.
-- [ ] `startedAt` appears nowhere in `LivePageList.tsx`.
-- [ ] Tests and `pnpm build` pass.
+- [x] The live list and the results show the same reason text for a Skipped Page.
+- [x] The reason is not red.
+- [x] `startedAt` appears nowhere in `LivePageList.tsx`.
+- [x] Tests and `pnpm build` pass.
 
 ## Notes
 

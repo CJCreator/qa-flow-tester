@@ -207,9 +207,9 @@ Run: `pnpm exec vitest run packages/core/tests/audit-store-backend.test.ts packa
 
 ## Done when
 
-- [ ] `listAudits` no longer lists every object when the backend has `listFolders`.
-- [ ] `deletePrefix` on Cloud Storage sends up to 8 deletes at once.
-- [ ] Tests and `pnpm build` pass.
+- [x] `listAudits` no longer lists every object when the backend has `listFolders`.
+- [x] `deletePrefix` on Cloud Storage sends up to 8 deletes at once.
+- [x] Tests and `pnpm build` pass.
 
 ## Notes
 

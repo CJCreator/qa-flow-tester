@@ -121,9 +121,9 @@ Run: `pnpm exec vitest run packages/core/tests/audit-store.test.ts packages/core
 
 ## Done when
 
-- [ ] The slug routine exists once.
-- [ ] Stored object names are unchanged (the new test proves it).
-- [ ] Tests and `pnpm build` pass.
+- [x] The slug routine exists once.
+- [x] Stored object names are unchanged (the new test proves it).
+- [x] Tests and `pnpm build` pass.
 
 ## Notes
 

@@ -176,8 +176,8 @@ Then `pnpm build`.
 
 ## Done when
 
-- [ ] All six replacements are made and no listed test changes its expectations.
-- [ ] `pnpm build` passes.
+- [x] All six replacements are made and no listed test changes its expectations.
+- [x] `pnpm build` passes.
 
 ## Notes
 

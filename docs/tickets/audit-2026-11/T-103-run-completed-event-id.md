@@ -67,8 +67,8 @@ Run: `pnpm exec vitest run packages/runner/tests/run-events-replay.test.ts packa
 
 ## Done when
 
-- [ ] `onEvent` receives the same object that was published.
-- [ ] Both test files and `pnpm build` pass.
+- [x] `onEvent` receives the same object that was published.
+- [x] Both test files and `pnpm build` pass.
 
 ## Notes
 

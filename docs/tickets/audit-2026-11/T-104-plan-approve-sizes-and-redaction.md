@@ -113,9 +113,9 @@ Run: `pnpm exec vitest run packages/runner/tests/plan-routes.test.ts`, then `pnp
 
 ## Done when
 
-- [ ] Approve stores only `375px`, `768px`, `1440px`.
-- [ ] `redactError` delegates to `redactedMessage`.
-- [ ] Tests and `pnpm build` pass.
+- [x] Approve stores only `375px`, `768px`, `1440px`.
+- [x] `redactError` delegates to `redactedMessage`.
+- [x] Tests and `pnpm build` pass.
 
 ## Notes
 

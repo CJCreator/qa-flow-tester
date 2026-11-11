@@ -141,9 +141,9 @@ Run: `pnpm exec vitest run packages/core/tests/audit-store.test.ts packages/core
 
 ## Done when
 
-- [ ] An unknown `kind` is refused; unknown formats are dropped; `reason` and `title` are capped at 300 characters.
-- [ ] `write-all.ts` never puts an error's message in a stored document entry.
-- [ ] Tests and `pnpm build` pass.
+- [x] An unknown `kind` is refused; unknown formats are dropped; `reason` and `title` are capped at 300 characters.
+- [x] `write-all.ts` never puts an error's message in a stored document entry.
+- [x] Tests and `pnpm build` pass.
 
 ## Notes
 

@@ -151,8 +151,8 @@ Then `pnpm build` (it type-checks and reports an import cycle problem as an erro
 
 ## Done when
 
-- [ ] `BAD_CONTROL` is defined once under `packages/core/src/audit`, the id pattern once, the scale helper once, and the three refusal sentences once.
-- [ ] The listed tests and `pnpm build` pass.
+- [x] `BAD_CONTROL` is defined once under `packages/core/src/audit`, the id pattern once, the scale helper once, and the three refusal sentences once.
+- [x] The listed tests and `pnpm build` pass.
 
 ## Notes
 

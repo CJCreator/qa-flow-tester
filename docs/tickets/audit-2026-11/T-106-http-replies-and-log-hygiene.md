@@ -127,11 +127,11 @@ Run: `pnpm exec vitest run packages/runner/tests/route-access-server.test.ts pac
 
 ## Done when
 
-- [ ] The gate's 401 JSON has `code: 'ERR_ACCESS_KEY'`.
-- [ ] CORS allows `PUT` and `Idempotency-Key`.
-- [ ] The five path decodes answer 400 on a malformed escape.
-- [ ] The crash log prints a redacted message.
-- [ ] Tests and `pnpm build` pass.
+- [x] The gate's 401 JSON has `code: 'ERR_ACCESS_KEY'`.
+- [x] CORS allows `PUT` and `Idempotency-Key`.
+- [x] The five path decodes answer 400 on a malformed escape.
+- [x] The crash log prints a redacted message.
+- [x] Tests and `pnpm build` pass.
 
 ## Notes
 

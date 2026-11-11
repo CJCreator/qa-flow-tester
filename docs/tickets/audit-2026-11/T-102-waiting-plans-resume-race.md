@@ -112,9 +112,9 @@ Run: `pnpm exec vitest run packages/runner/tests/plan-routes.test.ts`, then `pnp
 
 ## Done when
 
-- [ ] A second concurrent resume on one session answers 409 `ERR_RUN_IN_PROGRESS`.
-- [ ] The guard is always released (`finally`).
-- [ ] The test file and `pnpm build` pass.
+- [x] A second concurrent resume on one session answers 409 `ERR_RUN_IN_PROGRESS`.
+- [x] The guard is always released (`finally`).
+- [x] The test file and `pnpm build` pass.
 
 ## Notes
 

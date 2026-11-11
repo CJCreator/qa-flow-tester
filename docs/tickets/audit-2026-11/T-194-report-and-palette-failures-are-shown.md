@@ -145,10 +145,10 @@ Run: `pnpm exec vitest run packages/wizard/tests/report-settings-text.test.ts pa
 
 ## Done when
 
-- [ ] A failed Undo shows the runner's reason under "Problems found".
-- [ ] A failed developer download shows a message under the buttons.
-- [ ] No `void triage(`, `void downloadRunFile(` or `void downloadPlanMarkdown(` remains.
-- [ ] Tests and `pnpm build` pass.
+- [x] A failed Undo shows the runner's reason under "Problems found".
+- [x] A failed developer download shows a message under the buttons.
+- [x] No `void triage(`, `void downloadRunFile(` or `void downloadPlanMarkdown(` remains.
+- [x] Tests and `pnpm build` pass.
 
 ## Notes
 

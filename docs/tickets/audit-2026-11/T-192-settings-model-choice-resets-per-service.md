@@ -64,9 +64,9 @@ Run: `pnpm exec vitest run packages/wizard/tests/report-settings-text.test.ts pa
 
 ## Done when
 
-- [ ] `ModelChoice` has `key={setup.provider ?? 'openrouter'}`.
-- [ ] After switching service, the model fields are empty or show that service's saved model.
-- [ ] Tests and `pnpm build` pass.
+- [x] `ModelChoice` has `key={setup.provider ?? 'openrouter'}`.
+- [x] After switching service, the model fields are empty or show that service's saved model.
+- [x] Tests and `pnpm build` pass.
 
 ## Notes
 

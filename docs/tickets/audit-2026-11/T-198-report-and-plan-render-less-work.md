@@ -115,10 +115,10 @@ Run: `pnpm exec vitest run packages/wizard/tests/coverage-view.test.tsx packages
 
 ## Done when
 
-- [ ] `AspectGrades` has no `includes(` inside a `filter` and computes counts in one `useMemo`.
-- [ ] The Plan's sections read `deferredView`; the search input still reads `view`.
-- [ ] The area cards show the same problem counts as before (compare one report by eye, or rely on `coverage-view.test.tsx`).
-- [ ] Tests and `pnpm build` pass.
+- [x] `AspectGrades` has no `includes(` inside a `filter` and computes counts in one `useMemo`.
+- [x] The Plan's sections read `deferredView`; the search input still reads `view`.
+- [x] The area cards show the same problem counts as before (compare one report by eye, or rely on `coverage-view.test.tsx`).
+- [x] Tests and `pnpm build` pass.
 
 ## Notes
 

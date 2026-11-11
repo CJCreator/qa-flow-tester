@@ -224,9 +224,9 @@ Run: `pnpm exec vitest run packages/core/tests/audit-store.test.ts packages/core
 
 ## Done when
 
-- [ ] With the real `AuditStore`, the save step takes the audit lock once for all Page Content and screenshots.
-- [ ] The notes for a failed save are worded exactly as before.
-- [ ] Tests and `pnpm build` pass.
+- [x] With the real `AuditStore`, the save step takes the audit lock once for all Page Content and screenshots.
+- [x] The notes for a failed save are worded exactly as before.
+- [x] Tests and `pnpm build` pass.
 
 ## Notes
 

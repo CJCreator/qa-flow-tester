@@ -148,9 +148,9 @@ Then `pnpm build` and `pnpm exec eslint packages/core/src/audit` (no new errors)
 
 ## Done when
 
-- [ ] `startRecorded`, `auditDocumentKey` and `createGcsAuditStoreBackend` no longer appear anywhere under `packages/`.
-- [ ] No `lookup.requested ??` is left under `packages/core/src/audit/documents`.
-- [ ] The listed tests, `pnpm build` and eslint pass.
+- [x] `startRecorded`, `auditDocumentKey` and `createGcsAuditStoreBackend` no longer appear anywhere under `packages/`.
+- [x] No `lookup.requested ??` is left under `packages/core/src/audit/documents`.
+- [x] The listed tests, `pnpm build` and eslint pass.
 
 ## Notes
 

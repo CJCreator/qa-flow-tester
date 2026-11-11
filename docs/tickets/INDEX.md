@@ -29,6 +29,21 @@ Plan: [WEBSITE-AUDIT-RELIABILITY-PLAN.md](WEBSITE-AUDIT-RELIABILITY-PLAN.md). De
 | [T-86](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-86-hosted-audits-for-the-signed-in-owner) | Hosted audits for the signed-in owner | A8 | P1 | M | 4 | built | - |
 | [T-89](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-89-proving-the-audit-works) | Proving the audit works | A12 | P1 | M | 4 | todo | - |
 
+## Open: audit follow-up (November 2026)
+
+One file per ticket under [audit-2026-11/](audit-2026-11/). Each file names the files it may edit and the tickets it must not be built beside.
+
+| id | title | gaps | priority | size | wave | status | depends on |
+|---|---|---|---|---|---|---|---|
+| [T-226](audit-2026-11/T-226-ci-and-deploy-share-audit-and-secret-scan.md) | CI and Deploy share one audit job and one secret-scan job | - | P3 | M | 1 | todo | - |
+| [T-227](audit-2026-11/T-227-quality-gate-timeout-and-stale-comment.md) | Give the CI quality gate a workable timeout | - | P3 | S | 2 | todo | T-226 |
+| [T-228](audit-2026-11/T-228-run-plugin-checks-in-ci.md) | Run the plugin checks in CI | - | P3 | S | 3 | todo | T-227 |
+| [T-225](audit-2026-11/T-225-pin-third-party-actions-to-commit-sha.md) | Pin every GitHub Action to a commit SHA | - | P2 | S | 4 | todo | T-228 |
+| [T-229](audit-2026-11/T-229-remove-unused-coverage-setup.md) | Remove the coverage setup nothing runs | - | P3 | S | 1 | todo | - |
+| [T-230](audit-2026-11/T-230-test-run-completed-reaches-on-event.md) | Test that the finished-run event reaches `onEvent` | - | P3 | S | 1 | todo | - |
+
+T-225 to T-228 all edit `.github/workflows/ci.yml`, so they are built one after another in the order above. T-229 and T-230 touch other files and can be built beside them.
+
 ## Open: carried over
 
 | id | title | gaps | priority | size | wave | status | depends on |
@@ -40,4 +55,4 @@ Plan: [WEBSITE-AUDIT-RELIABILITY-PLAN.md](WEBSITE-AUDIT-RELIABILITY-PLAN.md). De
 
 ## Built work
 
-Built work is in git. Website Audit T-79 to T-85, T-87, T-88, T-90: `fdf287f`, `a4cb689`, `b237983`. Earlier tracks (demo readiness, review remediation, qaskills-patterns) are in earlier history. T-52 (container hardening and health): non-root runner and site images, `/healthz` health checks, `docker-compose.yml`, `docs/CONTAINER_DEPLOYMENT.md`.
+Built work is in git. Audit of November 2026, T-91 to T-224 (134 tickets, all built and verified on `d225418`): the ticket files stay under [audit-2026-11/](audit-2026-11/). Website Audit T-79 to T-85, T-87, T-88, T-90: `fdf287f`, `a4cb689`, `b237983`. Earlier tracks (demo readiness, review remediation, qaskills-patterns) are in earlier history. T-52 (container hardening and health): non-root runner and site images, `/healthz` health checks, `docker-compose.yml`, `docs/CONTAINER_DEPLOYMENT.md`.

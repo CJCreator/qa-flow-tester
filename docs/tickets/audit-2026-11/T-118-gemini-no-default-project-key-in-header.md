@@ -130,7 +130,7 @@ Command: `pnpm exec vitest run packages/core/tests/gemini-adc-fallback.test.ts p
 
 ## Done when
 
-- [x] `grep -rn "512310" packages/` finds nothing
+- [x] `grep -rn "512310" packages/*/src` finds nothing (a runner test still asserts the id in the deploy guide, which is correct)
 - [x] `grep -rn "key=" packages/core/src/ai` finds no AI Studio address
 - [x] Both test files pass; `pnpm build` passes
 

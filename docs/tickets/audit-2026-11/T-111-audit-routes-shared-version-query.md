@@ -109,8 +109,8 @@ Run: `pnpm exec vitest run packages/runner/tests/audit-common.test.ts`, then `pn
 
 ## Done when
 
-- [ ] `grep -c "^function versionQuery" packages/runner/src/routes/*.ts` shows 0 for every file.
-- [ ] The new test passes; the runner unit tests and `pnpm build` pass.
+- [x] `grep -c "^function versionQuery" packages/runner/src/routes/*.ts` shows 0 for every file.
+- [x] The new test passes; the runner unit tests and `pnpm build` pass.
 
 ## Notes
 

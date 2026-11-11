@@ -55,9 +55,9 @@ Run: `pnpm exec vitest run packages/runner/tests/seo-static.test.ts`, then `pnpm
 
 ## Done when
 
-- [ ] `PUBLIC_PATHS` holds exactly `/`, `/index.html`, `/sample-report.html`.
-- [ ] `/docs`, `/changelog`, `/case-studies` answer with `noindex`.
-- [ ] The test file and `pnpm build` pass.
+- [x] `PUBLIC_PATHS` holds exactly `/`, `/index.html`, `/sample-report.html`.
+- [x] `/docs`, `/changelog`, `/case-studies` answer with `noindex`.
+- [x] The test file and `pnpm build` pass.
 
 ## Notes
 

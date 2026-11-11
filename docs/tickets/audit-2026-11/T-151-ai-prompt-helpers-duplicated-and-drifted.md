@@ -139,9 +139,9 @@ Run: `pnpm exec vitest run packages/core/tests/audit-claim-words.test.ts package
 
 ## Done when
 
-- [ ] One `languageName` and one claim-word prompt list exist under `packages/core/src/audit`.
-- [ ] Every prompt names "release verdict" and "not ready yet".
-- [ ] Tests and `pnpm build` pass.
+- [x] One `languageName` and one claim-word prompt list exist under `packages/core/src/audit`.
+- [x] Every prompt names "release verdict" and "not ready yet".
+- [x] Tests and `pnpm build` pass.
 
 ## Notes
 

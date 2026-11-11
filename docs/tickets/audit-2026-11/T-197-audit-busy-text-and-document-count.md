@@ -102,10 +102,10 @@ Run: `pnpm exec vitest run packages/wizard/tests/audit-saved.test.tsx packages/w
 
 ## Done when
 
-- [ ] The busy text is written once and holds no "run".
-- [ ] The documents line names the five Audit Documents, the Pitch Glimpse and the Owner Audit.
-- [ ] The heading "Audit Documents ready" is unchanged (tests and `RESULT_SECTIONS` in `AnalysisScreen.tsx:297` use it).
-- [ ] Tests and `pnpm build` pass.
+- [x] The busy text is written once and holds no "run".
+- [x] The documents line names the five Audit Documents, the Pitch Glimpse and the Owner Audit.
+- [x] The heading "Audit Documents ready" is unchanged (tests and `RESULT_SECTIONS` in `AnalysisScreen.tsx:297` use it).
+- [x] Tests and `pnpm build` pass.
 
 ## Notes
 

@@ -135,9 +135,9 @@ Run: `pnpm exec vitest run packages/wizard/tests/checkup-schedules.test.tsx pack
 
 ## Done when
 
-- [ ] With the runner down, the comparison screen shows its load error with Retry, and Settings shows the schedules error.
-- [ ] 401/403 on schedules still gives the owner-only message.
-- [ ] Tests and `pnpm build` pass.
+- [x] With the runner down, the comparison screen shows its load error with Retry, and Settings shows the schedules error.
+- [x] 401/403 on schedules still gives the owner-only message.
+- [x] Tests and `pnpm build` pass.
 
 ## Notes
 
