@@ -1,12 +1,12 @@
 import {
   AUDIT_API,
-  AUDIT_ERROR_CODES,
   auditPath,
   type AuditErrorCode,
   type AuditSettingsReply,
   type AuditSettingsUpdate,
   type CompanyDetails,
 } from '@qa/types/src/browser.js';
+import { isAuditErrorCode, NOT_ANSWERING } from '../audit-call';
 
 /**
  * The document settings screen's calls to the runner (REQ-027, REQ-019, REQ-018): the saved settings and
@@ -136,16 +136,9 @@ export function removePagespeedKey(): AuditSettingsUpdate {
   return { pagespeedKey: null };
 }
 
-const NOT_ANSWERING =
-  'The tool is not answering. Check your connection and that the tool is still running, then try again.';
-
 const REFUSALS: Partial<Record<AuditErrorCode, string>> = {
   ERR_FORBIDDEN: 'Only the tool user can change the document settings.',
 };
-
-function isAuditErrorCode(value: unknown): value is AuditErrorCode {
-  return typeof value === 'string' && (AUDIT_ERROR_CODES as readonly string[]).includes(value);
-}
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);

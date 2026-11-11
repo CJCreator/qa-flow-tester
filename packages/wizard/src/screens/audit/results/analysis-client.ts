@@ -1,12 +1,12 @@
 import {
   AUDIT_API,
-  AUDIT_ERROR_CODES,
   AUDIT_ID_PATTERN,
   auditPath,
   type AuditContentReply,
   type AuditErrorCode,
   type AuditGetReply,
 } from '@qa/types/src/browser.js';
+import { isAuditErrorCode, NOT_ANSWERING } from '../audit-call';
 
 /**
  * The analysis screen's calls to the runner: one Website Audit version (`AUDIT_API.get`) and the Page
@@ -19,7 +19,6 @@ export type AuditCallResult<T> = { ok: true; reply: T } | { ok: false; error: st
 type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 const TIMEOUT_MS = 15000;
-const NOT_ANSWERING = 'The tool is not answering. Make sure it is still open in its terminal, then try again.';
 const UNREADABLE = 'The tool sent an answer that could not be read. Try again.';
 const BAD_ID = 'This Website Audit address is not valid. Open the Website Audit from its list.';
 
@@ -33,10 +32,6 @@ const REFUSALS: Partial<Record<AuditErrorCode, string>> = {
   ERR_BROWSER_LAUNCH: 'The browser could not be launched.',
   ERR_PIPELINE: 'The Website Audit pipeline encountered an error.',
 };
-
-function isAuditErrorCode(value: unknown): value is AuditErrorCode {
-  return typeof value === 'string' && (AUDIT_ERROR_CODES as readonly string[]).includes(value);
-}
 
 function versionQuery(version: number | undefined): string | null {
   return typeof version === 'number' && Number.isInteger(version) && version > 0 ? `version=${version}` : null;

@@ -1,6 +1,5 @@
 import {
   AUDIT_API,
-  AUDIT_ERROR_CODES,
   auditPath,
   type AuditErrorCode,
   type AuditErrorReply,
@@ -9,6 +8,7 @@ import {
   type AuditStartErrors,
   type AuditStartReply,
 } from '@qa/types/src/browser.js';
+import { isAuditErrorCode, NOT_ANSWERING } from '../audit-call';
 import { checkAuditStartForm, type AuditStartForm } from './audit-start-form';
 
 /**
@@ -16,8 +16,6 @@ import { checkAuditStartForm, type AuditStartForm } from './audit-start-form';
  * `/api/audits/:id/stream`. Every refusal becomes a plain sentence safe to show as-is; status codes and
  * raw errors never reach the screen.
  */
-
-const NOT_ANSWERING = 'The tool is not answering. Make sure it is still open in its terminal, then try again.';
 
 /** Plain sentences for the refusals the start screen expects (REQ-001 AC-2, ADR 0042). */
 const START_REFUSALS: Partial<Record<AuditErrorCode, string>> = {
@@ -36,10 +34,6 @@ const START_REFUSALS: Partial<Record<AuditErrorCode, string>> = {
 };
 
 export type RunningInfo = { kind: 'checkup' | 'audit'; href: string };
-
-function isAuditErrorCode(value: unknown): value is AuditErrorCode {
-  return typeof value === 'string' && (AUDIT_ERROR_CODES as readonly string[]).includes(value);
-}
 
 /** The sentence for a refusal: ours for the expected codes, else the runner's own message (already plain). */
 export function auditErrorText(

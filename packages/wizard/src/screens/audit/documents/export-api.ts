@@ -9,6 +9,7 @@ import {
   type OwnerAuditQuery,
   type PitchQuery,
 } from '@qa/types/src/browser.js';
+import { NOT_ANSWERING } from '../audit-call';
 
 /**
  * The export panel's download links (REQ-021, REQ-022, REQ-019, REQ-025): the Audit Documents
@@ -107,8 +108,6 @@ export type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 export type DownloadOutcome = { ok: true; fileName: string; blob: Blob } | { ok: false; message: string };
 
-const NOT_ANSWERING =
-  'The tool is not answering. Check your connection and that the tool is still running, then try again.';
 const DOWNLOAD_FAILED = 'The file could not be made. Try again.';
 
 /** Which of the three downloads. */

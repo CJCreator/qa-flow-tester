@@ -1,6 +1,5 @@
 import {
   AUDIT_API,
-  AUDIT_ERROR_CODES,
   HELPER_PERMISSIONS,
   auditPath,
   type AuditErrorCode,
@@ -9,6 +8,7 @@ import {
   type HelperPermission,
   type HelperSession,
 } from '@qa/types/src/browser.js';
+import { isAuditErrorCode, NOT_ANSWERING } from '../audit-call';
 
 /**
  * The Helper screens' calls to the runner (REQ-033): whether Helper sign-in is set up on this copy
@@ -37,9 +37,6 @@ export interface HelperStatus {
   firebase: FirebaseWebConfig | null;
 }
 
-const NOT_ANSWERING =
-  'The tool is not answering. Check your connection and that the tool is still running, then try again.';
-
 export const HELPERS_OFF_MESSAGE =
   'Helper sign-in is not set up on this copy. Until it is, give the people helping you the downloaded documents instead. Whoever hosts this copy can turn Helper sign-in on.';
 export const SIGN_IN_FAILED_MESSAGE = 'Google sign-in did not work. Try again, or ask the person who gave you access.';
@@ -60,10 +57,6 @@ export const PERMISSION_LABEL: Readonly<Record<HelperPermission, string>> = {
 
 /** A loose email check for the form; the runner checks it again. */
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function isAuditErrorCode(value: unknown): value is AuditErrorCode {
-  return typeof value === 'string' && (AUDIT_ERROR_CODES as readonly string[]).includes(value);
-}
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);

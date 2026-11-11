@@ -1,6 +1,5 @@
 import {
   AUDIT_API,
-  AUDIT_ERROR_CODES,
   auditPath,
   isShortlistOutcome,
   type AuditErrorCode,
@@ -16,6 +15,7 @@ import {
   type ShortlistOutcome,
   type ShortlistUpdate,
 } from '@qa/types/src/browser.js';
+import { isAuditErrorCode, NOT_ANSWERING } from '../audit-call';
 import { count } from '../../../lib/format';
 import { watchAudit, type AuditEventSourceFactory } from '../start/audit-start-api';
 
@@ -49,8 +49,6 @@ export const AUDIT_PATHS = {
   shortlist: '/shortlist',
 } as const;
 
-const NOT_ANSWERING = 'The tool is not answering. Make sure it is still open in its terminal, then try again.';
-
 /** Shown when a request is refused because the runner is busy (REQ-028 AC-3). */
 export const RUN_IN_PROGRESS_TEXT =
   'Another Check-up, benchmark or Website Audit is in progress. Wait for it to finish, then try again.';
@@ -61,10 +59,6 @@ const REFUSALS: Partial<Record<AuditErrorCode, string>> = {
   ERR_AUDIT_RUNNING: 'A version of this Website Audit is still running. Try again when it has finished.',
   ERR_FORBIDDEN: 'You do not have permission to do this on this Website Audit.',
 };
-
-function isAuditErrorCode(value: unknown): value is AuditErrorCode {
-  return typeof value === 'string' && (AUDIT_ERROR_CODES as readonly string[]).includes(value);
-}
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);

@@ -305,7 +305,7 @@ describe('analysis client: refusals come back as { error, code }, never thrown',
     );
     expect(down).toEqual({
       ok: false,
-      error: 'The tool is not answering. Make sure it is still open in its terminal, then try again.',
+      error: 'The tool is not answering. Check your connection and that the tool is still running, then try again.',
     });
     const odd = await getAuditResult(AUDIT_ID, undefined, mockFetch(jsonResponse({ hello: 'world' })));
     expect(odd).toEqual({ ok: false, error: 'The tool sent an answer that could not be read. Try again.' });

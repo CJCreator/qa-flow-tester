@@ -1,4 +1,5 @@
-import { AUDIT_ERROR_CODES, type AuditErrorCode } from '@qa/types/src/browser.js';
+import { type AuditErrorCode } from '@qa/types/src/browser.js';
+import { isAuditErrorCode, NOT_ANSWERING } from '../audit-call';
 
 /**
  * The AI model per Website Audit task (REQ-039): the saved models, the defaults and the model each task calls
@@ -98,17 +99,11 @@ export function isUpdateEmpty(update: AuditAiModelsUpdate): boolean {
   return Object.keys(update.models).length === 0;
 }
 
-const NOT_ANSWERING =
-  'The tool is not answering. Check your connection and that the tool is still running, then try again.';
 export const FIX_FIELDS = 'Some fields need a change. See the message next to each one.';
 
 const REFUSALS: Partial<Record<AuditErrorCode, string>> = {
   ERR_FORBIDDEN: 'Only the tool user can change the AI models.',
 };
-
-function isAuditErrorCode(value: unknown): value is AuditErrorCode {
-  return typeof value === 'string' && (AUDIT_ERROR_CODES as readonly string[]).includes(value);
-}
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);

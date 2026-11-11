@@ -1,6 +1,5 @@
 import {
   AUDIT_API,
-  AUDIT_ERROR_CODES,
   DOCUMENT_LANGUAGE_INFO,
   SHARE_LINK_DAYS,
   SHARED_LINK_PREFIX,
@@ -14,6 +13,7 @@ import {
   type ShareLink,
   type ShareLinkKind,
 } from '@qa/types/src/browser.js';
+import { isAuditErrorCode, NOT_ANSWERING } from '../audit-call';
 import { RUN_IN_PROGRESS_TEXT } from './saved-api';
 
 /**
@@ -26,9 +26,6 @@ import { RUN_IN_PROGRESS_TEXT } from './saved-api';
 export type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 export type ShareOutcome<T> = { ok: true; value: T } | { ok: false; message: string; code?: AuditErrorCode };
-
-const NOT_ANSWERING =
-  'The tool is not answering. Check your connection and that the tool is still running, then try again.';
 
 /** Shown when the preview needs an AI key and none is saved; the screen links to Settings beside it. */
 export const NO_AI_KEY_MESSAGE =
@@ -57,10 +54,6 @@ export const KIND_LABEL: Readonly<Record<ShareLinkKind, string>> = {
 };
 
 export const SHARE_KINDS: readonly ShareLinkKind[] = ['pitch', 'preview'];
-
-function isAuditErrorCode(value: unknown): value is AuditErrorCode {
-  return typeof value === 'string' && (AUDIT_ERROR_CODES as readonly string[]).includes(value);
-}
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);

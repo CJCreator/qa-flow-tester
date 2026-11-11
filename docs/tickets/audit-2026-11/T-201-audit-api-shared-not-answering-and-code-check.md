@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P3 | M | wizard | inconsistency | blocked |
+| P3 | M | wizard | inconsistency | built |
 
 **Files you may edit (no others):**
 - `packages/wizard/src/screens/audit/audit-call.ts` (new)
@@ -130,9 +130,9 @@ then `pnpm build` and `pnpm lint` (0 errors).
 
 ## Done when
 
-- [ ] `NOT_ANSWERING` and `isAuditErrorCode` are each declared once, in `audit-call.ts`.
-- [ ] No Website Audit screen says "open in its terminal".
-- [ ] All listed tests, `pnpm build` and `pnpm lint` pass.
+- [x] `NOT_ANSWERING` and `isAuditErrorCode` are each declared once, in `audit-call.ts`.
+- [x] No Website Audit screen says "open in its terminal".
+- [x] All listed tests, `pnpm build` and `pnpm lint` pass.
 
 ## Notes
 

@@ -1,6 +1,5 @@
 import {
   AUDIT_API,
-  AUDIT_ERROR_CODES,
   auditPath,
   type AuditContentReply,
   type AuditEditsPatch,
@@ -10,6 +9,7 @@ import {
   type EditOverlay,
   type PageContent,
 } from '@qa/types/src/browser.js';
+import { isAuditErrorCode, NOT_ANSWERING } from '../audit-call';
 
 /**
  * The review and edit screen's calls to the runner (REQ-020): the version and its edits
@@ -22,18 +22,11 @@ export type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 export type ReviewOutcome<T> = { ok: true; value: T } | { ok: false; message: string; code?: AuditErrorCode };
 
-const NOT_ANSWERING =
-  'The tool is not answering. Check your connection and that the tool is still running, then try again.';
-
 const REFUSALS: Partial<Record<AuditErrorCode, string>> = {
   ERR_AUDIT_NOT_FOUND: 'This Website Audit was not found. It may have been deleted.',
   ERR_AUDIT_RUNNING: 'This version of the Website Audit is still running. Review it when it has finished.',
   ERR_FORBIDDEN: 'You do not have permission to do this on this Website Audit.',
 };
-
-function isAuditErrorCode(value: unknown): value is AuditErrorCode {
-  return typeof value === 'string' && (AUDIT_ERROR_CODES as readonly string[]).includes(value);
-}
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
