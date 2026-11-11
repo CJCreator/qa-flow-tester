@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { DesignStandardsChecker, hexToRgb, normalizeColor } from '../src/design-standards.js';
-import { UXQualityChecker, wcagCriteria } from '../src/ux-quality.js';
+import { UXQualityChecker, wcagCriteria, axeCacheKey, type AxeScan } from '../src/ux-quality.js';
 import { chromium, type Browser } from 'playwright';
 import type { Finding } from '@qa/types';
 import { PNG } from 'pngjs';
@@ -162,6 +162,40 @@ describe('UXQualityChecker accessibility scan', () => {
       expect(img?.title).toContain('WCAG 1.1.1');
       expect(img?.evidence.allTargets).toHaveLength(3);
       expect(img?.expectedVsActual.actual).toContain('3 elements');
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  it('reports a small target once when axe also found a target-size violation', async () => {
+    const page = await (await browser.newContext({ viewport: { width: 375, height: 700 } })).newPage();
+    try {
+      await page.setContent(
+        '<html lang="en"><head><title>t</title></head><body><main>' +
+          '<button style="box-sizing:border-box;padding:0;width:10px;height:10px">a</button>' +
+          '<button style="box-sizing:border-box;padding:0;width:50px;height:50px">b</button></main></body></html>'
+      );
+      const fakeScan: AxeScan = {
+        violations: [
+          {
+            id: 'target-size',
+            impact: 'serious',
+            help: 'Target size must be at least 24 by 24 pixels',
+            description: 'Ensures touch targets have sufficient size and space',
+            tags: ['wcag22aa', 'wcag258'],
+            nodes: [{ target: ['button'] }],
+          },
+        ],
+      };
+      const axeCache = new Map([[axeCacheKey(page, 'visitor'), Promise.resolve(fakeScan)]]);
+      const findingsWithAxe = await checker.check(page, { ...ctx, breakpoint: '375px', axeCache });
+      expect(findingsWithAxe).toHaveLength(1);
+      expect(findingsWithAxe[0].id).toMatch(/^F-A11Y-/);
+      expect(findingsWithAxe.some((f) => f.id.startsWith('F-UX-TARGET-') && f.severity === 'Minor')).toBe(false);
+
+      const findingsWithoutAxe = await checker.check(page, { ...ctx, breakpoint: '375px', enableAxe: false });
+      const minorFinding = findingsWithoutAxe.find((f) => f.id.startsWith('F-UX-TARGET-') && f.severity === 'Minor');
+      expect(minorFinding).toBeDefined();
     } finally {
       await page.context().close();
     }
