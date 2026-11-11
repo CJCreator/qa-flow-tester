@@ -37,4 +37,16 @@ describe('share image', () => {
     expect(b.readUInt32BE(20)).toBe(630);
     expect(b.length).toBeLessThan(500 * 1024);
   });
+
+  it('favicon and the image script use palette colours, not the old dark blue', () => {
+    const favicon = readFileSync(join(WIZARD, 'public', 'favicon.svg'), 'utf8');
+    const script = readFileSync(join(WIZARD, 'scripts', 'make-og-image.mjs'), 'utf8');
+    for (const old of ['#111827', '#6C9BF2', '#9ca3af', '#f9fafb', '#d1d5db']) {
+      expect(favicon.toLowerCase()).not.toContain(old.toLowerCase());
+      expect(script.toLowerCase()).not.toContain(old.toLowerCase());
+    }
+    expect(favicon).toContain('#0E1311');
+    expect(favicon).toContain('#8FA6FF');
+    expect(script).toContain('#0E1311');
+  });
 });
