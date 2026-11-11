@@ -1,6 +1,6 @@
 # QA Flow Tester (Release check-up)
 
-Open-source, self-hosted tool that scans a web app, writes a reviewable Plan, runs it with Playwright and
+Source-available (FSL-1.1-MIT), self-hosted tool that scans a web app, writes a reviewable Plan, runs it with Playwright and
 deterministic checkers, and produces a pre-release report. pnpm monorepo, TypeScript, Node 22, vitest.
 
 ## Read first
