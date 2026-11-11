@@ -30,3 +30,9 @@ updates:
       prefix: 'chore(docker)'
     ignore:
       - dependency-name: 'mcr.microsoft.com/playwright'
+  - package-ecosystem: docker
+    directory: /site
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: 'chore(docker)'
