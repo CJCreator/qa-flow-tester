@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { checkZip, docxToMarkdown, htmlToMarkdown } from '../src/discovery/docx-to-markdown.js';
+import { deflateRawSync } from 'node:zlib';
+import { checkInflatedSizes, checkZip, docxToMarkdown, htmlToMarkdown } from '../src/discovery/docx-to-markdown.js';
 
 // --- tiny stored (uncompressed) ZIP writer, test only ---
 const CRC_TABLE = (() => {
@@ -20,6 +21,7 @@ function crc32(data: Uint8Array): number {
 interface ZipEntry {
   name: string;
   data: string;
+  deflate?: boolean;
   declaredSize?: number;
 }
 
@@ -32,30 +34,34 @@ function buildZip(entries: ZipEntry[]): Uint8Array {
     const name = enc.encode(e.name);
     const data = enc.encode(e.data);
     const crc = crc32(data);
+    const method = e.deflate ? 8 : 0;
+    const payload = e.deflate ? deflateRawSync(data) : data;
     const local = new Uint8Array(30 + name.length);
     const lv = new DataView(local.buffer);
     lv.setUint32(0, 0x04034b50, true);
     lv.setUint16(4, 20, true);
+    lv.setUint16(8, method, true);
     lv.setUint32(14, crc, true);
-    lv.setUint32(18, data.length, true);
+    lv.setUint32(18, payload.length, true);
     lv.setUint32(22, data.length, true);
     lv.setUint16(26, name.length, true);
     local.set(name, 30);
-    parts.push(local, data);
+    parts.push(local, payload);
 
     const cd = new Uint8Array(46 + name.length);
     const cv = new DataView(cd.buffer);
     cv.setUint32(0, 0x02014b50, true);
     cv.setUint16(4, 20, true);
     cv.setUint16(6, 20, true);
+    cv.setUint16(10, method, true);
     cv.setUint32(16, crc, true);
-    cv.setUint32(20, data.length, true);
+    cv.setUint32(20, payload.length, true);
     cv.setUint32(24, e.declaredSize ?? data.length, true);
     cv.setUint16(28, name.length, true);
     cv.setUint32(42, offset, true);
     cd.set(name, 46);
     central.push(cd);
-    offset += local.length + data.length;
+    offset += local.length + payload.length;
   }
   const cdSize = central.reduce((n, c) => n + c.length, 0);
   const end = new Uint8Array(22);
@@ -82,29 +88,35 @@ const cell = (text: string) => `<w:tc>${para(text)}</w:tc>`;
 const tableXml = (rows: string[][]) =>
   `<w:tbl>${rows.map((r) => `<w:tr>${r.map(cell).join('')}</w:tr>`).join('')}</w:tbl>`;
 
-function makeDocx(bodyXml: string, extra: ZipEntry[] = []): Uint8Array {
+function makeDocx(bodyXml: string, extra: ZipEntry[] = [], options?: { deflate?: boolean }): Uint8Array {
+  const deflate = options?.deflate;
   return buildZip([
     {
       name: '[Content_Types].xml',
       data: '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>',
+      deflate,
     },
     {
       name: '_rels/.rels',
       data: '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>',
+      deflate,
     },
     {
       name: 'word/_rels/document.xml.rels',
       data: '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>',
+      deflate,
     },
     {
       name: 'word/styles.xml',
       data: `<?xml version="1.0" encoding="UTF-8"?><w:styles ${W}><w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/></w:style><w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/></w:style></w:styles>`,
+      deflate,
     },
     {
       name: 'word/document.xml',
       data: `<?xml version="1.0" encoding="UTF-8"?><w:document ${W}><w:body>${bodyXml}</w:body></w:document>`,
+      deflate,
     },
-    ...extra,
+    ...extra.map((e) => ({ deflate, ...e })),
   ]);
 }
 
@@ -168,6 +180,34 @@ describe('docxToMarkdown', { timeout: 30_000 }, () => {
 
   it('accepts a normal small ZIP in checkZip', () => {
     expect(() => checkZip(buildZip([{ name: 'a.txt', data: 'a' }]))).not.toThrow();
+  });
+});
+
+describe('checkInflatedSizes', () => {
+  it('refuses an entry that declares 1 KB and inflates to 30 MB', async () => {
+    const bomb = buildZip([
+      { name: 'word/document.xml', data: 'x'.repeat(30 * 1024 * 1024), deflate: true, declaredSize: 1024 },
+    ]);
+    expect(() => checkZip(bomb)).not.toThrow();
+    expect(() => checkInflatedSizes(bomb)).toThrow(/could not be read/);
+    await expect(docxToMarkdown(bomb)).rejects.toThrow(/could not be read/);
+  });
+
+  it('refuses an entry whose inflated size differs from the declared size', () => {
+    const mismatch = buildZip([
+      { name: 'word/document.xml', data: 'a'.repeat(5000), deflate: true, declaredSize: 4000 },
+    ]);
+    expect(() => checkInflatedSizes(mismatch)).toThrow(/could not be read/);
+  });
+
+  it('refuses a stored entry whose sizes disagree', () => {
+    const mismatch = buildZip([{ name: 'word/document.xml', data: 'abc', declaredSize: 10 }]);
+    expect(() => checkInflatedSizes(mismatch)).toThrow(/could not be read/);
+  });
+
+  it('accepts an honest deflated .docx', async () => {
+    const { text } = await docxToMarkdown(makeDocx(para('Hello', 'Heading1'), [], { deflate: true }));
+    expect(text).toContain('# Hello');
   });
 });
 
