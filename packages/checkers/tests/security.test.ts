@@ -358,6 +358,22 @@ describe('SecurityChecker', () => {
       expect(await csrfOn(FORM, [{ name: 'sid', sameSite: 'None' }])).toHaveLength(1);
     });
 
+    it('reports a CSRF check that could not read the page instead of finding nothing', async () => {
+      const proxy = {
+        evaluate: async () => {
+          throw new Error('boom');
+        },
+        url: () => 'https://shop.test/',
+        context: () => ({ cookies: async () => [] }),
+      } as unknown as Page;
+      const findings = await checker.checkCsrf(proxy, base);
+      expect(findings).toHaveLength(1);
+      expect(findings[0].title).toBe('Could not verify: whether forms carry a CSRF token');
+      expect(findings[0].needsConfirmation).toBe(true);
+      expect(findings[0].checker).toBe('security');
+      expect(findings[0].id).toBe('F-UNVERIFIED-security-CSRF-GEN');
+    });
+
     it('cookie flags: Secure only on https, HttpOnly on session cookies, no values in text', async () => {
       const run = async (url: string, cookie: Record<string, unknown>) => {
         const mockPage = {
@@ -450,5 +466,6 @@ describe('SecurityChecker', () => {
     expect(unverified).toHaveLength(1);
     expect(unverified[0].needsConfirmation).toBe(true);
     expect(unverified[0].checker).toBe('security');
+    expect(findings.filter((f) => f.title === 'Could not verify: whether forms carry a CSRF token')).toHaveLength(1);
   });
 });
