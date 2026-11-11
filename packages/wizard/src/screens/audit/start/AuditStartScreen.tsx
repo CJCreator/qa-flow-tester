@@ -234,7 +234,7 @@ export function AuditStartFields({
           disabled={starting}
           aria-describedby={message ? 'audit-start-message' : undefined}
         >
-          {starting ? <Spinner label="Starting…" announce={false} /> : 'Start the Website Audit'}
+          {starting ? <Spinner label="Starting…" /> : 'Start the Website Audit'}
         </button>
       </div>
     </form>

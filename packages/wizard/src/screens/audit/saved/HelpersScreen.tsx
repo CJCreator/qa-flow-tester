@@ -154,7 +154,7 @@ export function HelpersView({
             </ul>
           </fieldset>
           <button type="submit" className="btn-primary" disabled={busy}>
-            {busy ? <Spinner label="Saving…" announce={false} /> : 'Give access'}
+            {busy ? <Spinner label="Saving…" /> : 'Give access'}
           </button>
           {message &&
             (message.tone === 'fail' ? (

@@ -264,7 +264,7 @@ export function PreviewShareView(props: PreviewShareViewProps) {
             disabled={busy || preview.status === 'making'}
             onClick={props.onMakePreview}
           >
-            {preview.status === 'making' ? <Spinner label="Making the preview…" announce={false} /> : 'Make preview'}
+            {preview.status === 'making' ? <Spinner label="Making the preview…" /> : 'Make preview'}
           </button>
           {/* Always a link: a preview made in an earlier visit can still be opened. */}
           <a
@@ -337,7 +337,7 @@ export function PreviewShareView(props: PreviewShareViewProps) {
           </fieldset>
           <LanguageSelect id="share-language" value={props.shareLanguage} onChange={props.onShareLanguage} />
           <button type="button" className="btn-primary" disabled={busy} onClick={props.onCreateLink}>
-            {busy ? <Spinner label="Working…" announce={false} /> : 'Make Shared Link'}
+            {busy ? <Spinner label="Working…" /> : 'Make Shared Link'}
           </button>
         </div>
         {message &&

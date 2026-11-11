@@ -627,7 +627,7 @@ function VisualReview({
           }}
         >
           {working ? (
-            <Spinner label="Looking over the screens…" announce={false} />
+            <Spinner label="Looking over the screens…" />
           ) : (
             `Look over the other ${count(review.remaining, 'screen', 'screens')}`
           )}
@@ -659,7 +659,7 @@ function ReportActionsBar({ report, actions }: { report: ReleaseReport; actions:
           disabled={actions.starting}
           onClick={() => actions.onTestAgain(report)}
         >
-          {actions.starting ? <Spinner label="Starting…" announce={false} /> : 'New check-up of this site'}
+          {actions.starting ? <Spinner label="Starting…" /> : 'New check-up of this site'}
         </button>
         <button
           type="button"
@@ -679,7 +679,7 @@ function ReportActionsBar({ report, actions }: { report: ReleaseReport; actions:
             }
           }}
         >
-          {downloading ? <Spinner label="Downloading…" announce={false} /> : 'Download the report'}
+          {downloading ? <Spinner label="Downloading…" /> : 'Download the report'}
         </button>
         <button type="button" className="btn-link" onClick={() => window.print()}>
           Print
@@ -738,7 +738,7 @@ function ReportActionsBar({ report, actions }: { report: ReleaseReport; actions:
             </div>
           </div>
           <button type="submit" className="btn-primary" disabled={actions.starting || !username.trim() || !password}>
-            {actions.starting ? <Spinner label="Starting…" announce={false} /> : 'Start with these sign-in details'}
+            {actions.starting ? <Spinner label="Starting…" /> : 'Start with these sign-in details'}
           </button>
         </form>
       )}
@@ -1540,7 +1540,7 @@ function SourcesSummary({ report }: { report: ReleaseReport }) {
                       <div className="flex flex-wrap items-center gap-3">
                         {/* Quiet: the screen's one primary is "New check-up of this site". */}
                         <button type="submit" disabled={savingOverride} className="btn-quiet btn-sm">
-                          {savingOverride ? <Spinner label="Saving…" announce={false} /> : 'Save the override'}
+                          {savingOverride ? <Spinner label="Saving…" /> : 'Save the override'}
                         </button>
                         <button type="button" onClick={() => setActiveOverride(null)} className="btn-link text-sm">
                           Cancel
@@ -1688,7 +1688,7 @@ function ProblemItem({
                   {/* Quiet: the screen's one primary is "New check-up of this site". */}
                   <button type="submit" className="btn-quiet btn-sm" disabled={saving}>
                     {saving ? (
-                      <Spinner label="Saving…" announce={false} />
+                      <Spinner label="Saving…" />
                     ) : marking === 'Intended' ? (
                       'Mark as intended'
                     ) : (

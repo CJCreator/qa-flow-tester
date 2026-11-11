@@ -28,7 +28,7 @@ export function CopyButton({ label, getText }: { label: string; getText: () => P
           }
         }}
       >
-        {state === 'working' ? <Spinner label="Copying…" announce={false} /> : label}
+        {state === 'working' ? <Spinner label="Copying…" /> : label}
       </button>
       <span role="status" className="ml-2 text-sm text-pass">
         {state === 'copied' ? 'Copied' : ''}

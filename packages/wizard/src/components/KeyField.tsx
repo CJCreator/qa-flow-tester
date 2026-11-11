@@ -132,7 +132,7 @@ export function KeyField({
       </div>
 
       <p id="ai-key-status" role="status" className="mt-2 min-h-[1.6em] text-sm">
-        {status.kind === 'checking' && <Spinner label="Checking the key…" announce={false} />}
+        {status.kind === 'checking' && <Spinner label="Checking the key…" />}
         {status.kind === 'empty' && saved && <span className="font-bold text-pass">Key saved</span>}
         {status.kind === 'valid' && <span className="font-bold text-pass">✓ The key works</span>}
         {status.kind === 'invalid' && (
@@ -150,7 +150,7 @@ export function KeyField({
           onClick={() => void save()}
           aria-describedby={saveOffReason ? 'ai-key-save-reason' : undefined}
         >
-          {saving ? <Spinner label="Saving your key…" announce={false} /> : saveLabel}
+          {saving ? <Spinner label="Saving your key…" /> : saveLabel}
         </button>
         {saveOffReason && (
           <span id="ai-key-save-reason" className="text-sm text-ink-soft">

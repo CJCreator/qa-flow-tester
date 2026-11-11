@@ -429,7 +429,7 @@ function PaidKey({
       <div className="flex flex-wrap items-center gap-3">
         {/* The first key is the one thing to do; once a key exists the model choice is the primary. */}
         <button type="submit" className={configured ? 'btn-quiet' : 'btn-primary'} disabled={saving || !key.trim()}>
-          {saving ? <Spinner label="Saving…" announce={false} /> : configured ? 'Save the new key' : `Use ${name}`}
+          {saving ? <Spinner label="Saving…" /> : configured ? 'Save the new key' : `Use ${name}`}
         </button>
         <Feedback result={error ? { ok: false, text: error } : saved} />
       </div>
@@ -587,7 +587,7 @@ function ModelChoice({ setup, onSaved }: { setup: AiSetup; onSaved: () => void }
 
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" className="btn-primary" disabled={saving} onClick={() => void save()}>
-          {saving ? <Spinner label="Saving…" announce={false} /> : 'Save the model choice'}
+          {saving ? <Spinner label="Saving…" /> : 'Save the model choice'}
         </button>
         <Feedback result={result} />
       </div>
@@ -599,7 +599,7 @@ function ModelChoice({ setup, onSaved }: { setup: AiSetup; onSaved: () => void }
           onClick={() => void runTest()}
           aria-describedby="test-model-hint"
         >
-          {test.running ? <Spinner label="Asking the model…" announce={false} /> : 'Test this model'}
+          {test.running ? <Spinner label="Asking the model…" /> : 'Test this model'}
         </button>
         <div role="status" className="text-sm">
           {test.result?.ok && test.result.ms != null && (
@@ -1077,7 +1077,7 @@ function CheckupSchedules() {
 
           <div className="flex flex-wrap items-center gap-3">
             <button type="submit" disabled={saving || !targetUrl.trim()} className="btn-quiet min-h-[44px]">
-              {saving ? <Spinner label="Saving…" announce={false} /> : 'Save the schedule'}
+              {saving ? <Spinner label="Saving…" /> : 'Save the schedule'}
             </button>
             <button type="button" onClick={() => setShowAddForm(false)} className="btn-link min-h-[44px]">
               Cancel

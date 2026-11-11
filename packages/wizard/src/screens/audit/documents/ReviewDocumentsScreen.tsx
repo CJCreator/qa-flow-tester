@@ -538,7 +538,7 @@ export function ReviewDocumentsView({
           Discard changes
         </button>
         <button type="button" className="btn-primary" disabled={!pending || saving} onClick={onSave}>
-          {saving ? <Spinner label="Saving…" announce={false} /> : 'Save changes'}
+          {saving ? <Spinner label="Saving…" /> : 'Save changes'}
         </button>
       </BottomActionBar>
     </div>

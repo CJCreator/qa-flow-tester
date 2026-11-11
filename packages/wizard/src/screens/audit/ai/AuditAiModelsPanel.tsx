@@ -90,7 +90,7 @@ export function AuditAiModelsView({
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" className="btn-quiet" disabled={!pending || saving} onClick={onSave}>
-          {saving ? <Spinner label="Saving…" announce={false} /> : 'Save AI models'}
+          {saving ? <Spinner label="Saving…" /> : 'Save AI models'}
         </button>
         <button type="button" className="btn-quiet" disabled={!pending || saving} onClick={onDiscard}>
           Discard unsaved changes

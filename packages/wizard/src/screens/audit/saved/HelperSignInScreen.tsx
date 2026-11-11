@@ -128,7 +128,7 @@ export function HelperSignInView({ state, onSignIn, onSignOut, onOpenAudit, host
   return (
     <div className="space-y-4">
       <button type="button" className="btn-primary px-6 font-bold" disabled={busy} onClick={onSignIn}>
-        {busy ? <Spinner label="Signing in…" announce={false} /> : 'Sign in with Google'}
+        {busy ? <Spinner label="Signing in…" /> : 'Sign in with Google'}
       </button>
       {state.status === 'signed-out' && state.message && <ErrorMessage>{state.message}</ErrorMessage>}
     </div>

@@ -6,9 +6,7 @@ export function WakeNote({ state }: { state: WakeState }) {
   if (state === 'none') return null;
   return (
     <p role="status" className="mt-3 text-sm text-ink-soft">
-      {state === 'waking' && (
-        <Spinner label="Getting the free online copy ready. It sleeps when idle." announce={false} />
-      )}
+      {state === 'waking' && <Spinner label="Getting the free online copy ready. It sleeps when idle." />}
       {state === 'ready' && (
         <span>
           <span aria-hidden="true" className="font-bold text-pass">

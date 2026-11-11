@@ -482,7 +482,7 @@ export function NewCheckupScreen({
           aria-invalid={check.state === 'invalid' || check.state === 'unreachable'}
         />
         <div id="url-status" role="status" className="mt-2 min-h-[1.6em] text-sm">
-          {check.state === 'checking' && <Spinner label="Checking the address…" announce={false} />}
+          {check.state === 'checking' && <Spinner label="Checking the address…" />}
           {check.state === 'invalid' && <span className="font-medium text-fail">{check.reason}</span>}
           {check.state === 'ok' && kind && (
             <div className="flex flex-wrap items-center gap-2 pt-1">
@@ -832,7 +832,7 @@ export function NewCheckupScreen({
           disabled={starting || !canStart}
           aria-describedby={blockedHint ? 'scan-blocked-hint' : 'start-hint'}
         >
-          {starting ? <Spinner label="Starting…" announce={false} /> : 'Start the check-up'}
+          {starting ? <Spinner label="Starting…" /> : 'Start the check-up'}
         </button>
         {blockedHint ? (
           <p id="scan-blocked-hint" role="alert" className="text-sm font-semibold text-warn">

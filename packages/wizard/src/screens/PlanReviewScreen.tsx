@@ -474,7 +474,7 @@ export function PlanReviewScreen({
             disabled={busy || approving || !signInReady}
             aria-describedby={signInReady ? undefined : 'sign-in-again-reason'}
           >
-            {approving ? <Spinner label="Starting the tests…" announce={false} /> : 'Approve with these details'}
+            {approving ? <Spinner label="Starting the tests…" /> : 'Approve with these details'}
           </button>
         ) : (
           <button
@@ -485,7 +485,7 @@ export function PlanReviewScreen({
             onClick={() => void approve()}
           >
             {approving ? (
-              <Spinner label="Starting the tests…" announce={false} />
+              <Spinner label="Starting the tests…" />
             ) : (
               <>
                 <span className="sm:hidden">Approve and test</span>

@@ -329,7 +329,7 @@ export function DocumentSettingsView({
           Discard changes
         </button>
         <button type="button" className="btn-primary" disabled={!pending || saving} onClick={onSave}>
-          {saving ? <Spinner label="Saving…" announce={false} /> : 'Save document settings'}
+          {saving ? <Spinner label="Saving…" /> : 'Save document settings'}
         </button>
       </BottomActionBar>
       {dialog}

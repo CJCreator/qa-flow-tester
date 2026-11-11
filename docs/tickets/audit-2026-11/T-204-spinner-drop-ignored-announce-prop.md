@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P3 | M | wizard | dead-code | todo |
+| P3 | M | wizard | dead-code | built |
 
 **Files you may edit (no others):**
 - `packages/wizard/src/components/text.tsx`
@@ -82,8 +82,8 @@ Run: `pnpm build`, then `pnpm exec vitest run --project unit packages/wizard`, t
 
 ## Done when
 
-- [ ] `grep -rn "announce" packages/wizard/src` prints only the two comment lines in `components/text.tsx` that use the word in prose (lines 3 and 35), or nothing.
-- [ ] `pnpm build`, the wizard unit tests and `pnpm lint` pass.
+- [x] `grep -rn "announce" packages/wizard/src` prints only the two comment lines in `components/text.tsx` that use the word in prose (lines 3 and 35), or nothing.
+- [x] `pnpm build`, the wizard unit tests and `pnpm lint` pass.
 
 ## Notes
 

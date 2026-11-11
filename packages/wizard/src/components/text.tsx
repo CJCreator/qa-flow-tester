@@ -34,13 +34,7 @@ export function ErrorMessage({ children }: { children: ReactNode }) {
  * A working indicator with its words. It is always a status message with an accessible label, so screen readers
  * announce what is in progress.
  */
-export function Spinner({
-  label,
-}: {
-  label: string;
-  /** @deprecated Ignored: every indicator is a labelled status. Kept so existing callers still compile. */
-  announce?: boolean;
-}) {
+export function Spinner({ label }: { label: string }) {
   return (
     <span className="inline-flex items-center gap-2" role="status" aria-label={label}>
       <svg aria-hidden="true" className="h-5 w-5 animate-spin motion-reduce:animate-none" viewBox="0 0 24 24">
