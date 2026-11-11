@@ -35,6 +35,8 @@ One file per ticket under [audit-2026-11/](audit-2026-11/). Each file names the 
 
 The tickets are grouped into chains. Tickets in one chain edit the same files, so build them one after another in wave order. Different chains can be built at the same time, with two limits: T-240 also edits `packages/runner/src/routes/plan.ts`, so do not build it beside T-256, T-258 or T-260; and T-225 edits every workflow file, so build it after T-274 if both are in flight. No ticket is waiting on a decision: the owner settled all eleven open choices on 2026-11-11, and each ticket records the answer.
 
+The ids are not continuous: T-235 to T-239, T-253, T-254, T-280 to T-284 and T-290 to T-294 were reserved and never used. No ticket is missing.
+
 ### CI workflows
 
 | id | title | gaps | priority | size | wave | status | depends on |
