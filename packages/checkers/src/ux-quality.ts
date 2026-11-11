@@ -9,11 +9,16 @@ import {
 } from '@qa/types';
 import { couldNotVerifyFinding } from './could-not-verify.js';
 
+interface AxeRunner {
+  withTags(tags: string[]): { analyze(): Promise<unknown> };
+}
+
+type AxeBuilderCtor = new (opts: { page: Page }) => AxeRunner;
+
 // Support both ESM default and CJS named export
-const AxeBuilder =
-  (axePlaywright as unknown as { default?: typeof axePlaywright; AxeBuilder?: typeof axePlaywright }).default ||
-  (axePlaywright as unknown as { AxeBuilder?: typeof axePlaywright }).AxeBuilder ||
-  axePlaywright;
+const AxeBuilder = ((axePlaywright as unknown as { default?: AxeBuilderCtor; AxeBuilder?: AxeBuilderCtor }).default ||
+  (axePlaywright as unknown as { AxeBuilder?: AxeBuilderCtor }).AxeBuilder ||
+  axePlaywright) as AxeBuilderCtor;
 
 /** WCAG 2.2 AA 2.5.8 Target Size (Minimum). */
 const WCAG_MIN_TARGET_PX = 24;
@@ -31,22 +36,29 @@ interface AxeRule {
 const WCAG_NAMES: Record<string, string> = {
   '1.1.1': 'Non-text Content',
   '1.3.1': 'Info and Relationships',
+  '1.3.5': 'Identify Input Purpose',
   '1.4.1': 'Use of Color',
   '1.4.3': 'Contrast (Minimum)',
   '1.4.4': 'Resize Text',
   '1.4.10': 'Reflow',
+  '1.4.11': 'Non-text Contrast',
+  '1.4.12': 'Text Spacing',
   '2.1.1': 'Keyboard',
   '2.1.2': 'No Keyboard Trap',
   '2.4.1': 'Bypass Blocks',
-  '2.4.3': 'Focus Order',
-  '2.4.11': 'Focus Not Obscured (Minimum)',
   '2.4.2': 'Page Titled',
+  '2.4.3': 'Focus Order',
   '2.4.4': 'Link Purpose (In Context)',
+  '2.4.6': 'Headings and Labels',
   '2.4.7': 'Focus Visible',
+  '2.4.11': 'Focus Not Obscured (Minimum)',
   '2.5.8': 'Target Size (Minimum)',
   '3.1.1': 'Language of Page',
+  '3.3.1': 'Error Identification',
   '3.3.2': 'Labels or Instructions',
+  '3.3.3': 'Error Suggestion',
   '4.1.2': 'Name, Role, Value',
+  '4.1.3': 'Status Messages',
 };
 
 /** Turns axe tags such as `wcag143` into "WCAG 1.4.3 Contrast (Minimum)". */
@@ -136,7 +148,7 @@ export function axeCacheKey(page: Page, role = ''): string {
 export class UXQualityChecker {
   private async axeScan(page: Page, cache?: AxeCache, role = ''): Promise<AxeScan> {
     const scan = async (): Promise<AxeScan> => {
-      const axeResults = await new (AxeBuilder as any)({ page })
+      const axeResults = await new AxeBuilder({ page })
         .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
         .analyze();
       return axeResults as AxeScan;
@@ -171,11 +183,13 @@ export class UXQualityChecker {
   ): Promise<Finding[]> {
     const findings: Finding[] = [];
     let counter = 1;
+    let axeFoundTargetSize = false;
 
     // 1. Accessibility Check via axe-core
     if (context.enableAxe !== false) {
       try {
         const axeResults = await this.axeScan(page, context.axeCache, context.role);
+        axeFoundTargetSize = axeResults.violations.some((v) => v.id === 'target-size');
 
         for (const violation of axeResults.violations) {
           const firstNode = violation.nodes[0];
@@ -310,6 +324,8 @@ export class UXQualityChecker {
     }
 
     // 2. Rule: Mobile Tap Target Size (< 44x44px on mobile)
+    // The AA minimum (24 px) is axe's job when axe ran; this check adds the 44 px
+    // recommendation and covers runs with axe switched off (enableAxe: false).
     if (context.breakpoint === '375px') {
       try {
         const smallTargets = await page.evaluate(() => {
@@ -386,6 +402,9 @@ export class UXQualityChecker {
           const label = target.text || target.ariaLabel || target.testId || `unlabeled <${target.tagName}>`;
           // WCAG 2.2 AA (2.5.8) asks for 24x24px. 44x44px is the AAA / platform guidance level.
           const belowAA = (target.width < WCAG_MIN_TARGET_PX || target.height < WCAG_MIN_TARGET_PX) && !target.spaced;
+          if (belowAA && axeFoundTargetSize) {
+            continue;
+          }
           findings.push({
             id: `F-UX-TARGET-${context.testCaseId || 'GEN'}-${counter++}`,
             testCaseId: context.testCaseId,
