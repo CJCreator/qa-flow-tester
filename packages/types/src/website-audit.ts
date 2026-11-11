@@ -1142,6 +1142,12 @@ export const AUDIT_API = {
   stream: { method: 'GET', path: '/api/audits/:id/stream', replies: 'sse', access: 'view' },
   /** 202: a new version with the same address and limits. */
   rerun: { method: 'POST', path: '/api/audits/:id/rerun', replies: 'json', access: 'owner' },
+  /**
+   * Stops the Website Audit's running version and nothing else. 202 `AuditStopReply { stopped: true }` when the
+   * stop was asked for (the version is saved as 'stopped' a moment later); 200 `{ stopped: false, message }` when
+   * that audit is not running. Never touches a Check-up.
+   */
+  stop: { method: 'POST', path: '/api/audits/:id/stop', replies: 'json', access: 'owner' },
   content: { method: 'GET', path: '/api/audits/:id/content', replies: 'json', access: 'view' },
   /** A screenshot of the version, by its path relative to the version's folder. */
   file: { method: 'GET', path: '/api/audits/:id/file', replies: 'file', access: 'view' },
@@ -1254,6 +1260,11 @@ type VersionQuery = { version?: number };
 export interface AuditStartReply {
   auditId: string;
   version: number;
+}
+
+export interface AuditStopReply {
+  stopped: boolean;
+  message?: string;
 }
 
 export interface AuditListReply {
@@ -1392,6 +1403,7 @@ interface AuditApiShapes {
   remove: { query: NoQuery; body: undefined; reply: { deleted: true } };
   stream: { query: VersionQuery; body: undefined; reply: EventStreamReply<AuditProgressEvent> };
   rerun: { query: NoQuery; body: undefined; reply: AuditStartReply };
+  stop: { query: NoQuery; body: undefined; reply: AuditStopReply };
   content: { query: VersionQuery & { path: string }; body: undefined; reply: AuditContentReply };
   file: { query: VersionQuery & { path: string }; body: undefined; reply: FileReply };
   getEdits: { query: VersionQuery; body: undefined; reply: AuditEditsReply };
