@@ -1,4 +1,4 @@
-import type { ConsoleEntry, Finding, NetworkEntry, StepEvidence, Breakpoint } from '@qa/types';
+import type { ConsoleEntry, Finding, FindingSeverity, NetworkEntry, StepEvidence, Breakpoint } from '@qa/types';
 
 function safeOrigin(url: string | undefined): string | null {
   if (!url) return null;
@@ -7,6 +7,29 @@ function safeOrigin(url: string | undefined): string | null {
   } catch {
     return null;
   }
+}
+
+export function isUncaught(c: ConsoleEntry): boolean {
+  return typeof c.text === 'string' && c.text.startsWith('Uncaught Exception');
+}
+
+export function originOfConsoleEntry(c: ConsoleEntry): string | undefined {
+  if (c.url) {
+    return safeOrigin(c.url) ?? undefined;
+  }
+  if (!isUncaught(c)) {
+    return undefined;
+  }
+  const lines = c.text.split(/\r?\n/);
+  for (const line of lines) {
+    if (!line.trim().startsWith('at ')) continue;
+    const match = line.match(/https?:\/\/[^\s)'"]+/);
+    if (match) {
+      const origin = safeOrigin(match[0]);
+      if (origin) return origin;
+    }
+  }
+  return undefined;
 }
 
 const withoutHash = (url: string) => url.split('#')[0];
@@ -51,7 +74,7 @@ export class BugDetectionChecker {
       }
       const attributed = new Set<ConsoleEntry>();
       // A third-party failure is minor unless the page broke with it: a crash in the same step.
-      const pageBroke = step.consoleErrors.some((c) => c.text.includes('Uncaught Exception'));
+      const pageBroke = step.consoleErrors.some(isUncaught);
 
       for (const [url, requests] of requestsByUrl) {
         const consoleSigns = step.consoleErrors.filter(
@@ -108,14 +131,36 @@ export class BugDetectionChecker {
       // 2. Console errors and uncaught exceptions that aren't about a failed file
       for (const consoleLog of step.consoleErrors) {
         if (attributed.has(consoleLog)) continue;
-        const isUnhandledException = consoleLog.text.includes('Uncaught Exception');
-        // An error thrown inside another site's script (a chat widget, analytics) is theirs.
-        const isThirdParty = isThirdPartyUrl(consoleLog.url);
+        const isUnhandledException = isUncaught(consoleLog);
+        const origin = originOfConsoleEntry(consoleLog);
+        const isThirdParty = !!pageOrigin && !!origin && pageOrigin !== origin;
+        const isFirstParty = !!pageOrigin && !!origin && pageOrigin === origin;
+
+        let severity: FindingSeverity;
+        let resolution: string;
+
+        if (isThirdParty) {
+          severity = 'Minor';
+          resolution = `The error comes from a script on another site (${origin}). Check it doesn't break anything people use, and report it to its provider.`;
+        } else if (isFirstParty) {
+          severity = isUnhandledException ? 'Blocker' : 'Major';
+          resolution =
+            'Inspect the stack trace in console logs, ensure null checks and error boundaries are configured.';
+        } else if (isUnhandledException) {
+          severity = 'Major';
+          resolution =
+            'The address of the failing script could not be read, so it may come from a third party. Inspect the stack trace in console logs, ensure null checks and error boundaries are configured.';
+        } else {
+          severity = 'Minor';
+          resolution =
+            'Inspect the stack trace in console logs, ensure null checks and error boundaries are configured.';
+        }
+
         findings.push({
           id: `F-BUG-${context.testCaseId || 'GEN'}-${findingCounter++}`,
           testCaseId: context.testCaseId,
           flowId: context.flowId,
-          severity: isThirdParty ? 'Minor' : isUnhandledException ? 'Blocker' : 'Major',
+          severity,
           checker: 'bug-detection',
           title: isUnhandledException
             ? `Uncaught Exception in step "${step.stepName}"`
@@ -139,9 +184,7 @@ export class BugDetectionChecker {
             domSnapshotPath: step.domSnapshotPath,
             consoleLogs: [consoleLog],
           },
-          resolution: isThirdParty
-            ? `The error comes from a script on another site (${safeOrigin(consoleLog.url)}). Check it doesn't break anything people use, and report it to its provider.`
-            : 'Inspect the stack trace in console logs, ensure null checks and error boundaries are configured.',
+          resolution,
           thirdParty: isThirdParty || undefined,
         });
       }
