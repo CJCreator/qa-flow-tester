@@ -2,8 +2,7 @@
  * The check-up API: what the runner accepts and answers, and what the wizard sends.
  *
  * Pure, browser-safe module, and types only on purpose: the wizard bundles @qa/types from source, so a value
- * or an import of a Node built-in here would enter the wizard's bundle. Both ends of the check-up API import
- * these shapes instead of carrying a copy, so a field cannot disappear on one side unnoticed.
+ * or an import of a Node built-in here would enter the wizard's bundle. The wizard imports the request and status shapes below instead of carrying a copy, so a field cannot disappear on one side unnoticed.
  *
  * The wire names come from the runner's handlers (it is what answers): `RunStartBody` is the body
  * `packages/runner/src/server.ts` declares as `TriggerRunBody`, and `RunnerStatusReply` is exactly what its
@@ -129,14 +128,6 @@ export interface RunStartBody {
 }
 
 /**
- * `POST /api/runner/run` reply (202). The run's progress and completion travel over the SSE stream, so
- * the id is the whole answer.
- */
-export interface RunStartReply {
-  runId: string;
-}
-
-/**
  * `PATCH /api/runner/plan` body, moved from the wizard's copy (its comments describe each field). The
  * runner validates the values and refuses unknown ones.
  */
@@ -199,13 +190,4 @@ export interface RunnerStatusReply {
    * email in AUDIT_OWNER_EMAILS (ADR 0042, T-86).
    */
   auditOwner?: boolean;
-}
-
-/**
- * `POST /api/runner/plan/approve` reply on success: the Plan is approved and its run has started. Approval
- * refusals carry an error and a `code` instead (409 ERR_DUPLICATE_APPROVAL / ERR_PLAN_UPDATING, 404).
- */
-export interface ApprovalReply {
-  status: 'approved';
-  runId: string;
 }
