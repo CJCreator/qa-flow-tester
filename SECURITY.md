@@ -4,7 +4,9 @@
 
 Please do not open a public issue. Use GitHub's private vulnerability reporting on the repository
 (Security tab, "Report a vulnerability"). Include steps to reproduce and the version or commit. Expect an
-acknowledgement within a few days. (Owner: add a contact email here if you want one.)
+acknowledgement within a few days.
+
+Only the latest `main` and the hosted copy are supported. A fix goes to `main` and to the hosted copy together; older commits and copies are not patched.
 
 ## What the tool is allowed to do (the safety model)
 
