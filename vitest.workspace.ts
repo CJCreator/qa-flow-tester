@@ -18,6 +18,7 @@ const BROWSER_TESTS: Record<string, string[]> = {
     'finding-groups',
     'form-selectors',
     'multi-browser-network',
+    'orchestrator-run-paths',
     'role-selector-exact',
     'small-fixes',
     'visual-capture',
