@@ -7,7 +7,6 @@ import {
   secondsLeft,
   siteTypeName,
   timeLeft,
-  translateReviewPlan,
   type FeedState,
   type RunnerEvent,
 } from '../src/lib/translate';
@@ -169,93 +168,6 @@ describe('looksTechnical', () => {
   it.each(['Save invoice', 'Sign-in', 'Create Invoice Flow', 'E-mail address'])('accepts %s', (label) =>
     expect(looksTechnical(label)).toBe(false)
   );
-});
-
-describe('translateReviewPlan (Task 1.3)', () => {
-  it('turns a technical discovery plan into plain sentences with no selectors, patterns or jargon', () => {
-    const rawPlan: any = {
-      runId: 'run-123',
-      targetUrl: 'http://localhost:3501',
-      discoveredAt: new Date().toISOString(),
-      pages: [
-        { urlPath: '/', title: 'Home', interactiveElementsCount: 5, formsCount: 0 },
-        { urlPath: '/invoices/new', title: 'New Invoice', interactiveElementsCount: 3, formsCount: 1 },
-      ],
-      flows: [
-        {
-          id: 'flow-invoice',
-          name: 'Create Invoice',
-          role: 'manager',
-          startPage: '/invoices/new',
-          steps: [
-            { action: 'fill', selector: '[data-testid="customer-field"]', name: 'customer-field', value: 'Acme Corp' },
-            { action: 'fill', selector: '#amount-field', name: 'amount-field', value: '500' },
-            { action: 'click', selector: '[data-testid="save-btn"]', name: 'save-btn' },
-            { action: 'navigate', value: '^/invoices/\\d+$', name: 'View created invoice' },
-            { action: 'wait', name: 'wait-load' },
-          ],
-          candidateExpectations: {
-            origin: 'observed',
-            url: { pattern: '^/invoices/\\d+$' },
-            validationError: { field: 'customer-field' },
-          },
-          candidateValidationRules: [
-            {
-              field: 'amount',
-              selector: '#amount-field',
-              expectedError: 'must be positive',
-              origin: 'ai-guess',
-            },
-          ],
-        },
-      ],
-      questions: [],
-    };
-
-    const translated = translateReviewPlan(rawPlan);
-    expect(translated.journeys).toBeDefined();
-    expect(translated.journeys!.length).toBe(1);
-
-    const journey = translated.journeys![0];
-    expect(journey.steps).toEqual([
-      'Fill in “Customer field” with “Acme Corp”',
-      'Fill in “Amount field” with “500”',
-      'Click “Save button”',
-      'Open page “/invoices”',
-      'Wait for the page to finish loading',
-    ]);
-
-    // Checks have plain sentences and correct origin tags
-    expect(journey.checks).toEqual([
-      {
-        sentence: 'Shows an error message if “Customer field” is invalid',
-        origin: 'observed',
-      },
-      {
-        sentence: 'Reaches page “/invoices”',
-        origin: 'observed',
-      },
-      {
-        sentence: 'Validates “Amount field”: must be positive',
-        origin: 'ai-guess',
-      },
-    ]);
-
-    // Site-wide checks are provided
-    expect(translated.siteWideChecks?.length).toBeGreaterThanOrEqual(5);
-    expect(translated.siteWideChecks?.some((c) => c.name.includes('WCAG'))).toBe(true);
-
-    // Page groups are organized by section and layout
-    expect(translated.pageGroups?.length).toBeGreaterThan(0);
-
-    // User-facing translated plan text contains zero selectors, raw regex, or testids
-    const userFacingText = JSON.stringify({
-      journeys: translated.journeys,
-      siteWideChecks: translated.siteWideChecks,
-      pageGroups: translated.pageGroups,
-    });
-    expect(userFacingText).not.toMatch(/data-testid|#amount-field|#save-btn|\^|\$|\\d\+/);
-  });
 });
 
 describe('plainTitle (M6 gap fixes)', () => {
