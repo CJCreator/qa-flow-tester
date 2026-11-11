@@ -28,6 +28,9 @@ ARG VITE_SIGNUP_URL=
 ENV VITE_COUNTER_URL=$VITE_COUNTER_URL \
     VITE_CONTACT_EMAIL=$VITE_CONTACT_EMAIL \
     VITE_SIGNUP_URL=$VITE_SIGNUP_URL
+# Single stage on purpose (decided 2026-11): the Playwright base image is the bulk of the size, the runner serves the
+# wizard from packages/wizard/dist and needs the pnpm-linked node_modules, and build-secret-scan scans /app as it is.
+# devDependencies stay in the image. A two-stage build needs a local Docker build and start test first.
 RUN pnpm --filter "@qa/runner..." run build && pnpm --filter @qa/wizard run build
 
 ENV NODE_ENV=production \
