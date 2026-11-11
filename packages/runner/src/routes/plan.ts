@@ -49,6 +49,7 @@ import {
   saveSiteMemory,
   rememberRun,
   buildPlan,
+  NO_TESTS_REASON,
   testsFor,
   screenSizesOf,
   handCheckNotes,
@@ -895,9 +896,6 @@ export async function interpret(c: PlanRouteContext): Promise<void> {
   sendJson(res, 200, interpretation);
 }
 
-const NO_TESTS_FALLBACK =
-  'Nothing to test: the scan found no page or journey to check. Add a page or a journey, or choose another address.';
-
 /** Sessions with an approval in flight: a second approve while one is running is refused, key or not. */
 const approving = new WeakSet<CheckupSession>();
 /** Sessions with a "bring back a waiting plan" request under way: a second one is refused, not interleaved. */
@@ -1159,9 +1157,9 @@ async function approveOnce(c: PlanRouteContext, idempotencyKey: string | undefin
   }
   if (specTestCases.length === 0) {
     sendJson(res, 409, {
-      error: noTests ?? NO_TESTS_FALLBACK,
+      error: noTests ?? NO_TESTS_REASON,
       code: 'ERR_NO_TESTS',
-      noTests: noTests ?? NO_TESTS_FALLBACK,
+      noTests: noTests ?? NO_TESTS_REASON,
     });
     return;
   }
@@ -1291,30 +1289,15 @@ export async function waitingPlans(c: PlanRouteContext): Promise<void> {
   }
 }
 
+/**
+ * The dispatcher hands every plan row a context that already carries the plan pieces (`planRouteContext` in
+ * server.ts is spread into it). A context without a session is a wiring mistake: say so, do not guess.
+ */
 function toPlanContext(c: RouteContext): PlanRouteContext {
-  const anyC = c as any;
-  if (anyC.session) {
-    return anyC as PlanRouteContext;
+  if (!(c as Partial<PlanRouteContext>).session) {
+    throw new Error('The plan routes need the runner session in their context.');
   }
-  const server = c.server;
-  return {
-    session: server.session,
-    req: c.req,
-    res: c.res,
-    url: c.url,
-    broadcastRunnerEvent: (event) => server.broadcastRunnerEvent(event),
-    isMine: (runId) => (server as any).isMine?.(runId) ?? true,
-    isBeta: (server as any).beta ?? false,
-    aiFor: (context) => (server as any).aiFor?.(context),
-    aiBudgetFor: (settings, key, cap) => (server as any).aiBudgetFor?.(settings, key, cap),
-    recordModelOutcomes: (models) => (server as any).recordModelOutcomes?.(models),
-    refuseTarget: (res, target) => (server as any).refuseTarget?.(res, target),
-    siteDir: () => (server as any).siteDir?.() ?? server.session.paths.dataDir,
-    testCopyOf: (typed, marked) => (server as any).testCopyOf?.(typed, marked) ?? Promise.resolve(true),
-    onApproved: (record, specTestCases, notRun, generation) => {
-      (server as any).executeTesting?.(record, specTestCases, notRun, generation);
-    },
-  };
+  return c as unknown as PlanRouteContext;
 }
 
 // Every Plan row is the tool user's (access key) and open on a beta copy, where betaScope/closedInBeta in
