@@ -7,11 +7,11 @@ import { fileURLToPath } from 'node:url';
 const out = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'og-image.png');
 mkdirSync(dirname(out), { recursive: true });
 
-const html = `<!doctype html><html><body style="margin:0;width:1200px;height:630px;background:#111827;color:#f9fafb;
+const html = `<!doctype html><html><body style="margin:0;width:1200px;height:630px;background:#0E1311;color:#E8EEEA;
 font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;display:flex;flex-direction:column;justify-content:center;padding:0 96px;box-sizing:border-box">
-<div style="font-size:34px;font-weight:700;color:#9ca3af;margin-bottom:28px">Release check-up</div>
+<div style="font-size:34px;font-weight:700;color:#8FA6FF;margin-bottom:28px">Release check-up</div>
 <div style="font-size:96px;font-weight:800;line-height:1.05">QA without a QA team.</div>
-<div style="font-size:40px;color:#d1d5db;margin-top:32px">Know if your site is ready to ship.</div>
+<div style="font-size:40px;color:#A8B4AE;margin-top:32px">Know if your site is ready to ship.</div>
 </body></html>`;
 
 const browser = await chromium.launch();
