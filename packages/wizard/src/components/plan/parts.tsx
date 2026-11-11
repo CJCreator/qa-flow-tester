@@ -93,7 +93,7 @@ export function ItemToggle({
       <input
         type="checkbox"
         aria-label={label}
-        title={on ? 'Included: uncheck to leave it out of the run' : 'Left out: check to include it'}
+        title={on ? 'Included: uncheck to leave it out of the check-up' : 'Left out: check to include it'}
         checked={on}
         disabled={disabled}
         onChange={(e) => onChange(e.target.checked)}

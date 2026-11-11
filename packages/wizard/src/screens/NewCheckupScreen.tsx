@@ -519,7 +519,7 @@ export function NewCheckupScreen({
           <div className="mt-6 rounded-card border border-edge bg-surface p-4">
             <p className="font-bold">Forms are filled in and sent with your sign-in details</p>
             <p className="mt-1 text-sm text-ink-soft">
-              You added sign-in details, so the check-up acts as that user. The notice to accept is under “Sign in to
+              You added sign-in details, so the check-up acts as that role. The notice to accept is under “Sign in to
               test pages behind a login”.
             </p>
             {!form.signInConsent && (

@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P2 | S | wizard | inconsistency | todo |
+| P2 | S | wizard | inconsistency | built |
 
 **Files you may edit (no others):**
 - `packages/wizard/src/screens/ScanningScreen.tsx`
@@ -72,8 +72,8 @@ Run: `pnpm exec vitest run packages/wizard/tests/wizard-terminology-a11y.test.ts
 
 ## Done when
 
-- [ ] All eight strings read as in the "New text" column.
-- [ ] The three test files pass; `pnpm build` passes.
+- [x] All eight strings read as in the "New text" column.
+- [x] The three test files pass; `pnpm build` passes.
 
 ## Notes
 

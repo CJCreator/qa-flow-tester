@@ -852,7 +852,7 @@ function ReleaseGates() {
                 checked={gate.strictAccessibility ?? false}
                 onChange={(e) => updateGate('strictAccessibility', e.target.checked)}
               />
-              Every accessibility check must pass (WCAG AA)
+              Accessibility area must reach grade A
             </label>
           </div>
         </div>
@@ -1360,7 +1360,7 @@ function Sites() {
   const forget = async (host: string, role: string) => {
     const ok = await confirm({
       title: `Forget the ${role} sign-in for ${host}?`,
-      body: 'The saved password is removed from this computer’s keychain. Check-ups of this site won’t sign in as this account until you add it again.',
+      body: 'The saved password is removed from this computer’s keychain. Check-ups of this site won’t sign in as this role until you add it again.',
       confirmLabel: 'Forget the sign-in',
       danger: true,
     });

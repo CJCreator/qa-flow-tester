@@ -739,7 +739,7 @@ function SummarySection({ plan, actions }: { plan: ReviewPlan; actions: PlanActi
         </div>
       </fieldset>
       <button type="button" className="btn-link text-sm" disabled={actions.busy} onClick={actions.quickCheck}>
-        Make it a quick check: desktop only, and only the shared menus’ links
+        Make it a shorter check-up: desktop only, and only the shared menus’ links
       </button>
 
       <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">

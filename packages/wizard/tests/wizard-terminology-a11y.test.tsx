@@ -75,3 +75,20 @@ describe('Settings row buttons name their row', () => {
     expect(settings).toContain(label);
   });
 });
+
+describe('glossary words in UI text (CONTEXT.md _Avoid_ lists)', () => {
+  const read = (p: string) => readFileSync(join(SRC, p), 'utf8');
+  it.each([
+    ['screens/ScanningScreen.tsx', 'the specs you added'],
+    ['screens/NewCheckupScreen.tsx', 'acts as that user'],
+    ['screens/SettingsScreen.tsx', 'as this account'],
+    ['screens/SettingsScreen.tsx', 'Every accessibility check must pass'],
+    ['screens/ReportScreen.tsx', 'Reported in run:'],
+    ['components/plan/parts.tsx', 'out of the run'],
+    ['components/plan/PlanDocument.tsx', 'a quick check'],
+    ['api.ts', 'spec override'],
+  ])('%s no longer says "%s"', (file, phrase) => {
+    expect(read(file)).not.toContain(phrase);
+  });
+});
+

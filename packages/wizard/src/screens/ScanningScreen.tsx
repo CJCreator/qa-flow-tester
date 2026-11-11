@@ -98,7 +98,7 @@ export function ScanningScreen({
           failure
             ? undefined
             : `This can take a few minutes on a big site. You can leave this page: the check-up keeps going, and "New check-up" shows a dot while it does. You review the plan before anything is tested${
-                hasMaterials ? ', and the AI uses the specs you added to write it' : ''
+                hasMaterials ? ', and it is written with the Product Context you added' : ''
               }.`
         }
       />

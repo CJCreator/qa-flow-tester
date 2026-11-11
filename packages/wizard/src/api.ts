@@ -1072,6 +1072,6 @@ export async function recordSpecOverride(payload: SpecOverridePayload): Promise<
     method: 'POST',
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new RunnerError('Couldn’t record the spec override.');
+  if (!res.ok) throw new RunnerError('The override couldn’t be saved. Try again.');
   return json<{ ok: boolean }>(res);
 }

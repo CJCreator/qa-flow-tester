@@ -1603,7 +1603,7 @@ function ProblemItem({
       `**Why it matters**: ${whyItMatters(group)}`,
       `**How to fix**: ${howToFix(group, looksTechnical)}`,
       '',
-      `*Reported in run: \`${report.runId}\` for ${report.targetUrl}*`,
+      `*Reported in check-up: \`${report.runId}\` for ${report.targetUrl}*`,
     ].join('\n');
 
   return (
