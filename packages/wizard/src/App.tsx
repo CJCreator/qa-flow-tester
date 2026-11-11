@@ -64,6 +64,7 @@ import { ScanningScreen, isScanProgress, type ScanProgress } from './screens/Sca
 import { headersNotice } from './lib/coverage-text';
 import { TestingScreen } from './screens/TestingScreen';
 import { splitStoredContext } from './lib/context';
+import { stopProblem, type StopReply } from './lib/stop-result';
 import { BetaAuditNotice, showsBetaAuditNotice } from './screens/audit/BetaAuditNotice';
 
 /** How often the runner's state is read while a check-up is in progress, besides its events. */
@@ -458,12 +459,10 @@ export default function App() {
   };
 
   /** A stop that did not stop anything says so, beside the thing that was stopped. */
-  const stopFailed = (result: { aborted: boolean; error?: string }): boolean => {
-    if (result.aborted) {
-      setStopError(null);
-      return false;
-    }
-    setStopError(result.error ?? 'Nothing was stopped. The check-up may have already finished.');
+  const stopFailed = (result: StopReply): boolean => {
+    const problem = stopProblem(result);
+    setStopError(problem);
+    if (problem === null) return false;
     void reconcile();
     return true;
   };
