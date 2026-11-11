@@ -8,7 +8,8 @@ import { createCheckupSession, type CheckupSession } from '../src/session/checku
 import type { StoredPlanRecord } from '../src/session/plan-store.js';
 import type { ReviewPlan, DiscoveryDraft, TestCase, PlanPage, PageInventoryItem } from '@qa/types';
 import { getPlan, patchPlan, approvePlan, planMarkdown, waitingPlans } from '../src/routes/plan.js';
-import { CREDENTIAL_PLACEHOLDERS } from '@qa/core';
+import { planRoutes } from '../src/routes/index.js';
+import { CREDENTIAL_PLACEHOLDERS, NO_TESTS_REASON } from '@qa/core';
 
 class MockResponse {
   statusCode = 200;
@@ -536,5 +537,36 @@ describe('Plan generation: stale writes refused, approval bumps it (R9, R10)', (
 
     expect(res.statusCode).toBe(200);
     expect(session.plan.currentRecord?.context.breakpoints).toEqual(before);
+  });
+
+  it('approve with nothing to test answers 409 with the core wording', async () => {
+    const record = makeStoredPlan();
+    record.context.draft = undefined;
+    record.plan.testCases = [];
+    await session.plan.save(record);
+
+    const res = new MockResponse();
+    await approvePlan({
+      session,
+      req: createMockRequest({}),
+      res: res as unknown as http.ServerResponse,
+      url: new URL('http://localhost/api/runner/plan/approve'),
+    });
+
+    expect(res.statusCode).toBe(409);
+    expect(res.json().code).toBe('ERR_NO_TESTS');
+    expect(res.json().noTests).toBe(NO_TESTS_REASON);
+  });
+
+  it('a plan row refuses a context without a session', () => {
+    const row = planRoutes[0];
+    expect(() =>
+      row.handle({
+        server: undefined as never,
+        req: createMockRequest(undefined, {}, 'GET'),
+        res: new MockResponse() as unknown as http.ServerResponse,
+        url: new URL('http://localhost/api/runner/plan'),
+      })
+    ).toThrow(/runner session/);
   });
 });
