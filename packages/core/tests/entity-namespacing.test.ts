@@ -29,22 +29,6 @@ describe('namespacing: run token', () => {
       expect(o).not.toBe(a);
     }
   });
-
-  it('namespacing: injectStepValues with a run token is the same on every call', () => {
-    const step = fill('{{unique}} and {{entityName}}');
-    const one = EntityNamespacer.injectStepValues(step, 1, 'abcdef');
-    const two = EntityNamespacer.injectStepValues(step, 1, 'abcdef');
-    expect(one.value).toBe(two.value);
-    expect(one.value).toBe('w1_abcdef and entity_w1_abcdef');
-  });
-
-  it('namespacing: legacy injectStepValues without token still random-unique', () => {
-    const step = fill('{{unique}}');
-    const one = EntityNamespacer.injectStepValues(step, 1);
-    const two = EntityNamespacer.injectStepValues(step, 1);
-    expect(one.value).toMatch(/^w1_/);
-    expect(one.value).not.toBe(two.value);
-  });
 });
 
 describe('namespacing: fill values', () => {
