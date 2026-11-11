@@ -142,7 +142,7 @@ function ruleBreachText(v: ReturnType<typeof releaseVerdict>): string {
 const SEVERITY_RANK: FindingSeverity[] = ['Blocker', 'Major', 'Minor', 'Suggestion'];
 
 /** A problem row: one per distinct problem, with every key it stands for (for #deep links). */
-export interface ProblemRow extends ProblemGroup {
+interface ProblemRow extends ProblemGroup {
   keys: string[];
 }
 
@@ -150,7 +150,7 @@ export interface ProblemRow extends ProblemGroup {
  * Display only: rows for the same plain problem in the same area are one row that lists every page.
  * (The verdict keeps its own counting; this is how the list reads.)
  */
-export function mergeSameProblem(groups: ProblemGroup[]): ProblemRow[] {
+function mergeSameProblem(groups: ProblemGroup[]): ProblemRow[] {
   const rows = new Map<string, ProblemRow>();
   for (const g of groups) {
     const id = `${plainTitleText(g.title).toLowerCase()}|${g.aspect}`;

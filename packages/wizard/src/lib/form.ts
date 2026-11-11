@@ -74,13 +74,6 @@ export interface VisibilityChoice {
   marketing: boolean;
 }
 
-export const DEFAULT_VISIBILITY: VisibilityChoice = {
-  search: true,
-  answers: true,
-  aiSearch: true,
-  marketing: true,
-};
-
 export interface SignInEntry {
   role: string;
   username: string;

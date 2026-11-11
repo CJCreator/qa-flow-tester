@@ -60,9 +60,6 @@ export const darkPalette = {
   j5: '#FBA35C',
 };
 
-/** @deprecated The light palette is now the default; kept as a name for the print rules. */
-export const lightPalette = palette;
-
 /** Shadows: soft on paper, deeper in the dark where they are the only lift. */
 const shadows = {
   light: {

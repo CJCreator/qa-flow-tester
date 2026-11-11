@@ -29,7 +29,6 @@ type PaletteToken =
 
 export declare const palette: Record<PaletteToken, string>;
 export declare const darkPalette: Record<PaletteToken, string>;
-export declare const lightPalette: Record<PaletteToken, string>;
 
 declare const config: Config;
 export default config;

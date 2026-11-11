@@ -13,7 +13,7 @@ import {
  * `validateAuditStartBody`, so both ends refuse the same input with the same message (REQ-001 AC-3).
  */
 
-/** The defaults the shared check fills in for a bare address: 200 pages and depth 8 (CRAWL_LIMIT_BOUNDS). */
+/** The defaults the shared check fills in for a bare address: 50 pages and depth 5 (AUDIT_LIMIT_DEFAULTS). */
 function sharedDefaults(): { maxPages: number; maxDepth: number } {
   const check = validateAuditStartBody({ url: 'https://example.com' });
   if (!check.ok) throw new Error('validateAuditStartBody refused a bare address');

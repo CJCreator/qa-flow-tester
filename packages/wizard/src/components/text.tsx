@@ -18,10 +18,6 @@ export function FocusHeading({ children, className }: { children: ReactNode; cla
   );
 }
 
-export function Lead({ children }: { children: ReactNode }) {
-  return <p className="mb-8 max-w-prose text-lg text-ink-soft">{children}</p>;
-}
-
 export function ErrorMessage({ children }: { children: ReactNode }) {
   return (
     <p role="alert" className="mt-4 max-w-prose rounded-card border border-fail/40 bg-fail-tint px-4 py-3 text-fail">

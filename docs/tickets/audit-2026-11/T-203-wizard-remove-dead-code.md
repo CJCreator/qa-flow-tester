@@ -2,7 +2,7 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P3 | M | wizard | dead-code | todo |
+| P3 | M | wizard | dead-code | built |
 
 **Files you may edit (no others):**
 - `packages/wizard/src/screens/audit/results/analysis-text.ts`
@@ -122,9 +122,9 @@ then `pnpm exec vitest run --project unit packages/wizard` and `pnpm build`, `pn
 
 ## Done when
 
-- [ ] All nine steps are applied (or a skipped step is reported with the build error that showed it is used).
-- [ ] `grep -rn "lightPalette\|DEFAULT_VISIBILITY\|aiStatusNoteText\|badge-tech\|corner-ticks\|blueprint-card" packages/wizard --include=*.ts --include=*.tsx --include=*.js --include=*.css` (excluding `node_modules`, `dist`) prints nothing.
-- [ ] Tests, `pnpm build` and `pnpm lint` pass.
+- [x] All nine steps are applied (or a skipped step is reported with the build error that showed it is used).
+- [x] `grep -rn "lightPalette\|DEFAULT_VISIBILITY\|aiStatusNoteText\|badge-tech\|corner-ticks\|blueprint-card" packages/wizard --include=*.ts --include=*.tsx --include=*.js --include=*.css` (excluding `node_modules`, `dist`) prints nothing.
+- [x] Tests, `pnpm build` and `pnpm lint` pass.
 
 ## Notes
 

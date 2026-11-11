@@ -309,7 +309,7 @@ export function staysInForm(form: { contains(node: Node | null): boolean } | nul
   return !!form && !!next && form.contains(next as Node);
 }
 
-export function EditableTitle({
+function EditableTitle({
   value,
   onSave,
   disabled,

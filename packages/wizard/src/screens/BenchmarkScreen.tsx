@@ -8,16 +8,9 @@ import { addressFromSearch } from '../lib/form';
 import { scrollBehavior } from '../lib/format';
 import { Link, PATHS } from '../lib/router';
 import { useDocumentTitle } from '../lib/title';
+import { hostOf } from '../lib/url';
 
 const POLL_MS = 1500;
-
-function hostOf(address: string): string {
-  try {
-    return new URL(address).host;
-  } catch {
-    return address;
-  }
-}
 
 function count(n: number, noun: string): string {
   return `${n} ${noun}${n === 1 ? '' : 's'}`;

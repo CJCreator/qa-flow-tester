@@ -81,15 +81,6 @@
   .card-1 {
     @apply rounded-card border border-rule;
   }
-  .card-2 {
-    @apply rounded-card border border-rule shadow-level-1;
-  }
-  .card-3 {
-    @apply rounded-panel border border-rule shadow-level-2;
-  }
-  .card-4 {
-    @apply rounded-panel border border-rule shadow-level-4;
-  }
 
   /* The drawing board: only behind the site map, where it means something. */
   .bg-blueprint-grid {
@@ -97,16 +88,6 @@
       linear-gradient(to right, rgb(var(--c-rule) / 0.6) 1px, transparent 1px),
       linear-gradient(to bottom, rgb(var(--c-rule) / 0.6) 1px, transparent 1px);
     background-size: 28px 28px;
-  }
-  .bg-blueprint-grid-dense {
-    background-image:
-      linear-gradient(to right, rgb(var(--c-rule) / 0.4) 1px, transparent 1px),
-      linear-gradient(to bottom, rgb(var(--c-rule) / 0.4) 1px, transparent 1px);
-    background-size: 14px 14px;
-  }
-  .bg-blueprint-dots {
-    background-image: radial-gradient(rgb(var(--c-edge) / 0.35) 1px, transparent 1px);
-    background-size: 18px 18px;
   }
 
   /* Badges: sentence case, the body face, a tone from the palette. */
@@ -124,30 +105,6 @@
   }
   .badge-fail {
     @apply badge border-fail/40 bg-fail-tint text-fail;
-  }
-  /* Older names for the same badges. */
-  .badge-tech {
-    @apply badge text-ink-soft;
-  }
-  .badge-tech-stamp {
-    @apply badge-stamp;
-  }
-  .badge-tech-pass {
-    @apply badge-pass;
-  }
-  .badge-tech-warn {
-    @apply badge-warn;
-  }
-  .badge-tech-fail {
-    @apply badge-fail;
-  }
-
-  .blueprint-card {
-    @apply relative rounded-panel border border-rule bg-surface shadow-level-1;
-  }
-  /* Registration ticks are retired: the class stays so old markup still lays out. */
-  .corner-ticks {
-    position: relative;
   }
 
   /* A disclosure: <details class="disclosure"><summary>…</summary>…</details>. */
