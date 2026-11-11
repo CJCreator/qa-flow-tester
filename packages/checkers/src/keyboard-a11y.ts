@@ -51,6 +51,15 @@ export interface TabWalk {
   focusableCount: number;
 }
 
+/** Kept on `window` during one Tab walk so the list of focusable elements is not rebuilt on every press. */
+interface TabCache {
+  list: Element[] | null;
+  size: string;
+  /** Set by the observer when anything in the page changed since the list was built. */
+  dirty: boolean;
+  observer: MutationObserver;
+}
+
 const TRAP_WINDOW = 24;
 const TRAP_MAX_CYCLE = 8;
 const TRAP_MIN_VISITS = 3;
@@ -97,11 +106,26 @@ async function readStop(page: Page): Promise<TabStop | null> {
       }
       return parts.join(' > ');
     };
-    const list = Array.from(
-      document.querySelectorAll(
-        'a[href],button,input:not([type=hidden]),select,textarea,summary,[tabindex],[contenteditable=""],[contenteditable="true"]'
-      )
-    ).filter((e) => !(e as HTMLInputElement).disabled && e.getAttribute('tabindex') !== '-1' && visible(e));
+    const cache = (window as unknown as { __qaTabCache?: TabCache }).__qaTabCache;
+    const size = `${window.innerWidth}x${window.innerHeight}`;
+    // The cached list is good while nothing changed in the page and the window kept its size.
+    // `takeRecords` catches a change the observer has not reported yet.
+    const unchanged = !!cache && !cache.dirty && cache.observer.takeRecords().length === 0 && cache.size === size;
+    let list: Element[] | null = unchanged && cache!.list ? cache!.list : null;
+    // A focused element missing from the list may have just appeared (a menu that opens on focus): read again.
+    if (list && !list.includes(el)) list = null;
+    if (!list) {
+      list = Array.from(
+        document.querySelectorAll(
+          'a[href],button,input:not([type=hidden]),select,textarea,summary,[tabindex],[contenteditable=""],[contenteditable="true"]'
+        )
+      ).filter((e) => !(e as HTMLInputElement).disabled && e.getAttribute('tabindex') !== '-1' && visible(e));
+      if (cache) {
+        cache.list = list;
+        cache.size = size;
+        cache.dirty = false;
+      }
+    }
     const r = el.getBoundingClientRect();
     // Is the whole element hidden under something fixed or sticky? Needs >= 3 sample points in view.
     const inset = Math.max(0, Math.min(4, r.width / 4, r.height / 4));
@@ -148,28 +172,57 @@ export class KeyboardA11yChecker {
     await page.evaluate(() => {
       const a = document.activeElement as HTMLElement | null;
       if (a && a !== document.body) a.blur();
+      // One list of focusable elements for the whole walk; any change in the page marks it stale.
+      const w = window as unknown as { __qaTabCache?: TabCache };
+      w.__qaTabCache?.observer.disconnect();
+      const cache: TabCache = {
+        list: null,
+        size: '',
+        dirty: false,
+        observer: new MutationObserver(() => {
+          cache.dirty = true;
+        }),
+      };
+      cache.observer.observe(document.documentElement, {
+        subtree: true,
+        childList: true,
+        attributes: true,
+        characterData: true,
+      });
+      w.__qaTabCache = cache;
     });
     const stops: TabStop[] = [];
     let leftPage = false;
     let wrapped = false;
     let focusableCount = 0;
-    for (let i = 0; i < max; i++) {
-      await page.keyboard.press('Tab');
-      const stop = await readStop(page);
-      if (!stop) {
-        leftPage = true;
-        break;
-      }
-      focusableCount = stop.focusableCount;
-      const first = stops[0];
-      stops.push(stop);
-      if (first && first.idx >= 0 && stop.idx === first.idx) {
-        const distinct = new Set(stops.map((s) => s.idx)).size;
-        if (distinct >= focusableCount - 1) {
-          wrapped = true;
+    try {
+      for (let i = 0; i < max; i++) {
+        await page.keyboard.press('Tab');
+        const stop = await readStop(page);
+        if (!stop) {
+          leftPage = true;
           break;
         }
+        focusableCount = stop.focusableCount;
+        const first = stops[0];
+        stops.push(stop);
+        if (first && first.idx >= 0 && stop.idx === first.idx) {
+          const distinct = new Set(stops.map((s) => s.idx)).size;
+          if (distinct >= focusableCount - 1) {
+            wrapped = true;
+            break;
+          }
+        }
       }
+    } finally {
+      // Drop the cache so a later `readStop` (the focus-trap check) reads the page fresh.
+      await page
+        .evaluate(() => {
+          const w = window as unknown as { __qaTabCache?: TabCache };
+          w.__qaTabCache?.observer.disconnect();
+          delete w.__qaTabCache;
+        })
+        .catch(() => {});
     }
     return { stops, leftPage, wrapped, focusableCount };
   }
