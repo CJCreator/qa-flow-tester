@@ -2,19 +2,19 @@ import type http from 'http';
 import {
   AUDIT_API,
   type AuditAccess,
-  type AuditErrorCode,
-  type AuditErrorReply,
   type AuditGetReply,
   type AuditListReply,
   type AuditSummary,
   type EditOverlay,
   type HelperPermission,
 } from '@qa/types';
-import { AuditRecordError, AuditStoreError, emptyOverlay, type AuditStore } from '@qa/core';
+import { emptyOverlay, type AuditStore } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
-import { versionQuery } from './audit-common.js';
+import { refuse, refuseStoreFailure as refuseWith, versionQuery } from './audit-common.js';
 import { sendJson } from './body.js';
 import { allows } from '../helpers/index.js';
+
+export { refuse };
 
 /** Who is asking: the tool user, or a signed-in Helper (their Google address, from REQ-033's sign-in). */
 export interface AuditCaller {
@@ -31,26 +31,13 @@ export interface AuditRouteDeps {
   isRunning?: (auditId: string) => boolean | Promise<boolean>;
 }
 
-export function refuse(res: http.ServerResponse, status: number, code: AuditErrorCode, error: string): void {
-  const body: AuditErrorReply = { error, code };
-  sendJson(res, status, body);
-}
-
 export const AUDIT_NOT_FOUND = 'This Website Audit was not found. It may have been deleted.';
 export const AUDIT_FORBIDDEN = 'You do not have permission to do this on this Website Audit.';
-const INVALID_REQUEST = 'The request is not valid.';
 const STORE_FAILURE = 'The saved audits could not be read or changed. Try again.';
 
 /** Store failures become fixed sentences: no keys, paths or provider text reach the caller. */
 export function refuseStoreFailure(res: http.ServerResponse, err: unknown): void {
-  if (err instanceof AuditRecordError) {
-    if (err.code === 'not-found') return refuse(res, 404, 'ERR_AUDIT_NOT_FOUND', AUDIT_NOT_FOUND);
-    return refuse(res, 400, 'ERR_INVALID_REQUEST', INVALID_REQUEST);
-  }
-  if (err instanceof AuditStoreError && err.code === 'invalid-key') {
-    return refuse(res, 400, 'ERR_INVALID_REQUEST', INVALID_REQUEST);
-  }
-  sendJson(res, 500, { error: STORE_FAILURE });
+  refuseWith(res, err, { notFound: AUDIT_NOT_FOUND, failed: STORE_FAILURE });
 }
 
 /**
