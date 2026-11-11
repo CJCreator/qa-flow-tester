@@ -36,9 +36,9 @@ export class DefaultCheckupSession implements CheckupSession {
     this.secrets = new DefaultRunSecrets(paths.authDir);
     this.events = new DefaultRunEvents();
     this.plan = new DefaultPlanStore(paths.dataDir, this.secrets);
-    this.report = new DefaultReportStore(paths, () => {
+    this.report = new DefaultReportStore(paths, async () => {
       const active = this.run.runId ? [this.run.runId] : [];
-      const parked = [...this.plan.parked.values()].map((r) => r.plan.runId);
+      const parked = (await this.plan.waiting()).map((w) => w.record.plan.runId);
       return [...active, ...parked];
     });
   }
