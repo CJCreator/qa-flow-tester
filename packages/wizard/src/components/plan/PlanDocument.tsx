@@ -235,12 +235,12 @@ function Section({
 function CollapsibleGroup({
   title,
   startOpen,
-  headerRight,
+  actions,
   children,
 }: {
   title: React.ReactNode;
   startOpen: boolean;
-  headerRight?: React.ReactNode;
+  actions?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const view = useContext(ViewContext);
@@ -264,11 +264,15 @@ function CollapsibleGroup({
       open={open}
       onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}
     >
-      <summary className="flex min-h-[48px] cursor-pointer flex-wrap items-center justify-between gap-2 px-3 py-2 text-base text-ink">
+      <summary className="flex min-h-[48px] cursor-pointer items-center px-3 py-2 text-base text-ink">
         <span>{title}</span>
-        {headerRight}
       </summary>
-      {open && <div className="p-3">{children}</div>}
+      {open && (
+        <div className="p-3">
+          {actions && <div className="mb-3 flex justify-end">{actions}</div>}
+          {children}
+        </div>
+      )}
     </details>
   );
 }
@@ -1129,10 +1133,7 @@ function BulkSwitch({
       type="button"
       className="btn-link text-sm disabled:cursor-not-allowed disabled:text-ink-soft"
       disabled={actions.busy}
-      onClick={(e) => {
-        e.preventDefault();
-        actions.setSkippedMany(ids, !allOff);
-      }}
+      onClick={() => actions.setSkippedMany(ids, !allOff)}
     >
       {allOff ? `Switch on ${what}` : `Switch off ${what}`}
     </button>
@@ -1176,7 +1177,7 @@ function PagesSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAction
               </span>
             }
             startOpen={members.length <= 6}
-            headerRight={
+            actions={
               <BulkSwitch
                 ids={testable.map((p) => p.id)}
                 skippedCount={testable.filter((p) => p.skipped).length}
@@ -1340,7 +1341,7 @@ function NavigationSection({ plan, actions }: { plan: ReviewPlan; actions: PlanA
                   </span>
                 }
                 startOpen={starts.length <= 3}
-                headerRight={
+                actions={
                   <BulkSwitch
                     ids={links.map((n) => n.id)}
                     skippedCount={links.filter((n) => n.skipped).length}
