@@ -30,11 +30,6 @@ coverage/
 # Tooling
 .kilo/
 .playwright-mcp/
-# Claude Code folder is local only (owner decision 2026-10-09)
-.claude/worktrees/
-.claude/settings.local.json
-# Hand-off files between the pipeline agents (/ship)
-.claude/work/
 .scratch/
 
 # AI-EOS runtime state (session, locks, events, evidence logs, checkpoints)
@@ -49,6 +44,7 @@ coverage/
 # Local design review screenshots and editor settings
 .review-shots/
 .vscode/
+# Claude Code folder is local only (owner decision 2026-10-09)
 .claude/
 
 .vercel
