@@ -345,9 +345,7 @@ describe('answered calls keep their behaviour', () => {
       model: 'gem-x',
       usage: { promptTokens: 7, completionTokens: 9, reasoningTokens: 1 },
     });
-    expect(calls[0].url).toBe(
-      `https://generativelanguage.googleapis.com/v1beta/models/gem-x:generateContent`
-    );
+    expect(calls[0].url).toBe(`https://generativelanguage.googleapis.com/v1beta/models/gem-x:generateContent`);
     expect(calls[0].init.headers).toEqual({ 'Content-Type': 'application/json', 'x-goog-api-key': KEY });
     expect(JSON.parse(String(calls[0].init.body))).toEqual({
       contents: [

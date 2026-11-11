@@ -183,8 +183,7 @@ export class KeyboardA11yChecker {
       findings.push(...(await this.checkFocusObscured(page, context, walk.stops)));
       findings.push(...(await this.checkFocusTrap(page, context, walk)));
       // A finding that still needs a person to confirm it is a guess: it does not make a criterion violated.
-      const has = (kind: string) =>
-        findings.some((f) => f.id.startsWith(`F-A11Y-${kind}-`) && !f.needsConfirmation);
+      const has = (kind: string) => findings.some((f) => f.id.startsWith(`F-A11Y-${kind}-`) && !f.needsConfirmation);
       reportCriteria(context, [
         { tag: 'wcag211', violated: has('TAB') },
         { tag: 'wcag212', violated: has('TRAP') },

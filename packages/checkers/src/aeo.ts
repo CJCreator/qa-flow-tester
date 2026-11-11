@@ -156,8 +156,7 @@ export class AeoChecker {
 
     // 4. Question Headings and Direct Answer Paragraphs
     for (const qh of details.questionHeadings) {
-      const wrongLength =
-        !qh.answerIsStructured && (qh.nextParagraphWordCount < 10 || qh.nextParagraphWordCount > 100);
+      const wrongLength = !qh.answerIsStructured && (qh.nextParagraphWordCount < 10 || qh.nextParagraphWordCount > 100);
       if (!qh.hasAnswerParagraph || wrongLength) {
         findings.push({
           id: `F-AEO-${tcId}-DIRECT-ANSWER-${findings.length + 1}`,
@@ -242,7 +241,8 @@ export class AeoChecker {
               nextEl = nextEl.nextElementSibling;
             }
             const tag = nextEl ? nextEl.tagName : '';
-            const answerText = nextEl && tag !== 'DIV' && !/^H[1-6]$/.test(tag) ? (nextEl.textContent || '').trim() : '';
+            const answerText =
+              nextEl && tag !== 'DIV' && !/^H[1-6]$/.test(tag) ? (nextEl.textContent || '').trim() : '';
             const words = answerText ? answerText.split(/\s+/).length : 0;
             questionHeadings.push({
               text,

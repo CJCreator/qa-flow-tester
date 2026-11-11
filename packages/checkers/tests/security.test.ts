@@ -411,9 +411,7 @@ describe('SecurityChecker', () => {
           url: () => 'https://shop.test/',
           evaluate: async () => [],
           context: () => ({
-            cookies: async () => [
-              { name, value: 'v', secure: true, httpOnly: false, sameSite: 'Lax' },
-            ],
+            cookies: async () => [{ name, value: 'v', secure: true, httpOnly: false, sameSite: 'Lax' }],
           }),
         } as unknown as Page;
         const findings = await checker.checkPage(mockPage, { ...base });

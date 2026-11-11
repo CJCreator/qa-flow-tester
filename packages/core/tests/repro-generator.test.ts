@@ -84,9 +84,7 @@ describe('ReproScriptGenerator', () => {
       flowId: 'flow-2',
       role: 'manager',
       startPage: '/test',
-      steps: [
-        { action: 'click', selector: "[aria-label='Close']", name: 'Close\nthe dialog' },
-      ],
+      steps: [{ action: 'click', selector: "[aria-label='Close']", name: 'Close\nthe dialog' }],
       expectations: {},
     };
 

@@ -13,7 +13,11 @@ import {
   saveShortlistEntry,
   shortlistUpdate,
 } from '../src/screens/audit/saved/saved-api';
-import { entryVersion, ShortlistPanelView, type ShortlistPanelViewProps } from '../src/screens/audit/saved/ShortlistPanel';
+import {
+  entryVersion,
+  ShortlistPanelView,
+  type ShortlistPanelViewProps,
+} from '../src/screens/audit/saved/ShortlistPanel';
 import { ShortlistView, type ShortlistViewProps } from '../src/screens/audit/saved/ShortlistScreen';
 
 const AUDIT_ID = 'abcd1234';
@@ -268,7 +272,14 @@ describe('Shortlist screen filters (REQ-023 AC-3)', () => {
 });
 
 describe('entryVersion', () => {
-  const entry = { auditId: 'a1', mark: null, notes: 'x', outcome: null, outcomeNote: '', updatedAt: '2026-11-01T00:00:00.000Z' };
+  const entry = {
+    auditId: 'a1',
+    mark: null,
+    notes: 'x',
+    outcome: null,
+    outcomeNote: '',
+    updatedAt: '2026-11-01T00:00:00.000Z',
+  };
   it('is the same for two copies of one saved entry', () => {
     expect(entryVersion({ ...entry })).toBe(entryVersion({ ...entry }));
   });

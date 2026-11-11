@@ -24,9 +24,7 @@ describe('SafePublicCrawler browser policy and guard', () => {
     });
 
     const crawler = new SafePublicCrawler();
-    await expect(
-      crawler.crawl({ entryUrl: 'https://example.com/', respectRobots: false })
-    ).rejects.toThrow('stop');
+    await expect(crawler.crawl({ entryUrl: 'https://example.com/', respectRobots: false })).rejects.toThrow('stop');
 
     expect(launch.mock.calls[0][0].args).toEqual(['--host-resolver-rules=MAP example.com 93.184.216.34']);
     expect(close).toHaveBeenCalledTimes(1);
@@ -41,9 +39,7 @@ describe('SafePublicCrawler browser policy and guard', () => {
     });
 
     const crawler = new SafePublicCrawler();
-    await expect(
-      crawler.crawl({ entryUrl: 'https://example.com/', respectRobots: false })
-    ).rejects.toThrow('stop');
+    await expect(crawler.crawl({ entryUrl: 'https://example.com/', respectRobots: false })).rejects.toThrow('stop');
 
     expect(launch.mock.calls[0][0].args).toEqual([]);
     expect(close).toHaveBeenCalledTimes(1);

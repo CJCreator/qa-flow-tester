@@ -108,10 +108,14 @@ export async function listGeminiModels(apiKey: string, opts?: GeminiModelOptions
   const ids: string[] = [];
   let pageToken: string | undefined;
   for (let page = 0; page < MAX_PAGES; page++) {
-    const url =
-      `${STUDIO}/models?pageSize=1000` +
-      (pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : '');
-    const res = await call(fetchFn, url, { method: 'GET', headers: { 'x-goog-api-key': apiKey } }, apiKey, opts?.signal);
+    const url = `${STUDIO}/models?pageSize=1000` + (pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : '');
+    const res = await call(
+      fetchFn,
+      url,
+      { method: 'GET', headers: { 'x-goog-api-key': apiKey } },
+      apiKey,
+      opts?.signal
+    );
     if (!res.ok) {
       const body = await res.text().catch(() => '');
       throw new GeminiApiError(res.status, scrub(body, apiKey), summarize(body, apiKey));
