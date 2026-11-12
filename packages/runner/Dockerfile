@@ -1,6 +1,6 @@
 # The QA Tool: the runner, which drives real browsers, and the Wizard it serves, on one port. It builds on Playwright's image, whose version must match the `playwright` package in
 # the lockfile.
-FROM mcr.microsoft.com/playwright:v1.63.0-noble
+FROM mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
 RUN corepack enable && corepack prepare pnpm@11.10.0 --activate
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
     COREPACK_ENABLE_DOWNLOAD_PROMPT=0
