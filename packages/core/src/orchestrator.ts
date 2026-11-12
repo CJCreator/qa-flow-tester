@@ -528,15 +528,20 @@ export class FlowTestOrchestrator {
 
     // Initialize Permission Matrix Checker if available in profile
     let permChecker: PermissionMatrixChecker | undefined;
-    if (options.profile?.permissionMatrix) {
-      permChecker = new PermissionMatrixChecker(options.profile.permissionMatrix);
-    } else if (options.profile?.permissionMatrixFile) {
+    const file = options.profile?.permissionMatrix ? undefined : options.profile?.permissionMatrixFile;
+    if (options.profile?.permissionMatrix || options.profile?.permissionMatrixFile) {
       try {
-        const matrixContent = await fs.readFile(options.profile.permissionMatrixFile, 'utf8');
-        permChecker = new PermissionMatrixChecker(matrixContent);
-        console.log(`[QA Orchestrator] Loaded permission matrix from ${options.profile.permissionMatrixFile}`);
+        if (options.profile?.permissionMatrix) {
+          permChecker = new PermissionMatrixChecker(options.profile.permissionMatrix);
+        } else if (file) {
+          const matrixContent = await fs.readFile(file, 'utf8');
+          permChecker = new PermissionMatrixChecker(matrixContent);
+          console.log(`[QA Orchestrator] Loaded permission matrix from ${file}`);
+        }
       } catch (err) {
-        console.warn(`[QA Orchestrator] Could not load permission matrix from ${options.profile.permissionMatrixFile}`);
+        console.warn(
+          `[QA Orchestrator] Could not load the permission matrix${file ? ' from ' + file : ''}: ${err instanceof Error ? err.message : String(err)}`
+        );
       }
     }
 
