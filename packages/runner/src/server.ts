@@ -170,6 +170,7 @@ import { purgeVisitorFolders } from './session/visitor-cleanup.js';
 import { BrowserGate } from './browser-gate.js';
 import { isRunId } from './session/report-store.js';
 import { hostOfAddress } from './session/plan-store.js';
+import { isResumable } from './session/run-events.js';
 import { testCopyFor } from './host-policy.js';
 import { isLoopbackBindHost } from './bind-host.js';
 import {
@@ -1156,14 +1157,17 @@ export class RunnerServer {
               'X-Accel-Buffering': 'no',
             });
             // `head` is the newest id this process has given out: a page holding a larger id has reached a restarted runner.
+            // `resumed` is false when the page must take the whole retained log again: no id, an id from a restarted
+            // runner, or events between the id and the oldest retained one that fell off the replay cap (truncated).
+            const after = lastEventIdOf(req, url);
+            const resumed = isResumable(this.session.events, after);
             res.write(
-              `data: ${JSON.stringify({ type: 'connected', timestamp: Date.now(), head: this.session.events.lastId })}\n\n`
+              `data: ${JSON.stringify({ type: 'connected', timestamp: Date.now(), head: this.session.events.lastId, resumed })}\n\n`
             );
             // A page that opens or reconnects mid-run catches up: this run's events so far, in order (beta: only the visitor's own run).
-            // LAT-10: a reconnecting page says the last id it saw; only the events after it are replayed. Without an id, the whole log.
-            // If that id has fallen off the replay cap, what remains is replayed and the gap is not announced.
+            // LAT-10: a resumable reconnect gets only the events after its id; otherwise the whole retained log.
             if (this.isMine(this.currentRunId))
-              for (const { id, event } of this.session.events.since(lastEventIdOf(req, url) ?? 0))
+              for (const { id, event } of this.session.events.since(resumed && after !== null ? after : 0))
                 res.write(`id: ${id}\ndata: ${JSON.stringify({ ...event, replayed: true })}\n\n`);
             this.streamClients.add(res);
             if (this.beta) this.streamSessions.set(res, currentSessionId());

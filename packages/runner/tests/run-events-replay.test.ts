@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DefaultRunEvents, MAX_RUN_EVENTS } from '../src/session/run-events.js';
+import { DefaultRunEvents, MAX_RUN_EVENTS, isResumable } from '../src/session/run-events.js';
 
 describe('run event replay by id (LAT-10)', () => {
   it('gives each published event an increasing id, and since() returns the later ones in order', () => {
@@ -57,6 +57,41 @@ describe('run event replay by id (LAT-10)', () => {
     const tail = events.since(12).map((e) => e.id);
     expect(tail).toEqual([13, 14, 15, 16, 17, 18, 19, 20]);
     expect(new Set(tail).size).toBe(tail.length);
+  });
+
+  it('firstId is the oldest retained id: null before any event, the cap edge after overflow, null after clear()', () => {
+    const events = new DefaultRunEvents();
+    expect(events.firstId).toBeNull();
+    events.publish({ type: 'A' });
+    expect(events.firstId).toBe(1);
+    for (let i = 0; i < MAX_RUN_EVENTS; i++) events.publish({ type: 'STEP', n: i });
+    expect(events.firstId).toBe(2);
+    events.clear();
+    expect(events.firstId).toBeNull();
+  });
+
+  it('isResumable: only an id this process issued, with no gap before the oldest retained event', () => {
+    const events = new DefaultRunEvents();
+    expect(isResumable(events, 0)).toBe(true); // nothing published yet: nothing to miss
+    for (let i = 1; i <= MAX_RUN_EVENTS + 50; i++) events.publish({ type: 'STEP', n: i });
+    const firstId = events.firstId as number;
+    const head = events.lastId;
+
+    expect(isResumable(events, null)).toBe(false);
+    expect(isResumable(events, head)).toBe(true);
+    expect(isResumable(events, head + 1)).toBe(false); // a restarted runner's larger id
+    expect(isResumable(events, firstId - 2)).toBe(false); // truncated: ids firstId-1 fell off the cap
+    expect(isResumable(events, firstId - 1)).toBe(true); // nothing missing
+    expect(isResumable(events, firstId)).toBe(true);
+  });
+
+  it('isResumable: an empty log resumes from any id this process issued', () => {
+    const events = new DefaultRunEvents();
+    events.publish({ type: 'A' });
+    events.publish({ type: 'B' });
+    events.clear();
+    expect(isResumable(events, 2)).toBe(true);
+    expect(isResumable(events, 3)).toBe(false);
   });
 
   it('idOf() is undefined for an object that was never published', () => {

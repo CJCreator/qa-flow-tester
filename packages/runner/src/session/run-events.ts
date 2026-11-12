@@ -18,16 +18,29 @@ export interface RunEvents {
   /** The id `publish` gave this event object, or undefined when it was never published here. */
   idOf(event: object): number | undefined;
   /**
-   * Retained events with an id after `afterId`, oldest first. If `afterId` is older than the cap, this returns
-   * only what remains: the events that fell off the replay cap are gone, and the caller is not told about the gap.
+   * Retained events with an id after `afterId`, oldest first. If `afterId` is older than the oldest retained
+   * event, this returns only what remains: the events that fell off the replay cap are gone. The caller checks
+   * `firstId` to tell a truncated replay from a complete one (see `isResumable`).
    */
   since(afterId: number): ReadonlyArray<RunEventEntry>;
+  /** The id of the oldest retained event, or null when none is retained. */
+  readonly firstId: number | null;
   /** The id of the newest event published in this process (0 before any). Never reset: ids stay unique per process. */
   readonly lastId: number;
   /** Subscribe a transport (the SSE branch) to new events; returns the unsubscribe function. */
   subscribe(listener: (event: Record<string, unknown>) => void): () => void;
   /** Forget the run's events (reset when a run starts). Ids keep counting up. */
   clear(): void;
+}
+
+/**
+ * Whether a reconnecting page with id `after` can be resumed from the log: the id must be one this process
+ * issued (a restarted runner numbers from 1 again, so a larger id is stale), and every event after it must still
+ * be retained (no gap from the replay cap). Anything else needs the whole retained log again.
+ */
+export function isResumable(events: Pick<RunEvents, 'firstId' | 'lastId'>, after: number | null): boolean {
+  if (after === null || after > events.lastId) return false;
+  return events.firstId === null || events.firstId <= after + 1;
 }
 
 export class DefaultRunEvents implements RunEvents {
@@ -43,6 +56,10 @@ export class DefaultRunEvents implements RunEvents {
 
   get lastId(): number {
     return this._lastId;
+  }
+
+  get firstId(): number | null {
+    return this._ids.length > 0 ? this._ids[0] : null;
   }
 
   publish(event: Record<string, unknown>): number {

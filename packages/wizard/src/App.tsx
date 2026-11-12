@@ -31,7 +31,7 @@ import { AreaNav } from './components/AreaNav';
 import { hasFinishedCheckup } from './lib/onboarding';
 import { CommandPalette } from './components/CommandPalette';
 import { useRunnerConnection } from './hooks/useRunnerConnection';
-import { useRunnerStream } from './hooks/useRunnerStream';
+import { shouldResetFeed, useRunnerStream } from './hooks/useRunnerStream';
 import { usePollBackoff } from './hooks/usePollBackoff';
 import {
   DEFAULT_MAX_PAGES,
@@ -329,9 +329,12 @@ export default function App() {
 
       switch (event.type) {
         case 'connected':
-          setFeed(initialFeed('product'));
-          setScan(null);
-          planningStartedAt.current = null;
+          // A resumed reconnect keeps the feed and scan already held; only the gap comes after it.
+          if (shouldResetFeed(event)) {
+            setFeed(initialFeed('product'));
+            setScan(null);
+            planningStartedAt.current = null;
+          }
           void reconcile();
           return;
 
