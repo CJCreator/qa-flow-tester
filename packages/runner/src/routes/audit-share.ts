@@ -373,9 +373,6 @@ export function auditShareRoutes(deps: AuditShareDeps): Route[] {
     }
   };
 
-  /** Any other GET under `/s/` (a malformed id) gets the same 404 body as an unknown id. */
-  const sharedNotFound = (c: RouteContext): void => sendSharedPage(c.res, 404, SHARED_NOT_FOUND_PAGE);
-
   return [
     {
       method: AUDIT_API.listShares.method,
@@ -402,6 +399,5 @@ export function auditShareRoutes(deps: AuditShareDeps): Route[] {
       beta: 'allow',
       handle: sharedPage,
     },
-    { method: 'GET', path: '/s', prefix: true, access: 'public', beta: 'allow', handle: sharedNotFound },
   ];
 }
