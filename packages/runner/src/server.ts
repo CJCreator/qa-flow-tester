@@ -592,14 +592,6 @@ export class RunnerServer {
     return this.session.secrets.tunnelAuth;
   }
 
-  private get currentHeaderHosts(): string[] | undefined {
-    return this.session.secrets.headerHosts;
-  }
-
-  private get currentUserAgent(): string | undefined {
-    return this.session.secrets.userAgent;
-  }
-
   private get legacyDataDir(): string | undefined {
     return this.session.paths.legacyDataDir;
   }
@@ -1891,6 +1883,7 @@ export class RunnerServer {
           postLoginUrl?: string;
         };
         testSignIn?: string;
+        customHeaders?: unknown;
         rememberSignIns?: RoleCredential[];
       } = {};
       try {
@@ -1962,6 +1955,7 @@ export class RunnerServer {
         postLoginUrl?: string;
       };
       testSignIn?: string;
+      customHeaders?: unknown;
     },
     res: http.ServerResponse
   ): Promise<void> {
@@ -2014,16 +2008,16 @@ export class RunnerServer {
       this.sendJson(res, 400, { error: 'That isn’t a site address.' });
       return;
     }
+    // The sign-in test sends only the headers its own request carries (T-296): never another run's secrets.
+    const ownHeaders = checkCustomHeaders(body.customHeaders);
+    if (!ownHeaders.ok) {
+      this.sendJson(res, 400, { error: ownHeaders.problem.error, code: ownHeaders.problem.code });
+      return;
+    }
     const browser = new BrowserManager();
     let result: { ok: boolean; landingPath?: string; reason?: SignInFailureReason };
     try {
-      const context = await browser.createContext({
-        baseUrl: target,
-        customHeaders: this.currentCustomHeaders,
-        userAgent: this.currentUserAgent,
-        tunnelAuth: this.currentTunnelAuth,
-        headerHosts: this.currentHeaderHosts,
-      });
+      const context = await browser.createContext({ baseUrl: target, customHeaders: ownHeaders.value });
       result = await new PreFlightChecker().signIn(context, target, credential);
     } catch {
       result = { ok: false, reason: 'unreachable' };

@@ -1011,7 +1011,7 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
 
     // Tracked like a run started here, so a stop waits for its teardown before freeing the slot.
     executeTesting: (...args: Parameters<typeof executeTesting>) => {
-      const run = executeTesting(...args);
+      const run = executeTesting(...args).finally(() => forgetRunSecrets(args[3]));
       currentRunPromise = run.then(
         () => undefined,
         () => undefined
@@ -1093,34 +1093,44 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
         authorization,
         abortController.signal,
         finishController.signal
-      ).catch((err: unknown) => {
-        if (generation !== session.run.generation || isAbortError(err)) return;
-        session.secrets.savedSessions.delete(runId);
-        const msg = redactedMessage(err, {
-          roles: body.roles,
-          customHeaders: session.secrets.headers,
-          tunnelAuth: session.secrets.tunnelAuth,
-          targetUrl: session.run.targetUrl || undefined,
-        });
-        const code = (err as { code?: string } | undefined)?.code || 'ERR_DISCOVERY_FAILED';
-        session.report.setError(msg, code);
-        session.run.setPhase('failed');
-        session.run.setIsRunning(false);
-        const signInReason = err instanceof SignInFailedError ? err.reason : undefined;
-        broadcast({
-          type: 'RUN_FAILED',
-          runId,
-          error: msg,
-          code,
-          ...(signInReason ? { signInReason } : {}),
-          timestamp: Date.now(),
-        });
-      });
+      )
+        .catch((err: unknown) => {
+          if (generation !== session.run.generation || isAbortError(err)) return;
+          session.secrets.savedSessions.delete(runId);
+          const msg = redactedMessage(err, {
+            roles: body.roles,
+            customHeaders: session.secrets.headers,
+            tunnelAuth: session.secrets.tunnelAuth,
+            targetUrl: session.run.targetUrl || undefined,
+          });
+          const code = (err as { code?: string } | undefined)?.code || 'ERR_DISCOVERY_FAILED';
+          session.report.setError(msg, code);
+          session.run.setPhase('failed');
+          session.run.setIsRunning(false);
+          const signInReason = err instanceof SignInFailedError ? err.reason : undefined;
+          broadcast({
+            type: 'RUN_FAILED',
+            runId,
+            error: msg,
+            code,
+            ...(signInReason ? { signInReason } : {}),
+            timestamp: Date.now(),
+          });
+        })
+        .finally(() => forgetRunSecrets(generation));
 
       currentRunPromise = runPromise;
 
       return { runId, awaitingReview: false };
     }
+  }
+
+  /**
+   * A run that ended (done, failed or stopped) leaves no custom headers, tunnel sign-in or user agent behind
+   * (T-296). A Plan waiting for review keeps them: its testing still needs them.
+   */
+  function forgetRunSecrets(generation: number): void {
+    if (generation === session.run.generation && session.run.phase !== 'awaiting-review') session.secrets.clear();
   }
 
   /** Waits, up to TEARDOWN_WAIT_MS, for the current run's promise to settle. A run that is stuck is logged and left. */
@@ -1192,6 +1202,7 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
         session.run.setPhase('idle');
         session.run.setTargetUrl(null);
         await session.plan.clear(runId ?? undefined);
+        session.secrets.clear();
       }
       session.report.setError('Run was manually stopped by user.', 'ERR_RUN_ABORTED');
 
