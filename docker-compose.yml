@@ -6,7 +6,6 @@ services:
       args:
         VITE_COUNTER_URL: ${VITE_COUNTER_URL:-}
         VITE_CONTACT_EMAIL: ${VITE_CONTACT_EMAIL:-}
-        VITE_SIGNUP_URL: ${VITE_SIGNUP_URL:-}
     container_name: qa-flow-tester-runner
     restart: unless-stopped
     # The container is the only wall around Chromium (it runs with --no-sandbox, see packages/runner/Dockerfile), so

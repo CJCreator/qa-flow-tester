@@ -7,6 +7,7 @@ All notable changes. Format follows [Keep a Changelog](https://keepachangelog.co
 
 ### Removed
 
+- `VITE_SIGNUP_URL`: it fed an email-updates control that was never built (T-373)
 - Finished `.pipeline/e2e-url-credentials-crawl` records, unused `yaml` dependency from `@qa/core`, duplicate `.gitignore` lines
 
 ### Added

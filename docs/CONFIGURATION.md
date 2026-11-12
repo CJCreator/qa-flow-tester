@@ -19,6 +19,7 @@ and the code in step.
 | `RUNNER_BETA_RUNS_PER_VISITOR`  | `5`                 | Beta only: most check-ups plus comparisons one visitor may start per UTC day. A value that is not a whole number of at least 1 uses the default. Memory only; a restart resets it                                                                    |
 | `RUNNER_BETA_RUNS_PER_DAY`      | `40`                | Beta only: the same limit for the whole shared copy                                                                                                                                                                                                  |
 | `RUNNER_STEP_TIMEOUT_MS`        | `10000`             | Most time one test step may spend finding and acting on its element, in ms, across retries. Invalid or non-positive values use the default; maximum 300000. Also the `stepTimeoutMs` orchestrator option                                             |
+| `RUNNER_RUN_RETENTION_DAYS`     | `30`                | Days to keep completed check-up run folders before deleting them. `0` disables retention cleanup.                                                                                                                                                    |
 | `PUBLIC_URL`                    | none                | Public address (for example `https://qa.example.com`) when served behind a domain or tunnel. Used for absolute links, canonical tags and the sitemap. Unset: the request's own host                                                                  |
 | `K_SERVICE`                     | none                | Set by Cloud Run. With it, `PORT` sets the port, and the service's own `*.run.app` host counts as an allowed origin                                                                                                                                  |
 | `PORT`                          | none                | Set by the hosting platform. Read only where `K_SERVICE` (or `RENDER`) is set, so a `PORT` in your shell cannot move a local runner                                                                                                                  |
@@ -195,10 +196,9 @@ file. Both are set by GitHub, not by you.
 | `VITE_WAKE_LIMIT_SECONDS` | `90`                    | How long the landing page waits for the online copy to wake, in seconds (5 to 600)               |
 | `VITE_COUNTER_URL`        | none                    | Full GoatCounter-style `https://.../count` endpoint. Unset: no counting and no request           |
 | `VITE_CONTACT_EMAIL`      | none                    | Landing footer shows a mailto. Unset: GitHub issues                                              |
-| `VITE_SIGNUP_URL`         | none                    | https form-post endpoint for the email-updates control. Unset: "Send feedback" link              |
 
 The `VITE_*` values are read when the wizard is built and must be public values only. The deploy workflow sets them in
-the site build; the runner Dockerfile takes the three landing ones as build args. See `LANDING_MEASUREMENT.md`.
+the site build; the runner Dockerfile takes the two landing ones as build args. See `LANDING_MEASUREMENT.md`.
 
 ## Entity Namespacing (Test Copy only)
 

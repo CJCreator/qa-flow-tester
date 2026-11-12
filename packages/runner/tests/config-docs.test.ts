@@ -11,7 +11,7 @@ const read = (rel: string) => fs.readFile(path.join(root, rel), 'utf8');
 const VITE_BUILTINS = new Set(['MODE', 'DEV', 'PROD', 'SSR', 'BASE_URL']);
 
 // Settings that were removed from the code. They must not come back in code, scripts or the example.
-const RETIRED = ['QA_CHECKUP_PORT', 'HUB_API_URL'];
+const RETIRED = ['QA_CHECKUP_PORT', 'HUB_API_URL', 'VITE_SIGNUP_URL'];
 
 // Commands pnpm provides itself, so they need no script in package.json.
 const PNPM_BUILTINS = new Set(['install', 'exec', 'setup', 'add', 'run', 'dlx', 'update', 'filter']);
