@@ -15,6 +15,7 @@ const BROWSER_TESTS: Record<string, string[]> = {
     'alt-text-quality',
     'design-ux-checkers',
     'keyboard-a11y',
+    'marketing-heuristics',
     'performance',
     'refusal-rule',
     'security',

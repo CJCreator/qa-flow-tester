@@ -407,15 +407,15 @@ export class MarketingChecker {
         const bodyText = (document.body?.innerText || '').replace(/\s+/g, ' ');
 
         const ctaWords =
-          /\b(get started|start|try|sign up|join|buy|book|schedule|request|demo|subscribe|download|shop|order|free|contact us|learn more)\b/i;
-        const hasCallToAction = Array.from(document.querySelectorAll('a, button, [role="button"]')).some(
-          (el) => visible(el) && textOf(el).length > 0 && textOf(el).length <= 40 && ctaWords.test(textOf(el))
-        );
+          /\b(get started|start (?:free|now|your)|try (?:it |for )?free|try (?:it|now)|sign up|join|buy|book|schedule|request|demo|subscribe|download|shop|order|contact us)\b/i;
+        const hasCallToAction = Array.from(
+          document.querySelectorAll('button, [role="button"], a[class*="btn" i], a[class*="button" i]')
+        ).some((el) => visible(el) && textOf(el).length > 0 && textOf(el).length <= 40 && ctaWords.test(textOf(el)));
 
         const hasContactRoute = links.some(
           (a) =>
             /^(mailto|tel):/i.test(a.getAttribute('href') || '') ||
-            /contact|support|help/i.test(textOf(a)) ||
+            /contact|support/i.test(textOf(a)) ||
             /contact/i.test(a.getAttribute('href') || '')
         );
         const hasPrivacyLink = links.some(
@@ -462,12 +462,13 @@ export class MarketingChecker {
         // Proof from other people: quotes, ratings, or a "trusted by" row.
         const hasTrustSignals =
           !!document.querySelector(
-            '[class*="testimonial" i], [class*="review" i], [class*="rating" i], [itemprop="review"], [itemprop="aggregateRating"], blockquote'
+            '[class*="testimonial" i], [class*="rating" i], [itemprop="review"], [itemprop="aggregateRating"], [class*="testimonial" i] blockquote, [id*="testimonial" i] blockquote, [class*="review" i] blockquote, [id*="review" i] blockquote'
           ) ||
-          /\b(trusted by|loved by|used by|what (our )?(customers|users|clients) say|testimonials?|customer stories|rated \d(\.\d)?)\b/i.test(
+          /\b(trusted by|loved by|used by|what (our )?(customers|users|clients) say|testimonials?|customer stories)\b/i.test(
             bodyText
           ) ||
-          /\b\d(\.\d)?\s?\/\s?5\b/.test(bodyText);
+          /\brated \d(?:\.\d)? (?:out )?of 5\b/i.test(bodyText) ||
+          /\b\d(?:\.\d)?\s?\/\s?5 stars\b/i.test(bodyText);
 
         // A way to leave an email: an email field, or newsletter and waitlist wording.
         const hasLeadCapture =
@@ -477,11 +478,17 @@ export class MarketingChecker {
           );
 
         // A consent notice: a known tool, or a banner that talks about cookies.
+        const fixedOrSticky = Array.from(document.querySelectorAll('*'))
+          .slice(0, 200)
+          .filter((el) => {
+            const pos = window.getComputedStyle(el).position;
+            return pos === 'fixed' || pos === 'sticky';
+          });
         const hasCookieNotice =
           !!document.querySelector(
             '#onetrust-banner-sdk, #CybotCookiebotDialog, .cc-window, .cookie-banner, [id*="cookie" i], [class*="cookie" i], [id*="consent" i], [class*="consent" i], [aria-label*="cookie" i]'
           ) ||
-          Array.from(document.querySelectorAll('[role="dialog"], [role="alertdialog"], aside, footer, div')).some(
+          [...Array.from(document.querySelectorAll('[role="dialog"], [role="alertdialog"]')), ...fixedOrSticky].some(
             (el) => {
               if (!visible(el)) return false;
               const text = textOf(el);
