@@ -10,7 +10,7 @@
  * 2. no file under `packages/wizard/` reaches into `@qa/types/src/` by path for anything but `browser.js`.
  */
 import { describe, expect, it } from 'vitest';
-import { readdirSync, readFileSync, statSync } from 'fs';
+import { lstatSync, readdirSync, readFileSync, statSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -106,11 +106,19 @@ function closureOf(entry: string): string[] {
   return [...seen];
 }
 
+/**
+ * Source files of a package, for the wizard scan. Skips `node_modules` at any depth: its entries are installed
+ * packages (and workspace symlinks to other packages), not this package's source. Symlinks are not followed,
+ * so a link back into the tree cannot loop.
+ */
 function sourceFilesUnder(dir: string): string[] {
   const found: string[] = [];
   for (const entry of readdirSync(dir)) {
+    if (entry === 'node_modules') continue;
     const full = path.join(dir, entry);
-    if (statSync(full).isDirectory()) {
+    const info = lstatSync(full);
+    if (info.isSymbolicLink()) continue;
+    if (info.isDirectory()) {
       found.push(...sourceFilesUnder(full));
     } else if (/\.(ts|tsx)$/.test(entry)) {
       found.push(full);
