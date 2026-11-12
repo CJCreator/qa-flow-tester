@@ -155,20 +155,69 @@ export function readsAddressParam(route: Route): boolean {
   return route.name === 'new' || isCheckRoute(route);
 }
 
+/** Answers whether the person may leave the screen for `to`; true leaves. Set by a screen with unsaved work. */
+export type LeaveCheck = (to: string) => Promise<boolean>;
+
+let leaveCheck: LeaveCheck | null = null;
+/** The address on screen, so Back can be undone while a screen holds unsaved work. */
+let shownAddress = typeof window === 'undefined' ? '' : window.location.pathname + window.location.search;
+
+/**
+ * Makes every move ask `check` first. Returns the function that lifts the block. The newest block wins.
+ * Back while blocked adds one history entry for the screen; that is the price of keeping the address and the screen in step.
+ */
+export function blockNavigation(check: LeaveCheck): () => void {
+  leaveCheck = check;
+  return () => {
+    if (leaveCheck === check) leaveCheck = null;
+  };
+}
+
 const listeners = new Set<() => void>();
 const notify = () => listeners.forEach((listener) => listener());
-if (typeof window !== 'undefined') window.addEventListener('popstate', notify);
 
-/** Goes to an address in the app. `replace` swaps the current history entry, for moves the person didn't make. */
-export function navigate(to: string, options: { replace?: boolean } = {}): void {
-  const here = window.location.pathname + window.location.search;
-  if (to === here) return;
+function onPopState(): void {
+  if (!leaveCheck) {
+    shownAddress = window.location.pathname + window.location.search;
+    notify();
+    return;
+  }
+  const target = window.location.pathname + window.location.search;
+  window.history.pushState(null, '', shownAddress);
+  const currentCheck = leaveCheck;
+  void currentCheck(target).then((leave) => {
+    if (!leave) return;
+    if (leaveCheck === currentCheck) leaveCheck = null;
+    window.history.back();
+  });
+}
+
+if (typeof window !== 'undefined') window.addEventListener('popstate', onPopState);
+
+function go(to: string, options: { replace?: boolean } = {}): void {
   if (options.replace) window.history.replaceState(null, '', to);
   else {
     window.history.pushState(null, '', to);
     window.scrollTo(0, 0);
   }
+  shownAddress = to;
   notify();
+}
+
+/** Goes to an address in the app. `replace` swaps the current history entry, for moves the person didn't make. */
+export function navigate(to: string, options: { replace?: boolean } = {}): void {
+  const here = window.location.pathname + window.location.search;
+  if (to === here) return;
+  if (!leaveCheck) {
+    go(to, options);
+    return;
+  }
+  const currentCheck = leaveCheck;
+  void currentCheck(to).then((leave) => {
+    if (!leave) return;
+    if (leaveCheck === currentCheck) leaveCheck = null;
+    go(to, options);
+  });
 }
 
 function subscribe(listener: () => void): () => void {

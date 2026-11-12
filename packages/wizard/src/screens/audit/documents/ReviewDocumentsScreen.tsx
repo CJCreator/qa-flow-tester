@@ -5,7 +5,7 @@ import { useConfirm } from '../../../components/ConfirmDialog';
 import { ErrorMessage, Notice, Spinner } from '../../../components/text';
 import { Badge, BottomActionBar, LoadError, Page, PageHeader } from '../../../components/ui';
 import { count, scrollBehavior } from '../../../lib/format';
-import { Link, navigate, PATHS } from '../../../lib/router';
+import { blockNavigation, Link, navigate, PATHS } from '../../../lib/router';
 import { AuditTabs } from '../AuditTabs';
 import { useDocumentTitle } from '../../../lib/title';
 import { RewriteReview } from '../ai/RewriteReview';
@@ -653,10 +653,19 @@ export function ReviewDocumentsScreen({
   const dirty = !isDraftEmpty(draft);
   const { confirm, dialog } = useConfirm();
 
-  // Unsaved edits: the browser asks before the tab closes or reloads, and a click on a link inside the app
-  // asks first (the capture listener runs before the router's own click handling).
+  // Unsaved edits: the browser asks before the tab closes or reloads, and moves inside the app
+  // (Back, Forward, command palette, links) ask first via the router block.
   useEffect(() => {
     if (!dirty) return;
+    const unblock = blockNavigation(() =>
+      confirm({
+        title: 'Leave without saving?',
+        body: 'Your edits are not saved yet. If you leave now, they are lost.',
+        confirmLabel: 'Leave and lose the edits',
+        cancelLabel: 'Stay and keep editing',
+        danger: true,
+      })
+    );
     const beforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
       e.returnValue = '';
@@ -668,19 +677,12 @@ export function ReviewDocumentsScreen({
       const href = link.getAttribute('href') ?? '';
       if (!href.startsWith('/') || href.startsWith('//')) return;
       e.preventDefault();
-      void confirm({
-        title: 'Leave without saving?',
-        body: 'Your edits are not saved yet. If you leave now, they are lost.',
-        confirmLabel: 'Leave and lose the edits',
-        cancelLabel: 'Stay and keep editing',
-        danger: true,
-      }).then((leave) => {
-        if (leave) navigate(href);
-      });
+      navigate(href);
     };
     window.addEventListener('beforeunload', beforeUnload);
     document.addEventListener('click', onClick, true);
     return () => {
+      unblock();
       window.removeEventListener('beforeunload', beforeUnload);
       document.removeEventListener('click', onClick, true);
     };
