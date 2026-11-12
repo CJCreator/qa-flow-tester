@@ -3,8 +3,8 @@
  *
  * - `measurePageSpeed` asks PSI once (strategy mobile, category performance) and maps `lighthouseResult` to lab
  *   values and `loadingExperience` (page) or `originLoadingExperience` (origin) to field values.
- * - `measureSampleSpeeds` asks for one page at a time; after a quota answer the remaining pages are 'quota'
- *   without a request.
+ * - `measureSampleSpeeds` asks for up to PSI_IN_FLIGHT pages at once, the first PSI_MAX_PAGES Sample Pages only;
+ *   after a quota answer the remaining pages are 'quota' without a request.
  * - The request goes through `makeOutboundFetch` (ADR 0031) to the fixed googleapis.com host, public addresses
  *   only. The audited page address is only a query parameter. The key (ADR 0034) goes in the `x-goog-api-key`
  *   header, never the address, and never into a returned value, error or log line. Without a key no request is
@@ -13,6 +13,7 @@
  *   can never read as good (REQ-012 AC-2).
  */
 import type { ExternalSpeed, PageSpeed, SpeedNotMeasuredReason, SpeedValue } from '@qa/types';
+import { stopIfAborted } from '../../abort.js';
 import type { ServiceKeyName } from '../../ai/key-resolver.js';
 import { defaultNetDeps, makeOutboundFetch, type NetDeps } from '../../safe-net.js';
 
@@ -21,6 +22,10 @@ export const PSI_ENDPOINT = 'https://www.googleapis.com/pagespeedonline/v5/runPa
 export const PSI_TIMEOUT_MS = 90_000;
 /** A full PSI answer with every Lighthouse audit is a few megabytes. */
 export const PSI_MAX_BYTES = 16 * 1024 * 1024;
+/** PSI requests at once. */
+export const PSI_IN_FLIGHT = 4;
+/** Sample Pages measured by PSI per audit; the others use this tool's own timing (ADR 0042). */
+export const PSI_MAX_PAGES = 20;
 
 export interface PageSpeedDeps {
   /** The key resolver's `resolveServiceKey`. Null, missing or failing means no key. */
@@ -35,6 +40,10 @@ export interface PageSpeedDeps {
   now?: () => Date;
   /** Notes about failed requests. Never given the key. */
   log?: (line: string) => void;
+  /** Stop: no new request starts and the one in flight is cancelled; `measureSampleSpeeds` then throws AbortError. */
+  signal?: AbortSignal;
+  inFlight?: number;
+  maxPages?: number;
 }
 
 /** Why PageSpeed Insights did not measure (ADR 0042). */
@@ -276,6 +285,7 @@ async function measureWithKey(
     timeoutMs: deps.timeoutMs ?? PSI_TIMEOUT_MS,
     headers: { accept: 'application/json', ...(apiKey ? { 'x-goog-api-key': apiKey } : {}) },
     deps: net,
+    signal: deps.signal,
   });
   const res = await fetchFn(psiRequestUrl(pageUrl));
   if (!res) {
@@ -318,11 +328,13 @@ const wasQuota = (s: PageSpeedMeasurement | PageSpeed) =>
   ('notMeasuredReason' in s && s.notMeasuredReason === 'quota');
 
 /**
- * One request at a time, in the given order. The key is resolved once. After a quota answer no further request
- * is made: the remaining pages are 'not-measured' with reason 'quota'.
- * Without a key, pages are reported as 'no-key' without requests (ADR 0042).
+ * Up to PSI_IN_FLIGHT requests at once, for the first PSI_MAX_PAGES pages, keeping the given order. The key is
+ * resolved once. After a quota answer no further request is made: the remaining pages are 'not-measured' with
+ * reason 'quota'. Without a key, pages are reported as 'no-key' without requests (ADR 0042). Stop cancels the
+ * requests in flight and throws AbortError.
  */
 export async function measureSampleSpeeds(pages: readonly string[], deps: PageSpeedDeps = {}): Promise<SampleSpeed[]> {
+  stopIfAborted(deps.signal);
   if (pages.length === 0) return [];
   const apiKey = await resolveKey(deps);
   if (!apiKey && !deps.allowKeyless) {
@@ -333,20 +345,49 @@ export async function measureSampleSpeeds(pages: readonly string[], deps: PageSp
       notMeasuredReason: 'no-key',
     }));
   }
-  const out: SampleSpeed[] = [];
-  let quotaHit = false;
-  for (const url of pages) {
-    if (quotaHit) {
-      out.push({ url, speed: notMeasured('quota'), notMeasuredReason: 'quota' });
-      continue;
-    }
-    const speed = await measureWithKey(url, apiKey, deps);
-    quotaHit = wasQuota(speed);
-    out.push({
-      url,
-      speed,
-      ...(speed.notMeasuredReason ? { notMeasuredReason: speed.notMeasuredReason } : {}),
-    });
+
+  const out = new Array<SampleSpeed>(pages.length);
+  const maxPages = deps.maxPages ?? PSI_MAX_PAGES;
+  const measuredCount = Math.min(pages.length, Math.max(0, maxPages));
+  for (let i = measuredCount; i < pages.length; i++) {
+    out[i] = { url: pages[i], speed: notMeasured('failed') };
   }
+
+  let nextIndex = 0;
+  let quotaHit = false;
+
+  const workerCount = Math.min(deps.inFlight ?? PSI_IN_FLIGHT, measuredCount);
+  const workers = Array.from({ length: workerCount }, async () => {
+    while (true) {
+      if (quotaHit) {
+        while (nextIndex < measuredCount) {
+          const idx = nextIndex++;
+          out[idx] = { url: pages[idx], speed: notMeasured('quota'), notMeasuredReason: 'quota' };
+        }
+        break;
+      }
+      if (nextIndex >= measuredCount) break;
+      const index = nextIndex++;
+      const url = pages[index];
+
+      stopIfAborted(deps.signal);
+      if (quotaHit) {
+        out[index] = { url, speed: notMeasured('quota'), notMeasuredReason: 'quota' };
+        continue;
+      }
+      const speed = await measureWithKey(url, apiKey, deps);
+      stopIfAborted(deps.signal);
+      if (wasQuota(speed)) {
+        quotaHit = true;
+      }
+      out[index] = {
+        url,
+        speed,
+        ...(speed.notMeasuredReason ? { notMeasuredReason: speed.notMeasuredReason } : {}),
+      };
+    }
+  });
+
+  await Promise.all(workers);
   return out;
 }

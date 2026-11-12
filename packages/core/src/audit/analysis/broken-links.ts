@@ -1,5 +1,6 @@
 import type { AuditFinding, AuditLimits, PageContent } from '@qa/types';
 import type { FetchFn } from '@qa/checkers';
+import { stopIfAborted } from '../../abort.js';
 import type { RobotsPolicy } from '../../competitive/robots.js';
 import { REDACTED } from '../../redact.js';
 import { IMPACT_EFFORT_BY_RULE } from '../ai/ranking.js';
@@ -45,6 +46,8 @@ export interface CheckLinksOptions {
   robots?: Pick<RobotsPolicy, 'isAllowed'>;
   /** The include/exclude limits the crawl applied. A target outside them is never requested or reported. */
   pathLimits?: LinkPathLimits;
+  /** Stop: the link check ends before its next request. */
+  signal?: AbortSignal;
 }
 
 /** A status that means the target is gone or failing (the orchestrator's link rule). */
@@ -190,6 +193,7 @@ export async function checkLinks(
       if (requests >= maxRequests) continue;
       const url = targetUrl(site, target.to);
       if (!url) continue;
+      stopIfAborted(opts.signal);
       requests++;
       // One at a time: the next request starts only after this one has settled.
       const response = await opts.fetch(url).catch(() => null);

@@ -71,6 +71,8 @@ export interface AnalysisInput {
   headers?: ResponseHeaders;
   /** The first free finding number: the first id is AF-<this>. */
   firstFindingNumber: number;
+  /** Stop: the link check ends before its next request. */
+  signal?: AbortSignal;
 }
 
 /** One recorded page of the analysis. */
@@ -150,6 +152,7 @@ export async function analyseSite(input: AnalysisInput): Promise<SiteAnalysis> {
       ...(input.robots ? { robots: input.robots } : {}),
       ...(input.pathLimits ? { pathLimits: input.pathLimits } : {}),
       maxRequests: input.maxLinkRequests ?? ANALYSIS_MAX_LINK_REQUESTS,
+      ...(input.signal ? { signal: input.signal } : {}),
     },
     scratch
   );

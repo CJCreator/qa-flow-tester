@@ -333,6 +333,8 @@ export interface OutboundFetchOptions {
   deps?: NetDeps;
   /** Shared with the crawl of the same site: each request waits for its host's turn (ADR 0015). */
   pacer?: HostPacer;
+  /** Aborting cancels a request in flight; the fetch then answers null like any failed request. */
+  signal?: AbortSignal;
 }
 
 /** The checkers' response plus the raw body bytes (binary bodies such as images are not UTF-8 text). */
@@ -379,6 +381,7 @@ export function makeOutboundFetch(opts: OutboundFetchOptions = {}): OutboundFetc
           headers: opts.headers,
           allowPrivate,
           redirectAsResponse: true,
+          signal: opts.signal,
         },
         deps
       );

@@ -5,6 +5,7 @@ import type { ContentLink, PageContent } from '@qa/types';
 import type { FetchFn, FetchedResponse } from '@qa/checkers';
 import { checkLinks, type CheckLinksOptions } from '../src/audit/analysis/broken-links.js';
 import { createFindingIdAllocator } from '../src/audit/analysis/finding-ids.js';
+import { isAbortError } from '../src/abort.js';
 import { RobotsPolicy } from '../src/competitive/robots.js';
 
 const ORIGIN = 'https://bakery.example';
@@ -346,6 +347,23 @@ describe('checkLinks', () => {
       ['/about-us', 's1'],
       ['/private/open', 's2'],
     ]);
+  });
+
+  it('Stop ends the link check before the next request', async () => {
+    const controller = new AbortController();
+    const calls: string[] = [];
+    const fetch: FetchFn = async (url) => {
+      calls.push(url);
+      if (calls.length === 2) controller.abort();
+      return null;
+    };
+    const promise = checkLinks(
+      [page('/', [link('/a'), link('/b', 's2'), link('/c')])],
+      options({ fetch, maxRequests: 10, signal: controller.signal }),
+      createFindingIdAllocator()
+    );
+    await expect(promise).rejects.toSatisfy((err) => isAbortError(err));
+    expect(calls).toHaveLength(2);
   });
 
   it('the module makes requests only through the injected FetchFn', () => {

@@ -810,6 +810,28 @@ describe('audit pipeline: runAuditPipeline', () => {
     expect(stages.measureSampleSpeeds).not.toHaveBeenCalled();
   });
 
+  it('passes the run signal to PageSpeed and the analysis', async () => {
+    const controller = new AbortController();
+    const stages = siteStages();
+    const { outcome } = await run({ signal: controller.signal }, stages);
+    await outcome;
+    expect(vi.mocked(stages.measureSampleSpeeds!).mock.calls[0][1]?.signal).toBe(controller.signal);
+    expect(vi.mocked(stages.analyseSite!).mock.calls[0][0].signal).toBe(controller.signal);
+  });
+
+  it('a Stop during PageSpeed ends the run as stopped, nothing saved', async () => {
+    const controller = new AbortController();
+    const stages = siteStages({
+      measureSampleSpeeds: vi.fn(async () => {
+        controller.abort();
+        throw abortError();
+      }),
+    });
+    const { outcome, mem } = await run({ signal: controller.signal }, stages);
+    await expect(outcome).rejects.toMatchObject({ name: 'AbortError' });
+    expect(mem.store.saveResult).not.toHaveBeenCalled();
+  });
+
   it('falls back to browser timing when PageSpeed Insights does not measure and notes the speed source', async () => {
     const recorder = await recordCrawl();
     recorder.pages.forEach((p) => {

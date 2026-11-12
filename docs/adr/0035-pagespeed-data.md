@@ -1,6 +1,6 @@
 # 0035: Page Speed for the Website Audit Comes from the PageSpeed Insights API
 
-Status: Accepted, 2026-11-03. Amended by [0042](0042-website-audit-reliability-and-access.md) (lab timing by this tool when PageSpeed Insights cannot answer). Follow-up record named in [0033](0033-website-audit-entry-point.md). Records Q-03 (speed
+Status: Accepted, 2026-11-03. Amended by [0042](0042-website-audit-reliability-and-access.md) (lab timing by this tool when PageSpeed Insights cannot answer). Amended by T-326 (up to 4 requests at once, the first 20 Sample Pages only). Follow-up record named in [0033](0033-website-audit-entry-point.md). Records Q-03 (speed
 part) and Q-32 for REQ-012 and REQ-043.
 
 ## Context
@@ -31,13 +31,13 @@ how it was measured and that something not measured is never shown as a clean re
   never read as good:
   - HTTP 429, or a Google quota or rate-limit error (`RESOURCE_EXHAUSTED`, `rateLimitExceeded`,
     `dailyLimitExceeded`...): `quota`. After a quota answer no further PSI request is made in that audit; the
-    remaining Sample Pages are `quota` without a request.
+    remaining Sample Pages are `quota` without a request (requests already sent still finish).
   - The whole request did not finish within 90 seconds: `timeout`.
   - DNS or connection failure: `no-network`.
   - A 200 answer without field data for page or origin: field `no-field-data` (lab is still shown).
   - Anything else (Lighthouse could not load the page, a bad key, a redirect, an answer that is not JSON or too
     large): `failed`.
-  Requests go one at a time. A failed page does not stop the others.
+  Up to 4 requests go at once, for the first 20 Sample Pages; the other Sample Pages use this tool's own timing (ADR 0042). A failed page does not stop the others. Stop cancels the requests in flight.
 - **Outbound path (ADR 0031).** The request goes through `makeOutboundFetch`: the host is the fixed
   `www.googleapis.com`, resolved once, pinned, public addresses only (even on a local run), no redirects followed.
   The audited page address is only the `url` query parameter and has already passed the public-address check of the
