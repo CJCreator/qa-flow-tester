@@ -1,5 +1,5 @@
 import type { DocSource, FindingSeverity, IssueType, ReleaseReport, RoleNotTested } from '@qa/types';
-import { ISSUE_TYPES, issueTypeOf } from '@qa/types';
+import { ISSUE_TYPES, SEVERITY_ORDER, issueTypeOf } from '@qa/types';
 import { codeSpan, sanitizeInline } from './findings-contract.js';
 import { describeSource } from './source-wording.js';
 
@@ -32,8 +32,6 @@ export interface IssuesModel {
   documentedItems?: ReleaseReport['documentedItems'];
   pageCoverage?: ReleaseReport['pageCoverage'];
 }
-
-const SEVERITY_ORDER: FindingSeverity[] = ['Blocker', 'Major', 'Minor', 'Suggestion'];
 
 function toIssue(f: ReleaseReport['findings'][number]): Issue {
   const evidence = [f.evidence?.screenshotPath, f.evidence?.baselineScreenshotPath, f.evidence?.currentScreenshotPath]

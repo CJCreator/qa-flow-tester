@@ -7,7 +7,7 @@ import type {
   FindingSeverity,
   SiteAspectGrades,
 } from '@qa/types';
-import { ASPECT_CHECKERS, ASPECTS, aspectOfFinding, problemKey } from '@qa/types';
+import { ASPECT_CHECKERS, ASPECTS, SEVERITY_ORDER, aspectOfFinding, problemKey } from '@qa/types';
 import { isSiteScopedFinding } from './finding-groups.js';
 
 export { ASPECT_CHECKERS };
@@ -21,8 +21,6 @@ const SEVERITY_DEDUCTIONS: Record<FindingSeverity, number> = {
   Minor: 5,
   Suggestion: 2,
 };
-
-const SEVERITY_RANK: Record<FindingSeverity, number> = { Blocker: 0, Major: 1, Minor: 2, Suggestion: 3 };
 
 const FLAKY_STABILITY_PENALTY = 3;
 
@@ -152,7 +150,8 @@ export function calculateSiteAspectGrades(findings: Finding[], options: ScoringO
       entry.ids.push(f.id);
       entry.siteScoped = entry.siteScoped && isSiteScopedFinding(f);
       if (advisory) continue;
-      if (!entry.graded || SEVERITY_RANK[f.severity] < SEVERITY_RANK[entry.severity]) entry.severity = f.severity;
+      if (!entry.graded || SEVERITY_ORDER.indexOf(f.severity) < SEVERITY_ORDER.indexOf(entry.severity))
+        entry.severity = f.severity;
       entry.graded = true;
     }
 

@@ -15,7 +15,7 @@ import { needsTestCopy } from '../live-site.js';
 import type { PlannerForm } from './ai-planner.js';
 import { pathOf } from './site-graph.js';
 import { normaliseRoleText, personaName, resolveRole, resolveRoleList } from './spec-roles.js';
-import { UNIT_KINDS } from './sources.js';
+import { UNIT_KINDS, docSourceOf } from './sources.js';
 
 /**
  * The Fixed-Rule Fallback reading the Product Context (ADR 0009, 0020, 0023). Pure and deterministic:
@@ -76,12 +76,6 @@ const FINAL_ACTION = /\b(finali[sz]e|publish)\b/i;
 const NEGATION = /\b(cannot|can't|can not|must not|never|not allowed|no access|denied|blocked|forbidden|may not)\b/i;
 const ROUTE_TOKEN = /(?:^|[\s`"'“(])(\/[A-Za-z0-9][\w\-./]*)/g;
 const DYNAMIC_OR_API = /^\/api(\/|$)|[*:[\]{}<>]/;
-
-const docSourceOf = (h: ParsedRequirementHint, section = h.section): DocSource => ({
-  document: h.document ?? 'Product Context',
-  section,
-  requirementId: h.id,
-});
 
 const cleanRoute = (r: string): string => {
   const p = pathOf(r.trim().replace(/[.,;:)]+$/, ''));

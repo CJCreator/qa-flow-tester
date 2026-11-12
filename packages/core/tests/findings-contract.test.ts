@@ -7,6 +7,7 @@ import {
   AGENTS_SNIPPET,
   buildFixThese,
   buildKnownFindings,
+  githubAnnotations,
   parseKnownFindings,
   sanitizeInline,
   withFindingsContract,
@@ -230,5 +231,15 @@ describe('fix-these.md content', () => {
 
     const empty = buildFixThese(withFindingsContract(report([finding({ severity: 'Minor' })])));
     expect(empty).toContain('No Blocker or Major problems found by the automatic checks.');
+  });
+});
+
+describe('githubAnnotations', () => {
+  it('githubAnnotations lists Blockers before Majors', () => {
+    const lines = githubAnnotations([
+      finding({ id: 'F-1', severity: 'Major', title: 'Slow page' }),
+      finding({ id: 'F-2', severity: 'Blocker', title: 'Crash' }),
+    ]);
+    expect(lines.map((l) => l.split(' ')[0])).toEqual(['::error', '::warning']);
   });
 });

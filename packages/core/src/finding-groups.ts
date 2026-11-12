@@ -1,6 +1,4 @@
-import { normalizeRoute, normalizeSelector, type Finding } from '@qa/types';
-
-const SEVERITY_RANK = { Blocker: 0, Major: 1, Minor: 2, Suggestion: 3 } as const;
+import { normalizeRoute, normalizeSelector, SEVERITY_ORDER, type Finding } from '@qa/types';
 
 /** The files a site has once, at its root. A finding about one of them is about the whole site. */
 const SITE_ROOT_PATHS = new Set(['/robots.txt', '/sitemap.xml', '/llms.txt']);
@@ -62,7 +60,7 @@ export function mergeDuplicateFindings(findings: Finding[]): Finding[] {
     }
     first.occurrences = (first.occurrences || 1) + 1;
     // The merged finding keeps the highest severity, and is confirmed if any member is.
-    if (SEVERITY_RANK[f.severity] < SEVERITY_RANK[first.severity]) first.severity = f.severity;
+    if (SEVERITY_ORDER.indexOf(f.severity) < SEVERITY_ORDER.indexOf(first.severity)) first.severity = f.severity;
     if (!f.needsConfirmation) first.needsConfirmation = false;
     const seenAt = first.seenAt!;
     const page = normUrlPath;

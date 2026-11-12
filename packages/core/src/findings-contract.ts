@@ -7,7 +7,7 @@
  * data. This is NOT a redaction guarantee (see ADR 0016/0017).
  */
 import type { Finding, FindingSeverity, ReleaseReport } from '@qa/types';
-import { FINDINGS_SCHEMA_VERSION, findingFingerprint, isActiveFinding } from '@qa/types';
+import { FINDINGS_SCHEMA_VERSION, SEVERITY_ORDER, findingFingerprint, isActiveFinding } from '@qa/types';
 
 export interface KnownFinding {
   fingerprint: string;
@@ -25,7 +25,11 @@ export interface KnownFindings {
 
 const MAX_INLINE = 300;
 const MAX_ANNOTATIONS = 50;
-const SEVERITY_ORDER: Record<string, number> = { Blocker: 0, Major: 1, Minor: 2, Suggestion: 3 };
+
+function severityRank(severity: string): number {
+  const at = SEVERITY_ORDER.indexOf(severity as FindingSeverity);
+  return at < 0 ? SEVERITY_ORDER.length : at;
+}
 
 /** C0, DEL and C1 control characters (includes CR and LF). */
 function isControlChar(ch: string): boolean {
@@ -136,7 +140,7 @@ export function buildFixThese(report: ReleaseReport): string {
     .map((f) => ({ f, fp: fingerprintOf(f, report.productId) }))
     .sort(
       (a, b) =>
-        (SEVERITY_ORDER[a.f.severity] ?? 9) - (SEVERITY_ORDER[b.f.severity] ?? 9) ||
+        severityRank(a.f.severity) - severityRank(b.f.severity) ||
         (a.f.where.urlPath < b.f.where.urlPath ? -1 : a.f.where.urlPath > b.f.where.urlPath ? 1 : 0) ||
         (a.fp < b.fp ? -1 : a.fp > b.fp ? 1 : 0)
     );
@@ -208,7 +212,7 @@ function isRepoRelativePath(p: string): boolean {
 export function githubAnnotations(findings: Finding[]): string[] {
   return findings
     .filter((f) => isActiveFinding(f) && (f.severity === 'Blocker' || f.severity === 'Major'))
-    .sort((a, b) => (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9))
+    .sort((a, b) => severityRank(a.severity) - severityRank(b.severity))
     .slice(0, MAX_ANNOTATIONS)
     .map((f) => {
       const command = f.severity === 'Blocker' ? 'error' : 'warning';
