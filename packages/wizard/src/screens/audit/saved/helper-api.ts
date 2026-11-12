@@ -9,6 +9,7 @@ import {
   type HelperSession,
 } from '@qa/types/src/browser.js';
 import { isAuditErrorCode, NOT_ANSWERING } from '../audit-call';
+import { announceSessionChange } from '../../../lib/session-event';
 
 /**
  * The Helper screens' calls to the runner (REQ-033): whether Helper sign-in is set up on this copy
@@ -216,7 +217,10 @@ export function startHelperSession(idToken: string, fetchImpl: Fetch = fetch): P
     fetchImpl,
     SIGN_IN_FAILED_MESSAGE,
     asSession
-  );
+  ).then((outcome) => {
+    if (outcome.ok) announceSessionChange();
+    return outcome;
+  });
 }
 
 /** `GET /api/helper/session`: the signed-in Helper and their Website Audits, when a session is open. */
@@ -238,5 +242,8 @@ export function endHelperSession(fetchImpl: Fetch = fetch): Promise<HelperOutcom
     fetchImpl,
     'Signing out did not work. Try again.',
     (reply) => (isObject(reply) && reply.signedOut === true ? true : null)
-  );
+  ).then((outcome) => {
+    if (outcome.ok) announceSessionChange();
+    return outcome;
+  });
 }
