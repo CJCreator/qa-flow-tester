@@ -21,7 +21,7 @@ import { RISKY_TO_CLICK, SESSION_ENDING } from '../discovery/deterministic-spide
 import { needsTestCopy } from '../live-site.js';
 import { guessFillValue } from './fill-values.js';
 import { deriveRejects } from './rejects.js';
-import { BudgetSpentError, CapSpentError, StoppedEarlyError } from './ai-budget.js';
+import { BudgetSpentError, CapSpentError, PacedAI, StoppedEarlyError } from './ai-budget.js';
 import { linkKey, pathOf, type SharedLink, type SiteGraph } from './site-graph.js';
 import type { PageCoverageInfo } from './sampling.js';
 import type { ParsedRequirementHint } from '../discovery/context-parser.js';
@@ -883,13 +883,21 @@ export async function planPagesAndMenus(
       });
   }
 
-  for (const batch of batches) {
-    for (const [urlPath, entry] of await planBatch(batch, input, ai, { safety, titles, binding, asking })) {
-      planned.set(urlPath, entry);
+  // As many batches at once as the pacing allows (PacedAI holds the real limit); results go back in order.
+  const concurrency = ai instanceof PacedAI ? ai.concurrency : 1;
+  const results: Array<Map<string, PlannedPage>> = new Array(batches.length);
+  let next = 0;
+  const worker = async (): Promise<void> => {
+    while (next < batches.length) {
+      const index = next++;
+      const batch = batches[index];
+      results[index] = await planBatch(batch, input, ai, { safety, titles, binding, asking });
+      done++;
+      onProgress?.({ done, total, what: `Planned ${batch.map((p) => p.urlPath).join(', ')}` });
     }
-    done++;
-    onProgress?.({ done, total, what: `Planned ${batch.map((p) => p.urlPath).join(', ')}` });
-  }
+  };
+  await Promise.all(Array.from({ length: Math.min(concurrency, batches.length) }, worker));
+  for (const result of results) for (const [urlPath, entry] of result) planned.set(urlPath, entry);
 
   return assemblePlan(input, ai, planned, {
     binding,
