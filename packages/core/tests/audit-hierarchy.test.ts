@@ -240,6 +240,20 @@ describe('buildPageHierarchy', () => {
     expect(at.get('/menu/cakes')).toEqual({ parent: '/menu', placedBy: 'path' });
   });
 
+  it('menu and breadcrumb links to the www twin place the page', () => {
+    const menu = [menuItem('https://www.bakery.example/menu', 'Menu')];
+    const pages = [
+      page('/', 'Home', { menu }),
+      page('/menu', 'Menu'),
+      page('/menu/cakes', 'Cakes', {
+        breadcrumb: crumbs(['https://www.bakery.example/menu', 'Menu'], [null, 'Cakes']),
+      }),
+    ];
+    const at = placements(buildPageHierarchy(pages, '/'));
+    expect(at.get('/menu')).toEqual({ parent: '/', placedBy: 'menu' });
+    expect(at.get('/menu/cakes')).toEqual({ parent: '/menu', placedBy: 'breadcrumb' });
+  });
+
   it('keeps a duplicate recorded path once and builds a root when the start page is missing', () => {
     const pages = [page('/a', 'A'), page('/a', 'A again')];
     const hierarchy = buildPageHierarchy(pages, '/');
@@ -315,5 +329,18 @@ describe('internalLinking (REQ-015)', () => {
     const result = internalLinking(hierarchy, ['/', '/a', '/b']);
     expect(result.inboundCounts).toEqual({ '/': 0, '/a': 0, '/b': 1 });
     expect(result.unlinkedPages).toEqual(['/a']);
+  });
+
+  it('a page linked only through the www twin is not unlinked', () => {
+    const pages = [
+      page('/', 'Home', {
+        anchors: [anchor('https://www.bakery.example/about', 'About')],
+      }),
+      page('/about', 'About'),
+    ];
+    const paths = pages.map((p) => p.urlPath);
+    const result = internalLinking(buildPageHierarchy(pages, '/'), paths);
+    expect(result.inboundCounts['/about']).toBe(1);
+    expect(result.unlinkedPages).not.toContain('/about');
   });
 });

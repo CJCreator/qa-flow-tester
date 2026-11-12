@@ -94,6 +94,36 @@ describe('KeyboardA11yChecker (browser)', () => {
       await page.close();
       expect(seen.find((e) => e.criterion.includes('2.1.1'))?.status).toBe('violated');
     });
+
+    it("reads each element's size about once per walk, not once per press", async () => {
+      const page = await open(Array.from({ length: 12 }, (_, i) => `<button>${i}</button>`).join(''));
+      await page.evaluate(() => {
+        const w = window as unknown as { __rects: number };
+        w.__rects = 0;
+        const original = Element.prototype.getBoundingClientRect;
+        Element.prototype.getBoundingClientRect = function (this: Element) {
+          w.__rects++;
+          return original.call(this);
+        };
+      });
+      const walk = await checker.walkTabOrder(page);
+      const rects = await page.evaluate(() => (window as unknown as { __rects: number }).__rects);
+      await page.close();
+      expect(walk.focusableCount).toBe(12);
+      expect(walk.stops.length).toBeGreaterThanOrEqual(12);
+      expect(rects).toBeLessThan(60);
+    });
+
+    it('picks up an element that appears during the walk', async () => {
+      const page = await open(
+        '<button id="a">A</button><button id="b">B</button><button id="c">C</button>' +
+          '<script>document.getElementById("b").addEventListener("focus",()=>{if(!document.getElementById("late")){const l=document.createElement("button");l.id="late";l.textContent="L";document.body.appendChild(l);}});</script>'
+      );
+      const walk = await checker.walkTabOrder(page);
+      await page.close();
+      expect(walk.stops.some((s) => s.selector === '#late')).toBe(true);
+      expect(walk.focusableCount).toBe(4);
+    });
   });
 
   describe('safety', () => {

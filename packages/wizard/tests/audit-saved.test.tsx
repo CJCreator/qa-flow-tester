@@ -160,7 +160,7 @@ describe('saved Website Audits list', () => {
     expect(bakery).toContain('https://bakery.example.com/menu');
     expect(bakery).toContain('1 version ');
     expect(bakery).toContain('Latest: Stopped');
-    expect(bakery).toContain('No Shortlist mark');
+    expect(bakery).not.toContain('Shortlist');
 
     expect(html).toContain(`href="${AUDIT_PATHS.history(AUDIT_ID)}"`);
     expect(html).toContain('aria-label="Open the Website Audit of shop.example.org"');

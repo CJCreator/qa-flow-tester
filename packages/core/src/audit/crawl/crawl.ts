@@ -13,7 +13,13 @@
  */
 import { chromium, type Browser, type BrowserContext, type LaunchOptions, type Page } from 'playwright';
 import type { AuditRequest, PageCoverage, PageLink, RouteSkipReason, SkippedPageInfo } from '@qa/types';
-import { BREAKPOINT_VIEWPORTS, getBrowserPolicy, installRequestGuard, type BrowserManager } from '../../browser.js';
+import {
+  BREAKPOINT_VIEWPORTS,
+  getBrowserPolicy,
+  installRequestGuard,
+  WEBRTC_NO_DIRECT_UDP,
+  type BrowserManager,
+} from '../../browser.js';
 import { isIpLiteral } from '../../address-class.js';
 import { blockChanges } from '../../live-site.js';
 import { defaultNetDeps, makeRequestGuard, resolvePublic, type NetDeps } from '../../safe-net.js';
@@ -67,6 +73,7 @@ const CHROMIUM_ARGS = [
   '--disable-dev-shm-usage',
   '--disable-gpu',
   '--disable-extensions',
+  WEBRTC_NO_DIRECT_UDP,
 ];
 /** A plain DNS name: nothing a `--host-resolver-rules` list could read as another rule or a pattern. */
 const RULE_SAFE_HOST = /^[a-z0-9_-]+(\.[a-z0-9_-]+)*\.?$/;

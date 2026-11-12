@@ -62,7 +62,7 @@ export function DocumentsReady({ version, auditId }: DocumentsReadyProps) {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link to={reviewUrl} className="btn-quiet btn-sm">
-            Open
+            Review the Audit Documents
           </Link>
           <Link to={exportUrl} className="btn-quiet btn-sm">
             Download all
@@ -85,7 +85,7 @@ export function DocumentsReady({ version, auditId }: DocumentsReadyProps) {
             >
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-bold">{title}</span>
+                  <span className="min-w-0 font-bold [overflow-wrap:anywhere]">{title}</span>
                   <span
                     className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
                       isReady ? 'bg-pass-tint text-pass' : 'bg-panel text-ink-soft'
@@ -103,7 +103,7 @@ export function DocumentsReady({ version, auditId }: DocumentsReadyProps) {
               </div>
               <div className="shrink-0">
                 {isReady ? (
-                  <Link to={reviewUrl} className="btn-link text-sm">
+                  <Link to={reviewUrl} className="btn-link min-w-[44px] justify-center text-sm">
                     Open
                   </Link>
                 ) : (

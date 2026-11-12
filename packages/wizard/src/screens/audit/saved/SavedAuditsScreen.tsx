@@ -31,6 +31,13 @@ export function SavedAuditsActions({ load }: { load: SavedAuditsLoad }) {
 /** One saved Website Audit: host, address, versions, latest status and Shortlist mark. The whole row opens it. */
 function AuditItem({ audit }: { audit: AuditSummary }) {
   const latest = latestVersion(audit);
+  // What the latest version holds, so two audits of one address are told apart; left out while it has no counts.
+  const sizeText = [
+    latest?.pagesRecorded !== undefined ? count(latest.pagesRecorded, 'page', 'pages') : null,
+    latest?.findings !== undefined ? count(latest.findings, 'finding', 'findings') : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
   return (
     <li
       className="relative rounded-card border border-rule bg-surface p-4 transition-colors duration-fast hover:border-edge focus-within:border-stamp"
@@ -52,7 +59,8 @@ function AuditItem({ audit }: { audit: AuditSummary }) {
             {count(audit.versions.length, 'version', 'versions')}
             {latest && ` · Latest: ${STATUS_LABEL[latest.status]}, started ${formatWhen(latest.startedAt)}`}
           </p>
-          <p className="text-sm text-ink-soft">{shortlistMarkText(audit.shortlist)}</p>
+          {sizeText && <p className="text-sm text-ink">{sizeText}</p>}
+          {audit.shortlist?.mark && <p className="text-sm text-ink-soft">{shortlistMarkText(audit.shortlist)}</p>}
         </div>
         <span aria-hidden="true" className="mt-1 shrink-0 text-xl text-ink-soft">
           →

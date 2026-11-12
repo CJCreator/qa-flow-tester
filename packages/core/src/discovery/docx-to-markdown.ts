@@ -1,9 +1,10 @@
 import { createRequire } from 'node:module';
+import { inflateRawSync } from 'node:zlib';
 
 /**
  * Word (.docx) to Markdown for Product Context. Server side only (Node).
  * mammoth turns the document into HTML; a small pure step turns that into Markdown.
- * Input is untrusted: the ZIP is checked by hand before mammoth sees it.
+ * Input is untrusted: the ZIP is checked by hand, declared and inflated sizes, before mammoth sees it.
  */
 
 export const DOCX_MAX_BYTES = 2 * 1024 * 1024;
@@ -52,6 +53,68 @@ export function checkZip(bytes: Uint8Array): void {
     if (total > DOCX_MAX_UNCOMPRESSED_BYTES) {
       throw new Error('This Word file expands to more than 20 MB. Split it into smaller files.');
     }
+    pos += 46 + view.getUint16(pos + 28, true) + view.getUint16(pos + 30, true) + view.getUint16(pos + 32, true);
+  }
+}
+
+/**
+ * Inflates every entry once, with a hard output cap, before mammoth (JSZip) sees the file: a ZIP can declare
+ * small sizes and inflate to gigabytes, and JSZip only notices after inflating. Throws a plain-sentence Error.
+ * Call after checkZip, which has already checked the central directory's shape and the declared total.
+ */
+export function checkInflatedSizes(bytes: Uint8Array): void {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let eocd = -1;
+  const lowest = Math.max(0, bytes.length - 22 - 0xffff);
+  for (let i = bytes.length - 22; i >= lowest; i--) {
+    if (view.getUint32(i, true) === 0x06054b50) {
+      eocd = i;
+      break;
+    }
+  }
+  if (eocd < 0) throw new Error(BAD_FILE);
+  const entries = view.getUint16(eocd + 10, true);
+  const cdOffset = view.getUint32(eocd + 16, true);
+  if (entries === 0xffff || cdOffset === 0xffffffff) {
+    throw new Error('This Word file uses a ZIP format that is not supported. Save it again as .docx.');
+  }
+  let pos = cdOffset;
+  for (let n = 0; n < entries; n++) {
+    if (pos + 46 > bytes.length || view.getUint32(pos, true) !== 0x02014b50) throw new Error(BAD_FILE);
+    const flags = view.getUint16(pos + 8, true);
+    if ((flags & 1) !== 0) throw new Error(BAD_FILE);
+    const method = view.getUint16(pos + 10, true);
+    const compressedSize = view.getUint32(pos + 20, true);
+    const declared = view.getUint32(pos + 24, true);
+    const localOffset = view.getUint32(pos + 42, true);
+
+    if (localOffset + 30 > bytes.length || view.getUint32(localOffset, true) !== 0x04034b50) {
+      throw new Error(BAD_FILE);
+    }
+    const localNameLen = view.getUint16(localOffset + 26, true);
+    const localExtraLen = view.getUint16(localOffset + 28, true);
+    const dataOffset = localOffset + 30 + localNameLen + localExtraLen;
+    if (dataOffset + compressedSize > bytes.length) {
+      throw new Error(BAD_FILE);
+    }
+
+    if (method === 0) {
+      if (compressedSize !== declared) throw new Error(BAD_FILE);
+    } else if (method === 8) {
+      const slice = bytes.subarray(dataOffset, dataOffset + compressedSize);
+      let inflated: Uint8Array;
+      try {
+        inflated = inflateRawSync(slice, { maxOutputLength: declared + 1 });
+      } catch {
+        throw new Error(BAD_FILE);
+      }
+      if (inflated.length !== declared) {
+        throw new Error(BAD_FILE);
+      }
+    } else {
+      throw new Error('This Word file uses a ZIP format that is not supported. Save it again as .docx.');
+    }
+
     pos += 46 + view.getUint16(pos + 28, true) + view.getUint16(pos + 30, true) + view.getUint16(pos + 32, true);
   }
 }
@@ -265,6 +328,7 @@ function loadMammoth(): MammothLike {
  */
 export async function docxToMarkdown(bytes: Uint8Array): Promise<{ text: string; warnings: string[] }> {
   checkZip(bytes);
+  checkInflatedSizes(bytes);
   const mammoth = loadMammoth();
   let timer: NodeJS.Timeout | undefined;
   try {

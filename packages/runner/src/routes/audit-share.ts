@@ -12,7 +12,6 @@ import {
   AUDIT_API,
   isDocumentLanguage,
   type AuditErrorCode,
-  type AuditErrorReply,
   type AuditResult,
   type DocumentLanguage,
   type EditOverlay,
@@ -23,8 +22,6 @@ import {
   type ShareListReply,
 } from '@qa/types';
 import {
-  AuditRecordError,
-  AuditStoreError,
   MAX_AUDIT_VERSION,
   PITCH_TOP_FINDINGS,
   editedViewOf,
@@ -38,6 +35,7 @@ import {
   type AuditStore,
 } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
+import { refuse, refuseStoreFailure as refuseWith } from './audit-common.js';
 import { readJsonBody, sendJson } from './body.js';
 import { mayUseAudit, type AuditCaller } from './audit-store.js';
 
@@ -92,21 +90,8 @@ const STORE_FAILED = 'The Shared Links could not be read or saved. Try again.';
 // JSON rows
 // ---------------------------------------------------------------------------------------------------
 
-function refuse(res: http.ServerResponse, status: number, code: AuditErrorCode, error: string): void {
-  const body: AuditErrorReply = { error, code };
-  sendJson(res, status, body);
-}
-
-/** Store failures become fixed sentences: no keys, paths or backend text reach the caller. */
 function refuseStoreFailure(res: http.ServerResponse, err: unknown, notFoundMessage = AUDIT_NOT_FOUND): void {
-  if (err instanceof AuditRecordError) {
-    if (err.code === 'not-found') return refuse(res, 404, 'ERR_AUDIT_NOT_FOUND', notFoundMessage);
-    return refuse(res, 400, 'ERR_INVALID_REQUEST', INVALID);
-  }
-  if (err instanceof AuditStoreError && err.code === 'invalid-key') {
-    return refuse(res, 400, 'ERR_INVALID_REQUEST', INVALID);
-  }
-  sendJson(res, 500, { error: STORE_FAILED });
+  refuseWith(res, err, { notFound: notFoundMessage, failed: STORE_FAILED });
 }
 
 /** The audit named by `:id`, or null after a 404 was sent. */

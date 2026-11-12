@@ -20,6 +20,10 @@ For local development, load the folder straight from a checkout:
 claude --plugin-dir ./plugins/repo-orchestrator
 ```
 
+## What installing adds
+
+The plugin registers one hook, `hooks/guard-test-runs.mjs`. It is Node code that Claude Code runs before every Bash call in every session where the plugin is enabled, with your user's rights, not only during an orchestrator run. It reads the command text and the file `.claude/orchestrator/phase` in the project, writes nothing, and uses no network. Read it before you install (it is 77 lines). It is a workflow guard, not a sandbox: it only stops common test commands during the implementation and readiness phases, a determined or unusual command gets through, and it fails open (allows the call) on malformed input or a missing phase file. Do not use it as a security control.
+
 ## Use
 
 Invoke the orchestrator explicitly. It is not auto-triggered, because a full run dispatches several agents:

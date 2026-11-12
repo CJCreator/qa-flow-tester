@@ -15,7 +15,6 @@ import {
   staleEdit,
 } from '../src/lib/plan-sources';
 import { bucketOf, groupProblems, judgementByRole } from '../src/lib/summary';
-import { translateReviewPlan } from '../src/lib/translate';
 import { capOf, contextDocumentsOf, EMPTY_FORM, savedSessionsOf } from '../src/lib/form';
 
 const nf = (id: string, document: string, skipped = false): PlanNotFound => ({
@@ -72,19 +71,6 @@ describe('plan Source view helpers', () => {
     expect(documentedLine({ reached: 4, total: 6 })).toBe('4 of 6 documented items reached');
     expect(documentedLine({ reached: 0, total: 0 })).toBeNull();
     expect(documentedLine(undefined)).toBeNull();
-  });
-  it('keeps the new plan fields through the translation helper', () => {
-    const plan = translateReviewPlan({
-      flows: [],
-      pages: [],
-      questions: [],
-      notFound: [nf('1', 'a.md')],
-      rolesNotTested: [{ role: 'admin', reason: 'mfa', text: 'needs a code' }],
-      plannedWhileCrawling: true,
-    } as never);
-    expect(plan.notFound).toHaveLength(1);
-    expect(plan.rolesNotTested?.[0].role).toBe('admin');
-    expect(plan.plannedWhileCrawling).toBe(true);
   });
 });
 

@@ -1,31 +1,25 @@
-﻿# Release check-up: only the home page is public. Run reports, plans and settings are private.
+# Release check-up: only the home page, the sample report and llms.txt are public. Check-ups, reports, plans,
+# settings and Website Audits are private. AI answer and generative engines get the same rules: a crawler obeys
+# only the group that names it, so every private path is listed for them too.
 User-agent: *
+User-agent: GPTBot
+User-agent: ChatGPT-User
+User-agent: OAI-SearchBot
+User-agent: ClaudeBot
+User-agent: PerplexityBot
+User-agent: Google-Extended
 Allow: /$
+Allow: /llms.txt
+Allow: /sample-report.html
 Disallow: /api/
 Disallow: /check
 Disallow: /reports
 Disallow: /baselines
 Disallow: /benchmark
 Disallow: /settings
-
-# AI answer and generative engines may read the public summary.
-User-agent: GPTBot
-Allow: /$
-Allow: /llms.txt
-User-agent: ChatGPT-User
-Allow: /$
-Allow: /llms.txt
-User-agent: OAI-SearchBot
-Allow: /$
-Allow: /llms.txt
-User-agent: ClaudeBot
-Allow: /$
-Allow: /llms.txt
-User-agent: PerplexityBot
-Allow: /$
-Allow: /llms.txt
-User-agent: Google-Extended
-Allow: /$
-Allow: /llms.txt
+Disallow: /audits
+Disallow: /audit-settings
+Disallow: /shortlist
+Disallow: /helper
 
 Sitemap: %ORIGIN%/sitemap.xml

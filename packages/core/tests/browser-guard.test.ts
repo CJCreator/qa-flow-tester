@@ -24,6 +24,7 @@ function fakeContext() {
     route: async (_pattern: string, handler: Handler) => {
       handlers.push(handler);
     },
+    routeWebSocket: async () => {},
   } as unknown as BrowserContext;
   /** Sends a request through the routes, latest first, and says how it ended. */
   async function send(url: string, opts: { redirected?: boolean; method?: string } = {}) {

@@ -60,7 +60,7 @@ const WHERE_IT_RUNS: Array<{ name: string; sites: string; where: string; setup: 
   {
     name: 'Your own computer',
     sites: 'Any address your computer can reach',
-    where: 'Everything stays on your machine.',
+    where: 'Everything stays on your machine, except what you send to the AI you choose.',
     setup: 'Run it from the source',
   },
 ];
@@ -142,7 +142,7 @@ function AddressForm() {
       action={startAddress()}
       method="get"
       onSubmit={() => sendCounterEvent(COUNTER_EVENTS.startCheckup)}
-      className="flex flex-col gap-3 sm:flex-row"
+      className="flex flex-col gap-3 sm:flex-row lg:flex-col"
     >
       <label htmlFor="hero-url" className="sr-only">
         Your site’s address
@@ -154,9 +154,9 @@ function AddressForm() {
         inputMode="url"
         autoComplete="url"
         placeholder="https://your-site.com"
-        className="field min-h-[48px] min-w-0 flex-1 font-mono placeholder:font-sans"
+        className="field h-14 min-w-0 flex-1 font-mono text-lg placeholder:font-sans"
       />
-      <button type="submit" className="btn-primary whitespace-nowrap px-8">
+      <button type="submit" className="btn-primary min-h-[56px] whitespace-nowrap px-8 lg:min-h-[48px]">
         Start a free check-up
       </button>
     </form>
@@ -260,14 +260,14 @@ export function LandingScreen() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 border-b border-rule bg-surface/95 backdrop-blur-md">
-        <div className="relative mx-auto flex max-w-6xl items-center justify-between gap-x-2 px-3 py-1 sm:gap-x-4 sm:px-6">
+      <header className="sticky top-0 z-header border-b border-rule bg-raised">
+        <div className="relative mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-2 px-3 py-1 sm:gap-x-4 sm:px-6">
           <span className="inline-flex min-h-[44px] items-center gap-2 whitespace-nowrap text-sm font-bold text-ink sm:text-base">
             <Mark />
             Release check-up
           </span>
-          <div className="flex items-center gap-1 sm:gap-3">
-            <nav aria-label="Main" className="hidden items-center gap-x-1 lg:flex">
+          <div className="flex min-w-0 flex-wrap items-center gap-1 sm:gap-3">
+            <nav aria-label="Main" className="hidden flex-wrap items-center gap-x-1 lg:flex">
               {NAV.map((n) => (
                 <a key={n.href} href={n.href} className={NAV_LINK}>
                   {n.label}
@@ -286,7 +286,7 @@ export function LandingScreen() {
         </div>
       </header>
 
-      <div className="overflow-x-clip">
+      <main id="main" className="overflow-x-clip">
         <section aria-labelledby="hero-title" className="border-b border-rule bg-canvas">
           <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14">
             <div className="min-w-0">
@@ -309,9 +309,6 @@ export function LandingScreen() {
               </p>
               <p className="mt-2 text-sm text-ink-soft">
                 No sign-up. On a live site it only looks: nothing is filled in, sent or changed.
-              </p>
-              <p className="mt-1 text-sm text-ink-soft">
-                The address you type is sent with the page you go to, so it reaches whichever copy runs your check-up.
               </p>
               <WakeNote state={wake} />
             </div>
@@ -341,7 +338,7 @@ export function LandingScreen() {
           <ol className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {HOME_STEPS.map((s, i) => (
               <li key={s.name} className="min-w-0 border-t border-edge pt-4">
-                <span aria-hidden="true" className="block font-stamp text-6xl leading-none text-stamp">
+                <span aria-hidden="true" className="block font-stamp text-5xl leading-none text-stamp">
                   {i + 1}
                 </span>
                 <p className="mt-4 text-lg font-bold text-ink">
@@ -366,9 +363,10 @@ export function LandingScreen() {
             </div>
             <ul className="grid min-w-0 gap-x-10 sm:grid-cols-2">
               {AREAS.map((a) => (
-                <li key={a.name} className="min-w-0 border-t border-rule py-4">
+                <li key={a.name} className="min-w-0 border-t border-rule py-2">
+                  {/* Each area opens the sample report (a test keeps it so); the link is a full 44px target. */}
                   <p className="font-bold text-ink">
-                    <a href={SAMPLE_REPORT_URL} className="btn-link min-h-0 font-bold text-ink">
+                    <a href={SAMPLE_REPORT_URL} className="btn-link font-bold text-ink">
                       {a.name}
                       <span className="sr-only">, in the sample report</span>
                     </a>
@@ -410,9 +408,7 @@ export function LandingScreen() {
               <tbody>
                 {WHERE_IT_RUNS.map((r) => (
                   <tr key={r.name}>
-                    <th scope="row" className="!font-bold !text-ink">
-                      {r.name}
-                    </th>
+                    <th scope="row">{r.name}</th>
                     <td className="text-ink-soft">{r.sites}</td>
                     <td className="leading-relaxed text-ink-soft">{r.where}</td>
                     <td className="text-ink">{r.setup}</td>
@@ -470,7 +466,7 @@ export function LandingScreen() {
             </p>
           </div>
         </section>
-      </div>
+      </main>
 
       <footer className="border-t border-rule bg-surface">
         <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 text-sm text-ink-soft sm:px-6 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">

@@ -186,7 +186,7 @@ export function AuditHistoryView({
               </button>
               <button
                 type="button"
-                className="btn-quiet btn-sm border-fail text-fail hover:border-fail hover:bg-fail-tint"
+                className="btn-danger-quiet btn-sm"
                 aria-label={`Delete the Website Audit of ${summary.host}`}
                 disabled={deleting}
                 onClick={onAskDelete}

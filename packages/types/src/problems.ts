@@ -146,13 +146,22 @@ export function plainTitleText(t: string): string {
 }
 
 /**
- * The key a problem is grouped by: its `issueKey` when it has one, else its plain title. A Check-up's
- * findings always have one (core's `mergeDuplicateFindings` writes `checker|title|where`), so there the
- * same problem found by two checkers stays two problems. The plain-title fallback serves findings that
- * were never merged.
+ * Plain titles of problems that two checks both report, and that are one problem for a person: a
+ * missing page title is found by the search check and by the accessibility scan. They share one key.
+ * Add a title here only when both findings are about the whole page, so no element or page is lost.
+ */
+const SHARED_BETWEEN_CHECKS = new Set(['The page is missing a title']);
+
+/**
+ * The key a problem is grouped by. A problem in `SHARED_BETWEEN_CHECKS` has the same key whichever
+ * check found it. Any other problem has its `issueKey` when it has one (a Check-up's findings always
+ * do: core's `mergeDuplicateFindings` writes `checker|title|where`, so the same problem found by two
+ * checks stays two problems), else its plain title.
  */
 export function problemKey(f: Pick<Finding, 'title'> & { issueKey?: string }): string {
-  return f.issueKey ?? plainTitleText(f.title).toLowerCase();
+  const plain = plainTitleText(f.title);
+  if (SHARED_BETWEEN_CHECKS.has(plain)) return plain.toLowerCase();
+  return f.issueKey ?? plain.toLowerCase();
 }
 
 /** One problem, and every place it was found. */

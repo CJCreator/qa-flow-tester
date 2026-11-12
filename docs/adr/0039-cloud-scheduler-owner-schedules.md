@@ -27,7 +27,7 @@ The owner wants to create, pause and delete schedules on the hosted copy, and ha
 - A run longer than 30 minutes ends the tick with that schedule `failed`; the run keeps going, possibly with throttled CPU. The fallback, `--no-cpu-throttling`, costs money and needs a new ADR amendment.
 - `--max-instances 1` (0036, 0038) means no distributed lock is needed. A tick overlapping another answers `busy: true`.
 - The access key is never stored in Cloud Scheduler. The service account email in `SCHEDULER_SERVICE_ACCOUNT` is a public value.
-- The OIDC audience reuses `RUNNER_ALLOWED_ORIGINS`, so the static-site origin is also an accepted audience. This is harmless: only tokens minted for the configured service account pass.
+- The OIDC audience reuses `RUNNER_ALLOWED_ORIGINS`: it is the runner's own URL, which the deploy lists. Only tokens minted for the configured service account pass.
 - Without `AUDIT_STORE_BUCKET` the hosted schedules sit in `/tmp` and are lost on redeploy.
 - The deploy's `--set-env-vars` separator changes from `^@^` to `^#^`, because the service account email contains `@`.
 - Cloud Scheduler is one job on the free tier (3 jobs per billing account); see `docs/DEPLOYMENT.md`.

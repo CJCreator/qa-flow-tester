@@ -70,6 +70,7 @@ async function main() {
   console.log(`✅ Authenticated account: ${activeAccount}`);
 
   const sha = capture('git rev-parse --short HEAD') || 'manual';
+  const fullSha = capture('git rev-parse HEAD') || '';
   const runnerImage = `${REGION}-docker.pkg.dev/${PROJECT}/qa/runner:${sha}`;
   const siteImage = `${REGION}-docker.pkg.dev/${PROJECT}/qa/site:${sha}`;
 
@@ -79,7 +80,9 @@ async function main() {
   // Step 1: Build local packages
   console.log('\n--- Step 1: Building Workspace Packages ---');
   if (deploySite) {
-    sh('pnpm run site-build', { env: { ...process.env, VITE_ONLINE_APP_URL: RUNNER_URL } });
+    sh('pnpm run site-build', {
+      env: { ...process.env, VITE_ONLINE_APP_URL: RUNNER_URL, ...(fullSha ? { GITHUB_SHA: fullSha } : {}) },
+    });
   }
   if (deployRunner) {
     sh('pnpm --filter "@qa/runner..." run build');
@@ -104,7 +107,7 @@ async function main() {
   if (deployRunner) {
     console.log('\n--- Step 4: Deploying qa-check-up (Runner) ---');
     // Using '^#^' as separator: '#' allows origins containing commas and emails containing '@'
-    const allowedOrigins = process.env.RUNNER_ALLOWED_ORIGINS || [RUNNER_URL, RUNNER_HASH_URL, SITE_URL].join(',');
+    const allowedOrigins = process.env.RUNNER_ALLOWED_ORIGINS || [RUNNER_URL, RUNNER_HASH_URL].join(',');
 
     const envVars = [
       'RUNNER_BETA=1',
@@ -149,7 +152,8 @@ async function main() {
       (status) => status === 401 || status === 200 // 401 indicates access-token gate is actively protecting
     );
     if (!runnerOk && !isDryRun) {
-      console.warn('⚠️ Runner endpoint did not respond with expected status within timeout.');
+      console.error('Runner endpoint did not respond with the expected status within the timeout.');
+      process.exit(1);
     }
   }
 
@@ -157,13 +161,14 @@ async function main() {
     const siteOk = await verifyEndpoint(`${SITE_URL}/version.json`, (status, text) => {
       try {
         const json = JSON.parse(text);
-        return status === 200 && json.commit !== undefined;
+        return status === 200 && (fullSha ? json.commit === fullSha : json.commit !== undefined);
       } catch {
-        return status === 200;
+        return false;
       }
     });
     if (!siteOk && !isDryRun) {
-      console.warn('⚠️ Site endpoint did not serve version.json within timeout.');
+      console.error('Site endpoint did not serve version.json for this commit within the timeout.');
+      process.exit(1);
     }
   }
 

@@ -41,9 +41,10 @@ describe('refusal rule in a page', () => {
     await browser.close();
   });
 
-  const run = async (html: string, message?: string, probeOnly?: boolean) => {
+  const run = async (html: string, message?: string, probeOnly?: boolean, after?: (p: Page) => Promise<void>) => {
     await page.setContent(html);
     const baseline = await captureRefusalBaseline(page);
+    if (after) await after(page);
     return { baseline, seen: await readRefusal(page, { baseline, message, probeOnly }) };
   };
 
@@ -54,9 +55,21 @@ describe('refusal rule in a page', () => {
   });
 
   it('a visible role=alert is a signal', async () => {
-    const { seen } = await run('<html><body><h1>Hi</h1><div role="alert">Email is wrong</div><p>x</p></body></html>');
+    const { seen } = await run('<html><body><h1>Hi</h1><p>x</p></body></html>', undefined, false, async (p) => {
+      await p.evaluate(() => {
+        const div = document.createElement('div');
+        div.setAttribute('role', 'alert');
+        div.textContent = 'Email is wrong';
+        document.body.appendChild(div);
+      });
+    });
     expect(seen.signals).toContain('alert');
     expect(seen.errorText).toBe('Email is wrong');
+  });
+
+  it('an alert present in the baseline gives no alert signal', async () => {
+    const { seen } = await run('<html><body><h1>Hi</h1><div role="alert">Email is wrong</div><p>x</p></body></html>');
+    expect(seen.signals).not.toContain('alert');
   });
 
   it('aria-invalid="true" is a signal', async () => {
@@ -178,8 +191,14 @@ describe('SpecConformanceChecker refusal block', () => {
   });
 
   it('a different message is Major only when a message was stated', async () => {
-    await page.setContent('<html><body><h1>Hi</h1><div role="alert">Something else</div></body></html>');
+    await page.setContent('<html><body><h1>Hi</h1></body></html>');
     const baseline = await captureRefusalBaseline(page);
+    await page.evaluate(() => {
+      const div = document.createElement('div');
+      div.setAttribute('role', 'alert');
+      div.textContent = 'Something else';
+      document.body.appendChild(div);
+    });
     const stated = await new SpecConformanceChecker().check(
       page,
       tc({}, { message: 'valid email' }),

@@ -9,6 +9,7 @@ import type {
   Section,
 } from '@qa/types';
 import { redactUrl } from '../../redact.js';
+import { isSameSite } from '../../same-site.js';
 import { detectPageLanguage } from './language.js';
 import type { RawCtaCandidate, RawPage } from './raw-page.js';
 
@@ -168,8 +169,9 @@ function sitePath(url: URL): string {
   return redactUrl(`${url.pathname}${url.search}`);
 }
 
-function isSameSite(url: URL, site: URL | null): boolean {
-  return site !== null && url.host.toLowerCase() === site.host.toLowerCase();
+/** The crawl's rule: the same host or its www twin, same port (same-site.ts). */
+function onSite(url: URL, site: URL | null): boolean {
+  return site !== null && isSameSite(url.host, site.host);
 }
 
 /**
@@ -181,14 +183,14 @@ function linkTarget(href: string, base: URL | null, site: URL | null): { to: str
   if (trimmed === '' || trimmed.startsWith('#')) return null;
   const url = parseUrl(trimmed, base);
   if (!url || (url.protocol !== 'http:' && url.protocol !== 'https:')) return null;
-  if (isSameSite(url, site)) return { to: sitePath(url), leavesSite: false };
+  if (onSite(url, site)) return { to: sitePath(url), leavesSite: false };
   return { to: redactUrl(url.href), leavesSite: true };
 }
 
 function formAction(action: string, base: URL | null, site: URL | null): string {
   const url = parseUrl(action.trim(), base);
   if (!url) return redactUrl(action.trim());
-  return isSameSite(url, site) ? sitePath(url) : redactUrl(url.href);
+  return onSite(url, site) ? sitePath(url) : redactUrl(url.href);
 }
 
 /** Q-33: a button element, or a link with role=button or a class containing "button" or "btn". */
@@ -211,5 +213,5 @@ function ctaTarget(href: string | null, base: URL | null, site: URL | null): str
   if (!url) return undefined;
   if (url.protocol === 'tel:' || url.protocol === 'mailto:') return redactUrl(trimmed);
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return undefined;
-  return isSameSite(url, site) ? sitePath(url) : redactUrl(url.href);
+  return onSite(url, site) ? sitePath(url) : redactUrl(url.href);
 }

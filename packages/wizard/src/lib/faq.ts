@@ -14,7 +14,7 @@ export const HOME_FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: 'Where does my check-up run, and who can see it?',
-    a: "On the free online copy, the check-up runs on our server, one at a time, and only public sites can be checked. Your AI key and any sign-in details are kept in memory for your visit only (up to 24 hours) and never written to disk. It is a shared beta copy: each visitor sees only their own check-ups and reports, but everyone shares one server, so don't check anything you would not want on shared hardware. To check a site on your own computer or network, run Release check-up yourself, and nothing leaves your machine.",
+    a: "The address you type is sent with the page you go to, so it reaches whichever copy runs your check-up. On the free online copy, the check-up runs on our server, one at a time, and only public sites can be checked. Your AI key and any sign-in details are kept in memory for your visit only (up to 24 hours) and never written to disk. It is a shared beta copy: each visitor sees only their own check-ups and reports, but everyone shares one server, so don't check anything you would not want on shared hardware. To check a site on your own computer or network, run Release check-up yourself. Nothing leaves your machine except what you send to the AI you choose; skip AI to keep everything local.",
   },
   {
     q: 'Do I need to write tests?',

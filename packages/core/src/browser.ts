@@ -63,6 +63,10 @@ export function getBrowserPolicy(): BrowserPolicy | null {
   return browserPolicy;
 }
 
+type RequestGuard = (url: string, redirected: boolean) => Promise<boolean>;
+/** Every guard installed on a context; its one WebSocket route asks all of them. */
+const socketGuards = new WeakMap<BrowserContext, RequestGuard[]>();
+
 /** Adds the guard as the first route of a context; later routes (blockChanges) fall back to it. */
 export async function installRequestGuard(
   context: BrowserContext,
@@ -79,7 +83,29 @@ export async function installRequestGuard(
     if (!allowed) return route.abort('blockedbyclient');
     return route.fallback();
   });
+
+  // route() never sees a WebSocket handshake: the same guard decides, and a refused socket is closed.
+  const guards = socketGuards.get(context);
+  if (guards) {
+    guards.push(guard);
+    return;
+  }
+  socketGuards.set(context, [guard]);
+  await context.routeWebSocket(/.*/, async (ws) => {
+    let allowed = false;
+    try {
+      const all = socketGuards.get(context) ?? [];
+      allowed = (await Promise.all(all.map((g) => g(ws.url(), false)))).every(Boolean);
+    } catch {
+      allowed = false;
+    }
+    if (!allowed) return ws.close({ code: 1008, reason: 'Blocked: not a public address' });
+    ws.connectToServer();
+  });
 }
+
+/** No direct UDP for WebRTC: STUN/TURN packets cannot reach addresses the request guard never sees. */
+export const WEBRTC_NO_DIRECT_UDP = '--force-webrtc-ip-handling-policy=disable_non_proxied_udp';
 
 export const BREAKPOINT_VIEWPORTS: Record<Breakpoint, { width: number; height: number }> = {
   '375px': { width: 375, height: 667 }, // Mobile
@@ -122,6 +148,7 @@ export class BrowserManager {
               '--disable-dev-shm-usage',
               '--disable-gpu',
               '--disable-extensions',
+              ...(browserPolicy?.guard ? [WEBRTC_NO_DIRECT_UDP] : []),
               ...(pinned.length ? [`--host-resolver-rules=${pinned.join(', ')}`] : []),
             ]
           : [];
@@ -152,6 +179,7 @@ export class BrowserManager {
           : undefined),
       baseURL: options.baseUrl,
       ignoreHTTPSErrors: true,
+      serviceWorkers: 'block' as const,
       storageState: options.storageState as NonNullable<Parameters<Browser['newContext']>[0]>['storageState'],
     };
 

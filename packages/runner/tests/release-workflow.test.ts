@@ -18,7 +18,8 @@ describe('release workflow', () => {
 
   it('builds and does not publish', () => {
     expect(yml).toContain('pnpm install --frozen-lockfile');
-    expect(yml).toContain('pnpm build');
+    expect(yml).toContain('pnpm run site-build');
+    expect(yml).toContain('run build');
     expect(yml).toContain('contents: read');
     for (const word of [
       'npm publish',

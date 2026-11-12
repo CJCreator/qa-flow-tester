@@ -80,7 +80,7 @@ export class UXGapSynthesizer {
     }
 
     // 2. If an AI provider is active and not mock, run LLM synthesis
-    if (aiProvider && aiProvider.constructor.name !== 'MockAIProvider') {
+    if (aiProvider && aiProvider.providerType !== 'mock') {
       try {
         const prompt = `You are a Principal Product Designer & UX Researcher.
 Compare our product flow with a competitor's reference flow:

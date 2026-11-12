@@ -4,7 +4,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { SchedulerManager, type CheckupSchedule } from '../src/scheduler.js';
+import { SchedulerManager, type CheckupSchedule, type ScheduleStore } from '../src/scheduler.js';
 import { RunnerServer } from '../src/server.js';
 
 const scratch = path.join(process.cwd(), '.tmp-scheduler');
@@ -166,13 +166,52 @@ describe('The scheduler tick (ADR 0039)', () => {
     expect((await scheduler.loadSchedules())[0].nextRunAt).toBe(before);
   });
 
-  it('a run that throws is a failed run, and the tick goes on', async () => {
+  it('a run that throws is a failed run, logs to console.error, and the tick goes on', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     await addDue('boom');
     const summary = await scheduler.tick(async () => {
       throw new Error('boom');
     });
     expect(summary.failed).toBe(1);
     expect((await scheduler.loadSchedules())[0].lastRunStatus).toBe('failed');
+    expect(consoleError).toHaveBeenCalledWith('[Release check-up] Scheduler tick failed:', 'boom');
+    consoleError.mockRestore();
+  });
+
+  it('a runner callback that rejects counts as failed and logs', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await addDue('rejection');
+    const summary = await scheduler.tick(async () => Promise.reject(new Error('schedule runner failed')));
+    expect(summary.failed).toBe(1);
+    expect((await scheduler.loadSchedules())[0].lastRunStatus).toBe('failed');
+    expect(consoleError).toHaveBeenCalledWith('[Release check-up] Scheduler tick failed:', 'schedule runner failed');
+    consoleError.mockRestore();
+  });
+
+  it('a store whose read() throws makes tick() resolve with error set, nothing started, and console.error called once', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const throwingStore: ScheduleStore = {
+      async read() {
+        throw new Error('store disk read error');
+      },
+      async write() {},
+    };
+    const mgr = new SchedulerManager(throwingStore);
+    const run = vi.fn(async () => true);
+    const summary = await mgr.tick(run);
+
+    expect(run).not.toHaveBeenCalled();
+    expect(summary).toEqual({
+      started: 0,
+      failed: 0,
+      skipped: 0,
+      retrying: 0,
+      busy: false,
+      error: 'store disk read error',
+    });
+    expect(consoleError).toHaveBeenCalledTimes(1);
+    expect(consoleError).toHaveBeenCalledWith('[Release check-up] Scheduler tick failed:', 'store disk read error');
+    consoleError.mockRestore();
   });
 
   it('a schedule paused while an earlier run was going is not started', async () => {

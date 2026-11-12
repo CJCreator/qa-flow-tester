@@ -9,6 +9,12 @@ services:
         VITE_SIGNUP_URL: ${VITE_SIGNUP_URL:-}
     container_name: qa-flow-tester-runner
     restart: unless-stopped
+    # The container is the only wall around Chromium (it runs with --no-sandbox, see packages/runner/Dockerfile), so
+    # it gets no extra rights and a memory ceiling like the hosted copy's 2 GiB.
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 2g
     ports:
       - '${RUNNER_PORT:-3001}:3001'
     environment:

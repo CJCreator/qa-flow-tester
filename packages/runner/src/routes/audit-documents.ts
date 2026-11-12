@@ -3,23 +3,13 @@ import {
   AUDIT_API,
   type AuditEditsPatch,
   type AuditEditsReply,
-  type AuditErrorCode,
-  type AuditErrorReply,
   type AuditResult,
   type EditOverlay,
   type PageContent,
 } from '@qa/types';
-import {
-  AuditRecordError,
-  AuditStoreError,
-  emptyOverlay,
-  mergeEditsPatch,
-  pageContentName,
-  validateAuditEditsPatch,
-  type AuditStore,
-} from '@qa/core';
+import { emptyOverlay, mergeEditsPatch, pageContentName, validateAuditEditsPatch, type AuditStore } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
-import { versionQuery } from './audit-common.js';
+import { refuse, refuseStoreFailure as refuseWith, versionQuery } from './audit-common.js';
 import { readJsonBody, sendJson } from './body.js';
 
 /** What the Audit Document rows need: the Website Audit store (G6). */
@@ -32,23 +22,10 @@ const EDITS_NAME = 'edits';
 /** A patch is at most 500 items of a few thousand characters each; far below the general body cap. */
 const MAX_EDITS_BODY_CHARS = 2_000_000;
 
-function refuse(res: http.ServerResponse, status: number, code: AuditErrorCode, error: string): void {
-  const body: AuditErrorReply = { error, code };
-  sendJson(res, status, body);
-}
-
 const NOT_FOUND = 'This Website Audit was not found. It may have been deleted.';
 
-/** Store failures become fixed sentences: no keys, paths or provider text reach the caller. */
 function refuseStoreFailure(res: http.ServerResponse, err: unknown): void {
-  if (err instanceof AuditRecordError) {
-    if (err.code === 'not-found') return refuse(res, 404, 'ERR_AUDIT_NOT_FOUND', NOT_FOUND);
-    return refuse(res, 400, 'ERR_INVALID_REQUEST', 'The request is not valid.');
-  }
-  if (err instanceof AuditStoreError && err.code === 'invalid-key') {
-    return refuse(res, 400, 'ERR_INVALID_REQUEST', 'The request is not valid.');
-  }
-  sendJson(res, 500, { error: 'The edits could not be read or saved. Try again.' });
+  refuseWith(res, err, { notFound: NOT_FOUND, failed: 'The edits could not be read or saved. Try again.' });
 }
 
 /** Writes to one version's edits go one at a time, so two saves never overwrite each other. */

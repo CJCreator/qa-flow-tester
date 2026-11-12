@@ -64,6 +64,7 @@ import { ScanningScreen, isScanProgress, type ScanProgress } from './screens/Sca
 import { headersNotice } from './lib/coverage-text';
 import { TestingScreen } from './screens/TestingScreen';
 import { splitStoredContext } from './lib/context';
+import { stopProblem, type StopReply } from './lib/stop-result';
 import { BetaAuditNotice, showsBetaAuditNotice } from './screens/audit/BetaAuditNotice';
 
 /** How often the runner's state is read while a check-up is in progress, besides its events. */
@@ -145,7 +146,7 @@ function stepOf(route: Route): Step | null {
 
 function Loading({ label }: { label: string }) {
   return (
-    <div className="mx-auto w-full max-w-form px-4 py-16 text-ink-soft sm:px-6 lg:px-8">
+    <div className="mx-auto w-full max-w-workspace px-4 py-16 text-ink-soft sm:px-6 lg:px-8">
       <Spinner label={label} />
     </div>
   );
@@ -458,12 +459,10 @@ export default function App() {
   };
 
   /** A stop that did not stop anything says so, beside the thing that was stopped. */
-  const stopFailed = (result: { aborted: boolean; error?: string }): boolean => {
-    if (result.aborted) {
-      setStopError(null);
-      return false;
-    }
-    setStopError(result.error ?? 'Nothing was stopped. The check-up may have already finished.');
+  const stopFailed = (result: StopReply): boolean => {
+    const problem = stopProblem(result);
+    setStopError(problem);
+    if (problem === null) return false;
     void reconcile();
     return true;
   };
@@ -854,7 +853,7 @@ export default function App() {
               confirm={confirm}
             />
           ) : status?.phase === 'awaiting-review' && planError ? (
-            <div className="mx-auto w-full max-w-form px-4 py-16 sm:px-6 lg:px-8">
+            <div className="mx-auto w-full max-w-workspace px-4 py-16 sm:px-6 lg:px-8 [&>*]:max-w-form">
               <Notice
                 title="The plan couldn’t be opened"
                 actions={
@@ -998,30 +997,35 @@ export default function App() {
         // From the first paint, not once connected: a row inserted later pushes the whole page down (layout shift).
         !landing && <AreaNav route={route} beta={!!status?.beta} auditOwner={!!status?.auditOwner} />
       )}
-      <main id="main">
-        {lostContact && (
-          <div className="mx-auto max-w-prose px-4 pt-4 sm:px-6">
-            <Notice tone="warn" title="Lost contact with Release check-up. Retrying…">
-              Check that it’s still running in its terminal (start it with pnpm start). This page keeps trying.
-            </Notice>
-          </div>
-        )}
-        {stopError && (
-          <div className="mx-auto max-w-prose px-4 pt-4 sm:px-6">
-            <Notice
-              title="The check-up wasn’t stopped"
-              actions={
-                <button type="button" className="btn-quiet" onClick={() => setStopError(null)}>
-                  Dismiss
-                </button>
-              }
-            >
-              {stopError}
-            </Notice>
-          </div>
-        )}
+      {landing ? (
+        // The landing page brings its own header, main and footer landmarks.
         <Suspense fallback={<Loading label="Opening…" />}>{body}</Suspense>
-      </main>
+      ) : (
+        <main id="main">
+          {lostContact && (
+            <div className="mx-auto max-w-workspace px-4 pt-4 sm:px-6 lg:px-8 [&>*]:max-w-prose">
+              <Notice tone="warn" title="Lost contact with Release check-up. Retrying…">
+                Check that it’s still running in its terminal (start it with pnpm start). This page keeps trying.
+              </Notice>
+            </div>
+          )}
+          {stopError && (
+            <div className="mx-auto max-w-workspace px-4 pt-4 sm:px-6 lg:px-8 [&>*]:max-w-prose">
+              <Notice
+                title="The check-up wasn’t stopped"
+                actions={
+                  <button type="button" className="btn-quiet" onClick={() => setStopError(null)}>
+                    Dismiss
+                  </button>
+                }
+              >
+                {stopError}
+              </Notice>
+            </div>
+          )}
+          <Suspense fallback={<Loading label="Opening…" />}>{body}</Suspense>
+        </main>
+      )}
       {!landing && <CommandPalette route={route} beta={!!status?.beta} auditOwner={!!status?.auditOwner} />}
       {dialog}
     </div>

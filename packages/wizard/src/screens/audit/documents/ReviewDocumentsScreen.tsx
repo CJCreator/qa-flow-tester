@@ -5,7 +5,7 @@ import { useConfirm } from '../../../components/ConfirmDialog';
 import { ErrorMessage, Notice, Spinner } from '../../../components/text';
 import { Badge, BottomActionBar, LoadError, Page, PageHeader } from '../../../components/ui';
 import { count, scrollBehavior } from '../../../lib/format';
-import { Link, navigate, PATHS } from '../../../lib/router';
+import { blockNavigation, Link, navigate, PATHS } from '../../../lib/router';
 import { AuditTabs } from '../AuditTabs';
 import { useDocumentTitle } from '../../../lib/title';
 import { RewriteReview } from '../ai/RewriteReview';
@@ -87,50 +87,54 @@ function PageItem({
   return (
     <li className="mt-2" data-page={node.urlPath}>
       <div className={`flex flex-wrap items-center gap-2 ${node.removed ? 'text-ink-soft' : ''}`}>
-        <span
-          className={`font-bold ${node.removed ? 'line-through' : 'text-ink'}`}
-          {...(hasTitle ? textLangAttrs(node.title ?? '', 'not-identified') : {})}
-        >
-          {hasTitle ? node.title : node.urlPath}
-        </span>
-        {hasTitle ? (
-          <span className="break-all text-sm text-ink-soft">{node.urlPath}</span>
-        ) : (
-          <span className="text-sm text-ink-soft">({titleText(node.title)})</span>
-        )}
-        <span className="text-xs text-ink-soft">{PLACED_BY_LABEL[node.placedBy]}</span>
-        {node.removed && <span className="text-sm font-semibold text-fail">Removed from the Audit Documents</span>}
-        <UnsavedTag show={node.unsaved} />
-        {node.removed ? (
-          <button
-            type="button"
-            className="btn-quiet btn-sm"
-            aria-label={`Restore ${node.urlPath} to the Audit Documents`}
-            onClick={() => onRemove(node.urlPath, false)}
+        <div className="flex min-w-0 flex-1 basis-full flex-wrap items-center gap-2 sm:basis-0">
+          <span
+            className={`font-bold ${node.removed ? 'line-through' : 'text-ink'}`}
+            {...(hasTitle ? textLangAttrs(node.title ?? '', 'not-identified') : {})}
           >
-            Restore
-          </button>
-        ) : (
-          !isRoot && (
+            {hasTitle ? node.title : node.urlPath}
+          </span>
+          {hasTitle ? (
+            <span className="break-all text-sm text-ink-soft">{node.urlPath}</span>
+          ) : (
+            <span className="text-sm text-ink-soft">({titleText(node.title)})</span>
+          )}
+          <span className="text-xs text-ink-soft">{PLACED_BY_LABEL[node.placedBy]}</span>
+          {node.removed && <span className="text-sm font-semibold text-fail">Removed from the Audit Documents</span>}
+          <UnsavedTag show={node.unsaved} />
+        </div>
+        <div className="flex max-w-full flex-wrap items-center gap-x-3 sm:shrink-0">
+          {node.removed ? (
             <button
               type="button"
               className="btn-quiet btn-sm"
-              aria-label={`Remove ${node.urlPath} from the Audit Documents`}
-              onClick={() => onRemove(node.urlPath, true)}
+              aria-label={`Restore ${node.urlPath} to the Audit Documents`}
+              onClick={() => onRemove(node.urlPath, false)}
             >
-              Remove
+              Restore
             </button>
-          )
-        )}
-        <button
-          type="button"
-          className="btn-link text-sm"
-          aria-label={`Edit the Sections of ${node.urlPath}`}
-          aria-pressed={selectedPage === node.urlPath}
-          onClick={() => onSelect(node.urlPath)}
-        >
-          Edit Sections
-        </button>
+          ) : (
+            !isRoot && (
+              <button
+                type="button"
+                className="btn-quiet btn-sm"
+                aria-label={`Remove ${node.urlPath} from the Audit Documents`}
+                onClick={() => onRemove(node.urlPath, true)}
+              >
+                Remove
+              </button>
+            )
+          )}
+          <button
+            type="button"
+            className="btn-link text-sm"
+            aria-label={`Edit the Sections of ${node.urlPath}`}
+            aria-pressed={selectedPage === node.urlPath}
+            onClick={() => onSelect(node.urlPath)}
+          >
+            Edit Sections
+          </button>
+        </div>
       </div>
       {node.children.length > 0 && (
         <ul className="ml-4 border-l border-rule pl-3">
@@ -153,9 +157,9 @@ function PageItem({
 // Sections of one page
 // ---------------------------------------------------------------------------------------------------
 
-function sectionName(row: SectionRow): string {
+function sectionName(row: SectionRow, position: number): string {
   const heading = row.section.heading?.trim();
-  return `Section ${row.section.id}: ${heading ? heading : SECTION_KIND_LABEL[row.section.kind]}`;
+  return `Section ${position}: ${heading ? heading : SECTION_KIND_LABEL[row.section.kind]}`;
 }
 
 function SectionsEditor({
@@ -198,7 +202,7 @@ function SectionsEditor({
         <ol className="space-y-4">
           {rows.map((row, i) => {
             const id = `review-section-${i}`;
-            const name = sectionName(row);
+            const name = sectionName(row, i + 1);
             const lang = textLangAttrs(row.original, content.language.primary);
             return (
               <li key={row.section.id} className="rounded-card border border-rule p-3" data-section-id={row.section.id}>
@@ -408,7 +412,7 @@ export function ReviewDocumentsView({
                     const changed = row.changed.includes(field);
                     const label = `${FIELD_LABEL[field]} of finding ${finding.id}`;
                     return (
-                      <div key={field} className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div key={field} className="mt-3 grid grid-cols-1 gap-4">
                         <div>
                           <label htmlFor={id} className="label text-ink">
                             {label}
@@ -424,8 +428,8 @@ export function ReviewDocumentsView({
                           ) : (
                             <textarea
                               id={id}
-                              rows={3}
-                              className="field w-full"
+                              rows={6}
+                              className="field w-full [field-sizing:content] min-h-[5rem]"
                               value={row.shown[field]}
                               onChange={(e) => onDraft(setFindingField(draft, finding.id, field, e.target.value))}
                             />
@@ -515,32 +519,38 @@ export function ReviewDocumentsView({
           </ul>
         )}
       </section>
-      <BottomActionBar
-        summary={
-          <>
-            <span aria-live="polite">
-              {pending ? 'You have changes that are not saved yet.' : 'Every change is saved.'}
-            </span>
-            {message &&
-              (message.tone === 'fail' ? (
-                <span role="alert" className="mt-1 block font-semibold text-fail">
-                  {message.text}
-                </span>
-              ) : (
-                <span role="status" className="mt-1 block font-semibold text-pass">
-                  {message.text}
-                </span>
-              ))}
-          </>
-        }
-      >
-        <button type="button" className="btn-quiet" disabled={!pending || saving} onClick={onDiscard}>
-          Discard changes
-        </button>
-        <button type="button" className="btn-primary" disabled={!pending || saving} onClick={onSave}>
-          {saving ? <Spinner label="Saving…" /> : 'Save changes'}
-        </button>
-      </BottomActionBar>
+      {pending || saving || message?.tone === 'fail' ? (
+        <BottomActionBar
+          summary={
+            <>
+              <span aria-live="polite">
+                {pending ? 'You have changes that are not saved yet.' : 'Every change is saved.'}
+              </span>
+              {message &&
+                (message.tone === 'fail' ? (
+                  <span role="alert" className="mt-1 block font-semibold text-fail">
+                    {message.text}
+                  </span>
+                ) : (
+                  <span role="status" className="mt-1 block font-semibold text-pass">
+                    {message.text}
+                  </span>
+                ))}
+            </>
+          }
+        >
+          <button type="button" className="btn-quiet" disabled={!pending || saving} onClick={onDiscard}>
+            Discard changes
+          </button>
+          <button type="button" className="btn-primary" disabled={!pending || saving} onClick={onSave}>
+            {saving ? <Spinner label="Saving…" /> : 'Save changes'}
+          </button>
+        </BottomActionBar>
+      ) : (
+        <p role="status" className={message ? 'mt-10 text-sm font-semibold text-pass' : 'sr-only'}>
+          {message ? message.text : 'Every change is saved.'}
+        </p>
+      )}
     </div>
   );
 }
@@ -653,10 +663,19 @@ export function ReviewDocumentsScreen({
   const dirty = !isDraftEmpty(draft);
   const { confirm, dialog } = useConfirm();
 
-  // Unsaved edits: the browser asks before the tab closes or reloads, and a click on a link inside the app
-  // asks first (the capture listener runs before the router's own click handling).
+  // Unsaved edits: the browser asks before the tab closes or reloads, and moves inside the app
+  // (Back, Forward, command palette, links) ask first via the router block.
   useEffect(() => {
     if (!dirty) return;
+    const unblock = blockNavigation(() =>
+      confirm({
+        title: 'Leave without saving?',
+        body: 'Your edits are not saved yet. If you leave now, they are lost.',
+        confirmLabel: 'Leave and lose the edits',
+        cancelLabel: 'Stay and keep editing',
+        danger: true,
+      })
+    );
     const beforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
       e.returnValue = '';
@@ -668,19 +687,12 @@ export function ReviewDocumentsScreen({
       const href = link.getAttribute('href') ?? '';
       if (!href.startsWith('/') || href.startsWith('//')) return;
       e.preventDefault();
-      void confirm({
-        title: 'Leave without saving?',
-        body: 'Your edits are not saved yet. If you leave now, they are lost.',
-        confirmLabel: 'Leave and lose the edits',
-        cancelLabel: 'Stay and keep editing',
-        danger: true,
-      }).then((leave) => {
-        if (leave) navigate(href);
-      });
+      navigate(href);
     };
     window.addEventListener('beforeunload', beforeUnload);
     document.addEventListener('click', onClick, true);
     return () => {
+      unblock();
       window.removeEventListener('beforeunload', beforeUnload);
       document.removeEventListener('click', onClick, true);
     };

@@ -15,7 +15,7 @@ import type {
 } from '@qa/types/src/browser.js';
 import { AnalysisView, type AnalysisLoad } from '../src/screens/audit/results/AnalysisScreen';
 import { auditFileUrl } from '../src/screens/audit/results/analysis-client';
-import { NOT_DONE_REASON_TEXT, fixFirst } from '../src/screens/audit/results/analysis-text';
+import { fixFirst } from '../src/screens/audit/results/analysis-text';
 import { PageFactsView } from '../src/screens/audit/results/PageFactsView';
 import { PageContentView } from '../src/screens/audit/results/PageContentView';
 import { HierarchyView } from '../src/screens/audit/results/HierarchyView';
@@ -231,11 +231,12 @@ describe('site areas', () => {
 });
 
 describe('notes, roadmap and links', () => {
-  it('shows result.notes in a banner that links to Audit settings for any AI reason', () => {
+  it('shows result.notes in a banner that links to Settings (where the AI key is kept) for any AI reason', () => {
     expect(text).toContain('AI notes need an AI key.');
-    expect(html).toMatch(/<a [^>]*href="\/audit-settings"[^>]*>Audit settings<\/a>/);
+    expect(html).toMatch(/<a [^>]*href="\/settings"[^>]*>Settings<\/a>/);
+    expect(html).not.toContain('href="/audit-settings"');
 
-    // Any AI note links to Audit settings (T-88)
+    // Any AI note links to Settings (T-88)
     for (const aiNote of [
       'AI notes need an AI key.',
       'The AI key expired. Update it in Audit settings.',
@@ -243,8 +244,8 @@ describe('notes, roadmap and links', () => {
       'The AI did not answer in time.',
     ]) {
       const banner = renderToStaticMarkup(createElement(NotesBanner, { notes: [aiNote] }));
-      expect(banner).toContain('Audit settings');
-      expect(banner).toContain('/audit-settings');
+      expect(banner).toContain('href="/settings"');
+      expect(banner).not.toContain('href="/audit-settings"');
     }
 
     // Non-AI notes (speed source, only 1 page, site stopped answering) show in the banner without linking to Audit settings
@@ -256,6 +257,7 @@ describe('notes, roadmap and links', () => {
     ]) {
       const other = renderToStaticMarkup(createElement(NotesBanner, { notes: [otherNote] }));
       expect(other).not.toContain('Audit settings');
+      expect(other).not.toContain('href="/settings"');
       expect(other).toContain(otherNote);
     }
   });

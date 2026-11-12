@@ -4,9 +4,10 @@
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { crc32, inflateRawSync } from 'node:zlib';
 import type { DiscoveryDraft, ReviewPlan, TestCase } from '@qa/types';
 import { planToPlaywrightProject, EXPORT_PLAYWRIGHT_RANGE } from '../src/plan/playwright-export.js';
-import { zipFiles, crc32 } from '../src/plan/zip.js';
+import { zipFiles } from '../src/plan/zip.js';
 import { REFUSAL_RULE_SOURCE, CAPTURE_BASELINE_SOURCE } from '@qa/checkers';
 import { expandPlan } from '../src/plan/expand.js';
 
@@ -63,29 +64,36 @@ describe('playwright export', () => {
     expect(zipFiles(a).equals(zipFiles(b))).toBe(true);
   });
 
-  it('export zip has a valid central directory and correct crc32 per file', () => {
+  it('export zip is a valid archive holding every file unchanged', () => {
     const files = planToPlaywrightProject(planOf([tc()]));
     const zip = zipFiles(files);
     const eocd = zip.length - 22;
     expect(zip.readUInt32LE(eocd)).toBe(0x06054b50);
-    expect(zip.readUInt16LE(eocd + 10)).toBe(files.length);
+    const count = zip.readUInt16LE(eocd + 10);
+    expect(count).toBe(files.length);
     let p = zip.readUInt32LE(eocd + 16);
     expect(p + zip.readUInt32LE(eocd + 12)).toBe(eocd);
-    for (const f of files) {
+    const found = new Map<string, string>();
+    for (let i = 0; i < count; i++) {
       expect(zip.readUInt32LE(p)).toBe(0x02014b50);
+      const method = zip.readUInt16LE(p + 10);
       const crc = zip.readUInt32LE(p + 16);
-      const size = zip.readUInt32LE(p + 20);
+      const packed = zip.readUInt32LE(p + 20);
+      const size = zip.readUInt32LE(p + 24);
       const nameLen = zip.readUInt16LE(p + 28);
       const local = zip.readUInt32LE(p + 42);
-      expect(zip.subarray(p + 46, p + 46 + nameLen).toString('utf8')).toBe(f.path);
-      expect(size).toBe(Buffer.byteLength(f.content));
-      expect(crc).toBe(crc32(Buffer.from(f.content)));
+      const name = zip.subarray(p + 46, p + 46 + nameLen).toString('utf8');
       expect(zip.readUInt32LE(local)).toBe(0x04034b50);
-      const dataStart = local + 30 + zip.readUInt16LE(local + 26) + zip.readUInt16LE(local + 28);
-      expect(zip.subarray(dataStart, dataStart + size).toString('utf8')).toBe(f.content);
+      const start = local + 30 + zip.readUInt16LE(local + 26) + zip.readUInt16LE(local + 28);
+      const body = zip.subarray(start, start + packed);
+      const data = method === 8 ? inflateRawSync(body) : body;
+      expect(data.length).toBe(size);
+      expect(crc32(data) >>> 0).toBe(crc);
+      found.set(name, data.toString('utf8'));
       p += 46 + nameLen;
     }
-    expect(crc32(Buffer.from('123456789'))).toBe(0xcbf43926);
+    expect([...found.keys()].sort()).toEqual(files.map((f) => f.path).sort());
+    for (const f of files) expect(found.get(f.path)).toBe(f.content);
   });
 
   it('export maps click, fill, select, navigate, wait and check-link to Playwright calls', () => {

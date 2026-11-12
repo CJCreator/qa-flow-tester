@@ -104,6 +104,8 @@ change drops below WCAG 2.2 AA.
   (`style-tokens.test.ts`).
 - Never put white text on the accent. Use `text-on-stamp`.
 - Cards are flat, with a hairline. A shadow is only for things that float: menus, dialogs and sticky bars.
+- Sticky bars are opaque (`bg-raised`, no alpha, no blur). A see-through bar lets the text scrolling under it
+  show through its own text (seen on Plan Review and the Report, audit of 2026-11-12).
 
 ## Type
 
@@ -122,21 +124,40 @@ change drops below WCAG 2.2 AA.
 
 - **Widths:** `max-w-prose` (38rem) for reading, `max-w-form` (44rem) for forms, and `max-w-workspace` (72rem)
   for the plan, the report and the map.
+  Every width starts at the same left edge as the top bar and the area row (the workspace gutter): a narrow
+  column is not centred, so a title never jumps sideways between screens (New check-up and Website Audits at
+  1440, audit of 2026-11-12).
 - **Radii:** `rounded-control` 6px, `rounded-card` 10px, `rounded-panel` 14px, `rounded-pill`.
 - **Shadows:** `shadow-level-1` to `shadow-level-4` are CSS variables. They are deeper in the dark, where they are
   the only lift.
-- **Layers:** `z-sticky` 20, `z-header` 40, `z-menu` 50, `z-dialog` 60, `z-toast` 70.
+- **Layers:** `z-sticky` 20, `z-header` 40, `z-menu` 50, `z-dialog` 60, `z-toast` 70. No raw `z-50` or `z-[60]`.
+- **Sticky bottom bar:** `BottomActionBar` marks itself with `data-bottom-bar`, and the page then keeps focused
+  controls clear of it (`scroll-padding-bottom`). On phones its summary is one short line.
+- **The site map** lays its cards out from their real size (160 by about 156px) and fits two to four columns
+  to its box, so no page starts out of view.
 - **Buttons:**
   - `.btn-primary`, `.btn-quiet` and `.btn-danger` are all 48px high.
-  - `.btn-sm` is 44px. Every tap target is at least 44px.
+  - `.btn-sm` is 44px. Every tap target is at least 44px, in both directions: a short label such as "Show" or
+    "Print" takes `min-w-[44px]`.
+  - `.btn-danger-quiet` (red words and outline) is for stopping or deleting beside a safer choice. `.btn-danger`
+    (filled) is only for the single confirm button of a dialog.
+  - A dialog has one filled button. With three choices they stack at full width, the main one on top.
   - `.btn-link` is an inline action.
-  - There is one primary per screen.
+  - There is one primary per screen. An empty state holds it; the page header then has none.
+  - Filters and switches appear only when there are at least two things to choose between.
 - **Shared classes:**
   - `.badge` and its tones (`-stamp`, `-pass`, `-warn`, `-fail`).
   - `.disclosure` (a `<details>`).
   - `.segmented` for two or three choices.
   - `.table-plain`.
-  - `.field`.
+  - `.field` (at least 44px tall, whatever padding or text size a screen gives it).
+
+## The report as a file
+
+The single-file HTML report (`packages/core/src/html-report.ts`) and the sample of it on the landing page follow
+this document too: paper, ink, flat hairline cards, the verdict in sentence case on its tint, token colours for
+grades and severities, 14px smallest text, and no sideways scroll from 320px. It uses a system font stack, because
+the file must work offline. A new sample is saved from the generator, never styled by hand.
 
 ## Motion
 
@@ -165,7 +186,9 @@ Motion helps someone see what changed. Each use is judged on that.
 ## Landing hero
 
 - The address form sits beside the real sample report. It is a plain GET to `/check?url=`, which prefills the New
-  check-up screen.
+  check-up screen. The address field is the bold element: the full width of its column, at the size of the field on
+  New check-up, with the button under it on wide screens.
+- The page header, `main` and the footer are sibling landmarks, so "Skip to the content" skips the navigation.
 - The real sample report is the only proof on the page.
 - Marketing wording follows [ADR 0018](../../docs/adr/0018-claim-wording.md).
 

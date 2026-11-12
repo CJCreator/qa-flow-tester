@@ -119,6 +119,7 @@ function makeMockBrowser(routes: Record<string, MockRoute | ((attempt: number) =
 
   const context = {
     route: async () => {},
+    routeWebSocket: async () => {},
     close: async () => {},
     newPage: async () => createPage(),
   } as unknown as BrowserContext;

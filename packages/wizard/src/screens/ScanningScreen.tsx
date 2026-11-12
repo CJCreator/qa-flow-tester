@@ -97,7 +97,7 @@ export function ScanningScreen({
         lede={
           failure
             ? undefined
-            : `This can take a few minutes on a big site. You can leave this page: the check-up keeps going, and "New check-up" shows a dot while it does. You review the plan before anything is tested${
+            : `This can take a few minutes on a big site. You can leave this page: the check-up keeps going, and Check-ups shows a dot while it does. You review the plan before anything is tested${
                 hasMaterials ? ', and it is written with the Product Context you added' : ''
               }.`
         }
@@ -212,11 +212,7 @@ export function ScanningScreen({
           </section>
 
           <div className="mt-8">
-            <button
-              type="button"
-              className="btn-quiet border-fail text-fail hover:border-fail hover:bg-fail-tint"
-              onClick={onStop}
-            >
+            <button type="button" className="btn-danger-quiet" onClick={onStop}>
               Stop the check-up
             </button>
           </div>

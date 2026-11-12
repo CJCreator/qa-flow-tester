@@ -60,7 +60,7 @@ export function AuditSummary({ result }: { result: AuditResult }) {
 /** The plain sentences the tool left for its user, such as "AI notes need an AI key", with the way to fix it. */
 export function NotesBanner({ notes }: { notes: string[] }) {
   if (notes.length === 0) return null;
-  // Any note about AI links to Audit settings (T-88).
+  // Any note about AI links to Settings, where the AI key is kept (T-88).
   const aboutAi = notes.some(isAiNote);
   return (
     <Notice
@@ -68,8 +68,8 @@ export function NotesBanner({ notes }: { notes: string[] }) {
       title="Notes about this Website Audit"
       actions={
         aboutAi && (
-          <Link to={PATHS.auditSettings} className="btn-link">
-            Audit settings
+          <Link to={PATHS.settings} className="btn-link">
+            Settings
           </Link>
         )
       }

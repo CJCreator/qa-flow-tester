@@ -61,8 +61,8 @@ export function ConnectionScreen({ checks }: { checks: number }) {
       <h2 className="mb-2 text-xl font-bold">In your GitHub repo: nothing to install</h2>
       <p className="mb-4 max-w-prose text-ink-soft">
         The check-up runs on your own GitHub Actions minutes (free for public repos, 2,000 minutes a month for private
-        ones on the free plan). Your site, your AI key and the report stay with you. A site that is only reachable from
-        your build, such as a private preview, works too.
+        ones on the free plan). Your AI key and the report stay in your own repository. Page text goes only to the AI
+        you choose. A site that is only reachable from your build, such as a private preview, works too.
       </p>
 
       <ol className="mb-6 list-decimal space-y-4 pl-6">

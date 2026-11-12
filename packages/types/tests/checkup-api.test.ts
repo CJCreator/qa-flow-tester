@@ -4,13 +4,7 @@
  * failing at run time, on the wire, between the runner and the wizard.
  */
 import { describe, expectTypeOf, it } from 'vitest';
-import type {
-  ApprovalReply,
-  PlanPatchBody,
-  RunnerStatusReply,
-  RunStartBody,
-  RunStartReply,
-} from '../src/checkup-api.js';
+import type { PlanPatchBody, RunnerStatusReply, RunStartBody } from '../src/checkup-api.js';
 
 describe('check-up API contracts (T-201)', () => {
   it('RunStartBody carries every field POST /api/runner/run accepts', () => {
@@ -112,14 +106,5 @@ describe('check-up API contracts (T-201)', () => {
     expectTypeOf<RunnerStatusReply['phase']>().toEqualTypeOf<
       'idle' | 'scanning' | 'awaiting-review' | 'testing' | 'done' | 'failed'
     >();
-  });
-
-  it('RunStartReply and ApprovalReply carry what their success branches write', () => {
-    const started = { runId: 'run-1' } satisfies RunStartReply;
-    const approved = { status: 'approved', runId: 'run-1' } satisfies ApprovalReply;
-
-    expectTypeOf(started).toMatchTypeOf<RunStartReply>();
-    expectTypeOf(approved).toMatchTypeOf<ApprovalReply>();
-    expectTypeOf<ApprovalReply['status']>().toEqualTypeOf<'approved'>();
   });
 });

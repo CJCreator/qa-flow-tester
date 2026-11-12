@@ -12,7 +12,8 @@ import type {
   TestCaseExpectations,
 } from '@qa/types';
 import { stepToSentence, expectationsToChecks } from '../../lib/plan-translate';
-import { scrollBehavior } from '../../lib/format';
+import { count, scrollBehavior } from '../../lib/format';
+import { Disclosure } from '../ui';
 import type { InterpretResult, PatchPlanBody } from '../../api';
 import {
   confirmRolesEdit,
@@ -110,9 +111,6 @@ const SIZE_NAMES: Record<Breakpoint, string> = {
   '768px': 'Tablet (768px)',
   '1440px': 'Desktop (1440px)',
 };
-/** Sections longer than this start collapsed. */
-const COLLAPSE_OVER = 20;
-
 /** Who a role is, in the words the rest of the plan uses. */
 function roleName(role: string | undefined): string {
   return !role || role === 'anonymous' || role === 'visitor' ? 'visitor' : role;
@@ -154,20 +152,33 @@ function flowNeedsMe(flow: DiscoveredFlow): boolean {
   return flow.source === 'fallback' || !!flow.isNew || !!flow.needsHelp?.length || isGuess(flow.candidateExpectations);
 }
 
+/**
+ * Opens a section's own disclosure (its direct child details), so a jump to the section shows its items.
+ * Only for section elements: an item's own details are left to the item.
+ */
+function openOwnSection(el: HTMLElement): void {
+  if (el.tagName !== 'SECTION') return;
+  const own = el.querySelector<HTMLDetailsElement>(':scope > details');
+  if (own && !own.open) own.open = true;
+}
+
 function Section({
   id,
   title,
   count,
   intro,
   collapsible,
+  startOpen = false,
   children,
 }: {
   id: string;
   title: string;
   count?: number | string;
   intro?: string;
-  /** Starts collapsed when long, unless the reader is looking for something. */
+  /** Collapsible sections start closed. Set this to start one open. */
   collapsible?: boolean;
+  /** Only for collapsible sections: starts open. */
+  startOpen?: boolean;
   children: React.ReactNode;
 }) {
   const view = useContext(ViewContext);
@@ -186,9 +197,7 @@ function Section({
     const shouldOpen =
       view.expandAll !== undefined && view.expandAll !== null
         ? view.expandAll
-        : (typeof count === 'number' ? count : parseInt(count ?? '0', 10)) <= COLLAPSE_OVER ||
-          !!view.query.trim() ||
-          view.needsMe;
+        : startOpen || !!view.query.trim() || view.needsMe;
     const [open, setOpen] = useState(shouldOpen);
 
     useEffect(() => {
@@ -235,12 +244,12 @@ function Section({
 function CollapsibleGroup({
   title,
   startOpen,
-  headerRight,
+  actions,
   children,
 }: {
   title: React.ReactNode;
   startOpen: boolean;
-  headerRight?: React.ReactNode;
+  actions?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const view = useContext(ViewContext);
@@ -264,11 +273,15 @@ function CollapsibleGroup({
       open={open}
       onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}
     >
-      <summary className="flex min-h-[48px] cursor-pointer flex-wrap items-center justify-between gap-2 px-3 py-2 text-base text-ink">
+      <summary className="flex min-h-[48px] cursor-pointer items-center px-3 py-2 text-base text-ink">
         <span>{title}</span>
-        {headerRight}
       </summary>
-      {open && <div className="p-3">{children}</div>}
+      {open && (
+        <div className="p-3">
+          {actions && <div className="mb-3 flex justify-end">{actions}</div>}
+          {children}
+        </div>
+      )}
     </details>
   );
 }
@@ -391,8 +404,8 @@ function EditableTitle({
   }
 
   return (
-    <span className="inline-flex items-center gap-1">
-      <span className={className}>{value}</span>
+    <span className="inline-flex min-w-0 max-w-full items-center gap-1">
+      <span className={`min-w-0 [overflow-wrap:anywhere] ${className}`}>{value}</span>
       {!disabled && (
         <button
           type="button"
@@ -642,43 +655,50 @@ function IntentSummary({ plan, actions }: { plan: ReviewPlan; actions: PlanActio
   if (!line && !overCap) return null;
   return (
     <div className="mt-4" data-testid="intent-summary">
-      {line && <p className="text-base text-ink">{line}</p>}
+      {/* One Intent only: its count is the total above, and a switch for it would switch everything off. */}
+      {line && present.length > 1 && <p className="text-base text-ink">{line}</p>}
       {overCap && (
         <p className="mt-1 text-base text-warn" data-testid="over-cap-line">
           {overCap}
         </p>
       )}
-      {present.length > 0 && (
-        <fieldset className="mt-3">
-          <legend className="label mb-1">Intents to run</legend>
-          <p className="mb-2 max-w-prose text-sm text-ink-soft">
-            An Intent is what a test expects to happen. Switch one off to leave its tests out of this check-up.
-          </p>
-          <div className="flex flex-wrap gap-x-5 gap-y-1">
-            {present.map((c) => {
-              const off = actions.intentsOff.includes(c.intent);
-              return (
-                <label
-                  key={c.intent}
-                  className="flex min-h-[44px] cursor-pointer items-center gap-2 text-base text-ink"
-                  title={INTENT_HINTS[c.intent]}
-                >
-                  <input
-                    type="checkbox"
-                    className="h-5 w-5 accent-stamp"
-                    data-testid={`intent-switch-${c.intent}`}
-                    checked={!off}
-                    disabled={actions.busy}
-                    onChange={(e) => actions.setIntentOff(c.intent, !e.target.checked)}
-                  />
-                  {c.label} ({c.items})
-                </label>
-              );
-            })}
-          </div>
-        </fieldset>
-      )}
     </div>
+  );
+}
+
+/** One switch per Intent, when the plan has more than one. */
+function IntentSwitches({ plan, actions }: { plan: ReviewPlan; actions: PlanActions }) {
+  const present = intentsInPlan(plan);
+  if (present.length < 2) return null;
+  return (
+    <fieldset>
+      <legend className="label mb-1">Intents to run</legend>
+      <p className="mb-2 max-w-prose text-sm text-ink-soft">
+        An Intent is what a test expects to happen. Switch one off to leave its tests out of this check-up.
+      </p>
+      <div className="flex flex-wrap gap-x-5 gap-y-1">
+        {present.map((c) => {
+          const off = actions.intentsOff.includes(c.intent);
+          return (
+            <label
+              key={c.intent}
+              className="flex min-h-[44px] cursor-pointer items-center gap-2 text-base text-ink"
+              title={INTENT_HINTS[c.intent]}
+            >
+              <input
+                type="checkbox"
+                className="h-5 w-5 accent-stamp"
+                data-testid={`intent-switch-${c.intent}`}
+                checked={!off}
+                disabled={actions.busy}
+                onChange={(e) => actions.setIntentOff(c.intent, !e.target.checked)}
+              />
+              {c.label} ({c.items})
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
   );
 }
 
@@ -692,7 +712,6 @@ function SummarySection({ plan, actions }: { plan: ReviewPlan; actions: PlanActi
   const scanningLine = plannedWhileScanningLine(plan);
   return (
     <Section id="plan-summary" title="What approving runs">
-      {scanningLine && <p className="mb-3 text-sm text-ink-soft">{scanningLine}</p>}
       <ul className="space-y-1.5">
         {(plan.summary?.lines || []).map((line, i) => (
           <li key={i} className="flex items-start justify-between gap-3 text-base text-ink">
@@ -703,7 +722,11 @@ function SummarySection({ plan, actions }: { plan: ReviewPlan; actions: PlanActi
               ) : null}
             </span>
             {line.itemIds.length > 0 && (
-              <button type="button" className="btn-link shrink-0 text-sm" onClick={() => showItem(line.itemIds[0])}>
+              <button
+                type="button"
+                className="btn-link min-w-[44px] shrink-0 justify-center text-sm"
+                onClick={() => showItem(line.itemIds[0])}
+              >
                 Show
               </button>
             )}
@@ -712,84 +735,97 @@ function SummarySection({ plan, actions }: { plan: ReviewPlan; actions: PlanActi
       </ul>
       <IntentSummary plan={plan} actions={actions} />
 
-      <fieldset className="mt-5">
-        <legend className="label mb-2">Screen sizes</legend>
-        <div className="flex flex-wrap gap-x-5 gap-y-1">
-          {SIZES.map((size) => {
-            const on = sizes.includes(size);
-            return (
-              <label key={size} className="flex min-h-[44px] cursor-pointer items-center gap-2 text-base text-ink">
-                <input
-                  type="checkbox"
-                  className="h-5 w-5 accent-stamp"
-                  checked={on}
-                  disabled={actions.busy || (on && sizes.length === 1)}
-                  onChange={(e) =>
-                    actions.setScreenSizes(
-                      e.target.checked
-                        ? SIZES.filter((s) => s === size || sizes.includes(s))
-                        : sizes.filter((s) => s !== size)
-                    )
-                  }
-                />
-                {SIZE_NAMES[size]}
-              </label>
-            );
-          })}
-        </div>
-      </fieldset>
-      <button type="button" className="btn-link text-sm" disabled={actions.busy} onClick={actions.quickCheck}>
-        Make it a shorter check-up: desktop only, and only the shared menus’ links
-      </button>
+      {/* What to run is a setting, not the plan: one closed row, so the plan itself starts sooner. */}
+      <Disclosure
+        className="mt-5"
+        summary="Change what runs"
+        hint={`${sizes.length === SIZES.length ? 'Every screen size' : count(sizes.length, 'screen size', 'screen sizes')} · as ${(plan.roles?.length ? plan.roles : ['visitor']).map(roleName).join(', ')}`}
+      >
+        <div className="grid gap-5">
+          <IntentSwitches plan={plan} actions={actions} />
+          <fieldset>
+            <legend className="label mb-2">Screen sizes</legend>
+            <div className="flex flex-wrap gap-x-5 gap-y-1">
+              {SIZES.map((size) => {
+                const on = sizes.includes(size);
+                return (
+                  <label key={size} className="flex min-h-[44px] cursor-pointer items-center gap-2 text-base text-ink">
+                    <input
+                      type="checkbox"
+                      className="h-5 w-5 accent-stamp"
+                      checked={on}
+                      disabled={actions.busy || (on && sizes.length === 1)}
+                      onChange={(e) =>
+                        actions.setScreenSizes(
+                          e.target.checked
+                            ? SIZES.filter((s) => s === size || sizes.includes(s))
+                            : sizes.filter((s) => s !== size)
+                        )
+                      }
+                    />
+                    {SIZE_NAMES[size]}
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+          <button type="button" className="btn-link w-fit text-sm" disabled={actions.busy} onClick={actions.quickCheck}>
+            Make it a shorter check-up: desktop only, and only the shared menus’ links
+          </button>
 
-      <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
-        <div>
-          <dt className="text-ink-soft">Tested as</dt>
-          <dd className="text-ink">{(plan.roles?.length ? plan.roles : ['visitor']).map(roleName).join(', ')}</dd>
+          <dl className="grid gap-3 text-sm sm:grid-cols-2">
+            <div>
+              <dt className="text-ink-soft">Tested as</dt>
+              <dd className="text-ink">{(plan.roles?.length ? plan.roles : ['visitor']).map(roleName).join(', ')}</dd>
+            </div>
+            {budget && (
+              <div>
+                <dt className="text-ink-soft">AI requests</dt>
+                <dd className="text-ink">
+                  {budget.used} used, about {budget.needed} needed
+                  {budget.left !== undefined && ` · ${budget.left} free left today`}
+                  {budget.visualReview ? ` · looking over the screens can use up to ${budget.visualReview} more` : ''}
+                </dd>
+              </div>
+            )}
+          </dl>
+          {tokens.length > 0 && (
+            <details className="text-sm">
+              <summary className="inline-flex min-h-[44px] cursor-pointer items-center font-semibold text-stamp underline decoration-2 underline-offset-4">
+                AI tokens used
+              </summary>
+              <div className="overflow-x-auto">
+                <table className="table-plain mt-2">
+                  <thead>
+                    <tr>
+                      <th>Stage</th>
+                      <th>Requests</th>
+                      <th>Sent</th>
+                      <th>Answered</th>
+                      <th>Of which thinking</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tokens.map(([stage, u]) => (
+                      <tr key={stage}>
+                        <td>{TOKEN_STAGES[stage] ?? stage}</td>
+                        <td>
+                          {u!.requests}
+                          {u!.truncated ? ` (${u!.truncated} cut off)` : ''}
+                        </td>
+                        <td>{u!.promptTokens.toLocaleString()}</td>
+                        <td>{u!.completionTokens.toLocaleString()}</td>
+                        <td>{u!.reasoningTokens.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          )}
+          {scanningLine && <p className="text-sm text-ink-soft">{scanningLine}</p>}
         </div>
-        {budget && (
-          <div>
-            <dt className="text-ink-soft">AI requests</dt>
-            <dd className="text-ink">
-              {budget.used} used, about {budget.needed} needed
-              {budget.left !== undefined && ` · ${budget.left} free left today`}
-              {budget.visualReview ? ` · looking over the screens can use up to ${budget.visualReview} more` : ''}
-            </dd>
-          </div>
-        )}
-      </dl>
-      {tokens.length > 0 && (
-        <details className="mt-3 text-sm">
-          <summary className="flex min-h-[44px] cursor-pointer items-center text-ink-soft">AI tokens used</summary>
-          <div className="overflow-x-auto">
-            <table className="table-plain mt-2">
-              <thead>
-                <tr>
-                  <th>Stage</th>
-                  <th>Requests</th>
-                  <th>Sent</th>
-                  <th>Answered</th>
-                  <th>Of which thinking</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tokens.map(([stage, u]) => (
-                  <tr key={stage}>
-                    <td>{TOKEN_STAGES[stage] ?? stage}</td>
-                    <td>
-                      {u!.requests}
-                      {u!.truncated ? ` (${u!.truncated} cut off)` : ''}
-                    </td>
-                    <td>{u!.promptTokens.toLocaleString()}</td>
-                    <td>{u!.completionTokens.toLocaleString()}</td>
-                    <td>{u!.reasoningTokens.toLocaleString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </details>
-      )}
+      </Disclosure>
 
       {plan.readOnlyReason && (
         <p className="mt-4 rounded-card border border-warn/40 bg-warn-tint p-3 text-sm text-ink">
@@ -837,6 +873,7 @@ function QuestionsSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAc
       title={unanswered > 0 ? 'Needs your answer' : 'Your answers'}
       count={unanswered > 0 ? unanswered : plan.questions.length}
       collapsible
+      startOpen
       intro="Anything you leave unanswered gets the cautious answer: nothing is sent or deleted."
     >
       <ul className="space-y-3">
@@ -1129,10 +1166,7 @@ function BulkSwitch({
       type="button"
       className="btn-link text-sm disabled:cursor-not-allowed disabled:text-ink-soft"
       disabled={actions.busy}
-      onClick={(e) => {
-        e.preventDefault();
-        actions.setSkippedMany(ids, !allOff);
-      }}
+      onClick={() => actions.setSkippedMany(ids, !allOff)}
     >
       {allOff ? `Switch on ${what}` : `Switch off ${what}`}
     </button>
@@ -1176,7 +1210,7 @@ function PagesSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAction
               </span>
             }
             startOpen={members.length <= 6}
-            headerRight={
+            actions={
               <BulkSwitch
                 ids={testable.map((p) => p.id)}
                 skippedCount={testable.filter((p) => p.skipped).length}
@@ -1340,7 +1374,7 @@ function NavigationSection({ plan, actions }: { plan: ReviewPlan; actions: PlanA
                   </span>
                 }
                 startOpen={starts.length <= 3}
-                headerRight={
+                actions={
                   <BulkSwitch
                     ids={links.map((n) => n.id)}
                     skippedCount={links.filter((n) => n.skipped).length}
@@ -1519,7 +1553,7 @@ function SortableJourneyItem({ flow, actions }: { flow: DiscoveredFlow; actions:
           {...listeners}
           aria-label={`Drag to reorder journey: ${flow.name}`}
           title="Drag to reorder"
-          className="-my-1.5 inline-flex h-11 w-8 shrink-0 cursor-grab items-center justify-center rounded-control text-ink-soft hover:bg-panel hover:text-ink active:cursor-grabbing"
+          className="-my-1.5 inline-flex h-11 w-11 shrink-0 cursor-grab items-center justify-center rounded-control text-ink-soft hover:bg-panel hover:text-ink active:cursor-grabbing"
         >
           <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <circle cx="7" cy="4" r="1.5" />
@@ -1670,7 +1704,11 @@ function WontRunSection({ plan }: { plan: ReviewPlan }) {
                 <span className="text-ink-soft">— {wontRunReason(item.reason)}</span>
               </span>
               {item.itemId && (
-                <button type="button" className="btn-link shrink-0 text-sm" onClick={() => showItem(item.itemId!)}>
+                <button
+                  type="button"
+                  className="btn-link min-w-[44px] shrink-0 justify-center text-sm"
+                  onClick={() => showItem(item.itemId!)}
+                >
                   Show
                 </button>
               )}
@@ -1691,6 +1729,7 @@ function NotFoundSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAct
     <Section
       id="plan-notfound"
       title="Not found in app"
+      startOpen
       count={groups.reduce((n, g) => n + g.items.length, 0)}
       intro={`${line ? `${line}. ` : ''}These are in your documents but the scan found no matching page or control. They are not counted as failures. Remove one if it is not meant to exist, or add the page and scan again.`}
       collapsible
@@ -1707,7 +1746,7 @@ function NotFoundSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAct
                 </span>
                 <button
                   type="button"
-                  className="btn-link shrink-0 text-sm"
+                  className="btn-link min-w-[44px] shrink-0 justify-center text-sm"
                   disabled={actions.busy}
                   onClick={() => actions.editNotFound(removeNotFoundEdit(item.id))}
                 >
@@ -1792,7 +1831,8 @@ function DocsSection({ plan, actions }: { plan: ReviewPlan; actions: PlanActions
 /** Filter chips: show only the items with one Intent. Pressing the chosen one again shows all. */
 function IntentChips({ plan, view, setView }: { plan: ReviewPlan; view: View; setView: (v: View) => void }) {
   const present = intentsInPlan(plan);
-  if (present.length === 0) return null;
+  // A filter needs at least two things to choose between.
+  if (present.length < 2) return null;
   return (
     <div
       className="flex flex-wrap items-center gap-2"
@@ -1926,7 +1966,9 @@ function usePlanKeyboardNavigation() {
         const targetId = targetMap[e.key.toLowerCase()];
         if (targetId) {
           e.preventDefault();
-          const targetEl = document.getElementById(targetId) || document.getElementById(`${targetId}-title`);
+          const sectionEl = document.getElementById(targetId);
+          if (sectionEl) openOwnSection(sectionEl);
+          const targetEl = sectionEl || document.getElementById(`${targetId}-title`);
           targetEl?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
           return;
         }
@@ -2022,8 +2064,17 @@ function usePlanKeyboardNavigation() {
 }
 
 /** The complete plan as one readable document: everything that will run, and everything that won't. */
-export function PlanDocument({ plan, actions }: { plan: ReviewPlan; actions: PlanActions }) {
-  const [view, setView] = useState<View>({ query: '', needsMe: false });
+export function PlanDocument({
+  plan,
+  actions,
+  startExpanded = false,
+}: {
+  plan: ReviewPlan;
+  actions: PlanActions;
+  /** Every section open on arrival. The default is closed, except "Needs your answer". */
+  startExpanded?: boolean;
+}) {
+  const [view, setView] = useState<View>({ query: '', needsMe: false, expandAll: startExpanded ? true : undefined });
   // The search box updates at once; the sections follow when the browser has time, so typing never lags.
   const deferredView = useDeferredValue(view);
   usePlanKeyboardNavigation();
@@ -2035,35 +2086,53 @@ export function PlanDocument({ plan, actions }: { plan: ReviewPlan; actions: Pla
   }, []);
 
   useEffect(() => {
+    const findTarget = (decoded: string): HTMLElement | null =>
+      document.getElementById(decoded) ||
+      document.getElementById(itemDomId(decoded)) ||
+      Array.from(document.querySelectorAll<HTMLElement>('[data-plan-item]')).find(
+        (el) => el.dataset.planItem === decoded
+      ) ||
+      null;
+    const reveal = (target: HTMLElement) => {
+      openOwnSection(target);
+      let parent = target.parentElement;
+      while (parent) {
+        if (parent instanceof HTMLDetailsElement) parent.open = true;
+        parent = parent.parentElement;
+      }
+      target.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
+      target.classList.add('ring-2', 'ring-stamp', 'transition-all', 'duration-slow');
+      window.setTimeout(() => {
+        target.classList.remove('ring-2', 'ring-stamp');
+      }, 3000);
+    };
+    let frame: number | null = null;
     const handleHash = () => {
       const raw = window.location.hash.slice(1);
       if (!raw) return;
       const decoded = safeDecodeHash(raw);
       if (decoded === null) return;
-      const target =
-        document.getElementById(decoded) ||
-        document.getElementById(itemDomId(decoded)) ||
-        Array.from(document.querySelectorAll<HTMLElement>('[data-plan-item]')).find(
-          (el) => el.dataset.planItem === decoded
-        );
+      const target = findTarget(decoded);
       if (target) {
-        let parent = target.parentElement;
-        while (parent) {
-          if (parent instanceof HTMLDetailsElement) parent.open = true;
-          parent = parent.parentElement;
-        }
-        target.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
-        target.classList.add('ring-2', 'ring-stamp', 'transition-all', 'duration-slow');
-        window.setTimeout(() => {
-          target.classList.remove('ring-2', 'ring-stamp');
-        }, 3000);
+        reveal(target);
+        return;
       }
+      // The item is inside a closed section: open every section, then find it (same as showItem).
+      window.dispatchEvent(new Event(OPEN_ALL_EVENT));
+      frame = window.requestAnimationFrame(() => {
+        frame = window.requestAnimationFrame(() => {
+          frame = null;
+          const later = findTarget(decoded);
+          if (later) reveal(later);
+        });
+      });
     };
 
     const timer = window.setTimeout(handleHash, 150);
     window.addEventListener('hashchange', handleHash);
     return () => {
       window.clearTimeout(timer);
+      if (frame !== null) window.cancelAnimationFrame(frame);
       window.removeEventListener('hashchange', handleHash);
     };
   }, []);

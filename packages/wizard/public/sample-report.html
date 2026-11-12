@@ -13,110 +13,130 @@
   <meta name="twitter:title" content="Example report · Release check-up">
   <meta name="twitter:description" content="A real Release check-up report on a small demo site with a few known problems: the verdict, the problems in priority order and the evidence.">
   <style>
+    /* Certificate: quiet paper, green-grey ink, cobalt for links. Flat cards with a hairline, no shadows. */
     :root {
-      --bg: #0D1322;
-      --card-bg: #FFFFFF;
-      --navy-900: #0B1120;
-      --navy-800: #1E293B;
-      --navy-700: #334155;
-      --text-main: #0F172A;
-      --text-muted: #64748B;
-      --blueprint-line: #1E3A8A;
-      --blueprint-bg: #0D1322;
+      --paper: #F4F6F4;
+      --canvas: #ECEFEC;
+      --surface: #FFFFFF;
+      --ink: #121A17;
+      --ink-soft: #4C5853;
+      --rule: #D8DDDA;
+      --edge: #7A8580;
+      --stamp: #1D3FD0;
+      --pass: #0B7547;
+      --pass-tint: #E2F3E9;
+      --warn: #8A5000;
+      --warn-tint: #FBEFD9;
+      --fail: #B42318;
+      --fail-tint: #FCE8E6;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-text-size-adjust: 100%; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: var(--bg);
-      color: var(--text-main);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 1rem;
+      line-height: 1.5;
+      background: var(--paper);
+      color: var(--ink);
       padding: 2rem 1rem;
-      background-image: radial-gradient(rgba(30, 58, 138, 0.25) 1px, transparent 1px);
-      background-size: 24px 24px;
+      overflow-wrap: anywhere;
     }
+    a { color: var(--stamp); text-decoration: underline; text-underline-offset: 2px; }
+    a:focus-visible, summary:focus-visible { outline: 3px solid var(--stamp); outline-offset: 2px; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.9em; overflow-wrap: anywhere; }
     .container {
       max-width: 1100px;
       margin: 0 auto;
     }
     .header-banner {
-      background: var(--card-bg);
-      border-radius: 12px;
-      padding: 2rem;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      border-left: 8px solid #B42318;
+      border-radius: 10px;
+      padding: 1.5rem;
       display: flex;
+      flex-wrap: wrap;
       justify-content: space-between;
       align-items: center;
+      gap: 1rem 1.5rem;
       margin-bottom: 1.5rem;
-      border-left: 8px solid #DC2626;
     }
+    .header-left { flex: 1 1 18rem; min-width: 0; }
     .header-left h1 {
       font-size: 1.75rem;
+      line-height: 1.2;
       font-weight: 700;
-      color: var(--text-main);
+      color: var(--ink);
     }
     .header-left p {
-      color: var(--text-muted);
+      color: var(--ink-soft);
       margin-top: 0.25rem;
       font-size: 0.95rem;
     }
+    .header-left p[style] { font-size: 0.875rem !important; }
     .overall-badge {
-      text-align: center;
-      padding: 1rem 1.5rem;
-      border-radius: 12px;
-      background: #FEF2F2;
-      border: 2px solid #DC2626;
+      flex: 0 1 16rem;
+      min-width: 0;
+      max-width: 100%;
+      text-align: left;
+      padding: 1rem 1.25rem;
+      border-radius: 10px;
+      background: #FCE8E6;
+      border: 2px solid #B42318;
     }
     .overall-grade {
-      font-size: 1.6rem;
+      font-size: 1.75rem;
       font-weight: 800;
-      text-transform: uppercase;
-      color: #991B1B;
+      color: #B42318;
       line-height: 1.1;
-      transform: rotate(-3deg);
     }
     .overall-label {
-      font-size: 0.85rem;
+      font-size: 0.9375rem;
       font-weight: 600;
-      color: #991B1B;
+      color: #B42318;
       margin-top: 0.4rem;
-      max-width: 16rem;
     }
     .card {
-      background: var(--card-bg);
-      border-radius: 12px;
-      padding: 1.75rem;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      border-radius: 10px;
+      padding: 1.5rem;
       margin-bottom: 1.5rem;
     }
     .section-title {
       font-size: 1.25rem;
+      line-height: 1.3;
       font-weight: 700;
-      color: var(--text-main);
+      color: var(--ink);
     }
     .section-desc {
-      color: var(--text-muted);
-      font-size: 0.9rem;
+      color: var(--ink-soft);
+      font-size: 0.9375rem;
       margin-top: 0.25rem;
       margin-bottom: 1.25rem;
     }
     .aspects-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
       gap: 1rem;
       margin-bottom: 1.5rem;
     }
     .aspect-card {
-      background: var(--card-bg);
-      border-radius: 8px;
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      border-radius: 10px;
       padding: 1.25rem;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+      min-width: 0;
     }
     .aspect-header {
       display: flex;
+      flex-wrap: wrap;
       justify-content: space-between;
       align-items: center;
+      gap: 0.5rem;
       margin-bottom: 0.75rem;
     }
     .aspect-title {
@@ -125,13 +145,13 @@
     }
     .aspect-grade {
       font-weight: 700;
-      font-size: 0.85rem;
+      font-size: 0.875rem;
       padding: 0.2rem 0.6rem;
       border-radius: 9999px;
     }
     .aspect-score-bar {
       height: 6px;
-      background: #E2E8F0;
+      background: var(--canvas);
       border-radius: 9999px;
       overflow: hidden;
       margin-bottom: 0.75rem;
@@ -142,32 +162,34 @@
     }
     .aspect-footer {
       display: flex;
+      flex-wrap: wrap;
       justify-content: space-between;
-      font-size: 0.8rem;
-      color: var(--text-muted);
+      gap: 0.25rem 0.75rem;
+      font-size: 0.875rem;
+      color: var(--ink-soft);
     }
     .history-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
       gap: 1rem;
       text-align: center;
       margin-top: 1rem;
     }
     .history-stat {
       padding: 1rem;
-      border-radius: 8px;
-      background: #F8FAFC;
-      border: 1px solid #E2E8F0;
+      border-radius: 10px;
+      background: var(--paper);
+      border: 1px solid var(--rule);
     }
-    .history-stat.fixed .history-num { color: #059669; }
-    .history-stat.new .history-num { color: #DC2626; }
-    .history-stat.open .history-num { color: #D97706; }
-    .history-num { font-size: 2rem; font-weight: 800; display: block; }
-    .history-label { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
+    .history-stat.fixed .history-num { color: var(--pass); }
+    .history-stat.new .history-num { color: var(--fail); }
+    .history-stat.open .history-num { color: var(--warn); }
+    .history-num { font-size: 2rem; font-weight: 700; display: block; line-height: 1.2; }
+    .history-label { font-size: 0.9375rem; color: var(--ink-soft); font-weight: 500; }
     .group-heading {
       font-size: 1rem;
       font-weight: 700;
-      color: var(--navy-800);
+      color: var(--ink);
       margin-bottom: 0.75rem;
     }
     .rec-list {
@@ -177,78 +199,89 @@
     }
     .rec-item {
       padding: 1rem;
-      border-radius: 8px;
-      background: #F8FAFC;
-      border: 1px solid #E2E8F0;
+      border-radius: 10px;
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      min-width: 0;
     }
     .rec-top {
       display: flex;
+      flex-wrap: wrap;
       gap: 0.5rem;
       align-items: center;
-      font-size: 0.8rem;
+      font-size: 0.875rem;
       margin-bottom: 0.5rem;
     }
-    .rec-aspect { font-weight: 600; color: #1E3A8A; }
+    .rec-aspect { font-weight: 600; color: var(--ink-soft); }
     .rec-title { font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem; }
-    .rec-summary { font-size: 0.9rem; color: #475569; margin-bottom: 0.5rem; }
-    .rec-fix { font-size: 0.85rem; background: #EFF6FF; border-left: 3px solid #2563EB; padding: 0.5rem 0.75rem; border-radius: 0 4px 4px 0; margin-bottom: 0.5rem; }
-    .rec-meta { font-size: 0.8rem; color: var(--text-muted); }
-    .rec-meta code { color: #0F172A; background: #E2E8F0; padding: 0.1rem 0.3rem; border-radius: 3px; }
+    .rec-summary { font-size: 0.9375rem; color: var(--ink-soft); margin-bottom: 0.5rem; }
+    .rec-fix { font-size: 0.9375rem; background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--stamp); padding: 0.5rem 0.75rem; border-radius: 6px; margin-bottom: 0.5rem; }
+    .rec-meta { font-size: 0.875rem; color: var(--ink-soft); }
+    .rec-meta code { color: var(--ink); background: var(--canvas); padding: 0.1rem 0.3rem; border-radius: 6px; }
     .badge {
-      font-size: 0.75rem;
+      font-size: 0.875rem;
       font-weight: 700;
-      text-transform: uppercase;
       padding: 0.15rem 0.5rem;
-      border-radius: 4px;
+      border-radius: 6px;
+      background: var(--canvas);
+      color: var(--ink);
     }
-    .badge.blocker { background: #FEE2E2; color: #991B1B; }
-    .badge.major { background: #FFEDD5; color: #9A3412; }
-    .badge.minor { background: #FEF3C7; color: #92400E; }
-    .badge.suggestion { background: #E0E7FF; color: #3730A3; }
+    .badge.blocker { background: var(--fail-tint); color: var(--fail); }
+    .badge.major { background: var(--warn-tint); color: var(--warn); }
+    .badge.minor { background: var(--warn-tint); color: var(--warn); }
+    .badge.suggestion { background: var(--canvas); color: var(--stamp); }
     details.finding-card {
-      border: 1px solid #E2E8F0;
-      border-radius: 8px;
+      border: 1px solid var(--rule);
+      border-radius: 10px;
       margin-bottom: 0.5rem;
-      background: #FFFFFF;
+      background: var(--surface);
       overflow: hidden;
     }
     summary.finding-summary {
       padding: 1rem;
       cursor: pointer;
       display: flex;
+      flex-wrap: wrap;
       justify-content: space-between;
       align-items: center;
-      font-size: 0.95rem;
+      gap: 0.5rem 1rem;
+      font-size: 0.9375rem;
       user-select: none;
-      background: #FFFFFF;
+      background: var(--surface);
     }
-    summary.finding-summary:hover { background: #F8FAFC; }
-    .finding-summary-left { display: flex; align-items: center; gap: 0.75rem; }
-    .finding-checker { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
+    summary.finding-summary:hover { background: var(--paper); }
+    .finding-summary-left { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; min-width: 0; }
+    .finding-checker { font-size: 0.875rem; color: var(--ink-soft); font-weight: 600; }
     .finding-title-text { font-weight: 600; }
-    .finding-route { font-size: 0.8rem; color: var(--text-muted); font-family: monospace; }
+    .finding-route { font-size: 0.875rem; color: var(--ink-soft); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
     .finding-details {
       padding: 1rem;
-      background: #F8FAFC;
-      border-top: 1px solid #E2E8F0;
-      font-size: 0.9rem;
+      background: var(--paper);
+      border-top: 1px solid var(--rule);
+      font-size: 0.9375rem;
     }
     .finding-row { margin-bottom: 0.5rem; }
-    .finding-label { font-weight: 600; color: #334155; margin-right: 0.5rem; }
-    .resolve-text { color: #059669; font-weight: 500; }
+    .finding-label { font-weight: 600; color: var(--ink); margin-right: 0.5rem; }
+    .resolve-text { color: var(--pass); font-weight: 500; }
     .finding-steps { margin-top: 0.75rem; }
     .finding-steps ol { margin-left: 1.5rem; margin-top: 0.25rem; }
     .footer-note {
       text-align: center;
-      color: #94A3B8;
-      font-size: 0.8rem;
+      color: var(--ink-soft);
+      font-size: 0.875rem;
       margin-top: 2rem;
     }
-    
-    /* Printed or saved as PDF: plain paper, no dotted board, nothing cut across pages. */
+    @media (max-width: 480px) {
+      body { padding: 1rem 0.75rem; }
+      .header-banner, .card { padding: 1rem; }
+      .header-banner { border-left-width: 6px; }
+      .header-left h1 { font-size: 1.5rem; }
+      .overall-badge { flex-basis: 100%; }
+    }
+    /* Printed or saved as PDF: plain paper, nothing cut across pages. */
     @media print {
-      body { background: #FFFFFF; background-image: none; padding: 0; }
-      .header-banner, section, .card { box-shadow: none !important; break-inside: avoid; }
+      body { background: #FFFFFF; padding: 0; }
+      .header-banner, section, .card { break-inside: avoid; }
     }
   </style>
 </head>
@@ -357,19 +390,19 @@
       </section>
     
       <section class="section card history-banner">
-        <h2>Changes Since Last Run</h2>
+        <h2>Changes since last run</h2>
         <div class="history-grid">
           <div class="history-stat fixed">
             <span class="history-num">0</span>
-            <span class="history-label">Fixed Issues</span>
+            <span class="history-label">Fixed issues</span>
           </div>
           <div class="history-stat new">
             <span class="history-num">23</span>
-            <span class="history-label">New Issues</span>
+            <span class="history-label">New issues</span>
           </div>
           <div class="history-stat open">
             <span class="history-num">0</span>
-            <span class="history-label">Still Open</span>
+            <span class="history-label">Still open</span>
           </div>
         </div>
       </section>
@@ -378,11 +411,11 @@
     
     
       <section class="section card">
-        <h2 class="section-title">Prioritized Improvement Recommendations</h2>
+        <h2 class="section-title">Prioritized improvement recommendations</h2>
         <p class="section-desc">Sorted deterministically by impact, severity, and implementation return on investment.</p>
         
         
-          <h4 class="group-heading">⚡ Quick Wins (High Return, Low Effort)</h4>
+          <h4 class="group-heading">⚡ Quick wins (high return, low effort)</h4>
           <div class="rec-list">
           <div class="rec-item">
             <div class="rec-top">
@@ -394,7 +427,7 @@
             <h4 class="rec-title">Dead End Page: No back button or header navigation detected</h4>
             <p class="rec-summary">Page lacks back link, header, or primary navigation</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Add a persistent top navigation bar or back-button link to the page layout.
+              <strong>Suggested fix:</strong> Add a persistent top navigation bar or back-button link to the page layout.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/deadend</code></span>
@@ -411,7 +444,7 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: About (40x17px)</h4>
             <p class="rec-summary">Element measures 40x17px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
+              <strong>Suggested fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/</code></span>
@@ -428,7 +461,7 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: About (40x17px)</h4>
             <p class="rec-summary">Element measures 40x17px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
+              <strong>Suggested fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/reports</code></span>
@@ -445,7 +478,7 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: Dashboard (69x17px)</h4>
             <p class="rec-summary">Element measures 69x17px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
+              <strong>Suggested fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/invoices/new</code></span>
@@ -462,7 +495,7 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: Home (39x17px)</h4>
             <p class="rec-summary">Element measures 39x17px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
+              <strong>Suggested fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/</code></span>
@@ -479,7 +512,7 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: Home (39x17px)</h4>
             <p class="rec-summary">Element measures 39x17px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
+              <strong>Suggested fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/login</code></span>
@@ -496,7 +529,7 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: Invoices (54x17px)</h4>
             <p class="rec-summary">Element measures 54x17px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
+              <strong>Suggested fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/dashboard</code></span>
@@ -513,7 +546,7 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: My account (76x17px)</h4>
             <p class="rec-summary">Element measures 76x17px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
+              <strong>Suggested fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/</code></span>
@@ -530,7 +563,7 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: My account (76x17px)</h4>
             <p class="rec-summary">Element measures 76x17px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
+              <strong>Suggested fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/reports</code></span>
@@ -547,7 +580,7 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: New Invoice (82x17px)</h4>
             <p class="rec-summary">Element measures 82x17px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
+              <strong>Suggested fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/</code></span>
@@ -564,7 +597,7 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: Orphaned Page (98x17px)</h4>
             <p class="rec-summary">Element measures 98x17px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
+              <strong>Suggested fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/dashboard</code></span>
@@ -581,7 +614,7 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: Reports (50x17px)</h4>
             <p class="rec-summary">Element measures 50x17px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
+              <strong>Suggested fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/</code></span>
@@ -598,7 +631,7 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: Save (46x21px)</h4>
             <p class="rec-summary">Element measures 46x21px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
+              <strong>Suggested fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/invoices/new</code></span>
@@ -615,7 +648,7 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: Sign In (47x17px)</h4>
             <p class="rec-summary">Element measures 47x17px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
+              <strong>Suggested fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/</code></span>
@@ -632,7 +665,7 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: Sign in (57x21px)</h4>
             <p class="rec-summary">Element measures 57x21px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
+              <strong>Suggested fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/signin</code></span>
@@ -649,7 +682,7 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: Sign In (58x21px)</h4>
             <p class="rec-summary">Element measures 58x21px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
+              <strong>Suggested fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/login</code></span>
@@ -666,7 +699,7 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: Trigger 500 API Failure (153x21px)</h4>
             <p class="rec-summary">Element measures 153x21px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
+              <strong>Suggested fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/dashboard</code></span>
@@ -683,7 +716,7 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: Trigger Console Error (144x21px)</h4>
             <p class="rec-summary">Element measures 144x21px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
+              <strong>Suggested fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/dashboard</code></span>
@@ -700,7 +733,7 @@
             <h4 class="rec-title">Touch target below WCAG 2.5.8 minimum: X (20x20px)</h4>
             <p class="rec-summary">Element measures 20x20px</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
+              <strong>Suggested fix:</strong> Increase min-height and min-width to at least 44px or add padding for mobile viewports.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/dashboard</code></span>
@@ -710,7 +743,7 @@
         
 
         
-          <h4 class="group-heading" style="margin-top: 1.5rem;">🏗️ Bigger Changes (Architectural / High Effort)</h4>
+          <h4 class="group-heading" style="margin-top: 1.5rem;">🏗️ Bigger changes (architectural / high effort)</h4>
           <div class="rec-list">
           <div class="rec-item">
             <div class="rec-top">
@@ -723,7 +756,7 @@
             <p class="rec-summary">Request failed with status 500
 Console: Failed to load resource: the server responded with a status of 500 (Internal Server Error)</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Backend API error (5xx). Check server endpoint logs and database connections.
+              <strong>Suggested fix:</strong> Backend API error (5xx). Check server endpoint logs and database connections.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/dashboard</code></span>
@@ -740,7 +773,7 @@ Console: Failed to load resource: the server responded with a status of 500 (Int
             <h4 class="rec-title">Console Error in step &quot;Try “Trigger Console Error”&quot;</h4>
             <p class="rec-summary">Simulated Unhandled Runtime Bug in Dashboard</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Inspect the stack trace in console logs, ensure null checks and error boundaries are configured.
+              <strong>Suggested fix:</strong> Inspect the stack trace in console logs, ensure null checks and error boundaries are configured.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/dashboard</code></span>
@@ -757,7 +790,7 @@ Console: Failed to load resource: the server responded with a status of 500 (Int
             <h4 class="rec-title">The sign-in form sends passwords in the page address</h4>
             <p class="rec-summary">The form uses GET (or names a page to send to with no method, which means GET), so the password goes into the address</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> Send the form with method=&quot;post&quot;. A password in the address is kept in browser history, server and proxy logs, and analytics, and can leak to other sites through the Referer header.
+              <strong>Suggested fix:</strong> Send the form with method=&quot;post&quot;. A password in the address is kept in browser history, server and proxy logs, and analytics, and can leak to other sites through the Referer header.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/login</code></span>
@@ -775,7 +808,7 @@ Console: Failed to load resource: the server responded with a status of 500 (Int
             <p class="rec-summary">Fix any of the following:
   Document does not have a non-empty &lt;title&gt; element</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> See https://dequeuniversity.com/rules/axe/4.13/document-title?application=playwright. Remediation: Documents must have &lt;title&gt; element to aid in navigation.
+              <strong>Suggested fix:</strong> See https://dequeuniversity.com/rules/axe/4.13/document-title?application=playwright. Remediation: Documents must have &lt;title&gt; element to aid in navigation.
             </div>
             <div class="rec-meta">
               <span>Affected: <code>/about</code></span>

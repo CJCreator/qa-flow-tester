@@ -61,7 +61,7 @@ describe('Website Audit progress stepper (ADR 0042)', () => {
 describe('Website Audit status chips (REQ-002, ADR 0042)', () => {
   it('formats AI status texts accurately according to spec', () => {
     expect(aiStatusText('ready')).toBe('AI: ready');
-    expect(aiStatusText('key-expired')).toBe('AI: key expired: update in Audit settings');
+    expect(aiStatusText('key-expired')).toBe('AI: key expired: update in Settings');
     expect(aiStatusText('no-key')).toBe('AI: no key: template text');
   });
 
@@ -237,7 +237,7 @@ describe('AuditProgress: scripted reducer sequence and live updates', () => {
         elapsedMs: 20000,
       })
     );
-    expect(html).toContain('AI: key expired: update in Audit settings');
+    expect(html).toContain('AI: key expired: update in Settings');
     expect(html).toContain('Speed: measured by this tool');
 
     // 4. Audit done

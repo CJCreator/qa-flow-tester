@@ -348,7 +348,7 @@ export function HelpersScreen({ auditId, fetchImpl }: HelpersScreenProps) {
   );
 
   return (
-    <Page width="form">
+    <Page width="workspace">
       <PageHeader
         back={{ to: PATHS.audits, label: 'All Website Audits' }}
         title="Helpers"

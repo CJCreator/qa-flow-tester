@@ -94,15 +94,18 @@ describe('Single-File Offline HTML Report (html-report.ts)', () => {
     expect(content).toContain('Looks and reads well');
 
     // Recommendations present
-    expect(content).toContain('Prioritized Improvement Recommendations');
+    expect(content).toContain('Prioritized improvement recommendations');
     expect(content).toContain('Configure Content-Security-Policy header');
 
     // Findings collapsible details present
     expect(content).toContain('Missing Content-Security-Policy header');
     expect(content).toContain('Run the check-up again on the same address');
 
-    // Direction B theme color present
-    expect(content).toContain('#0D1322');
+    // Certificate palette: paper background, flat cards (no shadows), no uppercase verdict
+    expect(content).toContain('--paper: #F4F6F4');
+    expect(content).not.toContain('#0D1322');
+    expect(content).not.toContain('box-shadow');
+    expect(content).not.toContain('text-transform');
 
     // No external scripts or CDNs (works 100% offline)
     expect(content).not.toContain('<script src="http');
@@ -195,5 +198,72 @@ describe('Single-File Offline HTML Report (html-report.ts)', () => {
 
     const none = await fs.readFile(await generateSingleFileHtmlReport(mockReport, { outputDir: tempDir }), 'utf8');
     expect(none).not.toContain('Slower than the last check-up');
+  });
+
+  it('heading levels follow strict order and emojis sit inside aria-hidden="true"', async () => {
+    const reportWithRecsAndDocGaps: ReleaseReport = {
+      ...mockReport,
+      documentedItems: {
+        total: 2,
+        reached: 1,
+        notFound: [
+          {
+            code: 'SPEC_GAP_NO_PAGE',
+            reason: 'Settings page was not found in crawl',
+            docSource: { section: 'Settings', document: 'spec.md' },
+          },
+        ],
+      },
+      recommendations: [
+        {
+          id: 'REC-001',
+          category: 'quick-win',
+          title: 'Configure Content-Security-Policy header',
+          aspect: 'Protected',
+          severity: 'Major',
+          effort: 'Low',
+          impact: 'High',
+          affectedPages: ['/'],
+          findingIds: ['F-001'],
+          summary: 'No CSP header was returned',
+          suggestedFix: "Set default-src 'self'",
+        },
+        {
+          id: 'REC-002',
+          category: 'bigger-change',
+          title: 'Migrate to modern auth provider',
+          aspect: 'Protected',
+          severity: 'Major',
+          effort: 'High',
+          impact: 'High',
+          affectedPages: ['/auth'],
+          findingIds: ['F-001'],
+          summary: 'Legacy session store',
+          suggestedFix: 'Switch to OpenID Connect',
+        },
+      ],
+    };
+
+    const content = await fs.readFile(
+      await generateSingleFileHtmlReport(reportWithRecsAndDocGaps, { outputDir: tempDir }),
+      'utf8'
+    );
+
+    // Emojis are inside aria-hidden="true"
+    expect(content).toContain('<span aria-hidden="true">⚡</span> Quick wins');
+    expect(content).toContain('<span aria-hidden="true">🏗️</span> Bigger changes');
+
+    // Heading tags in order: each level is at most one deeper than preceding
+    const headingMatches = [...content.matchAll(/<h([1-6])[\s>]/gi)];
+    const levels = headingMatches.map((m) => parseInt(m[1], 10));
+
+    expect(levels.length).toBeGreaterThan(0);
+    expect(levels[0]).toBe(1);
+
+    for (let i = 1; i < levels.length; i++) {
+      const prev = levels[i - 1];
+      const curr = levels[i];
+      expect(curr).toBeLessThanOrEqual(prev + 1);
+    }
   });
 });

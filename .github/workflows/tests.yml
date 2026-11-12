@@ -6,7 +6,7 @@ on:
   workflow_call:
     inputs:
       shard:
-        description: 'Which part of the suite to run, as N/4 (for example 2/4).'
+        description: 'Which part of the suite to run, as N/M, passed to vitest --shard. Unit runs 1/2 and 2/2; browser runs 1/4 to 4/4.'
         required: true
         type: string
       project:

@@ -105,9 +105,12 @@ export function PastCheckupsScreen({
         title="Past check-ups"
         lede="The last ten check-ups of each site are kept. Older ones are deleted by themselves."
         actions={
-          <Link to={PATHS.new} className="btn-primary">
-            New check-up
-          </Link>
+          // With nothing kept yet, the empty state below holds the one primary action.
+          runs && runs.length > 0 ? (
+            <Link to={PATHS.new} className="btn-primary">
+              New check-up
+            </Link>
+          ) : undefined
         }
       />
 
@@ -194,7 +197,7 @@ export function PastCheckupsScreen({
                         </button>
                         <button
                           type="button"
-                          className="btn-quiet btn-sm min-h-[44px] border-fail text-fail hover:border-fail hover:bg-fail-tint"
+                          className="btn-danger-quiet btn-sm"
                           onClick={() => void remove(run)}
                           aria-label={`Delete the check-up of ${run.host} from ${formatWhen(run.timestamp)}`}
                         >

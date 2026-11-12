@@ -140,12 +140,43 @@ export function judgeRefusal(result: RefusalResult, opts: { message?: string } =
   return judgement;
 }
 
+const VALID_SIGNALS = new Set<string>(['invalid', 'aria-invalid', 'alert', 'error-text']);
+
+export function isRefusalBaseline(v: unknown): v is RefusalBaseline {
+  if (typeof v !== 'object' || v === null) return false;
+  const o = v as Record<string, unknown>;
+  return (
+    typeof o.path === 'string' &&
+    typeof o.records === 'number' &&
+    Number.isFinite(o.records) &&
+    Array.isArray(o.errorTexts) &&
+    o.errorTexts.every((x) => typeof x === 'string')
+  );
+}
+
+export function isRefusalResult(v: unknown): v is RefusalResult {
+  if (typeof v !== 'object' || v === null) return false;
+  const o = v as Record<string, unknown>;
+  return (
+    typeof o.moved === 'boolean' &&
+    typeof o.newRecord === 'boolean' &&
+    typeof o.crashed === 'boolean' &&
+    Array.isArray(o.signals) &&
+    o.signals.every((s) => typeof s === 'string' && VALID_SIGNALS.has(s)) &&
+    (o.errorText === undefined || typeof o.errorText === 'string')
+  );
+}
+
 /** Looks at the page right before the submit click. */
 export async function captureRefusalBaseline(page: Page): Promise<RefusalBaseline> {
-  return page.evaluate(`(${CAPTURE_BASELINE_SOURCE})()`) as Promise<RefusalBaseline>;
+  const raw: unknown = await page.evaluate(`(${CAPTURE_BASELINE_SOURCE})()`);
+  if (!isRefusalBaseline(raw)) throw new Error('refusal baseline: the page returned an unexpected value');
+  return raw;
 }
 
 /** Looks at the page after the click and returns what the rule saw. */
 export async function readRefusal(page: Page, input: RefusalInput): Promise<RefusalResult> {
-  return page.evaluate(`(${REFUSAL_RULE_SOURCE})(${JSON.stringify(input)})`) as Promise<RefusalResult>;
+  const raw: unknown = await page.evaluate(`(${REFUSAL_RULE_SOURCE})(${JSON.stringify(input)})`);
+  if (!isRefusalResult(raw)) throw new Error('refusal result: the page returned an unexpected value');
+  return raw;
 }

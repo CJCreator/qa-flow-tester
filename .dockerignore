@@ -12,6 +12,14 @@
 .qa-hub-storage
 .qa-keys.json
 .qa-ai-models.json
+.qa-data
+.qa-tunnel-data
+.qa-tunnel-report
+.ai-eos
+.benchmark
+coverage
+qa-report
+docs
 .tmp-*
 .env
 npm-debug.log

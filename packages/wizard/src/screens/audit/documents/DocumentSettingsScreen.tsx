@@ -135,7 +135,7 @@ export function DocumentSettingsView({
         </h4>
         <dl
           aria-labelledby="settings-placeholders-title"
-          className="grid grid-cols-1 gap-x-4 gap-y-1 text-sm sm:grid-cols-[auto_1fr]"
+          className="grid grid-cols-1 gap-x-4 gap-y-1 text-sm [overflow-wrap:anywhere] sm:grid-cols-[auto_1fr]"
         >
           {PROPOSAL_PLACEHOLDERS.map((p) => (
             <div key={p.name} className="contents">
@@ -174,7 +174,7 @@ export function DocumentSettingsView({
                 onChange={(e) => onDraft({ ...draft, optOutText: { ...draft.optOutText, [language]: e.target.value } })}
               />
               <p className="label mt-2 text-ink">{`Default text in ${LANGUAGE_LABEL[language]}`}</p>
-              <p className="whitespace-pre-wrap text-sm text-ink-soft" lang={language}>
+              <p className="whitespace-pre-wrap text-sm text-ink-soft [overflow-wrap:anywhere]" lang={language}>
                 {fallback === '' ? 'The tool has no default text for this language.' : fallback}
               </p>
               <button
@@ -306,32 +306,38 @@ export function DocumentSettingsView({
         )}
       </section>
 
-      <BottomActionBar
-        summary={
-          <>
-            <span aria-live="polite">
-              {pending ? 'You have changes that are not saved yet.' : 'Every change is saved.'}
-            </span>
-            {message &&
-              (message.tone === 'fail' ? (
-                <span role="alert" className="mt-1 block font-semibold text-fail">
-                  {message.text}
-                </span>
-              ) : (
-                <span role="status" className="mt-1 block font-semibold text-pass">
-                  {message.text}
-                </span>
-              ))}
-          </>
-        }
-      >
-        <button type="button" className="btn-quiet" disabled={!pending || saving} onClick={() => void discard()}>
-          Discard changes
-        </button>
-        <button type="button" className="btn-primary" disabled={!pending || saving} onClick={onSave}>
-          {saving ? <Spinner label="Saving…" /> : 'Save document settings'}
-        </button>
-      </BottomActionBar>
+      {pending || saving || message?.tone === 'fail' ? (
+        <BottomActionBar
+          summary={
+            <>
+              <span aria-live="polite">
+                {pending ? 'You have changes that are not saved yet.' : 'Every change is saved.'}
+              </span>
+              {message &&
+                (message.tone === 'fail' ? (
+                  <span role="alert" className="mt-1 block font-semibold text-fail">
+                    {message.text}
+                  </span>
+                ) : (
+                  <span role="status" className="mt-1 block font-semibold text-pass">
+                    {message.text}
+                  </span>
+                ))}
+            </>
+          }
+        >
+          <button type="button" className="btn-quiet" disabled={!pending || saving} onClick={() => void discard()}>
+            Discard changes
+          </button>
+          <button type="button" className="btn-primary" disabled={!pending || saving} onClick={onSave}>
+            {saving ? <Spinner label="Saving…" /> : 'Save document settings'}
+          </button>
+        </BottomActionBar>
+      ) : (
+        <p role="status" className={message ? 'mt-10 text-sm font-semibold text-pass' : 'sr-only'}>
+          {message ? message.text : 'Every change is saved.'}
+        </p>
+      )}
       {dialog}
     </div>
   );

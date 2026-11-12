@@ -197,9 +197,12 @@ export function VisualBaselinesScreen() {
           </LoadError>
         )}
 
-        <div className="flex flex-wrap items-end justify-between gap-4 border-b border-rule pb-4">
-          <div role="group" aria-label="Screen size" className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold text-ink-soft">Screen size</span>
+        {/* Filters only once there is something to filter. Both carry their label above, on one baseline. */}
+        <div
+          className={`flex flex-wrap items-end justify-between gap-4 border-b border-rule pb-4 ${baselines && baselines.length > 0 ? '' : 'hidden'}`}
+        >
+          <div role="group" aria-label="Screen size">
+            <span className="label">Screen size</span>
             <div className="segmented [&>button]:min-h-[44px]">
               {(['all', '375px', '768px', '1440px'] as BreakpointFilter[]).map((bp) => (
                 <button
@@ -234,7 +237,7 @@ export function VisualBaselinesScreen() {
           </div>
         ) : filteredBaselines.length === 0 ? (
           <EmptyState
-            title="No visual baselines found"
+            title={baselines && baselines.length > 0 ? 'No visual baselines found' : 'No visual baselines yet.'}
             action={
               !(baselines && baselines.length > 0) ? (
                 <Link to={PATHS.new} className="btn-primary">
@@ -338,7 +341,7 @@ export function VisualBaselinesScreen() {
                         type="button"
                         onClick={() => void handleDelete(activeItem)}
                         disabled={processingId === activeItem.id}
-                        className="btn-quiet btn-sm border-fail text-fail hover:border-fail hover:bg-fail-tint"
+                        className="btn-danger-quiet btn-sm"
                       >
                         Delete
                       </button>

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { AuditStartErrors, AuditStartReply } from '@qa/types/src/browser.js';
 import { ErrorMessage, Spinner } from '../../../components/text';
 import { Disclosure, Page, PageHeader } from '../../../components/ui';
-import { count } from '../../../lib/format';
+import { count, scrollBehavior } from '../../../lib/format';
 import { Link, PATHS } from '../../../lib/router';
 import { useDocumentTitle } from '../../../lib/title';
 import {
@@ -254,6 +254,15 @@ export function AuditFollowUpLink({ auditId, done, version }: { auditId: string;
   );
 }
 
+/** The host of an address the person typed, for a page title; the address as typed when it is not a web address. */
+function hostOf(address: string): string {
+  try {
+    return new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(address) ? address : `https://${address}`).host || address;
+  } catch {
+    return address;
+  }
+}
+
 export interface AuditStartScreenProps {
   /** Overrides for tests: the request and the stream. */
   submit?: (form: AuditStartForm) => Promise<AuditStartOutcome>;
@@ -309,6 +318,19 @@ export function AuditStartScreen({ submit = submitAuditStart, openSource }: Audi
     );
   }, [started, openSource]);
 
+  // The run began: show it from its top, not from wherever the form's button sat.
+  useEffect(() => {
+    if (started && typeof window !== 'undefined') window.scrollTo?.({ top: 0, behavior: scrollBehavior() });
+  }, [started]);
+
+  // Typing a new address answers the address error: it goes at once.
+  const onChange = (next: AuditStartForm) => {
+    if (errors.url && next.address !== form.address) {
+      setErrors(({ url: _cleared, ...rest }) => rest);
+    }
+    setForm(next);
+  };
+
   const onSubmit = async () => {
     setStarting(true);
     setMessage(null);
@@ -337,8 +359,12 @@ export function AuditStartScreen({ submit = submitAuditStart, openSource }: Audi
     <Page width="form">
       <PageHeader
         back={{ to: PATHS.audits, label: 'All Website Audits' }}
-        title="Start a Website Audit"
-        lede="A Website Audit reads a public website, page by page, to find what could be repaired or redesigned. It never signs in, fills in or sends a form. Pages it finds but does not record are listed as Skipped Pages."
+        title={started ? `Website Audit of ${hostOf(started.address)}` : 'Start a Website Audit'}
+        lede={
+          started
+            ? undefined
+            : 'A Website Audit reads a public website, page by page, to find what could be repaired or redesigned. It never signs in, fills in or sends a form. Pages it finds but does not record are listed as Skipped Pages.'
+        }
       />
 
       {started ? (
@@ -378,7 +404,7 @@ export function AuditStartScreen({ submit = submitAuditStart, openSource }: Audi
           message={message}
           busyRun={busyRun}
           starting={starting}
-          onChange={setForm}
+          onChange={onChange}
           onSubmit={() => void onSubmit()}
         />
       )}

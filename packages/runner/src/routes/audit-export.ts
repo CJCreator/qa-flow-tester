@@ -17,8 +17,6 @@ import {
   isDocumentLanguage,
   isExportFormat,
   type AuditDocumentKind,
-  type AuditErrorCode,
-  type AuditErrorReply,
   type AuditResult,
   type DocumentLanguage,
   type EditOverlay,
@@ -27,8 +25,6 @@ import {
   type StoredDocumentKind,
 } from '@qa/types';
 import {
-  AuditRecordError,
-  AuditStoreError,
   PITCH_TOP_FINDINGS,
   applySettingsUpdate,
   editedViewOf,
@@ -45,7 +41,7 @@ import {
   type ExportOptions,
 } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
-import { sendJson } from './body.js';
+import { refuse, refuseStoreFailure as refuseWith } from './audit-common.js';
 import type { AuditSettingsStore } from './audit-settings.js';
 
 /** What the download rows need: the Website Audit store (G6) and the stored audit settings (BE-508). */
@@ -83,23 +79,12 @@ const DOCUMENT_SLUGS: Readonly<Record<AuditDocumentKind, string>> = {
   proposal: 'proposal',
 };
 
-function refuse(res: http.ServerResponse, status: number, code: AuditErrorCode, error: string): void {
-  const body: AuditErrorReply = { error, code };
-  sendJson(res, status, body);
-}
-
 function invalid(res: http.ServerResponse, error: string): void {
   refuse(res, 400, 'ERR_INVALID_REQUEST', error);
 }
 
-/** Store failures become fixed sentences: no keys, paths or provider text reach the caller. */
 function refuseStoreFailure(res: http.ServerResponse, err: unknown): void {
-  if (err instanceof AuditRecordError) {
-    if (err.code === 'not-found') return refuse(res, 404, 'ERR_AUDIT_NOT_FOUND', NOT_FOUND);
-    return invalid(res, 'The request is not valid.');
-  }
-  if (err instanceof AuditStoreError && err.code === 'invalid-key') return invalid(res, 'The request is not valid.');
-  sendJson(res, 500, { error: FAILED });
+  refuseWith(res, err, { notFound: NOT_FOUND, failed: FAILED });
 }
 
 /** The query values every row shares, checked. A string is the sentence of the first refusal. */

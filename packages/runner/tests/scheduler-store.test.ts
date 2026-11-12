@@ -2,7 +2,7 @@
  * ADR 0039: schedules live behind a store. Hosted copy: the audit store backend (Cloud Storage) key
  * `schedules/schedules.json`; local copy: `<dataDir>/schedules.json`. A failed read never reads as "no schedules".
  */
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { AuditStoreError, type AuditStoreBackend } from '@qa/core';
@@ -88,14 +88,27 @@ describe('Schedules in the audit store backend', () => {
   });
 
   it('a tick over a failing store saves nothing and does not throw', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     const backend = fakeBackend();
     const manager = new SchedulerManager(new BackendScheduleStore(backend));
     await manager.addSchedule(input);
     backend.failReads = true;
     backend.writes.length = 0;
     const summary = await manager.tick(async () => true);
-    expect(summary).toEqual({ started: 0, failed: 0, skipped: 0, retrying: 0, busy: false });
+    expect(summary).toEqual({
+      started: 0,
+      failed: 0,
+      skipped: 0,
+      retrying: 0,
+      busy: false,
+      error: 'The audit store is not reachable.',
+    });
     expect(backend.writes).toEqual([]);
+    expect(consoleError).toHaveBeenCalledWith(
+      '[Release check-up] Scheduler tick failed:',
+      'The audit store is not reachable.'
+    );
+    consoleError.mockRestore();
   });
 });
 
@@ -113,11 +126,26 @@ describe('Schedules in a local file', () => {
     expect(await new FileScheduleStore(dir).read()).toEqual(onDisk);
   });
 
-  it('a missing or broken file reads as no schedules', async () => {
-    expect(await new FileScheduleStore(dir).read()).toEqual([]);
+  it('a missing file reads as no schedules; a broken file throws, creates a corrupt copy, and addSchedule does not overwrite it', async () => {
+    const store = new FileScheduleStore(dir);
+    expect(await store.read()).toEqual([]);
+
     await fs.mkdir(dir, { recursive: true });
-    await fs.writeFile(path.join(dir, 'schedules.json'), 'not json', 'utf8');
-    expect(await new FileScheduleStore(dir).read()).toEqual([]);
+    const schedulesFile = path.join(dir, 'schedules.json');
+    await fs.writeFile(schedulesFile, 'not json', 'utf8');
+
+    await expect(store.read()).rejects.toThrow(
+      'The schedule file could not be read; it was kept as schedules.json.corrupt-<ts>.'
+    );
+
+    const files = await fs.readdir(dir);
+    const corruptFile = files.find((f) => f.startsWith('schedules.json.corrupt-'));
+    expect(corruptFile).toBeDefined();
+    expect(await fs.readFile(path.join(dir, corruptFile!), 'utf8')).toBe('not json');
+
+    const manager = new SchedulerManager(dir);
+    await expect(manager.addSchedule(input)).rejects.toThrow();
+    expect(await fs.readFile(schedulesFile, 'utf8')).toBe('not json');
   });
 
   it('a server without a bucket keeps schedules in the file, across a second server on the same dataDir', async () => {

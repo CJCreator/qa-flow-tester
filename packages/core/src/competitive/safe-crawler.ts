@@ -6,7 +6,7 @@ import { BugDetectionChecker, UXQualityChecker } from '@qa/checkers';
 import { EvidenceCollector } from '../evidence.js';
 import { isSameSite } from '../same-site.js';
 import { RobotsPolicy } from './robots.js';
-import { getBrowserPolicy, installRequestGuard } from '../browser.js';
+import { getBrowserPolicy, installRequestGuard, WEBRTC_NO_DIRECT_UDP } from '../browser.js';
 import { MUTATING_METHODS } from '../live-site.js';
 
 export interface SafeCrawlerOptions {
@@ -177,13 +177,14 @@ export class SafePublicCrawler {
     );
     const browser = await chromium.launch({
       headless: options.headless !== false,
-      args: pinned.length ? [`--host-resolver-rules=${pinned.join(', ')}`] : [],
+      args: [WEBRTC_NO_DIRECT_UDP, ...(pinned.length ? [`--host-resolver-rules=${pinned.join(', ')}`] : [])],
     });
 
     try {
       const context = await browser.newContext({
         viewport: { width: 1440, height: 900 },
         userAgent: `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ${USER_AGENT_TOKEN}/1.0`,
+        serviceWorkers: 'block',
       });
       if (policy?.guard) await installRequestGuard(context, policy.guard);
       await context.addInitScript(BLOCK_FORM_SUBMISSION_SCRIPT);

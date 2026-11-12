@@ -420,7 +420,7 @@ export function PlanReviewScreen({
         </div>
       )}
 
-      <div role="tabpanel" id="plan-tabpanel" aria-labelledby={`plan-tab-${tab}`}>
+      <div role="tabpanel" id="plan-tabpanel" aria-labelledby={`plan-tab-${tab}`} className="[overflow-wrap:anywhere]">
         {panel}
       </div>
 
@@ -453,7 +453,13 @@ export function PlanReviewScreen({
             ) : (
               <>
                 <p className="font-bold text-ink">
-                  {lines[0]?.text ?? (tests !== undefined ? count(tests, 'test', 'tests') : 'Ready to test')}
+                  {/* Phones: just the count. The full line is in “What approving runs”, and the bar stays short. */}
+                  <span className="sm:hidden">
+                    {tests !== undefined ? count(tests, 'test', 'tests') : (lines[0]?.text ?? 'Ready to test')}
+                  </span>
+                  <span className="hidden sm:inline">
+                    {lines[0]?.text ?? (tests !== undefined ? count(tests, 'test', 'tests') : 'Ready to test')}
+                  </span>
                   {minutes ? <span className="font-normal text-ink-soft">, about {minutes} min</span> : null}
                 </p>
                 {approving ? (

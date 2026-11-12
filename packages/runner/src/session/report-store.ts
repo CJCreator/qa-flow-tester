@@ -37,14 +37,14 @@ export class DefaultReportStore implements ReportStore {
   private lastReport: ReleaseReport | null = null;
   private lastRunError: string | null = null;
   private lastErrorCode: string | null = null;
-  private readonly getProtectedRunIds?: () => string[];
+  private readonly getProtectedRunIds?: () => string[] | Promise<string[]>;
   /**
    * Run summaries by run folder name (LAT-2). Valid while the `runs/` folder keeps the mtime it had when read:
    * a run folder added or removed changes it. keep() and prune() drop the index on their own writes.
    */
   private runIndex: { rootMtimeMs: number; byName: Map<string, RunSummary> } | null = null;
 
-  constructor(paths: SessionPaths, getProtectedRunIds?: () => string[]) {
+  constructor(paths: SessionPaths, getProtectedRunIds?: () => string[] | Promise<string[]>) {
     this.paths = paths;
     this.getProtectedRunIds = getProtectedRunIds;
   }
@@ -144,7 +144,7 @@ export class DefaultReportStore implements ReportStore {
     if (old.length) this.runIndex = null;
     const finished = new Set(runs.map((r) => r.runId));
     const root = path.join(this.paths.outputDir, 'runs');
-    const protectedIds = new Set(this.getProtectedRunIds ? this.getProtectedRunIds() : []);
+    const protectedIds = new Set(this.getProtectedRunIds ? await this.getProtectedRunIds() : []);
     for (const name of await fs.readdir(root).catch(() => [] as string[])) {
       if (!isRunId(name) || finished.has(name) || protectedIds.has(name)) continue;
       await fs.rm(path.join(root, name), { recursive: true, force: true }).catch(() => {});
