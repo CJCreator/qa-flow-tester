@@ -31,21 +31,13 @@ export const sharedResolve = {
   ],
 };
 
-// Global options (workers, coverage). The test files themselves come from the projects in vitest.workspace.ts.
+// Global options (workers). The test files themselves come from the projects in vitest.workspace.ts.
 export default defineConfig({
   test: {
     ...sharedTest,
     minWorkers: 1,
     maxWorkers: workers,
     include: ['packages/*/tests/**/*.test.{ts,tsx}'],
-    // Only active with --coverage (CI). Prints a summary; no thresholds.
-    coverage: {
-      provider: 'v8',
-      reporter: ['text-summary', 'json-summary'],
-      reportsDirectory: 'coverage',
-      include: ['packages/*/src/**/*.{ts,tsx}'],
-      exclude: ['**/dist/**', '**/*.d.ts', '**/tests/**'],
-    },
   },
   resolve: sharedResolve,
 });
