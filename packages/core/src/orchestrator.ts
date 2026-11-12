@@ -41,7 +41,7 @@ import { ReportGenerator, withPortablePaths } from './reporter.js';
 import { withSourceWording } from './source-wording.js';
 import { expandValidationTestCases } from './validator-expander.js';
 import { SuppressionsManager } from './suppressions.js';
-import { Redactor, redactUrl } from './redact.js';
+import { Redactor, redactUrl, storageStateSecrets } from './redact.js';
 import { mergeDuplicateFindings } from './finding-groups.js';
 import { resolveCredentialPlaceholders } from './credentials.js';
 import { onSiteAddress } from './same-site.js';
@@ -325,6 +325,21 @@ export interface RunOptions {
   stepTimeoutMs?: number;
 }
 
+/** Everything this run must never write or stream: Role details, header values, tunnel auth, saved sessions. */
+function runRedactor(options: RunOptions): Redactor {
+  return new Redactor(options.profile?.roles || [], {
+    extraSecrets: [
+      ...Object.values(options.customHeaders ?? {}),
+      ...(options.tunnelAuth ? [options.tunnelAuth] : []),
+      ...Object.values(options.suppliedSessions ?? {}).flatMap(storageStateSecrets),
+    ],
+  });
+}
+
+function evidenceDirOf(options: RunOptions): string {
+  return path.join(options.outputDir || path.join(process.cwd(), '.qa-report'), 'evidence');
+}
+
 export class FlowTestOrchestrator {
   private browserManager = new BrowserManager();
   private preflightChecker = new PreFlightChecker();
@@ -342,22 +357,27 @@ export class FlowTestOrchestrator {
    * Every exit (report, stop, sign-in failure, error) closes the browsers. close() is safe to call again.
    */
   async run(options: RunOptions): Promise<ReleaseReport> {
+    const redactor = runRedactor(options);
+    let redacted = false;
     try {
-      return await this.runChecks(options);
+      const report = await this.runChecks(options, redactor);
+      redacted = true; // runChecks redacted the evidence before it built the report
+      return report;
     } finally {
       await this.browserManager.close().catch(() => {});
+      // Stop, sign-in failure or error: the evidence already on disk is redacted too (ADR 0016).
+      if (!redacted) await redactor.files(evidenceDirOf(options)).catch(() => {});
     }
   }
 
-  private async runChecks(options: RunOptions): Promise<ReleaseReport> {
+  private async runChecks(options: RunOptions, redactor: Redactor): Promise<ReleaseReport> {
     const startTime = Date.now();
     const runId = options.runId || `run-${Date.now()}`;
     // Nothing the run streams or writes may carry a sign-in detail.
-    const redactor = new Redactor(options.profile?.roles || []);
     const emitEvent = options.onEvent || (() => {});
     const onEvent = (event: OrchestratorEvent) => emitEvent(redactor.deep(event));
     const outputDir = options.outputDir || path.join(process.cwd(), '.qa-report');
-    const evidenceDir = path.join(outputDir, 'evidence');
+    const evidenceDir = evidenceDirOf(options);
     const authDir = options.authDir || path.join(outputDir, 'auth');
     const repoRoot = options.repoRoot || process.cwd();
     const evidenceUrlPrefix = options.evidenceUrlPrefix ?? '/api/evidence/';
