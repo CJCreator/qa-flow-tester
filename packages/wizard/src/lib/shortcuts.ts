@@ -1,9 +1,12 @@
 /**
- * Single-key shortcuts (WCAG 2.1.4 Character Key Shortcuts): j, k, g and G on the plan. They never fire while
- * someone types in a form control, and the person can switch them off (saved in localStorage, on by default).
+ * Single-key shortcuts (WCAG 2.1.4 Character Key Shortcuts): j, k, g and G on the plan, and ? for the shortcuts list.
+ * They never fire while someone types in a form control, and the person can switch them off (saved in localStorage, on by default).
  */
 
 export const SINGLE_KEY_SHORTCUTS = ['j', 'k', 'g', 'G'] as const;
+
+/** An open dialog of either kind: a native <dialog> opened with showModal (ConfirmDialog) or role="dialog" (the palette). */
+export const OPEN_DIALOG_SELECTOR = 'dialog[open], [role="dialog"]';
 
 const STORAGE_KEY = 'qa-single-key-shortcuts';
 
@@ -61,4 +64,13 @@ export function isTypingTarget(el: FocusLike | null): boolean {
   if (editable !== null && editable !== 'false') return true;
   const role = el.getAttribute('role');
   return role !== null && TEXT_ROLES.has(role);
+}
+
+/** True when `?` should open the shortcuts list: no modifier, not typing, and single-key shortcuts are on. */
+export function opensShortcutList(
+  e: { key: string; metaKey: boolean; ctrlKey: boolean; altKey: boolean },
+  active: FocusLike | null,
+  enabled: boolean = readSingleKeyShortcuts()
+): boolean {
+  return e.key === '?' && !e.metaKey && !e.ctrlKey && !e.altKey && enabled && !isTypingTarget(active);
 }

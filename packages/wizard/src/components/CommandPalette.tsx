@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { navigate, PATHS, type Route } from '../lib/router';
 import { scrollBehavior } from '../lib/format';
-import { readSingleKeyShortcuts, writeSingleKeyShortcuts } from '../lib/shortcuts';
+import { opensShortcutList, readSingleKeyShortcuts, writeSingleKeyShortcuts } from '../lib/shortcuts';
 import { downloadPlanMarkdown } from '../api';
 
 export interface CommandAction {
@@ -91,7 +91,7 @@ function SingleKeyToggle() {
             writeSingleKeyShortcuts(e.target.checked);
           }}
         />
-        <span>Single-key shortcuts (j, k, g, G) on the plan</span>
+        <span>Single-key shortcuts (j, k, g, G on the plan, and ? for this list)</span>
       </label>
     </section>
   );
@@ -144,10 +144,6 @@ export function CommandPalette({
   // Global keys: Cmd+K or Ctrl+K toggles, ? shows the shortcuts, Esc closes.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const activeTag = document.activeElement?.tagName?.toLowerCase();
-      const isInput =
-        activeTag === 'input' || activeTag === 'textarea' || (document.activeElement as HTMLElement)?.isContentEditable;
-
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setOpen((prev) => !prev);
@@ -156,7 +152,7 @@ export function CommandPalette({
         return;
       }
 
-      if (e.key === '?' && !isInput && !e.metaKey && !e.ctrlKey) {
+      if (opensShortcutList(e, document.activeElement)) {
         e.preventDefault();
         setOpen(true);
         setMode('shortcuts');

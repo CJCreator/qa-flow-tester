@@ -1,7 +1,10 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   isSingleKeyShortcut,
   isTypingTarget,
+  OPEN_DIALOG_SELECTOR,
+  opensShortcutList,
   readSingleKeyShortcuts,
   writeSingleKeyShortcuts,
   type FocusLike,
@@ -62,5 +65,33 @@ describe('single-key shortcuts (W11, WCAG 2.1.4)', () => {
     };
     expect(readSingleKeyShortcuts(blocked)).toBe(true);
     expect(() => writeSingleKeyShortcuts(false, blocked)).not.toThrow();
+  });
+
+  it('? opens the list only when allowed', () => {
+    const e = { key: '?', metaKey: false, ctrlKey: false, altKey: false };
+    expect(opensShortcutList(e, el('BUTTON'), true)).toBe(true);
+    expect(opensShortcutList(e, el('BUTTON'), false)).toBe(false);
+    expect(opensShortcutList(e, el('SELECT'), true)).toBe(false);
+    expect(opensShortcutList(e, el('DIV', { role: 'combobox' }), true)).toBe(false);
+    expect(opensShortcutList(e, el('INPUT'), true)).toBe(false);
+    expect(opensShortcutList({ ...e, ctrlKey: true }, el('BUTTON'), true)).toBe(false);
+    expect(opensShortcutList({ ...e, key: '/' }, el('BUTTON'), true)).toBe(false);
+  });
+
+  it('the dialog selector finds a native open dialog and a role dialog', () => {
+    expect(OPEN_DIALOG_SELECTOR).toContain('dialog[open]');
+    expect(OPEN_DIALOG_SELECTOR).toContain('[role="dialog"]');
+  });
+
+  it('the plan skips its keys behind any open dialog', () => {
+    const planDoc = readFileSync(new URL('../src/components/plan/PlanDocument.tsx', import.meta.url), 'utf8');
+    expect(planDoc).toContain('querySelector(OPEN_DIALOG_SELECTOR)');
+    expect(planDoc).not.toContain('querySelector(\'[role="dialog"]\')');
+  });
+
+  it('the palette uses the shared check', () => {
+    const palette = readFileSync(new URL('../src/components/CommandPalette.tsx', import.meta.url), 'utf8');
+    expect(palette).toContain('opensShortcutList(');
+    expect(palette).not.toContain('const isInput');
   });
 });
