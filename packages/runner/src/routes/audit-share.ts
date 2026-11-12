@@ -35,7 +35,7 @@ import {
   type AuditStore,
 } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
-import { refuse, refuseStoreFailure as refuseWith } from './audit-common.js';
+import { AUDIT_NOT_FOUND, refuse, refuseStoreFailure } from './audit-common.js';
 import { readJsonBody, sendJson } from './body.js';
 import { mayUseAudit, type AuditCaller } from './audit-store.js';
 
@@ -76,7 +76,6 @@ const MAX_SHARE_BODY_CHARS = 10_000;
 const MAX_SCREENSHOT_BYTES = 3_000_000;
 const SHARE_KINDS: readonly ShareLinkKind[] = ['pitch', 'preview'];
 
-const AUDIT_NOT_FOUND = 'This Website Audit was not found. It may have been deleted.';
 const LINK_NOT_FOUND = 'This Shared Link was not found.';
 const INVALID = 'The request is not valid.';
 export const NO_PREVIEW_MESSAGE =
@@ -89,10 +88,6 @@ const STORE_FAILED = 'The Shared Links could not be read or saved. Try again.';
 // ---------------------------------------------------------------------------------------------------
 // JSON rows
 // ---------------------------------------------------------------------------------------------------
-
-function refuseStoreFailure(res: http.ServerResponse, err: unknown, notFoundMessage = AUDIT_NOT_FOUND): void {
-  refuseWith(res, err, { notFound: notFoundMessage, failed: STORE_FAILED });
-}
 
 /** The audit named by `:id`, or null after a 404 was sent. */
 async function existingAudit(store: AuditStore, c: RouteContext): Promise<string | null> {
@@ -286,7 +281,7 @@ export function auditShareRoutes(deps: AuditShareDeps): Route[] {
         : { links: links.map(({ id: _id, ...rest }) => rest as unknown as ShareLink) };
       sendJson(c.res, 200, reply);
     } catch (err) {
-      refuseStoreFailure(c.res, err);
+      refuseStoreFailure(c.res, err, { notFound: AUDIT_NOT_FOUND, failed: STORE_FAILED });
     }
   };
 
@@ -339,7 +334,7 @@ export function auditShareRoutes(deps: AuditShareDeps): Route[] {
       const reply: ShareLinkReply = { link };
       sendJson(c.res, 201, reply);
     } catch (err) {
-      refuseStoreFailure(c.res, err);
+      refuseStoreFailure(c.res, err, { notFound: AUDIT_NOT_FOUND, failed: STORE_FAILED });
     }
   };
 
@@ -352,7 +347,7 @@ export function auditShareRoutes(deps: AuditShareDeps): Route[] {
       const reply: ShareLinkReply = { link: await store.revokeShare(auditId, linkId) };
       sendJson(c.res, 200, reply);
     } catch (err) {
-      refuseStoreFailure(c.res, err, LINK_NOT_FOUND);
+      refuseStoreFailure(c.res, err, { notFound: LINK_NOT_FOUND, failed: STORE_FAILED });
     }
   };
 

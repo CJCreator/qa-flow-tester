@@ -9,7 +9,7 @@ import {
 } from '@qa/types';
 import { emptyOverlay, mergeEditsPatch, pageContentName, validateAuditEditsPatch, type AuditStore } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
-import { refuse, refuseStoreFailure as refuseWith, versionQuery } from './audit-common.js';
+import { AUDIT_NOT_FOUND, refuse, refuseStoreFailure, versionQuery } from './audit-common.js';
 import { readJsonBody, sendJson } from './body.js';
 
 /** What the Audit Document rows need: the Website Audit store (G6). */
@@ -21,12 +21,6 @@ export interface AuditDocumentDeps {
 const EDITS_NAME = 'edits';
 /** A patch is at most 500 items of a few thousand characters each; far below the general body cap. */
 const MAX_EDITS_BODY_CHARS = 2_000_000;
-
-const NOT_FOUND = 'This Website Audit was not found. It may have been deleted.';
-
-function refuseStoreFailure(res: http.ServerResponse, err: unknown): void {
-  refuseWith(res, err, { notFound: NOT_FOUND, failed: 'The edits could not be read or saved. Try again.' });
-}
 
 /** Writes to one version's edits go one at a time, so two saves never overwrite each other. */
 const saveQueues = new Map<string, Promise<unknown>>();
@@ -50,7 +44,7 @@ async function resolveTarget(store: AuditStore, c: RouteContext): Promise<Target
   const auditId = c.params?.id;
   const wanted = versionQuery(c.url);
   if (!auditId) {
-    refuse(c.res, 404, 'ERR_AUDIT_NOT_FOUND', NOT_FOUND);
+    refuse(c.res, 404, 'ERR_AUDIT_NOT_FOUND', AUDIT_NOT_FOUND);
     return null;
   }
   if (wanted === 'invalid') {
@@ -60,7 +54,7 @@ async function resolveTarget(store: AuditStore, c: RouteContext): Promise<Target
   const record = await store.readAuditRecord(auditId);
   const version = wanted ?? record?.latestVersion;
   if (!record || version === undefined || (await store.getVersion(auditId, version)) === null) {
-    refuse(c.res, 404, 'ERR_AUDIT_NOT_FOUND', NOT_FOUND);
+    refuse(c.res, 404, 'ERR_AUDIT_NOT_FOUND', AUDIT_NOT_FOUND);
     return null;
   }
   return { auditId, version };
@@ -142,7 +136,7 @@ export function auditEditsRoutes(deps: AuditDocumentDeps): Route[] {
       const reply: AuditEditsReply = { edits: await readOverlay(store, target) };
       sendJson(c.res, 200, reply);
     } catch (err) {
-      refuseStoreFailure(c.res, err);
+      refuseStoreFailure(c.res, err, { failed: 'The edits could not be read or saved. Try again.' });
     }
   };
 
@@ -177,7 +171,7 @@ export function auditEditsRoutes(deps: AuditDocumentDeps): Route[] {
       }
 
       const result = await store.getResult(target.auditId, target.version);
-      if (!result) return refuse(c.res, 404, 'ERR_AUDIT_NOT_FOUND', NOT_FOUND);
+      if (!result) return refuse(c.res, 404, 'ERR_AUDIT_NOT_FOUND', AUDIT_NOT_FOUND);
       const unknown = await unknownReference(store, target, result, checked.value);
       if (unknown) return refuse(c.res, 400, 'ERR_INVALID_REQUEST', unknown);
 
@@ -187,7 +181,7 @@ export function auditEditsRoutes(deps: AuditDocumentDeps): Route[] {
       const reply: AuditEditsReply = { edits };
       sendJson(c.res, 200, reply);
     } catch (err) {
-      refuseStoreFailure(c.res, err);
+      refuseStoreFailure(c.res, err, { failed: 'The edits could not be read or saved. Try again.' });
     }
   };
 
