@@ -20,6 +20,7 @@ import {
   type StartRunRequest,
   type WaitingPlan,
 } from './api';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { useConfirm } from './components/ConfirmDialog';
 import { NothingInProgress } from './components/RunStates';
 import { addressForPhase } from './lib/phase-address';
@@ -1028,7 +1029,9 @@ export default function App() {
             </Notice>
           </div>
         )}
-        <Suspense fallback={<Loading label="Opening…" />}>{body}</Suspense>
+        <ErrorBoundary resetKey={pathname}>
+          <Suspense fallback={<Loading label="Opening…" />}>{body}</Suspense>
+        </ErrorBoundary>
       </main>
       {!landing && <CommandPalette route={route} beta={!!status?.beta} auditOwner={!!status?.auditOwner} />}
       {dialog}

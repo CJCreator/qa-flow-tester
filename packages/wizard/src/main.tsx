@@ -6,6 +6,7 @@ import './index.css';
 import { matchRoute } from './lib/router';
 import { applyTheme, readTheme } from './lib/theme';
 import { reloadOnMissingChunk } from './lib/chunk-reload';
+import { ErrorBoundary, PageError } from './components/ErrorBoundary';
 
 // The public landing page is what most first visits open, so it loads without the app's code (the
 // runner connection, the plan editor, the report). Its links are page loads, which fetch the app.
@@ -15,10 +16,14 @@ const isLanding = matchRoute(window.location.pathname).name === 'landing';
 applyTheme(readTheme(), document.documentElement);
 reloadOnMissingChunk();
 const Entry = isLanding ? import('./LandingRoot') : import('./App');
-void Entry.then(({ default: Page }) =>
-  root.render(
-    <React.StrictMode>
-      <Page />
-    </React.StrictMode>
-  )
+Entry.then(
+  ({ default: Page }) =>
+    root.render(
+      <React.StrictMode>
+        <ErrorBoundary>
+          <Page />
+        </ErrorBoundary>
+      </React.StrictMode>
+    ),
+  () => root.render(<PageError />)
 );
