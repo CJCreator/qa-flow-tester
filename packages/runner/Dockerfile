@@ -24,8 +24,10 @@ COPY templates templates
 # Optional public landing values, read by Vite at build time. Empty means off.
 ARG VITE_COUNTER_URL=
 ARG VITE_CONTACT_EMAIL=
+ARG QA_TOOL_SHA=
 ENV VITE_COUNTER_URL=$VITE_COUNTER_URL \
-    VITE_CONTACT_EMAIL=$VITE_CONTACT_EMAIL
+    VITE_CONTACT_EMAIL=$VITE_CONTACT_EMAIL \
+    QA_TOOL_SHA=$QA_TOOL_SHA
 # Single stage on purpose (decided 2026-11): the Playwright base image is the bulk of the size, the runner serves the
 # wizard from packages/wizard/dist and needs the pnpm-linked node_modules, and build-secret-scan scans /app as it is.
 # devDependencies stay in the image. A two-stage build needs a local Docker build and start test first.

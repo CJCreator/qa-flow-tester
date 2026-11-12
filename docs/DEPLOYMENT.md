@@ -74,7 +74,8 @@ unknown paths.
 ## The user's own GitHub Actions
 
 The wizard fills `templates/qa-check.yml` (`__DEFAULT_URL__`, `__QA_TOOL_REF__` from `TOOL_REF` in
-`packages/wizard/src/lib/workflow.ts`). The job checks out this repo at that ref, installs and builds the runner chain,
+`packages/wizard/src/lib/workflow.ts`). `TOOL_REF` is the commit the wizard was built from (`QA_TOOL_SHA`, which the
+deploy passes in as `GITHUB_SHA`; a build with no commit falls back to `main`). The job checks out this repo at that ref, installs and builds the runner chain,
 installs Chromium, runs `node .qa-tool/packages/runner/dist/checkup.js`, and uploads `qa-report` (14 days). It runs on
 request, and when a preview or staging deployment reports success (a deployment of the `Production` environment is
 checked read-only; any other is a test copy). The user's secret is `QA_AI_API_KEY`. Settings:
@@ -176,8 +177,9 @@ account free; this uses 1.
 - [ ] After merge: Deploy workflow green, both services answer, open the online app and run one check-up on a public site
 - [ ] Rotate anything that was exposed during development
 
-Bumping the version means updating every `package.json`, `TOOL_REF` in `packages/wizard/src/lib/workflow.ts` and
-`CHANGELOG.md`; a test fails on drift. Tag before deploying a wizard that pins the new ref.
+Bumping the version means updating every `package.json` and `CHANGELOG.md`; a test fails on drift. `TOOL_REF` in
+`packages/wizard/src/lib/workflow.ts` is the commit the wizard was built from (`QA_TOOL_SHA`, set by the deploy), so
+the release-tag step no longer applies to the generated file.
 
 ## Rollback
 

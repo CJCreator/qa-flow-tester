@@ -2,11 +2,15 @@
 // and the one in the repo can't drift apart.
 import template from '../../../../templates/qa-check.yml?raw';
 
-/**
- * Ref of the QA Tool the workflow gets. `main` until the release tag exists: tag v0.1.0 at release,
- * then set this to the tag (a test guards that it matches the root version). Generated files pin it.
- */
-export const TOOL_REF = 'main';
+declare const __QA_TOOL_SHA__: string | undefined;
+
+/** The ref the generated file checks out: the commit this page was built from, else `main` (a build with no commit). */
+export function toolRefFor(sha: string | undefined): string {
+  return sha && /^[0-9a-f]{40}$/i.test(sha) ? sha.toLowerCase() : 'main';
+}
+
+/** Ref of the QA Tool the workflow gets: the commit the wizard was built from, else `main`. */
+export const TOOL_REF = toolRefFor(typeof __QA_TOOL_SHA__ === 'undefined' ? undefined : __QA_TOOL_SHA__);
 
 export { ONLINE_APP_URL } from './onlineUrl';
 

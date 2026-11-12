@@ -150,7 +150,7 @@ jobs:
       - name: Build the runner image
         run: |
           IMAGE="$GCP_REGION-docker.pkg.dev/$GCP_PROJECT/qa/runner:$GITHUB_SHA"
-          docker build -f packages/runner/Dockerfile -t "$IMAGE" .
+          docker build --build-arg QA_TOOL_SHA="$GITHUB_SHA" -f packages/runner/Dockerfile -t "$IMAGE" .
           echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
 
       # The same scan CI runs (ci.yml, build-secret-scan): the files in the image, its environment and build history.
