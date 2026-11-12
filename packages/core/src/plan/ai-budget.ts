@@ -246,10 +246,26 @@ export class PacedAI implements AIProvider {
         throw err;
       }
       const model = options.model ?? this.model;
+      const stops = [this.signal, this.finishSignal].filter((s): s is AbortSignal => !!s);
+      const sent: AICompletionOptions = {
+        ...options,
+        ...(model ? { model } : {}),
+        ...(stops.length > 0
+          ? { signal: options.signal ? AbortSignal.any([options.signal, ...stops]) : AbortSignal.any(stops) }
+          : {}),
+      };
       let result: AICompletion;
       try {
-        result = await completeWith(this.inner, messages, model ? { ...options, model } : options);
+        result = await completeWith(this.inner, messages, sent);
       } catch (err) {
+        if (this.signal?.aborted) {
+          this.used--;
+          stopIfAborted(this.signal);
+        }
+        if (this.finishSignal?.aborted) {
+          this.used--;
+          throw new StoppedEarlyError();
+        }
         const message = err instanceof Error ? err.message : String(err);
         if (!/\b429\b|rate.?limit/i.test(message)) {
           this.outcome(model, 'failed');
