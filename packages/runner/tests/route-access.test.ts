@@ -257,13 +257,27 @@ describe('isLoopbackAddress: the owner without a key is the local machine (DEC-0
 describe('schedule rows and the scheduler access level (ADR 0039)', () => {
   const rows = allRoutes.filter((r) => String(r.path).startsWith('/api/runner/schedules'));
 
-  it('the four owner rows are owner / allow, and the tick row is scheduler / allow', () => {
+  it('the four owner rows are owner and not served in beta by policy; the tick row is scheduler / allow', () => {
     const tick = rows.filter((r) => r.access === 'scheduler');
     expect(tick).toHaveLength(1);
     expect(tick[0]).toMatchObject({ method: 'POST', path: '/api/runner/schedules/tick', beta: 'allow' });
     const owner = rows.filter((r) => r.access === 'owner');
     expect(owner).toHaveLength(4);
-    for (const row of owner) expect(row.beta).toBe('allow');
+    for (const row of owner) expect(row.beta).toBeUndefined();
+  });
+
+  it('on a beta copy the key alone is 403 ERR_BETA on the four owner rows; an owner email and a local key pass (T-298)', () => {
+    const owner = rows.filter((r) => r.access === 'owner');
+    expect(owner).toHaveLength(4);
+    for (const row of owner) {
+      expect(authorizeRoute(row, { hasAccessKey: true, beta: true })).toMatchObject({
+        allow: false,
+        status: 403,
+        code: 'ERR_BETA',
+      });
+      expect(authorizeRoute(row, { hasAccessKey: false, beta: true, auditOwner: true })).toEqual({ allow: true });
+      expect(authorizeRoute(row, { hasAccessKey: true, beta: false })).toEqual({ allow: true });
+    }
   });
 
   it('owner rows: the key passes in beta, no key is 401', () => {

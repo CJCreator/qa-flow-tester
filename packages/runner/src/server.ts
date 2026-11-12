@@ -285,6 +285,7 @@ const DOWNLOADABLE_REPORT_FILES: Record<string, string> = {
 const SCHEDULE_RUN_CAP_MS = 28 * 60 * 1000;
 /** A tick starts no new run after this long (29 min): Cloud Scheduler gives up on a request at 30 min (ADR 0039). */
 const TICK_BUDGET_MS = 29 * 60 * 1000;
+const MAX_HOSTED_SCHEDULES = 10;
 
 export interface RunnerServerOptions {
   port?: number;
@@ -333,7 +334,8 @@ export interface RunnerServerOptions {
   /**
    * Beta mode (RUNNER_BETA=1), for a runner shared with a few outside testers: each tester's AI key and
    * sign-ins live in memory for their session only, only public sites can be checked, and the routes that
-   * change what other testers see (deleting check-ups, schedules, comparisons) are closed.
+   * change what other testers see (deleting check-ups, comparisons) are closed. Schedules are served only to an
+   * owner signed in with an AUDIT_OWNER_EMAILS account (T-298).
    */
   beta?: boolean;
   /** Test seam for a shared machine (beta): replaces DNS lookup and the pinned connection used for host checks. */
@@ -3721,6 +3723,14 @@ export class RunnerServer {
     }
 
     try {
+      // The hosted copy has one run slot for everyone: a few schedules, not a full day of them (T-298).
+      if (this.beta && (await this.scheduler.loadSchedules()).length >= MAX_HOSTED_SCHEDULES) {
+        this.sendJson(res, 429, {
+          error: `This copy already has ${MAX_HOSTED_SCHEDULES} schedules. Delete one before adding another.`,
+          code: 'ERR_SCHEDULE_LIMIT',
+        });
+        return;
+      }
       let hostname = body.targetUrl;
       try {
         hostname = new URL(body.targetUrl).hostname;
