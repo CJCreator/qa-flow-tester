@@ -69,4 +69,42 @@ describe('issues.html is self-contained', () => {
     );
     expect(await fs.readFile(outside.issuesHtmlPath, 'utf8')).not.toContain('data:');
   });
+
+  it('access table has <th scope="col"> twice and no bare <th>', async () => {
+    const accessReport = report(
+      [
+        finding({
+          title: 'Admin page reachable by visitor',
+          checker: 'permission-matrix',
+          where: { urlPath: '/admin', role: 'visitor', breakpoint: '1440px' },
+        }),
+      ],
+      {
+        results: [
+          {
+            role: 'visitor',
+            status: 'Passed',
+            testCaseId: '1',
+            flowId: '1',
+            durationMs: 1,
+            findings: [],
+            stepEvidence: [],
+          },
+          {
+            role: 'admin',
+            status: 'Passed',
+            testCaseId: '2',
+            flowId: '2',
+            durationMs: 1,
+            findings: [],
+            stepEvidence: [],
+          },
+        ],
+      }
+    );
+    const html = await renderIssuesHtml(buildIssuesModel(accessReport), dir);
+    const thCols = html.match(/<th\s+scope="col">/g) || [];
+    expect(thCols).toHaveLength(2);
+    expect(html).not.toMatch(/<th>/);
+  });
 });

@@ -118,7 +118,7 @@ export async function generateSingleFileHtmlReport(
         ${
           d.notFound && d.notFound.length > 0
             ? `
-          <h4 style="margin: 1rem 0 0.5rem; font-size:1rem; font-weight:600;">Not found in app (${d.notFound.length})</h4>
+          <h3 style="margin: 1rem 0 0.5rem; font-size:1rem; font-weight:600;">Not found in app (${d.notFound.length})</h3>
           <div class="gap-list" style="display:flex; flex-direction:column; gap:0.75rem;">
             ${d.notFound
               .map(
@@ -242,7 +242,7 @@ export async function generateSingleFileHtmlReport(
         ${
           quickWins.length > 0
             ? `
-          <h4 class="group-heading">⚡ Quick Wins (High Return, Low Effort)</h4>
+          <h3 class="group-heading"><span aria-hidden="true">⚡</span> Quick Wins (High Return, Low Effort)</h3>
           <div class="rec-list">${renderRecList(quickWins)}</div>
         `
             : ''
@@ -251,7 +251,7 @@ export async function generateSingleFileHtmlReport(
         ${
           biggerChanges.length > 0
             ? `
-          <h4 class="group-heading" style="margin-top: 1.5rem;">🏗️ Bigger Changes (Architectural / High Effort)</h4>
+          <h3 class="group-heading" style="margin-top: 1.5rem;"><span aria-hidden="true">🏗️</span> Bigger Changes (Architectural / High Effort)</h3>
           <div class="rec-list">${renderRecList(biggerChanges)}</div>
         `
             : ''
@@ -616,7 +616,7 @@ export const DEFAULT_IMAGE_BUDGET_BYTES = 6 * 1024 * 1024;
 
 const VISUAL_COMPARE_CSS = `
     .visual-compare { margin-top: 0.75rem; }
-    .visual-compare h5 { margin: 0 0 0.5rem; font-size: 0.9rem; }
+    .visual-compare h3 { margin: 0 0 0.5rem; font-size: 0.9rem; }
     .visual-compare .visual-row { display: flex; flex-wrap: wrap; gap: 0.75rem; }
     .visual-compare figure { margin: 0; flex: 1 1 220px; max-width: 100%; }
     .visual-compare img { max-width: 100%; height: auto; border: 1px solid #CBD5E1; }
@@ -672,7 +672,7 @@ async function renderVisualCompare(
     : `<p class="visual-note">There is no difference image: the screen size changed, so the old and new images cannot be laid over each other.</p>`;
   return `
             <div class="visual-compare">
-              <h5>Perceptual Visual Diff: old, new and difference</h5>
+              <h3>Perceptual Visual Diff: old, new and difference</h3>
               <div class="visual-row">
                 ${oldFigure}
                 ${newFigure}
