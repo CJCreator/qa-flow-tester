@@ -62,7 +62,7 @@ describe('checkup --docs and several roles', () => {
   it('rejects bad QA_ROLES; no flag reads roles', () => {
     expect(() => parseArgs([], { ...base, QA_ROLES: 'nope' })).toThrow(/QA_ROLES/);
     expect(() => parseArgs([], { ...base, QA_ROLES: '[{"role":"a"}]' })).toThrow(/username and a password/);
-    expect(parseArgs(['--roles', roles], base).signIns).toEqual([]);
+    expect(() => parseArgs(['--roles', roles], base)).toThrow(/Unknown option "--roles"/);
   });
 
   it('body has owner, consent, all roles and documents', () => {
@@ -100,6 +100,11 @@ describe('checkup --docs and several roles', () => {
 
     it('redactIngest and zeroYield', () => {
       expect(redactIngest('Password = abc and PASSWORD:xyz')).toBe('[hidden] and [hidden]');
+      const out = redactIngest('api_key = abc123 and Authorization: Bearer xyz.abc');
+      expect(out).not.toContain('abc123');
+      expect(out).not.toContain('xyz.abc');
+      expect(out).toContain('api_key = ***');
+      expect(out).toContain('Authorization: Bearer ***');
       expect(zeroYield('')).toBe(true);
       expect(zeroYield('# Heading\n- a requirement\n')).toBe(false);
     });

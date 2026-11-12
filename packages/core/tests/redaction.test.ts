@@ -3,7 +3,7 @@ import { mkdtemp, readFile, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import path from 'path';
 import type { TestCase } from '@qa/types';
-import { Redactor, redactUrl } from '../src/redact.js';
+import { Redactor, redactUrl, redactSecretText } from '../src/redact.js';
 import {
   replaceCredentialsWithPlaceholders,
   resolveCredentialPlaceholders,
@@ -126,5 +126,23 @@ describe('Credential placeholders', () => {
         targetUrl: 'https://example.com/',
       })
     ).toThrow(CredentialPlaceholderError);
+  });
+});
+
+describe('redactSecretText', () => {
+  const cases: Array<[string, string]> = [
+    ['secret: x', 'secret: ***'],
+    ['"token":"x"', '"token":"***"'],
+    ['client_secret=x', 'client_secret=***'],
+    ['Bearer abc.def', 'Bearer ***'],
+    ['Authorization: Bearer xyz.abc', 'Authorization: Bearer ***'],
+    ['Authorization: secret-token-123', 'Authorization: ***'],
+    ['api_key = abc123', 'api_key = ***'],
+    ['the key idea', 'the key idea'],
+    ['monkey: banana', 'monkey: banana'],
+  ];
+
+  it.each(cases)('redacts %s -> %s', (input, expected) => {
+    expect(redactSecretText(input)).toBe(expected);
   });
 });

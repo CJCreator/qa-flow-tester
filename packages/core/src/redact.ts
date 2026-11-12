@@ -25,6 +25,24 @@ export function redactUrl(text: string): string {
   return text.replace(SECRET_PARAM_IN_TEXT, `$1${REDACTED}`).replace(TOKEN_PATH_SEGMENT, `$1${REDACTED}`);
 }
 
+const SECRET_PARAM_NAME_VARIANTS = URL_SECRET_PARAM_NAMES.replace(/_/g, '[-_]');
+const SECRET_TEXT_NAMES = `${SECRET_PARAM_NAME_VARIANTS}|authorization`;
+const SECRET_TEXT_PATTERN = new RegExp(
+  `(?<![a-zA-Z0-9])((?:["']?[-_]*(?:${SECRET_TEXT_NAMES})[-_]*["']?\\s*(?:=>|[:=])\\s*(?:Bearer\\s+)?)|Bearer\\s+)(?:(["'])(.*?)\\2|([^\\s,;)\\]}>"']+))`,
+  'gi'
+);
+
+/**
+ * Hides secret-looking values in name/value pairs (`name <: or => value` where `name` is in
+ * `URL_SECRET_PARAM_NAMES` or `Authorization`) and `Bearer <token>` in plain text.
+ */
+export function redactSecretText(text: string): string {
+  if (!text || typeof text !== 'string') return text;
+  return text.replace(SECRET_TEXT_PATTERN, (_match, prefix, quote) => {
+    return quote ? `${prefix}${quote}${REDACTED}${quote}` : `${prefix}${REDACTED}`;
+  });
+}
+
 const TEXT_EVIDENCE = new Set([
   '.html',
   '.htm',

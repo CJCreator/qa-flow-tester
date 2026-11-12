@@ -38,7 +38,14 @@ import {
   summarizeDocument,
   parseHeaderText,
 } from '@qa/types';
-import { githubAnnotations, docxToMarkdown, runPostDeploySmoke, smokeReport, ReportGenerator } from '@qa/core';
+import {
+  githubAnnotations,
+  docxToMarkdown,
+  runPostDeploySmoke,
+  smokeReport,
+  ReportGenerator,
+  redactSecretText,
+} from '@qa/core';
 import type { AIProviderType, Finding, ReleaseReport, SiteAspectGrades, RunStartBody } from '@qa/types';
 import { createCheckupSession, createCheckupRun, resolveAuthorization } from './session/checkup-session.js';
 import { createShutdown, type ShutdownHandler } from './shutdown.js';
@@ -46,6 +53,7 @@ import { createShutdown, type ShutdownHandler } from './shutdown.js';
 export type FailOn = 'blocker' | 'major' | 'none' | 'standard';
 
 export interface CheckupArgs {
+  help?: boolean;
   url?: string;
   staging: boolean;
   failOn: FailOn;
@@ -100,9 +108,10 @@ const MAX_DOCS = 10;
 const MAX_DOC_BYTES = 500 * 1024;
 const MAX_DOCX_BYTES = 2 * 1024 * 1024;
 
-/** Hides `password: value` style text in a document before it leaves this machine. */
+/** Hides `password: value` style text and secrets in a document before it leaves this machine. */
 export function redactIngest(text: string): string {
-  return text.replace(/password\s*[:=]\s*\S+/gi, '[hidden]');
+  const hidden = text.replace(/password\s*[:=]\s*\S+/gi, '[hidden]');
+  return redactSecretText(hidden);
 }
 
 function parseRoles(env: NodeJS.ProcessEnv): RoleSignIn[] {
@@ -156,58 +165,170 @@ function parseRoles(env: NodeJS.ProcessEnv): RoleSignIn[] {
 const PROVIDERS: AIProviderType[] = ['openrouter', 'gemini', 'openai', 'anthropic'];
 const RUN_TIMEOUT_MS = 40 * 60 * 1000;
 
+export const USAGE_TEXT = `Usage: checkup <url> [options]
+
+One check-up from the command line: start the runner, test one address, write the report, print the verdict, and exit.
+
+Options:
+  --help, -h             Show this help text
+  --staging              Mark target as a test/staging copy (allows full testing)
+  --fail-on <level>      Exit code 1 on findings: standard (default), blocker, major, none
+  --provider <name>      AI provider: openrouter (default), gemini, openai, anthropic
+  --max-pages <n>        Pages to explore (1..1000, default 50)
+  --output <dir>         Output directory for report (default qa-report)
+  --test-cap <n>         Test cap (1..100000)
+  --concurrency <n>      Spider concurrency (1..5, default 2)
+  --delay <ms>           Pacing delay in ms (0..2000, default 100)
+  --header "Name: val"   Custom HTTP header (repeatable)
+  --docs <paths...>      Spec documents to read as Product Context
+  --debug [areas]        Debug areas to trace (crawl, auth, nav) or "all"
+  --preset smoke         Smoke Check-up (GET-only reads of known paths)
+  --health-path <path>   Health check path for smoke preset
+  --expected-version <v> Expected version for smoke preset
+  --confirm-live         Confirm running smoke check against live address
+
+Environment variables:
+  QA_TARGET_URL          Address to check
+  QA_AI_API_KEY          AI API key
+  QA_AI_PROVIDER         AI provider
+  QA_OUTPUT_DIR          Report output directory
+  QA_MAX_PAGES           Pages to explore
+  QA_FAIL_ON             Exit threshold
+  QA_CONCURRENCY         Spider concurrency
+  QA_DELAY_MS            Pacing delay in ms
+  QA_CUSTOM_HEADERS      JSON custom headers
+  QA_DEBUG               Debug areas
+  QA_USERNAME, QA_PASSWORD Test sign-in details
+  QA_ROLES               Additional roles JSON
+  QA_DOCS                Spec documents separated by ";"`;
+
+const VALUE_FLAGS = new Set([
+  '--fail-on',
+  '--provider',
+  '--max-pages',
+  '--output',
+  '--test-cap',
+  '--concurrency',
+  '--delay',
+  '--header',
+  '--preset',
+  '--health-path',
+  '--expected-version',
+]);
+
+function parseWholeNumberInRange(
+  raw: string | undefined,
+  flagName: string,
+  min: number,
+  max: number
+): number | undefined {
+  if (raw === undefined || raw === '') return undefined;
+  if (!/^-?\d+$/.test(raw.trim())) {
+    throw new Error(`${flagName} must be a whole number from ${min} to ${max}, not "${raw}"`);
+  }
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < min || n > max) {
+    throw new Error(`${flagName} must be a whole number from ${min} to ${max}, not "${raw}"`);
+  }
+  return n;
+}
+
 export function parseArgs(argv: string[], env: NodeJS.ProcessEnv = process.env): CheckupArgs {
-  const flag = (name: string) => {
-    const i = argv.indexOf(name);
-    return i >= 0 ? argv[i + 1] : undefined;
-  };
-  const rawFailOn = flag('--fail-on') ?? env.QA_FAIL_ON;
+  const flagMap = new Map<string, string>();
+  const headersList: string[] = [];
+  const flagDocs: string[] = [];
+  let debugValue: string | undefined;
+  let positionalUrl: string | undefined;
+  let help = false;
+  let staging = false;
+  let confirmLive: boolean | undefined;
+
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === '--help' || arg === '-h') {
+      help = true;
+      continue;
+    }
+    if (arg === '--staging') {
+      staging = true;
+      continue;
+    }
+    if (arg === '--confirm-live') {
+      confirmLive = true;
+      continue;
+    }
+    if (arg === '--docs') {
+      while (i + 1 < argv.length && !argv[i + 1].startsWith('--')) {
+        flagDocs.push(argv[++i]);
+      }
+      continue;
+    }
+    if (arg === '--debug') {
+      const next = argv[i + 1];
+      if (next && !next.startsWith('--') && !/^https?:\/\//i.test(next)) {
+        debugValue = next;
+        i++;
+      } else {
+        debugValue = 'all';
+      }
+      continue;
+    }
+    if (VALUE_FLAGS.has(arg)) {
+      const val = argv[i + 1];
+      if (val === undefined || val.startsWith('--')) {
+        throw new Error(`${arg} needs a value`);
+      }
+      if (arg === '--header') {
+        headersList.push(val);
+      } else {
+        flagMap.set(arg, val);
+      }
+      i++;
+      continue;
+    }
+    if (arg.startsWith('--')) {
+      throw new Error(`Unknown option "${arg}". Run with --help.`);
+    }
+    if (!positionalUrl) {
+      positionalUrl = arg;
+    }
+  }
+
+  const rawFailOn = flagMap.get('--fail-on') ?? env.QA_FAIL_ON;
   const failOn = (rawFailOn ? rawFailOn.toLowerCase() : 'standard') as FailOn;
   if (!['blocker', 'major', 'none', 'standard'].includes(failOn)) {
     throw new Error(`--fail-on must be blocker, major, none or standard, not "${failOn}"`);
   }
-  const provider = (flag('--provider') ?? env.QA_AI_PROVIDER ?? 'openrouter') as AIProviderType;
+  const provider = (flagMap.get('--provider') ?? env.QA_AI_PROVIDER ?? 'openrouter') as AIProviderType;
   if (!PROVIDERS.includes(provider)) {
     throw new Error(`The AI provider must be one of ${PROVIDERS.join(', ')}, not "${provider}"`);
   }
-  const maxPages = Number(flag('--max-pages') ?? env.QA_MAX_PAGES ?? 50);
-  // --docs takes every following argument up to the next --flag.
-  const docsAt = argv.indexOf('--docs');
-  const flagDocs: string[] = [];
-  if (docsAt >= 0) {
-    for (let i = docsAt + 1; i < argv.length && !argv[i].startsWith('--'); i++) flagDocs.push(argv[i]);
-  }
+
+  const maxPages =
+    parseWholeNumberInRange(flagMap.get('--max-pages') ?? env.QA_MAX_PAGES, '--max-pages', 1, 1000) ?? 50;
+  const crawlConcurrency = parseWholeNumberInRange(
+    flagMap.get('--concurrency') ?? env.QA_CONCURRENCY,
+    '--concurrency',
+    1,
+    5
+  );
+  const testCap = parseWholeNumberInRange(flagMap.get('--test-cap'), '--test-cap', 1, 100000);
+  const crawlDelayMs = parseWholeNumberInRange(flagMap.get('--delay') ?? env.QA_DELAY_MS, '--delay', 0, 2000);
+
   const docs = flagDocs.length
     ? flagDocs
     : (env.QA_DOCS ?? '')
         .split(';')
         .map((d) => d.trim())
         .filter(Boolean);
-  let debugValue: string | undefined;
-  const debugIdx = argv.indexOf('--debug');
-  if (debugIdx >= 0) {
-    const next = argv[debugIdx + 1];
-    if (next && !next.startsWith('--') && !/^https?:\/\//i.test(next)) {
-      debugValue = next;
-    } else {
-      debugValue = 'all';
-    }
+
+  if (debugValue) {
     process.env.QA_DEBUG = debugValue;
   } else if (env.QA_DEBUG) {
     debugValue = env.QA_DEBUG;
     process.env.QA_DEBUG = env.QA_DEBUG;
   }
 
-  const rawConcurrency = flag('--concurrency') ?? env.QA_CONCURRENCY;
-  const crawlConcurrency = rawConcurrency ? Math.max(1, Math.min(5, Number(rawConcurrency) || 2)) : undefined;
-  const rawDelay = flag('--delay') ?? env.QA_DELAY_MS;
-  // 0 means no delay. Only an unset or non-numeric value falls back to 100.
-  const delayNumber = rawDelay ? Number(rawDelay) : NaN;
-  const crawlDelayMs = rawDelay
-    ? Number.isFinite(delayNumber)
-      ? Math.max(0, Math.min(2000, delayNumber))
-      : 100
-    : undefined;
   const customHeaders: Record<string, string> = {};
   if (env.QA_CUSTOM_HEADERS) {
     try {
@@ -225,58 +346,35 @@ export function parseArgs(argv: string[], env: NodeJS.ProcessEnv = process.env):
       throw new Error('QA_CUSTOM_HEADERS is not valid');
     }
   }
-  for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === '--header') {
-      const line = argv[i + 1];
-      if (!line || line.startsWith('--')) {
-        throw new Error('QA_CUSTOM_HEADERS is not valid');
-      }
-      const { headers, errors } = parseHeaderText(line);
-      if (errors.length > 0 || Object.keys(headers).length === 0) {
-        throw new Error('QA_CUSTOM_HEADERS is not valid');
-      }
-      Object.assign(customHeaders, headers);
+  for (const line of headersList) {
+    const { headers, errors } = parseHeaderText(line);
+    if (errors.length > 0 || Object.keys(headers).length === 0) {
+      throw new Error('--header must look like "Name: value"');
     }
+    Object.assign(customHeaders, headers);
   }
 
-  const flagValues = new Set<string>([
-    ...([
-      '--fail-on',
-      '--provider',
-      '--max-pages',
-      '--output',
-      '--test-cap',
-      '--concurrency',
-      '--delay',
-      '--header',
-      '--preset',
-      '--health-path',
-      '--expected-version',
-    ]
-      .map((f) => flag(f))
-      .filter(Boolean) as string[]),
-    ...(debugValue && debugValue !== 'all' ? [debugValue] : []),
-    ...flagDocs,
-  ]);
   const signIns = parseRoles(env);
-  const rawPreset = flag('--preset');
+  const rawPreset = flagMap.get('--preset');
   if (rawPreset !== undefined && rawPreset !== 'smoke') {
     throw new Error(`--preset must be smoke, not "${rawPreset}"`);
   }
+
   return {
+    ...(help ? { help: true } : {}),
     ...(rawPreset === 'smoke'
       ? {
           preset: 'smoke' as const,
-          healthPath: flag('--health-path'),
-          expectedVersion: flag('--expected-version'),
-          confirmLive: argv.includes('--confirm-live') || undefined,
+          healthPath: flagMap.get('--health-path'),
+          expectedVersion: flagMap.get('--expected-version'),
+          confirmLive: confirmLive || undefined,
         }
       : {}),
-    url: argv.find((a) => !a.startsWith('--') && !flagValues.has(a)) ?? env.QA_TARGET_URL,
-    staging: argv.includes('--staging') || env.QA_STAGING === 'true',
+    url: positionalUrl ?? env.QA_TARGET_URL,
+    staging: staging || env.QA_STAGING === 'true',
     failOn: failOn as FailOn,
-    outputDir: path.resolve(flag('--output') ?? env.QA_OUTPUT_DIR ?? 'qa-report'),
-    maxPages: Number.isFinite(maxPages) && maxPages > 0 ? Math.min(Math.floor(maxPages), 1000) : 50,
+    outputDir: path.resolve(flagMap.get('--output') ?? env.QA_OUTPUT_DIR ?? 'qa-report'),
+    maxPages,
     provider,
     apiKey: env.QA_AI_API_KEY?.trim() || undefined,
     signIn: signIns[0]
@@ -284,19 +382,12 @@ export function parseArgs(argv: string[], env: NodeJS.ProcessEnv = process.env):
       : undefined,
     signIns,
     docs,
-    testCap: parseTestCap(flag('--test-cap')),
+    testCap,
     crawlConcurrency,
     crawlDelayMs,
     customHeaders: Object.keys(customHeaders).length > 0 ? customHeaders : undefined,
     debug: debugValue,
   };
-}
-
-/** --test-cap <n>: a positive whole number, clamped to 1..100000; anything else uses the default. */
-function parseTestCap(raw: string | undefined): number | undefined {
-  const n = Number(raw);
-  if (raw === undefined || !Number.isFinite(n) || n < 1) return undefined;
-  return Math.min(Math.floor(n), 100000);
 }
 
 /** The body for POST /api/runner/run. Test sign-in details, when set, are the consent for a full test. */
@@ -486,6 +577,10 @@ export function installCheckupSignalHandlers(
 }
 
 export async function runCheckup(args: CheckupArgs): Promise<number> {
+  if (args.help) {
+    console.log(USAGE_TEXT);
+    return 0;
+  }
   if (!args.url) throw new Error('Give the address to check, for example: checkup.js https://preview.example.com');
 
   if (args.preset === 'smoke') return runSmokeCheckup(args);
