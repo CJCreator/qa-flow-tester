@@ -41,10 +41,6 @@ export class SendGuard {
   hasSentAny(): boolean {
     return this.steps.size > 0;
   }
-
-  sentBySteps(): number[] {
-    return [...this.steps].sort((a, b) => a - b);
-  }
 }
 
 /** Passive listener only: never routes or blocks anything. */

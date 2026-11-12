@@ -8,7 +8,6 @@ import {
   buildFixThese,
   buildKnownFindings,
   githubAnnotations,
-  parseKnownFindings,
   sanitizeInline,
   withFindingsContract,
 } from '../src/findings-contract.js';
@@ -110,7 +109,7 @@ describe('outputs beside findings.json', () => {
     }
   });
 
-  it('parseKnownFindings reads back what buildKnownFindings wrote; fingerprints unique and sorted', () => {
+  it('buildKnownFindings lists active findings once, sorted by fingerprint', () => {
     const r = report([
       finding(),
       finding({ id: 'F-2', where: { urlPath: '/checkout', role: 'guest', breakpoint: '375px' } }),
@@ -123,14 +122,6 @@ describe('outputs beside findings.json', () => {
     const fps = known.findings.map((f) => f.fingerprint);
     expect(new Set(fps).size).toBe(fps.length);
     expect(fps).toEqual([...fps].sort());
-    expect(parseKnownFindings(JSON.stringify(known))).toEqual(known);
-  });
-
-  it('parseKnownFindings returns null on garbage', () => {
-    expect(parseKnownFindings('not json')).toBeNull();
-    expect(parseKnownFindings('[]')).toBeNull();
-    expect(parseKnownFindings('{"schemaVersion":1,"productId":"x","findings":[{"fingerprint":1}]}')).toBeNull();
-    expect(parseKnownFindings('{"findings":[]}')).toBeNull();
   });
 
   it('withFindingsContract puts schemaVersion first and a fingerprint on every finding', () => {

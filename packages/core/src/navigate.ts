@@ -30,8 +30,6 @@ export interface NavigateResult {
   redirectChain: string[];
   attempts: number;
   durationMs: number;
-  /** Idle/links condition met before the cap */
-  settled: boolean;
   /** When needLinks */
   linkCount?: number;
   /** The main response's Retry-After, in ms (seconds or an HTTP date), when it sent one. */
@@ -193,7 +191,7 @@ export async function navigate(page: Page, url: string, options?: NavigateOption
     const attemptTimeout = attempt === 1 ? timeoutMs : Math.round(timeoutMs * 1.5);
     try {
       const resp = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: attemptTimeout });
-      const { settled, linkCount } = await settlePage(page, { settleMs, needLinks });
+      const { linkCount } = await settlePage(page, { settleMs, needLinks });
 
       const redirectChain: string[] = [];
       if (resp) {
@@ -212,7 +210,6 @@ export async function navigate(page: Page, url: string, options?: NavigateOption
         redirectChain,
         attempts: attempt,
         durationMs: Date.now() - startTime,
-        settled,
         linkCount: needLinks ? linkCount : undefined,
         ...(retryAfterMs !== undefined ? { retryAfterMs } : {}),
       };
@@ -234,7 +231,6 @@ export async function navigate(page: Page, url: string, options?: NavigateOption
           redirectChain: [],
           attempts: attempt,
           durationMs: Date.now() - startTime,
-          settled: false,
           error: { kind: errInfo.kind, detail: err instanceof Error ? err.message : undefined },
         };
       }
@@ -259,7 +255,6 @@ export async function navigate(page: Page, url: string, options?: NavigateOption
     redirectChain: [],
     attempts: maxAttempts,
     durationMs: Date.now() - startTime,
-    settled: false,
     error: { kind: 'other' },
   };
 }

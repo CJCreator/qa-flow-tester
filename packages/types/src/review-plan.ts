@@ -83,8 +83,6 @@ export interface ReviewPlan {
    * Absent until the user has approved once (then kept for re-runs).
    */
   testCases?: TestCase[];
-  /** True if the generic template fallback was used because AI discovery failed. */
-  usedFallbackDiscovery?: boolean;
   /** The site isn't a test copy: journeys that send a form stay in the plan but aren't run. */
   readOnly?: boolean;
   /** The Test cap this Plan was expanded with. */

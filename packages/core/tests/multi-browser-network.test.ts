@@ -1,5 +1,5 @@
 import { describe, it, expect, afterAll } from 'vitest';
-import { BrowserManager, browserEngineLabel } from '../src/browser.js';
+import { BrowserManager } from '../src/browser.js';
 import { EvidenceCollector } from '../src/evidence.js';
 import path from 'path';
 import os from 'os';
@@ -9,12 +9,6 @@ describe('Multi-Browser Support & Network Intelligence (FR-1.4, FR-6.3.1)', () =
 
   afterAll(async () => {
     await browserManager.close();
-  });
-
-  it('formats PRD-compliant labels for multi-browser engines (FR-1.4)', () => {
-    expect(browserEngineLabel('chromium')).toBe('Chrome/Chromium (primary)');
-    expect(browserEngineLabel('webkit')).toBe('WebKit (Playwright build)');
-    expect(browserEngineLabel('firefox')).toBe('Firefox (Playwright build)');
   });
 
   it('launches requested browser engine and opens page', async () => {

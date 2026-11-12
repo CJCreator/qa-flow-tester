@@ -97,41 +97,6 @@ export function buildKnownFindings(report: ReleaseReport): KnownFindings {
   };
 }
 
-/** Reads known-findings.json text back. Null when it is not a known-findings file. */
-export function parseKnownFindings(text: string): KnownFindings | null {
-  let data: unknown;
-  try {
-    data = JSON.parse(text);
-  } catch {
-    return null;
-  }
-  if (!data || typeof data !== 'object') return null;
-  const d = data as Record<string, unknown>;
-  if (typeof d.schemaVersion !== 'number' || typeof d.productId !== 'string' || !Array.isArray(d.findings)) return null;
-  const findings: KnownFinding[] = [];
-  for (const raw of d.findings) {
-    if (!raw || typeof raw !== 'object') return null;
-    const r = raw as Record<string, unknown>;
-    if (
-      typeof r.fingerprint !== 'string' ||
-      typeof r.severity !== 'string' ||
-      typeof r.checker !== 'string' ||
-      typeof r.title !== 'string' ||
-      typeof r.urlPath !== 'string'
-    ) {
-      return null;
-    }
-    findings.push({
-      fingerprint: r.fingerprint,
-      severity: r.severity as FindingSeverity,
-      checker: r.checker,
-      title: r.title,
-      urlPath: r.urlPath,
-    });
-  }
-  return { schemaVersion: d.schemaVersion, productId: d.productId, findings };
-}
-
 /** fix-these.md: active Blockers and Majors, for a person or a coding agent. */
 export function buildFixThese(report: ReleaseReport): string {
   const active = report.findings.filter(isActiveFinding);

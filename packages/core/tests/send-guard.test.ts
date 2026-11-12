@@ -22,12 +22,4 @@ describe('send guard', () => {
     g.noteRequest({ method: 'POST', url: 'not a url' });
     expect(g.hasSentAny()).toBe(false);
   });
-
-  it('send guard: records which click step sent', () => {
-    const g = new SendGuard('shop.test');
-    g.clickStarted(1);
-    g.clickStarted(3);
-    g.noteRequest({ method: 'POST', url: 'http://shop.test:8080/s' });
-    expect(g.sentBySteps()).toEqual([3]);
-  });
 });

@@ -121,8 +121,6 @@ export interface ReleaseReport {
   traceability?: TraceabilityEntry[];
   suppressions?: SuppressionRule[];
   delta?: RunDelta;
-  /** True when this run's test cases came from the generic template fallback, not real AI-driven discovery. */
-  usedFallbackDiscovery?: boolean;
   /**
    * 'safe-public' when this report came from a read-only website scan (no sign-in, no form
    * submissions, no data changes), so it must not be read as full product coverage. 'read-only'

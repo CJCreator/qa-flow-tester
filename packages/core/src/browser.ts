@@ -4,22 +4,6 @@ import { isSameSite } from './same-site.js';
 
 export type BrowserEngine = 'chromium' | 'webkit' | 'firefox' | 'android-chrome';
 
-/** PRD FR-1.4 multi-browser engine display label. */
-export function browserEngineLabel(engine: BrowserEngine): string {
-  switch (engine) {
-    case 'chromium':
-      return 'Chrome/Chromium (primary)';
-    case 'webkit':
-      return 'WebKit (Playwright build)';
-    case 'firefox':
-      return 'Firefox (Playwright build)';
-    case 'android-chrome':
-      return 'Android Chrome (Mobile Emulation)';
-    default:
-      return engine;
-  }
-}
-
 export interface RunContextOptions {
   /** Target origin; headers go only to this host */
   baseUrl: string;

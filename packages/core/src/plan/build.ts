@@ -169,7 +169,6 @@ export function buildPlan(input: {
     flows: draft.flows,
     questions: draft.ambiguityQuestions,
     testCases: specTestCases,
-    usedFallbackDiscovery: draft.usedFallbackSynthesis,
     readOnly: readOnly || undefined,
     testCap: context.testCap,
     intentsOff: draft.plan?.intentsOff?.length ? draft.plan.intentsOff : undefined,

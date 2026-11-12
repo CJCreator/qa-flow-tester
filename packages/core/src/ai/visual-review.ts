@@ -30,7 +30,6 @@ export interface VisualReviewResult {
   findings: Finding[];
   remainingScreens: VisualReviewItemInput[];
   note?: string;
-  aiModel?: string;
   /** Why it stopped before the end: the AI Request Budget ran out, or the service failed. */
   stoppedBy?: Error;
 }
