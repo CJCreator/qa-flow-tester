@@ -6,7 +6,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { crc32, inflateRawSync } from 'node:zlib';
 import type { DiscoveryDraft, ReviewPlan, TestCase } from '@qa/types';
-import { planToPlaywrightProject, EXPORT_PLAYWRIGHT_RANGE } from '../src/plan/playwright-export.js';
+import { planToPlaywrightProject, EXPORT_PLAYWRIGHT_RANGE, isPasswordField } from '../src/plan/playwright-export.js';
 import { zipFiles } from '../src/plan/zip.js';
 import { REFUSAL_RULE_SOURCE, CAPTURE_BASELINE_SOURCE } from '@qa/checkers';
 import { expandPlan } from '../src/plan/expand.js';
@@ -240,6 +240,29 @@ describe('playwright export', () => {
     expect(admin).toContain('process.env["QA_ADMIN_PASSWORD"]!');
     expect(admin).toContain('process.env["QA_ADMIN_USERNAME"]!');
     expect(text).not.toMatch(/"cookies"|"origins"|"password":/);
+  });
+
+  it('export types Role password only into password fields (not passport, passenger, gift card, etc.)', () => {
+    const files = planToPlaywrightProject(
+      planOf(
+        [
+          tc({
+            id: 'TC-002',
+            name: 'Role fills passport and password',
+            role: 'admin',
+            steps: [
+              { action: 'fill', selector: '#passport', value: 'X1234567', name: 'Fill passport number' },
+              { action: 'fill', selector: '#password', value: 'pw-FAKE-123', name: 'Fill password' },
+            ],
+          }),
+        ],
+        { roles: ['visitor', 'admin'] }
+      )
+    );
+    const spec = file(files, 'tests/admin/journeys.spec.ts');
+    expect(spec).toContain('.fill("X1234567")');
+    expect(spec.match(/process\.env\["QA_ADMIN_PASSWORD"\]!/g)).toHaveLength(1);
+    expect(spec).not.toContain('pw-FAKE-123');
   });
 
   it('export adds .gitignore for auth and a README on creating sign-in state', () => {
@@ -508,6 +531,35 @@ describe('playwright export', () => {
       expect(spec.indexOf('"#tab-b"')).toBeGreaterThan(-1);
       expect(spec.indexOf('"#tab-b"')).toBeLessThan(spec.indexOf('"#email"'));
       expect(file(files, 'README.md')).toContain('expectRefused is a generic rule');
+    });
+  });
+
+  describe('isPasswordField', () => {
+    it.each([
+      ['#password', ''],
+      ['#pw', ''],
+      ['input[type="password"]', ''],
+      ['input[type=password]', ''],
+      ['[name=confirm_password]', ''],
+      ['#newPassword', ''],
+      ['#userpassword', ''],
+      ['#x', 'Fill password'],
+      ['#x', 'Enter passcode'],
+    ])('accepts %s (%s)', (selector, name) => {
+      expect(isPasswordField(selector, name)).toBe(true);
+    });
+
+    it.each([
+      ['#passport', ''],
+      ['#x', 'Fill passport number'],
+      ['#passengerName', ''],
+      ['#gift-card-message', 'Gift card message'],
+      ['#card-number', 'Card number'],
+      ['#otp', 'One-time code'],
+      ['#coupon-token', ''],
+      ['#email', 'Email for passwordless sign-in'],
+    ])('rejects %s (%s)', (selector, name) => {
+      expect(isPasswordField(selector, name)).toBe(false);
     });
   });
 });

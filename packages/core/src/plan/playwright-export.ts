@@ -31,7 +31,21 @@ export const EXPORT_LIMITS: string[] = [
   'No screenshots, evidence or visual baselines.',
 ];
 
-const SECRET_NAME = /pass(word)?|secret|token|otp|card|cvv/i;
+/** Words that name a password field. "Passport", "Passenger" and "Gift card" are not among them. */
+const PASSWORD_WORDS = new Set(['password', 'passwd', 'pwd', 'pw', 'passcode', 'passphrase']);
+
+/**
+ * True for a field that takes the Role's password: an `input[type=password]` selector, or a selector or step name
+ * with a password word in it (`#newPassword`, `confirm_password`, `#pw`, "Fill password").
+ */
+export function isPasswordField(selector: string, name: string): boolean {
+  if (/type\s*=\s*["']?password\b/i.test(selector)) return true;
+  const words = `${selector} ${name}`
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/);
+  return words.some((w) => PASSWORD_WORDS.has(w) || (/pass(word|wd)/.test(w) && !w.includes('passwordless')));
+}
 const DESTRUCTIVE_METHODS = "['POST', 'PUT', 'PATCH', 'DELETE']";
 
 /** A string literal. Everything that comes from the Plan goes through here, redacted. */
@@ -125,7 +139,7 @@ function mapStep(step: TestCaseStep, role: string, target: string): string[] {
       const value = step.value ?? '';
       let expr: string;
       if (/\{\{\s*username\s*\}\}/i.test(value)) expr = `process.env[${JSON.stringify(`QA_${envOf(role)}_USERNAME`)}]!`;
-      else if (/\{\{\s*password\s*\}\}/i.test(value) || SECRET_NAME.test(selector) || SECRET_NAME.test(step.name))
+      else if (/\{\{\s*password\s*\}\}/i.test(value) || isPasswordField(selector, step.name))
         expr = `process.env[${JSON.stringify(`QA_${envOf(role)}_PASSWORD`)}]!`;
       else expr = q(value);
       return [label, `await (await sel(page, ${q(selector)})).fill(${expr});`];
