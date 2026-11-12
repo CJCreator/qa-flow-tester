@@ -45,7 +45,7 @@ jobs:
   build-and-smoke:
     if: github.repository == 'CJCreator/qa-flow-tester'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     # Builds run out of memory at the default Node heap.
     env:
       NODE_OPTIONS: --max-old-space-size=8192
@@ -67,6 +67,12 @@ jobs:
 
       - name: Lint
         run: pnpm lint
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      - name: Typecheck
+        run: pnpm typecheck
 
       # The static site. The wizard's "Open the online app" button points at the runner.
       - name: Build the site
@@ -141,14 +147,28 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
 
-      # packages/runner/Dockerfile, tagged with this commit.
-      - name: Build and push the runner image
+      - name: Build the runner image
         run: |
           IMAGE="$GCP_REGION-docker.pkg.dev/$GCP_PROJECT/qa/runner:$GITHUB_SHA"
-          gcloud auth configure-docker "$GCP_REGION-docker.pkg.dev" --quiet
           docker build -f packages/runner/Dockerfile -t "$IMAGE" .
-          docker push "$IMAGE"
           echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      # The same scan CI runs (ci.yml, build-secret-scan): the files in the image, its environment and build history.
+      - name: Scan the runner image for AI keys
+        run: |
+          out="$RUNNER_TEMP/runner-image"
+          mkdir -p "$out"
+          id=$(docker create "$IMAGE")
+          docker cp "$id:/app" "$out/app"
+          docker rm "$id" > /dev/null
+          docker image inspect "$IMAGE" > "$out/image-config.json"
+          docker history --no-trunc "$IMAGE" > "$out/image-history.txt"
+          node scripts/scan-build-secrets.mjs "$out"
+
+      - name: Push the runner image
+        run: |
+          gcloud auth configure-docker "$GCP_REGION-docker.pkg.dev" --quiet
+          docker push "$IMAGE"
 
       # Cloud Run's root filesystem is read-only except /tmp, so data goes there (the image's /data is not writable).
       # The access token is read from Secret Manager, never from this file.
