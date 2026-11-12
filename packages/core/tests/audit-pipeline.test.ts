@@ -1120,7 +1120,7 @@ describe('audit pipeline: runAuditPipeline', () => {
     );
     const { result } = await outcome;
 
-    expect(result.notes).toContain('The AI key expired. Update it in Audit settings.');
+    expect(result.notes).toContain('The AI key expired. Update it in Settings.');
     expect(steps.find((s) => s.step === 'assessment')?.status).toBe('not-done');
     expect(steps.find((s) => s.step === 'recommendation')?.status).toBe('not-done');
   });
