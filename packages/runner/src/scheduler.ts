@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { writeJsonAtomic, type AuditStoreBackend } from '@qa/core';
+import { redactedMessage } from './session/checkup-run.js';
 
 export interface CheckupSchedule {
   id: string;
@@ -46,9 +47,11 @@ export interface TickSummary {
   retrying: number;
   /** Another tick was still going, so this one did nothing. */
   busy: boolean;
+  /** Why the tick could not finish, when the store read or another step threw. */
+  error?: string;
 }
 
-/** `<dataDir>/schedules.json`: the local copy's store. A missing or unreadable file reads as no schedules. */
+/** <dataDir>/schedules.json: the local copy's store. A missing file reads as no schedules; an unreadable one throws. */
 export class FileScheduleStore implements ScheduleStore {
   private readonly file: string;
 
@@ -56,14 +59,37 @@ export class FileScheduleStore implements ScheduleStore {
     this.file = path.join(dataDir, 'schedules.json');
   }
 
+  private async copyCorruptAside(): Promise<void> {
+    const corruptFile = `${this.file}.corrupt-${Date.now()}`;
+    await fs.copyFile(this.file, corruptFile).catch(() => {});
+  }
+
   async read(): Promise<CheckupSchedule[]> {
+    let data: string;
     try {
-      const data = await fs.readFile(this.file, 'utf8');
-      const parsed: unknown = JSON.parse(data);
-      return Array.isArray(parsed) ? (parsed as CheckupSchedule[]) : [];
-    } catch {
-      return [];
+      data = await fs.readFile(this.file, 'utf8');
+    } catch (err: unknown) {
+      if ((err as NodeJS.ErrnoException)?.code === 'ENOENT') {
+        return [];
+      }
+      await this.copyCorruptAside();
+      throw new Error('The schedule file could not be read; it was kept as schedules.json.corrupt-<ts>.');
     }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(data);
+    } catch {
+      await this.copyCorruptAside();
+      throw new Error('The schedule file could not be read; it was kept as schedules.json.corrupt-<ts>.');
+    }
+
+    if (!Array.isArray(parsed)) {
+      await this.copyCorruptAside();
+      throw new Error('The schedule file could not be read; it was kept as schedules.json.corrupt-<ts>.');
+    }
+
+    return parsed as CheckupSchedule[];
   }
 
   async write(list: CheckupSchedule[]): Promise<void> {
@@ -232,7 +258,13 @@ export class SchedulerManager {
           return { run: { ...sched }, previousLastRunAt };
         });
         if (!claim) continue;
-        const outcome: RunOutcome = await onRunScheduled(claim.run).catch((): RunOutcome => false);
+        let outcome: RunOutcome;
+        try {
+          outcome = await onRunScheduled(claim.run);
+        } catch (err: unknown) {
+          console.error('[Release check-up] Scheduler tick failed:', redactedMessage(err));
+          outcome = false;
+        }
         if (outcome === 'busy') summary.retrying += 1;
         else if (outcome) summary.started += 1;
         else summary.failed += 1;
@@ -250,8 +282,10 @@ export class SchedulerManager {
           await this.saveSchedules(latest);
         });
       }
-    } catch {
+    } catch (err: unknown) {
       // scheduler tick error resilience: a failed store read stops the tick and saves nothing
+      summary.error = redactedMessage(err);
+      console.error('[Release check-up] Scheduler tick failed:', summary.error);
     } finally {
       this.ticking = false;
     }
@@ -260,7 +294,7 @@ export class SchedulerManager {
 
   start(onRunScheduled: (schedule: CheckupSchedule) => Promise<RunOutcome>, intervalMs = 60000): void {
     if (this.timer) return;
-    this.timer = setInterval(() => void this.tick(onRunScheduled), intervalMs);
+    this.timer = setInterval(() => void this.tick(onRunScheduled).catch(() => {}), intervalMs);
     this.timer.unref?.();
   }
 
