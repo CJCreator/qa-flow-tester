@@ -29,7 +29,7 @@ import {
 import { runAccessChecks, contextFetcher, type AccessFetcher } from './access-control.js';
 import { makeCheckerFetch, createRunLinkChecker } from './checker-fetch.js';
 import { EvidenceCollector } from './evidence.js';
-import { captureVisualShot, readBaselineMode, writeVisualBaseline } from './visual-capture.js';
+import { captureVisualShot, readBaselineMode } from './visual-capture.js';
 import { PreFlightChecker, SignInFailedError, type PreFlightResult } from './preflight.js';
 import { restoreSession } from './discovery/discovery-agent.js';
 import { navigate, looksLikeLogin } from './navigate.js';
@@ -277,8 +277,6 @@ export interface RunOptions {
   recordVideo?: boolean;
   /** Reruns of a failing test, each in a clean context, stopping at the first pass. Default 3. Link tests never rerun. */
   flakyReruns?: number;
-  /** Overwrite visual baselines with this run's screenshots instead of comparing against them. */
-  updateBaselines?: boolean;
   onEvent?: (event: OrchestratorEvent) => void;
   /** Override the generated runId (e.g. so a caller can respond with an id before the run starts and have RUN_STARTED/RUN_COMPLETED carry the same id). Defaults to an internally generated `run-<timestamp>`. */
   runId?: string;
@@ -1235,40 +1233,34 @@ export class FlowTestOrchestrator {
           // Only a flow that completed reaches the screen the baseline was taken of.
           const baselinePath = path.join(baselineDir, `${testCase.id}-${bp}.png`);
           if (testPointPassed && pageLevelChecks) {
-            if (options.updateBaselines) {
-              const extraSelectors = options.profile?.visualMaskSelectors;
-              const shot = await captureVisualShot(page, { masked: true, extraSelectors });
-              await writeVisualBaseline(baselinePath, shot, { extraSelectors });
-            } else {
-              const baseline = await fs.readFile(baselinePath).catch(() => null);
-              if (baseline) {
-                const mode = await readBaselineMode(baselinePath, baseline);
-                const current = await captureVisualShot(page, {
-                  masked: mode.masked,
-                  extraSelectors: mode.masked ? mode.extraSelectors : undefined,
-                });
-                const diff = await this.designChecker.checkVisualDiff(current, baseline, {
-                  maxDiffPercent: options.profile?.visualDiffMaxPercent,
-                  diffOutputPath: path.join(testCaseEvidenceDir, 'visual-diff.png'),
-                });
-                if (!diff.match) {
-                  await fs.mkdir(testCaseEvidenceDir, { recursive: true });
-                  const baselineCopy = path.join(testCaseEvidenceDir, 'visual-baseline.png');
-                  const currentCopy = path.join(testCaseEvidenceDir, 'visual-current.png');
-                  await fs.writeFile(baselineCopy, baseline);
-                  await fs.writeFile(currentCopy, current);
-                  designFindings.push(
-                    this.designChecker.visualDiffFinding(diff, {
-                      testCaseId: testCase.id,
-                      role: testCase.role,
-                      breakpoint: bp,
-                      urlPath,
-                      baselineImagePath: path.join(testCaseEvidenceDir, 'visual-baseline.png'),
-                      currentImagePath: path.join(testCaseEvidenceDir, 'visual-current.png'),
-                      baselinePath: path.relative(process.cwd(), baselinePath).replace(/\\/g, '/'),
-                    })
-                  );
-                }
+            const baseline = await fs.readFile(baselinePath).catch(() => null);
+            if (baseline) {
+              const mode = await readBaselineMode(baselinePath, baseline);
+              const current = await captureVisualShot(page, {
+                masked: mode.masked,
+                extraSelectors: mode.masked ? mode.extraSelectors : undefined,
+              });
+              const diff = await this.designChecker.checkVisualDiff(current, baseline, {
+                maxDiffPercent: options.profile?.visualDiffMaxPercent,
+                diffOutputPath: path.join(testCaseEvidenceDir, 'visual-diff.png'),
+              });
+              if (!diff.match) {
+                await fs.mkdir(testCaseEvidenceDir, { recursive: true });
+                const baselineCopy = path.join(testCaseEvidenceDir, 'visual-baseline.png');
+                const currentCopy = path.join(testCaseEvidenceDir, 'visual-current.png');
+                await fs.writeFile(baselineCopy, baseline);
+                await fs.writeFile(currentCopy, current);
+                designFindings.push(
+                  this.designChecker.visualDiffFinding(diff, {
+                    testCaseId: testCase.id,
+                    role: testCase.role,
+                    breakpoint: bp,
+                    urlPath,
+                    baselineImagePath: path.join(testCaseEvidenceDir, 'visual-baseline.png'),
+                    currentImagePath: path.join(testCaseEvidenceDir, 'visual-current.png'),
+                    baselinePath: path.relative(process.cwd(), baselinePath).replace(/\\/g, '/'),
+                  })
+                );
               }
             }
           }

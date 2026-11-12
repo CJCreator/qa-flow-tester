@@ -5,7 +5,6 @@
  * baselines keep comparing exactly as before.
  */
 import fs from 'fs/promises';
-import path from 'path';
 import crypto from 'crypto';
 import type { Page, Locator } from 'playwright';
 
@@ -166,28 +165,6 @@ export function sidecarPath(pngPath: string): string {
 }
 
 const sha256 = (buf: Buffer) => crypto.createHash('sha256').update(buf).digest('hex');
-
-export async function writeVisualBaseline(
-  pngPath: string,
-  buf: Buffer,
-  opts: { extraSelectors?: string[] } = {}
-): Promise<void> {
-  await fs.mkdir(path.dirname(pngPath), { recursive: true });
-  await fs.writeFile(pngPath, buf);
-  await fs.writeFile(
-    sidecarPath(pngPath),
-    JSON.stringify(
-      {
-        version: VISUAL_SIDECAR_VERSION,
-        masked: true,
-        sha256: sha256(buf),
-        extraSelectors: opts.extraSelectors ?? [],
-      },
-      null,
-      2
-    )
-  );
-}
 
 export type BaselineMode = { masked: false } | { masked: true; extraSelectors: string[] };
 
