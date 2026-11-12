@@ -40,7 +40,6 @@ describe('Issues files', () => {
         timestamp: new Date().toISOString(),
         findings: [finding],
         results: [],
-        grades: [],
         recommendations: [],
       })
     );
