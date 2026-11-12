@@ -26,6 +26,8 @@ import {
   redactedMessage,
   ALL_SCREEN_SIZES,
   LOOPBACK_HOSTS,
+  resolveTargetUrl,
+  signInAccount,
 } from './session/checkup-session.js';
 import {
   allRoutes,
@@ -40,6 +42,7 @@ import {
   sendJson,
   type PlanRouteContext,
   getAuditRunsForServer,
+  ensurePlanLoaded,
 } from './routes/index.js';
 import type { AuditCrawl, AuditAddressCheck } from './routes/audit-crawl.js';
 import {
@@ -920,7 +923,7 @@ export class RunnerServer {
     if (this.beta) setBrowserPolicy({ guard: makeRequestGuard(this.hostChecks) });
     await this.auditRecoveryDone;
     await this.moveLegacyData();
-    await this.ensurePlanLoaded();
+    await ensurePlanLoaded(this.session);
     await this.loadLatestReport();
     // A schedule does what its screen says: it is checked every minute from the moment the server is up.
     // The hosted copy (beta) has no timer of its own: Cloud Scheduler calls the tick route (ADR 0039).
@@ -1603,24 +1606,6 @@ export class RunnerServer {
   }
 
   /**
-   * The address to connect to: a host alias, or localhost mapped to the host machine when the
-   * runner itself runs in a container. Everything else is used as typed.
-   */
-  private resolveTargetUrl(targetUrl: string): string {
-    try {
-      const u = new URL(targetUrl);
-      const alias = this.hostAliases[u.hostname.toLowerCase()];
-      if (alias) u.hostname = alias;
-      else if (this.localhostAlias && LOOPBACK_HOSTS.includes(u.hostname)) u.hostname = this.localhostAlias;
-      else return targetUrl;
-      return u.toString();
-    } catch {
-      // Invalid URLs are reported by the caller.
-      return targetUrl;
-    }
-  }
-
-  /**
    * Whether this address is a Test Copy. Local mode: by its name (and the owner's mark), as before.
    * Shared machine: marked AND public AND the Verified Domain proof passes right now (ADR 0014).
    */
@@ -1787,7 +1772,7 @@ export class RunnerServer {
     };
 
     const check = await new PreFlightChecker().checkUrlReachable(
-      this.resolveTargetUrl(targetUrl),
+      resolveTargetUrl(targetUrl, this.hostAliases, this.localhostAlias),
       undefined,
       this.beta ? (url, headers) => this.sharedGet(url, headers) : undefined
     );
@@ -1821,11 +1806,6 @@ export class RunnerServer {
     }
   }
 
-  /** The keychain account a site's saved sign-in password is kept under. */
-  private signInAccount(host: string, role: string): string {
-    return `signin:${host.toLowerCase()}:${role}`;
-  }
-
   /**
    * GET "" lists every remembered site: whether it's a test copy, whether search is checked, and its
    * saved sign-ins (never their passwords). POST "<host>" { searchChecks?, forgetSignIn? } changes one.
@@ -1853,7 +1833,7 @@ export class RunnerServer {
       }
       const needsPassword: string[] = [];
       for (const s of memory.signIns ?? []) {
-        const hasPw = await this.keyResolver.readSecret(this.signInAccount(memory.host, s.role));
+        const hasPw = await this.keyResolver.readSecret(signInAccount(memory.host, s.role));
         if (!hasPw) needsPassword.push(s.role);
       }
       this.sendJson(res, 200, {
@@ -1902,7 +1882,7 @@ export class RunnerServer {
         const existingSignIns = [...(memory.signIns ?? [])];
         for (const role of body.rememberSignIns) {
           if (role.password) {
-            const saved = await this.keyResolver.saveSecret(this.signInAccount(host, role.role), role.password);
+            const saved = await this.keyResolver.saveSecret(signInAccount(host, role.role), role.password);
             if (!saved) {
               notSaved.push(role.role);
               continue;
@@ -1927,7 +1907,7 @@ export class RunnerServer {
       if (body.searchChecks !== undefined) memory.searchChecks = body.searchChecks ?? undefined;
       if (body.forgetSignIn) {
         memory.signIns = (memory.signIns ?? []).filter((s) => s.role !== body.forgetSignIn);
-        await this.keyResolver.forgetSecret(this.signInAccount(memory.host, body.forgetSignIn));
+        await this.keyResolver.forgetSecret(signInAccount(memory.host, body.forgetSignIn));
       }
       await saveSiteMemory(this.siteDir(), memory);
       this.sendJson(res, 200, { saved: true });
@@ -1985,9 +1965,7 @@ export class RunnerServer {
       };
     } else {
       const saved = memory.signIns?.find((s) => s.role === body.testSignIn);
-      const password = saved
-        ? await this.keyResolver.readSecret(this.signInAccount(memory.host, saved.role))
-        : undefined;
+      const password = saved ? await this.keyResolver.readSecret(signInAccount(memory.host, saved.role)) : undefined;
       if (!saved || !password) {
         this.sendJson(res, 404, { error: 'That sign-in isn’t saved here.' });
         return;
@@ -2003,7 +1981,7 @@ export class RunnerServer {
         : !this.beta && isTestHost(typed.hostname)
           ? 'http:'
           : 'https:';
-      target = this.resolveTargetUrl(`${scheme}//${typed.host}`);
+      target = resolveTargetUrl(`${scheme}//${typed.host}`, this.hostAliases, this.localhostAlias);
     } catch {
       this.sendJson(res, 400, { error: 'That isn’t a site address.' });
       return;
@@ -2036,9 +2014,7 @@ export class RunnerServer {
       return;
     }
     if (body.addSignIn) {
-      if (
-        !(await this.keyResolver.saveSecret(this.signInAccount(memory.host, credential.role), credential.password!))
-      ) {
+      if (!(await this.keyResolver.saveSecret(signInAccount(memory.host, credential.role), credential.password!))) {
         this.sendJson(res, 200, {
           verified: true,
           saved: false,
@@ -2108,7 +2084,7 @@ export class RunnerServer {
       const currentSignIns = [...(memory?.signIns ?? [])];
       const notSaved: string[] = [];
       for (const role of body.roles) {
-        if (role.password && !(await this.keyResolver.saveSecret(this.signInAccount(host, role.role), role.password))) {
+        if (role.password && !(await this.keyResolver.saveSecret(signInAccount(host, role.role), role.password))) {
           notSaved.push(role.role);
           continue;
         }
@@ -2128,7 +2104,7 @@ export class RunnerServer {
     const roles: RoleCredential[] = [];
     const needsPassword: string[] = [];
     for (const s of memory.signIns) {
-      const password = await this.keyResolver.readSecret(this.signInAccount(host, s.role));
+      const password = await this.keyResolver.readSecret(signInAccount(host, s.role));
       if (password) {
         roles.push({
           role: s.role,
@@ -3136,7 +3112,7 @@ export class RunnerServer {
 
     // A plan waiting for review is kept aside when another site is checked (one waiting plan per
     // site). Only a new check-up of the same site throws it away, so the caller has to say so.
-    await this.ensurePlanLoaded();
+    await ensurePlanLoaded(this.session);
     const waiting = this.phase === 'awaiting-review' ? this.session.plan.currentRecord : null;
     // Beta: a plan another visitor left waiting is kept aside for them, whatever the site, and is never named here.
     const othersPlan = this.beta && !!waiting && !this.isMine(waiting.plan.runId);
@@ -3384,15 +3360,6 @@ export class RunnerServer {
     return this.makeAIProvider(settings.provider, apiKey, settings.model);
   }
 
-  private async ensurePlanLoaded(): Promise<StoredPlanRecord | null> {
-    const record = await this.session.plan.current();
-    // Never marked awaiting review while an audit or benchmark holds the slot (DEC-002): begin() refuses then.
-    if (record && this.phase === 'idle' && this.session.run.begin(record.plan.runId, record.plan.targetUrl)) {
-      this.session.run.setPhase('awaiting-review');
-    }
-    return record;
-  }
-
   /** The site a plan is for, as typed ("localhost:3050"). */
   private hostOfPlan(record: StoredPlanRecord): string {
     return this.session.plan.hostOf(record);
@@ -3611,7 +3578,7 @@ export class RunnerServer {
           refName,
           flowType,
           outputDir: shots,
-          resolveUrl: (address) => this.resolveTargetUrl(address),
+          resolveUrl: (address) => resolveTargetUrl(address, this.hostAliases, this.localhostAlias),
           ai: await this.benchmarkAi(),
           onStage: (stage) => {
             job.stage = stage;
