@@ -16,7 +16,7 @@ import { BudgetSpentError, StoppedEarlyError } from './ai-budget.js';
 import { fallbackReasonOf, parseJsonAnswer, PLANNING_MAX_TOKENS } from './ai-planner.js';
 import type { ParsedRequirementHint } from '../discovery/context-parser.js';
 import { docSourceOf } from './sources.js';
-import { fieldHint } from './fill-values.js';
+import { guessFillValue } from './fill-values.js';
 
 /** Documented User Flows shown to the AI, and the room each gets. */
 const DOCUMENTED_FLOWS = 12;
@@ -57,31 +57,6 @@ export interface JourneyPlannerOutput {
   notes: string[];
   /** Questions about journeys that can't run as planned. */
   questions: AmbiguityQuestion[];
-}
-
-/** A likely-looking value for a fill step the AI left empty: better an obvious test value than a blank field that passes silently. */
-function guessFillValue(step: { selector?: string; name: string }): string {
-  const hint = fieldHint(`${step.selector || ''} ${step.name}`);
-  if (hint.includes('email')) return 'test.user@example.com';
-  if (hint.includes('password') || hint.includes('pass')) return 'TestPassword123!';
-  if (hint.includes('search') || hint.includes('query') || hint.includes('find')) return 'test';
-  if (hint.includes('date') || hint.includes('birth') || hint.includes('dob')) return '2026-11-01';
-  if (hint.includes('zip') || hint.includes('postal')) return '90210';
-  if (hint.includes('price') || hint.includes('cost') || hint.includes('total')) return '49.99';
-  if (
-    hint.includes('url') ||
-    hint.includes('address') ||
-    hint.includes('site') ||
-    hint.includes('domain') ||
-    hint.includes('host')
-  )
-    return 'https://example.com';
-  if (hint.includes('phone') || hint.includes('tel') || hint.includes('mobile')) return '+15555550123';
-  if (hint.includes('number') || hint.includes('amount') || hint.includes('qty') || hint.includes('count')) return '1';
-  if (hint.includes('first') && hint.includes('name')) return 'Alex';
-  if (hint.includes('last') && hint.includes('name')) return 'Smith';
-  if (hint.includes('name')) return 'Test User';
-  return 'Test Value';
 }
 
 /**
@@ -306,7 +281,7 @@ Respond with ONLY the JSON object.
     for (const flow of flows) {
       for (const step of flow.steps || []) {
         if (step.action === 'fill' && (!step.value || String(step.value).trim() === '')) {
-          step.value = guessFillValue(step);
+          step.value = guessFillValue(`${step.selector || ''} ${step.name}`);
           console.warn(
             `[JourneyPlanner] AI-generated fill step "${step.name}" in flow "${flow.id}" had no value; backfilling with a placeholder ("${step.value}") to avoid a silent no-op.`
           );
