@@ -239,6 +239,21 @@ describe('contextFetcher (ADR 0031: pinned outbound path)', () => {
     expect(connects[0].address).toBe('93.184.216.34');
   });
 
+  it("sends the Role's own headers beside its cookies", async () => {
+    const connects: PinnedRequest[] = [];
+    const deps: NetDeps = {
+      lookup: async () => ['93.184.216.34'],
+      connect: async (req) => {
+        connects.push(req);
+        return { status: 200, headers: {}, body: '' };
+      },
+    };
+    await contextFetcher(fakeContext('alice'), deps, { Authorization: 'Bearer tok-123' })('http://app.test/closed');
+    expect(connects).toHaveLength(1);
+    expect(connects[0].headers.Cookie).toBe('user=alice');
+    expect(connects[0].headers.Authorization).toBe('Bearer tok-123');
+  });
+
   it('with a browser guard set, a host resolving to 169.254.169.254 is never connected to', async () => {
     setBrowserPolicy({ guard: async () => true });
     const connects: PinnedRequest[] = [];
