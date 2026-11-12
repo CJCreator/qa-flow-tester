@@ -41,6 +41,7 @@ import {
 import { githubAnnotations, docxToMarkdown, runPostDeploySmoke, smokeReport, ReportGenerator } from '@qa/core';
 import type { AIProviderType, Finding, ReleaseReport, SiteAspectGrades, RunStartBody } from '@qa/types';
 import { createCheckupSession, createCheckupRun, resolveAuthorization } from './session/checkup-session.js';
+import { createShutdown, type ShutdownHandler } from './shutdown.js';
 
 export type FailOn = 'blocker' | 'major' | 'none' | 'standard';
 
@@ -461,6 +462,29 @@ async function runSmokeCheckup(args: CheckupArgs): Promise<number> {
   return exitCodeFor(report.findings, args.failOn, report.grades);
 }
 
+export interface SignalTarget {
+  on(event: string, listener: (...args: any[]) => void): unknown;
+  removeListener(event: string, listener: (...args: any[]) => void): unknown;
+}
+
+/**
+ * Registers SIGINT and SIGTERM signal listeners calling shutdown with exit code 2,
+ * returning a disposer function that removes them.
+ */
+export function installCheckupSignalHandlers(
+  shutdown: (reason: string, exitCode: number) => Promise<void> | void,
+  proc: SignalTarget = process
+): () => void {
+  const onSigint = () => void shutdown('SIGINT', 2);
+  const onSigterm = () => void shutdown('SIGTERM', 2);
+  proc.on('SIGINT', onSigint);
+  proc.on('SIGTERM', onSigterm);
+  return () => {
+    proc.removeListener('SIGINT', onSigint);
+    proc.removeListener('SIGTERM', onSigterm);
+  };
+}
+
 export async function runCheckup(args: CheckupArgs): Promise<number> {
   if (!args.url) throw new Error('Give the address to check, for example: checkup.js https://preview.example.com');
 
@@ -488,6 +512,15 @@ export async function runCheckup(args: CheckupArgs): Promise<number> {
     authDir: path.join(workDir, 'auth'),
   });
   const checkupRun = createCheckupRun(session);
+  const shutdown = createShutdown({
+    shutdown: async () => {
+      await checkupRun.stop();
+      await fs.rm(workDir, { recursive: true, force: true }).catch(() => {});
+    },
+    exit: (c) => process.exit(c),
+    log: console.error,
+  });
+  const disposeSignals = installCheckupSignalHandlers(shutdown);
 
   try {
     const hasKey = !!args.apiKey;
@@ -561,6 +594,7 @@ export async function runCheckup(args: CheckupArgs): Promise<number> {
       );
     return code;
   } finally {
+    disposeSignals();
     await checkupRun.stop();
     // Success, failure or stop: the sessions and the rest of the working folder go.
     await fs.rm(workDir, { recursive: true, force: true }).catch(() => {});
