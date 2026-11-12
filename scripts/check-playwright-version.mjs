@@ -4,6 +4,14 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+/** A warning when the running Node major differs from the one in .nvmrc, else null. `running` is process.versions.node. */
+export function nodeMajorWarning(running, nvmrcText) {
+  const want = /^v?(\d+)/.exec(String(nvmrcText).trim());
+  const have = /^(\d+)/.exec(String(running));
+  if (!want || !have || want[1] === have[1]) return null;
+  return `Node ${have[1]} is running; this repository is built and tested on Node ${want[1]} (.nvmrc). Use Node ${want[1]} to match CI.`;
+}
+
 /** Version from `FROM mcr.microsoft.com/playwright:vX.Y.Z-noble`, or null. */
 export function parseDockerfileVersion(text) {
   const m = /^FROM\s+\S*playwright:v(\d+\.\d+\.\d+)/im.exec(text);
@@ -111,6 +119,11 @@ export function main(root = path.resolve(path.dirname(fileURLToPath(import.meta.
   } catch (err) {
     console.error(`Could not read a file needed for the Playwright version check: ${err.message}`);
     return 1;
+  }
+  // A different Node major is a warning only; it never changes the exit code.
+  if (existsSync(path.join(root, '.nvmrc'))) {
+    const warning = nodeMajorWarning(process.versions.node, readFileSync(path.join(root, '.nvmrc'), 'utf8'));
+    if (warning) console.warn(warning);
   }
   const manifests = parseManifestVersions(root);
   const result = checkVersions({

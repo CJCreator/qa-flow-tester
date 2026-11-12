@@ -8,11 +8,12 @@
 // RUNNER_PORT, RUNNER_HOST and the other RUNNER_* settings work as for the runner itself.
 // Values in .env load through the start script's node flag (--env-file-if-exists), so a value set only there is read.
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import net from 'node:net';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { nodeMajorWarning } from './check-playwright-version.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const port = Number(process.env.RUNNER_PORT || 3001);
@@ -103,6 +104,12 @@ function open(url) {
 }
 
 if (!built('node_modules')) fail('Nothing is installed yet. Run pnpm bootstrap first.');
+
+// A Node major other than .nvmrc's (CI's) is a warning only.
+if (existsSync(path.join(root, '.nvmrc'))) {
+  const nodeWarning = nodeMajorWarning(process.versions.node, readFileSync(path.join(root, '.nvmrc'), 'utf8'));
+  if (nodeWarning) console.warn(`\n[QA Tool] ${nodeWarning}\n`);
+}
 
 // 1. Build whatever is missing or out of date: the libraries it runs on, then the Wizard it serves.
 // tsc rewrites every output file on each build, so one file per package marks when it was last built.

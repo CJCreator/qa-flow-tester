@@ -10,7 +10,7 @@ export interface ExportFile {
 }
 
 /** Same range as core's `playwright` dependency (packages/core/package.json). Free to update. */
-export const EXPORT_PLAYWRIGHT_RANGE = '1.63.0';
+export const EXPORT_PLAYWRIGHT_RANGE = '1.65.0';
 
 // Copied from browser.ts on purpose: that module imports playwright, which the exporter must not.
 const VIEWPORTS: Record<Breakpoint, { width: number; height: number }> = {

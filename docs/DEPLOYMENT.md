@@ -49,7 +49,7 @@ reaches the runner empty, which it treats as off. Meanings: [CONFIGURATION.md](C
 
 ## Docker
 
-`packages/runner/Dockerfile` builds on Playwright's image. **Its version (`v1.63.0-noble`) must match the `playwright`
+`packages/runner/Dockerfile` builds on Playwright's image. **Its version (`v1.65.0-noble`) must match the `playwright`
 version in `pnpm-lock.yaml`**; bump both together. It installs the runner and wizard chains, copies `templates/` (the
 wizard embeds the workflow file), builds both, and runs `node packages/runner/dist/cli.js` on port 3001, bound to
 `0.0.0.0`, with data in `/data` and reports in `/data/reports`. The two `VITE_COUNTER_URL` and `VITE_CONTACT_EMAIL`

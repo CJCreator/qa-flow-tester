@@ -6,6 +6,6 @@ allowBuilds:
   protobufjs: false
   workerd: false
 overrides:
-  playwright: '1.63.0'
-  playwright-core: '1.63.0'
+  playwright: '1.65.0'
+  playwright-core: '1.65.0'
   '@grpc/grpc-js': '>=1.13.6'

@@ -5,8 +5,8 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  playwright: 1.63.0
-  playwright-core: 1.63.0
+  playwright: 1.65.0
+  playwright-core: 1.65.0
   '@grpc/grpc-js': '>=1.13.6'
 
 importers:
@@ -45,7 +45,7 @@ importers:
     dependencies:
       '@axe-core/playwright':
         specifier: ^4.10.1
-        version: 4.13.0(playwright-core@1.63.0)
+        version: 4.13.0(playwright-core@1.65.0)
       '@qa/types':
         specifier: workspace:*
         version: link:../types
@@ -53,8 +53,8 @@ importers:
         specifier: ^7.2.0
         version: 7.2.0
       playwright:
-        specifier: 1.63.0
-        version: 1.63.0
+        specifier: 1.65.0
+        version: 1.65.0
       pngjs:
         specifier: ^7.0.0
         version: 7.0.0
@@ -87,8 +87,8 @@ importers:
         specifier: 1.12.3
         version: 1.12.3
       playwright:
-        specifier: 1.63.0
-        version: 1.63.0
+        specifier: 1.65.0
+        version: 1.65.0
     devDependencies:
       '@types/node':
         specifier: ^22.10.2
@@ -110,8 +110,8 @@ importers:
         specifier: ^22.10.2
         version: 22.20.4
       playwright:
-        specifier: 1.63.0
-        version: 1.63.0
+        specifier: 1.65.0
+        version: 1.65.0
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -171,8 +171,8 @@ importers:
         specifier: ^10.4.20
         version: 10.6.1(postcss@8.5.28)
       playwright:
-        specifier: 1.63.0
-        version: 1.63.0
+        specifier: 1.65.0
+        version: 1.65.0
       postcss:
         specifier: ^8.4.49
         version: 8.5.28
@@ -195,7 +195,7 @@ packages:
   '@axe-core/playwright@4.13.0':
     resolution: {integrity: sha512-6YLx+kxXu5GJceG4ozFg+33a2EMTdjYwWGloJ3sb9Kta5pp+ZNS53uxGVog5JetIY8s++P5UrtX+cri+u0VAVg==}
     peerDependencies:
-      playwright-core: 1.63.0
+      playwright-core: 1.65.0
 
   '@babel/code-frame@7.29.7':
     resolution: {integrity: sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==}
@@ -2097,13 +2097,13 @@ packages:
     resolution: {integrity: sha512-xhcb4yHu9sM/G7foGzoLtXYcC0zHEaOXXjRKhGup0fw78Nf2Tkiapv4EQyMzrbcmQPsllAI7DbFY2UT7PlI9Pg==}
     hasBin: true
 
-  playwright-core@1.63.0:
-    resolution: {integrity: sha512-rYCsBF/M5HjUch52bbtVONEFjv6Xu8sm8h72dNlR5bzIE1fvC/bxgspzkjSfU+MweEMmPM8KJebG6nnyxo5mCg==}
+  playwright-core@1.65.0:
+    resolution: {integrity: sha512-vNSKgH6YqtN7cdT/L334zo0a+YwkrpicyrHJlWWPIm/Q+Nn2SWInil01oT0mbu96U4GgoRtCYQD9CzJQgju+lA==}
     engines: {node: '>=20'}
     hasBin: true
 
-  playwright@1.63.0:
-    resolution: {integrity: sha512-+7ziBLidS4NaNCdt57SUDT+wYmmd5fmiQejUic/kb+YsYSCPyOOE9sebzMjNmQrsnNpDJqd4WHvV/8lfKfUDUg==}
+  playwright@1.65.0:
+    resolution: {integrity: sha512-F3AMWcR44qMBt4kq+6Kb6mX7bjGXshktKFOPULd7reED6ZJWevjbNRqysP7q+AATE9kdPEZBibex1BYsvpVoeA==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -2554,10 +2554,10 @@ snapshots:
 
   '@alloc/quick-lru@5.3.0': {}
 
-  '@axe-core/playwright@4.13.0(playwright-core@1.63.0)':
+  '@axe-core/playwright@4.13.0(playwright-core@1.65.0)':
     dependencies:
       axe-core: 4.13.0
-      playwright-core: 1.63.0
+      playwright-core: 1.65.0
 
   '@babel/code-frame@7.29.7':
     dependencies:
@@ -4350,11 +4350,11 @@ snapshots:
     dependencies:
       pngjs: 7.0.0
 
-  playwright-core@1.63.0: {}
+  playwright-core@1.65.0: {}
 
-  playwright@1.63.0:
+  playwright@1.65.0:
     dependencies:
-      playwright-core: 1.63.0
+      playwright-core: 1.65.0
 
   pngjs@7.0.0: {}
 
