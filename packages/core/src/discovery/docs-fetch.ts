@@ -126,22 +126,111 @@ function decodeEntities(s: string): string {
   });
 }
 
+type HtmlToken = { kind: 'text'; text: string } | { kind: 'tag'; name: string; closing: boolean; raw: string };
+
+/** Elements whose content is never page text. */
+const HIDDEN_CONTENT = new Set(['script', 'style', 'noscript', 'svg', 'head']);
+const BLOCK_CLOSING = new Set(['p', 'div', 'section', 'article', 'ul', 'ol', 'table', 'tr', 'pre', 'blockquote']);
+
+/**
+ * Splits HTML into text and tags in one pass: every scan moves forward, so the cost grows with the page size,
+ * not its square. Comments and hidden elements are dropped. Like a browser, an unclosed comment or hidden
+ * element hides the rest of the page, and a `<` with no `>` after it is text.
+ */
+function htmlTokens(html: string): HtmlToken[] {
+  const out: HtmlToken[] = [];
+  const lower = html.toLowerCase();
+  let i = 0;
+  while (i < html.length) {
+    const lt = html.indexOf('<', i);
+    if (lt < 0) {
+      out.push({ kind: 'text', text: html.slice(i) });
+      break;
+    }
+    if (lt > i) out.push({ kind: 'text', text: html.slice(i, lt) });
+    if (html.startsWith('<!--', lt)) {
+      const end = html.indexOf('-->', lt + 4);
+      if (end < 0) break;
+      out.push({ kind: 'text', text: ' ' });
+      i = end + 3;
+      continue;
+    }
+    const start = /^<(\/?)([a-z][a-z0-9-]*)/i.exec(html.slice(lt, lt + 64));
+    if (!start) {
+      out.push({ kind: 'text', text: '<' });
+      i = lt + 1;
+      continue;
+    }
+    const gt = html.indexOf('>', lt + 1);
+    if (gt < 0) {
+      out.push({ kind: 'text', text: html.slice(lt) });
+      break;
+    }
+    const name = start[2].toLowerCase();
+    const closing = start[1] === '/';
+    const raw = html.slice(lt, gt + 1);
+    i = gt + 1;
+    if (!closing && HIDDEN_CONTENT.has(name) && !raw.endsWith('/>')) {
+      const close = lower.indexOf(`</${name}`, i);
+      if (close < 0) break;
+      const closeEnd = html.indexOf('>', close);
+      if (closeEnd < 0) break;
+      out.push({ kind: 'text', text: ' ' });
+      i = closeEnd + 1;
+      continue;
+    }
+    out.push({ kind: 'tag', name, closing, raw });
+  }
+  return out;
+}
+
 /** Reduces a docs page to text. Headings become `#` lines (so they act as sections), list items become `- ` lines. */
 export function htmlToDoc(html: string): string {
-  let s = html.replace(/<!--[\s\S]*?-->/g, ' ').replace(/<(script|style|noscript|svg|head)\b[\s\S]*?<\/\1\s*>/gi, ' ');
-  s = s.replace(/<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1\s*>/gi, (_m, level: string, inner: string) => {
-    const text = inner
-      .replace(/<[^>]*>/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    return text ? `\n${'#'.repeat(Number(level))} ${text}\n` : '\n';
-  });
-  s = s
-    .replace(/<li\b[^>]*>/gi, '\n- ')
-    .replace(/<\/(p|div|section|article|ul|ol|table|tr|pre|blockquote)\s*>/gi, '\n')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<[^>]*>/g, ' ');
-  s = decodeEntities(s);
+  const tokens = htmlTokens(html);
+  const parts: string[] = [];
+  let headingLevel: number | null = null;
+  let headingParts: string[] = [];
+
+  for (const t of tokens) {
+    if (headingLevel !== null) {
+      if (t.kind === 'tag') {
+        if (t.closing && t.name === `h${headingLevel}`) {
+          const text = headingParts.join('').replace(/\s+/g, ' ').trim();
+          parts.push(text ? `\n${'#'.repeat(headingLevel)} ${text}\n` : '\n');
+          headingLevel = null;
+          headingParts = [];
+        } else {
+          headingParts.push(' ');
+        }
+      } else {
+        headingParts.push(t.text);
+      }
+    } else {
+      if (t.kind === 'text') {
+        parts.push(t.text);
+      } else {
+        const hm = /^h([1-6])$/.exec(t.name);
+        if (!t.closing && hm) {
+          headingLevel = Number(hm[1]);
+          headingParts = [' '];
+        } else if (!t.closing && t.name === 'li') {
+          parts.push('\n- ');
+        } else if (t.closing && BLOCK_CLOSING.has(t.name)) {
+          parts.push('\n');
+        } else if (t.name === 'br') {
+          parts.push('\n');
+        } else {
+          parts.push(' ');
+        }
+      }
+    }
+  }
+
+  if (headingLevel !== null) {
+    parts.push(headingParts.join(''));
+  }
+
+  const s = decodeEntities(parts.join(''));
   return s
     .split('\n')
     .map((l) => l.replace(/[ \t\f\v]+/g, ' ').trim())
@@ -152,9 +241,11 @@ export function htmlToDoc(html: string): string {
 
 function linksOf(html: string, base: string): string[] {
   const out: string[] = [];
-  const re = /<a\b[^>]*?\shref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(html))) {
+  const hrefRe = /\shref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i;
+  for (const token of htmlTokens(html)) {
+    if (token.kind !== 'tag' || token.closing || token.name !== 'a') continue;
+    const m = hrefRe.exec(token.raw);
+    if (!m) continue;
     const href = decodeEntities(m[1] ?? m[2] ?? m[3] ?? '').trim();
     if (!href || href.startsWith('#') || /^(mailto|tel|javascript):/i.test(href)) continue;
     try {
