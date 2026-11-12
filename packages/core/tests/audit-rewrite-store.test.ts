@@ -5,7 +5,14 @@ import path from 'path';
 import type { AIMessage, AIProviderType, PageContent } from '@qa/types';
 import type { AIProvider } from '../src/ai/ai-provider.js';
 import { resolveAuditAi } from '../src/audit/ai/stage-ai.js';
-import { REWRITES_FILE, RewriteStore, type RewriteRunDeps } from '../src/audit/ai/rewrite-store.js';
+import {
+  REWRITES_FILE,
+  RewriteStore,
+  type RewriteRunDeps,
+  type RewriteStoreBackend,
+} from '../src/audit/ai/rewrite-store.js';
+import { AuditStore } from '../src/audit/store/audit-store.js';
+import { AuditStoreError, LocalAuditStoreBackend } from '../src/audit/store/index.js';
 
 const TEST_KEY = 'test-key-not-real';
 const FIXED = new Date('2026-11-03T10:00:00.000Z');
@@ -66,8 +73,25 @@ function deps(provider: AIProvider, extra: Partial<RewriteRunDeps> = {}) {
 const S2 = { urlPath: '/about', sectionId: 's2' };
 
 let dir: string;
+let backend: LocalAuditStoreBackend;
+let auditStore: AuditStore;
+let auditId: string;
+let open: () => RewriteStore;
+let rewritesFile: () => string;
+
 beforeEach(async () => {
   dir = await fs.mkdtemp(path.join(os.tmpdir(), 'qa-rewrite-'));
+  backend = new LocalAuditStoreBackend(dir);
+  auditStore = new AuditStore(backend);
+  auditId = (
+    await auditStore.createAudit({
+      url: 'https://kumar.example/',
+      limits: { maxPages: 5, maxDepth: 2, includePaths: [], excludePaths: [] },
+      language: 'en',
+    })
+  ).auditId;
+  open = () => new RewriteStore(auditStore, auditId, 1);
+  rewritesFile = () => path.join(backend.root, 'audits', auditId, 'v1', REWRITES_FILE);
 });
 afterEach(async () => {
   await fs.rm(dir, { recursive: true, force: true });
@@ -75,7 +99,7 @@ afterEach(async () => {
 
 describe('RewriteStore approval gate (REQ-030 AC-1)', () => {
   it('refuses to run without approval: ERR_NOT_APPROVED, no key lookup, no AI request', async () => {
-    const store = new RewriteStore(dir);
+    const store = open();
     const { provider, requests } = scripted([FRESH]);
     const d = deps(provider);
     const result = await store.run({ ...S2, language: 'en' }, d.run);
@@ -86,7 +110,7 @@ describe('RewriteStore approval gate (REQ-030 AC-1)', () => {
   });
 
   it('approval of one Section does not approve another', async () => {
-    const store = new RewriteStore(dir);
+    const store = open();
     await store.approve({ urlPath: '/about', sectionId: 's1' }, now);
     const { provider, requests } = scripted([FRESH]);
     expect(await store.run({ ...S2, language: 'en' }, deps(provider).run)).toMatchObject({ code: 'ERR_NOT_APPROVED' });
@@ -94,13 +118,13 @@ describe('RewriteStore approval gate (REQ-030 AC-1)', () => {
   });
 
   it('two stores on the same version folder do not lose an update', async () => {
-    const a = new RewriteStore(dir);
-    const b = new RewriteStore(dir);
+    const a = open();
+    const b = open();
     await Promise.all([
       a.approve({ urlPath: '/about', sectionId: 's1' }, now),
       b.approve({ urlPath: '/about', sectionId: 's2' }, now),
     ]);
-    const reader = new RewriteStore(dir);
+    const reader = open();
     const list = await reader.list();
     const s1 = list.find((s) => s.urlPath === '/about' && s.sectionId === 's1');
     const s2 = list.find((s) => s.urlPath === '/about' && s.sectionId === 's2');
@@ -109,7 +133,7 @@ describe('RewriteStore approval gate (REQ-030 AC-1)', () => {
   });
 
   it('refuses ERR_NO_AI_KEY when approved but there is no key', async () => {
-    const store = new RewriteStore(dir);
+    const store = open();
     await store.approve(S2, now);
     const createProvider = vi.fn();
     const result = await store.run(
@@ -125,14 +149,14 @@ describe('RewriteStore approval gate (REQ-030 AC-1)', () => {
   });
 
   it('approving twice keeps the first time', async () => {
-    const store = new RewriteStore(dir);
+    const store = open();
     await store.approve(S2, now);
     const again = await store.approve(S2, () => new Date('2027-01-01T00:00:00.000Z'));
     expect(again.ok && again.rewrite.approvedAt).toBe(FIXED.toISOString());
   });
 
   it('rejects malformed paths, ids and languages', async () => {
-    const store = new RewriteStore(dir);
+    const store = open();
     expect(await store.approve({ urlPath: 'about', sectionId: 's2' })).toMatchObject({
       code: 'ERR_INVALID_REQUEST',
       fields: { urlPath: expect.any(String) },
@@ -146,11 +170,11 @@ describe('RewriteStore approval gate (REQ-030 AC-1)', () => {
       code: 'ERR_INVALID_REQUEST',
       fields: { language: expect.any(String) },
     });
-    await expect(fs.access(path.join(dir, REWRITES_FILE))).rejects.toThrow();
+    await expect(fs.access(rewritesFile())).rejects.toThrow();
   });
 
   it('refuses a Section that is not on the recorded page, with no AI request', async () => {
-    const store = new RewriteStore(dir);
+    const store = open();
     await store.approve({ urlPath: '/about', sectionId: 's9' }, now);
     const { provider, requests } = scripted([FRESH]);
     expect(await store.run({ urlPath: '/about', sectionId: 's9', language: 'en' }, deps(provider).run)).toMatchObject({
@@ -162,7 +186,7 @@ describe('RewriteStore approval gate (REQ-030 AC-1)', () => {
 
 describe('RewriteStore run and accept (REQ-030 AC-2)', () => {
   it('stores the proposal with its language, overlaps and time; the original is the Section text', async () => {
-    const store = new RewriteStore(dir);
+    const store = open();
     await store.approve(S2, now);
     const { provider, requests } = scripted([FRESH]);
     const result = await store.run({ ...S2, language: 'en' }, deps(provider).run);
@@ -181,7 +205,7 @@ describe('RewriteStore run and accept (REQ-030 AC-2)', () => {
   });
 
   it('flags copied runs on the stored proposal after the one retry', async () => {
-    const store = new RewriteStore(dir);
+    const store = open();
     await store.approve(S2, now);
     const { provider, requests } = scripted([COPIED, COPIED]);
     const result = await store.run({ ...S2, language: 'en' }, deps(provider).run);
@@ -192,7 +216,7 @@ describe('RewriteStore run and accept (REQ-030 AC-2)', () => {
   });
 
   it('honours the configured overlap threshold', async () => {
-    const store = new RewriteStore(dir);
+    const store = open();
     await store.approve(S2, now);
     const { provider, requests } = scripted([COPIED]);
     const result = await store.run({ ...S2, language: 'en' }, deps(provider, { overlapWords: 12 }).run);
@@ -201,7 +225,7 @@ describe('RewriteStore run and accept (REQ-030 AC-2)', () => {
   });
 
   it('reports an AI failure without storing a proposal', async () => {
-    const store = new RewriteStore(dir);
+    const store = open();
     await store.approve(S2, now);
     const { provider } = scripted(['Our certified bakery.', 'Our certified bakery again.']);
     const result = await store.run({ ...S2, language: 'en' }, deps(provider).run);
@@ -210,13 +234,13 @@ describe('RewriteStore run and accept (REQ-030 AC-2)', () => {
   });
 
   it('refuses to accept without approval', async () => {
-    const store = new RewriteStore(dir);
+    const store = open();
     const result = await store.accept({ ...S2, text: FRESH }, { content: content(), now });
     expect(result).toMatchObject({ ok: false, code: 'ERR_NOT_APPROVED' });
   });
 
   it('refuses to accept copy that still has a flagged run: ERR_OVERLAP with the runs', async () => {
-    const store = new RewriteStore(dir);
+    const store = open();
     await store.approve(S2, now);
     const result = await store.accept({ ...S2, text: COPIED }, { content: content(), now });
     expect(result).toMatchObject({
@@ -232,7 +256,7 @@ describe('RewriteStore run and accept (REQ-030 AC-2)', () => {
   });
 
   it('accepting clean copy returns a SectionEdit marked by rewrite', async () => {
-    const store = new RewriteStore(dir);
+    const store = open();
     await store.approve(S2, now);
     const result = await store.accept({ ...S2, text: FRESH }, { content: content(), now });
     expect(result).toEqual({
@@ -243,7 +267,7 @@ describe('RewriteStore run and accept (REQ-030 AC-2)', () => {
   });
 
   it('rejects empty or over-long accepted text', async () => {
-    const store = new RewriteStore(dir);
+    const store = open();
     await store.approve(S2, now);
     expect(await store.accept({ ...S2, text: '   ' }, { content: content() })).toMatchObject({
       code: 'ERR_INVALID_REQUEST',
@@ -257,12 +281,12 @@ describe('RewriteStore run and accept (REQ-030 AC-2)', () => {
 
 describe('RewriteStore persistence', () => {
   it('approval and proposals survive a reload; the file holds no key', async () => {
-    const first = new RewriteStore(dir);
+    const first = open();
     await first.approve(S2, now);
     const { provider } = scripted([FRESH]);
     await first.run({ ...S2, language: 'ta' }, deps(provider).run);
 
-    const reloaded = new RewriteStore(dir);
+    const reloaded = open();
     expect(await reloaded.list()).toEqual([
       {
         ...S2,
@@ -271,16 +295,16 @@ describe('RewriteStore persistence', () => {
         acceptedAt: null,
       },
     ]);
-    const raw = await fs.readFile(path.join(dir, REWRITES_FILE), 'utf8');
+    const raw = await fs.readFile(rewritesFile(), 'utf8');
     expect(raw).not.toContain(TEST_KEY);
     expect(raw).not.toMatch(/apiKey|key/i);
   });
 
   it('reads an unreadable file as empty and drops malformed entries', async () => {
-    await fs.writeFile(path.join(dir, REWRITES_FILE), '{not json', 'utf8');
-    expect(await new RewriteStore(dir).list()).toEqual([]);
+    await fs.writeFile(rewritesFile(), '{not json', 'utf8');
+    expect(await open().list()).toEqual([]);
     await fs.writeFile(
-      path.join(dir, REWRITES_FILE),
+      rewritesFile(),
       JSON.stringify({
         schemaVersion: 1,
         rewrites: [
@@ -290,12 +314,35 @@ describe('RewriteStore persistence', () => {
       }),
       'utf8'
     );
-    expect(await new RewriteStore(dir).list()).toEqual([{ ...S2, approvedAt: 'x', proposal: null, acceptedAt: null }]);
+    expect(await open().list()).toEqual([{ ...S2, approvedAt: 'x', proposal: null, acceptedAt: null }]);
   });
 
   it('keeps concurrent approvals of different Sections', async () => {
-    const store = new RewriteStore(dir);
+    const store = open();
     await Promise.all([store.approve(S2, now), store.approve({ urlPath: '/about', sectionId: 's1' }, now)]);
     expect((await store.list()).map((r) => r.sectionId).sort()).toEqual(['s1', 's2']);
+  });
+
+  it('is deleted with the audit (ADR 0036)', async () => {
+    await open().approve(S2, now);
+    await auditStore.deleteAudit(auditId);
+    expect(await backend.list(`audits/${auditId}`)).toEqual([]);
+  });
+
+  it('refuses to write after the version is gone', async () => {
+    await auditStore.deleteAudit(auditId);
+    await expect(open().approve(S2, now)).rejects.toMatchObject({ code: 'not-found' });
+    await expect(fs.access(rewritesFile())).rejects.toThrow();
+  });
+
+  it('a store that cannot be reached is an error, not an empty list', async () => {
+    const fakeBackend: RewriteStoreBackend = {
+      readVersionJson: async () => {
+        throw new AuditStoreError('unavailable', 'x');
+      },
+      writeVersionJson: async () => {},
+    };
+    const store = new RewriteStore(fakeBackend, auditId, 1);
+    await expect(store.list()).rejects.toMatchObject({ code: 'unavailable' });
   });
 });

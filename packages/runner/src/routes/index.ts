@@ -1,4 +1,3 @@
-import path from 'node:path';
 import {
   AUDIT_AI_API,
   AUDIT_AI_STAGES,
@@ -17,8 +16,6 @@ import {
   pageContentName,
   resolveAuditAi,
   resolveAuditSettings,
-  versionFolder,
-  type LocalAuditStoreBackend,
   type PageSpeedDeps,
 } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
@@ -145,16 +142,6 @@ export function buildAuditRoutes(server: RunnerServer): Route[] {
     return v ? { version: v.version, status: v.status, language: v.language } : null;
   };
 
-  /** Rewrite state is a local file per version; a cloud store keeps it under the runner data folder. */
-  const rewriteStoreFor = (auditId: string, version: number): RewriteStore => {
-    const folder = versionFolder(auditId, version).split('/');
-    const dir =
-      backend.kind === 'local'
-        ? path.join((backend as LocalAuditStoreBackend).root, ...folder)
-        : path.join(dataDir, 'audit-rewrites', ...folder);
-    return new RewriteStore(dir);
-  };
-
   return [
     // A local runner may audit localhost and LAN addresses (ADR 0042); the hosted copy never.
     ...auditCrawlRoutes({
@@ -210,7 +197,7 @@ export function buildAuditRoutes(server: RunnerServer): Route[] {
       hasAiKey: async () => (await resolveAi()).ok,
       findVersion,
       rewrites: (auditId, version) => {
-        const rewrites = rewriteStoreFor(auditId, version);
+        const rewrites = new RewriteStore(store, auditId, version);
         return {
           list: () => rewrites.list(),
           approve: (s) => rewrites.approve(s),
