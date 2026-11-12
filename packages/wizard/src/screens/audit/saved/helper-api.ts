@@ -153,6 +153,21 @@ export function permissionText(permissions: readonly HelperPermission[]): string
     .join(', ');
 }
 
+/** The Helper sign-in status this page has last seen: 'unknown' until a status fetch succeeds. In memory only. */
+export type KnownHelperSignIn = 'on' | 'off' | 'unknown';
+
+let knownSignIn: KnownHelperSignIn = 'unknown';
+
+/** Whether Helper sign-in was last seen on or off in this page session, or 'unknown' if no status has loaded yet. */
+export function knownHelperSignIn(): KnownHelperSignIn {
+  return knownSignIn;
+}
+
+/** For tests: forget the recorded status. */
+export function resetKnownHelperSignIn(): void {
+  knownSignIn = 'unknown';
+}
+
 /** `GET /api/helper/status`: is Helper sign-in set up on this copy? A 404 ERR_HELPERS_OFF means no. */
 export async function loadHelperStatus(fetchImpl: Fetch = fetch): Promise<HelperOutcome<HelperStatus>> {
   const outcome = await call(
@@ -165,8 +180,12 @@ export async function loadHelperStatus(fetchImpl: Fetch = fetch): Promise<Helper
         ? { enabled: body.enabled, firebase: asFirebaseConfig(body.firebase) }
         : null
   );
-  if (!outcome.ok && outcome.code === 'ERR_HELPERS_OFF') return { ok: true, value: { enabled: false, firebase: null } };
-  return outcome;
+  const result: HelperOutcome<HelperStatus> =
+    !outcome.ok && outcome.code === 'ERR_HELPERS_OFF'
+      ? { ok: true, value: { enabled: false, firebase: null } }
+      : outcome;
+  if (result.ok) knownSignIn = result.value.enabled ? 'on' : 'off';
+  return result;
 }
 
 /** `GET /api/audits/:id/helpers`: the Helpers of one Website Audit. */

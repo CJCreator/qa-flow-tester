@@ -10,6 +10,7 @@ import {
   SIGN_IN_FAILED_MESSAGE,
   endHelperSession,
   grantHelper,
+  knownHelperSignIn,
   listHelpers,
   loadCallerIsHelper,
   loadHelperSession,
@@ -17,6 +18,7 @@ import {
   normalEmail,
   permissionText,
   removeHelper,
+  resetKnownHelperSignIn,
   startHelperSession,
   type Fetch,
   type FirebaseWebConfig,
@@ -128,6 +130,32 @@ describe('Helper API calls', () => {
 
     const off = fakeFetch({ status: 404, body: { error: 'off', code: 'ERR_HELPERS_OFF' } });
     expect(await loadHelperStatus(off.fetchImpl)).toEqual({ ok: true, value: { enabled: false, firebase: null } });
+  });
+
+  it('records the last Helper sign-in status it successfully read, in memory only', async () => {
+    resetKnownHelperSignIn();
+    expect(knownHelperSignIn()).toBe('unknown');
+
+    await loadHelperStatus(fakeFetch({ status: 200, body: { enabled: true, firebase: CONFIG } }).fetchImpl);
+    expect(knownHelperSignIn()).toBe('on');
+
+    await loadHelperStatus(fakeFetch({ status: 200, body: { enabled: false } }).fetchImpl);
+    expect(knownHelperSignIn()).toBe('off');
+
+    await loadHelperStatus(fakeFetch({ status: 404, body: { error: 'off', code: 'ERR_HELPERS_OFF' } }).fetchImpl);
+    expect(knownHelperSignIn()).toBe('off');
+
+    resetKnownHelperSignIn();
+    expect(knownHelperSignIn()).toBe('unknown');
+  });
+
+  it('keeps the recorded status when a status read fails', async () => {
+    resetKnownHelperSignIn();
+    await loadHelperStatus(fakeFetch({ status: 200, body: { enabled: true, firebase: CONFIG } }).fetchImpl);
+    const failed = await loadHelperStatus(fakeFetch({ status: 500, body: {} }).fetchImpl);
+    expect(failed.ok).toBe(false);
+    expect(knownHelperSignIn()).toBe('on');
+    resetKnownHelperSignIn();
   });
 
   it('lists, gives and removes Helper access on one Website Audit', async () => {

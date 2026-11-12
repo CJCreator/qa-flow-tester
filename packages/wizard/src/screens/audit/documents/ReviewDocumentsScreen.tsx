@@ -87,50 +87,54 @@ function PageItem({
   return (
     <li className="mt-2" data-page={node.urlPath}>
       <div className={`flex flex-wrap items-center gap-2 ${node.removed ? 'text-ink-soft' : ''}`}>
-        <span
-          className={`font-bold ${node.removed ? 'line-through' : 'text-ink'}`}
-          {...(hasTitle ? textLangAttrs(node.title ?? '', 'not-identified') : {})}
-        >
-          {hasTitle ? node.title : node.urlPath}
-        </span>
-        {hasTitle ? (
-          <span className="break-all text-sm text-ink-soft">{node.urlPath}</span>
-        ) : (
-          <span className="text-sm text-ink-soft">({titleText(node.title)})</span>
-        )}
-        <span className="text-xs text-ink-soft">{PLACED_BY_LABEL[node.placedBy]}</span>
-        {node.removed && <span className="text-sm font-semibold text-fail">Removed from the Audit Documents</span>}
-        <UnsavedTag show={node.unsaved} />
-        {node.removed ? (
-          <button
-            type="button"
-            className="btn-quiet btn-sm"
-            aria-label={`Restore ${node.urlPath} to the Audit Documents`}
-            onClick={() => onRemove(node.urlPath, false)}
+        <div className="flex min-w-0 flex-1 basis-full flex-wrap items-center gap-2 sm:basis-0">
+          <span
+            className={`font-bold ${node.removed ? 'line-through' : 'text-ink'}`}
+            {...(hasTitle ? textLangAttrs(node.title ?? '', 'not-identified') : {})}
           >
-            Restore
-          </button>
-        ) : (
-          !isRoot && (
+            {hasTitle ? node.title : node.urlPath}
+          </span>
+          {hasTitle ? (
+            <span className="break-all text-sm text-ink-soft">{node.urlPath}</span>
+          ) : (
+            <span className="text-sm text-ink-soft">({titleText(node.title)})</span>
+          )}
+          <span className="text-xs text-ink-soft">{PLACED_BY_LABEL[node.placedBy]}</span>
+          {node.removed && <span className="text-sm font-semibold text-fail">Removed from the Audit Documents</span>}
+          <UnsavedTag show={node.unsaved} />
+        </div>
+        <div className="flex max-w-full flex-wrap items-center gap-x-3 sm:shrink-0">
+          {node.removed ? (
             <button
               type="button"
               className="btn-quiet btn-sm"
-              aria-label={`Remove ${node.urlPath} from the Audit Documents`}
-              onClick={() => onRemove(node.urlPath, true)}
+              aria-label={`Restore ${node.urlPath} to the Audit Documents`}
+              onClick={() => onRemove(node.urlPath, false)}
             >
-              Remove
+              Restore
             </button>
-          )
-        )}
-        <button
-          type="button"
-          className="btn-link text-sm"
-          aria-label={`Edit the Sections of ${node.urlPath}`}
-          aria-pressed={selectedPage === node.urlPath}
-          onClick={() => onSelect(node.urlPath)}
-        >
-          Edit Sections
-        </button>
+          ) : (
+            !isRoot && (
+              <button
+                type="button"
+                className="btn-quiet btn-sm"
+                aria-label={`Remove ${node.urlPath} from the Audit Documents`}
+                onClick={() => onRemove(node.urlPath, true)}
+              >
+                Remove
+              </button>
+            )
+          )}
+          <button
+            type="button"
+            className="btn-link text-sm"
+            aria-label={`Edit the Sections of ${node.urlPath}`}
+            aria-pressed={selectedPage === node.urlPath}
+            onClick={() => onSelect(node.urlPath)}
+          >
+            Edit Sections
+          </button>
+        </div>
       </div>
       {node.children.length > 0 && (
         <ul className="ml-4 border-l border-rule pl-3">
@@ -408,7 +412,7 @@ export function ReviewDocumentsView({
                     const changed = row.changed.includes(field);
                     const label = `${FIELD_LABEL[field]} of finding ${finding.id}`;
                     return (
-                      <div key={field} className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div key={field} className="mt-3 grid grid-cols-1 gap-4">
                         <div>
                           <label htmlFor={id} className="label text-ink">
                             {label}
@@ -424,8 +428,8 @@ export function ReviewDocumentsView({
                           ) : (
                             <textarea
                               id={id}
-                              rows={3}
-                              className="field w-full"
+                              rows={6}
+                              className="field w-full [field-sizing:content] min-h-[5rem]"
                               value={row.shown[field]}
                               onChange={(e) => onDraft(setFindingField(draft, finding.id, field, e.target.value))}
                             />

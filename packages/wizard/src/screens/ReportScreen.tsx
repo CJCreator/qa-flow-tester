@@ -346,7 +346,7 @@ export function Report({
         </div>
         <div className="min-w-0 flex-1 border-l-2 border-dotted border-rule px-5 py-5 sm:px-8 sm:py-6">
           <p className="text-sm text-ink-soft">
-            Check-up of <span className="break-all font-bold text-ink">{host}</span>
+            Check-up of <span className="[overflow-wrap:anywhere] font-bold text-ink">{host}</span>
           </p>
           <FocusHeading className={`mt-1 font-stamp text-verdict font-bold ${tone.words}`}>
             {summary.stamp}

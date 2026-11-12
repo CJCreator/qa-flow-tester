@@ -108,7 +108,7 @@ function RadioGroup<V extends string>({
                 className="h-5 w-5 accent-stamp"
                 {...(hint ? { 'aria-describedby': `${id}-hint` } : {})}
               />
-              <label htmlFor={id} className="py-3 pr-2">
+              <label htmlFor={id} className="min-w-[44px] py-3 pr-2">
                 {labels[option]}
               </label>
               {hint && (

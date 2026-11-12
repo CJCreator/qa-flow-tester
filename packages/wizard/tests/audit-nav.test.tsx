@@ -8,6 +8,8 @@ import { MobileMenu, TopBar } from '../src/components/TopBar';
 import { PATHS, type Route } from '../src/lib/router';
 import { NotFoundScreen } from '../src/screens/NotFoundScreen';
 import { AUDIT_ROUTE_NAMES, BetaAuditNotice, showsBetaAuditNotice } from '../src/screens/audit/BetaAuditNotice';
+import { AuditTabs, type AuditTab } from '../src/screens/audit/AuditTabs';
+import { loadHelperStatus, resetKnownHelperSignIn, type Fetch } from '../src/screens/audit/saved/helper-api';
 
 const ROUTES: Route[] = [
   { name: 'landing' },
@@ -308,5 +310,51 @@ describe('beta Website Audit notice', () => {
     expect(html).toMatch(/href="https:\/\/github\.com\/[^"]+\/blob\/main\/docs\/DEPLOYMENT\.md"/);
     expect(html).toContain('target="_blank"');
     expect(html).toContain('rel="noopener noreferrer"');
+  });
+});
+
+describe('audit tabs: Helpers hidden once Helper sign-in is known to be off', () => {
+  const replyWith =
+    (body: unknown, status = 200): Fetch =>
+    async () =>
+      new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+  const tabs = (current: AuditTab, hide: AuditTab[] = []) =>
+    renderToStaticMarkup(createElement(AuditTabs, { auditId: 'a1', version: 2, current, hide }));
+  const helpersHref = PATHS.auditHelpers('a1');
+
+  it('shows the Helpers tab when the status is unknown', () => {
+    resetKnownHelperSignIn();
+    expect(tabs('results')).toContain(`href="${helpersHref}"`);
+  });
+
+  it('leaves the Helpers tab out when the status is off and the current tab is not Helpers', async () => {
+    resetKnownHelperSignIn();
+    await loadHelperStatus(replyWith({ enabled: false }));
+    const html = tabs('results');
+    expect(html).not.toContain(`href="${helpersHref}"`);
+    expect(html).toContain('>Results</a>');
+    expect(html).toContain('>Share</a>');
+    resetKnownHelperSignIn();
+  });
+
+  it('keeps the Helpers tab on the Helpers screen even when the status is off', async () => {
+    resetKnownHelperSignIn();
+    await loadHelperStatus(replyWith({ enabled: false }));
+    expect(tabs('helpers')).toContain(`href="${helpersHref}"`);
+    resetKnownHelperSignIn();
+  });
+
+  it('shows the Helpers tab when the status is on', async () => {
+    resetKnownHelperSignIn();
+    await loadHelperStatus(replyWith({ enabled: true, firebase: null }));
+    expect(tabs('results')).toContain(`href="${helpersHref}"`);
+    resetKnownHelperSignIn();
+  });
+
+  it('still honours the hide prop', () => {
+    resetKnownHelperSignIn();
+    const html = tabs('results', ['share']);
+    expect(html).not.toContain('>Share</a>');
+    expect(html).toContain(`href="${helpersHref}"`);
   });
 });

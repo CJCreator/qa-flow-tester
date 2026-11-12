@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Link, PATHS, type Route } from '../lib/router';
 import { AUDIT_ROUTE_NAMES } from '../screens/audit/BetaAuditNotice';
 
@@ -87,6 +88,16 @@ export function AreaNav({
   beta?: boolean;
   auditOwner?: boolean;
 }) {
+  const listRef = useRef<HTMLUListElement>(null);
+  useEffect(() => {
+    const ul = listRef.current;
+    if (!ul) return;
+    const link = ul.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!link) return;
+    const box = ul.getBoundingClientRect();
+    const on = link.getBoundingClientRect();
+    ul.scrollLeft += on.left - box.left - (box.width - on.width) / 2;
+  }, [route.name]);
   if (route.name === 'helper-sign-in') return null;
   const area = areaOf(route);
   if (!area) return null;
@@ -95,7 +106,10 @@ export function AreaNav({
   return (
     <nav aria-label={AREA_TITLES[area]} className="border-b border-rule bg-canvas" data-area={area}>
       <div className="mx-auto max-w-workspace px-4 sm:px-6 lg:px-8">
-        <ul className="-mx-4 flex items-center gap-1 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+        <ul
+          ref={listRef}
+          className="-mx-4 flex items-center gap-1 overflow-x-auto px-4 sm:mx-0 sm:px-0 [mask-image:linear-gradient(to_right,black_calc(100%-1rem),transparent)] sm:[mask-image:none]"
+        >
           {links.map((l) => {
             const current = l.names.includes(route.name);
             return (
