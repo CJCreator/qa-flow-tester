@@ -1,7 +1,7 @@
 import path from 'path';
 import { promises as fs } from 'fs';
 import type { AIProvider } from '@qa/core';
-import { BenchmarkingEngine, SafePublicCrawler, UXGapSynthesizer, isPrivateHost } from '@qa/core';
+import { BenchmarkingEngine, SafePublicCrawler, UXGapSynthesizer, isPrivateHost, writeJsonAtomic } from '@qa/core';
 import type { BenchmarkJob } from '@qa/types';
 
 /** How many finished comparisons are kept. Older ones are deleted by themselves. */
@@ -32,7 +32,7 @@ export class BenchmarkStore {
 
   async save(job: BenchmarkJob): Promise<void> {
     await fs.mkdir(this.dir, { recursive: true });
-    await fs.writeFile(this.file(job.id), JSON.stringify(job, null, 2), 'utf8');
+    await writeJsonAtomic(this.file(job.id), job);
     await this.prune();
   }
 
