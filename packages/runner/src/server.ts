@@ -2223,10 +2223,6 @@ export class RunnerServer {
       visualReviewCalls: VISUAL_REVIEW_CALLS,
     });
     const setup = await this.aiSetup();
-    const today =
-      setup.provider === 'openrouter' && setup.key
-        ? await this.openRouter.freeRequestsToday(setup.key).catch(() => null)
-        : null;
     // Pacing and price come from what the provider reports; dollars only when the model has a price.
     const cap = checkAiCap(body.aiCap);
     const capValue = cap.ok ? cap.value : undefined;
@@ -2245,8 +2241,8 @@ export class RunnerServer {
       seenBefore: !!memory,
       provider: setup.provider,
       free: setup.provider === 'openrouter',
-      left: today?.remaining ?? null,
-      limit: today?.limit ?? null,
+      left: budget?.left ?? null,
+      limit: budget?.limit ?? null,
       concurrency: budget?.pacing.concurrency ?? 1,
       cap: capValue ?? null,
       // Dollars are shown only when the model has a price above zero: a free key shows requests only.
