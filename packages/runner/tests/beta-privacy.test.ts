@@ -123,8 +123,10 @@ describe('On the shared copy, a visitor sees only their own check-up', () => {
           targetUrl: `https://${host}/`,
           host,
           timestamp: new Date().toISOString(),
+          durationMs: 1000,
           ready: true,
           stamp: 'Ready to release',
+          counts: { critical: 0, major: 0, minor: 0 },
         })
       );
       await fs.writeFile(
