@@ -1,5 +1,5 @@
-import { defineWorkspace, configDefaults } from 'vitest/config';
-import { sharedTest, sharedResolve } from './vitest.config';
+import { configDefaults } from 'vitest/config';
+import { sharedTest, sharedResolve } from './vitest.shared';
 
 // Two tiers. Every test file belongs to exactly one project.
 //   unit    : no Chromium, no external network. A loopback server on a port the OS picks is allowed (a
@@ -51,7 +51,8 @@ const browserFiles = Object.entries(BROWSER_TESTS).flatMap(([pkg, names]) =>
   names.map((name) => `packages/${pkg}/tests/${name}.test.ts`)
 );
 
-export default defineWorkspace([
+// Read by vitest.config.ts (`test.projects`). Plain array: vitest 4 no longer has defineWorkspace.
+export const projects = [
   {
     resolve: sharedResolve,
     test: {
@@ -69,4 +70,4 @@ export default defineWorkspace([
       include: browserFiles,
     },
   },
-]);
+];
