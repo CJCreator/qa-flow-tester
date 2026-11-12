@@ -310,9 +310,6 @@ export function LandingScreen() {
               <p className="mt-2 text-sm text-ink-soft">
                 No sign-up. On a live site it only looks: nothing is filled in, sent or changed.
               </p>
-              <p className="mt-1 text-sm text-ink-soft">
-                The address you type is sent with the page you go to, so it reaches whichever copy runs your check-up.
-              </p>
               <WakeNote state={wake} />
             </div>
             <SampleReportFrame />
