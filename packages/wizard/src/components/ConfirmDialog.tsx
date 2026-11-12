@@ -38,6 +38,17 @@ function ConfirmDialog({ options, onClose }: { options: ConfirmOptions; onClose:
     };
   }, []);
 
+  const cancelButton = (
+    <button ref={cancelRef} type="button" className="btn-quiet" onClick={() => onClose('cancel')}>
+      {options.cancelLabel ?? 'Cancel'}
+    </button>
+  );
+  const confirmButton = (
+    <button type="button" className={options.danger ? 'btn-danger' : 'btn-primary'} onClick={() => onClose('confirm')}>
+      {options.confirmLabel}
+    </button>
+  );
+
   return (
     <dialog
       ref={ref}
@@ -56,27 +67,27 @@ function ConfirmDialog({ options, onClose }: { options: ConfirmOptions; onClose:
         <div id="confirm-body" className="mt-3 text-ink-soft">
           {options.body}
         </div>
-        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
-          <button ref={cancelRef} type="button" className="btn-quiet" onClick={() => onClose('cancel')}>
-            {options.cancelLabel ?? 'Cancel'}
-          </button>
-          {options.altLabel && (
+        {/* Three choices stack at full width, the main one on top, in the order they are read and tabbed through:
+            long labels never wrap into ragged rows. The second way is never a filled button, so the dialog has
+            one loud choice. Two choices sit side by side from 640px, the safe one first. */}
+        {options.altLabel ? (
+          <div className="mt-6 flex flex-col gap-3">
+            {confirmButton}
             <button
               type="button"
-              className={options.altDanger ? 'btn-danger' : 'btn-quiet'}
+              className={options.altDanger ? 'btn-danger-quiet' : 'btn-quiet'}
               onClick={() => onClose('alt')}
             >
               {options.altLabel}
             </button>
-          )}
-          <button
-            type="button"
-            className={options.danger ? 'btn-danger' : 'btn-primary'}
-            onClick={() => onClose('confirm')}
-          >
-            {options.confirmLabel}
-          </button>
-        </div>
+            {cancelButton}
+          </div>
+        ) : (
+          <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
+            {cancelButton}
+            {confirmButton}
+          </div>
+        )}
       </div>
     </dialog>
   );

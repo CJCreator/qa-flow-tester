@@ -346,7 +346,7 @@ export function Report({
         </div>
         <div className="min-w-0 flex-1 border-l-2 border-dotted border-rule px-5 py-5 sm:px-8 sm:py-6">
           <p className="text-sm text-ink-soft">
-            Check-up of <span className="break-all font-bold text-ink">{host}</span>
+            Check-up of <span className="[overflow-wrap:anywhere] font-bold text-ink">{host}</span>
           </p>
           <FocusHeading className={`mt-1 font-stamp text-verdict font-bold ${tone.words}`}>
             {summary.stamp}
@@ -681,7 +681,7 @@ function ReportActionsBar({ report, actions }: { report: ReleaseReport; actions:
         >
           {downloading ? <Spinner label="Downloading…" /> : 'Download the report'}
         </button>
-        <button type="button" className="btn-link" onClick={() => window.print()}>
+        <button type="button" className="btn-link min-w-[44px] justify-center" onClick={() => window.print()}>
           Print
         </button>
         <button type="button" className="btn-link" aria-expanded={deeper} onClick={() => setDeeper((d) => !d)}>
@@ -821,7 +821,7 @@ function AspectGrades({ report }: { report: ReleaseReport }) {
   if (!report.grades) return null;
   return (
     <Section id="aspects" title="How each area did">
-      <ul className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+      <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {ASPECTS.map((aspect) => {
           const data = report.grades!.aspects[aspect];
           const checked = !!data && data.checked !== false && data.grade !== null;
@@ -831,7 +831,7 @@ function AspectGrades({ report }: { report: ReleaseReport }) {
             <li
               key={aspect}
               className={`flex flex-col gap-3 rounded-card border border-rule bg-surface p-4 ${
-                checked && sub ? 'col-span-2 lg:col-span-1' : ''
+                checked && sub ? 'sm:col-span-2 lg:col-span-1' : ''
               }`}
             >
               <div className="flex items-start justify-between gap-3">
@@ -849,7 +849,13 @@ function AspectGrades({ report }: { report: ReleaseReport }) {
                     {data.grade}
                   </span>
                 ) : (
-                  <span className="shrink-0 text-sm font-bold text-ink-soft">Not checked</span>
+                  // No grade: an empty tile keeps the row's shape; the words are in the line under the area's name.
+                  <span
+                    aria-hidden="true"
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-control border border-dashed border-edge font-stamp text-2xl text-ink-soft"
+                  >
+                    –
+                  </span>
                 )}
               </div>
               {checked && sub && (

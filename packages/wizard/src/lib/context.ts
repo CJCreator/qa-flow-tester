@@ -53,7 +53,6 @@ export function rejectReason(name: string, sizeBytes: number, options: { allowDo
   return null;
 }
 
-
 /** What the file picker gives us; a browser `File` fits. */
 export interface PickedFile {
   name: string;

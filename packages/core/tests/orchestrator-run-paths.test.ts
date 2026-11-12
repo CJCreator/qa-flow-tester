@@ -3,24 +3,25 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';
 import type { Route } from 'playwright';
-import { FlowTestOrchestrator } from '../src/orchestrator.js';
+import { FlowTestOrchestrator, type OrchestratorEvent } from '../src/orchestrator.js';
 import { BrowserManager } from '../src/browser.js';
 import type { PreFlightResult } from '../src/preflight.js';
-import type { TestCase, OrchestratorEvent } from '@qa/types';
+import type { TestCase } from '@qa/types';
 
 describe('orchestrator run paths', () => {
   let tmpDir: string | undefined;
   const origCreateContext = BrowserManager.prototype.createContext;
   let currentRouteHandler: ((route: Route) => Promise<void> | void) | undefined;
 
-  const preflight: PreFlightResult = {
+  const preflight = {
     ok: true,
     roleAuthResults: {},
     roleStorageStates: {},
     roleLandingPaths: {},
     roleFailures: {},
     roleDiagnostics: {},
-  };
+    // A partial fixture: the orchestrator paths under test never read the fields left out.
+  } as PreFlightResult;
 
   beforeEach(() => {
     currentRouteHandler = undefined;

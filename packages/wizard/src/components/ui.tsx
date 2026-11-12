@@ -16,7 +16,11 @@ const WIDTHS: Record<PageWidth, string> = {
   workspace: 'max-w-workspace',
 };
 
-/** The column a screen lives in: one of three widths, the page gutter, and the mount fade. */
+/**
+ * The column a screen lives in: one of three widths and the mount fade. Every column starts at the same left edge
+ * as the top bar and the area row (the workspace gutter), whatever its width, so a title never jumps sideways
+ * between screens.
+ */
 export function Page({
   width = 'form',
   children,
@@ -27,8 +31,8 @@ export function Page({
   className?: string;
 }) {
   return (
-    <div className={`screen-in mx-auto w-full ${WIDTHS[width]} px-4 pb-16 pt-8 sm:px-6 sm:pt-12 lg:px-8 ${className}`}>
-      {children}
+    <div className="screen-in mx-auto w-full max-w-workspace px-4 pb-16 pt-8 sm:px-6 sm:pt-12 lg:px-8">
+      <div className={`${WIDTHS[width]} ${className}`}>{children}</div>
     </div>
   );
 }
@@ -166,7 +170,9 @@ export function Disclosure({
 export function BottomActionBar({ summary, children }: { summary?: ReactNode; children: ReactNode }) {
   return (
     <div
-      className="sticky bottom-0 z-sticky -mx-4 -mb-16 mt-10 border-t border-rule bg-raised/95 px-4 shadow-level-3 backdrop-blur-sm sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
+      // index.css keeps focused controls clear of this bar (scroll-padding-bottom) while it is on the page.
+      data-bottom-bar=""
+      className="sticky bottom-0 z-sticky -mx-4 -mb-16 mt-10 border-t border-rule bg-raised px-4 shadow-level-3 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
       style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
     >
       <div className="flex flex-col gap-3 pt-3 sm:flex-row sm:items-center sm:justify-between">

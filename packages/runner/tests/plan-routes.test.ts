@@ -541,7 +541,7 @@ describe('Plan generation: stale writes refused, approval bumps it (R9, R10)', (
 
   it('approve with nothing to test answers 409 with the core wording', async () => {
     const record = makeStoredPlan();
-    record.context.draft = undefined;
+    record.context.draft = undefined as never;
     record.plan.testCases = [];
     await session.plan.save(record);
 

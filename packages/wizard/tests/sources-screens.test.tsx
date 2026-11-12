@@ -88,7 +88,13 @@ describe('Plan Review: Sources', () => {
       documentedItems: { total: 2, reached: 1 },
       rolesNotTested: [{ role: 'viewer', reason: 'wrong-details', text: 'The username or password was not accepted.' }],
     };
-    const html = renderToStaticMarkup(createElement(PlanDocument, { plan: plan as never, actions }));
+    // Sections start closed (only their headers show), so the contents are read with every section open.
+    const closed = renderToStaticMarkup(createElement(PlanDocument, { plan: plan as never, actions }));
+    expect(closed).toContain('Pages');
+    expect(closed).not.toContain('guide.md, section Users &gt; Create');
+    const html = renderToStaticMarkup(
+      createElement(PlanDocument, { plan: plan as never, actions, startExpanded: true })
+    );
     expect(html).toContain('guide.md, section Users &gt; Create');
     expect(html).toContain('Roles proposed by the AI: admin');
     expect(html).toContain('Confirm roles');

@@ -210,10 +210,9 @@ describe('company details', () => {
   it('enables the save only when something changed, and shows the saved and failed states', () => {
     const reply = settingsReply();
     const clean = view();
-    expect(clean).toMatch(
-      /<button type="button" class="btn-primary[^"]*" disabled="">Save document settings<\/button>/
-    );
-    expect(textOf(clean)).toContain('Every change is saved.');
+    // Nothing pending: no bottom bar, only a quiet status line.
+    expect(clean).not.toContain('Save document settings');
+    expect(clean).toMatch(/<p role="status" class="sr-only">Every change is saved\.<\/p>/);
     const changed = view({ draft: { ...draftFrom(reply), proposalTemplate: 'x' } });
     expect(changed).toMatch(/<button type="button" class="btn-primary[^"]*">Save document settings<\/button>/);
     expect(textOf(changed)).toContain('You have changes that are not saved yet.');
@@ -331,10 +330,12 @@ describe('Website Audit settings (T-75)', () => {
     const screen = renderToStaticMarkup(
       createElement(DocumentSettingsScreen, { fetchImpl: fakeFetch().impl }, createElement('section', { id: 'more' }))
     );
-    const column = screen.indexOf('<div class="screen-in mx-auto w-full max-w-form');
+    // The page starts at the workspace gutter; its form-width column sits inside (one left edge, DESIGN.md).
+    const column = screen.indexOf('<div class="screen-in mx-auto w-full max-w-workspace');
     expect(column).toBe(0);
+    expect(screen).toContain('<div class="max-w-form');
     expect(screen.indexOf('<section id="more">')).toBeGreaterThan(column);
-    expect(screen.endsWith('<section id="more"></section></div></div>')).toBe(true);
+    expect(screen.endsWith('<section id="more"></section></div></div></div>')).toBe(true);
   });
 
   it('says whether a PageSpeed key is saved and never renders one back', () => {

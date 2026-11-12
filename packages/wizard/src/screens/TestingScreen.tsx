@@ -131,8 +131,8 @@ export function TestingScreen({
 
   return (
     <div className="flex min-h-[calc(100vh-7rem)] flex-col">
-      <div className="border-b border-rule bg-surface px-4 py-4 sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-workspace flex-wrap items-end justify-between gap-4">
+      <div className="border-b border-rule bg-surface py-4">
+        <div className="mx-auto flex max-w-workspace flex-wrap items-end justify-between gap-4 px-4 sm:px-6 lg:px-8">
           <div className="min-w-0 flex-1">
             <FocusHeading className="break-words font-stamp text-3xl font-bold tracking-tight sm:text-4xl">
               Testing {host}
@@ -167,17 +167,13 @@ export function TestingScreen({
             )}
           </div>
           {running && (
-            <button
-              type="button"
-              className="btn-quiet border-fail text-fail hover:border-fail hover:bg-fail-tint"
-              onClick={onStop}
-            >
+            <button type="button" className="btn-danger-quiet" onClick={onStop}>
               Stop testing
             </button>
           )}
         </div>
         {feed.status === 'failed' && feed.failure && (
-          <div className="mx-auto mt-4 max-w-workspace">
+          <div className="mx-auto mt-4 max-w-workspace px-4 sm:px-6 lg:px-8">
             <RunFailure
               title="Testing stopped"
               message={feed.failure}
