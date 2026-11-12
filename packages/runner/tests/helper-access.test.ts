@@ -495,7 +495,8 @@ describe('Hosted audits for the signed-in owner on a beta copy (T-86, ADR 0042)'
 
     const keyRes = await call('GET', '/api/runner/status', undefined, ACCESS);
     expect(keyRes.status).toBe(200);
-    expect(JSON.parse(keyRes.body).auditOwner).toBe(true);
+    // T-297: on a beta copy the key alone is not an owner.
+    expect(JSON.parse(keyRes.body).auditOwner).toBe(false);
 
     const anonRes = await call('GET', '/api/runner/status');
     expect(anonRes.status).toBe(401);

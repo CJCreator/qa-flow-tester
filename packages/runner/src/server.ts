@@ -389,7 +389,7 @@ export interface AuditWiring {
   readonly helperAccess: HelperAccess;
   /** The saved AI setup (provider, text and vision models; not secret, never a key). */
   readAiModels(): Promise<AuditAiSetup>;
-  /** The request is the owner's: it carries the access key, or, with none set, comes from this computer (DEC-004). */
+  /** The request is the owner's (`RunnerServer.isAuditOwner`): an AUDIT_OWNER_EMAILS sign-in, or, outside beta, the access key or this computer (DEC-004). */
   isOwnerRequest(req: http.IncomingMessage): boolean;
   /**
    * The runner is local (ADR 0042): not a beta copy and bound to this computer, so a Website Audit may read
@@ -856,11 +856,12 @@ export class RunnerServer {
   }
 
   /**
-   * Whether the request is from an audit owner (holds the access key, or is a signed-in Google account in
-   * AUDIT_OWNER_EMAILS, ADR 0042 / T-86).
+   * Whether the request is from an audit owner: a signed-in Google account in AUDIT_OWNER_EMAILS (ADR 0042 / T-86),
+   * or, on a copy that is not beta, the access key (or this computer when no key is set, DEC-004). On a beta copy
+   * every tester holds the key, so the key alone is not ownership there (T-297).
    */
   public isAuditOwner(req: http.IncomingMessage): boolean {
-    if (this.carriesAccessKey(req)) return true;
+    if (!this.beta && this.carriesAccessKey(req)) return true;
     const session = this.helperAccess?.session(req);
     if (!session?.email) return false;
     return this.isAuditOwnerEmail(session.email);
