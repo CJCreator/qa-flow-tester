@@ -171,6 +171,7 @@ export class SeoChecker {
           severity: 'Minor',
           checker: 'seo',
           categoryTag: 'SEO',
+          ruleCode: 'seo-multiple-h1',
           title: `Page has multiple <h1> headings (${details.h1Count} found)`,
           where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
           expectedVsActual: {
@@ -262,6 +263,7 @@ export class SeoChecker {
             severity: 'Minor',
             checker: 'seo',
             categoryTag: 'SEO',
+            ruleCode: 'seo-multiple-canonical',
             title: `Page contains multiple canonical URL tags (${details.canonicalCount} found)`,
             where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
             expectedVsActual: {
@@ -352,6 +354,7 @@ export class SeoChecker {
           severity: 'Minor',
           checker: 'seo',
           categoryTag: 'SEO',
+          ruleCode: 'seo-images-missing-alt',
           title: `Images missing alt text descriptions (${details.imagesWithoutAltCount} found)`,
           where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
           expectedVsActual: {
@@ -635,6 +638,7 @@ export class SeoChecker {
             checker: 'seo',
             // A broken link is something broken, whoever the site is for.
             aspect: 'Works',
+            ruleCode: 'seo-broken-link',
             title: `Broken link found: ${linkPath} returned HTTP ${status}`,
             where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
             expectedVsActual: {
