@@ -9,6 +9,7 @@ import type {
 } from '@qa/types';
 import { FORM_ANSWERS, isSkipAnswer } from './questions.js';
 import { sensitiveKind } from './action-words.js';
+import { safeIdPart } from '../safe-id.js';
 
 /** True when the flow presses the form's send button on the form's page. */
 function submitsForm(flow: DiscoveredFlow, q: AmbiguityQuestion): boolean {
@@ -70,6 +71,7 @@ export class TestPlanner {
     }
 
     const testCases: TestCase[] = [];
+    const usedIds = new Set<string>();
 
     for (const flow of draft.flows) {
       // 1. Skip flows marked out of scope or whose startPage is out of scope, flows that can't run
@@ -110,7 +112,16 @@ export class TestPlanner {
       }
 
       const answered = formAnswer ? expectationFromAnswer(formAnswer) : null;
-      const id = flow.id.startsWith('TC-') ? flow.id : `TC-${flow.id}`;
+      const base = safeIdPart(flow.id);
+      let id = base.startsWith('TC-') ? base : `TC-${base}`;
+      if (usedIds.has(id)) {
+        let suffix = 2;
+        while (usedIds.has(`${id}-${suffix}`)) {
+          suffix++;
+        }
+        id = `${id}-${suffix}`;
+      }
+      usedIds.add(id);
       testCases.push({
         id,
         requirementId: `REQ-${flow.id}`,
@@ -130,8 +141,10 @@ export class TestPlanner {
       // Each checkable rule the user added is its own test, so it never shares a verdict with a guess.
       (flow.userRules || []).forEach((rule, i) => {
         if (!rule.checkable || !rule.check) return;
+        const ruleId = `${id}-RULE-${i + 1}`;
+        usedIds.add(ruleId);
         testCases.push({
-          id: `${id}-RULE-${i + 1}`,
+          id: ruleId,
           requirementId: `REQ-${flow.id}`,
           flowId: flow.id,
           name: `${flow.name}: ${rule.text}`,

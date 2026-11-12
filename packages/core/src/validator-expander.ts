@@ -1,4 +1,5 @@
 import type { TestCase, TestCaseStep } from '@qa/types';
+import { safeIdPart } from './safe-id.js';
 
 /**
  * Expands test cases containing validationRules into synthetic boundary & invalid test cases.
@@ -47,7 +48,7 @@ export function expandValidationTestCases(testCases: TestCase[]): TestCase[] {
       if (rule.origin === 'ai-guess') {
         if (!tc.steps.some((step) => step.action === 'fill' && isTargetStep(step))) continue;
         add(tc, {
-          id: `${tc.id}-val-${rule.field}-empty`,
+          id: `${tc.id}-val-${safeIdPart(rule.field)}-empty`,
           flowId: tc.flowId,
           name: `${tc.name || tc.id} [Validation: ${rule.field} empty]`,
           role: tc.role,
@@ -69,7 +70,7 @@ export function expandValidationTestCases(testCases: TestCase[]): TestCase[] {
       if (typeof rule.min === 'number') {
         const boundaryVal = (rule.min - 1).toString();
         add(tc, {
-          id: `${tc.id}-val-${rule.field}-min`,
+          id: `${tc.id}-val-${safeIdPart(rule.field)}-min`,
           flowId: tc.flowId,
           name: `${tc.name || tc.id} [Validation: ${rule.field} min-1]`,
           role: tc.role,
@@ -88,7 +89,7 @@ export function expandValidationTestCases(testCases: TestCase[]): TestCase[] {
       if (typeof rule.max === 'number') {
         const boundaryVal = (rule.max + 1).toString();
         add(tc, {
-          id: `${tc.id}-val-${rule.field}-max`,
+          id: `${tc.id}-val-${safeIdPart(rule.field)}-max`,
           flowId: tc.flowId,
           name: `${tc.name || tc.id} [Validation: ${rule.field} max+1]`,
           role: tc.role,
@@ -105,7 +106,7 @@ export function expandValidationTestCases(testCases: TestCase[]): TestCase[] {
 
       // 3. Empty input
       add(tc, {
-        id: `${tc.id}-val-${rule.field}-empty`,
+        id: `${tc.id}-val-${safeIdPart(rule.field)}-empty`,
         flowId: tc.flowId,
         name: `${tc.name || tc.id} [Validation: ${rule.field} empty]`,
         role: tc.role,

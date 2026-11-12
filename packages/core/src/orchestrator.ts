@@ -48,6 +48,7 @@ import { onSiteAddress } from './same-site.js';
 import { blockChanges, NEEDS_TEST_COPY } from './live-site.js';
 import { EntityNamespacer } from './entity-namespacing.js';
 import { SendGuard, watchSends } from './send-guard.js';
+import { safeIdPart, pathInside, testPointDir } from './safe-id.js';
 import {
   BugDetectionChecker,
   SpecConformanceChecker,
@@ -550,7 +551,8 @@ export class FlowTestOrchestrator {
     const baselineDir = path.resolve(options.profile?.visualBaselineDir || '.qa-baselines');
     const recordVideo = options.recordVideo ?? true;
 
-    const breakpoints: Breakpoint[] = options.breakpoints || ['1440px'];
+    const asked = (options.breakpoints || []).filter((b): b is Breakpoint => Object.hasOwn(BREAKPOINT_VIEWPORTS, b));
+    const breakpoints: Breakpoint[] = asked.length > 0 ? asked : ['1440px'];
     const results: TestPointResult[] = [];
     const allFindings: Finding[] = [];
     // WCAG coverage per criterion, merged across pages by worst status (never one percentage).
@@ -662,7 +664,7 @@ export class FlowTestOrchestrator {
           `[QA Orchestrator] Executing ${testCase.id} ("${testCase.flowId}") on ${bp} as ${testCase.role}...`
         );
         const pointStartTime = Date.now();
-        const testCaseEvidenceDir = path.join(evidenceDir, `${testCase.id}-${bp}`);
+        const testCaseEvidenceDir = testPointDir(evidenceDir, testCase.id, bp);
         let evidenceCollector = new EvidenceCollector(testCaseEvidenceDir);
 
         let context: BrowserContext | undefined;
@@ -1231,7 +1233,7 @@ export class FlowTestOrchestrator {
             );
           }
           // Only a flow that completed reaches the screen the baseline was taken of.
-          const baselinePath = path.join(baselineDir, `${testCase.id}-${bp}.png`);
+          const baselinePath = pathInside(baselineDir, `${safeIdPart(testCase.id)}-${safeIdPart(bp)}.png`);
           if (testPointPassed && pageLevelChecks) {
             const baseline = await fs.readFile(baselinePath).catch(() => null);
             if (baseline) {
