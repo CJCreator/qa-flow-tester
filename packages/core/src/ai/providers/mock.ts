@@ -1,5 +1,6 @@
 import type { AIProvider } from '../ai-provider.js';
 import type { AIMessage, AICompletionOptions, AIProviderType } from '@qa/types';
+import { sensitiveKind } from '../../discovery/action-words.js';
 
 export class MockAIProvider implements AIProvider {
   readonly providerType: AIProviderType = 'mock';
@@ -35,7 +36,7 @@ export class MockAIProvider implements AIProvider {
               ['button', 'tab', 'switch'].includes(c.role) &&
               !c.inForm &&
               !c.disabled &&
-              !/delete|remove|pay|buy|sign ?out|log ?out|reset|trigger/i.test(c.name)
+              !(sensitiveKind(c.name) || /sign ?out|log ?out|reset|trigger/i.test(c.name))
           );
           return {
             urlPath: p.urlPath,

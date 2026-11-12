@@ -8,6 +8,7 @@ import type {
   TestCaseStep,
 } from '@qa/types';
 import { FORM_ANSWERS, isSkipAnswer } from './questions.js';
+import { sensitiveKind } from './action-words.js';
 
 /** True when the flow presses the form's send button on the form's page. */
 function submitsForm(flow: DiscoveredFlow, q: AmbiguityQuestion): boolean {
@@ -52,6 +53,22 @@ export class TestPlanner {
       draft.ambiguityQuestions.filter((q) => q.flowId && isSkipAnswer(q.selectedAnswer)).map((q) => q.flowId!)
     );
 
+    const allowedSensitive = new Set<string>();
+    for (const q of draft.ambiguityQuestions) {
+      if (q.category === 'sensitive_action' && q.selectedAnswer && !isSkipAnswer(q.selectedAnswer) && q.targetElement) {
+        allowedSensitive.add(q.targetElement);
+      }
+    }
+
+    const elementNames = new Map<string, string>();
+    for (const page of draft.pages) {
+      for (const el of page.elements || []) {
+        if (el.selector && el.name) {
+          elementNames.set(el.selector, el.name);
+        }
+      }
+    }
+
     const testCases: TestCase[] = [];
 
     for (const flow of draft.flows) {
@@ -75,6 +92,15 @@ export class TestPlanner {
       const activeSteps: TestCaseStep[] = flow.steps.filter((s) => {
         if (s.selector && skippedElements.has(s.selector)) {
           return false;
+        }
+        if (s.action === 'click') {
+          const elementName = s.selector ? elementNames.get(s.selector) : undefined;
+          if (
+            sensitiveKind(s.name, elementName ?? '', s.selector ?? '') !== null &&
+            (!s.selector || !allowedSensitive.has(s.selector))
+          ) {
+            return false;
+          }
         }
         return true;
       });

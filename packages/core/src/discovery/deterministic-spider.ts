@@ -13,6 +13,7 @@ import type {
   RouteSkipReason,
 } from '@qa/types';
 import { SafetyFilter } from './safety-filter.js';
+import { riskyToClick } from './action-words.js';
 import { collectElementInventory, TEST_ID_ATTRIBUTES } from './element-inventory.js';
 import { redactUrl } from '../redact.js';
 import { isSameSite } from '../same-site.js';
@@ -194,9 +195,8 @@ export interface CrawlOptions {
 
 /** Links and buttons that would end a signed-in session. */
 export const SESSION_ENDING = /log\s*-?\s*out|sign\s*-?\s*out|log\s*off|signoff/i;
-/** Never clicked while exploring: they change or send things. */
-export const RISKY_TO_CLICK =
-  /reset|delete|remove|destroy|clear|cancel|pay|purchase|buy|place order|subscribe|send|submit|finish|confirm|save|apply|upload|download|print|share|invite|deactivate|close/i;
+/** Never clicked while exploring: they change or send things (the shared classifier, action-words.ts). */
+export const RISKY_TO_CLICK: { test(name: string): boolean } = { test: riskyToClick };
 /** Buttons whose name suggests they only move to another screen. */
 export const NAVIGATION_WORDS =
   /checkout|cart|basket|bag|view|details|more|next|continue|back|browse|shop|start|explore|profile|account|settings|dashboard|home|open|target/i;

@@ -2,6 +2,7 @@ import type { BrowserContext } from 'playwright';
 import type { DiscoveredFlow, DiscoveryDraft, PageInventoryItem } from '@qa/types';
 import { isPrivateHost } from './competitive/safe-crawler.js';
 import { SafetyFilter } from './discovery/safety-filter.js';
+import { changesData } from './discovery/action-words.js';
 import { isIpLiteral, isPrivateTextHost } from './address-class.js';
 import { decideTestCopy, type TestCopyReason } from './domain-verification.js';
 import { defaultNetDeps } from './safe-net.js';
@@ -106,10 +107,6 @@ export async function blockChanges(context: BrowserContext): Promise<string[]> {
   return blocked;
 }
 
-/** Button words that save, send or delete something. Links with a real address are only navigation. */
-const CHANGES_SOMETHING =
-  /\b(save|submit|send|delete|remove|pay|buy|purchase|order|subscribe|register|sign ?up|create|publish|comment|confirm|finish|upload|invite|reserve|book now|add to (?:cart|basket|bag)|check ?out|place order|update)\b/i;
-
 type FormInfo = NonNullable<DiscoveryDraft['forms']>[number];
 
 /**
@@ -127,7 +124,7 @@ export function needsTestCopy(flow: DiscoveredFlow, pages: PageInventoryItem[], 
     const form = forms.find((f) => f.submitButtonSelector === step.selector);
     if (form) {
       // A GET form only fetches a page, unless a script sends it another way: its button says so.
-      if ((form.method || 'GET').toUpperCase() !== 'GET' || CHANGES_SOMETHING.test(name)) return true;
+      if ((form.method || 'GET').toUpperCase() !== 'GET' || changesData(name)) return true;
       continue;
     }
     if (safety.isSensitive(name, step.selector)) return true;
@@ -136,7 +133,7 @@ export function needsTestCopy(flow: DiscoveredFlow, pages: PageInventoryItem[], 
       : false;
     if (isLink) continue;
     if (el?.insideForm && (el.role === 'button' || el.inputType === 'submit')) return true;
-    if (CHANGES_SOMETHING.test(name)) return true;
+    if (changesData(name)) return true;
   }
   return false;
 }
