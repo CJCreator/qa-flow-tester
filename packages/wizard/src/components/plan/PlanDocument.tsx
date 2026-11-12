@@ -111,9 +111,6 @@ const SIZE_NAMES: Record<Breakpoint, string> = {
   '768px': 'Tablet (768px)',
   '1440px': 'Desktop (1440px)',
 };
-/** Sections longer than this start collapsed. */
-const COLLAPSE_OVER = 20;
-
 /** Who a role is, in the words the rest of the plan uses. */
 function roleName(role: string | undefined): string {
   return !role || role === 'anonymous' || role === 'visitor' ? 'visitor' : role;
@@ -155,20 +152,33 @@ function flowNeedsMe(flow: DiscoveredFlow): boolean {
   return flow.source === 'fallback' || !!flow.isNew || !!flow.needsHelp?.length || isGuess(flow.candidateExpectations);
 }
 
+/**
+ * Opens a section's own disclosure (its direct child details), so a jump to the section shows its items.
+ * Only for section elements: an item's own details are left to the item.
+ */
+function openOwnSection(el: HTMLElement): void {
+  if (el.tagName !== 'SECTION') return;
+  const own = el.querySelector<HTMLDetailsElement>(':scope > details');
+  if (own && !own.open) own.open = true;
+}
+
 function Section({
   id,
   title,
   count,
   intro,
   collapsible,
+  startOpen = false,
   children,
 }: {
   id: string;
   title: string;
   count?: number | string;
   intro?: string;
-  /** Starts collapsed when long, unless the reader is looking for something. */
+  /** Collapsible sections start closed. Set this to start one open. */
   collapsible?: boolean;
+  /** Only for collapsible sections: starts open. */
+  startOpen?: boolean;
   children: React.ReactNode;
 }) {
   const view = useContext(ViewContext);
@@ -187,9 +197,7 @@ function Section({
     const shouldOpen =
       view.expandAll !== undefined && view.expandAll !== null
         ? view.expandAll
-        : (typeof count === 'number' ? count : parseInt(count ?? '0', 10)) <= COLLAPSE_OVER ||
-          !!view.query.trim() ||
-          view.needsMe;
+        : startOpen || !!view.query.trim() || view.needsMe;
     const [open, setOpen] = useState(shouldOpen);
 
     useEffect(() => {
@@ -865,6 +873,7 @@ function QuestionsSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAc
       title={unanswered > 0 ? 'Needs your answer' : 'Your answers'}
       count={unanswered > 0 ? unanswered : plan.questions.length}
       collapsible
+      startOpen
       intro="Anything you leave unanswered gets the cautious answer: nothing is sent or deleted."
     >
       <ul className="space-y-3">
@@ -1720,6 +1729,7 @@ function NotFoundSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAct
     <Section
       id="plan-notfound"
       title="Not found in app"
+      startOpen
       count={groups.reduce((n, g) => n + g.items.length, 0)}
       intro={`${line ? `${line}. ` : ''}These are in your documents but the scan found no matching page or control. They are not counted as failures. Remove one if it is not meant to exist, or add the page and scan again.`}
       collapsible
@@ -1956,7 +1966,9 @@ function usePlanKeyboardNavigation() {
         const targetId = targetMap[e.key.toLowerCase()];
         if (targetId) {
           e.preventDefault();
-          const targetEl = document.getElementById(targetId) || document.getElementById(`${targetId}-title`);
+          const sectionEl = document.getElementById(targetId);
+          if (sectionEl) openOwnSection(sectionEl);
+          const targetEl = sectionEl || document.getElementById(`${targetId}-title`);
           targetEl?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
           return;
         }
@@ -2052,8 +2064,17 @@ function usePlanKeyboardNavigation() {
 }
 
 /** The complete plan as one readable document: everything that will run, and everything that won't. */
-export function PlanDocument({ plan, actions }: { plan: ReviewPlan; actions: PlanActions }) {
-  const [view, setView] = useState<View>({ query: '', needsMe: false });
+export function PlanDocument({
+  plan,
+  actions,
+  startExpanded = false,
+}: {
+  plan: ReviewPlan;
+  actions: PlanActions;
+  /** Every section open on arrival. The default is closed, except "Needs your answer". */
+  startExpanded?: boolean;
+}) {
+  const [view, setView] = useState<View>({ query: '', needsMe: false, expandAll: startExpanded ? true : undefined });
   // The search box updates at once; the sections follow when the browser has time, so typing never lags.
   const deferredView = useDeferredValue(view);
   usePlanKeyboardNavigation();
@@ -2065,35 +2086,53 @@ export function PlanDocument({ plan, actions }: { plan: ReviewPlan; actions: Pla
   }, []);
 
   useEffect(() => {
+    const findTarget = (decoded: string): HTMLElement | null =>
+      document.getElementById(decoded) ||
+      document.getElementById(itemDomId(decoded)) ||
+      Array.from(document.querySelectorAll<HTMLElement>('[data-plan-item]')).find(
+        (el) => el.dataset.planItem === decoded
+      ) ||
+      null;
+    const reveal = (target: HTMLElement) => {
+      openOwnSection(target);
+      let parent = target.parentElement;
+      while (parent) {
+        if (parent instanceof HTMLDetailsElement) parent.open = true;
+        parent = parent.parentElement;
+      }
+      target.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
+      target.classList.add('ring-2', 'ring-stamp', 'transition-all', 'duration-slow');
+      window.setTimeout(() => {
+        target.classList.remove('ring-2', 'ring-stamp');
+      }, 3000);
+    };
+    let frame: number | null = null;
     const handleHash = () => {
       const raw = window.location.hash.slice(1);
       if (!raw) return;
       const decoded = safeDecodeHash(raw);
       if (decoded === null) return;
-      const target =
-        document.getElementById(decoded) ||
-        document.getElementById(itemDomId(decoded)) ||
-        Array.from(document.querySelectorAll<HTMLElement>('[data-plan-item]')).find(
-          (el) => el.dataset.planItem === decoded
-        );
+      const target = findTarget(decoded);
       if (target) {
-        let parent = target.parentElement;
-        while (parent) {
-          if (parent instanceof HTMLDetailsElement) parent.open = true;
-          parent = parent.parentElement;
-        }
-        target.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
-        target.classList.add('ring-2', 'ring-stamp', 'transition-all', 'duration-slow');
-        window.setTimeout(() => {
-          target.classList.remove('ring-2', 'ring-stamp');
-        }, 3000);
+        reveal(target);
+        return;
       }
+      // The item is inside a closed section: open every section, then find it (same as showItem).
+      window.dispatchEvent(new Event(OPEN_ALL_EVENT));
+      frame = window.requestAnimationFrame(() => {
+        frame = window.requestAnimationFrame(() => {
+          frame = null;
+          const later = findTarget(decoded);
+          if (later) reveal(later);
+        });
+      });
     };
 
     const timer = window.setTimeout(handleHash, 150);
     window.addEventListener('hashchange', handleHash);
     return () => {
       window.clearTimeout(timer);
+      if (frame !== null) window.cancelAnimationFrame(frame);
       window.removeEventListener('hashchange', handleHash);
     };
   }, []);
