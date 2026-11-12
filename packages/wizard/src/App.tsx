@@ -146,7 +146,7 @@ function stepOf(route: Route): Step | null {
 
 function Loading({ label }: { label: string }) {
   return (
-    <div className="mx-auto w-full max-w-form px-4 py-16 text-ink-soft sm:px-6 lg:px-8">
+    <div className="mx-auto w-full max-w-workspace px-4 py-16 text-ink-soft sm:px-6 lg:px-8">
       <Spinner label={label} />
     </div>
   );
@@ -853,7 +853,7 @@ export default function App() {
               confirm={confirm}
             />
           ) : status?.phase === 'awaiting-review' && planError ? (
-            <div className="mx-auto w-full max-w-form px-4 py-16 sm:px-6 lg:px-8">
+            <div className="mx-auto w-full max-w-workspace px-4 py-16 sm:px-6 lg:px-8 [&>*]:max-w-form">
               <Notice
                 title="The plan couldn’t be opened"
                 actions={
@@ -1003,14 +1003,14 @@ export default function App() {
       ) : (
         <main id="main">
           {lostContact && (
-            <div className="mx-auto max-w-prose px-4 pt-4 sm:px-6">
+            <div className="mx-auto max-w-workspace px-4 pt-4 sm:px-6 lg:px-8 [&>*]:max-w-prose">
               <Notice tone="warn" title="Lost contact with Release check-up. Retrying…">
                 Check that it’s still running in its terminal (start it with pnpm start). This page keeps trying.
               </Notice>
             </div>
           )}
           {stopError && (
-            <div className="mx-auto max-w-prose px-4 pt-4 sm:px-6">
+            <div className="mx-auto max-w-workspace px-4 pt-4 sm:px-6 lg:px-8 [&>*]:max-w-prose">
               <Notice
                 title="The check-up wasn’t stopped"
                 actions={

@@ -16,7 +16,11 @@ const WIDTHS: Record<PageWidth, string> = {
   workspace: 'max-w-workspace',
 };
 
-/** The column a screen lives in: one of three widths, the page gutter, and the mount fade. */
+/**
+ * The column a screen lives in: one of three widths and the mount fade. Every column starts at the same left edge
+ * as the top bar and the area row (the workspace gutter), whatever its width, so a title never jumps sideways
+ * between screens.
+ */
 export function Page({
   width = 'form',
   children,
@@ -27,8 +31,8 @@ export function Page({
   className?: string;
 }) {
   return (
-    <div className={`screen-in mx-auto w-full ${WIDTHS[width]} px-4 pb-16 pt-8 sm:px-6 sm:pt-12 lg:px-8 ${className}`}>
-      {children}
+    <div className="screen-in mx-auto w-full max-w-workspace px-4 pb-16 pt-8 sm:px-6 sm:pt-12 lg:px-8">
+      <div className={`${WIDTHS[width]} ${className}`}>{children}</div>
     </div>
   );
 }

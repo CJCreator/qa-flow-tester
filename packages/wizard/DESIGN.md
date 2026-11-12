@@ -124,6 +124,9 @@ change drops below WCAG 2.2 AA.
 
 - **Widths:** `max-w-prose` (38rem) for reading, `max-w-form` (44rem) for forms, and `max-w-workspace` (72rem)
   for the plan, the report and the map.
+  Every width starts at the same left edge as the top bar and the area row (the workspace gutter): a narrow
+  column is not centred, so a title never jumps sideways between screens (New check-up and Website Audits at
+  1440, audit of 2026-11-12).
 - **Radii:** `rounded-control` 6px, `rounded-card` 10px, `rounded-panel` 14px, `rounded-pill`.
 - **Shadows:** `shadow-level-1` to `shadow-level-4` are CSS variables. They are deeper in the dark, where they are
   the only lift.

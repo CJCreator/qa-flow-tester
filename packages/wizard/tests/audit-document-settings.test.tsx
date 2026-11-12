@@ -330,10 +330,12 @@ describe('Website Audit settings (T-75)', () => {
     const screen = renderToStaticMarkup(
       createElement(DocumentSettingsScreen, { fetchImpl: fakeFetch().impl }, createElement('section', { id: 'more' }))
     );
-    const column = screen.indexOf('<div class="screen-in mx-auto w-full max-w-form');
+    // The page starts at the workspace gutter; its form-width column sits inside (one left edge, DESIGN.md).
+    const column = screen.indexOf('<div class="screen-in mx-auto w-full max-w-workspace');
     expect(column).toBe(0);
+    expect(screen).toContain('<div class="max-w-form');
     expect(screen.indexOf('<section id="more">')).toBeGreaterThan(column);
-    expect(screen.endsWith('<section id="more"></section></div></div>')).toBe(true);
+    expect(screen.endsWith('<section id="more"></section></div></div></div>')).toBe(true);
   });
 
   it('says whether a PageSpeed key is saved and never renders one back', () => {
