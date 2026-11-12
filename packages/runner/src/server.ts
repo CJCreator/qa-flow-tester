@@ -12,6 +12,7 @@ import {
   type RunStartBody,
 } from '@qa/types';
 import { serveUi, type UiApp } from './ui-static.js';
+import { regradeReport } from './regrade.js';
 import {
   createCheckupSession,
   type CheckupSession,
@@ -96,8 +97,6 @@ import {
   listSiteMemories,
   emptySiteMemory,
   VisualReviewer,
-  calculateSiteAspectGrades,
-  generateRankedRecommendations,
   generateSingleFileHtmlReport,
   PacedAI,
   BudgetSpentError,
@@ -2339,9 +2338,7 @@ export class RunnerServer {
         await suppressions.removeSuppressions(titles, host);
       }
       // The grades, what to improve and the verdict follow.
-      const ran = report.results.flatMap((r) => (r.checks || []).map((c) => c.checker));
-      report.grades = calculateSiteAspectGrades(report.findings, { checkersRun: ran });
-      report.recommendations = generateRankedRecommendations(report.findings);
+      regradeReport(report);
       await this.saveReviewedReport(report);
       if (this.lastReport?.runId === runId) this.lastReport = report;
       this.sendJson(res, 200, report);
@@ -2373,9 +2370,7 @@ export class RunnerServer {
         f.judgementAccepted = accept || undefined;
         f.needsConfirmation = accept ? undefined : true;
       }
-      const ran = report.results.flatMap((r) => (r.checks || []).map((c) => c.checker));
-      report.grades = calculateSiteAspectGrades(report.findings, { checkersRun: ran });
-      report.recommendations = generateRankedRecommendations(report.findings);
+      regradeReport(report);
       await this.saveReviewedReport(report);
       if (this.lastReport?.runId === runId) this.lastReport = report;
       this.sendJson(res, 200, report);
@@ -2553,9 +2548,7 @@ export class RunnerServer {
       result.remainingScreens.length > 0 ? { runId: report.runId, screens: result.remainingScreens } : null;
     if (result.findings.length > 0) report.findings.push(...result.findings);
     if (result.reviewedCount > 0) {
-      const ran = report.results.flatMap((r) => (r.checks || []).map((c) => c.checker));
-      report.grades = calculateSiteAspectGrades(report.findings, { checkersRun: [...ran, 'ai-review'] });
-      report.recommendations = generateRankedRecommendations(report.findings);
+      regradeReport(report, ['ai-review']);
     }
     report.visualReview = {
       reviewed: (report.visualReview?.reviewed ?? 0) + result.reviewedCount,
