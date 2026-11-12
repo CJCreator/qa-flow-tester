@@ -3,7 +3,7 @@ import { mkdtemp, readFile, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import path from 'path';
 import type { TestCase } from '@qa/types';
-import { Redactor, redactUrl, redactSecretText } from '../src/redact.js';
+import { Redactor, redactUrl, redactSecretText, storageStateSecrets } from '../src/redact.js';
 import {
   replaceCredentialsWithPlaceholders,
   resolveCredentialPlaceholders,
@@ -144,5 +144,20 @@ describe('redactSecretText', () => {
 
   it.each(cases)('redacts %s -> %s', (input, expected) => {
     expect(redactSecretText(input)).toBe(expected);
+  });
+});
+
+describe('extra secrets and saved sessions (T-316)', () => {
+  it('hides extra secrets of 8+ characters, and the bare token of a Bearer value', () => {
+    const r = new Redactor([], { extraSecrets: ['bypass-0123456789', 'Bearer tunnel-abcdefgh', 'short'] });
+    expect(r.text('h=bypass-0123456789 t=tunnel-abcdefgh s=short')).toBe('h=*** t=*** s=short');
+  });
+
+  it('lists cookie and localStorage values of a saved session, skipping what has none', () => {
+    const values = storageStateSecrets({
+      cookies: [{ name: 'sid', value: 'cookie-value-12345' }, { name: 'x' }],
+      origins: [{ origin: 'https://a.test', localStorage: [{ name: 't', value: 'ls-value-67890' }] }],
+    } as never);
+    expect(values).toEqual(['cookie-value-12345', 'ls-value-67890']);
   });
 });
