@@ -60,10 +60,9 @@ import { ConnectionScreen } from './screens/ConnectionScreen';
 import { NewCheckupScreen, type StartFacts } from './screens/NewCheckupScreen';
 import { NotFoundScreen } from './screens/NotFoundScreen';
 import { LandingScreen } from './screens/LandingScreen';
-import { PlanReviewScreen, type PlanNotice, type PlanUpdateState } from './screens/PlanReviewScreen';
-import { ScanningScreen, isScanProgress, type ScanProgress } from './screens/ScanningScreen';
+import type { PlanNotice, PlanUpdateState } from './screens/PlanReviewScreen';
+import { isScanProgress, type ScanProgress } from './lib/scan-progress';
 import { headersNotice } from './lib/coverage-text';
-import { TestingScreen } from './screens/TestingScreen';
 import { splitStoredContext } from './lib/context';
 import { stopProblem, type StopReply } from './lib/stop-result';
 import { AUDIT_ROUTE_NAMES, BetaAuditNotice, showsBetaAuditNotice } from './screens/audit/BetaAuditNotice';
@@ -90,6 +89,12 @@ const VisualBaselinesScreen = lazy(() =>
 );
 const BenchmarkScreen = lazy(() => import('./screens/BenchmarkScreen').then((m) => ({ default: m.BenchmarkScreen })));
 const SettingsScreen = lazy(() => import('./screens/SettingsScreen').then((m) => ({ default: m.SettingsScreen })));
+// The Check-up's own screens: only a person who starts or resumes a Check-up needs them (LAT-11).
+const ScanningScreen = lazy(() => import('./screens/ScanningScreen').then((m) => ({ default: m.ScanningScreen })));
+const PlanReviewScreen = lazy(() =>
+  import('./screens/PlanReviewScreen').then((m) => ({ default: m.PlanReviewScreen }))
+);
+const TestingScreen = lazy(() => import('./screens/TestingScreen').then((m) => ({ default: m.TestingScreen })));
 // The Website Audit screens are opened from their own addresses, so a Check-up never loads them (LAT-11).
 const AuditStartScreen = lazy(() =>
   import('./screens/audit/start/AuditStartScreen').then((m) => ({ default: m.AuditStartScreen }))
