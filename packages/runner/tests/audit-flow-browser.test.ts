@@ -18,7 +18,7 @@ import path from 'node:path';
 import { promises as fs } from 'node:fs';
 import { chromium, type Browser } from 'playwright';
 import { AUDIT_DOCUMENT_KINDS, type AuditProgressEvent } from '@qa/types';
-import { runAuditCrawl, type NetDeps, type PinnedRequest } from '@qa/core';
+import { KeyResolver, runAuditCrawl, type NetDeps, type PinnedRequest } from '@qa/core';
 import { RunnerServer } from '../src/server.js';
 
 const PORT = 3849;
@@ -28,6 +28,23 @@ const ORIGIN = 'https://flow-test.example';
 let scratch: string;
 let server: RunnerServer;
 let browser: Browser;
+// The server runs as a local run, so this machine's AI keys (keychain, environment) and gcloud ADC would make
+// the assessing stage call a real AI provider and stall until its timeout. The test is hermetic instead: no
+// keys are read, and ADC points at a file that does not exist. The audit then runs without AI, as on a
+// machine with no AI setup. ADC is restored in afterAll.
+const savedAdcPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+
+class NoKeysResolver extends KeyResolver {
+  override async resolveKey(): Promise<null> {
+    return null;
+  }
+  override async resolveServiceKey(): Promise<null> {
+    return null;
+  }
+  override async loadByokConfig(): Promise<Record<string, string>> {
+    return {};
+  }
+}
 
 function makeNetDeps(): NetDeps {
   return {
@@ -125,6 +142,7 @@ function readStream(auditId: string): Promise<AuditProgressEvent[]> {
 
 beforeAll(async () => {
   scratch = await fs.mkdtemp(path.join(os.tmpdir(), 'qa-flow-browser-'));
+  process.env.GOOGLE_APPLICATION_CREDENTIALS = path.join(scratch, 'no-adc-here.json');
   browser = await chromium.launch({
     headless: true,
     args: [
@@ -207,6 +225,7 @@ beforeAll(async () => {
     outputDir: path.join(scratch, 'report'),
     dataDir: path.join(scratch, 'data'),
     accessToken: ACCESS,
+    keyResolver: new NoKeysResolver(scratch, undefined, { keyDir: path.join(scratch, 'keys') }),
     auditCheckAddress: async (url) => ({
       ok: true,
       finalUrl: url,
@@ -229,6 +248,8 @@ beforeAll(async () => {
 afterAll(async () => {
   await server?.stop();
   await browser?.close();
+  if (savedAdcPath === undefined) delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  else process.env.GOOGLE_APPLICATION_CREDENTIALS = savedAdcPath;
   if (scratch) {
     await fs.rm(scratch, { recursive: true, force: true });
   }
