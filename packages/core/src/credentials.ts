@@ -1,4 +1,7 @@
 import type { RoleCredential, TestCaseStep } from '@qa/types';
+import { isSameSite } from './same-site.js';
+
+export class CredentialPlaceholderError extends Error {}
 
 /**
  * Plans, drafts and reports never hold sign-in details. A step that types them says one of these
@@ -18,11 +21,31 @@ export function replaceCredentialsWithPlaceholders(steps: TestCaseStep[], roles:
   }
 }
 
-/** The value to actually type: placeholders become the role's real details (or the first role's). */
-export function resolveCredentialPlaceholders(value: string, role: string, roles: RoleCredential[]): string {
-  if (!value.includes('{{')) return value;
-  const credential = roles.find((r) => r.role === role) || roles[0];
-  if (!credential) return value;
+/**
+ * The value to actually type: placeholders become the test's own Role's real details, and only on a page of
+ * the checked App (same site and same scheme as the target). Throws, typing nothing, when the Role has no
+ * sign-in details or the page is elsewhere.
+ */
+export function resolveCredentialPlaceholders(
+  value: string,
+  role: string,
+  roles: RoleCredential[],
+  where: { pageUrl: string; targetUrl: string }
+): string {
+  if (!value.includes(CREDENTIAL_PLACEHOLDERS.username) && !value.includes(CREDENTIAL_PLACEHOLDERS.password))
+    return value;
+  const credential = roles.find((r) => r.role === role);
+  if (!credential) throw new CredentialPlaceholderError(`The Role “${role}” has no sign-in details to type here.`);
+  let onSite = false;
+  try {
+    const page = new URL(where.pageUrl);
+    const target = new URL(where.targetUrl);
+    onSite = page.protocol === target.protocol && isSameSite(page.host, target.host);
+  } catch {
+    onSite = false;
+  }
+  if (!onSite)
+    throw new CredentialPlaceholderError('Sign-in details are typed only on the checked site; this page is elsewhere.');
   return value
     .split(CREDENTIAL_PLACEHOLDERS.username)
     .join(credential.username || '')

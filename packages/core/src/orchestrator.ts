@@ -44,6 +44,7 @@ import { SuppressionsManager } from './suppressions.js';
 import { Redactor, redactUrl } from './redact.js';
 import { mergeDuplicateFindings } from './finding-groups.js';
 import { resolveCredentialPlaceholders } from './credentials.js';
+import { onSiteAddress } from './same-site.js';
 import { blockChanges, NEEDS_TEST_COPY } from './live-site.js';
 import { EntityNamespacer } from './entity-namespacing.js';
 import { SendGuard, watchSends } from './send-guard.js';
@@ -737,7 +738,10 @@ export class FlowTestOrchestrator {
               }
             });
 
-            const startUrl = new URL(testCase.startPage, options.targetUrl).toString();
+            const startUrl = onSiteAddress(testCase.startPage, options.targetUrl, options.headerHosts);
+            if (!startUrl) {
+              throw new Error(`The start page ${testCase.startPage} is not on the checked site, so it was not opened.`);
+            }
             const navRes = await navigate(page, startUrl, {
               timeoutMs: 15000,
               who: testCase.role,
@@ -877,7 +881,10 @@ export class FlowTestOrchestrator {
                     const locator = await locateElement(page, step.selector || '');
                     await locator.waitFor({ state: 'visible', timeout: waitTimeout() });
                     const planned = runToken ? EntityNamespacer.namespaceFillValue(step, runToken) : step.value || '';
-                    const value = resolveCredentialPlaceholders(planned, testCase.role, options.profile?.roles || []);
+                    const value = resolveCredentialPlaceholders(planned, testCase.role, options.profile?.roles || [], {
+                      pageUrl: page.url(),
+                      targetUrl: options.targetUrl,
+                    });
                     await locator.fill(value, { timeout: budget.clamp(4000) });
                   } else if (step.action === 'select') {
                     const locator = await locateElement(page, step.selector || '');
@@ -920,7 +927,11 @@ export class FlowTestOrchestrator {
                         });
                     }
                   } else if (step.action === 'navigate') {
-                    await page.goto(new URL(step.value || '', options.targetUrl).toString(), {
+                    const to = onSiteAddress(step.value || '', options.targetUrl, options.headerHosts);
+                    if (!to) {
+                      throw new Error(`Step “${step.name}” goes to ${step.value}, which is not on the checked site.`);
+                    }
+                    await page.goto(to, {
                       waitUntil: 'domcontentloaded',
                       timeout: 10000,
                     });
