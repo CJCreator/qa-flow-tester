@@ -6,10 +6,11 @@
  */
 import type { AIMessage } from '@qa/types';
 import type { AuditAi } from '../ai/stage-ai.js';
-import { findClaimWords } from '../ai/claim-words.js';
+import { findClaimWords, stripClaimWords } from '../ai/claim-words.js';
+import { labelsFor } from '../documents/labels/index.js';
 import { sameSiteUrl } from '../../safe-net.js';
 import { previewFacts, previewMessages, previewRetryPrompt, type PreviewFacts, type PreviewInput } from './prompt.js';
-import { buildTemplateHtml } from './template.js';
+import { buildTemplateHtml, pathOf } from './template.js';
 import {
   previewNodesText,
   renderPreviewDocument,
@@ -49,22 +50,32 @@ export interface GeneratePreviewOptions {
 
 export type PreviewProblem = 'budget-spent' | 'failed' | 'claim-words';
 
-export type GeneratedPreview = { ok: true; html: string } | { ok: false; problem: PreviewProblem };
+export type GeneratedPreview = {
+  ok: true;
+  html: string;
+  /** 'ai' when the AI's page was used; 'template' when the page was built from the findings and Page Content. */
+  source: 'ai' | 'template';
+  /** Set when the AI was asked but its answer was not used: why the template was used instead. */
+  problem?: PreviewProblem;
+};
 
 /**
  * Writes the improved homepage (REQ-024, ADR 0042, T-81).
  * When AI succeeds, the AI-improved preview is rendered.
  * When AI fails, has claim words, or no AI key is configured, falls back to the template.
+ * Returns `source: 'template'` and, when the AI was asked, the `problem`.
  */
 export async function generatePreview(input: PreviewInput, options: GeneratePreviewOptions): Promise<GeneratedPreview> {
   const facts = previewFacts(input);
 
   let chosen: ReturnType<typeof buildNodes> | null = null;
+  let problem: PreviewProblem | undefined;
+
   if (options.ai) {
     const base = previewMessages(facts);
     try {
       const first = await askOnce(options, base);
-      if (first.ok && first.text.trim()) {
+      if ('text' in first && first.text.trim()) {
         const candidate = buildNodes(first.text, facts);
         const claims = findClaimWords(previewNodesText(candidate.nodes));
 
@@ -74,37 +85,52 @@ export async function generatePreview(input: PreviewInput, options: GeneratePrev
             { role: 'assistant', content: first.text.slice(0, MAX_ANSWER_ECHO_CHARS) },
             { role: 'user', content: previewRetryPrompt(claims) },
           ]);
-          if (retry.ok && retry.text.trim()) {
+          if ('text' in retry && retry.text.trim()) {
             const retriedCandidate = buildNodes(retry.text, facts);
             const retryClaims = findClaimWords(previewNodesText(retriedCandidate.nodes));
             if (retryClaims.length === 0) {
               chosen = retriedCandidate;
+            } else {
+              problem = 'claim-words';
             }
+          } else {
+            problem = 'problem' in retry ? retry.problem : 'failed';
           }
         } else {
           chosen = candidate;
         }
+      } else {
+        problem = 'problem' in first ? first.problem : 'failed';
       }
     } catch (err) {
       if (options.signal?.aborted) throw err;
-      // AI failure: falls through to template fallback
+      problem = 'failed';
     }
   }
 
   // Fall back to template when AI fails or key is missing
-  const page = chosen ?? buildNodes(buildTemplateHtml(facts), facts);
+  let page = chosen;
+  if (!page) {
+    page = buildNodes(buildTemplateHtml(facts), facts);
+    if (findClaimWords(previewNodesText(page.nodes)).length > 0) {
+      page = { ...page, nodes: scrubClaimWords(page.nodes) };
+    }
+  }
+
   const nodes = await inlineImages(page.nodes, facts, options);
   return {
     ok: true,
     html: renderPreviewDocument({ nodes, css: page.css, language: facts.language, host: facts.host }),
+    source: chosen ? 'ai' : 'template',
+    ...(chosen || !problem ? {} : { problem }),
   };
 }
 
 async function askOnce(
   options: GeneratePreviewOptions,
   messages: AIMessage[]
-): Promise<{ ok: true; text: string } | { ok: false; problem: 'budget-spent' | 'failed' }> {
-  if (!options.ai) return { ok: false, problem: 'failed' };
+): Promise<{ text: string } | { problem: 'budget-spent' | 'failed' }> {
+  if (!options.ai) return { problem: 'failed' };
   try {
     const answer = await options.ai.ask('preview', messages, {
       signal: options.signal,
@@ -113,12 +139,12 @@ async function askOnce(
       temperature: 0.6,
       maxTokens: 8000,
     });
-    if (!answer.ok) return { ok: false, problem: 'budget-spent' };
+    if (!answer.ok) return { problem: 'budget-spent' };
     const text = stripFences(answer.completion.text);
-    return text === '' ? { ok: false, problem: 'failed' } : { ok: true, text };
+    return text === '' ? { problem: 'failed' } : { text };
   } catch (err) {
     if (options.signal?.aborted) throw err;
-    return { ok: false, problem: 'failed' }; // no provider text is kept
+    return { problem: 'failed' }; // no provider text is kept
   }
 }
 
@@ -126,6 +152,28 @@ function stripFences(text: string): string {
   const trimmed = String(text ?? '').trim();
   const fenced = /^```[a-zA-Z]*\s*\n([\s\S]*?)\n?```\s*$/.exec(trimmed);
   return (fenced ? fenced[1] : trimmed).trim();
+}
+
+function scrubClaimWords(nodes: readonly PreviewNode[]): PreviewNode[] {
+  return nodes.map((node) => {
+    if (node.kind === 'text') {
+      return findClaimWords(node.text).length > 0 ? { kind: 'text', text: stripClaimWords(node.text) } : node;
+    }
+    if (node.kind === 'open') {
+      let changed = false;
+      const attrs: Array<[string, string]> = node.attrs.map(([name, val]) => {
+        if (name === 'alt' || name === 'title' || name.startsWith('aria-')) {
+          if (findClaimWords(val).length > 0) {
+            changed = true;
+            return [name, stripClaimWords(val)];
+          }
+        }
+        return [name, val];
+      });
+      return changed ? { kind: 'open', name: node.name, attrs } : node;
+    }
+    return node;
+  });
 }
 
 /** The sanitised body, with every homepage menu link the AI left out added in a menu of its own. */
@@ -140,20 +188,21 @@ function buildNodes(answer: string, facts: PreviewFacts): SanitizedPreview {
   const missing = facts.menu.filter((link) => !present.has(withoutHash(link.href)));
   if (missing.length === 0) return page;
 
+  const { labels } = labelsFor(facts.language);
   const menu: PreviewNode[] = [
     {
       kind: 'open',
       name: 'nav',
       attrs: [
         ['class', 'qa-preview-menu'],
-        ['aria-label', 'Site menu'],
+        ['aria-label', labels.headings.navigationLinks],
       ],
     },
   ];
   for (const link of missing) {
     menu.push(
       { kind: 'open', name: 'a', attrs: [['href', link.href]] },
-      { kind: 'text', text: link.text },
+      { kind: 'text', text: stripClaimWords(link.text) || pathOf(link.href) },
       { kind: 'close', name: 'a' }
     );
   }
