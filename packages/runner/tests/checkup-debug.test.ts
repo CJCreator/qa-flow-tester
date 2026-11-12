@@ -59,18 +59,16 @@ describe('checkup strict custom headers validation', () => {
   });
 
   it('throws on invalid --header line without leaking content', () => {
-    expect(() => parseArgs(['--header', 'NoColonLine', 'https://app.test'])).toThrowError(
-      'QA_CUSTOM_HEADERS is not valid'
-    );
+    // T-356: a bad --header names the flag, not the environment variable.
+    const headerMsg = '--header must look like "Name: value"';
+    expect(() => parseArgs(['--header', 'NoColonLine', 'https://app.test'])).toThrowError(headerMsg);
 
     const secretVal = 'secret\r\nBearer 123';
-    expect(() => parseArgs(['--header', `Auth: ${secretVal}`, 'https://app.test'])).toThrowError(
-      'QA_CUSTOM_HEADERS is not valid'
-    );
+    expect(() => parseArgs(['--header', `Auth: ${secretVal}`, 'https://app.test'])).toThrowError(headerMsg);
     try {
       parseArgs(['--header', `Auth: ${secretVal}`, 'https://app.test']);
     } catch (err: any) {
-      expect(err.message).toBe('QA_CUSTOM_HEADERS is not valid');
+      expect(err.message).toBe(headerMsg);
       expect(err.message).not.toContain('Bearer');
     }
   });

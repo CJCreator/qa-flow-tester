@@ -18,8 +18,10 @@ describe('checkup test sign-in via env', () => {
   });
 
   it('has no command-line flag for the password', () => {
-    const a = parseArgs(['--password', PW, '--username', USER], base);
-    expect(a.signIn).toBeUndefined();
+    // T-356: unknown flags are refused, so a password can never be read from argv.
+    expect(() => parseArgs(['--password', PW, '--username', USER], base)).toThrow(
+      'Unknown option "--password". Run with --help.'
+    );
   });
 
   it('body carries roles, consent, owner, skipReview only with both variables', () => {

@@ -20,13 +20,19 @@ describe('checkup pacing delay (QA_DELAY_MS, --delay)', () => {
     expect(parseArgs([url], { QA_DELAY_MS: '250' }).crawlDelayMs).toBe(250);
   });
 
-  it('clamps values above 2000 to 2000 and below 0 to 0', () => {
-    expect(parseArgs([url], { QA_DELAY_MS: '9999' }).crawlDelayMs).toBe(2000);
-    expect(parseArgs([url], { QA_DELAY_MS: '-5' }).crawlDelayMs).toBe(0);
+  it('refuses values above 2000 or below 0 instead of clamping (T-356)', () => {
+    expect(() => parseArgs([url], { QA_DELAY_MS: '9999' })).toThrow(
+      '--delay must be a whole number from 0 to 2000, not "9999"'
+    );
+    expect(() => parseArgs([url], { QA_DELAY_MS: '-5' })).toThrow(
+      '--delay must be a whole number from 0 to 2000, not "-5"'
+    );
   });
 
-  it('falls back to 100 ms for a non-numeric value', () => {
-    expect(parseArgs([url], { QA_DELAY_MS: 'soon' }).crawlDelayMs).toBe(100);
+  it('refuses a non-numeric value instead of falling back to 100 ms (T-356)', () => {
+    expect(() => parseArgs([url], { QA_DELAY_MS: 'soon' })).toThrow(
+      '--delay must be a whole number from 0 to 2000, not "soon"'
+    );
   });
 
   it('lets --delay override QA_DELAY_MS, including with 0', () => {

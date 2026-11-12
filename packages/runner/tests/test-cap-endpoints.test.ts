@@ -28,8 +28,13 @@ describe('checkIntentsOff', () => {
 describe('--test-cap', () => {
   it('reaches the run body, clamped; absent by default', () => {
     expect(buildRunBody(parseArgs(['http://x.test', '--test-cap', '40'], {})).testCap).toBe(40);
-    expect(parseArgs(['http://x.test', '--test-cap', '9999999'], {}).testCap).toBe(100000);
-    expect(parseArgs(['http://x.test', '--test-cap', 'zero'], {}).testCap).toBeUndefined();
+    // T-356: out-of-range or non-numeric values are refused, not clamped.
+    expect(() => parseArgs(['http://x.test', '--test-cap', '9999999'], {})).toThrow(
+      '--test-cap must be a whole number from 1 to 100000, not "9999999"'
+    );
+    expect(() => parseArgs(['http://x.test', '--test-cap', 'zero'], {})).toThrow(
+      '--test-cap must be a whole number from 1 to 100000, not "zero"'
+    );
     const args = parseArgs(['--test-cap', '7', 'http://x.test'], {});
     expect(args.url).toBe('http://x.test');
     expect(buildRunBody(parseArgs(['http://x.test'], {}))).not.toHaveProperty('testCap');
