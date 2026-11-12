@@ -1,6 +1,7 @@
 /**
- * Check-up schedule rows (ADR 0039, amends ADR 0037): the owner's list, add, pause and delete, served on the
- * hosted copy too, and the tick the Cloud Scheduler job calls. Schedule ids (`sched_<ts>_<rand>`) are not
+ * Check-up schedule rows (ADR 0039, amends ADR 0037): the owner's list, add, pause and delete; on the hosted
+ * copy only an owner signed in with an AUDIT_OWNER_EMAILS Google account reaches them (the access key is shared
+ * by every tester there, T-298), and the tick the Cloud Scheduler job calls. Schedule ids (`sched_<ts>_<rand>`) are not
  * audit ids, so the id rows are prefix rows and the handler reads the id itself.
  */
 import type { Route, RouteContext } from './route.js';
@@ -52,14 +53,12 @@ export const scheduleRoutes: readonly Route[] = [
     method: 'GET',
     path: SCHEDULES_PATH,
     access: 'owner',
-    beta: 'allow',
     handle: (context) => guarded(context, async () => sendJson(context.res, 200, await context.server.listSchedules())),
   },
   {
     method: 'POST',
     path: SCHEDULES_PATH,
     access: 'owner',
-    beta: 'allow',
     handle: (context) => guarded(context, () => context.server.addScheduleFromRequest(context.req, context.res)),
   },
   {
@@ -67,7 +66,6 @@ export const scheduleRoutes: readonly Route[] = [
     path: `${SCHEDULES_PATH}/`,
     prefix: true,
     access: 'owner',
-    beta: 'allow',
     handle: (context) =>
       guarded(context, async () => {
         const id = idFrom(context.url.pathname, '/toggle');
@@ -83,7 +81,6 @@ export const scheduleRoutes: readonly Route[] = [
     path: `${SCHEDULES_PATH}/`,
     prefix: true,
     access: 'owner',
-    beta: 'allow',
     handle: (context) =>
       guarded(context, async () => {
         const id = idFrom(context.url.pathname, '');

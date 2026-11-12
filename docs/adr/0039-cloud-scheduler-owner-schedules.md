@@ -48,3 +48,7 @@ The sentence in Decision that says only `POST /api/runner/schedules/tick` has th
 ## Amendment, 2026-11-06 (single instance): the scheduler lock is per-process by design
 
 The runner stays at one instance (`--max-instances 1`, ADR 0036). The in-memory scheduler lock in `packages/runner/src/scheduler.ts` (the `ticking` flag and the locked queue) is therefore sufficient. It is not a cross-instance lock. Scaling out past one instance needs a shared lease (for example in Cloud Storage) first; this decision must be revisited before that happens.
+
+## Amendment, 2026-11-11 (T-298): on the hosted copy the schedule owner is an owner email
+
+Every tester on the hosted copy holds the access key, so "the owner (access key)" in Decision let any tester list, add, pause and delete every schedule. The four schedule rows are no longer `beta: 'allow'`: on a beta copy only a Google sign-in whose email is in `AUDIT_OWNER_EMAILS` reaches them (route.ts `auditOwnerAllowed`, as for the Website Audit owner rows, ADR 0042). The hosted copy also keeps at most 10 schedules. A local copy is unchanged: the access key (or this computer) is the owner.
