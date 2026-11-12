@@ -30,7 +30,13 @@ import { runAccessChecks, contextFetcher, type AccessFetcher } from './access-co
 import { makeCheckerFetch, createRunLinkChecker } from './checker-fetch.js';
 import { EvidenceCollector } from './evidence.js';
 import { captureVisualShot, readBaselineMode } from './visual-capture.js';
-import { PreFlightChecker, SignInFailedError, type PreFlightResult } from './preflight.js';
+import {
+  PreFlightChecker,
+  SignInFailedError,
+  roleRequestHeaders,
+  routeRoleHeaders,
+  type PreFlightResult,
+} from './preflight.js';
 import { restoreSession } from './discovery/discovery-agent.js';
 import { navigate, looksLikeLogin } from './navigate.js';
 import { isSignInOnlyForm, readPageForms } from './discovery/deterministic-spider.js';
@@ -381,6 +387,7 @@ export class FlowTestOrchestrator {
     const authDir = options.authDir || path.join(outputDir, 'auth');
     const repoRoot = options.repoRoot || process.cwd();
     const evidenceUrlPrefix = options.evidenceUrlPrefix ?? '/api/evidence/';
+    const roleHeadersFor = (role: string) => roleRequestHeaders(options.profile?.roles?.find((r) => r.role === role));
 
     // The tool's own repository is not the checked site's source: never point a finding at it.
     const sourceLocator = isQaToolRepo(repoRoot) ? undefined : new SourceLocator(repoRoot);
@@ -434,6 +441,7 @@ export class FlowTestOrchestrator {
             tunnelAuth: options.tunnelAuth,
             headerHosts: options.headerHosts,
           });
+          await routeRoleHeaders(context, options.targetUrl, roleHeadersFor(roleCred.role));
           const page = await context.newPage();
           const landingPath = options.preflight!.roleLandingPaths?.[roleCred.role] || '/';
           const testUrl = new URL(landingPath, options.targetUrl).toString();
@@ -751,6 +759,7 @@ export class FlowTestOrchestrator {
               userAgent: options.userAgent,
               headerHosts: options.headerHosts,
             }));
+            await routeRoleHeaders(context, options.targetUrl, roleHeadersFor(testCase.role));
 
             // On a live site nothing that could change data leaves the browser.
             blockedChanges = options.readOnly ? await blockChanges(context) : [];
@@ -815,16 +824,21 @@ export class FlowTestOrchestrator {
                   });
                   const slug = credential.role.replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 40);
                   const statePath = path.join(authDir, `${slug}.json`);
-                  const reloginRes = await this.preflightChecker.signIn(
-                    reloginContext,
-                    options.targetUrl,
-                    credential,
-                    statePath
-                  );
-                  // The whole session, not only its cookies: the one restore helper (LC-004). The retry still
-                  // starts from the state file on disk, so a failure here cannot strand the run.
-                  const reloginState = reloginRes.ok ? await reloginContext.storageState().catch(() => null) : null;
-                  await reloginContext.close().catch(() => {});
+                  let reloginRes: Awaited<ReturnType<PreFlightChecker['signIn']>>;
+                  let reloginState: Awaited<ReturnType<BrowserContext['storageState']>> | null;
+                  try {
+                    reloginRes = await this.preflightChecker.signIn(
+                      reloginContext,
+                      options.targetUrl,
+                      credential,
+                      statePath
+                    );
+                    // The whole session, not only its cookies: the one restore helper (LC-004). The retry still
+                    // starts from the state file on disk, so a failure here cannot strand the run.
+                    reloginState = reloginRes.ok ? await reloginContext.storageState().catch(() => null) : null;
+                  } finally {
+                    await reloginContext.close().catch(() => {});
+                  }
 
                   if (reloginRes.ok) {
                     roleStorageStates[testCase.role] = statePath;
@@ -1522,7 +1536,8 @@ export class FlowTestOrchestrator {
         for (const role of accessRoles) {
           const ctx = await this.browserManager.createContext({ ...base, storageState: roleStorageStates[role] });
           accessContexts.push(ctx);
-          roleFetchers[role] = contextFetcher(ctx);
+          await routeRoleHeaders(ctx, options.targetUrl, roleHeadersFor(role));
+          roleFetchers[role] = contextFetcher(ctx, undefined, roleHeadersFor(role));
         }
         const guard = getBrowserPolicy()?.guard;
         const access = await runAccessChecks({
