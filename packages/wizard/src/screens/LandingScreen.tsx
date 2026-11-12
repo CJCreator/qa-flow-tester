@@ -60,7 +60,7 @@ const WHERE_IT_RUNS: Array<{ name: string; sites: string; where: string; setup: 
   {
     name: 'Your own computer',
     sites: 'Any address your computer can reach',
-    where: 'Everything stays on your machine.',
+    where: 'Everything stays on your machine, except what you send to the AI you choose.',
     setup: 'Run it from the source',
   },
 ];
