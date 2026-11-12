@@ -997,6 +997,10 @@ export default function App() {
         // From the first paint, not once connected: a row inserted later pushes the whole page down (layout shift).
         !landing && <AreaNav route={route} beta={!!status?.beta} auditOwner={!!status?.auditOwner} />
       )}
+      {landing ? (
+        // The landing page brings its own header, main and footer landmarks.
+        <Suspense fallback={<Loading label="Opening…" />}>{body}</Suspense>
+      ) : (
       <main id="main">
         {lostContact && (
           <div className="mx-auto max-w-prose px-4 pt-4 sm:px-6">
@@ -1021,6 +1025,7 @@ export default function App() {
         )}
         <Suspense fallback={<Loading label="Opening…" />}>{body}</Suspense>
       </main>
+      )}
       {!landing && <CommandPalette route={route} beta={!!status?.beta} auditOwner={!!status?.auditOwner} />}
       {dialog}
     </div>

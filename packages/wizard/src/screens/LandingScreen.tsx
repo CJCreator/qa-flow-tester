@@ -142,7 +142,7 @@ function AddressForm() {
       action={startAddress()}
       method="get"
       onSubmit={() => sendCounterEvent(COUNTER_EVENTS.startCheckup)}
-      className="flex flex-col gap-3 sm:flex-row"
+      className="flex flex-col gap-3 sm:flex-row lg:flex-col"
     >
       <label htmlFor="hero-url" className="sr-only">
         Your site’s address
@@ -154,9 +154,9 @@ function AddressForm() {
         inputMode="url"
         autoComplete="url"
         placeholder="https://your-site.com"
-        className="field min-h-[48px] min-w-0 flex-1 font-mono placeholder:font-sans"
+        className="field h-14 min-w-0 flex-1 font-mono text-lg placeholder:font-sans"
       />
-      <button type="submit" className="btn-primary whitespace-nowrap px-8">
+      <button type="submit" className="btn-primary min-h-[56px] whitespace-nowrap px-8 lg:min-h-[48px]">
         Start a free check-up
       </button>
     </form>
@@ -260,7 +260,7 @@ export function LandingScreen() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 border-b border-rule bg-surface/95 backdrop-blur-md">
+      <header className="sticky top-0 z-header border-b border-rule bg-raised">
         <div className="relative mx-auto flex max-w-6xl items-center justify-between gap-x-2 px-3 py-1 sm:gap-x-4 sm:px-6">
           <span className="inline-flex min-h-[44px] items-center gap-2 whitespace-nowrap text-sm font-bold text-ink sm:text-base">
             <Mark />
@@ -286,7 +286,7 @@ export function LandingScreen() {
         </div>
       </header>
 
-      <div className="overflow-x-clip">
+      <main id="main" className="overflow-x-clip">
         <section aria-labelledby="hero-title" className="border-b border-rule bg-canvas">
           <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14">
             <div className="min-w-0">
@@ -341,7 +341,7 @@ export function LandingScreen() {
           <ol className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {HOME_STEPS.map((s, i) => (
               <li key={s.name} className="min-w-0 border-t border-edge pt-4">
-                <span aria-hidden="true" className="block font-stamp text-6xl leading-none text-stamp">
+                <span aria-hidden="true" className="block font-stamp text-5xl leading-none text-stamp">
                   {i + 1}
                 </span>
                 <p className="mt-4 text-lg font-bold text-ink">
@@ -363,16 +363,16 @@ export function LandingScreen() {
               >
                 What it looks at
               </SectionTitle>
+              <p className="mt-2">
+                <a href={SAMPLE_REPORT_URL} className="btn-link">
+                  See each area in the sample report
+                </a>
+              </p>
             </div>
             <ul className="grid min-w-0 gap-x-10 sm:grid-cols-2">
               {AREAS.map((a) => (
                 <li key={a.name} className="min-w-0 border-t border-rule py-4">
-                  <p className="font-bold text-ink">
-                    <a href={SAMPLE_REPORT_URL} className="btn-link min-h-0 font-bold text-ink">
-                      {a.name}
-                      <span className="sr-only">, in the sample report</span>
-                    </a>
-                  </p>
+                  <p className="font-bold text-ink">{a.name}</p>
                   <p className="mt-1 text-sm leading-relaxed text-ink-soft">{a.text}</p>
                 </li>
               ))}
@@ -410,7 +410,7 @@ export function LandingScreen() {
               <tbody>
                 {WHERE_IT_RUNS.map((r) => (
                   <tr key={r.name}>
-                    <th scope="row" className="!font-bold !text-ink">
+                    <th scope="row">
                       {r.name}
                     </th>
                     <td className="text-ink-soft">{r.sites}</td>
@@ -470,7 +470,7 @@ export function LandingScreen() {
             </p>
           </div>
         </section>
-      </div>
+      </main>
 
       <footer className="border-t border-rule bg-surface">
         <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 text-sm text-ink-soft sm:px-6 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
