@@ -83,6 +83,37 @@ describe('releaseVerdict gate matrix', () => {
     expect(v.reason).toBe('No problems found.');
     expect(v.notChecked).toBeUndefined();
   });
+
+  it('accepts narrowed findings holding only severity, title, triageStatus, and needsConfirmation (T-351)', () => {
+    const narrowed = [
+      {
+        severity: 'Blocker' as const,
+        title: 'Critical defect',
+        triageStatus: undefined,
+        needsConfirmation: false,
+      },
+      {
+        severity: 'Major' as const,
+        title: 'Expected behavior',
+        triageStatus: 'Intended' as const,
+        needsConfirmation: false,
+      },
+      {
+        severity: 'Minor' as const,
+        title: 'Unconfirmed suggestion',
+        triageStatus: undefined,
+        needsConfirmation: true,
+      },
+    ];
+    const v = releaseVerdict(narrowed);
+    expect(v.ready).toBe(false);
+    expect(v.stamp).toBe('Not ready yet');
+    expect(v.counts.Blocker).toBe(1);
+    expect(v.counts.Major).toBe(0);
+    expect(v.toConfirm).toBe(1);
+    expect(v.mustFix).toBe(1);
+    expect(v.total).toBe(1);
+  });
 });
 
 describe('releaseVerdict zero-check gate (OPEN_ISSUES C5)', () => {

@@ -164,8 +164,11 @@ export function problemKey(f: Pick<Finding, 'title'> & { issueKey?: string }): s
   return f.issueKey ?? plain.toLowerCase();
 }
 
+export type ProblemInput = Pick<Finding, 'title' | 'severity' | 'checker' | 'where'> &
+  Partial<Pick<Finding, 'triageStatus' | 'needsConfirmation' | 'issueKey' | 'seenAt' | 'aspect' | 'categoryTag'>>;
+
 /** One problem, and every place it was found. */
-export interface Problem {
+export interface Problem<F = Finding> {
   key: string;
   /** The plain title. */
   title: string;
@@ -173,7 +176,7 @@ export interface Problem {
   severity: FindingSeverity;
   /** Every area it touches, first the one it counts toward. */
   aspects: AspectType[];
-  findings: Finding[];
+  findings: F[];
   /** The pages it was found on, in the order first seen. */
   pages: string[];
   /** An AI guess the site didn't match: not a problem until someone confirms it. */
@@ -189,8 +192,8 @@ export function isDismissed(f: Pick<Finding, 'triageStatus'>): boolean {
  * Findings as problems: the same problem on several pages, or from several checks, is one problem
  * that lists them. Dismissed findings are left out; unconfirmed AI guesses are kept apart.
  */
-export function groupIntoProblems(findings?: Finding[] | null): Problem[] {
-  const problems = new Map<string, Problem>();
+export function groupIntoProblems<F extends ProblemInput = Finding>(findings?: F[] | null): Problem<F>[] {
+  const problems = new Map<string, Problem<F>>();
   for (const f of findings ?? []) {
     if (isDismissed(f)) continue;
     const toConfirm = !!f.needsConfirmation;

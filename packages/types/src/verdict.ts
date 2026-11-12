@@ -1,5 +1,5 @@
 import type { AspectGrade, AspectType, Finding, FindingSeverity, RunCoverage, SiteAspectGrades } from './index.js';
-import { groupIntoProblems, isDismissed } from './problems.js';
+import { groupIntoProblems, isDismissed, type ProblemInput } from './problems.js';
 
 export interface ReleaseGateCriteria {
   maxBlockers?: number;
@@ -117,10 +117,11 @@ export function releaseVerdict(
   // AI-written findings are advisory: they never change the verdict (ADR 0009).
   const safeFindings = (findings ?? []).filter((f) => !f.advisory && f.checker !== 'ai-review');
   const problems = groupIntoProblems(
-    safeFindings.map(
-      (f) =>
-        ({ checker: 'bug-detection', id: '', where: { urlPath: '', role: '', breakpoint: '1440px' }, ...f }) as Finding
-    )
+    safeFindings.map((f): ProblemInput => ({
+      checker: 'bug-detection',
+      where: { urlPath: '', role: '', breakpoint: '1440px' },
+      ...f,
+    }))
   );
   const active = problems.filter((p) => !p.toConfirm);
   const counts: Record<FindingSeverity, number> = { Blocker: 0, Major: 0, Minor: 0, Suggestion: 0 };

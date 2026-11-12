@@ -161,4 +161,11 @@ describe('the browser-safe entry into @qa/types (T-211)', () => {
     }
     expect(offenders).toEqual([]);
   });
+
+  it('declares the browser entry in package.json and marks the package side-effect free (T-351)', () => {
+    const pkgPath = fileURLToPath(new URL('../package.json', import.meta.url));
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+    expect(pkg.exports?.['./browser']).toBeDefined();
+    expect(pkg.sideEffects).toBe(false);
+  });
 });
