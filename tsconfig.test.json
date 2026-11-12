@@ -13,12 +13,10 @@
       "@qa/types/src/*": ["packages/types/src/*"],
       "@qa/core": ["packages/core/src/index.ts"],
       "@qa/checkers": ["packages/checkers/src/index.ts"],
-      "@qa/runner": ["packages/runner/src/index.ts"],
-      // Core tests import pngjs; its types are installed by @qa/checkers (devDependency @types/pngjs).
-      "pngjs": ["packages/checkers/node_modules/@types/pngjs/index.d.ts"]
+      "@qa/runner": ["packages/runner/src/index.ts"]
     }
   },
   // Wizard tests import wizard source that uses import.meta.env and '?raw' imports (packages/wizard/tsconfig.json types).
   "files": ["packages/wizard/node_modules/vite/client.d.ts"],
-  "include": ["packages/*/tests/**/*", "scripts/**/*"]
+  "include": ["packages/*/tests/**/*"]
 }
