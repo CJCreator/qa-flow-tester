@@ -41,7 +41,7 @@ import {
   type ExportOptions,
 } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
-import { refuse, refuseStoreFailure as refuseWith } from './audit-common.js';
+import { AUDIT_NOT_FOUND, refuse, refuseStoreFailure } from './audit-common.js';
 import type { AuditSettingsStore } from './audit-settings.js';
 
 /** What the download rows need: the Website Audit store (G6) and the stored audit settings (BE-508). */
@@ -55,7 +55,6 @@ export interface AuditExportDeps {
 }
 
 const EDITS_NAME = 'edits';
-const NOT_FOUND = 'This Website Audit was not found. It may have been deleted.';
 const RUNNING = 'This version of the Website Audit is still running. Download it when it has finished.';
 const NO_RESULT = 'This version of the Website Audit has no finished result to download.';
 const FAILED = 'The file could not be made. Try again.';
@@ -81,10 +80,6 @@ const DOCUMENT_SLUGS: Readonly<Record<AuditDocumentKind, string>> = {
 
 function invalid(res: http.ServerResponse, error: string): void {
   refuse(res, 400, 'ERR_INVALID_REQUEST', error);
-}
-
-function refuseStoreFailure(res: http.ServerResponse, err: unknown): void {
-  refuseWith(res, err, { notFound: NOT_FOUND, failed: FAILED });
 }
 
 /** The query values every row shares, checked. A string is the sentence of the first refusal. */
@@ -160,14 +155,14 @@ interface Loaded {
 async function load(store: AuditStore, c: RouteContext, wanted: number | undefined): Promise<Loaded | null> {
   const auditId = c.params?.id;
   if (!auditId) {
-    refuse(c.res, 404, 'ERR_AUDIT_NOT_FOUND', NOT_FOUND);
+    refuse(c.res, 404, 'ERR_AUDIT_NOT_FOUND', AUDIT_NOT_FOUND);
     return null;
   }
   const record = await store.readAuditRecord(auditId);
   const version = wanted ?? record?.latestVersion;
   const found = record && version !== undefined ? await store.getVersion(auditId, version) : null;
   if (!record || version === undefined || !found) {
-    refuse(c.res, 404, 'ERR_AUDIT_NOT_FOUND', NOT_FOUND);
+    refuse(c.res, 404, 'ERR_AUDIT_NOT_FOUND', AUDIT_NOT_FOUND);
     return null;
   }
   if (found.status === 'running') {
@@ -305,7 +300,7 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
       );
       sendFile(c.res, file);
     } catch (err) {
-      refuseStoreFailure(c.res, err);
+      refuseStoreFailure(c.res, err, { failed: FAILED });
     } finally {
       release();
     }
@@ -336,7 +331,7 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
       );
       sendFile(c.res, file);
     } catch (err) {
-      refuseStoreFailure(c.res, err);
+      refuseStoreFailure(c.res, err, { failed: FAILED });
     } finally {
       release();
     }
@@ -381,7 +376,7 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
       );
       sendFile(c.res, file);
     } catch (err) {
-      refuseStoreFailure(c.res, err);
+      refuseStoreFailure(c.res, err, { failed: FAILED });
     } finally {
       release();
     }

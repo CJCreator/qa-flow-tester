@@ -10,11 +10,11 @@ import {
 } from '@qa/types';
 import { emptyOverlay, type AuditStore } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
-import { refuse, refuseStoreFailure as refuseWith, versionQuery } from './audit-common.js';
+import { AUDIT_NOT_FOUND, refuse, refuseStoreFailure, versionQuery } from './audit-common.js';
 import { sendJson } from './body.js';
 import { allows } from '../helpers/index.js';
 
-export { refuse };
+export { AUDIT_NOT_FOUND, refuse, refuseStoreFailure } from './audit-common.js';
 
 /** Who is asking: the tool user, or a signed-in Helper (their Google address, from REQ-033's sign-in). */
 export interface AuditCaller {
@@ -31,14 +31,7 @@ export interface AuditRouteDeps {
   isRunning?: (auditId: string) => boolean | Promise<boolean>;
 }
 
-export const AUDIT_NOT_FOUND = 'This Website Audit was not found. It may have been deleted.';
 export const AUDIT_FORBIDDEN = 'You do not have permission to do this on this Website Audit.';
-const STORE_FAILURE = 'The saved audits could not be read or changed. Try again.';
-
-/** Store failures become fixed sentences: no keys, paths or provider text reach the caller. */
-export function refuseStoreFailure(res: http.ServerResponse, err: unknown): void {
-  refuseWith(res, err, { notFound: AUDIT_NOT_FOUND, failed: STORE_FAILURE });
-}
 
 /**
  * The audits a Helper holds `permission` on; null for the owner (all of them).

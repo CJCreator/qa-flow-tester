@@ -22,24 +22,30 @@ export function refuse(res: http.ServerResponse, status: number, code: AuditErro
   sendJson(res, status, body);
 }
 
-const INVALID_REQUEST = 'The request is not valid.';
+export const AUDIT_NOT_FOUND = 'This Website Audit was not found. It may have been deleted.';
+export const INVALID_REQUEST = 'The request is not valid.';
 
-/** The two sentences that change from route to route. */
-export interface StoreFailureText {
-  /** The 404 sentence for a record that is not there. */
-  notFound: string;
-  /** The 500 sentence for any other failure. */
-  failed: string;
+export interface StoreFailureSentences {
+  notFound?: string;
+  failed?: string;
 }
 
-/** Store failures become fixed sentences: no keys, paths or backend text reach the caller. */
-export function refuseStoreFailure(res: http.ServerResponse, err: unknown, text: StoreFailureText): void {
+export type StoreFailureText = StoreFailureSentences;
+
+/** Store failures become fixed sentences: no keys, paths or provider text reach the caller. */
+export function refuseStoreFailure(
+  res: http.ServerResponse,
+  err: unknown,
+  sentences: StoreFailureSentences = {}
+): void {
   if (err instanceof AuditRecordError) {
-    if (err.code === 'not-found') return refuse(res, 404, 'ERR_AUDIT_NOT_FOUND', text.notFound);
+    if (err.code === 'not-found') {
+      return refuse(res, 404, 'ERR_AUDIT_NOT_FOUND', sentences.notFound ?? AUDIT_NOT_FOUND);
+    }
     return refuse(res, 400, 'ERR_INVALID_REQUEST', INVALID_REQUEST);
   }
   if (err instanceof AuditStoreError && err.code === 'invalid-key') {
     return refuse(res, 400, 'ERR_INVALID_REQUEST', INVALID_REQUEST);
   }
-  sendJson(res, 500, { error: text.failed });
+  sendJson(res, 500, { error: sentences.failed ?? 'The saved audits could not be read or changed. Try again.' });
 }

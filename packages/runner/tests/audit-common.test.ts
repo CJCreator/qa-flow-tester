@@ -100,4 +100,16 @@ describe('refuseStoreFailure', () => {
     });
     expect(res.body).not.toContain('super_secret');
   });
+
+  it('uses default notFound and failed text when omitted', () => {
+    const res404 = new FakeResponse();
+    refuseStoreFailure(res404 as unknown as http.ServerResponse, new AuditRecordError('not-found', 'not there'));
+    expect(res404.statusCode).toBe(404);
+    expect(res404.json().error).toBe('This Website Audit was not found. It may have been deleted.');
+
+    const res500 = new FakeResponse();
+    refuseStoreFailure(res500 as unknown as http.ServerResponse, new Error('unexpected'));
+    expect(res500.statusCode).toBe(500);
+    expect(res500.json().error).toBe('The saved audits could not be read or changed. Try again.');
+  });
 });
