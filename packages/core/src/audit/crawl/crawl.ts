@@ -22,7 +22,13 @@ import {
 } from '../../browser.js';
 import { isIpLiteral } from '../../address-class.js';
 import { blockChanges } from '../../live-site.js';
-import { defaultNetDeps, makeRequestGuard, resolvePublic, type NetDeps } from '../../safe-net.js';
+import {
+  defaultNetDeps,
+  makeRequestGuard,
+  privateAddressesAllowed,
+  resolvePublic,
+  type NetDeps,
+} from '../../safe-net.js';
 import { START_ADDRESS_MESSAGES, type AuditAddressCode } from './reachability.js';
 import { makeCheckerFetch } from '../../checker-fetch.js';
 import { RobotsPolicy, ROBOTS_USER_AGENT_TOKEN } from '../../competitive/robots.js';
@@ -293,7 +299,7 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
   const start = new URL(request.url);
   const startPath = start.pathname;
   // A local runner may audit this computer and its network; a shared machine's browser policy still wins.
-  const allowPrivate = opts.allowPrivateAddresses === true && getBrowserPolicy() === null;
+  const allowPrivate = opts.allowPrivateAddresses === true && privateAddressesAllowed(true);
 
   // Before any request: the start host must still be public, and the browser gets exactly that address. A
   // local run pins nothing: the browser resolves `localhost` itself and reaches ::1 or 127.0.0.1, whichever

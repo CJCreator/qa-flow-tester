@@ -11,7 +11,7 @@ export type AddressClass =
   | 'metadata'
   | 'unique-local'
   | 'carrier-nat'
-  | 'multicast-reserved';
+  | 'multicast-reserved'; // multicast, reserved or special-purpose
 
 function parseIPv4(text: string): [number, number, number, number] | null {
   const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(text);
@@ -62,6 +62,9 @@ function classifyV4(a: number, b: number, c: number, d: number): AddressClass | 
   if (a === 192 && b === 168) return 'private';
   if (a === 169 && b === 254) return c === 169 && d === 254 ? 'metadata' : 'link-local';
   if (a === 100 && b >= 64 && b <= 127) return 'carrier-nat';
+  // special-purpose ranges (RFC 6890): benchmarking, IETF protocol assignments
+  if (a === 198 && (b === 18 || b === 19)) return 'multicast-reserved';
+  if (a === 192 && b === 0 && c === 0) return 'multicast-reserved';
   if (a >= 224) return 'multicast-reserved';
   return null;
 }
@@ -79,6 +82,12 @@ function classifyV6(g: number[]): AddressClass | null {
   }
   // NAT64 64:ff9b::/96
   if (g[0] === 0x64 && g[1] === 0xff9b && g.slice(2, 6).every((x) => x === 0)) return embedded();
+  // IPv4-translated: ::ffff:0:a.b.c.d
+  if (g.slice(0, 4).every((x) => x === 0) && g[4] === 0xffff && g[5] === 0) return embedded();
+  // 6to4: 2002::/16
+  if (g[0] === 0x2002) return classifyV4(g[1] >> 8, g[1] & 255, g[2] >> 8, g[2] & 255);
+  // Teredo: 2001:0::/32
+  if (g[0] === 0x2001 && g[1] === 0) return 'multicast-reserved';
   if (g[0] === 0xfd00 && g[1] === 0x0ec2 && g.slice(2, 7).every((x) => x === 0) && g[7] === 0x254) return 'metadata';
   if ((g[0] & 0xffc0) === 0xfe80) return 'link-local';
   if ((g[0] & 0xfe00) === 0xfc00) return 'unique-local';

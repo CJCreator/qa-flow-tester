@@ -351,6 +351,14 @@ function flatHeaders(headers: Record<string, string | string[] | undefined>): Re
 }
 
 /**
+ * Whether private addresses may be reached now: the caller allows it and no browser guard is set (a shared
+ * machine, ADR 0014). A policy that only pins a host (a local alias) is not a guard.
+ */
+export function privateAddressesAllowed(allow: boolean | undefined): boolean {
+  return allow !== false && !getBrowserPolicy()?.guard;
+}
+
+/**
  * The one outbound path for page- and site-derived addresses (ADR 0031): GET only, through `safeGet`
  * (resolved once per hop, pinned, every redirect hop re-checked). Returns the checkers' `FetchFn`:
  * null when the request was refused or could not be made. Whether private addresses are allowed is read
@@ -359,7 +367,7 @@ function flatHeaders(headers: Record<string, string | string[] | undefined>): Re
 export function makeOutboundFetch(opts: OutboundFetchOptions = {}): OutboundFetchFn {
   const deps = opts.deps ?? defaultNetDeps;
   const fetchOnce = async (url: string): Promise<OutboundResponse | null> => {
-    const allowPrivate = opts.allowPrivate !== false && getBrowserPolicy() === null;
+    const allowPrivate = privateAddressesAllowed(opts.allowPrivate);
     let got: SafeGetResult;
     try {
       got = await safeGet(
@@ -547,7 +555,7 @@ export function makeGuardedFetch(opts: GuardedFetchOptions = {}): GuardedFetch {
       url,
       {
         // Read at call time: a browser guard (shared machine) makes this public only, whatever the caller passed.
-        allowPrivate: opts.allowPrivate !== false && getBrowserPolicy() === null,
+        allowPrivate: privateAddressesAllowed(opts.allowPrivate),
         maxRedirects: manual ? 0 : maxRedirects,
         headers: headersFromInit(init?.headers),
         redirectAsResponse: true,

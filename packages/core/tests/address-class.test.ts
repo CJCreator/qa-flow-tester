@@ -64,8 +64,32 @@ describe('Address classes (isTestHost on a shared machine, ADR 0014)', () => {
     expect(classifyAddress('64:ff9b::808:808')).toBeNull();
   });
 
+  it.each([
+    ['2002:7f00:1::', 'loopback'],
+    ['2002:a00:1::1', 'private'],
+    ['2002:a9fe:a9fe::', 'metadata'],
+    ['2001:0:4136:e378:8000:63bf:3fff:fdd2', 'multicast-reserved'],
+    ['::ffff:0:7f00:1', 'loopback'],
+    ['::ffff:0:a00:1', 'private'],
+    ['198.18.0.1', 'multicast-reserved'],
+    ['198.19.255.255', 'multicast-reserved'],
+    ['192.0.0.170', 'multicast-reserved'],
+  ] as const)('refuses %s with class %s', (address, expectedClass) => {
+    expect(classifyAddress(address)).toBe(expectedClass);
+  });
+
   it('public addresses are not refused', () => {
-    for (const a of ['8.8.8.8', '1.1.1.1', '93.184.216.34', '2606:4700:4700::1111', '2001:4860:4860::8888']) {
+    for (const a of [
+      '8.8.8.8',
+      '1.1.1.1',
+      '93.184.216.34',
+      '2606:4700:4700::1111',
+      '2001:4860:4860::8888',
+      '2002:808:808::1',
+      '198.17.255.255',
+      '198.20.0.1',
+      '192.0.1.1',
+    ]) {
       expect(classifyAddress(a), a).toBeNull();
       expect(isPublicAddress(a), a).toBe(true);
     }
