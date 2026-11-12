@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { writeJsonAtomic } from '@qa/core';
 import type { ReleaseReport, RunSummary } from '@qa/types';
-import { releaseVerdict } from '@qa/types';
+import { releaseVerdict, isRunSummary, isReleaseReportShape } from '@qa/types';
 import type { SessionPaths } from './checkup-session.js';
 
 export const RUNS_KEPT_PER_SITE = 10;
@@ -106,7 +106,10 @@ export class DefaultReportStore implements ReportStore {
       for (const name of names) {
         if (!isRunId(name)) continue;
         try {
-          byName.set(name, JSON.parse(await fs.readFile(path.join(root, name, 'summary.json'), 'utf8')) as RunSummary);
+          const parsed = JSON.parse(await fs.readFile(path.join(root, name, 'summary.json'), 'utf8'));
+          if (isRunSummary(parsed)) {
+            byName.set(name, parsed);
+          }
         } catch {
           // not finished
         }
@@ -214,7 +217,8 @@ export class DefaultReportStore implements ReportStore {
     const [latest] = await this.list();
     if (!latest) return;
     try {
-      this.lastReport = JSON.parse(await fs.readFile(path.join(this.dirFor(latest.runId), 'report.json'), 'utf8'));
+      const parsed = JSON.parse(await fs.readFile(path.join(this.dirFor(latest.runId), 'report.json'), 'utf8'));
+      this.lastReport = isReleaseReportShape(parsed) ? (parsed as ReleaseReport) : null;
     } catch {
       // unreadable: the list still shows it
     }
@@ -223,7 +227,8 @@ export class DefaultReportStore implements ReportStore {
   async read(runId: string): Promise<ReleaseReport | null> {
     if (this.lastReport?.runId === runId) return this.lastReport;
     try {
-      return JSON.parse(await fs.readFile(path.join(this.dirFor(runId), 'report.json'), 'utf8'));
+      const parsed = JSON.parse(await fs.readFile(path.join(this.dirFor(runId), 'report.json'), 'utf8'));
+      return isReleaseReportShape(parsed) ? (parsed as ReleaseReport) : null;
     } catch {
       return null;
     }

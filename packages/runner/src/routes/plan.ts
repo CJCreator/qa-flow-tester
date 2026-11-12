@@ -15,6 +15,7 @@ import {
   type StorageStateData,
   type PlanPatchBody,
   type ProviderLimits,
+  planPatchProblem,
 } from '@qa/types';
 import {
   planValidatorFor,
@@ -218,6 +219,12 @@ export async function patchPlan(c: PlanRouteContext): Promise<void> {
     body = await readJsonBody<PlanPatchBody>(req);
   } catch {
     sendJson(res, 400, { error: 'Invalid JSON body' });
+    return;
+  }
+
+  const patchProblem = planPatchProblem(body);
+  if (patchProblem) {
+    sendJson(res, 400, { error: patchProblem });
     return;
   }
 
