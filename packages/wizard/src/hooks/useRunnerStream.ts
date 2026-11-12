@@ -18,7 +18,7 @@ export function resumeUrl(url: string, lastEventId: number | null): string {
  * Whether a `connected` event means the page must drop its feed. A fresh or non-resumable connection gets the whole
  * retained log again, so the feed is rebuilt from it; a resumed one carries only the gap, so the feed is kept.
  */
-export function shouldResetFeed(event: { resumed?: unknown }): boolean {
+export function shouldResetFeed(event: Record<string, unknown>): boolean {
   return event.resumed !== true;
 }
 
