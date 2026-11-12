@@ -161,6 +161,7 @@ import {
   type BetaLimits,
 } from './beta.js';
 import { purgeVisitorFolders } from './session/visitor-cleanup.js';
+import { BrowserGate } from './browser-gate.js';
 import { isRunId } from './session/report-store.js';
 import { hostOfAddress } from './session/plan-store.js';
 import { testCopyFor } from './host-policy.js';
@@ -290,6 +291,9 @@ const SCHEDULE_RUN_OWNER = '(schedule)';
 /** A tick starts no new run after this long (29 min): Cloud Scheduler gives up on a request at 30 min (ADR 0039). */
 const TICK_BUDGET_MS = 29 * 60 * 1000;
 const MAX_HOSTED_SCHEDULES = 10;
+/** Open event streams per visitor on a beta copy, and in total on any copy (T-300). Each one holds a Cloud Run request. */
+const MAX_STREAMS_PER_VISITOR = 4;
+const MAX_STREAMS = 40;
 
 export interface RunnerServerOptions {
   port?: number;
@@ -493,6 +497,8 @@ export class RunnerServer {
   private outputDir: string;
   private dataDir: string;
   private streamClients = new Set<http.ServerResponse>();
+  /** Browsers started outside the run slot (sign-in tests): one on the hosted copy, two locally (T-300). */
+  private sideBrowsers: BrowserGate;
   /** Beta: which visitor each open stream belongs to, so a run's events reach only the visitor who started it. */
   private streamSessions = new Map<http.ServerResponse, string | undefined>();
   /** Beta: which visitor started each run. A visitor sees only their own runs, plans and reports. */
@@ -642,6 +648,7 @@ export class RunnerServer {
     this.modelRecordFile = path.join(this.dataDir, '.qa-ai-model-record.json');
     this.defaultsFile = path.join(this.dataDir, '.qa-settings.json');
     this.beta = !!options.beta;
+    this.sideBrowsers = new BrowserGate(this.beta ? 1 : 2);
     this.betaLimits = options.betaLimits ?? betaLimitsFromEnv();
     this.hostChecks = options.hostChecks;
     this.stepTimeoutMs = options.stepTimeoutMs;
@@ -1106,6 +1113,14 @@ export class RunnerServer {
 
           // GET /api/runner/stream (Server-Sent Events)
           if (pathname === '/api/runner/stream' && req.method === 'GET') {
+            if (this.streamRefused()) {
+              res.setHeader('Retry-After', '30');
+              this.sendJson(res, 429, {
+                error: 'Too many progress streams are open. Close another tab of this page and try again.',
+                code: 'ERR_TOO_MANY_STREAMS',
+              });
+              return;
+            }
             res.writeHead(200, {
               'Content-Type': 'text/event-stream',
               'Cache-Control': 'no-cache, no-transform',
@@ -1562,10 +1577,20 @@ export class RunnerServer {
     return true;
   }
 
+  /** True when this request may not open another event stream: too many on the copy, or (beta) for this visitor. */
+  private streamRefused(): boolean {
+    if (this.streamClients.size >= MAX_STREAMS) return true;
+    if (!this.beta) return false;
+    const me = currentSessionId();
+    let mine = 0;
+    for (const owner of this.streamSessions.values()) if (owner === me) mine++;
+    return mine >= MAX_STREAMS_PER_VISITOR;
+  }
+
   /**
    * Beta only: counts this start against the visitor's and the day's limits. Answers 429 and returns true
    * when one is reached. Call it after every other check, so a refused start costs nothing. Counted: check-up
-   * and comparison starts. Not counted: preflight (no browser run) and the plan routes, which continue an
+   * and comparison starts, sign-in tests (each opens a browser) and Smoke Check-ups. Not counted: preflight (no browser run) and the plan routes, which continue an
    * already counted check-up (known gap: include-host / add-page can repeat within one plan; the day's cap
    * and one run at a time bound it). Keyed on the session, never the address.
    */
@@ -2009,6 +2034,21 @@ export class RunnerServer {
       this.sendJson(res, 400, { error: ownHeaders.problem.error, code: ownHeaders.problem.code });
       return;
     }
+    // One sign-in test browser at a time on the hosted copy, two locally; a run's browser has its own slot (T-300).
+    const release = this.sideBrowsers.tryAcquire();
+    if (!release) {
+      res.setHeader('Retry-After', '30');
+      this.sendJson(res, 429, {
+        error: 'Another sign-in test is running on this copy. Try again in a minute.',
+        code: 'ERR_BUSY',
+      });
+      return;
+    }
+    // On the hosted copy a sign-in test opens a browser, so it counts like a check-up start.
+    if (this.betaLimitHit(res)) {
+      release();
+      return;
+    }
     const browser = new BrowserManager();
     let result: { ok: boolean; landingPath?: string; reason?: SignInFailureReason };
     try {
@@ -2018,6 +2058,7 @@ export class RunnerServer {
       result = { ok: false, reason: 'unreachable' };
     } finally {
       await browser.close();
+      release();
     }
 
     if (!result.ok) {
@@ -3056,6 +3097,7 @@ export class RunnerServer {
 
     // Smoke Check-up: a few read-only GETs, no browser, no plan. Runs here and answers with the report.
     if (body.preset === 'smoke') {
+      if (this.betaLimitHit(res)) return;
       try {
         const result = await runPostDeploySmoke({
           targetUrl: body.targetUrl,

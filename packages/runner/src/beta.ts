@@ -184,7 +184,7 @@ function hitFor(scope: 'visitor' | 'day', limit: number, now: number): BetaLimit
     resetsAt: new Date(reset).toISOString(),
     error:
       scope === 'visitor'
-        ? `You have used your ${limit} check-ups for today on this shared copy (a comparison counts as one). The limit resets at 00:00 UTC, ${inAbout}.`
+        ? `You have used your ${limit} check-ups for today on this shared copy (a comparison, a sign-in test and a Smoke Check-up each count as one). The limit resets at 00:00 UTC, ${inAbout}.`
         : `This shared copy has reached its limit of ${limit} check-ups for today. It resets at 00:00 UTC, ${inAbout}.`,
     suggestion:
       'Come back after the reset, or run the QA Tool on your own computer or in your own GitHub Actions, which have no such limit.',
