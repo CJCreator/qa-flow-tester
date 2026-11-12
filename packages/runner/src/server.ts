@@ -169,11 +169,8 @@ import {
   checkRoles,
   checkLoginPath,
 } from './run-inputs.js';
-
-function isInside(dir: string, file: string): boolean {
-  const rel = path.relative(dir, file);
-  return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
-}
+import { isInside } from './fs-inside.js';
+import { readCookie } from './cookies.js';
 
 /**
  * Saved sign-in sessions (auth/<role>.json) hold live session cookies: no folder called "auth" is
@@ -234,20 +231,6 @@ function isLoopbackHost(host: string | undefined): boolean {
 
 /** The cookie that carries the access key once a shared link has been opened. */
 const ACCESS_COOKIE = 'qa_access';
-
-/** One cookie's value from a Cookie header. */
-function cookieValue(header: string | undefined, name: string): string | undefined {
-  for (const part of (header || '').split(';')) {
-    const at = part.indexOf('=');
-    if (at === -1 || part.slice(0, at).trim() !== name) continue;
-    try {
-      return decodeURIComponent(part.slice(at + 1).trim());
-    } catch {
-      return undefined;
-    }
-  }
-  return undefined;
-}
 
 /** Compared in constant time, so how long a refusal takes says nothing about the key. */
 function matchesSecret(given: string | null | undefined, secret: string): boolean {
@@ -820,7 +803,7 @@ export class RunnerServer {
   private carriesAccessKey(req: http.IncomingMessage): boolean {
     const key = this.accessToken;
     if (!key) return isLoopbackAddress(req.socket?.remoteAddress);
-    if (matchesSecret(cookieValue(req.headers.cookie, ACCESS_COOKIE), key)) return true;
+    if (matchesSecret(readCookie(req.headers.cookie, ACCESS_COOKIE), key)) return true;
     const header = req.headers['x-qa-access'];
     return matchesSecret(Array.isArray(header) ? header[0] : header, key);
   }

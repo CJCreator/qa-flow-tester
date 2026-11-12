@@ -4,6 +4,7 @@ import net from 'net';
 import { randomBytes } from 'crypto';
 import { AsyncLocalStorage } from 'async_hooks';
 import type { AIProviderType } from '@qa/types';
+import { readCookie } from './cookies.js';
 import {
   KeyResolver,
   classifyAddress,
@@ -39,14 +40,6 @@ interface Session {
   pinned?: boolean;
 }
 const sessions = new Map<string, Session>();
-
-function cookieValue(header: string | undefined, name: string): string | undefined {
-  for (const part of (header || '').split(';')) {
-    const [key, ...rest] = part.trim().split('=');
-    if (key === name) return rest.join('=');
-  }
-  return undefined;
-}
 
 /** A session that owns a run, a plan or a sign-in is never pushed out to make room. */
 function ownsSomething(s: Session): boolean {
@@ -111,7 +104,7 @@ function claimNewSession(address: string, now: number): boolean {
  */
 export function sessionFor(req: http.IncomingMessage, res: http.ServerResponse, secure: boolean): string {
   forgetOldSessions();
-  const sent = cookieValue(req.headers.cookie, SESSION_COOKIE);
+  const sent = readCookie(req.headers.cookie, SESSION_COOKIE);
   let id = sent && sessions.has(sent) ? sent : undefined;
   if (!id) {
     if (!claimNewSession(clientAddress(req), Date.now())) throw new SessionRateLimited();

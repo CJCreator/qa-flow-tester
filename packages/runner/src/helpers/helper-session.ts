@@ -8,6 +8,9 @@
  */
 import type http from 'http';
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
+import { readCookie, cookieFrom } from '../cookies.js';
+
+export { readCookie, cookieFrom };
 
 export const HELPER_COOKIE = 'qa_helper';
 /** Longest Helper session: 8 hours. */
@@ -85,23 +88,6 @@ export function readHelperSessionValue(key: Buffer, value: string | undefined, n
   // Expired, or claiming more than the longest session (a cookie this code never signs).
   if (exp <= nowSeconds || exp > nowSeconds + HELPER_SESSION_SECONDS) return null;
   return { email, sub, exp };
-}
-
-/** The value of one cookie in a Cookie header, decoded; undefined when absent. */
-export function cookieFrom(header: string | undefined, name: string): string | undefined {
-  if (!header) return undefined;
-  for (const part of header.split(';')) {
-    const eq = part.indexOf('=');
-    if (eq < 0) continue;
-    if (part.slice(0, eq).trim() !== name) continue;
-    const raw = part.slice(eq + 1).trim();
-    try {
-      return decodeURIComponent(raw);
-    } catch {
-      return undefined;
-    }
-  }
-  return undefined;
 }
 
 /** The request's Helper session, or null. */

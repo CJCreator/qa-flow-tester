@@ -2,6 +2,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import type http from 'http';
+import { isInside } from './fs-inside.js';
 
 /** A built single-page app served beside the API: the Wizard at "/". */
 export interface UiApp {
@@ -45,11 +46,6 @@ const FOREVER = 'public, max-age=31536000, immutable';
 export function defaultUiApps(): UiApp[] {
   const packagesDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
   return [{ base: '/', dir: path.join(packagesDir, 'wizard', 'dist'), name: 'Wizard' }];
-}
-
-function isInside(dir: string, file: string): boolean {
-  const rel = path.relative(dir, file);
-  return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
 }
 
 async function readFileIfPresent(file: string): Promise<Buffer | null> {
