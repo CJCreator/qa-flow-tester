@@ -348,6 +348,11 @@ function evidenceDirOf(options: RunOptions): string {
 
 export class FlowTestOrchestrator {
   private browserManager = new BrowserManager();
+
+  /** The run was abandoned: close the browser and refuse new ones. */
+  async forceClose(): Promise<void> {
+    await this.browserManager.abandon();
+  }
   private preflightChecker = new PreFlightChecker();
   private bugChecker = new BugDetectionChecker();
   private specChecker = new SpecConformanceChecker();

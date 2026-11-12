@@ -1,6 +1,7 @@
 import { chromium, webkit, firefox, type Browser, type BrowserContext, type Page, type Locator } from 'playwright';
 import type { Breakpoint, StorageStateData } from '@qa/types';
 import { isSameSite } from './same-site.js';
+import { abortError } from './abort.js';
 
 export type BrowserEngine = 'chromium' | 'webkit' | 'firefox' | 'android-chrome';
 
@@ -107,8 +108,10 @@ function tunnelHeaders(tunnelAuth?: string): Record<string, string> {
 
 export class BrowserManager {
   private browsers = new Map<BrowserEngine, Browser>();
+  private abandoned = false;
 
   async launch(engineOrHeadless: BrowserEngine | boolean = 'chromium', headless = true): Promise<Browser> {
+    if (this.abandoned) throw abortError();
     const engine: BrowserEngine = typeof engineOrHeadless === 'string' ? engineOrHeadless : 'chromium';
     const isHeadless = typeof engineOrHeadless === 'boolean' ? engineOrHeadless : headless;
 
@@ -146,6 +149,7 @@ export class BrowserManager {
   }
 
   async createContext(options: BrowserOptions = {}): Promise<BrowserContext> {
+    if (this.abandoned) throw abortError();
     const engine = options.engine ?? 'chromium';
     const browser = await this.launch(engine, options.headless ?? true);
 
@@ -276,6 +280,30 @@ export class BrowserManager {
     }
     await Promise.all(closes);
     this.browsers.clear();
+  }
+
+  /**
+   * The run was abandoned (a stop did not tear down in time): close every browser, capped at 2 s each, and refuse
+   * new ones. Playwright gives no process handle for launch(), so if close() itself hangs the Chromium process can
+   * outlive this call (residual risk).
+   */
+  async abandon(): Promise<void> {
+    this.abandoned = true;
+    const browsers = [...this.browsers.values()];
+    this.browsers.clear();
+    await Promise.all(
+      browsers.map(async (b) => {
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const giveUp = new Promise<void>((resolve) => {
+          timer = setTimeout(resolve, 2000);
+        });
+        try {
+          await Promise.race([b.close().catch(() => {}), giveUp]);
+        } finally {
+          if (timer) clearTimeout(timer);
+        }
+      })
+    );
   }
 }
 

@@ -137,6 +137,8 @@ export interface RunDeps {
   beta?: boolean;
   hostChecks?: NetDeps;
   stepTimeoutMs?: number;
+  /** Test seam: hands over the setter for the abandon hook that waitForTeardown calls when the cap wins. */
+  registerForceClose?: (set: (forceClose: (() => Promise<void>) | null) => void) => void;
   onEvent?: (event: OrchestratorEvent | Record<string, unknown>) => void;
   screensForReview?: (report: ReleaseReport, draft?: DiscoveryDraft) => VisualReviewItemInput[];
   visualReview?: (
@@ -385,6 +387,11 @@ function logPlanSaveFailure(err: unknown): void {
 
 export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): CheckupRun {
   let currentRunPromise: Promise<void> | null = null;
+  /** Closes the browser of the run in flight and refuses new ones. Called when a stopped run is abandoned (T-358). */
+  let forceCloseCurrent: (() => Promise<void>) | null = null;
+  deps.registerForceClose?.((forceClose) => {
+    forceCloseCurrent = forceClose;
+  });
   /** True from the moment start() is called until it has claimed the slot (or failed). Set before any await. */
   let starting = false;
   let startDone: Promise<void> | null = null;
@@ -461,6 +468,8 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
     await fs.mkdir(runAuthDir, { recursive: true, mode: 0o700 });
 
     const orchestrator = new FlowTestOrchestrator();
+    const closeOrchestrator = () => orchestrator.forceClose();
+    forceCloseCurrent = closeOrchestrator;
     let report: ReleaseReport;
     try {
       report = await orchestrator.run({
@@ -528,6 +537,8 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
         timestamp: Date.now(),
       });
       return;
+    } finally {
+      if (forceCloseCurrent === closeOrchestrator) forceCloseCurrent = null;
     }
 
     if (!current()) return;
@@ -839,38 +850,46 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
 
       session.run.setPhase('scanning');
       broadcast({ type: 'DISCOVERY_STARTED', runId, timestamp: Date.now() });
-      const outcome = await new DiscoveryAgent().discoverWithSession({
-        targetUrl,
-        productId,
-        profile,
-        contextFilePath,
-        contextDocuments: documents.length ? documents : undefined,
-        suppliedSessions: session.secrets.savedSessions.get(runId),
-        aiPacing: aiBudget?.pacing,
-        outputDir: runDir,
-        authDir: runAuthDir,
-        signal,
-        finishSignal,
-        aiProvider: ai.provider,
-        readOnly,
-        requireSignIn: consent ? true : undefined,
-        maxPages:
-          typeof body.maxPages === 'number' && body.maxPages > 0
-            ? Math.min(Math.floor(body.maxPages), 1000)
-            : undefined,
-        crawlConcurrency: checkCrawlConcurrency(body.crawlConcurrency),
-        crawlDelayMs: checkCrawlDelayMs(body.crawlDelayMs),
-        customHeaders: session.secrets.headers,
-        userAgent: body.userAgent,
-        tunnelAuth: body.tunnelAuth,
-        headerHosts: body.headerHosts,
-        aiBudget,
-        aiModels: { model: ai.models?.text, fallbacks: ai.fallbacks },
-        onProgress: (progress) => {
-          if (current()) broadcast({ type: 'DISCOVERY_PROGRESS', runId, ...progress, timestamp: Date.now() });
-        },
-        remembered: body.replanAll ? undefined : memory?.plan,
-      });
+      const agent = new DiscoveryAgent();
+      const closeAgent = () => agent.forceClose();
+      forceCloseCurrent = closeAgent;
+      let outcome: Awaited<ReturnType<typeof agent.discoverWithSession>>;
+      try {
+        outcome = await agent.discoverWithSession({
+          targetUrl,
+          productId,
+          profile,
+          contextFilePath,
+          contextDocuments: documents.length ? documents : undefined,
+          suppliedSessions: session.secrets.savedSessions.get(runId),
+          aiPacing: aiBudget?.pacing,
+          outputDir: runDir,
+          authDir: runAuthDir,
+          signal,
+          finishSignal,
+          aiProvider: ai.provider,
+          readOnly,
+          requireSignIn: consent ? true : undefined,
+          maxPages:
+            typeof body.maxPages === 'number' && body.maxPages > 0
+              ? Math.min(Math.floor(body.maxPages), 1000)
+              : undefined,
+          crawlConcurrency: checkCrawlConcurrency(body.crawlConcurrency),
+          crawlDelayMs: checkCrawlDelayMs(body.crawlDelayMs),
+          customHeaders: session.secrets.headers,
+          userAgent: body.userAgent,
+          tunnelAuth: body.tunnelAuth,
+          headerHosts: body.headerHosts,
+          aiBudget,
+          aiModels: { model: ai.models?.text, fallbacks: ai.fallbacks },
+          onProgress: (progress) => {
+            if (current()) broadcast({ type: 'DISCOVERY_PROGRESS', runId, ...progress, timestamp: Date.now() });
+          },
+          remembered: body.replanAll ? undefined : memory?.plan,
+        });
+      } finally {
+        if (forceCloseCurrent === closeAgent) forceCloseCurrent = null;
+      }
       if (!current()) return;
 
       const draft = outcome.draft;
@@ -1140,8 +1159,10 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
     let timer: NodeJS.Timeout | undefined;
     const cap = new Promise<void>((resolve) => {
       timer = setTimeout(() => {
-        console.warn('[Release check-up] The stopped check-up did not finish tearing down in time; freeing the slot.');
-        resolve();
+        console.warn(
+          '[Release check-up] The stopped check-up did not finish tearing down in time; its browser was closed and the slot is freed.'
+        );
+        void (forceCloseCurrent?.() ?? Promise.resolve()).catch(() => {}).then(resolve);
       }, TEARDOWN_WAIT_MS);
     });
     try {

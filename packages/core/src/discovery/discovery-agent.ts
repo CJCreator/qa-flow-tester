@@ -328,6 +328,11 @@ export async function restoreSession(context: BrowserContext, state: StorageStat
 
 export class DiscoveryAgent {
   private browserManager = new BrowserManager();
+
+  /** The run was abandoned: close the browser and refuse new ones. */
+  async forceClose(): Promise<void> {
+    await this.browserManager.abandon();
+  }
   private contextParser = new ContextParser();
 
   async discoverWithSession(options: DiscoveryOptions): Promise<DiscoveryOutcome> {

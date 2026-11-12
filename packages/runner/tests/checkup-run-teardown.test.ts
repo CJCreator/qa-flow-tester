@@ -39,9 +39,12 @@ describe('R2: stop waits for teardown before the slot is freed', () => {
     await fs.rm(scratch, { recursive: true, force: true });
   });
 
-  function makeRun() {
+  function makeRun(forceClose?: () => Promise<void>) {
     const session = createCheckupSession({ outputDir: scratch, dataDir: scratch });
     const run = createCheckupRun(session, {
+      registerForceClose: (set) => {
+        if (forceClose) set(forceClose);
+      },
       siteDir: () => scratch,
       // The run parks here until the test releases it: it stands in for the run still tearing down.
       prepareAI: async () => {
@@ -82,7 +85,8 @@ describe('R2: stop waits for teardown before the slot is freed', () => {
   it('frees the slot after the 6 second cap when the run never finishes tearing down', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const { session, run } = makeRun();
+    const forceClose = vi.fn(async () => {});
+    const { session, run } = makeRun(forceClose);
     await run.start({ body, authorization });
 
     let stopped = false;
@@ -92,7 +96,9 @@ describe('R2: stop waits for teardown before the slot is freed', () => {
     });
     await vi.advanceTimersByTimeAsync(5_999);
     expect(stopped).toBe(false);
+    expect(forceClose).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);
+    expect(forceClose).toHaveBeenCalledTimes(1);
 
     await expect(stopping).resolves.toMatchObject({ aborted: true });
     expect(session.run.isRunning).toBe(false);
