@@ -1,4 +1,12 @@
-import type { DiscoveryDraft, NavigationCheck, PageInventoryItem, PlanPage, RoleCredential } from '@qa/types';
+import type {
+  DiscoveredFlow,
+  DiscoveryDraft,
+  NavigationCheck,
+  PageInventoryItem,
+  PlanPage,
+  PlanPageTest,
+  RoleCredential,
+} from '@qa/types';
 import type { AIProvider } from '../ai/ai-provider.js';
 import type { SiteType } from '../discovery/site-type.js';
 import { markJourneysNeedingTestCopy } from '../live-site.js';
@@ -80,6 +88,35 @@ function keepSwitchedOff<T extends { id: string; skipped?: boolean }>(fresh: T[]
   return fresh.map((i) => (off.has(i.id) ? { ...i, skipped: true } : i));
 }
 
+/** `fresh` plus the tests in `before` that came from a document and are not in `fresh`. */
+export function withDocumentedTests(fresh: PlanPageTest[], before: PlanPageTest[]): PlanPageTest[] {
+  const have = new Set(fresh.map((t) => t.id));
+  return [...fresh, ...before.filter((t) => t.docSource && !have.has(t.id))];
+}
+
+/** `fresh` plus the journeys in `before` that came from a document and are not in `fresh`. */
+export function withDocumentedFlows(fresh: DiscoveredFlow[], before: DiscoveredFlow[]): DiscoveredFlow[] {
+  const have = new Set(fresh.map((f) => f.id));
+  return [...fresh, ...before.filter((f) => f.docSource && !have.has(f.id))];
+}
+
+/**
+ * The pages after a re-plan, with the document tests of the pages before. A page the re-plan did not
+ * produce (a documented address the crawl never found) stays, holding only its document tests.
+ */
+export function withDocumentedPages(fresh: PlanPage[], before: PlanPage[]): PlanPage[] {
+  const out = fresh.map((page) => {
+    const old = before.find((b) => pathOf(b.urlPath) === pathOf(page.urlPath));
+    return old ? { ...page, tests: withDocumentedTests(page.tests, old.tests) } : page;
+  });
+  for (const old of before) {
+    if (out.some((p) => pathOf(p.urlPath) === pathOf(old.urlPath))) continue;
+    const documented = old.tests.filter((t) => t.docSource);
+    if (documented.length > 0) out.push({ ...old, tests: documented });
+  }
+  return out;
+}
+
 /**
  * Plans one page again with the AI: its tests and its own links. Used when the person asks for
  * changes to a page, promotes a page covered by its Layout Group's samples, or adds a page.
@@ -112,7 +149,7 @@ export async function replanPage(
   Object.assign(planned, {
     coverage,
     coveredBy: undefined,
-    tests: fresh.tests,
+    tests: withDocumentedTests(fresh.tests, planned.tests),
     source: fresh.source,
     fallbackReason: fresh.fallbackReason,
     skipped: false,
@@ -152,6 +189,7 @@ export async function replanJourneys(
   const graph = buildSiteGraph(draft.pages, startPathOf(draft));
   const byClicks = (p: PageInventoryItem) => graph.clickPaths.get(p.urlPath)?.length ?? Number.MAX_SAFE_INTEGER;
   const tested = testedPages({ pages: draft.pages, coverage });
+  const before = draft.flows;
   options.onProgress?.('Planning the journeys');
   const out = await planJourneys(
     {
@@ -169,6 +207,7 @@ export async function replanJourneys(
   );
   const off = new Set(draft.flows.filter((f) => f.outOfScope).map((f) => f.id));
   draft.flows = out.flows.map((f) => (off.has(f.id) ? { ...f, outOfScope: true } : f));
+  draft.flows = withDocumentedFlows(draft.flows, before);
   for (const flow of draft.flows) replaceCredentialsWithPlaceholders(flow.steps, options.roles);
   markJourneysNeedingTestCopy(draft);
   draft.ambiguityQuestions = [...draft.ambiguityQuestions.filter((q) => !q.id.startsWith('Q-STEP-')), ...out.questions];
@@ -189,11 +228,13 @@ export async function replanAll(
   const out = await planPagesAndMenus(plannerInput(draft, draft.pages, coverage, graph, options), ai, (p) =>
     options.onProgress?.(`${p.what} (${p.done} of ${p.total})`)
   );
+  const pagesBefore = plan.pages;
   const added = new Set(plan.pages.filter((p) => p.added).map((p) => p.urlPath));
   plan.pages = keepSwitchedOff(
     out.pages.map((p) => (added.has(p.urlPath) ? { ...p, added: true } : p)),
     plan.pages
   );
+  plan.pages = withDocumentedPages(plan.pages, pagesBefore);
   plan.navigation = keepSwitchedOff(out.navigation, plan.navigation);
   const notes = [...out.notes, ...(await replanJourneys(draft, ai, options))];
   return notes;
