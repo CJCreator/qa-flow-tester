@@ -35,7 +35,7 @@ import { restoreSession } from './discovery/discovery-agent.js';
 import { navigate, looksLikeLogin } from './navigate.js';
 import { isSignInOnlyForm, readPageForms } from './discovery/deterministic-spider.js';
 import { debugLog } from './debug-log.js';
-import { SourceLocator } from './source-locator.js';
+import { SourceLocator, isQaToolRepo } from './source-locator.js';
 import { ReproScriptGenerator } from './repro-generator.js';
 import { ReportGenerator, withPortablePaths } from './reporter.js';
 import { withSourceWording } from './source-wording.js';
@@ -363,7 +363,8 @@ export class FlowTestOrchestrator {
     const repoRoot = options.repoRoot || process.cwd();
     const evidenceUrlPrefix = options.evidenceUrlPrefix ?? '/api/evidence/';
 
-    const sourceLocator = new SourceLocator(repoRoot);
+    // The tool's own repository is not the checked site's source: never point a finding at it.
+    const sourceLocator = isQaToolRepo(repoRoot) ? undefined : new SourceLocator(repoRoot);
     const reproGenerator = new ReproScriptGenerator(evidenceDir);
     const reportGenerator = new ReportGenerator(outputDir);
     const suppressionsManager = new SuppressionsManager(options.stateDir || outputDir);
@@ -1352,7 +1353,7 @@ export class FlowTestOrchestrator {
           // Enrich findings with Source Code Locator and Repro Script
           for (const f of keptFindings) {
             f.where.urlPath = sitePathOf(f.where.urlPath, options.targetUrl);
-            if (f.where.dataTestId) {
+            if (f.where.dataTestId && sourceLocator) {
               const srcLoc = await sourceLocator.findByTestId(f.where.dataTestId);
               if (srcLoc) {
                 f.sourceLocation = srcLoc;

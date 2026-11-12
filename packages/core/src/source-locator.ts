@@ -1,6 +1,11 @@
-import { promises as fs } from 'fs';
+import { existsSync, promises as fs } from 'fs';
 import path from 'path';
 import type { SourceLocation } from '@qa/types';
+
+/** True when the folder is a checkout of this tool itself: its own code is not the checked site's code. */
+export function isQaToolRepo(dir: string): boolean {
+  return existsSync(path.join(dir, 'packages', 'core', 'src', 'orchestrator.ts'));
+}
 
 export class SourceLocator {
   private repoRoot: string;
