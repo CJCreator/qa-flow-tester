@@ -44,7 +44,7 @@ the main session orchestrates. Batch mode: `/ship plan`, `/ship approve <slug>`,
 
 ## Deferred tests
 
-While `.claude/work/DEFER_TESTS` exists, do not run any tests (a hook blocks them). Write the tests, review by reading, builds are fine.
+While `.claude/work/DEFER_TESTS` exists, do not run any tests (a local hook may block them, but `.claude/` is not part of a clone, so nothing enforces this: follow it by hand). Write the tests, review by reading, builds are fine.
 Tickets end `built`. Only `/verify-all`, after every ticket is built, runs tests. Delete the file to turn this off.
 
 ## Output style

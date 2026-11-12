@@ -35,7 +35,7 @@ Requires Node.js 22.9.0 or newer and pnpm 11 (the exact version is pinned in `pa
 ## Decision records
 
 `docs/adr/NNNN-short-title.md` with `# NNNN: Title`, `## Context and Decision`, `## Consequences`. Use the next unused
-number (the latest is 0023; 0013 and 0015 are reserved and not written yet, so check before numbering). Superseded records
+number: list `docs/adr/` and take the one after the highest. Superseded records
 get a note at the top rather than being deleted.
 
 ## Code conventions
