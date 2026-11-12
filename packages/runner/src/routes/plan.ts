@@ -63,7 +63,7 @@ import {
 import type { Route, RouteContext } from './route.js';
 import { readJsonBody, sendJson } from './body.js';
 import type { CheckupSession, StoredPlanRecord } from '../session/checkup-session.js';
-import { redactedMessage } from '../session/checkup-run.js';
+import { redactedMessage, hasCompleteSignIn } from '../session/checkup-run.js';
 import { checkIntentsOff, checkCustomHeaders, checkSavedSessions } from '../run-inputs.js';
 import { addTokens } from '../ai-tokens.js';
 
@@ -103,10 +103,6 @@ const INCLUDED_HOST_PAGES = 30;
 const SIGNED_IN_PAGES = 60;
 const CONSENT_NEEDS_SIGN_IN =
   'Full testing needs the test sign-in details you agreed to use, and they are missing, so nothing was sent to the site. Send them again, or start a new check-up that only looks at the site.';
-
-function hasCompleteSignIn(roles?: Array<{ username?: string; password?: string }>): boolean {
-  return (roles ?? []).some((r) => !!r.username && !!r.password);
-}
 
 export function asFlow(testCase: TestCase): DiscoveredFlow {
   return {
