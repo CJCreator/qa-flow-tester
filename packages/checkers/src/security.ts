@@ -50,6 +50,54 @@ const SESSION_COOKIE_NAME =
 const SCRIPT_READ_COOKIE_NAME = /^(?:_ga|_gid|_gat|_gcl|_fbp|_hj|ajs_|amp_|mp_|__utm|_clck|_clsk|__stripe_)|csrf|xsrf/i;
 
 /**
+ * Parse a Content-Security-Policy header into a map of directive name to tokens.
+ * Directive names are lower-cased. Token case is preserved. First occurrence of a directive wins.
+ */
+export function parseCsp(value: string): Map<string, string[]> {
+  const result = new Map<string, string[]>();
+  for (const part of value.split(';')) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    const tokens = trimmed.split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) continue;
+    const directive = tokens[0].toLowerCase();
+    if (!result.has(directive)) {
+      result.set(directive, tokens.slice(1));
+    }
+  }
+  return result;
+}
+
+/**
+ * Extract the max-age directive value in seconds from a Strict-Transport-Security header.
+ * Case-insensitive, handles optional quotes. Returns integer or undefined if missing/invalid.
+ */
+export function hstsMaxAge(value: string): number | undefined {
+  for (const part of value.split(';')) {
+    const match = part.trim().match(/^max-age\s*=\s*["']?\s*(\d+)\s*["']?$/i);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      return Number.isNaN(num) ? undefined : num;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * True when frame-ancestors directive is missing, is empty, or contains '*', 'http:', or 'https:' as a token.
+ */
+export function frameAncestorsAllowsAll(csp: Map<string, string[]>): boolean {
+  const tokens = csp.get('frame-ancestors');
+  if (!tokens || tokens.length === 0) {
+    return true;
+  }
+  return tokens.some((token) => {
+    const lower = token.toLowerCase();
+    return lower === '*' || lower === 'http:' || lower === 'https:';
+  });
+}
+
+/**
  * Passive security checks: they only read what a normal visit produced, and never probe or attack.
  * Covers headers, cookies, mixed content, stack traces, and passwords in addresses.
  */
@@ -399,7 +447,9 @@ export class SecurityChecker {
     }
 
     // Content-Security-Policy
-    if (!normalized['content-security-policy']) {
+    const cspHeader = normalized['content-security-policy'];
+    const csp = cspHeader ? parseCsp(cspHeader) : undefined;
+    if (!cspHeader) {
       findings.push(
         this.finding(`F-SEC-${context.testCaseId || 'GEN'}-CSP`, context, context.urlPath, {
           title: 'Missing Content-Security-Policy (CSP) header',
@@ -411,6 +461,39 @@ export class SecurityChecker {
           resolution: "Configure a Content-Security-Policy header, e.g.: default-src 'self'; script-src 'self';",
         })
       );
+    } else if (csp) {
+      const scriptDirective = csp.has('script-src') ? 'script-src' : csp.has('default-src') ? 'default-src' : undefined;
+      if (scriptDirective) {
+        const tokens = csp.get(scriptDirective) ?? [];
+        const hasNonceOrStrictDynamic = tokens.some((t) => {
+          const lower = t.toLowerCase();
+          return lower.startsWith("'nonce-") || lower === "'strict-dynamic'";
+        });
+        const offending: string[] = [];
+        const hasUnsafeInline = tokens.some((t) => t.toLowerCase() === "'unsafe-inline'") && !hasNonceOrStrictDynamic;
+        const hasUnsafeEval = tokens.some((t) => t.toLowerCase() === "'unsafe-eval'");
+        if (hasUnsafeInline) {
+          const tok = tokens.find((t) => t.toLowerCase() === "'unsafe-inline'");
+          offending.push(tok ?? "'unsafe-inline'");
+        }
+        if (hasUnsafeEval) {
+          const tok = tokens.find((t) => t.toLowerCase() === "'unsafe-eval'");
+          offending.push(tok ?? "'unsafe-eval'");
+        }
+        if (offending.length > 0) {
+          findings.push(
+            this.finding(`F-SEC-${context.testCaseId || 'GEN'}-CSP-UNSAFE`, context, context.urlPath, {
+              title: 'Content-Security-Policy allows unsafe script sources',
+              severity: 'Minor',
+              expected: 'Content-Security-Policy script sources should avoid "unsafe-inline" and "unsafe-eval"',
+              actual: offending.join(', '),
+              steps: [`Request ${context.urlPath}`, 'Inspect Content-Security-Policy response header'],
+              resolution:
+                'Remove "unsafe-inline" (or use nonces or strict-dynamic) and "unsafe-eval" from script sources.',
+            })
+          );
+        }
+      }
     }
 
     // X-Content-Type-Options: nosniff
@@ -428,19 +511,21 @@ export class SecurityChecker {
     }
 
     // Clickjacking protection: X-Frame-Options or frame-ancestors
-    const hasFrameAncestors = normalized['content-security-policy']?.includes('frame-ancestors');
+    const hasFrameAncestorsDirective = Boolean(csp?.has('frame-ancestors'));
+    const openFrameAncestors = hasFrameAncestorsDirective && frameAncestorsAllowsAll(csp!);
+    const hasFrameAncestors = hasFrameAncestorsDirective && !openFrameAncestors;
     const xFrameOptions = normalized['x-frame-options']?.toUpperCase();
-    if (
-      !hasFrameAncestors &&
-      (!xFrameOptions || (!xFrameOptions.includes('DENY') && !xFrameOptions.includes('SAMEORIGIN')))
-    ) {
+    const hasValidXFrame = Boolean(
+      xFrameOptions && (xFrameOptions.includes('DENY') || xFrameOptions.includes('SAMEORIGIN'))
+    );
+    if (openFrameAncestors || (!hasFrameAncestors && !hasValidXFrame)) {
       findings.push(
         this.finding(`F-SEC-${context.testCaseId || 'GEN'}-CLICKJACK`, context, context.urlPath, {
           title: 'Missing clickjacking protection (X-Frame-Options or CSP frame-ancestors)',
           severity: 'Minor',
           expected:
             'Responses must declare X-Frame-Options: DENY/SAMEORIGIN or CSP frame-ancestors to prevent clickjacking',
-          actual: 'No frame restriction headers were found',
+          actual: openFrameAncestors ? 'frame-ancestors allows any site' : 'No frame restriction headers were found',
           steps: [`Request ${context.urlPath}`, 'Check headers for X-Frame-Options or CSP frame-ancestors'],
           resolution: 'Add "X-Frame-Options: SAMEORIGIN" or CSP "frame-ancestors \'self\'" to response headers.',
         })
@@ -462,17 +547,38 @@ export class SecurityChecker {
     }
 
     // Strict-Transport-Security (HSTS) - only checked if HTTPS
-    if (context.isHttps && !normalized['strict-transport-security']) {
-      findings.push(
-        this.finding(`F-SEC-${context.testCaseId || 'GEN'}-HSTS`, context, context.urlPath, {
-          title: 'Missing Strict-Transport-Security (HSTS) header on HTTPS site',
-          severity: 'Major',
-          expected: 'HTTPS websites should return Strict-Transport-Security to enforce encrypted connections',
-          actual: 'Strict-Transport-Security header is missing',
-          steps: [`Request ${context.urlPath} over HTTPS`, 'Inspect response headers for Strict-Transport-Security'],
-          resolution: 'Add "Strict-Transport-Security: max-age=31536000; includeSubDomains" to web server headers.',
-        })
-      );
+    if (context.isHttps) {
+      const hstsHeader = normalized['strict-transport-security'];
+      if (!hstsHeader) {
+        findings.push(
+          this.finding(`F-SEC-${context.testCaseId || 'GEN'}-HSTS`, context, context.urlPath, {
+            title: 'Missing Strict-Transport-Security (HSTS) header on HTTPS site',
+            severity: 'Major',
+            expected: 'HTTPS websites should return Strict-Transport-Security to enforce encrypted connections',
+            actual: 'Strict-Transport-Security header is missing',
+            steps: [`Request ${context.urlPath} over HTTPS`, 'Inspect response headers for Strict-Transport-Security'],
+            resolution: 'Add "Strict-Transport-Security: max-age=31536000; includeSubDomains" to web server headers.',
+          })
+        );
+      } else {
+        const maxAge = hstsMaxAge(hstsHeader);
+        if (maxAge === undefined || maxAge < 15552000) {
+          findings.push(
+            this.finding(`F-SEC-${context.testCaseId || 'GEN'}-HSTS-WEAK`, context, context.urlPath, {
+              title: 'Strict-Transport-Security max-age is too short or missing',
+              severity: 'Minor',
+              expected: 'max-age of at least 15552000 seconds',
+              actual: `"${hstsHeader}"`,
+              steps: [
+                `Request ${context.urlPath} over HTTPS`,
+                'Inspect response headers for Strict-Transport-Security',
+              ],
+              resolution:
+                'Set "Strict-Transport-Security: max-age=31536000; includeSubDomains" with max-age >= 15552000.',
+            })
+          );
+        }
+      }
     }
 
     // CORS Misconfiguration Audit (FR-6.5)
