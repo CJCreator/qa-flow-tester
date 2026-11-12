@@ -81,7 +81,7 @@ async function main() {
   console.log('\n--- Step 1: Building Workspace Packages ---');
   if (deploySite) {
     sh('pnpm run site-build', {
-      env: { ...process.env, VITE_ONLINE_APP_URL: RUNNER_URL, ...(fullSha ? { GITHUB_SHA: fullSha } : {}) },
+      env: { ...process.env, VITE_ONLINE_APP_URL: RUNNER_URL, SITE_URL, ...(fullSha ? { GITHUB_SHA: fullSha } : {}) },
     });
   }
   if (deployRunner) {
