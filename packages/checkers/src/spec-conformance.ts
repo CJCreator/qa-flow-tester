@@ -17,21 +17,71 @@ const GUESS_RESOLUTION =
   'This expectation is an AI guess that nobody has confirmed. Confirm or correct it in the plan review; if the site behaves as intended, mark this check as intended.';
 
 /**
+ * Normalises text by collapsing whitespace, trimming, and lowercasing.
+ */
+export function normaliseText(s: string): string {
+  return s.replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+/**
+ * Matches a request URL against an expected API path.
+ * Match when request pathname equals apiPath pathname or continues with `/` right after it (whole segments),
+ * supporting `*` wildcard in segments. If apiPath has searchParams, require every key=value from apiPath
+ * searchParams to be present and match in requestUrl searchParams.
+ */
+export function apiPathMatches(requestUrl: string, apiPath: string): boolean {
+  try {
+    const reqParsed = new URL(requestUrl, 'http://x');
+    const apiParsed = new URL(apiPath, 'http://x');
+
+    for (const [key, value] of apiParsed.searchParams.entries()) {
+      const reqValues = reqParsed.searchParams.getAll(key);
+      if (!reqValues.includes(value)) {
+        return false;
+      }
+    }
+
+    const cleanApiPath =
+      apiParsed.pathname.length > 1 && apiParsed.pathname.endsWith('/')
+        ? apiParsed.pathname.slice(0, -1)
+        : apiParsed.pathname;
+
+    const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pattern = cleanApiPath.split('*').map(escapeRegex).join('[^/]*');
+
+    const pathRegex = cleanApiPath === '/' ? /^\/$/ : new RegExp(`^${pattern}(?:/.*)?$`);
+
+    return pathRegex.test(reqParsed.pathname);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Whether one of the addresses matches an expected page. The expectation may be a plain address
  * ("/inventory-item.html?id=4", where "?" and "." mean themselves), a wildcard ("/invoices/*"), or
- * a regular expression ("/dashboard|/account", "^/invoices/new$").
+ * alternatives separated by "|" ("/dashboard|/account", "^/invoices/new$").
  */
 export function urlMatchesPattern(pattern: string, addresses: string[]): boolean {
-  const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const asWildcard = new RegExp('^' + pattern.split('*').map(escape).join('.*') + '$');
-  let asRegex: RegExp | null = null;
-  try {
-    // Grouped, so the anchors bind to every alternative of "/dashboard|/account".
-    asRegex = new RegExp('^(?:' + pattern.replace(/\*/g, '.*').replace(/\//g, '\\/') + ')$');
-  } catch {
-    // Not a valid regular expression: the plain reading is all there is.
+  if (pattern.length > 300) {
+    return false;
   }
-  return addresses.some((a) => asWildcard.test(a) || !!asRegex?.test(a));
+
+  const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  const regexes = pattern.split('|').map((alt) => {
+    let clean = alt;
+    if (clean.startsWith('^')) {
+      clean = clean.slice(1);
+    }
+    if (clean.endsWith('$')) {
+      clean = clean.slice(0, -1);
+    }
+    const body = clean.split('*').map(escapeRegex).join('.*');
+    return new RegExp(`^${body}$`);
+  });
+
+  return addresses.some((a) => regexes.some((re) => re.test(a)));
 }
 
 export class SpecConformanceChecker {
@@ -317,8 +367,9 @@ export class SpecConformanceChecker {
     if (testCase.expectations.text) {
       const { contains, notContains, description } = testCase.expectations.text;
       const pageText = `${await page.title().catch(() => '')}\n${await page.innerText('body').catch(() => '')}`;
+      const haystack = normaliseText(pageText);
 
-      if (contains && !pageText.includes(contains)) {
+      if (contains && !haystack.includes(normaliseText(contains))) {
         findings.push(
           asGuess(
             {
@@ -354,7 +405,7 @@ export class SpecConformanceChecker {
         );
       }
 
-      if (notContains && pageText.includes(notContains)) {
+      if (notContains && haystack.includes(normaliseText(notContains))) {
         findings.push(
           asGuess(
             {
@@ -552,7 +603,7 @@ export class SpecConformanceChecker {
       // If the expected API call failed with a different status
       const failedMatch = stepEvidenceList
         .flatMap((s) => s.failedRequests)
-        .find((r) => r.method === method && r.url.includes(apiPath));
+        .find((r) => r.method === method && apiPathMatches(r.url, apiPath));
 
       if (failedMatch && failedMatch.status !== status) {
         findings.push({

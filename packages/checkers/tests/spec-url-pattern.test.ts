@@ -20,4 +20,27 @@ describe('Expected page addresses', () => {
   it('does not break on a pattern that is not a valid regular expression', () => {
     expect(urlMatchesPattern('/search(1', ['/search(1'])).toBe(true);
   });
+
+  it('returns false for patterns longer than 300 characters', () => {
+    const pattern301 = 'a'.repeat(301);
+    expect(pattern301.length).toBe(301);
+    expect(urlMatchesPattern(pattern301, [pattern301])).toBe(false);
+  });
+
+  it('matches regex characters literally without interpreting them as regex syntax', () => {
+    expect(urlMatchesPattern('/a+b', ['/a+b'])).toBe(true);
+    expect(urlMatchesPattern('/a+b', ['/aab'])).toBe(false);
+
+    expect(urlMatchesPattern('/users?', ['/users?'])).toBe(true);
+    expect(urlMatchesPattern('/users?', ['/user'])).toBe(false);
+  });
+
+  it('prevents catastrophic backtracking (ReDoS) and completes in under 1 second', () => {
+    const start = Date.now();
+    const result = urlMatchesPattern('(a+)+$', ['a'.repeat(5000) + '!']);
+    const duration = Date.now() - start;
+
+    expect(result).toBe(false);
+    expect(duration).toBeLessThan(1000);
+  });
 });
