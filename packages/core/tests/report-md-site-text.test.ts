@@ -102,4 +102,3 @@ describe('report.md site text framing (T-315)', () => {
     expect(rowCols.length).toBe(headerCols.length);
   });
 });
-

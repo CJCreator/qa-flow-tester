@@ -16,7 +16,14 @@ describe('journey-sensitive-steps', () => {
         interactiveElementsCount: 2,
         formsCount: 0,
         elements: [
-          { tagName: 'button', role: 'button', name: 'Place order', selector: '#place-order', visible: true, enabled: true },
+          {
+            tagName: 'button',
+            role: 'button',
+            name: 'Place order',
+            selector: '#place-order',
+            visible: true,
+            enabled: true,
+          },
           { tagName: 'input', role: 'textbox', name: 'Email', selector: '#email', visible: true, enabled: true },
         ],
       },
@@ -30,7 +37,7 @@ describe('journey-sensitive-steps', () => {
         startPage: '/checkout',
         steps: [
           { action: 'fill', selector: '#email', value: 'user@example.com', name: 'Fill Email' },
-          { action: 'click', selector: '#place-order', name: 'Press “Place order”' },
+          { action: 'click', selector: '#place-order', name: 'Press ï¿½Place orderï¿½' },
         ],
       },
     ],
