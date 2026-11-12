@@ -306,12 +306,12 @@ describe('editing a Section (REQ-020)', () => {
     expect(rows[1].original).toBe(SERVICES);
 
     const html = view({ edits: saved, selectedPage: '/services', content: { status: 'loaded', content } });
-    expect(html).toMatch(/<label for="review-section-1"[^>]*>Text of Section s2: Our services<\/label>/);
+    expect(html).toMatch(/<label for="review-section-1"[^>]*>Text of Section 2: Our services<\/label>/);
     expect(html).toMatch(/<textarea[^>]*id="review-section-1"[^>]*>Same-day laptop repair\.<\/textarea>/);
     expect(html).toContain('We repair laptops &lt;b&gt;fast&lt;/b&gt;.');
     expect(html).not.toContain('<b>fast</b>');
-    expect(html).toContain('aria-label="Reset Section s2: Our services to the original text"');
-    expect(html).not.toContain('aria-label="Reset Section s1: Header to the original text"');
+    expect(html).toContain('aria-label="Reset Section 2: Our services to the original text"');
+    expect(html).not.toContain('aria-label="Reset Section 1: Header to the original text"');
 
     const resetRows = sectionRows(content, saved, resetSection(emptyDraft(), '/services', 's2'));
     expect(resetRows[1].shown).toBe(SERVICES);

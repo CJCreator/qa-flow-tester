@@ -396,8 +396,8 @@ function EditableTitle({
   }
 
   return (
-    <span className="inline-flex items-center gap-1">
-      <span className={className}>{value}</span>
+    <span className="inline-flex min-w-0 max-w-full items-center gap-1">
+      <span className={`min-w-0 [overflow-wrap:anywhere] ${className}`}>{value}</span>
       {!disabled && (
         <button
           type="button"

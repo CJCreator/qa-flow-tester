@@ -420,7 +420,7 @@ export function PlanReviewScreen({
         </div>
       )}
 
-      <div role="tabpanel" id="plan-tabpanel" aria-labelledby={`plan-tab-${tab}`}>
+      <div role="tabpanel" id="plan-tabpanel" aria-labelledby={`plan-tab-${tab}`} className="[overflow-wrap:anywhere]">
         {panel}
       </div>
 

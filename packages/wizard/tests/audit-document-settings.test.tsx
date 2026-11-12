@@ -210,10 +210,9 @@ describe('company details', () => {
   it('enables the save only when something changed, and shows the saved and failed states', () => {
     const reply = settingsReply();
     const clean = view();
-    expect(clean).toMatch(
-      /<button type="button" class="btn-primary[^"]*" disabled="">Save document settings<\/button>/
-    );
-    expect(textOf(clean)).toContain('Every change is saved.');
+    // Nothing pending: no bottom bar, only a quiet status line.
+    expect(clean).not.toContain('Save document settings');
+    expect(clean).toMatch(/<p role="status" class="sr-only">Every change is saved\.<\/p>/);
     const changed = view({ draft: { ...draftFrom(reply), proposalTemplate: 'x' } });
     expect(changed).toMatch(/<button type="button" class="btn-primary[^"]*">Save document settings<\/button>/);
     expect(textOf(changed)).toContain('You have changes that are not saved yet.');

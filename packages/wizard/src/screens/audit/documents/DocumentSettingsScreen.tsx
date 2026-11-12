@@ -306,32 +306,38 @@ export function DocumentSettingsView({
         )}
       </section>
 
-      <BottomActionBar
-        summary={
-          <>
-            <span aria-live="polite">
-              {pending ? 'You have changes that are not saved yet.' : 'Every change is saved.'}
-            </span>
-            {message &&
-              (message.tone === 'fail' ? (
-                <span role="alert" className="mt-1 block font-semibold text-fail">
-                  {message.text}
-                </span>
-              ) : (
-                <span role="status" className="mt-1 block font-semibold text-pass">
-                  {message.text}
-                </span>
-              ))}
-          </>
-        }
-      >
-        <button type="button" className="btn-quiet" disabled={!pending || saving} onClick={() => void discard()}>
-          Discard changes
-        </button>
-        <button type="button" className="btn-primary" disabled={!pending || saving} onClick={onSave}>
-          {saving ? <Spinner label="Saving…" /> : 'Save document settings'}
-        </button>
-      </BottomActionBar>
+      {pending || saving || message?.tone === 'fail' ? (
+        <BottomActionBar
+          summary={
+            <>
+              <span aria-live="polite">
+                {pending ? 'You have changes that are not saved yet.' : 'Every change is saved.'}
+              </span>
+              {message &&
+                (message.tone === 'fail' ? (
+                  <span role="alert" className="mt-1 block font-semibold text-fail">
+                    {message.text}
+                  </span>
+                ) : (
+                  <span role="status" className="mt-1 block font-semibold text-pass">
+                    {message.text}
+                  </span>
+                ))}
+            </>
+          }
+        >
+          <button type="button" className="btn-quiet" disabled={!pending || saving} onClick={() => void discard()}>
+            Discard changes
+          </button>
+          <button type="button" className="btn-primary" disabled={!pending || saving} onClick={onSave}>
+            {saving ? <Spinner label="Saving…" /> : 'Save document settings'}
+          </button>
+        </BottomActionBar>
+      ) : (
+        <p role="status" className={message ? 'mt-10 text-sm font-semibold text-pass' : 'sr-only'}>
+          {message ? message.text : 'Every change is saved.'}
+        </p>
+      )}
       {dialog}
     </div>
   );

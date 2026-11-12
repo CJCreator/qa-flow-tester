@@ -313,7 +313,7 @@ export function PreviewShareView(props: PreviewShareViewProps) {
           Make a Shared Link
         </h2>
         <p className="mt-1 max-w-prose text-sm text-ink-soft">{SHARED_LINK_WARNING}</p>
-        <div className="mt-4 flex flex-wrap items-end gap-4">
+        <div className="mt-4 flex flex-wrap items-start gap-4">
           <fieldset>
             <legend className="label text-ink">Shared Link to</legend>
             <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
@@ -336,7 +336,7 @@ export function PreviewShareView(props: PreviewShareViewProps) {
             </div>
           </fieldset>
           <LanguageSelect id="share-language" value={props.shareLanguage} onChange={props.onShareLanguage} />
-          <button type="button" className="btn-primary" disabled={busy} onClick={props.onCreateLink}>
+          <button type="button" className="btn-primary self-end" disabled={busy} onClick={props.onCreateLink}>
             {busy ? <Spinner label="Working…" /> : 'Make Shared Link'}
           </button>
         </div>

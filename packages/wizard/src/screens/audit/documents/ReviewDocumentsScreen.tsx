@@ -153,9 +153,9 @@ function PageItem({
 // Sections of one page
 // ---------------------------------------------------------------------------------------------------
 
-function sectionName(row: SectionRow): string {
+function sectionName(row: SectionRow, position: number): string {
   const heading = row.section.heading?.trim();
-  return `Section ${row.section.id}: ${heading ? heading : SECTION_KIND_LABEL[row.section.kind]}`;
+  return `Section ${position}: ${heading ? heading : SECTION_KIND_LABEL[row.section.kind]}`;
 }
 
 function SectionsEditor({
@@ -198,7 +198,7 @@ function SectionsEditor({
         <ol className="space-y-4">
           {rows.map((row, i) => {
             const id = `review-section-${i}`;
-            const name = sectionName(row);
+            const name = sectionName(row, i + 1);
             const lang = textLangAttrs(row.original, content.language.primary);
             return (
               <li key={row.section.id} className="rounded-card border border-rule p-3" data-section-id={row.section.id}>
@@ -515,32 +515,38 @@ export function ReviewDocumentsView({
           </ul>
         )}
       </section>
-      <BottomActionBar
-        summary={
-          <>
-            <span aria-live="polite">
-              {pending ? 'You have changes that are not saved yet.' : 'Every change is saved.'}
-            </span>
-            {message &&
-              (message.tone === 'fail' ? (
-                <span role="alert" className="mt-1 block font-semibold text-fail">
-                  {message.text}
-                </span>
-              ) : (
-                <span role="status" className="mt-1 block font-semibold text-pass">
-                  {message.text}
-                </span>
-              ))}
-          </>
-        }
-      >
-        <button type="button" className="btn-quiet" disabled={!pending || saving} onClick={onDiscard}>
-          Discard changes
-        </button>
-        <button type="button" className="btn-primary" disabled={!pending || saving} onClick={onSave}>
-          {saving ? <Spinner label="Saving…" /> : 'Save changes'}
-        </button>
-      </BottomActionBar>
+      {pending || saving || message?.tone === 'fail' ? (
+        <BottomActionBar
+          summary={
+            <>
+              <span aria-live="polite">
+                {pending ? 'You have changes that are not saved yet.' : 'Every change is saved.'}
+              </span>
+              {message &&
+                (message.tone === 'fail' ? (
+                  <span role="alert" className="mt-1 block font-semibold text-fail">
+                    {message.text}
+                  </span>
+                ) : (
+                  <span role="status" className="mt-1 block font-semibold text-pass">
+                    {message.text}
+                  </span>
+                ))}
+            </>
+          }
+        >
+          <button type="button" className="btn-quiet" disabled={!pending || saving} onClick={onDiscard}>
+            Discard changes
+          </button>
+          <button type="button" className="btn-primary" disabled={!pending || saving} onClick={onSave}>
+            {saving ? <Spinner label="Saving…" /> : 'Save changes'}
+          </button>
+        </BottomActionBar>
+      ) : (
+        <p role="status" className={message ? 'mt-10 text-sm font-semibold text-pass' : 'sr-only'}>
+          {message ? message.text : 'Every change is saved.'}
+        </p>
+      )}
     </div>
   );
 }

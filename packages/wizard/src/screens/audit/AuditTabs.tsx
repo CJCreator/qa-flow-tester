@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Link, PATHS } from '../../lib/router';
 
 export type AuditTab = 'history' | 'results' | 'documents' | 'download' | 'share' | 'helpers';
@@ -27,10 +28,22 @@ export function AuditTabs({
     { id: 'helpers', label: 'Helpers', to: PATHS.auditHelpers(auditId) },
   ];
   const shown = tabs.filter((t): t is { id: AuditTab; label: string; to: string } => !!t.to && !hide.includes(t.id));
+  const navRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    // Sets the strip's own scroll position: scrollIntoView was cancelled by the page's scroll to the top on arrival.
+    const nav = navRef.current;
+    const on = nav?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!nav || !on) return;
+    const navBox = nav.getBoundingClientRect();
+    const onBox = on.getBoundingClientRect();
+    nav.scrollLeft += onBox.left - navBox.left - (navBox.width - onBox.width) / 2;
+    // Again when tabs arrive late (those that need a version), which is when the strip starts to overflow.
+  }, [current, shown.length]);
   return (
     <nav
+      ref={navRef}
       aria-label="This Website Audit"
-      className="-mx-4 mb-8 overflow-x-auto border-b border-rule px-4 sm:mx-0 sm:px-0"
+      className="[mask-image:linear-gradient(to_right,black_calc(100%-1rem),transparent)] sm:[mask-image:none] -mx-4 mb-8 overflow-x-auto border-b border-rule px-4 sm:mx-0 sm:px-0"
     >
       <ul className="flex min-w-max gap-1">
         {shown.map((t) => {

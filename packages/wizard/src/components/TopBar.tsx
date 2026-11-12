@@ -33,14 +33,13 @@ export function Mark({ size = 24 }: { size?: number }) {
 const CHECKUP_SCREENS: Route['name'][] = ['new', 'scan', 'plan', 'testing'];
 
 /** A check-up is running somewhere else: a small cobalt dot with a spoken label. */
+// In the top bar the dot sits in the link's corner, so its arrival never pushes the next link along.
+const DOT_PLACE = { corner: 'absolute right-0.5 top-2.5', inline: 'relative ml-2' } as const;
+
 function InProgressDot({ corner = false }: { corner?: boolean }) {
+  const place = `${DOT_PLACE[corner ? 'corner' : 'inline']} flex h-2 w-2`;
   return (
-    <span
-      // In the top bar the dot sits in the link's corner, so its arrival never pushes the next link along.
-      className={corner ? 'absolute right-0.5 top-2.5 flex h-2 w-2' : 'relative ml-2 flex h-2 w-2'}
-      aria-label="A check-up is in progress"
-      role="status"
-    >
+    <span className={place} aria-label="A check-up is in progress" role="status">
       <span className="absolute inline-flex h-full w-full rounded-full bg-stamp motion-safe:animate-ping" />
       <span className="relative inline-flex h-2 w-2 rounded-full bg-stamp" />
     </span>
