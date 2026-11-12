@@ -256,47 +256,36 @@ Respond with ONLY the JSON object.
 
     // One chance to repair its own output, told exactly what was wrong.
     console.warn(`[JourneyPlanner] AI response needs repair (${problems[0]}); retrying with a repair prompt...`);
-    const repair = await completeWith(
-      ai,
-      [
-        system,
-        asking,
-        { role: 'assistant', content: responseText },
-        {
-          role: 'user',
-          content: `That response was not usable:\n${problems
-            .slice(0, 20)
-            .map((p) => `- ${p}`)
-            .join(
-              '\n'
-            )}\n\nReply again with ONLY a single valid JSON object matching the requested schema — no markdown fences, no commentary, no truncation. Copy every selector exactly from the element lists, and every "fill" step MUST include a concrete non-empty "value".`,
-        },
-      ],
-      { ...asked, stage: 'repair', temperature: 0 }
-    );
-    // A cut-off repair is "the model ran out of room", not "the service didn't answer".
-    if (repair.finishReason === 'length' && !firstParse) throw new AITruncatedError(repair.model);
-    const repairText = repair.text;
     let flows: DiscoveredFlow[];
     try {
-      flows = parseFlows(repairText);
+      const repair = await completeWith(
+        ai,
+        [
+          system,
+          asking,
+          { role: 'assistant', content: responseText },
+          {
+            role: 'user',
+            content: `That response was not usable:\n${problems
+              .slice(0, 20)
+              .map((p) => `- ${p}`)
+              .join(
+                '\n'
+              )}\n\nReply again with ONLY a single valid JSON object matching the requested schema — no markdown fences, no commentary, no truncation. Copy every selector exactly from the element lists, and every "fill" step MUST include a concrete non-empty "value".`,
+          },
+        ],
+        { ...asked, stage: 'repair', temperature: 0 }
+      );
+      // A cut-off repair is "the model ran out of room", not "the service didn't answer".
+      if (repair.finishReason === 'length' && !firstParse) throw new AITruncatedError(repair.model);
+      flows = parseFlows(repair.text);
     } catch (repairErr) {
       // A usable first answer beats none: its bad steps are caught when checked.
-      if (!firstParse) throw repairErr;
-      flows = firstParse;
+      if (firstParse) return finish(backfill(firstParse), false, false);
+      throw repairErr;
     }
     // Still no value after the repair: type an obvious test value rather than nothing.
-    for (const flow of flows) {
-      for (const step of flow.steps || []) {
-        if (step.action === 'fill' && (!step.value || String(step.value).trim() === '')) {
-          step.value = guessFillValue(step);
-          console.warn(
-            `[JourneyPlanner] AI-generated fill step "${step.name}" in flow "${flow.id}" had no value; backfilling with a placeholder ("${step.value}") to avoid a silent no-op.`
-          );
-        }
-      }
-    }
-    return finish(flows, false, false);
+    return finish(backfill(flows), false, false);
   } catch (aiErr) {
     console.warn(`[JourneyPlanner] Fixed-rule journeys instead: ${aiErr instanceof Error ? aiErr.message : aiErr}`);
     const overBudget = aiErr instanceof BudgetSpentError;
@@ -311,6 +300,20 @@ Respond with ONLY the JSON object.
             : 'The AI service didn’t answer for the journeys, so fixed rules chose them.'
     );
     return finish(fallback(), true, overBudget, fallbackReasonOf(aiErr));
+  }
+
+  function backfill(flows: DiscoveredFlow[]): DiscoveredFlow[] {
+    for (const flow of flows) {
+      for (const step of flow.steps || []) {
+        if (step.action === 'fill' && (!step.value || String(step.value).trim() === '')) {
+          step.value = guessFillValue(step);
+          console.warn(
+            `[JourneyPlanner] AI-generated fill step "${step.name}" in flow "${flow.id}" had no value; backfilling with a placeholder ("${step.value}") to avoid a silent no-op.`
+          );
+        }
+      }
+    }
+    return flows;
   }
 
   function finish(

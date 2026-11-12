@@ -2,6 +2,7 @@ import type { Breakpoint, Finding, FindingSeverity } from '@qa/types';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { completeWith, type AIProvider } from './ai-provider.js';
+import { parseJsonAnswer } from '../plan/ai-planner.js';
 
 export interface VisualReviewItemInput {
   layoutGroup: string;
@@ -74,6 +75,10 @@ export class VisualReviewer {
           unreadable++;
           continue;
         }
+        if (issues === 'unusable') {
+          stoppedBy = new Error("The AI's answer for this screen could not be read.");
+          break;
+        }
         for (let i = 0; i < issues.length; i++) {
           const issue = issues[i];
           findings.push({
@@ -135,7 +140,7 @@ export class VisualReviewer {
     screen: VisualReviewItemInput,
     aiProvider: AIProvider,
     model?: string
-  ): Promise<VisualReviewIssue[] | null> {
+  ): Promise<VisualReviewIssue[] | null | 'unusable'> {
     const images: string[] = [];
     for (const s of screen.screenshots) {
       if (s.base64Data) images.push(s.base64Data);
@@ -164,7 +169,7 @@ Respond ONLY with a JSON object:
   ]
 }`;
 
-    const { text: response } = await completeWith(
+    const answer = await completeWith(
       aiProvider,
       [
         { role: 'system', content: 'You are an expert UX and visual design auditor. Output valid JSON only.' },
@@ -173,16 +178,42 @@ Respond ONLY with a JSON object:
       { model, responseFormat: 'json', temperature: 0.1, stage: 'visual-review' }
     );
 
+    if (answer.finishReason === 'length') return 'unusable';
+
+    let parsed: any;
     try {
-      const parsed = JSON.parse(
-        response
-          .replace(/```json/gi, '')
-          .replace(/```/g, '')
-          .trim()
-      );
-      return Array.isArray(parsed?.issues) ? parsed.issues : [];
+      parsed = parseJsonAnswer(answer.text);
     } catch {
-      return [];
+      return 'unusable';
     }
+
+    if (!parsed || !Array.isArray(parsed.issues)) return 'unusable';
+
+    const validBreakpoints = new Set<Breakpoint>(['375px', '768px', '1440px']);
+    const validIssues: VisualReviewIssue[] = [];
+    for (const raw of parsed.issues) {
+      if (!raw || typeof raw !== 'object') continue;
+      if (
+        typeof raw.what !== 'string' ||
+        raw.what.trim() === '' ||
+        typeof raw.why !== 'string' ||
+        raw.why.trim() === '' ||
+        typeof raw.suggestedImprovement !== 'string' ||
+        raw.suggestedImprovement.trim() === '' ||
+        !validBreakpoints.has(raw.breakpoint)
+      ) {
+        continue;
+      }
+      validIssues.push({
+        breakpoint: raw.breakpoint,
+        ...(typeof raw.selector === 'string' ? { selector: raw.selector } : {}),
+        what: raw.what,
+        why: raw.why,
+        suggestedImprovement: raw.suggestedImprovement,
+        severity: raw.severity === 'Suggestion' ? 'Suggestion' : 'Minor',
+      });
+      if (validIssues.length === 3) break;
+    }
+    return validIssues;
   }
 }

@@ -169,4 +169,107 @@ describe('AI Visual and Copy Review (visual-review.ts)', () => {
     expect(result.note).toContain('the rest can be finished from the report');
     expect(result.stoppedBy).toBeInstanceOf(Error);
   });
+
+  it('does not count a screen as reviewed when AI answer is cut off (finishReason: length), keeping it in remainingScreens', async () => {
+    const provider: AIProvider = {
+      providerType: 'mock',
+      generateText: async () => '{"issues": [{"break',
+      complete: async () => ({
+        text: '{"issues": [{"break',
+        finishReason: 'length',
+      }),
+    };
+    const result = await reviewer.reviewScreens(mockScreens, provider, { maxCalls: 5 });
+    expect(result.reviewedCount).toBe(0);
+    expect(result.remainingScreens).toHaveLength(3);
+    expect(result.remainingScreens[0].urlPath).toBe('/');
+    expect(result.stoppedBy?.message).toBe("The AI's answer for this screen could not be read.");
+  });
+
+  it('does not count a screen as reviewed when AI answer is not valid JSON, keeping it in remainingScreens', async () => {
+    const provider: AIProvider = {
+      providerType: 'mock',
+      generateText: async () => 'Sorry, I cannot help with this.',
+      complete: async () => ({
+        text: 'Sorry, I cannot help with this.',
+        finishReason: 'stop',
+      }),
+    };
+    const result = await reviewer.reviewScreens(mockScreens, provider, { maxCalls: 5 });
+    expect(result.reviewedCount).toBe(0);
+    expect(result.remainingScreens).toHaveLength(3);
+    expect(result.remainingScreens[0].urlPath).toBe('/');
+    expect(result.stoppedBy?.message).toBe("The AI's answer for this screen could not be read.");
+  });
+
+  it('clamps issues to at most 3 findings per screen', async () => {
+    const issues = [1, 2, 3, 4, 5].map((n) => ({
+      breakpoint: '375px' as const,
+      what: `Issue ${n}`,
+      why: `Why ${n}`,
+      suggestedImprovement: `Fix ${n}`,
+      severity: 'Minor' as const,
+    }));
+    const provider: AIProvider = {
+      providerType: 'mock',
+      generateText: async () => JSON.stringify({ issues }),
+    };
+    const result = await reviewer.reviewScreens([mockScreens[0]], provider, { maxCalls: 5 });
+    expect(result.reviewedCount).toBe(1);
+    expect(result.findings).toHaveLength(3);
+    expect(result.findings.map((f) => f.title)).toEqual([
+      '[AI Review] Issue 1',
+      '[AI Review] Issue 2',
+      '[AI Review] Issue 3',
+    ]);
+  });
+
+  it('drops issues with missing what or invalid breakpoint (e.g. 2000px)', async () => {
+    const provider: AIProvider = {
+      providerType: 'mock',
+      generateText: async () =>
+        JSON.stringify({
+          issues: [
+            {
+              breakpoint: '2000px',
+              what: 'Screen is too wide',
+              why: 'Too much space',
+              suggestedImprovement: 'Center content',
+              severity: 'Minor',
+            },
+            {
+              breakpoint: '375px',
+              what: '   ',
+              why: 'Empty what',
+              suggestedImprovement: 'Fill what',
+              severity: 'Minor',
+            },
+            {
+              breakpoint: '768px',
+              what: 'Valid issue',
+              why: 'Legitimate reason',
+              suggestedImprovement: 'Legitimate fix',
+              severity: 'Minor',
+            },
+          ],
+        }),
+    };
+    const result = await reviewer.reviewScreens([mockScreens[0]], provider, { maxCalls: 5 });
+    expect(result.reviewedCount).toBe(1);
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0].title).toBe('[AI Review] Valid issue');
+    expect(result.findings[0].where.breakpoint).toBe('768px');
+  });
+
+  it('counts a screen with an empty issues array as reviewed', async () => {
+    const provider: AIProvider = {
+      providerType: 'mock',
+      generateText: async () => JSON.stringify({ issues: [] }),
+    };
+    const result = await reviewer.reviewScreens([mockScreens[0]], provider, { maxCalls: 5 });
+    expect(result.status).toBe('completed');
+    expect(result.reviewedCount).toBe(1);
+    expect(result.findings).toHaveLength(0);
+    expect(result.remainingScreens).toHaveLength(0);
+  });
 });
