@@ -151,3 +151,47 @@ All in `docs/design-audit/2026-11-12/`, full-page, at 1440, 768 and 375.
   warnings and 0 errors repo-wide.
 - **Local data created** in the worktree's own store: two check-ups and two Website Audits of the demo site.
 - No instructions aimed at an AI were found in any page, file or tool output.
+
+## 8. Round 2: decisions taken and what was built
+
+Decisions (2026-11-12): move the hero's address line into the FAQ; shrink the screenshots; build four of the
+proposals; open a draft pull request. Sections 4, 6 and 7 above describe the state before this round.
+
+| What changed                                                                                                                                                              | Level | Commit    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | --------- |
+| One left edge: every page column starts at the workspace gutter (proposal 1)                                                                                              | L2    | `4ab4e1f` |
+| Plan Review sections start closed, except "Needs your answer" and "Not found in app" (proposal 2, without the rail): 7,782px → 2,486px at 1440, 10,672px → 3,311px at 375 | L2    | `f855e65` |
+| Exported report headings in sentence case (proposal 4, wording only)                                                                                                      | L1    | `e1f7256` |
+| Hero address line moved into the FAQ answer and its structured data                                                                                                       | L1    | `b018eb6` |
+| Audit review fields full width, long-text boxes grow with their text, hierarchy actions aligned (proposal 3, fields only): 21,122px → 19,400px at 1440                    | L1    | `79fadbb` |
+| Helpers tab left out once helper sign-in is known to be off (proposal 5)                                                                                                  | L1    | `79fadbb` |
+| Area rows fade and centre the current link on phones; report host wraps between words; export labels 44px wide                                                            | L1    | `79fadbb` |
+| Evidence re-saved at half size: about 11 MB → 3 MB                                                                                                                        | n/a   | `0170fda` |
+
+L2 evidence for this round, in this folder:
+
+| Commit                         | Before                                                                                    | After                                           | Revert               |
+| ------------------------------ | ----------------------------------------------------------------------------------------- | ----------------------------------------------- | -------------------- |
+| `4ab4e1f` One left edge        | `left-edge-before-new-checkup-{1440,768}.jpg`, `left-edge-before-website-audits-1440.jpg` | `left-edge-after-…` (same names)                | `git revert 4ab4e1f` |
+| `f855e65` Plan sections closed | `plan-review-after-{1440,768,375}.jpg`                                                    | `plan-sections-closed-after-{1440,768,375}.jpg` | `git revert f855e65` |
+
+Correctness rows from section 6 that this round closes: Check-ups area row cue (fixed), Report host breaking
+mid-word (fixed), Audit export label width (fixed), Exported report Title Case headings (fixed), Audit helpers tab
+(fixed, with the limit below), Audit review field width and clipped text (fixed; the page is still 19,400px).
+
+Still open after this round:
+
+- **Not built:** the Plan Review side rail; Website Audit results and review as separate pages; regenerating the
+  sample report (its body keeps some old inline colours) and plain-words finding titles.
+- **Helpers tab:** it disappears only after the Helpers screen has been opened once in the page session, because
+  that is when the app learns sign-in is off. A reload shows it again until then.
+- **Landing in the dark theme:** the sample report stays light inside a dark page.
+- **Unverified:** Settings caption contrast; the Chrome freeze after typing an address; layout shift by metric; the
+  screens listed in section 7 that need a key, a sign-in or the shared copy.
+- **History size:** the first round's full-size screenshots remain in this branch's history; a squash merge drops
+  them.
+
+Verification on the final state: 63 captures (21 screens at 1440, 768 and 375) with no horizontal scroll, unlabeled
+field, overflow or text under 14px; 42 captures at 200% text with no sideways scroll; keyboard jump, direct item
+link and "Open every section" checked on the closed plan.
+Unit tests 3,925 of 3,925; full build clean; lint 0 errors (117 warnings repo-wide, not compared against the base).
