@@ -19,6 +19,7 @@ import {
   type AuditDocumentKind,
   type AuditResult,
   type DocumentLanguage,
+  type EditOverlay,
   type ExportFormat,
   type PageContent,
   type StoredDocumentKind,
