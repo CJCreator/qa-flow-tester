@@ -94,15 +94,15 @@ export class AeoChecker {
       }
     }
 
-    // 2. Organization / WebSite Schema on Root/About
-    if (isRootOrAbout && !hasMalformedJsonLd) {
+    // 2. Organization / WebSite Schema on Homepage
+    const isHomePage = context.urlPath === '/' || context.urlPath === '';
+    if (isHomePage && !hasMalformedJsonLd) {
       const hasOrgOrSite =
         schemaTypes.has('Organization') ||
         schemaTypes.has('Corporation') ||
         schemaTypes.has('LocalBusiness') ||
         schemaTypes.has('WebSite');
       const first = !context.siteWide?.has('org-schema');
-      context.siteWide?.add('org-schema');
       if (!hasOrgOrSite && first) {
         findings.push({
           id: `F-AEO-${tcId}-ORG-SCHEMA-${findings.length + 1}`,
@@ -127,6 +127,7 @@ export class AeoChecker {
             'Add a JSON-LD Organization schema on the homepage establishing your brand entity, logo, and authority links.',
         });
       }
+      context.siteWide?.add('org-schema');
     }
 
     // 3. Breadcrumb navigation check on inner pages
@@ -222,36 +223,85 @@ export class AeoChecker {
         const hasBreadcrumbsNav = !!breadcrumbsEl;
 
         // Check question headings
-        const headings = document.querySelectorAll('h2, h3, h4');
         const questionHeadings: Array<{
           text: string;
           nextParagraphWordCount: number;
           hasAnswerParagraph: boolean;
           answerIsStructured?: boolean;
         }> = [];
-        headings.forEach((h) => {
-          const text = (h.textContent || '').trim();
+
+        const BLOCKS = ['P', 'DIV', 'UL', 'OL', 'TABLE', 'DL'];
+        const STRUCTURED_TAGS = ['UL', 'OL', 'TABLE', 'DL'];
+
+        function resolveAnswer(el: Element | null): { text: string; structured: boolean } {
+          if (!el) return { text: '', structured: false };
+          const tag = el.tagName;
+          if (/^H[1-6]$/.test(tag)) {
+            return { text: '', structured: false };
+          }
+          if (tag === 'DIV') {
+            const hasHeading = !!el.querySelector('h1, h2, h3, h4, h5, h6');
+            const text = (el.textContent || '').trim();
+            if (!hasHeading && text.length < 600) {
+              return { text, structured: false };
+            }
+            return { text: '', structured: false };
+          }
+          const text = (el.textContent || '').trim();
+          return { text, structured: STRUCTURED_TAGS.includes(tag) };
+        }
+
+        const candidates = Array.from(document.querySelectorAll('h2, h3, h4, details > summary'));
+        for (const candidate of candidates) {
+          if (questionHeadings.length >= 5) break;
+
+          // If a heading is inside a summary, avoid double processing
+          if (candidate.tagName !== 'SUMMARY' && candidate.closest('summary')) {
+            continue;
+          }
+
+          const text = (candidate.textContent || '').trim();
           const isQuestion = text.endsWith('?') || /^(what|how|why|when|where|who)\b/i.test(text);
-          if (isQuestion && text.length > 8) {
-            // The answer is the first content block after the heading. Another heading ends the search:
-            // what follows it answers that heading, not this one.
-            const BLOCKS = ['P', 'DIV', 'UL', 'OL', 'TABLE', 'DL'];
-            let nextEl = h.nextElementSibling;
+          if (!isQuestion || text.length <= 8) {
+            continue;
+          }
+
+          let answerText = '';
+          let isStructured = false;
+
+          if (candidate.tagName === 'SUMMARY') {
+            const nextEl = candidate.nextElementSibling;
+            if (nextEl) {
+              const res = resolveAnswer(nextEl);
+              answerText = res.text;
+              isStructured = res.structured;
+            } else if (candidate.parentElement) {
+              const clone = candidate.parentElement.cloneNode(true) as HTMLElement;
+              clone.querySelectorAll('summary').forEach((s) => s.remove());
+              answerText = (clone.textContent || '').trim();
+              isStructured = false;
+            }
+          } else {
+            let nextEl = candidate.nextElementSibling;
+            if (!nextEl && candidate.parentElement) {
+              nextEl = candidate.parentElement.nextElementSibling;
+            }
             while (nextEl && !BLOCKS.includes(nextEl.tagName) && !/^H[1-6]$/.test(nextEl.tagName)) {
               nextEl = nextEl.nextElementSibling;
             }
-            const tag = nextEl ? nextEl.tagName : '';
-            const answerText =
-              nextEl && tag !== 'DIV' && !/^H[1-6]$/.test(tag) ? (nextEl.textContent || '').trim() : '';
-            const words = answerText ? answerText.split(/\s+/).length : 0;
-            questionHeadings.push({
-              text,
-              nextParagraphWordCount: words,
-              hasAnswerParagraph: words > 0,
-              answerIsStructured: words > 0 && tag !== 'P',
-            });
+            const res = resolveAnswer(nextEl);
+            answerText = res.text;
+            isStructured = res.structured;
           }
-        });
+
+          const words = answerText ? answerText.split(/\s+/).length : 0;
+          questionHeadings.push({
+            text,
+            nextParagraphWordCount: words,
+            hasAnswerParagraph: words > 0,
+            answerIsStructured: words > 0 && isStructured,
+          });
+        }
 
         // Content volume and structure
         const bodyText = (document.body.innerText || '').trim();

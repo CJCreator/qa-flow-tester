@@ -10,7 +10,15 @@ import { sharedTest, sharedResolve } from './vitest.config';
 // set to an empty folder: no unit file tried to launch Chromium.
 // A new test file lands in `unit` by default. Add it here when it launches Chromium.
 const BROWSER_TESTS: Record<string, string[]> = {
-  checkers: ['alt-text-quality', 'design-ux-checkers', 'keyboard-a11y', 'performance', 'refusal-rule', 'security'],
+  checkers: [
+    'aeo-geo-dom',
+    'alt-text-quality',
+    'design-ux-checkers',
+    'keyboard-a11y',
+    'performance',
+    'refusal-rule',
+    'security',
+  ],
   core: [
     'browser-guard',
     'browser-restart',

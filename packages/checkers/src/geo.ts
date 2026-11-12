@@ -159,10 +159,18 @@ export class GeoChecker {
         }
 
         // Author attribution
-        const authorEl = document.querySelector(
-          '[rel="author"], [class*="author" i], [itemprop="author"], meta[name="author"]'
-        );
-        const hasAuthorByline = !!authorEl;
+        let hasAuthorByline = !!document.querySelector('[rel="author"], [itemprop="author"], meta[name="author"]');
+        if (!hasAuthorByline) {
+          const authorRegex = /(^|[\s_-])(author|byline)($|[\s_-])/i;
+          const elementsWithClass = Array.from(document.querySelectorAll('[class]'));
+          for (const el of elementsWithClass) {
+            const cls = el.getAttribute('class') || '';
+            if (authorRegex.test(cls)) {
+              hasAuthorByline = true;
+              break;
+            }
+          }
+        }
 
         // Date published
         const dateEl = document.querySelector(
