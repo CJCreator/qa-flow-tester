@@ -23,7 +23,7 @@ import {
   type AuditStoreBackend,
   type DeletePrefixOptions,
 } from '../src/audit/store/index.js';
-import { pageContentName } from '../src/audit/pipeline/pipeline.js';
+import { pageContentName } from '../src/audit/store/keys.js';
 import { phoneScreenshotFile } from '../src/audit/phone-layout.js';
 
 const REQUEST: AuditRequest = {

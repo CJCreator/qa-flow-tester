@@ -55,7 +55,7 @@ import { auditMarketing } from '../analysis/marketing-signals.js';
 import { seoBasics } from '../analysis/seo-basics.js';
 import { measureSampleSpeeds, type PageSpeedDeps } from '../ai/pagespeed.js';
 import { assessPages, assessSite, AUDIT_AI_IN_FLIGHT, type AreaGrades } from '../ai/assessment.js';
-import { pageSlug } from '../store/keys.js';
+import { pageContentName } from '../store/keys.js';
 import { recommendPages, ruleRecommendation } from '../ai/page-recommendation.js';
 import {
   checkCitations,
@@ -183,11 +183,6 @@ export class AuditPipelineError extends Error {
     this.name = 'AuditPipelineError';
     this.code = code;
   }
-}
-
-/** The per-version Page Content object name of a page: `pages/<slug>-<sha256-8>`. */
-export function pageContentName(urlPath: string): string {
-  return `pages/${pageSlug(urlPath)}`;
 }
 
 const NOTES: Record<Exclude<PipelineStep, 'reading'>, string> = {

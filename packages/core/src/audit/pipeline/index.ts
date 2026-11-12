@@ -4,7 +4,6 @@
  */
 export {
   runAuditPipeline,
-  pageContentName,
   AuditPipelineError,
   DEFAULT_SITE_STAGES,
   onlyOnePageNoteText,

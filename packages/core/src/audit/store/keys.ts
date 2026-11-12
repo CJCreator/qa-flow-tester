@@ -28,6 +28,11 @@ export function pageSlug(urlPath: string): string {
   return `${slug}-${hash}`;
 }
 
+/** The per-version Page Content object name of a page: `pages/<slug>-<sha256-8>` (stored as `<name>.json`). */
+export function pageContentName(urlPath: string): string {
+  return `pages/${pageSlug(urlPath)}`;
+}
+
 export const STORED_DOCUMENT_KINDS: readonly StoredDocumentKind[] = [
   ...AUDIT_DOCUMENT_KINDS,
   'pitch-glimpse',

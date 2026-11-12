@@ -37,11 +37,11 @@ import type { PhoneLayoutRecord } from '../src/audit/phone-layout.js';
 import type { AssessPagesInput, AssessSiteInput, PageAssessment } from '../src/audit/ai/assessment.js';
 import type { RecommendPagesInput } from '../src/audit/ai/page-recommendation.js';
 import type { AuditAi } from '../src/audit/ai/stage-ai.js';
+import { pageContentName } from '../src/audit/store/keys.js';
 import {
   AuditPipelineError,
   areaGrades,
   createPageRecorder,
-  pageContentName,
   runAuditPipeline,
   type AuditPipelineDeps,
   type AuditPipelineStore,

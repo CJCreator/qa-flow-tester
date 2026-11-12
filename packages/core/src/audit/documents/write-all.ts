@@ -32,9 +32,8 @@ import { labelsFor } from './labels/index.js';
 import type { AuditDoc } from './model.js';
 import { renderMarkdown } from './render-markdown.js';
 import { renderHtml } from './render-html.js';
-import { STORED_DOCUMENT_KINDS } from '../store/keys.js';
+import { pageContentName, STORED_DOCUMENT_KINDS } from '../store/keys.js';
 import type { AuditVersionUpdate } from '../store/audit-store.js';
-import { pageContentName } from '../pipeline/pipeline.js';
 
 /** Fixed wording for the version record: never the error's own text (it can hold paths or storage details). */
 const NOT_BUILT = 'The document could not be built.';
