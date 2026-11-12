@@ -4,6 +4,7 @@ import { promises as fs } from 'fs';
 import type { Finding, ReferenceFlow, ReferenceFlowStep, StepEvidence, VisitedPage } from '@qa/types';
 import { BugDetectionChecker, UXQualityChecker } from '@qa/checkers';
 import { EvidenceCollector } from '../evidence.js';
+import { classifyAddress, isPrivateTextHost } from '../address-class.js';
 import { isSameSite } from '../same-site.js';
 import { RobotsPolicy } from './robots.js';
 import { getBrowserPolicy, installRequestGuard, WEBRTC_NO_DIRECT_UDP } from '../browser.js';
@@ -60,19 +61,9 @@ export function scanScope(entryUrl: string): string {
   return pathname.slice(0, pathname.lastIndexOf('/') + 1) || '/';
 }
 
-/** This machine, a private network address, or Docker's name for the host. */
+/** This machine, a private network address, or Docker's name for the host (the shared classifier, ADR 0014). */
 export function isPrivateHost(hostname: string): boolean {
-  const h = hostname.replace(/^\[|\]$/g, '').toLowerCase();
-  return (
-    h === 'localhost' ||
-    h.endsWith('.localhost') ||
-    h === 'host.docker.internal' ||
-    h === '::1' ||
-    /^127\./.test(h) ||
-    /^10\./.test(h) ||
-    /^192\.168\./.test(h) ||
-    /^172\.(1[6-9]|2\d|3[01])\./.test(h)
-  );
+  return isPrivateTextHost(hostname) || classifyAddress(hostname) !== null;
 }
 
 /**
