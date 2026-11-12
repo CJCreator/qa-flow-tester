@@ -149,6 +149,12 @@ importers:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
     devDependencies:
+      '@qa/core':
+        specifier: workspace:*
+        version: link:../core
+      '@qa/runner':
+        specifier: workspace:*
+        version: link:../runner
       '@types/react':
         specifier: ^18.3.18
         version: 18.3.31
