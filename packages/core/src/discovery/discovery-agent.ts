@@ -62,6 +62,8 @@ export interface DiscoveryOptions {
    * with the roles' own details is still allowed.
    */
   readOnly?: boolean;
+  /** The App is a Test Copy (the runner decides): its certificate may be self-signed. */
+  testCopy?: boolean;
   /** Pages to explore per crawl. Default 200 (DEFAULT_MAX_PAGES). */
   maxPages?: number;
   /** Crawl concurrency (1 to 5, default 2). */
@@ -344,6 +346,7 @@ export class DiscoveryAgent {
   }
 
   private async discoverSite(options: DiscoveryOptions): Promise<DiscoveryOutcome> {
+    this.browserManager.trustInvalidCertificates = options.testCopy === true;
     const outputDir = options.outputDir || path.join(process.cwd(), '.qa-report');
     await fs.mkdir(outputDir, { recursive: true });
     const signal = options.signal;

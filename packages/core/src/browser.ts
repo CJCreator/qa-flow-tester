@@ -2,6 +2,7 @@ import { chromium, webkit, firefox, type Browser, type BrowserContext, type Page
 import type { Breakpoint, StorageStateData } from '@qa/types';
 import { isSameSite } from './same-site.js';
 import { abortError } from './abort.js';
+import { classifyAddress, isPrivateTextHost } from './address-class.js';
 
 export type BrowserEngine = 'chromium' | 'webkit' | 'firefox' | 'android-chrome';
 
@@ -26,6 +27,19 @@ export interface BrowserOptions extends Partial<RunContextOptions> {
   storageState?: string | StorageStateData;
   /** When set, Playwright records a .webm of every page in the context into this directory. */
   recordVideoDir?: string;
+  /** The App is a Test Copy: a self-signed certificate is accepted (T-312). */
+  trustInvalidCertificates?: boolean;
+}
+
+/** Certificate errors are ignored only on this machine, a private network, or a Test Copy. */
+export function ignoresCertificateErrors(baseUrl: string | undefined, testCopy: boolean): boolean {
+  if (testCopy) return true;
+  try {
+    const host = new URL(baseUrl ?? '').hostname;
+    return isPrivateTextHost(host) || classifyAddress(host) !== null;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -111,6 +125,8 @@ function tunnelHeaders(tunnelAuth?: string): Record<string, string> {
 export class BrowserManager {
   private browsers = new Map<BrowserEngine, Browser>();
   private abandoned = false;
+  /** Set per run: true only for a Test Copy (T-312). Used when a context's options leave it out. */
+  trustInvalidCertificates = false;
 
   async launch(engineOrHeadless: BrowserEngine | boolean = 'chromium', headless = true): Promise<Browser> {
     if (this.abandoned) throw abortError();
@@ -169,7 +185,10 @@ export class BrowserManager {
           ? 'Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36'
           : undefined),
       baseURL: options.baseUrl,
-      ignoreHTTPSErrors: true,
+      ignoreHTTPSErrors: ignoresCertificateErrors(
+        options.baseUrl,
+        options.trustInvalidCertificates ?? this.trustInvalidCertificates
+      ),
       serviceWorkers: 'block' as const,
       storageState: options.storageState as NonNullable<Parameters<Browser['newContext']>[0]>['storageState'],
     };

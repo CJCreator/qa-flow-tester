@@ -300,6 +300,8 @@ export interface RunOptions {
    * tries to send data is reported as needing a test copy rather than as broken.
    */
   readOnly?: boolean;
+  /** The App is a Test Copy (the runner decides): its certificate may be self-signed (T-312). */
+  testCopy?: boolean;
   /** Planned tests that won't run, and why, e.g. a journey that needs a test copy on a live site. */
   notRun?: Array<{ id: string; flowId: string; name: string; role: string; reason: string }>;
   /** The site as the plan saw it, kept in the report so it can be drawn as a map. */
@@ -383,6 +385,7 @@ export class FlowTestOrchestrator {
 
   private async runChecks(options: RunOptions, redactor: Redactor): Promise<ReleaseReport> {
     const startTime = Date.now();
+    this.browserManager.trustInvalidCertificates = options.testCopy === true;
     const runId = options.runId || `run-${Date.now()}`;
     // Nothing the run streams or writes may carry a sign-in detail.
     const emitEvent = options.onEvent || (() => {});
@@ -1453,24 +1456,46 @@ export class FlowTestOrchestrator {
           if (isAbortError(fatalErr) || fatalErr instanceof SignInFailedError) throw fatalErr;
           testPointPassed = false;
           const msg = (fatalErr instanceof Error ? fatalErr.message : String(fatalErr)).replace(/\x1b\[[0-9;]*m/g, '');
+          // A start page with a bad certificate is a finding about the site, once per host per run (T-312).
+          const tlsHost = startPageNavResult?.error?.kind === 'tls' ? new URL(options.targetUrl).hostname : undefined;
+          const tlsFinding = tlsHost !== undefined && !siteWide.has(`tls:${tlsHost}`);
+          if (tlsHost !== undefined) siteWide.add(`tls:${tlsHost}`);
           // A test that couldn't run at all still says why: a failure with no finding explains nothing.
-          const couldNotRun: Finding = {
-            id: `F-RUN-${testCase.id}-${bp}`,
-            testCaseId: testCase.id,
-            flowId: testCase.flowId,
-            severity: 'Major',
-            checker: 'bug-detection',
-            title: `Couldn’t run “${testCase.name || testCase.flowId}”`,
-            where: { urlPath: testCase.startPage, role: testCase.role, breakpoint: bp },
-            expectedVsActual: {
-              expected: `${testCase.startPage} opens and the test can run`,
-              actual: msg.split('\n')[0].substring(0, 300),
-            },
-            stepsToReproduce: [`Open ${testCase.startPage} as ${testCase.role} at ${bp}`],
-            evidence: {},
-            resolution:
-              'Check the page loads at this address for this role; a timeout usually means the page is slow or the server stopped.',
-          };
+          const couldNotRun: Finding = tlsFinding
+            ? {
+                id: `F-TLS-${tlsHost}`,
+                testCaseId: testCase.id,
+                flowId: testCase.flowId,
+                severity: 'Blocker',
+                checker: 'security',
+                title: 'The site’s certificate is not valid',
+                where: { urlPath: testCase.startPage, role: testCase.role, breakpoint: bp },
+                expectedVsActual: {
+                  expected: `A valid HTTPS certificate for ${tlsHost}`,
+                  actual: /net::ERR_[A-Z_]+/.exec(startPageNavResult?.error?.detail ?? '')?.[0] ?? 'certificate error',
+                },
+                stepsToReproduce: [`Open ${testCase.startPage} in a browser`],
+                evidence: {},
+                resolution:
+                  'Renew or fix the certificate (expired, wrong name, or not from a trusted authority). Browsers show a full-page warning instead of the page.',
+              }
+            : {
+                id: `F-RUN-${testCase.id}-${bp}`,
+                testCaseId: testCase.id,
+                flowId: testCase.flowId,
+                severity: 'Major',
+                checker: 'bug-detection',
+                title: `Couldn’t run “${testCase.name || testCase.flowId}”`,
+                where: { urlPath: testCase.startPage, role: testCase.role, breakpoint: bp },
+                expectedVsActual: {
+                  expected: `${testCase.startPage} opens and the test can run`,
+                  actual: msg.split('\n')[0].substring(0, 300),
+                },
+                stepsToReproduce: [`Open ${testCase.startPage} as ${testCase.role} at ${bp}`],
+                evidence: {},
+                resolution:
+                  'Check the page loads at this address for this role; a timeout usually means the page is slow or the server stopped.',
+              };
           allFindings.push(couldNotRun);
           pointResult = {
             testCaseId: testCase.id,

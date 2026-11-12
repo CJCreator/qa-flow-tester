@@ -35,7 +35,7 @@ export interface NavigateResult {
   /** The main response's Retry-After, in ms (seconds or an HTTP date), when it sent one. */
   retryAfterMs?: number;
   /** Kind only, never message text */
-  error?: { kind: 'timeout' | 'net' | 'aborted' | 'other'; detail?: string };
+  error?: { kind: 'timeout' | 'net' | 'tls' | 'aborted' | 'other'; detail?: string };
 }
 
 /** A Retry-After value in ms: delay-seconds or an HTTP date. Undefined when absent or unreadable. */
@@ -51,7 +51,7 @@ export function parseRetryAfter(value: string | undefined, now: number = Date.no
 /**
  * Classifies a Playwright navigation error into a kind enum without leaking error message text.
  */
-function classifyError(err: unknown, page: Page): { kind: 'timeout' | 'net' | 'aborted' | 'other' } {
+function classifyError(err: unknown, page: Page): { kind: 'timeout' | 'net' | 'tls' | 'aborted' | 'other' } {
   if (page.isClosed()) {
     return { kind: 'aborted' };
   }
@@ -63,6 +63,10 @@ function classifyError(err: unknown, page: Page): { kind: 'timeout' | 'net' | 'a
   }
   if (/page closed|target closed|browser has been closed|browser disconnected|crashed/i.test(message)) {
     return { kind: 'aborted' };
+  }
+  // A certificate does not fix itself on a retry (T-312).
+  if (/net::ERR_(CERT_|SSL_|BAD_SSL)/i.test(message)) {
+    return { kind: 'tls' };
   }
   if (/net::ERR_|connection refused|ECONNREFUSED|ENOTFOUND|getaddrinfo/i.test(message)) {
     return { kind: 'net' };
@@ -217,7 +221,7 @@ export async function navigate(page: Page, url: string, options?: NavigateOption
       const errInfo = classifyError(err, page);
       const isLastAttempt = attempt >= maxAttempts;
 
-      if (errInfo.kind === 'aborted' || isLastAttempt) {
+      if (errInfo.kind === 'aborted' || errInfo.kind === 'tls' || isLastAttempt) {
         let currentUrl = '';
         try {
           currentUrl = page.url();

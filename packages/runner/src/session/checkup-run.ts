@@ -497,6 +497,7 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
         reportNotes: context.reportNotes,
         aiModels: context.aiModels,
         readOnly: context.readOnly,
+        testCopy: context.testCopy,
         requireSignIn: context.signInConsent && !context.readOnly ? true : undefined,
         pageCoverage: context.pageCoverage ?? context.draft?.exploration?.pageCoverage,
         notRun,
@@ -739,6 +740,7 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
         releaseTarget: body.releaseTarget,
         draft: undefined as unknown as DiscoveryDraft,
         readOnly,
+        testCopy: testHost,
         signInConsent: consent && !readOnly ? true : undefined,
         siteHost,
         productContext: body.productContext,
@@ -871,6 +873,7 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
           finishSignal,
           aiProvider: ai.provider,
           readOnly,
+          testCopy: testHost,
           requireSignIn: consent ? true : undefined,
           maxPages:
             typeof body.maxPages === 'number' && body.maxPages > 0

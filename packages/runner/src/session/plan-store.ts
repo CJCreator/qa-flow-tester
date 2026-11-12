@@ -41,6 +41,8 @@ export interface StoredPlanRecord {
     aiCap?: RunCap;
     testCap?: number;
     readOnly?: boolean;
+    /** The App is a Test Copy: its certificate may be self-signed (T-312). */
+    testCopy?: boolean;
     signInConsent?: boolean;
     siteHost?: string;
     ai?: { provider: AIProviderType; model?: string; apiKey?: string };
