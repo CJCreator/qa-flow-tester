@@ -269,11 +269,11 @@ describe('Website Audit start request: POST /api/audits (REQ-001 AC-2)', () => {
     );
   });
 
-  it('stops a running audit via stopAudit (POST /api/runner/stop)', async () => {
-    const fetchImpl = vi.fn(async () => reply(200, { aborted: true }));
-    const result = await stopAudit(fetchImpl);
+  it('stops a running audit via stopAudit (POST /api/audits/:id/stop)', async () => {
+    const fetchImpl = vi.fn(async () => reply(202, { stopped: true }));
+    const result = await stopAudit('audit_00001', fetchImpl);
     expect(result.ok).toBe(true);
-    expect(fetchImpl).toHaveBeenCalledWith('/api/runner/stop', {
+    expect(fetchImpl).toHaveBeenCalledWith('/api/audits/audit_00001/stop', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
     });

@@ -98,6 +98,7 @@ describe('LivePageList component', () => {
       createElement(LivePageList, {
         pages: samplePages,
         elapsedMs: 15000,
+        auditId: 'audit_00001',
       })
     );
 
@@ -295,15 +296,26 @@ describe('stopAudit', () => {
     (async () => new Response(JSON.stringify(body), { status })) as unknown as typeof fetch;
 
   it('is ok only when the runner stopped something', async () => {
-    expect(await stopAudit(reply(200, { aborted: true }))).toEqual({ ok: true });
+    expect(await stopAudit('audit_00001', reply(202, { stopped: true }))).toEqual({ ok: true });
   });
   it('says so when the runner stopped nothing', async () => {
-    expect(await stopAudit(reply(200, { aborted: false, message: 'No run currently active' }))).toEqual({
+    expect(await stopAudit('audit_00001', reply(200, { stopped: false, message: 'not running' }))).toEqual({
       ok: false,
       message: STOP_DID_NOTHING,
     });
   });
   it('says so on a refusal', async () => {
-    expect(await stopAudit(reply(403, { error: 'no' }))).toEqual({ ok: false, message: STOP_DID_NOTHING });
+    expect(await stopAudit('audit_00001', reply(403, { error: 'no' }))).toEqual({
+      ok: false,
+      message: STOP_DID_NOTHING,
+    });
+  });
+  it('calls the audit stop route with the id escaped', async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ stopped: true }), { status: 202 }));
+    await stopAudit('a/b', fetchImpl as unknown as typeof fetch);
+    expect(fetchImpl).toHaveBeenCalledWith('/api/audits/a%2Fb/stop', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
   });
 });

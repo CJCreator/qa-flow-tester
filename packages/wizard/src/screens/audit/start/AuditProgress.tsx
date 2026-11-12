@@ -290,6 +290,7 @@ export function AuditProgress({
         elapsedMs={elapsedMs}
         onStop={onStop}
         stopped={!running}
+        auditId={progress?.auditId}
       />
 
       {state.status === 'working' && progress?.currentPath && (

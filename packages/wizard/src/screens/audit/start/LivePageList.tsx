@@ -12,6 +12,8 @@ export interface LivePageListProps {
   onStop?: () => void | Promise<void>;
   /** Set to true when the audit has completed or stopped. */
   stopped?: boolean;
+  /** The Website Audit being shown. Without it the Stop button is not offered. */
+  auditId?: string;
 }
 
 export function pageStateLabel(state: AuditPageState['state']): string {
@@ -46,7 +48,7 @@ export function pageAiText(ai?: 'waiting' | 'done' | 'not-done'): string | null 
  * Live page list under counters: shows each page's crawl state, plain-words skip reason,
  * AI assessment status, live elapsed time, and a Stop button (ADR 0042).
  */
-export function LivePageList({ pages, elapsedMs, onStop, stopped = false }: LivePageListProps) {
+export function LivePageList({ pages, elapsedMs, onStop, stopped = false, auditId }: LivePageListProps) {
   const [stopping, setStopping] = useState(false);
   const [liveElapsed, setLiveElapsed] = useState(0);
   const [stopMessage, setStopMessage] = useState<string | null>(null);
@@ -64,13 +66,14 @@ export function LivePageList({ pages, elapsedMs, onStop, stopped = false }: Live
 
   const handleStop = async () => {
     if (stopping || stopped) return;
+    if (!onStop && !auditId) return;
     setStopping(true);
     setStopMessage(null);
     try {
       if (onStop) {
         await onStop();
-      } else {
-        const outcome = await stopAudit();
+      } else if (auditId) {
+        const outcome = await stopAudit(auditId);
         if (!outcome.ok) setStopMessage(outcome.message ?? null);
       }
     } finally {
@@ -84,7 +87,7 @@ export function LivePageList({ pages, elapsedMs, onStop, stopped = false }: Live
         <span className="font-medium text-ink-soft" data-testid="live-elapsed">
           Elapsed: {formatDuration(elapsed)}
         </span>
-        {!stopped && (
+        {!stopped && (onStop || auditId) && (
           <button
             type="button"
             className="btn-quiet btn-sm text-fail"
