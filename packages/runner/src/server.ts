@@ -171,6 +171,7 @@ import {
 } from './run-inputs.js';
 import { isInside } from './fs-inside.js';
 import { readCookie } from './cookies.js';
+import { evidenceUrl } from './evidence-url.js';
 
 /**
  * Saved sign-in sessions (auth/<role>.json) hold live session cookies: no folder called "auth" is
@@ -3450,9 +3451,9 @@ export class RunnerServer {
         if (matchingFinding) {
           const matchPercent = matchingFinding.expectedVsActual.actual?.match(/([\d.]+)%\s+of pixels differ/);
           if (matchPercent) diffPercent = parseFloat(matchPercent[1]);
-          if (matchingFinding.evidence?.screenshotPath) {
-            diffUrl = `/api/evidence/${matchingFinding.evidence.screenshotPath}`;
-          }
+          const runId = this.lastReport?.runId ?? '';
+          diffUrl = evidenceUrl(this.outputDir, runId, matchingFinding.evidence?.screenshotPath);
+          currentUrl = evidenceUrl(this.outputDir, runId, matchingFinding.evidence?.currentScreenshotPath);
         }
 
         items.push({
@@ -3494,8 +3495,13 @@ export class RunnerServer {
         return;
       }
       if (body.currentEvidencePath) {
-        const src = path.resolve(this.outputDir, String(body.currentEvidencePath));
-        if (isInside(this.outputDir, src) && !isSavedSession(this.outputDir, src)) {
+        // The Visual Baselines screen sends the address it showed (`/api/evidence/...`); a plain path under the
+        // output folder is accepted too.
+        const given = String(body.currentEvidencePath);
+        const EVIDENCE_PREFIX = '/api/evidence/';
+        const rel = given.startsWith(EVIDENCE_PREFIX) ? decodePath(given.slice(EVIDENCE_PREFIX.length)) : given;
+        const src = rel === null ? null : path.resolve(this.outputDir, rel);
+        if (src && isInside(this.outputDir, src) && !isSavedSession(this.outputDir, src)) {
           await fs.copyFile(src, dest);
         }
       }
