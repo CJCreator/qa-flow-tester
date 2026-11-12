@@ -2,6 +2,32 @@ import type { Page } from 'playwright';
 import type { Breakpoint, Finding, FindingSeverity, WcagCoverageEntry } from '@qa/types';
 import { wcagCriteria } from './ux-quality.js';
 
+declare const qaCssPath: (e: Element) => string;
+
+const CSS_PATH_SOURCE = `function qaCssPath(e) {
+  const t = e.getAttribute('data-testid');
+  if (t) return \`[data-testid="\${CSS.escape(t)}"]\`;
+  if (e.id) return \`#\${CSS.escape(e.id)}\`;
+  const parts = [];
+  let n = e;
+  for (let i = 0; n && n !== document.body && i < 3; i++) {
+    const p = n.parentElement;
+    const tag = n.tagName.toLowerCase();
+    if (!p) {
+      parts.unshift(tag);
+      break;
+    }
+    const same = Array.from(p.children).filter((c) => c.tagName === n.tagName);
+    parts.unshift(same.length > 1 ? \`\${tag}:nth-of-type(\${same.indexOf(n) + 1})\` : tag);
+    n = p;
+  }
+  return parts.join(' > ');
+}`;
+
+async function evaluateWithCssPath<R>(page: Page, body: () => R): Promise<R> {
+  return page.evaluate(`(() => { ${CSS_PATH_SOURCE}; return (${body.toString()})(); })()`) as Promise<R>;
+}
+
 /**
  * Keyboard and reflow checks (T-22): elements the Tab key cannot reach, focus hidden under a fixed
  * header, focus that gets stuck, and sideways scrolling at 320 px. Automatic checks only (ADR 0018):
@@ -79,32 +105,13 @@ export function detectTrap(
 }
 
 async function readStop(page: Page): Promise<TabStop | null> {
-  const raw: unknown = await page.evaluate(() => {
+  const raw: unknown = await evaluateWithCssPath(page, () => {
     const el = document.activeElement as HTMLElement | null;
     if (!el || el === document.body || el === document.documentElement) return null;
     const visible = (e: Element) => {
       const r = e.getBoundingClientRect();
       const cs = getComputedStyle(e);
       return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none';
-    };
-    const sel = (e: Element): string => {
-      const t = e.getAttribute('data-testid');
-      if (t) return `[data-testid="${t}"]`;
-      if (e.id) return `#${e.id}`;
-      const parts: string[] = [];
-      let n: Element | null = e;
-      for (let i = 0; n && n !== document.body && i < 3; i++) {
-        const p: Element | null = n.parentElement;
-        const tag = n.tagName.toLowerCase();
-        if (!p) {
-          parts.unshift(tag);
-          break;
-        }
-        const same = Array.from(p.children).filter((c) => c.tagName === n!.tagName);
-        parts.unshift(same.length > 1 ? `${tag}:nth-of-type(${same.indexOf(n) + 1})` : tag);
-        n = p;
-      }
-      return parts.join(' > ');
     };
     const cache = (window as unknown as { __qaTabCache?: TabCache }).__qaTabCache;
     const size = `${window.innerWidth}x${window.innerHeight}`;
@@ -152,7 +159,7 @@ async function readStop(page: Page): Promise<TabStop | null> {
       });
     return {
       idx: list.indexOf(el),
-      selector: sel(el),
+      selector: qaCssPath(el),
       tag: el.tagName.toLowerCase(),
       testId: el.getAttribute('data-testid') || undefined,
       rect: { x: r.x, y: r.y, width: r.width, height: r.height },
@@ -262,7 +269,7 @@ export class KeyboardA11yChecker {
   // --- S5: elements the Tab key cannot reach (WCAG 2.1.1) -----------------------------------
 
   async checkKeyboardTraversal(page: Page, context: KeyboardA11yContext): Promise<Finding[]> {
-    const raw: unknown = await page.evaluate(() => {
+    const raw: unknown = await evaluateWithCssPath(page, () => {
       const NATIVE =
         'a[href],button,input:not([type=hidden]),select,textarea,summary,iframe,[contenteditable=""],[contenteditable="true"],audio[controls],video[controls]';
       const ROLES = 'button|link|tab|menuitem|checkbox|switch';
@@ -271,25 +278,6 @@ export class KeyboardA11yChecker {
         .join(',');
       const COMPOSITE =
         '[role=tablist],[role=menu],[role=menubar],[role=listbox],[role=radiogroup],[role=toolbar],[role=tree],[role=grid]';
-      const sel = (e: Element): string => {
-        const t = e.getAttribute('data-testid');
-        if (t) return `[data-testid="${t}"]`;
-        if (e.id) return `#${e.id}`;
-        const parts: string[] = [];
-        let n: Element | null = e;
-        for (let i = 0; n && n !== document.body && i < 3; i++) {
-          const p: Element | null = n.parentElement;
-          const tag = n.tagName.toLowerCase();
-          if (!p) {
-            parts.unshift(tag);
-            break;
-          }
-          const same = Array.from(p.children).filter((c) => c.tagName === n!.tagName);
-          parts.unshift(same.length > 1 ? `${tag}:nth-of-type(${same.indexOf(n) + 1})` : tag);
-          n = p;
-        }
-        return parts.join(' > ');
-      };
       const out: Array<{ selector: string; tag: string; role: string | null; onclickOnly: boolean }> = [];
       for (const el of Array.from(document.querySelectorAll(`${roleSel},[onclick]`))) {
         if (el.matches(NATIVE) || el.closest('a[href],button')) continue;
@@ -305,7 +293,7 @@ export class KeyboardA11yChecker {
           continue;
         const hasRole = el.matches(roleSel);
         out.push({
-          selector: sel(el),
+          selector: qaCssPath(el),
           tag: el.tagName.toLowerCase(),
           role: el.getAttribute('role'),
           onclickOnly: !hasRole,
@@ -436,29 +424,10 @@ export class KeyboardA11yChecker {
     try {
       await page.setViewportSize({ width: 320, height: 256 });
       await page.waitForTimeout(150);
-      const raw: unknown = await page.evaluate(() => {
+      const raw: unknown = await evaluateWithCssPath(page, () => {
         const scrollWidth = document.documentElement.scrollWidth;
         if (scrollWidth <= 321) return null;
         const EXEMPT = 'table,pre,code,img,svg,canvas,video,iframe,map';
-        const sel = (e: Element): string => {
-          const t = e.getAttribute('data-testid');
-          if (t) return `[data-testid="${t}"]`;
-          if (e.id) return `#${e.id}`;
-          const parts: string[] = [];
-          let n: Element | null = e;
-          for (let i = 0; n && n !== document.body && i < 3; i++) {
-            const p: Element | null = n.parentElement;
-            const tag = n.tagName.toLowerCase();
-            if (!p) {
-              parts.unshift(tag);
-              break;
-            }
-            const same = Array.from(p.children).filter((c) => c.tagName === n!.tagName);
-            parts.unshift(same.length > 1 ? `${tag}:nth-of-type(${same.indexOf(n) + 1})` : tag);
-            n = p;
-          }
-          return parts.join(' > ');
-        };
         const scrolls = (e: Element | null) => {
           for (let n = e; n && n !== document.body; n = n.parentElement) {
             const ox = getComputedStyle(n).overflowX;
@@ -474,7 +443,7 @@ export class KeyboardA11yChecker {
           const cs = getComputedStyle(el);
           if (cs.display === 'none' || cs.visibility === 'hidden') continue;
           if (scrolls(el.parentElement) || scrolls(el)) continue;
-          return { scrollWidth, selector: sel(el) };
+          return { scrollWidth, selector: qaCssPath(el) };
         }
         return null;
       });

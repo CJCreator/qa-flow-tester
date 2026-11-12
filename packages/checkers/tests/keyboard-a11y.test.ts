@@ -124,6 +124,33 @@ describe('KeyboardA11yChecker (browser)', () => {
       expect(walk.stops.some((s) => s.selector === '#late')).toBe(true);
       expect(walk.focusableCount).toBe(4);
     });
+
+    it('escapes id selectors with special characters like :r1:', async () => {
+      const page = await browser.newPage({ viewport: VIEWPORT });
+      await page.setContent('<div role="button" id=":r1:" tabindex="-1" onclick="void 0">Save</div>');
+      const f = await checker.checkKeyboardTraversal(page, ctx);
+      expect(f).toHaveLength(1);
+      expect(f[0].where.cssSelector).toBe('#\\:r1\\:');
+      const matches = await page.evaluate((sel) => {
+        const el = document.querySelector(sel);
+        return el === document.getElementById(':r1:');
+      }, f[0].where.cssSelector);
+      expect(matches).toBe(true);
+      await page.close();
+    });
+
+    it('escapes data-testid with quotes and spaces so selector round-trips with querySelector', async () => {
+      const page = await browser.newPage({ viewport: VIEWPORT });
+      await page.setContent('<div role="button" data-testid=\'say "hi"\' onclick="void 0">Say Hi</div>');
+      const f = await checker.checkKeyboardTraversal(page, ctx);
+      expect(f).toHaveLength(1);
+      const matches = await page.evaluate((sel) => {
+        const el = document.querySelector(sel);
+        return el !== null && el.getAttribute('data-testid') === 'say "hi"';
+      }, f[0].where.cssSelector);
+      expect(matches).toBe(true);
+      await page.close();
+    });
   });
 
   describe('safety', () => {
