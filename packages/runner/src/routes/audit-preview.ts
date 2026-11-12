@@ -57,7 +57,6 @@ export function previewHeaders(html: string): Record<string, string> {
 
 const MAX_PREVIEW_BODY_CHARS = 2_000;
 
-export const NO_AI_KEY = 'Add an AI key to write the improved homepage preview.';
 export const PREVIEW_FAILED = 'The AI could not write the preview this time. Nothing was saved. Try again.';
 export const PREVIEW_NOT_FOUND = 'There is no preview for this version yet. Make one first.';
 const NOT_FINISHED = 'This version has no finished result, so there is nothing to preview.';
@@ -79,7 +78,7 @@ export type PreviewImageFetcher = (
 /** core's generatePreview (packages/core/src/audit/preview). */
 export type PreviewGenerator = (
   input: PreviewGeneratorInput,
-  options: { ai: AuditAi; fetchImage?: PreviewImageFetcher; signal?: AbortSignal; timeoutMs?: number }
+  options: { ai?: AuditAi; fetchImage?: PreviewImageFetcher; signal?: AbortSignal; timeoutMs?: number }
 ) => Promise<{ ok: true; html: string } | { ok: false; problem: string }>;
 
 export interface AuditPreviewRouteDeps {
@@ -88,7 +87,8 @@ export interface AuditPreviewRouteDeps {
   caller: (context: RouteContext) => AuditCaller | Promise<AuditCaller>;
   /**
    * The tool user's audit AI: resolveAuditAi with the saved AI setup, the key resolver and the models per
-   * audit stage (REQ-039), so the 'preview' stage uses its chosen model. No key: `{ ok: false }`.
+   * audit stage (REQ-039), so the 'preview' stage uses its chosen model. No key: `{ ok: false }`, and the
+   * preview is written from template text.
    */
   resolveAi: () => Promise<AuditAiResolution>;
   generate: PreviewGenerator;
@@ -182,8 +182,8 @@ export function auditPreviewRoutes(deps: AuditPreviewRouteDeps): Route[] {
       const result = await store.getResult(auditId, version.version);
       if (!result) return refuse(res, 404, 'ERR_AUDIT_NOT_FOUND', NOT_FINISHED);
 
+      // No key is not a refusal: the preview is then written from template text (ADR 0042).
       const resolved = await deps.resolveAi();
-      if (!resolved.ok) return refuse(res, 409, 'ERR_NO_AI_KEY', NO_AI_KEY);
 
       const language = body.language ?? version.language;
       const home = await store.readVersionJson<PageContent>(
@@ -197,7 +197,7 @@ export function auditPreviewRoutes(deps: AuditPreviewRouteDeps): Route[] {
       try {
         generated = await deps.generate(
           { result, home, edits, language },
-          { ai: resolved.ai, fetchImage, timeoutMs: deps.aiTimeoutMs }
+          { ...(resolved.ok ? { ai: resolved.ai } : {}), fetchImage, timeoutMs: deps.aiTimeoutMs }
         );
       } catch {
         generated = { ok: false, problem: 'failed' };

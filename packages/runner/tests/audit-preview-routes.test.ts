@@ -147,17 +147,18 @@ describe('preview rows', () => {
     expect(rows.find((r) => r.method === 'GET')!.access).toBe('view');
   });
 
-  it('without an AI key: 409 ERR_NO_AI_KEY, no AI request, nothing stored', async () => {
+  it('without an AI key: 200, template preview stored, no AI request', async () => {
     hasKey = false;
     const generate = vi.fn<PreviewGenerator>(generatePreview);
     const res = await call(auditPreviewRoutes(deps({ generate })), 'createPreview', auditId, {
       body: JSON.stringify({ version: 1, language: 'en' }),
     });
-    expect(res.statusCode).toBe(409);
-    expect(res.json().code).toBe('ERR_NO_AI_KEY');
-    expect(generate).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(200);
+    expect(generate).toHaveBeenCalledTimes(1);
+    expect(generate.mock.calls[0][1].ai).toBeUndefined();
     expect(providerCalls).toHaveLength(0);
-    expect(await storedPreview()).toBeNull();
+    const page = new TextDecoder().decode((await storedPreview())!);
+    expect(page).toContain('<html lang="en"');
   });
 
   it("with a key: stores preview.html and answers PreviewReply; the 'preview' stage model is used", async () => {
