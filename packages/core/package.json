@@ -15,8 +15,7 @@
     "@qa/checkers": "workspace:*",
     "@qa/types": "workspace:*",
     "mammoth": "1.12.3",
-    "playwright": "1.63.0",
-    "pngjs": "^7.0.0"
+    "playwright": "1.63.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
