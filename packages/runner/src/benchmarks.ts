@@ -2,7 +2,7 @@ import path from 'path';
 import { promises as fs } from 'fs';
 import type { AIProvider } from '@qa/core';
 import { BenchmarkingEngine, SafePublicCrawler, UXGapSynthesizer, isPrivateHost, writeJsonAtomic } from '@qa/core';
-import type { BenchmarkJob } from '@qa/types';
+import { type BenchmarkJob, isBenchmarkJob } from '@qa/types';
 
 /** How many finished comparisons are kept. Older ones are deleted by themselves. */
 const KEEP = 10;
@@ -38,7 +38,8 @@ export class BenchmarkStore {
 
   async get(id: string): Promise<BenchmarkJob | null> {
     try {
-      return JSON.parse(await fs.readFile(this.file(id), 'utf8')) as BenchmarkJob;
+      const parsed = JSON.parse(await fs.readFile(this.file(id), 'utf8'));
+      return isBenchmarkJob(parsed) ? parsed : null;
     } catch {
       return null;
     }

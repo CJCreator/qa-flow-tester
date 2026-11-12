@@ -11,7 +11,7 @@ import type {
   RunCap,
   AIProviderType,
 } from '@qa/types';
-import { normalizePlanIntents, normalizeTestIntents } from '@qa/types';
+import { normalizePlanIntents, normalizeTestIntents, isStoredPlanShape } from '@qa/types';
 import { writeJsonAtomic, readJsonSafe, Redactor, type PreFlightResult } from '@qa/core';
 import type { RunSecrets } from './run-secrets.js';
 
@@ -172,6 +172,10 @@ export class DefaultPlanStore implements PlanStore {
     }
     const res = await readJsonSafe<StoredPlanRecord>(this.file, { currentVersion: 1 });
     if (!res.data) return null;
+    if (!isStoredPlanShape(res.data)) {
+      console.warn(`[qa] ignoring unreadable saved Plan ${this.file}`);
+      return null;
+    }
     const record = this.normalize(res.data);
     if (record?.plan && record?.context && record.status === 'awaiting-review') {
       this.currentPlanRecord = record;
@@ -236,6 +240,11 @@ export class DefaultPlanStore implements PlanStore {
         const file = path.join(dir, name);
         if (await this.dropIfExpired(file)) continue;
         const res = await readJsonSafe<StoredPlanRecord>(file, { currentVersion: 1 });
+        if (!res.data) continue;
+        if (!isStoredPlanShape(res.data)) {
+          console.warn(`[qa] ignoring unreadable saved Plan ${file}`);
+          continue;
+        }
         if (res.data?.plan && res.data?.context) {
           const record = this.normalize(res.data);
           const host = this.hostOf(record);
@@ -263,9 +272,14 @@ export class DefaultPlanStore implements PlanStore {
     }
     let record = this.parkedPlans.get(host) ?? null;
     if (!record) {
-      const res = await readJsonSafe<StoredPlanRecord>(this.parkedFileFor(host), { currentVersion: 1 });
+      const file = this.parkedFileFor(host);
+      const res = await readJsonSafe<StoredPlanRecord>(file, { currentVersion: 1 });
       if (res.data) {
-        record = this.normalize(res.data);
+        if (!isStoredPlanShape(res.data)) {
+          console.warn(`[qa] ignoring unreadable saved Plan ${file}`);
+        } else {
+          record = this.normalize(res.data);
+        }
       }
     }
     this.parkedPlans.delete(host);
