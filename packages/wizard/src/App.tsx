@@ -65,7 +65,8 @@ import { headersNotice } from './lib/coverage-text';
 import { TestingScreen } from './screens/TestingScreen';
 import { splitStoredContext } from './lib/context';
 import { stopProblem, type StopReply } from './lib/stop-result';
-import { BetaAuditNotice, showsBetaAuditNotice } from './screens/audit/BetaAuditNotice';
+import { AUDIT_ROUTE_NAMES, BetaAuditNotice, showsBetaAuditNotice } from './screens/audit/BetaAuditNotice';
+import { SESSION_CHANGED_EVENT } from './lib/session-event';
 
 /** How often the runner's state is read while a check-up is in progress, besides its events. */
 const POLL_MS = 5000;
@@ -225,6 +226,13 @@ export default function App() {
     if (target && target !== window.location.pathname) navigate(target, { replace: true });
   }, []);
 
+  // A Helper or owner signing in or out on /helper changes what the shared copy shows: read the status again.
+  useEffect(() => {
+    const onSessionChange = () => void reconcile();
+    window.addEventListener(SESSION_CHANGED_EVENT, onSessionChange);
+    return () => window.removeEventListener(SESSION_CHANGED_EVENT, onSessionChange);
+  }, [reconcile]);
+
   const loadAi = useCallback(() => {
     setStartError(null);
     getAiSetup()
@@ -265,10 +273,11 @@ export default function App() {
   // The runner's state is read again on each check-up address, and every few seconds while a
   // check-up is in progress (the events do most of the work; this catches anything missed).
   const checkAddress = isCheckRoute(route);
+  const auditAddress = AUDIT_ROUTE_NAMES.includes(route.name);
   useEffect(() => {
     if (!reachable) return;
-    if (checkAddress) void reconcile();
-  }, [reachable, pathname, checkAddress, inProgress, reconcile]);
+    if (checkAddress || auditAddress) void reconcile();
+  }, [reachable, pathname, checkAddress, auditAddress, inProgress, reconcile]);
   // Polling backs off while nothing changes, and goes back to POLL_MS on each event or phase change. It stops
   // once the run is done or failed.
   const runSettled = status?.phase === 'done' || status?.phase === 'failed';
