@@ -19,17 +19,13 @@ import {
   type AuditDocumentKind,
   type AuditResult,
   type DocumentLanguage,
-  type EditOverlay,
   type ExportFormat,
   type PageContent,
   type StoredDocumentKind,
 } from '@qa/types';
 import {
-  PITCH_TOP_FINDINGS,
   applySettingsUpdate,
-  editedViewOf,
   emptyAuditSettings,
-  emptyOverlay,
   exportAudit,
   exportBaseName,
   exportOwnerAudit,
@@ -41,7 +37,7 @@ import {
   type ExportOptions,
 } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
-import { AUDIT_NOT_FOUND, refuse, refuseStoreFailure } from './audit-common.js';
+import { AUDIT_NOT_FOUND, refuse, refuseStoreFailure, pitchScreenshots, readEdits } from './audit-common.js';
 import type { AuditSettingsStore } from './audit-settings.js';
 
 /** What the download rows need: the Website Audit store (G6) and the stored audit settings (BE-508). */
@@ -54,21 +50,12 @@ export interface AuditExportDeps {
   maxConcurrentPdf?: number;
 }
 
-const EDITS_NAME = 'edits';
 const RUNNING = 'This version of the Website Audit is still running. Download it when it has finished.';
 const NO_RESULT = 'This version of the Website Audit has no finished result to download.';
 const FAILED = 'The file could not be made. Try again.';
 const PDF_BUSY = 'Another PDF is being made. Try again in a moment.';
 const PDF_RETRY_AFTER_SECONDS = 5;
 const DEFAULT_MAX_CONCURRENT_PDF = 2;
-const MAX_SCREENSHOT_BYTES = 3_000_000;
-const IMAGE_TYPES: Readonly<Record<string, string>> = {
-  png: 'image/png',
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  webp: 'image/webp',
-  gif: 'image/gif',
-};
 
 const DOCUMENT_SLUGS: Readonly<Record<AuditDocumentKind, string>> = {
   structure: 'structure',
@@ -184,32 +171,8 @@ async function load(store: AuditStore, c: RouteContext, wanted: number | undefin
     )
   );
   const contents: PageContent[] = read.filter((content): content is PageContent => !!content);
-  const edits = (await store.readVersionJson<EditOverlay>(auditId, version, EDITS_NAME)) ?? emptyOverlay();
+  const edits = await readEdits(store, auditId, version);
   return { auditId, version, result, contents, edits };
-}
-
-/** Screenshots of the findings the Pitch Glimpse shows, as data: URIs. A missing or odd one is left out. */
-async function pitchScreenshots(store: AuditStore, l: Loaded): Promise<Record<string, string>> {
-  const shots: Record<string, string> = {};
-  const top = editedViewOf({ result: l.result, contents: l.contents, edits: l.edits }).result.findings.slice(
-    0,
-    PITCH_TOP_FINDINGS
-  );
-  for (const finding of top) {
-    const name = finding.screenshotPath;
-    if (!name || Object.prototype.hasOwnProperty.call(shots, name)) continue;
-    const type = IMAGE_TYPES[name.slice(name.lastIndexOf('.') + 1).toLowerCase()];
-    if (!type) continue;
-    try {
-      const bytes = await store.getVersionFile(l.auditId, l.version, name);
-      if (bytes && bytes.byteLength > 0 && bytes.byteLength <= MAX_SCREENSHOT_BYTES) {
-        shots[name] = `data:${type};base64,${Buffer.from(bytes).toString('base64')}`;
-      }
-    } catch {
-      // A path the store refuses is shown as "no screenshot", never as an error.
-    }
-  }
-  return shots;
 }
 
 /** The saved settings over the defaults. A damaged stored object reads as the defaults. */

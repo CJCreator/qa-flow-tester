@@ -7,9 +7,9 @@ import {
   type EditOverlay,
   type PageContent,
 } from '@qa/types';
-import { emptyOverlay, mergeEditsPatch, pageContentName, validateAuditEditsPatch, type AuditStore } from '@qa/core';
+import { mergeEditsPatch, pageContentName, validateAuditEditsPatch, type AuditStore } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
-import { AUDIT_NOT_FOUND, refuse, refuseStoreFailure, versionQuery } from './audit-common.js';
+import { AUDIT_NOT_FOUND, EDITS_NAME, readEdits, refuse, refuseStoreFailure, versionQuery } from './audit-common.js';
 import { readJsonBody, sendJson } from './body.js';
 
 /** What the Audit Document rows need: the Website Audit store (G6). */
@@ -17,8 +17,6 @@ export interface AuditDocumentDeps {
   store: AuditStore;
 }
 
-/** The overlay is saved beside the version's result: `audits/<id>/v<n>/edits.json`. */
-const EDITS_NAME = 'edits';
 /** A patch is at most 500 items of a few thousand characters each; far below the general body cap. */
 const MAX_EDITS_BODY_CHARS = 2_000_000;
 
@@ -61,7 +59,7 @@ async function resolveTarget(store: AuditStore, c: RouteContext): Promise<Target
 }
 
 async function readOverlay(store: AuditStore, t: Target): Promise<EditOverlay> {
-  return (await store.readVersionJson<EditOverlay>(t.auditId, t.version, EDITS_NAME)) ?? emptyOverlay();
+  return readEdits(store, t.auditId, t.version);
 }
 
 /**

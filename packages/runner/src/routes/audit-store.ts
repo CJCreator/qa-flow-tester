@@ -8,9 +8,9 @@ import {
   type EditOverlay,
   type HelperPermission,
 } from '@qa/types';
-import { emptyOverlay, type AuditStore } from '@qa/core';
+import { type AuditStore } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
-import { AUDIT_NOT_FOUND, refuse, refuseStoreFailure, versionQuery } from './audit-common.js';
+import { AUDIT_NOT_FOUND, readEdits, refuse, refuseStoreFailure, versionQuery } from './audit-common.js';
 import { sendJson } from './body.js';
 import { allows } from '../helpers/index.js';
 
@@ -112,7 +112,7 @@ export function auditStoreRoutes(deps: AuditRouteDeps): Route[] {
         if (!version) return refuse(res, 404, 'ERR_AUDIT_NOT_FOUND', AUDIT_NOT_FOUND);
 
         const result = version.status === 'done' ? await store.getResult(auditId, version.version) : null;
-        const edits = (await store.readVersionJson<EditOverlay>(auditId, version.version, 'edits')) ?? emptyOverlay();
+        const edits = await readEdits(store, auditId, version.version);
         const reply: AuditGetReply = { summary, version, result, edits };
         sendJson(res, 200, reply);
       } catch (err) {

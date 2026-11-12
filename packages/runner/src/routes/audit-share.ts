@@ -23,9 +23,6 @@ import {
 } from '@qa/types';
 import {
   MAX_AUDIT_VERSION,
-  PITCH_TOP_FINDINGS,
-  editedViewOf,
-  emptyOverlay,
   generatePitchGlimpse,
   pageContentName,
   previewCspForHtml,
@@ -35,7 +32,7 @@ import {
   type AuditStore,
 } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
-import { AUDIT_NOT_FOUND, refuse, refuseStoreFailure } from './audit-common.js';
+import { AUDIT_NOT_FOUND, refuse, refuseStoreFailure, pitchScreenshots, readEdits } from './audit-common.js';
 import { readJsonBody, sendJson } from './body.js';
 import { mayUseAudit, type AuditCaller } from './audit-store.js';
 
@@ -68,12 +65,8 @@ export function sharedPageHeaders(html: string): Record<string, string> {
 
 const ROBOTS_META = '<meta name="robots" content="noindex, nofollow">';
 
-/** The edit overlay beside a version's result (BE-509). */
-const EDITS_NAME = 'edits';
 /** A share body is three short fields. */
 const MAX_SHARE_BODY_CHARS = 10_000;
-/** Largest screenshot embedded in a Pitch Glimpse snapshot. */
-const MAX_SCREENSHOT_BYTES = 3_000_000;
 const SHARE_KINDS: readonly ShareLinkKind[] = ['pitch', 'preview'];
 
 const LINK_NOT_FOUND = 'This Shared Link was not found.';
@@ -131,42 +124,6 @@ export function checkShareBody(body: unknown): { ok: true; value: ShareRequest }
   return { ok: true, value };
 }
 
-const IMAGE_TYPES: Readonly<Record<string, string>> = {
-  png: 'image/png',
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  webp: 'image/webp',
-  gif: 'image/gif',
-};
-
-/** Screenshots of the findings the Pitch Glimpse shows, as data: URIs. A missing or odd one is left out. */
-async function pitchScreenshots(
-  store: AuditStore,
-  auditId: string,
-  version: number,
-  result: AuditResult,
-  contents: PageContent[],
-  edits: EditOverlay
-): Promise<Record<string, string>> {
-  const shots: Record<string, string> = {};
-  const top = editedViewOf({ result, contents, edits }).result.findings.slice(0, PITCH_TOP_FINDINGS);
-  for (const finding of top) {
-    const name = finding.screenshotPath;
-    if (!name || Object.prototype.hasOwnProperty.call(shots, name)) continue;
-    const type = IMAGE_TYPES[name.slice(name.lastIndexOf('.') + 1).toLowerCase()];
-    if (!type) continue;
-    try {
-      const bytes = await store.getVersionFile(auditId, version, name);
-      if (bytes && bytes.byteLength > 0 && bytes.byteLength <= MAX_SCREENSHOT_BYTES) {
-        shots[name] = `data:${type};base64,${Buffer.from(bytes).toString('base64')}`;
-      }
-    } catch {
-      // A path the store refuses is shown as "no screenshot", never as an error.
-    }
-  }
-  return shots;
-}
-
 /** The Pitch Glimpse of a finished version with its edits applied, rendered once for the snapshot. */
 async function renderPitch(
   deps: AuditShareDeps,
@@ -186,8 +143,8 @@ async function renderPitch(
     )
   );
   const contents: PageContent[] = read.filter((content): content is PageContent => !!content);
-  const edits = (await store.readVersionJson<EditOverlay>(auditId, version, EDITS_NAME)) ?? emptyOverlay();
-  const screenshots = await pitchScreenshots(store, auditId, version, result, contents, edits);
+  const edits = await readEdits(store, auditId, version);
+  const screenshots = await pitchScreenshots(store, { auditId, version, result, contents, edits });
   const optOutText = await deps.optOutText();
   return generatePitchGlimpse({ result, contents, edits, language, settings: { optOutText }, screenshots }).html;
 }

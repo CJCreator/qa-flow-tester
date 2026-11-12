@@ -18,7 +18,6 @@ import {
   type PreviewReply,
 } from '@qa/types';
 import {
-  emptyOverlay,
   makeOutboundFetch,
   pageContentName,
   previewCspForHtml,
@@ -30,7 +29,7 @@ import {
   type AuditStore,
 } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
-import { versionQuery } from './audit-common.js';
+import { readEdits, versionQuery } from './audit-common.js';
 import { sendJson } from './body.js';
 import {
   AUDIT_FORBIDDEN,
@@ -192,7 +191,7 @@ export function auditPreviewRoutes(deps: AuditPreviewRouteDeps): Route[] {
         version.version,
         pageContentName(result.hierarchy.root.urlPath)
       );
-      const edits = (await store.readVersionJson<EditOverlay>(auditId, version.version, 'edits')) ?? emptyOverlay();
+      const edits = await readEdits(store, auditId, version.version);
 
       let generated: Awaited<ReturnType<PreviewGenerator>>;
       try {
