@@ -53,7 +53,7 @@ async function estimate(port: number, price: { prompt: number; completion: numbe
       body: JSON.stringify(body),
     });
     const reply = (await res.json()) as Record<string, unknown>;
-    return { ...reply, freeCalls };
+    return { ...reply, freeCalls } as Record<string, any>;
   } finally {
     await runner.stop();
   }

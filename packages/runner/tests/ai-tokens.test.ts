@@ -32,7 +32,7 @@ describe('addTokens', () => {
   });
 
   it('does not change either input', () => {
-    const a: StageTokens = { planning: use(1), discovery: use(2) };
+    const a: StageTokens = { planning: use(1), journeys: use(2) };
     const b: StageTokens = { planning: use(3), assessment: use(4) };
     const aBefore = JSON.stringify(a);
     const bBefore = JSON.stringify(b);
@@ -61,41 +61,41 @@ describe('addTokens', () => {
     expect(r!.planning).not.toBe(b.planning);
   });
 
-  it('handles multiple stages including discovery, replan, visual review, and assessment', () => {
+  it('handles multiple stages including journeys, visual-review, and assessment', () => {
     const a: StageTokens = {
-      discovery: use(1),
-      'visual review': use(2),
+      journeys: use(1),
+      'visual-review': use(2),
     };
     const b: StageTokens = {
-      discovery: use(3),
-      replan: use(4),
+      journeys: use(3),
+      repair: use(4),
       assessment: use(5),
     };
     const result = addTokens(a, b);
     expect(result).toEqual({
-      discovery: {
+      journeys: {
         requests: 4,
         promptTokens: 40,
         completionTokens: 20,
         reasoningTokens: 8,
         truncated: 0,
       },
-      'visual review': use(2),
-      replan: use(4),
+      'visual-review': use(2),
+      repair: use(4),
       assessment: use(5),
     });
   });
 
   it('accumulates usage across multiple sequential calls', () => {
     let budget: StageTokens | undefined;
-    budget = addTokens(budget, { discovery: use(1) });
+    budget = addTokens(budget, { journeys: use(1) });
     budget = addTokens(budget, { planning: use(2) });
-    budget = addTokens(budget, { discovery: use(2), planning: use(1) });
+    budget = addTokens(budget, { journeys: use(2), planning: use(1) });
     budget = addTokens(budget, {});
     budget = addTokens(budget, undefined);
 
     expect(budget).toEqual({
-      discovery: {
+      journeys: {
         requests: 3,
         promptTokens: 30,
         completionTokens: 15,

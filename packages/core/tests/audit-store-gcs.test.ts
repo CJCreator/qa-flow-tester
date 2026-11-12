@@ -237,12 +237,13 @@ describe('Cloud Storage backend requests', () => {
     const fetch: FetchLike = async (_input, init) => {
       count++;
       return new Promise((_resolve, reject) => {
-        if (init?.signal?.aborted) {
-          reject(init.signal.reason);
+        const signal = init?.signal;
+        if (signal?.aborted) {
+          reject(signal.reason);
           return;
         }
-        init?.signal?.addEventListener('abort', () => {
-          reject(init.signal.reason);
+        signal?.addEventListener('abort', () => {
+          reject(signal.reason);
         });
       });
     };

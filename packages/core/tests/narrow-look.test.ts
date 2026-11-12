@@ -130,6 +130,7 @@ describe('lookAtNarrowScreens', () => {
   it('(d) the hidden links and the menu button are marked on every page that shares the menu', async () => {
     stubElements = [
       {
+        tagName: 'button',
         selector: 'button.menu-toggle',
         name: 'Menu',
         role: 'button',
@@ -138,6 +139,7 @@ describe('lookAtNarrowScreens', () => {
         landmark: 'header',
       },
       {
+        tagName: 'a',
         selector: 'nav > a.home',
         name: 'Home',
         role: 'link',

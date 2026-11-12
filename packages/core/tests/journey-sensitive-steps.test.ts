@@ -16,8 +16,8 @@ describe('journey-sensitive-steps', () => {
         interactiveElementsCount: 2,
         formsCount: 0,
         elements: [
-          { role: 'button', name: 'Place order', selector: '#place-order' },
-          { role: 'textbox', name: 'Email', selector: '#email' },
+          { tagName: 'button', role: 'button', name: 'Place order', selector: '#place-order', visible: true, enabled: true },
+          { tagName: 'input', role: 'textbox', name: 'Email', selector: '#email', visible: true, enabled: true },
         ],
       },
     ],
@@ -30,7 +30,7 @@ describe('journey-sensitive-steps', () => {
         startPage: '/checkout',
         steps: [
           { action: 'fill', selector: '#email', value: 'user@example.com', name: 'Fill Email' },
-          { action: 'click', selector: '#place-order', name: 'Press â€œPlace orderâ€' },
+          { action: 'click', selector: '#place-order', name: 'Press “Place order”' },
         ],
       },
     ],
@@ -75,8 +75,8 @@ describe('journey-sensitive-steps', () => {
   it('drops click on an element named Continue whose AI step name is "Delete the invoice"', () => {
     const draft = createDraft();
     draft.pages[0].elements = [
-      { role: 'button', name: 'Continue', selector: '#continue-btn' },
-      { role: 'textbox', name: 'Email', selector: '#email' },
+      { tagName: 'button', role: 'button', name: 'Continue', selector: '#continue-btn', visible: true, enabled: true },
+      { tagName: 'input', role: 'textbox', name: 'Email', selector: '#email', visible: true, enabled: true },
     ];
     draft.flows[0].steps = [
       { action: 'fill', selector: '#email', value: 'user@example.com', name: 'Fill Email' },

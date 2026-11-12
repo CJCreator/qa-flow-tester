@@ -25,7 +25,7 @@ describe('stableRuleCode & findingFingerprint', () => {
       where: {
         urlPath: '/about',
         role: 'visitor',
-        breakpoint: 'desktop',
+        breakpoint: '1440px',
       },
     };
 
@@ -36,7 +36,7 @@ describe('stableRuleCode & findingFingerprint', () => {
       where: {
         urlPath: '/about',
         role: 'visitor',
-        breakpoint: 'desktop',
+        breakpoint: '1440px',
       },
     };
 
@@ -50,7 +50,7 @@ describe('stableRuleCode & findingFingerprint', () => {
       where: {
         urlPath: '/about',
         role: 'visitor',
-        breakpoint: 'desktop',
+        breakpoint: '1440px',
       },
     };
 
@@ -60,7 +60,7 @@ describe('stableRuleCode & findingFingerprint', () => {
       where: {
         urlPath: '/about',
         role: 'visitor',
-        breakpoint: 'desktop',
+        breakpoint: '1440px',
       },
     };
 
@@ -75,7 +75,7 @@ describe('stableRuleCode & findingFingerprint', () => {
       where: {
         urlPath: '/contact',
         role: 'visitor',
-        breakpoint: 'desktop',
+        breakpoint: '1440px',
       },
     };
 
@@ -86,7 +86,7 @@ describe('stableRuleCode & findingFingerprint', () => {
       where: {
         urlPath: '/contact',
         role: 'visitor',
-        breakpoint: 'desktop',
+        breakpoint: '1440px',
       },
     };
 

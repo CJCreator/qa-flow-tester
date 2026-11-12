@@ -134,7 +134,7 @@ describe('KeyboardA11yChecker (browser)', () => {
       const matches = await page.evaluate((sel) => {
         const el = document.querySelector(sel);
         return el === document.getElementById(':r1:');
-      }, f[0].where.cssSelector);
+      }, f[0].where.cssSelector!);
       expect(matches).toBe(true);
       await page.close();
     });
@@ -147,7 +147,7 @@ describe('KeyboardA11yChecker (browser)', () => {
       const matches = await page.evaluate((sel) => {
         const el = document.querySelector(sel);
         return el !== null && el.getAttribute('data-testid') === 'say "hi"';
-      }, f[0].where.cssSelector);
+      }, f[0].where.cssSelector!);
       expect(matches).toBe(true);
       await page.close();
     });
@@ -164,10 +164,10 @@ describe('KeyboardA11yChecker (browser)', () => {
       );
       const pressed: string[] = [];
       const original = page.keyboard.press.bind(page.keyboard);
-      page.keyboard.press = async (key: string, options?: { delay?: number }) => {
+      page.keyboard.press = (async (key: string, options?: Parameters<typeof original>[1]) => {
         pressed.push(key);
         return original(key, options);
-      };
+      }) as typeof page.keyboard.press;
       const clicks: string[] = [];
       await page.exposeFunction('__noteClick', (s: string) => clicks.push(s));
       await page.evaluate(() =>
