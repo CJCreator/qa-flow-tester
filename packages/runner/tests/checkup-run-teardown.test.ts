@@ -1,6 +1,6 @@
 /**
  * R2: a stop waits for the aborted run to tear down before it frees the slot. A second start is refused until then,
- * and stop() resolves only after teardown (or after the 20 second cap, which then frees the slot).
+ * and stop() resolves only after teardown (or after the 6 second cap, which then frees the slot).
  * The run is held inside an injected prepareAI, so no browser is launched.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -79,7 +79,7 @@ describe('R2: stop waits for teardown before the slot is freed', () => {
     expect(session.run.phase).toBe('idle');
   });
 
-  it('frees the slot after the 20 second cap when the run never finishes tearing down', async () => {
+  it('frees the slot after the 6 second cap when the run never finishes tearing down', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const { session, run } = makeRun();
@@ -90,13 +90,47 @@ describe('R2: stop waits for teardown before the slot is freed', () => {
       stopped = true;
       return result;
     });
-    await vi.advanceTimersByTimeAsync(19_999);
+    await vi.advanceTimersByTimeAsync(5_999);
     expect(stopped).toBe(false);
     await vi.advanceTimersByTimeAsync(1);
 
     await expect(stopping).resolves.toMatchObject({ aborted: true });
     expect(session.run.isRunning).toBe(false);
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('did not finish tearing down in time'));
+  });
+
+  it('saves the waiting Plan before teardown wait ends when stopping a run in the testing phase', async () => {
+    const { session, run } = makeRun();
+    await run.start({ body, authorization });
+    const runId = session.run.runId!;
+
+    session.run.setPhase('testing');
+    const fakeRecord = {
+      plan: { runId, targetUrl: 'https://a.example/', items: [] },
+      context: { runId, targetUrl: 'https://a.example/', productId: 'test', draft: {} as any },
+    } as any;
+    session.plan.set(fakeRecord);
+
+    const saveSpy = vi.spyOn(session.plan, 'save');
+
+    let stopped = false;
+    const stopping = run.stop().then((result) => {
+      stopped = true;
+      return result;
+    });
+    await tick();
+
+    // The run is still held (tearing down), but the waiting Plan was already saved.
+    expect(stopped).toBe(false);
+    expect(session.run.isRunning).toBe(true);
+    expect(saveSpy).toHaveBeenCalledTimes(1);
+    expect(saveSpy).toHaveBeenCalledWith(fakeRecord);
+
+    releasePrep();
+    const result = await stopping;
+    expect(stopped).toBe(true);
+    expect(result).toEqual({ aborted: true, planKept: true, finishing: false });
+    expect(session.run.phase).toBe('awaiting-review');
   });
 
   it('a stop after a Check-up ended is not an abort', async () => {

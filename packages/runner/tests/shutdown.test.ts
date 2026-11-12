@@ -75,7 +75,24 @@ describe('graceful shutdown (R3)', () => {
     await first;
   });
 
-  it('forces the exit when the graceful stop takes longer than the grace period', async () => {
+  it('forces the exit after the default 8000ms grace period when the graceful stop hangs', async () => {
+    vi.useFakeTimers();
+    const exit = vi.fn();
+    const shutdown = createShutdown({
+      shutdown: () => new Promise<void>(() => {}),
+      exit,
+      log: () => {},
+    });
+
+    void shutdown('SIGTERM', 0);
+    await vi.advanceTimersByTimeAsync(7999);
+    expect(exit).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(exit).toHaveBeenCalledWith(0);
+  });
+
+  it('forces the exit when the graceful stop takes longer than a custom grace period', async () => {
     vi.useFakeTimers();
     const exit = vi.fn();
     const shutdown = createShutdown({

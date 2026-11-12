@@ -3,7 +3,7 @@ export interface ShutdownDeps {
   shutdown: () => Promise<void>;
   exit: (code: number) => void;
   log: (message: string) => void;
-  /** Longest the graceful stop may take before the process exits anyway. */
+  /** Longest the graceful stop may take before the process exits anyway (defaults to 8 s to fit Cloud Run's ~10 s grace). */
   graceMs?: number;
 }
 
@@ -14,7 +14,8 @@ export type ShutdownHandler = (reason: string, exitCode: number) => Promise<void
  * (a second Ctrl+C) exits at once.
  */
 export function createShutdown(deps: ShutdownDeps): ShutdownHandler {
-  const graceMs = deps.graceMs ?? 15000;
+  // Cloud Run gives a container about 10 s after SIGTERM before SIGKILL; default to 8 s so shutdown fits within it.
+  const graceMs = deps.graceMs ?? 8000;
   let started = false;
   return async (reason, exitCode) => {
     if (started) {

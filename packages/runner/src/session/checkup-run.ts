@@ -376,7 +376,7 @@ export function screensForReview(
 }
 
 /** Longest a stop waits for the aborted run to tear down (browser closed, cleanup done) before it frees the slot. */
-const TEARDOWN_WAIT_MS = 20_000;
+const TEARDOWN_WAIT_MS = 6_000;
 
 function logPlanSaveFailure(err: unknown): void {
   console.warn('[Release check-up] Couldn’t save the plan:', redactedMessage(err));
@@ -1147,8 +1147,6 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
         } catch {}
         session.run.setAbortController(null);
       }
-      // The slot stays held (isRunning) until the aborted run has torn down, so a start cannot overlap it.
-      await waitForTeardown();
 
       const record = session.plan.currentRecord;
       const planKept = session.run.phase === 'testing' && !!record && record.plan.runId === runId;
@@ -1156,7 +1154,12 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
         session.run.setPhase('awaiting-review');
         session.run.setIsRunning(true);
         await session.plan.save(record!).catch(logPlanSaveFailure);
-      } else {
+      }
+
+      // The slot stays held (isRunning) until the aborted run has torn down, so a start cannot overlap it.
+      await waitForTeardown();
+
+      if (!planKept) {
         session.run.setIsRunning(false);
         session.run.setPhase('idle');
         session.run.setTargetUrl(null);
