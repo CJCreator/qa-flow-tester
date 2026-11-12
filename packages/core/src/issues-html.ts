@@ -75,7 +75,7 @@ export async function renderIssuesHtml(
         for (const table of model.accessTables) {
           body.push(`<p>Who can reach <code>${t(table.page)}</code>:</p>`);
           body.push(
-            `<table><tr><th>Role</th><th>Result</th></tr>${table.rows
+            `<table><tr><th scope="col">Role</th><th scope="col">Result</th></tr>${table.rows
               .map((r) => `<tr><td>${t(r.role, 200)}</td><td>${escapeHtml(r.result)}</td></tr>`)
               .join('')}</table>`
           );
