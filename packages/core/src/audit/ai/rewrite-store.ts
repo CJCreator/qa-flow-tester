@@ -1,12 +1,11 @@
 /**
- * The Section rewrites of one audit version (REQ-030), kept in `rewrites.json` inside the version folder
- * the caller passes in. One RewriteState per (urlPath, sectionId): the tool user approves the Section,
- * the AI writes new copy, the tool user accepts (edited) copy, which becomes a SectionEdit marked
- * `by: 'rewrite'` for the edit overlay. The file holds no key: only paths, ids, copy and times.
+ * The Section rewrites of one audit version (REQ-030), kept in the audit store as `rewrites.json` in the version
+ * folder (ADR 0036), so it is deleted with the audit. One RewriteState per (urlPath, sectionId): the tool user
+ * approves the Section, the AI writes new copy, the tool user accepts (edited) copy, which becomes a SectionEdit
+ * marked `by: 'rewrite'` for the edit overlay. The file holds no key: only paths, ids, copy and times.
  *
  * Nothing here reaches the audited site: the original is the Section text from Page Content (ADR 0030).
  */
-import path from 'path';
 import {
   isDocumentLanguage,
   sectionText,
@@ -17,13 +16,17 @@ import {
   type RewriteState,
   type SectionEdit,
 } from '@qa/types';
-import { readJsonSafe, writeJsonAtomic } from '../../atomic-write.js';
+import type { AuditStore } from '../store/audit-store.js';
+import { AuditStoreError } from '../store/backend.js';
 import { BAD_CONTROL, ID_PATTERN as SECTION_ID, MAX_SECTION_EDIT_CHARS, editPathProblem } from '../documents/edits.js';
 import { findOverlaps, overlapThreshold, writeRewrite, type RewriteAiProblem } from './rewrite.js';
 import type { AuditAiResolution } from './stage-ai.js';
 
 export const REWRITES_FILE = 'rewrites.json';
+const REWRITES_NAME = 'rewrites';
 const SCHEMA_VERSION = 1;
+
+export type RewriteStoreBackend = Pick<AuditStore, 'readVersionJson' | 'writeVersionJson'>;
 
 interface StoredFile {
   schemaVersion: number;
@@ -162,22 +165,34 @@ function cleanStates(raw: unknown): RewriteState[] {
 }
 
 /**
- * One save queue per rewrites file, shared by every RewriteStore of this process: the runner builds a new
+ * One save queue per audit version, shared by every RewriteStore of this process: the runner builds a new
  * store for each request, so a queue kept on the instance would not stop two requests overwriting each other.
  */
 const SAVE_QUEUES = new Map<string, Promise<unknown>>();
 
 export class RewriteStore {
-  readonly file: string;
+  /** The version's rewrites object in the audit store (`audits/<id>/v<n>/rewrites.json`), deleted with the audit. */
+  constructor(
+    private readonly store: RewriteStoreBackend,
+    private readonly auditId: string,
+    private readonly version: number
+  ) {}
 
-  /** `versionDir`: the audit version's folder, chosen and checked by the caller. */
-  constructor(versionDir: string) {
-    this.file = path.join(versionDir, REWRITES_FILE);
+  private get queueKey(): string {
+    return `${this.auditId}\n${this.version}`;
   }
 
   /** Every Section's rewrite state; empty when nothing is saved or the file is unreadable. */
   async list(): Promise<RewriteState[]> {
-    const { data } = await readJsonSafe<Partial<StoredFile>>(this.file, { currentVersion: SCHEMA_VERSION });
+    let data: Partial<StoredFile> | null;
+    try {
+      data = await this.store.readVersionJson<Partial<StoredFile>>(this.auditId, this.version, REWRITES_NAME);
+    } catch (err) {
+      // An unreadable object reads as empty, as before; a store that cannot be reached is an error.
+      if (err instanceof AuditStoreError && err.code === 'invalid-data') return [];
+      throw err;
+    }
+    if (data && typeof data.schemaVersion === 'number' && data.schemaVersion > SCHEMA_VERSION) return [];
     return cleanStates(data?.rewrites);
   }
 
@@ -270,7 +285,7 @@ export class RewriteStore {
 
   /** Applies one change to a Section's state; saves run one at a time. `undefined` means it is not approved. */
   private change(s: RewriteSection, apply: (state: RewriteState) => RewriteState | undefined): Promise<RewriteResult> {
-    const waitFor = SAVE_QUEUES.get(this.file) ?? Promise.resolve();
+    const waitFor = SAVE_QUEUES.get(this.queueKey) ?? Promise.resolve();
     const run = waitFor.then(async (): Promise<RewriteResult> => {
       const states = await this.list();
       const at = states.findIndex((r) => keyOf(r) === keyOf(s));
@@ -283,14 +298,14 @@ export class RewriteStore {
       if (at >= 0) states[at] = next;
       else states.push(next);
       const stored: StoredFile = { schemaVersion: SCHEMA_VERSION, rewrites: states };
-      await writeJsonAtomic(this.file, stored);
+      await this.store.writeVersionJson(this.auditId, this.version, REWRITES_NAME, stored);
       return { ok: true, rewrite: next };
     });
     const tail = run.catch(() => {});
-    SAVE_QUEUES.set(this.file, tail);
+    SAVE_QUEUES.set(this.queueKey, tail);
     // Drop the entry once nothing newer is waiting, so the map does not grow with every version ever edited.
     void tail.then(() => {
-      if (SAVE_QUEUES.get(this.file) === tail) SAVE_QUEUES.delete(this.file);
+      if (SAVE_QUEUES.get(this.queueKey) === tail) SAVE_QUEUES.delete(this.queueKey);
     });
     return run;
   }

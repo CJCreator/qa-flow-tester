@@ -4,9 +4,6 @@
  * small HTTP server through resolveRoute, with BE-408's real RewriteStore in a temp folder and a fake AI.
  */
 import http from 'http';
-import os from 'os';
-import path from 'path';
-import fs from 'fs/promises';
 import type { AddressInfo } from 'net';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -43,7 +40,6 @@ const content: PageContent = {
 };
 
 interface World {
-  dir: string;
   server: http.Server;
   base: string;
   models: AuditAiModels;
@@ -58,8 +54,17 @@ interface World {
 let w: World;
 
 async function start(): Promise<World> {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'qa-audit-ai-routes-'));
-  const store = new RewriteStore(dir);
+  let saved: unknown = null;
+  const store = new RewriteStore(
+    {
+      readVersionJson: async () => saved as never,
+      writeVersionJson: async (_a, _v, _n, value) => {
+        saved = value;
+      },
+    },
+    AUDIT_ID,
+    1
+  );
   const ask = vi.fn(async () => ({
     ok: true as const,
     completion: { text: CLEAN_COPY },
@@ -67,7 +72,7 @@ async function start(): Promise<World> {
     claimWords: [] as string[],
   }));
   const ai = { provider: 'openai', ask } as unknown as AuditAi;
-  const world = { dir, ask, models: {}, keySaved: true, status: 'done', applied: [] } as unknown as World;
+  const world = { ask, models: {}, keySaved: true, status: 'done', applied: [] } as unknown as World;
 
   // The wiring BE-190 does: bind the store's run to the tool user's AI.
   const ops: AuditRewriteOps = {
@@ -146,7 +151,6 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await new Promise<void>((resolve) => w.server.close(() => resolve()));
-  await fs.rm(w.dir, { recursive: true, force: true });
 });
 
 describe('route rows declare their access level', () => {
