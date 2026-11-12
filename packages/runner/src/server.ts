@@ -145,6 +145,8 @@ import {
   SessionKeyResolver,
   betaLimitsFromEnv,
   claimBetaRun,
+  betaDayUsage,
+  restoreBetaDayUsage,
   currentSessionId,
   enterSession,
   refusedTarget,
@@ -160,6 +162,7 @@ import {
   liveVisitorFolders,
   type BetaLimits,
 } from './beta.js';
+import { UsageLedger } from './usage-ledger.js';
 import { purgeVisitorFolders } from './session/visitor-cleanup.js';
 import { BrowserGate } from './browser-gate.js';
 import { isRunId } from './session/report-store.js';
@@ -526,6 +529,7 @@ export class RunnerServer {
   readonly auditOwnerEmails: readonly string[];
   readonly auditDailyLimit?: number;
   private auditLimiter: AuditDailyLimiter;
+  private usageLedger: UsageLedger;
   private readonly wiring: AuditWiring;
 
   public readonly session: CheckupSession;
@@ -675,6 +679,7 @@ export class RunnerServer {
     // One audit store per runner (ADR 0036), shared by Helper access and the audit routes. Recovery of
     // versions left "running" by a crash starts here and is awaited before the first audit request.
     const auditStore = createAuditStore(selectAuditStoreBackend({ dataDir: this.dataDir }));
+    this.usageLedger = new UsageLedger(auditStore.backend);
     this.auditRecoveryDone = recoverRunningAudits(auditStore);
     // Schedules follow the audit store: in the bucket on the hosted copy (they survive a redeploy), a file otherwise.
     this.scheduler = new SchedulerManager(
@@ -709,7 +714,11 @@ export class RunnerServer {
       },
       isOwnerRequest: (req) => this.isAuditOwner(req),
       localRun: !this.beta && isLoopbackBindHost(this.host),
-      claimAuditLimit: (email) => this.auditLimiter.claim(email),
+      claimAuditLimit: (email) => {
+        const outcome = this.auditLimiter.claim(email);
+        if (outcome.allowed && email && this.auditDailyLimit) this.saveUsage();
+        return outcome;
+      },
       ...(options.auditCrawl ? { crawl: options.auditCrawl } : {}),
       ...(options.auditCheckAddress ? { checkAddress: options.auditCheckAddress } : {}),
     };
@@ -942,6 +951,13 @@ export class RunnerServer {
     // A shared machine checks every browser request: nothing may reach a non-public address (ADR 0014).
     if (this.beta) setBrowserPolicy({ guard: makeRequestGuard(this.hostChecks) });
     await this.auditRecoveryDone;
+    // Today's counts from before a restart (T-301). Unreadable or another day's: start from zero.
+    const today = betaDayUsage();
+    const stored = await this.usageLedger.load(today.day);
+    if (stored) {
+      restoreBetaDayUsage({ day: stored.day, count: stored.copyStarts });
+      this.auditLimiter.restore(stored.day, stored.auditStarts);
+    }
     await this.moveLegacyData();
     await ensurePlanLoaded(this.session);
     await this.loadLatestReport();
@@ -1594,10 +1610,23 @@ export class RunnerServer {
    * already counted check-up (known gap: include-host / add-page can repeat within one plan; the day's cap
    * and one run at a time bound it). Keyed on the session, never the address.
    */
+  /** Writes today's counted starts to the audit store, so a restart keeps them (T-301). */
+  private saveUsage(): void {
+    const today = betaDayUsage();
+    void this.usageLedger.save({
+      day: today.day,
+      copyStarts: today.count,
+      auditStarts: this.auditLimiter.snapshot(today.day),
+    });
+  }
+
   private betaLimitHit(res: http.ServerResponse): boolean {
     if (!this.beta) return false;
     const hit = claimBetaRun(currentSessionId(), { limits: this.betaLimits });
-    if (!hit) return false;
+    if (!hit) {
+      this.saveUsage();
+      return false;
+    }
     this.sendJson(res, 429, {
       error: hit.error,
       code: 'ERR_BETA_LIMIT',

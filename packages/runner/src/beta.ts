@@ -90,11 +90,25 @@ const NEW_SESSIONS_PER_WINDOW = 20;
 const NEW_SESSION_WINDOW_MS = 10 * 60_000;
 const newSessionTimes = new Map<string, number[]>();
 
-/** The client address: the last X-Forwarded-For entry (added by the nearest proxy) or the socket's. */
-function clientAddress(req: http.IncomingMessage): string {
+/**
+ * How many trusted proxies in front of the runner append to X-Forwarded-For (RUNNER_TRUSTED_PROXY_HOPS).
+ * Default 1: Cloud Run's front end. 0 ignores the header and uses the socket address. At most 5.
+ */
+export function trustedProxyHops(env: Record<string, string | undefined> = process.env): number {
+  const raw = env.RUNNER_TRUSTED_PROXY_HOPS?.trim();
+  return raw !== undefined && /^[0-5]$/.test(raw) ? Number(raw) : 1;
+}
+
+/** The client address: the X-Forwarded-For entry the outermost trusted proxy added, or the socket's. */
+export function clientAddress(req: http.IncomingMessage, hops: number = trustedProxyHops()): string {
+  const socket = req.socket?.remoteAddress || 'unknown';
+  if (hops === 0) return socket;
   const forwarded = req.headers?.['x-forwarded-for'];
-  const last = (Array.isArray(forwarded) ? forwarded.join(',') : forwarded)?.split(',').pop()?.trim();
-  return last || req.socket?.remoteAddress || 'unknown';
+  const entries = (Array.isArray(forwarded) ? forwarded.join(',') : (forwarded ?? ''))
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  return entries[entries.length - hops] || socket;
 }
 
 /** Counts one new session for the address; false when it is over the limit. */
@@ -168,11 +182,25 @@ export function betaLimitsFromEnv(env: Record<string, string | undefined> = proc
   };
 }
 
-// The whole shared copy's count for one UTC day. Memory only: a restart starts it again.
+// The whole shared copy's count for one UTC day. Also kept in the audit store by the runner (T-301), so a restart does not reset it.
 let dayUsage: { day: string; count: number } = { day: '', count: 0 };
 
 const utcDay = (now: number): string => new Date(now).toISOString().slice(0, 10);
 const nextMidnight = (now: number): number => Date.parse(`${utcDay(now)}T00:00:00.000Z`) + 86_400_000;
+
+/** The copy's count for today (a copy, for the usage ledger, T-301). */
+export function betaDayUsage(now: number = Date.now()): { day: string; count: number } {
+  const day = utcDay(now);
+  return { day, count: dayUsage.day === day ? dayUsage.count : 0 };
+}
+
+/** Puts back a stored count for today; a higher count already in memory is kept. */
+export function restoreBetaDayUsage(stored: { day: string; count: number }, now: number = Date.now()): void {
+  const day = utcDay(now);
+  if (stored.day !== day) return;
+  if (dayUsage.day !== day) dayUsage = { day, count: 0 };
+  dayUsage.count = Math.max(dayUsage.count, stored.count);
+}
 
 function hitFor(scope: 'visitor' | 'day', limit: number, now: number): BetaLimitHit {
   const reset = nextMidnight(now);

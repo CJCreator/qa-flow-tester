@@ -2,6 +2,12 @@
  * Daily limit of audit starts per owner email per UTC day (T-86, ADR 0042).
  * Unset means unlimited. When set, exceeding it answers 429 ERR_BETA_LIMIT.
  */
+import { createHash } from 'crypto';
+
+/** The key an owner email is counted (and stored) under: SHA-256 of the trimmed, lower-cased email. */
+export function ownerKey(email: string): string {
+  return createHash('sha256').update(email.trim().toLowerCase()).digest('hex');
+}
 
 export interface AuditLimitOutcome {
   allowed: boolean;
@@ -22,13 +28,13 @@ export class AuditDailyLimiter {
   claim(email?: string): AuditLimitOutcome {
     if (!this.limit) return { allowed: true };
     if (!email) return { allowed: true };
-    const norm = email.trim().toLowerCase();
+    const key = ownerKey(email);
     const now = this.now();
     const day = new Date(now).toISOString().slice(0, 10);
-    let record = this.usage.get(norm);
+    let record = this.usage.get(key);
     if (!record || record.day !== day) {
       record = { day, count: 0 };
-      this.usage.set(norm, record);
+      this.usage.set(key, record);
     }
     if (record.count >= this.limit) {
       const reset = Date.parse(`${day}T00:00:00.000Z`) + 86_400_000;
@@ -42,5 +48,20 @@ export class AuditDailyLimiter {
     }
     record.count++;
     return { allowed: true };
+  }
+
+  /** Today's counts per owner key, for the usage ledger (T-301). */
+  snapshot(day: string): Record<string, number> {
+    const out: Record<string, number> = {};
+    for (const [key, record] of this.usage) if (record.day === day) out[key] = record.count;
+    return out;
+  }
+
+  /** Puts back stored counts for `day`; a count already higher in memory is kept. */
+  restore(day: string, counts: Record<string, number>): void {
+    for (const [key, count] of Object.entries(counts)) {
+      const known = this.usage.get(key);
+      if (!known || known.day !== day || known.count < count) this.usage.set(key, { day, count });
+    }
   }
 }
