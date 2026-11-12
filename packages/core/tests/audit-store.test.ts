@@ -544,3 +544,52 @@ describe('no secrets in stored audits', () => {
     }
   });
 });
+
+describe('bounded reads', () => {
+  it('listAudits and getAudit keep their reads bounded', async () => {
+    let inFlight = 0;
+    let peak = 0;
+    const originalGetJson = backend.getJson.bind(backend);
+    backend.getJson = async <T>(key: string): Promise<T | null> => {
+      inFlight++;
+      if (inFlight > peak) peak = inFlight;
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      try {
+        return await originalGetJson<T>(key);
+      } finally {
+        inFlight--;
+      }
+    };
+
+    try {
+      for (let i = 0; i < 20; i++) {
+        const { auditId } = await store.createAudit(REQUEST);
+        await store.addVersion(auditId);
+      }
+
+      peak = 0;
+      const audits = await store.listAudits();
+      expect(audits).toHaveLength(20);
+      const sorted = [...audits].sort(
+        (a, b) => b.createdAt.localeCompare(a.createdAt) || a.auditId.localeCompare(b.auditId)
+      );
+      expect(audits).toEqual(sorted);
+      expect(peak).toBeLessThanOrEqual(16);
+      expect(peak).toBeGreaterThan(0);
+
+      const { auditId: manyVersionsId } = await store.createAudit(REQUEST);
+      for (let i = 0; i < 11; i++) {
+        await store.addVersion(manyVersionsId);
+      }
+
+      peak = 0;
+      const audit = await store.getAudit(manyVersionsId);
+      expect(audit).not.toBeNull();
+      expect(audit!.versions).toHaveLength(12);
+      expect(peak).toBeLessThanOrEqual(8);
+      expect(peak).toBeGreaterThan(0);
+    } finally {
+      backend.getJson = originalGetJson;
+    }
+  });
+});

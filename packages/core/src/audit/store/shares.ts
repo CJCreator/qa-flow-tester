@@ -12,7 +12,7 @@ import {
   isDocumentLanguage,
   SHARE_LINK_DAYS,
   SHARE_LINK_ID_PATTERN,
-  type AuditSummary,
+  type AuditVersion,
   type DocumentLanguage,
   type ShareLink,
   type ShareLinkKind,
@@ -39,7 +39,7 @@ const SHARE_LINK_KINDS: readonly ShareLinkKind[] = ['pitch', 'preview'];
 type ShareIndexEntry = { linkId: string; auditId: string } | { linkId: string; gone: true };
 
 export type ShareResolution =
-  | { status: 'open'; link: ShareLink; audit: AuditSummary }
+  | { status: 'open'; link: ShareLink; version: AuditVersion }
   /** Revoked, expired, or its audit was deleted: answer 410. */
   | { status: 'gone' }
   /** Unknown or malformed: answer 404. */
@@ -118,7 +118,11 @@ export async function listShares(ctx: AuditStoreContext, auditId: string): Promi
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
 }
 
-/** Answers `/s/:linkId`: the link and its audit when open; 'gone' or 'missing' otherwise. */
+function isPositiveVersion(v: unknown): v is number {
+  return Number.isInteger(v) && (v as number) >= 1;
+}
+
+/** Answers `/s/:linkId`: the link and its version when open; 'gone' or 'missing' otherwise. */
 export async function resolveShare(ctx: AuditStoreContext, linkId: string): Promise<ShareResolution> {
   // Malformed ids never reach the backend.
   if (typeof linkId !== 'string' || !SHARE_LINK_ID_PATTERN.test(linkId)) return { status: 'missing' };
@@ -133,9 +137,11 @@ export async function resolveShare(ctx: AuditStoreContext, linkId: string): Prom
   if (link.revokedAt) return { status: 'gone' };
   const expiresAt = Date.parse(link.expiresAt);
   if (!Number.isFinite(expiresAt) || ctx.now().getTime() >= expiresAt) return { status: 'gone' };
-  const audit = await ctx.getAudit(auditId);
-  if (!audit || !audit.versions.some((v) => v.version === link.version)) return { status: 'gone' };
-  return { status: 'open', link, audit };
+  // Only the link's own version: one read, whatever the number of versions (the route needs no more).
+  if (!isPositiveVersion(link.version)) return { status: 'gone' };
+  const version = await ctx.readVersion(auditId, link.version);
+  if (!version) return { status: 'gone' };
+  return { status: 'open', link, version };
 }
 
 /** Called by deleteAudit (under the audit lock): every index entry of the audit becomes a tombstone. */

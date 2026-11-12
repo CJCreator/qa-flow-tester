@@ -96,6 +96,22 @@ const ISO_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/;
 const AUDIT_RECORD_KEY = /^audits\/([A-Za-z0-9_-]{8,64})\/audit\.json$/;
 /** Per-version objects written at once by `writeVersionEntries`. */
 const VERSION_WRITES_IN_FLIGHT = 6;
+const AUDIT_READS_IN_FLIGHT = 8;
+
+/** Runs `fn` over `items`, at most `limit` at once; results in input order. */
+async function mapInFlight<T, R>(items: readonly T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const out = new Array<R>(items.length);
+  let next = 0;
+  const worker = async (): Promise<void> => {
+    for (;;) {
+      const i = next++;
+      if (i >= items.length) return;
+      out[i] = await fn(items[i]);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()));
+  return out;
+}
 
 /** Per backend, per audit: the tail of the queue of writes. Shared by every store on the same backend. */
 const auditLocks = new WeakMap<AuditStoreBackend, Map<string, Promise<void>>>();
@@ -367,7 +383,7 @@ export class AuditStore implements AuditStoreContext {
     const record = await this.readAuditRecord(auditId);
     if (!record) return null;
     const numbers = Array.from({ length: Math.max(0, record.latestVersion) }, (_, i) => i + 1);
-    const versions = (await Promise.all(numbers.map((n) => this.readVersion(auditId, n)))).filter(
+    const versions = (await mapInFlight(numbers, AUDIT_READS_IN_FLIGHT, (n) => this.readVersion(auditId, n))).filter(
       (v): v is AuditVersion => v !== null
     );
     const shortlist = await getShortlist(this, auditId);
@@ -385,7 +401,9 @@ export class AuditStore implements AuditStoreContext {
       : (await this.backend.list(AUDITS_FOLDER))
           .map((key) => AUDIT_RECORD_KEY.exec(key)?.[1])
           .filter((id): id is string => !!id);
-    const audits = (await Promise.all(ids.map((id) => this.getAudit(id)))).filter((a): a is AuditSummary => a !== null);
+    const audits = (await mapInFlight(ids, AUDIT_READS_IN_FLIGHT, (id) => this.getAudit(id))).filter(
+      (a): a is AuditSummary => a !== null
+    );
     return audits.sort((a, b) => b.createdAt.localeCompare(a.createdAt) || a.auditId.localeCompare(b.auditId));
   }
 

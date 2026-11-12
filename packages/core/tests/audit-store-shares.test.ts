@@ -9,6 +9,7 @@ import {
   LocalAuditStoreBackend,
   shareIndexKey,
   shareRecordKey,
+  versionRecordKey,
 } from '../src/audit/store/index.js';
 
 const REQUEST: AuditRequest = {
@@ -67,14 +68,47 @@ describe('Shared Links (REQ-019, REQ-024)', () => {
     expect(await store.listShares(auditId)).toEqual([]);
   });
 
-  it('resolves an open link with its audit', async () => {
+  it('resolves an open link with its own version', async () => {
     const { auditId } = await store.createAudit(REQUEST);
     const link = await store.createShare(auditId, { version: 1, kind: 'pitch', language: 'en' });
     const resolved = await store.resolveShare(link.id);
     expect(resolved.status).toBe('open');
     if (resolved.status !== 'open') return;
     expect(resolved.link).toEqual(link);
-    expect(resolved.audit.auditId).toBe(auditId);
+    expect(resolved.version).toMatchObject({ auditId, version: 1 });
+  });
+
+  it('reads only the index entry, the link record and its own version record', async () => {
+    const recordedKeys: string[] = [];
+    const originalGetJson = backend.getJson.bind(backend);
+    backend.getJson = async <T>(key: string): Promise<T | null> => {
+      recordedKeys.push(key);
+      return originalGetJson<T>(key);
+    };
+
+    const { auditId } = await store.createAudit(REQUEST);
+    await store.addVersion(auditId);
+    const link = await store.createShare(auditId, { version: 2, kind: 'pitch', language: 'en' });
+
+    recordedKeys.length = 0;
+    const resolved = await store.resolveShare(link.id);
+    expect(resolved.status).toBe('open');
+    expect(recordedKeys).toEqual([
+      shareIndexKey(link.id),
+      shareRecordKey(auditId, link.id),
+      versionRecordKey(auditId, 2),
+    ]);
+  });
+
+  it('is gone when its version record is missing or the stored version is not a number', async () => {
+    const { auditId } = await store.createAudit(REQUEST);
+    const link = await store.createShare(auditId, { version: 1, kind: 'pitch', language: 'en' });
+    await fs.rm(path.join(backend.root, 'audits', auditId, 'v1', 'version.json'));
+    expect(await store.resolveShare(link.id)).toEqual({ status: 'gone' });
+
+    const damagedLink = { ...link, version: 0 };
+    await backend.putJson(shareRecordKey(auditId, link.id), damagedLink);
+    expect(await store.resolveShare(link.id)).toEqual({ status: 'gone' });
   });
 
   it('is gone once revoked; revoking again keeps the first time', async () => {
