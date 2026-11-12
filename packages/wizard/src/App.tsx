@@ -67,6 +67,7 @@ import { splitStoredContext } from './lib/context';
 import { stopProblem, type StopReply } from './lib/stop-result';
 import { AUDIT_ROUTE_NAMES, BetaAuditNotice, showsBetaAuditNotice } from './screens/audit/BetaAuditNotice';
 import { SESSION_CHANGED_EVENT } from './lib/session-event';
+import { lostContactHint } from './lib/lost-contact';
 
 /** How often the runner's state is read while a check-up is in progress, besides its events. */
 const POLL_MS = 5000;
@@ -1022,7 +1023,7 @@ export default function App() {
           {lostContact && (
             <div className="mx-auto max-w-workspace px-4 pt-4 sm:px-6 lg:px-8 [&>*]:max-w-prose">
               <Notice tone="warn" title="Lost contact with Release check-up. Retrying…">
-                Check that it’s still running in its terminal (start it with pnpm start). This page keeps trying.
+                {lostContactHint(!!status?.beta)}
               </Notice>
             </div>
           )}

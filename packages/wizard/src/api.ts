@@ -43,22 +43,33 @@ export class RunnerError extends Error {
 
 const NOT_RESPONDING = 'Release check-up isn’t responding. Make sure it’s still running, then try again.';
 
+/**
+ * AbortSignal.any where the browser has it (Safari 17.4+, Firefox 124+). Elsewhere a signal that aborts as soon as
+ * any of the given signals does, with that signal's reason.
+ */
+export function anySignal(signals: AbortSignal[]): AbortSignal {
+  if (typeof AbortSignal.any === 'function') return AbortSignal.any(signals);
+  const controller = new AbortController();
+  for (const signal of signals) {
+    if (signal.aborted) {
+      controller.abort(signal.reason);
+      break;
+    }
+    signal.addEventListener('abort', () => controller.abort(signal.reason), { once: true });
+  }
+  return controller.signal;
+}
+
 async function call(path: string, init: RequestInit = {}, timeoutMs = 15000): Promise<Response> {
   try {
     return await fetch(path, {
       ...init,
       headers: init.body ? { 'Content-Type': 'application/json', ...init.headers } : init.headers,
       // A caller's signal (a check for an address that has since changed) cancels the request too.
-      signal: init.signal
-        ? AbortSignal.any([init.signal, AbortSignal.timeout(timeoutMs)])
-        : AbortSignal.timeout(timeoutMs),
+      signal: init.signal ? anySignal([init.signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs),
     });
   } catch {
-    throw new RunnerError(
-      NOT_RESPONDING,
-      'ERR_SERVER_UNRESPONSIVE',
-      'Check that it’s still running in its terminal (start it with pnpm start).'
-    );
+    throw new RunnerError(NOT_RESPONDING, 'ERR_SERVER_UNRESPONSIVE');
   }
 }
 
