@@ -21,6 +21,7 @@ class MemoryStore implements SecretStore {
 const scratch = path.join(process.cwd(), '.tmp-ai-estimate-cap');
 
 async function estimate(port: number, price: { prompt: number; completion: number } | null, body: unknown) {
+  let freeCalls = 0;
   const store = new MemoryStore();
   store.secrets.set('openrouter', 'sk-or-test');
   const runner = new RunnerServer({
@@ -29,7 +30,10 @@ async function estimate(port: number, price: { prompt: number; completion: numbe
     dataDir: path.join(scratch, `${port}-data`),
     keyResolver: new KeyResolver(path.join(scratch, `${port}-data`), store),
     openRouter: {
-      freeRequestsToday: async () => ({ remaining: 40, limit: 50 }),
+      freeRequestsToday: async () => {
+        freeCalls++;
+        return { remaining: 40, limit: 50 };
+      },
       keyLimits: async () => ({ remainingRequests: 40, requestsPerInterval: 20, intervalMs: 60000 }),
       modelPrice: async () => price,
       validateKey: async () => ({ valid: true }),
@@ -48,7 +52,8 @@ async function estimate(port: number, price: { prompt: number; completion: numbe
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    return (await res.json()) as Record<string, unknown>;
+    const reply = (await res.json()) as Record<string, unknown>;
+    return { ...reply, freeCalls };
   } finally {
     await runner.stop();
   }
@@ -72,5 +77,16 @@ describe('AI estimate with a cap', () => {
     const r = await estimate(3728, { prompt: 1, completion: 4 }, { maxPages: 30, aiCap: { dollars: 2 } });
     expect(r.price).toEqual({ prompt: 1, completion: 4 });
     expect(r.estimatedUsd as number).toBeGreaterThan(0);
+  });
+
+  it("asks OpenRouter for today's free requests once", async () => {
+    const { freeCalls } = await estimate(3729, null, { maxPages: 30 });
+    expect(freeCalls).toBe(1);
+  });
+
+  it('still reports what the key has left today', async () => {
+    const r = await estimate(3729, null, { maxPages: 30 });
+    expect(r.left).toBe(40);
+    expect(r.limit).toBe(50);
   });
 });
