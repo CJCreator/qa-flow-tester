@@ -81,6 +81,8 @@ export const AUDIT_SAVE_FAILED = 'The Website Audit could not be saved. Try agai
 export const AUDIT_STATUS_FAILED =
   'The Website Audit was saved, but its status could not be updated. Try reloading it.';
 export const AUDIT_STOPPED = 'The Website Audit was stopped before it finished.';
+export const AUDIT_HOSTED_PAGES = (max: number) =>
+  `This copy audits at most ${max} pages. Lower Max pages and start again.`;
 
 /**
  * AuditErrorCode of a 'failed' event. A crawl that broke off is ERR_UNREACHABLE (the site stopped answering);
@@ -131,6 +133,8 @@ export interface AuditRunServices {
    * be audited. Set from the runner's own settings, never from the start body. Default false.
    */
   allowPrivateAddresses?: boolean;
+  /** Most pages one audit may record on this runner. The hosted copy sets AUDIT_LIMIT_DEFAULTS.hostedMaxPages; unset means the start check's own limit. */
+  maxPages?: number;
   resolveAi?: () => Promise<AuditAiResolution>;
   resolveServiceKey?: PageSpeedDeps['resolveServiceKey'];
   preflightAi?: typeof preflightAuditAi;
@@ -353,7 +357,11 @@ export async function runAuditVersion(
     currentStage = 'crawling';
     workDir = await (services.makeWorkDir ?? defaultMakeWorkDir)();
     const recorder = (services.createRecorder ?? createPageRecorder)({ workDir });
-    const crawl = await crawlFn(request, {
+    const runRequest =
+      services.maxPages !== undefined && request.limits.maxPages > services.maxPages
+        ? { ...request, limits: { ...request.limits, maxPages: services.maxPages } }
+        : request;
+    const crawl = await crawlFn(runRequest, {
       signal,
       // The crawl redacts currentPath; the run adds the audit id and version.
       onProgress: (p) => {
@@ -388,7 +396,7 @@ export async function runAuditVersion(
     await afterCrawl({
       auditId: run.auditId,
       version: run.version,
-      request,
+      request: runRequest,
       startedAt,
       crawl,
       recorder,
@@ -490,6 +498,9 @@ export function createAuditCrawlRoutes(deps: AuditCrawlRouteDeps): Route[] {
     const check = validateAuditStartBody(body);
     if (!check.ok) return refuse(res, 400, 'ERR_INVALID_AUDIT', AUDIT_INVALID, check.errors);
     const request = check.value;
+    if (deps.maxPages !== undefined && request.limits.maxPages > deps.maxPages) {
+      return refuse(res, 400, 'ERR_INVALID_AUDIT', AUDIT_INVALID, { maxPages: AUDIT_HOSTED_PAGES(deps.maxPages) });
+    }
 
     // Busy now: answer before spending a network check on it. Claimed for real after the check, below.
     const slot = slotOf(context);

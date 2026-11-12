@@ -1,7 +1,7 @@
 import type { Page } from 'playwright';
 import type { PageContent } from '@qa/types';
 import { buildPageContent } from './page-content.js';
-import { JSON_LD_RAW_CAP, type RawPage } from './raw-page.js';
+import { JSON_LD_RAW_CAP, RAW_ITEM_TEXT_CAP, RAW_LIST_CAP, capRawPage, type RawPage } from './raw-page.js';
 
 /**
  * readPage (REQ-007, REQ-008, REQ-009): reads the rendered page that is open into a RawPage in one
@@ -23,6 +23,7 @@ export interface ReadPageOptions {
 }
 
 export interface ReadPageResult {
+  /** The text is in `content.text` only: `textChunks` is emptied once the Page Content is built. */
   raw: RawPage;
   content: PageContent;
 }
@@ -41,10 +42,15 @@ export async function readPage(page: Page, options: ReadPageOptions = {}): Promi
       ? Math.max(0, Math.floor(options.maxTextChars))
       : READ_PAGE_MAX_TEXT_CHARS;
 
-  const facts: DomFacts = await page.evaluate(readDom, { maxTextChars, jsonLdCap: JSON_LD_RAW_CAP });
+  const facts: DomFacts = await page.evaluate(readDom, {
+    maxTextChars,
+    jsonLdCap: JSON_LD_RAW_CAP,
+    listCap: RAW_LIST_CAP,
+    itemTextCap: RAW_ITEM_TEXT_CAP,
+  });
 
   const url = page.url();
-  const raw: RawPage = { url, ...facts };
+  const raw: RawPage = capRawPage({ url, ...facts });
   const headers = safeHeaders(options.responseHeaders);
   if (headers) raw.responseHeaders = headers;
 
@@ -54,7 +60,9 @@ export async function readPage(page: Page, options: ReadPageOptions = {}): Promi
   } catch {
     // about:blank and the like: buildPageContent treats every link as leaving the site.
   }
-  return { raw, content: buildPageContent(raw, { origin, maxTextChars }) };
+  const content = buildPageContent(raw, { origin, maxTextChars });
+  raw.textChunks = [];
+  return { raw, content };
 }
 
 function safeHeaders(headers: Record<string, string> | undefined): Record<string, string> | undefined {
@@ -72,7 +80,7 @@ function safeHeaders(headers: Record<string, string> | undefined): Record<string
  * Runs in the browser. Self-contained: no imports, no outer variables. Reads only; values typed into
  * form fields (input value, textarea content, selected option) are never read.
  */
-function readDom(args: { maxTextChars: number; jsonLdCap: number }): DomFacts {
+function readDom(args: { maxTextChars: number; jsonLdCap: number; listCap: number; itemTextCap: number }): DomFacts {
   type Kind = 'header' | 'nav' | 'main' | 'aside' | 'footer' | 'region' | 'heading';
   type Boundary = { kind: Kind; heading?: string };
   type MenuItem = { text: string; href: string | null; children: MenuItem[] };
@@ -240,11 +248,11 @@ function readDom(args: { maxTextChars: number; jsonLdCap: number }): DomFacts {
     if (block) flush();
     if (boundaryLandmark) startBoundary({ kind: boundaryLandmark });
     else if (!hidden && level !== null && level <= 2 && outsideLandmarks(el)) {
-      startBoundary({ kind: 'heading', heading: clean(el.textContent) });
+      startBoundary({ kind: 'heading', heading: clean(el.textContent).slice(0, args.itemTextCap) });
     }
     if (tag === 'br' && !hidden) flush();
 
-    if (tag === 'img') {
+    if (tag === 'img' && images.length < args.listCap) {
       const src = el.getAttribute('src') || (el as HTMLImageElement).currentSrc || '';
       images.push({ src, alt: el.getAttribute('alt'), chunk: here() });
     }
@@ -261,17 +269,24 @@ function readDom(args: { maxTextChars: number; jsonLdCap: number }): DomFacts {
     }
 
     // Facts recorded after their own text, so they land in the chunk that holds it.
-    if (level !== null) headings.push({ level, text: clean(el.textContent), chunk: here() });
+    if (level !== null && headings.length < args.listCap) {
+      headings.push({ level, text: clean(el.textContent).slice(0, args.itemTextCap), chunk: here() });
+    }
     if (tag === 'a' && el.hasAttribute('href')) {
       const href = el.getAttribute('href') || '';
       const text = anchorText(el);
       const chunk = here();
-      anchors.push({ href, text, region: linkRegion(el), chunk });
+      if (anchors.length < args.listCap) {
+        anchors.push({ href, text, region: linkRegion(el), chunk });
+      }
       const scheme = href.trim().toLowerCase();
-      if (scheme.startsWith('tel:')) contactLinks.push({ kind: 'tel', href, text, chunk });
-      else if (scheme.startsWith('mailto:')) contactLinks.push({ kind: 'mailto', href, text, chunk });
+      if (scheme.startsWith('tel:') && contactLinks.length < args.listCap) {
+        contactLinks.push({ kind: 'tel', href, text, chunk });
+      } else if (scheme.startsWith('mailto:') && contactLinks.length < args.listCap) {
+        contactLinks.push({ kind: 'mailto', href, text, chunk });
+      }
     }
-    if (!hidden) {
+    if (!hidden && ctaCandidates.length < args.listCap) {
       const role = el.getAttribute('role');
       const className = el.getAttribute('class') || '';
       if (tag === 'a' && (el.hasAttribute('href') || role)) {

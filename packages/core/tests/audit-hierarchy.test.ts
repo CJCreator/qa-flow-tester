@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import type { HierarchyNode, LinkRegion, PageHierarchy } from '@qa/types';
 import { buildPageContent } from '../src/audit/analysis/page-content.js';
-import { buildPageHierarchy, internalLinking, type HierarchyPage } from '../src/audit/analysis/hierarchy.js';
+import {
+  MAX_NAV_LINKS_PER_PAGE,
+  buildPageHierarchy,
+  internalLinking,
+  type HierarchyPage,
+} from '../src/audit/analysis/hierarchy.js';
 import type { RawBreadcrumbItem, RawMenuItem, RawPage } from '../src/audit/analysis/raw-page.js';
 
 const ORIGIN = 'https://bakery.example';
@@ -277,11 +282,18 @@ describe('navigation map (REQ-007 AC-1)', () => {
   it('lists every internal link of every recorded page with from, to, region and text', () => {
     const pages = fixturePages();
     const { links } = buildPageHierarchy(pages, '/');
-    const expected = pages.flatMap((p) =>
-      p.content.links
+    const expected = pages.flatMap((p) => {
+      const seen = new Set<string>();
+      return p.content.links
         .filter((l) => !l.leavesSite)
-        .map((l) => ({ from: p.urlPath, to: l.to, region: l.region, text: l.text }))
-    );
+        .filter((l) => {
+          const key = `${l.region}\n${l.to}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .map((l) => ({ from: p.urlPath, to: l.to, region: l.region, text: l.text }));
+    });
     expect(links).toEqual(expected);
     expect(links).toContainEqual({ from: '/', to: '/services/catering', region: 'menu', text: 'Catering' });
     expect(links).toContainEqual({
@@ -290,6 +302,17 @@ describe('navigation map (REQ-007 AC-1)', () => {
       region: 'internal',
       text: 'Kaju katli recipe',
     });
+  });
+
+  it('keeps a link once per page and region, and at most MAX_NAV_LINKS_PER_PAGE per page', () => {
+    const distinctLinks = Array.from({ length: 300 }, (_, i) => anchor(`/target-${i}`, `Target ${i}`, 'internal'));
+    const testPage = page('/test', 'Test', {
+      anchors: [anchor('/about', 'About us', 'menu'), anchor('/about', 'About us', 'menu'), ...distinctLinks],
+    });
+    const { links } = buildPageHierarchy([testPage], '/test');
+    const menuLinks = links.filter((l) => l.region === 'menu');
+    expect(menuLinks).toEqual([{ from: '/test', to: '/about', region: 'menu', text: 'About us' }]);
+    expect(links).toHaveLength(MAX_NAV_LINKS_PER_PAGE);
   });
 
   it('leaves out links that leave the site and non-page links', () => {

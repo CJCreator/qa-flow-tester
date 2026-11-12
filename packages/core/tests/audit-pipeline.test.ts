@@ -1208,6 +1208,34 @@ describe('audit pipeline: runAuditPipeline', () => {
       errorCode: 'ERR_PIPELINE',
     });
   });
+
+  it('drops the raw facts after the analysis', async () => {
+    const recorder = await recordCrawl(
+      pageStages({
+        readPage: vi.fn(async (page: Page) => {
+          const urlPath = (page as unknown as { urlPath: string }).urlPath;
+          return {
+            raw: {
+              url: `${ORIGIN}${urlPath}`,
+              anchors: [{ href: '/about', text: 'About', region: 'internal', chunk: 0 }],
+            } as unknown as RawPage,
+            content: content(urlPath, `Title ${urlPath}`),
+          };
+        }),
+      })
+    );
+    expect(recorder.pages[0].read?.raw.anchors).toHaveLength(1);
+    const initialContents = recorder.pages.map((p) => p.read?.content);
+    const { outcome } = await run({ recorder });
+    await outcome;
+    for (let i = 0; i < recorder.pages.length; i++) {
+      const p = recorder.pages[i];
+      if (p.read) {
+        expect(p.read.raw.anchors).toEqual([]);
+        expect(p.read.content).toEqual(initialContents[i]);
+      }
+    }
+  });
 });
 
 describe('audit pipeline: area grades', () => {

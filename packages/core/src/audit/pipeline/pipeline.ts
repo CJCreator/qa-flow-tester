@@ -48,6 +48,7 @@ import type { NetDeps } from '../../safe-net.js';
 import type { AuditStore } from '../store/audit-store.js';
 import type { AuditCrawlResult } from '../crawl/crawl.js';
 import { createFindingIdAllocator } from '../analysis/finding-ids.js';
+import { EMPTY_RAW_LISTS } from '../analysis/raw-page.js';
 import { skipKey } from '../analysis/broken-links.js';
 import { analyseSite, type AnalysisPage, type SiteAnalysis } from '../analysis/analyse-site.js';
 import { auditMarketing } from '../analysis/marketing-signals.js';
@@ -463,6 +464,9 @@ export async function runAuditPipeline(
     analysis = fallbackAnalysis(readable, startPath);
     record('analysis', 'checking-pages', false, NOTES.analysis);
   }
+
+  // The raw facts are read by the analysis only; drop them so 200 pages do not stay in memory twice.
+  for (const p of readable) p.read!.raw = { ...p.read!.raw, ...EMPTY_RAW_LISTS };
 
   // Phone layout findings continue the analysis's AF numbers.
   const ids = createFindingIdAllocator(analysis.nextFindingNumber);

@@ -7,6 +7,9 @@ import type { RawMenuItem, RawPage } from './raw-page.js';
  * The page hierarchy, the navigation map and the internal-linking figures (REQ-007, REQ-015).
  * Fixed rules, no AI, no request. Pure and deterministic.
  *
+ * PageHierarchy.links contains each internal link once per page and region, at most
+ * MAX_NAV_LINKS_PER_PAGE per page.
+ *
  * Placement (Q-23), strongest rule first:
  * 1. the start page is the root ('start');
  * 2. menu nesting from the start page's menu tree ('menu'): a page's parent is the nearest menu item above
@@ -17,6 +20,9 @@ import type { RawMenuItem, RawPage } from './raw-page.js';
  * ancestor falls through to the next rule. Each rule is applied to every page before the next rule runs,
  * so menu placements always win over breadcrumb placements.
  */
+
+/** Most navigation links kept per page in the hierarchy. */
+export const MAX_NAV_LINKS_PER_PAGE = 200;
 
 export interface HierarchyPage {
   urlPath: string;
@@ -101,9 +107,16 @@ export function buildPageHierarchy(pages: HierarchyPage[], startPath: string): P
 
   const links: NavigationLink[] = [];
   for (const page of unique) {
+    const seenOnPage = new Set<string>();
+    let countOnPage = 0;
     for (const link of page.content.links) {
       if (link.leavesSite) continue;
+      const key = `${link.region}\n${link.to}`;
+      if (seenOnPage.has(key)) continue;
+      seenOnPage.add(key);
       links.push({ from: page.urlPath, to: link.to, region: link.region, text: link.text });
+      countOnPage++;
+      if (countOnPage >= MAX_NAV_LINKS_PER_PAGE) break;
     }
   }
 

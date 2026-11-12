@@ -36,6 +36,7 @@ import {
   auditCrawlRoutes,
   auditPipelineStep,
   createAuditCrawlRoutes,
+  runAuditVersion,
   type AfterCrawlStep,
   type AuditCrawlRouteDeps,
 } from '../src/routes/audit-crawl.js';
@@ -411,6 +412,47 @@ describe('POST /api/audits', () => {
     expect(JSON.stringify(json)).not.toMatch(/disk|secret/);
     expect(crawlCalls).toHaveLength(0);
     expect(slot.kind).toBeNull();
+  });
+
+  it('the hosted copy refuses more pages than its limit', async () => {
+    const base = await serve(createAuditCrawlRoutes(deps({ maxPages: 200 })));
+    const { status, json } = await post(base, { ...VALID, maxPages: 500 });
+    expect(status).toBe(400);
+    expect(json.code).toBe('ERR_INVALID_AUDIT');
+    expect(json.fields?.maxPages).toMatch(/200/);
+    expect(crawlCalls).toHaveLength(0);
+
+    const ok = await post(base, { ...VALID, maxPages: 200 });
+    expect(ok.status).toBe(202);
+    await waitFor(runEnded(ok.json.auditId));
+    expect(crawlCalls).toHaveLength(1);
+    expect(crawlCalls[0].request.limits.maxPages).toBe(200);
+  });
+
+  it('a run never crawls more than the limit', async () => {
+    const run = runs.start('audit-test-run-cap', 1);
+    const request: AuditRequest = {
+      url: 'https://example.com/',
+      limits: { maxPages: 500, maxDepth: 2, includePaths: [], excludePaths: [] },
+      language: 'en',
+    };
+    await runAuditVersion(deps({ maxPages: 200 }), {
+      run,
+      request,
+      startedAt: new Date().toISOString(),
+      slot,
+    });
+    expect(crawlCalls).toHaveLength(1);
+    expect(crawlCalls[0].request.limits.maxPages).toBe(200);
+  });
+
+  it('a local runner has no extra limit', async () => {
+    const base = await serve(createAuditCrawlRoutes(deps()));
+    const { status, json } = await post(base, { ...VALID, maxPages: 500 });
+    expect(status).toBe(202);
+    await waitFor(runEnded(json.auditId));
+    expect(crawlCalls).toHaveLength(1);
+    expect(crawlCalls[0].request.limits.maxPages).toBe(500);
   });
 });
 

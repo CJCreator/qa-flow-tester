@@ -160,3 +160,98 @@ export interface RawPage {
    */
   responseHeaders?: Record<string, string>;
 }
+
+/** Most entries kept per list of a RawPage (headings, images, anchors, contact links, CTA candidates, scripts...). */
+export const RAW_LIST_CAP = 500;
+
+/** Longest text kept per heading, Section heading, link, CTA, menu or breadcrumb entry. */
+export const RAW_ITEM_TEXT_CAP = 300;
+
+/** Most forms per page, and most fields per form. */
+export const RAW_FORM_CAP = 50;
+
+export const EMPTY_RAW_LISTS = {
+  textChunks: [],
+  headings: [],
+  images: [],
+  anchors: [],
+  contactLinks: [],
+  forms: [],
+  ctaCandidates: [],
+  scripts: [],
+  stylesheets: [],
+  iframes: [],
+  jsonLd: [],
+  addresses: [],
+  menu: [],
+  breadcrumb: [],
+} satisfies Partial<RawPage>;
+
+function cut(text: string, max: number): string {
+  if (text.length <= max) return text;
+  let end = max;
+  const code = text.charCodeAt(end - 1);
+  if (end > 0 && code >= 0xd800 && code <= 0xdbff) end -= 1;
+  return text.slice(0, end);
+}
+
+function capMenu(items: RawMenuItem[], maxTotal = RAW_LIST_CAP): RawMenuItem[] {
+  let count = 0;
+  function walk(list: RawMenuItem[]): RawMenuItem[] {
+    const result: RawMenuItem[] = [];
+    for (const item of list) {
+      if (count >= maxTotal) break;
+      count++;
+      const text = cut(item.text, RAW_ITEM_TEXT_CAP);
+      const children = count < maxTotal ? walk(item.children ?? []) : [];
+      result.push({ ...item, text, children });
+    }
+    return result;
+  }
+  return walk(items);
+}
+
+export function capRawPage(raw: RawPage): RawPage {
+  return {
+    ...raw,
+    headings: (raw.headings ?? []).slice(0, RAW_LIST_CAP).map((h) => ({ ...h, text: cut(h.text, RAW_ITEM_TEXT_CAP) })),
+    images: (raw.images ?? []).slice(0, RAW_LIST_CAP).map((img) => ({
+      ...img,
+      alt: img.alt !== null ? cut(img.alt, RAW_ITEM_TEXT_CAP) : null,
+    })),
+    anchors: (raw.anchors ?? []).slice(0, RAW_LIST_CAP).map((a) => ({ ...a, text: cut(a.text, RAW_ITEM_TEXT_CAP) })),
+    contactLinks: (raw.contactLinks ?? [])
+      .slice(0, RAW_LIST_CAP)
+      .map((c) => ({ ...c, text: cut(c.text, RAW_ITEM_TEXT_CAP) })),
+    forms: (raw.forms ?? []).slice(0, RAW_FORM_CAP).map((f) => ({
+      ...f,
+      fields: (f.fields ?? [])
+        .slice(0, RAW_FORM_CAP)
+        .map((fld) => ({ ...fld, label: cut(fld.label, RAW_ITEM_TEXT_CAP) })),
+    })),
+    ctaCandidates: (raw.ctaCandidates ?? [])
+      .slice(0, RAW_LIST_CAP)
+      .map((c) => ({ ...c, text: cut(c.text, RAW_ITEM_TEXT_CAP) })),
+    scripts: (raw.scripts ?? []).slice(0, RAW_LIST_CAP),
+    stylesheets: (raw.stylesheets ?? []).slice(0, RAW_LIST_CAP),
+    iframes: (raw.iframes ?? []).slice(0, RAW_LIST_CAP),
+    jsonLd: (raw.jsonLd ?? []).slice(0, RAW_LIST_CAP),
+    socialMetaKeys: (raw.socialMetaKeys ?? []).slice(0, RAW_LIST_CAP),
+    frameworkMarkers: (raw.frameworkMarkers ?? []).slice(0, RAW_LIST_CAP),
+    addresses: (raw.addresses ?? []).slice(0, RAW_LIST_CAP).map((a) => cut(a, RAW_ITEM_TEXT_CAP)),
+    menu: capMenu(raw.menu ?? []),
+    breadcrumb: (raw.breadcrumb ?? [])
+      .slice(0, RAW_LIST_CAP)
+      .map((b) => ({ ...b, text: cut(b.text, RAW_ITEM_TEXT_CAP) })),
+    textChunks: (raw.textChunks ?? []).map((c) => {
+      if (!c.boundary?.heading) return c;
+      return {
+        ...c,
+        boundary: {
+          ...c.boundary,
+          heading: cut(c.boundary.heading, RAW_ITEM_TEXT_CAP),
+        },
+      };
+    }),
+  };
+}
