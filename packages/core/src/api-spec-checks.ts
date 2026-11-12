@@ -1,6 +1,7 @@
 import type { Finding, FindingSeverity } from '@qa/types';
 import { Redactor, redactUrl } from './redact.js';
 import { validate } from './json-schema-lite.js';
+import { makeGuardedFetch, GuardedFetchBlockedError } from './safe-net.js';
 
 /**
  * API checks from a supplied OpenAPI file (JSON). Negative-first: at least 40% of the checks send
@@ -273,6 +274,8 @@ export interface RunApiChecksOptions {
   baseUrl: string;
   /** Test Copy plus owner consent: lets checks that change data run. */
   allowWrites?: boolean;
+  /** The run's rule for private addresses (a local run only, ADR 0031). Never from request input. */
+  allowPrivate?: boolean;
   /** Full Authorization header value. Used for the request, hidden from every finding. */
   authHeader?: string;
   requestTimeoutMs?: number;
@@ -316,7 +319,8 @@ function findingFor(
 }
 
 export async function runApiChecks(plan: ApiCheckPlan, options: RunApiChecksOptions): Promise<ApiChecksResult> {
-  const doFetch = options.fetchImpl ?? fetch;
+  const doFetch = options.fetchImpl ?? makeGuardedFetch({ allowPrivate: options.allowPrivate, maxRedirects: 0 });
+  const base = new URL(options.baseUrl);
   const redactor = new Redactor(
     options.authHeader ? [{ token: options.authHeader.replace(/^\w+\s+/, '') }, { token: options.authHeader }] : []
   );
@@ -330,12 +334,27 @@ export async function runApiChecks(plan: ApiCheckPlan, options: RunApiChecksOpti
   };
   if (plan.checks.length === 0) return result;
   let n = 0;
+  let offOrigin = 0;
   const add = (...a: [FindingSeverity, ApiCheck, string, string, string[]?]) =>
     result.findings.push(findingFor(++n, a[0], a[1], a[2], a[3], a[4]));
 
   for (const c of plan.checks) {
     if (c.sends && !options.allowWrites) {
       result.skippedWrites++;
+      continue;
+    }
+    if (c.sends && !options.fetchImpl) {
+      result.skippedWrites++;
+      continue;
+    }
+    let target: URL;
+    try {
+      target = new URL(c.url, base);
+    } catch {
+      target = new URL('about:blank');
+    }
+    if (target.origin !== base.origin) {
+      offOrigin++;
       continue;
     }
     const headers: Record<string, string> = { accept: 'application/json' };
@@ -346,14 +365,18 @@ export async function runApiChecks(plan: ApiCheckPlan, options: RunApiChecksOpti
     if (options.authHeader && !c.omitAuth) headers.authorization = options.authHeader;
     let res: Response;
     try {
-      res = await doFetch(new URL(c.url, options.baseUrl), {
+      res = await doFetch(target, {
         method: c.method,
         headers,
         body: c.sends ? body : undefined,
         redirect: 'manual',
         signal: AbortSignal.timeout(options.requestTimeoutMs ?? 10_000),
       });
-    } catch {
+    } catch (err) {
+      if (err instanceof GuardedFetchBlockedError) {
+        result.notChecked.push('API checks were not sent: the API address is not a public web address.');
+        break;
+      }
       add('Major', c, `${c.description}: no answer`, 'No answer in time');
       result.ran++;
       continue;
@@ -384,6 +407,9 @@ export async function runApiChecks(plan: ApiCheckPlan, options: RunApiChecksOpti
           errors
         );
     }
+  }
+  if (offOrigin > 0) {
+    result.notChecked.push(`${offOrigin} API checks were not sent: their path leaves ${base.origin}.`);
   }
   if (result.skippedWrites > 0) {
     result.notChecked.push(`${result.skippedWrites} API checks that change data were not sent (no Test Copy consent).`);

@@ -17,6 +17,7 @@ const RULES: Rule[] = [
   { name: 'request.fetch/get/head', pattern: /\brequest\??\.(?:fetch|get|head)\s*\(/ },
   // A call of the global fetch: not a method (`.fetch(`), not a declaration (`async fetch(`, `function fetch(`).
   { name: 'node fetch', pattern: /(?:(?<![.\w$]|async |function )fetch|\bglobalThis\.fetch)\s*\(/ },
+  { name: 'fetch alias', pattern: /(?:\?\?|\|\||=)\s*(?:globalThis\.)?fetch\b(?!\s*\()/ },
 ];
 
 /** Calls still allowed, each with its reason. A stale entry (nothing left to excuse) fails the test too. */
@@ -40,6 +41,11 @@ const EXCEPTIONS: Array<{ file: string; rule: string; reason: string }> = [
     file: 'packages/core/src/ai/providers/openai.ts',
     rule: 'node fetch',
     reason: 'AI provider endpoint, fixed address',
+  },
+  {
+    file: 'packages/core/src/ai/openrouter.ts',
+    rule: 'fetch alias',
+    reason: 'OpenRouter API endpoint, fixed address; the constructor parameter is a test seam',
   },
   {
     file: 'packages/core/src/discovery/docs-fetch.ts',
@@ -87,6 +93,9 @@ describe('outbound source grep (ADR 0031)', () => {
       'await request.head(link);',
       'const res = await fetch(url);',
       'await globalThis.fetch(u, init);',
+      'const doFetch = options.fetchImpl ?? fetch;',
+      'const fallback = fn || globalThis.fetch;',
+      'this.fetchImpl = fetch;',
     ];
     for (const line of bad) expect(scanSource(line), line).not.toEqual([]);
     const fine = [
@@ -94,6 +103,7 @@ describe('outbound source grep (ADR 0031)', () => {
       'static async fetch(origin: string) {',
       'await RobotsPolicy.fetch(origin, token);',
       'const response = await opts.fetch(url);',
+      'const doFetch = options.fetchImpl ?? makeGuardedFetch();',
       '// page.request.get is not used here',
       '  * a comment about fetch(url)',
     ];

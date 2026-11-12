@@ -135,8 +135,53 @@ describe('api spec checks', () => {
 
   it('sends write checks only when writes are allowed', async () => {
     const url = await start((_req, res) => json(res, 400, {}));
-    const r = await runApiChecks(generateApiChecks(spec), { baseUrl: url, allowWrites: true });
+    const r = await runApiChecks(generateApiChecks(spec), { baseUrl: url, allowWrites: true, fetchImpl: fetch });
     expect(seen.some((s) => s.method === 'POST')).toBe(true);
     expect(r.skippedWrites).toBe(0);
+  });
+
+  it('writes are not sent without a vouched client', async () => {
+    const url = await start((_req, res) => json(res, 400, {}));
+    const r = await runApiChecks(generateApiChecks(spec), { baseUrl: url, allowWrites: true });
+    expect(seen.length).toBeGreaterThan(0);
+    expect(seen.every((s) => s.method === 'GET')).toBe(true);
+    expect(r.skippedWrites).toBeGreaterThan(0);
+  });
+
+  it('a spec path that leaves the origin is not sent, and the sign-in header goes nowhere else', async () => {
+    const secret = 'Bearer s3cret-token-value';
+    const url = await start((req, res) => {
+      if (req.url === '/items') return json(res, 200, [{ id: 1, name: 'a' }]);
+      json(res, 404, {});
+    });
+    const offOriginSpec = {
+      openapi: '3.0.0',
+      security: [{ bearer: [] }],
+      paths: {
+        '/items': {
+          get: {
+            responses: { '200': {} },
+          },
+        },
+        'https://attacker.test/exfiltrate': {
+          get: {
+            responses: { '200': {} },
+          },
+        },
+      },
+    };
+    const r = await runApiChecks(generateApiChecks(offOriginSpec), { baseUrl: url, authHeader: secret });
+    expect(seen.length).toBeGreaterThan(0);
+    expect(seen.every((s) => s.url.startsWith('/items'))).toBe(true);
+    expect(seen.some((s) => s.auth === secret)).toBe(true);
+    expect(r.notChecked.some((l) => l.includes('their path leaves'))).toBe(true);
+  });
+
+  it('a refused address sends nothing', async () => {
+    const url = await start((_req, res) => json(res, 200, []));
+    const r = await runApiChecks(generateApiChecks(spec), { baseUrl: url, allowPrivate: false });
+    expect(seen).toEqual([]);
+    expect(r.ran).toBe(0);
+    expect(r.notChecked).toContain('API checks were not sent: the API address is not a public web address.');
   });
 });
