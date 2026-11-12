@@ -7,6 +7,14 @@ const ROBOTS_MAX_BYTES = 512_000;
 /** The longest Crawl-delay honoured (ADR 0015); a larger value is cut to this and logged. */
 export const MAX_CRAWL_DELAY_MS = 30_000;
 
+/** The name our crawls give in User-Agent and match against robots.txt groups. One value for every crawl. */
+export const ROBOTS_USER_AGENT_TOKEN = 'QA-Benchmarking-Bot';
+
+/** The wait between page loads on a site we crawl: our own choice, never shorter than the site's robots.txt Crawl-delay. */
+export function crawlPageDelayMs(chosenMs: number, robots?: Pick<RobotsPolicy, 'crawlDelayMs'>): number {
+  return Math.max(chosenMs, robots?.crawlDelayMs ?? 0);
+}
+
 /** Milliseconds for a Crawl-delay value in seconds, or undefined when it is not a number of seconds ≥ 0. */
 function crawlDelayMsOf(value: string): number | undefined {
   if (!/^(\d+(\.\d*)?|\.\d+)$/.test(value)) return undefined;

@@ -6,7 +6,7 @@ import { BugDetectionChecker, UXQualityChecker } from '@qa/checkers';
 import { EvidenceCollector } from '../evidence.js';
 import { classifyAddress, isPrivateTextHost } from '../address-class.js';
 import { isSameSite } from '../same-site.js';
-import { RobotsPolicy } from './robots.js';
+import { RobotsPolicy, ROBOTS_USER_AGENT_TOKEN } from './robots.js';
 import { getBrowserPolicy, installRequestGuard, WEBRTC_NO_DIRECT_UDP } from '../browser.js';
 import { MUTATING_METHODS } from '../live-site.js';
 
@@ -43,7 +43,6 @@ export interface SafeScanResult {
   skippedByRobots: string[];
 }
 
-const USER_AGENT_TOKEN = 'QA-Benchmarking-Bot';
 /** Hard ceiling on in-page interaction hops for external sites. */
 const MAX_CRAWL_STEPS = 5;
 const DEFAULT_SCAN_PAGES = 25;
@@ -156,7 +155,7 @@ export class SafePublicCrawler {
     const robots =
       options.respectRobots === false
         ? RobotsPolicy.allowAll()
-        : await RobotsPolicy.fetch(targetUrlObj.origin, USER_AGENT_TOKEN);
+        : await RobotsPolicy.fetch(targetUrlObj.origin, ROBOTS_USER_AGENT_TOKEN);
     if (!robots.isAllowed(targetUrlObj.pathname + targetUrlObj.search)) {
       throw new Error(`robots.txt on ${targetUrlObj.origin} disallows crawling ${targetUrlObj.pathname}`);
     }
@@ -174,7 +173,7 @@ export class SafePublicCrawler {
     try {
       const context = await browser.newContext({
         viewport: { width: 1440, height: 900 },
-        userAgent: `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ${USER_AGENT_TOKEN}/1.0`,
+        userAgent: `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ${ROBOTS_USER_AGENT_TOKEN}/1.0`,
         serviceWorkers: 'block',
       });
       if (policy?.guard) await installRequestGuard(context, policy.guard);

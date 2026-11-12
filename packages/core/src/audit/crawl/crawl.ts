@@ -25,7 +25,7 @@ import { blockChanges } from '../../live-site.js';
 import { defaultNetDeps, makeRequestGuard, resolvePublic, type NetDeps } from '../../safe-net.js';
 import { START_ADDRESS_MESSAGES, type AuditAddressCode } from './reachability.js';
 import { makeCheckerFetch } from '../../checker-fetch.js';
-import { RobotsPolicy } from '../../competitive/robots.js';
+import { RobotsPolicy, ROBOTS_USER_AGENT_TOKEN } from '../../competitive/robots.js';
 import { HostPacer } from '../../host-pacer.js';
 import { redactUrl } from '../../redact.js';
 import { DeterministicSpider, type SpiderPageInventoryItem } from '../../discovery/deterministic-spider.js';
@@ -41,7 +41,7 @@ import {
 } from './interstitial.js';
 
 /** The user-agent token whose robots.txt group the audit follows (the Spider's, so one site rule fits both). */
-export const AUDIT_ROBOTS_TOKEN = 'QA-Benchmarking-Bot';
+export const AUDIT_ROBOTS_TOKEN = ROBOTS_USER_AGENT_TOKEN;
 /** Least pause between two requests to the audited host, when robots.txt asks for none (ADR 0015). */
 export const AUDIT_MIN_GAP_MS = 500;
 /** How long an empty start page gets to render before it counts as an Interstitial Page. */

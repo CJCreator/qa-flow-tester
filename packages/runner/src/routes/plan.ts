@@ -38,6 +38,8 @@ import {
   PreFlightChecker,
   DeterministicSpider,
   RobotsPolicy,
+  ROBOTS_USER_AGENT_TOKEN,
+  crawlPageDelayMs,
   blockChanges,
   interpretRule,
   interpretTest,
@@ -597,14 +599,15 @@ async function crawlMore(
       headerHosts: record.context.headerHosts || c.session.secrets.headerHosts,
     });
     if (record.context.readOnly) await blockChanges(context);
+    const robots = ownMachine ? undefined : await RobotsPolicy.fetch(origin.origin, ROBOTS_USER_AGENT_TOKEN);
     const result = await new DeterministicSpider(
       record.context.profile?.forbiddenActions || [],
       options.maxPages
     ).crawl(context, target, {
       startPaths: options.startPaths,
       exploreClicks: options.exploreClicks,
-      robots: ownMachine ? undefined : await RobotsPolicy.fetch(origin.origin, 'QA-Benchmarking-Bot'),
-      pageDelayMs: ownMachine ? 0 : 2000,
+      robots,
+      pageDelayMs: crawlPageDelayMs(ownMachine ? 0 : 2000, robots),
       screenshotDir: path.join(c.session.report.dirFor(record.context.runId), 'plan-pages'),
       screenshotPrefix: `more-${Date.now()}`,
       onPage: options.onPage,

@@ -38,7 +38,7 @@ import { detectSiteType, type SiteType } from './site-type.js';
 import { formQuestion, intentQuestionsFor } from './questions.js';
 import { siteContentKey, type RememberedPlan } from '../site-memory.js';
 import type { CrawlOptions } from './deterministic-spider.js';
-import { RobotsPolicy } from '../competitive/robots.js';
+import { RobotsPolicy, ROBOTS_USER_AGENT_TOKEN, crawlPageDelayMs } from '../competitive/robots.js';
 import { isPrivateHost } from '../competitive/safe-crawler.js';
 import { blockChanges, markJourneysNeedingTestCopy } from '../live-site.js';
 import type { AIProvider } from '../ai/ai-provider.js';
@@ -158,7 +158,6 @@ const JOURNEY_PROMPT_PAGES = 40;
 
 /** Waits between page loads on sites we don't own. */
 const PUBLIC_SITE_PAGE_DELAY_MS = 2000;
-const CRAWLER_TOKEN = 'QA-Benchmarking-Bot';
 
 /**
  * Combines the signed-out crawl with each role's crawl. A page keeps the elements seen by the
@@ -451,10 +450,13 @@ export class DiscoveryAgent {
     const defaultBudgetMinutes = Number.isFinite(envMinutes) && envMinutes > 0 ? envMinutes : 20;
     const deadlineAt = options.deadlineAt ?? Date.now() + defaultBudgetMinutes * 60 * 1000;
 
+    const robots = ownMachine ? undefined : await RobotsPolicy.fetch(targetOrigin.origin, ROBOTS_USER_AGENT_TOKEN);
+    const chosenDelayMs =
+      options.crawlDelayMs !== undefined ? options.crawlDelayMs : ownMachine ? 0 : PUBLIC_SITE_PAGE_DELAY_MS;
     const crawlOptions: CrawlOptions = {
-      robots: ownMachine ? undefined : await RobotsPolicy.fetch(targetOrigin.origin, CRAWLER_TOKEN),
-      pageDelayMs:
-        options.crawlDelayMs !== undefined ? options.crawlDelayMs : ownMachine ? 0 : PUBLIC_SITE_PAGE_DELAY_MS,
+      robots,
+      // A site's own Crawl-delay is a floor: the person's setting can ask for more, never less (ADR 0015).
+      pageDelayMs: crawlPageDelayMs(chosenDelayMs, robots),
       concurrency: options.crawlConcurrency,
       customHeaders: options.customHeaders,
       screenshotDir: path.join(outputDir, 'plan-pages'),

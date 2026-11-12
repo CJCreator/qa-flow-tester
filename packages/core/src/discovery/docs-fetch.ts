@@ -1,11 +1,10 @@
-import { RobotsPolicy } from '../competitive/robots.js';
+import { RobotsPolicy, ROBOTS_USER_AGENT_TOKEN } from '../competitive/robots.js';
 import { isSameSite } from '../same-site.js';
 import { safeGet, type NetDeps } from '../safe-net.js';
 
 export const DOCS_MAX_PAGES = 20;
 export const DOCS_MAX_BYTES = 1024 * 1024;
 const MAX_REDIRECTS = 5;
-const ROBOTS_TOKEN = 'qa-flow-tester';
 
 export type DocsGetResult =
   { ok: true; status: number; finalUrl: string; contentType: string; body: string } | { ok: false; why: string };
@@ -295,7 +294,7 @@ export async function fetchDocsPages(startUrl: string, options: DocsFetchOptions
     const r = await get(new URL('/robots.txt', start).toString(), { maxBytes }).catch(() => null);
     robots =
       r && r.ok && r.status >= 200 && r.status < 300
-        ? RobotsPolicy.parse(r.body, ROBOTS_TOKEN)
+        ? RobotsPolicy.parse(r.body, ROBOTS_USER_AGENT_TOKEN)
         : RobotsPolicy.allowAll();
   }
 
