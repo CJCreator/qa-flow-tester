@@ -23,11 +23,11 @@ on:
         type: boolean
         default: false
 
-# One deploy at a time. If a new commit is pushed to main while a previous run is in progress,
-# the older run is cancelled to immediately deploy the latest code without queuing delays.
+# One deploy at a time. A push while a deploy is running waits for it: cancelling mid-rollout could leave the runner
+# and the site on different commits. GitHub keeps only the newest waiting run, so the latest commit still goes out.
 concurrency:
   group: deploy
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read
