@@ -397,7 +397,8 @@ export class AuditStore implements AuditStoreContext {
       // Index entries first, so no index entry ever points at a removed folder.
       await tombstoneShares(this, auditId);
       await removeHelperIndexEntries(this, auditId);
-      await this.backend.deletePrefix(auditFolder(auditId));
+      // The record last: while it exists the audit is listed and the delete can be run again (ADR 0036).
+      await this.backend.deletePrefix(auditFolder(auditId), { last: auditRecordKey(auditId) });
       return existed;
     });
   }

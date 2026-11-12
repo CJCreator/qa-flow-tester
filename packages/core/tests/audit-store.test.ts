@@ -21,6 +21,7 @@ import {
   helperEmailHash,
   pageSlug,
   type AuditStoreBackend,
+  type DeletePrefixOptions,
 } from '../src/audit/store/index.js';
 import { pageContentName } from '../src/audit/pipeline/pipeline.js';
 import { phoneScreenshotFile } from '../src/audit/phone-layout.js';
@@ -57,7 +58,7 @@ function spy(inner: AuditStoreBackend): AuditStoreBackend & { calls: string[] } 
     getBytes: (k) => (calls.push(`getBytes ${k}`), inner.getBytes(k)),
     putBytes: (k, d) => (calls.push(`putBytes ${k}`), inner.putBytes(k, d)),
     list: (p) => (calls.push(`list ${p}`), inner.list(p)),
-    deletePrefix: (p) => (calls.push(`deletePrefix ${p}`), inner.deletePrefix(p)),
+    deletePrefix: (p, o) => (calls.push(`deletePrefix ${p}`), inner.deletePrefix(p, o)),
   };
 }
 
@@ -432,6 +433,19 @@ describe('deleteAudit (Q-30)', () => {
     expect((await store.resolveShare(keepLink.id)).status).toBe('open');
     // Deleting again is harmless.
     expect(await store.deleteAudit(id)).toBe(false);
+  });
+
+  it('names the audit record as the last key', async () => {
+    let capturedOptions: DeletePrefixOptions | undefined;
+    const watched = spy(backend);
+    watched.deletePrefix = async (prefix, options) => {
+      capturedOptions = options;
+      return backend.deletePrefix(prefix, options);
+    };
+    const wrappedStore = new AuditStore(watched);
+    const { auditId: id } = await wrappedStore.createAudit(REQUEST);
+    await wrappedStore.deleteAudit(id);
+    expect(capturedOptions?.last).toBe(`audits/${id}/audit.json`);
   });
 });
 

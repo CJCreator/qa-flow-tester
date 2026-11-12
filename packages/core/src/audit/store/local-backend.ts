@@ -1,7 +1,14 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { writeJsonAtomic } from '../../atomic-write.js';
-import { assertValidKey, AuditStoreError, normalizePrefix, type AuditStoreBackend } from './backend.js';
+import {
+  assertKeyInFolder,
+  assertValidKey,
+  AuditStoreError,
+  normalizePrefix,
+  type AuditStoreBackend,
+  type DeletePrefixOptions,
+} from './backend.js';
 
 /** Folder under the runner data folder that holds the local audit store (ADR 0036). */
 export const LOCAL_AUDIT_STORE_DIR = 'audit-store';
@@ -119,9 +126,26 @@ export class LocalAuditStoreBackend implements AuditStoreBackend {
     }
   }
 
-  async deletePrefix(prefix: string): Promise<void> {
+  async deletePrefix(prefix: string, options: DeletePrefixOptions = {}): Promise<void> {
     const folder = normalizePrefix(prefix);
-    await fs.rm(this.resolve(folder.slice(0, -1)), { recursive: true, force: true });
+    const folderDir = this.resolve(folder.slice(0, -1));
+    if (options.last !== undefined) {
+      assertKeyInFolder(folder, options.last);
+      const lastFileName = options.last.slice(folder.length);
+      let entries: string[];
+      try {
+        entries = await fs.readdir(folderDir);
+      } catch (err) {
+        if (isMissing(err)) return;
+        throw err;
+      }
+      for (const entry of entries) {
+        if (entry !== lastFileName) {
+          await fs.rm(path.join(folderDir, entry), { recursive: true, force: true });
+        }
+      }
+    }
+    await fs.rm(folderDir, { recursive: true, force: true });
   }
 }
 

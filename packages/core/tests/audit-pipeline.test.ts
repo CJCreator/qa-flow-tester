@@ -738,12 +738,21 @@ describe('audit pipeline: runAuditPipeline', () => {
 
   it('throws AuditPipelineError when the result cannot be saved, and records the save as not done', async () => {
     const { outcome, mem, steps } = await run();
-    mem.store.saveResult.mockRejectedValueOnce(new Error('disk full'));
+    mem.store.saveResult.mockRejectedValue(new Error('disk full'));
     await expect(outcome).rejects.toBeInstanceOf(AuditPipelineError);
     await expect(outcome).rejects.toThrow('The audit could not be saved.');
     expect(steps.at(-1)).toMatchObject({ step: 'saving', status: 'not-done' });
     expect(mem.store.updateVersion).not.toHaveBeenCalled();
+    expect(mem.store.saveResult).toHaveBeenCalledTimes(2);
     await expect(outcome).rejects.toMatchObject({ code: 'save-failed' });
+  });
+
+  it('retries saveResult once: a passing blip still saves the result', async () => {
+    const { outcome, mem } = await run();
+    mem.store.saveResult.mockRejectedValueOnce(new Error('blip'));
+    await expect(outcome).resolves.toBeDefined();
+    expect(mem.results).toHaveLength(1);
+    expect(mem.store.saveResult).toHaveBeenCalledTimes(2);
   });
 
   it('retries updateVersion once: a passing blip after a stored result still completes', async () => {
@@ -1191,7 +1200,7 @@ describe('audit pipeline: runAuditPipeline', () => {
 
   it('only a save failure throws with errorCode ERR_PIPELINE', async () => {
     const { outcome, mem } = await run();
-    mem.store.saveResult.mockRejectedValueOnce(new Error('disk write failed'));
+    mem.store.saveResult.mockRejectedValue(new Error('disk write failed'));
 
     await expect(outcome).rejects.toThrow(AuditPipelineError);
     await expect(outcome).rejects.toMatchObject({

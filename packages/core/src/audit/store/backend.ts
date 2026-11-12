@@ -26,8 +26,19 @@ export interface AuditStoreBackend {
    * (`listFolders('audits')` gives the audit ids). Optional: a backend without it is listed with `list`.
    */
   listFolders?(prefix: string): Promise<string[]>;
-  /** Removes every key under a folder prefix. The prefix must not be empty. */
-  deletePrefix(prefix: string): Promise<void>;
+  /**
+   * Removes every key under a folder prefix. The prefix must not be empty.
+   * When `options.last` is given, that key is deleted only after every other key under the prefix is gone.
+   */
+  deletePrefix(prefix: string, options?: DeletePrefixOptions): Promise<void>;
+}
+
+export interface DeletePrefixOptions {
+  /**
+   * A key directly inside the folder that is deleted only after every other key under it is gone. When any
+   * other delete fails it stays, so the caller can run the same delete again (the audit record, ADR 0036).
+   */
+  last?: string;
 }
 
 export type AuditStoreErrorCode =
@@ -86,4 +97,10 @@ export function normalizePrefix(prefix: string, options: { allowEmpty?: boolean 
   const folder = prefix.endsWith('/') ? prefix.slice(0, -1) : prefix;
   assertValidKey(folder);
   return `${folder}/`;
+}
+
+/** Throws invalid-key unless `key` is a valid key directly inside `folder` (as `normalizePrefix` returns it). */
+export function assertKeyInFolder(folder: string, key: string): void {
+  assertValidKey(key);
+  if (!key.startsWith(folder) || key.slice(folder.length).includes('/')) throw invalidKey();
 }
