@@ -38,6 +38,8 @@ interface Session {
   proofChecks?: Map<string, number>;
   /** Owns a run or a plan: kept when the session cap is reached. */
   pinned?: boolean;
+  /** The visitor is signed in with an AUDIT_OWNER_EMAILS Google account; set on every request (T-299). */
+  owner?: boolean;
 }
 const sessions = new Map<string, Session>();
 
@@ -50,6 +52,17 @@ function ownsSomething(s: Session): boolean {
 export function pinSession(sessionId: string | undefined): void {
   const s = sessionId ? sessions.get(sessionId) : undefined;
   if (s) s.pinned = true;
+}
+
+/** Records, on every request, whether the visitor is signed in as an owner of this copy. */
+export function markSessionOwner(sessionId: string, owner: boolean): void {
+  const s = sessions.get(sessionId);
+  if (s) s.owner = owner;
+}
+
+/** Whether a session (by default the current request's) is a signed-in owner of this copy. */
+export function sessionIsOwner(sessionId: string | undefined = current.getStore()): boolean {
+  return !!sessionId && sessions.get(sessionId)?.owner === true;
 }
 
 function forgetOldSessions(): void {

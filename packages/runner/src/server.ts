@@ -153,6 +153,8 @@ import {
   claimProofCheck,
   sessionFor,
   pinSession,
+  markSessionOwner,
+  sessionIsOwner,
   SessionRateLimited,
   purgeStaleSessions,
   liveVisitorFolders,
@@ -283,6 +285,8 @@ const DOWNLOADABLE_REPORT_FILES: Record<string, string> = {
 };
 /** One scheduled run may hold the tick request this long (28 min); past it the run is left going and marked failed. */
 const SCHEDULE_RUN_CAP_MS = 28 * 60 * 1000;
+/** The owner of a run a schedule started on the hosted copy: any signed-in owner of the copy. Never a session id (those are base64url). */
+const SCHEDULE_RUN_OWNER = '(schedule)';
 /** A tick starts no new run after this long (29 min): Cloud Scheduler gives up on a request at 30 min (ADR 0039). */
 const TICK_BUDGET_MS = 29 * 60 * 1000;
 const MAX_HOSTED_SCHEDULES = 10;
@@ -736,8 +740,11 @@ export class RunnerServer {
   /** Beta: whether a run belongs to the visitor making this request. Outside beta every run is everyone's. */
   private isMine(runId: string | null | undefined): boolean {
     if (!this.beta) return true;
+    const owner = runId ? this.runOwners.get(runId) : undefined;
+    // A scheduled run belongs to the copy's owners (T-298): any request signed in with an owner email.
+    if (owner === SCHEDULE_RUN_OWNER) return sessionIsOwner();
     const me = currentSessionId();
-    return !!me && !!runId && this.runOwners.get(runId) === me;
+    return !!me && !!owner && owner === me;
   }
 
   /** Where this visitor's remembered sites live: shared outside beta, one folder per visitor in beta. */
@@ -770,7 +777,11 @@ export class RunnerServer {
     const owner = this.beta && eventRun ? this.runOwners.get(eventRun) : undefined;
     for (const client of this.streamClients) {
       // Beta: a run's events go only to the visitor who started it.
-      if (this.beta && (!owner || this.streamSessions.get(client) !== owner)) continue;
+      const mine =
+        owner === SCHEDULE_RUN_OWNER
+          ? sessionIsOwner(this.streamSessions.get(client))
+          : !!owner && this.streamSessions.get(client) === owner;
+      if (this.beta && !mine) continue;
       try {
         client.write(payload);
       } catch {
@@ -1049,7 +1060,9 @@ export class RunnerServer {
           // view would count as a new visitor and soon hit the per-address limit.
           if (this.beta && matched?.route.access !== 'scheduler' && matched?.route.access !== 'public') {
             try {
-              enterSession(sessionFor(req, res, isHttpsRequest(req)));
+              const visitor = sessionFor(req, res, isHttpsRequest(req));
+              enterSession(visitor);
+              markSessionOwner(visitor, this.isAuditOwnerEmail(this.helperAccess?.session(req)?.email));
             } catch (err) {
               if (!(err instanceof SessionRateLimited)) throw err;
               res.setHeader('Retry-After', '600');
@@ -1405,7 +1418,9 @@ export class RunnerServer {
         beta: false,
         hostChecks: this.hostChecks,
       });
-      await this.checkupRun.start({ body, authorization });
+      const started = await this.checkupRun.start({ body, authorization });
+      // The tick has no visitor session, so claimOwner recorded nothing: the run is the copy's owners' (T-299).
+      if (this.beta) this.runOwners.set(started.runId, SCHEDULE_RUN_OWNER);
     } catch (err) {
       // The slot was taken between the check above and the start: the schedule is retried, not failed (R5).
       return (err as { code?: unknown } | null)?.code === 'ERR_RUN_IN_PROGRESS' ? 'busy' : false;
