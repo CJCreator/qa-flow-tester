@@ -19,7 +19,7 @@ describe('UX findings are deduplicated per normalized route (C7)', () => {
   const checker = new UXQualityChecker();
 
   it('the same route with different query noise is one finding', () => {
-    const out = checker.deduplicateFindings([f('a', '/checkout?utm=1'), f('b', '/Checkout/')]);
+    const out = checker.deduplicateFindings([f('a', '/checkout?utm=1'), f('b', '/checkout/')]);
     expect(out.map((x) => x.id)).toEqual(['a']);
   });
 

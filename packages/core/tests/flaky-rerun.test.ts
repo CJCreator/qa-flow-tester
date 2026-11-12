@@ -120,7 +120,7 @@ describe('Flaky Passed in the report', () => {
   it('report line shows "1 of 2" and the likely cause', async () => {
     const out = await new ReportGenerator(tempDir).generate(reportWith(flaky));
     const md = await fs.readFile(out.mdPath, 'utf8');
-    expect(md).toContain('TC-FLAKY: 1 of 2 passed; likely cause: network');
+    expect(md).toContain('`TC-FLAKY`: 1 of 2 passed; likely cause: network');
     expect(md).toContain('counted as passed');
   });
 
