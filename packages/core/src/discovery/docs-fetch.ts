@@ -3,6 +3,7 @@ import { isSameSite } from '../same-site.js';
 import { safeGet, type NetDeps } from '../safe-net.js';
 
 export const DOCS_MAX_PAGES = 20;
+export const DOCS_MAX_ATTEMPTS = 40;
 export const DOCS_MAX_BYTES = 1024 * 1024;
 const MAX_REDIRECTS = 5;
 
@@ -15,6 +16,7 @@ export type DocsGet = (url: string, opts: { maxBytes: number }) => Promise<DocsG
 export interface DocsFetchOptions {
   get?: DocsGet;
   maxPages?: number;
+  maxAttempts?: number;
   maxBytes?: number;
   /** Same-site rule; defaults to `isSameSite`. */
   sameSite?: (host: string, siteHost: string) => boolean;
@@ -273,6 +275,7 @@ function isDocType(contentType: string): 'html' | 'text' | null {
 export async function fetchDocsPages(startUrl: string, options: DocsFetchOptions = {}): Promise<DocsFetchResult> {
   const get = options.get ?? localDocsGet;
   const maxPages = options.maxPages ?? DOCS_MAX_PAGES;
+  const maxAttempts = options.maxAttempts ?? DOCS_MAX_ATTEMPTS;
   const maxBytes = options.maxBytes ?? DOCS_MAX_BYTES;
   const sameSite = options.sameSite ?? isSameSite;
   const docs: DocsFetchResult['docs'] = [];
@@ -300,8 +303,10 @@ export async function fetchDocsPages(startUrl: string, options: DocsFetchOptions
 
   const seen = new Set<string>([start.toString()]);
   const queue: string[] = [start.toString()];
-  while (queue.length > 0 && docs.length < maxPages) {
+  let attempts = 0;
+  while (queue.length > 0 && docs.length < maxPages && attempts < maxAttempts) {
     const url = queue.shift() as string;
+    attempts++;
     const u = new URL(url);
     if (!robots.isAllowed(u.pathname + u.search)) {
       skipped.push({ url, why: 'robots.txt does not allow it' });
@@ -361,6 +366,8 @@ export async function fetchDocsPages(startUrl: string, options: DocsFetchOptions
   }
   if (queue.length > 0 && docs.length >= maxPages) {
     skipped.push({ url: queue[0], why: `only the first ${maxPages} pages are read` });
+  } else if (queue.length > 0 && attempts >= maxAttempts) {
+    skipped.push({ url: queue[0], why: `stopped after ${maxAttempts} addresses tried` });
   }
   return { docs, skipped };
 }

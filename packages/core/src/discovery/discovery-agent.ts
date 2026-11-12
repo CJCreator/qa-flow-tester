@@ -611,6 +611,7 @@ export class DiscoveryAgent {
     if (!options.finishSignal?.aborted)
       await lookAtNarrowScreens(spiderResult.pages, {
         baseUrl: options.targetUrl,
+        deadlineAt,
         openContext: async (size, page) => {
           const signedIn = page.reachedBy?.includes('visitor') ? undefined : page.reachedBy?.[0];
           const context = await this.browserManager.createContext({

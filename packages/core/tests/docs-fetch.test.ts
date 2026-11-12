@@ -6,6 +6,7 @@ import { fetchDocsPages, htmlToDoc, makeGuardedDocsGet } from '../src/discovery/
 let server: http.Server;
 let base = '';
 let offHost = '';
+let requests: string[] = [];
 
 const page = (title: string, links: string[] = []) =>
   `<html><head><title>x</title><script>var secret=1</script></head><body><h1>${title}</h1><p>About ${title}.</p><ul><li>Rule of ${title}</li></ul>${links
@@ -15,6 +16,7 @@ const page = (title: string, links: string[] = []) =>
 beforeAll(async () => {
   server = http.createServer((req, res) => {
     const url = req.url ?? '/';
+    requests.push(url);
     const html = (b: string, type = 'text/html') => {
       res.writeHead(200, { 'content-type': type });
       res.end(b);
@@ -41,6 +43,10 @@ beforeAll(async () => {
     }
     if (url === '/docs/big') return html('x'.repeat(2000));
     if (url === '/docs/img') return html('png', 'image/png');
+    if (url === '/docs/dead-links') {
+      const dead = Array.from({ length: 60 }, (_, i) => `/docs/dead/${i + 1}`);
+      return html(page('Lots of dead links', dead));
+    }
     if (url.startsWith('/many/')) {
       const n = Number(url.slice(6));
       return html(page(`P${n}`, [`/many/${n + 1}`, `/many/${n + 2}`]));
@@ -91,6 +97,16 @@ describe('fetchDocsPages', () => {
     const { docs, skipped } = await fetchDocsPages(`${base}/many/1`);
     expect(docs).toHaveLength(20);
     expect(skipped.some((s) => /first 20/.test(s.why))).toBe(true);
+  });
+
+  it('stops after maxAttempts addresses tried when links are dead', async () => {
+    requests = [];
+    const { docs, skipped } = await fetchDocsPages(`${base}/docs/dead-links`, { maxAttempts: 10 });
+    const pageRequests = requests.filter((u) => u !== '/robots.txt');
+    expect(pageRequests.length).toBeLessThanOrEqual(10);
+    expect(pageRequests.length).toBe(10);
+    expect(docs).toHaveLength(1);
+    expect(skipped.some((s) => s.why === 'stopped after 10 addresses tried')).toBe(true);
   });
 
   it('refuses file: and non-http start', async () => {
