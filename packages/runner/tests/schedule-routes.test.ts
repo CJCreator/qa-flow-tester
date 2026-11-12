@@ -194,6 +194,7 @@ describe('schedules on a beta copy', () => {
   const store = memoryStore([sched({ id: 'sched_9_priv', targetUrl: 'http://10.0.0.5/' })]);
   let server: RunnerServer;
   let helperCookie: string;
+  let ownerCookie: string;
   let startSpy: ReturnType<typeof vi.fn>;
 
   beforeAll(async () => {
@@ -201,14 +202,17 @@ describe('schedules on a beta copy', () => {
     const access = createHelperAccess({
       ...helperSettingsFromEnv({ FIREBASE_PROJECT_ID: 'proj', RUNNER_ACCESS_TOKEN: KEY }),
       store: new AuditStore(new LocalAuditStoreBackend(storeDir)),
+      auditOwnerEmails: ['owner@example.com'],
     });
     helperCookie = `${HELPER_COOKIE}=${signHelperSession(access.sessionKey(), { email: 'h@example.com', sub: 'u1' }, new Date())}`;
+    ownerCookie = `${HELPER_COOKIE}=${signHelperSession(access.sessionKey(), { email: 'owner@example.com', sub: 'u2' }, new Date())}`;
     server = new RunnerServer({
       port: PORT,
       outputDir: path.join(scratch, 'c-report'),
       dataDir: path.join(scratch, 'c-data'),
       beta: true,
       accessToken: KEY,
+      auditOwnerEmails: ['owner@example.com'],
       scheduleStore: store,
       schedulerAuth: verifier(),
       helperAccess: access,
@@ -235,7 +239,7 @@ describe('schedules on a beta copy', () => {
 
   it('refuses private targets at creation with 400 ERR_PRIVATE_TARGET', async () => {
     for (const targetUrl of ['http://10.0.0.5/', 'http://localhost:3000']) {
-      const res = await call(PORT, 'POST', '/api/runner/schedules', { 'x-qa-access': KEY }, { targetUrl });
+      const res = await call(PORT, 'POST', '/api/runner/schedules', { cookie: ownerCookie }, { targetUrl });
       expect(res.status, targetUrl).toBe(400);
       expect(JSON.parse(res.body).code).toBe('ERR_PRIVATE_TARGET');
     }
@@ -246,10 +250,72 @@ describe('schedules on a beta copy', () => {
       PORT,
       'POST',
       '/api/runner/schedules',
-      { 'x-qa-access': KEY },
+      { cookie: ownerCookie },
       { targetUrl: 'https://example.com', hour: 25 }
     );
     expect(res.status).toBe(400);
+  });
+
+  it('the access key alone is 403 ERR_BETA on the four schedule rows', async () => {
+    for (const [method, rawPath] of [
+      ['GET', '/api/runner/schedules'],
+      ['POST', '/api/runner/schedules'],
+      ['POST', '/api/runner/schedules/sched_1_abc/toggle'],
+      ['DELETE', '/api/runner/schedules/sched_1_abc'],
+    ] as const) {
+      const res = await call(PORT, method, rawPath, { 'x-qa-access': KEY }, { targetUrl: 'https://example.com' });
+      expect(res.status, `${method} ${rawPath}`).toBe(403);
+      expect(JSON.parse(res.body).code, `${method} ${rawPath}`).toBe('ERR_BETA');
+    }
+  });
+
+  it('an owner manages schedules', async () => {
+    const saved = store.list;
+    store.list = [];
+    try {
+      const added = await call(
+        PORT,
+        'POST',
+        '/api/runner/schedules',
+        { cookie: ownerCookie },
+        { targetUrl: 'https://example.com' }
+      );
+      expect(added.status).toBe(201);
+      const { id } = JSON.parse(added.body) as { id: string };
+      expect((await call(PORT, 'GET', '/api/runner/schedules', { cookie: ownerCookie })).status).toBe(200);
+      const toggled = await call(
+        PORT,
+        'POST',
+        `/api/runner/schedules/${id}/toggle`,
+        { cookie: ownerCookie },
+        { enabled: false }
+      );
+      expect(toggled.status).toBe(200);
+      expect((await call(PORT, 'DELETE', `/api/runner/schedules/${id}`, { cookie: ownerCookie })).status).toBe(200);
+    } finally {
+      store.list = saved;
+    }
+  });
+
+  it('an eleventh schedule is refused', async () => {
+    const saved = store.list;
+    store.list = Array.from({ length: 10 }, (_, n) =>
+      sched({ id: `sched_${n}_full`, targetUrl: 'https://example.com/' })
+    );
+    try {
+      const res = await call(
+        PORT,
+        'POST',
+        '/api/runner/schedules',
+        { cookie: ownerCookie },
+        { targetUrl: 'https://example.com' }
+      );
+      expect(res.status).toBe(429);
+      expect(JSON.parse(res.body).code).toBe('ERR_SCHEDULE_LIMIT');
+      expect(store.list).toHaveLength(10);
+    } finally {
+      store.list = saved;
+    }
   });
 
   it('a valid token is served (not 403/429) with no session cookie, however often it calls', async () => {

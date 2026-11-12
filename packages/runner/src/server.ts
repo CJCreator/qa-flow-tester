@@ -26,6 +26,8 @@ import {
   redactedMessage,
   ALL_SCREEN_SIZES,
   LOOPBACK_HOSTS,
+  resolveTargetUrl,
+  signInAccount,
 } from './session/checkup-session.js';
 import {
   allRoutes,
@@ -40,6 +42,7 @@ import {
   sendJson,
   type PlanRouteContext,
   getAuditRunsForServer,
+  ensurePlanLoaded,
 } from './routes/index.js';
 import type { AuditCrawl, AuditAddressCheck } from './routes/audit-crawl.js';
 import {
@@ -282,6 +285,7 @@ const DOWNLOADABLE_REPORT_FILES: Record<string, string> = {
 const SCHEDULE_RUN_CAP_MS = 28 * 60 * 1000;
 /** A tick starts no new run after this long (29 min): Cloud Scheduler gives up on a request at 30 min (ADR 0039). */
 const TICK_BUDGET_MS = 29 * 60 * 1000;
+const MAX_HOSTED_SCHEDULES = 10;
 
 export interface RunnerServerOptions {
   port?: number;
@@ -330,7 +334,8 @@ export interface RunnerServerOptions {
   /**
    * Beta mode (RUNNER_BETA=1), for a runner shared with a few outside testers: each tester's AI key and
    * sign-ins live in memory for their session only, only public sites can be checked, and the routes that
-   * change what other testers see (deleting check-ups, schedules, comparisons) are closed.
+   * change what other testers see (deleting check-ups, comparisons) are closed. Schedules are served only to an
+   * owner signed in with an AUDIT_OWNER_EMAILS account (T-298).
    */
   beta?: boolean;
   /** Test seam for a shared machine (beta): replaces DNS lookup and the pinned connection used for host checks. */
@@ -389,7 +394,7 @@ export interface AuditWiring {
   readonly helperAccess: HelperAccess;
   /** The saved AI setup (provider, text and vision models; not secret, never a key). */
   readAiModels(): Promise<AuditAiSetup>;
-  /** The request is the owner's: it carries the access key, or, with none set, comes from this computer (DEC-004). */
+  /** The request is the owner's (`RunnerServer.isAuditOwner`): an AUDIT_OWNER_EMAILS sign-in, or, outside beta, the access key or this computer (DEC-004). */
   isOwnerRequest(req: http.IncomingMessage): boolean;
   /**
    * The runner is local (ADR 0042): not a beta copy and bound to this computer, so a Website Audit may read
@@ -590,14 +595,6 @@ export class RunnerServer {
 
   private get currentTunnelAuth(): string | undefined {
     return this.session.secrets.tunnelAuth;
-  }
-
-  private get currentHeaderHosts(): string[] | undefined {
-    return this.session.secrets.headerHosts;
-  }
-
-  private get currentUserAgent(): string | undefined {
-    return this.session.secrets.userAgent;
   }
 
   private get legacyDataDir(): string | undefined {
@@ -856,11 +853,12 @@ export class RunnerServer {
   }
 
   /**
-   * Whether the request is from an audit owner (holds the access key, or is a signed-in Google account in
-   * AUDIT_OWNER_EMAILS, ADR 0042 / T-86).
+   * Whether the request is from an audit owner: a signed-in Google account in AUDIT_OWNER_EMAILS (ADR 0042 / T-86),
+   * or, on a copy that is not beta, the access key (or this computer when no key is set, DEC-004). On a beta copy
+   * every tester holds the key, so the key alone is not ownership there (T-297).
    */
   public isAuditOwner(req: http.IncomingMessage): boolean {
-    if (this.carriesAccessKey(req)) return true;
+    if (!this.beta && this.carriesAccessKey(req)) return true;
     const session = this.helperAccess?.session(req);
     if (!session?.email) return false;
     return this.isAuditOwnerEmail(session.email);
@@ -927,7 +925,7 @@ export class RunnerServer {
     if (this.beta) setBrowserPolicy({ guard: makeRequestGuard(this.hostChecks) });
     await this.auditRecoveryDone;
     await this.moveLegacyData();
-    await this.ensurePlanLoaded();
+    await ensurePlanLoaded(this.session);
     await this.loadLatestReport();
     // A schedule does what its screen says: it is checked every minute from the moment the server is up.
     // The hosted copy (beta) has no timer of its own: Cloud Scheduler calls the tick route (ADR 0039).
@@ -1610,24 +1608,6 @@ export class RunnerServer {
   }
 
   /**
-   * The address to connect to: a host alias, or localhost mapped to the host machine when the
-   * runner itself runs in a container. Everything else is used as typed.
-   */
-  private resolveTargetUrl(targetUrl: string): string {
-    try {
-      const u = new URL(targetUrl);
-      const alias = this.hostAliases[u.hostname.toLowerCase()];
-      if (alias) u.hostname = alias;
-      else if (this.localhostAlias && LOOPBACK_HOSTS.includes(u.hostname)) u.hostname = this.localhostAlias;
-      else return targetUrl;
-      return u.toString();
-    } catch {
-      // Invalid URLs are reported by the caller.
-      return targetUrl;
-    }
-  }
-
-  /**
    * Whether this address is a Test Copy. Local mode: by its name (and the owner's mark), as before.
    * Shared machine: marked AND public AND the Verified Domain proof passes right now (ADR 0014).
    */
@@ -1794,7 +1774,7 @@ export class RunnerServer {
     };
 
     const check = await new PreFlightChecker().checkUrlReachable(
-      this.resolveTargetUrl(targetUrl),
+      resolveTargetUrl(targetUrl, this.hostAliases, this.localhostAlias),
       undefined,
       this.beta ? (url, headers) => this.sharedGet(url, headers) : undefined
     );
@@ -1828,11 +1808,6 @@ export class RunnerServer {
     }
   }
 
-  /** The keychain account a site's saved sign-in password is kept under. */
-  private signInAccount(host: string, role: string): string {
-    return `signin:${host.toLowerCase()}:${role}`;
-  }
-
   /**
    * GET "" lists every remembered site: whether it's a test copy, whether search is checked, and its
    * saved sign-ins (never their passwords). POST "<host>" { searchChecks?, forgetSignIn? } changes one.
@@ -1860,7 +1835,7 @@ export class RunnerServer {
       }
       const needsPassword: string[] = [];
       for (const s of memory.signIns ?? []) {
-        const hasPw = await this.keyResolver.readSecret(this.signInAccount(memory.host, s.role));
+        const hasPw = await this.keyResolver.readSecret(signInAccount(memory.host, s.role));
         if (!hasPw) needsPassword.push(s.role);
       }
       this.sendJson(res, 200, {
@@ -1890,6 +1865,7 @@ export class RunnerServer {
           postLoginUrl?: string;
         };
         testSignIn?: string;
+        customHeaders?: unknown;
         rememberSignIns?: RoleCredential[];
       } = {};
       try {
@@ -1908,7 +1884,7 @@ export class RunnerServer {
         const existingSignIns = [...(memory.signIns ?? [])];
         for (const role of body.rememberSignIns) {
           if (role.password) {
-            const saved = await this.keyResolver.saveSecret(this.signInAccount(host, role.role), role.password);
+            const saved = await this.keyResolver.saveSecret(signInAccount(host, role.role), role.password);
             if (!saved) {
               notSaved.push(role.role);
               continue;
@@ -1933,7 +1909,7 @@ export class RunnerServer {
       if (body.searchChecks !== undefined) memory.searchChecks = body.searchChecks ?? undefined;
       if (body.forgetSignIn) {
         memory.signIns = (memory.signIns ?? []).filter((s) => s.role !== body.forgetSignIn);
-        await this.keyResolver.forgetSecret(this.signInAccount(memory.host, body.forgetSignIn));
+        await this.keyResolver.forgetSecret(signInAccount(memory.host, body.forgetSignIn));
       }
       await saveSiteMemory(this.siteDir(), memory);
       this.sendJson(res, 200, { saved: true });
@@ -1961,6 +1937,7 @@ export class RunnerServer {
         postLoginUrl?: string;
       };
       testSignIn?: string;
+      customHeaders?: unknown;
     },
     res: http.ServerResponse
   ): Promise<void> {
@@ -1990,9 +1967,7 @@ export class RunnerServer {
       };
     } else {
       const saved = memory.signIns?.find((s) => s.role === body.testSignIn);
-      const password = saved
-        ? await this.keyResolver.readSecret(this.signInAccount(memory.host, saved.role))
-        : undefined;
+      const password = saved ? await this.keyResolver.readSecret(signInAccount(memory.host, saved.role)) : undefined;
       if (!saved || !password) {
         this.sendJson(res, 404, { error: 'That sign-in isn’t saved here.' });
         return;
@@ -2008,21 +1983,21 @@ export class RunnerServer {
         : !this.beta && isTestHost(typed.hostname)
           ? 'http:'
           : 'https:';
-      target = this.resolveTargetUrl(`${scheme}//${typed.host}`);
+      target = resolveTargetUrl(`${scheme}//${typed.host}`, this.hostAliases, this.localhostAlias);
     } catch {
       this.sendJson(res, 400, { error: 'That isn’t a site address.' });
+      return;
+    }
+    // The sign-in test sends only the headers its own request carries (T-296): never another run's secrets.
+    const ownHeaders = checkCustomHeaders(body.customHeaders);
+    if (!ownHeaders.ok) {
+      this.sendJson(res, 400, { error: ownHeaders.problem.error, code: ownHeaders.problem.code });
       return;
     }
     const browser = new BrowserManager();
     let result: { ok: boolean; landingPath?: string; reason?: SignInFailureReason };
     try {
-      const context = await browser.createContext({
-        baseUrl: target,
-        customHeaders: this.currentCustomHeaders,
-        userAgent: this.currentUserAgent,
-        tunnelAuth: this.currentTunnelAuth,
-        headerHosts: this.currentHeaderHosts,
-      });
+      const context = await browser.createContext({ baseUrl: target, customHeaders: ownHeaders.value });
       result = await new PreFlightChecker().signIn(context, target, credential);
     } catch {
       result = { ok: false, reason: 'unreachable' };
@@ -2041,9 +2016,7 @@ export class RunnerServer {
       return;
     }
     if (body.addSignIn) {
-      if (
-        !(await this.keyResolver.saveSecret(this.signInAccount(memory.host, credential.role), credential.password!))
-      ) {
+      if (!(await this.keyResolver.saveSecret(signInAccount(memory.host, credential.role), credential.password!))) {
         this.sendJson(res, 200, {
           verified: true,
           saved: false,
@@ -2113,7 +2086,7 @@ export class RunnerServer {
       const currentSignIns = [...(memory?.signIns ?? [])];
       const notSaved: string[] = [];
       for (const role of body.roles) {
-        if (role.password && !(await this.keyResolver.saveSecret(this.signInAccount(host, role.role), role.password))) {
+        if (role.password && !(await this.keyResolver.saveSecret(signInAccount(host, role.role), role.password))) {
           notSaved.push(role.role);
           continue;
         }
@@ -2133,7 +2106,7 @@ export class RunnerServer {
     const roles: RoleCredential[] = [];
     const needsPassword: string[] = [];
     for (const s of memory.signIns) {
-      const password = await this.keyResolver.readSecret(this.signInAccount(host, s.role));
+      const password = await this.keyResolver.readSecret(signInAccount(host, s.role));
       if (password) {
         roles.push({
           role: s.role,
@@ -3141,7 +3114,7 @@ export class RunnerServer {
 
     // A plan waiting for review is kept aside when another site is checked (one waiting plan per
     // site). Only a new check-up of the same site throws it away, so the caller has to say so.
-    await this.ensurePlanLoaded();
+    await ensurePlanLoaded(this.session);
     const waiting = this.phase === 'awaiting-review' ? this.session.plan.currentRecord : null;
     // Beta: a plan another visitor left waiting is kept aside for them, whatever the site, and is never named here.
     const othersPlan = this.beta && !!waiting && !this.isMine(waiting.plan.runId);
@@ -3389,15 +3362,6 @@ export class RunnerServer {
     return this.makeAIProvider(settings.provider, apiKey, settings.model);
   }
 
-  private async ensurePlanLoaded(): Promise<StoredPlanRecord | null> {
-    const record = await this.session.plan.current();
-    // Never marked awaiting review while an audit or benchmark holds the slot (DEC-002): begin() refuses then.
-    if (record && this.phase === 'idle' && this.session.run.begin(record.plan.runId, record.plan.targetUrl)) {
-      this.session.run.setPhase('awaiting-review');
-    }
-    return record;
-  }
-
   /** The site a plan is for, as typed ("localhost:3050"). */
   private hostOfPlan(record: StoredPlanRecord): string {
     return this.session.plan.hostOf(record);
@@ -3616,7 +3580,7 @@ export class RunnerServer {
           refName,
           flowType,
           outputDir: shots,
-          resolveUrl: (address) => this.resolveTargetUrl(address),
+          resolveUrl: (address) => resolveTargetUrl(address, this.hostAliases, this.localhostAlias),
           ai: await this.benchmarkAi(),
           onStage: (stage) => {
             job.stage = stage;
@@ -3759,6 +3723,14 @@ export class RunnerServer {
     }
 
     try {
+      // The hosted copy has one run slot for everyone: a few schedules, not a full day of them (T-298).
+      if (this.beta && (await this.scheduler.loadSchedules()).length >= MAX_HOSTED_SCHEDULES) {
+        this.sendJson(res, 429, {
+          error: `This copy already has ${MAX_HOSTED_SCHEDULES} schedules. Delete one before adding another.`,
+          code: 'ERR_SCHEDULE_LIMIT',
+        });
+        return;
+      }
       let hostname = body.targetUrl;
       try {
         hostname = new URL(body.targetUrl).hostname;

@@ -220,7 +220,7 @@ export function speedSourceNoteText(source: 'pagespeed-insights' | 'this-tool' |
 export function aiStatusNoteText(status: AuditAiStatus, reason?: string): string {
   if (status === 'ready') return 'AI: ready.';
   if (status === 'no-key') return 'AI notes need an AI key.';
-  if (status === 'key-expired') return 'The AI key expired. Update it in Audit settings.';
+  if (status === 'key-expired') return 'The AI key expired. Update it in Settings.';
   if (status === 'quota') return 'The AI quota was reached.';
   if (status === 'timeout') return 'The AI did not answer in time.';
   if (status === 'provider-error') {

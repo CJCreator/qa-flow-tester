@@ -40,25 +40,25 @@ jobs:
       # Preview deployments are test copies. A Production deployment is checked read-only.
       QA_TARGET_URL: ${{ inputs.url || github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
       QA_STAGING: ${{ inputs.staging || (github.event_name == 'deployment_status' && github.event.deployment.environment != 'Production') }}
-      QA_AI_API_KEY: ${{ secrets.QA_AI_API_KEY }}
       QA_AI_PROVIDER: openrouter
       QA_OUTPUT_DIR: qa-report
       # Fail the build on a Blocker. Use "major" to be stricter, or "none" to only report.
       QA_FAIL_ON: blocker
     steps:
       - name: Get the check-up tool
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           repository: CJCreator/qa-flow-tester
-          # The QA Tool version to run: a release tag once one is published, otherwise the main branch.
+          # Pinned to the commit this page was built from, so every run gets exactly that code.
+          # (A build with no commit falls back to the main branch.)
           ref: __QA_TOOL_REF__
           path: .qa-tool
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
         with:
           package_json_file: .qa-tool/package.json
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: pnpm
@@ -72,11 +72,13 @@ jobs:
           pnpm --filter "@qa/runner..." run build
 
       - name: Run the check-up
+        env:
+          QA_AI_API_KEY: ${{ secrets.QA_AI_API_KEY }}
         run: node .qa-tool/packages/runner/dist/checkup.js
 
       - name: Keep the report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: qa-report
           path: qa-report

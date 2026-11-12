@@ -19,6 +19,37 @@ import { isSameSite } from './same-site.js';
 /** The plain URL check's fetch: the browser guard's address rule on every hop (ADR 0031). */
 const guardedFetch = makeGuardedFetch();
 
+/** The Role's own request headers: its `headers` and, with a token, `Authorization: Bearer <token>`. */
+export function roleRequestHeaders(credential: Partial<RoleCredential> | undefined): Record<string, string> {
+  return {
+    ...credential?.headers,
+    ...(credential?.token ? { Authorization: `Bearer ${credential.token}` } : {}),
+  };
+}
+
+/** Adds the Role's headers to every request to the checked site, never to a CDN, analytics or font host. No headers: nothing is added. */
+export async function routeRoleHeaders(
+  context: BrowserContext,
+  baseUrl: string,
+  headers: Record<string, string>
+): Promise<void> {
+  if (Object.keys(headers).length === 0) return;
+  const siteHost = new URL(baseUrl).host.toLowerCase();
+  await context
+    .route('**/*', async (route) => {
+      let onSite = false;
+      try {
+        const host = new URL(route.request().url()).host.toLowerCase();
+        onSite = host === siteHost || isSameSite(host, siteHost);
+      } catch {
+        onSite = false;
+      }
+      if (!onSite) return route.fallback();
+      return route.fallback({ headers: { ...route.request().headers(), ...headers } });
+    })
+    .catch(() => {});
+}
+
 /** A required sign-in failed. The message is the fixed wording for the reason: never any typed detail. */
 export class SignInFailedError extends Error {
   readonly code = 'ERR_SIGN_IN_FAILED';
@@ -236,27 +267,8 @@ export class PreFlightChecker {
     }
 
     // Apply per-role headers and localStorage initialization if specified
-    const roleHeaders = {
-      ...credential.headers,
-      ...(credential.token ? { Authorization: `Bearer ${credential.token}` } : {}),
-    };
-    if (Object.keys(roleHeaders).length > 0) {
-      // Only the checked site gets the Role's headers: never a CDN, analytics or font host.
-      const siteHost = new URL(baseUrl).host.toLowerCase();
-      await context
-        .route('**/*', async (route) => {
-          let onSite = false;
-          try {
-            const host = new URL(route.request().url()).host.toLowerCase();
-            onSite = host === siteHost || isSameSite(host, siteHost);
-          } catch {
-            onSite = false;
-          }
-          if (!onSite) return route.fallback();
-          return route.fallback({ headers: { ...route.request().headers(), ...roleHeaders } });
-        })
-        .catch(() => {});
-    }
+    const roleHeaders = roleRequestHeaders(credential);
+    await routeRoleHeaders(context, baseUrl, roleHeaders);
     if (credential.localStorageEntries && Object.keys(credential.localStorageEntries).length > 0) {
       await context
         .addInitScript((entries) => {
@@ -693,11 +705,7 @@ export class PreFlightChecker {
 
           let context: BrowserContext | undefined;
           try {
-            const roleHeaders = {
-              ...options.customHeaders,
-              ...role.headers,
-              ...(role.token ? { Authorization: `Bearer ${role.token}` } : {}),
-            };
+            const roleHeaders = { ...options.customHeaders, ...roleRequestHeaders(role) };
             context = await options.browserManager.createContext({
               baseUrl: targetUrl,
               tunnelAuth,

@@ -21,8 +21,8 @@ All in `packages/core/src/redact.ts`. A hidden value becomes `REDACTED = '***'`.
 ### Shipped: where it is applied
 | File | Lines | What goes through it |
 | --- | --- | --- |
-| `packages/core/src/orchestrator.ts` | 314-316 | Every event, via `deep`, before it is emitted. Built from the profile roles. |
-| `packages/core/src/orchestrator.ts` | 1166-1167 | `files(evidenceDir)` over the evidence folder; the Report via `deep` before it is returned. |
+| `packages/core/src/orchestrator.ts` | `runRedactor` | Every event, via `deep`, before it is emitted. Built from the profile Roles, the run's custom header values, the tunnel auth value and the values of supplied sessions (`extraSecrets`). |
+| `packages/core/src/orchestrator.ts` | `files(evidenceDir)` | Over the evidence folder before the report is built, and again in `run()`'s `finally` on every other exit (stop, sign-in failure, error); the Report via `deep` before it is returned. |
 | `packages/core/src/safe-scan.ts` | 39-40, 118, 141 | `new Redactor()` with no credentials, so URL parameters only: events, the Report, and `evidence/` files. |
 | `packages/core/src/discovery/discovery-agent.ts` | 200, 262 | Redactor built from the profile roles; the landing address in log lines goes through `text`. |
 | `packages/core/src/discovery/discovery-agent.ts` | 400, 437 | A `redact` callback handed to page planning and journey planning, which apply it to AI prompts (`packages/core/src/plan/ai-planner.ts:573`, `packages/core/src/plan/journeys.ts:125`). |
@@ -39,8 +39,8 @@ These are the behaviour today. None is a bug report; each closure is a change to
 
 - A password or token shorter than 3 characters is not hidden.
 - A username without `@` is not hidden. This is chosen: a plain `admin` would blank ordinary words in a Report. Covered by the test "keeps plain usernames, which would blank out ordinary words".
-- Only the exact names in `SECRET_PARAM_NAMES` are matched. `x-api-key` and `?apiKeyValue=` are not. A value in a `#fragment` (`#access_token=...`) is not, because the pattern needs `?` or `&` before the name.
-- Only the literal, URL-encoded and `+` forms are hidden. Base64, HTML entities and other encodings are not.
+- Only the exact names in `SECRET_PARAM_NAMES` are matched. `x-api-key` and `?apiKeyValue=` are not. A value in a `#fragment` (`#access_token=...`) is matched too: the pattern also accepts `#` before the name.
+- A known secret is hidden as typed, URL-encoded (and with `+` for a space), HTML-escaped (named and numeric entities) and JSON-escaped (`\"`, `\uXXXX`). Base64 is not.
 - `deep` rewrites string values, not object keys.
 - `files` skips every other extension. Screenshots and videos (`.png`, `.webm`) are not redacted, so a typed password visible on screen stays in the picture. [0019](0019-visual-diff-stabilising-and-masking.md) masks password fields in newly recorded visual baselines only, and adds old/new/difference images to the Report, which are not redacted.
 - Browser sign-in state is written to `<outputDir>/auth/<role>.json` (`packages/core/src/preflight.ts`, around line 161). It is outside `evidence/`, is never passed through `files`, and holds live cookies. Treat the whole output folder as sensitive until this is closed.

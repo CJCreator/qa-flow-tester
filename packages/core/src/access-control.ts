@@ -180,7 +180,11 @@ const ACCESS_MAX_BYTES = 2_000_000;
  * A GET with a browser context's own cookies for that address, through the pinned outbound path
  * (ADR 0031): no redirects followed, so a 3xx comes back with its Location.
  */
-export function contextFetcher(context: BrowserContext, deps?: NetDeps): AccessFetcher {
+export function contextFetcher(
+  context: BrowserContext,
+  deps?: NetDeps,
+  headers: Record<string, string> = {}
+): AccessFetcher {
   return async (url) => {
     const cookies = await context.cookies(url).catch(() => []);
     const cookie = cookies.map((c) => `${c.name}=${c.value}`).join('; ');
@@ -188,7 +192,7 @@ export function contextFetcher(context: BrowserContext, deps?: NetDeps): AccessF
       maxRedirects: 0,
       timeoutMs: 15000,
       maxBytes: ACCESS_MAX_BYTES,
-      headers: cookie ? { Cookie: cookie } : {},
+      headers: { ...headers, ...(cookie ? { Cookie: cookie } : {}) },
       deps,
     });
     const res = await fetchFn(url);

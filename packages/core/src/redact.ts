@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import type { RoleCredential } from '@qa/types';
+import type { RoleCredential, StorageStateData } from '@qa/types';
 import { SECRET_PARAM_NAMES } from '@qa/checkers';
 
 export const REDACTED = '***';
@@ -95,6 +95,27 @@ export interface RedactorOptions {
    * token, on text nobody reads.
    */
   minSecretLength?: number;
+  /** More values to hide: a run's custom header values, tunnel auth, saved session values. Same 8-character floor as Role headers. */
+  extraSecrets?: string[];
+}
+
+/** Every cookie value and localStorage value in a saved session. Unknown shapes are skipped. */
+export function storageStateSecrets(state: StorageStateData): string[] {
+  const out: string[] = [];
+  if (!state || typeof state !== 'object') return out;
+  const valueOf = (x: unknown): unknown => (x && typeof x === 'object' ? (x as { value?: unknown }).value : undefined);
+  for (const c of Array.isArray(state.cookies) ? state.cookies : []) {
+    const v = valueOf(c);
+    if (typeof v === 'string') out.push(v);
+  }
+  for (const o of Array.isArray(state.origins) ? state.origins : []) {
+    const entries = o && typeof o === 'object' ? (o as { localStorage?: unknown }).localStorage : undefined;
+    for (const e of Array.isArray(entries) ? entries : []) {
+      const v = valueOf(e);
+      if (typeof v === 'string') out.push(v);
+    }
+  }
+  return out;
 }
 
 /**
@@ -108,18 +129,21 @@ export class Redactor {
   constructor(credentials: Array<Partial<RoleCredential>> = [], opts: RedactorOptions = {}) {
     const minLength = opts.minSecretLength ?? DEFAULT_MIN_SECRET_LENGTH;
     const values = new Set<string>();
+    const addExtra = (extra: unknown) => {
+      if (typeof extra !== 'string') return;
+      // "Bearer abc": hide the token part as well, so it is caught wherever it appears on its own.
+      const bare = extra.replace(/^(Bearer|Basic|Token)\s+/i, '');
+      for (const v of [extra, bare]) if (v.length >= Math.max(minLength, MIN_EXTRA_SECRET_LENGTH)) values.add(v);
+    };
     for (const c of credentials) {
       for (const secret of [c.password, c.token]) if (secret && secret.length >= minLength) values.add(secret);
       if (c.username && c.username.includes('@')) values.add(c.username);
       // A Role's headers and stored entries are secrets too (an API key, a session token).
-      const extras = [...Object.values(c.headers ?? {}), ...Object.values(c.localStorageEntries ?? {})];
-      for (const extra of extras) {
-        if (typeof extra !== 'string') continue;
-        // "Bearer abc": hide the token part as well, so it is caught wherever it appears on its own.
-        const bare = extra.replace(/^(Bearer|Basic|Token)\s+/i, '');
-        for (const v of [extra, bare]) if (v.length >= Math.max(minLength, MIN_EXTRA_SECRET_LENGTH)) values.add(v);
+      for (const extra of [...Object.values(c.headers ?? {}), ...Object.values(c.localStorageEntries ?? {})]) {
+        addExtra(extra);
       }
     }
+    for (const extra of opts.extraSecrets ?? []) addExtra(extra);
     // Longest first, so a secret that contains another is hidden whole. Encoded and escaped forms too.
     this.secrets = [...values]
       .flatMap(secretForms)

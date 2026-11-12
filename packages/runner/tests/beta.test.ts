@@ -198,7 +198,7 @@ describe('A runner shared as a beta', () => {
   });
 });
 
-describe('Schedules on a beta copy with an access key (ADR 0039)', () => {
+describe('Schedules on a beta copy: the access key alone is not the owner (T-298)', () => {
   const KEY_PORT = 3573;
   const dir = path.join(process.cwd(), '.tmp-beta-schedules');
   let server: RunnerServer;
@@ -223,15 +223,17 @@ describe('Schedules on a beta copy with an access key (ADR 0039)', () => {
     await fs.rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   });
 
-  it('serves the owner: add, list, pause and delete are never 403', async () => {
-    const added = await asOwner('POST', '/api/runner/schedules', { targetUrl: 'https://example.com' });
-    expect(added.status).toBe(201);
-    const { id } = JSON.parse(added.body) as { id: string };
-    expect((await asOwner('GET', '/api/runner/schedules')).status).toBe(200);
-    expect((await asOwner('POST', `/api/runner/schedules/${id}/toggle`, { enabled: false })).status).toBe(200);
-    expect((await asOwner('DELETE', `/api/runner/schedules/${id}`)).status).toBe(200);
-    expect((await asOwner('DELETE', '/api/runner/schedules/sched_0_nothere')).status).toBe(404);
-    expect((await asOwner('POST', '/api/runner/schedules/sched_0_nothere/toggle', {})).status).toBe(404);
+  it('refuses a key holder with 403 ERR_BETA', async () => {
+    const calls = [
+      await asOwner('POST', '/api/runner/schedules', { targetUrl: 'https://example.com' }),
+      await asOwner('GET', '/api/runner/schedules'),
+      await asOwner('POST', '/api/runner/schedules/sched_1_abc/toggle', { enabled: false }),
+      await asOwner('DELETE', '/api/runner/schedules/sched_1_abc'),
+    ];
+    for (const answer of calls) {
+      expect(answer.status).toBe(403);
+      expect(JSON.parse(answer.body).code).toBe('ERR_BETA');
+    }
   });
 
   it('turns a visitor without the key away with 401', async () => {

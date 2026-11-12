@@ -1,8 +1,25 @@
-title = "QA Tool gitleaks config"
-
 [extend]
 useDefault = true
 
+# Only the test files named here are skipped. A real key pasted into any other test file, old or new, is found.
 [allowlist]
-description = "Fake keys in tests"
-paths = ['''^packages/[^/]+/tests/''']
+description = "Test files that hold fake keys on purpose. A new test file is scanned."
+paths = [
+  '''^packages/core/tests/ai-provider\.test\.ts$''',
+  '''^packages/core/tests/audit-assessment\.test\.ts$''',
+  '''^packages/core/tests/audit-doc-settings\.test\.ts$''',
+  '''^packages/core/tests/audit-pagespeed\.test\.ts$''',
+  '''^packages/core/tests/audit-store\.test\.ts$''',
+  '''^packages/core/tests/gemini-models\.test\.ts$''',
+  '''^packages/core/tests/key-resolver-encryption\.test\.ts$''',
+  '''^packages/core/tests/openrouter-cache\.test\.ts$''',
+  '''^packages/core/tests/openrouter-limits\.test\.ts$''',
+  '''^packages/core/tests/openrouter\.test\.ts$''',
+  '''^packages/runner/tests/ai-estimate-cap\.test\.ts$''',
+  '''^packages/runner/tests/ai-gemini-models\.test\.ts$''',
+  '''^packages/runner/tests/audit-settings-routes\.test\.ts$''',
+  '''^packages/runner/tests/beta\.test\.ts$''',
+  '''^packages/runner/tests/scan-build-secrets\.test\.ts$''',
+  '''^packages/runner/tests/scan-commit-secrets\.test\.ts$''',
+  '''^packages/wizard/tests/audit-document-settings\.test\.tsx$''',
+]
