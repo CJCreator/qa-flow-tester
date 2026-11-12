@@ -15,8 +15,6 @@ import {
   type StorageStateData,
   type PlanPatchBody,
   type ProviderLimits,
-  type AIStage,
-  type AIStageUsage,
 } from '@qa/types';
 import {
   planValidatorFor,
@@ -64,6 +62,7 @@ import { readJsonBody, sendJson } from './body.js';
 import type { CheckupSession, StoredPlanRecord } from '../session/checkup-session.js';
 import { redactedMessage } from '../session/checkup-run.js';
 import { checkIntentsOff, checkCustomHeaders, checkSavedSessions } from '../run-inputs.js';
+import { addTokens } from '../ai-tokens.js';
 
 export interface PlanRouteContext {
   readonly session: CheckupSession;
@@ -104,30 +103,6 @@ const CONSENT_NEEDS_SIGN_IN =
 
 function hasCompleteSignIn(roles?: Array<{ username?: string; password?: string }>): boolean {
   return (roles ?? []).some((r) => !!r.username && !!r.password);
-}
-
-function addTokens(
-  a?: Partial<Record<AIStage, AIStageUsage>>,
-  b?: Partial<Record<AIStage, AIStageUsage>>
-): Partial<Record<AIStage, AIStageUsage>> | undefined {
-  if (!a && !b) return undefined;
-  const out: Partial<Record<AIStage, AIStageUsage>> = { ...(a || {}) };
-  if (!b) return out;
-  for (const [stage, usage] of Object.entries(b) as Array<[AIStage, AIStageUsage]>) {
-    const existing = out[stage];
-    if (!existing) {
-      out[stage] = { ...usage };
-    } else {
-      out[stage] = {
-        requests: existing.requests + usage.requests,
-        promptTokens: existing.promptTokens + usage.promptTokens,
-        completionTokens: existing.completionTokens + usage.completionTokens,
-        reasoningTokens: existing.reasoningTokens + usage.reasoningTokens,
-        truncated: existing.truncated + usage.truncated,
-      };
-    }
-  }
-  return out;
 }
 
 export function asFlow(testCase: TestCase): DiscoveredFlow {

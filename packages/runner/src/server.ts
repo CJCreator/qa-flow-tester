@@ -13,6 +13,7 @@ import {
 } from '@qa/types';
 import { serveUi, type UiApp } from './ui-static.js';
 import { regradeReport } from './regrade.js';
+import { addTokens } from './ai-tokens.js';
 import {
   createCheckupSession,
   type CheckupSession,
@@ -57,7 +58,6 @@ import type {
   RunnerPhase,
   Breakpoint,
   DiscoveryDraft,
-  AIRequestBudget,
   BenchmarkJob,
   SignInFailureReason,
   RunCap,
@@ -265,23 +265,6 @@ function lastEventIdOf(req: http.IncomingMessage, url: URL): number | null {
   const raw = (Array.isArray(header) ? header[0] : header) ?? url.searchParams.get('lastEventId');
   if (typeof raw !== 'string' || !/^\d{1,15}$/.test(raw.trim())) return null;
   return Number(raw.trim());
-}
-
-/** Token use per stage, added together. */
-function addTokens(a: AIRequestBudget['tokens'], b: AIRequestBudget['tokens']): AIRequestBudget['tokens'] {
-  if (!b || Object.keys(b).length === 0) return a;
-  const sum: NonNullable<AIRequestBudget['tokens']> = JSON.parse(JSON.stringify(a ?? {}));
-  for (const [stage, u] of Object.entries(b) as Array<
-    [keyof typeof sum, NonNullable<(typeof sum)[keyof typeof sum]>]
-  >) {
-    const s = (sum[stage] ??= { requests: 0, promptTokens: 0, completionTokens: 0, reasoningTokens: 0, truncated: 0 });
-    s.requests += u.requests;
-    s.promptTokens += u.promptTokens;
-    s.completionTokens += u.completionTokens;
-    s.reasoningTokens += u.reasoningTokens;
-    s.truncated += u.truncated;
-  }
-  return sum;
 }
 
 /** The AI settings kept beside the key (not secret), so every browser gets the same setup. */
