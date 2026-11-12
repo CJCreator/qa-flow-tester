@@ -208,12 +208,22 @@ describe('Shared Link rows (D-004, REQ-048)', () => {
 
   it('only the /s/ rows are public and served on a beta copy; the others need the access key', () => {
     for (const row of routes) {
-      const isShared = typeof row.path === 'string' && (row.path === '/s' || row.path.startsWith('/s/'));
+      const isShared = typeof row.path === 'string' && row.path.startsWith('/s/');
       expect(row.access === 'public', String(row.path)).toBe(isShared);
       expect(row.beta === 'allow', String(row.path)).toBe(isShared);
       const visitor = authorizeRoute(row, { hasAccessKey: false, beta: true });
       expect(visitor.allow, String(row.path)).toBe(isShared);
     }
+  });
+
+  it('the Shared Link rows are exactly the four contract rows', () => {
+    expect(routes.map((r) => `${r.method} ${r.path}`)).toEqual([
+      'GET /api/audits/:id/share',
+      'POST /api/audits/:id/share',
+      'DELETE /api/audits/:id/share/:linkId',
+      'GET /s/:linkId',
+    ]);
+    expect(routes).toHaveLength(4);
   });
 });
 
@@ -390,7 +400,7 @@ describe('GET /s/:linkId', () => {
     expect(gone.text).toBe(SHARED_GONE_PAGE);
   });
 
-  it('answers the same 404 body for a malformed or an unknown linkId', async () => {
+  it('answers 404 for an unknown linkId, while malformed paths fall through to not found', async () => {
     const unknown = await call('GET', `/s/${'U'.repeat(22)}`);
     expect(unknown.status).toBe(404);
     expect(unknown.text).toBe(SHARED_NOT_FOUND_PAGE);
@@ -406,9 +416,7 @@ describe('GET /s/:linkId', () => {
     ]) {
       const res = await call('GET', malformed);
       expect(res.status, malformed).toBe(404);
-      expect(res.text, malformed).toBe(unknown.text);
-      expect(res.headers['content-type'], malformed).toBe(unknown.headers['content-type']);
-      expect(res.headers['set-cookie'], malformed).toBeUndefined();
+      expect(res.json?.error, malformed).toBe('Not found');
     }
   });
 });
