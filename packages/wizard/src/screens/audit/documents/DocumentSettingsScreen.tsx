@@ -135,7 +135,7 @@ export function DocumentSettingsView({
         </h4>
         <dl
           aria-labelledby="settings-placeholders-title"
-          className="grid grid-cols-1 gap-x-4 gap-y-1 text-sm sm:grid-cols-[auto_1fr]"
+          className="grid grid-cols-1 gap-x-4 gap-y-1 text-sm [overflow-wrap:anywhere] sm:grid-cols-[auto_1fr]"
         >
           {PROPOSAL_PLACEHOLDERS.map((p) => (
             <div key={p.name} className="contents">
@@ -174,7 +174,7 @@ export function DocumentSettingsView({
                 onChange={(e) => onDraft({ ...draft, optOutText: { ...draft.optOutText, [language]: e.target.value } })}
               />
               <p className="label mt-2 text-ink">{`Default text in ${LANGUAGE_LABEL[language]}`}</p>
-              <p className="whitespace-pre-wrap text-sm text-ink-soft" lang={language}>
+              <p className="whitespace-pre-wrap text-sm text-ink-soft [overflow-wrap:anywhere]" lang={language}>
                 {fallback === '' ? 'The tool has no default text for this language.' : fallback}
               </p>
               <button
