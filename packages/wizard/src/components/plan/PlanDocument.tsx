@@ -12,7 +12,8 @@ import type {
   TestCaseExpectations,
 } from '@qa/types';
 import { stepToSentence, expectationsToChecks } from '../../lib/plan-translate';
-import { scrollBehavior } from '../../lib/format';
+import { count, scrollBehavior } from '../../lib/format';
+import { Disclosure } from '../ui';
 import type { InterpretResult, PatchPlanBody } from '../../api';
 import {
   confirmRolesEdit,
@@ -653,37 +654,43 @@ function IntentSummary({ plan, actions }: { plan: ReviewPlan; actions: PlanActio
           {overCap}
         </p>
       )}
-      {present.length > 1 && (
-        <fieldset className="mt-3">
-          <legend className="label mb-1">Intents to run</legend>
-          <p className="mb-2 max-w-prose text-sm text-ink-soft">
-            An Intent is what a test expects to happen. Switch one off to leave its tests out of this check-up.
-          </p>
-          <div className="flex flex-wrap gap-x-5 gap-y-1">
-            {present.map((c) => {
-              const off = actions.intentsOff.includes(c.intent);
-              return (
-                <label
-                  key={c.intent}
-                  className="flex min-h-[44px] cursor-pointer items-center gap-2 text-base text-ink"
-                  title={INTENT_HINTS[c.intent]}
-                >
-                  <input
-                    type="checkbox"
-                    className="h-5 w-5 accent-stamp"
-                    data-testid={`intent-switch-${c.intent}`}
-                    checked={!off}
-                    disabled={actions.busy}
-                    onChange={(e) => actions.setIntentOff(c.intent, !e.target.checked)}
-                  />
-                  {c.label} ({c.items})
-                </label>
-              );
-            })}
-          </div>
-        </fieldset>
-      )}
     </div>
+  );
+}
+
+/** One switch per Intent, when the plan has more than one. */
+function IntentSwitches({ plan, actions }: { plan: ReviewPlan; actions: PlanActions }) {
+  const present = intentsInPlan(plan);
+  if (present.length < 2) return null;
+  return (
+    <fieldset>
+      <legend className="label mb-1">Intents to run</legend>
+      <p className="mb-2 max-w-prose text-sm text-ink-soft">
+        An Intent is what a test expects to happen. Switch one off to leave its tests out of this check-up.
+      </p>
+      <div className="flex flex-wrap gap-x-5 gap-y-1">
+        {present.map((c) => {
+          const off = actions.intentsOff.includes(c.intent);
+          return (
+            <label
+              key={c.intent}
+              className="flex min-h-[44px] cursor-pointer items-center gap-2 text-base text-ink"
+              title={INTENT_HINTS[c.intent]}
+            >
+              <input
+                type="checkbox"
+                className="h-5 w-5 accent-stamp"
+                data-testid={`intent-switch-${c.intent}`}
+                checked={!off}
+                disabled={actions.busy}
+                onChange={(e) => actions.setIntentOff(c.intent, !e.target.checked)}
+              />
+              {c.label} ({c.items})
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
   );
 }
 
@@ -697,7 +704,6 @@ function SummarySection({ plan, actions }: { plan: ReviewPlan; actions: PlanActi
   const scanningLine = plannedWhileScanningLine(plan);
   return (
     <Section id="plan-summary" title="What approving runs">
-      {scanningLine && <p className="mb-3 text-sm text-ink-soft">{scanningLine}</p>}
       <ul className="space-y-1.5">
         {(plan.summary?.lines || []).map((line, i) => (
           <li key={i} className="flex items-start justify-between gap-3 text-base text-ink">
@@ -708,7 +714,11 @@ function SummarySection({ plan, actions }: { plan: ReviewPlan; actions: PlanActi
               ) : null}
             </span>
             {line.itemIds.length > 0 && (
-              <button type="button" className="btn-link min-w-[44px] shrink-0 justify-center text-sm" onClick={() => showItem(line.itemIds[0])}>
+              <button
+                type="button"
+                className="btn-link min-w-[44px] shrink-0 justify-center text-sm"
+                onClick={() => showItem(line.itemIds[0])}
+              >
                 Show
               </button>
             )}
@@ -717,86 +727,97 @@ function SummarySection({ plan, actions }: { plan: ReviewPlan; actions: PlanActi
       </ul>
       <IntentSummary plan={plan} actions={actions} />
 
-      <fieldset className="mt-5">
-        <legend className="label mb-2">Screen sizes</legend>
-        <div className="flex flex-wrap gap-x-5 gap-y-1">
-          {SIZES.map((size) => {
-            const on = sizes.includes(size);
-            return (
-              <label key={size} className="flex min-h-[44px] cursor-pointer items-center gap-2 text-base text-ink">
-                <input
-                  type="checkbox"
-                  className="h-5 w-5 accent-stamp"
-                  checked={on}
-                  disabled={actions.busy || (on && sizes.length === 1)}
-                  onChange={(e) =>
-                    actions.setScreenSizes(
-                      e.target.checked
-                        ? SIZES.filter((s) => s === size || sizes.includes(s))
-                        : sizes.filter((s) => s !== size)
-                    )
-                  }
-                />
-                {SIZE_NAMES[size]}
-              </label>
-            );
-          })}
-        </div>
-      </fieldset>
-      <button type="button" className="btn-link text-sm" disabled={actions.busy} onClick={actions.quickCheck}>
-        Make it a shorter check-up: desktop only, and only the shared menus’ links
-      </button>
+      {/* What to run is a setting, not the plan: one closed row, so the plan itself starts sooner. */}
+      <Disclosure
+        className="mt-5"
+        summary="Change what runs"
+        hint={`${sizes.length === SIZES.length ? 'Every screen size' : count(sizes.length, 'screen size', 'screen sizes')} · as ${(plan.roles?.length ? plan.roles : ['visitor']).map(roleName).join(', ')}`}
+      >
+        <div className="grid gap-5">
+          <IntentSwitches plan={plan} actions={actions} />
+          <fieldset>
+            <legend className="label mb-2">Screen sizes</legend>
+            <div className="flex flex-wrap gap-x-5 gap-y-1">
+              {SIZES.map((size) => {
+                const on = sizes.includes(size);
+                return (
+                  <label key={size} className="flex min-h-[44px] cursor-pointer items-center gap-2 text-base text-ink">
+                    <input
+                      type="checkbox"
+                      className="h-5 w-5 accent-stamp"
+                      checked={on}
+                      disabled={actions.busy || (on && sizes.length === 1)}
+                      onChange={(e) =>
+                        actions.setScreenSizes(
+                          e.target.checked
+                            ? SIZES.filter((s) => s === size || sizes.includes(s))
+                            : sizes.filter((s) => s !== size)
+                        )
+                      }
+                    />
+                    {SIZE_NAMES[size]}
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+          <button type="button" className="btn-link w-fit text-sm" disabled={actions.busy} onClick={actions.quickCheck}>
+            Make it a shorter check-up: desktop only, and only the shared menus’ links
+          </button>
 
-      <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
-        <div>
-          <dt className="text-ink-soft">Tested as</dt>
-          <dd className="text-ink">{(plan.roles?.length ? plan.roles : ['visitor']).map(roleName).join(', ')}</dd>
+          <dl className="grid gap-3 text-sm sm:grid-cols-2">
+            <div>
+              <dt className="text-ink-soft">Tested as</dt>
+              <dd className="text-ink">{(plan.roles?.length ? plan.roles : ['visitor']).map(roleName).join(', ')}</dd>
+            </div>
+            {budget && (
+              <div>
+                <dt className="text-ink-soft">AI requests</dt>
+                <dd className="text-ink">
+                  {budget.used} used, about {budget.needed} needed
+                  {budget.left !== undefined && ` · ${budget.left} free left today`}
+                  {budget.visualReview ? ` · looking over the screens can use up to ${budget.visualReview} more` : ''}
+                </dd>
+              </div>
+            )}
+          </dl>
+          {tokens.length > 0 && (
+            <details className="text-sm">
+              <summary className="inline-flex min-h-[44px] cursor-pointer items-center font-semibold text-stamp underline decoration-2 underline-offset-4">
+                AI tokens used
+              </summary>
+              <div className="overflow-x-auto">
+                <table className="table-plain mt-2">
+                  <thead>
+                    <tr>
+                      <th>Stage</th>
+                      <th>Requests</th>
+                      <th>Sent</th>
+                      <th>Answered</th>
+                      <th>Of which thinking</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tokens.map(([stage, u]) => (
+                      <tr key={stage}>
+                        <td>{TOKEN_STAGES[stage] ?? stage}</td>
+                        <td>
+                          {u!.requests}
+                          {u!.truncated ? ` (${u!.truncated} cut off)` : ''}
+                        </td>
+                        <td>{u!.promptTokens.toLocaleString()}</td>
+                        <td>{u!.completionTokens.toLocaleString()}</td>
+                        <td>{u!.reasoningTokens.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          )}
+          {scanningLine && <p className="text-sm text-ink-soft">{scanningLine}</p>}
         </div>
-        {budget && (
-          <div>
-            <dt className="text-ink-soft">AI requests</dt>
-            <dd className="text-ink">
-              {budget.used} used, about {budget.needed} needed
-              {budget.left !== undefined && ` · ${budget.left} free left today`}
-              {budget.visualReview ? ` · looking over the screens can use up to ${budget.visualReview} more` : ''}
-            </dd>
-          </div>
-        )}
-      </dl>
-      {tokens.length > 0 && (
-        <details className="mt-3 text-sm">
-          <summary className="inline-flex min-h-[44px] cursor-pointer items-center font-semibold text-stamp underline decoration-2 underline-offset-4">
-            AI tokens used
-          </summary>
-          <div className="overflow-x-auto">
-            <table className="table-plain mt-2">
-              <thead>
-                <tr>
-                  <th>Stage</th>
-                  <th>Requests</th>
-                  <th>Sent</th>
-                  <th>Answered</th>
-                  <th>Of which thinking</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tokens.map(([stage, u]) => (
-                  <tr key={stage}>
-                    <td>{TOKEN_STAGES[stage] ?? stage}</td>
-                    <td>
-                      {u!.requests}
-                      {u!.truncated ? ` (${u!.truncated} cut off)` : ''}
-                    </td>
-                    <td>{u!.promptTokens.toLocaleString()}</td>
-                    <td>{u!.completionTokens.toLocaleString()}</td>
-                    <td>{u!.reasoningTokens.toLocaleString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </details>
-      )}
+      </Disclosure>
 
       {plan.readOnlyReason && (
         <p className="mt-4 rounded-card border border-warn/40 bg-warn-tint p-3 text-sm text-ink">
@@ -1674,7 +1695,11 @@ function WontRunSection({ plan }: { plan: ReviewPlan }) {
                 <span className="text-ink-soft">— {wontRunReason(item.reason)}</span>
               </span>
               {item.itemId && (
-                <button type="button" className="btn-link min-w-[44px] shrink-0 justify-center text-sm" onClick={() => showItem(item.itemId!)}>
+                <button
+                  type="button"
+                  className="btn-link min-w-[44px] shrink-0 justify-center text-sm"
+                  onClick={() => showItem(item.itemId!)}
+                >
                   Show
                 </button>
               )}
