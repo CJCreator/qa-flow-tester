@@ -148,19 +148,19 @@ export async function generateSingleFileHtmlReport(
     const { newFindingFingerprints, fixedFindingFingerprints, openFindingFingerprints } = report.history;
     historyBannerHtml = `
       <section class="section card history-banner">
-        <h2>Changes Since Last Run</h2>
+        <h2>Changes since last run</h2>
         <div class="history-grid">
           <div class="history-stat fixed">
             <span class="history-num">${fixedFindingFingerprints.length}</span>
-            <span class="history-label">Fixed Issues</span>
+            <span class="history-label">Fixed issues</span>
           </div>
           <div class="history-stat new">
             <span class="history-num">${newFindingFingerprints.length}</span>
-            <span class="history-label">New Issues</span>
+            <span class="history-label">New issues</span>
           </div>
           <div class="history-stat open">
             <span class="history-num">${openFindingFingerprints.length}</span>
-            <span class="history-label">Still Open</span>
+            <span class="history-label">Still open</span>
           </div>
         </div>
       </section>
@@ -224,7 +224,7 @@ export async function generateSingleFileHtmlReport(
             <h4 class="rec-title">${escapeHtml(rec.title)}</h4>
             <p class="rec-summary">${escapeHtml(rec.summary)}</p>
             <div class="rec-fix">
-              <strong>Suggested Fix:</strong> ${escapeHtml(rec.suggestedFix)}
+              <strong>Suggested fix:</strong> ${escapeHtml(rec.suggestedFix)}
             </div>
             <div class="rec-meta">
               <span>Affected: ${rec.affectedPages.map((p) => `<code>${escapeHtml(p)}</code>`).join(', ')}</span>
@@ -236,13 +236,13 @@ export async function generateSingleFileHtmlReport(
 
     recommendationsHtml = `
       <section class="section card">
-        <h2 class="section-title">Prioritized Improvement Recommendations</h2>
+        <h2 class="section-title">Prioritized improvement recommendations</h2>
         <p class="section-desc">Sorted deterministically by impact, severity, and implementation return on investment.</p>
         
         ${
           quickWins.length > 0
             ? `
-          <h3 class="group-heading"><span aria-hidden="true">⚡</span> Quick Wins (High Return, Low Effort)</h3>
+          <h3 class="group-heading"><span aria-hidden="true">⚡</span> Quick wins (high return, low effort)</h3>
           <div class="rec-list">${renderRecList(quickWins)}</div>
         `
             : ''
@@ -251,7 +251,7 @@ export async function generateSingleFileHtmlReport(
         ${
           biggerChanges.length > 0
             ? `
-          <h3 class="group-heading" style="margin-top: 1.5rem;"><span aria-hidden="true">🏗️</span> Bigger Changes (Architectural / High Effort)</h3>
+          <h3 class="group-heading" style="margin-top: 1.5rem;"><span aria-hidden="true">🏗️</span> Bigger changes (architectural / high effort)</h3>
           <div class="rec-list">${renderRecList(biggerChanges)}</div>
         `
             : ''

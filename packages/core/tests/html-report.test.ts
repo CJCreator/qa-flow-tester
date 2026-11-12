@@ -94,7 +94,7 @@ describe('Single-File Offline HTML Report (html-report.ts)', () => {
     expect(content).toContain('Looks and reads well');
 
     // Recommendations present
-    expect(content).toContain('Prioritized Improvement Recommendations');
+    expect(content).toContain('Prioritized improvement recommendations');
     expect(content).toContain('Configure Content-Security-Policy header');
 
     // Findings collapsible details present
@@ -250,8 +250,8 @@ describe('Single-File Offline HTML Report (html-report.ts)', () => {
     );
 
     // Emojis are inside aria-hidden="true"
-    expect(content).toContain('<span aria-hidden="true">⚡</span> Quick Wins');
-    expect(content).toContain('<span aria-hidden="true">🏗️</span> Bigger Changes');
+    expect(content).toContain('<span aria-hidden="true">⚡</span> Quick wins');
+    expect(content).toContain('<span aria-hidden="true">🏗️</span> Bigger changes');
 
     // Heading tags in order: each level is at most one deeper than preceding
     const headingMatches = [...content.matchAll(/<h([1-6])[\s>]/gi)];
