@@ -1,6 +1,68 @@
 import type { Finding, PermissionMatrix, Breakpoint } from '@qa/types';
 import YAML from 'yaml';
 
+export class PermissionMatrixError extends Error {}
+
+function normalizePermission(val: unknown): 'allow' | 'deny' | null {
+  if (typeof val === 'boolean') {
+    if (val) return 'allow';
+    return 'deny';
+  }
+  if (typeof val === 'number') {
+    if (val === 1) return 'allow';
+    if (val === 0) return 'deny';
+    return null;
+  }
+  if (typeof val === 'string') {
+    const s = val.trim().toLowerCase();
+    if (s === 'allow' || s === 'yes' || s === 'true' || s === 'y' || s === '1') {
+      return 'allow';
+    }
+    if (s === 'deny' || s === 'no' || s === 'false' || s === 'n' || s === '0') {
+      return 'deny';
+    }
+  }
+  return null;
+}
+
+export function validatePermissionMatrix(value: unknown): PermissionMatrix {
+  if (!Array.isArray(value)) {
+    throw new PermissionMatrixError('The permission matrix must be an array');
+  }
+
+  const normalized: PermissionMatrix = [];
+  for (let i = 0; i < value.length; i++) {
+    const ruleNum = i + 1;
+    const rule = value[i];
+    if (!rule || typeof rule !== 'object' || Array.isArray(rule)) {
+      throw new PermissionMatrixError(`Rule ${ruleNum} is not an object`);
+    }
+
+    const target = (rule as Record<string, unknown>).target;
+    if (typeof target !== 'string' || target.trim() === '') {
+      throw new PermissionMatrixError(`Rule ${ruleNum}: target must be a non-empty string`);
+    }
+
+    const roles = (rule as Record<string, unknown>).roles;
+    if (!roles || typeof roles !== 'object' || Array.isArray(roles)) {
+      throw new PermissionMatrixError(`Rule ${ruleNum}: roles must be an object`);
+    }
+
+    const normalizedRoles: Record<string, 'allow' | 'deny'> = {};
+    for (const [role, rawVal] of Object.entries(roles as Record<string, unknown>)) {
+      const norm = normalizePermission(rawVal);
+      if (!norm) {
+        throw new PermissionMatrixError(`Rule ${ruleNum}: role "${role}" has invalid permission "${rawVal}"`);
+      }
+      normalizedRoles[role] = norm;
+    }
+
+    normalized.push({ target: target.trim(), roles: normalizedRoles });
+  }
+
+  return normalized;
+}
+
 /** True when `target` is the rule's path or sits under it: "/admin" covers "/admin/users" and "/admin?tab=1", not "/administrator". */
 function ruleCovers(ruleTarget: string, target: string): boolean {
   if (target === ruleTarget) return true;
@@ -16,7 +78,7 @@ export class PermissionMatrixChecker {
       if (typeof matrixOrYaml === 'string') {
         this.matrix = this.parseMatrix(matrixOrYaml);
       } else {
-        this.matrix = matrixOrYaml;
+        this.matrix = validatePermissionMatrix(matrixOrYaml);
       }
     }
   }
@@ -26,35 +88,70 @@ export class PermissionMatrixChecker {
    */
   public parseMatrix(content: string): PermissionMatrix {
     const trimmed = content.trim();
-    if (trimmed.startsWith('-') || trimmed.includes(':')) {
-      // Parse YAML
-      const parsed = YAML.parse(trimmed);
-      if (Array.isArray(parsed)) {
-        return parsed as PermissionMatrix;
+    if (!trimmed) return [];
+
+    const lines = trimmed.split(/\r?\n/).map((l) => l.trim());
+    const firstNonBlank = lines.find((l) => l.length > 0) ?? '';
+    const isYaml = firstNonBlank.startsWith('-') || firstNonBlank.startsWith('[') || firstNonBlank.startsWith('---');
+
+    if (isYaml) {
+      let parsed: unknown;
+      try {
+        parsed = YAML.parse(trimmed);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        throw new PermissionMatrixError('The permission matrix is not valid YAML: ' + message);
       }
+      return validatePermissionMatrix(parsed);
     }
 
     // Parse CSV: header is "target,role1,role2,role3"
-    const lines = trimmed
-      .split('\n')
-      .map((l) => l.trim())
-      .filter(Boolean);
-    if (lines.length < 2) return [];
+    const nonEmptyLines: { lineNum: number; text: string }[] = [];
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].length > 0) {
+        nonEmptyLines.push({ lineNum: i + 1, text: lines[i] });
+      }
+    }
 
-    const header = lines[0].split(',').map((h) => h.trim());
+    if (nonEmptyLines.length === 0) return [];
+
+    const headerLine = nonEmptyLines[0];
+    const header = headerLine.text.split(',').map((h) => h.trim());
+    if (header.length < 2) {
+      throw new PermissionMatrixError(`Line ${headerLine.lineNum}: CSV header must have at least two columns`);
+    }
+
     const targetIdx = 0;
     const roleCols = header.slice(1);
 
     const rules: PermissionMatrix = [];
-    for (let i = 1; i < lines.length; i++) {
-      const parts = lines[i].split(',').map((p) => p.trim());
+    for (let i = 1; i < nonEmptyLines.length; i++) {
+      const { lineNum, text } = nonEmptyLines[i];
+      const parts = text.split(',').map((p) => p.trim());
+      if (parts.length > header.length) {
+        throw new PermissionMatrixError(`Line ${lineNum}: row has more cells than header`);
+      }
+
       const target = parts[targetIdx];
+      if (!target) {
+        throw new PermissionMatrixError(`Line ${lineNum}: target must be a non-empty string`);
+      }
+
       const permissions: Record<string, 'allow' | 'deny'> = {};
 
       for (let r = 0; r < roleCols.length; r++) {
         const role = roleCols[r];
-        const val = parts[r + 1]?.toLowerCase() === 'allow' ? 'allow' : 'deny';
-        permissions[role] = val;
+        if (!role) continue;
+        const cell = parts[r + 1];
+        if (cell === undefined || cell === '') {
+          // Empty cell means "no expectation for this role": leave the role out of roles
+          continue;
+        }
+        const norm = normalizePermission(cell);
+        if (!norm) {
+          throw new PermissionMatrixError(`Line ${lineNum}: role "${role}" has invalid permission "${cell}"`);
+        }
+        permissions[role] = norm;
       }
 
       rules.push({ target, roles: permissions });

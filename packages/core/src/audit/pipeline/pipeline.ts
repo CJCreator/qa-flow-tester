@@ -450,6 +450,7 @@ export async function runAuditPipeline(
         startPath: new URL(deps.request.url).pathname,
       },
       firstFindingNumber: 1,
+      signal,
     });
     analysed = true;
     notes.push(...analysis.notes);
@@ -513,7 +514,7 @@ export async function runAuditPipeline(
   let speedSource: 'pagespeed-insights' | 'this-tool' | 'not-measured' = 'not-measured';
   try {
     const urls = samples.map((p) => new URL(p.urlPath, origin).toString());
-    const speeds = urls.length > 0 ? await stages.measureSampleSpeeds(urls, deps.pageSpeed) : [];
+    const speeds = urls.length > 0 ? await stages.measureSampleSpeeds(urls, { ...deps.pageSpeed, signal }) : [];
     samples.forEach((p, i) => {
       const psiResult = speeds[i];
       const psiMeasured = psiResult?.speed?.lab.status === 'measured';
