@@ -488,13 +488,16 @@ export function NewCheckupScreen({
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <Badge tone="pass">Reachable</Badge>
               <span className="break-all font-mono text-xs text-ink">{check.url}</span>
-              <Badge tone={kind.isTestCopy && form.owner ? 'warn' : 'neutral'}>
-                {kind.isTestCopy && form.owner
-                  ? 'Test copy: forms are filled in and sent'
-                  : kind.isTestCopy
-                    ? 'Only looks: nothing is sent or changed'
-                    : 'Live site: only looks, nothing is sent or changed'}
-              </Badge>
+              {/* The choice below says what the check-up may do; this badge only stands in when no choice is shown. */}
+              {consentFlow && (
+                <Badge tone={kind.isTestCopy && form.owner ? 'warn' : 'neutral'}>
+                  {kind.isTestCopy && form.owner
+                    ? 'Test copy: forms are filled in and sent'
+                    : kind.isTestCopy
+                      ? 'Only looks: nothing is sent or changed'
+                      : 'Live site: only looks, nothing is sent or changed'}
+                </Badge>
+              )}
             </div>
           )}
           {check.state === 'ok' && check.startWarning && (
@@ -828,7 +831,7 @@ export function NewCheckupScreen({
         <button
           type="submit"
           form="new-checkup-form"
-          className="btn-primary"
+          className="btn-primary w-full sm:w-auto"
           disabled={starting || !canStart}
           aria-describedby={blockedHint ? 'scan-blocked-hint' : 'start-hint'}
         >
@@ -1158,7 +1161,7 @@ function AccessChoice({
         {
           id: 'look',
           title: 'Only look at it: nothing is sent or changed',
-          hint: 'Nothing is filled in, sent or changed. Nothing is recorded about who owns it.',
+          hint: 'Nothing is recorded about who owns it.',
           set: { owner: false },
         },
         {

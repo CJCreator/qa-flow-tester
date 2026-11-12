@@ -56,14 +56,18 @@ function ConfirmDialog({ options, onClose }: { options: ConfirmOptions; onClose:
         <div id="confirm-body" className="mt-3 text-ink-soft">
           {options.body}
         </div>
-        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
+        {/* Three choices stack at full width, the main one on top: long labels never wrap into ragged rows.
+            The second way is never a filled button, so the dialog has one loud choice. */}
+        <div
+          className={`mt-6 flex flex-col-reverse gap-3 ${options.altLabel ? '' : 'sm:flex-row sm:flex-wrap sm:justify-end'}`}
+        >
           <button ref={cancelRef} type="button" className="btn-quiet" onClick={() => onClose('cancel')}>
             {options.cancelLabel ?? 'Cancel'}
           </button>
           {options.altLabel && (
             <button
               type="button"
-              className={options.altDanger ? 'btn-danger' : 'btn-quiet'}
+              className={options.altDanger ? 'btn-danger-quiet' : 'btn-quiet'}
               onClick={() => onClose('alt')}
             >
               {options.altLabel}

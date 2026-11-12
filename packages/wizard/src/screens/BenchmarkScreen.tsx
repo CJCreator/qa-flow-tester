@@ -249,7 +249,7 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
       {dialog}
       <PageHeader
         title="Compare with another site"
-        lede="See how your journey stacks up against another site, or one you admire: how many steps and form fields a visitor meets, which helpful patterns each has, and what you could try. It only looks: nothing is typed, sent or changed on either site, and the other site’s robots.txt is respected. It takes about a minute."
+        lede="Compare a journey on your site with the same journey on another: the steps, the form fields and the helpful patterns each has. It only looks at both sites, respects the other site’s robots.txt, and takes about a minute."
       />
 
       <form onSubmit={handleSubmit} className="space-y-4 rounded-panel border border-rule bg-surface p-5">

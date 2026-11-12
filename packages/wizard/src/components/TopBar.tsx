@@ -47,6 +47,10 @@ const DESKTOP_POINTER = 'hidden [@media(min-width:640px)_and_(pointer:fine)]:inl
 const SHORTCUT_BUTTON = `${DESKTOP_POINTER} min-h-[44px] items-center gap-2 rounded-control px-3 text-sm text-ink-soft transition-colors duration-fast hover:bg-panel hover:text-ink`;
 const KEY_CAP = 'rounded-control border border-edge bg-surface px-1.5 font-mono text-xs text-ink';
 
+/** The palette's key as this device writes it: the Command sign on Apple keyboards, Ctrl elsewhere. */
+const PALETTE_KEY =
+  typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent) ? '⌘K' : 'Ctrl K';
+
 const openPalette = (mode: 'command' | 'shortcuts') =>
   window.dispatchEvent(new CustomEvent('qa:open-command-palette', { detail: { mode } }));
 
@@ -108,7 +112,7 @@ export function TopBar({
   );
 
   return (
-    <header className="sticky top-0 z-header border-b border-rule bg-raised/95">
+    <header className="sticky top-0 z-header border-b border-rule bg-raised">
       <div className="mx-auto flex max-w-workspace flex-wrap items-center justify-between gap-x-4 px-4 sm:px-6 lg:px-8">
         <div className="flex min-w-0 items-center gap-2 sm:gap-6">
           <Link
@@ -137,7 +141,7 @@ export function TopBar({
                 title="Find a command or a place (Cmd+K or Ctrl+K)"
               >
                 Commands
-                <kbd className={KEY_CAP}>⌘K</kbd>
+                <kbd className={KEY_CAP}>{PALETTE_KEY}</kbd>
               </button>
               <button
                 type="button"

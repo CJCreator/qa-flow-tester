@@ -646,13 +646,14 @@ function IntentSummary({ plan, actions }: { plan: ReviewPlan; actions: PlanActio
   if (!line && !overCap) return null;
   return (
     <div className="mt-4" data-testid="intent-summary">
-      {line && <p className="text-base text-ink">{line}</p>}
+      {/* One Intent only: its count is the total above, and a switch for it would switch everything off. */}
+      {line && present.length > 1 && <p className="text-base text-ink">{line}</p>}
       {overCap && (
         <p className="mt-1 text-base text-warn" data-testid="over-cap-line">
           {overCap}
         </p>
       )}
-      {present.length > 0 && (
+      {present.length > 1 && (
         <fieldset className="mt-3">
           <legend className="label mb-1">Intents to run</legend>
           <p className="mb-2 max-w-prose text-sm text-ink-soft">
@@ -707,7 +708,7 @@ function SummarySection({ plan, actions }: { plan: ReviewPlan; actions: PlanActi
               ) : null}
             </span>
             {line.itemIds.length > 0 && (
-              <button type="button" className="btn-link shrink-0 text-sm" onClick={() => showItem(line.itemIds[0])}>
+              <button type="button" className="btn-link min-w-[44px] shrink-0 justify-center text-sm" onClick={() => showItem(line.itemIds[0])}>
                 Show
               </button>
             )}
@@ -764,7 +765,9 @@ function SummarySection({ plan, actions }: { plan: ReviewPlan; actions: PlanActi
       </dl>
       {tokens.length > 0 && (
         <details className="mt-3 text-sm">
-          <summary className="flex min-h-[44px] cursor-pointer items-center text-ink-soft">AI tokens used</summary>
+          <summary className="inline-flex min-h-[44px] cursor-pointer items-center font-semibold text-stamp underline decoration-2 underline-offset-4">
+            AI tokens used
+          </summary>
           <div className="overflow-x-auto">
             <table className="table-plain mt-2">
               <thead>
@@ -1520,7 +1523,7 @@ function SortableJourneyItem({ flow, actions }: { flow: DiscoveredFlow; actions:
           {...listeners}
           aria-label={`Drag to reorder journey: ${flow.name}`}
           title="Drag to reorder"
-          className="-my-1.5 inline-flex h-11 w-8 shrink-0 cursor-grab items-center justify-center rounded-control text-ink-soft hover:bg-panel hover:text-ink active:cursor-grabbing"
+          className="-my-1.5 inline-flex h-11 w-11 shrink-0 cursor-grab items-center justify-center rounded-control text-ink-soft hover:bg-panel hover:text-ink active:cursor-grabbing"
         >
           <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <circle cx="7" cy="4" r="1.5" />
@@ -1671,7 +1674,7 @@ function WontRunSection({ plan }: { plan: ReviewPlan }) {
                 <span className="text-ink-soft">— {wontRunReason(item.reason)}</span>
               </span>
               {item.itemId && (
-                <button type="button" className="btn-link shrink-0 text-sm" onClick={() => showItem(item.itemId!)}>
+                <button type="button" className="btn-link min-w-[44px] shrink-0 justify-center text-sm" onClick={() => showItem(item.itemId!)}>
                   Show
                 </button>
               )}
@@ -1708,7 +1711,7 @@ function NotFoundSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAct
                 </span>
                 <button
                   type="button"
-                  className="btn-link shrink-0 text-sm"
+                  className="btn-link min-w-[44px] shrink-0 justify-center text-sm"
                   disabled={actions.busy}
                   onClick={() => actions.editNotFound(removeNotFoundEdit(item.id))}
                 >
@@ -1793,7 +1796,8 @@ function DocsSection({ plan, actions }: { plan: ReviewPlan; actions: PlanActions
 /** Filter chips: show only the items with one Intent. Pressing the chosen one again shows all. */
 function IntentChips({ plan, view, setView }: { plan: ReviewPlan; view: View; setView: (v: View) => void }) {
   const present = intentsInPlan(plan);
-  if (present.length === 0) return null;
+  // A filter needs at least two things to choose between.
+  if (present.length < 2) return null;
   return (
     <div
       className="flex flex-wrap items-center gap-2"

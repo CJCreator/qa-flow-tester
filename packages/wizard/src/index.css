@@ -60,6 +60,10 @@
   .btn-danger {
     @apply btn bg-fail text-on-stamp shadow-level-1 hover:opacity-90 active:shadow-none disabled:bg-rule disabled:text-ink-soft disabled:shadow-none;
   }
+  /* Stops or deletes, beside a safer choice: red words and outline, never a second filled button. */
+  .btn-danger-quiet {
+    @apply btn border-[1.5px] border-fail bg-surface text-fail hover:bg-fail-tint active:bg-fail-tint disabled:border-rule disabled:text-ink-soft;
+  }
   .btn-sm {
     @apply min-h-[44px] px-4 text-sm;
   }
@@ -68,7 +72,8 @@
   }
 
   .field {
-    @apply block w-full rounded-control border-[1.5px] border-edge bg-surface px-4 py-3 text-base text-ink placeholder:text-ink-soft transition-[border-color,box-shadow] duration-fast ease-standard hover:border-ink-soft focus:border-stamp focus:outline-none focus:ring-2 focus:ring-stamp/30;
+    /* 44px at least, whatever padding or text size a screen gives it (WCAG 2.5.8). */
+    @apply block min-h-[44px] w-full rounded-control border-[1.5px] border-edge bg-surface px-4 py-3 text-base text-ink placeholder:text-ink-soft transition-[border-color,box-shadow] duration-fast ease-standard hover:border-ink-soft focus:border-stamp focus:outline-none focus:ring-2 focus:ring-stamp/30;
   }
   .label {
     @apply mb-2 block font-bold;
@@ -148,6 +153,10 @@
   }
   .table-plain th {
     @apply border-b border-edge px-3 py-2 font-semibold text-ink-soft;
+  }
+  /* A row's own heading: ink, bold, and the same hairline as its cells. */
+  .table-plain tbody th {
+    @apply border-rule font-bold text-ink;
   }
   .table-plain td {
     @apply border-b border-rule px-3 py-2.5 align-top;

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import type { DiscoveredFlow } from '@qa/types';
 import { journeyPages } from '@qa/types/src/browser.js';
 
@@ -50,6 +50,15 @@ export interface SiteMapProps {
 /** One shared empty list: a new [] default on every render re-ran the path effect forever. */
 const NO_FLOWS: DiscoveredFlow[] = [];
 
+// The drawing's measurements, in px. A card is its path row, a 16:9 thumbnail and its title row: about 156 tall.
+const CARD_WIDTH = 160;
+const CARD_HEIGHT = 156;
+/** From one card's left edge to the next: the card plus room for the journey lines between cards. */
+const COLUMN_PITCH = CARD_WIDTH + 80;
+/** From one row's top to the next: the card, the stagger of every other column, and a clear gap. */
+const ROW_PITCH = CARD_HEIGHT + 30 + 34;
+const MAP_EDGE = 60;
+
 const JOURNEY_TEXT = ['text-j1', 'text-j2', 'text-j3', 'text-j4', 'text-j5'];
 const JOURNEY_FILL = ['bg-j1', 'bg-j2', 'bg-j3', 'bg-j4', 'bg-j5'];
 
@@ -93,6 +102,19 @@ export function SiteMap({
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [connectorPaths, setConnectorPaths] = useState<Array<{ id: string; d: string; color: string }>>([]);
   const [linkPaths, setLinkPaths] = useState<Array<{ id: string; d: string }>>([]);
+  // As many columns as the drawing's box holds (two to four), so no card starts out of view.
+  const drawingRef = useRef<HTMLDivElement>(null);
+  const [columns, setColumns] = useState(4);
+  useEffect(() => {
+    const box = drawingRef.current;
+    if (!box || typeof ResizeObserver === 'undefined') return;
+    const fit = () =>
+      setColumns(Math.min(4, Math.max(2, Math.floor((box.clientWidth - MAP_EDGE * 2 - CARD_WIDTH) / COLUMN_PITCH) + 1)));
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, [viewMode]);
 
   // One shape for both kinds of journey: an id and its pages in order.
   const journeys: MapJourney[] = useMemo(
@@ -149,21 +171,19 @@ export function SiteMap({
   // Where each card sits on the drawing.
   const nodePositions = useMemo(() => {
     const pos = new Map<string, { x: number; y: number; width: number; height: number }>();
-    const cardWidth = 160;
-    const cardHeight = 110;
     nodes.forEach((node, i) => {
-      const col = i % 4;
-      const row = Math.floor(i / 4);
+      const col = i % columns;
+      const row = Math.floor(i / columns);
       pos.set(node.urlPath, {
-        x: 60 + col * (cardWidth + 80),
-        y: 80 + row * (cardHeight + 50) + (col % 2 === 1 ? 30 : 0),
-        width: cardWidth,
-        height: cardHeight,
+        x: MAP_EDGE + col * COLUMN_PITCH,
+        y: 80 + row * ROW_PITCH + (col % 2 === 1 ? 30 : 0),
+        width: CARD_WIDTH,
+        height: CARD_HEIGHT,
       });
     });
     return pos;
-  }, [nodes]);
-  const groupsTop = 80 + Math.ceil(nodes.length / 4) * 160 + 40;
+  }, [nodes, columns]);
+  const groupsTop = 80 + Math.ceil(nodes.length / columns) * ROW_PITCH + 40;
 
   useEffect(() => {
     if (viewMode !== 'map') return;
@@ -318,12 +338,12 @@ export function SiteMap({
         </div>
       ) : (
         // The drawing is a fixed size and scrolls inside the map, never the page.
-        <div className="relative min-h-0 flex-1 overflow-auto bg-canvas">
+        <div ref={drawingRef} className="relative min-h-0 flex-1 overflow-auto bg-canvas">
           <div
             className="bg-blueprint-grid relative p-8"
             style={{
               minHeight: `${Math.max(620, groupsTop + Math.ceil(groups.length / 3) * 110)}px`,
-              minWidth: '960px',
+              minWidth: `${MAP_EDGE * 2 + (columns - 1) * COLUMN_PITCH + CARD_WIDTH}px`,
             }}
           >
             <svg
@@ -340,7 +360,7 @@ export function SiteMap({
             </svg>
 
             {nodes.map((node) => {
-              const pos = nodePositions.get(node.urlPath) || { x: 40, y: 40, width: 160, height: 110 };
+              const pos = nodePositions.get(node.urlPath) || { x: 40, y: 40, width: CARD_WIDTH, height: CARD_HEIGHT };
               const isSelected = selectedPagePath === node.urlPath;
               const border =
                 node.status === 'pass'
