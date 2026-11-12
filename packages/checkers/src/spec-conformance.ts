@@ -110,6 +110,7 @@ export class SpecConformanceChecker {
               flowId: testCase.flowId,
               severity: 'Major',
               checker: 'spec-conformance',
+              ruleCode: 'spec-field-no-error',
               title: `No error appeared after leaving "${field}" empty`,
               where: {
                 urlPath: new URL(currentUrl, context.baseUrl).pathname,
@@ -172,6 +173,7 @@ export class SpecConformanceChecker {
             ...base,
             id: `F-SPEC-${testCase.id}-${counter++}`,
             severity: 'Major',
+            ruleCode: 'spec-form-broke',
             title: `${urlPath} broke when the form was sent`,
             expectedVsActual: {
               expected: `The form at ${refusal.formPath} refuses the value and stays usable`,
@@ -187,6 +189,7 @@ export class SpecConformanceChecker {
                 id: `F-SPEC-${testCase.id}-${counter++}`,
                 // A Source-backed one is re-worded by withSourceWording to docSeverity ?? Major.
                 severity: testCase.docSource ? 'Major' : 'Minor',
+                ruleCode: 'spec-refusal-accepted',
                 title: `The form at ${refusal.formPath} accepted a value it should refuse`,
                 expectedVsActual: {
                   expected: `The form refuses the value: it stays on the page, adds nothing, and shows an error`,
@@ -206,6 +209,7 @@ export class SpecConformanceChecker {
             ...base,
             id: `F-SPEC-${testCase.id}-${counter++}`,
             severity: 'Major',
+            ruleCode: 'spec-refusal-wording',
             title: `The form at ${refusal.formPath} refused with different wording`,
             expectedVsActual: {
               expected: `The message says: "${refusal.message}"`,
@@ -254,6 +258,7 @@ export class SpecConformanceChecker {
                 flowId: testCase.flowId,
                 severity: 'Blocker',
                 checker: 'spec-conformance',
+                ruleCode: 'spec-denial-reached',
                 title: `${context.role} reached ${urlPath}, which should not be open to this role`,
                 where: { urlPath, role: context.role, breakpoint: context.breakpoint },
                 expectedVsActual: {
@@ -281,6 +286,7 @@ export class SpecConformanceChecker {
               flowId: testCase.flowId,
               severity: 'Blocker',
               checker: 'spec-conformance',
+              ruleCode: 'spec-url-mismatch',
               title: `URL did not match expected pattern: "${pattern}"`,
               where: {
                 urlPath,
@@ -321,6 +327,7 @@ export class SpecConformanceChecker {
               flowId: testCase.flowId,
               severity: 'Major',
               checker: 'spec-conformance',
+              ruleCode: 'spec-text-missing',
               title: `Expected text not found: "${contains}"`,
               where: {
                 urlPath: new URL(currentUrl).pathname,
@@ -356,6 +363,7 @@ export class SpecConformanceChecker {
               flowId: testCase.flowId,
               severity: 'Major',
               checker: 'spec-conformance',
+              ruleCode: 'spec-text-disallowed',
               title: `Disallowed text appeared: "${notContains}"`,
               where: {
                 urlPath: new URL(currentUrl).pathname,

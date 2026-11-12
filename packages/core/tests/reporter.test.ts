@@ -180,10 +180,10 @@ describe('ReportGenerator findings contract', () => {
     ],
   });
 
-  it('findings.json has schemaVersion 1 and a fingerprint on every finding', async () => {
+  it('findings.json has schemaVersion 2 and a fingerprint on every finding', async () => {
     const { jsonPath } = await new ReportGenerator(dirA).generate(mk('run-a', '2026-10-08T10:00:00Z'));
     const parsed = JSON.parse(await fs.readFile(jsonPath, 'utf8'));
-    expect(parsed.schemaVersion).toBe(1);
+    expect(parsed.schemaVersion).toBe(2);
     for (const f of parsed.findings) expect(f.fingerprint).toMatch(/^fp_[0-9a-f]{16}$/);
   });
 

@@ -9,6 +9,7 @@ Builds on [0004](0004-structural-fingerprint-deduplication.md) (Structural Finge
 
 ### Version
 - `findings.json` gets a top-level integer `schemaVersion`. This ADR defines `1`.
+- Version 2: the rule code input changed, and the route is no longer lower-cased.
 - A file with no `schemaVersion` is version 0 (written before the contract). It must still be read. `SuppressionsManager.computeDelta` reads only `.findings[].checker`, `.title` and `.where.urlPath`, so it keeps working.
 - Policy:
   - Adding an optional field, or a new output file, is not a bump.
@@ -18,7 +19,7 @@ Builds on [0004](0004-structural-fingerprint-deduplication.md) (Structural Finge
 
 ### Fingerprint
 - Per finding, `fingerprint` is the Structural Fingerprint from 0004, computed by one shared helper `findingFingerprint(finding, productId)` in `@qa/types`. History uses the same helper, so the two cannot drift.
-- Inputs: `productId`, route (`where.urlPath`, normalized), checker id (`checker`), rule code (the finding `title`, as 0004 and history already do), selector (`cssSelector`, else `dataTestId`).
+- Inputs: `productId`, route (`where.urlPath`, normalized), checker id (`checker`), rule code (`ruleCode` when the checker sets it, else the finding `title` with numbers and quoted values replaced), selector (`cssSelector`, else `dataTestId`).
 - Excluded: run id, timestamp, host, port, absolute paths, breakpoint, role.
 - Not unique. The same fingerprint can appear on several findings (one per breakpoint or role). Consumers must not use it as a unique key in `findings`. `known-findings.json` lists unique ones.
 - Known limit: changing title wording changes the fingerprint, so a reworded finding shows as new. `issueKey` was rejected as an input: it is optional and few checkers set it.

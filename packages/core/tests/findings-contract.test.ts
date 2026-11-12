@@ -135,7 +135,7 @@ describe('outputs beside findings.json', () => {
   it('withFindingsContract puts schemaVersion first and a fingerprint on every finding', () => {
     const out = withFindingsContract(report([finding(), finding({ id: 'F-2', title: 'B' })]));
     expect(Object.keys(out)[0]).toBe('schemaVersion');
-    expect(out.schemaVersion).toBe(1);
+    expect(out.schemaVersion).toBe(2);
     for (const f of out.findings) expect(f.fingerprint).toMatch(/^fp_[0-9a-f]{16}$/);
   });
 });

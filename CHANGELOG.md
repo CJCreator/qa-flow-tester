@@ -31,6 +31,7 @@ All notable changes. Format follows [Keep a Changelog](https://keepachangelog.co
 
 ### Changed
 
+- Finding fingerprints no longer change when a count or quoted value in the title changes; `findings.json` schemaVersion is 2. Fingerprints change once on upgrade.
 - Denial Plan Items are now Intent Denied (`intent: 'denied'` replaces `kind: 'denial'`); saved Plans and site memory with the old value still load (ADR 0024)
 - The CI command takes Product Context with `--docs` (or `QA_DOCS`); a docs URL still works in the wizard and runner only
 - "N of M documented items reached" counts User Flows, routes and negative specs once any exist, not plain headings (ADR 0023)

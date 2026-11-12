@@ -63,7 +63,7 @@ export function normalizeRoute(rawRoute: string): string {
     route = '/' + route;
   }
 
-  return route.toLowerCase();
+  return route;
 }
 
 /**
@@ -102,16 +102,36 @@ export function computeStructuralFingerprint(params: FingerprintParams): string 
 }
 
 /**
+ * Produces a stable rule code from a finding title when no explicit ruleCode is provided:
+ * - Lower-cases the title
+ * - Replaces each quoted segment ("..." or '...') with ""
+ * - Replaces every run of digits with #
+ * - Collapses spaces
+ * - Trims
+ */
+export function stableRuleCode(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/"[^"]*"|'[^']*'/g, '""')
+    .replace(/\d+/g, '#')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
  * The Structural Fingerprint of a finding (ADR 0004, ADR 0017). One definition, used by the
  * site history and by findings.json, so the two cannot drift. Not unique per finding: the same
  * problem at several breakpoints or roles shares it.
  */
-export function findingFingerprint(f: Pick<Finding, 'checker' | 'title' | 'where'>, productId: string): string {
+export function findingFingerprint(
+  f: Pick<Finding, 'checker' | 'title' | 'where' | 'ruleCode'>,
+  productId: string
+): string {
   return computeStructuralFingerprint({
     productId,
     route: f.where.urlPath,
     checkerId: f.checker,
-    ruleCode: f.title,
+    ruleCode: f.ruleCode?.trim() || stableRuleCode(f.title),
     selector: f.where.cssSelector || f.where.dataTestId,
   });
 }

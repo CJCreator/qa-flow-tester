@@ -3,10 +3,16 @@ import { computeStructuralFingerprint, normalizeRoute, normalizeSelector } from 
 
 describe('Structural Fingerprinting & Normalization', () => {
   describe('normalizeRoute', () => {
-    it('normalizes full URLs to invariant lowercase pathnames', () => {
+    it('normalizes full URLs to invariant pathnames', () => {
       expect(normalizeRoute('http://localhost:3000/checkout')).toBe('/checkout');
       expect(normalizeRoute('https://staging.internal.net:8080/checkout/')).toBe('/checkout');
       expect(normalizeRoute('http://127.0.0.1:4173/app/invoices/')).toBe('/app/invoices');
+    });
+
+    it('preserves path case and drops host', () => {
+      expect(normalizeRoute('/Foo')).toBe('/Foo');
+      expect(normalizeRoute('/Foo')).not.toBe('/foo');
+      expect(normalizeRoute('http://localhost:3000/Foo')).toBe('/Foo');
     });
 
     it('strips query parameters and hashes', () => {
