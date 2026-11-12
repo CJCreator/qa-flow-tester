@@ -255,6 +255,70 @@ describe('buildPageContent', () => {
     expect(tos).not.toContain('zzz');
   });
 
+  it('a link to the www twin is a site path, not a link that leaves the site', () => {
+    const fromApex = buildPageContent(
+      rawPage({
+        url: 'https://bakery.example/',
+        anchors: [{ href: 'https://www.bakery.example/about', text: 'About', region: 'internal', chunk: -1 }],
+      }),
+      OPTIONS
+    );
+    expect(fromApex.links[0]).toMatchObject({ to: '/about' });
+    expect(fromApex.links[0].leavesSite).toBeUndefined();
+
+    const fromWww = buildPageContent(
+      rawPage({
+        url: 'https://www.bakery.example/',
+        anchors: [{ href: 'https://bakery.example/menu', text: 'Menu', region: 'internal', chunk: -1 }],
+      }),
+      OPTIONS
+    );
+    expect(fromWww.links[0]).toMatchObject({ to: '/menu' });
+    expect(fromWww.links[0].leavesSite).toBeUndefined();
+  });
+
+  it('another subdomain or another port still leaves the site', () => {
+    const content = buildPageContent(
+      rawPage({
+        anchors: [
+          { href: 'https://shop.bakery.example/x', text: 'Shop', region: 'internal', chunk: -1 },
+          { href: 'https://bakery.example:8443/x', text: 'Port', region: 'internal', chunk: -1 },
+        ],
+      }),
+      OPTIONS
+    );
+    expect(content.links[0]).toMatchObject({ to: 'https://shop.bakery.example/x', leavesSite: true });
+    expect(content.links[1]).toMatchObject({ to: 'https://bakery.example:8443/x', leavesSite: true });
+  });
+
+  it('form actions and CTA links to the twin are site paths', () => {
+    const content = buildPageContent(
+      rawPage({
+        forms: [
+          {
+            method: 'post',
+            action: 'https://www.bakery.example/order',
+            fields: [],
+            chunk: 0,
+          },
+        ],
+        ctaCandidates: [
+          {
+            element: 'a',
+            text: 'Order now',
+            href: 'https://www.bakery.example/order',
+            role: 'button',
+            className: '',
+            chunk: 0,
+          },
+        ],
+      }),
+      OPTIONS
+    );
+    expect(content.forms[0].action).toBe('/order');
+    expect(content.ctas[0]).toMatchObject({ to: '/order' });
+  });
+
   it('tel:, mailto:, javascript:, fragment-only and empty links are not ContentLinks', () => {
     const content = buildPageContent(
       rawPage({
