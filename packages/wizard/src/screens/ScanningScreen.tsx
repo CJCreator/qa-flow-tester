@@ -212,11 +212,7 @@ export function ScanningScreen({
           </section>
 
           <div className="mt-8">
-            <button
-              type="button"
-              className="btn-danger-quiet"
-              onClick={onStop}
-            >
+            <button type="button" className="btn-danger-quiet" onClick={onStop}>
               Stop the check-up
             </button>
           </div>

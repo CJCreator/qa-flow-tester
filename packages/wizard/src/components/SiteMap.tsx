@@ -109,7 +109,9 @@ export function SiteMap({
     const box = drawingRef.current;
     if (!box || typeof ResizeObserver === 'undefined') return;
     const fit = () =>
-      setColumns(Math.min(4, Math.max(2, Math.floor((box.clientWidth - MAP_EDGE * 2 - CARD_WIDTH) / COLUMN_PITCH) + 1)));
+      setColumns(
+        Math.min(4, Math.max(2, Math.floor((box.clientWidth - MAP_EDGE * 2 - CARD_WIDTH) / COLUMN_PITCH) + 1))
+      );
     fit();
     const observer = new ResizeObserver(fit);
     observer.observe(box);

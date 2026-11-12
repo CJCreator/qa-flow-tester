@@ -167,11 +167,7 @@ export function TestingScreen({
             )}
           </div>
           {running && (
-            <button
-              type="button"
-              className="btn-danger-quiet"
-              onClick={onStop}
-            >
+            <button type="button" className="btn-danger-quiet" onClick={onStop}>
               Stop testing
             </button>
           )}

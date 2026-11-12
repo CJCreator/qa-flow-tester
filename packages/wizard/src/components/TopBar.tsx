@@ -49,7 +49,9 @@ const KEY_CAP = 'rounded-control border border-edge bg-surface px-1.5 font-mono 
 
 /** The palette's key as this device writes it: the Command sign on Apple keyboards, Ctrl elsewhere. */
 const PALETTE_KEY =
-  typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent) ? '⌘K' : 'Ctrl K';
+  typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent)
+    ? '⌘K'
+    : 'Ctrl K';
 
 const openPalette = (mode: 'command' | 'shortcuts') =>
   window.dispatchEvent(new CustomEvent('qa:open-command-palette', { detail: { mode } }));

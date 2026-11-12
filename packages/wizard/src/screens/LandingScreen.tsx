@@ -261,13 +261,13 @@ export function LandingScreen() {
   return (
     <>
       <header className="sticky top-0 z-header border-b border-rule bg-raised">
-        <div className="relative mx-auto flex max-w-6xl items-center justify-between gap-x-2 px-3 py-1 sm:gap-x-4 sm:px-6">
+        <div className="relative mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-2 px-3 py-1 sm:gap-x-4 sm:px-6">
           <span className="inline-flex min-h-[44px] items-center gap-2 whitespace-nowrap text-sm font-bold text-ink sm:text-base">
             <Mark />
             Release check-up
           </span>
-          <div className="flex items-center gap-1 sm:gap-3">
-            <nav aria-label="Main" className="hidden items-center gap-x-1 lg:flex">
+          <div className="flex min-w-0 flex-wrap items-center gap-1 sm:gap-3">
+            <nav aria-label="Main" className="hidden flex-wrap items-center gap-x-1 lg:flex">
               {NAV.map((n) => (
                 <a key={n.href} href={n.href} className={NAV_LINK}>
                   {n.label}
@@ -410,9 +410,7 @@ export function LandingScreen() {
               <tbody>
                 {WHERE_IT_RUNS.map((r) => (
                   <tr key={r.name}>
-                    <th scope="row">
-                      {r.name}
-                    </th>
+                    <th scope="row">{r.name}</th>
                     <td className="text-ink-soft">{r.sites}</td>
                     <td className="leading-relaxed text-ink-soft">{r.where}</td>
                     <td className="text-ink">{r.setup}</td>

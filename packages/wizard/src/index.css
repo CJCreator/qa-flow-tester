@@ -135,7 +135,8 @@
 
   /* Two or three choices side by side (aria-pressed or aria-selected marks the chosen one). */
   .segmented {
-    @apply inline-flex rounded-control border-[1.5px] border-edge bg-surface p-0.5;
+    /* Wraps instead of pushing the page sideways when the text is enlarged. */
+    @apply inline-flex max-w-full flex-wrap rounded-control border-[1.5px] border-edge bg-surface p-0.5;
   }
   .segmented > button,
   .segmented > a {

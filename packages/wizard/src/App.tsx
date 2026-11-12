@@ -1001,30 +1001,30 @@ export default function App() {
         // The landing page brings its own header, main and footer landmarks.
         <Suspense fallback={<Loading label="Opening…" />}>{body}</Suspense>
       ) : (
-      <main id="main">
-        {lostContact && (
-          <div className="mx-auto max-w-prose px-4 pt-4 sm:px-6">
-            <Notice tone="warn" title="Lost contact with Release check-up. Retrying…">
-              Check that it’s still running in its terminal (start it with pnpm start). This page keeps trying.
-            </Notice>
-          </div>
-        )}
-        {stopError && (
-          <div className="mx-auto max-w-prose px-4 pt-4 sm:px-6">
-            <Notice
-              title="The check-up wasn’t stopped"
-              actions={
-                <button type="button" className="btn-quiet" onClick={() => setStopError(null)}>
-                  Dismiss
-                </button>
-              }
-            >
-              {stopError}
-            </Notice>
-          </div>
-        )}
-        <Suspense fallback={<Loading label="Opening…" />}>{body}</Suspense>
-      </main>
+        <main id="main">
+          {lostContact && (
+            <div className="mx-auto max-w-prose px-4 pt-4 sm:px-6">
+              <Notice tone="warn" title="Lost contact with Release check-up. Retrying…">
+                Check that it’s still running in its terminal (start it with pnpm start). This page keeps trying.
+              </Notice>
+            </div>
+          )}
+          {stopError && (
+            <div className="mx-auto max-w-prose px-4 pt-4 sm:px-6">
+              <Notice
+                title="The check-up wasn’t stopped"
+                actions={
+                  <button type="button" className="btn-quiet" onClick={() => setStopError(null)}>
+                    Dismiss
+                  </button>
+                }
+              >
+                {stopError}
+              </Notice>
+            </div>
+          )}
+          <Suspense fallback={<Loading label="Opening…" />}>{body}</Suspense>
+        </main>
       )}
       {!landing && <CommandPalette route={route} beta={!!status?.beta} auditOwner={!!status?.auditOwner} />}
       {dialog}
