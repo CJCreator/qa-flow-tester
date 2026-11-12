@@ -8,6 +8,7 @@ import { sharedTest, sharedResolve } from './vitest.config';
 //             runner's CLI). `pnpm test:browser`; nightly only, never on PRs.
 // `pnpm test:all` runs both. Checked on 2026-11-03 by running `--project unit` with PLAYWRIGHT_BROWSERS_PATH
 // set to an empty folder: no unit file tried to launch Chromium.
+// Checked on 2026-11-12 with an empty PLAYWRIGHT_BROWSERS_PATH: the runner files not listed below run in unit.
 // A new test file lands in `unit` by default. Add it here when it launches Chromium.
 const BROWSER_TESTS: Record<string, string[]> = {
   checkers: [
@@ -38,31 +39,10 @@ const BROWSER_TESTS: Record<string, string[]> = {
     'audit-phone-layout',
   ],
   runner: [
-    'access-token',
-    'ai-estimate-cap',
-    'baseline-accept',
-    'beta',
-    'beta-privacy',
-    'cli-bind-host',
-    'context-docx-route',
-    'domain-proof',
-    'error-redaction',
-    'issues-download',
-    'reapproval-roles',
-    'remembered-signins',
-    'route-inventory',
-    'scheduler',
-    'single-server',
-    'spec-override-endpoint',
-    // Website audit: each starts a RunnerServer, and some drive Chromium.
+    // Website audit: these launch Chromium (PDF export, or a page driven by the runner).
     'audit-documents-flow',
     'audit-flow-browser',
-    'audit-helpers-routes',
-    'audit-persistence-integration',
     'audit-preview-browser',
-    'helper-access',
-    'route-access-server',
-    'server-audit-wiring',
   ],
   wizard: ['landing-audit-browser'],
 };

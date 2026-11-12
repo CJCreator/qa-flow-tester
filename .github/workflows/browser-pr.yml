@@ -1,0 +1,32 @@
+# The browser tier on pull requests that touch code it covers. Everything else waits for the nightly run (e2e-nightly.yml).
+name: Browser tests (pull requests)
+
+on:
+  pull_request:
+    paths:
+      - 'packages/core/src/browser*.ts'
+      - 'packages/core/src/discovery/**'
+      - 'packages/core/src/orchestrator.ts'
+      - 'packages/checkers/src/**'
+      - 'packages/wizard/tests/**'
+      - 'vitest.workspace.ts'
+      - '.github/workflows/browser-pr.yml'
+      - '.github/workflows/tests.yml'
+
+concurrency:
+  group: browser-pr-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  browser:
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ['1/4', '2/4', '3/4', '4/4']
+    uses: ./.github/workflows/tests.yml
+    with:
+      project: browser
+      shard: ${{ matrix.shard }}

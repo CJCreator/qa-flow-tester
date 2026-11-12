@@ -6,10 +6,10 @@ Runner: vitest. Node environment, 30 s test and hook timeouts, tests in `package
 
 `vitest.workspace.ts` assigns every test file to one project. Select one with `--project <name>`.
 
-| Tier      | Command             | Runs                                                                                                                | Needs    | Where                                                                     |
-| --------- | ------------------- | ------------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------- |
-| `unit`    | `pnpm test`         | No Chromium, no external network: fake pages, in-memory inputs. A loopback server on an OS-assigned port is allowed | Node     | Pull requests (`ci.yml`, 2 shards), `deploy.yml` before publishing, local |
-| `browser` | `pnpm test:browser` | Chromium on `setContent` or `route().fulfill()` pages, alone or through a started runner; never a site              | Chromium | Nightly (`e2e-nightly.yml`, 4 shards), local                              |
+| Tier      | Command             | Runs                                                                                                                | Needs    | Where                                                                                                                  |
+| --------- | ------------------- | ------------------------------------------------------------------------------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `unit`    | `pnpm test`         | No Chromium, no external network: fake pages, in-memory inputs. A loopback server on an OS-assigned port is allowed | Node     | Pull requests (`ci.yml`, 2 shards), `deploy.yml` before publishing, local                                              |
+| `browser` | `pnpm test:browser` | Chromium on `setContent` or `route().fulfill()` pages, alone or through a started runner; never a site              | Chromium | Nightly (`e2e-nightly.yml`, 4 shards) and on pull requests that touch browser code (`browser-pr.yml`, 4 shards), local |
 
 `pnpm test:all` runs both. A file is `browser` only if the `BROWSER_TESTS` list in `vitest.workspace.ts` names it; every other file is `unit`. Add a file to that list when it launches Chromium. A unit test may start a `RunnerServer` or an `http.createServer` stub on `127.0.0.1`, on a port the OS picks (`packages/runner/tests/helpers/free-port.ts`, or `listen(0)`), never on a fixed port.
 
