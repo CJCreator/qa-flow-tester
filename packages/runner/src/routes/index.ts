@@ -9,13 +9,10 @@ import {
 import {
   AuditAiModelsStore,
   RewriteStore,
-  applySettingsUpdate,
-  emptyAuditSettings,
   generatePreview,
   hasGoogleAdc,
   pageContentName,
   resolveAuditAi,
-  resolveAuditSettings,
   type PageSpeedDeps,
 } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
@@ -30,7 +27,12 @@ import { auditContentRoutes } from './audit-content.js';
 import { auditRerunRoutes } from './audit-rerun.js';
 import { auditStoreRoutes, type AuditCaller } from './audit-store.js';
 import { auditEditsRoutes, updateEditsOverlay } from './audit-documents.js';
-import { auditSettingsRoutes, auditSettingsStoreOn, type PagespeedKeyPort } from './audit-settings.js';
+import {
+  auditSettingsRoutes,
+  auditSettingsStoreOn,
+  loadResolvedSettings,
+  type PagespeedKeyPort,
+} from './audit-settings.js';
 import { auditExportRoutes } from './audit-export.js';
 import { auditPreviewRoutes } from './audit-preview.js';
 import { auditShareRoutes } from './audit-share.js';
@@ -127,11 +129,7 @@ export function buildAuditRoutes(server: RunnerServer): Route[] {
     },
   };
 
-  const storedSettings = async () => {
-    const raw = await settings.load();
-    const checked = raw ? applySettingsUpdate(emptyAuditSettings(), raw) : null;
-    return resolveAuditSettings(checked?.ok ? checked.settings : emptyAuditSettings(), false);
-  };
+  const storedSettings = () => loadResolvedSettings(settings);
 
   const findVersion: AuditAiRouteDeps['findVersion'] = async (auditId, version) => {
     const audit = await store.getAudit(auditId);

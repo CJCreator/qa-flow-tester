@@ -5,12 +5,19 @@ import fs from 'fs/promises';
 import os from 'os';
 import path from 'path';
 import { AUDIT_API, type AuditSettingsReply } from '@qa/types';
-import { auditSettingsDefaults, createLocalAuditStoreBackend } from '@qa/core';
+import {
+  auditSettingsDefaults,
+  createLocalAuditStoreBackend,
+  emptyAuditSettings,
+  resolveAuditSettings,
+} from '@qa/core';
 import {
   auditSettingsRoutes,
   auditSettingsStoreOn,
   AUDIT_SETTINGS_KEY,
+  loadResolvedSettings,
   type AuditSettingsDeps,
+  type AuditSettingsStore,
   type PagespeedKeyPort,
 } from '../src/routes/audit-settings.js';
 import { authorizeRoute, resolveRoute, type Route } from '../src/routes/route.js';
@@ -306,5 +313,28 @@ describe('audit settings routes', () => {
     const get = await call(brokenStore, 'GET');
     expect(get.statusCode).toBe(500);
     expect(get.body).not.toContain('EACCES');
+  });
+
+  describe('loadResolvedSettings', () => {
+    it('loadResolvedSettings gives the defaults when nothing was saved', async () => {
+      const store: AuditSettingsStore = { load: async () => null, save: async () => {} };
+      const result = await loadResolvedSettings(store);
+      expect(result).toEqual(resolveAuditSettings(emptyAuditSettings(), false));
+    });
+
+    it('loadResolvedSettings gives the defaults for a damaged object', async () => {
+      const store: AuditSettingsStore = { load: async () => ({ company: 42 as any }), save: async () => {} };
+      const result = await loadResolvedSettings(store);
+      expect(result).toEqual(resolveAuditSettings(emptyAuditSettings(), false));
+    });
+
+    it('loadResolvedSettings keeps a valid saved value', async () => {
+      const store: AuditSettingsStore = {
+        load: async () => ({ company: { name: 'Acme Corp' } }),
+        save: async () => {},
+      };
+      const result = await loadResolvedSettings(store);
+      expect(result.company.name).toBe('Acme Corp');
+    });
   });
 });

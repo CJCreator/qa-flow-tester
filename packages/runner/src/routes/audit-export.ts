@@ -24,21 +24,18 @@ import {
   type StoredDocumentKind,
 } from '@qa/types';
 import {
-  applySettingsUpdate,
-  emptyAuditSettings,
   exportAudit,
   exportBaseName,
   exportOwnerAudit,
   exportPitchGlimpse,
   pageContentName,
-  resolveAuditSettings,
   type AuditExportFile,
   type AuditStore,
   type ExportOptions,
 } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
 import { AUDIT_NOT_FOUND, refuse, refuseStoreFailure, pitchScreenshots, readEdits } from './audit-common.js';
-import type { AuditSettingsStore } from './audit-settings.js';
+import { loadResolvedSettings, type AuditSettingsStore } from './audit-settings.js';
 
 /** What the download rows need: the Website Audit store (G6) and the stored audit settings (BE-508). */
 export interface AuditExportDeps {
@@ -175,14 +172,6 @@ async function load(store: AuditStore, c: RouteContext, wanted: number | undefin
   return { auditId, version, result, contents, edits };
 }
 
-/** The saved settings over the defaults. A damaged stored object reads as the defaults. */
-async function loadSettings(settings: AuditSettingsStore) {
-  const raw = await settings.load();
-  const checked = raw === null || raw === undefined ? null : applySettingsUpdate(emptyAuditSettings(), raw);
-  const stored = checked && checked.ok ? checked.settings : emptyAuditSettings();
-  return resolveAuditSettings(stored, false);
-}
-
 /** The download rows (export access: the owner's key, or a Helper with the export permission). */
 export function auditExportRoutes(deps: AuditExportDeps): Route[] {
   const { store, settings } = deps;
@@ -255,7 +244,7 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
           result: loaded.result,
           contents: loaded.contents,
           edits: loaded.edits,
-          settings: await loadSettings(settings),
+          settings: await loadResolvedSettings(settings),
           ...(common.language ? { language: common.language } : {}),
           ...(documents ? { documents } : {}),
         },
@@ -279,7 +268,7 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
     try {
       const loaded = await load(store, c, common.version);
       if (!loaded) return;
-      const { optOutText } = await loadSettings(settings);
+      const { optOutText } = await loadResolvedSettings(settings);
       const file = await exportPitchGlimpse(
         format,
         {

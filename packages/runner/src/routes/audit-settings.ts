@@ -67,11 +67,16 @@ const READ_FAILED = 'The settings could not be read. Try again.';
  * hand-edited or damaged object cannot reach a reply. Nothing saved, or an object that fails, reads as the
  * defaults. A stray `pagespeedKey` in it is dropped, never returned.
  */
-async function loadStored(store: AuditSettingsStore): Promise<StoredAuditSettings> {
+export async function loadStored(store: AuditSettingsStore): Promise<StoredAuditSettings> {
   const raw = await store.load();
   if (raw === null || raw === undefined) return emptyAuditSettings();
   const checked = applySettingsUpdate(emptyAuditSettings(), raw);
   return checked.ok ? checked.settings : emptyAuditSettings();
+}
+
+/** The saved settings over the defaults, as every reader sees them. A damaged stored object reads as the defaults. */
+export async function loadResolvedSettings(store: AuditSettingsStore) {
+  return resolveAuditSettings(await loadStored(store), false);
 }
 
 async function replyFor(stored: StoredAuditSettings, port: PagespeedKeyPort): Promise<AuditSettingsReply> {
