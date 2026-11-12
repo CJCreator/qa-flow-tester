@@ -15,10 +15,10 @@ permissions:
   contents: read
 
 jobs:
-  # Fast Quality Gate: Surfaces lint, formatting, and typecheck errors in ~30-45 seconds
+  # Quality gate: lint, formatting and typecheck. Runs beside the tests so these errors show first.
   quality-gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     # Typecheck runs out of memory at the default Node heap.
     env:
       NODE_OPTIONS: --max-old-space-size=8192
