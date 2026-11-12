@@ -1,4 +1,5 @@
 import type { DiscoveredFlow, ElementInventoryItem, PageInventoryItem } from '@qa/types';
+import { isSitePath } from '../same-site.js';
 
 export interface PlanIssue {
   flowId: string;
@@ -104,8 +105,26 @@ export class PlanValidator {
   }
 
   checkFlow(flow: DiscoveredFlow): PlanIssue[] {
-    if (!this.canCheck) return [];
     const issues: PlanIssue[] = [];
+    if (!isSitePath(flow.startPage)) {
+      issues.push({
+        flowId: flow.id,
+        stepIndex: -1,
+        stepName: 'Start page',
+        message: `The flow starts at ${flow.startPage}, which is not a path on this site. Use a path such as /pricing.`,
+      });
+    }
+    (flow.steps || []).forEach((step, stepIndex) => {
+      if (step.action === 'navigate' && !isSitePath(step.value)) {
+        issues.push({
+          flowId: flow.id,
+          stepIndex,
+          stepName: step.name,
+          message: `Step "${step.name}" goes to ${step.value}, which is not a path on this site. Use a path such as /pricing.`,
+        });
+      }
+    });
+    if (!this.canCheck) return issues;
     // The page each step runs on is known at the start and after a direct navigation. After a
     // click the page may have changed, so later steps are checked against every page found.
     let currentPath: string | null = normalizePath(flow.startPage);

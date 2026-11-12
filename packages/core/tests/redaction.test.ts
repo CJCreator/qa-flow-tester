@@ -4,7 +4,11 @@ import { tmpdir } from 'os';
 import path from 'path';
 import type { TestCase } from '@qa/types';
 import { Redactor, redactUrl } from '../src/redact.js';
-import { replaceCredentialsWithPlaceholders, resolveCredentialPlaceholders } from '../src/credentials.js';
+import {
+  replaceCredentialsWithPlaceholders,
+  resolveCredentialPlaceholders,
+  CredentialPlaceholderError,
+} from '../src/credentials.js';
 
 describe('Redactor', () => {
   const redactor = new Redactor([
@@ -110,7 +114,17 @@ describe('Credential placeholders', () => {
     ];
     replaceCredentialsWithPlaceholders(steps, roles);
     expect(steps.map((s) => s.value)).toEqual(['{{username}}', '{{password}}', 'hello']);
-    expect(resolveCredentialPlaceholders('{{password}}', 'viewer', roles)).toBe('viewer-password');
-    expect(resolveCredentialPlaceholders('{{username}}', 'someone-else', roles)).toBe('manager@example.com');
+    expect(
+      resolveCredentialPlaceholders('{{password}}', 'viewer', roles, {
+        pageUrl: 'https://example.com/login',
+        targetUrl: 'https://example.com/',
+      })
+    ).toBe('viewer-password');
+    expect(() =>
+      resolveCredentialPlaceholders('{{username}}', 'someone-else', roles, {
+        pageUrl: 'https://example.com/login',
+        targetUrl: 'https://example.com/',
+      })
+    ).toThrow(CredentialPlaceholderError);
   });
 });
