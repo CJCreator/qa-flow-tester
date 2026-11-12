@@ -903,8 +903,13 @@ export async function runAuditPipeline(
   try {
     await store.saveResult(auditId, version, result);
   } catch {
-    record('saving', 'saving', false, NOTES.saving);
-    throw new AuditPipelineError('save-failed');
+    // One retry: a passing blip should not throw away the whole crawl.
+    try {
+      await store.saveResult(auditId, version, result);
+    } catch {
+      record('saving', 'saving', false, NOTES.saving);
+      throw new AuditPipelineError('save-failed');
+    }
   }
   record('saving', 'saving', saveNotes.length === 0);
   try {

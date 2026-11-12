@@ -262,4 +262,15 @@ describe('local backend specifics', () => {
     expect(await backend.listFolders!('audits/aaaaaaaa')).toEqual(['v1']);
     expect(await backend.listFolders!('missing')).toEqual([]);
   });
+
+  it('deletePrefix with last removes everything, the last key included', async () => {
+    const backend = new LocalAuditStoreBackend(dataDir);
+    await backend.putJson('audits/a1/audit.json', { id: 'a1' });
+    await backend.putJson('audits/a1/v1/x.json', { data: 1 });
+    await backend.deletePrefix('audits/a1', { last: 'audits/a1/audit.json' });
+    expect(await backend.list('audits/a1')).toEqual([]);
+    await expect(backend.deletePrefix('audits/a1', { last: 'audits/a1/v1/x.json' })).rejects.toMatchObject({
+      code: 'invalid-key',
+    });
+  });
 });

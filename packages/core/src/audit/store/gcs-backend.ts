@@ -1,4 +1,11 @@
-import { assertValidKey, AuditStoreError, normalizePrefix, type AuditStoreBackend } from './backend.js';
+import {
+  assertKeyInFolder,
+  assertValidKey,
+  AuditStoreError,
+  normalizePrefix,
+  type AuditStoreBackend,
+  type DeletePrefixOptions,
+} from './backend.js';
 
 /**
  * Cloud Storage backend over the JSON REST API (ADR 0036). No SDK: every request goes through the
@@ -19,8 +26,21 @@ export const METADATA_TOKEN_URL =
 /** Refresh the cached token this long before it expires. */
 export const TOKEN_REFRESH_MARGIN_MS = 60_000;
 
+export const GCS_REQUEST_TIMEOUT_MS = 30_000;
+export const METADATA_TIMEOUT_MS = 5_000;
+export const GCS_RETRY_DELAYS_MS: readonly number[] = [250, 1000];
+
 /** Object deletes sent at once by `deletePrefix`. */
 const DELETE_IN_FLIGHT = 8;
+
+function isRetryableStatus(status: number): boolean {
+  return status === 408 || status === 429 || status >= 500;
+}
+
+function sleep(ms: number): Promise<void> {
+  if (ms <= 0) return Promise.resolve();
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 /**
  * Cloud Storage bucket naming rules: 3-63 characters (up to 222 with dots, each dot-separated part at most 63),
@@ -73,37 +93,60 @@ async function discardBody(res: Response): Promise<void> {
  * Default token provider: reads the Cloud Run metadata server and caches the token until
  * shortly before it expires. Concurrent callers share one request.
  */
-export function createMetadataTokenProvider(options: { fetch: FetchLike; now?: () => number }): AccessTokenProvider {
+export function createMetadataTokenProvider(options: {
+  fetch: FetchLike;
+  now?: () => number;
+  timeoutMs?: number;
+  retryDelaysMs?: readonly number[];
+}): AccessTokenProvider {
   const now = options.now ?? Date.now;
+  const timeoutMs = options.timeoutMs ?? METADATA_TIMEOUT_MS;
+  const retryDelaysMs = options.retryDelaysMs ?? GCS_RETRY_DELAYS_MS;
   let cached: { token: string; expiresAt: number } | null = null;
   let inflight: Promise<string> | null = null;
 
   const refresh = async (): Promise<string> => {
-    let res: Response;
-    try {
-      res = await options.fetch(METADATA_TOKEN_URL, { headers: { 'Metadata-Flavor': 'Google' } });
-    } catch {
-      throw new AuditStoreError('unauthorized', 'The audit store could not get a Cloud Storage access token.');
+    for (let i = 0; i <= retryDelaysMs.length; i++) {
+      const isLast = i === retryDelaysMs.length;
+      let res: Response;
+      try {
+        res = await options.fetch(METADATA_TOKEN_URL, {
+          headers: { 'Metadata-Flavor': 'Google' },
+          signal: AbortSignal.timeout(timeoutMs),
+        });
+      } catch {
+        if (isLast) {
+          throw new AuditStoreError('unauthorized', 'The audit store could not get a Cloud Storage access token.');
+        }
+        await sleep(retryDelaysMs[i]);
+        continue;
+      }
+      if (!isLast && isRetryableStatus(res.status)) {
+        await discardBody(res);
+        await sleep(retryDelaysMs[i]);
+        continue;
+      }
+      if (!res.ok) {
+        await discardBody(res);
+        throw new AuditStoreError(
+          'unauthorized',
+          `The audit store could not get a Cloud Storage access token (${res.status}).`
+        );
+      }
+      let body: { access_token?: unknown; expires_in?: unknown };
+      try {
+        body = (await res.json()) as typeof body;
+      } catch {
+        throw new AuditStoreError('unauthorized', 'The audit store got an unreadable Cloud Storage access token.');
+      }
+      if (typeof body.access_token !== 'string' || body.access_token.length === 0) {
+        throw new AuditStoreError('unauthorized', 'The audit store got an unreadable Cloud Storage access token.');
+      }
+      const expiresInSec = typeof body.expires_in === 'number' && body.expires_in > 0 ? body.expires_in : 0;
+      cached = { token: body.access_token, expiresAt: now() + expiresInSec * 1000 };
+      return body.access_token;
     }
-    if (!res.ok) {
-      await discardBody(res);
-      throw new AuditStoreError(
-        'unauthorized',
-        `The audit store could not get a Cloud Storage access token (${res.status}).`
-      );
-    }
-    let body: { access_token?: unknown; expires_in?: unknown };
-    try {
-      body = (await res.json()) as typeof body;
-    } catch {
-      throw new AuditStoreError('unauthorized', 'The audit store got an unreadable Cloud Storage access token.');
-    }
-    if (typeof body.access_token !== 'string' || body.access_token.length === 0) {
-      throw new AuditStoreError('unauthorized', 'The audit store got an unreadable Cloud Storage access token.');
-    }
-    const expiresInSec = typeof body.expires_in === 'number' && body.expires_in > 0 ? body.expires_in : 0;
-    cached = { token: body.access_token, expiresAt: now() + expiresInSec * 1000 };
-    return body.access_token;
+    throw new AuditStoreError('unauthorized', 'The audit store could not get a Cloud Storage access token.');
   };
 
   return async () => {
@@ -123,6 +166,8 @@ export interface GcsAuditStoreOptions {
   tokenProvider: AccessTokenProvider;
   /** Override for tests; defaults to the public Cloud Storage endpoint. */
   apiBase?: string;
+  timeoutMs?: number;
+  retryDelaysMs?: readonly number[];
 }
 
 export class GcsAuditStoreBackend implements AuditStoreBackend {
@@ -131,6 +176,8 @@ export class GcsAuditStoreBackend implements AuditStoreBackend {
   private readonly fetchFn: FetchLike;
   private readonly tokenProvider: AccessTokenProvider;
   private readonly apiBase: string;
+  private readonly timeoutMs: number;
+  private readonly retryDelaysMs: readonly number[];
 
   constructor(options: GcsAuditStoreOptions) {
     if (!isValidBucketName(options.bucket)) {
@@ -140,6 +187,8 @@ export class GcsAuditStoreBackend implements AuditStoreBackend {
     this.fetchFn = options.fetch;
     this.tokenProvider = options.tokenProvider;
     this.apiBase = (options.apiBase ?? GCS_API_BASE).replace(/\/+$/, '');
+    this.timeoutMs = options.timeoutMs ?? GCS_REQUEST_TIMEOUT_MS;
+    this.retryDelaysMs = options.retryDelaysMs ?? GCS_RETRY_DELAYS_MS;
   }
 
   private objectUrl(key: string): string {
@@ -147,14 +196,29 @@ export class GcsAuditStoreBackend implements AuditStoreBackend {
   }
 
   private async request(url: string, init: RequestInit = {}): Promise<Response> {
-    const token = await this.tokenProvider();
-    const headers = new Headers(init.headers);
-    headers.set('Authorization', `Bearer ${token}`);
-    try {
-      return await this.fetchFn(url, { ...init, headers });
-    } catch {
-      throw networkError();
+    for (let i = 0; i <= this.retryDelaysMs.length; i++) {
+      const isLast = i === this.retryDelaysMs.length;
+      const token = await this.tokenProvider();
+      const headers = new Headers(init.headers);
+      headers.set('Authorization', `Bearer ${token}`);
+      let res: Response;
+      try {
+        res = await this.fetchFn(url, { ...init, headers, signal: AbortSignal.timeout(this.timeoutMs) });
+      } catch {
+        if (isLast) {
+          throw networkError();
+        }
+        await sleep(this.retryDelaysMs[i]);
+        continue;
+      }
+      if (!isLast && isRetryableStatus(res.status)) {
+        await discardBody(res);
+        await sleep(this.retryDelaysMs[i]);
+        continue;
+      }
+      return res;
     }
+    throw networkError();
   }
 
   /** Downloads an object; null on 404. */
@@ -276,22 +340,34 @@ export class GcsAuditStoreBackend implements AuditStoreBackend {
     return names.sort();
   }
 
-  async deletePrefix(prefix: string): Promise<void> {
-    normalizePrefix(prefix);
+  private async deleteObject(key: string): Promise<void> {
+    const res = await this.request(this.objectUrl(key), { method: 'DELETE' });
+    await discardBody(res);
+    // 404: already gone (deleted concurrently); the goal state holds.
+    if (!res.ok && res.status !== 404) throw statusError(res.status);
+  }
+
+  async deletePrefix(prefix: string, options: DeletePrefixOptions = {}): Promise<void> {
+    const folder = normalizePrefix(prefix);
+    if (options.last !== undefined) {
+      assertKeyInFolder(folder, options.last);
+    }
     const keys = await this.list(prefix);
+    const toDelete = options.last !== undefined ? keys.filter((k) => k !== options.last) : keys;
     // A few at once: an audit has hundreds of objects and the audit lock is held while they go.
     let next = 0;
     const worker = async (): Promise<void> => {
       for (;;) {
-        const key = keys[next++];
+        const key = toDelete[next++];
         if (key === undefined) return;
-        const res = await this.request(this.objectUrl(key), { method: 'DELETE' });
-        await discardBody(res);
-        // 404: already gone (deleted concurrently); the goal state holds.
-        if (!res.ok && res.status !== 404) throw statusError(res.status);
+        await this.deleteObject(key);
       }
     };
-    await Promise.all(Array.from({ length: Math.min(DELETE_IN_FLIGHT, keys.length) }, () => worker()));
+    await Promise.all(Array.from({ length: Math.min(DELETE_IN_FLIGHT, toDelete.length) }, () => worker()));
+    if (options.last !== undefined) {
+      // Only once everything else is gone: a failure above leaves the record, so the delete can be run again.
+      await this.deleteObject(options.last);
+    }
   }
 }
 
