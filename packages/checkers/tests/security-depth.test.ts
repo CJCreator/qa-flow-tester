@@ -67,6 +67,36 @@ describe('SRI', () => {
     expect(await new SecurityDepthChecker().checkSri(mockPage(tags), ctx())).toEqual([]);
   });
 
+  it("treats a site's own subdomains as first party and flags look-alike hosts", () => {
+    const exampleOrigin = 'https://www.example.com';
+    const subTags = [
+      { tag: 'script', url: 'https://cdn.example.com/a.js', hasIntegrity: false },
+      { tag: 'link', url: 'https://static.example.com/b.css', hasIntegrity: false },
+      { tag: 'script', url: 'https://cdn.other.com/lib.js', hasIntegrity: false },
+      { tag: 'script', url: 'https://example.com.evil.net/x.js', hasIntegrity: false },
+    ];
+    // cdn.example.com and static.example.com are skipped; cdn.other.com and evil.net are flagged
+    const missing = findMissingSri(subTags as never, exampleOrigin);
+    expect(missing.map((t) => t.url)).toEqual(['https://cdn.other.com/lib.js', 'https://example.com.evil.net/x.js']);
+
+    // From https://app.example.com, cdn.example.com is also first party (same registrable domain)
+    expect(
+      findMissingSri(
+        [{ tag: 'script', url: 'https://cdn.example.com/a.js', hasIntegrity: false }] as never,
+        'https://app.example.com'
+      )
+    ).toEqual([]);
+
+    // Two-part TLD example (e.g. .co.uk)
+    const ukOrigin = 'https://shop.example.co.uk';
+    expect(
+      findMissingSri([{ tag: 'script', url: 'https://cdn.example.co.uk/a.js', hasIntegrity: false }] as never, ukOrigin)
+    ).toEqual([]);
+    expect(
+      findMissingSri([{ tag: 'script', url: 'https://cdn.other.co.uk/a.js', hasIntegrity: false }] as never, ukOrigin)
+    ).toHaveLength(1);
+  });
+
   it('ignores about:blank pages and tolerates odd evaluate results', async () => {
     const checker = new SecurityDepthChecker();
     expect(await checker.checkSri(mockPage([], 'about:blank'), ctx())).toEqual([]);

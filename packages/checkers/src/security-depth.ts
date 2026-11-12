@@ -25,6 +25,7 @@ export interface SecurityDepthContext {
 
 export interface FetchedResponse {
   status: number;
+  /** Header names are lower-case (Node's `res.headers`). */
   headers: Record<string, string>;
   text: () => Promise<string>;
 }
@@ -64,13 +65,47 @@ export async function sameOriginGet(fetchFn: FetchFn, url: string, origin: strin
   return fetchFn(target.toString());
 }
 
+const TWO_PART_TLDS = new Set(['co.uk', 'org.uk', 'ac.uk', 'com.au', 'co.nz', 'co.in', 'co.jp', 'com.br']);
+
+/**
+ * Returns true if resourceHost is an own subdomain of pageHost (or the same host).
+ * Lower-cases both, strips a leading `www.`, then returns true when equal or resource ends with `.` + registrable domain.
+ * Note: this is an approximation without a full public-suffix list.
+ */
+export function isOwnSubdomain(resourceHost: string, pageHost: string): boolean {
+  const normResource = resourceHost.toLowerCase().replace(/^www\./, '');
+  const normPage = pageHost.toLowerCase().replace(/^www\./, '');
+  if (normResource === normPage) return true;
+
+  const parts = normPage.split('.');
+  if (parts.length < 2) return false;
+
+  const lastTwo = parts.slice(-2).join('.');
+  let regDomain: string;
+  if (parts.length >= 3 && TWO_PART_TLDS.has(lastTwo)) {
+    regDomain = parts.slice(-3).join('.');
+  } else {
+    regDomain = lastTwo;
+  }
+
+  return normResource === regDomain || normResource.endsWith('.' + regDomain);
+}
+
 /** Cross-origin scripts and stylesheets with no integrity attribute. */
 export function findMissingSri(tags: ResourceTag[], pageOrigin: string): ResourceTag[] {
+  let pageHost: string;
+  try {
+    pageHost = new URL(pageOrigin).hostname;
+  } catch {
+    return [];
+  }
   return tags.filter((t) => {
     if (t.hasIntegrity) return false;
     try {
       const u = new URL(t.url);
-      return (u.protocol === 'http:' || u.protocol === 'https:') && u.origin !== pageOrigin;
+      if (u.protocol !== 'http:' && u.protocol !== 'https:') return false;
+      if (u.origin === pageOrigin) return false;
+      return !isOwnSubdomain(u.hostname, pageHost);
     } catch {
       return false;
     }
