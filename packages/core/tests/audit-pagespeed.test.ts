@@ -13,8 +13,11 @@ import {
   mapPsiResponse,
   psiNotMeasuredReason,
   PSI_ENDPOINT,
+  PSI_IN_FLIGHT,
+  PSI_MAX_PAGES,
   type PageSpeedDeps,
 } from '../src/audit/ai/pagespeed.js';
+import { isAbortError } from '../src/abort.js';
 import type { NetDeps, PinnedRequest, RawResponse } from '../src/safe-net.js';
 import { setBrowserPolicy } from '../src/browser.js';
 
@@ -264,7 +267,7 @@ describe('measurePageSpeed: failures carry no values (REQ-012 AC-2)', () => {
 });
 
 describe('measureSampleSpeeds', () => {
-  it('asks one page at a time, in order, resolving the key once', async () => {
+  it('with inFlight 1 asks one page at a time, in order, resolving the key once', async () => {
     let inFlight = 0;
     let maxInFlight = 0;
     let keyCalls = 0;
@@ -285,6 +288,7 @@ describe('measureSampleSpeeds', () => {
     };
     const out = await measureSampleSpeeds(['https://a.example.in/', 'https://b.example.in/'], {
       ...deps(net),
+      inFlight: 1,
       resolveServiceKey: async () => {
         keyCalls++;
         return { apiKey: FAKE_KEY };
@@ -305,7 +309,7 @@ describe('measureSampleSpeeds', () => {
     const f = fakeNet([json('page-field.json'), json('quota-429.json', 429), json('page-field.json')]);
     const out = await measureSampleSpeeds(
       ['https://a.example.in/', 'https://b.example.in/', 'https://c.example.in/', 'https://d.example.in/'],
-      deps(f.net)
+      deps(f.net, { inFlight: 1 })
     );
     expect(f.connects).toHaveLength(2);
     expect(out[0].speed.lab.status).toBe('measured');
@@ -319,12 +323,96 @@ describe('measureSampleSpeeds', () => {
 
   it('a failed page does not stop the rest', async () => {
     const f = fakeNet([new Error('timeout'), json('page-field.json')]);
-    const out = await measureSampleSpeeds(['https://a.example.in/', 'https://b.example.in/'], deps(f.net));
+    const out = await measureSampleSpeeds(
+      ['https://a.example.in/', 'https://b.example.in/'],
+      deps(f.net, { inFlight: 1 })
+    );
     expectNotMeasured(out[0].speed, 'timeout');
     expect(out[0].notMeasuredReason).toBe('error');
     expect(psiNotMeasuredReason(out[0])).toBe('error');
     expect(out[1].speed.lab.status).toBe('measured');
     expect(out[1].notMeasuredReason).toBeUndefined();
+  });
+
+  it('asks up to PSI_IN_FLIGHT pages at once and keeps the page order', async () => {
+    let inFlight = 0;
+    let maxInFlight = 0;
+    const urls = Array.from({ length: 8 }, (_, i) => `https://p${i}.example.in/`);
+    const f = fakeNet(urls.map(() => json('page-field.json')));
+    const net: NetDeps = {
+      lookup: f.net.lookup,
+      async connect(req) {
+        inFlight++;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        await new Promise((r) => setTimeout(r, 5));
+        try {
+          return await f.net.connect(req);
+        } finally {
+          inFlight--;
+        }
+      },
+    };
+    const out = await measureSampleSpeeds(urls, deps(net));
+    expect(maxInFlight).toBe(PSI_IN_FLIGHT);
+    expect(out.map((o) => o.url)).toEqual(urls);
+  });
+
+  it('measures the first PSI_MAX_PAGES pages only', async () => {
+    const urls = Array.from({ length: 25 }, (_, i) => `https://p${i}.example.in/`);
+    const f = fakeNet(urls.map(() => json('page-field.json')));
+    const out = await measureSampleSpeeds(urls, deps(f.net, { maxPages: 3, inFlight: 1 }));
+    expect(f.connects).toHaveLength(3);
+    expect(out).toHaveLength(25);
+    for (let i = 3; i < 25; i++) {
+      expectNotMeasured(out[i].speed, 'failed');
+      expect(out[i].notMeasuredReason).toBeUndefined();
+    }
+  });
+
+  it('Stop cancels the request in flight and throws AbortError', async () => {
+    const controller = new AbortController();
+    const connects: PinnedRequest[] = [];
+    const net: NetDeps = {
+      async lookup() {
+        return ['142.250.183.10'];
+      },
+      connect(req) {
+        connects.push(req);
+        controller.abort();
+        return new Promise<RawResponse>((_, reject) => {
+          if (req.signal?.aborted) {
+            reject(Object.assign(new Error('aborted'), { name: 'AbortError' }));
+            return;
+          }
+          req.signal?.addEventListener('abort', () => {
+            reject(Object.assign(new Error('aborted'), { name: 'AbortError' }));
+          });
+        });
+      },
+    };
+    const promise = measureSampleSpeeds(
+      ['https://a.example.in/', 'https://b.example.in/'],
+      deps(net, { signal: controller.signal })
+    );
+    await expect(promise).rejects.toSatisfy((err) => isAbortError(err));
+    expect(connects).toHaveLength(1);
+  });
+
+  it('an aborted signal makes no request', async () => {
+    let keyCalls = 0;
+    const f = fakeNet([]);
+    const controller = new AbortController();
+    controller.abort();
+    const promise = measureSampleSpeeds(['https://a.example.in/'], {
+      ...deps(f.net, { signal: controller.signal }),
+      resolveServiceKey: async () => {
+        keyCalls++;
+        return { apiKey: FAKE_KEY };
+      },
+    });
+    await expect(promise).rejects.toSatisfy((err) => isAbortError(err));
+    expect(keyCalls).toBe(0);
+    expect(f.connects).toHaveLength(0);
   });
 
   it('measureSampleSpeeds without a key returns no-key for every page without requests', async () => {
