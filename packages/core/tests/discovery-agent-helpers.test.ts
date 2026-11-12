@@ -37,8 +37,8 @@ describe('DiscoveryAgent helpers', () => {
       };
 
       const merged = mergeCrawls([
-        { who: 'visitor', result: createSpiderResult({ pages: [visitorPage] }) },
-        { who: 'admin', result: createSpiderResult({ pages: [adminPage] }) },
+        { who: 'visitor', result: createSpiderResult({ pages: [visitorPage as never] }) },
+        { who: 'admin', result: createSpiderResult({ pages: [adminPage as never] }) },
       ]);
 
       expect(merged.pages).toHaveLength(1);
@@ -192,14 +192,14 @@ describe('DiscoveryAgent helpers', () => {
         {
           who: 'visitor',
           result: createSpiderResult({
-            forms: [duplicateForm1],
+            forms: [duplicateForm1 as never],
             sensitiveActions: [duplicateAction1],
           }),
         },
         {
           who: 'admin',
           result: createSpiderResult({
-            forms: [duplicateForm2],
+            forms: [duplicateForm2 as never],
             sensitiveActions: [duplicateAction2],
           }),
         },
