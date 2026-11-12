@@ -8,19 +8,12 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import os from 'os';
 import path from 'path';
 import { promises as fs } from 'fs';
-import { createRequire } from 'module';
-// The runner package does not depend on Playwright (a new dependency needs its own planned task); core does, so it
-// is resolved from core's folder. Same module the core and wizard browser tests use.
-import type { Browser, BrowserContext, Page } from '../../core/node_modules/playwright';
+import { chromium, type Browser, type BrowserContext, type Page } from 'playwright';
 import type { AICompletionOptions, AuditAiModels, ShareLink } from '@qa/types';
 import { AuditStore, emptyOverlay, pageContentName, resolveAuditAi, type AIProvider } from '@qa/core';
 import { generatePreview } from '../../core/src/audit/preview/index.js';
 import { auditDocContents, auditDocResult, PATHS } from '../../core/tests/helpers/audit-doc-fixture.js';
 import { RunnerServer } from '../src/server.js';
-
-const { chromium } = createRequire(path.resolve(__dirname, '../../core/package.json'))(
-  'playwright'
-) as typeof import('../../core/node_modules/playwright');
 
 const PORT = 3845;
 const ORIGIN = `http://localhost:${PORT}`;

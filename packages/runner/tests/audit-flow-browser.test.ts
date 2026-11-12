@@ -16,17 +16,10 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { promises as fs } from 'node:fs';
-import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
-import type { Browser } from '../../core/node_modules/playwright';
+import { chromium, type Browser } from 'playwright';
 import { AUDIT_DOCUMENT_KINDS, type AuditProgressEvent } from '@qa/types';
 import { runAuditCrawl, type NetDeps, type PinnedRequest } from '@qa/core';
 import { RunnerServer } from '../src/server.js';
-
-const HERE = path.dirname(fileURLToPath(import.meta.url));
-const { chromium } = createRequire(path.resolve(HERE, '../../core/package.json'))(
-  'playwright'
-) as typeof import('../../core/node_modules/playwright');
 
 const PORT = 3849;
 const ACCESS = 'flow-test-access-token-987654321';

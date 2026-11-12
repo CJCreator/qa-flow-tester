@@ -15,24 +15,15 @@ import http from 'http';
 import https from 'https';
 import os from 'os';
 import path from 'path';
-import { createRequire } from 'module';
-import { fileURLToPath } from 'url';
 import { inflateRawSync, crc32 } from 'zlib';
 import { promises as fs } from 'fs';
+import { chromium, type Request } from 'playwright';
 import { AUDIT_DOCUMENT_KINDS, type AuditResult, type AuditRequest } from '@qa/types';
 import { findClaimWords, labelsFor, pageContentName, type AuditStore } from '@qa/core';
-import type { Request } from '../../core/node_modules/playwright';
 import { RunnerServer } from '../src/server.js';
 import { auditDocContents, auditDocResult, PATHS } from '../../core/tests/helpers/audit-doc-fixture.js';
 
 const PORT = 3761;
-const HERE = path.dirname(fileURLToPath(import.meta.url));
-// Playwright is a dependency of @qa/core, not of the runner: load the copy core's printer uses, so the spy
-// below sees the very same `chromium` object.
-const corePlaywright = createRequire(path.resolve(HERE, '../../core/package.json'))(
-  'playwright'
-) as typeof import('../../core/node_modules/playwright');
-const { chromium } = corePlaywright;
 
 // 1x1 PNG: the stored screenshot of each top finding.
 const PNG_BYTES = Buffer.from(
