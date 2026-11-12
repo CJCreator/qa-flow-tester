@@ -3,6 +3,7 @@ import { timingSafeEqual } from 'crypto';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { handleHealthRoute } from './routes/health.js';
+import { applySecurityHeaders, runnerCsp } from './security-headers.js';
 import { evidenceContentType, sendEvidenceFile } from './evidence-file.js';
 import {
   releaseVerdict,
@@ -526,6 +527,7 @@ export class RunnerServer {
   private helperGrants: RunnerServerOptions['helperGrants'];
   /** The Helper access dispatch uses: given, or this runner's own when Helper sign-in is on. */
   private helperAccess: HelperAccess | undefined;
+  private readonly csp: string;
   readonly auditOwnerEmails: readonly string[];
   readonly auditDailyLimit?: number;
   private auditLimiter: AuditDailyLimiter;
@@ -703,6 +705,7 @@ export class RunnerServer {
     });
     this.helperAccess = options.helperAccess ?? (ownHelperAccess.enabled ? ownHelperAccess : undefined);
     this.helperGrants = options.helperGrants ?? this.helperAccess?.helperGrants;
+    this.csp = runnerCsp(this.helperAccess?.firebaseWeb?.authDomain);
     const wiring: AuditWiring = {
       dataDir: this.dataDir,
       store: auditStore,
@@ -969,6 +972,8 @@ export class RunnerServer {
         try {
           const url = new URL(req.url || '/', `http://${bracketHost(this.host)}:${this.port}`);
           const pathname = url.pathname;
+          // Frame, script and transport defaults for every answer (T-303); a page's own writeHead headers win.
+          applySecurityHeaders(req, res, this.csp);
 
           // Liveness & health check routes (/health, /healthz)
           if (handleHealthRoute(req, res, pathname)) {
