@@ -1,4 +1,5 @@
 import type { SensitiveAction, AmbiguityQuestion } from '@qa/types';
+import { actionText, sensitiveKind } from './action-words.js';
 import { sensitiveQuestion } from './questions.js';
 
 export class SafetyFilter {
@@ -12,10 +13,9 @@ export class SafetyFilter {
     const combined = `${elementText} ${selector} ${actionType || ''}`.toLowerCase();
 
     // 1. Check against explicit profile forbidden actions
-    const normalizedCombined = combined.replace(/-/g, ' ');
     for (const forbidden of this.forbiddenActions) {
-      const normalizedForbidden = forbidden.replace(/-/g, ' ');
-      if (combined.includes(forbidden) || normalizedCombined.includes(normalizedForbidden)) {
+      const forbiddenText = actionText(forbidden);
+      if (forbiddenText && actionText(combined).includes(forbiddenText)) {
         return {
           type: 'admin_setting',
           elementSelector: selector,
@@ -26,9 +26,8 @@ export class SafetyFilter {
       }
     }
 
-    // 2. Destructive Actions (deletions, purges)
-    const deleteRegex = /\b(delete|remove|destroy|purge|erase|drop|truncate|cancel-account)\b/i;
-    if (deleteRegex.test(combined)) {
+    const kind = sensitiveKind(elementText, selector, actionType || '');
+    if (kind === 'deletion') {
       return {
         type: 'deletion',
         elementSelector: selector,
@@ -37,10 +36,7 @@ export class SafetyFilter {
         reason: 'Potential destructive data removal action',
       };
     }
-
-    // 3. Payment & Billing
-    const paymentRegex = /\b(pay|payment|charge|checkout|purchase|subscribe|buy-now|credit-card|invoice-pay)\b/i;
-    if (paymentRegex.test(combined)) {
+    if (kind === 'payment') {
       return {
         type: 'payment',
         elementSelector: selector,
@@ -49,10 +45,7 @@ export class SafetyFilter {
         reason: 'Financial transaction or payment trigger',
       };
     }
-
-    // 4. External Communications
-    const commsRegex = /\b(send-email|email-blast|notify-users|broadcast|send-sms)\b/i;
-    if (commsRegex.test(combined)) {
+    if (kind === 'external_communication') {
       return {
         type: 'external_communication',
         elementSelector: selector,
