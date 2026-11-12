@@ -1,3 +1,4 @@
+import vm from 'node:vm';
 import type { PageInventoryItem, PlanPage, PlanPageTest, TestCaseStep } from '@qa/types';
 import type { SafetyFilter } from '../discovery/safety-filter.js';
 import type { PlannerForm } from './ai-planner.js';
@@ -37,9 +38,47 @@ const PATTERN_CANDIDATES = ['Test Value', 'test', 'abc123', '12345', 'A1b2C3d4',
 /** Values tried, in order, to find one the pattern refuses. Never empty: an empty value is the required rule's business. */
 const NON_MATCHING = ['!', 'x', '0', '#@#', 'zzzzzzzz', '12345', 'AAAA', 'Test Value'];
 
+/** A longer `pattern` is not read: the field gets no pattern item and no typed value. */
+const MAX_PATTERN_LENGTH = 256;
+/** The longest value a Rejects item types; a field that needs more gets no item. */
+const MAX_VALUE_LENGTH = 1000;
+/** One pattern check may take this long; a slower pattern is never run again in this process. */
+const PATTERN_TIMEOUT_MS = 100;
+
+// The page's pattern runs in a separate context with a time limit, so a pattern that backtracks
+// for minutes cannot stop the runner. Results are cached: the same few values are tried for each pattern.
+const matchContext = vm.createContext({ pattern: '', value: '' });
+const matchScript = new vm.Script('new RegExp("^(?:" + pattern + ")$", "v").test(value)');
+const matchCache = new Map<string, boolean>();
+const slowPatterns = new Set<string>();
+
+/** undefined: the pattern is too long or too slow to check, so nothing is planned from it. */
 function wholeMatch(pattern: string, value: string): boolean | undefined {
+  if (pattern.length > MAX_PATTERN_LENGTH || slowPatterns.has(pattern)) return undefined;
+  const key = `${pattern}\u0000${value}`;
+  const known = matchCache.get(key);
+  if (known !== undefined) return known;
+  matchContext.pattern = pattern;
+  matchContext.value = value;
+  let result: boolean;
   try {
-    return new RegExp(`^(?:${pattern})$`).test(value);
+    result = matchScript.runInContext(matchContext, { timeout: PATTERN_TIMEOUT_MS }) === true;
+  } catch {
+    if (slowPatterns.size >= 1000) slowPatterns.clear();
+    slowPatterns.add(pattern);
+    return undefined;
+  }
+  if (matchCache.size >= 5000) matchCache.clear();
+  matchCache.set(key, result);
+  return result;
+}
+
+/** The pattern the browser applies: none when it does not compile with the `v` flag (HTML spec). */
+function patternInForce(pattern: string | undefined): string | undefined {
+  if (!pattern) return undefined;
+  try {
+    new RegExp(`^(?:${pattern})$`, 'v'); // compiling does not backtrack; only matching can
+    return pattern;
   } catch {
     return undefined;
   }
@@ -81,6 +120,7 @@ function sampleFor(pattern: string): string | undefined {
       const m = /^\{(\d+)(?:,(\d*))?\}/.exec(pattern.slice(i));
       if (!m) return undefined;
       times = Number(m[1]);
+      if (times > MAX_VALUE_LENGTH) return undefined;
       i += m[0].length;
     } else if (q === '+') {
       i += 1;
@@ -89,12 +129,14 @@ function sampleFor(pattern: string): string | undefined {
       i += 1;
     }
     out += unit.repeat(times);
+    if (out.length > MAX_VALUE_LENGTH) return undefined;
   }
   return out;
 }
 
 /** A value this field accepts, or undefined when none can be worked out (the item is then left out). */
 function validValue(input: FormInput): string | undefined {
+  const pattern = patternInForce(input.pattern);
   const type = (input.type || '').toLowerCase();
   let value: string;
   if (type === 'email') value = 'test.user@example.com';
@@ -113,28 +155,30 @@ function validValue(input: FormInput): string | undefined {
           ? String(max)
           : '1';
   } else value = guessFillValue(`${input.selector} ${input.label ?? ''}`);
-  if (input.pattern && wholeMatch(input.pattern, value) !== true) {
-    const built = sampleFor(input.pattern);
+  if (pattern && wholeMatch(pattern, value) !== true) {
+    const built = sampleFor(pattern);
     const fit = [...(built ? [built] : []), ...PATTERN_CANDIDATES].find(
-      (c) => c !== '' && wholeMatch(input.pattern!, c) === true
+      (c) => c !== '' && wholeMatch(pattern, c) === true
     );
     if (fit === undefined) return undefined;
     value = fit;
   }
   if (input.minLength && value.length < input.minLength) {
+    if (input.minLength > MAX_VALUE_LENGTH) return undefined;
     const padded = value.padEnd(input.minLength, 'a');
-    if (input.pattern && wholeMatch(input.pattern, padded) !== true) return undefined;
+    if (pattern && wholeMatch(pattern, padded) !== true) return undefined;
     value = padded;
   }
   if (input.maxLength && value.length > input.maxLength) {
     value = value.slice(0, input.maxLength);
-    if (input.pattern && wholeMatch(input.pattern, value) !== true) return undefined;
+    if (pattern && wholeMatch(pattern, value) !== true) return undefined;
   }
   return value;
 }
 
 /** The rules a field states that a test can break, each with a value that breaks only it. */
 export function rejectRulesOf(input: FormInput): Array<{ rule: RejectRule; value: string; what: string }> {
+  const pattern = patternInForce(input.pattern);
   const type = (input.type || '').toLowerCase();
   const out: Array<{ rule: RejectRule; value: string; what: string }> = [];
   if (!TEXT_TYPES.has(type) && !CHECK_TYPES.has(type)) return out;
@@ -142,8 +186,8 @@ export function rejectRulesOf(input: FormInput): Array<{ rule: RejectRule; value
   if (!TEXT_TYPES.has(type)) return out;
   if (type === 'email') out.push({ rule: 'email', value: 'not-an-email', what: 'is not an email address' });
   if (type === 'url') out.push({ rule: 'url', value: 'not a web address', what: 'is not a web address' });
-  if (input.pattern && type !== 'email' && type !== 'url') {
-    const bad = NON_MATCHING.find((v) => wholeMatch(input.pattern!, v) === false);
+  if (pattern && type !== 'email' && type !== 'url' && validValue(input) !== undefined) {
+    const bad = NON_MATCHING.find((v) => wholeMatch(pattern, v) === false);
     if (bad !== undefined) out.push({ rule: 'pattern', value: bad, what: 'does not match the expected format' });
   }
   if (type === 'number') {
@@ -155,7 +199,7 @@ export function rejectRulesOf(input: FormInput): Array<{ rule: RejectRule; value
       out.push({ rule: 'max', value: String(max + 1), what: 'is above the maximum' });
   }
   // A browser stops typing at the maximum length, so a longer value can't be sent: no item for it.
-  if (type !== 'number' && input.minLength && input.minLength >= 2)
+  if (type !== 'number' && input.minLength && input.minLength >= 2 && input.minLength <= MAX_VALUE_LENGTH)
     out.push({ rule: 'minlength', value: 'a'.repeat(input.minLength - 1), what: 'is too short' });
   return out;
 }
