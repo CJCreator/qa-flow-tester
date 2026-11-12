@@ -210,7 +210,8 @@ describe('SeoChecker and Search/AI Suite', () => {
       urlPath: '/settings',
     });
 
-    expect(findings.some((f) => f.title.includes('noindex directive preventing search engine indexing'))).toBe(true);
+    // In T-340 /settings is an exempt path, so no noindex defect is raised
+    expect(findings.some((f) => f.title.includes('noindex directive preventing search engine indexing'))).toBe(false);
   });
 
   it('detects broken internal link returning HTTP 404', async () => {

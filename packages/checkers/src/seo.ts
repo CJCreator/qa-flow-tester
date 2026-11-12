@@ -62,6 +62,84 @@ function requestBaseOf(page: Page, context: SeoContext): string | undefined {
   return context.baseUrl;
 }
 
+const ACTION_SEGMENTS = new Set([
+  'logout',
+  'signout',
+  'sign-out',
+  'log-out',
+  'unsubscribe',
+  'delete',
+  'remove',
+  'cancel',
+  'confirm',
+  'verify',
+  'activate',
+  'approve',
+  'checkout',
+  'pay',
+]);
+
+const ACTION_QUERY_KEYS = new Set(['token', 'key', 'code', 'otp', 'signature', 'sig', 'action']);
+
+/**
+ * Returns true when path segment (case-insensitive) matches any action verb:
+ * logout, signout, sign-out, log-out, unsubscribe, delete, remove, cancel, confirm, verify, activate, approve, checkout, pay;
+ * OR query has a key named token, key, code, otp, signature, sig, or action.
+ * Segment matching must be exact segment equality (e.g. /blog/cancel-culture is false).
+ */
+export function isActionLink(pathAndQuery: string): boolean {
+  if (!pathAndQuery) return false;
+  try {
+    const url = new URL(pathAndQuery, 'http://localhost');
+    const segments = url.pathname.split('/').filter(Boolean);
+    for (const seg of segments) {
+      if (ACTION_SEGMENTS.has(seg.toLowerCase())) {
+        return true;
+      }
+    }
+    for (const key of url.searchParams.keys()) {
+      if (ACTION_QUERY_KEYS.has(key.toLowerCase())) {
+        return true;
+      }
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+const NOINDEX_EXEMPT_SEGMENTS = new Set([
+  'login',
+  'auth',
+  'signup',
+  'cart',
+  'account',
+  'checkout',
+  'admin',
+  'dashboard',
+  'settings',
+]);
+
+/**
+ * Returns true for /login, /auth, /signup, /cart, /account, /checkout, /admin, /dashboard, /settings
+ * (exact or leading path segment).
+ */
+export function isNoindexExempt(urlPath: string): boolean {
+  if (!urlPath) return false;
+  try {
+    const url = new URL(urlPath, 'http://localhost');
+    const segments = url.pathname.split('/').filter(Boolean);
+    if (segments.length === 0) return false;
+    const leading = segments[0].toLowerCase();
+    return NOINDEX_EXEMPT_SEGMENTS.has(leading);
+  } catch {
+    const segments = urlPath.split('?')[0].split('#')[0].split('/').filter(Boolean);
+    if (segments.length === 0) return false;
+    const leading = segments[0].toLowerCase();
+    return NOINDEX_EXEMPT_SEGMENTS.has(leading);
+  }
+}
+
 export class SeoChecker {
   private siteRootAuditor = new SiteRootAuditor();
   private aeoChecker = new AeoChecker();
@@ -121,6 +199,28 @@ export class SeoChecker {
           evidence: {},
           resolution: 'Add a distinct, descriptive <title> in the <head> of the HTML document.',
         });
+      } else {
+        const titleTrimmed = details.title.trim();
+        const len = titleTrimmed.length;
+        if (len < 10 || len > 60) {
+          findings.push({
+            id: `F-SEO-${tcId}-TITLE-LENGTH-${findings.length + 1}`,
+            testCaseId: context.testCaseId,
+            flowId: context.flowId,
+            severity: 'Suggestion',
+            checker: 'seo',
+            categoryTag: 'SEO',
+            title: `Page title is ${len < 10 ? 'too short' : 'too long'} (${len} characters)`,
+            where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
+            expectedVsActual: {
+              expected: 'A title of 10 to 60 characters',
+              actual: `Title has ${len} characters ("${titleTrimmed}")`,
+            },
+            stepsToReproduce: [`Visit ${context.urlPath}`, 'Inspect the <title> tag in <head>'],
+            evidence: {},
+            resolution: 'Adjust the <title> tag length to be between 10 and 60 characters for optimal search display.',
+          });
+        }
       }
 
       // 2. Meta Description
@@ -142,6 +242,28 @@ export class SeoChecker {
           evidence: {},
           resolution: 'Add a <meta name="description" content="..."> tag with a 50–160 character summary.',
         });
+      } else {
+        const descTrimmed = details.metaDescription.trim();
+        const len = descTrimmed.length;
+        if (len < 50 || len > 160) {
+          findings.push({
+            id: `F-SEO-${tcId}-DESC-LENGTH-${findings.length + 1}`,
+            testCaseId: context.testCaseId,
+            flowId: context.flowId,
+            severity: 'Suggestion',
+            checker: 'seo',
+            categoryTag: 'SEO',
+            title: `Page description is ${len < 50 ? 'too short' : 'too long'} (${len} characters)`,
+            where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
+            expectedVsActual: {
+              expected: 'A meta description of 50 to 160 characters',
+              actual: `Description has ${len} characters ("${descTrimmed}")`,
+            },
+            stepsToReproduce: [`Visit ${context.urlPath}`, 'Search for <meta name="description"> in <head>'],
+            evidence: {},
+            resolution: 'Adjust the meta description to be between 50 and 160 characters.',
+          });
+        }
       }
 
       // 3. Heading Structure: Exactly one H1 and sequential order
@@ -280,25 +402,70 @@ export class SeoChecker {
         }
       }
 
-      // 6. Meta Robots Noindex Warning
-      if (details.metaRobots && details.metaRobots.toLowerCase().includes('noindex')) {
-        findings.push({
-          id: `F-SEO-${tcId}-NOINDEX-${findings.length + 1}`,
-          testCaseId: context.testCaseId,
-          flowId: context.flowId,
-          severity: 'Major',
-          checker: 'seo',
-          categoryTag: 'SEO',
-          title: 'Page has a noindex directive preventing search engine indexing',
-          where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
-          expectedVsActual: {
-            expected: 'Public production pages should not block search crawlers unless intentionally hidden',
-            actual: `meta robots directive is "${details.metaRobots}"`,
-          },
-          stepsToReproduce: [`Visit ${context.urlPath}`, 'Check <meta name="robots"> in <head>'],
-          evidence: {},
-          resolution: 'Remove "noindex" from the meta robots tag if this page should appear in search results.',
-        });
+      // 6. Meta Robots Noindex Warning & X-Robots-Tag Header
+      if (isPublicVisitor && !isNoindexExempt(context.urlPath)) {
+        if (details.metaRobots && details.metaRobots.toLowerCase().includes('noindex')) {
+          findings.push({
+            id: `F-SEO-${tcId}-NOINDEX-${findings.length + 1}`,
+            testCaseId: context.testCaseId,
+            flowId: context.flowId,
+            severity: 'Major',
+            checker: 'seo',
+            categoryTag: 'SEO',
+            title: 'Page has a noindex directive preventing search engine indexing',
+            where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
+            expectedVsActual: {
+              expected: 'Public production pages should not block search crawlers unless intentionally hidden',
+              actual: `meta robots directive is "${details.metaRobots}"`,
+            },
+            stepsToReproduce: [`Visit ${context.urlPath}`, 'Check <meta name="robots"> in <head>'],
+            evidence: {},
+            resolution: 'Remove "noindex" from the meta robots tag if this page should appear in search results.',
+          });
+        }
+
+        if (fetchFn && firstTime('xrobots:' + context.urlPath)) {
+          try {
+            let targetUrl = '';
+            try {
+              if (typeof page.url === 'function') {
+                targetUrl = page.url();
+              }
+            } catch {
+              // Page may throw or lack url
+            }
+            if (!targetUrl) {
+              targetUrl = context.baseUrl ? new URL(context.urlPath, context.baseUrl).href : context.urlPath;
+            }
+            if (targetUrl) {
+              const res = await fetchFn(targetUrl);
+              const headers = res?.headers || {};
+              const val = headers['x-robots-tag'] || headers['X-Robots-Tag'];
+              if (typeof val === 'string' && val.toLowerCase().includes('noindex')) {
+                findings.push({
+                  id: `F-SEO-${tcId}-NOINDEX-${findings.length + 1}`,
+                  testCaseId: context.testCaseId,
+                  flowId: context.flowId,
+                  severity: 'Major',
+                  checker: 'seo',
+                  categoryTag: 'SEO',
+                  title: 'Page has a noindex directive preventing search engine indexing',
+                  where: { urlPath: context.urlPath, role: context.role, breakpoint: context.breakpoint },
+                  expectedVsActual: {
+                    expected: 'Public production pages should not block search crawlers unless intentionally hidden',
+                    actual: 'X-Robots-Tag header is "' + val + '"',
+                  },
+                  stepsToReproduce: [`Visit ${context.urlPath}`, 'Check HTTP response headers for X-Robots-Tag'],
+                  evidence: {},
+                  resolution:
+                    'Remove "noindex" from the X-Robots-Tag response header if this page should appear in search results.',
+                });
+              }
+            }
+          } catch {
+            // Skip on network or fetch failure
+          }
+        }
       }
 
       // 7. Mobile Viewport Meta Tag (for public pages)
@@ -605,7 +772,7 @@ export class SeoChecker {
     const findings: Finding[] = [];
     // A link already requested this run (the shared menu, on every page) is not asked for again.
     const asked = (p: string) => context.siteWide?.has(`link:${p}`) === true;
-    const toCheck = paths.filter((p) => !asked(p)).slice(0, 5);
+    const toCheck = paths.filter((p) => !asked(p) && !isActionLink(p)).slice(0, 5);
     if (!fetchFn) {
       if (toCheck.length === 0) return findings;
       return [
