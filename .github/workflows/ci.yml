@@ -46,6 +46,9 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Plugin checks
+        run: pnpm test:plugin
+
   # Unit tests only (no browser, no fabricated site), 2 shards (see tests.yml). Browser and e2e tests run nightly
   # (e2e-nightly.yml). Deploy runs the unit shards on push to main.
   build-and-test:
