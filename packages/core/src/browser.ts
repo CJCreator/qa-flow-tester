@@ -36,6 +36,8 @@ export interface BrowserOptions extends Partial<RunContextOptions> {
 export interface BrowserPolicy {
   guard?: (url: string, redirected: boolean) => Promise<boolean>;
   pinned?: Record<string, string>;
+  /** The egress proxy every browser on this machine uses (ADR 0045). */
+  proxy?: string;
 }
 
 let browserPolicy: BrowserPolicy | null = null;
@@ -142,6 +144,7 @@ export class BrowserManager {
       b = await launcher.launch({
         headless: isHeadless,
         args,
+        ...(browserPolicy?.proxy ? { proxy: { server: browserPolicy.proxy } } : {}),
       });
       this.browsers.set(engine, b);
     }

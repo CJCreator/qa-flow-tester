@@ -40,6 +40,7 @@ export * from './live-site.js';
 export * from './address-class.js';
 export * from './domain-verification.js';
 export * from './safe-net.js';
+export * from './egress-proxy.js';
 export * from './site-memory.js';
 export * from './discovery/interpret.js';
 export * from './redact.js';

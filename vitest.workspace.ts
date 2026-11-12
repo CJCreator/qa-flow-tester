@@ -23,6 +23,7 @@ const BROWSER_TESTS: Record<string, string[]> = {
   core: [
     'browser-guard',
     'browser-restart',
+    'egress-proxy-browser',
     'element-inventory',
     'finding-groups',
     'form-selectors',

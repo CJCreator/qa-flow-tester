@@ -362,9 +362,11 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
     } else {
       // The audit's own Chromium: never the shared BrowserManager, whose pins belong to another run.
       try {
+        const egressProxy = getBrowserPolicy()?.proxy;
         browser = await launch({
           headless: true,
           args: [...CHROMIUM_ARGS, ...(pins.length ? [`--host-resolver-rules=${pins.join(', ')}`] : [])],
+          ...(egressProxy ? { proxy: { server: egressProxy } } : {}),
         });
       } catch (err) {
         throw new AuditBrowserLaunchError(err instanceof Error ? err.message : undefined);

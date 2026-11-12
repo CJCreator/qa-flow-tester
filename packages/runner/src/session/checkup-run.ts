@@ -32,6 +32,7 @@ import {
   redactUrl,
   applySafeAnswers,
   setBrowserPolicy,
+  getBrowserPolicy,
   makeRequestGuard,
   resolvePublic,
   isIpLiteral,
@@ -708,6 +709,7 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
       if (deps.beta) {
         const checked = await resolvePublic(typed.hostname, deps.hostChecks);
         setBrowserPolicy({
+          ...getBrowserPolicy(),
           guard: makeRequestGuard(deps.hostChecks),
           pinned: checked.ok && !isIpLiteral(typed.hostname) ? { [typed.hostname]: checked.address } : undefined,
         });

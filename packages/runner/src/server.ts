@@ -91,6 +91,8 @@ import {
   isTestHost,
   setBrowserPolicy,
   makeRequestGuard,
+  startEgressProxy,
+  type EgressProxy,
   verifyDomainProof,
   safeGet,
   proofUrl,
@@ -517,6 +519,8 @@ export class RunnerServer {
   private beta: boolean;
   private betaLimits: BetaLimits;
   private hostChecks: NetDeps | undefined;
+  /** The shared machine's egress proxy for Chromium (ADR 0045). Beta only. */
+  private egress: EgressProxy | undefined;
   private stepTimeoutMs: number | undefined;
   private openRouter: OpenRouterClient;
   private makeAIProvider: (provider: AIProviderType, apiKey: string, model?: string) => AIProvider;
@@ -952,7 +956,10 @@ export class RunnerServer {
 
   public async start(): Promise<string> {
     // A shared machine checks every browser request: nothing may reach a non-public address (ADR 0014).
-    if (this.beta) setBrowserPolicy({ guard: makeRequestGuard(this.hostChecks) });
+    if (this.beta) {
+      this.egress = await startEgressProxy({ lookup: this.hostChecks?.lookup });
+      setBrowserPolicy({ guard: makeRequestGuard(this.hostChecks), proxy: this.egress.url });
+    }
     await this.auditRecoveryDone;
     // Today's counts from before a restart (T-301). Unreadable or another day's: start from zero.
     const today = betaDayUsage();
@@ -1490,6 +1497,8 @@ export class RunnerServer {
   public async stop(): Promise<void> {
     this.scheduler.stop();
     if (this.beta) setBrowserPolicy(null);
+    await this.egress?.close();
+    this.egress = undefined;
     // Open event streams would otherwise keep the server from ever finishing its close.
     for (const client of this.streamClients) client.end();
     this.streamClients.clear();

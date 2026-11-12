@@ -1,6 +1,7 @@
 # 0014: Verified Domains and Host Checks for Shared Machines
 
 Status: Accepted 2026-10-07 (owner answers recorded under Decisions for owner).
+Amended by [0045](0045-pinned-egress-proxy-for-chromium.md): on a shared machine Chromium connects only through a pinned egress proxy, which closes the residual risk stated under "Browser guard and its limit".
 
 Amended by [0022](0022-test-sign-in-as-consent.md): on the person's own computer, accepted test sign-in details also allow full testing of an App that is not a Test Copy. Shared online copy unchanged.
 

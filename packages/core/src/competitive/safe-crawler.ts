@@ -168,6 +168,7 @@ export class SafePublicCrawler {
     const browser = await chromium.launch({
       headless: options.headless !== false,
       args: [WEBRTC_NO_DIRECT_UDP, ...(pinned.length ? [`--host-resolver-rules=${pinned.join(', ')}`] : [])],
+      ...(policy?.proxy ? { proxy: { server: policy.proxy } } : {}),
     });
 
     try {
