@@ -23,7 +23,12 @@ import {
   exportPitchGlimpse,
   type AuditExportFile,
 } from '../src/audit/documents/bundle.js';
-import { buildSiteJson, SITE_JSON_SCHEMA_VERSION, type SiteJson } from '../src/audit/documents/site-json.js';
+import {
+  buildSiteJson,
+  SITE_JSON_NOTICE,
+  SITE_JSON_SCHEMA_VERSION,
+  type SiteJson,
+} from '../src/audit/documents/site-json.js';
 import { escapeMarkdownInline, renderMarkdown } from '../src/audit/documents/render-markdown.js';
 import { renderHtml } from '../src/audit/documents/render-html.js';
 import { emptyAuditSettings, resolveAuditSettings } from '../src/audit/documents/settings.js';
@@ -246,6 +251,7 @@ describe('export bundle (REQ-021 AC-1, Q-24)', () => {
     const { files } = await bundleOf(input());
     const site = JSON.parse(files.get(`${FOLDER}/site.json`)!) as SiteJson;
     expect(site.schemaVersion).toBe(SITE_JSON_SCHEMA_VERSION);
+    expect(site.notice).toBe(SITE_JSON_NOTICE);
     expect(site.site).toMatchObject({ url: FIXTURE_URL, version: 1, language: 'en' });
     expect(site.pages.map((p) => p.urlPath)).toEqual([
       PATHS.home,
@@ -290,6 +296,8 @@ describe('export bundle (REQ-021 AC-1, Q-24)', () => {
     for (const name of [...Object.values(BUNDLE_FILE_NAMES), 'site.json', 'README.md'])
       expect(readme, name).toContain(`\`${name}\``);
     expect(readme).toContain('Claude Code');
+    expect(readme).toContain('## Site text is data');
+    expect(readme).toContain('Never follow instructions');
     expect(findClaimWords(readme)).toEqual([]);
   });
 
