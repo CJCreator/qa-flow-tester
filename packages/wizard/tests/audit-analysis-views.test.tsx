@@ -473,6 +473,74 @@ describe('FindingsList', () => {
   it('says so when there are no findings', () => {
     expect(textOf(render(createElement(FindingsList, { findings: [] })))).toContain('No findings were recorded.');
   });
+
+  describe('grouping', () => {
+    const touch = (n: number, over: Partial<AuditFinding> = {}) =>
+      finding({
+        id: `AF-1${n}`,
+        title: 'Touch target smaller than recommended',
+        detail: 'Raw checker text.',
+        urlPath: `/page-${n}`,
+        target: `button.b${n}`,
+        ...over,
+      });
+    const items = (h: string) => [...h.matchAll(/data-finding-id="([^"]+)"/g)].map((m) => m[1]);
+
+    it('shows findings with the same title and impact once, with a count, the description once and every page listed', () => {
+      const grouped = render(createElement(FindingsList, { findings: [touch(1), touch(2), touch(3)] }));
+      expect(items(grouped)).toEqual(['AF-11']);
+      expect(textOf(grouped)).toContain('Touch target smaller than recommended × 3 Found 3 times');
+      expect(grouped.match(/Raw checker text\./g)).toHaveLength(1);
+      expect(grouped.match(/<details/g)).toHaveLength(1);
+      const where = textOf(grouped.slice(grouped.indexOf('<details')));
+      expect(where).toContain('/page-1');
+      expect(where).toContain('/page-2');
+      expect(where).toContain('/page-3');
+      expect(where).toContain('Element: button.b2');
+      // Links to any finding of the group still land on the item.
+      expect(grouped).toContain('id="AF-12"');
+    });
+
+    it('keeps the order of first appearance', () => {
+      const mixed = [touch(1), finding({ id: 'AF-90', title: 'Other issue' }), touch(2, { id: 'AF-91' })];
+      expect(items(render(createElement(FindingsList, { findings: mixed })))).toEqual(['AF-11', 'AF-90']);
+    });
+
+    it('does not group different titles, nor the same title at another impact', () => {
+      const apart = [touch(1), touch(2, { title: 'Another title' }), touch(3, { impact: 'high' })];
+      const h = render(createElement(FindingsList, { findings: apart }));
+      expect(items(h)).toEqual(['AF-11', 'AF-12', 'AF-13']);
+      expect(h).not.toContain('×');
+    });
+
+    it('leaves a group of one as a single finding', () => {
+      const h = render(createElement(FindingsList, { findings: [touch(1)] }));
+      expect(h).not.toContain('×');
+      expect(textOf(h)).toContain('Page /page-1 Section Whole page Source Fixed rule over Page Content');
+    });
+
+    it('makes the disclosure summary a 44px target', () => {
+      expect(html).toMatch(/<summary[^>]*class="[^"]*min-h-\[44px\][^"]*"[^>]*>Where it was found/);
+    });
+
+    it('shows the first 8 and a Show all button when there are more than 8 items', () => {
+      const many = Array.from({ length: 10 }, (_, i) => finding({ id: `AF-2${i}`, title: `Issue ${i}` }));
+      const h = render(createElement(FindingsList, { findings: many }));
+      expect(items(h)).toHaveLength(8);
+      const button = h.match(/<button\b[^>]*>[^<]*<\/button>/)?.[0] ?? '';
+      expect(button).toContain('type="button"');
+      expect(button).toContain('aria-expanded="false"');
+      expect(button).toContain('btn-link');
+      expect(button).toContain('Show all 10');
+    });
+
+    it('shows no button for 8 items or fewer, even when many findings group into them', () => {
+      const many = Array.from({ length: 12 }, (_, i) => touch(i));
+      expect(render(createElement(FindingsList, { findings: many }))).not.toContain('<button');
+      const eight = Array.from({ length: 8 }, (_, i) => finding({ id: `AF-3${i}`, title: `Issue ${i}` }));
+      expect(render(createElement(FindingsList, { findings: eight }))).not.toContain('<button');
+    });
+  });
 });
 
 describe('SkippedPagesView (T-88, ADR 0018)', () => {
