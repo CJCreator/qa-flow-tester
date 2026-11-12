@@ -5,6 +5,7 @@
  */
 import type { PreviewFacts } from './prompt.js';
 import { stripClaimWords } from '../documents/wording.js';
+import { labelsFor } from '../documents/labels/index.js';
 
 function escapeHtml(text: string): string {
   return text
@@ -20,19 +21,30 @@ function sanitizeClaimText(text: string): string {
   return stripClaimWords(text);
 }
 
+export function pathOf(href: string): string {
+  try {
+    return new URL(href).pathname || href;
+  } catch {
+    return href;
+  }
+}
+
 /**
  * Builds semantic HTML for the improved homepage from PreviewFacts without using AI.
  * Respects ADR 0018 wording: no release verdicts, no compliance claims.
  */
 export function buildTemplateHtml(facts: PreviewFacts): string {
+  const { labels } = labelsFor(facts.language);
   const parts: string[] = [];
 
   // Header and navigation
   parts.push('<header>');
   if (facts.menu.length > 0) {
-    parts.push('  <nav class="qa-preview-menu" aria-label="Site menu">');
+    parts.push(`  <nav aria-label="${escapeHtml(labels.headings.navigationLinks)}">`);
     for (const link of facts.menu) {
-      parts.push(`    <a href="${escapeHtml(link.href)}">${escapeHtml(link.text)}</a>`);
+      parts.push(
+        `    <a href="${escapeHtml(link.href)}">${escapeHtml(sanitizeClaimText(link.text) || pathOf(link.href))}</a>`
+      );
     }
     parts.push('  </nav>');
   }
@@ -42,11 +54,11 @@ export function buildTemplateHtml(facts: PreviewFacts): string {
   parts.push('<main>');
 
   // Title / Hero
-  const title = facts.title || (facts.headings.length > 0 ? facts.headings[0].text : 'Welcome');
+  const title = facts.title || facts.headings[0]?.text || facts.host;
   parts.push(`  <h1 id="top">${escapeHtml(sanitizeClaimText(title))}</h1>`);
 
   if (facts.description) {
-    parts.push(`  <p class="qa-preview-lead">${escapeHtml(sanitizeClaimText(facts.description))}</p>`);
+    parts.push(`  <p>${escapeHtml(sanitizeClaimText(facts.description))}</p>`);
   }
 
   // Hero Image if available
@@ -69,8 +81,7 @@ export function buildTemplateHtml(facts: PreviewFacts): string {
 
   // Calls to Action
   if (facts.ctas.length > 0) {
-    parts.push('  <section id="qa-preview-actions">');
-    parts.push('    <h2>Actions</h2>');
+    parts.push('  <section>');
     parts.push('    <ul>');
     for (const cta of facts.ctas) {
       const text = escapeHtml(sanitizeClaimText(cta.text));
@@ -86,8 +97,8 @@ export function buildTemplateHtml(facts: PreviewFacts): string {
 
   // Suggested Improvements from Audit Findings
   if (facts.findings.length > 0) {
-    parts.push('  <section id="qa-preview-suggestions">');
-    parts.push('    <h2>Suggested improvements</h2>');
+    parts.push('  <section>');
+    parts.push(`    <h2>${escapeHtml(labels.headings.topIssues)}</h2>`);
     parts.push('    <ul>');
     for (const finding of facts.findings) {
       const fTitle = escapeHtml(sanitizeClaimText(finding.title));
@@ -100,7 +111,7 @@ export function buildTemplateHtml(facts: PreviewFacts): string {
 
   // Additional images
   if (facts.images.length > 1) {
-    parts.push('  <section id="qa-preview-gallery">');
+    parts.push('  <section>');
     for (const img of facts.images.slice(1)) {
       parts.push(`    <img src="${escapeHtml(img.src)}" alt="${escapeHtml(sanitizeClaimText(img.alt || ''))}">`);
     }
@@ -108,17 +119,6 @@ export function buildTemplateHtml(facts: PreviewFacts): string {
   }
 
   parts.push('</main>');
-
-  // Footer
-  parts.push('<footer>');
-  if (facts.menu.length > 0) {
-    parts.push('  <nav aria-label="Footer navigation">');
-    for (const link of facts.menu) {
-      parts.push(`    <a href="${escapeHtml(link.href)}">${escapeHtml(link.text)}</a>`);
-    }
-    parts.push('  </nav>');
-  }
-  parts.push('</footer>');
 
   return parts.join('\n');
 }

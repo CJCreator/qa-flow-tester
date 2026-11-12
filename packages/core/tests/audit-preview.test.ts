@@ -9,6 +9,7 @@ import type { AICompletionOptions, AIMessage, AIProviderType } from '@qa/types';
 import type { AIProvider } from '../src/ai/ai-provider.js';
 import { resolveAuditAi, type AuditAi } from '../src/audit/ai/stage-ai.js';
 import { emptyOverlay } from '../src/audit/documents/edits.js';
+import { labelsFor } from '../src/audit/documents/labels/index.js';
 import {
   generatePreview,
   previewFacts,
@@ -194,6 +195,8 @@ describe('preview generator', () => {
     expect(out.ok).toBe(true);
     expect(fake.calls).toHaveLength(2);
     expect(fake.calls[1].messages.at(-1)?.content).toMatch(/secure/i);
+    expect(out.source).toBe('ai');
+    expect(out.problem).toBeUndefined();
   });
 
   it('claim words in both answers: falls back to template text without claim words', async () => {
@@ -205,6 +208,8 @@ describe('preview generator', () => {
     expect(out.html).not.toContain('Certified');
     expect(out.html).not.toContain('safe');
     expect(out.html).toContain('href="https://shop.example.in/about"');
+    expect(out.source).toBe('template');
+    expect(out.problem).toBe('claim-words');
   });
 
   it('a failed or empty AI answer falls back to template text with no provider text', async () => {
@@ -214,12 +219,16 @@ describe('preview generator', () => {
     if (!failedOut.ok) throw new Error('expected ok');
     expect(failedOut.html).not.toContain('secret detail');
     expect(failedOut.html).toContain('href="https://shop.example.in/about"');
+    expect(failedOut.source).toBe('template');
+    expect(failedOut.problem).toBe('failed');
 
     const empty = fakeAi(['   ']);
     const emptyOut = await generatePreview(input(), { ai: await empty.ai() });
     expect(emptyOut.ok).toBe(true);
     if (!emptyOut.ok) throw new Error('expected ok');
     expect(emptyOut.html).toContain('href="https://shop.example.in/about"');
+    expect(emptyOut.source).toBe('template');
+    expect(emptyOut.problem).toBe('failed');
   });
 
   it('no AI provided: builds preview copy from findings and Page Content (ADR 0018 template)', async () => {
@@ -228,7 +237,71 @@ describe('preview generator', () => {
     if (!out.ok) throw new Error('expected ok');
     expect(out.html).toContain('Preview of suggested changes');
     expect(out.html).toContain('href="https://shop.example.in/about"');
-    expect(out.html).toContain('Suggested improvements');
+    expect(out.html).toContain(labelsFor('en').labels.headings.topIssues);
+    expect(out.source).toBe('template');
+    expect(out.problem).toBeUndefined();
+  });
+
+  it('the template filters claim words from menu text and keeps no reserved names', async () => {
+    const base = input();
+    const withMenu: PreviewInput = {
+      ...base,
+      result: {
+        ...base.result,
+        hierarchy: {
+          ...base.result.hierarchy,
+          links: [
+            ...base.result.hierarchy.links,
+            {
+              from: PATHS.home,
+              to: 'https://shop.example.in/checkout',
+              text: 'Secure checkout',
+              region: 'menu',
+            },
+          ],
+        },
+      },
+    };
+    const out = await generatePreview(withMenu, {});
+    expect(findClaimWords(out.html)).toEqual([]);
+    expect(out.html).toContain('href="https://shop.example.in/checkout"');
+    expect(out.html).not.toMatch(/id="qa-preview-(actions|suggestions|gallery)"|class="qa-preview-lead"/);
+  });
+
+  it('the template uses the document language for its headings', () => {
+    const html = buildTemplateHtml({ ...previewFacts(input()), language: 'ta' });
+    expect(html).toContain(labelsFor('ta').labels.headings.topIssues);
+    expect(html).not.toContain('Suggested improvements');
+    expect(html).not.toContain('Actions');
+    expect(html).not.toContain('Site menu');
+    expect(html).not.toContain('Welcome');
+  });
+
+  it('a menu link the AI left out keeps its link but loses its claim words', async () => {
+    const base = input();
+    const withMenu: PreviewInput = {
+      ...base,
+      result: {
+        ...base.result,
+        hierarchy: {
+          ...base.result.hierarchy,
+          links: [
+            {
+              from: PATHS.home,
+              to: 'https://shop.example.in/bakers',
+              text: 'Certified bakers',
+              region: 'menu',
+            },
+          ],
+        },
+      },
+    };
+    const fake = fakeAi(['<main><h1>Hello</h1></main>']);
+    const out = await generatePreview(withMenu, { ai: await fake.ai() });
+    expect(out.source).toBe('ai');
+    expect(out.html).toContain('href="https://shop.example.in/bakers"');
+    expect(out.html).not.toContain('Certified');
+    expect(findClaimWords(out.html)).toEqual([]);
   });
 
   it('works without stored homepage content: the menu links still appear', async () => {
