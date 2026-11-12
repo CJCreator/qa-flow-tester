@@ -14,6 +14,11 @@
     scroll-padding-top: 6rem;
   }
 
+  /* With a sticky action bar at the bottom, a control that takes focus scrolls clear of it (WCAG 2.4.11). */
+  html:has([data-bottom-bar]) {
+    scroll-padding-bottom: 11rem;
+  }
+
   body {
     @apply bg-paper font-sans text-base text-ink antialiased;
     min-height: 100vh;
