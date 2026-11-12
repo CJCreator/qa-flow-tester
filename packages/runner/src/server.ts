@@ -137,6 +137,7 @@ import {
   type TickSummary,
 } from './scheduler.js';
 import { schedulerAuthFromEnv, type GoogleOidcVerifier } from './helpers/google-oidc-token.js';
+import { isHttpsRequest } from './helpers/helper-session.js';
 import {
   SessionKeyResolver,
   betaLimitsFromEnv,
@@ -914,11 +915,7 @@ export class RunnerServer {
     if (req.method === 'GET' && matchesSecret(url.searchParams.get('access'), key)) {
       url.searchParams.delete('access');
       // Secure only when the visit was https (a tunnel says so): plain-http localhost would drop the cookie.
-      const proto = req.headers['x-forwarded-proto'];
-      const isHttps =
-        (Array.isArray(proto) ? proto[0] : proto)?.includes('https') ||
-        (typeof req.headers['cf-visitor'] === 'string' && req.headers['cf-visitor'].includes('https')) ||
-        Array.from(this.allowedOrigins).some((o) => o.startsWith('https://'));
+      const isHttps = isHttpsRequest(req) || Array.from(this.allowedOrigins).some((o) => o.startsWith('https://'));
       const secure = isHttps ? '; Secure' : '';
       res.writeHead(303, {
         'Set-Cookie': `${ACCESS_COOKIE}=${encodeURIComponent(key)}; Path=/; HttpOnly; SameSite=Lax${secure}`,
@@ -1069,9 +1066,8 @@ export class RunnerServer {
           // A 'public' row (a Shared Link page) needs no visitor session: its viewer keeps no cookie, so each
           // view would count as a new visitor and soon hit the per-address limit.
           if (this.beta && matched?.route.access !== 'scheduler' && matched?.route.access !== 'public') {
-            const proto = req.headers['x-forwarded-proto'];
             try {
-              enterSession(sessionFor(req, res, (Array.isArray(proto) ? proto[0] : proto)?.includes('https') ?? false));
+              enterSession(sessionFor(req, res, isHttpsRequest(req)));
             } catch (err) {
               if (!(err instanceof SessionRateLimited)) throw err;
               res.setHeader('Retry-After', '600');

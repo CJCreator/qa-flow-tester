@@ -95,6 +95,24 @@ describe('A runner shared with an access key', () => {
     expect(link.headers['set-cookie']?.[0]).toContain('Secure');
   });
 
+  it('the access cookie is Secure when X-Forwarded-Proto is https', async () => {
+    const res = await get(KEYED_PORT, `/?access=${KEY}`, { 'x-forwarded-proto': 'https' });
+    expect(res.status).toBe(303);
+    expect(String(res.headers['set-cookie'])).toContain('Secure');
+  });
+
+  it('the access cookie is Secure when CF-Visitor says https', async () => {
+    const res = await get(KEYED_PORT, `/?access=${KEY}`, { 'cf-visitor': '{"scheme":"https"}' });
+    expect(res.status).toBe(303);
+    expect(String(res.headers['set-cookie'])).toContain('Secure');
+  });
+
+  it('the access cookie is not Secure on plain http', async () => {
+    const res = await get(KEYED_PORT, `/?access=${KEY}`, { 'x-forwarded-proto': 'http' });
+    expect(res.status).toBe(303);
+    expect(String(res.headers['set-cookie'])).not.toContain('Secure');
+  });
+
   it('lets in requests that carry the key in the cookie or the X-QA-Access header', async () => {
     expect((await get(KEYED_PORT, '/api/runner/status', { cookie: `theme=dark; qa_access=${KEY}` })).status).toBe(200);
     expect((await get(KEYED_PORT, '/api/runner/status', { 'x-qa-access': KEY })).status).toBe(200);
