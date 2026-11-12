@@ -10,18 +10,18 @@ export interface HtmlReportOptions {
 }
 
 const GRADE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  A: { bg: '#ECFDF5', text: '#065F46', border: '#059669' },
-  B: { bg: '#F0F9FF', text: '#0369A1', border: '#0284C7' },
-  C: { bg: '#FFFBEB', text: '#92400E', border: '#D97706' },
-  D: { bg: '#FFF7ED', text: '#9A3412', border: '#EA580C' },
-  F: { bg: '#FEF2F2', text: '#991B1B', border: '#DC2626' },
+  A: { bg: '#E2F3E9', text: '#0B7547', border: '#0B7547' },
+  B: { bg: '#E2F3E9', text: '#0B7547', border: '#0B7547' },
+  C: { bg: '#FBEFD9', text: '#8A5000', border: '#8A5000' },
+  D: { bg: '#FBEFD9', text: '#8A5000', border: '#8A5000' },
+  F: { bg: '#FCE8E6', text: '#B42318', border: '#B42318' },
 };
 
 const SEVERITY_COLORS: Record<FindingSeverity, { bg: string; text: string }> = {
-  Blocker: { bg: '#FEE2E2', text: '#991B1B' },
-  Major: { bg: '#FFEDD5', text: '#9A3412' },
-  Minor: { bg: '#FEF3C7', text: '#92400E' },
-  Suggestion: { bg: '#E0E7FF', text: '#3730A3' },
+  Blocker: { bg: '#FCE8E6', text: '#B42318' },
+  Major: { bg: '#FBEFD9', text: '#8A5000' },
+  Minor: { bg: '#FBEFD9', text: '#8A5000' },
+  Suggestion: { bg: '#ECEFEC', text: '#1D3FD0' },
 };
 
 /**
@@ -52,10 +52,10 @@ export async function generateSingleFileHtmlReport(
       const data = report.grades?.aspects[aspect];
       if (!data || data.checked === false || data.grade === null) {
         return `
-        <div class="aspect-card" style="border-top: 4px solid #94A3B8;">
+        <div class="aspect-card" style="border-top: 4px solid #7A8580;">
           <div class="aspect-header">
             <span class="aspect-title">${escapeHtml(aspect)}</span>
-            <span class="aspect-grade" style="background: #F1F5F9; color: #475569; border: 1px solid #94A3B8;">Not checked</span>
+            <span class="aspect-grade" style="background: #ECEFEC; color: #4C5853; border: 1px solid #7A8580;">Not checked</span>
           </div>
           <div class="aspect-footer"><span>Nothing in this run checked it, so it isn’t graded.</span></div>
         </div>
@@ -106,12 +106,12 @@ export async function generateSingleFileHtmlReport(
     documentedItemsHtml = `
       <section class="section card documented-items-section">
         <h2 class="section-title">Documented items</h2>
-        <div class="doc-coverage-banner" style="display:flex; justify-content:space-between; align-items:center; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:1rem 1.5rem; margin-bottom:1rem;">
+        <div class="doc-coverage-banner" style="display:flex; flex-wrap:wrap; gap:0.75rem; justify-content:space-between; align-items:center; background:#F4F6F4; border:1px solid #D8DDDA; border-radius:10px; padding:1rem 1.5rem; margin-bottom:1rem;">
           <div>
-            <div style="font-size:1.15rem; font-weight:700; color:#0F172A;">${d.reached} of ${d.total} documented items reached</div>
-            <div style="font-size:0.875rem; color:#64748B; margin-top:0.25rem;">Items from your Product Context, matched against the pages and controls found in the App.</div>
+            <div style="font-size:1.15rem; font-weight:700; color:#121A17;">${d.reached} of ${d.total} documented items reached</div>
+            <div style="font-size:0.875rem; color:#4C5853; margin-top:0.25rem;">Items from your Product Context, matched against the pages and controls found in the App.</div>
           </div>
-          <div style="font-size:1.5rem; font-weight:800; color:${d.total > 0 && d.reached === d.total ? '#16A34A' : '#D97706'};">
+          <div style="font-size:1.5rem; font-weight:800; color:${d.total > 0 && d.reached === d.total ? '#0B7547' : '#8A5000'};">
             ${d.total > 0 ? Math.round((d.reached / d.total) * 100) : 100}%
           </div>
         </div>
@@ -123,20 +123,20 @@ export async function generateSingleFileHtmlReport(
             ${d.notFound
               .map(
                 (item) => `
-              <div style="border: 1px solid #E2E8F0; border-left: 4px solid #E11D48; border-radius: 6px; padding: 0.75rem 1rem; background: #FFF;">
+              <div style="border: 1px solid #D8DDDA; border-left: 4px solid #B42318; border-radius: 10px; padding: 0.75rem 1rem; background: #FFFFFF;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                  <strong style="color:#0F172A;">${escapeHtml(item.docSource?.section || item.docSource?.document || 'Documented item')}</strong>
-                  <span style="font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:4px; background:#FFE4E6; color:#BE123C; font-family:monospace;">${escapeHtml(item.code || 'SPEC_GAP_NO_PAGE')}</span>
+                  <strong style="color:#121A17;">${escapeHtml(item.docSource?.section || item.docSource?.document || 'Documented item')}</strong>
+                  <span style="font-size:0.875rem; font-weight:700; padding:2px 8px; border-radius:6px; background:#FCE8E6; color:#B42318; font-family:monospace;">${escapeHtml(item.code || 'SPEC_GAP_NO_PAGE')}</span>
                 </div>
-                <div style="font-size:0.875rem; color:#475569; margin-top:0.25rem;">${escapeHtml(item.reason)}</div>
-                <div style="margin-top:0.5rem; font-size:0.75rem; color:#64748B; font-style:italic;">
+                <div style="font-size:0.875rem; color:#4C5853; margin-top:0.25rem;">${escapeHtml(item.reason)}</div>
+                <div style="margin-top:0.5rem; font-size:0.875rem; color:#4C5853; font-style:italic;">
                   Did this feature change or move? Record an override in .qa-data/spec-overrides.json.
                 </div>
               </div>`
               )
               .join('')}
           </div>`
-            : '<p style="color:#16A34A; font-size:0.875rem; font-weight:500;">✓ Every documented item was reached in the App.</p>'
+            : '<p style="color:#0B7547; font-size:0.875rem; font-weight:500;">✓ Every documented item was reached in the App.</p>'
         }
       </section>
     `;
@@ -326,110 +326,130 @@ export async function generateSingleFileHtmlReport(
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QA Readiness Report — ${escapeHtml(report.productId)}</title>
   <style>
+    /* Certificate: quiet paper, green-grey ink, cobalt for links. Flat cards with a hairline, no shadows. */
     :root {
-      --bg: #0D1322;
-      --card-bg: #FFFFFF;
-      --navy-900: #0B1120;
-      --navy-800: #1E293B;
-      --navy-700: #334155;
-      --text-main: #0F172A;
-      --text-muted: #64748B;
-      --blueprint-line: #1E3A8A;
-      --blueprint-bg: #0D1322;
+      --paper: #F4F6F4;
+      --canvas: #ECEFEC;
+      --surface: #FFFFFF;
+      --ink: #121A17;
+      --ink-soft: #4C5853;
+      --rule: #D8DDDA;
+      --edge: #7A8580;
+      --stamp: #1D3FD0;
+      --pass: #0B7547;
+      --pass-tint: #E2F3E9;
+      --warn: #8A5000;
+      --warn-tint: #FBEFD9;
+      --fail: #B42318;
+      --fail-tint: #FCE8E6;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-text-size-adjust: 100%; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: var(--bg);
-      color: var(--text-main);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 1rem;
+      line-height: 1.5;
+      background: var(--paper);
+      color: var(--ink);
       padding: 2rem 1rem;
-      background-image: radial-gradient(rgba(30, 58, 138, 0.25) 1px, transparent 1px);
-      background-size: 24px 24px;
+      overflow-wrap: anywhere;
     }
+    a { color: var(--stamp); text-decoration: underline; text-underline-offset: 2px; }
+    a:focus-visible, summary:focus-visible { outline: 3px solid var(--stamp); outline-offset: 2px; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.9em; overflow-wrap: anywhere; }
     .container {
       max-width: 1100px;
       margin: 0 auto;
     }
     .header-banner {
-      background: var(--card-bg);
-      border-radius: 12px;
-      padding: 2rem;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      border-left: 8px solid ${gradeStyle.border};
+      border-radius: 10px;
+      padding: 1.5rem;
       display: flex;
+      flex-wrap: wrap;
       justify-content: space-between;
       align-items: center;
+      gap: 1rem 1.5rem;
       margin-bottom: 1.5rem;
-      border-left: 8px solid ${gradeStyle.border};
     }
+    .header-left { flex: 1 1 18rem; min-width: 0; }
     .header-left h1 {
       font-size: 1.75rem;
+      line-height: 1.2;
       font-weight: 700;
-      color: var(--text-main);
+      color: var(--ink);
     }
     .header-left p {
-      color: var(--text-muted);
+      color: var(--ink-soft);
       margin-top: 0.25rem;
       font-size: 0.95rem;
     }
+    .header-left p[style] { font-size: 0.875rem !important; }
     .overall-badge {
-      text-align: center;
-      padding: 1rem 1.5rem;
-      border-radius: 12px;
+      flex: 0 1 16rem;
+      min-width: 0;
+      max-width: 100%;
+      text-align: left;
+      padding: 1rem 1.25rem;
+      border-radius: 10px;
       background: ${gradeStyle.bg};
       border: 2px solid ${gradeStyle.border};
     }
     .overall-grade {
-      font-size: 1.6rem;
+      font-size: 1.75rem;
       font-weight: 800;
-      text-transform: uppercase;
       color: ${gradeStyle.text};
       line-height: 1.1;
-      transform: rotate(-3deg);
     }
     .overall-label {
-      font-size: 0.85rem;
+      font-size: 0.9375rem;
       font-weight: 600;
       color: ${gradeStyle.text};
       margin-top: 0.4rem;
-      max-width: 16rem;
     }
     .card {
-      background: var(--card-bg);
-      border-radius: 12px;
-      padding: 1.75rem;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      border-radius: 10px;
+      padding: 1.5rem;
       margin-bottom: 1.5rem;
     }
     .section-title {
       font-size: 1.25rem;
+      line-height: 1.3;
       font-weight: 700;
-      color: var(--text-main);
+      color: var(--ink);
     }
     .section-desc {
-      color: var(--text-muted);
-      font-size: 0.9rem;
+      color: var(--ink-soft);
+      font-size: 0.9375rem;
       margin-top: 0.25rem;
       margin-bottom: 1.25rem;
     }
     .aspects-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
       gap: 1rem;
       margin-bottom: 1.5rem;
     }
     .aspect-card {
-      background: var(--card-bg);
-      border-radius: 8px;
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      border-radius: 10px;
       padding: 1.25rem;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+      min-width: 0;
     }
     .aspect-header {
       display: flex;
+      flex-wrap: wrap;
       justify-content: space-between;
       align-items: center;
+      gap: 0.5rem;
       margin-bottom: 0.75rem;
     }
     .aspect-title {
@@ -438,13 +458,13 @@ export async function generateSingleFileHtmlReport(
     }
     .aspect-grade {
       font-weight: 700;
-      font-size: 0.85rem;
+      font-size: 0.875rem;
       padding: 0.2rem 0.6rem;
       border-radius: 9999px;
     }
     .aspect-score-bar {
       height: 6px;
-      background: #E2E8F0;
+      background: var(--canvas);
       border-radius: 9999px;
       overflow: hidden;
       margin-bottom: 0.75rem;
@@ -455,32 +475,34 @@ export async function generateSingleFileHtmlReport(
     }
     .aspect-footer {
       display: flex;
+      flex-wrap: wrap;
       justify-content: space-between;
-      font-size: 0.8rem;
-      color: var(--text-muted);
+      gap: 0.25rem 0.75rem;
+      font-size: 0.875rem;
+      color: var(--ink-soft);
     }
     .history-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
       gap: 1rem;
       text-align: center;
       margin-top: 1rem;
     }
     .history-stat {
       padding: 1rem;
-      border-radius: 8px;
-      background: #F8FAFC;
-      border: 1px solid #E2E8F0;
+      border-radius: 10px;
+      background: var(--paper);
+      border: 1px solid var(--rule);
     }
-    .history-stat.fixed .history-num { color: #059669; }
-    .history-stat.new .history-num { color: #DC2626; }
-    .history-stat.open .history-num { color: #D97706; }
-    .history-num { font-size: 2rem; font-weight: 800; display: block; }
-    .history-label { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
+    .history-stat.fixed .history-num { color: var(--pass); }
+    .history-stat.new .history-num { color: var(--fail); }
+    .history-stat.open .history-num { color: var(--warn); }
+    .history-num { font-size: 2rem; font-weight: 700; display: block; line-height: 1.2; }
+    .history-label { font-size: 0.9375rem; color: var(--ink-soft); font-weight: 500; }
     .group-heading {
       font-size: 1rem;
       font-weight: 700;
-      color: var(--navy-800);
+      color: var(--ink);
       margin-bottom: 0.75rem;
     }
     .rec-list {
@@ -490,78 +512,90 @@ export async function generateSingleFileHtmlReport(
     }
     .rec-item {
       padding: 1rem;
-      border-radius: 8px;
-      background: #F8FAFC;
-      border: 1px solid #E2E8F0;
+      border-radius: 10px;
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      min-width: 0;
     }
     .rec-top {
       display: flex;
+      flex-wrap: wrap;
       gap: 0.5rem;
       align-items: center;
-      font-size: 0.8rem;
+      font-size: 0.875rem;
       margin-bottom: 0.5rem;
     }
-    .rec-aspect { font-weight: 600; color: #1E3A8A; }
+    .rec-aspect { font-weight: 600; color: var(--ink-soft); }
     .rec-title { font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem; }
-    .rec-summary { font-size: 0.9rem; color: #475569; margin-bottom: 0.5rem; }
-    .rec-fix { font-size: 0.85rem; background: #EFF6FF; border-left: 3px solid #2563EB; padding: 0.5rem 0.75rem; border-radius: 0 4px 4px 0; margin-bottom: 0.5rem; }
-    .rec-meta { font-size: 0.8rem; color: var(--text-muted); }
-    .rec-meta code { color: #0F172A; background: #E2E8F0; padding: 0.1rem 0.3rem; border-radius: 3px; }
+    .rec-summary { font-size: 0.9375rem; color: var(--ink-soft); margin-bottom: 0.5rem; }
+    .rec-fix { font-size: 0.9375rem; background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--stamp); padding: 0.5rem 0.75rem; border-radius: 6px; margin-bottom: 0.5rem; }
+    .rec-meta { font-size: 0.875rem; color: var(--ink-soft); }
+    .rec-meta code { color: var(--ink); background: var(--canvas); padding: 0.1rem 0.3rem; border-radius: 6px; }
     .badge {
-      font-size: 0.75rem;
+      font-size: 0.875rem;
       font-weight: 700;
-      text-transform: uppercase;
       padding: 0.15rem 0.5rem;
-      border-radius: 4px;
+      border-radius: 6px;
+      background: var(--canvas);
+      color: var(--ink);
     }
-    .badge.blocker { background: #FEE2E2; color: #991B1B; }
-    .badge.major { background: #FFEDD5; color: #9A3412; }
-    .badge.minor { background: #FEF3C7; color: #92400E; }
-    .badge.suggestion { background: #E0E7FF; color: #3730A3; }
+    .badge.blocker { background: var(--fail-tint); color: var(--fail); }
+    .badge.major { background: var(--warn-tint); color: var(--warn); }
+    .badge.minor { background: var(--warn-tint); color: var(--warn); }
+    .badge.suggestion { background: var(--canvas); color: var(--stamp); }
     details.finding-card {
-      border: 1px solid #E2E8F0;
-      border-radius: 8px;
+      border: 1px solid var(--rule);
+      border-radius: 10px;
       margin-bottom: 0.5rem;
-      background: #FFFFFF;
+      background: var(--surface);
       overflow: hidden;
     }
     summary.finding-summary {
       padding: 1rem;
       cursor: pointer;
       display: flex;
+      flex-wrap: wrap;
       justify-content: space-between;
       align-items: center;
-      font-size: 0.95rem;
+      gap: 0.5rem 1rem;
+      font-size: 0.9375rem;
       user-select: none;
-      background: #FFFFFF;
+      background: var(--surface);
     }
-    summary.finding-summary:hover { background: #F8FAFC; }
-    .finding-summary-left { display: flex; align-items: center; gap: 0.75rem; }
-    .finding-checker { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
+    summary.finding-summary:hover { background: var(--paper); }
+    .finding-summary-left { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; min-width: 0; }
+    .finding-checker { font-size: 0.875rem; color: var(--ink-soft); font-weight: 600; }
     .finding-title-text { font-weight: 600; }
-    .finding-route { font-size: 0.8rem; color: var(--text-muted); font-family: monospace; }
+    .finding-route { font-size: 0.875rem; color: var(--ink-soft); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
     .finding-details {
       padding: 1rem;
-      background: #F8FAFC;
-      border-top: 1px solid #E2E8F0;
-      font-size: 0.9rem;
+      background: var(--paper);
+      border-top: 1px solid var(--rule);
+      font-size: 0.9375rem;
     }
     .finding-row { margin-bottom: 0.5rem; }
-    .finding-label { font-weight: 600; color: #334155; margin-right: 0.5rem; }
-    .resolve-text { color: #059669; font-weight: 500; }
+    .finding-label { font-weight: 600; color: var(--ink); margin-right: 0.5rem; }
+    .resolve-text { color: var(--pass); font-weight: 500; }
     .finding-steps { margin-top: 0.75rem; }
     .finding-steps ol { margin-left: 1.5rem; margin-top: 0.25rem; }
     .footer-note {
       text-align: center;
-      color: #94A3B8;
-      font-size: 0.8rem;
+      color: var(--ink-soft);
+      font-size: 0.875rem;
       margin-top: 2rem;
     }
+    @media (max-width: 480px) {
+      body { padding: 1rem 0.75rem; }
+      .header-banner, .card { padding: 1rem; }
+      .header-banner { border-left-width: 6px; }
+      .header-left h1 { font-size: 1.5rem; }
+      .overall-badge { flex-basis: 100%; }
+    }
     ${hasVisual ? VISUAL_COMPARE_CSS : ''}
-    /* Printed or saved as PDF: plain paper, no dotted board, nothing cut across pages. */
+    /* Printed or saved as PDF: plain paper, nothing cut across pages. */
     @media print {
-      body { background: #FFFFFF; background-image: none; padding: 0; }
-      .header-banner, section, .card { box-shadow: none !important; break-inside: avoid; }
+      body { background: #FFFFFF; padding: 0; }
+      .header-banner, section, .card { break-inside: avoid; }
     }
   </style>
 </head>
@@ -571,7 +605,7 @@ export async function generateSingleFileHtmlReport(
       <div class="header-left">
         <h1>Release check-up</h1>
         <p>Site: <strong>${escapeHtml(report.targetUrl)}</strong> | Checked on: ${escapeHtml(new Date(report.timestamp).toLocaleString())}</p>
-        <p style="margin-top: 0.25rem; font-size: 0.85rem;">Run ID: <code>${escapeHtml(report.runId)}</code> | Problems found: ${verdict.total}</p>
+        <p style="margin-top: 0.25rem; font-size: 0.875rem;">Run ID: <code>${escapeHtml(report.runId)}</code> | Problems found: ${verdict.total}</p>
       </div>
       <div class="overall-badge">
         <div class="overall-grade">${escapeHtml(verdict.stamp)}</div>
@@ -594,7 +628,7 @@ export async function generateSingleFileHtmlReport(
       <h2 class="section-title">Every finding behind the ${verdict.total} ${verdict.total === 1 ? 'problem' : 'problems'} (${report.findings.length})</h2>
       <p class="section-desc">Click any finding to inspect expected vs actual behavior, steps to reproduce, and recommended fix.</p>
       <div class="findings-list">
-        ${findingsHtml || '<p style="color: #059669; font-weight: 500;">No defects identified! All checked criteria passed.</p>'}
+        ${findingsHtml || '<p style="color: #0B7547; font-weight: 500;">No defects identified! All checked criteria passed.</p>'}
       </div>
     </section>
 
@@ -619,9 +653,9 @@ const VISUAL_COMPARE_CSS = `
     .visual-compare h3 { margin: 0 0 0.5rem; font-size: 0.9rem; }
     .visual-compare .visual-row { display: flex; flex-wrap: wrap; gap: 0.75rem; }
     .visual-compare figure { margin: 0; flex: 1 1 220px; max-width: 100%; }
-    .visual-compare img { max-width: 100%; height: auto; border: 1px solid #CBD5E1; }
-    .visual-compare figcaption { font-size: 0.8rem; margin-top: 0.25rem; }
-    .visual-compare .visual-note { font-size: 0.8rem; }`;
+    .visual-compare img { max-width: 100%; height: auto; border: 1px solid #D8DDDA; }
+    .visual-compare figcaption { font-size: 0.875rem; margin-top: 0.25rem; }
+    .visual-compare .visual-note { font-size: 0.875rem; }`;
 
 /**
  * Source for one evidence image: embedded as base64 while the budget lasts, else a relative link.

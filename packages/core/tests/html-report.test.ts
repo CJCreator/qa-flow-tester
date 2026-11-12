@@ -101,8 +101,11 @@ describe('Single-File Offline HTML Report (html-report.ts)', () => {
     expect(content).toContain('Missing Content-Security-Policy header');
     expect(content).toContain('Run the check-up again on the same address');
 
-    // Direction B theme color present
-    expect(content).toContain('#0D1322');
+    // Certificate palette: paper background, flat cards (no shadows), no uppercase verdict
+    expect(content).toContain('--paper: #F4F6F4');
+    expect(content).not.toContain('#0D1322');
+    expect(content).not.toContain('box-shadow');
+    expect(content).not.toContain('text-transform');
 
     // No external scripts or CDNs (works 100% offline)
     expect(content).not.toContain('<script src="http');
