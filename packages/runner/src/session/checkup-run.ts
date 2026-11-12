@@ -60,6 +60,7 @@ import {
   checkCrawlConcurrency,
   checkCrawlDelayMs,
   checkCustomHeaders,
+  type InputProblem,
 } from '../run-inputs.js';
 import { testCopyFor } from '../host-policy.js';
 import type { CheckupSession, StoredPlanRecord } from './checkup-session.js';
@@ -397,6 +398,24 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
       { code: 'ERR_RUN_IN_PROGRESS', status: 409 }
     );
 
+  /** A refused input: the same error and code the web route answers with, as a 400. */
+  const inputRefused = (problem: InputProblem) =>
+    Object.assign(new Error(problem.error), { code: problem.code, status: 400 });
+
+  const valueOf = <T>(checked: { ok: true; value: T } | { ok: false; problem: InputProblem }): T => {
+    if (!checked.ok) throw inputRefused(checked.problem);
+    return checked.value;
+  };
+
+  const hostnameOf = (url?: string): string => {
+    if (!url) return '';
+    try {
+      return new URL(url).hostname;
+    } catch {
+      return '';
+    }
+  };
+
   const broadcast = (event: OrchestratorEvent | Record<string, unknown>): void => {
     // RUN_COMPLETED is logged and streamed without its report (the page fetches that). One object for both,
     // so the stream finds the id the log gave it.
@@ -713,7 +732,7 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
         designNotes: body.designNotes,
         searchChecks,
         visibility,
-        aiCap: aiCap.ok ? aiCap.value : undefined,
+        aiCap: valueOf(aiCap),
         testCap: checkTestCap(body.testCap),
         customHeaders: session.secrets.headers,
         userAgent: body.userAgent,
@@ -776,11 +795,13 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
       const docsNotes: string[] = [];
       const documents: Array<{ name: string; text: string }> = [];
       const checkedDocs = checkContextDocuments(body.contextDocuments);
-      if (checkedDocs.ok && checkedDocs.value) documents.push(...checkedDocs.value);
+      const docs = valueOf(checkedDocs);
+      if (docs) documents.push(...docs);
       const docsUrl = checkContextUrl(body.contextUrl);
-      if (docsUrl.ok && docsUrl.value) {
+      const url = valueOf(docsUrl);
+      if (url) {
         const guarded = deps.beta || !isPrivateHost(typed.hostname);
-        const fetched = await fetchDocsPages(docsUrl.value, {
+        const fetched = await fetchDocsPages(url, {
           get: guarded ? makeGuardedDocsGet(deps.hostChecks) : localDocsGet,
         }).catch(() => null);
         if (!fetched) {
@@ -945,6 +966,15 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
       const { body, authorization } = input;
       // Checked and set before the first await: a second start while this one is still starting is refused.
       if (starting || (session.run.isRunning && session.run.phase !== 'awaiting-review')) throw runBusy();
+      for (const checked of [
+        checkContextDocuments(body.contextDocuments),
+        checkContextUrl(body.contextUrl),
+        checkAiCap(body.aiCap),
+        checkCustomHeaders(body.customHeaders),
+        checkSavedSessions(body.savedSessions, hostnameOf(body.targetUrl)),
+      ]) {
+        if (!checked.ok) throw inputRefused(checked.problem);
+      }
       starting = true;
       let finishStarting!: () => void;
       startDone = new Promise<void>((resolve) => (finishStarting = resolve));
@@ -1041,17 +1071,15 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
       session.events.clear();
       const generation = session.run.generation;
 
-      let typedHostname = '';
-      try {
-        typedHostname = new URL(body.targetUrl).hostname;
-      } catch {}
+      const typedHostname = hostnameOf(body.targetUrl);
       const customHeadersChecked = checkCustomHeaders(body.customHeaders);
       const sessions = checkSavedSessions(body.savedSessions, typedHostname);
-      if (sessions.ok && sessions.value) session.secrets.savedSessions.set(runId, sessions.value);
+      const savedSessions = valueOf(sessions);
+      if (savedSessions) session.secrets.savedSessions.set(runId, savedSessions);
       delete body.savedSessions;
 
       session.secrets.set({
-        headers: customHeadersChecked.ok ? customHeadersChecked.value : undefined,
+        headers: valueOf(customHeadersChecked),
         tunnelAuth: body.tunnelAuth,
         headerHosts: body.headerHosts,
         userAgent: body.userAgent,
