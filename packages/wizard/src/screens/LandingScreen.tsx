@@ -363,16 +363,17 @@ export function LandingScreen() {
               >
                 What it looks at
               </SectionTitle>
-              <p className="mt-2">
-                <a href={SAMPLE_REPORT_URL} className="btn-link">
-                  See each area in the sample report
-                </a>
-              </p>
             </div>
             <ul className="grid min-w-0 gap-x-10 sm:grid-cols-2">
               {AREAS.map((a) => (
-                <li key={a.name} className="min-w-0 border-t border-rule py-4">
-                  <p className="font-bold text-ink">{a.name}</p>
+                <li key={a.name} className="min-w-0 border-t border-rule py-2">
+                  {/* Each area opens the sample report (a test keeps it so); the link is a full 44px target. */}
+                  <p className="font-bold text-ink">
+                    <a href={SAMPLE_REPORT_URL} className="btn-link font-bold text-ink">
+                      {a.name}
+                      <span className="sr-only">, in the sample report</span>
+                    </a>
+                  </p>
                   <p className="mt-1 text-sm leading-relaxed text-ink-soft">{a.text}</p>
                 </li>
               ))}
