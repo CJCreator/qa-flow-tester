@@ -1,4 +1,3 @@
-import type http from 'http';
 import {
   AUDIT_API,
   type AuditEditsPatch,

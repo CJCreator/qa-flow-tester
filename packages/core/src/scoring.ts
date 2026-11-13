@@ -12,9 +12,6 @@ import { isSiteScopedFinding } from './finding-groups.js';
 
 export { ASPECT_CHECKERS };
 
-/** The most the AI's visual review can take off an area's score on its own (from 100 to a C). */
-const MAX_OPINION_DEDUCTION = 25;
-
 const SEVERITY_DEDUCTIONS: Record<FindingSeverity, number> = {
   Blocker: 50,
   Major: 20,

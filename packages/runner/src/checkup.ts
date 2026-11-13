@@ -48,7 +48,7 @@ import {
 } from '@qa/core';
 import type { AIProviderType, Finding, ReleaseReport, SiteAspectGrades, RunStartBody } from '@qa/types';
 import { createCheckupSession, createCheckupRun, resolveAuthorization } from './session/checkup-session.js';
-import { createShutdown, type ShutdownHandler } from './shutdown.js';
+import { createShutdown } from './shutdown.js';
 
 export type FailOn = 'blocker' | 'major' | 'none' | 'standard';
 

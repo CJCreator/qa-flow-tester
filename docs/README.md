@@ -17,7 +17,6 @@ Read in this order when you are new to the project.
 | [`LANDING_MEASUREMENT.md`](LANDING_MEASUREMENT.md)                                       | The optional landing counter: events, what is sent, how to turn it off                            |
 | [`AGENT_WORKFLOW.md`](AGENT_WORKFLOW.md)                                                 | The local agent pipeline (`.claude/`, not part of a clone)                                        |
 | [`tickets/INDEX.md`](tickets/INDEX.md)                                                   | Open work, one row per ticket. The status column is the record                                    |
-| [`tickets/WEBSITE-AUDIT-RELIABILITY-PLAN.md`](tickets/WEBSITE-AUDIT-RELIABILITY-PLAN.md) | The plan behind the open Website Audit tickets                                                    |
 | [`findings.schema.json`](findings.schema.json)                                           | The JSON schema of `findings.json` in a report                                                    |
 | [`LEGAL_AND_LICENSES.md`](LEGAL_AND_LICENSES.md)                                         | The project's licence and the licences of its runtime dependencies                                |
 | [`GTM_AND_PRICING.md`](GTM_AND_PRICING.md)                                               | Draft notes on audience and pricing. Nothing in it is built or decided                            |

@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import type { ReleaseReport, AspectType, FindingSeverity, RankedRecommendation } from '@qa/types';
+import type { ReleaseReport, FindingSeverity, RankedRecommendation } from '@qa/types';
 import { groupIntoProblems, releaseVerdict, ASPECTS } from '@qa/types';
 import { notChecked } from './not-checked.js';
 

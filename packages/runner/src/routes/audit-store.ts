@@ -1,11 +1,9 @@
-import type http from 'http';
 import {
   AUDIT_API,
   type AuditAccess,
   type AuditGetReply,
   type AuditListReply,
   type AuditSummary,
-  type EditOverlay,
   type HelperPermission,
 } from '@qa/types';
 import { type AuditStore } from '@qa/core';
