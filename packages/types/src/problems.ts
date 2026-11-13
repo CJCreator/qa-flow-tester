@@ -142,7 +142,11 @@ export function plainTitleText(t: string): string {
   if (/Content page lacks author byline and publication timestamp/i.test(t))
     return 'The article doesn’t say who wrote it or when';
 
-  return t.replace(/^WCAG Violation:\s*/i, '').replace(/\s*\([a-z0-9-]+\)$/i, '');
+  // Strip technical WCAG prefixes (e.g. "WCAG violation:", "WCAG 1.4.3 Contrast (Minimum) violation:") and trailing rule IDs (e.g. "(color-contrast)")
+  return t
+    .replace(/^WCAG(?:\s+[\d.]+\s+[^:]+?)?\s+violation:\s*/i, '')
+    .replace(/^WCAG\s+violation:\s*/i, '')
+    .replace(/\s*\([a-z0-9-]+\)$/i, '');
 }
 
 /**
