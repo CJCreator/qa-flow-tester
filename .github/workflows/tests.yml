@@ -33,6 +33,10 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      - name: Build packages (unit tests import @qa/types from dist)
+        if: inputs.project == 'unit'
+        run: pnpm -r --workspace-concurrency=1 run build
+
       - name: Build the site (also type-checks types and the wizard)
         if: inputs.project != 'unit'
         run: pnpm run site-build
