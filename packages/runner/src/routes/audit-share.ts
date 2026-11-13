@@ -14,7 +14,6 @@ import {
   type AuditErrorCode,
   type AuditResult,
   type DocumentLanguage,
-  type EditOverlay,
   type PageContent,
   type ShareLink,
   type ShareLinkKind,

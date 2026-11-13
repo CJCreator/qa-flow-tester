@@ -17,7 +17,6 @@ import {
   type AuditFinding,
   type AuditPage,
   type AuditResult,
-  type AuditScale,
   type EditOverlay,
   type FindingEdit,
   type HierarchyNode,

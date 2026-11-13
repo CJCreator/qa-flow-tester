@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useEffect } from 'react';
+import { useMemo, useRef, useState, useEffect } from 'react';
 import type { DiscoveredFlow } from '@qa/types';
 import { journeyPages } from '@qa/types/src/browser.js';
 
