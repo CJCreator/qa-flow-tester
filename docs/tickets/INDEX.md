@@ -22,12 +22,10 @@ The order of work is `todo` → `planned` → `approved` → `building` → `bui
 
 ## Open: Website Audit reliability
 
-Plan: [WEBSITE-AUDIT-RELIABILITY-PLAN.md](WEBSITE-AUDIT-RELIABILITY-PLAN.md). Decisions: [ADR 0042](../adr/0042-website-audit-reliability-and-access.md), [ADR 0043](../adr/0043-parallel-page-fetching-in-the-website-audit.md).
+Decisions: [ADR 0042](../adr/0042-website-audit-reliability-and-access.md), [ADR 0043](../adr/0043-parallel-page-fetching-in-the-website-audit.md). The Website Audit reliability plan (T-86, T-89) was removed once built; read it with `git show dfe5bc4:docs/tickets/WEBSITE-AUDIT-RELIABILITY-PLAN.md`.
 
 | id | title | gaps | priority | size | wave | status | depends on |
 |---|---|---|---|---|---|---|---|
-| [T-86](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-86-hosted-audits-for-the-signed-in-owner) | Hosted audits for the signed-in owner | A8 | P1 | M | 4 | built | - |
-| [T-89](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-89-proving-the-audit-works) | Proving the audit works | A12 | P1 | M | 4 | built | - |
 
 ## Open: audit follow-up (November 2026)
 
@@ -54,7 +52,6 @@ The ids are not continuous: T-235 to T-239, T-253, T-254, T-280 to T-284 and T-2
 |---|---|---|---|---|---|---|---|
 | [T-270](audit-2026-11/T-270-remove-duplicate-dev-script.md) | Remove the `dev` script that repeats `dev:wizard` | - | P4 | S | 1 | todo | - |
 | [T-229](audit-2026-11/T-229-remove-unused-coverage-setup.md) | Remove the coverage setup nothing runs | - | P3 | S | 2 | todo | T-270 |
-| [T-271](audit-2026-11/T-271-core-drops-pngjs-and-typecheck-config-leftovers.md) | `@qa/core` stops declaring `pngjs`; clean the typecheck config | - | P4 | S | 3 | done | T-229 |
 | [T-278](audit-2026-11/T-278-wizard-declares-core-and-runner-for-its-tests.md) | The wizard declares `@qa/core` and `@qa/runner`, which its tests import | - | P4 | S | 4 | todo | T-271 |
 | [T-268](audit-2026-11/T-268-runner-declares-playwright-for-its-browser-tests.md) | The runner declares Playwright, and its browser tests import it by name | - | P3 | S | 5 | todo | T-278 |
 
@@ -287,11 +284,6 @@ Findings with no new ticket:
 
 | id | title | gaps | priority | size | wave | status | depends on |
 |---|---|---|---|---|---|---|---|
-| T-23 | Split large files by area | G35 | P3 | L | 19 | later | - |
-| QSP-009 | Wizard smoke option (qaskills-patterns F3) | - | - | - | - | later | - |
-
-- **T-23:** later. Partly done: the plan, schedule, Website Audit and health routes live under `packages/runner/src/routes/`. `packages/runner/src/server.ts` is still about 4,100 lines and keeps the inline endpoints listed in `docs/API.md`. Splitting the rest is not scheduled.
-
 ## Built work
 
 Built work is in git. Audit of November 2026, T-91 to T-224 (134 tickets, all built and verified on `d225418`): the ticket files were removed once built; read one with `git show 409a01b:docs/tickets/audit-2026-11/<file>`. Open tickets that name a T-91 to T-224 ticket do so as background only. Website Audit T-79 to T-85, T-87, T-88, T-90: `fdf287f`, `a4cb689`, `b237983`. Earlier tracks (demo readiness, review remediation, qaskills-patterns) are in earlier history. T-52 (container hardening and health): non-root runner and site images, `/healthz` health checks, `docker-compose.yml`, `docs/CONTAINER_DEPLOYMENT.md`.

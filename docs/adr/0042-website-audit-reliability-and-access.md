@@ -61,7 +61,7 @@ A diagnosis on 2026-11-05 (local runner, `example.com`, `htmx.org` and the owner
 - AI cost grows with page count: about one request per recorded page plus one for the whole site. The start screen's "Limits (optional)" panel shows an estimate before starting.
 - A second speed source exists. Reports must name it, and "lab, one run" is never presented as real-visitor data (0035, 0018).
 - Opening the hosted copy to anyone beyond `AUDIT_OWNER_EMAILS` needs a later decision: each person's own Website Audit list and a daily limit. This is not built now.
-- The rest is built by T-79 to T-90 in [WEBSITE-AUDIT-RELIABILITY-PLAN.md](../tickets/WEBSITE-AUDIT-RELIABILITY-PLAN.md).
+- The rest is built by T-79 to T-90 (plan removed once built; `git show dfe5bc4:docs/tickets/WEBSITE-AUDIT-RELIABILITY-PLAN.md`).
 
 ## Already built (2026-11-05)
 - **`feaa7f9`** (merged through `aed2615`, Prettier fix in #57):

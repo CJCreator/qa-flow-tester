@@ -25,7 +25,7 @@ A Website Audit fetches pages one at a time per host with at least 500 ms betwee
 - The audited site sees up to 3 concurrent page loads. The owner accepts this for sites the tool user does not own. RISK-005 (unsolicited outreach) is unchanged.
 - `HostPacer` gains concurrency logic shared with the Check-up's code path. Its default of 1 and a unit test keep the Check-up's behaviour fixed.
 - Memory: 3 open pages in one Chromium fit the hosted 2 GiB instance. The run slot still allows one run at a time on a runner.
-- Built by T-80 (crawl and pacer) and T-81/T-84 (AI pool and pipeline), in [WEBSITE-AUDIT-RELIABILITY-PLAN.md](../tickets/WEBSITE-AUDIT-RELIABILITY-PLAN.md).
+- Built by T-80 (crawl and pacer) and T-81/T-84 (AI pool and pipeline), in the Website Audit reliability plan (removed once built; `git show dfe5bc4:docs/tickets/WEBSITE-AUDIT-RELIABILITY-PLAN.md`).
 
 ## In review (#59, `feat/audit-parallel-crawl`)
 Not merged. Parts of T-80 and T-81 are built on that branch.
