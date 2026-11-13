@@ -54,7 +54,7 @@ The ids are not continuous: T-235 to T-239, T-253, T-254, T-280 to T-284 and T-2
 |---|---|---|---|---|---|---|---|
 | [T-270](audit-2026-11/T-270-remove-duplicate-dev-script.md) | Remove the `dev` script that repeats `dev:wizard` | - | P4 | S | 1 | todo | - |
 | [T-229](audit-2026-11/T-229-remove-unused-coverage-setup.md) | Remove the coverage setup nothing runs | - | P3 | S | 2 | todo | T-270 |
-| [T-271](audit-2026-11/T-271-core-drops-pngjs-and-typecheck-config-leftovers.md) | `@qa/core` stops declaring `pngjs`; clean the typecheck config | - | P4 | S | 3 | todo | T-229 |
+| [T-271](audit-2026-11/T-271-core-drops-pngjs-and-typecheck-config-leftovers.md) | `@qa/core` stops declaring `pngjs`; clean the typecheck config | - | P4 | S | 3 | done | T-229 |
 | [T-278](audit-2026-11/T-278-wizard-declares-core-and-runner-for-its-tests.md) | The wizard declares `@qa/core` and `@qa/runner`, which its tests import | - | P4 | S | 4 | todo | T-271 |
 | [T-268](audit-2026-11/T-268-runner-declares-playwright-for-its-browser-tests.md) | The runner declares Playwright, and its browser tests import it by name | - | P3 | S | 5 | todo | T-278 |
 

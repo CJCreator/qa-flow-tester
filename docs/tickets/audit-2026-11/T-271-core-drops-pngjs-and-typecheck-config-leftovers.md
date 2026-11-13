@@ -2,7 +2,9 @@
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
-| P4 | S | config | dead | todo |
+| P4 | S | config | dead | done |
+
+**Result (2026-11-13):** already done before this ticket was worked. `packages/core/package.json` has no `pngjs` entry and `tsconfig.test.json` has no `pngjs` path, so no change was needed. Checked in the dead-code-removal worktree (branch `worktree-dead-code-removal`).
 
 **Files you may edit (no others):**
 
