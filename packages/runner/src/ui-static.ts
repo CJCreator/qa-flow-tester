@@ -69,12 +69,13 @@ const PUBLIC_PATHS = new Set(['/', '/index.html', '/sample-report.html']);
 /**
  * The public address of this server, for absolute URLs in canonical links, structured data and the
  * sitemap. PUBLIC_URL wins (set it when serving behind a domain or tunnel); otherwise the request's
- * own host is used, which the server has already checked to be its own.
+ * own Host header, which the server has already checked to be its own (never X-Forwarded-Host).
  */
 export function publicOrigin(req: http.IncomingMessage): string {
   const configured = process.env.PUBLIC_URL?.trim().replace(/\/+$/, '');
   if (configured && /^https?:\/\/[\w.-]+(:\d+)?$/.test(configured)) return configured;
-  const host = String(req.headers['x-forwarded-host'] || req.headers.host || 'localhost');
+  // Host has been checked by dispatch against this server's own names. X-Forwarded-Host has not, and any client can send it.
+  const host = String(req.headers.host || 'localhost');
   const safeHost = /^[\w.-]+(:\d+)?$/.test(host) ? host : 'localhost';
   const proto =
     String(req.headers['x-forwarded-proto'] || '')

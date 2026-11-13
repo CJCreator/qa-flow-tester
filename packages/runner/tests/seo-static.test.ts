@@ -27,6 +27,12 @@ describe('publicOrigin', () => {
     expect(publicOrigin(req({ host: 'localhost:3001' }))).toBe('https://checkup.example.com');
   });
 
+  it('ignores X-Forwarded-Host: any client can send it', () => {
+    expect(
+      publicOrigin(req({ host: 'qa.example.com', 'x-forwarded-host': 'evil.example', 'x-forwarded-proto': 'https' }))
+    ).toBe('https://qa.example.com');
+  });
+
   it('never reflects a malformed host into the page', () => {
     expect(publicOrigin(req({ host: 'evil.com"><script>' }))).toBe('http://localhost');
   });

@@ -192,6 +192,7 @@ function startRunner(origin) {
       ...process.env,
       RUNNER_PORT: String(port),
       RUNNER_ALLOWED_ORIGINS: origin,
+      PUBLIC_URL: process.env.PUBLIC_URL || origin,
       RUNNER_ACCESS_TOKEN: accessKey,
       ...(beta
         ? { RUNNER_BETA: '1', OPENROUTER_API_KEY: '', ANTHROPIC_API_KEY: '', OPENAI_API_KEY: '', GEMINI_API_KEY: '' }

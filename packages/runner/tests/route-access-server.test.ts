@@ -219,6 +219,15 @@ describe('Route dispatch enforces access levels and the beta policy (REQ-048)', 
     }
   });
 
+  it('T-302: 25 sign-in calls from one address all answer 200 and set no visitor session', async () => {
+    for (let i = 0; i < 25; i++) {
+      const res = await call(BETA_PORT, 'POST', '/api/t/helper/session');
+      expect(res.status).toBe(200);
+      const cookies = res.headers['set-cookie'] ?? [];
+      expect(cookies.some((c) => c.startsWith('qa_session='))).toBe(false);
+    }
+  });
+
   it('D-005: on a beta copy, Helper sign-in and a granted Helper pass the beta policy', async () => {
     const signIn = await call(BETA_PORT, 'POST', '/api/t/helper/session');
     expect(signIn.status).toBe(200);

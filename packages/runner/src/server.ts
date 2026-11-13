@@ -1103,9 +1103,15 @@ export class RunnerServer {
               }
             }
 
-            // A 'public' row (a Shared Link page) needs no visitor session: its viewer keeps no cookie, so each
-            // view would count as a new visitor and soon hit the per-address limit.
-            if (this.beta && matched?.route.access !== 'scheduler' && matched?.route.access !== 'public') {
+            // A 'public' row (a Shared Link page) and a 'sign-in' row (Helper sign-in) need no visitor session: a
+            // Shared Link viewer keeps no cookie, and Helper sign-in uses only the Helper cookie. Making a session
+            // there would let anyone, without the key, push testers' idle sessions out (T-302).
+            if (
+              this.beta &&
+              matched?.route.access !== 'scheduler' &&
+              matched?.route.access !== 'public' &&
+              matched?.route.access !== 'sign-in'
+            ) {
               try {
                 const visitor = sessionFor(req, res, isHttpsRequest(req));
                 enterSession(visitor);
