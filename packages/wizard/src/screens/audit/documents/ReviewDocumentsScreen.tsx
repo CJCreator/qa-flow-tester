@@ -292,6 +292,44 @@ export interface ReviewDocumentsViewProps {
   fetchImpl?: Fetch;
 }
 
+/** The sections of the review form, in page order, by the id of each heading. */
+export const REVIEW_SECTIONS: ReadonlyArray<{ id: string; label: string }> = [
+  { id: 'review-hierarchy-title', label: 'Page hierarchy' },
+  { id: 'review-sections-title', label: 'Page Content by Section' },
+  { id: 'review-findings-title', label: 'Findings' },
+  { id: 'review-actions-title', label: 'Redesign or repair' },
+];
+
+/** Scrolls to a section and moves focus to its heading, so keyboard and screen-reader users land there too. */
+function goToSection(id: string) {
+  const heading = document.getElementById(id);
+  if (!heading) return;
+  if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1');
+  heading.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
+  heading.focus({ preventScroll: true });
+}
+
+/** An index of the review sections: a sticky column on wide screens, a row that scrolls sideways on phones. */
+function ReviewSectionIndex() {
+  return (
+    <nav aria-label="Sections of the review form" className="mb-8 lg:mb-0">
+      <ul className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0 lg:sticky lg:top-24 lg:grid lg:gap-0 lg:overflow-visible lg:pb-0">
+        {REVIEW_SECTIONS.map((section) => (
+          <li key={section.id} className="shrink-0">
+            <button
+              type="button"
+              onClick={() => goToSection(section.id)}
+              className="inline-flex min-h-[44px] items-center whitespace-nowrap rounded-control border border-edge bg-surface px-3 text-sm font-semibold text-ink hover:border-ink lg:w-full lg:border-0 lg:border-l-2 lg:border-rule lg:bg-transparent lg:text-ink-soft lg:hover:border-stamp lg:hover:text-ink"
+            >
+              {section.label}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
 /**
  * The review and edit view of one Website Audit version (REQ-020): the page hierarchy with remove and
  * restore, each page's Sections, the findings and the redesign-or-repair choice per Sample Page. Edits
@@ -329,196 +367,201 @@ export function ReviewDocumentsView({
 
   return (
     <div className="space-y-10">
-      <section aria-labelledby="review-hierarchy-title" className="space-y-3">
-        <h2 id="review-hierarchy-title" className="text-xl font-bold">
-          Page hierarchy
-        </h2>
-        <p className="max-w-prose text-sm text-ink-soft">
-          A removed page is left out of the exported Audit Documents. Restore it at any time.
-        </p>
-        <ul aria-label="Page hierarchy">
-          <PageItem
-            node={tree}
-            selectedPage={selectedPage}
-            onRemove={(urlPath, removed) => onDraft(setPageRemoved(draft, edits, urlPath, removed))}
-            onSelect={onSelectPage}
-          />
-        </ul>
-      </section>
+      <div className="lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-10">
+        <ReviewSectionIndex />
+        <div className="min-w-0 space-y-10">
+          <section aria-labelledby="review-hierarchy-title" className="space-y-3">
+            <h2 id="review-hierarchy-title" className="text-xl font-bold">
+              Page hierarchy
+            </h2>
+            <p className="max-w-prose text-sm text-ink-soft">
+              A removed page is left out of the exported Audit Documents. Restore it at any time.
+            </p>
+            <ul aria-label="Page hierarchy">
+              <PageItem
+                node={tree}
+                selectedPage={selectedPage}
+                onRemove={(urlPath, removed) => onDraft(setPageRemoved(draft, edits, urlPath, removed))}
+                onSelect={onSelectPage}
+              />
+            </ul>
+          </section>
 
-      <SectionsEditor urlPath={selectedPage} state={content} edits={edits} draft={draft} onDraft={onDraft} />
+          <SectionsEditor urlPath={selectedPage} state={content} edits={edits} draft={draft} onDraft={onDraft} />
 
-      {content?.status === 'loaded' &&
-        (aiConfigured === true ? (
-          <RewriteReview
-            key={content.content.urlPath}
-            auditId={reply.summary.auditId}
-            version={reply.version.version}
-            content={content.content}
-            onAccepted={onRewriteAccepted}
-            fetchImpl={fetchImpl}
-          />
-        ) : aiConfigured === false ? (
-          <Notice
-            tone="stamp"
-            title="Rewriting a Section needs an AI key"
-            actions={
-              <Link to={PATHS.settings} className="btn-link min-h-[44px]">
-                Add an AI key in Settings
-              </Link>
-            }
-          />
-        ) : null)}
+          {content?.status === 'loaded' &&
+            (aiConfigured === true ? (
+              <RewriteReview
+                key={content.content.urlPath}
+                auditId={reply.summary.auditId}
+                version={reply.version.version}
+                content={content.content}
+                onAccepted={onRewriteAccepted}
+                fetchImpl={fetchImpl}
+              />
+            ) : aiConfigured === false ? (
+              <Notice
+                tone="stamp"
+                title="Rewriting a Section needs an AI key"
+                actions={
+                  <Link to={PATHS.settings} className="btn-link min-h-[44px]">
+                    Add an AI key in Settings
+                  </Link>
+                }
+              />
+            ) : null)}
 
-      <section aria-labelledby="review-findings-title" className="space-y-3">
-        <h2 id="review-findings-title" className="text-xl font-bold">
-          Findings
-        </h2>
-        <p className="max-w-prose text-sm text-ink-soft">
-          {`${count(findings.length, 'finding', 'findings')}. The Findings document and the Improvement Roadmap use the text below.`}
-        </p>
-        {findings.length === 0 ? (
-          <p className="text-sm text-ink-soft">No findings were recorded.</p>
-        ) : (
-          <ol className="space-y-4">
-            {findings.map((row, i) => {
-              const { finding } = row;
-              const isAi = finding.source === 'ai' || finding.advisory === true;
-              return (
-                <li key={finding.id} className="rounded-card border border-rule p-3" data-finding-id={finding.id}>
-                  <h3 className="font-bold">
-                    {`${finding.id}: ${row.shown.title}`}
-                    <UnsavedTag show={row.unsaved} />
-                  </h3>
-                  {isAi && (
-                    <p className="mt-1 inline-flex rounded-full bg-stamp-tint px-2 text-xs font-semibold text-stamp">
-                      {ADVISORY_LABEL}
-                    </p>
-                  )}
-                  <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-                    <dt className="font-bold">Page</dt>
-                    <dd className="break-all">{finding.urlPath}</dd>
-                    <dt className="font-bold">Section</dt>
-                    <dd>{sectionLabel(finding.sectionId)}</dd>
-                    <dt className="font-bold">Impact</dt>
-                    <dd>{SCALE_LABEL[finding.impact]}</dd>
-                    <dt className="font-bold">Effort</dt>
-                    <dd>{SCALE_LABEL[finding.effort]}</dd>
-                    <dt className="font-bold">Source</dt>
-                    <dd>{SOURCE_LABEL[finding.source]}</dd>
-                  </dl>
-                  {(['title', 'detail', 'suggestion'] as const).map((field) => {
-                    const id = `review-finding-${i}-${field}`;
-                    const changed = row.changed.includes(field);
-                    const label = `${FIELD_LABEL[field]} of finding ${finding.id}`;
-                    return (
-                      <div key={field} className="mt-3 grid grid-cols-1 gap-4">
-                        <div>
-                          <label htmlFor={id} className="label text-ink">
-                            {label}
-                          </label>
-                          {field === 'title' ? (
-                            <input
-                              id={id}
-                              type="text"
-                              className="field w-full"
-                              value={row.shown[field]}
-                              onChange={(e) => onDraft(setFindingField(draft, finding.id, field, e.target.value))}
-                            />
-                          ) : (
-                            <textarea
-                              id={id}
-                              rows={6}
-                              className="field w-full [field-sizing:content] min-h-[5rem]"
-                              value={row.shown[field]}
-                              onChange={(e) => onDraft(setFindingField(draft, finding.id, field, e.target.value))}
-                            />
-                          )}
-                        </div>
-                        {changed && (
-                          <div>
-                            <p className="label text-ink">{`Original ${FIELD_LABEL[field].toLowerCase()}`}</p>
-                            <p className="whitespace-pre-wrap text-sm text-ink-soft">{finding[field]}</p>
+          <section aria-labelledby="review-findings-title" className="space-y-3">
+            <h2 id="review-findings-title" className="text-xl font-bold">
+              Findings
+            </h2>
+            <p className="max-w-prose text-sm text-ink-soft">
+              {`${count(findings.length, 'finding', 'findings')}. The Findings document and the Improvement Roadmap use the text below.`}
+            </p>
+            {findings.length === 0 ? (
+              <p className="text-sm text-ink-soft">No findings were recorded.</p>
+            ) : (
+              <ol className="space-y-4">
+                {findings.map((row, i) => {
+                  const { finding } = row;
+                  const isAi = finding.source === 'ai' || finding.advisory === true;
+                  return (
+                    <li key={finding.id} className="rounded-card border border-rule p-3" data-finding-id={finding.id}>
+                      <h3 className="font-bold">
+                        {`${finding.id}: ${row.shown.title}`}
+                        <UnsavedTag show={row.unsaved} />
+                      </h3>
+                      {isAi && (
+                        <p className="mt-1 inline-flex rounded-full bg-stamp-tint px-2 text-xs font-semibold text-stamp">
+                          {ADVISORY_LABEL}
+                        </p>
+                      )}
+                      <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+                        <dt className="font-bold">Page</dt>
+                        <dd className="break-all">{finding.urlPath}</dd>
+                        <dt className="font-bold">Section</dt>
+                        <dd>{sectionLabel(finding.sectionId)}</dd>
+                        <dt className="font-bold">Impact</dt>
+                        <dd>{SCALE_LABEL[finding.impact]}</dd>
+                        <dt className="font-bold">Effort</dt>
+                        <dd>{SCALE_LABEL[finding.effort]}</dd>
+                        <dt className="font-bold">Source</dt>
+                        <dd>{SOURCE_LABEL[finding.source]}</dd>
+                      </dl>
+                      {(['title', 'detail', 'suggestion'] as const).map((field) => {
+                        const id = `review-finding-${i}-${field}`;
+                        const changed = row.changed.includes(field);
+                        const label = `${FIELD_LABEL[field]} of finding ${finding.id}`;
+                        return (
+                          <div key={field} className="mt-3 grid grid-cols-1 gap-4">
+                            <div>
+                              <label htmlFor={id} className="label text-ink">
+                                {label}
+                              </label>
+                              {field === 'title' ? (
+                                <input
+                                  id={id}
+                                  type="text"
+                                  className="field w-full"
+                                  value={row.shown[field]}
+                                  onChange={(e) => onDraft(setFindingField(draft, finding.id, field, e.target.value))}
+                                />
+                              ) : (
+                                <textarea
+                                  id={id}
+                                  rows={6}
+                                  className="field w-full [field-sizing:content] min-h-[5rem]"
+                                  value={row.shown[field]}
+                                  onChange={(e) => onDraft(setFindingField(draft, finding.id, field, e.target.value))}
+                                />
+                              )}
+                            </div>
+                            {changed && (
+                              <div>
+                                <p className="label text-ink">{`Original ${FIELD_LABEL[field].toLowerCase()}`}</p>
+                                <p className="whitespace-pre-wrap text-sm text-ink-soft">{finding[field]}</p>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                  {row.changed.length > 0 && (
-                    <button
-                      type="button"
-                      className="btn-quiet btn-sm mt-3"
-                      aria-label={`Reset finding ${finding.id} to the original text`}
-                      onClick={() => onDraft(resetFinding(draft, finding.id))}
-                    >
-                      Reset to original
-                    </button>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
-        )}
-      </section>
+                        );
+                      })}
+                      {row.changed.length > 0 && (
+                        <button
+                          type="button"
+                          className="btn-quiet btn-sm mt-3"
+                          aria-label={`Reset finding ${finding.id} to the original text`}
+                          onClick={() => onDraft(resetFinding(draft, finding.id))}
+                        >
+                          Reset to original
+                        </button>
+                      )}
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+          </section>
 
-      <section aria-labelledby="review-actions-title" className="space-y-3">
-        <h2 id="review-actions-title" className="text-xl font-bold">
-          Redesign or repair
-        </h2>
-        <p className="max-w-prose text-sm text-ink-soft">
-          One choice per Sample Page. The pages its Layout Group covers follow it.
-        </p>
-        {recommendations.length === 0 ? (
-          <p className="text-sm text-ink-soft">No Sample Page has a redesign-or-repair recommendation.</p>
-        ) : (
-          <ul className="space-y-4">
-            {recommendations.map((row, i) => (
-              <li key={row.urlPath} className="rounded-card border border-rule p-3">
-                <fieldset>
-                  <legend className="font-bold">
-                    {`Redesign or repair: ${row.urlPath}`}
-                    <UnsavedTag show={row.unsaved} />
-                  </legend>
-                  <p className="mt-1 text-sm text-ink-soft">
-                    {`Proposed: ${ACTION_LABEL[row.proposed.action]}, ${DECIDED_BY_LABEL[row.proposed.decidedBy]}. ${row.proposed.reason}`}
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-6">
-                    {ACTIONS.map((action) => {
-                      const id = `review-action-${i}-${action}`;
-                      return (
-                        <span key={action} className="inline-flex min-h-[44px] items-center gap-2">
-                          <input
-                            id={id}
-                            type="radio"
-                            name={`review-action-${i}`}
-                            value={action}
-                            checked={row.chosen === action}
-                            onChange={() => onDraft(chooseAction(draft, row.urlPath, action))}
-                            className="h-5 w-5 accent-stamp"
-                          />
-                          <label htmlFor={id} className="py-3 pr-3">
-                            {ACTION_LABEL[action]}
-                          </label>
-                        </span>
-                      );
-                    })}
-                  </div>
-                  {row.edited && (
-                    <button
-                      type="button"
-                      className="btn-quiet btn-sm mt-2"
-                      aria-label={`Reset ${row.urlPath} to the proposed choice`}
-                      onClick={() => onDraft(resetAction(draft, row.urlPath))}
-                    >
-                      Reset to proposed
-                    </button>
-                  )}
-                </fieldset>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+          <section aria-labelledby="review-actions-title" className="space-y-3">
+            <h2 id="review-actions-title" className="text-xl font-bold">
+              Redesign or repair
+            </h2>
+            <p className="max-w-prose text-sm text-ink-soft">
+              One choice per Sample Page. The pages its Layout Group covers follow it.
+            </p>
+            {recommendations.length === 0 ? (
+              <p className="text-sm text-ink-soft">No Sample Page has a redesign-or-repair recommendation.</p>
+            ) : (
+              <ul className="space-y-4">
+                {recommendations.map((row, i) => (
+                  <li key={row.urlPath} className="rounded-card border border-rule p-3">
+                    <fieldset>
+                      <legend className="font-bold">
+                        {`Redesign or repair: ${row.urlPath}`}
+                        <UnsavedTag show={row.unsaved} />
+                      </legend>
+                      <p className="mt-1 text-sm text-ink-soft">
+                        {`Proposed: ${ACTION_LABEL[row.proposed.action]}, ${DECIDED_BY_LABEL[row.proposed.decidedBy]}. ${row.proposed.reason}`}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-6">
+                        {ACTIONS.map((action) => {
+                          const id = `review-action-${i}-${action}`;
+                          return (
+                            <span key={action} className="inline-flex min-h-[44px] items-center gap-2">
+                              <input
+                                id={id}
+                                type="radio"
+                                name={`review-action-${i}`}
+                                value={action}
+                                checked={row.chosen === action}
+                                onChange={() => onDraft(chooseAction(draft, row.urlPath, action))}
+                                className="h-5 w-5 accent-stamp"
+                              />
+                              <label htmlFor={id} className="py-3 pr-3">
+                                {ACTION_LABEL[action]}
+                              </label>
+                            </span>
+                          );
+                        })}
+                      </div>
+                      {row.edited && (
+                        <button
+                          type="button"
+                          className="btn-quiet btn-sm mt-2"
+                          aria-label={`Reset ${row.urlPath} to the proposed choice`}
+                          onClick={() => onDraft(resetAction(draft, row.urlPath))}
+                        >
+                          Reset to proposed
+                        </button>
+                      )}
+                    </fieldset>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+      </div>
       {pending || saving || message?.tone === 'fail' ? (
         <BottomActionBar
           summary={

@@ -22,6 +22,7 @@ import {
 } from '../src/screens/audit/documents/review-model';
 import { loadAudit, loadEdits, loadPageContent, saveEdits } from '../src/screens/audit/documents/review-api';
 import {
+  REVIEW_SECTIONS,
   ReviewDocumentsScreen,
   ReviewDocumentsView,
   type ReviewDocumentsViewProps,
@@ -522,6 +523,15 @@ describe('Section rewrite on the review (T-74)', () => {
       'utf8'
     );
     expect(source).not.toMatch(/bg-accent|text-accent/);
+  });
+
+  it('renders section navigation with sticky rail on desktop and anchors to all review sections', () => {
+    const html = view({ aiConfigured: true });
+    expect(html).toContain('aria-label="Sections of the review form"');
+    for (const section of REVIEW_SECTIONS) {
+      expect(html).toContain(section.label);
+      expect(html).toContain(`id="${section.id}"`);
+    }
   });
 });
 
