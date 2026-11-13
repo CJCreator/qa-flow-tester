@@ -1,6 +1,16 @@
 # The QA Tool: the runner, which drives real browsers, and the Wizard it serves, on one port. It builds on Playwright's image, whose version must match the `playwright` package in
 # the lockfile.
 FROM mcr.microsoft.com/playwright:v1.65.0-noble@sha256:9beb546099e11f52d62e505537914870e01a67e0e6b00ae41da4775324e73dbe
+# Replace the base image's bundled Node (v26) with Node 22, the version pinned in .nvmrc. Playwright stays from the base.
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends xz-utils; \
+    rm -rf /var/lib/apt/lists/*; \
+    curl -fsSLO https://nodejs.org/dist/v22.23.5/node-v22.23.5-linux-x64.tar.xz; \
+    echo "cdeb8670a0c81f51b4dc4ac61919f9b1ad917b304bf8221eb939570663d240f8  node-v22.23.5-linux-x64.tar.xz" | sha256sum -c -; \
+    tar -xJf node-v22.23.5-linux-x64.tar.xz -C /usr/local --strip-components 1; \
+    rm node-v22.23.5-linux-x64.tar.xz; \
+    node --version
 RUN corepack enable && corepack prepare pnpm@11.10.0 --activate
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
     COREPACK_ENABLE_DOWNLOAD_PROMPT=0
