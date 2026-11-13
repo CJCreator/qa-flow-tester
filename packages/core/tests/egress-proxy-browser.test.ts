@@ -27,7 +27,7 @@ beforeAll(async () => {
   });
   // The WebSocket endpoint: a bare 101 handshake, the socket is then left open.
   site.on('upgrade', (req, socket) => {
-    upgraded.add(socket);
+    upgraded.add(socket as net.Socket);
     const key = String(req.headers['sec-websocket-key'] ?? '');
     const accept = crypto
       .createHash('sha1')

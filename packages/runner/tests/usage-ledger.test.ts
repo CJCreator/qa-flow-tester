@@ -33,7 +33,7 @@ afterEach(() => {
 describe('UsageLedger', () => {
   it('save then load gives the same object; another day loads as null', async () => {
     const backend = fakeBackend();
-    const ledger = new UsageLedger(backend);
+    const ledger = new UsageLedger(backend as unknown as ConstructorParameters<typeof UsageLedger>[0]);
     await ledger.save(sample(today));
     await ledger.flush();
     expect(await ledger.load(today)).toEqual(sample(today));
@@ -43,7 +43,7 @@ describe('UsageLedger', () => {
 
   it('a stored value with a negative or non-number count loads as null', async () => {
     const backend = fakeBackend();
-    const ledger = new UsageLedger(backend);
+    const ledger = new UsageLedger(backend as unknown as ConstructorParameters<typeof UsageLedger>[0]);
     backend.data.set(USAGE_KEY, { day: today, copyStarts: -1, auditStarts: {} });
     expect(await ledger.load(today)).toBeNull();
     backend.data.set(USAGE_KEY, { day: today, copyStarts: 'x', auditStarts: {} });
@@ -54,7 +54,7 @@ describe('UsageLedger', () => {
     const backend = fakeBackend();
     backend.getJson.mockRejectedValue(new Error('bucket secret-name-xyz denied'));
     const log = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const ledger = new UsageLedger(backend);
+    const ledger = new UsageLedger(backend as unknown as ConstructorParameters<typeof UsageLedger>[0]);
     expect(await ledger.load(today)).toBeNull();
     expect(log).toHaveBeenCalledTimes(1);
     expect(String(log.mock.calls[0][0])).not.toContain('secret-name-xyz');
@@ -64,7 +64,7 @@ describe('UsageLedger', () => {
     const backend = fakeBackend();
     backend.putJson.mockRejectedValue(new Error('network down'));
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    const ledger = new UsageLedger(backend);
+    const ledger = new UsageLedger(backend as unknown as ConstructorParameters<typeof UsageLedger>[0]);
     await expect(ledger.save(sample(today))).resolves.toBeUndefined();
     await expect(ledger.flush()).resolves.toBeUndefined();
   });

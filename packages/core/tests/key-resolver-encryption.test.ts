@@ -139,7 +139,7 @@ describe('KeyResolver encrypted fallback file and service keys', () => {
 
     const otherMachine = resolver(noKeychain, path.join(root, 'other-config'));
     expect(await otherMachine.resolveKey('anthropic')).toBeNull();
-    expect(warn.mock.calls.some((call) => String(call[0]).includes('cannot be decrypted'))).toBe(true);
+    expect(warn.mock.calls.some((call: unknown[]) => String(call[0]).includes('cannot be decrypted'))).toBe(true);
   });
 
   it('rejects a tampered file instead of returning altered keys', async () => {

@@ -147,7 +147,10 @@ describe('T-297: on a beta copy the access key alone is not an audit owner', () 
   });
 
   it('owner sign-in, with and without the key: every audit, the link id, auditOwner true', async () => {
-    for (const headers of [{ cookie: ownerCookie }, { cookie: ownerCookie, 'x-qa-access': KEY }]) {
+    for (const headers of [{ cookie: ownerCookie }, { cookie: ownerCookie, 'x-qa-access': KEY }] as Record<
+      string,
+      string
+    >[]) {
       const list = await call(betaPort, '/api/audits', headers);
       expect(list.status).toBe(200);
       expect(list.json.audits.map((a: any) => a.auditId).sort()).toEqual([auditA, auditB].sort());

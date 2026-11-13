@@ -61,7 +61,7 @@ function createMockRequest(
 }
 
 function makeGoodPlan(runId = 'run-1', targetUrl = 'https://example.com'): StoredPlanRecord {
-  const plan: ReviewPlan = {
+  const plan = {
     runId,
     targetUrl,
     discoveredAt: new Date().toISOString(),
@@ -76,8 +76,8 @@ function makeGoodPlan(runId = 'run-1', targetUrl = 'https://example.com'): Store
         tests: [{ id: 'test-1', name: 'Test 1', steps: [] }],
       },
     ],
-  };
-  const draft: DiscoveryDraft = {
+  } as unknown as ReviewPlan;
+  const draft = {
     version: '1.0',
     productId: 'product-1',
     targetUrl,
@@ -99,7 +99,7 @@ function makeGoodPlan(runId = 'run-1', targetUrl = 'https://example.com'): Store
       layoutGroups: [],
       otherHosts: [],
     },
-  };
+  } as unknown as DiscoveryDraft;
   return {
     schemaVersion: 1,
     status: 'awaiting-review',

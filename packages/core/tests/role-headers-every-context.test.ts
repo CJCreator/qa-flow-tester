@@ -86,7 +86,7 @@ describe('the saved-session check', () => {
       roleLandingPaths: {},
       roleFailures: {},
       roleDiagnostics: {},
-    } as PreFlightResult);
+    } as unknown as PreFlightResult);
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(console, 'warn').mockImplementation(() => {});
 
