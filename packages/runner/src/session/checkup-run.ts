@@ -786,7 +786,8 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
           const k = b.apiKey;
           const m = b.aiModel;
           return {
-            provider: createAIProvider(p, k || 'mock-key', undefined, m),
+            // The CI check-up runs on the person's own machine or CI runner: its Google sign-in is theirs (ADR 0042).
+            provider: createAIProvider(p, k || 'mock-key', undefined, m, { allowAdc: true }),
             models: m ? { text: m } : undefined,
             settings: { provider: p, model: m, apiKey: k },
             key: k,

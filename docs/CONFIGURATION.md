@@ -92,8 +92,8 @@ project ID when the file has no `quota_project_id`. `APPDATA` is set by Windows 
 
 How ADC is used:
 
-- **Save it as the key.** Saving `adc` as the Gemini key in Settings sends every Gemini request to Vertex AI with ADC.
-- **Gemini's own fallback.** When a Gemini AI Studio key cannot be used (400 `API_KEY_INVALID`, 401, 402, 403, 429), Gemini retries on Vertex AI with ADC. AI Studio aliases such as `gemini-flash-latest` do not exist on Vertex AI, so they are sent as the default Gemini model.
+- **Save it as the key.** Saving `adc` as the Gemini key in Settings sends every Gemini request to Vertex AI with ADC. This works only on a runner bound to this computer, and in the CI check-up. The hosted copy and any runner reachable from other machines refuse `adc`.
+- **Gemini's own fallback.** When a Gemini AI Studio key cannot be used (400 `API_KEY_INVALID`, 401, 402, 403, 429), Gemini retries on Vertex AI with ADC. This also works only on a runner bound to this computer, and in the CI check-up; elsewhere it never falls back. AI Studio aliases such as `gemini-flash-latest` do not exist on Vertex AI, so they are sent as the default Gemini model.
 - **The Website Audit's fallback, on a runner bound to this computer only.** When no key is saved, or another provider refuses its key (401, 402, 403), the audit uses Gemini through ADC for the rest of that audit. The hosted copy never uses the machine's credentials.
 
 Each failed AI request writes one line to the runner's console, with keys and tokens removed:

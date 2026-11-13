@@ -185,8 +185,16 @@ export interface AuditAi {
 
 export type AuditAiResolution = { ok: true; ai: AuditAi } | { ok: false; reason: 'no-ai-key' };
 
+/** Google sign-in only where the runner allowed it: it passes `hasAdc` on a local runner only (ADR 0042). */
+function providerFactory(deps: ResolveAuditAiDeps): (type: AIProviderType, apiKey: string) => AIProvider {
+  return (
+    deps.createProvider ??
+    ((type, apiKey) => createAIProvider(type, apiKey, undefined, undefined, { allowAdc: deps.hasAdc !== undefined }))
+  );
+}
+
 export async function resolveAuditAi(deps: ResolveAuditAiDeps): Promise<AuditAiResolution> {
-  const create = deps.createProvider ?? createAIProvider;
+  const create = providerFactory(deps);
   const hasAdc = deps.hasAdc;
   const key = await deps.keys.resolveKey(deps.setup.provider);
   // No saved key anywhere, but this computer has Google sign-in: Gemini through Vertex AI (ADR 0042).
@@ -209,7 +217,7 @@ function auditAiOn(
   onAdc: boolean,
   hasAdc?: () => Promise<boolean>
 ): AuditAi {
-  const create = deps.createProvider ?? createAIProvider;
+  const create = providerFactory(deps);
   let provider = first;
   let providerType = firstType;
   let switched = onAdc;

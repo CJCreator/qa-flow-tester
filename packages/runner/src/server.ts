@@ -538,6 +538,8 @@ export class RunnerServer {
   private auditLimiter: AuditDailyLimiter;
   private usageLedger: UsageLedger;
   private readonly wiring: AuditWiring;
+  /** Not a shared copy and bound to this computer (ADR 0042): Google sign-in and private addresses are allowed. */
+  private readonly localRun: boolean;
 
   public readonly session: CheckupSession;
   /** The chosen free models (not secret), kept beside the key so every browser gets the same setup. */
@@ -665,8 +667,10 @@ export class RunnerServer {
     this.stepTimeoutMs = options.stepTimeoutMs;
     this.keyResolver = options.keyResolver || (this.beta ? new SessionKeyResolver() : new KeyResolver(this.dataDir));
     this.openRouter = options.openRouter || new OpenRouterClient();
+    this.localRun = !this.beta && isLoopbackBindHost(this.host);
     this.makeAIProvider =
-      options.createAIProvider || ((provider, apiKey, model) => createAIProvider(provider, apiKey, undefined, model));
+      options.createAIProvider ||
+      ((provider, apiKey, model) => createAIProvider(provider, apiKey, undefined, model, { allowAdc: this.localRun }));
     this.uiApps = options.ui || [];
     this.allowedOrigins = new Set(
       (options.allowedOrigins || []).map((o) => {
@@ -721,7 +725,7 @@ export class RunnerServer {
         return { provider, text, vision };
       },
       isOwnerRequest: (req) => this.isAuditOwner(req),
-      localRun: !this.beta && isLoopbackBindHost(this.host),
+      localRun: this.localRun,
       claimAuditLimit: (email) => {
         const outcome = this.auditLimiter.claim(email);
         if (outcome.allowed && email && this.auditDailyLimit) this.saveUsage();
@@ -2855,6 +2859,14 @@ export class RunnerServer {
         return true;
       }
       const apiKey = body.apiKey?.trim();
+      // Google sign-in (ADC) reads this computer's credentials file: only a runner bound to this computer may use it.
+      if (provider === 'gemini' && !this.localRun && (apiKey === 'adc' || apiKey?.startsWith('ya29.'))) {
+        this.sendJson(res, 400, {
+          saved: false,
+          reason: 'Google sign-in works only on a runner on your own computer. Add a Gemini API key.',
+        });
+        return true;
+      }
       // Gemini: a new key (or `model: null` with the saved one) is checked by picking a model it can use. That
       // model is saved unless the person named one; a `-latest` alias counts as not naming one.
       const latestAlias = (m: unknown) => typeof m === 'string' && /-latest$/i.test(m);
@@ -3212,6 +3224,18 @@ export class RunnerServer {
         error: 'The test AI is not available here.',
         code: 'ERR_NO_AI_KEY',
         suggestion: 'Add an OpenRouter key in Settings (the free tier works), then start the check-up again.',
+      });
+      return;
+    }
+    // Only a provider the runner knows: an unknown name must not reach the test AI (createAIProvider).
+    if (
+      body.aiProvider !== undefined &&
+      body.aiProvider !== 'mock' &&
+      !AI_PROVIDERS.some((p) => p.id === body.aiProvider)
+    ) {
+      this.sendJson(res, 400, {
+        error: 'This AI provider is not known. Choose one in Settings.',
+        code: 'ERR_NO_AI_KEY',
       });
       return;
     }

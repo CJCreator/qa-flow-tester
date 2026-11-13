@@ -168,6 +168,25 @@ describe('A runner shared as a beta', () => {
     expect(JSON.parse(run.body).code).toBe('ERR_NO_AI_KEY');
   });
 
+  it('never lets a tester save Google sign-in (adc) as the Gemini key', async () => {
+    const cookie = await newSession();
+    const saved = await call('POST', '/api/ai/settings', cookie, { provider: 'gemini', apiKey: 'adc' });
+    expect(saved.status).toBe(400);
+    expect(JSON.parse(saved.body).saved).toBe(false);
+  });
+
+  it('refuses an AI provider name the runner does not know, instead of the test AI', async () => {
+    const cookie = await newSession();
+    const run = await call('POST', '/api/runner/run', cookie, {
+      targetUrl: 'https://example.com/',
+      useAI: true,
+      aiProvider: 'Mock',
+      apiKey: 'x',
+    });
+    expect(run.status).toBe(400);
+    expect(JSON.parse(run.body).code).toBe('ERR_NO_AI_KEY');
+  });
+
   it('compares sites for a tester, but only public ones, and keeps each tester’s comparisons to themselves', async () => {
     const alice = await newSession();
     const bob = await newSession();
