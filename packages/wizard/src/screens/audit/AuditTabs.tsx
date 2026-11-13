@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { Link, PATHS } from '../../lib/router';
-import { knownHelperSignIn } from './saved/helper-api';
+import { ensureKnownHelperSignIn, knownHelperSignIn, subscribeKnownHelperSignIn } from './saved/helper-api';
 
 export type AuditTab = 'history' | 'results' | 'documents' | 'download' | 'share' | 'helpers';
 
@@ -21,6 +21,14 @@ export function AuditTabs({
   current: AuditTab;
   hide?: AuditTab[];
 }) {
+  const status = useSyncExternalStore(subscribeKnownHelperSignIn, knownHelperSignIn, knownHelperSignIn);
+
+  useEffect(() => {
+    // Eagerly query helper sign-in status so the Helpers tab is hidden cleanly when helper sign-in is off,
+    // without requiring the user to visit the HelpersScreen first.
+    void ensureKnownHelperSignIn();
+  }, []);
+
   const tabs: Array<{ id: AuditTab; label: string; to: string | null }> = [
     { id: 'results', label: 'Results', to: version ? PATHS.auditVersion(auditId, version) : null },
     { id: 'documents', label: 'Documents', to: version ? PATHS.auditReview(auditId, version) : null },
@@ -29,7 +37,7 @@ export function AuditTabs({
     { id: 'share', label: 'Share', to: PATHS.auditShare(auditId) },
     { id: 'helpers', label: 'Helpers', to: PATHS.auditHelpers(auditId) },
   ];
-  const helpersOff = knownHelperSignIn() === 'off' && current !== 'helpers';
+  const helpersOff = status === 'off' && current !== 'helpers';
   const hidden = helpersOff ? [...hide, 'helpers' as const] : hide;
   const shown = tabs.filter((t): t is { id: AuditTab; label: string; to: string } => !!t.to && !hidden.includes(t.id));
   const navRef = useRef<HTMLElement>(null);

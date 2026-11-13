@@ -31,6 +31,130 @@ export type { PlanNotice, PlanUpdateState } from '../lib/run-events';
 /** How long a background change may be waited for before the plan can be approved again. */
 export const PENDING_TIMEOUT_MS = 60_000;
 
+/** Navigation item for the desktop side rail / quick jump. */
+export interface PlanSectionNavItem {
+  id: string;
+  label: string;
+  count?: number | string;
+}
+
+/** Determines which plan sections are available in the plan to display in the side rail. */
+export function planSectionNavItems(plan: ReviewPlan): PlanSectionNavItem[] {
+  const items: PlanSectionNavItem[] = [];
+
+  const questions = plan.questions || [];
+  if (questions.length > 0) {
+    const unanswered = questions.filter((q) => !q.selectedAnswer).length;
+    items.push({
+      id: 'plan-questions',
+      label: unanswered > 0 ? 'Needs your answer' : 'Your answers',
+      count: unanswered > 0 ? unanswered : questions.length,
+    });
+  }
+
+  items.push({ id: 'plan-summary', label: 'What approving runs' });
+  items.push({ id: 'plan-finder', label: 'Find in the plan' });
+
+  const pages = plan.planPages || [];
+  items.push({
+    id: 'plan-pages',
+    label: 'Pages',
+    count: pages.length,
+  });
+
+  const navigation = plan.navigation || [];
+  items.push({
+    id: 'plan-navigation',
+    label: 'Navigation',
+    count: navigation.length,
+  });
+
+  const flows = plan.flows || [];
+  items.push({
+    id: 'plan-journeys',
+    label: 'Journeys',
+    count: flows.length,
+  });
+
+  items.push({ id: 'plan-checks', label: 'Checks' });
+
+  const wontRun = plan.wontRun || [];
+  items.push({
+    id: 'plan-wontrun',
+    label: 'Won’t run',
+    count: wontRun.length,
+  });
+
+  const rolesNotTested = plan.rolesNotTested || [];
+  if (rolesNotTested.length > 0) {
+    items.push({
+      id: 'plan-roles-not-tested',
+      label: 'Roles not tested',
+      count: rolesNotTested.length,
+    });
+  }
+
+  const notFound = plan.notFound || [];
+  if (notFound.length > 0 || plan.documentedItems) {
+    items.push({
+      id: 'plan-notfound',
+      label: 'Not found in app',
+      count: notFound.length,
+    });
+  }
+
+  items.push({ id: 'plan-docs', label: 'Notes and context' });
+
+  return items;
+}
+
+/** Sticky navigation side rail / quick jump for desktop screens (>=1024px / lg). */
+export function PlanSideRail({ plan }: { plan: ReviewPlan }) {
+  const sections = useMemo(() => planSectionNavItems(plan), [plan]);
+
+  const jumpTo = (id: string) => {
+    const target = document.getElementById(id);
+    if (!target) return;
+    if (target.tagName === 'SECTION') {
+      const own = target.querySelector<HTMLDetailsElement>(':scope > details');
+      if (own && !own.open) own.open = true;
+    }
+    let parent = target.parentElement;
+    while (parent) {
+      if (parent instanceof HTMLDetailsElement) parent.open = true;
+      parent = parent.parentElement;
+    }
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const heading = target.querySelector<HTMLElement>('h2, h3, [tabindex="-1"], input');
+    if (heading) {
+      if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1');
+      heading.focus({ preventScroll: true });
+    }
+  };
+
+  return (
+    <nav aria-label="Plan sections" className="hidden lg:block lg:sticky lg:top-24 lg:self-start lg:w-48 lg:shrink-0">
+      <p className="mb-2 text-xs font-bold uppercase tracking-wider text-ink-soft">Sections</p>
+      <ul className="space-y-0.5 border-l border-rule">
+        {sections.map((s) => (
+          <li key={s.id}>
+            <button
+              type="button"
+              onClick={() => jumpTo(s.id)}
+              className="group -ml-[1px] flex w-full items-center justify-between border-l-2 border-transparent px-3 py-1.5 text-left text-sm text-ink-soft transition-colors hover:border-stamp hover:text-ink focus:outline-none focus:border-stamp focus:text-ink min-h-[44px]"
+            >
+              <span className="truncate">{s.label}</span>
+              {s.count !== undefined && (
+                <span className="ml-2 text-xs text-ink-soft/75 group-hover:text-ink-soft">{s.count}</span>
+              )}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
 export interface PlanReviewScreenProps {
   plan: ReviewPlan;
   /** Roles are the sign-in typed again, when the saved plan's details were forgotten. */
@@ -409,7 +533,14 @@ export function PlanReviewScreen({
       )}
 
       <div role="tabpanel" id="plan-tabpanel" aria-labelledby={`plan-tab-${tab}`} className="[overflow-wrap:anywhere]">
-        {panel}
+        {tab === 'plan' ? (
+          <div className="lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-10">
+            <PlanSideRail plan={shown} />
+            <div className="min-w-0">{panel}</div>
+          </div>
+        ) : (
+          panel
+        )}
       </div>
 
       <PlanFile />

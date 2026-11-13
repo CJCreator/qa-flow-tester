@@ -158,15 +158,58 @@ export function permissionText(permissions: readonly HelperPermission[]): string
 export type KnownHelperSignIn = 'on' | 'off' | 'unknown';
 
 let knownSignIn: KnownHelperSignIn = 'unknown';
+let pendingStatusPromise: Promise<HelperOutcome<HelperStatus>> | null = null;
+const statusListeners = new Set<() => void>();
+
+function setKnownSignIn(next: KnownHelperSignIn): void {
+  if (knownSignIn !== next) {
+    knownSignIn = next;
+    statusListeners.forEach((listener) => {
+      try {
+        listener();
+      } catch (err) {
+        console.error(err);
+      }
+    });
+  }
+}
 
 /** Whether Helper sign-in was last seen on or off in this page session, or 'unknown' if no status has loaded yet. */
 export function knownHelperSignIn(): KnownHelperSignIn {
   return knownSignIn;
 }
 
-/** For tests: forget the recorded status. */
+/** Subscribe to changes in knownHelperSignIn status. */
+export function subscribeKnownHelperSignIn(listener: () => void): () => void {
+  statusListeners.add(listener);
+  return () => {
+    statusListeners.delete(listener);
+  };
+}
+
+/** For tests: forget the recorded status and pending promise. */
 export function resetKnownHelperSignIn(): void {
   knownSignIn = 'unknown';
+  pendingStatusPromise = null;
+}
+
+/**
+ * Ensures helper status is requested eagerly (memoized in memory while in-flight or known).
+ * Does not throw; resolves with current known status.
+ */
+export function ensureKnownHelperSignIn(fetchImpl: Fetch = fetch): Promise<KnownHelperSignIn> {
+  if (knownSignIn !== 'unknown') {
+    return Promise.resolve(knownSignIn);
+  }
+  if (!pendingStatusPromise) {
+    pendingStatusPromise = loadHelperStatus(fetchImpl).finally(() => {
+      pendingStatusPromise = null;
+    });
+  }
+  return pendingStatusPromise.then(
+    () => knownSignIn,
+    () => knownSignIn
+  );
 }
 
 /** `GET /api/helper/status`: is Helper sign-in set up on this copy? A 404 ERR_HELPERS_OFF means no. */
@@ -185,7 +228,7 @@ export async function loadHelperStatus(fetchImpl: Fetch = fetch): Promise<Helper
     !outcome.ok && outcome.code === 'ERR_HELPERS_OFF'
       ? { ok: true, value: { enabled: false, firebase: null } }
       : outcome;
-  if (result.ok) knownSignIn = result.value.enabled ? 'on' : 'off';
+  if (result.ok) setKnownSignIn(result.value.enabled ? 'on' : 'off');
   return result;
 }
 

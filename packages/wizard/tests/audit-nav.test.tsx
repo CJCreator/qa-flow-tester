@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { AUDIT_LINKS, AreaNav, CHECKUP_LINKS, areaOf, menuGroups } from '../src/components/AreaNav';
 import { AUDIT_COMMANDS } from '../src/components/CommandPalette';
 import { MobileMenu, TopBar } from '../src/components/TopBar';
@@ -356,5 +356,23 @@ describe('audit tabs: Helpers hidden once Helper sign-in is known to be off', ()
     const html = tabs('results', ['share']);
     expect(html).not.toContain('>Share</a>');
     expect(html).toContain(`href="${helpersHref}"`);
+  });
+
+  it('eagerly queries helper sign-in status via ensureKnownHelperSignIn without visiting HelpersScreen', async () => {
+    resetKnownHelperSignIn();
+    const fetchSpy = vi.fn(replyWith({ enabled: false }));
+    const { ensureKnownHelperSignIn } = await import('../src/screens/audit/saved/helper-api');
+    const result = await ensureKnownHelperSignIn(fetchSpy);
+    expect(result).toBe('off');
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+    // Repeated call is memoized while in memory
+    const second = await ensureKnownHelperSignIn(fetchSpy);
+    expect(second).toBe('off');
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+    const html = tabs('results');
+    expect(html).not.toContain(`href="${helpersHref}"`);
+    resetKnownHelperSignIn();
   });
 });
