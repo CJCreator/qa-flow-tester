@@ -55,6 +55,7 @@ import { blockChanges, NEEDS_TEST_COPY } from './live-site.js';
 import { EntityNamespacer } from './entity-namespacing.js';
 import { SendGuard, watchSends } from './send-guard.js';
 import { safeIdPart, pathInside, testPointDir } from './safe-id.js';
+import { baselineKey } from './plan/baseline-key.js';
 import {
   BugDetectionChecker,
   SpecConformanceChecker,
@@ -1280,7 +1281,10 @@ export class FlowTestOrchestrator {
             );
           }
           // Only a flow that completed reaches the screen the baseline was taken of.
-          const baselinePath = pathInside(baselineDir, `${safeIdPart(testCase.id)}-${safeIdPart(bp)}.png`);
+          const baselinePath = pathInside(
+            baselineDir,
+            `${baselineKey({ targetUrl: options.targetUrl, planItemId: testCase.planItemId, testCaseId: testCase.id, role: testCase.role })}-${safeIdPart(bp)}.png`
+          );
           if (testPointPassed && pageLevelChecks) {
             const baseline = await fs.readFile(baselinePath).catch(() => null);
             if (baseline) {

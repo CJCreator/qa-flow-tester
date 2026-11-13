@@ -13,6 +13,8 @@ const scratch = path.join(process.cwd(), '.tmp-baseline-accept');
 const outputDir = path.join(scratch, 'report');
 const baselineDir = path.join(process.cwd(), '.qa-baselines');
 const ID = 'tmp-t34-baseline-test';
+// Same shape as core's baselineKey(): host, Plan Item hash and role, then the breakpoint.
+const KEY = 'localhost-3050__page-some-path-0a1b2c3d-admin-1440px';
 
 function accept(body: unknown): Promise<{ status: number; body: string }> {
   return new Promise((resolve, reject) => {
@@ -78,6 +80,7 @@ describe('POST /api/runner/baselines/accept', () => {
     await server?.stop();
     await fs.rm(path.join(baselineDir, `${ID}.png`), { force: true });
     await fs.rm(path.join(baselineDir, 'tmp-t267-TC-1-1440px.png'), { force: true });
+    await fs.rm(path.join(baselineDir, `${KEY}.png`), { force: true });
     await fs.rm(scratch, { recursive: true, force: true });
   });
 
@@ -140,7 +143,10 @@ describe('POST /api/runner/baselines/accept', () => {
           title: 'Visual regression against baseline at 1440px',
           testCaseId: 'tmp-t267-TC-1',
           where: { breakpoint: '1440px' },
-          expectedVsActual: { actual: '2.00% of pixels differ (10 px)' },
+          expectedVsActual: {
+            expected: 'Matches approved baseline .qa-baselines/tmp-t267-TC-1-1440px.png',
+            actual: '2.00% of pixels differ (10 px)',
+          },
           evidence: {
             screenshotPath: 'evidence/TC-1-1440px/visual-diff.png',
             currentScreenshotPath: 'evidence/TC-1-1440px/visual-current.png',
@@ -154,5 +160,49 @@ describe('POST /api/runner/baselines/accept', () => {
     const item = items.find((i) => i.id === 'tmp-t267-TC-1-1440px');
     expect(item?.currentUrl).toBe('/api/evidence/runs/run-1/evidence/TC-1-1440px/visual-current.png');
     expect(item?.diffUrl).toBe('/api/evidence/runs/run-1/evidence/TC-1-1440px/visual-diff.png');
+  });
+
+  it('accepts a key-named baseline and matches its finding by file name', async () => {
+    await fs.rm(path.join(baselineDir, `${KEY}.png`), { force: true });
+    const answer = await accept({ id: KEY, currentEvidencePath: 'runs/run-1/evidence/shot.png' });
+    expect(answer.status).toBe(200);
+    expect(await exists(path.join(baselineDir, `${KEY}.png`))).toBe(true);
+
+    const other = `localhost-3051__page-some-path-0a1b2c3d-admin-1440px`;
+    await fs.writeFile(path.join(baselineDir, `${other}.png`), 'png');
+    (server as unknown as { lastReport: unknown }).lastReport = {
+      runId: 'run-1',
+      findings: [
+        {
+          checker: 'design-standards',
+          title: 'Visual regression against baseline at 1440px',
+          testCaseId: 'TC-9',
+          where: { breakpoint: '1440px' },
+          expectedVsActual: {
+            expected: `Matches approved baseline .qa-baselines/${KEY}.png`,
+            actual: '3.00% of pixels differ (12 px)',
+          },
+          evidence: {
+            screenshotPath: 'evidence/TC-9/visual-diff.png',
+            currentScreenshotPath: 'evidence/TC-9/visual-current.png',
+          },
+        },
+      ],
+    };
+    const answer2 = await get('/api/runner/baselines');
+    expect(answer2.status).toBe(200);
+    const items = JSON.parse(answer2.body) as {
+      id: string;
+      hasRegression: boolean;
+      testCaseId: string;
+      breakpoint: string;
+    }[];
+    const mine = items.find((i) => i.id === KEY);
+    const sibling = items.find((i) => i.id === other);
+    expect(mine?.hasRegression).toBe(true);
+    expect(mine?.testCaseId).toBe('localhost-3050__page-some-path-0a1b2c3d-admin');
+    expect(mine?.breakpoint).toBe('1440px');
+    expect(sibling?.hasRegression).toBe(false);
+    await fs.rm(path.join(baselineDir, `${other}.png`), { force: true });
   });
 });

@@ -3538,9 +3538,10 @@ export class RunnerServer {
         const breakpoint = (matchBp ? matchBp[1] : '1440px') as Breakpoint;
         const testCaseId = matchBp ? base.slice(0, -matchBp[1].length - 1) : base;
 
-        // Check if there's a finding for this testCase and breakpoint
+        // The baseline's file name (site, Plan Item, role, breakpoint) is the finding's reference: the finding says
+        // `Matches approved baseline <path>`, so the last path segment is compared with this file name.
         const matchingFinding = visualFindings.find(
-          (f) => f.testCaseId === testCaseId && f.where.breakpoint === breakpoint
+          (f) => f.where.breakpoint === breakpoint && f.expectedVsActual.expected.split(/[\\/]/).pop() === entry.name
         );
 
         let diffPercent: number | undefined;
