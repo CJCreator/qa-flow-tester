@@ -184,31 +184,33 @@ export function NewCheckupScreen({
       );
       return () => clearTimeout(timer);
     }
-    const timer = setTimeout(async () => {
-      try {
-        const result = await checkReachable(normal.url);
-        if (id !== latest.current) return;
-        const facts: SiteFacts = { host: result.host, testCopy: result.testCopy, remembered: result.remembered };
-        setCheck(
-          result.ok
-            ? {
-                state: 'ok',
-                url: normal.url,
-                facts,
-                statusCode: result.statusCode,
-                startWarning: result.startWarning,
-              }
-            : { state: 'unreachable', url: normal.url, reason: result.reason, suggestion: result.suggestion, facts }
-        );
-      } catch (err) {
-        if (id !== latest.current) return;
-        setCheck({
-          state: 'unreachable',
-          url: normal.url,
-          reason: err instanceof RunnerError ? err.message : 'The address couldn’t be checked. Try again.',
-          facts: {},
-        });
-      }
+    const timer = setTimeout(() => {
+      void (async () => {
+        try {
+          const result = await checkReachable(normal.url);
+          if (id !== latest.current) return;
+          const facts: SiteFacts = { host: result.host, testCopy: result.testCopy, remembered: result.remembered };
+          setCheck(
+            result.ok
+              ? {
+                  state: 'ok',
+                  url: normal.url,
+                  facts,
+                  statusCode: result.statusCode,
+                  startWarning: result.startWarning,
+                }
+              : { state: 'unreachable', url: normal.url, reason: result.reason, suggestion: result.suggestion, facts }
+          );
+        } catch (err) {
+          if (id !== latest.current) return;
+          setCheck({
+            state: 'unreachable',
+            url: normal.url,
+            reason: err instanceof RunnerError ? err.message : 'The address couldn’t be checked. Try again.',
+            facts: {},
+          });
+        }
+      })().catch((err: unknown) => console.error(err));
     }, CHECK_DELAY_MS);
     return () => clearTimeout(timer);
   }, [form.address, recheck]);
@@ -975,23 +977,25 @@ function MaterialField({
             accept=".md,.markdown,.txt"
             className="sr-only"
             aria-label={`Add a file to ${label}`}
-            onChange={async (e) => {
-              const input = e.currentTarget;
-              const file = input.files?.[0];
-              input.value = '';
-              if (!file) return;
-              const reason = rejectReason(file.name, file.size);
-              if (reason) {
-                setFileError(reason);
-                return;
-              }
-              setFileError(null);
-              try {
-                const text = await file.text();
-                onChange(value.trim() ? `${value.trim()}\n\n${text}` : text);
-              } catch {
-                setFileError('Could not read the file.');
-              }
+            onChange={(e) => {
+              void (async () => {
+                const input = e.currentTarget;
+                const file = input.files?.[0];
+                input.value = '';
+                if (!file) return;
+                const reason = rejectReason(file.name, file.size);
+                if (reason) {
+                  setFileError(reason);
+                  return;
+                }
+                setFileError(null);
+                try {
+                  const text = await file.text();
+                  onChange(value.trim() ? `${value.trim()}\n\n${text}` : text);
+                } catch {
+                  setFileError('Could not read the file.');
+                }
+              })().catch((err: unknown) => console.error(err));
             }}
           />
         </label>
@@ -1044,22 +1048,24 @@ function ReferenceDocuments({
             accept=".md,.markdown,.txt,.docx"
             className="sr-only"
             aria-label="Add documents (.md, .txt or .docx)"
-            onChange={async (e) => {
-              const input = e.currentTarget;
-              const picked = Array.from(input.files ?? []);
-              input.value = '';
-              if (picked.length === 0) return;
-              const result = await readContextFiles(picked, form.contextFiles.length, { convertDocx });
-              setRejected(result.rejected);
-              if (result.accepted.length > 0) {
-                onFormChange((f) => ({
-                  ...f,
-                  contextFiles: [
-                    ...f.contextFiles.filter((old) => !result.accepted.some((a) => a.name === old.name)),
-                    ...result.accepted,
-                  ].slice(0, MAX_CONTEXT_FILES),
-                }));
-              }
+            onChange={(e) => {
+              void (async () => {
+                const input = e.currentTarget;
+                const picked = Array.from(input.files ?? []);
+                input.value = '';
+                if (picked.length === 0) return;
+                const result = await readContextFiles(picked, form.contextFiles.length, { convertDocx });
+                setRejected(result.rejected);
+                if (result.accepted.length > 0) {
+                  onFormChange((f) => ({
+                    ...f,
+                    contextFiles: [
+                      ...f.contextFiles.filter((old) => !result.accepted.some((a) => a.name === old.name)),
+                      ...result.accepted,
+                    ].slice(0, MAX_CONTEXT_FILES),
+                  }));
+                }
+              })().catch((err: unknown) => console.error(err));
             }}
           />
         </label>
@@ -1522,16 +1528,18 @@ function ImportRoles({ onFormChange }: { onFormChange: (update: (form: CheckupFo
             accept=".csv,.txt"
             className="sr-only"
             aria-label="Pick a role list file (.csv or .txt)"
-            onChange={async (e) => {
-              const input = e.currentTarget;
-              const file = input.files?.[0];
-              input.value = '';
-              if (!file) return;
-              try {
-                apply(await file.text());
-              } catch {
-                setNote('The file couldn’t be read. Try again.');
-              }
+            onChange={(e) => {
+              void (async () => {
+                const input = e.currentTarget;
+                const file = input.files?.[0];
+                input.value = '';
+                if (!file) return;
+                try {
+                  apply(await file.text());
+                } catch {
+                  setNote('The file couldn’t be read. Try again.');
+                }
+              })().catch((err: unknown) => console.error(err));
             }}
           />
         </label>
@@ -1697,31 +1705,33 @@ function SavedSessions({
             accept=".json,application/json"
             className="sr-only"
             aria-label="Add a saved session file"
-            onChange={async (e) => {
-              const input = e.currentTarget;
-              const file = input.files?.[0];
-              input.value = '';
-              if (!file) return;
-              try {
-                const text = await file.text();
-                const result = parseSessionFile(file.name, file.size, text);
-                if (!result.ok) {
-                  setError(result.message);
-                  return;
+            onChange={(e) => {
+              void (async () => {
+                const input = e.currentTarget;
+                const file = input.files?.[0];
+                input.value = '';
+                if (!file) return;
+                try {
+                  const text = await file.text();
+                  const result = parseSessionFile(file.name, file.size, text);
+                  if (!result.ok) {
+                    setError(result.message);
+                    return;
+                  }
+                  setError(null);
+                  const name = role.trim();
+                  onFormChange((f) => ({
+                    ...f,
+                    savedSessions: [
+                      ...f.savedSessions.filter((s) => s.role !== name),
+                      { role: name, fileName: file.name, state: result.state },
+                    ],
+                  }));
+                  setRole('');
+                } catch {
+                  setError('The file couldn’t be read. Try again.');
                 }
-                setError(null);
-                const name = role.trim();
-                onFormChange((f) => ({
-                  ...f,
-                  savedSessions: [
-                    ...f.savedSessions.filter((s) => s.role !== name),
-                    { role: name, fileName: file.name, state: result.state },
-                  ],
-                }));
-                setRole('');
-              } catch {
-                setError('The file couldn’t be read. Try again.');
-              }
+              })().catch((err: unknown) => console.error(err));
             }}
           />
         </label>

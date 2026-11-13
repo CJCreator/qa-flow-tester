@@ -522,27 +522,29 @@ function AddSignIn({ actions }: { actions: PlanActions }) {
   return (
     <form
       className="mt-3 grid gap-3 rounded-card border border-rule p-4 sm:grid-cols-2"
-      onSubmit={async (e) => {
-        e.preventDefault();
-        setError(null);
-        try {
-          await actions.addSignIn({
-            role: role.trim() || 'member',
-            username: username.trim(),
-            password,
-            loginPath: loginPath.trim() || undefined,
-            usernameSelector: usernameSelector.trim() || undefined,
-            passwordSelector: passwordSelector.trim() || undefined,
-            submitSelector: submitSelector.trim() || undefined,
-          });
-          setOpen(false);
-          setPassword('');
-          setUsernameSelector('');
-          setPasswordSelector('');
-          setSubmitSelector('');
-        } catch (err) {
-          setError(err instanceof Error ? err.message : 'The sign-in couldn’t be added.');
-        }
+      onSubmit={(e) => {
+        void (async () => {
+          e.preventDefault();
+          setError(null);
+          try {
+            await actions.addSignIn({
+              role: role.trim() || 'member',
+              username: username.trim(),
+              password,
+              loginPath: loginPath.trim() || undefined,
+              usernameSelector: usernameSelector.trim() || undefined,
+              passwordSelector: passwordSelector.trim() || undefined,
+              submitSelector: submitSelector.trim() || undefined,
+            });
+            setOpen(false);
+            setPassword('');
+            setUsernameSelector('');
+            setPasswordSelector('');
+            setSubmitSelector('');
+          } catch (err) {
+            setError(err instanceof Error ? err.message : 'The sign-in couldn’t be added.');
+          }
+        })().catch((err: unknown) => console.error(err));
       }}
     >
       <p className="text-sm text-ink-soft sm:col-span-2">
@@ -1230,15 +1232,17 @@ function PagesSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAction
       {pages.length === 0 && <p className="text-sm text-ink-soft">No pages match.</p>}
       <form
         className="mt-6 grid gap-2"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          setError(null);
-          try {
-            await actions.addPage(address.trim());
-            setAddress('');
-          } catch (err) {
-            setError(err instanceof Error ? err.message : 'The page couldn’t be added.');
-          }
+        onSubmit={(e) => {
+          void (async () => {
+            e.preventDefault();
+            setError(null);
+            try {
+              await actions.addPage(address.trim());
+              setAddress('');
+            } catch (err) {
+              setError(err instanceof Error ? err.message : 'The page couldn’t be added.');
+            }
+          })().catch((err: unknown) => console.error(err));
         }}
       >
         <label className="font-bold" htmlFor="add-page-address">
@@ -1476,19 +1480,21 @@ function DescribeTest({ plan, actions }: { plan: ReviewPlan; actions: PlanAction
           type="button"
           className="btn-quiet btn-sm"
           disabled={working || actions.busy || !sentence.trim()}
-          onClick={async () => {
-            setWorking(true);
-            setError(null);
-            setResult(null);
-            try {
-              const r = await actions.describeTest(sentence.trim(), urlPath);
-              if (r.ok && r.flow) setResult(r);
-              else setError(r.message || 'That couldn’t be turned into a test. Try saying it another way.');
-            } catch (err) {
-              setError(err instanceof Error ? err.message : 'That couldn’t be turned into a test.');
-            } finally {
-              setWorking(false);
-            }
+          onClick={() => {
+            void (async () => {
+              setWorking(true);
+              setError(null);
+              setResult(null);
+              try {
+                const r = await actions.describeTest(sentence.trim(), urlPath);
+                if (r.ok && r.flow) setResult(r);
+                else setError(r.message || 'That couldn’t be turned into a test. Try saying it another way.');
+              } catch (err) {
+                setError(err instanceof Error ? err.message : 'That couldn’t be turned into a test.');
+              } finally {
+                setWorking(false);
+              }
+            })().catch((err: unknown) => console.error(err));
           }}
         >
           {working ? 'Reading it…' : 'Turn into a test'}
@@ -1511,10 +1517,12 @@ function DescribeTest({ plan, actions }: { plan: ReviewPlan; actions: PlanAction
             type="button"
             className="btn-quiet btn-sm mt-2"
             disabled={actions.busy}
-            onClick={async () => {
-              await actions.addJourney(result.flow!);
-              setSentence('');
-              setResult(null);
+            onClick={() => {
+              void (async () => {
+                await actions.addJourney(result.flow!);
+                setSentence('');
+                setResult(null);
+              })().catch((err: unknown) => console.error(err));
             }}
           >
             Add this test to the plan
@@ -1820,7 +1828,9 @@ function DocsSection({ plan, actions }: { plan: ReviewPlan; actions: PlanActions
         type="button"
         className="btn-quiet btn-sm"
         disabled={actions.busy}
-        onClick={() => actions.saveDocsAndReplan(productContext, designNotes)}
+        onClick={() => {
+          void actions.saveDocsAndReplan(productContext, designNotes).catch((err: unknown) => console.error(err));
+        }}
       >
         Save and re-plan everything with the AI
       </button>

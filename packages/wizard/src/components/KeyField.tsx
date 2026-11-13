@@ -44,18 +44,20 @@ export function KeyField({
     }
     setStatus({ kind: 'checking' });
     const checkId = ++latestCheck.current;
-    const timer = setTimeout(async () => {
-      try {
-        const result = await validateKey(trimmed);
-        if (checkId !== latestCheck.current) return; // a newer paste superseded this one
-        setStatus(result.valid ? { kind: 'valid' } : { kind: 'invalid', reason: result.reason });
-      } catch (err) {
-        if (checkId !== latestCheck.current) return;
-        setStatus({
-          kind: 'invalid',
-          reason: err instanceof RunnerError ? err.message : 'The key couldn’t be checked. Try again.',
-        });
-      }
+    const timer = setTimeout(() => {
+      void (async () => {
+        try {
+          const result = await validateKey(trimmed);
+          if (checkId !== latestCheck.current) return; // a newer paste superseded this one
+          setStatus(result.valid ? { kind: 'valid' } : { kind: 'invalid', reason: result.reason });
+        } catch (err) {
+          if (checkId !== latestCheck.current) return;
+          setStatus({
+            kind: 'invalid',
+            reason: err instanceof RunnerError ? err.message : 'The key couldn’t be checked. Try again.',
+          });
+        }
+      })().catch((err: unknown) => console.error(err));
     }, VALIDATE_DELAY_MS);
     return () => clearTimeout(timer);
   }, [key]);

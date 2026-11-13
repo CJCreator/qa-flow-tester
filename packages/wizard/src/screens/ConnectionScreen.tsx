@@ -95,7 +95,13 @@ export function ConnectionScreen({ checks }: { checks: number }) {
           </pre>
           <div className="mt-3 flex flex-wrap items-center gap-3">
             {/* The online app is the screen's primary action when there is one. */}
-            <button type="button" className={ONLINE_APP_URL ? 'btn-quiet' : 'btn-primary'} onClick={copy}>
+            <button
+              type="button"
+              className={ONLINE_APP_URL ? 'btn-quiet' : 'btn-primary'}
+              onClick={() => {
+                void copy().catch((err: unknown) => console.error(err));
+              }}
+            >
               Copy the file
             </button>
             <span role="status" className="text-sm font-bold text-pass">

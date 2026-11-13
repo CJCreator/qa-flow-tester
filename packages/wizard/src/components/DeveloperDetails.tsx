@@ -16,16 +16,18 @@ export function CopyButton({ label, getText }: { label: string; getText: () => P
         type="button"
         className="btn-quiet btn-sm"
         disabled={state === 'working'}
-        onClick={async () => {
-          setState('working');
-          const text = await getText().catch(() => '');
-          try {
-            await navigator.clipboard.writeText(text);
-            setState('copied');
-            window.setTimeout(() => setState('idle'), 2500);
-          } catch {
-            setState({ manual: text });
-          }
+        onClick={() => {
+          void (async () => {
+            setState('working');
+            const text = await getText().catch(() => '');
+            try {
+              await navigator.clipboard.writeText(text);
+              setState('copied');
+              window.setTimeout(() => setState('idle'), 2500);
+            } catch {
+              setState({ manual: text });
+            }
+          })().catch((err: unknown) => console.error(err));
         }}
       >
         {state === 'working' ? <Spinner label="Copying…" /> : label}

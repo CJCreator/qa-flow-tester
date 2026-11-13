@@ -23,7 +23,7 @@
     "test:all": "vitest run",
     "test:watch": "vitest",
     "test:plugin": "node plugins/repo-orchestrator/scripts/validate.mjs && node --test plugins/repo-orchestrator/test/*.test.mjs",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 107",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc -p tsconfig.test.json --noEmit"

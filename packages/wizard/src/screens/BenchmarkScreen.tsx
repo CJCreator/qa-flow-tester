@@ -252,7 +252,12 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
         lede="Compare a journey on your site with the same journey on another: the steps, the form fields and the helpful patterns each has. It only looks at both sites, respects the other site’s robots.txt, and takes about a minute."
       />
 
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-panel border border-rule bg-surface p-5">
+      <form
+        onSubmit={(e) => {
+          void handleSubmit(e).catch((err: unknown) => console.error(err));
+        }}
+        className="space-y-4 rounded-panel border border-rule bg-surface p-5"
+      >
         <h2 className="text-xl font-bold text-ink">Which two sites?</h2>
         <p className="max-w-prose text-sm text-ink-soft">
           Enter the address where the journey starts on each, such as the pricing page or the sign-up page.

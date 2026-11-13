@@ -229,23 +229,25 @@ export function PlanReviewScreen({
       setSizes(chosen);
       void edit(() => patchPlan({ screenSizes: chosen })).finally(() => setSizes(null));
     },
-    replanEverything: async () => {
-      const tested = (plan.planPages || []).filter((p) => p.coverage !== 'covered').length;
-      const about = Math.ceil(tested / 3) + 2;
-      const ok = await confirm({
-        title: 'Re-plan everything with the AI?',
-        body: (
-          <p>
-            The AI plans every page, link and journey again, which takes about {about} AI requests
-            {budget?.left !== undefined ? ` (you have ${budget.left} left today)` : ''}. What you switched off stays
-            off, but changes you made to tests and journeys are replaced.
-          </p>
-        ),
-        confirmLabel: 'Re-plan everything',
-        cancelLabel: 'Keep the plan',
-        danger: true,
-      });
-      if (ok) void inBackground(() => replanEverything());
+    replanEverything: () => {
+      void (async () => {
+        const tested = (plan.planPages || []).filter((p) => p.coverage !== 'covered').length;
+        const about = Math.ceil(tested / 3) + 2;
+        const ok = await confirm({
+          title: 'Re-plan everything with the AI?',
+          body: (
+            <p>
+              The AI plans every page, link and journey again, which takes about {about} AI requests
+              {budget?.left !== undefined ? ` (you have ${budget.left} left today)` : ''}. What you switched off stays
+              off, but changes you made to tests and journeys are replaced.
+            </p>
+          ),
+          confirmLabel: 'Re-plan everything',
+          cancelLabel: 'Keep the plan',
+          danger: true,
+        });
+        if (ok) void inBackground(() => replanEverything());
+      })().catch((err: unknown) => console.error(err));
     },
     saveDocsAndReplan: async (productContext, designNotes) => {
       await edit(() => patchPlan({ productContext, designNotes }));

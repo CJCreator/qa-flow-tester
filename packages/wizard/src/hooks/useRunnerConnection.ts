@@ -22,10 +22,13 @@ export function useRunnerConnection(enabled = true): { reachable: boolean; check
       if (cancelled) return;
       setChecks((n) => n + 1);
       if (status) setReachable(true);
-      else timer = setTimeout(check, POLL_INTERVAL_MS);
+      else timer = setTimeout(run, POLL_INTERVAL_MS);
+    };
+    const run = () => {
+      void check().catch((err: unknown) => console.error(err));
     };
 
-    check();
+    run();
     return () => {
       cancelled = true;
       clearTimeout(timer);

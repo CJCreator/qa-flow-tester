@@ -602,28 +602,30 @@ function VisualReview({
           type="button"
           className="btn-quiet btn-sm print:hidden"
           disabled={working}
-          onClick={async () => {
-            setWorking(true);
-            setMessage(null);
-            try {
-              const result = await finishAiReview(report.runId);
-              onReportChanged(await getRun(report.runId));
-              setMessage(
-                result.remainingCount > 0
-                  ? {
-                      tone: 'warn',
-                      text: `${result.reviewedCount} more looked over; ${result.remainingCount} left for another time.`,
-                    }
-                  : { tone: 'pass', text: 'All the screens are looked over now.' }
-              );
-            } catch (err) {
-              setMessage({
-                tone: 'fail',
-                text: err instanceof RunnerError ? err.message : 'That couldn’t be finished. Try again later.',
-              });
-            } finally {
-              setWorking(false);
-            }
+          onClick={() => {
+            void (async () => {
+              setWorking(true);
+              setMessage(null);
+              try {
+                const result = await finishAiReview(report.runId);
+                onReportChanged(await getRun(report.runId));
+                setMessage(
+                  result.remainingCount > 0
+                    ? {
+                        tone: 'warn',
+                        text: `${result.reviewedCount} more looked over; ${result.remainingCount} left for another time.`,
+                      }
+                    : { tone: 'pass', text: 'All the screens are looked over now.' }
+                );
+              } catch (err) {
+                setMessage({
+                  tone: 'fail',
+                  text: err instanceof RunnerError ? err.message : 'That couldn’t be finished. Try again later.',
+                });
+              } finally {
+                setWorking(false);
+              }
+            })().catch((err: unknown) => console.error(err));
           }}
         >
           {working ? (
@@ -665,18 +667,20 @@ function ReportActionsBar({ report, actions }: { report: ReleaseReport; actions:
           type="button"
           className="btn-quiet"
           disabled={downloading}
-          onClick={async () => {
-            setDownloading(true);
-            setDownloadError(null);
-            setDownloaded(false);
-            try {
-              await downloadRunFile(report.runId, 'report.html');
-              setDownloaded(true);
-            } catch (err) {
-              setDownloadError(err instanceof Error ? err.message : 'The report couldn’t be downloaded. Try again.');
-            } finally {
-              setDownloading(false);
-            }
+          onClick={() => {
+            void (async () => {
+              setDownloading(true);
+              setDownloadError(null);
+              setDownloaded(false);
+              try {
+                await downloadRunFile(report.runId, 'report.html');
+                setDownloaded(true);
+              } catch (err) {
+                setDownloadError(err instanceof Error ? err.message : 'The report couldn’t be downloaded. Try again.');
+              } finally {
+                setDownloading(false);
+              }
+            })().catch((err: unknown) => console.error(err));
           }}
         >
           {downloading ? <Spinner label="Downloading…" /> : 'Download the report'}
@@ -1668,16 +1672,18 @@ function ProblemItem({
             {marking ? (
               <form
                 className="space-y-2"
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  setSaving(true);
-                  setError(null);
-                  try {
-                    await onTriage(titles, marking, reason);
-                  } catch (err) {
-                    setError(err instanceof Error ? err.message : 'That couldn’t be saved. Try again.');
-                    setSaving(false);
-                  }
+                onSubmit={(e) => {
+                  void (async () => {
+                    e.preventDefault();
+                    setSaving(true);
+                    setError(null);
+                    try {
+                      await onTriage(titles, marking, reason);
+                    } catch (err) {
+                      setError(err instanceof Error ? err.message : 'That couldn’t be saved. Try again.');
+                      setSaving(false);
+                    }
+                  })().catch((err: unknown) => console.error(err));
                 }}
               >
                 <label className="label text-sm" htmlFor={`${id}-reason`}>
@@ -1721,15 +1727,17 @@ function ProblemItem({
                       type="button"
                       className="btn-link text-sm font-bold"
                       disabled={saving}
-                      onClick={async () => {
-                        setSaving(true);
-                        setError(null);
-                        try {
-                          await onAccept(titles);
-                        } catch (err) {
-                          setError(err instanceof Error ? err.message : 'That couldn’t be saved. Try again.');
-                          setSaving(false);
-                        }
+                      onClick={() => {
+                        void (async () => {
+                          setSaving(true);
+                          setError(null);
+                          try {
+                            await onAccept(titles);
+                          } catch (err) {
+                            setError(err instanceof Error ? err.message : 'That couldn’t be saved. Try again.');
+                            setSaving(false);
+                          }
+                        })().catch((err: unknown) => console.error(err));
                       }}
                     >
                       Accept as a problem

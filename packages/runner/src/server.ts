@@ -980,459 +980,466 @@ export class RunnerServer {
     // The hosted copy (beta) has no timer of its own: Cloud Scheduler calls the tick route (ADR 0039).
     if (!this.beta) this.scheduler.start((schedule) => this.runSchedule(schedule));
     return new Promise((resolve, reject) => {
-      this.server = http.createServer(async (req, res) => {
-        try {
-          const url = new URL(req.url || '/', `http://${bracketHost(this.host)}:${this.port}`);
-          const pathname = url.pathname;
-          // Frame, script and transport defaults for every answer (T-303); a page's own writeHead headers win.
-          applySecurityHeaders(req, res, this.csp);
+      this.server = http.createServer((req, res) => {
+        void (async () => {
+          try {
+            const url = new URL(req.url || '/', `http://${bracketHost(this.host)}:${this.port}`);
+            const pathname = url.pathname;
+            // Frame, script and transport defaults for every answer (T-303); a page's own writeHead headers win.
+            applySecurityHeaders(req, res, this.csp);
 
-          // Liveness & health check routes (/health, /healthz)
-          if (handleHealthRoute(req, res, pathname)) {
-            return;
-          }
-
-          // Only this computer's own names (or explicitly allowed tunnel origins) are answered,
-          // so a page can't point a name it controls at this port (DNS rebinding) and read reports.
-          const hostHeader = req.headers.host;
-          const isAllowedHost =
-            isLoopbackHost(hostHeader) ||
-            (hostHeader &&
-              Array.from(this.allowedOrigins).some((o) => {
-                try {
-                  return new URL(o).hostname.toLowerCase() === hostHeader.split(':')[0].toLowerCase();
-                } catch {
-                  return false;
-                }
-              })) ||
-            (!!process.env.K_SERVICE && !!hostHeader && hostHeader.split(':')[0].toLowerCase().endsWith('.run.app'));
-
-          if (!isAllowedHost) {
-            res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
-            res.end(
-              `Release check-up only answers on this computer or allowed tunnel hosts. Open http://localhost:${this.port}/ instead.`
-            );
-            return;
-          }
-
-          // Only localhost pages (or explicitly allowed origins) may drive the runner; a wildcard
-          // would let any website trigger runs. Extra origins are set via RUNNER_ALLOWED_ORIGINS.
-          const origin = req.headers.origin;
-          const originNorm = origin ? origin.replace(/\/+$/, '') : undefined;
-          // Only exact origins: this server's own, or one listed. Not any other localhost port.
-          const ownHost = (req.headers.host ?? '').toLowerCase();
-          const isOwnOrigin =
-            !!originNorm && !!ownHost && [`http://${ownHost}`, `https://${ownHost}`].includes(originNorm.toLowerCase());
-          if (origin && (isOwnOrigin || (originNorm && this.allowedOrigins.has(originNorm)))) {
-            res.setHeader('Access-Control-Allow-Origin', origin);
-            res.setHeader('Access-Control-Allow-Credentials', 'true');
-            res.setHeader('Vary', 'Origin');
-            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-            res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-QA-Access, Idempotency-Key');
-          } else if (origin && req.method !== 'GET') {
-            res.writeHead(403, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'Cross-origin requests are only accepted from localhost' }));
-            return;
-          }
-
-          if (req.method === 'OPTIONS') {
-            res.writeHead(204);
-            res.end();
-            return;
-          }
-
-          // The route table is matched before the access-key gate, so 'public' and 'sign-in' rows are served
-          // without the key and Helper rows can be reached with a Helper grant. Rows for the tool user and
-          // everything not in the table keep the gate as before (it also moves ?access= into a cookie).
-          const matched = resolveRoute(this.routes, req.method ?? 'GET', pathname);
-          if (matched?.route.access === 'owner' && !url.searchParams.has('access')) {
-            // A signed-in Helper without the key on an owner row gets the audit error model (403 ERR_FORBIDDEN).
-            const refusal = await this.helperRefusal(req, matched.route, matched.params);
-            if (refusal) {
-              this.sendJson(res, refusal.status, { error: refusal.error, code: refusal.code });
+            // Liveness & health check routes (/health, /healthz)
+            if (handleHealthRoute(req, res, pathname)) {
               return;
             }
-          }
-          // A verified Helper session (T-68, ADR 0037 D-005) may load the wizard page and its assets and ask the
-          // reduced status; it passes nothing else here, so every other unmatched or owner path keeps the gate.
-          const helperLoadsWizard =
-            !matched && !url.searchParams.has('access') && this.helperMayLoadWizard(req, pathname);
-          const isAuditOwner = this.isAuditOwner(req);
-          const ownerAllowed = matched?.route.access === 'owner' && isAuditOwner;
-          if (
-            (!matched || matched.route.access === 'owner') &&
-            !helperLoadsWizard &&
-            !ownerAllowed &&
-            !this.grantAccess(req, res, url)
-          )
-            return;
-          if (matched) {
-            // Closed by default: a row without an access level, or one this caller doesn't meet, is refused.
-            const granted = await this.helperPermissionsFor(req, matched.route, matched.params);
-            // A scheduler row is the Cloud Scheduler's: only a valid Google-signed token opens it, never the key.
-            const scheduler =
-              matched.route.access === 'scheduler' && this.schedulerAuth
-                ? await this.schedulerAuth.verify(req.headers.authorization).then(
-                    () => true,
-                    () => false
-                  )
-                : false;
-            const decision = authorizeRoute(matched.route, {
-              hasAccessKey: this.carriesAccessKey(req),
-              beta: this.beta,
-              helper: (permission) => granted.has(permission),
-              scheduler,
-              // Email only: on a beta copy every tester holds the access key, so the key is not ownership.
-              auditOwner: this.isAuditOwnerEmail(this.helperAccess?.session(req)?.email),
-            });
-            if (!decision.allow) {
+
+            // Only this computer's own names (or explicitly allowed tunnel origins) are answered,
+            // so a page can't point a name it controls at this port (DNS rebinding) and read reports.
+            const hostHeader = req.headers.host;
+            const isAllowedHost =
+              isLoopbackHost(hostHeader) ||
+              (hostHeader &&
+                Array.from(this.allowedOrigins).some((o) => {
+                  try {
+                    return new URL(o).hostname.toLowerCase() === hostHeader.split(':')[0].toLowerCase();
+                  } catch {
+                    return false;
+                  }
+                })) ||
+              (!!process.env.K_SERVICE && !!hostHeader && hostHeader.split(':')[0].toLowerCase().endsWith('.run.app'));
+
+            if (!isAllowedHost) {
+              res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
+              res.end(
+                `Release check-up only answers on this computer or allowed tunnel hosts. Open http://localhost:${this.port}/ instead.`
+              );
+              return;
+            }
+
+            // Only localhost pages (or explicitly allowed origins) may drive the runner; a wildcard
+            // would let any website trigger runs. Extra origins are set via RUNNER_ALLOWED_ORIGINS.
+            const origin = req.headers.origin;
+            const originNorm = origin ? origin.replace(/\/+$/, '') : undefined;
+            // Only exact origins: this server's own, or one listed. Not any other localhost port.
+            const ownHost = (req.headers.host ?? '').toLowerCase();
+            const isOwnOrigin =
+              !!originNorm &&
+              !!ownHost &&
+              [`http://${ownHost}`, `https://${ownHost}`].includes(originNorm.toLowerCase());
+            if (origin && (isOwnOrigin || (originNorm && this.allowedOrigins.has(originNorm)))) {
+              res.setHeader('Access-Control-Allow-Origin', origin);
+              res.setHeader('Access-Control-Allow-Credentials', 'true');
+              res.setHeader('Vary', 'Origin');
+              res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+              res.setHeader(
+                'Access-Control-Allow-Headers',
+                'Content-Type, Authorization, X-QA-Access, Idempotency-Key'
+              );
+            } else if (origin && req.method !== 'GET') {
+              res.writeHead(403, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Cross-origin requests are only accepted from localhost' }));
+              return;
+            }
+
+            if (req.method === 'OPTIONS') {
+              res.writeHead(204);
+              res.end();
+              return;
+            }
+
+            // The route table is matched before the access-key gate, so 'public' and 'sign-in' rows are served
+            // without the key and Helper rows can be reached with a Helper grant. Rows for the tool user and
+            // everything not in the table keep the gate as before (it also moves ?access= into a cookie).
+            const matched = resolveRoute(this.routes, req.method ?? 'GET', pathname);
+            if (matched?.route.access === 'owner' && !url.searchParams.has('access')) {
+              // A signed-in Helper without the key on an owner row gets the audit error model (403 ERR_FORBIDDEN).
               const refusal = await this.helperRefusal(req, matched.route, matched.params);
               if (refusal) {
                 this.sendJson(res, refusal.status, { error: refusal.error, code: refusal.code });
                 return;
               }
-              this.sendJson(res, decision.status, { error: decision.error, code: decision.code });
-              return;
             }
-          }
-
-          // A 'public' row (a Shared Link page) needs no visitor session: its viewer keeps no cookie, so each
-          // view would count as a new visitor and soon hit the per-address limit.
-          if (this.beta && matched?.route.access !== 'scheduler' && matched?.route.access !== 'public') {
-            try {
-              const visitor = sessionFor(req, res, isHttpsRequest(req));
-              enterSession(visitor);
-              markSessionOwner(visitor, this.isAuditOwnerEmail(this.helperAccess?.session(req)?.email));
-            } catch (err) {
-              if (!(err instanceof SessionRateLimited)) throw err;
-              res.setHeader('Retry-After', '600');
-              this.sendJson(res, 429, { error: err.message, code: 'ERR_BETA_LIMIT' });
+            // A verified Helper session (T-68, ADR 0037 D-005) may load the wizard page and its assets and ask the
+            // reduced status; it passes nothing else here, so every other unmatched or owner path keeps the gate.
+            const helperLoadsWizard =
+              !matched && !url.searchParams.has('access') && this.helperMayLoadWizard(req, pathname);
+            const isAuditOwner = this.isAuditOwner(req);
+            const ownerAllowed = matched?.route.access === 'owner' && isAuditOwner;
+            if (
+              (!matched || matched.route.access === 'owner') &&
+              !helperLoadsWizard &&
+              !ownerAllowed &&
+              !this.grantAccess(req, res, url)
+            )
               return;
-            }
-            if (this.closedInBeta(req.method, pathname)) {
-              this.sendJson(res, 403, {
-                error: 'This is closed on the shared beta copy, so testers don’t change each other’s check-ups.',
-                code: 'ERR_BETA',
-              });
-              return;
-            }
-            if (await this.betaScope(req, res, pathname)) return;
-          }
-
-          // A table row is served here, before the inline handlers below, so no inline handler can answer a
-          // path the table authorized under a weaker access level.
-          if (matched) {
-            await matched.route.handle({
-              server: this,
-              ...this.planRouteContext(req, res, url),
-              params: matched.params,
-            });
-            return;
-          }
-
-          // QA Flow Studio is retired (ADR 0010): its old addresses lead to Past check-ups.
-          if (pathname === '/studio' || pathname.startsWith('/studio/')) {
-            res.writeHead(308, { Location: '/reports' });
-            res.end();
-            return;
-          }
-
-          // Past check-ups: GET /api/runs, GET /api/runs/<runId>, GET /api/runs/<runId>/download/<file>,
-          // DELETE /api/runs/<runId>
-          if (pathname === '/api/runs' || pathname.startsWith('/api/runs/')) {
-            await this.handleRuns(pathname.slice('/api/runs'.length), req, res);
-            return;
-          }
-
-          // GET /api/runner/stream (Server-Sent Events)
-          if (pathname === '/api/runner/stream' && req.method === 'GET') {
-            if (this.streamRefused()) {
-              res.setHeader('Retry-After', '30');
-              this.sendJson(res, 429, {
-                error: 'Too many progress streams are open. Close another tab of this page and try again.',
-                code: 'ERR_TOO_MANY_STREAMS',
-              });
-              return;
-            }
-            res.writeHead(200, {
-              'Content-Type': 'text/event-stream',
-              'Cache-Control': 'no-cache, no-transform',
-              Connection: 'keep-alive',
-              'X-Accel-Buffering': 'no',
-            });
-            // `head` is the newest id this process has given out: a page holding a larger id has reached a restarted runner.
-            // `resumed` is false when the page must take the whole retained log again: no id, an id from a restarted
-            // runner, or events between the id and the oldest retained one that fell off the replay cap (truncated).
-            const after = lastEventIdOf(req, url);
-            const resumed = isResumable(this.session.events, after);
-            res.write(
-              `data: ${JSON.stringify({ type: 'connected', timestamp: Date.now(), head: this.session.events.lastId, resumed })}\n\n`
-            );
-            // A page that opens or reconnects mid-run catches up: this run's events so far, in order (beta: only the visitor's own run).
-            // LAT-10: a resumable reconnect gets only the events after its id; otherwise the whole retained log.
-            if (this.isMine(this.currentRunId))
-              for (const { id, event } of this.session.events.since(resumed && after !== null ? after : 0))
-                res.write(`id: ${id}\ndata: ${JSON.stringify({ ...event, replayed: true })}\n\n`);
-            this.streamClients.add(res);
-            if (this.beta) this.streamSessions.set(res, currentSessionId());
-            req.on('close', () => {
-              this.streamClients.delete(res);
-              this.streamSessions.delete(res);
-            });
-            return;
-          }
-
-          // POST /api/runner/run
-          if (pathname === '/api/runner/run' && req.method === 'POST') {
-            await this.handleTriggerRun(req, res);
-            return;
-          }
-
-          // POST /api/runner/abort or /api/runner/stop
-          if ((pathname === '/api/runner/abort' || pathname === '/api/runner/stop') && req.method === 'POST') {
-            await this.handleAbortRun(req, res);
-            return;
-          }
-
-          // GET /api/report — last completed run's ReleaseReport
-          if (pathname === '/api/report' && req.method === 'GET') {
-            if (!this.lastReport) {
-              res.writeHead(404, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: 'No completed run yet' }));
-              return;
-            }
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify(this.lastReport));
-            return;
-          }
-
-          // GET /api/runner/status
-          if (pathname === '/api/runner/status' && req.method === 'GET') {
-            // A Helper without the access key learns only that the copy is up: nothing about any run (T-68).
-            if (this.isKeylessHelper(req)) {
-              this.sendJson(res, 200, {
-                isRunning: false,
-                hasReport: false,
-                lastRunError: null,
-                lastErrorCode: null,
-                phase: 'idle',
-                hasPlan: false,
-                runId: null,
-                targetUrl: null,
-                reportRunId: null,
+            if (matched) {
+              // Closed by default: a row without an access level, or one this caller doesn't meet, is refused.
+              const granted = await this.helperPermissionsFor(req, matched.route, matched.params);
+              // A scheduler row is the Cloud Scheduler's: only a valid Google-signed token opens it, never the key.
+              const scheduler =
+                matched.route.access === 'scheduler' && this.schedulerAuth
+                  ? await this.schedulerAuth.verify(req.headers.authorization).then(
+                      () => true,
+                      () => false
+                    )
+                  : false;
+              const decision = authorizeRoute(matched.route, {
+                hasAccessKey: this.carriesAccessKey(req),
                 beta: this.beta,
-                helper: true,
-                auditOwner: this.isAuditOwner(req),
+                helper: (permission) => granted.has(permission),
+                scheduler,
+                // Email only: on a beta copy every tester holds the access key, so the key is not ownership.
+                auditOwner: this.isAuditOwnerEmail(this.helperAccess?.session(req)?.email),
+              });
+              if (!decision.allow) {
+                const refusal = await this.helperRefusal(req, matched.route, matched.params);
+                if (refusal) {
+                  this.sendJson(res, refusal.status, { error: refusal.error, code: refusal.code });
+                  return;
+                }
+                this.sendJson(res, decision.status, { error: decision.error, code: decision.code });
+                return;
+              }
+            }
+
+            // A 'public' row (a Shared Link page) needs no visitor session: its viewer keeps no cookie, so each
+            // view would count as a new visitor and soon hit the per-address limit.
+            if (this.beta && matched?.route.access !== 'scheduler' && matched?.route.access !== 'public') {
+              try {
+                const visitor = sessionFor(req, res, isHttpsRequest(req));
+                enterSession(visitor);
+                markSessionOwner(visitor, this.isAuditOwnerEmail(this.helperAccess?.session(req)?.email));
+              } catch (err) {
+                if (!(err instanceof SessionRateLimited)) throw err;
+                res.setHeader('Retry-After', '600');
+                this.sendJson(res, 429, { error: err.message, code: 'ERR_BETA_LIMIT' });
+                return;
+              }
+              if (this.closedInBeta(req.method, pathname)) {
+                this.sendJson(res, 403, {
+                  error: 'This is closed on the shared beta copy, so testers don’t change each other’s check-ups.',
+                  code: 'ERR_BETA',
+                });
+                return;
+              }
+              if (await this.betaScope(req, res, pathname)) return;
+            }
+
+            // A table row is served here, before the inline handlers below, so no inline handler can answer a
+            // path the table authorized under a weaker access level.
+            if (matched) {
+              await matched.route.handle({
+                server: this,
+                ...this.planRouteContext(req, res, url),
+                params: matched.params,
               });
               return;
             }
-            // Read-only: reading status does not load or start a plan (S11). Startup already loaded any saved one.
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(
-              JSON.stringify({
-                isRunning: this.isRunning,
-                hasReport: !!this.lastReport,
-                lastRunError: this.lastRunError,
-                lastErrorCode: this.lastErrorCode,
-                phase: this.phase,
-                hasPlan: !!this.session.plan.currentRecord,
-                runId: this.currentRunId,
-                // The site the run in progress or paused is for, as typed, for the Resume card.
-                targetUrl: this.session.plan.currentRecord?.plan.targetUrl ?? this.currentTargetUrl,
-                // The finished report, when the last run finished.
-                reportRunId: this.lastReport?.runId ?? null,
-                // A copy shared with other people: their check-ups and reports are visible to each other.
-                beta: this.beta,
-                auditOwner: this.isAuditOwner(req),
-              })
-            );
-            return;
-          }
 
-          // GET /api/sites, POST /api/sites/<host> — what's remembered per site: its choices and saved sign-ins
-          if (pathname === '/api/sites' || pathname.startsWith('/api/sites/')) {
-            const sitePath = decodePath(pathname.slice('/api/sites'.length).replace(/^\//, ''));
-            if (sitePath === null) {
-              this.sendJson(res, 400, { error: 'The address is not valid.', code: 'ERR_INVALID_REQUEST' });
+            // QA Flow Studio is retired (ADR 0010): its old addresses lead to Past check-ups.
+            if (pathname === '/studio' || pathname.startsWith('/studio/')) {
+              res.writeHead(308, { Location: '/reports' });
+              res.end();
               return;
             }
-            await this.handleSites(sitePath, req, res);
-            return;
-          }
 
-          // GET/POST /api/settings/defaults — the screen sizes a check-up starts with
-          if (pathname === '/api/settings/defaults') {
-            await this.handleDefaults(req, res);
-            return;
-          }
-
-          // POST /api/runner/ai-estimate — about how many AI requests a scan needs, against what's left today
-          if (pathname === '/api/runner/ai-estimate' && req.method === 'POST') {
-            await this.handleAiEstimate(req, res);
-            return;
-          }
-
-          // POST /api/runner/preflight — is the target URL reachable? (no browser, no run)
-          if (pathname === '/api/runner/preflight' && req.method === 'POST') {
-            await this.handlePreflight(req, res);
-            return;
-          }
-
-          // POST /api/runner/context/docx — a Word file as Markdown (stateless; open in beta)
-          if (pathname === '/api/runner/context/docx' && req.method === 'POST') {
-            await this.handleContextDocx(req, res);
-            return;
-          }
-
-          // POST /api/runner/domain-proof — the Verified Domain line to publish, and whether it is there now
-          if (pathname === '/api/runner/domain-proof' && req.method === 'POST') {
-            await this.handleDomainProof(req, res);
-            return;
-          }
-
-          // GET /api/report/download/<report.md|findings.json> — the run's files, byte-for-byte
-          if (pathname.startsWith('/api/report/download/') && req.method === 'GET') {
-            await this.handleReportDownload(pathname.replace('/api/report/download/', ''), res);
-            return;
-          }
-
-          // POST /api/runner/ai/finish (Task 2.4: finish visual review on remaining screens)
-          if (pathname === '/api/runner/ai/finish' && req.method === 'POST') {
-            await this.handleAiFinish(req, res);
-            return;
-          }
-
-          if (pathname.startsWith('/api/ai/') && !pathname.startsWith('/api/ai/openrouter/')) {
-            if (await this.handleAiSettings(pathname.slice('/api/ai/'.length), req, res)) return;
-          }
-          if (pathname.startsWith('/api/ai/openrouter/')) {
-            await this.handleOpenRouter(pathname.replace('/api/ai/openrouter/', ''), req, res);
-            return;
-          }
-
-          // GET /api/baselines/* — static visual baseline image serving
-          if (pathname.startsWith('/api/baselines/') && req.method === 'GET') {
-            const baselineId = decodePath(pathname.replace('/api/baselines/', ''));
-            if (baselineId === null) {
-              this.sendJson(res, 400, { error: 'The address is not valid.', code: 'ERR_INVALID_REQUEST' });
+            // Past check-ups: GET /api/runs, GET /api/runs/<runId>, GET /api/runs/<runId>/download/<file>,
+            // DELETE /api/runs/<runId>
+            if (pathname === '/api/runs' || pathname.startsWith('/api/runs/')) {
+              await this.handleRuns(pathname.slice('/api/runs'.length), req, res);
               return;
             }
-            await this.handleServeBaseline(baselineId, res);
-            return;
-          }
 
-          // Visual Baseline API
-          if (pathname === '/api/runner/baselines' && req.method === 'GET') {
-            await this.handleListBaselines(res);
-            return;
-          }
-          if (pathname === '/api/runner/baselines/accept' && req.method === 'POST') {
-            await this.handleAcceptBaseline(req, res);
-            return;
-          }
-          if (pathname.startsWith('/api/runner/baselines/') && req.method === 'DELETE') {
-            const baselineId = decodePath(pathname.replace('/api/runner/baselines/', ''));
-            if (baselineId === null) {
-              this.sendJson(res, 400, { error: 'The address is not valid.', code: 'ERR_INVALID_REQUEST' });
+            // GET /api/runner/stream (Server-Sent Events)
+            if (pathname === '/api/runner/stream' && req.method === 'GET') {
+              if (this.streamRefused()) {
+                res.setHeader('Retry-After', '30');
+                this.sendJson(res, 429, {
+                  error: 'Too many progress streams are open. Close another tab of this page and try again.',
+                  code: 'ERR_TOO_MANY_STREAMS',
+                });
+                return;
+              }
+              res.writeHead(200, {
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache, no-transform',
+                Connection: 'keep-alive',
+                'X-Accel-Buffering': 'no',
+              });
+              // `head` is the newest id this process has given out: a page holding a larger id has reached a restarted runner.
+              // `resumed` is false when the page must take the whole retained log again: no id, an id from a restarted
+              // runner, or events between the id and the oldest retained one that fell off the replay cap (truncated).
+              const after = lastEventIdOf(req, url);
+              const resumed = isResumable(this.session.events, after);
+              res.write(
+                `data: ${JSON.stringify({ type: 'connected', timestamp: Date.now(), head: this.session.events.lastId, resumed })}\n\n`
+              );
+              // A page that opens or reconnects mid-run catches up: this run's events so far, in order (beta: only the visitor's own run).
+              // LAT-10: a resumable reconnect gets only the events after its id; otherwise the whole retained log.
+              if (this.isMine(this.currentRunId))
+                for (const { id, event } of this.session.events.since(resumed && after !== null ? after : 0))
+                  res.write(`id: ${id}\ndata: ${JSON.stringify({ ...event, replayed: true })}\n\n`);
+              this.streamClients.add(res);
+              if (this.beta) this.streamSessions.set(res, currentSessionId());
+              req.on('close', () => {
+                this.streamClients.delete(res);
+                this.streamSessions.delete(res);
+              });
               return;
             }
-            await this.handleDeleteBaseline(baselineId, res);
-            return;
-          }
 
-          // Benchmarking: compare your site with another one.
-          if (pathname === '/api/runner/benchmark' && req.method === 'POST') {
-            await this.handleStartBenchmark(req, res);
-            return;
-          }
-          if (pathname === '/api/runner/benchmarks' && req.method === 'GET') {
-            await this.handleListBenchmarks(res);
-            return;
-          }
-          if (pathname.startsWith('/api/runner/benchmark/') && (req.method === 'GET' || req.method === 'DELETE')) {
-            const benchmarkId = decodePath(pathname.slice('/api/runner/benchmark/'.length));
-            if (benchmarkId === null) {
-              this.sendJson(res, 400, { error: 'The address is not valid.', code: 'ERR_INVALID_REQUEST' });
+            // POST /api/runner/run
+            if (pathname === '/api/runner/run' && req.method === 'POST') {
+              await this.handleTriggerRun(req, res);
               return;
             }
-            await this.handleBenchmarkById(benchmarkId, req.method, res);
-            return;
-          }
 
-          // Spec Drift Overrides API (FR-2.6, FR-9.4.1)
-          if (pathname === '/api/runner/spec-override' && req.method === 'POST') {
-            await this.handleRecordSpecOverride(req, res);
-            return;
-          }
-          if (pathname === '/api/runner/spec-overrides' && req.method === 'GET') {
-            await this.handleListSpecOverrides(res);
-            return;
-          }
+            // POST /api/runner/abort or /api/runner/stop
+            if ((pathname === '/api/runner/abort' || pathname === '/api/runner/stop') && req.method === 'POST') {
+              await this.handleAbortRun(req, res);
+              return;
+            }
 
-          // GET /api/evidence/* — static evidence file serving, rooted at this runner's own output
-          // dir. A run's files are under runs/<runId>/ (evidence, page thumbnails, its reports).
-          if (pathname.startsWith('/api/evidence/') && req.method === 'GET') {
-            const relPath = decodePath(pathname.replace('/api/evidence/', ''));
-            if (relPath === null) {
-              this.sendJson(res, 400, { error: 'The address is not valid.', code: 'ERR_INVALID_REQUEST' });
+            // GET /api/report — last completed run's ReleaseReport
+            if (pathname === '/api/report' && req.method === 'GET') {
+              if (!this.lastReport) {
+                res.writeHead(404, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'No completed run yet' }));
+                return;
+              }
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify(this.lastReport));
               return;
             }
-            if (hasDotDotSegment(relPath)) {
-              res.writeHead(403, { 'Content-Type': 'text/plain' });
-              res.end('Forbidden');
+
+            // GET /api/runner/status
+            if (pathname === '/api/runner/status' && req.method === 'GET') {
+              // A Helper without the access key learns only that the copy is up: nothing about any run (T-68).
+              if (this.isKeylessHelper(req)) {
+                this.sendJson(res, 200, {
+                  isRunning: false,
+                  hasReport: false,
+                  lastRunError: null,
+                  lastErrorCode: null,
+                  phase: 'idle',
+                  hasPlan: false,
+                  runId: null,
+                  targetUrl: null,
+                  reportRunId: null,
+                  beta: this.beta,
+                  helper: true,
+                  auditOwner: this.isAuditOwner(req),
+                });
+                return;
+              }
+              // Read-only: reading status does not load or start a plan (S11). Startup already loaded any saved one.
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(
+                JSON.stringify({
+                  isRunning: this.isRunning,
+                  hasReport: !!this.lastReport,
+                  lastRunError: this.lastRunError,
+                  lastErrorCode: this.lastErrorCode,
+                  phase: this.phase,
+                  hasPlan: !!this.session.plan.currentRecord,
+                  runId: this.currentRunId,
+                  // The site the run in progress or paused is for, as typed, for the Resume card.
+                  targetUrl: this.session.plan.currentRecord?.plan.targetUrl ?? this.currentTargetUrl,
+                  // The finished report, when the last run finished.
+                  reportRunId: this.lastReport?.runId ?? null,
+                  // A copy shared with other people: their check-ups and reports are visible to each other.
+                  beta: this.beta,
+                  auditOwner: this.isAuditOwner(req),
+                })
+              );
               return;
             }
-            const targetFile = path.resolve(this.outputDir, relPath);
-            // Checked again on the path the file system really opens, so neither a link nor another
-            // spelling of the same folder can reach a saved session.
-            const realTarget = await fs.realpath(targetFile).catch(() => null);
-            const realRoot = realTarget
-              ? await fs.realpath(this.outputDir).catch(() => this.outputDir)
-              : this.outputDir;
-            const forbidden =
-              !isInside(this.outputDir, targetFile) ||
-              isSavedSession(this.outputDir, targetFile) ||
-              (realTarget !== null && (!isInside(realRoot, realTarget) || isSavedSession(realRoot, realTarget)));
-            if (forbidden) {
-              res.writeHead(403, { 'Content-Type': 'text/plain' });
-              res.end('Forbidden');
+
+            // GET /api/sites, POST /api/sites/<host> — what's remembered per site: its choices and saved sign-ins
+            if (pathname === '/api/sites' || pathname.startsWith('/api/sites/')) {
+              const sitePath = decodePath(pathname.slice('/api/sites'.length).replace(/^\//, ''));
+              if (sitePath === null) {
+                this.sendJson(res, 400, { error: 'The address is not valid.', code: 'ERR_INVALID_REQUEST' });
+                return;
+              }
+              await this.handleSites(sitePath, req, res);
               return;
             }
-            try {
-              const stat = await fs.stat(targetFile);
-              if (!stat.isFile()) {
+
+            // GET/POST /api/settings/defaults — the screen sizes a check-up starts with
+            if (pathname === '/api/settings/defaults') {
+              await this.handleDefaults(req, res);
+              return;
+            }
+
+            // POST /api/runner/ai-estimate — about how many AI requests a scan needs, against what's left today
+            if (pathname === '/api/runner/ai-estimate' && req.method === 'POST') {
+              await this.handleAiEstimate(req, res);
+              return;
+            }
+
+            // POST /api/runner/preflight — is the target URL reachable? (no browser, no run)
+            if (pathname === '/api/runner/preflight' && req.method === 'POST') {
+              await this.handlePreflight(req, res);
+              return;
+            }
+
+            // POST /api/runner/context/docx — a Word file as Markdown (stateless; open in beta)
+            if (pathname === '/api/runner/context/docx' && req.method === 'POST') {
+              await this.handleContextDocx(req, res);
+              return;
+            }
+
+            // POST /api/runner/domain-proof — the Verified Domain line to publish, and whether it is there now
+            if (pathname === '/api/runner/domain-proof' && req.method === 'POST') {
+              await this.handleDomainProof(req, res);
+              return;
+            }
+
+            // GET /api/report/download/<report.md|findings.json> — the run's files, byte-for-byte
+            if (pathname.startsWith('/api/report/download/') && req.method === 'GET') {
+              await this.handleReportDownload(pathname.replace('/api/report/download/', ''), res);
+              return;
+            }
+
+            // POST /api/runner/ai/finish (Task 2.4: finish visual review on remaining screens)
+            if (pathname === '/api/runner/ai/finish' && req.method === 'POST') {
+              await this.handleAiFinish(req, res);
+              return;
+            }
+
+            if (pathname.startsWith('/api/ai/') && !pathname.startsWith('/api/ai/openrouter/')) {
+              if (await this.handleAiSettings(pathname.slice('/api/ai/'.length), req, res)) return;
+            }
+            if (pathname.startsWith('/api/ai/openrouter/')) {
+              await this.handleOpenRouter(pathname.replace('/api/ai/openrouter/', ''), req, res);
+              return;
+            }
+
+            // GET /api/baselines/* — static visual baseline image serving
+            if (pathname.startsWith('/api/baselines/') && req.method === 'GET') {
+              const baselineId = decodePath(pathname.replace('/api/baselines/', ''));
+              if (baselineId === null) {
+                this.sendJson(res, 400, { error: 'The address is not valid.', code: 'ERR_INVALID_REQUEST' });
+                return;
+              }
+              await this.handleServeBaseline(baselineId, res);
+              return;
+            }
+
+            // Visual Baseline API
+            if (pathname === '/api/runner/baselines' && req.method === 'GET') {
+              await this.handleListBaselines(res);
+              return;
+            }
+            if (pathname === '/api/runner/baselines/accept' && req.method === 'POST') {
+              await this.handleAcceptBaseline(req, res);
+              return;
+            }
+            if (pathname.startsWith('/api/runner/baselines/') && req.method === 'DELETE') {
+              const baselineId = decodePath(pathname.replace('/api/runner/baselines/', ''));
+              if (baselineId === null) {
+                this.sendJson(res, 400, { error: 'The address is not valid.', code: 'ERR_INVALID_REQUEST' });
+                return;
+              }
+              await this.handleDeleteBaseline(baselineId, res);
+              return;
+            }
+
+            // Benchmarking: compare your site with another one.
+            if (pathname === '/api/runner/benchmark' && req.method === 'POST') {
+              await this.handleStartBenchmark(req, res);
+              return;
+            }
+            if (pathname === '/api/runner/benchmarks' && req.method === 'GET') {
+              await this.handleListBenchmarks(res);
+              return;
+            }
+            if (pathname.startsWith('/api/runner/benchmark/') && (req.method === 'GET' || req.method === 'DELETE')) {
+              const benchmarkId = decodePath(pathname.slice('/api/runner/benchmark/'.length));
+              if (benchmarkId === null) {
+                this.sendJson(res, 400, { error: 'The address is not valid.', code: 'ERR_INVALID_REQUEST' });
+                return;
+              }
+              await this.handleBenchmarkById(benchmarkId, req.method, res);
+              return;
+            }
+
+            // Spec Drift Overrides API (FR-2.6, FR-9.4.1)
+            if (pathname === '/api/runner/spec-override' && req.method === 'POST') {
+              await this.handleRecordSpecOverride(req, res);
+              return;
+            }
+            if (pathname === '/api/runner/spec-overrides' && req.method === 'GET') {
+              await this.handleListSpecOverrides(res);
+              return;
+            }
+
+            // GET /api/evidence/* — static evidence file serving, rooted at this runner's own output
+            // dir. A run's files are under runs/<runId>/ (evidence, page thumbnails, its reports).
+            if (pathname.startsWith('/api/evidence/') && req.method === 'GET') {
+              const relPath = decodePath(pathname.replace('/api/evidence/', ''));
+              if (relPath === null) {
+                this.sendJson(res, 400, { error: 'The address is not valid.', code: 'ERR_INVALID_REQUEST' });
+                return;
+              }
+              if (hasDotDotSegment(relPath)) {
+                res.writeHead(403, { 'Content-Type': 'text/plain' });
+                res.end('Forbidden');
+                return;
+              }
+              const targetFile = path.resolve(this.outputDir, relPath);
+              // Checked again on the path the file system really opens, so neither a link nor another
+              // spelling of the same folder can reach a saved session.
+              const realTarget = await fs.realpath(targetFile).catch(() => null);
+              const realRoot = realTarget
+                ? await fs.realpath(this.outputDir).catch(() => this.outputDir)
+                : this.outputDir;
+              const forbidden =
+                !isInside(this.outputDir, targetFile) ||
+                isSavedSession(this.outputDir, targetFile) ||
+                (realTarget !== null && (!isInside(realRoot, realTarget) || isSavedSession(realRoot, realTarget)));
+              if (forbidden) {
+                res.writeHead(403, { 'Content-Type': 'text/plain' });
+                res.end('Forbidden');
+                return;
+              }
+              try {
+                const stat = await fs.stat(targetFile);
+                if (!stat.isFile()) {
+                  res.writeHead(404, { 'Content-Type': 'text/plain' });
+                  res.end('Not a file');
+                  return;
+                }
+                sendEvidenceFile(req, res, targetFile, stat, evidenceContentType(path.extname(targetFile)));
+              } catch {
+                if (relPath.endsWith('product-context.md')) {
+                  res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+                  res.end('');
+                  return;
+                }
                 res.writeHead(404, { 'Content-Type': 'text/plain' });
-                res.end('Not a file');
-                return;
+                res.end(`Evidence file not found: ${relPath}`);
               }
-              sendEvidenceFile(req, res, targetFile, stat, evidenceContentType(path.extname(targetFile)));
-            } catch {
-              if (relPath.endsWith('product-context.md')) {
-                res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
-                res.end('');
-                return;
-              }
-              res.writeHead(404, { 'Content-Type': 'text/plain' });
-              res.end(`Evidence file not found: ${relPath}`);
+              return;
             }
-            return;
-          }
 
-          // Everything that isn't the API is one of the built UIs.
-          if (!pathname.startsWith('/api/') && (await serveUi(this.uiApps, req, res, pathname))) return;
+            // Everything that isn't the API is one of the built UIs.
+            if (!pathname.startsWith('/api/') && (await serveUi(this.uiApps, req, res, pathname))) return;
 
-          res.writeHead(404, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Not found' }));
-        } catch (err: unknown) {
-          // A response that already started (a stream, a partly sent body) can't take a 500: just end it.
-          if (res.headersSent) {
-            if (!res.writableEnded) res.end();
-            return;
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Not found' }));
+          } catch (err: unknown) {
+            // A response that already started (a stream, a partly sent body) can't take a 500: just end it.
+            if (res.headersSent) {
+              if (!res.writableEnded) res.end();
+              return;
+            }
+            const msg = this.redactedMessage(err);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: msg }));
           }
-          const msg = this.redactedMessage(err);
-          res.writeHead(500, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: msg }));
-        }
+        })().catch((err: unknown) => console.warn('[Release check-up] A request failed:', this.redactedMessage(err)));
       });
 
       this.server.listen(this.port, this.host, () => {

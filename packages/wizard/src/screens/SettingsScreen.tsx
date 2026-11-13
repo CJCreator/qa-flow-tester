@@ -399,18 +399,20 @@ function PaidKey({
   return (
     <form
       className="space-y-3"
-      onSubmit={async (e) => {
-        e.preventDefault();
-        setSaving(true);
-        setError(null);
-        try {
-          onSaved(await saveAiSettings({ provider, apiKey: key.trim() || undefined }));
-          setKey('');
-        } catch (err) {
-          setError(err instanceof RunnerError ? err.message : 'The key couldn’t be saved. Check it and save again.');
-        } finally {
-          setSaving(false);
-        }
+      onSubmit={(e) => {
+        void (async () => {
+          e.preventDefault();
+          setSaving(true);
+          setError(null);
+          try {
+            onSaved(await saveAiSettings({ provider, apiKey: key.trim() || undefined }));
+            setKey('');
+          } catch (err) {
+            setError(err instanceof RunnerError ? err.message : 'The key couldn’t be saved. Check it and save again.');
+          } finally {
+            setSaving(false);
+          }
+        })().catch((err: unknown) => console.error(err));
       }}
     >
       <label htmlFor="paid-key" className="label">
@@ -982,7 +984,12 @@ function CheckupSchedules() {
       {actionError && <ErrorMessage>{actionError}</ErrorMessage>}
 
       {showAddForm && (
-        <form onSubmit={handleAdd} className="mb-6 space-y-4 rounded-card border border-rule bg-surface p-4">
+        <form
+          onSubmit={(e) => {
+            void handleAdd(e).catch((err: unknown) => console.error(err));
+          }}
+          className="mb-6 space-y-4 rounded-card border border-rule bg-surface p-4"
+        >
           <h3 className="text-lg font-bold">New scheduled check-up</h3>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -1217,7 +1224,9 @@ function AddSignIn({ host, onSaved }: { host: string; onSaved: () => void }) {
   };
   return (
     <form
-      onSubmit={submit}
+      onSubmit={(e) => {
+        void submit(e).catch((err: unknown) => console.error(err));
+      }}
       className="mt-3 grid gap-3 rounded-card border border-rule bg-surface p-4 sm:grid-cols-2"
       aria-label={'Add a sign-in for ' + host}
     >
