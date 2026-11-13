@@ -46,11 +46,17 @@ import { OpenAIProvider } from './providers/openai.js';
 import { GeminiProvider } from './providers/gemini.js';
 import { MockAIProvider } from './providers/mock.js';
 
+export interface CreateAIProviderOptions {
+  /** Gemini may use this computer's Google sign-in (ADC). Only a runner bound to this computer, or the CI check-up (ADR 0042). */
+  allowAdc?: boolean;
+}
+
 export function createAIProvider(
   type: AIProviderType,
   apiKey: string,
   baseUrl?: string,
-  defaultModel?: string
+  defaultModel?: string,
+  options: CreateAIProviderOptions = {}
 ): AIProvider {
   switch (type) {
     case 'anthropic':
@@ -59,9 +65,10 @@ export function createAIProvider(
     case 'openrouter':
       return new OpenAIProvider(apiKey, type === 'openrouter' ? 'https://openrouter.ai/api/v1' : baseUrl, defaultModel);
     case 'gemini':
-      return new GeminiProvider(apiKey, defaultModel);
+      return new GeminiProvider(apiKey, defaultModel, { allowAdc: options.allowAdc === true });
     case 'mock':
-    default:
       return new MockAIProvider();
+    default:
+      throw new Error(`Unknown AI provider "${String(type).slice(0, 40)}".`);
   }
 }

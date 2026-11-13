@@ -1,5 +1,6 @@
 import type { AIProvider } from '../ai-provider.js';
 import { DEFAULT_MODELS } from '../default-models.js';
+import { summarizeApiError } from '../error-text.js';
 import { geminiModelMissing, workingGeminiModel } from '../gemini-models.js';
 import { requestError, requestSignal } from '../timeout.js';
 import type { AICompletion, AIMessage, AICompletionOptions, AIProviderType } from '@qa/types';
@@ -137,10 +138,13 @@ export class GeminiProvider implements AIProvider {
   readonly providerType: AIProviderType = 'gemini';
   private apiKey: string;
   private defaultModel?: string;
+  /** Google sign-in (ADC) may be used: only on a runner bound to this computer, or the CI check-up (ADR 0042). */
+  private allowAdc: boolean;
 
-  constructor(apiKey: string, defaultModel?: string) {
+  constructor(apiKey: string, defaultModel?: string, opts: { allowAdc?: boolean } = {}) {
     this.apiKey = apiKey;
     this.defaultModel = defaultModel;
+    this.allowAdc = opts.allowAdc === true;
   }
 
   async generateText(messages: AIMessage[], options: AICompletionOptions = {}): Promise<string> {
@@ -160,7 +164,13 @@ export class GeminiProvider implements AIProvider {
 
   private async send(messages: AIMessage[], options: AICompletionOptions, signal: AbortSignal): Promise<AICompletion> {
     const model = options.model || this.defaultModel || DEFAULT_MODELS.gemini;
+    // The model id goes into the request URL, so it must be a plain name (no path or query characters).
+    if (!/^[\w.-]+$/.test(model)) throw new Error('The Gemini model name is not valid.');
     const isAdc = this.apiKey === 'adc' || this.apiKey.startsWith('ya29.');
+    // Refused before resolveAdcToken, so the operator's credentials file is never read on a shared copy.
+    if (isAdc && !this.allowAdc) {
+      throw new Error('Google sign-in works only on a runner on your own computer. Add a Gemini API key in Settings.');
+    }
 
     const contents = messages.map((m) => {
       const parts: any[] = [{ text: m.content }];
@@ -235,13 +245,15 @@ export class GeminiProvider implements AIProvider {
         if (!res.ok) {
           // The key cannot be used now (rejected, expired, out of credit or quota): Google sign-in (ADC) on
           // Vertex AI is tried when this computer has it. When that fails too, both answers are named.
-          const adc = aiStudioKeyUnusable(res.status, studioText) ? await resolveAdcToken(signal) : null;
-          if (!adc || !adc.projectId) throw new Error(`Gemini API error (${res.status}): ${studioText}`);
+          const adc =
+            this.allowAdc && aiStudioKeyUnusable(res.status, studioText) ? await resolveAdcToken(signal) : null;
+          const studioSummary = summarizeApiError(studioText, this.apiKey);
+          if (!adc || !adc.projectId) throw new Error(`Gemini API error (${res.status}): ${studioSummary}`);
           const vertex = await postVertex(adc.accessToken, adc.projectId, usedModel, payload, signal);
           if (!vertex.res.ok) {
             const vertexText = await vertex.res.text();
             throw new Error(
-              `Gemini API error (${res.status}): ${studioText} | Vertex AI with Google sign-in (${vertex.res.status}): ${vertexText}`
+              `Gemini API error (${res.status}): ${studioSummary} | Vertex AI with Google sign-in (${vertex.res.status}): ${summarizeApiError(vertexText, this.apiKey)}`
             );
           }
           res = vertex.res;
@@ -252,7 +264,7 @@ export class GeminiProvider implements AIProvider {
 
     if (!res.ok) {
       const errorText = await res.text();
-      throw new Error(`Gemini API error (${res.status}): ${errorText}`);
+      throw new Error(`Gemini API error (${res.status}): ${summarizeApiError(errorText, this.apiKey)}`);
     }
 
     const data = (await res.json()) as any;

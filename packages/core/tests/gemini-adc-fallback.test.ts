@@ -72,7 +72,7 @@ describe('Gemini AI Studio key to Vertex AI (Google sign-in) fallback', () => {
   });
 
   const ask = (model?: string, key = 'studio-key') =>
-    new mod.GeminiProvider(key, model).complete([{ role: 'user', content: 'hi' }]);
+    new mod.GeminiProvider(key, model, { allowAdc: true }).complete([{ role: 'user', content: 'hi' }]);
 
   describe('helpers', () => {
     it('vertexModelFor maps -latest aliases to the default model and leaves others alone', () => {

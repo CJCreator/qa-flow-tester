@@ -1,4 +1,5 @@
 import { createHash } from 'crypto';
+import { scrubKey, summarizeApiError } from './error-text.js';
 
 /**
  * Which Gemini model a Google AI Studio key can use. Google renames and retires models often, and a free key
@@ -62,23 +63,6 @@ export function geminiModelMissing(status: number, body: string): boolean {
   return status === 400 && !KEY_INVALID.test(body) && MODEL_MISSING.test(body);
 }
 
-function scrub(text: string, apiKey: string): string {
-  return apiKey ? text.split(apiKey).join('[key]') : text;
-}
-
-/** Google's own message from an error body, without the JSON around it. */
-function summarize(body: string, apiKey: string): string {
-  let text = body;
-  try {
-    const err = (JSON.parse(body) as { error?: { message?: string; status?: string } }).error;
-    if (err?.message) text = err.status ? `${err.message} [${err.status}]` : err.message;
-  } catch {
-    // not JSON: the text as sent
-  }
-  const clean = scrub(text, apiKey).replace(/\s+/g, ' ').trim();
-  return clean.length > 300 ? `${clean.slice(0, 297)}...` : clean;
-}
-
 function fetcher(opts?: GeminiModelOptions): typeof fetch {
   return opts?.fetchFn ?? ((input, init) => globalThis.fetch(input, init));
 }
@@ -95,7 +79,7 @@ async function call(
     return await fetchFn(url, { ...init, signal });
   } catch (err) {
     if (signal?.aborted) throw err;
-    throw new Error(scrub(err instanceof Error ? err.message : String(err), apiKey));
+    throw new Error(scrubKey(err instanceof Error ? err.message : String(err), apiKey));
   }
 }
 
@@ -118,7 +102,7 @@ export async function listGeminiModels(apiKey: string, opts?: GeminiModelOptions
     );
     if (!res.ok) {
       const body = await res.text().catch(() => '');
-      throw new GeminiApiError(res.status, scrub(body, apiKey), summarize(body, apiKey));
+      throw new GeminiApiError(res.status, scrubKey(body, apiKey), summarizeApiError(body, apiKey));
     }
     const data = (await res.json()) as {
       models?: Array<{ name?: string; supportedGenerationMethods?: string[] }>;

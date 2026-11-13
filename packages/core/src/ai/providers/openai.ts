@@ -1,5 +1,6 @@
 import type { AIProvider } from '../ai-provider.js';
 import { DEFAULT_MODELS } from '../default-models.js';
+import { summarizeApiError } from '../error-text.js';
 import { requestError, requestSignal } from '../timeout.js';
 import type { AICompletion, AIMessage, AICompletionOptions, AIProviderType } from '@qa/types';
 
@@ -112,7 +113,9 @@ export class OpenAIProvider implements AIProvider {
     }
 
     if (!res.ok) {
-      throw new Error(`OpenAI/OpenRouter API error (${res.status}): ${errorText ?? (await res.text())}`);
+      throw new Error(
+        `OpenAI/OpenRouter API error (${res.status}): ${summarizeApiError(errorText ?? (await res.text()), this.apiKey)}`
+      );
     }
 
     const data = (await res.json()) as any;

@@ -403,7 +403,7 @@ describe('Gemini ADC token and fallback requests', () => {
     const calls: FetchCall[] = [];
     globalThis.fetch = hangingFetch(calls) as unknown as typeof fetch;
     // Real timers here: the credentials file is read with real I/O before the token fetch starts.
-    const err = await new GeminiProvider('adc').complete(MESSAGES, options).then(
+    const err = await new GeminiProvider('adc', undefined, { allowAdc: true }).complete(MESSAGES, options).then(
       () => null,
       (e: unknown) => e
     );
@@ -429,7 +429,7 @@ describe('Gemini ADC token and fallback requests', () => {
       }
       return hang(u, init);
     }) as unknown as typeof fetch;
-    const err = await new GeminiProvider(KEY, 'gem-x').complete(MESSAGES, options).then(
+    const err = await new GeminiProvider(KEY, 'gem-x', { allowAdc: true }).complete(MESSAGES, options).then(
       () => null,
       (e: unknown) => e
     );

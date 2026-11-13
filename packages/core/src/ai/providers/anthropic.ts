@@ -1,5 +1,6 @@
 import type { AIProvider } from '../ai-provider.js';
 import { DEFAULT_MODELS } from '../default-models.js';
+import { summarizeApiError } from '../error-text.js';
 import { requestError, requestSignal } from '../timeout.js';
 import type { AICompletion, AIMessage, AICompletionOptions, AIProviderType } from '@qa/types';
 
@@ -81,7 +82,7 @@ export class AnthropicProvider implements AIProvider {
 
     if (!res.ok) {
       const errorText = await res.text();
-      throw new Error(`Anthropic API error (${res.status}): ${errorText}`);
+      throw new Error(`Anthropic API error (${res.status}): ${summarizeApiError(errorText, this.apiKey)}`);
     }
 
     const data = (await res.json()) as any;
