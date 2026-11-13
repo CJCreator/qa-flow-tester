@@ -24,26 +24,12 @@ import {
   type PlanDelta,
 } from '../api';
 import type { ConfirmOptions } from '../components/ConfirmDialog';
+import type { PlanNotice, PlanUpdateState } from '../lib/run-events';
 
-/** A background change to the plan (re-planning, adding pages), as Release check-up reports it. */
-export interface PlanUpdateState {
-  running: boolean;
-  what?: string;
-  step?: string;
-  error?: string | null;
-  /** Goes up with every PLAN_UPDATE_* event, so a waiting screen can tell that something was heard. */
-  seq?: number;
-}
+export type { PlanNotice, PlanUpdateState } from '../lib/run-events';
 
 /** How long a background change may be waited for before the plan can be approved again. */
 export const PENDING_TIMEOUT_MS = 60_000;
-
-/** A banner over the plan: testing stopped or failed, or the site changed since the plan was approved. */
-export interface PlanNotice {
-  tone: 'fail' | 'warn' | 'stamp';
-  title: string;
-  body?: string;
-}
 
 export interface PlanReviewScreenProps {
   plan: ReviewPlan;

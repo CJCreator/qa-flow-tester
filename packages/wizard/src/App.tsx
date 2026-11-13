@@ -31,7 +31,7 @@ import { AreaNav } from './components/AreaNav';
 import { hasFinishedCheckup } from './lib/onboarding';
 import { CommandPalette } from './components/CommandPalette';
 import { useRunnerConnection } from './hooks/useRunnerConnection';
-import { shouldResetFeed, useRunnerStream } from './hooks/useRunnerStream';
+import { useRunnerStream } from './hooks/useRunnerStream';
 import { usePollBackoff } from './hooks/usePollBackoff';
 import {
   DEFAULT_MAX_PAGES,
@@ -45,7 +45,6 @@ import {
   contextUrlOf,
   productContextOf,
   rolesOf,
-  SIGN_IN_AGAIN_TEXT,
   savedSessionsOf,
   parseCustomHeaders,
   type CheckupForm,
@@ -53,15 +52,22 @@ import {
 import { isCheckRoute, matchRoute, navigate, PATHS, readsAddressParam, usePathname, type Route } from './lib/router';
 import { COUNTER_EVENTS, sendCounterEvent } from './lib/counter';
 import { useDocumentTitle } from './lib/title';
-import { initialFeed, plainFailure, reduceFeed, type FeedState, type RunnerEvent } from './lib/translate';
+import { initialFeed, plainFailure, type FeedState, type RunnerEvent } from './lib/translate';
 import { count } from './lib/format';
 import { displayHost, hostOf } from './lib/url';
 import { ConnectionScreen } from './screens/ConnectionScreen';
 import { NewCheckupScreen, type StartFacts } from './screens/NewCheckupScreen';
 import { NotFoundScreen } from './screens/NotFoundScreen';
 import { LandingScreen } from './screens/LandingScreen';
-import type { PlanNotice, PlanUpdateState } from './screens/PlanReviewScreen';
-import { isScanProgress, type ScanProgress } from './lib/scan-progress';
+import {
+  approveFailure,
+  runEventStep,
+  testingStoppedStep,
+  type PlanNotice,
+  type PlanUpdateState,
+  type RunStep,
+} from './lib/run-events';
+import type { ScanProgress } from './lib/scan-progress';
 import { headersNotice } from './lib/coverage-text';
 import { splitStoredContext } from './lib/context';
 import { stopProblem, type StopReply } from './lib/stop-result';
@@ -319,146 +325,77 @@ export default function App() {
     if (reachable && route.name === 'new') refreshRecent();
   }, [reachable, route.name, refreshRecent]);
 
-  const onEvent = useCallback(
-    (event: RunnerEvent) => {
-      // A page that opens or reconnects mid-run is sent the run's events so far, marked `replayed`:
-      // they rebuild the screens, but only live events move the person.
-      const live = event.replayed !== true;
-      const onCheckAddress = () => isCheckRoute(matchRoute(window.location.pathname));
-      const at = typeof event.timestamp === 'number' ? event.timestamp : Date.now();
-
-      switch (event.type) {
-        case 'connected':
-          // A resumed reconnect keeps the feed and scan already held; only the gap comes after it.
-          if (shouldResetFeed(event)) {
-            setFeed(initialFeed('product'));
-            setScan(null);
-            planningStartedAt.current = null;
-          }
-          void reconcile();
-          return;
-
-        case 'DISCOVERY_PROGRESS': {
-          if (!isScanProgress(event)) return;
-          const p = event;
-          if (p.stage === 'planning') planningStartedAt.current ??= at;
-          // Time left, from how long the AI requests so far took.
-          const elapsed = planningStartedAt.current ? (at - planningStartedAt.current) / 1000 : 0;
-          const secondsLeft =
-            p.stage === 'planning' && p.done && p.total
-              ? (elapsed / p.done) * Math.max(0, p.total - p.done)
-              : undefined;
-          // The same request asked about again keeps its start time; a new one starts its own.
-          const askingSince = p.asking
-            ? (before: ScanProgress | null) => (before?.asking && before.what === p.what ? before.askingSince : at)
-            : () => undefined;
-          setScan((before) => ({
-            ...before,
-            ...p,
-            pagesFound: p.pagesFound ?? before?.pagesFound,
-            secondsLeft: p.asking ? before?.secondsLeft : secondsLeft,
-            askingSince: askingSince(before),
-            asking: p.asking || undefined,
-          }));
-          return;
-        }
-
-        case 'PLAN_UPDATE_STARTED':
-          setPlanUpdate((u) => ({ running: true, what: String(event.what ?? ''), seq: (u.seq ?? 0) + 1 }));
-          return;
-        case 'PLAN_UPDATE_PROGRESS':
-          setPlanUpdate((u) => ({ ...u, running: true, step: String(event.what ?? ''), seq: (u.seq ?? 0) + 1 }));
-          return;
-        case 'PLAN_UPDATED':
-          getPlan()
-            .then(setPlan)
-            .catch(() =>
-              setPlanNotice({
-                tone: 'warn',
-                title: 'The updated plan couldn’t be loaded',
-                body: 'The plan on screen may be out of date. Reload the page to see the latest.',
-              })
-            )
-            .finally(() => setPlanUpdate((u) => ({ running: false, seq: (u.seq ?? 0) + 1 })));
-          return;
-        case 'PLAN_UPDATE_FAILED':
-          setPlanUpdate((u) => ({
-            running: false,
-            seq: (u.seq ?? 0) + 1,
-            error: 'The plan couldn’t be updated. Try again. If it keeps failing, check your AI key in Settings.',
-          }));
-          return;
-
-        case 'PLAN_READY':
-          getPlan()
-            .then((p) => {
-              setPlanError(false);
-              setPlan(p);
-            })
-            .catch(() => setPlanError(true));
-          if (event.changedSinceApproval) {
-            setPlanNotice({
-              tone: 'warn',
-              title: 'The site has changed since you approved its plan',
-              body: 'What’s new is marked New. Look it over, then approve the plan to test it.',
-            });
-          }
-          if (live) {
-            setStatus((s) => (s ? { ...s, phase: 'awaiting-review', hasPlan: true } : s));
-            if (onCheckAddress()) navigate(PATHS.plan, { replace: true });
-          }
-          return;
-
-        case 'TESTING_STARTED':
-          // The feed starts again with testing; the time left counts from here.
-          setFeed({ ...initialFeed('product'), testingStartedAt: at });
-          if (live) {
-            setStatus((s) => (s ? { ...s, phase: 'testing' } : s));
-            if (onCheckAddress()) navigate(PATHS.testing, { replace: true });
-          }
-          return;
-
-        case 'RUN_COMPLETED': {
-          setFeed((f) => reduceFeed(f, event, 'product'));
-          if (!live) return;
-          sendCounterEvent(COUNTER_EVENTS.completedCheckup);
-          const runId = typeof event.runId === 'string' ? event.runId : null;
-          setStatus((s) => (s ? { ...s, phase: 'done', isRunning: false, reportRunId: runId } : s));
-          refreshRecent();
-          if (runId && onCheckAddress()) navigate(PATHS.report(runId), { replace: true });
-          return;
-        }
-
-        case 'RUN_FAILED':
-          setFeed((f) => reduceFeed(f, event, 'product'));
-          if (live) epoch.current++;
-          if (event.planKept) {
-            // Testing failed part-way: the approved plan waits again, with what happened above it.
-            setPlanNotice({
-              tone: 'fail',
-              title: 'Testing stopped before it finished',
-              body: `${plainFailure(event.error, 'product')} Your plan is kept: approve it again when the site is working.`,
-            });
-            if (live) {
-              setStatus((s) => (s ? { ...s, phase: 'awaiting-review' } : s));
-              if (onCheckAddress()) navigate(PATHS.plan, { replace: true });
+  /** Applies what one runner event decided (see lib/run-events.ts): the state changes, then the effects, in order. */
+  const applyStep = useCallback(
+    (step: RunStep) => {
+      if (step.feed) setFeed(step.feed);
+      if (step.scan) setScan(step.scan);
+      if (step.status) setStatus(step.status);
+      if (step.planUpdate) setPlanUpdate(step.planUpdate);
+      if (step.planNotice !== undefined) setPlanNotice(step.planNotice);
+      if (step.planningStartedAt !== undefined) planningStartedAt.current = step.planningStartedAt;
+      for (const effect of step.effects) {
+        switch (effect.kind) {
+          case 'reconcile':
+            void reconcile();
+            break;
+          case 'load-plan':
+            if (effect.after === 'ready') {
+              getPlan()
+                .then((p) => {
+                  setPlanError(false);
+                  setPlan(p);
+                })
+                .catch(() => setPlanError(true));
+            } else if (effect.after === 'update') {
+              getPlan()
+                .then(setPlan)
+                .catch(() =>
+                  setPlanNotice({
+                    tone: 'warn',
+                    title: 'The updated plan couldn’t be loaded',
+                    body: 'The plan on screen may be out of date. Reload the page to see the latest.',
+                  })
+                )
+                .finally(() => setPlanUpdate((u) => ({ running: false, seq: (u.seq ?? 0) + 1 })));
+            } else {
+              getPlan()
+                .then(setPlan)
+                .catch(() => {});
             }
-          } else if (live) {
-            setStatus((s) => (s ? { ...s, phase: 'failed', isRunning: false } : s));
-          }
-          return;
-
-        case 'RUN_ABORTED':
-          setFeed((f) => reduceFeed(f, event, 'product'));
-          // Stopped from another tab: catch up.
-          if (live) void reconcile();
-          return;
-
-        default:
-          setFeed((f) => reduceFeed(f, event, 'product'));
+            break;
+          case 'navigate':
+            navigate(effect.to, { replace: true });
+            break;
+          case 'go':
+            navigate(effect.to);
+            break;
+          case 'refresh-recent':
+            refreshRecent();
+            break;
+          case 'count-completed':
+            sendCounterEvent(COUNTER_EVENTS.completedCheckup);
+            break;
+          case 'bump-epoch':
+            epoch.current++;
+            break;
+        }
       }
     },
     [reconcile, refreshRecent]
+  );
+
+  const onEvent = useCallback(
+    (event: RunnerEvent) => {
+      applyStep(
+        runEventStep(event, {
+          onCheckAddress: isCheckRoute(matchRoute(window.location.pathname)),
+          planningStartedAt: planningStartedAt.current,
+          now: Date.now(),
+        })
+      );
+    },
+    [applyStep]
   );
 
   const connection = useRunnerStream(STREAM_URL, reachable, onEvent, () => void reconcile());
@@ -732,22 +669,7 @@ export default function App() {
     epoch.current++;
     const result = await abortRun();
     if (stopFailed(result)) return;
-    setFeed(initialFeed('product'));
-    if (result.planKept) {
-      setStatus((s) => (s ? { ...s, phase: 'awaiting-review' } : s));
-      setPlanNotice({
-        tone: 'stamp',
-        title: 'Testing stopped. Your plan is kept.',
-        body: 'Change it if you like, then approve it again.',
-      });
-      await getPlan()
-        .then(setPlan)
-        .catch(() => {});
-      navigate(PATHS.plan, { replace: true });
-    } else {
-      setStatus((s) => (s ? { ...s, phase: 'idle', isRunning: false } : s));
-      navigate(PATHS.new);
-    }
+    applyStep(testingStoppedStep(result));
   };
 
   const approve = async (roles?: RoleCredential[]) => {
@@ -768,21 +690,9 @@ export default function App() {
       setStatus((s) => (s ? { ...s, phase: 'testing' } : s));
       navigate(PATHS.testing);
     } catch (err) {
-      if (err instanceof RunnerError && err.code === 'ERR_SIGN_IN_REQUIRED') {
-        setApproveNeedsSignIn(err.needsSignIn && err.needsSignIn.length > 0 ? err.needsSignIn : true);
-        setApproveError(SIGN_IN_AGAIN_TEXT);
-        return;
-      }
-      if (
-        err instanceof RunnerError &&
-        err.code === 'ERR_HEADERS_NOT_SAVED' &&
-        err.needsHeaders &&
-        err.needsHeaders.length > 0
-      ) {
-        setApproveError(headersNotice(err.needsHeaders));
-        return;
-      }
-      setApproveError(err instanceof RunnerError ? err.message : 'The plan couldn’t be approved. Try again.');
+      const failure = approveFailure(err);
+      setApproveNeedsSignIn(failure.needsSignIn);
+      setApproveError(failure.error);
     } finally {
       setApproving(false);
     }
