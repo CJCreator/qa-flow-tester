@@ -7,7 +7,7 @@ import {
   parseHeaderText,
   MAX_CUSTOM_HEADERS,
 } from '@qa/types';
-import type { PlanIntent, RoleCredential, RunCap, StorageStateData } from '@qa/types';
+import type { AIProviderType, PlanIntent, RoleCredential, RunCap, StorageStateData } from '@qa/types';
 
 /** Most Product Context documents one Check-up takes, and the largest one. */
 export const MAX_CONTEXT_DOCUMENTS = 10;
@@ -90,6 +90,25 @@ export function checkAiCap(input: unknown): Checked<RunCap | undefined> {
     out.dollars = cap.dollars;
   }
   return { ok: true, value: out.requests !== undefined || out.dollars !== undefined ? out : undefined };
+}
+
+/**
+ * A dollar cap needs a known price for the model: without one the cap would do nothing and the person
+ * would not know. A request-only cap, or no cap, passes. `price` is the model's price per million tokens
+ * (from `knownPrice` or OpenRouter), or nothing when unknown.
+ */
+export function checkDollarCapPrice(
+  cap: RunCap | undefined,
+  _provider: AIProviderType,
+  price: unknown
+): Checked<RunCap | undefined> {
+  if (cap?.dollars !== undefined && (price === undefined || price === null)) {
+    return bad(
+      'ERR_CAP_NO_PRICE',
+      'The dollar cap needs a known price for this model. Set a request cap instead, or choose a model with a known price.'
+    );
+  }
+  return { ok: true, value: cap };
 }
 
 /** Most Tests the Plan runs before Rejects and Limits are trimmed: a positive whole number, 1 to 100000. Anything else uses the default. */

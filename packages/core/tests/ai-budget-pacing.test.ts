@@ -169,19 +169,20 @@ describe('PacedAI cap', () => {
   });
 
   it('stops at the dollar cap when a price is known', async () => {
-    // 1000 prompt + 1000 completion tokens at $1 + $3 per million = $0.004 a request.
-    const { provider } = slowProvider('openai', { promptTokens: 1000, completionTokens: 1000 });
+    // 1000 prompt + 1000 completion tokens at $1 + $3 per million = $0.004 a real request.
+    // The reservation estimates one request at 3000 + 1500 tokens = $0.0075, above the $0.006 cap,
+    // so the first request is refused before it is sent: the cap stops spending before any money goes out.
+    const { provider, state } = slowProvider('openai', { promptTokens: 1000, completionTokens: 1000 });
     const ai = new PacedAI(provider, Infinity, {
       gapMs: 0,
       cap: { dollars: 0.006 },
       price: { prompt: 1, completion: 3 },
     });
-    await ai.complete([]);
-    await ai.complete([]);
-    expect(ai.spentUsd).toBeCloseTo(0.008, 6);
     const err = await ai.complete([]).catch((e) => e);
     expect(err).toBeInstanceOf(CapSpentError);
-    expect(ai.used).toBe(2);
+    expect(state.calls).toBe(0);
+    expect(ai.spentUsd).toBe(0);
+    expect(ai.used).toBe(0);
   });
 
   it('ignores a dollar cap when no price is known', async () => {

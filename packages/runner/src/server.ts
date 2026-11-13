@@ -108,6 +108,7 @@ import {
   BudgetSpentError,
   pacingFor,
   estimateUsd,
+  knownPrice,
   buildIssuesModel,
   renderIssuesMarkdown,
   renderIssuesHtml,
@@ -3475,6 +3476,9 @@ export class RunnerServer {
       } catch {
         // nothing reported: today's pacing
       }
+    } else if (settings) {
+      // The standard price of the paid provider's model, or none when it is not in the table.
+      price = knownPrice(settings.provider, settings.model) ?? null;
     }
     const reported: ProviderLimits | null =
       limits || today ? { ...(limits ?? {}), remainingRequests: limits?.remainingRequests ?? today?.remaining } : null;

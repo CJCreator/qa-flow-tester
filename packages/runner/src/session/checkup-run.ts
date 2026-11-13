@@ -54,6 +54,7 @@ import {
 } from '@qa/core';
 import {
   checkAiCap,
+  checkDollarCapPrice,
   checkContextDocuments,
   checkContextUrl,
   checkSavedSessions,
@@ -802,6 +803,10 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
       if (body.planWithoutAI) ai.provider = undefined;
       const aiBudget =
         ai.provider && deps.aiBudgetFor ? await deps.aiBudgetFor(ai.settings, ai.key, context.aiCap) : undefined;
+      // A dollar cap with no known price would do nothing: refuse it before the run starts.
+      if (ai.provider) {
+        valueOf(checkDollarCapPrice(context.aiCap, ai.settings?.provider ?? 'openrouter', aiBudget?.pacing.price));
+      }
       if (!current()) return;
 
       await fs.mkdir(runDir, { recursive: true });

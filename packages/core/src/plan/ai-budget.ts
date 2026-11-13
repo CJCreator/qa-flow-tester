@@ -11,6 +11,10 @@ import type {
 } from '@qa/types';
 import { completeWith, type AIProvider } from '../ai/ai-provider.js';
 import { stopIfAborted } from '../abort.js';
+import { knownPrice as knownModelPrice } from '../ai/model-prices.js';
+
+/** The standard price of a provider's model, for the dollar cap. Re-exported here so the runner reaches it through `@qa/core`. */
+export const knownPrice = knownModelPrice;
 
 /** The AI Request Budget is spent: the Plan Item is planned by fixed rules instead. */
 export class BudgetSpentError extends Error {
@@ -113,6 +117,8 @@ export class PacedAI implements AIProvider {
   private waiting: Array<() => void> = [];
   private cap?: RunCap;
   private price?: { prompt: number; completion: number };
+  /** Dollars held for requests in flight: released when each request ends, answer or error. */
+  private reservedUsd = 0;
   private gapMs: number;
   private signal?: AbortSignal;
   private finishSignal?: AbortSignal;
@@ -237,10 +243,16 @@ export class PacedAI implements AIProvider {
       this.nextSlot = start + this.gapMs;
       this.used++;
       const wait = start - now;
+      // Holds the dollars one more request may cost, so parallel requests cannot all start under the cap.
+      const dollars = this.cap?.dollars;
+      const reserve = dollars !== undefined && this.price ? estimateUsd(1, this.price) : 0;
       try {
         if (wait > 0) await this.pause(wait);
         stopIfAborted(this.signal);
         if (this.finishSignal?.aborted) throw new StoppedEarlyError();
+        // No await between this check and the reservation below, so parallel requests see each other's holds.
+        if (reserve > 0 && this.spentUsd + this.reservedUsd + reserve > dollars!) throw new CapSpentError('dollars');
+        this.reservedUsd += reserve;
       } catch (err) {
         this.used--; // stopped before the request was sent
         throw err;
@@ -256,7 +268,10 @@ export class PacedAI implements AIProvider {
       };
       let result: AICompletion;
       try {
-        result = await completeWith(this.inner, messages, sent);
+        // The hold ends as soon as the request settles, before any retry wait.
+        result = await completeWith(this.inner, messages, sent).finally(() => {
+          this.reservedUsd -= reserve;
+        });
       } catch (err) {
         if (this.signal?.aborted) {
           this.used--;
