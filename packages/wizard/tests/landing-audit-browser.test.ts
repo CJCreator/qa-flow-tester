@@ -43,6 +43,7 @@ describe('landing page in a browser', () => {
   let browser: Browser;
   let context: BrowserContext;
   let page: Page;
+  let axeSource: string;
   const requested: string[] = [];
 
   const theme = (on: Page = page) => on.evaluate(() => document.documentElement.getAttribute('data-theme'));
@@ -63,7 +64,9 @@ describe('landing page in a browser', () => {
         new Promise((done) => setTimeout(done, 1000)),
       ])
     );
-    await on.addScriptTag({ path: axePath });
+    // Run axe's source with page.evaluate, not addScriptTag: the runner's CSP (script-src 'self') blocks inline
+    // script elements. page.evaluate runs through the DevTools protocol, which the page CSP does not restrict.
+    await on.evaluate(axeSource);
     const found = await on.evaluate(async () => {
       const axe = (
         window as unknown as { axe: { run: (ctx: unknown, opts?: unknown) => Promise<{ violations: Violation[] }> } }
@@ -76,6 +79,7 @@ describe('landing page in a browser', () => {
   }
 
   beforeAll(async () => {
+    axeSource = await fs.readFile(axePath, 'utf8');
     await build({
       root: wizardRoot,
       configFile: path.join(wizardRoot, 'vite.config.ts'),
