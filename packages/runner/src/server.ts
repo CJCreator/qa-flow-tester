@@ -643,7 +643,8 @@ export class RunnerServer {
 
   constructor(options: RunnerServerOptions = {}) {
     this.port = options.port || 3001;
-    this.host = options.host || 'localhost';
+    // Stored without brackets: listen() needs `::1`, and bracketHost() adds them back for URLs.
+    this.host = (options.host || 'localhost').replace(/^\[|\]$/g, '');
     this.outputDir = path.resolve(options.outputDir || path.join(process.cwd(), '.qa-runner-report'));
     this.baselineDir = path.resolve(process.cwd(), '.qa-baselines');
     this.localhostAlias = options.localhostAlias;
