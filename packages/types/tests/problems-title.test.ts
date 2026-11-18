@@ -36,9 +36,9 @@ describe('plainTitleText: raw checker WCAG titles', () => {
       )
     ).toBe('The page is missing a title');
 
-    expect(
-      plainTitleText('WCAG 1.1.1 Non-text Content violation: Images must have alternate text (image-alt)')
-    ).toBe('An image is missing a text description for screen readers');
+    expect(plainTitleText('WCAG 1.1.1 Non-text Content violation: Images must have alternate text (image-alt)')).toBe(
+      'An image is missing a text description for screen readers'
+    );
   });
 
   it('strips WCAG criteria prefix and trailing rule ids from unmapped checker titles', () => {
