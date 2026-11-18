@@ -75,6 +75,8 @@ export const localDocsGet: DocsGet = async (url, opts) => {
     }
     const location = res.headers.get('location');
     if (res.status >= 300 && res.status < 400 && location) {
+      // Release the socket: a redirect body is never read.
+      void res.body?.cancel().catch(() => undefined);
       try {
         current = new URL(location, current);
       } catch {
