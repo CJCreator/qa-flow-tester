@@ -44,7 +44,7 @@ import { AUDIT_AREAS, MARKETING_SIGNALS } from '@qa/types';
 import { isAbortError, stopIfAborted } from '../../abort.js';
 import { makeCheckerFetch } from '../../checker-fetch.js';
 import type { HostPacer } from '../../host-pacer.js';
-import type { NetDeps } from '../../safe-net.js';
+import { isLocalOriginHost, type NetDeps } from '../../safe-net.js';
 import type { AuditStore } from '../store/audit-store.js';
 import type { AuditCrawlResult } from '../crawl/crawl.js';
 import { createFindingIdAllocator } from '../analysis/finding-ids.js';
@@ -514,7 +514,11 @@ export async function runAuditPipeline(
   let speedSource: 'pagespeed-insights' | 'this-tool' | 'not-measured' = 'not-measured';
   try {
     const urls = samples.map((p) => new URL(p.urlPath, origin).toString());
-    const speeds = urls.length > 0 ? await stages.measureSampleSpeeds(urls, { ...deps.pageSpeed, signal }) : [];
+    // PageSpeed Insights is Google's service: a local or private site's addresses are never sent to it (ADR 0031).
+    // Those pages fall back to this tool's own timing below.
+    const psiMayMeasure = !isLocalOriginHost(new URL(origin).hostname);
+    const speeds =
+      urls.length > 0 && psiMayMeasure ? await stages.measureSampleSpeeds(urls, { ...deps.pageSpeed, signal }) : [];
     samples.forEach((p, i) => {
       const psiResult = speeds[i];
       const psiMeasured = psiResult?.speed?.lab.status === 'measured';
