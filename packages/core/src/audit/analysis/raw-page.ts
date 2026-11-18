@@ -187,7 +187,8 @@ export const EMPTY_RAW_LISTS = {
   breadcrumb: [],
 } satisfies Partial<RawPage>;
 
-function cut(text: string, max: number): string {
+/** Cuts at `max` UTF-16 units, never inside a surrogate pair. */
+export function cut(text: string, max: number): string {
   if (text.length <= max) return text;
   let end = max;
   const code = text.charCodeAt(end - 1);

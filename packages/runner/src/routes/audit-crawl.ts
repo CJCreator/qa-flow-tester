@@ -25,7 +25,6 @@ import {
   type AuditAccess,
   type AuditAiStatus,
   type AuditErrorCode,
-  type AuditErrorReply,
   type AuditProgressEvent,
   type AuditRequest,
   type AuditStage,
@@ -53,7 +52,7 @@ import {
   type PageSpeedDeps,
 } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
-import { versionQuery } from './audit-common.js';
+import { refuse, versionQuery } from './audit-common.js';
 import { readJsonBody, sendJson } from './body.js';
 import { mayUseAudit, type AuditCaller } from './audit-store.js';
 import type { RunSlot } from '../session/run-slot.js';
@@ -178,32 +177,6 @@ export function getRunningInfo(slot: RunSlot, runs?: AuditRuns): { kind: 'checku
     kind: 'checkup',
     href: '/check',
   };
-}
-
-function refuse(
-  res: http.ServerResponse,
-  status: number,
-  code: AuditErrorCode,
-  error: string,
-  extra?: { fields?: AuditErrorReply['fields']; running?: AuditErrorReply['running'] } | AuditErrorReply['fields']
-): void {
-  let fields: AuditErrorReply['fields'];
-  let running: AuditErrorReply['running'];
-  if (extra && typeof extra === 'object') {
-    if ('fields' in extra || 'running' in extra) {
-      fields = (extra as { fields?: AuditErrorReply['fields'] }).fields;
-      running = (extra as { running?: AuditErrorReply['running'] }).running;
-    } else {
-      fields = extra as AuditErrorReply['fields'];
-    }
-  }
-  const body: AuditErrorReply = {
-    error,
-    code,
-    ...(fields ? { fields } : {}),
-    ...(running ? { running } : {}),
-  };
-  sendJson(res, status, body);
 }
 
 function row(
@@ -476,6 +449,49 @@ export async function runAuditVersion(
   );
 }
 
+/**
+ * The checks every audit start shares, in order: the run slot is free (answered before spending a network check;
+ * claimed for real by the caller afterwards), the address is public and reachable, and the day's limit is claimed
+ * last, after every other refusal, so a refused start costs nothing. Sends the refusal and returns false on a failure.
+ */
+export async function passesStartChecks(
+  res: http.ServerResponse,
+  slot: RunSlot,
+  runs: AuditRuns,
+  url: string,
+  checkAddress: AuditAddressCheck,
+  claimAuditLimit: ((email?: string) => { allowed: boolean; error?: string }) | undefined,
+  helperEmail: string | undefined
+): Promise<boolean> {
+  if (slot.kind !== null) {
+    const running = getRunningInfo(slot, runs);
+    refuse(res, 409, 'ERR_RUN_IN_PROGRESS', AUDIT_BUSY, { running });
+    return false;
+  }
+
+  let address: AuditAddressResult;
+  try {
+    address = await checkAddress(url);
+  } catch {
+    address = { ok: false, code: 'ERR_UNREACHABLE', reason: AUDIT_UNREACHABLE };
+  }
+  if (!address.ok) {
+    if (address.code === 'ERR_PRIVATE_ADDRESS') refuse(res, 400, 'ERR_PRIVATE_ADDRESS', address.reason);
+    else if (address.code === 'ERR_DNS') refuse(res, 422, 'ERR_DNS', address.reason);
+    else refuse(res, 422, 'ERR_UNREACHABLE', address.reason);
+    return false;
+  }
+
+  if (claimAuditLimit && helperEmail) {
+    const claim = claimAuditLimit(helperEmail);
+    if (!claim.allowed) {
+      refuse(res, 429, 'ERR_BETA_LIMIT', claim.error ?? 'Daily limit of audit starts reached.');
+      return false;
+    }
+  }
+  return true;
+}
+
 /** The start and stream rows with every dependency injectable (tests use a fake crawl and address check). */
 export function createAuditCrawlRoutes(deps: AuditCrawlRouteDeps): Route[] {
   const runs = deps.runs ?? new AuditRuns();
@@ -496,37 +512,19 @@ export function createAuditCrawlRoutes(deps: AuditCrawlRouteDeps): Route[] {
       return refuse(res, 400, 'ERR_INVALID_REQUEST', AUDIT_BAD_BODY);
     }
     const check = validateAuditStartBody(body);
-    if (!check.ok) return refuse(res, 400, 'ERR_INVALID_AUDIT', AUDIT_INVALID, check.errors);
+    if (!check.ok) return refuse(res, 400, 'ERR_INVALID_AUDIT', AUDIT_INVALID, { fields: check.errors });
     const request = check.value;
     if (deps.maxPages !== undefined && request.limits.maxPages > deps.maxPages) {
-      return refuse(res, 400, 'ERR_INVALID_AUDIT', AUDIT_INVALID, { maxPages: AUDIT_HOSTED_PAGES(deps.maxPages) });
+      return refuse(res, 400, 'ERR_INVALID_AUDIT', AUDIT_INVALID, {
+        fields: { maxPages: AUDIT_HOSTED_PAGES(deps.maxPages) },
+      });
     }
 
-    // Busy now: answer before spending a network check on it. Claimed for real after the check, below.
     const slot = slotOf(context);
-    if (slot.kind !== null) {
-      const running = getRunningInfo(slot, runs);
-      return refuse(res, 409, 'ERR_RUN_IN_PROGRESS', AUDIT_BUSY, { running });
-    }
-
-    let address: AuditAddressResult;
-    try {
-      address = await checkAddress(request.url);
-    } catch {
-      address = { ok: false, code: 'ERR_UNREACHABLE', reason: AUDIT_UNREACHABLE };
-    }
-    if (!address.ok) {
-      if (address.code === 'ERR_PRIVATE_ADDRESS') return refuse(res, 400, 'ERR_PRIVATE_ADDRESS', address.reason);
-      if (address.code === 'ERR_DNS') return refuse(res, 422, 'ERR_DNS', address.reason);
-      return refuse(res, 422, 'ERR_UNREACHABLE', address.reason);
-    }
-
-    // The day's limit is claimed last, after every refusal above, so a refused start costs nothing.
-    if (deps.claimAuditLimit && caller.helperEmail) {
-      const claim = deps.claimAuditLimit(caller.helperEmail);
-      if (!claim.allowed) {
-        return refuse(res, 429, 'ERR_BETA_LIMIT', claim.error ?? 'Daily limit of audit starts reached.');
-      }
+    if (
+      !(await passesStartChecks(res, slot, runs, request.url, checkAddress, deps.claimAuditLimit, caller.helperEmail))
+    ) {
+      return;
     }
 
     // Synchronous claim, no await before it after the check (BE-103).

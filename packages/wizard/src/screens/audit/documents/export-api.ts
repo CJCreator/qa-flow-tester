@@ -9,7 +9,7 @@ import {
   type OwnerAuditQuery,
   type PitchQuery,
 } from '@qa/types/src/browser.js';
-import { NOT_ANSWERING } from '../audit-call';
+import { NOT_ANSWERING, withQuery } from '../audit-call';
 
 /**
  * The export panel's download links (REQ-021, REQ-022, REQ-019, REQ-025): the Audit Documents
@@ -63,13 +63,6 @@ export function setDocument(choice: ExportChoice, kind: AuditDocumentKind, picke
   if (picked) next.add(kind);
   else next.delete(kind);
   return { ...choice, documents: AUDIT_DOCUMENT_KINDS.filter((k) => next.has(k)) };
-}
-
-function withQuery(path: string, query: Record<string, string | number | undefined>): string {
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(query)) if (value !== undefined) params.set(key, String(value));
-  const text = params.toString();
-  return text === '' ? path : `${path}?${text}`;
 }
 
 /**

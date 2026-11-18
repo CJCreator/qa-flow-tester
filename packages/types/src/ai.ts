@@ -1,3 +1,4 @@
+import { isRecord } from './guards.js';
 import type { AuditEndpoint } from './website-audit.js';
 
 export type AIProviderType = 'anthropic' | 'openai' | 'gemini' | 'openrouter' | 'mock';
@@ -125,9 +126,7 @@ function isAuditAiStage(value: unknown): value is AuditAiStage {
  * `errors.models` when the body itself is malformed.
  */
 export function validateAuditAiModelsUpdate(input: unknown): AuditAiModelsCheck {
-  const isObject = (v: unknown): v is Record<string, unknown> =>
-    v !== null && typeof v === 'object' && !Array.isArray(v);
-  if (!isObject(input) || !isObject(input.models)) {
+  if (!isRecord(input) || !isRecord(input.models)) {
     return { ok: false, errors: { models: 'Send the models as an object of stage to model id.' } };
   }
   const errors: AuditAiModelsErrors = {};

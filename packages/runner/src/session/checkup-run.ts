@@ -12,6 +12,7 @@ import type {
   RunCap,
   ProductProfile,
 } from '@qa/types';
+import { formatDay, hostOf } from '@qa/types';
 import {
   emptyPlan,
   defaultTestCase,
@@ -66,7 +67,6 @@ import {
 } from '../run-inputs.js';
 import { testCopyFor } from '../host-policy.js';
 import type { CheckupSession, StoredPlanRecord } from './checkup-session.js';
-import { hostOfAddress } from './plan-store.js';
 
 export const LOOPBACK_HOSTS = ['localhost', '127.0.0.1', '[::1]'];
 export const ALL_SCREEN_SIZES: Breakpoint[] = ['375px', '768px', '1440px'];
@@ -273,14 +273,6 @@ export function resolveTargetUrl(
   } catch {
     return targetUrl;
   }
-}
-
-/** "30 September 2026", for sentences in the report. */
-export function formatDay(iso: string): string {
-  const date = new Date(iso);
-  return Number.isNaN(date.getTime())
-    ? iso
-    : date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
 /**
@@ -1060,7 +1052,7 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
       const othersPlan = !!deps.beta && !!waiting && (deps.isMine ? !deps.isMine(waiting.plan.runId) : false);
       // On the shared copy another tester's waiting plan is never moved: the start is refused instead.
       if (othersPlan) throw runBusy();
-      const parkWaiting = !!waiting && session.plan.hostOf(waiting) !== hostOfAddress(body.targetUrl);
+      const parkWaiting = !!waiting && session.plan.hostOf(waiting) !== hostOf(body.targetUrl);
       if (waiting && !parkWaiting && !body.replacePlan) {
         let waitingFor = waiting.plan.targetUrl;
         try {
@@ -1081,7 +1073,7 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
       }
 
       if (parkWaiting && waiting) await session.plan.park(waiting);
-      await session.plan.unpark(hostOfAddress(body.targetUrl));
+      await session.plan.unpark(hostOf(body.targetUrl));
       await session.plan.clear();
 
       const productId = body.productId || 'default-product';

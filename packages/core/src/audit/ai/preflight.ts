@@ -39,90 +39,10 @@ export async function preflightAuditAi(
   const timeoutMs = options?.timeoutMs ?? 10_000;
   const create = options?.createProvider ?? createAIProvider;
 
-  // 1. Function target: can be resolveKey or resolveAi
-  if (typeof target === 'function') {
-    const result = await target(options?.provider);
-    if (!result) return 'no-key';
-
-    // Check if it's an AuditAiResolution ({ ok: boolean })
-    if ('ok' in result) {
-      if (!result.ok) return 'no-key';
-      try {
-        const answer = await result.ai.ask('assessment', [{ role: 'user', content: 'Say hi' }], {
-          maxTokens: 5,
-          timeoutMs,
-          signal: options?.signal,
-        });
-        if (!answer.ok) return 'quota';
-        return 'ready';
-      } catch (err) {
-        if (options?.signal?.aborted) throw err;
-        return classifyAiError(err);
-      }
-    }
-
-    // It's a ResolvedKeyInfo ({ provider, apiKey })
-    if (!result.apiKey) return 'no-key';
+  /** One minimal 'Say hi' through the audit AI: 'ready', 'quota' when refused, or the classified error. */
+  const askHi = async (ai: Extract<AuditAiResolution, { ok: true }>['ai']): Promise<AuditAiStatus> => {
     try {
-      const provider = create(result.provider, result.apiKey);
-      await completeWith(provider, [{ role: 'user', content: 'Say hi' }], {
-        maxTokens: 5,
-        timeoutMs,
-        signal: options?.signal,
-      });
-      return 'ready';
-    } catch (err) {
-      if (options?.signal?.aborted) throw err;
-      return classifyAiError(err);
-    }
-  }
-
-  // 2. Object target
-  if (typeof target === 'object' && target !== null) {
-    if ('resolveAi' in target && typeof target.resolveAi === 'function') {
-      const resolution = await target.resolveAi();
-      if (!resolution.ok) return 'no-key';
-      try {
-        const answer = await resolution.ai.ask('assessment', [{ role: 'user', content: 'Say hi' }], {
-          maxTokens: 5,
-          timeoutMs,
-          signal: options?.signal,
-        });
-        if (!answer.ok) return 'quota';
-        return 'ready';
-      } catch (err) {
-        if (options?.signal?.aborted) throw err;
-        return classifyAiError(err);
-      }
-    }
-
-    if ('resolveKey' in target && typeof target.resolveKey === 'function') {
-      const key = await target.resolveKey(options?.provider);
-      if (!key || !key.apiKey) return 'no-key';
-      try {
-        const provider = create(key.provider, key.apiKey);
-        await completeWith(provider, [{ role: 'user', content: 'Say hi' }], {
-          maxTokens: 5,
-          timeoutMs,
-          signal: options?.signal,
-        });
-        return 'ready';
-      } catch (err) {
-        if (options?.signal?.aborted) throw err;
-        return classifyAiError(err);
-      }
-    }
-
-    // Full ResolveAuditAiDeps
-    const resolution = await resolveAuditAi({
-      setup: { provider: options?.provider },
-      keys: (target as any).keys ?? target,
-      createProvider: options?.createProvider,
-      ...target,
-    });
-    if (!resolution.ok) return 'no-key';
-    try {
-      const answer = await resolution.ai.ask('assessment', [{ role: 'user', content: 'Say hi' }], {
+      const answer = await ai.ask('assessment', [{ role: 'user', content: 'Say hi' }], {
         maxTokens: 5,
         timeoutMs,
         signal: options?.signal,
@@ -133,6 +53,63 @@ export async function preflightAuditAi(
       if (options?.signal?.aborted) throw err;
       return classifyAiError(err);
     }
+  };
+
+  /** One minimal 'Say hi' straight to the provider with this key: 'ready' or the classified error. */
+  const pingProvider = async (type: AIProviderType, apiKey: string): Promise<AuditAiStatus> => {
+    try {
+      const provider = create(type, apiKey);
+      await completeWith(provider, [{ role: 'user', content: 'Say hi' }], {
+        maxTokens: 5,
+        timeoutMs,
+        signal: options?.signal,
+      });
+      return 'ready';
+    } catch (err) {
+      if (options?.signal?.aborted) throw err;
+      return classifyAiError(err);
+    }
+  };
+
+  // 1. Function target: can be resolveKey or resolveAi
+  if (typeof target === 'function') {
+    const result = await target(options?.provider);
+    if (!result) return 'no-key';
+
+    // Check if it's an AuditAiResolution ({ ok: boolean })
+    if ('ok' in result) {
+      if (!result.ok) return 'no-key';
+      return askHi(result.ai);
+    }
+
+    // It's a ResolvedKeyInfo ({ provider, apiKey })
+    if (!result.apiKey) return 'no-key';
+    return pingProvider(result.provider, result.apiKey);
+  }
+
+  // 2. Object target
+  if (typeof target === 'object' && target !== null) {
+    if ('resolveAi' in target && typeof target.resolveAi === 'function') {
+      const resolution = await target.resolveAi();
+      if (!resolution.ok) return 'no-key';
+      return askHi(resolution.ai);
+    }
+
+    if ('resolveKey' in target && typeof target.resolveKey === 'function') {
+      const key = await target.resolveKey(options?.provider);
+      if (!key || !key.apiKey) return 'no-key';
+      return pingProvider(key.provider, key.apiKey);
+    }
+
+    // Full ResolveAuditAiDeps
+    const resolution = await resolveAuditAi({
+      setup: { provider: options?.provider },
+      keys: (target as any).keys ?? target,
+      createProvider: options?.createProvider,
+      ...target,
+    });
+    if (!resolution.ok) return 'no-key';
+    return askHi(resolution.ai);
   }
 
   return 'no-key';

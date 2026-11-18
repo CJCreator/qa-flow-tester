@@ -11,6 +11,7 @@ import type {
   RouteTelemetry,
   SkippedPageInfo,
   RouteSkipReason,
+  DraftForm,
 } from '@qa/types';
 import { SafetyFilter } from './safety-filter.js';
 import { riskyToClick } from './action-words.js';
@@ -68,6 +69,27 @@ export interface SpiderSkipVerdict {
   why: RouteSkipReason;
   /** Short fixed wording, never page text. */
   detail?: string;
+}
+
+/** A form the Spider found, as the draft plan records it: only the fields plan steps may use. */
+export function toDraftForm(f: DiscoveredFormInfo): DraftForm {
+  return {
+    urlPath: f.urlPath,
+    inputs: f.inputs.map((i) => ({
+      selector: i.selector,
+      type: i.type,
+      label: i.label,
+      required: i.required,
+      pattern: i.pattern,
+      min: i.min,
+      max: i.max,
+      minLength: i.minLength,
+      maxLength: i.maxLength,
+    })),
+    submitButtonSelector: f.submitButtonSelector,
+    method: f.method,
+    ...(f.opening?.length ? { opening: f.opening } : {}),
+  };
 }
 
 export interface SpiderResult {
@@ -759,10 +781,9 @@ export class DeterministicSpider {
           return;
         }
 
-        let navRes;
-        try {
-          // Limits are worked out once the turn comes, from the time left then.
-          navRes = await paced(fullUrl, () =>
+        // Loads the page through the pacer. Limits are worked out once the turn comes, from the time left then.
+        const loadPage = () =>
+          paced(fullUrl, () =>
             navigate(page, fullUrl, {
               ...navLimits(pageTimeoutMs),
               needLinks: true,
@@ -773,6 +794,9 @@ export class DeterministicSpider {
               },
             })
           );
+        let navRes;
+        try {
+          navRes = await loadPage();
         } catch (err: unknown) {
           // The wait for the host's turn ended at the deadline or on abort: the page was never requested.
           if (pacerSignal?.aborted) {
@@ -816,17 +840,7 @@ export class DeterministicSpider {
           }
           options.onPageProgress?.({ type: 'page', path: requestedAsAsked, state: 'retrying' });
           try {
-            const again = await paced(fullUrl, () =>
-              navigate(page, fullUrl, {
-                ...navLimits(pageTimeoutMs),
-                needLinks: true,
-                who: options.role || (isRoleSignedIn ? 'signed-in' : 'visitor'),
-                retryDelayMs: options.retryDelayMs,
-                onRetry: () => {
-                  options.onPageProgress?.({ type: 'page', path: requestedAsAsked, state: 'retrying' });
-                },
-              })
-            );
+            const again = await loadPage();
             navRes = { ...again, attempts: navRes.attempts + again.attempts };
           } catch {
             // The wait ended at the deadline or on abort: the first answer stands.

@@ -1,4 +1,5 @@
 import {
+  isRecord,
   AUDIT_API,
   DOCUMENT_LANGUAGE_INFO,
   SHARE_LINK_DAYS,
@@ -55,13 +56,9 @@ export const KIND_LABEL: Readonly<Record<ShareLinkKind, string>> = {
 
 export const SHARE_KINDS: readonly ShareLinkKind[] = ['pitch', 'preview'];
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
 function isShareLink(value: unknown): value is ShareLink {
   return (
-    isObject(value) &&
+    isRecord(value) &&
     typeof value.id === 'string' &&
     typeof value.version === 'number' &&
     (value.kind === 'pitch' || value.kind === 'preview') &&
@@ -95,7 +92,7 @@ async function call<T>(
     const value = accept(body);
     return value === null ? { ok: false, message: fallback } : { ok: true, value };
   }
-  const refusal = isObject(body) ? body : {};
+  const refusal = isRecord(body) ? body : {};
   const code = isAuditErrorCode(refusal.code) ? refusal.code : undefined;
   if (code && REFUSALS[code]) return { ok: false, message: REFUSALS[code]!, code };
   return { ok: false, message: fallback, code };
@@ -123,7 +120,7 @@ export function createPreview(
     fetchImpl,
     'The improved homepage preview could not be made. Try again.',
     (reply) =>
-      isObject(reply) && isObject(reply.preview) && typeof reply.preview.version === 'number'
+      isRecord(reply) && isRecord(reply.preview) && typeof reply.preview.version === 'number'
         ? (reply.preview as unknown as PreviewReply['preview'])
         : null
   );
@@ -141,7 +138,7 @@ export function listSharedLinks(auditId: string, fetchImpl: Fetch = fetch): Prom
     { method: AUDIT_API.listShares.method },
     fetchImpl,
     'The Shared Links could not be loaded. Try again.',
-    (reply) => (isObject(reply) && Array.isArray(reply.links) ? reply.links.filter(isShareLink) : null)
+    (reply) => (isRecord(reply) && Array.isArray(reply.links) ? reply.links.filter(isShareLink) : null)
   );
 }
 
@@ -157,7 +154,7 @@ export function createSharedLink(
     jsonInit(AUDIT_API.createShare.method, body),
     fetchImpl,
     'The Shared Link could not be made. Try again.',
-    (reply) => (isObject(reply) && isShareLink(reply.link) ? reply.link : null)
+    (reply) => (isRecord(reply) && isShareLink(reply.link) ? reply.link : null)
   );
 }
 
@@ -172,7 +169,7 @@ export function revokeSharedLink(
     { method: AUDIT_API.revokeShare.method },
     fetchImpl,
     'The Shared Link could not be revoked. Try again.',
-    (reply) => (isObject(reply) && isShareLink(reply.link) ? reply.link : null)
+    (reply) => (isRecord(reply) && isShareLink(reply.link) ? reply.link : null)
   );
 }
 

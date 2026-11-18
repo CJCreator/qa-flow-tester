@@ -1442,3 +1442,25 @@ interface AuditApiShapes {
 export type AuditApi = {
   [K in AuditEndpointName]: { params: PathParams<(typeof AUDIT_API)[K]['path']> } & AuditApiShapes[K];
 };
+
+/** Every placeholder a Proposal template may use, with what it is filled with (the filler in @qa/core and the
+ * wizard's settings screen both read this list). */
+export const PROPOSAL_PLACEHOLDERS = [
+  { name: 'findings_summary', description: 'How many findings per group, and the top findings with their page.' },
+  { name: 'scope', description: 'Each page with redesign or repair, as edited.' },
+  { name: 'not_included', description: 'The "not included" lines of this audit, or the default list.' },
+  { name: 'price', description: 'The price in INR as written for this audit; a "to fill in" marker when empty.' },
+  {
+    name: 'payment_terms',
+    description: 'The payment terms as written for this audit; a "to fill in" marker when empty.',
+  },
+  { name: 'timeline', description: 'The Improvement Roadmap phases and their items.' },
+  { name: 'company.name', description: 'Your company name.' },
+  { name: 'company.address', description: 'Your company address.' },
+  { name: 'company.phone', description: 'Your company phone number.' },
+  { name: 'company.email', description: 'Your company email address.' },
+  { name: 'company.website', description: 'Your company website.' },
+  { name: 'company.terms', description: 'Your terms and conditions.' },
+  { name: 'site.url', description: 'The address of the audited website.' },
+  { name: 'date', description: 'The date the Proposal is made (YYYY-MM-DD).' },
+] as const;

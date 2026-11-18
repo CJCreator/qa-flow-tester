@@ -13,33 +13,21 @@
  * Markdown or HTML structure. Unknown placeholders stay visible as written and are reported.
  */
 
-import type { AuditFindingGroup, CompanyDetails, DocumentLanguage, PageAction, ProposalInputs } from '@qa/types';
+import {
+  PROPOSAL_PLACEHOLDERS,
+  type AuditFindingGroup,
+  type CompanyDetails,
+  type DocumentLanguage,
+  type PageAction,
+  type ProposalInputs,
+} from '@qa/types';
 import type { EditedAuditView } from './edits.js';
 import type { AuditDoc, DocBlock, HeadingLevel } from './model.js';
 import { labelLanguages, labelsFor, phaseLabel, type DocumentLabels } from './labels/index.js';
 import { PROPOSAL_FILL_IN_EN, PROPOSAL_NOT_INCLUDED_EN } from './templates/proposal-en.js';
 import { PROPOSAL_FILL_IN_TA, PROPOSAL_NOT_INCLUDED_TA } from './templates/proposal-ta.js';
 
-/** Every placeholder a Proposal template may use, with what it is filled with (for the settings screen). */
-export const PROPOSAL_PLACEHOLDERS = [
-  { name: 'findings_summary', description: 'How many findings per group, and the top findings with their page.' },
-  { name: 'scope', description: 'Each page with redesign or repair, as edited.' },
-  { name: 'not_included', description: 'The "not included" lines of this audit, or the default list.' },
-  { name: 'price', description: 'The price in INR as written for this audit; a "to fill in" marker when empty.' },
-  {
-    name: 'payment_terms',
-    description: 'The payment terms as written for this audit; a "to fill in" marker when empty.',
-  },
-  { name: 'timeline', description: 'The Improvement Roadmap phases and their items.' },
-  { name: 'company.name', description: 'Your company name.' },
-  { name: 'company.address', description: 'Your company address.' },
-  { name: 'company.phone', description: 'Your company phone number.' },
-  { name: 'company.email', description: 'Your company email address.' },
-  { name: 'company.website', description: 'Your company website.' },
-  { name: 'company.terms', description: 'Your terms and conditions.' },
-  { name: 'site.url', description: 'The address of the audited website.' },
-  { name: 'date', description: 'The date the Proposal is made (YYYY-MM-DD).' },
-] as const;
+export { PROPOSAL_PLACEHOLDERS };
 
 export type ProposalPlaceholder = (typeof PROPOSAL_PLACEHOLDERS)[number]['name'];
 

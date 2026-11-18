@@ -13,7 +13,7 @@ import type { FetchFn } from '@qa/checkers';
 import type { AccessibilityBasicsResult } from './accessibility-basics.js';
 import { checkLinks, type CheckLinksOptions } from './broken-links.js';
 import { CONTENT_PROBLEM_RULES, contentProblems } from './content-problems.js';
-import { createFindingIdAllocator, type FindingIdAllocator } from './finding-ids.js';
+import { createFindingIdAllocator, uniqueIds, type FindingIdAllocator } from './finding-ids.js';
 import { buildPageHierarchy, internalLinking } from './hierarchy.js';
 import { auditMarketing, marketingSignals } from './marketing-signals.js';
 import type { RawPage } from './raw-page.js';
@@ -107,10 +107,6 @@ function sectionSummaries(content: PageContent): SectionSummary[] {
   return content.sections.map((s) =>
     s.heading === undefined ? { id: s.id, kind: s.kind } : { id: s.id, kind: s.kind, heading: s.heading }
   );
-}
-
-function uniqueIds(ids: string[]): string[] {
-  return [...new Set(ids)];
 }
 
 export async function analyseSite(input: AnalysisInput): Promise<SiteAnalysis> {

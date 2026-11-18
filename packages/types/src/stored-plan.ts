@@ -2,12 +2,9 @@
  * Runtime guards for stored plans, run summaries, reports and benchmark jobs.
  * Kept browser-safe and dependency-free.
  */
+import { isRecord } from './guards.js';
 import type { RunSummary } from './run-report.js';
 import type { BenchmarkJob } from './hub.js';
-
-function isRecord(x: unknown): x is Record<string, unknown> {
-  return typeof x === 'object' && x !== null && !Array.isArray(x);
-}
 
 function testsOk(pages: unknown): boolean {
   return Array.isArray(pages) && pages.every((p) => isRecord(p) && Array.isArray(p.tests));

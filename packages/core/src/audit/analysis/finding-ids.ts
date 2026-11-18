@@ -25,3 +25,8 @@ export function createFindingIdAllocator(start = 1): FindingIdAllocator {
     },
   };
 }
+
+/** The ids in first-seen order, each once. */
+export function uniqueIds(ids: readonly string[]): string[] {
+  return [...new Set(ids)];
+}

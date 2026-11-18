@@ -6,6 +6,7 @@ import { handleHealthRoute } from './routes/health.js';
 import { applySecurityHeaders, runnerCsp } from './security-headers.js';
 import { evidenceContentType, sendEvidenceFile } from './evidence-file.js';
 import {
+  hostOf,
   releaseVerdict,
   signInReasonText,
   summarizeDocument,
@@ -170,7 +171,6 @@ import { UsageLedger } from './usage-ledger.js';
 import { purgeVisitorFolders } from './session/visitor-cleanup.js';
 import { BrowserGate } from './browser-gate.js';
 import { isRunId } from './session/report-store.js';
-import { hostOfAddress } from './session/plan-store.js';
 import { isResumable } from './session/run-events.js';
 import { testCopyFor } from './host-policy.js';
 import { isLoopbackBindHost } from './bind-host.js';
@@ -3270,7 +3270,7 @@ export class RunnerServer {
       });
       return;
     }
-    const parkWaiting = !!waiting && this.hostOfPlan(waiting) !== hostOfAddress(body.targetUrl);
+    const parkWaiting = !!waiting && this.hostOfPlan(waiting) !== hostOf(body.targetUrl);
     if (waiting && !parkWaiting && !body.replacePlan) {
       let waitingFor = waiting.plan.targetUrl;
       try {

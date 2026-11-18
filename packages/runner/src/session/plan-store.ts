@@ -11,7 +11,7 @@ import type {
   RunCap,
   AIProviderType,
 } from '@qa/types';
-import { normalizePlanIntents, normalizeTestIntents, isStoredPlanShape } from '@qa/types';
+import { hostOf, normalizePlanIntents, normalizeTestIntents, isStoredPlanShape } from '@qa/types';
 import { writeJsonAtomic, readJsonSafe, Redactor, type PreFlightResult } from '@qa/core';
 import type { RunSecrets } from './run-secrets.js';
 
@@ -102,14 +102,6 @@ export interface PlanStore {
   forDisk(record: StoredPlanRecord): StoredPlanRecord;
   /** A saved Plan read back into the current shape (today's `normalizeStoredPlan`). */
   normalize(record: StoredPlanRecord): StoredPlanRecord;
-}
-
-export function hostOfAddress(address: string): string {
-  try {
-    return new URL(address).host;
-  } catch {
-    return address;
-  }
 }
 
 export function normalizeStoredPlan(record: StoredPlanRecord): StoredPlanRecord {
@@ -210,7 +202,7 @@ export class DefaultPlanStore implements PlanStore {
   }
 
   hostOf(record: StoredPlanRecord): string {
-    return record.context.siteHost ?? hostOfAddress(record.plan.targetUrl);
+    return record.context.siteHost ?? hostOf(record.plan.targetUrl);
   }
 
   parkedFileFor(host: string): string {

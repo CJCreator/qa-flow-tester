@@ -162,6 +162,27 @@ function openOwnSection(el: HTMLElement): void {
   if (own && !own.open) own.open = true;
 }
 
+/**
+ * Open state of a collapsible part: Expand all / Collapse all wins; otherwise it starts open when asked to,
+ * or while a search or the needs-me filter is on, and opens when either is switched on.
+ */
+function useOpenState(view: View, startOpen: boolean) {
+  const shouldOpen =
+    view.expandAll !== undefined && view.expandAll !== null
+      ? view.expandAll
+      : startOpen || !!view.query.trim() || view.needsMe;
+  const [open, setOpen] = useState(shouldOpen);
+
+  useEffect(() => {
+    if (view.expandAll !== undefined && view.expandAll !== null) {
+      setOpen(view.expandAll);
+    } else if (view.query.trim() || view.needsMe) {
+      setOpen(true);
+    }
+  }, [view.expandAll, view.query, view.needsMe]);
+  return [open, setOpen] as const;
+}
+
 function Section({
   id,
   title,
@@ -194,19 +215,7 @@ function Section({
     </>
   );
   if (collapsible) {
-    const shouldOpen =
-      view.expandAll !== undefined && view.expandAll !== null
-        ? view.expandAll
-        : startOpen || !!view.query.trim() || view.needsMe;
-    const [open, setOpen] = useState(shouldOpen);
-
-    useEffect(() => {
-      if (view.expandAll !== undefined && view.expandAll !== null) {
-        setOpen(view.expandAll);
-      } else if (view.query.trim() || view.needsMe) {
-        setOpen(true);
-      }
-    }, [view.expandAll, view.query, view.needsMe]);
+    const [open, setOpen] = useOpenState(view, startOpen);
 
     return (
       <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-24">
@@ -253,19 +262,7 @@ function CollapsibleGroup({
   children: React.ReactNode;
 }) {
   const view = useContext(ViewContext);
-  const shouldOpen =
-    view.expandAll !== undefined && view.expandAll !== null
-      ? view.expandAll
-      : startOpen || !!view.query.trim() || view.needsMe;
-  const [open, setOpen] = useState(shouldOpen);
-
-  useEffect(() => {
-    if (view.expandAll !== undefined && view.expandAll !== null) {
-      setOpen(view.expandAll);
-    } else if (view.query.trim() || view.needsMe) {
-      setOpen(true);
-    }
-  }, [view.expandAll, view.query, view.needsMe]);
+  const [open, setOpen] = useOpenState(view, startOpen);
 
   return (
     <details

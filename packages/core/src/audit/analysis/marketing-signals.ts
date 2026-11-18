@@ -10,6 +10,8 @@ import type {
   PageContent,
 } from '@qa/types';
 import { isLocalBusinessType, napFromPage } from './nap.js';
+import { clip } from '../ai/stage-ai.js';
+import { uniqueIds } from './finding-ids.js';
 import type { RawPage } from './raw-page.js';
 
 /**
@@ -171,7 +173,7 @@ function onPageSeo(pages: MarketingPage[], findings: AuditFinding[]): SignalResu
           pages: [],
           detail: `Not found: no title, meta description or H1 on the ${total} ${plural(total, 'page')} read${findingNote}.`,
         };
-  if (findingIds.length > 0) result.findingIds = unique(findingIds);
+  if (findingIds.length > 0) result.findingIds = uniqueIds(findingIds);
   return result;
 }
 
@@ -492,12 +494,4 @@ function nonEmpty(text: string | null | undefined): boolean {
 
 function lower(text: string | null | undefined): string {
   return (text ?? '').toLowerCase();
-}
-
-function unique(items: string[]): string[] {
-  return [...new Set(items)];
-}
-
-function clip(text: string, max: number): string {
-  return text.length <= max ? text : `${text.slice(0, max)}…`;
 }

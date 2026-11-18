@@ -24,6 +24,7 @@ import { parseJsonAnswer } from '../../plan/ai-planner.js';
 import { CLAIM_WORDS_PROMPT, findClaimWords } from './claim-words.js';
 import {
   classifyAiError,
+  clip,
   languageName,
   redactAiMessage,
   type AuditAi,
@@ -85,7 +86,6 @@ const MAX_HEADINGS = 40;
 const MAX_SECTIONS = 40;
 const MAX_CTAS = 25;
 const MAX_FINDINGS_SENT = 60;
-const MAX_FIELD_CHARS = 200;
 const MAX_NOTE_CHARS = 1200;
 
 const AREA_MEANING: Record<AuditArea, string> = {
@@ -402,8 +402,4 @@ function speedSummary(speed: PageSpeed) {
   const source =
     speed.lab.source === 'this-tool' ? 'measured by this tool (lab, one run)' : 'PageSpeed Insights (mobile)';
   return { source, lab: one(speed.lab), field: one(speed.field) };
-}
-
-function clip(text: string): string {
-  return text.length > MAX_FIELD_CHARS ? `${text.slice(0, MAX_FIELD_CHARS)}…` : text;
 }

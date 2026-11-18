@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import type { AuditSettingsReply } from '@qa/types/src/browser.js';
+import { PROPOSAL_PLACEHOLDERS as SHARED_PLACEHOLDERS, type AuditSettingsReply } from '@qa/types/src/browser.js';
 import {
   PROPOSAL_PLACEHOLDERS,
   draftFrom,
@@ -142,12 +142,9 @@ describe('Proposal template (REQ-027)', () => {
     }
   });
 
-  it('lists the same placeholders as the Proposal filler of @qa/core', () => {
-    const source = readFileSync(new URL('../../core/src/audit/documents/proposal.ts', import.meta.url), 'utf8');
-    const block = source.match(/export const PROPOSAL_PLACEHOLDERS = \[([\s\S]*?)\] as const;/)?.[1] ?? '';
-    const coreNames = [...block.matchAll(/name: '([^']+)'/g)].map((m) => m[1]);
-    expect(coreNames.length).toBeGreaterThan(0);
-    expect(PROPOSAL_PLACEHOLDERS.map((p) => p.name)).toEqual(coreNames);
+  it('lists the same placeholders as the Proposal filler of @qa/core (one shared list in @qa/types)', () => {
+    expect(PROPOSAL_PLACEHOLDERS).toBe(SHARED_PLACEHOLDERS);
+    expect(PROPOSAL_PLACEHOLDERS.length).toBeGreaterThan(0);
   });
 });
 

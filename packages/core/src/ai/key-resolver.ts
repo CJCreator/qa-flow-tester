@@ -2,7 +2,7 @@ import { createCipheriv, createDecipheriv, randomBytes, scrypt } from 'crypto';
 import { promises as fs } from 'fs';
 import os from 'os';
 import path from 'path';
-import type { AIProviderType } from '@qa/types';
+import { isRecord, type AIProviderType } from '@qa/types';
 
 export interface ResolvedKeyInfo {
   provider: AIProviderType;
@@ -404,10 +404,6 @@ function deriveKey(secret: string, salt: string): Promise<Buffer> {
 
 function additionalData(header: Pick<EncryptedKeyFile, 'version' | 'cipher' | 'keySource' | 'salt'>): Buffer {
   return Buffer.from(`${FILE_FORMAT}|${header.version}|${header.cipher}|${header.keySource}|${header.salt ?? ''}`);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function onlyStrings(value: Record<string, unknown>): Record<string, string> {

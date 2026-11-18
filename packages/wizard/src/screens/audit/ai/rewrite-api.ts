@@ -1,4 +1,5 @@
 import {
+  isRecord,
   AUDIT_API,
   auditPath,
   type AuditErrorCode,
@@ -36,12 +37,8 @@ const REFUSALS: Partial<Record<AuditErrorCode, string>> = {
   ERR_FORBIDDEN: 'You do not have permission to do this on this Website Audit.',
 };
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
 function isOverlapFlag(value: unknown): value is OverlapFlag {
-  return isObject(value) && typeof value.words === 'string' && typeof value.wordCount === 'number';
+  return isRecord(value) && typeof value.words === 'string' && typeof value.wordCount === 'number';
 }
 
 /** The overlaps of a reply, keeping only well-formed ones. */
@@ -50,12 +47,12 @@ function overlapsOf(value: unknown): OverlapFlag[] {
 }
 
 function isRewriteState(value: unknown): value is RewriteState {
-  if (!isObject(value)) return false;
+  if (!isRecord(value)) return false;
   if (typeof value.urlPath !== 'string' || typeof value.sectionId !== 'string') return false;
   if (value.approvedAt !== null && typeof value.approvedAt !== 'string') return false;
   if (value.acceptedAt !== null && typeof value.acceptedAt !== 'string') return false;
   const p = value.proposal;
-  return p === null || (isObject(p) && typeof p.text === 'string' && Array.isArray(p.overlaps));
+  return p === null || (isRecord(p) && typeof p.text === 'string' && Array.isArray(p.overlaps));
 }
 
 /** A rewrite with only well-formed overlaps, so the screen can trust them. */
@@ -66,7 +63,7 @@ function cleanRewrite(value: RewriteState): RewriteState {
 }
 
 function acceptRewriteReply(body: unknown): RewriteState | null {
-  return isObject(body) && isRewriteState(body.rewrite) ? cleanRewrite(body.rewrite) : null;
+  return isRecord(body) && isRewriteState(body.rewrite) ? cleanRewrite(body.rewrite) : null;
 }
 
 /** `?version=2`, when it is set. */
@@ -97,7 +94,7 @@ async function call<T>(
     const value = accept(body);
     return value === null ? { ok: false, message: fallback } : { ok: true, value };
   }
-  const refusal = isObject(body) ? body : {};
+  const refusal = isRecord(body) ? body : {};
   const code = isAuditErrorCode(refusal.code) ? refusal.code : undefined;
   if (code === 'ERR_OVERLAP') {
     return {
@@ -136,7 +133,7 @@ export function listRewrites(
     fetchImpl,
     'The saved rewrites could not be loaded. Try again.',
     (body) =>
-      isObject(body) && Array.isArray(body.rewrites) ? body.rewrites.filter(isRewriteState).map(cleanRewrite) : null
+      isRecord(body) && Array.isArray(body.rewrites) ? body.rewrites.filter(isRewriteState).map(cleanRewrite) : null
   );
 }
 

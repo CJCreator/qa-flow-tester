@@ -11,26 +11,19 @@
  * Not registered here: BE-190 adds `...auditRerunRoutes({ store, caller, runs, resolveAi, resolveServiceKey })`
  * to allRoutes, with the same `runs` instance as the start route.
  */
-import {
-  AUDIT_API,
-  AUDIT_ID_PATTERN,
-  type AuditAccess,
-  type AuditErrorCode,
-  type AuditErrorReply,
-  type AuditRequest,
-  type AuditStartReply,
-} from '@qa/types';
-import { checkAuditAddress, type AuditAddressResult, type AuditStore } from '@qa/core';
+import { AUDIT_API, AUDIT_ID_PATTERN, type AuditAccess, type AuditRequest, type AuditStartReply } from '@qa/types';
+import { checkAuditAddress, type AuditStore } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
 import { sendJson } from './body.js';
 import type { AuditCaller } from './audit-store.js';
+import { refuse } from './audit-common.js';
 import {
   AUDIT_BUSY,
   AUDIT_NOT_FOUND_STREAM,
   AUDIT_START_FAILED,
-  AUDIT_UNREACHABLE,
   auditPipelineStep,
   getRunningInfo,
+  passesStartChecks,
   runAuditVersion,
   type AuditAddressCheck,
   type AuditPipelineStepDeps,
@@ -63,22 +56,6 @@ export interface AuditRerunRouteDeps extends Omit<AuditRunServices, 'store'> {
   start?: AuditStarter;
   /** Test seam / wiring: check and claim an audit start against AUDIT_DAILY_LIMIT (T-86). */
   claimAuditLimit?: (email?: string) => { allowed: boolean; error?: string };
-}
-
-function refuse(
-  res: Parameters<typeof sendJson>[0],
-  status: number,
-  code: AuditErrorCode,
-  error: string,
-  extra?: { fields?: AuditErrorReply['fields']; running?: AuditErrorReply['running'] }
-): void {
-  const body: AuditErrorReply = {
-    error,
-    code,
-    ...(extra?.fields ? { fields: extra.fields } : {}),
-    ...(extra?.running ? { running: extra.running } : {}),
-  };
-  sendJson(res, status, body);
 }
 
 export function createAuditRerunRoutes(deps: AuditRerunRouteDeps): Route[] {
@@ -115,31 +92,11 @@ export function createAuditRerunRoutes(deps: AuditRerunRouteDeps): Route[] {
       return sendJson(res, 500, { error: AUDIT_START_FAILED });
     }
 
-    // Busy now: answer before spending a network check on it. Claimed for real after the check, below.
     const slot = slotOf(context);
-    if (slot.kind !== null) {
-      const running = getRunningInfo(slot, runs);
-      return refuse(res, 409, 'ERR_RUN_IN_PROGRESS', AUDIT_BUSY, { running });
-    }
-
-    let address: AuditAddressResult;
-    try {
-      address = await checkAddress(request.url);
-    } catch {
-      address = { ok: false, code: 'ERR_UNREACHABLE', reason: AUDIT_UNREACHABLE };
-    }
-    if (!address.ok) {
-      if (address.code === 'ERR_PRIVATE_ADDRESS') return refuse(res, 400, 'ERR_PRIVATE_ADDRESS', address.reason);
-      if (address.code === 'ERR_DNS') return refuse(res, 422, 'ERR_DNS', address.reason);
-      return refuse(res, 422, 'ERR_UNREACHABLE', address.reason);
-    }
-
-    // The day's limit is claimed last, after every refusal above, so a refused start costs nothing.
-    if (deps.claimAuditLimit && caller.helperEmail) {
-      const claim = deps.claimAuditLimit(caller.helperEmail);
-      if (!claim.allowed) {
-        return refuse(res, 429, 'ERR_BETA_LIMIT', claim.error ?? 'Daily limit of audit starts reached.');
-      }
+    if (
+      !(await passesStartChecks(res, slot, runs, request.url, checkAddress, deps.claimAuditLimit, caller.helperEmail))
+    ) {
+      return;
     }
 
     // Synchronous claim, no await before it after the check (BE-103).

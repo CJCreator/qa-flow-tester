@@ -15,4 +15,6 @@ export * from './site-map.js';
 export * from './context-parse.js';
 export * from './evidence-finding.js';
 export * from './website-audit.js';
+export * from './guards.js';
+export * from './display.js';
 // Add a module only while the guard test stays green.

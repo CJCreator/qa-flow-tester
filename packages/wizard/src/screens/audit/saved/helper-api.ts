@@ -1,4 +1,5 @@
 import {
+  isRecord,
   AUDIT_API,
   HELPER_PERMISSIONS,
   auditPath,
@@ -59,16 +60,12 @@ export const PERMISSION_LABEL: Readonly<Record<HelperPermission, string>> = {
 /** A loose email check for the form; the runner checks it again. */
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
 function isPermission(value: unknown): value is HelperPermission {
   return typeof value === 'string' && (HELPER_PERMISSIONS as readonly string[]).includes(value);
 }
 
 function asGrant(value: unknown): HelperGrant | null {
-  if (!isObject(value)) return null;
+  if (!isRecord(value)) return null;
   const { auditId, email, permissions, grantedAt } = value;
   if (typeof auditId !== 'string' || typeof email !== 'string' || !Array.isArray(permissions)) return null;
   return {
@@ -90,7 +87,7 @@ function asGrants(value: unknown): HelperGrant[] | null {
 }
 
 function asFirebaseConfig(value: unknown): FirebaseWebConfig | null {
-  if (!isObject(value)) return null;
+  if (!isRecord(value)) return null;
   const { apiKey, authDomain, projectId } = value;
   if (typeof apiKey !== 'string' || typeof authDomain !== 'string' || typeof projectId !== 'string') return null;
   if (apiKey.trim() === '' || authDomain.trim() === '' || projectId.trim() === '') return null;
@@ -98,7 +95,7 @@ function asFirebaseConfig(value: unknown): FirebaseWebConfig | null {
 }
 
 function asSession(body: unknown): HelperSession | null {
-  if (!isObject(body) || typeof body.email !== 'string') return null;
+  if (!isRecord(body) || typeof body.email !== 'string') return null;
   const grants = asGrants(body.grants);
   return grants === null ? null : { email: body.email, grants };
 }
@@ -126,7 +123,7 @@ async function call<T>(
     const value = accept(body);
     return value === null ? { ok: false, message: fallback } : { ok: true, value };
   }
-  const refusal = isObject(body) ? body : {};
+  const refusal = isRecord(body) ? body : {};
   const code = isAuditErrorCode(refusal.code) ? refusal.code : undefined;
   if (code && REFUSALS[code]) return { ok: false, message: REFUSALS[code]!, code };
   const error = typeof refusal.error === 'string' && refusal.error.trim() !== '' ? refusal.error.trim() : fallback;
@@ -220,7 +217,7 @@ export async function loadHelperStatus(fetchImpl: Fetch = fetch): Promise<Helper
     fetchImpl,
     'Could not check whether Helper sign-in is set up. Try again.',
     (body) =>
-      isObject(body) && typeof body.enabled === 'boolean'
+      isRecord(body) && typeof body.enabled === 'boolean'
         ? { enabled: body.enabled, firebase: asFirebaseConfig(body.firebase) }
         : null
   );
@@ -239,7 +236,7 @@ export function listHelpers(auditId: string, fetchImpl: Fetch = fetch): Promise<
     { method: AUDIT_API.listHelpers.method },
     fetchImpl,
     'The Helpers of this Website Audit could not be loaded. Try again.',
-    (body) => (isObject(body) ? asGrants(body.helpers) : null)
+    (body) => (isRecord(body) ? asGrants(body.helpers) : null)
   );
 }
 
@@ -255,7 +252,7 @@ export function grantHelper(
     { method: AUDIT_API.grantHelper.method, headers: JSON_HEADERS, body: JSON.stringify(body) },
     fetchImpl,
     'The access could not be given. Try again.',
-    (reply) => (isObject(reply) ? asGrant(reply.helper) : null)
+    (reply) => (isRecord(reply) ? asGrant(reply.helper) : null)
   );
 }
 
@@ -267,7 +264,7 @@ export function removeHelper(auditId: string, email: string, fetchImpl: Fetch = 
     { method: AUDIT_API.removeHelper.method },
     fetchImpl,
     'The access could not be removed. Try again.',
-    (reply) => (isObject(reply) && reply.removed === true ? true : null)
+    (reply) => (isRecord(reply) && reply.removed === true ? true : null)
   );
 }
 
@@ -303,7 +300,7 @@ export function endHelperSession(fetchImpl: Fetch = fetch): Promise<HelperOutcom
     { method: AUDIT_API.helperSignOut.method },
     fetchImpl,
     'Signing out did not work. Try again.',
-    (reply) => (isObject(reply) && reply.signedOut === true ? true : null)
+    (reply) => (isRecord(reply) && reply.signedOut === true ? true : null)
   ).then((outcome) => {
     if (outcome.ok) announceSessionChange();
     return outcome;

@@ -69,3 +69,31 @@ export function Notice({
     </div>
   );
 }
+
+type StatusText = { tone: string; text: string } | null | undefined;
+
+/** The outcome of an action under a form: an error message on 'fail', otherwise a polite success line. */
+export function StatusMessage({ message }: { message: StatusText }) {
+  if (!message) return null;
+  return message.tone === 'fail' ? (
+    <ErrorMessage>{message.text}</ErrorMessage>
+  ) : (
+    <p role="status" className="text-sm font-semibold text-pass">
+      {message.text}
+    </p>
+  );
+}
+
+/** The same outcome as one line inside a summary (the bottom action bar): an alert on 'fail', else a status. */
+export function InlineStatus({ message }: { message: StatusText }) {
+  if (!message) return null;
+  return message.tone === 'fail' ? (
+    <span role="alert" className="mt-1 block font-semibold text-fail">
+      {message.text}
+    </span>
+  ) : (
+    <span role="status" className="mt-1 block font-semibold text-pass">
+      {message.text}
+    </span>
+  );
+}

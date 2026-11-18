@@ -1,14 +1,8 @@
+export { formatDay } from '@qa/types/src/browser.js';
+
 /** "3 pages", "1 page". */
 export function count(n: number, one: string, many: string): string {
   return `${n} ${n === 1 ? one : many}`;
-}
-
-/** "30 September 2026". */
-export function formatDay(iso: string): string {
-  const date = new Date(iso);
-  return Number.isNaN(date.getTime())
-    ? iso
-    : date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
 /** "30 Sep 2026, 14:05": precise enough to tell two check-ups of one day apart. */
@@ -37,4 +31,13 @@ export function scrollBehavior(): ScrollBehavior {
   return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
     ? 'auto'
     : 'smooth';
+}
+
+/** Scrolls to a section and moves focus to its heading, so keyboard and screen-reader users land there too. */
+export function goToSection(id: string) {
+  const heading = document.getElementById(id);
+  if (!heading) return;
+  if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1');
+  heading.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
+  heading.focus({ preventScroll: true });
 }

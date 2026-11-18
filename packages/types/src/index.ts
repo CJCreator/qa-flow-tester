@@ -25,3 +25,5 @@ export * from './input-rules.js';
 export * from './checkup-api.js';
 export * from './website-audit.js';
 export * from './stored-plan.js';
+export * from './guards.js';
+export * from './display.js';

@@ -11,7 +11,7 @@ import type {
 import { redactUrl } from '../../redact.js';
 import { isSameSite } from '../../same-site.js';
 import { detectPageLanguage } from './language.js';
-import type { RawCtaCandidate, RawPage } from './raw-page.js';
+import { cut, type RawCtaCandidate, type RawPage } from './raw-page.js';
 
 /**
  * Page Content from a RawPage (REQ-008, REQ-009): fixed rules, no AI, no request. Pure and deterministic.
@@ -135,15 +135,6 @@ export function buildPageContent(raw: RawPage, options: PageContentOptions): Pag
     language: detectPageLanguage(text, raw.lang),
     sections,
   };
-}
-
-/** Cuts at `max` UTF-16 units, never inside a surrogate pair. */
-function cut(text: string, max: number): string {
-  if (text.length <= max) return text;
-  let end = max;
-  const code = text.charCodeAt(end - 1);
-  if (end > 0 && code >= 0xd800 && code <= 0xdbff) end -= 1;
-  return text.slice(0, end);
 }
 
 function headingLevel(level: number): HeadingLevel {

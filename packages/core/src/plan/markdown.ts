@@ -1,12 +1,4 @@
-import type { NavigationCheck, PlanPage, ReviewPlan, TestCaseExpectations } from '@qa/types';
-
-export function hostOf(address: string): string {
-  try {
-    return new URL(address).host;
-  } catch {
-    return address;
-  }
-}
+import { hostOf, type NavigationCheck, type PlanPage, type ReviewPlan, type TestCaseExpectations } from '@qa/types';
 
 const BY_FIXED_RULES = ' _(planned by fixed rules)_';
 

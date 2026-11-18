@@ -1,5 +1,6 @@
-import { AUDIT_API, isShortlistOutcome, type ShortlistListReply, type ShortlistReply } from '@qa/types';
+import { isShortlistOutcome, type ShortlistListReply, type ShortlistReply } from '@qa/types';
 import { AuditRecordError, isShortlistMark, type ShortlistFilter } from '@qa/core';
+import { auditRow } from './audit-common.js';
 import type { Route } from './route.js';
 import { readJsonBody, sendJson } from './body.js';
 import {
@@ -15,17 +16,12 @@ import {
 /** A Shortlist update is a few short fields (notes at most 4000 characters, plus JSON). */
 const MAX_SHORTLIST_BODY_CHARS = 20_000;
 
-function row(key: 'getShortlist' | 'putShortlist' | 'listShortlist', handle: Route['handle']): Route {
-  const { method, path, access } = AUDIT_API[key];
-  return { method, path, access, handle };
-}
-
 /** AUDIT_API getShortlist, putShortlist and listShortlist (REQ-023). */
 export function auditShortlistRoutes(deps: Pick<AuditRouteDeps, 'store' | 'caller'>): Route[] {
   const { store } = deps;
 
   return [
-    row('getShortlist', async (context) => {
+    auditRow('getShortlist', async (context) => {
       const { res } = context;
       try {
         const auditId = context.params?.id ?? '';
@@ -50,7 +46,7 @@ export function auditShortlistRoutes(deps: Pick<AuditRouteDeps, 'store' | 'calle
       }
     }),
 
-    row('putShortlist', async (context) => {
+    auditRow('putShortlist', async (context) => {
       const { res } = context;
       try {
         const auditId = context.params?.id ?? '';
@@ -83,7 +79,7 @@ export function auditShortlistRoutes(deps: Pick<AuditRouteDeps, 'store' | 'calle
       }
     }),
 
-    row('listShortlist', async (context) => {
+    auditRow('listShortlist', async (context) => {
       const { res } = context;
       try {
         const filter: ShortlistFilter = {};

@@ -1,3 +1,4 @@
+export { hostOf } from '@qa/types/src/browser.js';
 export type NormalizedUrl = { ok: true; url: string } | { ok: false; reason: string };
 
 const LOCAL_HOSTS = ['localhost', '127.0.0.1', '[::1]'];
@@ -46,15 +47,6 @@ export function displayHost(url: string): string {
   try {
     const u = new URL(url);
     return u.host + (u.pathname === '/' ? '' : u.pathname);
-  } catch {
-    return url;
-  }
-}
-
-/** Just the host, e.g. "shop.example.com" or "localhost:3050". */
-export function hostOf(url: string): string {
-  try {
-    return new URL(url).host;
   } catch {
     return url;
   }

@@ -1,4 +1,5 @@
 import {
+  isRecord,
   AUDIT_API,
   AUDIT_ID_PATTERN,
   auditPath,
@@ -85,18 +86,14 @@ async function call<T>(
   return code ? { ok: false, error: message, code } : { ok: false, error: message };
 }
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
 function isGetReply(body: unknown): body is AuditGetReply {
-  if (!isObject(body) || !isObject(body.version) || !('result' in body)) return false;
+  if (!isRecord(body) || !isRecord(body.version) || !('result' in body)) return false;
   const result = body.result;
-  return result === null || (isObject(result) && Array.isArray(result.pages) && Array.isArray(result.findings));
+  return result === null || (isRecord(result) && Array.isArray(result.pages) && Array.isArray(result.findings));
 }
 
 function isContentReply(body: unknown): body is AuditContentReply {
-  return isObject(body) && isObject(body.content) && typeof body.content.urlPath === 'string';
+  return isRecord(body) && isRecord(body.content) && typeof body.content.urlPath === 'string';
 }
 
 /** One version of a Website Audit (the latest without `version`), with its result once it has finished. */

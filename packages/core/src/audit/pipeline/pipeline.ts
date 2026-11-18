@@ -47,7 +47,7 @@ import type { HostPacer } from '../../host-pacer.js';
 import { isLocalOriginHost, type NetDeps } from '../../safe-net.js';
 import type { AuditStore } from '../store/audit-store.js';
 import type { AuditCrawlResult } from '../crawl/crawl.js';
-import { createFindingIdAllocator } from '../analysis/finding-ids.js';
+import { createFindingIdAllocator, uniqueIds } from '../analysis/finding-ids.js';
 import { EMPTY_RAW_LISTS } from '../analysis/raw-page.js';
 import { skipKey } from '../analysis/broken-links.js';
 import { analyseSite, type AnalysisPage, type SiteAnalysis } from '../analysis/analyse-site.js';
@@ -243,10 +243,6 @@ function notDoneAreas(grades: AreaGrades, reason: AssessmentNotDoneReason): Area
 /** The deterministic grade always wins over whatever came back. */
 function withGrades(areas: readonly AreaAssessment[], grades: AreaGrades): AreaAssessment[] {
   return areas.map((a) => ({ ...a, grade: grades[a.area] ?? null }));
-}
-
-function unique(ids: readonly string[]): string[] {
-  return [...new Set(ids)];
 }
 
 function rethrowIfStopped(err: unknown, signal: AbortSignal | undefined): void {
@@ -478,7 +474,7 @@ export async function runAuditPipeline(
     }
     phoneByPath.set(p.info.urlPath, {
       ...p.phone.phone,
-      findingIds: unique(p.phone.phone.findingIds.map((id) => remap.get(id)).filter((id): id is string => !!id)),
+      findingIds: uniqueIds(p.phone.phone.findingIds.map((id) => remap.get(id)).filter((id): id is string => !!id)),
     });
   }
 
@@ -751,7 +747,7 @@ export async function runAuditPipeline(
     findings = scored;
     record('ranking', 'ranking', false, NOTES.ranking);
   }
-  const re = (list: readonly string[]) => unique(list.map((id) => idMap.get(id) ?? id));
+  const re = (list: readonly string[]) => uniqueIds(list.map((id) => idMap.get(id) ?? id));
   for (const p of pages) {
     p.seo = { ...p.seo, findingIds: re(p.seo.findingIds) };
     if (p.accessibility) p.accessibility = { ...p.accessibility, findingIds: re(p.accessibility.findingIds) };

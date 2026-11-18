@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ErrorMessage, Spinner } from '../../../components/text';
+import { Spinner, StatusMessage } from '../../../components/text';
 import { LoadError } from '../../../components/ui';
 import {
   AUDIT_AI_STAGES,
@@ -104,14 +104,7 @@ export function AuditAiModelsView({
           {text}
         </p>
       ))}
-      {message &&
-        (message.tone === 'fail' ? (
-          <ErrorMessage>{message.text}</ErrorMessage>
-        ) : (
-          <p role="status" className="text-sm font-semibold text-pass">
-            {message.text}
-          </p>
-        ))}
+      <StatusMessage message={message} />
     </section>
   );
 }

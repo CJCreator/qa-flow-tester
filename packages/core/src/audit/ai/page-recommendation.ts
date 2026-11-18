@@ -37,6 +37,7 @@ import { logAiFailure, type AreaGrades } from './assessment.js';
 import { CLAIM_WORDS_PROMPT as NOT_ALLOWED, findClaimWords } from './claim-words.js';
 import {
   classifyAiError,
+  clip,
   languageName,
   redactAiMessage,
   type AuditAi,
@@ -80,7 +81,6 @@ export interface RecommendPagesInput {
 
 // Prompt size caps: page text is untrusted and unbounded.
 const MAX_FINDINGS_SENT = 60;
-const MAX_FIELD_CHARS = 200;
 const MAX_REASON_CHARS = 800;
 
 /** Pages asked at once (ADR 0043): the requests go to the AI Provider, not the audited site. */
@@ -340,8 +340,4 @@ function repairPrompt(problems: Problem[], language: DocumentLanguage): string {
   }
   if (problems.includes('ids')) parts.push('"findingIds" must list at least one id from the findings list.');
   return `${parts.join(' ')} Write in ${languageName(language)}. Answer again with ONLY the JSON object ${ANSWER_SHAPE}.`;
-}
-
-function clip(text: string): string {
-  return text.length > MAX_FIELD_CHARS ? `${text.slice(0, MAX_FIELD_CHARS)}…` : text;
 }

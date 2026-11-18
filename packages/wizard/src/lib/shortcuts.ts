@@ -3,6 +3,8 @@
  * They never fire while someone types in a form control, and the person can switch them off (saved in localStorage, on by default).
  */
 
+import { defaultStorage } from './theme';
+
 export const SINGLE_KEY_SHORTCUTS = ['j', 'k', 'g', 'G'] as const;
 
 /** An open dialog of either kind: a native <dialog> opened with showModal (ConfirmDialog) or role="dialog" (the palette). */
@@ -12,16 +14,8 @@ const STORAGE_KEY = 'qa-single-key-shortcuts';
 
 type Store = Pick<Storage, 'getItem' | 'setItem'>;
 
-function defaultStore(): Store | undefined {
-  try {
-    return typeof localStorage === 'undefined' ? undefined : localStorage;
-  } catch {
-    return undefined;
-  }
-}
-
 /** On unless the person switched it off. Storage that is blocked or unreadable counts as on. */
-export function readSingleKeyShortcuts(storage: Pick<Store, 'getItem'> | undefined = defaultStore()): boolean {
+export function readSingleKeyShortcuts(storage: Pick<Store, 'getItem'> | undefined = defaultStorage()): boolean {
   try {
     return storage?.getItem(STORAGE_KEY) !== 'off';
   } catch {
@@ -32,7 +26,7 @@ export function readSingleKeyShortcuts(storage: Pick<Store, 'getItem'> | undefin
 /** Saves the choice. If storage is blocked the choice lasts until the page is closed. */
 export function writeSingleKeyShortcuts(
   on: boolean,
-  storage: Pick<Store, 'setItem'> | undefined = defaultStore()
+  storage: Pick<Store, 'setItem'> | undefined = defaultStorage()
 ): void {
   try {
     storage?.setItem(STORAGE_KEY, on ? 'on' : 'off');

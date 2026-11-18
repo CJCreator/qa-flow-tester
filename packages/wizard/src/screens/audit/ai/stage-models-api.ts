@@ -1,4 +1,4 @@
-import { type AuditErrorCode } from '@qa/types/src/browser.js';
+import { isRecord, type AuditErrorCode } from '@qa/types/src/browser.js';
 import { isAuditErrorCode, NOT_ANSWERING } from '../audit-call';
 
 /**
@@ -105,17 +105,13 @@ const REFUSALS: Partial<Record<AuditErrorCode, string>> = {
   ERR_FORBIDDEN: 'Only the tool user can change the AI models.',
 };
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
 function modelId(value: unknown): string | null {
   return typeof value === 'string' && value.trim() !== '' ? value : null;
 }
 
 /** The reply with only well-formed values for the known tasks, or null when it is not a models reply. */
 function acceptReply(body: unknown): AuditAiModelsReply | null {
-  if (!isObject(body) || !isObject(body.models) || !isObject(body.defaults) || !isObject(body.effective)) return null;
+  if (!isRecord(body) || !isRecord(body.models) || !isRecord(body.defaults) || !isRecord(body.effective)) return null;
   const reply: AuditAiModelsReply = {
     models: {},
     defaults: { text: modelId(body.defaults.text), vision: modelId(body.defaults.vision) },
@@ -131,7 +127,7 @@ function acceptReply(body: unknown): AuditAiModelsReply | null {
 
 /** The message per field of a 400, from `errors` or `fields`; only string messages are kept. */
 function fieldErrors(refusal: Record<string, unknown>): AuditAiModelsErrors | undefined {
-  const source = isObject(refusal.errors) ? refusal.errors : isObject(refusal.fields) ? refusal.fields : undefined;
+  const source = isRecord(refusal.errors) ? refusal.errors : isRecord(refusal.fields) ? refusal.fields : undefined;
   if (!source) return undefined;
   const errors: AuditAiModelsErrors = {};
   for (const [field, message] of Object.entries(source)) {
@@ -169,7 +165,7 @@ async function call(
     const value = acceptReply(body);
     return value === null ? { ok: false, message: fallback } : { ok: true, value };
   }
-  const refusal = isObject(body) ? body : {};
+  const refusal = isRecord(body) ? body : {};
   const code = isAuditErrorCode(refusal.code) ? refusal.code : undefined;
   if (code && REFUSALS[code]) return { ok: false, message: REFUSALS[code]!, code };
   const errors = res.status === 400 ? fieldErrors(refusal) : undefined;

@@ -1,4 +1,6 @@
 import {
+  isRecord,
+  PROPOSAL_PLACEHOLDERS,
   AUDIT_API,
   auditPath,
   type AuditErrorCode,
@@ -6,7 +8,7 @@ import {
   type AuditSettingsUpdate,
   type CompanyDetails,
 } from '@qa/types/src/browser.js';
-import { isAuditErrorCode, NOT_ANSWERING } from '../audit-call';
+import { callAudit } from '../audit-call';
 
 /**
  * The document settings screen's calls to the runner (REQ-027, REQ-019, REQ-018): the saved settings and
@@ -33,29 +35,8 @@ export const COMPANY_FIELDS: readonly (keyof CompanyDetails)[] = [
   'terms',
 ];
 
-/**
- * The placeholders a Proposal template may use. Kept in step with `PROPOSAL_PLACEHOLDERS` of
- * packages/core/src/audit/documents/proposal.ts (the wizard cannot import @qa/core; a test compares both).
- */
-export const PROPOSAL_PLACEHOLDERS: ReadonlyArray<{ name: string; description: string }> = [
-  { name: 'findings_summary', description: 'How many findings per group, and the top findings with their page.' },
-  { name: 'scope', description: 'Each page with redesign or repair, as edited.' },
-  { name: 'not_included', description: 'The "not included" lines of this audit, or the default list.' },
-  { name: 'price', description: 'The price in INR as written for this audit; a "to fill in" marker when empty.' },
-  {
-    name: 'payment_terms',
-    description: 'The payment terms as written for this audit; a "to fill in" marker when empty.',
-  },
-  { name: 'timeline', description: 'The Improvement Roadmap phases and their items.' },
-  { name: 'company.name', description: 'Your company name.' },
-  { name: 'company.address', description: 'Your company address.' },
-  { name: 'company.phone', description: 'Your company phone number.' },
-  { name: 'company.email', description: 'Your company email address.' },
-  { name: 'company.website', description: 'Your company website.' },
-  { name: 'company.terms', description: 'Your terms and conditions.' },
-  { name: 'site.url', description: 'The address of the audited website.' },
-  { name: 'date', description: 'The date the Proposal is made (YYYY-MM-DD).' },
-];
+/** The placeholders a Proposal template may use: the one list in @qa/types, shared with the filler in @qa/core. */
+export { PROPOSAL_PLACEHOLDERS };
 
 /** What the screen's fields hold. */
 export interface SettingsDraft {
@@ -140,46 +121,22 @@ const REFUSALS: Partial<Record<AuditErrorCode, string>> = {
   ERR_FORBIDDEN: 'Only the tool user can change the document settings.',
 };
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
 function acceptReply(body: unknown): AuditSettingsReply | null {
-  if (!isObject(body) || !isObject(body.settings) || !isObject(body.defaults)) return null;
+  if (!isRecord(body) || !isRecord(body.settings) || !isRecord(body.defaults)) return null;
   const { settings, defaults } = body;
-  if (typeof settings.proposalTemplate !== 'string' || !isObject(settings.optOutText) || !isObject(settings.company))
+  if (typeof settings.proposalTemplate !== 'string' || !isRecord(settings.optOutText) || !isRecord(settings.company))
     return null;
-  if (typeof defaults.proposalTemplate !== 'string' || !isObject(defaults.optOutText)) return null;
+  if (typeof defaults.proposalTemplate !== 'string' || !isRecord(defaults.optOutText)) return null;
   return body as unknown as AuditSettingsReply;
 }
 
-async function call(
+function call(
   url: string,
   init: RequestInit,
   fetchImpl: Fetch,
   fallback: string
 ): Promise<SettingsOutcome<AuditSettingsReply>> {
-  let res: Response;
-  try {
-    res = await fetchImpl(url, init);
-  } catch {
-    return { ok: false, message: NOT_ANSWERING };
-  }
-  let body: unknown;
-  try {
-    body = await res.json();
-  } catch {
-    body = undefined;
-  }
-  if (res.ok) {
-    const value = acceptReply(body);
-    return value === null ? { ok: false, message: fallback } : { ok: true, value };
-  }
-  const refusal = isObject(body) ? body : {};
-  const code = isAuditErrorCode(refusal.code) ? refusal.code : undefined;
-  if (code && REFUSALS[code]) return { ok: false, message: REFUSALS[code]!, code };
-  const error = typeof refusal.error === 'string' && refusal.error.trim() !== '' ? refusal.error.trim() : fallback;
-  return { ok: false, message: error, code };
+  return callAudit(url, init, fetchImpl, fallback, acceptReply, REFUSALS);
 }
 
 /** `GET /api/audit-settings`: the saved settings and the tool's defaults. */

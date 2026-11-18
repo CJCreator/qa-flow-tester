@@ -1,4 +1,5 @@
 import {
+  isRecord,
   AUDIT_API,
   auditPath,
   isShortlistOutcome,
@@ -15,7 +16,7 @@ import {
   type ShortlistOutcome,
   type ShortlistUpdate,
 } from '@qa/types/src/browser.js';
-import { isAuditErrorCode, NOT_ANSWERING } from '../audit-call';
+import { withQuery, callAudit } from '../audit-call';
 import { count } from '../../../lib/format';
 import { watchAudit, type AuditEventSourceFactory } from '../start/audit-start-api';
 
@@ -60,50 +61,19 @@ const REFUSALS: Partial<Record<AuditErrorCode, string>> = {
   ERR_FORBIDDEN: 'You do not have permission to do this on this Website Audit.',
 };
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
-function withQuery(path: string, query: Record<string, string | number | undefined>): string {
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(query)) if (value !== undefined) params.set(key, String(value));
-  const text = params.toString();
-  return text === '' ? path : `${path}?${text}`;
-}
-
-async function call<T>(
+function call<T>(
   url: string,
   init: RequestInit,
   fetchImpl: Fetch,
   fallback: string,
   accept: (body: unknown) => T | null
 ): Promise<SavedOutcome<T>> {
-  let res: Response;
-  try {
-    res = await fetchImpl(url, init);
-  } catch {
-    return { ok: false, message: NOT_ANSWERING };
-  }
-  let body: unknown;
-  try {
-    body = await res.json();
-  } catch {
-    body = undefined;
-  }
-  if (res.ok) {
-    const value = accept(body);
-    return value === null ? { ok: false, message: fallback } : { ok: true, value };
-  }
-  const refusal = isObject(body) ? body : {};
-  const code = isAuditErrorCode(refusal.code) ? refusal.code : undefined;
-  if (code && REFUSALS[code]) return { ok: false, message: REFUSALS[code]!, code };
-  const error = typeof refusal.error === 'string' && refusal.error.trim() !== '' ? refusal.error.trim() : fallback;
-  return { ok: false, message: error, code };
+  return callAudit(url, init, fetchImpl, fallback, accept, REFUSALS);
 }
 
 function isSummary(value: unknown): value is AuditSummary {
   return (
-    isObject(value) &&
+    isRecord(value) &&
     typeof value.auditId === 'string' &&
     typeof value.url === 'string' &&
     Array.isArray(value.versions)
@@ -111,7 +81,7 @@ function isSummary(value: unknown): value is AuditSummary {
 }
 
 function isEntry(value: unknown): value is ShortlistEntry {
-  return isObject(value) && typeof value.auditId === 'string' && typeof value.notes === 'string';
+  return isRecord(value) && typeof value.auditId === 'string' && typeof value.notes === 'string';
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -125,7 +95,7 @@ export function listAudits(fetchImpl: Fetch = fetch): Promise<SavedOutcome<Audit
     { method: AUDIT_API.list.method },
     fetchImpl,
     'Your saved Website Audits could not be listed. Try again.',
-    (body) => (isObject(body) && Array.isArray(body.audits) && body.audits.every(isSummary) ? body.audits : null)
+    (body) => (isRecord(body) && Array.isArray(body.audits) && body.audits.every(isSummary) ? body.audits : null)
   );
 }
 
@@ -141,7 +111,7 @@ export function loadVersion(
     fetchImpl,
     'The Website Audit could not be opened. Try again.',
     (body) =>
-      isObject(body) && isSummary(body.summary) && isObject(body.version) ? (body as unknown as AuditGetReply) : null
+      isRecord(body) && isSummary(body.summary) && isRecord(body.version) ? (body as unknown as AuditGetReply) : null
   );
 }
 
@@ -153,7 +123,7 @@ export function rerunAudit(auditId: string, fetchImpl: Fetch = fetch): Promise<S
     fetchImpl,
     'The Website Audit could not be re-run. Try again.',
     (body) =>
-      isObject(body) && typeof body.version === 'number' && typeof body.auditId === 'string'
+      isRecord(body) && typeof body.version === 'number' && typeof body.auditId === 'string'
         ? (body as unknown as AuditStartReply)
         : null
   );
@@ -180,7 +150,7 @@ export function deleteAudit(auditId: string, fetchImpl: Fetch = fetch): Promise<
     { method: AUDIT_API.remove.method },
     fetchImpl,
     'The Website Audit could not be deleted. Try again.',
-    (body) => (isObject(body) && body.deleted === true ? true : null)
+    (body) => (isRecord(body) && body.deleted === true ? true : null)
   );
 }
 
@@ -191,7 +161,7 @@ export function loadShortlistEntry(auditId: string, fetchImpl: Fetch = fetch): P
     { method: AUDIT_API.getShortlist.method },
     fetchImpl,
     'The Shortlist entry could not be loaded. Try again.',
-    (body) => (isObject(body) && isEntry(body.entry) ? body.entry : null)
+    (body) => (isRecord(body) && isEntry(body.entry) ? body.entry : null)
   );
 }
 
@@ -210,7 +180,7 @@ export function saveShortlistEntry(
     },
     fetchImpl,
     'The Shortlist entry could not be saved. Try again.',
-    (body) => (isObject(body) && isEntry(body.entry) ? body.entry : null)
+    (body) => (isRecord(body) && isEntry(body.entry) ? body.entry : null)
   );
 }
 
@@ -225,7 +195,7 @@ export function listShortlist(
     fetchImpl,
     'The Shortlist could not be loaded. Try again.',
     (body) =>
-      isObject(body) && Array.isArray(body.entries) && body.entries.every(isEntry)
+      isRecord(body) && Array.isArray(body.entries) && body.entries.every(isEntry)
         ? (body.entries as ShortlistListItem[])
         : null
   );

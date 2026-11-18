@@ -9,6 +9,7 @@ import {
   pageBatches,
   PAGES_PER_REQUEST,
   planBatch,
+  plannedAs,
   testedPages,
   type PagePlannerInput,
   type PagePlannerOutput,
@@ -33,12 +34,6 @@ export interface PlanPipelineOptions {
   /** The page the App Flow starts from while the crawl runs. */
   startPath: string;
   onProgress?: (progress: PlannerProgress) => void;
-}
-
-/** Who a page's tests run as: the explorer whose view they were planned from (same rule as the planner). */
-function explorerOf(page: PageInventoryItem): string {
-  const reached = page.reachedBy?.length ? page.reachedBy : ['visitor'];
-  return reached[reached.length - 1];
 }
 
 /**
@@ -142,7 +137,7 @@ export class PlanPipeline {
     for (const page of testedPages(final)) {
       const first = this.seen.get(pathOf(page.urlPath));
       const entry = this.planned.get(pathOf(page.urlPath));
-      const who = explorerOf(page);
+      const who = plannedAs(page);
       if (!first || !entry || entry.origin === undefined || first.who === who) continue;
       if (first.contentKey === page.contentKey) continue;
       this.queue.push([page]);

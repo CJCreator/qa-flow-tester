@@ -12,6 +12,7 @@
  */
 
 import {
+  isRecord,
   sectionText,
   type AuditEditsPatch,
   type AuditFinding,
@@ -62,10 +63,6 @@ export type AuditEditsErrors = Record<string, string>;
 export type AuditEditsCheck = { ok: true; value: AuditEditsPatch } | { ok: false; errors: AuditEditsErrors };
 
 type Obj = Record<string, unknown>;
-
-function isObject(value: unknown): value is Obj {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
 
 /** Control characters other than tab, line feed and carriage return. */
 // eslint-disable-next-line no-control-regex
@@ -132,7 +129,7 @@ function validateFindings(input: unknown, errors: AuditEditsErrors): AuditEditsP
   const textKeys = ['title', 'detail', 'suggestion'] as const;
   list.forEach((entry, i) => {
     const at = `findings[${i}]`;
-    if (!isObject(entry)) {
+    if (!isRecord(entry)) {
       errors[at] = 'must be an object with a findingId.';
       return;
     }
@@ -167,7 +164,7 @@ function validateSections(input: unknown, errors: AuditEditsErrors): AuditEditsP
   const out: NonNullable<AuditEditsPatch['sections']> = [];
   list.forEach((entry, i) => {
     const at = `sections[${i}]`;
-    if (!isObject(entry)) {
+    if (!isRecord(entry)) {
       errors[at] = 'must be an object with a urlPath and a sectionId.';
       return;
     }
@@ -200,7 +197,7 @@ function validateRecommendations(input: unknown, errors: AuditEditsErrors): Audi
   const out: NonNullable<AuditEditsPatch['recommendations']> = [];
   list.forEach((entry, i) => {
     const at = `recommendations[${i}]`;
-    if (!isObject(entry)) {
+    if (!isRecord(entry)) {
       errors[at] = 'must be an object with a urlPath.';
       return;
     }
@@ -220,7 +217,7 @@ function validateRecommendations(input: unknown, errors: AuditEditsErrors): Audi
 }
 
 function validateProposal(input: unknown, errors: AuditEditsErrors): ProposalInputs | undefined {
-  if (!isObject(input)) {
+  if (!isRecord(input)) {
     errors.proposal = 'must be an object with price, paymentTerms or notIncluded.';
     return undefined;
   }
@@ -254,7 +251,7 @@ function validateProposal(input: unknown, errors: AuditEditsErrors): ProposalInp
  */
 export function validateAuditEditsPatch(body: unknown): AuditEditsCheck {
   const errors: AuditEditsErrors = {};
-  if (!isObject(body)) return { ok: false, errors: { body: 'must be an object.' } };
+  if (!isRecord(body)) return { ok: false, errors: { body: 'must be an object.' } };
   unknownKeys(body, ['findings', 'sections', 'removePages', 'restorePages', 'recommendations', 'proposal'], '', errors);
 
   const value: AuditEditsPatch = {};

@@ -1,4 +1,5 @@
 import {
+  isRecord,
   AUDIT_API,
   auditPath,
   type AuditContentReply,
@@ -9,7 +10,7 @@ import {
   type EditOverlay,
   type PageContent,
 } from '@qa/types/src/browser.js';
-import { isAuditErrorCode, NOT_ANSWERING } from '../audit-call';
+import { withQuery, callAudit } from '../audit-call';
 
 /**
  * The review and edit screen's calls to the runner (REQ-020): the version and its edits
@@ -28,51 +29,21 @@ const REFUSALS: Partial<Record<AuditErrorCode, string>> = {
   ERR_FORBIDDEN: 'You do not have permission to do this on this Website Audit.',
 };
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
 /** `?version=2&path=…`, with only the values that are set. */
-function withQuery(path: string, query: Record<string, string | number | undefined>): string {
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(query)) if (value !== undefined) params.set(key, String(value));
-  const text = params.toString();
-  return text === '' ? path : `${path}?${text}`;
-}
 
-async function call<T>(
+function call<T>(
   url: string,
   init: RequestInit,
   fetchImpl: Fetch,
   fallback: string,
   accept: (body: unknown) => T | null
 ): Promise<ReviewOutcome<T>> {
-  let res: Response;
-  try {
-    res = await fetchImpl(url, init);
-  } catch {
-    return { ok: false, message: NOT_ANSWERING };
-  }
-  let body: unknown;
-  try {
-    body = await res.json();
-  } catch {
-    body = undefined;
-  }
-  if (res.ok) {
-    const value = accept(body);
-    return value === null ? { ok: false, message: fallback } : { ok: true, value };
-  }
-  const refusal = isObject(body) ? body : {};
-  const code = isAuditErrorCode(refusal.code) ? refusal.code : undefined;
-  if (code && REFUSALS[code]) return { ok: false, message: REFUSALS[code]!, code };
-  const error = typeof refusal.error === 'string' && refusal.error.trim() !== '' ? refusal.error.trim() : fallback;
-  return { ok: false, message: error, code };
+  return callAudit(url, init, fetchImpl, fallback, accept, REFUSALS);
 }
 
 function isEditOverlay(value: unknown): value is EditOverlay {
   return (
-    isObject(value) &&
+    isRecord(value) &&
     Array.isArray(value.findings) &&
     Array.isArray(value.sections) &&
     Array.isArray(value.removedPages) &&
@@ -81,7 +52,7 @@ function isEditOverlay(value: unknown): value is EditOverlay {
 }
 
 function acceptEdits(body: unknown): EditOverlay | null {
-  return isObject(body) && isEditOverlay(body.edits) ? body.edits : null;
+  return isRecord(body) && isEditOverlay(body.edits) ? body.edits : null;
 }
 
 /** `GET /api/audits/:id`: the version (the latest when `version` is not given), its result and its edits. */
@@ -96,8 +67,8 @@ export function loadAudit(
     fetchImpl,
     'The Website Audit could not be opened. Try again.',
     (body) => {
-      if (!isObject(body) || !isObject(body.version) || !isEditOverlay(body.edits)) return null;
-      if (body.result !== null && !isObject(body.result)) return null;
+      if (!isRecord(body) || !isRecord(body.version) || !isEditOverlay(body.edits)) return null;
+      if (body.result !== null && !isRecord(body.result)) return null;
       return body as unknown as AuditGetReply;
     }
   );
@@ -131,8 +102,8 @@ export function loadPageContent(
     fetchImpl,
     'The Page Content of this page could not be loaded. Try again.',
     (body) => {
-      const content = isObject(body) ? (body as Partial<AuditContentReply>).content : undefined;
-      return isObject(content) && typeof content.text === 'string' && Array.isArray(content.sections) ? content : null;
+      const content = isRecord(body) ? (body as Partial<AuditContentReply>).content : undefined;
+      return isRecord(content) && typeof content.text === 'string' && Array.isArray(content.sections) ? content : null;
     }
   );
 }

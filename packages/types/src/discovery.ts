@@ -160,6 +160,28 @@ export interface DiscoveredFlow {
   docSource?: DocSource;
 }
 
+/** A form the crawler found, as the draft plan and the planner keep it: only what plan steps may use. */
+export interface DraftForm {
+  urlPath: string;
+  inputs: Array<{
+    selector: string;
+    /** Facts read from the field's attributes; absent when the page does not set them. */
+    type?: string;
+    label?: string;
+    required?: boolean;
+    pattern?: string;
+    min?: string;
+    max?: string;
+    minLength?: number;
+    maxLength?: number;
+  }>;
+  submitButtonSelector?: string;
+  /** Steps that open the form first (a tab, drawer or dialog); recorded by the Spider. */
+  opening?: TestCaseStep[];
+  /** How the form is sent: GET only fetches a page (a search); anything else sends data. */
+  method?: string;
+}
+
 export interface DiscoveryDraft {
   version: string;
   productId: string;
@@ -192,26 +214,7 @@ export interface DiscoveryDraft {
   /** Site category: 'shop' | 'SaaS' | 'content' | 'booking' | 'app' | 'other' */
   siteType?: 'shop' | 'SaaS' | 'content' | 'booking' | 'app' | 'other';
   /** Form fields and submit buttons the crawler found. Plan steps may use their selectors too. */
-  forms?: Array<{
-    urlPath: string;
-    inputs: Array<{
-      selector: string;
-      /** Facts read from the field's attributes; absent when the page does not set them. */
-      type?: string;
-      label?: string;
-      required?: boolean;
-      pattern?: string;
-      min?: string;
-      max?: string;
-      minLength?: number;
-      maxLength?: number;
-    }>;
-    submitButtonSelector?: string;
-    /** Steps that open the form first (a tab, drawer or dialog); recorded by the Spider. */
-    opening?: TestCaseStep[];
-    /** How the form is sent: GET only fetches a page (a search); anything else sends data. */
-    method?: string;
-  }>;
+  forms?: DraftForm[];
   /** True when this plan runs read-only because the site isn't a test copy. */
   readOnly?: boolean;
   /** The complete Plan's pages and Navigation Checks (ADR 0009). Journeys stay in `flows`. */

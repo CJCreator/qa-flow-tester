@@ -8,7 +8,17 @@ import {
   emptyOverlay,
   type AuditStore,
 } from '@qa/core';
-import type { AuditErrorCode, AuditErrorReply, EditOverlay, AuditResult, PageContent } from '@qa/types';
+import {
+  AUDIT_API,
+  type AuditAccess,
+  type AuditEndpointName,
+  type AuditErrorCode,
+  type AuditErrorReply,
+  type EditOverlay,
+  type AuditResult,
+  type PageContent,
+} from '@qa/types';
+import type { Route } from './route.js';
 import { sendJson } from './body.js';
 
 const VERSION = /^[1-9][0-9]{0,6}$/;
@@ -23,9 +33,29 @@ export function versionQuery(url: URL): number | undefined | 'invalid' {
   return VERSION.test(raw) ? Number(raw) : 'invalid';
 }
 
-/** A refusal with its fixed code and message. */
-export function refuse(res: http.ServerResponse, status: number, code: AuditErrorCode, error: string): void {
-  const body: AuditErrorReply = { error, code };
+/** A route row whose method, path and access come from AUDIT_API, so a row can never drift from the contract. */
+export function auditRow(
+  key: AuditEndpointName,
+  handle: Route['handle']
+): Route & { method: string; access: AuditAccess } {
+  const { method, path, access } = AUDIT_API[key];
+  return { method, path, access, handle };
+}
+
+/** A refusal with its fixed code and message, plus the field messages or the running check-up when given. */
+export function refuse(
+  res: http.ServerResponse,
+  status: number,
+  code: AuditErrorCode,
+  error: string,
+  extra?: { fields?: AuditErrorReply['fields']; running?: AuditErrorReply['running'] }
+): void {
+  const body: AuditErrorReply = {
+    error,
+    code,
+    ...(extra?.fields ? { fields: extra.fields } : {}),
+    ...(extra?.running ? { running: extra.running } : {}),
+  };
   sendJson(res, status, body);
 }
 

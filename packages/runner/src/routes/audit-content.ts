@@ -1,7 +1,7 @@
-import { AUDIT_API, type AuditAccess, type AuditContentReply, type PageContent } from '@qa/types';
+import { type AuditContentReply, type PageContent } from '@qa/types';
 import { pageContentName, type AuditStore } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
-import { versionQuery } from './audit-common.js';
+import { auditRow, versionQuery } from './audit-common.js';
 import { sendJson } from './body.js';
 import { AUDIT_NOT_FOUND, mayUseAudit, refuse, refuseStoreFailure, type AuditCaller } from './audit-store.js';
 
@@ -41,11 +41,6 @@ function screenshotType(raw: string | null): string | null {
   if (/[\u0000-\u001f\u007f]/.test(raw)) return null;
   const dot = raw.lastIndexOf('.');
   return IMAGE_TYPES[raw.slice(dot + 1).toLowerCase()] ?? null;
-}
-
-function row(key: 'content' | 'file', handle: Route['handle']): Route & { method: string; access: AuditAccess } {
-  const { method, path, access } = AUDIT_API[key];
-  return { method, path, access, handle };
 }
 
 /** AUDIT_API content and file (REQ-048, REQ-020). BE-190 registers these in the route table. */
@@ -116,5 +111,5 @@ export function auditContentRoutes(deps: AuditContentRouteDeps): Route[] {
     }
   };
 
-  return [row('content', getContent), row('file', getFile)];
+  return [auditRow('content', getContent), auditRow('file', getFile)];
 }

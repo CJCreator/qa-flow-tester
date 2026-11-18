@@ -59,6 +59,7 @@ import {
   type RunOptions,
   type ModelRecord,
   type MemorySummary,
+  toDraftForm,
 } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
 import { readJsonBody, sendJson } from './body.js';
@@ -621,23 +622,7 @@ async function crawlMore(
         reachedBy: [who],
         links: p.links?.map((l) => ({ ...l, seenBy: [who] })),
       })),
-      forms: result.forms.map((f) => ({
-        urlPath: f.urlPath,
-        inputs: f.inputs.map((i) => ({
-          selector: i.selector,
-          type: i.type,
-          label: i.label,
-          required: i.required,
-          pattern: i.pattern,
-          min: i.min,
-          max: i.max,
-          minLength: i.minLength,
-          maxLength: i.maxLength,
-        })),
-        submitButtonSelector: f.submitButtonSelector,
-        method: f.method,
-        ...(f.opening?.length ? { opening: f.opening } : {}),
-      })),
+      forms: result.forms.map(toDraftForm),
     };
   } finally {
     await browser.close();

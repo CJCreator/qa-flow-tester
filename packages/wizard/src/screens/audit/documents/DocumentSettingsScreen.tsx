@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import type { AuditSettingsReply, AuditSettingsUpdate, CompanyDetails } from '@qa/types/src/browser.js';
 import { useConfirm } from '../../../components/ConfirmDialog';
-import { Spinner } from '../../../components/text';
+import { InlineStatus, Spinner } from '../../../components/text';
 import { BottomActionBar, LoadError, Page, PageHeader } from '../../../components/ui';
 import { PATHS } from '../../../lib/router';
 import { useDocumentTitle } from '../../../lib/title';
@@ -313,16 +313,7 @@ export function DocumentSettingsView({
               <span aria-live="polite">
                 {pending ? 'You have changes that are not saved yet.' : 'Every change is saved.'}
               </span>
-              {message &&
-                (message.tone === 'fail' ? (
-                  <span role="alert" className="mt-1 block font-semibold text-fail">
-                    {message.text}
-                  </span>
-                ) : (
-                  <span role="status" className="mt-1 block font-semibold text-pass">
-                    {message.text}
-                  </span>
-                ))}
+              <InlineStatus message={message} />
             </>
           }
         >

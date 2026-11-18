@@ -14,6 +14,7 @@ import type {
   PlanPageTest,
   TestCaseExpectations,
   TestCaseStep,
+  DraftForm,
 } from '@qa/types';
 import { AITruncatedError, completeWith, type AIProvider } from '../ai/ai-provider.js';
 import { SafetyFilter } from '../discovery/safety-filter.js';
@@ -26,7 +27,7 @@ import { linkKey, pathOf, type SharedLink, type SiteGraph } from './site-graph.j
 import type { PageCoverageInfo } from './sampling.js';
 import type { ParsedRequirementHint } from '../discovery/context-parser.js';
 import { selectorForStep } from './selector-order.js';
-import { hostOf } from './markdown.js';
+import { hostOf } from '@qa/types';
 import {
   BIND_BATCH,
   defaultBinding,
@@ -40,25 +41,8 @@ import {
   type RoleBinding,
 } from './sources.js';
 
-/** A form the crawler found, as the planner needs it. */
-export interface PlannerForm {
-  urlPath: string;
-  method?: string;
-  inputs: Array<{
-    label?: string;
-    type?: string;
-    selector: string;
-    required?: boolean;
-    pattern?: string;
-    min?: string;
-    max?: string;
-    minLength?: number;
-    maxLength?: number;
-  }>;
-  submitButtonSelector?: string;
-  /** Steps that open the form first (tab, drawer, dialog). */
-  opening?: TestCaseStep[];
-}
+/** A form the crawler found, as the planner needs it: the draft plan's form. */
+export type PlannerForm = DraftForm;
 
 export interface PagePlannerInput {
   /** Every page the crawl found. */
@@ -244,7 +228,7 @@ export function parseJsonAnswer(text: string): any {
 }
 
 /** Who a page's tests run as: the explorer whose view of the page they were planned from. */
-function plannedAs(page: PageInventoryItem): string {
+export function plannedAs(page: PageInventoryItem): string {
   const reached = page.reachedBy?.length ? page.reachedBy : ['visitor'];
   return reached[reached.length - 1];
 }

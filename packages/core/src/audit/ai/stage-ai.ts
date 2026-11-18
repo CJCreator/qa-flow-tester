@@ -295,3 +295,8 @@ function auditAiOn(
     },
   };
 }
+
+/** `text` cut to `max` characters with an ellipsis, so one long field cannot crowd out the rest of a prompt. */
+export function clip(text: string, max = 200): string {
+  return text.length > max ? `${text.slice(0, max)}…` : text;
+}

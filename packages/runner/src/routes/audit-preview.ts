@@ -8,9 +8,7 @@
  */
 import type http from 'http';
 import {
-  AUDIT_API,
   isDocumentLanguage,
-  type AuditAccess,
   type AuditResult,
   type DocumentLanguage,
   type EditOverlay,
@@ -29,7 +27,7 @@ import {
   type AuditStore,
 } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
-import { readEdits, versionQuery } from './audit-common.js';
+import { auditRow, readEdits, versionQuery } from './audit-common.js';
 import { sendJson } from './body.js';
 import {
   AUDIT_FORBIDDEN,
@@ -97,14 +95,6 @@ export interface AuditPreviewRouteDeps {
   /** Deadline of the AI request; the generator's default when absent. */
   aiTimeoutMs?: number;
   now?: () => Date;
-}
-
-function row(
-  key: 'createPreview' | 'getPreview',
-  handle: Route['handle']
-): Route & { method: string; access: AuditAccess } {
-  const { method, path, access } = AUDIT_API[key];
-  return { method, path, access, handle };
 }
 
 async function readBody(req: http.IncomingMessage): Promise<string> {
@@ -242,5 +232,5 @@ export function auditPreviewRoutes(deps: AuditPreviewRouteDeps): Route[] {
     }
   };
 
-  return [row('createPreview', createPreview), row('getPreview', getPreview)];
+  return [auditRow('createPreview', createPreview), auditRow('getPreview', getPreview)];
 }

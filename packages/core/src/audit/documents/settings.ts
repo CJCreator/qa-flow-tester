@@ -14,6 +14,7 @@
  */
 
 import {
+  isRecord,
   DEFAULT_REWRITE_OVERLAP_WORDS,
   isDocumentLanguage,
   type AuditSettings,
@@ -128,10 +129,6 @@ export type AuditSettingsUpdateResult =
 
 type Obj = Record<string, unknown>;
 
-function isObject(value: unknown): value is Obj {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
 function textProblem(value: unknown, max: number, allowEmpty: boolean): string | undefined {
   if (typeof value !== 'string') return 'must be text.';
   if (!allowEmpty && value.trim() === '') return 'must not be empty; use null to put the default back.';
@@ -153,7 +150,7 @@ function unknownKeys(value: Obj, allowed: readonly string[], at: string, errors:
  * 1 to `MAX_REWRITE_OVERLAP_WORDS` are refused with one message per field, and then nothing changes.
  */
 export function applySettingsUpdate(current: StoredAuditSettings, update: unknown): AuditSettingsUpdateResult {
-  if (!isObject(update)) return { ok: false, errors: { body: 'must be an object.' } };
+  if (!isRecord(update)) return { ok: false, errors: { body: 'must be an object.' } };
   const errors: AuditSettingsErrors = {};
   unknownKeys(update, ['optOutText', 'company', 'proposalTemplate', 'rewriteOverlapWords', 'pagespeedKey'], '', errors);
 
@@ -161,7 +158,7 @@ export function applySettingsUpdate(current: StoredAuditSettings, update: unknow
   const body = update as Obj & AuditSettingsUpdate;
 
   if ('optOutText' in update) {
-    if (!isObject(body.optOutText)) {
+    if (!isRecord(body.optOutText)) {
       errors.optOutText = 'must be an object of text per language, such as { "en": "..." }.';
     } else {
       for (const [lang, text] of Object.entries(body.optOutText as Obj)) {
@@ -180,7 +177,7 @@ export function applySettingsUpdate(current: StoredAuditSettings, update: unknow
   }
 
   if ('company' in update) {
-    if (!isObject(body.company)) {
+    if (!isRecord(body.company)) {
       errors.company = 'must be an object with name, address, phone, email, website or terms.';
     } else {
       const company = body.company as Obj;

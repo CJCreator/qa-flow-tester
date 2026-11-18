@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import type { AuditGetReply, EditOverlay, PageAction, PageContent } from '@qa/types/src/browser.js';
 import { getAiSetup } from '../../../api';
 import { useConfirm } from '../../../components/ConfirmDialog';
-import { ErrorMessage, Notice, Spinner } from '../../../components/text';
+import { ErrorMessage, InlineStatus, Notice, Spinner } from '../../../components/text';
 import { Badge, BottomActionBar, LoadError, Page, PageHeader } from '../../../components/ui';
-import { count, scrollBehavior } from '../../../lib/format';
+import { count, goToSection, scrollBehavior } from '../../../lib/format';
 import { blockNavigation, Link, navigate, PATHS } from '../../../lib/router';
 import { AuditTabs } from '../AuditTabs';
 import { useDocumentTitle } from '../../../lib/title';
@@ -300,15 +300,6 @@ export const REVIEW_SECTIONS: ReadonlyArray<{ id: string; label: string }> = [
   { id: 'review-actions-title', label: 'Redesign or repair' },
 ];
 
-/** Scrolls to a section and moves focus to its heading, so keyboard and screen-reader users land there too. */
-function goToSection(id: string) {
-  const heading = document.getElementById(id);
-  if (!heading) return;
-  if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1');
-  heading.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
-  heading.focus({ preventScroll: true });
-}
-
 /** An index of the review sections: a sticky column on wide screens, a row that scrolls sideways on phones. */
 function ReviewSectionIndex() {
   return (
@@ -569,16 +560,7 @@ export function ReviewDocumentsView({
               <span aria-live="polite">
                 {pending ? 'You have changes that are not saved yet.' : 'Every change is saved.'}
               </span>
-              {message &&
-                (message.tone === 'fail' ? (
-                  <span role="alert" className="mt-1 block font-semibold text-fail">
-                    {message.text}
-                  </span>
-                ) : (
-                  <span role="status" className="mt-1 block font-semibold text-pass">
-                    {message.text}
-                  </span>
-                ))}
+              <InlineStatus message={message} />
             </>
           }
         >

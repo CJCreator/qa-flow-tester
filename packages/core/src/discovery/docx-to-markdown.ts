@@ -23,21 +23,7 @@ export function checkZip(bytes: Uint8Array): void {
   if (bytes.length > DOCX_MAX_BYTES) {
     throw new Error('This Word file is larger than 2 MB. Remove images or split it into smaller files.');
   }
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  let eocd = -1;
-  const lowest = Math.max(0, bytes.length - 22 - 0xffff);
-  for (let i = bytes.length - 22; i >= lowest; i--) {
-    if (view.getUint32(i, true) === 0x06054b50) {
-      eocd = i;
-      break;
-    }
-  }
-  if (eocd < 0) throw new Error(BAD_FILE);
-  const entries = view.getUint16(eocd + 10, true);
-  const cdOffset = view.getUint32(eocd + 16, true);
-  if (entries === 0xffff || cdOffset === 0xffffffff) {
-    throw new Error('This Word file uses a ZIP format that is not supported. Save it again as .docx.');
-  }
+  const { view, entries, cdOffset } = readCentralDirectory(bytes);
   if (entries > DOCX_MAX_ENTRIES) {
     throw new Error(`This Word file holds more than ${DOCX_MAX_ENTRIES} parts. Save it again as a plain .docx.`);
   }
@@ -58,11 +44,10 @@ export function checkZip(bytes: Uint8Array): void {
 }
 
 /**
- * Inflates every entry once, with a hard output cap, before mammoth (JSZip) sees the file: a ZIP can declare
- * small sizes and inflate to gigabytes, and JSZip only notices after inflating. Throws a plain-sentence Error.
- * Call after checkZip, which has already checked the central directory's shape and the declared total.
+ * Finds the ZIP's end-of-central-directory record and reads the entry count and central directory offset.
+ * Throws a plain-sentence Error when there is none or the file uses ZIP64.
  */
-export function checkInflatedSizes(bytes: Uint8Array): void {
+function readCentralDirectory(bytes: Uint8Array): { view: DataView; entries: number; cdOffset: number } {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   let eocd = -1;
   const lowest = Math.max(0, bytes.length - 22 - 0xffff);
@@ -78,6 +63,16 @@ export function checkInflatedSizes(bytes: Uint8Array): void {
   if (entries === 0xffff || cdOffset === 0xffffffff) {
     throw new Error('This Word file uses a ZIP format that is not supported. Save it again as .docx.');
   }
+  return { view, entries, cdOffset };
+}
+
+/**
+ * Inflates every entry once, with a hard output cap, before mammoth (JSZip) sees the file: a ZIP can declare
+ * small sizes and inflate to gigabytes, and JSZip only notices after inflating. Throws a plain-sentence Error.
+ * Call after checkZip, which has already checked the central directory's shape and the declared total.
+ */
+export function checkInflatedSizes(bytes: Uint8Array): void {
+  const { view, entries, cdOffset } = readCentralDirectory(bytes);
   let pos = cdOffset;
   for (let n = 0; n < entries; n++) {
     if (pos + 46 > bytes.length || view.getUint32(pos, true) !== 0x02014b50) throw new Error(BAD_FILE);

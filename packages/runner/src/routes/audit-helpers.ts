@@ -8,6 +8,7 @@
  */
 import type http from 'http';
 import {
+  isRecord,
   AUDIT_API,
   type AuditEndpointName,
   type AuditErrorCode,
@@ -92,10 +93,6 @@ function auditIdOf(context: RouteContext): string | undefined {
   return context.params?.id;
 }
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
 function row(name: AuditEndpointName, handle: Route['handle']): Route {
   const endpoint = AUDIT_API[name];
   // Closed in beta (D-004): sign-in rows are served there by authorizeRoute itself.
@@ -132,7 +129,7 @@ export function auditHelperRoutes(deps: AuditHelperRouteDeps): Route[] {
       } catch {
         return refuse(context.res, 400, 'ERR_INVALID_REQUEST', MESSAGES.invalid);
       }
-      if (!isObject(body)) return refuse(context.res, 400, 'ERR_INVALID_REQUEST', MESSAGES.invalid);
+      if (!isRecord(body)) return refuse(context.res, 400, 'ERR_INVALID_REQUEST', MESSAGES.invalid);
       const { email, permissions } = body;
       await withAudit(context, async (auditId) => {
         // The store trims, lower-cases and checks the email, and checks the permissions (unknown input is refused there).
@@ -173,7 +170,7 @@ export function auditHelperRoutes(deps: AuditHelperRouteDeps): Route[] {
       let sub: string;
       try {
         // The verifier refuses a token without a non-empty `sub`; the session is bound to it (DEC-011).
-        ({ email, sub } = await access.verifier.verify(isObject(body) ? body.idToken : undefined));
+        ({ email, sub } = await access.verifier.verify(isRecord(body) ? body.idToken : undefined));
       } catch (err) {
         if (!(err instanceof HelperSignInError)) {
           // Fixed message only: neither the token nor the error text is logged.

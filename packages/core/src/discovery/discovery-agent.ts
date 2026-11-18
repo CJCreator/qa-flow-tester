@@ -19,7 +19,7 @@ import { PlanValidator } from './plan-validator.js';
 import { BrowserManager, BREAKPOINT_VIEWPORTS } from '../browser.js';
 import { PreFlightChecker, SignInFailedError, type PreFlightResult } from '../preflight.js';
 import { debugLog } from '../debug-log.js';
-import { DeterministicSpider, DEFAULT_MAX_PAGES, type SpiderResult } from './deterministic-spider.js';
+import { DeterministicSpider, DEFAULT_MAX_PAGES, type SpiderResult, toDraftForm } from './deterministic-spider.js';
 import { buildSiteGraph, pathOf } from '../plan/site-graph.js';
 import { sampleLayoutGroups } from '../plan/sampling.js';
 import { PlanPipeline } from '../plan/pipeline.js';
@@ -842,23 +842,7 @@ export class DiscoveryAgent {
       timestamp: new Date().toISOString(),
       siteType,
       pages: spiderResult.pages,
-      forms: spiderResult.forms.map((f) => ({
-        urlPath: f.urlPath,
-        inputs: f.inputs.map((i) => ({
-          selector: i.selector,
-          type: i.type,
-          label: i.label,
-          required: i.required,
-          pattern: i.pattern,
-          min: i.min,
-          max: i.max,
-          minLength: i.minLength,
-          maxLength: i.maxLength,
-        })),
-        submitButtonSelector: f.submitButtonSelector,
-        method: f.method,
-        ...(f.opening?.length ? { opening: f.opening } : {}),
-      })),
+      forms: spiderResult.forms.map(toDraftForm),
       flows: synthesizedFlows,
       sensitiveActions: spiderResult.sensitiveActions,
       ambiguityQuestions,

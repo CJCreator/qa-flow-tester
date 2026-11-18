@@ -34,7 +34,8 @@ export function toggled(theme: Theme, dark: boolean = prefersDark()): Theme {
   return effectiveTheme(theme, dark) === 'dark' ? 'light' : 'dark';
 }
 
-function defaultStorage(): Storage | undefined {
+/** The browser's localStorage, or undefined where it is missing or blocked. */
+export function defaultStorage(): Storage | undefined {
   try {
     return typeof localStorage === 'undefined' ? undefined : localStorage;
   } catch {

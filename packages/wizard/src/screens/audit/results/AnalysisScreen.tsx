@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { AuditGetReply, AuditPage, PageContent } from '@qa/types/src/browser.js';
 import { ErrorMessage, Notice, Spinner } from '../../../components/text';
 import { Page, PageHeader } from '../../../components/ui';
-import { formatDay, scrollBehavior } from '../../../lib/format';
+import { formatDay, goToSection } from '../../../lib/format';
 import { Link, PATHS } from '../../../lib/router';
 import { AuditTabs } from '../AuditTabs';
 import { useDocumentTitle } from '../../../lib/title';
@@ -305,15 +305,6 @@ export const RESULT_SECTIONS: ReadonlyArray<{ id: string; label: string }> = [
   { id: 'audit-linking-title', label: 'Internal linking' },
   { id: 'audit-leaving-title', label: 'Links that leave the website' },
 ];
-
-/** Scrolls to a section and moves focus to its heading, so keyboard and screen-reader users land there too. */
-function goToSection(id: string) {
-  const heading = document.getElementById(id);
-  if (!heading) return;
-  if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1');
-  heading.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
-  heading.focus({ preventScroll: true });
-}
 
 /** An index of the sections: a sticky column on wide screens, a row that scrolls sideways on phones. */
 function SectionIndex() {

@@ -1,7 +1,5 @@
 import type http from 'http';
 import {
-  AUDIT_API,
-  type AuditAccess,
   type AuditGetReply,
   type AuditListReply,
   type AuditSummary,
@@ -10,7 +8,7 @@ import {
 } from '@qa/types';
 import { type AuditStore } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
-import { AUDIT_NOT_FOUND, readEdits, refuse, refuseStoreFailure, versionQuery } from './audit-common.js';
+import { auditRow, AUDIT_NOT_FOUND, readEdits, refuse, refuseStoreFailure, versionQuery } from './audit-common.js';
 import { sendJson } from './body.js';
 import { allows } from '../helpers/index.js';
 
@@ -59,12 +57,6 @@ export async function mayUseAudit(
   return ids === null || ids.has(auditId);
 }
 
-/** Declared access comes from AUDIT_API, so a row can never drift from the contract. */
-function row(key: 'list' | 'get' | 'remove', handle: Route['handle']): Route & { method: string; access: AuditAccess } {
-  const { method, path, access } = AUDIT_API[key];
-  return { method, path, access, handle };
-}
-
 /** AUDIT_API list, get and remove (REQ-028). */
 export function auditStoreRoutes(deps: AuditRouteDeps): Route[] {
   const { store } = deps;
@@ -75,7 +67,7 @@ export function auditStoreRoutes(deps: AuditRouteDeps): Route[] {
   };
 
   return [
-    row('list', async (context) => {
+    auditRow('list', async (context) => {
       try {
         const caller = await deps.caller(context);
         const ids = await grantedAuditIds(store, caller, 'view');
@@ -88,7 +80,7 @@ export function auditStoreRoutes(deps: AuditRouteDeps): Route[] {
       }
     }),
 
-    row('get', async (context) => {
+    auditRow('get', async (context) => {
       const { res } = context;
       try {
         const auditId = context.params?.id ?? '';
@@ -120,7 +112,7 @@ export function auditStoreRoutes(deps: AuditRouteDeps): Route[] {
       }
     }),
 
-    row('remove', async (context) => {
+    auditRow('remove', async (context) => {
       const { res } = context;
       try {
         const auditId = context.params?.id ?? '';
