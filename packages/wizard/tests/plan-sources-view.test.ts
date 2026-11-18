@@ -49,7 +49,7 @@ describe('plan Source view helpers', () => {
   });
   it('marks planned-while-scanning and added-after-scan', () => {
     expect(originLabel('while-crawling')).toBe('Planned during the check-up');
-    expect(originLabel('after-crawl')).toBe('Added after the scan');
+    expect(originLabel('after-crawl')).toBe('Added after the check-up looked at the site');
     expect(originLabel(undefined)).toBeNull();
   });
   it('builds the edit payloads', () => {

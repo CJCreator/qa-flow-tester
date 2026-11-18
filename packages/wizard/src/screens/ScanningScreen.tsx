@@ -93,7 +93,7 @@ export function ScanningScreen({
   return (
     <Page width="form">
       <PageHeader
-        title={failure ? `The scan of ${host} stopped` : `Exploring ${host}`}
+        title={failure ? `The check-up of ${host} stopped` : `Exploring ${host}`}
         lede={
           failure
             ? undefined
@@ -146,7 +146,7 @@ export function ScanningScreen({
             })}
           </ol>
 
-          <section aria-label="Scan progress" className="rounded-card border border-rule bg-surface p-5 sm:p-6">
+          <section aria-label="Check-up progress" className="rounded-card border border-rule bg-surface p-5 sm:p-6">
             {/* The live region holds the stage text only: no counters, so it never chatters. */}
             <div role="status" aria-live="polite" className="sr-only">
               {statusText(progress)}

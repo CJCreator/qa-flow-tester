@@ -23,7 +23,7 @@ export const SIGN_IN_STEPS = [
 export type SignInStep = (typeof SIGN_IN_STEPS)[number];
 
 /** Fixed plain words per reason. Never built from typed details, so no credential can end up in them. */
-export const SIGN_IN_REASON_TEXT: Record<SignInFailureReason, string> = {
+const SIGN_IN_REASON_TEXT: Record<SignInFailureReason, string> = {
   'wrong-details': 'The username or password was not accepted. Check them and try again.',
   'no-form': 'No sign-in form was found on that page. Check the sign-in page address.',
   unreachable: 'The site could not be reached, or took too long to answer. Check it is up and try again.',

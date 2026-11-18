@@ -28,7 +28,7 @@ export function isDenial(test: Parameters<typeof intentOf>[0]): boolean {
 /** Whether the item was planned during the scan or added once it ended; nothing for older plans. */
 export function originLabel(origin: 'while-crawling' | 'after-crawl' | undefined): string | null {
   if (origin === 'while-crawling') return 'Planned during the check-up';
-  if (origin === 'after-crawl') return 'Added after the scan';
+  if (origin === 'after-crawl') return 'Added after the check-up looked at the site';
   return null;
 }
 
@@ -92,6 +92,6 @@ export function documentedLine(documented: { reached: number; total: number } | 
 /** The plan is partly written during the scan: say so plainly. */
 export function plannedWhileScanningLine(plan: Pick<ReviewPlan, 'plannedWhileCrawling'>): string | null {
   return plan.plannedWhileCrawling
-    ? 'Planning started while the scan was still running. Items marked “Added after the scan” came last.'
+    ? 'Planning started while the scan was still running. Items marked “Added after the check-up looked at the site” came last.'
     : null;
 }

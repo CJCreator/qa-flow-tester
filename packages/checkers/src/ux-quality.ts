@@ -127,7 +127,7 @@ export function summariseWcag(
 }
 
 /** Alt texts that are present but say nothing: file names, "image", "photo", "untitled". */
-export const MEANINGLESS_ALT =
+const MEANINGLESS_ALT =
   /^(?:(?:img|image|photo|picture|pic|graphic|untitled|dsc|screenshot|icon|banner|spacer)[\s_-]*\d*|.*\.(?:png|jpe?g|gif|svg|webp|avif|bmp))$/i;
 
 /** One axe scan of a page state: the parts the checker reads (violations, incomplete, passes...). */
