@@ -649,7 +649,8 @@ export class FlowTestOrchestrator {
       return true;
     };
     const testingStartedAt = Date.now();
-    tests: for (const testCase of testCasesToRun) {
+    // One Plan Item at each of its screen sizes. 'stop' ends the testing loop: the run was asked to finish.
+    const runTestCase = async (testCase: TestCase): Promise<'next' | 'stop'> => {
       // Which checkers run afterwards depends on the kind of Plan Item (see TestCase.kind).
       const kind = testCase.kind;
       const lightChecks = kind === 'navigation' || kind === 'link';
@@ -672,7 +673,7 @@ export class FlowTestOrchestrator {
             skipReason: `Not tested: ${why.text}`,
           });
         }
-        continue;
+        return 'next';
       }
       if (sessionLostRoles.has(testCase.role)) {
         for (const bp of sizesFor(testCase)) {
@@ -688,12 +689,12 @@ export class FlowTestOrchestrator {
             skipReason: 'Signed out part-way: the session stopped working',
           });
         }
-        continue;
+        return 'next';
       }
       const searchSize = sizes.includes('1440px') ? '1440px' : sizes[sizes.length - 1];
       for (const bp of sizesFor(testCase)) {
         await stopHere();
-        if (options.finishSignal?.aborted) break tests;
+        if (options.finishSignal?.aborted) return 'stop';
         onEvent({
           type: 'TEST_POINT_STARTED',
           testCaseId: testCase.id,
@@ -1557,6 +1558,10 @@ export class FlowTestOrchestrator {
           })),
         });
       }
+      return 'next';
+    };
+    for (const testCase of testCasesToRun) {
+      if ((await runTestCase(testCase)) === 'stop') break;
     }
     stageTiming('testing', Date.now() - testingStartedAt, { tests: results.length });
     const postTestsStartedAt = Date.now();
