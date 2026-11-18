@@ -9,23 +9,46 @@ import { PlanSideRail, planSectionNavItems } from '../src/screens/PlanReviewScre
 const src = readFileSync(resolve(__dirname, '../src/screens/PlanReviewScreen.tsx'), 'utf8');
 
 const samplePlan: ReviewPlan = {
+  runId: 'run-1',
   targetUrl: 'https://example.com',
-  pages: [{ urlPath: '/', title: 'Home', kind: 'normal' }],
+  discoveredAt: '2026-11-01T00:00:00.000Z',
+  pages: [{ urlPath: '/', title: 'Home', interactiveElementsCount: 0, formsCount: 0 }],
   planPages: [
     {
       id: 'p1',
       urlPath: '/',
       title: 'Home',
-      coverage: 'sampled',
-      tests: [{ id: 't1', name: 'Check home', startPage: '/' }],
+      coverage: 'sample',
+      reachedBy: ['visitor'],
+      source: 'ai',
+      tests: [{ id: 't1', name: 'Check home', role: 'visitor', steps: [], source: 'ai' }],
     },
   ],
-  questions: [{ id: 'q1', question: 'Run checkout tests?', urlPath: '/checkout', defaultAnswer: 'no' }],
-  navigation: [{ id: 'n1', name: 'Pricing link', startPage: '/', to: '/pricing' }],
-  flows: [{ id: 'f1', name: 'Sign up flow', steps: [] }],
+  questions: [
+    {
+      id: 'q1',
+      urlPath: '/checkout',
+      question: 'Run checkout tests?',
+      options: ['Yes', 'No'],
+      category: 'untested_form',
+    },
+  ],
+  navigation: [
+    {
+      id: 'n1',
+      name: 'Pricing link',
+      startPage: '/',
+      linkName: 'Pricing',
+      selector: 'a[href="/pricing"]',
+      to: '/pricing',
+      roles: ['visitor'],
+      source: 'ai',
+    },
+  ],
+  flows: [{ id: 'f1', name: 'Sign up flow', role: 'visitor', description: 'Sign up', startPage: '/', steps: [] }],
   gradedChecks: [{ id: 'c1', name: 'Accessibility', description: 'WCAG 2.2 AA' }],
   wontRun: [{ what: 'Admin panel', reason: 'Behind a sign-in' }],
-  rolesNotTested: [{ role: 'admin', text: 'No credentials' }],
+  rolesNotTested: [{ role: 'admin', reason: 'wrong-details', text: 'No credentials' }],
   notFound: [],
 };
 

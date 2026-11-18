@@ -9,7 +9,11 @@ import { headersNotice } from '../src/lib/coverage-text';
 import { initialFeed, type FeedState, type RunnerEvent } from '../src/lib/translate';
 import type { ScanProgress } from '../src/lib/scan-progress';
 
-const CHECKUP = { onCheckAddress: true, planningStartedAt: null, now: 1_000 };
+const CHECKUP: { onCheckAddress: boolean; planningStartedAt: number | null; now: number } = {
+  onCheckAddress: true,
+  planningStartedAt: null,
+  now: 1_000,
+};
 const NOT_CHECKUP = { ...CHECKUP, onCheckAddress: false };
 
 const scanning = {
