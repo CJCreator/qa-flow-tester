@@ -38,7 +38,8 @@ import {
   type PreFlightResult,
 } from './preflight.js';
 import { restoreSession } from './discovery/discovery-agent.js';
-import { navigate, looksLikeLogin } from './navigate.js';
+import { navigate, looksLikeLogin, parseRetryAfter } from './navigate.js';
+import { HostPacer } from './host-pacer.js';
 import { isSignInOnlyForm, readPageForms } from './discovery/deterministic-spider.js';
 import { debugLog, stageTiming } from './debug-log.js';
 import { SourceLocator, isQaToolRepo } from './source-locator.js';
@@ -50,7 +51,7 @@ import { SuppressionsManager } from './suppressions.js';
 import { Redactor, redactUrl, storageStateSecrets } from './redact.js';
 import { mergeDuplicateFindings } from './finding-groups.js';
 import { resolveCredentialPlaceholders } from './credentials.js';
-import { onSiteAddress } from './same-site.js';
+import { isSameSite, onSiteAddress } from './same-site.js';
 import { blockChanges, NEEDS_TEST_COPY } from './live-site.js';
 import { EntityNamespacer } from './entity-namespacing.js';
 import { SendGuard, watchSends } from './send-guard.js';
@@ -305,7 +306,8 @@ export interface RunOptions {
   testCopy?: boolean;
   /**
    * Test lanes (ADR 0046): how many Roles' Plan Items run at once, one lane per Role. Default 1 (one at a time).
-   * Used only with `testCopy: true`; clamped to 1..5 and to the number of Roles in the Plan.
+   * Used only with `testCopy: true`; clamped to 1..5 and to the number of Roles in the Plan. Also the per-host cap
+   * on that run's page loads and checker requests (`testCopyInFlight`, clamped to 1..10).
    */
   parallelRoles?: number;
   /** Planned tests that won't run, and why, e.g. a journey that needs a test copy on a live site. */
@@ -372,6 +374,72 @@ export function testLaneCount(
   if (Number.isNaN(asked)) return 1;
   const roles = new Set(testCases.map(laneKeyOf)).size;
   return Math.max(1, Math.min(5, asked, roles));
+}
+
+/** The most page requests a Test Copy run may have in flight per host (ADR 0046). */
+export const MAX_TEST_COPY_IN_FLIGHT = 10;
+
+/** The per-host cap on a Test Copy run (ADR 0046): `parallelRoles` clamped to 1..10, 1 when unset. */
+export function testCopyInFlight(options: Pick<RunOptions, 'parallelRoles'>): number {
+  const asked = Math.floor(options.parallelRoles ?? 1);
+  if (Number.isNaN(asked)) return 1;
+  return Math.max(1, Math.min(MAX_TEST_COPY_IN_FLIGHT, asked));
+}
+
+/**
+ * The run's host pacer (ADR 0046): on a Test Copy run only, the Testing stage's page loads and the checkers'
+ * requests take turns per host, `testCopyInFlight` at once. A 429 or 503 slows a host down only when it is the
+ * Test Copy's own site (its www twin included). Undefined on every other run, which stays unpaced.
+ */
+export function testCopyPacer(
+  options: Pick<RunOptions, 'parallelRoles' | 'testCopy' | 'targetUrl'>
+): HostPacer | undefined {
+  if (options.testCopy !== true) return undefined;
+  let siteHost: string | undefined;
+  try {
+    siteHost = new URL(options.targetUrl).host;
+  } catch {
+    siteHost = undefined;
+  }
+  return new HostPacer({
+    maxInFlight: testCopyInFlight(options),
+    busyHosts: (host) => siteHost !== undefined && isSameSite(host, siteHost),
+  });
+}
+
+/**
+ * One Test Copy page load in its host's turn (ADR 0046). The host's answer is noted before the turn is freed: a
+ * 429 or 503 from the Test Copy's site drops it to one at a time for the rest of the run, its Retry-After waited
+ * out (ADR 0043).
+ * An address with no host loads unpaced. A stop while waiting for a turn throws an AbortError.
+ */
+export function pacedPageLoad<T>(
+  pacer: HostPacer,
+  url: string,
+  load: () => Promise<T>,
+  answerOf: (result: T) => { status?: number; retryAfterMs?: number } | undefined,
+  signal?: AbortSignal
+): Promise<T> {
+  let host: string;
+  try {
+    host = new URL(url).host;
+  } catch {
+    return load();
+  }
+  return pacer
+    .run(
+      host,
+      async () => {
+        const result = await load();
+        const answer = answerOf(result);
+        if (answer) pacer.noteStatus(host, answer.status, answer.retryAfterMs);
+        return result;
+      },
+      signal
+    )
+    .catch((err: unknown) => {
+      throw signal?.aborted ? abortError() : err;
+    });
 }
 
 /** One Plan Item's results and findings, kept apart while lanes run so the report can list them in Plan order. */
@@ -679,8 +747,13 @@ export class FlowTestOrchestrator {
     const marketingLog = newMarketingLog();
     // The checkers' requests (security.txt, source maps, links, site files) and the plan's link checks go
     // through the pinned, redirect-checked path only (ADR 0031), never Playwright's request API.
-    const checkerFetch = makeCheckerFetch();
-    const linkFetch = makeCheckerFetch({ maxRedirects: 10, timeoutMs: 10_000 });
+    // Test Copy runs only (ADR 0046): these and the Testing stage's page loads share one pacer, `parallelRoles`
+    // (1 to 10) per host at once; a 429 or 503 from the Test Copy's site drops it to one at a time. Other runs:
+    // no pacer, as before.
+    const hostPacer = testCopyPacer(options);
+    const paced = hostPacer ? { pacer: hostPacer, slowDownOnBusy: true } : {};
+    const checkerFetch = makeCheckerFetch(paced);
+    const linkFetch = makeCheckerFetch({ ...paced, maxRedirects: 10, timeoutMs: 10_000 });
     // Each plan link is requested once per run; the axe cache is shared by the run's UX checks (PERF-2).
     const checkRunLink = createRunLinkChecker(linkFetch);
     const axeCache: AxeCache = new Map();
@@ -863,10 +936,15 @@ export class FlowTestOrchestrator {
             if (!startUrl) {
               throw new Error(`The start page ${testCase.startPage} is not on the checked site, so it was not opened.`);
             }
-            const navRes = await navigate(page, startUrl, {
-              timeoutMs: 15000,
-              who: testCase.role,
-            });
+            const loadStart = () =>
+              navigate(page, startUrl, {
+                timeoutMs: 15000,
+                who: testCase.role,
+              });
+            // Test Copy runs: in the host's turn (ADR 0046). navigate() carries the status and Retry-After.
+            const navRes = await (hostPacer
+              ? pacedPageLoad(hostPacer, startUrl, loadStart, (r) => r, options.signal)
+              : loadStart());
             startPageNavResult = navRes;
             if (!navRes.ok) {
               throw new Error(`Failed to load ${testCase.startPage} (${navRes.error?.kind || 'net error'})`);
@@ -1057,10 +1135,24 @@ export class FlowTestOrchestrator {
                     if (!to) {
                       throw new Error(`Step “${step.name}” goes to ${step.value}, which is not on the checked site.`);
                     }
-                    await page.goto(to, {
-                      waitUntil: 'domcontentloaded',
-                      timeout: 10000,
-                    });
+                    const go = () =>
+                      page.goto(to, {
+                        waitUntil: 'domcontentloaded',
+                        timeout: 10000,
+                      });
+                    // Test Copy runs: in the host's turn (ADR 0046), a 429 or 503 answer slowing the host down.
+                    await (hostPacer
+                      ? pacedPageLoad(
+                          hostPacer,
+                          to,
+                          go,
+                          (resp) =>
+                            resp
+                              ? { status: resp.status(), retryAfterMs: parseRetryAfter(resp.headers()['retry-after']) }
+                              : undefined,
+                          options.signal
+                        )
+                      : go());
                   } else if (step.action === 'wait') {
                     await page.waitForTimeout(1000);
                   } else if (step.action === 'check-link') {

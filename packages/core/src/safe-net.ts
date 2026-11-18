@@ -7,6 +7,7 @@ import type { FetchedResponse } from '@qa/checkers';
 import { getBrowserPolicy } from './browser.js';
 import { isSameSite } from './same-site.js';
 import type { HostPacer } from './host-pacer.js';
+import { parseRetryAfter } from './navigate.js';
 
 /**
  * Network checks for shared machines (ADR 0014). Node only: the wizard never imports this file.
@@ -333,6 +334,12 @@ export interface OutboundFetchOptions {
   deps?: NetDeps;
   /** Shared with the crawl of the same site: each request waits for its host's turn (ADR 0015). */
   pacer?: HostPacer;
+  /**
+   * With `pacer` (Test Copy runs, ADR 0046): a 429 or 503 answer slows its host down for the rest of the run
+   * (`HostPacer.noteStatus`, limited to the pacer's `busyHosts`), Retry-After included. Off by default, so other
+   * runs keep their pacing.
+   */
+  slowDownOnBusy?: boolean;
   /** Aborting cancels a request in flight; the fetch then answers null like any failed request. */
   signal?: AbortSignal;
 }
@@ -411,7 +418,12 @@ export function makeOutboundFetch(opts: OutboundFetchOptions = {}): OutboundFetc
     } catch {
       return fetchOnce(url); // safeGet refuses it without a request
     }
-    return pacer.run(host, () => fetchOnce(url));
+    if (!opts.slowDownOnBusy) return pacer.run(host, () => fetchOnce(url));
+    return pacer.run(host, async () => {
+      const res = await fetchOnce(url);
+      if (res) pacer.noteStatus(host, res.status, parseRetryAfter(res.headers['retry-after']));
+      return res;
+    });
   };
 }
 

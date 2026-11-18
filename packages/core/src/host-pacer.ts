@@ -14,12 +14,22 @@ export interface HostPacerOptions {
    * the gap spaces task starts instead of end-to-start. A robots Crawl-delay, or `slowDown`, keeps the host at 1.
    */
   maxInFlight?: number;
+  /**
+   * The hosts whose 429 or 503 `noteStatus` acts on (default every host). ADR 0046: only the Test Copy's own site,
+   * so a third-party host that turns automated requests away does not stall the run.
+   */
+  busyHosts?: (host: string) => boolean;
 }
 
 /** The longest `Retry-After` waited out (ADR 0043). */
 export const MAX_RETRY_AFTER_MS = 60_000;
 /** A host that says it is busy again gets twice the gap, up to this (ADR 0043). */
 export const MAX_SLOWED_GAP_MS = 10_000;
+
+/** 429 Too Many Requests or 503 Service Unavailable: the host says it is busy (ADR 0043). */
+export function isBusyStatus(status: number | undefined): boolean {
+  return status === 429 || status === 503;
+}
 
 interface Lane {
   /** Tasks running now. */
@@ -73,6 +83,7 @@ export class HostPacer {
   readonly maxInFlight: number;
   private readonly now: () => number;
   private readonly sleep: (ms: number, signal?: AbortSignal) => Promise<void>;
+  private readonly busyHosts?: (host: string) => boolean;
   private readonly lanes = new Map<string, Lane>();
   private readonly held = new AsyncLocalStorage<Set<string>>();
 
@@ -83,6 +94,7 @@ export class HostPacer {
     this.maxInFlight = (opts.crawlDelayMs ?? 0) > 0 ? 1 : wanted;
     this.now = opts.now ?? Date.now;
     this.sleep = opts.sleep ?? defaultSleep;
+    this.busyHosts = opts.busyHosts;
   }
 
   /**
@@ -98,6 +110,18 @@ export class HostPacer {
       const until = this.now() + Math.min(retryAfterMs, MAX_RETRY_AFTER_MS);
       lane.notBefore = Math.max(lane.notBefore ?? 0, until);
     }
+  }
+
+  /**
+   * A paced request's answer (ADR 0046, Test Copy runs): a 429 or 503 from one of `busyHosts` slows the host down
+   * (`slowDown`); any other status or host changes nothing. Call it inside the task, before the turn is freed, so
+   * the tasks already waiting hold back too. True when the host was slowed down.
+   */
+  noteStatus(host: string, status: number | undefined, retryAfterMs?: number): boolean {
+    if (!isBusyStatus(status)) return false;
+    if (this.busyHosts && !this.busyHosts(host.toLowerCase())) return false;
+    this.slowDown(host, retryAfterMs);
+    return true;
   }
 
   /** How many tasks the host may run at once now (tests and progress). */

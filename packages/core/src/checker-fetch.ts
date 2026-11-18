@@ -21,8 +21,10 @@ export interface CheckerFetchOptions {
   /** 0 (default) returns a 3xx as the response; the checkers stay on the address they were given. */
   maxRedirects?: number;
   timeoutMs?: number;
-  /** Shared with the crawl of the same site (ADR 0015). */
+  /** Shared with the crawl of the same site (ADR 0015), or with the Test Copy run's page loads (ADR 0046). */
   pacer?: HostPacer;
+  /** With `pacer`: a 429 or 503 slows its host down for the rest of the run (Test Copy runs, ADR 0046). */
+  slowDownOnBusy?: boolean;
   /** Network seam for tests. */
   deps?: NetDeps;
 }
@@ -34,6 +36,7 @@ export function makeCheckerFetch(opts: CheckerFetchOptions = {}): FetchFn {
     timeoutMs: opts.timeoutMs ?? CHECKER_FETCH_TIMEOUT_MS,
     maxBytes: CHECKER_FETCH_MAX_BYTES,
     pacer: opts.pacer,
+    slowDownOnBusy: opts.slowDownOnBusy,
     deps: opts.deps,
   });
 }
