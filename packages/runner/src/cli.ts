@@ -40,16 +40,19 @@ if (!isLoopbackBindHost(host) && !accessToken) {
   process.exit(1);
 }
 
+// A tunnel or reverse proxy connects from 127.0.0.1, so without a token every outside caller would be the owner.
 if (beta && !accessToken) {
-  console.warn(
-    '[Release check-up] RUNNER_BETA is set without RUNNER_ACCESS_TOKEN: anyone who can reach this server can use it.'
+  console.error(
+    '[Release check-up] Refusing to start: RUNNER_BETA is set without RUNNER_ACCESS_TOKEN. Set RUNNER_ACCESS_TOKEN to a long random value.'
   );
+  process.exit(1);
 }
 
 if (allowedOrigins && !accessToken) {
-  console.warn(
-    '[Release check-up] RUNNER_ALLOWED_ORIGINS is set without RUNNER_ACCESS_TOKEN: anyone who can reach this server can use it, including the saved AI key and sign-ins.'
+  console.error(
+    '[Release check-up] Refusing to start: RUNNER_ALLOWED_ORIGINS is set without RUNNER_ACCESS_TOKEN. Set RUNNER_ACCESS_TOKEN to a long random value.'
   );
+  process.exit(1);
 }
 
 const server = new RunnerServer({
