@@ -36,6 +36,8 @@ export function KeyField({
 
   useEffect(() => {
     const trimmed = key.trim();
+    // Bump before the empty branch too, so a check still in flight for an earlier key cannot mark this one valid.
+    const checkId = ++latestCheck.current;
     setError(null);
     if (trimmed) setSaved(false);
     if (!trimmed) {
@@ -43,7 +45,6 @@ export function KeyField({
       return;
     }
     setStatus({ kind: 'checking' });
-    const checkId = ++latestCheck.current;
     const timer = setTimeout(() => {
       void (async () => {
         try {
