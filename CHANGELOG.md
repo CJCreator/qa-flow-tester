@@ -12,6 +12,7 @@ All notable changes. Format follows [Keep a Changelog](https://keepachangelog.co
 
 ### Added
 
+- Website Audit: a separate entry point beside the Check-up, for a whole site's pages, with page speed from the PageSpeed Insights API, parallel page fetching, stop, and Website Audit documents (ADR 0033, 0035, 0042, 0043)
 - Removed every fabricated website (`fixtures/`, `pnpm fixture`, the planted-defect benchmark) and the tests that used one; two test tiers: `pnpm test` runs only the fast `unit` project (no website, no Chromium), `test:browser` and `test:all` added; pull requests and deploys run `unit` only, browser tests run nightly; real sites are checked by hand (ADR 0040)
 - Owner can create, pause and delete scheduled Check-ups on the hosted copy; they run from Google Cloud Scheduler, which proves itself with a Google token, never the access key (ADR 0039). Scheduled Check-ups now record `passed` when the run finishes, not when it starts
 - Intent on Plan Items (Works, Rejects, Limits, Denied); Rejects planned from form attributes by fixed rules (no AI key needed); Limits from the AI Planner or a Source; the refusal rule shared by the Check-up and the Playwright export (`expectRefused`); Rejects and Limits wait for a Test Copy or sign-in consent; Ambiguity Questions for Sensitive submits (ADR 0024)
