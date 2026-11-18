@@ -37,6 +37,7 @@ import {
   headerErrorsOf,
   lookOnly,
   MAX_PAGES_LIMIT,
+  parallelRolesOf,
   primarySignInOf,
   rememberSignInsOf,
   scanBlockedHint,
@@ -67,6 +68,8 @@ export interface StartFacts {
   stagingHost?: boolean;
   /** Sent only when the person chose, so the runner remembers it for the site. */
   searchChecks?: boolean;
+  /** Sent only on a Test Copy, and only above 1. */
+  parallelRoles?: number;
   visibility?: { search: boolean; answers: boolean; aiSearch: boolean; marketing: boolean };
   /** True when there is no AI key: no AI is used and fixed rules write the plan, so a first scan needs no setup. */
   noAI?: boolean;
@@ -309,6 +312,7 @@ export function NewCheckupScreen({
       // With the consent notice the Access choice is not shown: its test-copy mark must not be remembered for the site.
       stagingHost: kind.showMark && !consentFlow ? form.markedTestCopy : undefined,
       searchChecks: searchChecksOn,
+      parallelRoles: parallelRolesOf(form, kind.isTestCopy && form.owner && !consentFlow),
       visibility: searchChecksOn ? visibilityOn : { search: false, answers: false, aiSearch: false, marketing: false },
       noAI: ai && !keyReady ? true : undefined,
     });
@@ -754,6 +758,28 @@ export function NewCheckupScreen({
                     </div>
                   </div>
                 </fieldset>
+
+                {kind?.isTestCopy && form.owner && !consentFlow && (
+                  <div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                      <label htmlFor="parallel-requests">Parallel requests per host (Test Copy only)</label>
+                      <ClampedNumberField
+                        id="parallel-requests"
+                        value={form.parallelRoles}
+                        min={1}
+                        max={10}
+                        fallback={1}
+                        className="field w-20"
+                        onCommit={(val) => onFormChange((f) => ({ ...f, parallelRoles: val }))}
+                      />
+                      <span className="text-sm text-ink-soft">1 to 10</span>
+                    </div>
+                    <p className="mt-2 text-sm text-ink-soft">
+                      1 is today’s behaviour. Higher runs more Roles and requests at once on your Test Copy. Stay low
+                      for a shared staging host.
+                    </p>
+                  </div>
+                )}
 
                 <div>
                   <label htmlFor={HEADERS_ID} className="block font-semibold text-ink">

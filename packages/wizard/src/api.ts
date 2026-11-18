@@ -424,7 +424,10 @@ export async function checkReachable(targetUrl: string): Promise<Reachability> {
  * What this client sends to start a check-up: the run-start body the runner accepts (T-201), under the
  * name the wizard has always used. It carries no fields of its own.
  */
-export type StartRunRequest = RunStartBody;
+export type StartRunRequest = RunStartBody & {
+  /** Test Copy only: how many Roles and requests run at once (1 to 10). */
+  parallelRoles?: number;
+};
 
 /** Starts a check-up: the scan, then the plan waits for review. Returns the check-up ID. */
 export async function startRun(request: StartRunRequest): Promise<string> {
@@ -460,6 +463,7 @@ export async function startRun(request: StartRunRequest): Promise<string> {
   if (request.testCap) body.testCap = request.testCap;
   if (request.crawlConcurrency) body.crawlConcurrency = request.crawlConcurrency;
   if (request.crawlDelayMs !== undefined) body.crawlDelayMs = request.crawlDelayMs;
+  if (request.parallelRoles) body.parallelRoles = request.parallelRoles;
   if (request.customHeaders) body.customHeaders = request.customHeaders;
   if (request.contextDocuments?.length) body.contextDocuments = request.contextDocuments;
   if (request.contextUrl) body.contextUrl = request.contextUrl;

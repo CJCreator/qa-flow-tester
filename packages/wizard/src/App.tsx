@@ -505,6 +505,7 @@ export default function App() {
       testCap: testCapOf(form),
       crawlConcurrency: form.crawlConcurrency !== 2 ? form.crawlConcurrency : undefined,
       crawlDelayMs: form.crawlDelayMs !== 100 ? form.crawlDelayMs : undefined,
+      parallelRoles: facts.parallelRoles,
       customHeaders: parseCustomHeaders(form.customHeaders),
     }).then((started) => {
       // Saved sessions are sent once and dropped from the screen once the check-up has started; they are never kept.

@@ -56,6 +56,8 @@ export interface CheckupForm {
   crawlConcurrency: number;
   /** Per-page pacing delay in ms (0-2000, default 100ms). */
   crawlDelayMs: number;
+  /** Parallel requests per host on a Test Copy (1 to 10, default 1). */
+  parallelRoles: number;
   /** Custom headers string e.g. "X-QA-Bypass-Token: secret". */
   customHeaders: string;
 }
@@ -133,8 +135,16 @@ export const EMPTY_FORM: CheckupForm = {
   testCap: '',
   crawlConcurrency: 2,
   crawlDelayMs: 100,
+  parallelRoles: 1,
   customHeaders: '',
 };
+
+/** The Parallel requests value to send: only on a Test Copy, and only when above the default of 1. */
+export function parallelRolesOf(form: Pick<CheckupForm, 'parallelRoles'>, isTestCopy: boolean): number | undefined {
+  if (!isTestCopy) return undefined;
+  const n = Math.floor(form.parallelRoles);
+  return Number.isFinite(n) && n > 1 ? Math.min(10, n) : undefined;
+}
 
 /** Parses multi-line "Header: Value" text into a Record<string, string>. */
 export function parseCustomHeaders(headersText: string): Record<string, string> | undefined {
