@@ -1,6 +1,6 @@
 # 0046: Parallel Test Execution on a Test Copy
 
-Status: Proposed (pending the developer sign-off), 2026-11-18. The owner asked for this rewrite; it is not yet accepted. Supersedes the one-at-a-time pacing of [0015](0015-live-site-request-rules.md) **for Test Copy runs only**. Builds on [0043](0043-parallel-page-fetching-in-the-website-audit.md), whose `HostPacer` `maxInFlight` option it reuses. Live sites, third-party sites and the Website Audit keep their rules.
+Status: Accepted, 2026-11-18, by the owner's approval. The two open items below (429/503 back-off, where N is configured) remain to be settled with the proposed defaults unless the owner says otherwise. Supersedes the one-at-a-time pacing of [0015](0015-live-site-request-rules.md) **for Test Copy runs only**. Builds on [0043](0043-parallel-page-fetching-in-the-website-audit.md), whose `HostPacer` `maxInFlight` option it reuses. Live sites, third-party sites and the Website Audit keep their rules.
 
 ## Context
 The Check-up's Testing stage runs Plan Items one after another, each in its own browser page. On a Test Copy (an App the person owns or runs: a staging address, a local or private address, a dev tunnel, or a host marked as a Test Copy; see the "Test Copy" entry in `CONTEXT.md`) a long Plan waits on each item in turn. The owner has approved running Plan Items in parallel browser contexts on a Test Copy.

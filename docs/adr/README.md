@@ -49,4 +49,4 @@ One row per record. The record itself holds the decision, its context and any la
 | [0043](0043-parallel-page-fetching-in-the-website-audit.md) | Parallel Page Fetching in the Website Audit | Accepted, 2026-11-05 (owner's answers in a grilling session, |
 | [0044](0044-expansion-platform-scope-and-roadmap.md) | Expansion Platform Scope and Architecture Roadmap | Accepted as a roadmap, 2026-11-06 |
 | [0045](0045-pinned-egress-proxy-for-chromium.md) | A Pinned Egress Proxy for Chromium on the Shared Machine | Accepted, 2026-11-12 (owner's answer on T-308) |
-| [0046](0046-parallel-test-execution-on-a-test-copy.md) | Parallel Test Execution on a Test Copy | Proposed (pending the developer sign-off), 2026-11-18 |
+| [0046](0046-parallel-test-execution-on-a-test-copy.md) | Parallel Test Execution on a Test Copy | Accepted, 2026-11-18 |
