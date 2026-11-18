@@ -1,6 +1,6 @@
 # 0046: Parallel Test Execution on a Test Copy
 
-Status: Accepted, 2026-11-18, by the owner's approval. The two open items below (429/503 back-off, where N is configured) remain to be settled with the proposed defaults unless the owner says otherwise. Supersedes the one-at-a-time pacing of [0015](0015-live-site-request-rules.md) **for Test Copy runs only**. Builds on [0043](0043-parallel-page-fetching-in-the-website-audit.md), whose `HostPacer` `maxInFlight` option it reuses. Live sites, third-party sites and the Website Audit keep their rules.
+Status: Accepted, 2026-11-18 (owner approval; amended the same day for the bound, back-off, pacing and config location). Supersedes the one-at-a-time pacing of [0015](0015-live-site-request-rules.md) **for Test Copy runs only**. Builds on [0043](0043-parallel-page-fetching-in-the-website-audit.md), whose `HostPacer` `maxInFlight` option it reuses. Live sites, third-party sites and the Website Audit keep their rules.
 
 ## Context
 The Check-up's Testing stage runs Plan Items one after another, each in its own browser page. On a Test Copy (an App the person owns or runs: a staging address, a local or private address, a dev tunnel, or a host marked as a Test Copy; see the "Test Copy" entry in `CONTEXT.md`) a long Plan waits on each item in turn. The owner has approved running Plan Items in parallel browser contexts on a Test Copy.
@@ -14,25 +14,29 @@ Current behaviour, observed in the code on 2026-11-18:
 
 ## Decision
 - **Test Copy runs may have several page requests in flight per host.** The cap is `maxInFlight`, set per run from a configurable value N:
-  - Bounds: 1 to 5. A value outside the bounds is clamped.
+  - Bounds: 1 to 10. A value outside the bounds is clamped.
+  - One knob: `parallelRoles`. It sets both the number of Role lanes and the per-host in-flight cap on Test Copy runs. It is set by `--parallel-roles <n>` (CLI), `QA_PARALLEL_ROLES` (env/config), and a "Parallel requests" field in the wizard (shown for a Test Copy only).
   - Default N = 1. This ships the pool at one, which is today's behaviour. A run uses a higher N only when the person chooses one for that run; the default stays 1 until they do.
 - **What the cap governs.** Only two things, both on a Test Copy run:
-  - Testing-stage navigations in the Check-up. These are unpaced today, so the cap adds a pacer where none exists.
+  - Testing-stage navigations in the Check-up. Current-state note: before this change, test navigations were unpaced, so the cap adds a pacer where none existed.
   - Checker fetches of the same run.
+  Decided 2026-11-18: both go through the host pacer at N in flight per host.
   Nothing else is governed by this cap: not the Website Audit, not live-site or third-party runs, not discovery.
 - **The cap is its own setting.** It is separate from the Website Audit's cap (3, ADR 0043) and from the live-site default (1, ADR 0015). Changing one does not change the others.
 - **Gate.** The raised cap applies only when the run is a Test Copy. The existing flag is the per-run `testCopy` option on the orchestrator (`packages/core/src/orchestrator.ts`); it already sets certificate handling. Its source is the Test Copy decision (`decideTestCopy` in `packages/core/src/domain-verification.ts`, called via `packages/core/src/live-site.ts`). Whether the runner passes that decision into the option was not traced in this pass; confirm it before build. A run without `testCopy: true` never gets N above 1.
 - **Unchanged rules:**
   - Live sites and third-party sites: one request at a time per host (ADR 0015).
   - Website Audit: ADR 0043, including its back-off rules.
+  - Back-off (decided 2026-11-18): a 429 or 503 from a Test Copy host drops that host to one request in flight for the rest of the run, the same as ADR 0043.
   - A robots.txt Crawl-delay forces the cap to 1 for that host, as in 0043 and in `HostPacer` (`crawlDelayMs > 0` sets `maxInFlight` to 1). This applies on a Test Copy too.
 - **Safety.** The Safety Filter ([0003](0003-deterministic-safety-filters-for-ai-discovery.md)) and evidence redaction ([0016](0016-evidence-redaction.md)) are unchanged. Parallel runs pass through the same filters and redaction as serial runs. Test Copy classification (ADR 0014) is unchanged; a host that is not a Test Copy never gets a cap above 1.
 - **Implementation.** `HostPacer` already supports `maxInFlight` (ADR 0043). The Testing stage does not pass a pacer today, so the build adds one, and passes N to it only when the run is a Test Copy. Build tickets are written after sign-off.
 
-## Open for sign-off
-- Whether a 429 or 503 from a Test Copy drops the host to one request at a time for the rest of the run, as 0043 does for the Website Audit. Proposed: yes, the same back-off.
-- Whether N is set in the wizard, in a config file, or both. Proposed: a config value, with the default of 1.
-- **Finding to confirm:** that Testing-stage navigations are unpaced today (the orchestrator passes no `HostPacer`). If the developer sees a pacer elsewhere in that path, this decision and the Context section need correcting.
+## Items settled (2026-11-18)
+- 429/503 back-off: decided, yes, same as ADR 0043 (see Decision).
+- Where N is set: decided, `parallelRoles` via CLI flag, env/config and a wizard field (Test Copy only).
+- Pacing: decided, Test Copy navigations and checker fetches use the host pacer at N per host. The unpaced-navigation finding stands as the current state before this change.
+- Site-wide findings: accepted. With Role lanes on, which page a site-wide finding is attributed to can differ between runs. This is documented, not fixed.
 
 ## Consequences
 - A Test Copy Check-up with many Plan Items finishes sooner, roughly in proportion to N for independent items. At the default N = 1 nothing changes.
