@@ -16,7 +16,7 @@ export function aiStatusText(ai?: AuditAiStatus): string | null {
     case 'no-key':
       return 'AI: no key: template text';
     case 'quota':
-      return 'AI: quota reached: template text';
+      return 'AI: request budget used up: template text';
     case 'timeout':
       return 'AI: timeout: template text';
     case 'provider-error':
