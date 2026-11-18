@@ -109,6 +109,10 @@ export class PacedAI implements AIProvider {
   readonly models: Record<string, AIModelOutcome> = {};
   /** Dollars spent so far, from the tokens used and the model's price; 0 when no price is known. */
   spentUsd = 0;
+  /** Total pacing wait (the gap before each request), in ms. Timing only: not used for any decision. */
+  paceWaitMs = 0;
+  /** Total time spent inside the provider's requests, retries included, in ms. Parallel requests add up. */
+  requestMs = 0;
   /** Requests that may be in flight at once. */
   readonly concurrency: number;
   /** Earliest start of the next request; reserved synchronously so gaps hold under concurrency. */
@@ -257,6 +261,7 @@ export class PacedAI implements AIProvider {
         this.used--; // stopped before the request was sent
         throw err;
       }
+      this.paceWaitMs += wait;
       const model = options.model ?? this.model;
       const stops = [this.signal, this.finishSignal].filter((s): s is AbortSignal => !!s);
       const sent: AICompletionOptions = {
@@ -267,10 +272,12 @@ export class PacedAI implements AIProvider {
           : {}),
       };
       let result: AICompletion;
+      const sentAt = Date.now();
       try {
         // The hold ends as soon as the request settles, before any retry wait.
         result = await completeWith(this.inner, messages, sent).finally(() => {
           this.reservedUsd -= reserve;
+          this.requestMs += Date.now() - sentAt;
         });
       } catch (err) {
         if (this.signal?.aborted) {

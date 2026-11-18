@@ -18,7 +18,7 @@ import { signInReasonText } from '@qa/types';
 import { PlanValidator } from './plan-validator.js';
 import { BrowserManager, BREAKPOINT_VIEWPORTS } from '../browser.js';
 import { PreFlightChecker, SignInFailedError, type PreFlightResult } from '../preflight.js';
-import { debugLog } from '../debug-log.js';
+import { debugLog, stageTiming } from '../debug-log.js';
 import { DeterministicSpider, DEFAULT_MAX_PAGES, type SpiderResult } from './deterministic-spider.js';
 import { buildSiteGraph, pathOf } from '../plan/site-graph.js';
 import { sampleLayoutGroups } from '../plan/sampling.js';
@@ -516,6 +516,7 @@ export class DiscoveryAgent {
 
     const totalMaxPages = options.maxPages ?? DEFAULT_MAX_PAGES;
     const visitorSpider = new DeterministicSpider(options.profile?.forbiddenActions || [], totalMaxPages);
+    const visitorStartedAt = Date.now();
     const visitorContext = await newContext();
     crawls.push({
       who: 'visitor',
@@ -530,6 +531,9 @@ export class DiscoveryAgent {
       }),
     });
     await visitorContext.close();
+    stageTiming('discovery.visitor', Date.now() - visitorStartedAt, {
+      pages: crawls[crawls.length - 1].result.pages.length,
+    });
     stopIfAborted(signal);
 
     for (const role of roles) {
@@ -543,6 +547,7 @@ export class DiscoveryAgent {
       console.log(
         `[DiscoveryAgent] Exploring signed in as "${role.role}"${landing ? ` from ${redactor.text(landing)}` : ''}...`
       );
+      const roleStartedAt = Date.now();
       const roleContext = await newContext(storageState);
       const roleMaxPages = Math.min(totalMaxPages, Math.max(20, Math.floor(totalMaxPages / 2)));
       const roleSpider = new DeterministicSpider(options.profile?.forbiddenActions || [], roleMaxPages);
@@ -586,6 +591,7 @@ export class DiscoveryAgent {
         result: roleResult,
       });
       await roleContext.close();
+      stageTiming('discovery.role', Date.now() - roleStartedAt, { role: role.role, pages: roleResult.pages.length });
       stopIfAborted(signal);
 
       if (roleResult.sessionLost || (roleResult.signInWalls && roleResult.signInWalls.length >= 3)) {
@@ -616,6 +622,7 @@ export class DiscoveryAgent {
     // Skipped when the person asked to finish with what's found.
     options.onProgress?.({ stage: 'narrow-screens' });
     let lastNarrowLoad = 0;
+    const narrowStartedAt = Date.now();
     if (!options.finishSignal?.aborted)
       await lookAtNarrowScreens(spiderResult.pages, {
         baseUrl: options.targetUrl,
@@ -642,6 +649,7 @@ export class DiscoveryAgent {
           lastNarrowLoad = Date.now();
         },
       });
+    stageTiming('narrow', Date.now() - narrowStartedAt, { pages: spiderResult.pages.length });
     await this.browserManager.close();
     stopIfAborted(signal);
 
@@ -704,6 +712,7 @@ export class DiscoveryAgent {
         roles: roleNames,
       }) + (reuseJourneys ? 0 : 1);
     crawling = false;
+    const planningStartedAt = Date.now();
     planningProgress = (done: number, what: string, asking?: { attempt?: number }, total = requestsNeeded) =>
       options.onProgress?.({
         stage: 'planning',
@@ -775,6 +784,13 @@ export class DiscoveryAgent {
     exploration.notes.push(...journeyPlan.notes);
     ambiguityQuestions.push(...journeyPlan.questions);
     planningProgress(requestsNeeded, 'Planned the journeys');
+    stageTiming('planning', Date.now() - planningStartedAt, { pages: pagePlan.pages.length });
+    // Summed over the whole discovery: the AI requests were sent while the crawl ran, too.
+    if (paced)
+      stageTiming('ai', paced.requestMs, {
+        requests: paced.used,
+        waitMs: Math.round(paced.paceWaitMs),
+      });
 
     // Fixed rules read the documents: User Flows, route access and Denial items, each with its Source.
     // With an AI, only units it did not reach are filled in here.

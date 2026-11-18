@@ -40,7 +40,7 @@ import {
 import { restoreSession } from './discovery/discovery-agent.js';
 import { navigate, looksLikeLogin } from './navigate.js';
 import { isSignInOnlyForm, readPageForms } from './discovery/deterministic-spider.js';
-import { debugLog } from './debug-log.js';
+import { debugLog, stageTiming } from './debug-log.js';
 import { SourceLocator, isQaToolRepo } from './source-locator.js';
 import { ReproScriptGenerator } from './repro-generator.js';
 import { ReportGenerator, withPortablePaths } from './reporter.js';
@@ -373,6 +373,7 @@ export class FlowTestOrchestrator {
   async run(options: RunOptions): Promise<ReleaseReport> {
     const redactor = runRedactor(options);
     let redacted = false;
+    const runStartedAt = Date.now();
     try {
       const report = await this.runChecks(options, redactor);
       redacted = true; // runChecks redacted the evidence before it built the report
@@ -381,6 +382,7 @@ export class FlowTestOrchestrator {
       await this.browserManager.close().catch(() => {});
       // Stop, sign-in failure or error: the evidence already on disk is redacted too (ADR 0016).
       if (!redacted) await redactor.files(evidenceDirOf(options)).catch(() => {});
+      stageTiming('run', Date.now() - runStartedAt);
     }
   }
 
@@ -646,6 +648,7 @@ export class FlowTestOrchestrator {
       vitalsMeasured.add(urlPath);
       return true;
     };
+    const testingStartedAt = Date.now();
     tests: for (const testCase of testCasesToRun) {
       // Which checkers run afterwards depends on the kind of Plan Item (see TestCase.kind).
       const kind = testCase.kind;
@@ -1534,6 +1537,13 @@ export class FlowTestOrchestrator {
         const lastScreen = [...pointResult!.stepEvidence].reverse().find((s) => s.screenshotPath)?.screenshotPath;
         if (lastScreen) for (const f of pointResult!.findings) f.evidence.screenshotPath ??= lastScreen;
         results.push(pointResult!);
+        // durationMs stops before the context and video are closed; wallMs runs to the end of the loop body.
+        stageTiming('test', pointResult!.durationMs, {
+          testCaseId: testCase.id,
+          status: pointResult!.status,
+          breakpoint: pointResult!.breakpoint,
+          wallMs: Date.now() - pointStartTime,
+        });
         onEvent({
           type: 'FINDINGS_UPDATED',
           totalFindings: allFindings.length,
@@ -1548,11 +1558,14 @@ export class FlowTestOrchestrator {
         });
       }
     }
+    stageTiming('testing', Date.now() - testingStartedAt, { tests: results.length });
+    const postTestsStartedAt = Date.now();
 
     // Access checks (ADR 0030): plain GETs only. A failure here never fails the run.
     const accessPages = options.siteMap?.pages ?? [];
     const accessRoles = Object.keys(roleStorageStates).filter((r) => !notTestedRoles.has(r));
     if (accessPages.length > 0 && accessRoles.length > 0 && !options.finishSignal?.aborted) {
+      const accessStartedAt = Date.now();
       const accessContexts: BrowserContext[] = [];
       try {
         const base = {
@@ -1588,6 +1601,7 @@ export class FlowTestOrchestrator {
         console.warn('[QA Orchestrator] Access checks did not run:', err instanceof Error ? err.message : err);
       } finally {
         for (const c of accessContexts) await c.close().catch(() => {});
+        stageTiming('access', Date.now() - accessStartedAt, { pages: accessPages.length, roles: accessRoles.length });
       }
     }
 
@@ -1711,6 +1725,8 @@ export class FlowTestOrchestrator {
           }
         : undefined;
 
+    stageTiming('post-tests', Date.now() - postTestsStartedAt);
+    const reportStartedAt = Date.now();
     const fullReport: ReleaseReport = {
       runId,
       productId: options.productId,
@@ -1764,6 +1780,7 @@ export class FlowTestOrchestrator {
     // Emit reports to .qa-report
     console.log(`[QA Orchestrator] Generating release readiness report in ${outputDir}...`);
     await reportGenerator.generate(report);
+    stageTiming('report', Date.now() - reportStartedAt);
     console.log(`[QA Orchestrator] Reports generated: report.md and findings.json`);
 
     onEvent({ type: 'RUN_COMPLETED', runId, report });
