@@ -303,6 +303,11 @@ export interface RunOptions {
   readOnly?: boolean;
   /** The App is a Test Copy (the runner decides): its certificate may be self-signed (T-312). */
   testCopy?: boolean;
+  /**
+   * Test lanes (ADR 0046): how many Roles' Plan Items run at once, one lane per Role. Default 1 (one at a time).
+   * Used only with `testCopy: true`; clamped to 1..5 and to the number of Roles in the Plan.
+   */
+  parallelRoles?: number;
   /** Planned tests that won't run, and why, e.g. a journey that needs a test copy on a live site. */
   notRun?: Array<{ id: string; flowId: string; name: string; role: string; reason: string }>;
   /** The site as the plan saw it, kept in the report so it can be drawn as a map. */
@@ -347,6 +352,47 @@ function runRedactor(options: RunOptions): Redactor {
 
 function evidenceDirOf(options: RunOptions): string {
   return path.join(options.outputDir || path.join(process.cwd(), '.qa-report'), 'evidence');
+}
+
+/**
+ * The test lane a Plan Item runs in (ADR 0046): its Role. A Role's Plan Items share its session, its
+ * re-sign-in and its "session lost" state, so they stay in one lane, one after another in Plan order.
+ */
+export function laneKeyOf(testCase: Pick<TestCase, 'role'>): string {
+  return testCase.role;
+}
+
+/** How many test lanes run at once: 1 unless the run is a Test Copy, then `parallelRoles` clamped to 1..5 and to the Roles. */
+export function testLaneCount(
+  options: Pick<RunOptions, 'parallelRoles' | 'testCopy'>,
+  testCases: Array<Pick<TestCase, 'role'>>
+): number {
+  if (options.testCopy !== true) return 1;
+  const asked = Math.floor(options.parallelRoles ?? 1);
+  if (Number.isNaN(asked)) return 1;
+  const roles = new Set(testCases.map(laneKeyOf)).size;
+  return Math.max(1, Math.min(5, asked, roles));
+}
+
+/** One Plan Item's results and findings, kept apart while lanes run so the report can list them in Plan order. */
+interface PlanSlot {
+  results: TestPointResult[];
+  findings: Finding[];
+}
+
+/** A one-at-a-time lock: `await acquire()` resolves to the release function once every earlier holder released. */
+function promiseMutex(): () => Promise<() => void> {
+  let tail: Promise<void> = Promise.resolve();
+  return async () => {
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const before = tail;
+    tail = before.then(() => held);
+    await before;
+    return release;
+  };
 }
 
 export class FlowTestOrchestrator {
@@ -618,6 +664,9 @@ export class FlowTestOrchestrator {
     // Running step counter across all test cases x breakpoints (not reset per test case),
     // so UI consumers of STEP_STARTED/STEP_COMPLETED see one continuously advancing sequence
     // for the whole run rather than restarting at 0 for every test point.
+    // With test lanes (ADR 0046) the lanes take numbers from it as they go, so which step gets which number
+    // depends on timing. It feeds only the STEP_STARTED/STEP_COMPLETED events: no finding id, fingerprint
+    // or grade reads it (step evidence numbers steps per test, from 1).
     let globalStepIndex = 0;
     // A test can be limited to some screen sizes (a link check runs once, at the first).
     const sizesFor = (tc: TestCase) =>
@@ -643,14 +692,35 @@ export class FlowTestOrchestrator {
     // Pages whose keyboard walk and 320 px reflow check already ran in this run (one size is enough).
     const keyboardChecked = new Set<string>();
     const reflowChecked = new Set<string>();
+    // Not yet measured with repeat loads, and this is the size they are taken at.
+    const vitalsPending = (urlPath: string, bp: Breakpoint, sizes: Breakpoint[]) =>
+      bp === (sizes.includes('375px') ? '375px' : sizes[0]) && !vitalsMeasured.has(urlPath);
     const wantsRepeatLoads = (urlPath: string, bp: Breakpoint, sizes: Breakpoint[]) => {
-      if (bp !== (sizes.includes('375px') ? '375px' : sizes[0]) || vitalsMeasured.has(urlPath)) return false;
+      if (!vitalsPending(urlPath, bp, sizes)) return false;
       vitalsMeasured.add(urlPath);
       return true;
     };
+
+    // Test lanes (ADR 0046): one lane per Role, `lanes` of them at once. At 1 the loop below runs as it always did.
+    const lanes = testLaneCount(options, testCasesToRun);
+    // Set when any lane must end: the run was asked to finish, or a lane threw. Never set when lanes is 1.
+    let lanesStopped = false;
+    // With lanes, vitalsMeasured, keyboardChecked and reflowChecked (keyed by page path, not Role) are
+    // checked, set and measured under this one lock, so no two lanes measure the same path at once. Which
+    // Role measures a path first, and so whose page the numbers come from, still depends on lane timing.
+    const lockMeasure = promiseMutex();
     const testingStartedAt = Date.now();
     // One Plan Item at each of its screen sizes. 'stop' ends the testing loop: the run was asked to finish.
-    const runTestCase = async (testCase: TestCase): Promise<'next' | 'stop'> => {
+    // With lanes, `slot` gets a copy of every result and finding this Plan Item adds, for the Plan-order report.
+    const runTestCase = async (testCase: TestCase, slot?: PlanSlot): Promise<'next' | 'stop'> => {
+      const keepResult = (result: TestPointResult) => {
+        results.push(result);
+        slot?.results.push(result);
+      };
+      const keepFinding = (finding: Finding) => {
+        allFindings.push(finding);
+        slot?.findings.push(finding);
+      };
       // Which checkers run afterwards depends on the kind of Plan Item (see TestCase.kind).
       const kind = testCase.kind;
       const lightChecks = kind === 'navigation' || kind === 'link';
@@ -661,7 +731,7 @@ export class FlowTestOrchestrator {
         const why = rolesNotTested.find((r) => r.role === testCase.role)!;
         // One per screen size, like every other result, so the Skipped count adds up with the planned total.
         for (const bp of sizes) {
-          results.push({
+          keepResult({
             testCaseId: testCase.id,
             flowId: testCase.flowId,
             role: testCase.role,
@@ -675,9 +745,10 @@ export class FlowTestOrchestrator {
         }
         return 'next';
       }
+      // Only this Role's own lane adds it to sessionLostRoles, so with lanes too only its later Plan Items skip.
       if (sessionLostRoles.has(testCase.role)) {
         for (const bp of sizesFor(testCase)) {
-          results.push({
+          keepResult({
             testCaseId: testCase.id,
             flowId: testCase.flowId,
             role: testCase.role,
@@ -694,13 +765,15 @@ export class FlowTestOrchestrator {
       const searchSize = sizes.includes('1440px') ? '1440px' : sizes[sizes.length - 1];
       for (const bp of sizesFor(testCase)) {
         await stopHere();
-        if (options.finishSignal?.aborted) return 'stop';
+        // lanesStopped: another lane finished early or threw, so this one starts no new test point either.
+        if (options.finishSignal?.aborted || lanesStopped) return 'stop';
         onEvent({
           type: 'TEST_POINT_STARTED',
           testCaseId: testCase.id,
           testCaseName: testCase.name || testCase.flowId,
           role: testCase.role,
           breakpoint: bp,
+          // Run-wide: the test points done so far. With lanes, two lanes can start at the same index.
           index: results.length,
           total: plannedTestPoints,
           startPage: testCase.startPage,
@@ -1091,10 +1164,12 @@ export class FlowTestOrchestrator {
             sentAny: () => sendGuard?.hasSentAny() === true,
             // Once a form was sent, a second try would send it twice: decline the retry.
             // A failed sign-in fails the same way every time: retrying only relaunches the browser.
+            // Lanes stopped: another lane threw (and may have closed the browser), so trying again is wasted.
             shouldRetry: (err) =>
               !isAbortError(err) &&
               !(err instanceof SignInFailedError) &&
               !sendGuard?.hasSentAny() &&
+              !lanesStopped &&
               (testCase.kind !== 'link' || sessionRefreshed),
           });
           if (
@@ -1116,7 +1191,7 @@ export class FlowTestOrchestrator {
           if (attemptResult.outcome === 'FLAKY_PASSED' && !sessionRefreshed) flakyRetry = attemptResult.telemetry;
 
           if (pointSkippedReason) {
-            results.push({
+            keepResult({
               testCaseId: testCase.id,
               flowId: testCase.flowId,
               role: testCase.role,
@@ -1214,24 +1289,34 @@ export class FlowTestOrchestrator {
                 ];
 
           // 3c. Performance (Speed, Web Vitals, Mobile Overflow & Overlap)
-          const perfFindings =
-            options.enablePerformance === false || !pageLevelChecks
-              ? []
-              : await this.performanceChecker.checkPage(page, {
-                  testCaseId: testCase.id,
-                  flowId: testCase.flowId,
-                  role: testCase.role,
-                  breakpoint: bp,
-                  urlPath: new URL(page.url(), options.targetUrl).pathname,
-                  onSpeed: (s) => {
-                    speedSamples[pageSpeedKey(testCase.role, bp, new URL(page.url(), options.targetUrl).pathname)] = s;
-                  },
-                  // Throttled repeat loads cost minutes, so each page gets them once per run, at the
-                  // phone width when there is one. Other widths read the vitals the page already had.
-                  repeatLoads: wantsRepeatLoads(new URL(page.url(), options.targetUrl).pathname, bp, sizes)
-                    ? 3
-                    : undefined,
-                });
+          let perfFindings: Finding[] = [];
+          if (options.enablePerformance !== false && pageLevelChecks) {
+            // Lanes only: a point that may take this page's repeat loads waits for the measure lock, then
+            // claims (wantsRepeatLoads) and measures under it. Without lanes no lock is taken.
+            const releaseMeasure =
+              lanes > 1 && vitalsPending(new URL(page.url(), options.targetUrl).pathname, bp, sizes)
+                ? await lockMeasure()
+                : undefined;
+            try {
+              perfFindings = await this.performanceChecker.checkPage(page, {
+                testCaseId: testCase.id,
+                flowId: testCase.flowId,
+                role: testCase.role,
+                breakpoint: bp,
+                urlPath: new URL(page.url(), options.targetUrl).pathname,
+                onSpeed: (s) => {
+                  speedSamples[pageSpeedKey(testCase.role, bp, new URL(page.url(), options.targetUrl).pathname)] = s;
+                },
+                // Throttled repeat loads cost minutes, so each page gets them once per run, at the
+                // phone width when there is one. Other widths read the vitals the page already had.
+                repeatLoads: wantsRepeatLoads(new URL(page.url(), options.targetUrl).pathname, bp, sizes)
+                  ? 3
+                  : undefined,
+              });
+            } finally {
+              releaseMeasure?.();
+            }
+          }
 
           // 3d. SEO & Link Health
           const searchHere = options.enableSeo !== false && pageLevelChecks && bp === searchSize;
@@ -1334,18 +1419,27 @@ export class FlowTestOrchestrator {
               urlPath,
               onCoverage,
             };
-            if (!keyboardChecked.has(urlPath)) {
-              keyboardChecked.add(urlPath);
-              a11yDepth.push(...(await this.keyboardA11y.checkKeyboard(page, a11yContext)));
-            }
-            if (!reflowChecked.has(urlPath)) {
-              reflowChecked.add(urlPath);
-              a11yDepth.push(
-                ...(await this.keyboardA11y.checkReflow(page, {
-                  ...a11yContext,
-                  restoreViewport: BREAKPOINT_VIEWPORTS[bp],
-                }))
-              );
+            // Lanes only: one lock around both checks and their check-and-set (see lockMeasure).
+            const releaseMeasure =
+              lanes > 1 && (!keyboardChecked.has(urlPath) || !reflowChecked.has(urlPath))
+                ? await lockMeasure()
+                : undefined;
+            try {
+              if (!keyboardChecked.has(urlPath)) {
+                keyboardChecked.add(urlPath);
+                a11yDepth.push(...(await this.keyboardA11y.checkKeyboard(page, a11yContext)));
+              }
+              if (!reflowChecked.has(urlPath)) {
+                reflowChecked.add(urlPath);
+                a11yDepth.push(
+                  ...(await this.keyboardA11y.checkReflow(page, {
+                    ...a11yContext,
+                    restoreViewport: BREAKPOINT_VIEWPORTS[bp],
+                  }))
+                );
+              }
+            } finally {
+              releaseMeasure?.();
             }
           }
 
@@ -1411,7 +1505,7 @@ export class FlowTestOrchestrator {
 
             // Absolute here; the report makes it relative to the report folder, like every evidence path.
             f.reproScriptPath = await reproGenerator.generate(f, testCase, options.targetUrl);
-            allFindings.push(f);
+            keepFinding(f);
           }
 
           // Unconfirmed AI guesses never fail a test point on their own.
@@ -1504,7 +1598,7 @@ export class FlowTestOrchestrator {
                 resolution:
                   'Check the page loads at this address for this role; a timeout usually means the page is slow or the server stopped.',
               };
-          allFindings.push(couldNotRun);
+          keepFinding(couldNotRun);
           pointResult = {
             testCaseId: testCase.id,
             flowId: testCase.flowId,
@@ -1537,7 +1631,7 @@ export class FlowTestOrchestrator {
         // A problem shows the screen it was found on: its own screenshot, or its test's latest one.
         const lastScreen = [...pointResult!.stepEvidence].reverse().find((s) => s.screenshotPath)?.screenshotPath;
         if (lastScreen) for (const f of pointResult!.findings) f.evidence.screenshotPath ??= lastScreen;
-        results.push(pointResult!);
+        keepResult(pointResult!);
         // durationMs stops before the context and video are closed; wallMs runs to the end of the loop body.
         stageTiming('test', pointResult!.durationMs, {
           testCaseId: testCase.id,
@@ -1547,6 +1641,7 @@ export class FlowTestOrchestrator {
         });
         onEvent({
           type: 'FINDINGS_UPDATED',
+          // Run-wide: every lane's findings so far.
           totalFindings: allFindings.length,
           latest: pointResult!.findings.map((f) => ({
             id: f.id,
@@ -1560,10 +1655,53 @@ export class FlowTestOrchestrator {
       }
       return 'next';
     };
-    for (const testCase of testCasesToRun) {
-      if ((await runTestCase(testCase)) === 'stop') break;
+    if (lanes === 1) {
+      for (const testCase of testCasesToRun) {
+        if ((await runTestCase(testCase)) === 'stop') break;
+      }
+    } else {
+      // Test lanes (ADR 0046): one lane per Role, its Plan Items one after another in Plan order; at most
+      // `lanes` lanes at once, the next Role's lane starting when one ends. Results and findings are put back
+      // in Plan order below. Still timing-dependent with lanes: which test point reports a site-wide fact first
+      // (siteWide; the finding keeps that page's path, which its fingerprint hashes), the order of notes added
+      // during testing and of the marketing log's pages, and the run-wide event counters.
+      const slots: PlanSlot[] = testCasesToRun.map(() => ({ results: [], findings: [] }));
+      const laneItems = new Map<string, number[]>();
+      testCasesToRun.forEach((testCase, i) => {
+        const items = laneItems.get(laneKeyOf(testCase));
+        if (items) items.push(i);
+        else laneItems.set(laneKeyOf(testCase), [i]);
+      });
+      const waiting = [...laneItems.values()];
+      // The first error a lane throws (a stop, a failed sign-in) ends every lane after its current test point,
+      // and is thrown once all of them have ended, so no browser context is left open.
+      const laneFailure: { failed?: boolean; error?: unknown } = {};
+      const runLanes = async (): Promise<void> => {
+        for (let items = waiting.shift(); items && !lanesStopped; items = waiting.shift()) {
+          for (const i of items) {
+            if (lanesStopped) break;
+            try {
+              if ((await runTestCase(testCasesToRun[i], slots[i])) === 'stop') lanesStopped = true;
+            } catch (error) {
+              if (!laneFailure.failed) {
+                laneFailure.failed = true;
+                laneFailure.error = error;
+              }
+              lanesStopped = true;
+            }
+          }
+        }
+      };
+      await Promise.all(Array.from({ length: lanes }, runLanes));
+      if (laneFailure.failed) throw laneFailure.error;
+      results.length = 0;
+      allFindings.length = 0;
+      for (const slot of slots) {
+        results.push(...slot.results);
+        allFindings.push(...slot.findings);
+      }
     }
-    stageTiming('testing', Date.now() - testingStartedAt, { tests: results.length });
+    stageTiming('testing', Date.now() - testingStartedAt, { tests: results.length, lanes });
     const postTestsStartedAt = Date.now();
 
     // Access checks (ADR 0030): plain GETs only. A failure here never fails the run.
