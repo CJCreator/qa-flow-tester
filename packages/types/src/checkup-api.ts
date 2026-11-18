@@ -113,6 +113,8 @@ export interface RunStartBody {
   aiCap?: RunCap;
   /** Most Tests the Plan runs before Rejects and Limits are trimmed (1 to 100000); the default when absent. */
   testCap?: number;
+  /** Roles tested at once on a Test Copy (1 to 10; default 1). Ignored on any other run. */
+  parallelRoles?: number;
   /** Crawl concurrency (workers count, 1 to 5; default 2 per FR-1.7). */
   crawlConcurrency?: number;
   /** Delay pacing between page requests in ms (default 100ms per FR-1.7). */

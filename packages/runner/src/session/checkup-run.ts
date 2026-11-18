@@ -68,6 +68,11 @@ import { testCopyFor } from '../host-policy.js';
 import type { CheckupSession, StoredPlanRecord } from './checkup-session.js';
 import { hostOfAddress } from './plan-store.js';
 
+/** A whole number clamped to 1..10; anything else is absent (the default, 1). */
+function clampParallelRoles(raw: unknown): number | undefined {
+  return typeof raw === 'number' && Number.isInteger(raw) ? Math.min(10, Math.max(1, raw)) : undefined;
+}
+
 export const LOOPBACK_HOSTS = ['localhost', '127.0.0.1', '[::1]'];
 export const ALL_SCREEN_SIZES: Breakpoint[] = ['375px', '768px', '1440px'];
 
@@ -499,6 +504,7 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
         aiModels: context.aiModels,
         readOnly: context.readOnly,
         testCopy: context.testCopy,
+        parallelRoles: context.parallelRoles,
         requireSignIn: context.signInConsent && !context.readOnly ? true : undefined,
         pageCoverage: context.pageCoverage ?? context.draft?.exploration?.pageCoverage,
         notRun,
@@ -750,6 +756,7 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
         visibility,
         aiCap: valueOf(aiCap),
         testCap: checkTestCap(body.testCap),
+        parallelRoles: clampParallelRoles(body.parallelRoles),
         customHeaders: session.secrets.headers,
         userAgent: body.userAgent,
         tunnelAuth: body.tunnelAuth,

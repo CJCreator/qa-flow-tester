@@ -69,6 +69,8 @@ export interface CheckupArgs {
   docs: string[];
   /** Most Tests the Plan runs before Rejects and Limits are trimmed (--test-cap). Absent: the default. */
   testCap?: number;
+  /** Test lanes (one sign-in role each) on a Test Copy: 1 to 10 (--parallel-roles or QA_PARALLEL_ROLES). Default 1. */
+  parallelRoles?: number;
   /** Spider concurrency: 1 to 5 concurrent page evaluations (--concurrency or QA_CONCURRENCY). */
   crawlConcurrency?: number;
   /** Per-page pacing delay in ms: 0 to 2000 ms (--delay or QA_DELAY_MS). */
@@ -177,6 +179,7 @@ Options:
   --max-pages <n>        Pages to explore (1..1000, default 50)
   --output <dir>         Output directory for report (default qa-report)
   --test-cap <n>         Test cap (1..100000)
+  --parallel-roles <n>   Roles tested at once on a Test Copy (1..10, default 1)
   --concurrency <n>      Spider concurrency (1..5, default 2)
   --delay <ms>           Pacing delay in ms (0..2000, default 100)
   --header "Name: val"   Custom HTTP header (repeatable)
@@ -194,6 +197,7 @@ Environment variables:
   QA_OUTPUT_DIR          Report output directory
   QA_MAX_PAGES           Pages to explore
   QA_FAIL_ON             Exit threshold
+  QA_PARALLEL_ROLES      Roles tested at once on a Test Copy
   QA_CONCURRENCY         Spider concurrency
   QA_DELAY_MS            Pacing delay in ms
   QA_CUSTOM_HEADERS      JSON custom headers
@@ -209,6 +213,7 @@ const VALUE_FLAGS = new Set([
   '--output',
   '--test-cap',
   '--concurrency',
+  '--parallel-roles',
   '--delay',
   '--header',
   '--preset',
@@ -231,6 +236,15 @@ function parseWholeNumberInRange(
     throw new Error(`${flagName} must be a whole number from ${min} to ${max}, not "${raw}"`);
   }
   return n;
+}
+
+/** `--parallel-roles` / QA_PARALLEL_ROLES: a whole number, clamped to 1..10. Anything else is refused. */
+export function parseParallelRoles(raw: string | undefined, flagName = '--parallel-roles'): number | undefined {
+  if (raw === undefined || raw.trim() === '') return undefined;
+  if (!/^-?\d+$/.test(raw.trim())) {
+    throw new Error(`${flagName} must be a whole number from 1 to 10, not "${raw}"`);
+  }
+  return Math.min(10, Math.max(1, Number(raw.trim())));
 }
 
 export function parseArgs(argv: string[], env: NodeJS.ProcessEnv = process.env): CheckupArgs {
@@ -312,6 +326,9 @@ export function parseArgs(argv: string[], env: NodeJS.ProcessEnv = process.env):
     1,
     5
   );
+  const parallelRoles = flagMap.has('--parallel-roles')
+    ? parseParallelRoles(flagMap.get('--parallel-roles'))
+    : parseParallelRoles(env.QA_PARALLEL_ROLES, 'QA_PARALLEL_ROLES');
   const testCap = parseWholeNumberInRange(flagMap.get('--test-cap'), '--test-cap', 1, 100000);
   const crawlDelayMs = parseWholeNumberInRange(flagMap.get('--delay') ?? env.QA_DELAY_MS, '--delay', 0, 2000);
 
@@ -383,6 +400,7 @@ export function parseArgs(argv: string[], env: NodeJS.ProcessEnv = process.env):
     signIns,
     docs,
     testCap,
+    parallelRoles,
     crawlConcurrency,
     crawlDelayMs,
     customHeaders: Object.keys(customHeaders).length > 0 ? customHeaders : undefined,
@@ -411,6 +429,7 @@ export function buildRunBody(args: CheckupArgs, documents: CheckupDocument[] = [
     ...(args.crawlDelayMs !== undefined ? { crawlDelayMs: args.crawlDelayMs } : {}),
     ...(args.customHeaders ? { customHeaders: args.customHeaders } : {}),
     ...(args.testCap ? { testCap: args.testCap } : {}),
+    ...(args.parallelRoles && args.parallelRoles > 1 ? { parallelRoles: args.parallelRoles } : {}),
     ...(documents.length ? { contextDocuments: documents } : {}),
     ...(signIns.length
       ? {

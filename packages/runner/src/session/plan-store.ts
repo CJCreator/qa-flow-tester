@@ -40,6 +40,8 @@ export interface StoredPlanRecord {
     contextDocuments?: Array<{ name: string; text: string }>;
     aiCap?: RunCap;
     testCap?: number;
+    /** Roles tested at once; the orchestrator uses it only on a Test Copy. */
+    parallelRoles?: number;
     readOnly?: boolean;
     /** The App is a Test Copy: its certificate may be self-signed (T-312). */
     testCopy?: boolean;
