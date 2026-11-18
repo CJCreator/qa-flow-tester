@@ -63,7 +63,7 @@ export interface DocumentSummary {
 
 export type ContextNameCheck = { ok: true } | { ok: false; message: string };
 
-export const UNSUPPORTED_CONTEXT_MESSAGE = 'PDF and old .doc files are not supported. Save as .docx, .md or .txt.';
+const UNSUPPORTED_CONTEXT_MESSAGE = 'PDF and old .doc files are not supported. Save as .docx, .md or .txt.';
 
 /** Product Context files: .md, .markdown, .txt, .docx. */
 export function isSupportedContextName(name: string): ContextNameCheck {

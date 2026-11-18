@@ -72,7 +72,7 @@ const TWO_PART_TLDS = new Set(['co.uk', 'org.uk', 'ac.uk', 'com.au', 'co.nz', 'c
  * Lower-cases both, strips a leading `www.`, then returns true when equal or resource ends with `.` + registrable domain.
  * Note: this is an approximation without a full public-suffix list.
  */
-export function isOwnSubdomain(resourceHost: string, pageHost: string): boolean {
+function isOwnSubdomain(resourceHost: string, pageHost: string): boolean {
   const normResource = resourceHost.toLowerCase().replace(/^www\./, '');
   const normPage = pageHost.toLowerCase().replace(/^www\./, '');
   if (normResource === normPage) return true;

@@ -115,7 +115,7 @@ export const AUDIT_AI_MODEL_ID_MAX = 200;
 // eslint-disable-next-line no-control-regex
 const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f-\u009f]/;
 
-export function isAuditAiStage(value: unknown): value is AuditAiStage {
+function isAuditAiStage(value: unknown): value is AuditAiStage {
   return typeof value === 'string' && (AUDIT_AI_STAGES as readonly string[]).includes(value);
 }
 

@@ -37,7 +37,7 @@ export interface RefusalResult {
   crashed: boolean;
 }
 
-/** Function expression: `(baseline) => RefusalBaseline-like`, runs in the page. */
+/** Function expression: `() => RefusalBaseline`, runs in the page. */
 export const CAPTURE_BASELINE_SOURCE = String.raw`() => {
   const visibleTexts = () => {
     const out = [];
@@ -56,7 +56,7 @@ export const CAPTURE_BASELINE_SOURCE = String.raw`() => {
   };
 }`;
 
-/** Function expression: `({ baseline, message, probeOnly }) => RefusalResult`, runs in the page. */
+/** Function expression: `(input: RefusalInput) => RefusalResult`, runs in the page. `message` is judged in Node (judgeRefusal). */
 export const REFUSAL_RULE_SOURCE = String.raw`(input) => {
   const baseline = input.baseline;
   const probeOnly = !!input.probeOnly;

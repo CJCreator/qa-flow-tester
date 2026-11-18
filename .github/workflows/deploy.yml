@@ -124,8 +124,9 @@ jobs:
   # build-and-smoke, audit and secret-scan must pass, and test must pass or have been skipped on purpose (skip_tests).
   cloud-run:
     needs: [build-and-smoke, test, audit, secret-scan]
+    # A manual run from a feature branch must not publish it: only main deploys.
     if: >-
-      ${{ !cancelled() && github.repository == 'CJCreator/qa-flow-tester' &&
+      ${{ !cancelled() && github.repository == 'CJCreator/qa-flow-tester' && github.ref == 'refs/heads/main' &&
       needs.build-and-smoke.result == 'success' &&
       needs.audit.result == 'success' && needs.secret-scan.result == 'success' &&
       (needs.test.result == 'success' || (inputs.skip_tests && needs.test.result == 'skipped')) }}
@@ -211,8 +212,9 @@ jobs:
   # The static site: the landing page and the wizard, public, served by nginx (site/Dockerfile).
   site:
     needs: [build-and-smoke, test, audit, secret-scan]
+    # Same guard as cloud-run: only main publishes.
     if: >-
-      ${{ !cancelled() && github.repository == 'CJCreator/qa-flow-tester' &&
+      ${{ !cancelled() && github.repository == 'CJCreator/qa-flow-tester' && github.ref == 'refs/heads/main' &&
       needs.build-and-smoke.result == 'success' &&
       needs.audit.result == 'success' && needs.secret-scan.result == 'success' &&
       (needs.test.result == 'success' || (inputs.skip_tests && needs.test.result == 'skipped')) }}

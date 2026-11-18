@@ -26,14 +26,14 @@ Plan: [WEBSITE-AUDIT-RELIABILITY-PLAN.md](WEBSITE-AUDIT-RELIABILITY-PLAN.md). De
 
 | id | title | gaps | priority | size | wave | status | depends on |
 |---|---|---|---|---|---|---|---|
-| [T-86](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-86-hosted-audits-for-the-signed-in-owner) | Hosted audits for the signed-in owner | A8 | P1 | M | 4 | built | - |
+| [T-86](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-86-hosted-audits-for-the-signed-in-owner) | Hosted audits for the signed-in owner | A8 | P1 | M | 4 | human | - |
 | [T-89](WEBSITE-AUDIT-RELIABILITY-PLAN.md#t-89-proving-the-audit-works) | Proving the audit works | A12 | P1 | M | 4 | built | - |
 
 ## Open: audit follow-up (November 2026)
 
-One file per ticket under [audit-2026-11/](audit-2026-11/). Each file names the files it may edit and the tickets it must not be built beside. These 54 tickets cover what the audit left over: findings that never got a ticket, and work that built tickets deferred in their Notes.
+One file per ticket under [audit-2026-11/](audit-2026-11/). Each file names the files it may edit and the tickets it must not be built beside. These 146 tickets cover what the audit left over: findings that never got a ticket, and work that built tickets deferred in their Notes.
 
-The tickets are grouped into chains. Tickets in one chain edit the same files, so build them one after another in wave order. Different chains can be built at the same time, with two limits: T-240 also edits `packages/runner/src/routes/plan.ts`, so do not build it beside T-256, T-258 or T-260; and T-225 edits every workflow file, so build it after T-274 if both are in flight. No ticket is waiting on a decision: the owner settled all eleven open choices on 2026-11-11, and each ticket records the answer.
+The tickets are grouped into chains. Tickets in one chain edit the same files, so build them one after another in wave order. Different chains can be built at the same time, with two limits: T-240 also edits `packages/runner/src/routes/plan.ts`, so do not build it beside T-256, T-258 or T-260; and T-225 edits every workflow file, so build it after T-274 if both are in flight. Ten tickets still wait on an owner decision (listed at the end of this section), and each builds its option A until the owner picks another.
 
 The ids are not continuous: T-235 to T-239, T-253, T-254, T-280 to T-284 and T-290 to T-294 were reserved and never used. No ticket is missing.
 

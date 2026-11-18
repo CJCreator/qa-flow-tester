@@ -764,7 +764,7 @@ export default function App() {
             onStop={() => void stopScan()}
           />
         ) : (
-          nothingInProgress('Nothing is being scanned')
+          nothingInProgress('Nothing is being checked')
         );
         break;
       case 'plan':
