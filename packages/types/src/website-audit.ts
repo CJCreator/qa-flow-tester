@@ -73,7 +73,12 @@ export const AUDIT_LIMIT_DEFAULTS = {
   pages: 50,
   depth: 5,
   hostedMaxPages: 200,
+  /** Pages of one host loaded at once when an audit starts (ADR 0043, 0046). */
   fetchInFlight: 3,
+  /** The most it climbs to on a local runner, one more after every 25 healthy answers (ADR 0046). */
+  fetchInFlightLocal: 8,
+  /** The most it climbs to on the hosted copy (1 CPU, 2 GiB): no climb (ADR 0046). */
+  fetchInFlightHosted: 3,
   aiInFlight: 4,
 } as const;
 

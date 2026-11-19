@@ -108,6 +108,8 @@ describe('audit-crawl-browser (T-89 browser tier)', () => {
     });
 
     expect(result.pages).toHaveLength(12);
+    // Starts at 3; it climbs only after 25 healthy answers (ADR 0046), and a 12-page site gives fewer.
+    expect(result.pacer.ceiling).toBe(8);
     expect(maxInFlight).toBeLessThanOrEqual(3);
     expect(maxInFlight).toBeGreaterThan(1);
 
@@ -192,6 +194,8 @@ describe('audit-crawl-browser (T-89 browser tier)', () => {
 
     expect(result.crawlDelayMs).toBe(1000);
     expect(result.pacer.maxInFlight).toBe(1);
+    // On a local runner the ceiling would be 8 (ADR 0046); a Crawl-delay keeps it at 1 for the whole audit.
+    expect(result.pacer.ceiling).toBe(1);
     expect(maxInFlight).toBe(1);
     expect(result.pages).toHaveLength(5);
   });
