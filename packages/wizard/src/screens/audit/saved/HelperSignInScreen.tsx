@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { WorkingLine, workingId } from '../../../components/DisabledReason';
 import type { HelperSession } from '@qa/types/src/browser.js';
 import { ErrorMessage, Spinner } from '../../../components/text';
 import { Page, PageHeader } from '../../../components/ui';
@@ -127,9 +128,16 @@ export function HelperSignInView({ state, onSignIn, onSignOut, onOpenAudit, host
   const busy = state.status === 'signing-in';
   return (
     <div className="space-y-4">
-      <button type="button" className="btn-primary px-6 font-bold" disabled={busy} onClick={onSignIn}>
+      <button
+        type="button"
+        className="btn-primary px-6 font-bold"
+        disabled={busy}
+        aria-describedby={workingId(busy)}
+        onClick={onSignIn}
+      >
         {busy ? <Spinner label="Signing in…" /> : 'Sign in with Google'}
       </button>
+      <WorkingLine busy={busy} />
       {state.status === 'signed-out' && state.message && <ErrorMessage>{state.message}</ErrorMessage>}
     </div>
   );

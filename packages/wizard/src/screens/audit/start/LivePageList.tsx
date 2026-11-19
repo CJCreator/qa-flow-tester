@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { WorkingLine, workingId } from '../../../components/DisabledReason';
 import type { AuditPageState } from '@qa/types/src/browser.js';
 import { formatDuration } from '../../../lib/format';
 import { skipText } from '../results/SkippedPagesView';
@@ -93,12 +94,14 @@ export function LivePageList({ pages, elapsedMs, onStop, stopped = false, auditI
             className="btn-quiet btn-sm text-fail"
             onClick={() => void handleStop()}
             disabled={stopping}
+            aria-describedby={workingId(stopping)}
             data-testid="audit-stop-button"
           >
             {stopping ? 'Stopping…' : 'Stop'}
           </button>
         )}
       </div>
+      <WorkingLine busy={stopping} />
       {stopMessage && (
         <p role="alert" className="mt-2 text-sm text-fail" data-testid="audit-stop-message">
           {stopMessage}

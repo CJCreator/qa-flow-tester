@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { DisabledReason, WORKING_ID, WorkingLine, reasonId } from '../../../components/DisabledReason';
 import type { AuditFinding, RewriteState } from '@qa/types/src/browser.js';
 import { ErrorMessage, Spinner } from '../../../components/text';
 import { loadVersion } from '../saved/saved-api';
@@ -106,6 +107,9 @@ export function CopyVariantsView(props: CopyVariantsViewProps) {
           type="button"
           className="btn-quiet"
           disabled={busy !== null || tickedUnapproved.length === 0}
+          aria-describedby={
+            busy !== null ? WORKING_ID : reasonId('copy-variants-approve-reason', tickedUnapproved.length === 0)
+          }
           onClick={props.onApprove}
         >
           {busy === 'approving' ? <Spinner label="Approving…" /> : 'Approve these Sections'}
@@ -114,12 +118,20 @@ export function CopyVariantsView(props: CopyVariantsViewProps) {
           type="button"
           className="btn-primary"
           disabled={busy !== null || approved.length === 0 || noKey}
-          aria-describedby="copy-variants-write-reason"
+          aria-describedby={busy !== null ? WORKING_ID : 'copy-variants-write-reason'}
           onClick={props.onWrite}
         >
           {busy === 'writing' ? <Spinner label="Writing drafts…" /> : 'Write 2 drafts for each approved Section'}
         </button>
       </div>
+      <WorkingLine busy={busy !== null} className="mt-2" />
+      <DisabledReason
+        id="copy-variants-approve-reason"
+        when={busy === null && tickedUnapproved.length === 0}
+        className="mt-2 text-sm text-ink-soft"
+      >
+        Tick at least one Section to approve first.
+      </DisabledReason>
       <p id="copy-variants-write-reason" className="mt-2 text-sm text-ink-soft">
         {noKey
           ? 'An AI key is needed to write drafts. Add one in Settings.'

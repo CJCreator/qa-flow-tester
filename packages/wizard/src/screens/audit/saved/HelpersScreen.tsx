@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { WorkingLine, workingId } from '../../../components/DisabledReason';
 import { HELPER_PERMISSIONS, type HelperGrant, type HelperPermission } from '@qa/types/src/browser.js';
 import { useConfirm } from '../../../components/ConfirmDialog';
 import { Spinner, StatusMessage } from '../../../components/text';
@@ -93,6 +94,7 @@ export function HelpersView({
                   type="button"
                   className="btn-quiet"
                   disabled={busy}
+                  aria-describedby={workingId(busy)}
                   aria-label={`Remove access for ${helper.email}`}
                   onClick={() => onRemove(helper)}
                 >
@@ -153,9 +155,10 @@ export function HelpersView({
               })}
             </ul>
           </fieldset>
-          <button type="submit" className="btn-primary" disabled={busy}>
+          <button type="submit" className="btn-primary" disabled={busy} aria-describedby={workingId(busy)}>
             {busy ? <Spinner label="Saving…" /> : 'Give access'}
           </button>
+          <WorkingLine busy={busy} />
           <StatusMessage message={message} />
         </form>
       </section>

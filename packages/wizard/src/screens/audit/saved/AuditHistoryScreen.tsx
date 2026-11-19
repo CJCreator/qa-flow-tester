@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { WorkingLine, workingId } from '../../../components/DisabledReason';
 import type { AuditGetReply, AuditSummary, AuditVersion, ShortlistEntry } from '@qa/types/src/browser.js';
 import { useConfirm, type ConfirmOptions } from '../../../components/ConfirmDialog';
 import { ErrorMessage, Notice, Spinner } from '../../../components/text';
@@ -188,13 +189,25 @@ export function AuditHistoryView({
             </Link>
           )}
           {owner && paused && onResume && (
-            <button type="button" className="btn-primary btn-sm" disabled={resuming} onClick={onResume}>
+            <button
+              type="button"
+              className="btn-primary btn-sm"
+              disabled={resuming}
+              aria-describedby={workingId(resuming)}
+              onClick={onResume}
+            >
               {resuming ? 'Resuming…' : 'Resume'}
             </button>
           )}
           {owner && (
             <>
-              <button type="button" className="btn-quiet btn-sm" disabled={rerunning} onClick={onRerun}>
+              <button
+                type="button"
+                className="btn-quiet btn-sm"
+                disabled={rerunning}
+                aria-describedby={workingId(rerunning)}
+                onClick={onRerun}
+              >
                 {rerunning ? 'Starting…' : 'Audit again'}
               </button>
               <button
@@ -202,12 +215,14 @@ export function AuditHistoryView({
                 className="btn-danger-quiet btn-sm"
                 aria-label={`Delete the Website Audit of ${summary.host}`}
                 disabled={deleting}
+                aria-describedby={workingId(deleting)}
                 onClick={onAskDelete}
               >
                 {deleting ? 'Deleting…' : 'Delete'}
               </button>
             </>
           )}
+          <WorkingLine busy={Boolean(resuming || rerunning || deleting)} />
           {owner && (
             <Badge tone={summary.shortlist?.mark === 'pitch' ? 'stamp' : 'neutral'}>
               {shortlistMarkText(summary.shortlist)}

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { DisabledReason, WORKING_ID, WorkingLine, reasonId } from '../../../components/DisabledReason';
 import type { AuditGetReply, EditOverlay, PageAction, PageContent } from '@qa/types/src/browser.js';
 import { getAiSetup } from '../../../api';
 import { useConfirm } from '../../../components/ConfirmDialog';
@@ -561,13 +562,29 @@ export function ReviewDocumentsView({
                 {pending ? 'You have changes that are not saved yet.' : 'Every change is saved.'}
               </span>
               <InlineStatus message={message} />
+              <WorkingLine busy={saving} />
+              <DisabledReason id="review-nothing-changed" when={!pending && !saving}>
+                Change something first
+              </DisabledReason>
             </>
           }
         >
-          <button type="button" className="btn-quiet" disabled={!pending || saving} onClick={onDiscard}>
+          <button
+            type="button"
+            className="btn-quiet"
+            disabled={!pending || saving}
+            aria-describedby={saving ? WORKING_ID : reasonId('review-nothing-changed', !pending)}
+            onClick={onDiscard}
+          >
             Discard changes
           </button>
-          <button type="button" className="btn-primary" disabled={!pending || saving} onClick={onSave}>
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={!pending || saving}
+            aria-describedby={saving ? WORKING_ID : reasonId('review-nothing-changed', !pending)}
+            onClick={onSave}
+          >
             {saving ? <Spinner label="Saving…" /> : 'Save changes'}
           </button>
         </BottomActionBar>

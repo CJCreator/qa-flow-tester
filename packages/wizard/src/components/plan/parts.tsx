@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { scrollBehavior } from '../../lib/format';
 import { Badge as SharedBadge } from '../ui';
+import { workingId } from '../DisabledReason';
 
 /** An element id for a Plan Item, so the approval summary can point at it. */
 export function itemDomId(itemId: string): string {
@@ -120,6 +121,7 @@ export function ReplanControl({
       <button
         type="button"
         disabled={disabled}
+        aria-describedby={workingId(!!disabled)}
         onClick={() => setOpen(true)}
         className="btn-link text-sm disabled:cursor-not-allowed disabled:text-ink-soft"
         aria-label={label}
@@ -150,7 +152,7 @@ export function ReplanControl({
         />
       </label>
       <div className="flex flex-wrap items-center gap-3">
-        <button type="submit" disabled={disabled} className="btn-quiet btn-sm">
+        <button type="submit" disabled={disabled} aria-describedby={workingId(!!disabled)} className="btn-quiet btn-sm">
           Re-plan
         </button>
         <button type="button" onClick={() => setOpen(false)} className="btn-link text-sm">
