@@ -6,6 +6,7 @@ import {
   type AuditExportQuery,
   type AuditStatus,
   type ExportFormat,
+  type ExportTranslationReply,
   type OwnerAuditQuery,
   type PitchQuery,
 } from '@qa/types/src/browser.js';
@@ -91,6 +92,45 @@ export function pitchUrl(auditId: string, choice: PitchChoice, version?: number)
 export function ownerAuditUrl(auditId: string, choice: OwnerAuditChoice, version?: number): string {
   const query: OwnerAuditQuery = { format: choice.format, language: choice.language, version };
   return withQuery(auditPath(AUDIT_API.owner.path, { id: auditId }), { ...query });
+}
+
+const LANGUAGE_NAMES: Partial<Record<string, string>> = { en: 'English', ta: 'Tamil' };
+
+/**
+ * What an export in another language will do with the text (T-420), in one sentence, or null when it changes
+ * nothing. Asked before the download starts so the AI cost is shown first.
+ */
+export function translationNote(reply: ExportTranslationReply): string | null {
+  if (!reply.needed) return null;
+  if (reply.labelsOnly) {
+    return `Labels only: findings stay in ${LANGUAGE_NAMES[reply.sourceLanguage] ?? 'their language'}. Add an AI key in Settings to translate the whole export.`;
+  }
+  if (reply.requests === 0) {
+    return 'The whole export is translated with your AI key. This version was translated before, so no new AI request is made.';
+  }
+  const n = reply.requests;
+  return `The whole export is translated with your AI key: about ${n} AI request${n === 1 ? '' : 's'}, which your AI provider may charge for. The site's own quoted text stays in its original wording.`;
+}
+
+/** Reads the translation plan for one export language; null when it cannot be read (the note is then left out). */
+export async function loadExportTranslation(
+  auditId: string,
+  language: string,
+  version: number | undefined,
+  fetchImpl: (input: string, init?: RequestInit) => Promise<Response> = fetch
+): Promise<ExportTranslationReply | null> {
+  try {
+    const res = await fetchImpl(
+      withQuery(auditPath(AUDIT_API.exportTranslation.path, { id: auditId }), { language, version }),
+      { method: 'GET' }
+    );
+    if (!res.ok) return null;
+    const body = (await res.json()) as Partial<ExportTranslationReply> | null;
+    if (!body || typeof body.needed !== 'boolean' || typeof body.requests !== 'number') return null;
+    return body as ExportTranslationReply;
+  } catch {
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------------------------------

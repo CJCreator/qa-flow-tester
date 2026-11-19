@@ -25,6 +25,7 @@ export * from './generate.js';
 export * from './write-all.js';
 export * from './site-json.js';
 export * from './bundle.js';
+export * from './translate.js';
 export * from './render-markdown.js';
 export * from './render-html.js';
 export * from './render-docx.js';

@@ -110,7 +110,7 @@ describe('route rows', () => {
       expect(row?.method).toBe('GET');
       expect(row?.access).toBe('export');
     }
-    expect(routes).toHaveLength(5);
+    expect(routes).toHaveLength(6);
   });
 });
 

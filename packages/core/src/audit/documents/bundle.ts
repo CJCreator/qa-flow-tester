@@ -48,6 +48,11 @@ export interface ExportOptions {
   renderPdf?: (html: string) => Promise<Buffer>;
   /** The Improved version's variants that passed the quality gate (T-415); the exports gain its section. */
   improved?: ImprovedExport;
+  /**
+   * Translates the built documents into the export language (T-420: the AI pass, or the labels-only notice).
+   * Not given: the documents are exported as built.
+   */
+  translate?: (docs: AuditDoc[]) => Promise<AuditDoc[]>;
 }
 
 /** One design variant that passed the quality gate, with its page and images (T-415). */
@@ -298,10 +303,15 @@ function readme(url: string, version: number, folder: string): string {
 }
 
 /** The export bundle (REQ-021, Q-24): the five Audit Documents, `site.json` and `README.md` in one folder. */
-export function buildAuditBundle(input: AuditDocumentsInput, improved?: ImprovedExport): AuditExportFile {
+export function buildAuditBundle(
+  input: AuditDocumentsInput,
+  improved?: ImprovedExport,
+  /** The five documents as already built and translated (T-420); built here when not given. */
+  builtDocs?: readonly AuditDoc[]
+): AuditExportFile {
   const view = editedViewOf(input);
   // The bundle always holds all five Audit Documents, whatever was selected.
-  const docs = documentsFromView(view, { ...input, documents: undefined });
+  const docs = builtDocs ?? documentsFromView(view, { ...input, documents: undefined });
   const folder = exportBaseName(view.result.url, view.result.version);
   const entries = docs.map((doc) => ({
     name: `${folder}/${BUNDLE_FILE_NAMES[doc.kind as AuditDocumentKind]}`,
@@ -338,10 +348,16 @@ export async function exportAudit(
   options: ExportOptions = {}
 ): Promise<AuditExportFile> {
   if (!isExportFormat(format)) throw new Error('This export format is not available.');
-  if (format === 'bundle') return buildAuditBundle(input, options.improved);
+  if (format === 'bundle') {
+    if (!options.translate) return buildAuditBundle(input, options.improved);
+    const view = editedViewOf(input);
+    const built = await options.translate(documentsFromView(view, { ...input, documents: undefined }));
+    return buildAuditBundle(input, options.improved, built);
+  }
   const view = editedViewOf(input);
-  const docs = documentsFromView(view, input);
-  if (docs.length === 0) throw new Error('There is no document to export.');
+  const built = documentsFromView(view, input);
+  if (built.length === 0) throw new Error('There is no document to export.');
+  const docs = options.translate ? await options.translate(built) : built;
   const improved = options.improved;
   const withImproved =
     improved && improved.variants.length > 0 ? [...docs, improvedVersionDoc(improved, docs[0]!.language)] : docs;

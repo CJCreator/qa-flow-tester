@@ -22,10 +22,12 @@ import {
   exportUrl,
   fallbackFileName,
   fetchDownload,
+  loadExportTranslation,
   ownerAuditUrl,
   pitchUrl,
   saveBlob,
   setDocument,
+  translationNote,
   type DownloadKind,
   type ExportChoice,
   type Fetch,
@@ -176,6 +178,8 @@ export interface ExportDocumentsViewProps {
   loadError?: string | null;
   /** Reads the version again. */
   onRetry?: () => void;
+  /** What the chosen export language does with the text, and what it costs (T-420); null shows nothing. */
+  translationNote?: string | null;
 }
 
 /**
@@ -200,6 +204,7 @@ export function ExportDocumentsView({
   checking = false,
   loadError = null,
   onRetry = () => {},
+  translationNote = null,
 }: ExportDocumentsViewProps) {
   const off = blockedReason !== null || busy !== null || checking || loadError !== null;
   const documentsHref = exportUrl(auditId, choice, version);
@@ -253,6 +258,11 @@ export function ExportDocumentsView({
           labels={LANGUAGE_LABEL}
           onChange={(language) => onChoice({ ...choice, language })}
         />
+        {translationNote !== null && (
+          <p role="status" data-testid="export-translation-note" className="mt-2 max-w-prose text-sm text-ink-soft">
+            {translationNote}
+          </p>
+        )}
         <RadioGroup
           name="export-format"
           legend="Format"
@@ -374,6 +384,20 @@ export function ExportDocumentsScreen({
   const [checking, setChecking] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [translation, setTranslation] = useState<string | null>(null);
+
+  // T-420: before the download, say what the chosen language does with the text and what it costs.
+  useEffect(() => {
+    let live = true;
+    setTranslation(null);
+    if (status === undefined) return;
+    void loadExportTranslation(auditId, choice.language, shownVersion, fetchImpl).then((reply) => {
+      if (live) setTranslation(reply ? translationNote(reply) : null);
+    });
+    return () => {
+      live = false;
+    };
+  }, [auditId, choice.language, shownVersion, status, fetchImpl]);
 
   // Read the version first: a running or failed one has nothing to download, and nothing downloads before it answers.
   useEffect(() => {
@@ -431,6 +455,7 @@ export function ExportDocumentsScreen({
       {/* This screen doesn't know whether the caller is a Helper, so the owner-only tabs are left out. */}
       <AuditTabs auditId={auditId} version={shownVersion} current="download" hide={['share', 'helpers']} />
       <ExportDocumentsView
+        translationNote={translation}
         auditId={auditId}
         version={version}
         choice={choice}
