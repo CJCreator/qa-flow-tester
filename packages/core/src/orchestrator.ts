@@ -79,7 +79,7 @@ import { generateRankedRecommendations } from './recommendations.js';
 import { SiteHistoryManager } from './site-history.js';
 import { findSlowerPages, pageSpeedKey } from './speed-change.js';
 import { generateSingleFileHtmlReport } from './html-report.js';
-import { abortError, isAbortError } from './abort.js';
+import { abortError, isAbortError, stopIfAborted } from './abort.js';
 import { RetryRunner } from './retry-runner.js';
 import { createStepBudget, resolveStepTimeoutMs } from './step-budget.js';
 
@@ -300,6 +300,12 @@ export interface RunOptions {
   recordVideo?: boolean | 'always';
   /** Reruns of a failing test, each in a clean context, stopping at the first pass. Default 1. Link tests never rerun. */
   flakyReruns?: number;
+  /**
+   * Test workers that run Test points side by side, each in its own browser context (ADR 0048). Every Test of
+   * one signed-in Role runs on the same worker, in Plan order. Default 1; the runner sets it from
+   * RUNNER_TEST_WORKERS (`testWorkerCount`).
+   */
+  testWorkers?: number;
   onEvent?: (event: OrchestratorEvent) => void;
   /** Override the generated runId (e.g. so a caller can respond with an id before the run starts and have RUN_STARTED/RUN_COMPLETED carry the same id). Defaults to an internally generated `run-<timestamp>`. */
   runId?: string;
@@ -362,6 +368,49 @@ function runRedactor(options: RunOptions): Redactor {
 
 function evidenceDirOf(options: RunOptions): string {
   return path.join(options.outputDir || path.join(process.cwd(), '.qa-report'), 'evidence');
+}
+
+/** Most test workers a run may use, whatever RUNNER_TEST_WORKERS says. */
+export const MAX_TEST_WORKERS = 8;
+
+/**
+ * How many test workers a Check-up uses (ADR 0048): RUNNER_TEST_WORKERS when it is a whole number from 1 to
+ * MAX_TEST_WORKERS; otherwise 4 on a local runner and 1 on the hosted copy.
+ */
+export function testWorkerCount(raw: string | undefined, hosted: boolean): number {
+  const n = raw !== undefined && /^\s*\d+\s*$/.test(raw) ? Number(raw) : NaN;
+  if (Number.isInteger(n) && n >= 1) return Math.min(n, MAX_TEST_WORKERS);
+  return hosted ? 1 : 4;
+}
+
+/**
+ * Runs `tasks` on `workers` workers that take them from one queue, in order. Every worker ends before this
+ * resolves, so nothing is still running when the run is torn down. Once a task throws, or `stop()` says so,
+ * no worker takes another task; the first error is thrown after all have ended.
+ */
+export async function runOnWorkers<T>(
+  tasks: T[],
+  workers: number,
+  run: (task: T) => Promise<void>,
+  stop: () => boolean = () => false
+): Promise<void> {
+  let next = 0;
+  let failed = false;
+  let firstError: unknown;
+  const worker = async () => {
+    while (!failed && !stop() && next < tasks.length) {
+      const task = tasks[next++];
+      try {
+        await run(task);
+      } catch (err) {
+        if (!failed) firstError = err;
+        failed = true;
+      }
+    }
+  };
+  const count = Math.max(1, Math.min(Math.floor(workers) || 1, tasks.length));
+  await Promise.allSettled(Array.from({ length: count }, worker));
+  if (failed) throw firstError;
 }
 
 /** The run note when evidence could not be redacted on the way out (T-393, ADR 0016). */
@@ -699,7 +748,11 @@ export class FlowTestOrchestrator {
       vitalsMeasured.add(urlPath);
       return true;
     };
-    tests: for (const testCase of testCasesToRun) {
+    // TEST_POINT_STARTED's position, counted across all workers.
+    let pointsStarted = 0;
+    // A worker that took a Test case runs it, at each of its sizes one after another (ADR 0048). `results`
+    // here is that case's own list: the run's list is put together in Plan order once every worker ends.
+    const runTestCase = async (testCase: TestCase, results: TestPointResult[], caseFindings: Finding[]) => {
       // Which checkers run afterwards depends on the kind of Plan Item (see TestCase.kind).
       const kind = testCase.kind;
       const lightChecks = kind === 'navigation' || kind === 'link';
@@ -722,7 +775,8 @@ export class FlowTestOrchestrator {
             skipReason: `Not tested: ${why.text}`,
           });
         }
-        continue;
+        pointsStarted += sizes.length; // skipped points keep their place in the count
+        return;
       }
       if (sessionLostRoles.has(testCase.role)) {
         for (const bp of sizesFor(testCase)) {
@@ -738,19 +792,20 @@ export class FlowTestOrchestrator {
             skipReason: 'Signed out part-way: the session stopped working',
           });
         }
-        continue;
+        pointsStarted += sizes.length;
+        return;
       }
       const searchSize = sizes.includes('1440px') ? '1440px' : sizes[sizes.length - 1];
       for (const bp of sizesFor(testCase)) {
         await stopHere();
-        if (options.finishSignal?.aborted) break tests;
+        if (options.finishSignal?.aborted) return;
         onEvent({
           type: 'TEST_POINT_STARTED',
           testCaseId: testCase.id,
           testCaseName: testCase.name || testCase.flowId,
           role: testCase.role,
           breakpoint: bp,
-          index: results.length,
+          index: pointsStarted++,
           total: plannedTestPoints,
           startPage: testCase.startPage,
           flowId: testCase.flowId,
@@ -794,6 +849,7 @@ export class FlowTestOrchestrator {
           // Steps run in a fresh browser context. One that fails is thrown away and run once more
           // from a clean start, so a passing second attempt shows as flaky instead of failing.
           const runAttempt = async (attempt: number): Promise<void> => {
+            stopIfAborted(options.signal);
             if (attempt > 1) {
               const discarded = page?.video();
               await context?.close().catch(() => {});
@@ -1143,6 +1199,8 @@ export class FlowTestOrchestrator {
             // A failed sign-in fails the same way every time: retrying only relaunches the browser.
             shouldRetry: (err) =>
               !isAbortError(err) &&
+              // A Stop ends every worker: none starts a retry, which would open the browser again.
+              !options.signal?.aborted &&
               !(err instanceof SignInFailedError) &&
               !sendGuard?.hasSentAny() &&
               (testCase.kind !== 'link' || sessionRefreshed),
@@ -1462,6 +1520,7 @@ export class FlowTestOrchestrator {
             // Absolute here; the report makes it relative to the report folder, like every evidence path.
             f.reproScriptPath = await reproGenerator.generate(f, testCase, options.targetUrl);
             allFindings.push(f);
+            caseFindings.push(f);
           }
 
           // Unconfirmed AI guesses never fail a test point on their own.
@@ -1555,6 +1614,7 @@ export class FlowTestOrchestrator {
                   'Check the page loads at this address for this role; a timeout usually means the page is slow or the server stopped.',
               };
           allFindings.push(couldNotRun);
+          caseFindings.push(couldNotRun);
           pointResult = {
             testCaseId: testCase.id,
             flowId: testCase.flowId,
@@ -1606,7 +1666,50 @@ export class FlowTestOrchestrator {
           })),
         });
       }
-    }
+    };
+
+    // Test workers (ADR 0048). Every Test case of one signed-in Role is one task, in Plan order, so sign-in
+    // state and the records a Role creates never race. A signed-out Test case is a task of its own. With one
+    // worker the cases run exactly in Plan order, as before.
+    const workers = Math.max(1, Math.min(MAX_TEST_WORKERS, Math.floor(options.testWorkers ?? 1) || 1));
+    const signedInRoles = new Set([
+      ...Object.keys(roleStorageStates),
+      ...(options.profile?.roles ?? []).map((r) => r.role),
+    ]);
+    const tasks: number[][] = [];
+    const roleTask = new Map<string, number[]>();
+    testCasesToRun.forEach((tc, i) => {
+      if (workers === 1 || !signedInRoles.has(tc.role)) {
+        tasks.push([i]);
+        return;
+      }
+      let task = roleTask.get(tc.role);
+      if (!task) {
+        task = [];
+        roleTask.set(tc.role, task);
+        tasks.push(task);
+      }
+      task.push(i);
+    });
+    const caseResults: TestPointResult[][] = testCasesToRun.map(() => []);
+    const caseFindings: Finding[][] = testCasesToRun.map(() => []);
+    const stopping = () => !!options.signal?.aborted || !!options.finishSignal?.aborted;
+    await runOnWorkers(
+      tasks,
+      workers,
+      async (task) => {
+        for (const i of task) {
+          if (stopping()) break;
+          await runTestCase(testCasesToRun[i], caseResults[i], caseFindings[i]);
+        }
+      },
+      stopping
+    );
+    await stopHere();
+    // Results and findings in Plan order, whichever worker finished first.
+    results.push(...caseResults.flat());
+    allFindings.length = 0;
+    allFindings.push(...caseFindings.flat());
 
     // Access checks (ADR 0030): plain GETs only. A failure here never fails the run.
     const accessPages = options.siteMap?.pages ?? [];
