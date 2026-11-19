@@ -178,7 +178,7 @@ export function buildAuditRoutes(server: RunnerServer): Route[] {
     ...auditEditsRoutes({ store }),
     ...auditContentRoutes({ store, caller }),
     ...auditSettingsRoutes({ settings, pagespeedKey }),
-    ...auditExportRoutes({ store, settings }),
+    ...auditExportRoutes({ store, settings, caller, resolveAi }),
     ...auditPreviewRoutes({ store, caller, resolveAi, generate: generatePreview }),
     ...auditImproveRoutes({
       store,

@@ -1213,6 +1213,8 @@ export const AUDIT_API = {
   setImproveBest: { method: 'PUT', path: '/api/audits/:id/improve-best', replies: 'json', access: 'edit' },
   /** Every variant that passed the quality gate, as a zip of HTML files with a README (T-415). */
   exportImproved: { method: 'GET', path: '/api/audits/:id/improve-export', replies: 'file', access: 'export' },
+  /** What an export in another language would cost in AI requests, before it starts (T-420). */
+  exportTranslation: { method: 'GET', path: '/api/audits/:id/export-translation', replies: 'json', access: 'export' },
   listShares: { method: 'GET', path: '/api/audits/:id/share', replies: 'json', access: 'view' },
   createShare: { method: 'POST', path: '/api/audits/:id/share', replies: 'json', access: 'owner' },
   revokeShare: { method: 'DELETE', path: '/api/audits/:id/share/:linkId', replies: 'json', access: 'owner' },
@@ -1460,6 +1462,25 @@ export interface ImproveBestBody extends VersionQuery {
   variant: number;
 }
 
+/** `language` is the export language; the version's own language when absent. */
+export interface ExportTranslationQuery extends VersionQuery {
+  language?: DocumentLanguage;
+}
+
+/** What an export in `language` does with the text (T-420). */
+export interface ExportTranslationReply {
+  /** False when `language` is the version's own: nothing is translated. */
+  needed: boolean;
+  /** The language the findings are written in. */
+  sourceLanguage: DocumentLanguage;
+  /** True when a key works and the caller may use it (the owner): the export translates the text. */
+  aiKey: boolean;
+  /** AI requests the export would make now; 0 when the text is cached or nothing is translated. */
+  requests: number;
+  /** True when the export changes the fixed labels only ("Labels only: findings stay in ..."). */
+  labelsOnly: boolean;
+}
+
 export interface ImproveBestReply {
   best: { page: string; variant: number };
 }
@@ -1571,6 +1592,7 @@ interface AuditApiShapes {
   getImprove: { query: VersionQuery; body: undefined; reply: HtmlReply };
   setImproveBest: { query: NoQuery; body: ImproveBestBody; reply: ImproveBestReply };
   exportImproved: { query: VersionQuery; body: undefined; reply: FileReply };
+  exportTranslation: { query: ExportTranslationQuery; body: undefined; reply: ExportTranslationReply };
   listShares: { query: NoQuery; body: undefined; reply: ShareListReply };
   createShare: { query: NoQuery; body: ShareCreateBody; reply: ShareLinkReply };
   revokeShare: { query: NoQuery; body: undefined; reply: ShareLinkReply };
