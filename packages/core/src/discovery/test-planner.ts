@@ -91,7 +91,7 @@ export class TestPlanner {
       if (formAnswer && isSkipAnswer(formAnswer.selectedAnswer)) continue;
 
       // 2. Filter out steps targeting skipped elements
-      const activeSteps: TestCaseStep[] = flow.steps.filter((s) => {
+      const filteredSteps: TestCaseStep[] = flow.steps.filter((s) => {
         if (s.selector && skippedElements.has(s.selector)) {
           return false;
         }
@@ -106,6 +106,10 @@ export class TestPlanner {
         }
         return true;
       });
+      // A Sensitive Action the person approved keeps the approval, so the run's click gate lets it through (T-421).
+      const activeSteps: TestCaseStep[] = filteredSteps.map((s) =>
+        s.action === 'click' && s.selector && allowedSensitive.has(s.selector) ? { ...s, sensitiveApproved: true } : s
+      );
 
       if (activeSteps.length === 0) {
         continue;
