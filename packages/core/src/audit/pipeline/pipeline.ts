@@ -31,6 +31,7 @@ import type {
   AuditRequest,
   AuditResult,
   AuditStage,
+  DocumentLanguage,
   Finding,
   HierarchyNode,
   MarketingSignal,
@@ -50,11 +51,25 @@ import type { AuditCrawlCheckpoint, AuditCrawlPage, AuditCrawlResult } from '../
 import { createFindingIdAllocator, uniqueIds } from '../analysis/finding-ids.js';
 import { EMPTY_RAW_LISTS } from '../analysis/raw-page.js';
 import { skipKey } from '../analysis/broken-links.js';
-import { analyseSite, type AnalysisPage, type SiteAnalysis } from '../analysis/analyse-site.js';
+import {
+  analyseSite,
+  findingKey,
+  pageOwnFindings,
+  type AnalysisPage,
+  type SiteAnalysis,
+} from '../analysis/analyse-site.js';
 import { auditMarketing } from '../analysis/marketing-signals.js';
 import { seoBasics } from '../analysis/seo-basics.js';
 import { measureSampleSpeeds, type PageSpeedDeps } from '../ai/pagespeed.js';
-import { assessPages, assessSite, AUDIT_AI_IN_FLIGHT, type AreaGrades } from '../ai/assessment.js';
+import {
+  assessPages,
+  assessSite,
+  auditAiInFlight,
+  BATCH_MAX_PAGES,
+  BATCH_MAX_WORDS,
+  type AreaGrades,
+  type AssessmentPageInput,
+} from '../ai/assessment.js';
 import { pageContentName } from '../store/keys.js';
 import { recommendPages, ruleRecommendation } from '../ai/page-recommendation.js';
 import {
@@ -160,6 +175,11 @@ export interface AuditPipelineDeps {
   stages?: Partial<SiteStages>;
   /** Settings for writing documents (company, proposal template, optOutText). */
   settings?: WriteAllSettings;
+  /**
+   * The page assessments started during the crawl (T-429), on the same `ai`. Pages it answered are not asked
+   * again; the others (restored from a checkpoint, unread, failed) are assessed here as before.
+   */
+  stream?: AuditAssessmentStream;
 }
 
 export interface AuditPipelineOutcome {
@@ -675,13 +695,42 @@ export async function runAuditPipeline(
   const recommendationsStarted = stages.recommendPages({ ...run, pages: recommendationInputs }, ai);
   recommendationsStarted.catch(() => {});
 
+  // Pages the stream already assessed during the crawl (T-429): their evidence moves to the final ids, matched by
+  // rule, page and target; a citation with no final finding is dropped. Their grades are the final ones below.
+  const streamed = new Map<string, AreaAssessment[]>();
+  if (deps.stream) {
+    await deps.stream.settle().catch(() => {});
+    stopIfAborted(signal);
+    const failed = deps.stream.firstFailure();
+    if (failed && !aiFailure) aiFailure = failed;
+    for (const [urlPath, answer] of deps.stream.answers()) {
+      if (!recordedByPath.has(urlPath) || !answer.areas.some((a) => a.status === 'done')) continue;
+      const finalByKey = new Map(findingsOf(urlPath).map((f) => [findingKey(f), f.id]));
+      const keyOf = new Map(answer.findings.map((f) => [f.id, findingKey(f)]));
+      const toFinal = (id: string) => {
+        const key = keyOf.get(id);
+        return key === undefined ? undefined : finalByKey.get(key);
+      };
+      streamed.set(
+        urlPath,
+        answer.areas.map((a) =>
+          a.status === 'done'
+            ? { ...a, evidence: uniqueIds(a.evidence.map(toFinal).filter((id): id is string => !!id)) }
+            : a
+        )
+      );
+    }
+  }
+
   let siteAreas: AreaAssessment[];
   let assessed = true;
   try {
     const pageAreas = await stages.assessPages(
       {
         ...run,
-        aiInFlight: AUDIT_AI_IN_FLIGHT,
+        // The provider's own limit, at most 8 (T-429); one limiter with the stream's requests when there is one.
+        aiInFlight: auditAiInFlight(ai.ok ? ai.ai.reportedLimit : undefined),
+        ...(deps.stream ? { limiter: deps.stream.limiter } : {}),
         onPageAiProgress: (path, status) => {
           deps.onProgress?.({
             type: 'page',
@@ -693,7 +742,7 @@ export async function runAuditPipeline(
           });
         },
         pages: pages
-          .filter((p) => recordedByPath.has(p.urlPath))
+          .filter((p) => recordedByPath.has(p.urlPath) && !streamed.has(p.urlPath))
           .map((p) => ({
             urlPath: p.urlPath,
             content: recordedByPath.get(p.urlPath)!.read!.content,
@@ -709,7 +758,7 @@ export async function runAuditPipeline(
     const byPath = new Map(pageAreas.map((a) => [a.urlPath, a.areas]));
     for (const p of pages) {
       const grades = pageGrades.get(p.urlPath)!;
-      const areas = byPath.get(p.urlPath);
+      const areas = streamed.get(p.urlPath) ?? byPath.get(p.urlPath);
       p.areas = areas ? withGrades(areas, grades) : notDoneAreas(grades, 'ai-failed');
     }
   } catch (err) {
@@ -719,7 +768,11 @@ export async function runAuditPipeline(
     const reason = redactAiMessage(err);
     const aiNote = aiStatusNoteText(status, reason);
     if (!notes.includes(aiNote)) notes.push(aiNote);
-    for (const p of pages) p.areas = notDoneAreas(pageGrades.get(p.urlPath)!, 'ai-failed');
+    for (const p of pages) {
+      const grades = pageGrades.get(p.urlPath)!;
+      const areas = streamed.get(p.urlPath);
+      p.areas = areas ? withGrades(areas, grades) : notDoneAreas(grades, 'ai-failed');
+    }
   }
   try {
     siteAreas = withGrades(
@@ -1134,5 +1187,185 @@ export async function loadAuditCheckpoint(
     crawl: { ...stored.crawl, pages: pages.map((e) => e.info) },
     pages,
     chunks: stored.chunks,
+  };
+}
+
+// ---------------------------------------------------------------------------------------------------
+// AI page assessments during the crawl (T-429)
+// ---------------------------------------------------------------------------------------------------
+
+/** Runs `fn` when one of the limiter's places is free: one limiter bounds every AI request of a run. */
+export type AiLimiter = <T>(fn: () => Promise<T>) => Promise<T>;
+
+/** At most `limit` calls at once, in the order asked. */
+export function createAiLimiter(limit: number): AiLimiter {
+  const max = Math.max(1, Math.floor(limit));
+  let active = 0;
+  const waiting: Array<() => void> = [];
+  return async (fn) => {
+    if (active >= max) await new Promise<void>((resolve) => waiting.push(resolve));
+    else active++;
+    try {
+      return await fn();
+    } finally {
+      const next = waiting.shift();
+      if (next) next();
+      else active--;
+    }
+  };
+}
+
+/** A page's AI assessment made during the crawl, with the provisional findings it was given. */
+export interface StreamedAssessment {
+  areas: AreaAssessment[];
+  /** Provisional ids: `runAuditPipeline` moves the evidence to the final ids by rule, page and target. */
+  findings: AuditFinding[];
+}
+
+export interface AuditAssessmentStream {
+  /** Bounds the stream's requests and, passed to `runAuditPipeline`, the ones after the crawl too. */
+  readonly limiter: AiLimiter;
+  /** A recorded page whose read and lab work have ended: its own checks run and its assessment is queued. */
+  add(page: RecordedPage): void;
+  /** Sends what is still waiting for a batch, then resolves once every assessment has ended. Never rejects. */
+  settle(): Promise<void>;
+  answers(): ReadonlyMap<string, StreamedAssessment>;
+  /** The first provider failure of the stream's requests, for the AI note. */
+  firstFailure(): { status: AuditAiStatus; error: string } | null;
+}
+
+/**
+ * Starts each page's AI assessment as soon as its own checks are done (T-429), so the AI works during the crawl
+ * instead of after it. A page's own checks are `pageOwnFindings` and its phone layout findings; the checks that
+ * need the whole site still run after the crawl, and the AI notes for the whole site still wait for every page.
+ * Small pages share a request as in `assessPages` (T-406): up to BATCH_MAX_PAGES at a time, as they arrive.
+ */
+export function createAuditAssessmentStream(opts: {
+  ai: AuditAiResolution;
+  language: DocumentLanguage;
+  signal?: AbortSignal;
+  timeoutMs?: number;
+  /** Default: `auditAiInFlight(ai.reportedLimit)`. */
+  limiter?: AiLimiter;
+  onPageAiProgress?: (path: string, status: 'done' | 'not-done') => void;
+  /** Test seam. Default: assessPages. */
+  assessPages?: typeof assessPages;
+}): AuditAssessmentStream {
+  const ai = opts.ai;
+  const assess = opts.assessPages ?? assessPages;
+  const limiter = opts.limiter ?? createAiLimiter(auditAiInFlight(ai.ok ? ai.ai.reportedLimit : undefined));
+  const answers = new Map<string, StreamedAssessment>();
+  const seen = new Set<string>();
+  const pending: Promise<void>[] = [];
+  let buffer: AssessmentPageInput[] = [];
+  let failure: { status: AuditAiStatus; error: string } | null = null;
+
+  const flush = (list: AssessmentPageInput[]) => {
+    if (list.length === 0) return;
+    const job = assess(
+      {
+        language: opts.language,
+        ...(opts.signal ? { signal: opts.signal } : {}),
+        ...(opts.timeoutMs !== undefined ? { timeoutMs: opts.timeoutMs } : {}),
+        onAiFailure: (status, error) => {
+          failure ??= { status, error };
+        },
+        ...(opts.onPageAiProgress ? { onPageAiProgress: opts.onPageAiProgress } : {}),
+        limiter,
+        pages: list,
+      },
+      ai
+    )
+      .then((result) => {
+        result.forEach((r, i) => {
+          if (r) answers.set(list[i].urlPath, { areas: r.areas, findings: list[i].findings });
+        });
+      })
+      .catch(() => {
+        // Not assessed here: the pipeline asks for these pages after the crawl.
+      });
+    pending.push(job);
+  };
+
+  return {
+    limiter,
+    add(entry) {
+      const urlPath = entry.info.urlPath;
+      if (!ai.ok || !entry.read || seen.has(urlPath) || opts.signal?.aborted) return;
+      seen.add(urlPath);
+      let input: AssessmentPageInput;
+      try {
+        input = ownAssessmentInput(entry);
+      } catch {
+        return;
+      }
+      if (typeof input.wordCount !== 'number' || input.wordCount >= BATCH_MAX_WORDS) {
+        flush([input]);
+        return;
+      }
+      buffer.push(input);
+      if (buffer.length >= BATCH_MAX_PAGES) {
+        flush(buffer);
+        buffer = [];
+      }
+    },
+    async settle() {
+      flush(buffer);
+      buffer = [];
+      for (let done = 0; done < pending.length; done = pending.length) {
+        await Promise.all(pending.slice(done));
+      }
+    },
+    answers: () => answers,
+    firstFailure: () => failure,
+  };
+}
+
+/** One recorded page as AI input from its own checks only, with provisional finding ids, in ranked order. */
+function ownAssessmentInput(entry: RecordedPage): AssessmentPageInput {
+  const urlPath = entry.info.urlPath;
+  const content = entry.read!.content;
+  const ids = createFindingIdAllocator();
+  const unscored: UnscoredAuditFinding[] = [...pageOwnFindings({ urlPath, content }, entry.accessibility, ids)];
+  for (const f of entry.phone?.findings ?? []) {
+    unscored.push(phoneFinding(f, urlPath, ids.next(), entry.phone!.phone.screenshotPath));
+  }
+  let ordered: AuditFinding[] = scoreFindings(unscored);
+  try {
+    const preview = rankFindingsWithIdMap(ordered, { start: 1 });
+    const back = new Map([...preview.idMap].map(([oldId, newId]) => [newId, oldId]));
+    ordered = preview.findings.map((f) => ({ ...f, id: back.get(f.id) ?? f.id }));
+  } catch {
+    // Listed in the order found.
+  }
+  const speed: PageSpeed | undefined =
+    entry.psi?.lab.status === 'measured'
+      ? entry.psi
+      : entry.timing?.speed.status === 'measured'
+        ? {
+            lab: entry.timing.speed,
+            field: { status: 'not-measured', source: 'this-tool', method: 'field', reason: 'failed' },
+          }
+        : undefined;
+  const phone = entry.phone?.phone;
+  const grades = areaGrades(
+    ordered,
+    {
+      'search-ranking': true,
+      marketing: true,
+      content: true,
+      accessibility: !!entry.accessibility,
+      usability: !!phone && (phone.overflow !== null || phone.findingIds.length > 0),
+      speed: false,
+    },
+    labPerformanceScore(speed)
+  );
+  return {
+    urlPath,
+    content,
+    wordCount: wordsIn(content.text),
+    findings: ordered,
+    grades,
+    ...(speed ? { speed } : {}),
   };
 }

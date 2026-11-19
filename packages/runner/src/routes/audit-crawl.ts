@@ -42,6 +42,7 @@ import {
   AuditCrawlRefusedError,
   AuditPipelineError,
   checkAuditAddress,
+  createAuditAssessmentStream,
   createAuditCheckpointer,
   createPageRecorder,
   isAbortError,
@@ -53,6 +54,7 @@ import {
   type AuditAddressResult,
   type AuditAiResolution,
   type AuditCrawlOptions,
+  type AuditAssessmentStream,
   type AuditCrawlResult,
   type AuditPageRecorder,
   type LoadedAuditCheckpoint,
@@ -118,6 +120,10 @@ export interface AfterCrawlInput {
   workDir: string;
   signal: AbortSignal;
   onProgress: (event: AuditProgressEvent) => void;
+  /** The run's AI, resolved once before the crawl (T-429): the step uses it rather than resolving again. */
+  ai?: AuditAiResolution;
+  /** The page assessments started during the crawl on that AI (T-429). */
+  stream?: AuditAssessmentStream;
 }
 
 /**
@@ -253,8 +259,8 @@ function markCrawlDone(store: AuditRunStore, now: () => Date): AfterCrawlStep {
 export function auditPipelineStep(deps: AuditPipelineStepDeps): AfterCrawlStep {
   const pipeline = deps.pipeline ?? runAuditPipeline;
   return async (input) => {
-    let ai: AuditAiResolution = { ok: false, reason: 'no-ai-key' };
-    if (deps.resolveAi) {
+    let ai: AuditAiResolution = input.ai ?? { ok: false, reason: 'no-ai-key' };
+    if (!input.ai && deps.resolveAi) {
       try {
         ai = await deps.resolveAi();
       } catch {
@@ -274,6 +280,7 @@ export function auditPipelineStep(deps: AuditPipelineStepDeps): AfterCrawlStep {
       pageSpeed: deps.resolveServiceKey ? { resolveServiceKey: deps.resolveServiceKey } : {},
       signal: input.signal,
       onProgress: input.onProgress,
+      ...(input.stream ? { stream: input.stream } : {}),
     });
   };
 }
@@ -422,6 +429,45 @@ export async function runAuditVersion(
             now,
           })
         : undefined;
+    // The run's AI, resolved once (T-429): each page's assessment starts as soon as its own checks are done,
+    // during the crawl, and the step after the crawl uses the same AI, budget and request limiter.
+    let ai: AuditAiResolution | undefined;
+    if (services.resolveAi) {
+      try {
+        ai = await services.resolveAi();
+      } catch {
+        ai = { ok: false, reason: 'no-ai-key' };
+      }
+    }
+    const stream =
+      ai?.ok === true
+        ? createAuditAssessmentStream({
+            ai,
+            language: runRequest.language,
+            signal,
+            onPageAiProgress: (path, status) =>
+              run.emit({
+                type: 'page',
+                auditId: run.auditId,
+                version: run.version,
+                path,
+                state: 'recorded',
+                ai: status,
+              }),
+          })
+        : undefined;
+    const onRenderedPage: AuditCrawlOptions['onRenderedPage'] = stream
+      ? async (page, info, context) => {
+          await recorder.onRenderedPage(page, info, context);
+          // Once its lab work has ended, without holding the crawl worker.
+          void recorder.settled([info.urlPath]).then(() => {
+            const pages = recorder.pages;
+            for (let i = pages.length - 1; i >= 0; i--) {
+              if (pages[i].info.urlPath === info.urlPath) return stream.add(pages[i]);
+            }
+          });
+        }
+      : recorder.onRenderedPage;
     const crawl = await crawlFn(runRequest, {
       signal,
       ...(restored ? { resume: restored.crawl } : {}),
@@ -460,7 +506,7 @@ export async function runAuditVersion(
           });
         }
       },
-      onRenderedPage: recorder.onRenderedPage,
+      onRenderedPage,
       ...(services.allowPrivateAddresses ? { allowPrivateAddresses: true } : {}),
     });
     crawled = true;
@@ -474,6 +520,8 @@ export async function runAuditVersion(
       recorder,
       workDir,
       signal,
+      ...(ai ? { ai } : {}),
+      ...(stream ? { stream } : {}),
       onProgress: (event) => {
         if (event.type === 'progress') {
           currentStage = event.stage;
