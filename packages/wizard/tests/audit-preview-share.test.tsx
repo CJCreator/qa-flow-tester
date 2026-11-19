@@ -90,8 +90,6 @@ function viewProps(over: Partial<PreviewShareViewProps> = {}): PreviewShareViewP
     auditId: AUDIT_ID,
     versions,
     version: 2,
-    previewLanguage: 'en',
-    preview: { status: 'idle' },
     kind: 'pitch',
     shareLanguage: 'en',
     created: null,
@@ -102,8 +100,6 @@ function viewProps(over: Partial<PreviewShareViewProps> = {}): PreviewShareViewP
     origin: ORIGIN,
     now: NOW,
     onVersion: () => undefined,
-    onPreviewLanguage: () => undefined,
-    onMakePreview: () => undefined,
     onKind: () => undefined,
     onShareLanguage: () => undefined,
     onCreateLink: () => undefined,
@@ -155,45 +151,19 @@ describe('Improved homepage preview', () => {
     if (outcome.ok) return;
     expect(outcome.message).not.toMatch(/409|provider config/);
 
-    const html = render({ preview: { status: 'failed', message: outcome.message, noAiKey: true } });
-    expect(html).toContain('role="alert"');
-    expect(textOf(html)).toMatch(/An AI key is needed/);
-    expect(html).toMatch(/<a [^>]*href="\/settings"[^>]*>Add an AI key in Settings<\/a>/);
-  });
-
-  it('shows other refusals as a plain error without the Settings link', () => {
-    const html = render({
-      preview: {
-        status: 'failed',
-        message: 'The improved homepage preview could not be made. Try again.',
-        noAiKey: false,
-      },
-    });
-    expect(textOf(html)).toContain('could not be made');
-    expect(html).not.toContain('href="/settings"');
+    // The panel that shows it lives on the Improved version tab now (tests/audit-tabs.test.tsx).
   });
 
   it('Open preview opens GET /api/audits/:id/preview?version=n in a new tab', () => {
     expect(previewUrl(AUDIT_ID, 3)).toBe(`/api/audits/${AUDIT_ID}/preview?version=3`);
     expect(AUDIT_API.getPreview).toMatchObject({ method: 'GET', path: '/api/audits/:id/preview' });
-    // A preview made in an earlier visit can still be opened, so the link is always there, with a hint.
-    const idle = render({ version: 1 });
-    expect(idle).toMatch(/<a [^>]*>Open preview<\/a>/);
-    expect(idle).not.toMatch(/<button[^>]*>Open preview<\/button>/);
-    expect(textOf(idle)).toContain('If there isn’t one yet, make it first');
-    const html = render({ version: 1, preview: { status: 'made', createdAt: '2026-11-03T10:00:00Z' } });
-    const anchor = html.match(/<a [^>]*>Open preview<\/a>/)?.[0] ?? '';
-    expect(anchor).toContain(`href="/api/audits/${AUDIT_ID}/preview?version=1"`);
-    expect(anchor).toContain('target="_blank"');
-    expect(anchor).toContain('rel="noopener noreferrer"');
-    expect(anchor).toMatch(/aria-label="Open preview of version 1 \(opens in a new tab\)"/);
   });
 
-  it('says when the preview is ready, and shows a spinner while it is made', () => {
-    expect(textOf(render({ preview: { status: 'made', createdAt: '2026-11-03T10:00:00Z' } }))).toMatch(
-      /The preview is ready/
-    );
-    expect(textOf(render({ preview: { status: 'making' } }))).toMatch(/Making the preview/);
+  it('the Share tab no longer shows the preview panel (ADR 0049)', () => {
+    const html = render();
+    expect(html).not.toContain('Make preview');
+    expect(html).not.toContain('preview-title');
+    expect(html).not.toContain('Open preview');
   });
 });
 
@@ -326,7 +296,6 @@ describe('Shared Link screen', () => {
     const html = render({ created: link });
     for (const id of [
       'share-version',
-      'preview-language',
       'share-language',
       'share-kind-pitch',
       'share-kind-preview',
@@ -349,7 +318,7 @@ describe('Shared Link screen', () => {
 
   it('shows a spinner while loading', () => {
     const html = renderToStaticMarkup(createElement(PreviewShareScreen, { auditId: AUDIT_ID, origin: ORIGIN }));
-    expect(textOf(html)).toMatch(/Preview and Shared Links/);
+    expect(textOf(html)).toMatch(/Shared Links/);
     expect(textOf(html)).toMatch(/Loading the Website Audit/);
   });
 });
@@ -361,7 +330,7 @@ describe('Shared Link screen', () => {
 describe('Preview and Shared Link wording', () => {
   it('says Shared Link and avoids the banned words', () => {
     const screens = [
-      render({ created: link, preview: { status: 'failed', message: NO_AI_KEY_MESSAGE, noAiKey: true } }),
+      render({ created: link }),
       render({ message: { tone: 'pass', text: 'The Shared Link to the Pitch Glimpse is revoked.' } }),
       renderToStaticMarkup(createElement(PreviewShareScreen, { auditId: AUDIT_ID, origin: ORIGIN })),
     ];

@@ -13,6 +13,7 @@ export const AUDIT_ROUTE_NAMES: readonly Name[] = [
   'audit-version',
   'audit-review',
   'audit-export',
+  'audit-improved',
   'audit-share',
   'audit-helpers',
   'audit-settings',

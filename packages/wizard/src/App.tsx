@@ -118,6 +118,9 @@ const ShortlistScreen = lazy(() =>
 const PreviewShareScreen = lazy(() =>
   import('./screens/audit/saved/PreviewShareScreen').then((m) => ({ default: m.PreviewShareScreen }))
 );
+const ImprovedVersionScreen = lazy(() =>
+  import('./screens/audit/improved/ImprovedVersionScreen').then((m) => ({ default: m.ImprovedVersionScreen }))
+);
 const HelpersScreen = lazy(() =>
   import('./screens/audit/saved/HelpersScreen').then((m) => ({ default: m.HelpersScreen }))
 );
@@ -875,6 +878,9 @@ export default function App() {
         break;
       case 'audit-export':
         body = <ExportDocumentsScreen auditId={route.auditId} version={route.version} />;
+        break;
+      case 'audit-improved':
+        body = <ImprovedVersionScreen auditId={route.auditId} />;
         break;
       case 'audit-share':
         body = <PreviewShareScreen auditId={route.auditId} />;

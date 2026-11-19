@@ -24,6 +24,7 @@ export type Route =
   | { name: 'audit-version'; auditId: string; version: number }
   | { name: 'audit-review'; auditId: string; version: number }
   | { name: 'audit-export'; auditId: string; version: number }
+  | { name: 'audit-improved'; auditId: string }
   | { name: 'audit-share'; auditId: string }
   | { name: 'audit-helpers'; auditId: string }
   | { name: 'audit-settings' }
@@ -53,6 +54,7 @@ export const PATHS = {
     `/audits/${encodeURIComponent(auditId)}/versions/${version}/review`,
   auditExport: (auditId: string, version: number) =>
     `/audits/${encodeURIComponent(auditId)}/versions/${version}/export`,
+  auditImproved: (auditId: string) => `/audits/${encodeURIComponent(auditId)}/improved`,
   auditShare: (auditId: string) => `/audits/${encodeURIComponent(auditId)}/share`,
   auditHelpers: (auditId: string) => `/audits/${encodeURIComponent(auditId)}/helpers`,
   auditSettings: '/audit-settings',
@@ -75,12 +77,15 @@ function readVersion(segment: string): number | null {
 }
 
 function matchAuditRoute(path: string): Route | null {
-  const match = path.match(/^\/audits\/([^/]+)(?:\/(share|helpers)|\/versions\/([^/]+)(?:\/(review|export))?)?$/);
+  const match = path.match(
+    /^\/audits\/([^/]+)(?:\/(share|helpers|improved)|\/versions\/([^/]+)(?:\/(review|export))?)?$/
+  );
   if (!match) return null;
   const auditId = readId(match[1]);
   if (auditId === null) return null;
   if (match[2] === 'share') return { name: 'audit-share', auditId };
   if (match[2] === 'helpers') return { name: 'audit-helpers', auditId };
+  if (match[2] === 'improved') return { name: 'audit-improved', auditId };
   if (match[3] === undefined) return { name: 'audit', auditId };
   const version = readVersion(match[3]);
   if (version === null) return null;
