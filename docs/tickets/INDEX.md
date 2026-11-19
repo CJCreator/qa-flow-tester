@@ -77,7 +77,7 @@ Plan: [ENHANCEMENT-PLAN-2026-11.md](ENHANCEMENT-PLAN-2026-11.md), with one file 
 | [T-427](enhance-2026-11/T-427-get-side-effects.md) | GET side effects | T-397 | P2 | M | 9 | todo | T-425 |
 | [T-430](enhance-2026-11/T-430-one-load-per-audit-page.md) | One load per audit page (5,000 pages in 2 hours) | P1 | P1 | M | 8 | todo | T-407 |
 | [T-429](enhance-2026-11/T-429-stream-ai-assessment-during-the-crawl.md) | AI assessment starts during the crawl (rest of T-406) | P1 | P2 | M | 9 | todo | T-430 |
-| [T-431](enhance-2026-11/T-431-improved-version-gaps.md) | Improved version gaps (budget, desktop before, Shared Links, ADC buttons) | P4 | P2 | M | 9 | todo | T-415, T-430 |
+| [T-431](enhance-2026-11/T-431-improved-version-gaps.md) | Improved version gaps (budget, desktop before, Shared Links, ADC buttons) | P4 | P2 | M | 9 | built | T-415, T-430 |
 | [T-396](enhance-2026-11/T-396-every-disabled-button-says-why.md) | Every disabled button says why (W20) | O3 | P2 | M | 10 | todo | T-415, T-420 |
 
 Gap ids: P1 to P4 are review problems 1 (speed) to 4 (Website Audit); O-numbers are rows of the review's "Other issues" table.
