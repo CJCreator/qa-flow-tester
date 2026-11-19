@@ -21,8 +21,12 @@ describe('inDomainAllowlist', () => {
   it('holds the site, its www twin and ticked hosts; a private Test Copy reaches its other private hosts', () => {
     const site = 'https://example.com/';
     expect(inDomainAllowlist(new URL('https://www.example.com/a'), site)).toBe(true);
-    expect(inDomainAllowlist(new URL('https://api.example.com/a'), site)).toBe(false);
-    expect(inDomainAllowlist(new URL('https://api.example.com/a'), site, ['api.example.com'])).toBe(true);
+    expect(inDomainAllowlist(new URL('https://api.example.com/a'), site)).toBe(true);
+    expect(inDomainAllowlist(new URL('https://api.app.com/a'), 'https://www.app.com/')).toBe(true);
+    expect(inDomainAllowlist(new URL('https://cdn.app.com/a'), 'https://www.app.com/')).toBe(true);
+    expect(inDomainAllowlist(new URL('https://api.other.com/a'), 'https://www.app.com/')).toBe(false);
+    expect(inDomainAllowlist(new URL('https://api.other.com/a'), 'https://www.app.com/', ['api.other.com'])).toBe(true);
+    expect(inDomainAllowlist(new URL('https://9.9.3.4/a'), 'https://1.2.3.4/')).toBe(false);
     expect(inDomainAllowlist(new URL('http://localhost:4000/api'), 'http://localhost:3000/')).toBe(true);
     expect(inDomainAllowlist(new URL('http://localhost:4000/api'), site)).toBe(false);
     expect(inDomainAllowlist(new URL('data:text/html,x'), site)).toBe(false);

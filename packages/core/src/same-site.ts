@@ -1,3 +1,5 @@
+import { isIP } from 'node:net';
+import { isOwnSubdomain } from '@qa/checkers';
 import { classifyAddress, isPrivateTextHost } from './address-class.js';
 
 /** The host without a leading "www.", lower-cased, so example.com and www.example.com match. */
@@ -48,6 +50,18 @@ function isPrivateHost(hostname: string): boolean {
 }
 
 /**
+ * True when a public host shares the site's registrable domain: `api.app.com` and `cdn.app.com` for `www.app.com`
+ * (owner decision 2026-11-19). Uses the checkers' registrable-domain helper. IP literals and single-label hosts never match.
+ */
+function isSameRegistrableDomain(hostname: string, siteHostname: string): boolean {
+  const plain = (h: string) => h.toLowerCase().replace(/^\[|\]$/g, '');
+  const a = plain(hostname);
+  const b = plain(siteHostname);
+  if (isIP(a) || isIP(b) || !a.includes('.') || !b.includes('.') || isPrivateHost(a) || isPrivateHost(b)) return false;
+  return isOwnSubdomain(a, b);
+}
+
+/**
  * The Domain Allowlist as a check on any address (T-424): the site's host (its `www` twin included) and
  * every host the person ticked. A Test Copy on this computer or a private network also reaches its other
  * private hosts, such as an API on another port. Anything that is not http or https is not on it.
@@ -62,5 +76,6 @@ export function inDomainAllowlist(url: URL, siteUrl: string, allowedHosts: strin
   }
   const host = url.host.toLowerCase();
   if (isSameSite(host, site.host) || allowedHosts.some((h) => isSameSite(host, h.toLowerCase()))) return true;
+  if (isSameRegistrableDomain(url.hostname, site.hostname)) return true;
   return isPrivateHost(site.hostname) && isPrivateHost(url.hostname);
 }
