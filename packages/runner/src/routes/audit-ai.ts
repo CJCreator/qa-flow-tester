@@ -11,6 +11,7 @@ import {
   AUDIT_AI_API,
   AUDIT_AI_STAGES,
   AUDIT_API,
+  REWRITE_BATCH_MAX_SECTIONS,
   isDocumentLanguage,
   modelForStage,
   validateAuditAiModelsUpdate,
@@ -24,6 +25,7 @@ import {
   type OverlapFlag,
   type PageContent,
   type RewriteAcceptReply,
+  type RewriteBatchReply,
   type RewriteListReply,
   type RewriteReply,
   type RewriteState,
@@ -77,6 +79,18 @@ export interface AuditRewriteOps {
     input: RewriteSectionRef & { text: string },
     deps: { content: PageContent | null; overlapWords?: number }
   ) => Promise<RewriteAcceptOpResult>;
+  /** T-419: approve several Sections in one step. */
+  approveMany?: (sections: RewriteSectionRef[]) => Promise<RewriteOpResult[]>;
+  /** T-419: copy variants for several approved Sections, one AI request per 5; results in input order. */
+  runBatch?: (
+    sections: RewriteSectionRef[],
+    deps: {
+      language: DocumentLanguage;
+      contentFor: (s: RewriteSectionRef) => PageContent | null;
+      overlapWords?: number;
+      signal?: AbortSignal;
+    }
+  ) => Promise<RewriteOpResult[]>;
 }
 
 type MaybePromise<T> = T | Promise<T>;
@@ -291,7 +305,10 @@ export function createAuditAiRoutes(deps: AuditAiRouteDeps): Route[] {
   }
 
   /** Body, section fields and a finished version for the approve/run/accept rows. */
-  async function sectionTarget(ctx: RouteContext): Promise<
+  async function sectionTarget(
+    ctx: RouteContext,
+    read?: Record<string, unknown>
+  ): Promise<
     | {
         body: Record<string, unknown>;
         auditId: string;
@@ -301,7 +318,7 @@ export function createAuditAiRoutes(deps: AuditAiRouteDeps): Route[] {
       }
     | undefined
   > {
-    const body = await readBody(ctx.req, AUDIT_REWRITE_BODY_MAX);
+    const body = read ?? (await readBody(ctx.req, AUDIT_REWRITE_BODY_MAX));
     const check = sectionRequest(body);
     if (!check.ok) {
       refuse(ctx.res, 400, 'ERR_INVALID_REQUEST', INVALID, { errors: check.errors });
@@ -321,6 +338,96 @@ export function createAuditAiRoutes(deps: AuditAiRouteDeps): Route[] {
       language: isDocumentLanguage(found.version.language) ? found.version.language : 'en',
       section: { urlPath: parsed.urlPath, sectionId: parsed.sectionId },
     };
+  }
+
+  /**
+   * T-419: approveRewrite / runRewrite with `sections` (a list). Approval stays per Section; the batch only
+   * saves clicks. A run sends nothing for a Section that is not approved, and nothing at all without a key.
+   */
+  async function batch(ctx: RouteContext, body: Record<string, unknown>, mode: 'approve' | 'run'): Promise<void> {
+    const raw = body.sections;
+    const errors: AuditAiModelsErrors = {};
+    for (const key of Object.keys(body)) {
+      if (!['sections', 'version', 'language'].includes(key)) errors[key.slice(0, 40)] = 'is not a known field.';
+    }
+    const version = versionOf(body.version);
+    if (version === null) errors.version = 'must be a version number: 1, 2, 3…';
+    const sections: RewriteSectionRef[] = [];
+    if (!Array.isArray(raw) || raw.length === 0 || raw.length > REWRITE_BATCH_MAX_SECTIONS) {
+      errors.sections = `must list 1 to ${REWRITE_BATCH_MAX_SECTIONS} Sections.`;
+    } else {
+      for (const item of raw) {
+        const s = item as Record<string, unknown> | null;
+        const urlPath = sectionField(s?.urlPath);
+        const sectionId = sectionField(s?.sectionId);
+        if (!urlPath || !sectionId) {
+          errors.sections = 'each Section needs a urlPath and a sectionId.';
+          break;
+        }
+        if (!sections.some((x) => x.urlPath === urlPath && x.sectionId === sectionId)) {
+          sections.push({ urlPath, sectionId });
+        }
+      }
+    }
+    if (body.language !== undefined && !isDocumentLanguage(body.language)) {
+      errors.language = 'must be one of the document languages.';
+    }
+    if (Object.keys(errors).length > 0) return refuse(ctx.res, 400, 'ERR_INVALID_REQUEST', INVALID, { errors });
+    const found = await versionFor(ctx, version ?? undefined);
+    if (!found) return;
+    if (found.version.status === 'running') return refuse(ctx.res, 409, 'ERR_AUDIT_RUNNING', RUNNING);
+    const ops = await deps.rewrites(found.auditId, found.version.version);
+    if (!ops.approveMany || !ops.runBatch) return refuse(ctx.res, 400, 'ERR_INVALID_REQUEST', INVALID);
+
+    let results: RewriteOpResult[];
+    if (mode === 'approve') {
+      results = await ops.approveMany(sections);
+    } else {
+      if (!(await deps.hasAiKey())) return refuse(ctx.res, 409, 'ERR_NO_AI_KEY', NO_AI_KEY);
+      const language: DocumentLanguage = isDocumentLanguage(body.language)
+        ? body.language
+        : isDocumentLanguage(found.version.language)
+          ? found.version.language
+          : 'en';
+      const contents = new Map<string, PageContent | null>();
+      for (const s of sections) {
+        if (!contents.has(s.urlPath)) {
+          contents.set(s.urlPath, await deps.loadSection(found.auditId, found.version.version, s.urlPath, s.sectionId));
+        }
+      }
+      const overlapWords = await deps.overlapWords();
+      const scope = callerSignal(ctx.req, ctx.res);
+      try {
+        results = await ops.runBatch(sections, {
+          language,
+          contentFor: (s) => contents.get(s.urlPath) ?? null,
+          overlapWords,
+          signal: scope.signal,
+        });
+      } finally {
+        scope.release();
+      }
+      if (scope.signal.aborted) return;
+    }
+    const reply: RewriteBatchReply = { rewrites: [], failures: [] };
+    results.forEach((r, i) => {
+      if (r.ok) reply.rewrites.push(r.rewrite);
+      else {
+        const code: AuditErrorCode = r.code === 'ai-failed' ? 'ERR_AI_FAILED' : r.code;
+        const error =
+          r.code === 'ERR_NOT_APPROVED'
+            ? NOT_APPROVED
+            : r.code === 'ERR_NO_AI_KEY'
+              ? NO_AI_KEY
+              : r.code === 'ERR_INVALID_REQUEST'
+                ? INVALID
+                : typeof r.message === 'string'
+                  ? r.message
+                  : FAILED;
+        reply.failures.push({ ...sections[i], code, error });
+      }
+    });
+    sendJson(ctx.res, 200, reply);
   }
 
   return [
@@ -382,7 +489,9 @@ export function createAuditAiRoutes(deps: AuditAiRouteDeps): Route[] {
       path: AUDIT_API.approveRewrite.path,
       access: AUDIT_API.approveRewrite.access,
       handle: guarded(async (ctx) => {
-        const target = await sectionTarget(ctx);
+        const body = await readBody(ctx.req, AUDIT_REWRITE_BODY_MAX);
+        if (body.sections !== undefined) return batch(ctx, body, 'approve');
+        const target = await sectionTarget(ctx, body);
         if (!target) return;
         const ops = await deps.rewrites(target.auditId, target.version);
         const result = await ops.approve(target.section);
@@ -396,7 +505,9 @@ export function createAuditAiRoutes(deps: AuditAiRouteDeps): Route[] {
       path: AUDIT_API.runRewrite.path,
       access: AUDIT_API.runRewrite.access,
       handle: guarded(async (ctx) => {
-        const target = await sectionTarget(ctx);
+        const body = await readBody(ctx.req, AUDIT_REWRITE_BODY_MAX);
+        if (body.sections !== undefined) return batch(ctx, body, 'run');
+        const target = await sectionTarget(ctx, body);
         if (!target) return;
         const rawLanguage = target.body.language;
         if (rawLanguage !== undefined && !isDocumentLanguage(rawLanguage)) {

@@ -196,6 +196,23 @@ export function RewriteReviewView({
                       <p className="label text-ink">Proposed copy</p>
                       <MarkedText text={proposal.text} overlaps={proposal.overlaps} lang={lang} />
                       <PhraseList overlaps={proposal.overlaps} title="Copied phrases" />
+                      {proposal.variants && proposal.variants.length > 1 && (
+                        <div className="space-y-2">
+                          <p className="label text-ink">Other draft</p>
+                          {proposal.variants.slice(1).map((v, i) => (
+                            <div key={i} className="space-y-1">
+                              <MarkedText text={v.text} overlaps={v.overlaps} lang={lang} />
+                              <button
+                                type="button"
+                                className="btn-link btn-sm"
+                                onClick={() => onDraft(section.id, v.text)}
+                              >
+                                Use this draft
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <label htmlFor={id} className="label text-ink">
