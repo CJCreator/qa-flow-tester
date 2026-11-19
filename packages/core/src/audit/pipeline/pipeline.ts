@@ -531,6 +531,7 @@ export async function runAuditPipeline(
     if (a.accessibility) page.accessibility = a.accessibility;
     const phone = phoneByPath.get(a.urlPath);
     if (phone) page.phone = phone;
+    if (rec?.desktopShot) page.desktopScreenshotPath = rec.desktopShot;
     return page;
   });
   // Every page is fully checked (ADR 0047); Sample Pages remain for the AI notes and recommendations.
@@ -871,6 +872,7 @@ export async function runAuditPipeline(
   if (typeof store.writeVersionEntries === 'function') {
     // One lock and one version check for all of them, a few at a time.
     const shots: Array<{ page: AuditPage; rel: string; data: Uint8Array | null }> = [];
+    const desktopShots: Array<{ page: AuditPage; rel: string; data: Uint8Array | null }> = [];
     for (const p of pages) {
       const rel = p.phone?.screenshotPath;
       if (!p.phone || !rel) continue;
@@ -882,6 +884,19 @@ export async function runAuditPipeline(
       }
       shots.push({ page: p, rel, data });
     }
+    // The 1440 px screenshots of Sample Pages (T-431) are saved with the phone ones.
+    for (const p of pages) {
+      const rel = p.desktopScreenshotPath;
+      if (!rel) continue;
+      let data: Uint8Array | null = null;
+      try {
+        data = new Uint8Array(await fs.readFile(path.join(deps.workDir, ...rel.split('/'))));
+      } catch {
+        data = null;
+      }
+      desktopShots.push({ page: p, rel, data });
+    }
+    const readableDesktop = desktopShots.filter((s) => s.data !== null);
     const readableShots = shots.filter((s) => s.data !== null);
     let saved: boolean[];
     try {
@@ -892,9 +907,10 @@ export async function runAuditPipeline(
           value: p.read!.content,
         })),
         ...readableShots.map((s) => ({ kind: 'file' as const, name: s.rel, data: s.data! })),
+        ...readableDesktop.map((s) => ({ kind: 'file' as const, name: s.rel, data: s.data! })),
       ]);
     } catch {
-      saved = new Array(readable.length + readableShots.length).fill(false);
+      saved = new Array(readable.length + readableShots.length + readableDesktop.length).fill(false);
     }
     readable.forEach((p, i) => {
       if (!saved[i]) saveNotes.push(`The Page Content of ${p.info.urlPath} could not be saved.`);
@@ -904,6 +920,13 @@ export async function runAuditPipeline(
       if (s.data !== null && shotSaved.get(s.rel)) continue;
       s.page.phone = { ...s.page.phone!, screenshotPath: null };
       saveNotes.push(`The phone screenshot of ${s.page.urlPath} could not be saved.`);
+    }
+    const desktopSaved = new Map(
+      readableDesktop.map((s, i) => [s.rel, saved[readable.length + readableShots.length + i]])
+    );
+    for (const s of desktopShots) {
+      if (s.data !== null && desktopSaved.get(s.rel)) continue;
+      s.page.desktopScreenshotPath = null;
     }
   } else {
     for (const p of readable) {
@@ -922,6 +945,16 @@ export async function runAuditPipeline(
       } catch {
         p.phone = { ...p.phone, screenshotPath: null };
         saveNotes.push(`The phone screenshot of ${p.urlPath} could not be saved.`);
+      }
+    }
+    for (const p of pages) {
+      const rel = p.desktopScreenshotPath;
+      if (!rel) continue;
+      try {
+        const data = await fs.readFile(path.join(deps.workDir, ...rel.split('/')));
+        await store.putVersionFile(auditId, version, rel, new Uint8Array(data));
+      } catch {
+        p.desktopScreenshotPath = null;
       }
     }
   }

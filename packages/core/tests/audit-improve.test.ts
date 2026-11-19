@@ -261,6 +261,25 @@ describe('design variants (T-413)', () => {
     expect(made.variants.filter((v) => v.problem === 'budget-spent')).toHaveLength(4);
   });
 
+  it('every variant request takes one from the audit AI request counter, and the budget stops the rest (T-431)', async () => {
+    const io = memoryIo();
+    const mock = mockAi(undefined, 3);
+    const ai = await mock.ai();
+    const r = result();
+    const made = await makeVariants(
+      { result: r, edits: emptyOverlay(), language: 'en', pages: improvePages(r), variants: 3 },
+      { io, scanAxe, ai }
+    );
+    expect(ai.budget?.used).toBe(3);
+    expect(ai.budget?.left).toBe(0);
+    expect(made.requests).toBe(3);
+    expect(made.variants.filter((v) => v.status === 'made')).toHaveLength(3);
+    // The ones the budget stopped are "not done", with the reason.
+    const stopped = made.variants.filter((v) => v.status === 'failed');
+    expect(stopped.length).toBeGreaterThan(0);
+    expect(stopped.every((v) => v.problem === 'budget-spent')).toBe(true);
+  });
+
   it('an empty answer is a failed variant, not a template page', async () => {
     const io = memoryIo();
     const mock = mockAi(() => '   ');

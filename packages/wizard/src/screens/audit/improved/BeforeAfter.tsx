@@ -47,6 +47,16 @@ export function BeforeAfter({ auditId, version, page, variant, html, findingTitl
         {SUGGESTION_LABEL}
       </p>
       <div className="mt-3 flex flex-wrap items-start gap-4">
+        {page.desktopScreenshotPath && (
+          <figure className="w-[360px]">
+            <img
+              src={screenshotUrl(auditId, version, page.desktopScreenshotPath)}
+              alt={`Before: the live page ${page.urlPath} at 1440 pixels, when it was audited`}
+              className="w-full border border-rule"
+            />
+            <figcaption className="mt-1 text-sm">Before, 1440 px</figcaption>
+          </figure>
+        )}
         <figure className="w-[200px]">
           {page.screenshotPath ? (
             <img
@@ -57,7 +67,7 @@ export function BeforeAfter({ auditId, version, page, variant, html, findingTitl
           ) : (
             <p className="text-sm text-ink-soft">No screenshot of this page was stored.</p>
           )}
-          <figcaption className="mt-1 text-sm">Before</figcaption>
+          <figcaption className="mt-1 text-sm">Before, phone</figcaption>
         </figure>
         {FRAME_WIDTHS.map((width) => (
           <figure key={width} className="overflow-hidden" style={{ width: width === 1440 ? 360 : 188 }}>

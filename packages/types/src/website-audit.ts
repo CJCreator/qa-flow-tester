@@ -652,6 +652,12 @@ export interface AuditPage {
   accessibility?: AccessibilityBasics;
   /** Sample Pages only. */
   phone?: PhoneLayout;
+  /**
+   * Sample Pages only: the top of the page at 1440 px, stored while the page was open for its lab checks
+   * (T-431), relative to the version's folder (`AUDIT_API.file`). The "before" of the Improved version's
+   * desktop view. Null when it could not be taken or saved.
+   */
+  desktopScreenshotPath?: string | null;
   /** Sample Pages only. */
   speed?: PageSpeed;
   /** Sample Pages only: one per area in `AUDIT_AREAS`. */
@@ -899,8 +905,11 @@ export const SHARED_LINK_PREFIX = '/s/';
 /** Shared Link ids: at least 128 random bits, URL-safe (22 base64url characters or more). */
 export const SHARE_LINK_ID_PATTERN = /^[A-Za-z0-9_-]{22,128}$/;
 
-/** Only a Pitch Glimpse or an improved-homepage preview can be shared. */
-export type ShareLinkKind = 'pitch' | 'preview';
+/**
+ * Only a Pitch Glimpse, an improved-homepage preview or one design variant of the Improved version can be
+ * shared (T-431). The snapshot is copied when the link is made; revoke and expiry apply as for the others.
+ */
+export type ShareLinkKind = 'pitch' | 'preview' | 'improved';
 
 export interface ShareLink {
   id: string;
@@ -1404,6 +1413,8 @@ export interface ImprovePage {
   layoutGroup: string | null;
   /** The stored phone screenshot of the page, relative to the version folder (`AUDIT_API.file`); the "before". */
   screenshotPath?: string | null;
+  /** The stored 1440 px screenshot of the page (T-431); null for a version audited before it was stored. */
+  desktopScreenshotPath?: string | null;
 }
 
 /** The automatic checks a variant must pass before it is shown (T-414). */
@@ -1524,6 +1535,9 @@ export interface ImproveCreateReply {
 export interface ShareCreateBody extends VersionQuery {
   kind: ShareLinkKind;
   language?: DocumentLanguage;
+  /** kind 'improved': the page key and variant number to share; the starred variant, else the first shown, when absent. */
+  page?: string;
+  variant?: number;
 }
 
 export interface ShareLinkReply {

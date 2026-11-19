@@ -23,6 +23,7 @@ import { createFindingIdAllocator, type FindingIdAllocator } from '../analysis/f
 import { readPage, type ReadPageResult } from '../analysis/read-page.js';
 import { accessibilityBasics, type AccessibilityBasicsResult } from '../analysis/accessibility-basics.js';
 import { recordPhoneLayout, type PhoneLayoutRecord } from '../phone-layout.js';
+import { recordDesktopShot } from './desktop-shot.js';
 import { measureBrowserTiming, type BrowserTimingResult } from '../speed/browser-timing.js';
 import { PSI_MAX_PAGES, type SampleSpeed } from '../ai/pagespeed.js';
 import type { AuditCrawlPage, RenderedPageContext } from '../crawl/crawl.js';
@@ -74,6 +75,8 @@ export interface RecordedPage {
   accessibility?: AccessibilityBasicsResult | null;
   /** Every page (ADR 0047). Null when the step threw. */
   phone?: PhoneLayoutRecord | null;
+  /** Sample Pages (T-431): the 1440 px screenshot taken on the open page; null when it could not be taken. */
+  desktopShot?: string | null;
   /** Every page (ADR 0047). Lab speed measured by this tool directly in the browser (ADR 0042). Null when the step threw. */
   timing?: BrowserTimingResult | null;
   /** Set when PageSpeed Insights was asked for this page during the crawl (T-404); `psi` holds its answer. */
@@ -330,6 +333,8 @@ export class AuditPageRecorder {
         entry.timing = null;
       }
     }
+    // T-431: the page is open, so the 1440 px "before" costs no second load. Sample Pages only.
+    if (entry.coverage === 'sample') entry.desktopShot = await recordDesktopShot(page, this.workDir, info.urlPath);
     try {
       entry.phone = await this.stages.recordPhoneLayout(page, {
         versionDir: this.workDir,

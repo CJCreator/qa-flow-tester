@@ -52,16 +52,17 @@ export type ShareLanguage = (typeof SHARE_LANGUAGES)[number];
 export const KIND_LABEL: Readonly<Record<ShareLinkKind, string>> = {
   pitch: 'Pitch Glimpse',
   preview: 'Improved homepage preview',
+  improved: 'Improved version (best design variant)',
 };
 
-export const SHARE_KINDS: readonly ShareLinkKind[] = ['pitch', 'preview'];
+export const SHARE_KINDS: readonly ShareLinkKind[] = ['pitch', 'preview', 'improved'];
 
 function isShareLink(value: unknown): value is ShareLink {
   return (
     isRecord(value) &&
     typeof value.id === 'string' &&
     typeof value.version === 'number' &&
-    (value.kind === 'pitch' || value.kind === 'preview') &&
+    (value.kind === 'pitch' || value.kind === 'preview' || value.kind === 'improved') &&
     isDocumentLanguage(value.language) &&
     typeof value.createdAt === 'string' &&
     typeof value.expiresAt === 'string' &&

@@ -13,12 +13,18 @@ import { AuditStore, LocalAuditStoreBackend, pageContentName, resolveAuditAi, ty
 import { auditDocContents, auditDocResult } from '../../core/tests/helpers/audit-doc-fixture.js';
 import { auditImproveRoutes } from '../src/routes/audit-improve.js';
 import { auditExportRoutes } from '../src/routes/audit-export.js';
+import { auditShareRoutes } from '../src/routes/audit-share.js';
 import { auditSettingsStoreOn } from '../src/routes/audit-settings.js';
 import type { Route } from '../src/routes/route.js';
 
 const NOW = new Date('2026-11-19T10:00:00.000Z');
 // A tiny JPEG stands for every thumbnail.
 const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46]);
+// A 1x1 PNG stands for the stored 1440 px screenshot (T-431).
+const PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+  'base64'
+);
 
 class MockResponse {
   statusCode = 0;
@@ -26,6 +32,9 @@ class MockResponse {
   chunks: Buffer[] = [];
   setHeader(name: string, value: string) {
     this.headers[name] = value;
+  }
+  removeHeader(name: string) {
+    delete this.headers[name];
   }
   writeHead(status: number, headers?: Record<string, string>) {
     this.statusCode = status;
@@ -105,7 +114,11 @@ beforeEach(async () => {
     language: 'en',
   });
   auditId = v1.auditId;
-  await store.saveResult(auditId, 1, { ...auditDocResult(), auditId, version: 1 });
+  const base = auditDocResult();
+  const root = base.pages.find((p) => p.urlPath === base.hierarchy.root.urlPath)!;
+  root.desktopScreenshotPath = 'desktop/home.png';
+  await store.saveResult(auditId, 1, { ...base, auditId, version: 1 });
+  await store.putVersionFile(auditId, 1, 'desktop/home.png', PNG);
   for (const c of auditDocContents()) await store.writeVersionJson(auditId, 1, pageContentName(c.urlPath), c);
   await store.updateVersion(auditId, 1, { status: 'done', finishedAt: NOW.toISOString() });
   const improve = auditImproveRoutes({
@@ -182,5 +195,64 @@ describe('Improved version downloads (T-415)', () => {
     expect(pitch.statusCode).toBe(200);
     expect(pitch.body.toString('utf8')).toContain(`data:image/jpeg;base64,${JPEG.toString('base64')}`);
     expect(pitch.body.toString('utf8')).toContain('Improved version');
+  });
+});
+
+describe('Before and after with both widths, and sharing (T-431)', () => {
+  it('the HTML export draws the stored 1440 px screenshot beside the phone one', async () => {
+    const html = await call(exportRows(), 'export', `/api/audits/${auditId}/export`, undefined, '?format=html');
+    expect(html.statusCode).toBe(200);
+    const text = html.body.toString('utf8');
+    expect(text).toContain('Before (stored 1440 px screenshot)');
+    expect(text).toContain(`data:image/png;base64,${PNG.toString('base64')}`);
+  });
+
+  function shareRows(): Route[] {
+    return auditShareRoutes({ store, optOutText: async () => ({}), caller: () => ({ owner: true }) });
+  }
+
+  it('a Shared Link can include the Improved version, and is gone after revoke', async () => {
+    const rows = shareRows();
+    const made = await call(
+      rows,
+      'createShare',
+      `/api/audits/${auditId}/share`,
+      JSON.stringify({ kind: 'improved', language: 'en', version: 1 })
+    );
+    expect(made.statusCode, made.body.toString()).toBe(201);
+    const { link } = made.json();
+    expect(link.kind).toBe('improved');
+    const open = await call(rows, 'sharedPage', `/s/${link.id}`);
+    expect(open.statusCode).toBe(200);
+    expect(open.body.toString('utf8')).toContain('<h1');
+    // The page is a variant: it is the one starred, here the first that passed.
+    const gone = await call(rows, 'revokeShare', `/api/audits/${auditId}/share/${link.id}`, undefined);
+    expect(gone.statusCode).toBe(200);
+    const after = await call(rows, 'sharedPage', `/s/${link.id}`);
+    expect(after.statusCode).toBe(410);
+  });
+
+  it('shares the starred variant, and refuses one that was not shown', async () => {
+    const rows = shareRows();
+    await call(
+      exportRows(),
+      'setImproveBest',
+      `/api/audits/${auditId}/improve-best`,
+      JSON.stringify({ page: 'p-services', variant: 2 })
+    );
+    const ok = await call(
+      rows,
+      'createShare',
+      `/api/audits/${auditId}/share`,
+      JSON.stringify({ kind: 'improved', page: 'p-services', variant: 2 })
+    );
+    expect(ok.statusCode).toBe(201);
+    const bad = await call(
+      rows,
+      'createShare',
+      `/api/audits/${auditId}/share`,
+      JSON.stringify({ kind: 'improved', page: 'nope', variant: 1 })
+    );
+    expect(bad.statusCode).toBe(400);
   });
 });

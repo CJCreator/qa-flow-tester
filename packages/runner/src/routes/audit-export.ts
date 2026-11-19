@@ -396,7 +396,14 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
       if (!bytes) continue;
       const page = pages.get(v.page)!;
       const before = await pngUri(store, loaded.auditId, loaded.version, page.screenshotPath);
-      variants.push({ page, variant: v, html: Buffer.from(bytes).toString('utf8'), ...(before ? { before } : {}) });
+      const beforeDesktop = await pngUri(store, loaded.auditId, loaded.version, page.desktopScreenshotPath);
+      variants.push({
+        page,
+        variant: v,
+        html: Buffer.from(bytes).toString('utf8'),
+        ...(before ? { before } : {}),
+        ...(beforeDesktop ? { beforeDesktop } : {}),
+      });
     }
     if (variants.length === 0) return null;
     const take = variants.slice(0, drawn);
