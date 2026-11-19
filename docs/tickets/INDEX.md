@@ -53,7 +53,7 @@ Plan: [ENHANCEMENT-PLAN-2026-11.md](ENHANCEMENT-PLAN-2026-11.md), with one file 
 | [T-391](enhance-2026-11/T-391-every-export-prints-the-same-count.md) | Every export prints the same count | P2 | P2 | S | 3 | todo | T-389 |
 | [T-403](enhance-2026-11/T-403-adaptive-fetch-concurrency.md) | Adaptive fetch concurrency (ADR 0046) | P1 | P1 | M | 3 | built | T-401, T-411 |
 | [T-409](enhance-2026-11/T-409-one-retry-video-on-retry.md) | One retry; video only on the retry | P1 | P1 | S | 3 | built | T-389 |
-| [T-404](enhance-2026-11/T-404-lab-work-off-the-crawl-workers.md) | Lab work off the crawl workers | P1 | P1 | M | 4 | todo | T-403 |
+| [T-404](enhance-2026-11/T-404-lab-work-off-the-crawl-workers.md) | Lab work off the crawl workers | P1 | P1 | M | 4 | built | T-403 |
 | [T-408](enhance-2026-11/T-408-parallel-check-up-test-workers.md) | Parallel Check-up test workers (ADR 0048) | P1 | P1 | L | 4 | todo | T-409, T-411 |
 | [T-405](enhance-2026-11/T-405-every-audit-page-fully-checked.md) | Every audit page fully checked (ADR 0047) | P3 | P1 | M | 5 | todo | T-404 |
 | [T-412](enhance-2026-11/T-412-improved-version-tab.md) | The Improved version tab (ADR 0049) | P4 | P1 | S | 5 | built | - |
