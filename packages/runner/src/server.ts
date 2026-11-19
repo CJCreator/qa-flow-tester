@@ -94,6 +94,7 @@ import {
   setBrowserPolicy,
   makeRequestGuard,
   startEgressProxy,
+  closePdfBrowser,
   type EgressProxy,
   type EgressProxyOptions,
   verifyDomainProof,
@@ -1532,6 +1533,8 @@ export class RunnerServer {
     if (this.beta) setBrowserPolicy(null);
     await this.egress?.close();
     this.egress = undefined;
+    // The one shared Chromium for PDF exports (T-410) would otherwise outlive the server.
+    await closePdfBrowser().catch(() => {});
     // Open event streams would otherwise keep the server from ever finishing its close.
     for (const client of this.streamClients) client.end();
     this.streamClients.clear();
