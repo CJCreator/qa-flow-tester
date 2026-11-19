@@ -30,6 +30,7 @@ import type { InterstitialKind } from '../audit/crawl/interstitial.js';
 import { debugLog } from '../debug-log.js';
 import { normalizeRoute, CrawlFrontier } from './frontier.js';
 import { dismissOverlays } from './overlay.js';
+import { guardPage } from './guard.js';
 
 export interface FormInputInfo {
   /** The HTML name attribute (may be empty). */
@@ -60,6 +61,8 @@ export interface DiscoveredFormInfo {
 
 export interface SpiderPageInventoryItem extends PageInventoryItem {
   exploreErrors?: number;
+  /** Changing requests (POST, PUT, PATCH, DELETE) an exploring click fired and the guard aborted (T-423). */
+  blockedChanges?: number;
   /** Link steps from the start address (the start page is 0). Always set on pages the Spider records. */
   depth?: number;
 }
@@ -1439,15 +1442,49 @@ export class DeterministicSpider {
               }
               const urlBefore = page.url();
               // A click may load another page of the host, so with a pacer it takes a turn too.
+              // Guarded (ADR 0025, T-423): changing requests are aborted and the page's own form submits do
+              // nothing while the click runs. What was blocked is kept as a fact, not as an error.
               await paced(pageUrl, async () => {
-                await page
-                  .locator(el.selector)
-                  .first()
-                  .click({ timeout: capToDeadline(3000) });
-                await Promise.race([
-                  page.waitForURL((u) => u.toString() !== urlBefore, { timeout: capToDeadline(1500) }),
-                  page.waitForTimeout(capToDeadline(250)),
-                ]).catch(() => {});
+                const guard = await guardPage(page);
+                try {
+                  await page
+                    .evaluate(() => {
+                      const proto = HTMLFormElement.prototype;
+                      const w = window as unknown as { __qaFormSubmit?: [unknown, unknown] };
+                      if (!w.__qaFormSubmit) w.__qaFormSubmit = [proto.submit, proto.requestSubmit];
+                      proto.submit = function () {};
+                      proto.requestSubmit = function () {};
+                    })
+                    .catch(() => undefined);
+                  await page
+                    .locator(el.selector)
+                    .first()
+                    .click({ timeout: capToDeadline(3000) });
+                  await Promise.race([
+                    page.waitForURL((u) => u.toString() !== urlBefore, { timeout: capToDeadline(1500) }),
+                    page.waitForTimeout(capToDeadline(250)),
+                  ]).catch(() => {});
+                } finally {
+                  // Same page still open: its own submit comes back. After a navigation there is nothing to undo.
+                  await page
+                    .evaluate(() => {
+                      const w = window as unknown as {
+                        __qaFormSubmit?: [HTMLFormElement['submit'], HTMLFormElement['requestSubmit']];
+                      };
+                      if (!w.__qaFormSubmit) return;
+                      [HTMLFormElement.prototype.submit, HTMLFormElement.prototype.requestSubmit] = w.__qaFormSubmit;
+                      delete w.__qaFormSubmit;
+                    })
+                    .catch(() => undefined);
+                  await guard.release();
+                  if (guard.blocked.length > 0) {
+                    pageItem.blockedChanges = (pageItem.blockedChanges ?? 0) + guard.blocked.length;
+                    debugLog('crawl', 'blocked a changing request', {
+                      path: currentPath,
+                      count: guard.blocked.length,
+                    });
+                  }
+                }
               });
               const after = new URL(page.url());
               if (onSite(after)) {
