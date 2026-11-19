@@ -107,6 +107,7 @@ export function createAuditRerunRoutes(deps: AuditRerunRouteDeps): Route[] {
     ) {
       return;
     }
+    deps.targetAccepted?.(request.url);
 
     // Synchronous claim, no await before it after the check (BE-103).
     if (!slot.begin(auditId, request.url, 'audit')) {
