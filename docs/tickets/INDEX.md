@@ -64,7 +64,7 @@ Plan: [ENHANCEMENT-PLAN-2026-11.md](ENHANCEMENT-PLAN-2026-11.md), with one file 
 | [T-407](enhance-2026-11/T-407-checkpoint-and-resume-audits.md) | Checkpoint and Resume for audits | P3, O7 | P1 | L | 7 | todo | T-406 |
 | [T-414](enhance-2026-11/T-414-variant-quality-gate.md) | Variant quality gate | P4 | P1 | M | 7 | built | T-413 |
 | [T-418](enhance-2026-11/T-418-competitor-examples-in-improved-version.md) | Competitor examples in the Improved version | P4 | P2 | M | 7 | todo | T-416, T-413 |
-| [T-419](enhance-2026-11/T-419-copy-variants-in-batches.md) | Copy variants in batches | P4 | P2 | M | 7 | todo | T-417 |
+| [T-419](enhance-2026-11/T-419-copy-variants-in-batches.md) | Copy variants in batches | P4 | P2 | M | 7 | built | T-417 |
 | [T-415](enhance-2026-11/T-415-before-after-download-exports-pitch.md) | Before/after, HTML download, exports, Pitch thumbnail | P4 | P1 | M | 8 | todo | T-414, T-410 |
 | [T-420](enhance-2026-11/T-420-full-ai-translation-of-exports.md) | Full AI translation of exports | O19 | P2 | M | 9 | todo | T-419, T-415 |
 | [T-421](enhance-2026-11/T-421-click-time-sensitive-action-gate.md) | A click-time Sensitive Action gate | T-397 | P1 | M | 5 | todo | T-408 |
