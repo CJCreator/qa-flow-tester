@@ -1,5 +1,6 @@
 import type { AspectGrade, AspectType, Finding, FindingSeverity, RunCoverage, SiteAspectGrades } from './index.js';
-import { groupIntoProblems, isDismissed, type ProblemInput } from './problems.js';
+import { isDismissed } from './problems.js';
+import { summarizeFindings } from './count-summary.js';
 
 export interface ReleaseGateCriteria {
   maxBlockers?: number;
@@ -114,16 +115,8 @@ export function releaseVerdict(
 ): ReleaseVerdict {
   gate = gate ?? DEFAULT_RELEASE_GATES.standard;
   const customGate = !sameGateCriteria(gate, DEFAULT_RELEASE_GATES.standard);
-  // AI-written findings are advisory: they never change the verdict (ADR 0009).
-  const safeFindings = (findings ?? []).filter((f) => !f.advisory && f.checker !== 'ai-review');
-  const problems = groupIntoProblems(
-    safeFindings.map((f): ProblemInput => ({
-      checker: 'bug-detection',
-      where: { urlPath: '', role: '', breakpoint: '1440px' },
-      ...f,
-    }))
-  );
-  const active = problems.filter((p) => !p.toConfirm);
+  // AI-written findings are advisory: they never change the verdict (ADR 0009). One count for every screen (T-389).
+  const { summary, active } = summarizeFindings(findings);
   const counts: Record<FindingSeverity, number> = { Blocker: 0, Major: 0, Minor: 0, Suggestion: 0 };
   for (const p of active) counts[p.severity]++;
 
@@ -222,9 +215,9 @@ export function releaseVerdict(
     reason,
     counts,
     mustFix,
-    total: active.length,
-    toConfirm: problems.length - active.length,
-    findings: safeFindings.filter(countsTowardVerdict).length,
+    total: summary.problems,
+    toConfirm: summary.toConfirm,
+    findings: summary.findings,
     gate,
     breaches: breaches.length > 0 ? breaches : undefined,
     notChecked: notChecked.length > 0 ? notChecked : undefined,
