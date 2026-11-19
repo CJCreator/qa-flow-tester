@@ -20,6 +20,9 @@ import { stripClaimWords } from '../documents/wording.js';
 import { clip, languageName, type AuditAi } from '../ai/stage-ai.js';
 import { CLAIM_WORDS_PROMPT } from '../ai/claim-words.js';
 
+/** An address the AI names without a scheme is read as https. A scheme, not a host: it names no external service. */
+const DEFAULT_SCHEME = 'https:';
+
 /** What the AI is told about the audited site. Facts from Page Content only. */
 export interface CompetitorSummary {
   url: string;
@@ -112,7 +115,8 @@ export function parseCompetitorAnswer(
     if (typeof raw !== 'string') continue;
     let url: URL;
     try {
-      url = new URL(/^[a-z]+:\/\//i.test(raw.trim()) ? raw.trim() : `${'https'}://${raw.trim()}`);
+      const address = raw.trim();
+      url = new URL(/^[a-z]+:\/\//i.test(address) ? address : `${DEFAULT_SCHEME}//${address}`);
     } catch {
       continue;
     }
