@@ -94,7 +94,9 @@ import {
   setBrowserPolicy,
   makeRequestGuard,
   startEgressProxy,
+  closePdfBrowser,
   type EgressProxy,
+  type EgressProxyOptions,
   verifyDomainProof,
   safeGet,
   proofUrl,
@@ -360,6 +362,8 @@ export interface RunnerServerOptions {
   beta?: boolean;
   /** Test seam for a shared machine (beta): replaces DNS lookup and the pinned connection used for host checks. */
   hostChecks?: NetDeps;
+  /** Test seam (beta): opens the egress proxy's upstream connection, so a test needs no real network. */
+  egressConnect?: EgressProxyOptions['connect'];
   /** Beta only: check-ups per visitor and per day. A test seam; default from RUNNER_BETA_RUNS_PER_VISITOR / _PER_DAY. */
   betaLimits?: BetaLimits;
   /** Most time one test step may spend finding and acting on its element, in ms (env RUNNER_STEP_TIMEOUT_MS). Default 10000. */
@@ -525,6 +529,7 @@ export class RunnerServer {
   private beta: boolean;
   private betaLimits: BetaLimits;
   private hostChecks: NetDeps | undefined;
+  private egressConnect: EgressProxyOptions['connect'];
   /** The shared machine's egress proxy for Chromium (ADR 0045). Beta only. */
   private egress: EgressProxy | undefined;
   private stepTimeoutMs: number | undefined;
@@ -670,6 +675,7 @@ export class RunnerServer {
     this.sideBrowsers = new BrowserGate(this.beta ? 1 : 2);
     this.betaLimits = options.betaLimits ?? betaLimitsFromEnv();
     this.hostChecks = options.hostChecks;
+    this.egressConnect = options.egressConnect;
     this.stepTimeoutMs = options.stepTimeoutMs;
     this.keyResolver = options.keyResolver || (this.beta ? new SessionKeyResolver() : new KeyResolver(this.dataDir));
     this.openRouter = options.openRouter || new OpenRouterClient();
@@ -968,7 +974,7 @@ export class RunnerServer {
   public async start(): Promise<string> {
     // A shared machine checks every browser request: nothing may reach a non-public address (ADR 0014).
     if (this.beta) {
-      this.egress = await startEgressProxy({ lookup: this.hostChecks?.lookup });
+      this.egress = await startEgressProxy({ lookup: this.hostChecks?.lookup, connect: this.egressConnect });
       setBrowserPolicy({ guard: makeRequestGuard(this.hostChecks), proxy: this.egress.url });
     }
     await this.auditRecoveryDone;
@@ -1527,6 +1533,8 @@ export class RunnerServer {
     if (this.beta) setBrowserPolicy(null);
     await this.egress?.close();
     this.egress = undefined;
+    // The one shared Chromium for PDF exports (T-410) would otherwise outlive the server.
+    await closePdfBrowser().catch(() => {});
     // Open event streams would otherwise keep the server from ever finishing its close.
     for (const client of this.streamClients) client.end();
     this.streamClients.clear();
@@ -1632,7 +1640,10 @@ export class RunnerServer {
   private async refuseTarget(res: http.ServerResponse, address: string | undefined): Promise<boolean> {
     if (!this.beta || !address) return false;
     const reason = await refusedTarget(address, this.hostChecks?.lookup);
-    if (!reason) return false;
+    if (!reason) {
+      this.allowTargetPort(address);
+      return false;
+    }
     this.sendJson(res, 400, {
       reachable: false,
       reason: 'private-address',
@@ -1641,6 +1652,19 @@ export class RunnerServer {
       suggestion: reason,
     });
     return true;
+  }
+
+  /** A public target on an explicit port (https://example.com:8443) is let through the egress proxy; other ports stay refused. */
+  private allowTargetPort(address: string): void {
+    if (!this.egress) return;
+    const text = address.trim();
+    let port = 0;
+    try {
+      port = Number(new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(text) ? text : `https://${text}`).port);
+    } catch {
+      return;
+    }
+    if (port) this.egress.allowPort(port);
   }
 
   /** True when this request may not open another event stream: too many on the copy, or (beta) for this visitor. */
