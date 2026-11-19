@@ -4,6 +4,43 @@
  */
 import { describe, it, expect } from 'vitest';
 import { pathLimitVerdict } from '../src/audit/crawl/limits.js';
+import { AUDIT_MAX_PER_SHAPE } from '../src/audit/crawl/crawl.js';
+import { CrawlFrontier } from '../src/discovery/frontier.js';
+
+/** Queues /p/0 … /p/<count-1> the way the Spider does (depth 1), and says what the frontier did with each. */
+function queueProducts(frontier: CrawlFrontier, count: number) {
+  let queued = 0;
+  let trapLimit = 0;
+  for (let n = 0; n < count; n++) {
+    const verdict = frontier.admit(`https://shop.example/p/${n}`, 'https://shop.example/', 1);
+    if (verdict.admit) queued++;
+    else if (verdict.reason === 'trap-limit') trapLimit++;
+  }
+  return { queued, trapLimit };
+}
+
+describe('trap limit per address shape (T-401)', () => {
+  it('a Website Audit queues 500 /p/<n> addresses of 600 and lists 100 as trap-limit', () => {
+    expect(AUDIT_MAX_PER_SHAPE).toBe(500);
+    const frontier = new CrawlFrontier({ maxPerShape: AUDIT_MAX_PER_SHAPE, maxDepth: 5 });
+    expect(queueProducts(frontier, 600)).toEqual({ queued: 500, trapLimit: 100 });
+  });
+
+  it('calendar-style addresses still stop at 500', () => {
+    const frontier = new CrawlFrontier({ maxPerShape: AUDIT_MAX_PER_SHAPE, maxDepth: 5 });
+    let queued = 0;
+    for (let day = 0; day < 700; day++) {
+      const d = new Date(Date.UTC(2026, 0, 1) + day * 86_400_000);
+      const path = `/${d.getUTCFullYear()}/${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
+      if (frontier.admit(`https://shop.example${path}`, 'https://shop.example/', 1).admit) queued++;
+    }
+    expect(queued).toBe(500);
+  });
+
+  it('the Check-up still stops at 25 (the Spider passes no maxPerShape)', () => {
+    expect(queueProducts(new CrawlFrontier({ maxDepth: 5 }), 600)).toEqual({ queued: 25, trapLimit: 575 });
+  });
+});
 
 const limits = (includePaths: string[] = [], excludePaths: string[] = []) => ({ includePaths, excludePaths });
 

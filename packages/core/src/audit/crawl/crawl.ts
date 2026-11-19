@@ -67,6 +67,11 @@ export const AUDIT_MAX_CRAWL_MS = 60 * 60 * 1000;
  * AUDIT_MIN_GAP_MS apart. One at a time when robots.txt sets a Crawl-delay or the site says it is busy.
  */
 export const AUDIT_FETCH_IN_FLIGHT = 3;
+/**
+ * Addresses of one shape (`/p/<n>`, `/2026/11/19`) a Website Audit queues at most (T-401). The Check-up keeps
+ * the Spider's 25; at 25 a shop with `/p/12345` product addresses stopped at 25 products.
+ */
+export const AUDIT_MAX_PER_SHAPE = 500;
 /** robots.txt and sitemap fetches: same limit as a page load. */
 const SITE_FILE_TIMEOUT_MS = 10_000;
 const SITE_FILE_REDIRECTS = 5;
@@ -407,6 +412,7 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
     const spider = new DeterministicSpider([], request.limits.maxPages);
     const result = await spider.crawl(context, request.url, {
       maxDepth: request.limits.maxDepth,
+      maxPerShape: AUDIT_MAX_PER_SHAPE,
       pageTimeoutMs: AUDIT_PAGE_TIMEOUT_MS,
       // One worker per page the pacer lets through at once, so all of them are used (ADR 0043).
       concurrency: pacer.maxInFlight,
