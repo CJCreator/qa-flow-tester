@@ -35,25 +35,21 @@ import {
   type AuditAiStatus,
   type AuditApi,
   type AuditFinding,
-  type AuditPageState,
   type AuditProgressEvent,
   type AuditStage,
   type AuditStartBody,
   type AuditStartErrors,
-  type AuditVersion,
   type EditOverlay,
   type ExternalSpeed,
   type PageContent,
   type ShortlistEntry,
   type ShortlistOutcome,
-  type SpeedSource,
-  type StoredAuditDocument,
   type TechnologyResult,
 } from '../src/website-audit.js';
 import { ROUTE_SKIP_REASONS, type RouteSkipReason } from '../src/route-telemetry.js';
 import { AI_STAGES, STAGE_MODEL_SLOT, modelForStage, type AIStage, type ModelsByStage } from '../src/ai.js';
 import { MARKETING_SIGNALS, type MarketingReview } from '../src/aspects.js';
-import { CRAWL_LIMIT_BOUNDS, type CrawlLimits } from '../src/discovery.js';
+import { type CrawlLimits } from '../src/discovery.js';
 
 const TYPES_SRC = fileURLToPath(new URL('../src', import.meta.url));
 

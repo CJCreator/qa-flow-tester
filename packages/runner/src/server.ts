@@ -3374,7 +3374,8 @@ export class RunnerServer {
       const { runId } = await this.checkupRun.start({ body, authorization });
       res.writeHead(202, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ runId }));
-    } catch (err: any) {
+    } catch (e) {
+      const err = e as { code?: string; message?: string; suggestion?: unknown; targetUrl?: unknown };
       if (err?.code === 'ERR_PLAN_WAITING') {
         this.sendJson(res, 409, {
           error: err.message,
@@ -3388,7 +3389,7 @@ export class RunnerServer {
         this.sendJson(res, 409, { error: err.message, code: err.code });
         return;
       }
-      this.sendJson(res, 500, { error: this.redactedMessage(err) });
+      this.sendJson(res, 500, { error: this.redactedMessage(e) });
     }
   }
 

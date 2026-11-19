@@ -40,6 +40,7 @@ import type {
   RoadmapItem,
   SpeedNotMeasuredReason,
 } from '@qa/types';
+import type { RouteSkipReason } from '@qa/types';
 import { AUDIT_AREAS, MARKETING_SIGNALS, countFindingRules } from '@qa/types';
 import { isAbortError, stopIfAborted } from '../../abort.js';
 import { makeCheckerFetch } from '../../checker-fetch.js';
@@ -804,7 +805,7 @@ export async function runAuditPipeline(
     signals: analysis.marketing.signals.map((s) => (s.findingIds ? { ...s, findingIds: re(s.findingIds) } : s)),
   };
   const citationProblems = checkCitations(
-    findings.filter((f) => !isSiteCausedSkip(f.rule as any)),
+    findings.filter((f) => !isSiteCausedSkip(f.rule as RouteSkipReason)),
     pages
   );
 
