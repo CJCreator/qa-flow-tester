@@ -28,4 +28,13 @@ export {
   type VariantAxeScan,
   type VariantGateInput,
 } from './quality-gate.js';
+export {
+  FIX_OPTIONS_NAME,
+  fixOptionsKey,
+  loadFixOptions,
+  type FixOptionsIo,
+  type LoadFixOptionsInput,
+  type LoadedFixOptions,
+} from './fix-options-store.js';
+export type { FixOption } from './fix-rules.js';
 export { decodePng, findLogo, screenshotColours, siteBrand, type SiteBrand } from './brand.js';

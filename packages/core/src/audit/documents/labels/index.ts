@@ -21,6 +21,7 @@ import { bn } from './bn.js';
 import { or } from './or.js';
 import { pa } from './pa.js';
 import { ur } from './ur.js';
+import { FIX_RULE_TEXT_TA, type FixRuleTextTa } from './fix-rules-ta.js';
 
 export type { DocumentLabels } from './en.js';
 
@@ -115,6 +116,31 @@ export function documentBetaNote(lang: DocumentLanguage): string {
   if (!hasOwn(DOCUMENT_LANGUAGE_INFO, lang) || !DOCUMENT_LANGUAGE_INFO[lang].beta) return '';
   // The note is in the language actually rendered: English when the request fell back (DEC-005).
   return labelsFor(lang).labels.status.betaTranslation;
+}
+
+const FIX_RULE_TEXT: Partial<Record<DocumentLanguage, Readonly<Record<string, readonly FixRuleTextTa[]>>>> = {
+  ta: FIX_RULE_TEXT_TA,
+};
+
+/**
+ * The fixed fix-option text (`improve/fix-rules.ts`) of option `index` under `key` (`ruleTextKey`) in
+ * `language`; undefined when the language has none (the English text is then used, under the beta label).
+ */
+export function fixRuleText(language: DocumentLanguage, key: string, index: number): FixRuleTextTa | undefined {
+  return FIX_RULE_TEXT[language]?.[key]?.[index];
+}
+
+/** A rule option with its title and trade-off in `language` where a table has them; AI options are as written. */
+export function localizeFixOption<T extends { id: string; source: string; title: string; tradeOff: string }>(
+  option: T,
+  textKey: string,
+  language: DocumentLanguage
+): T {
+  if (option.source !== 'rule') return option;
+  // Option ids end in the letter of the option: A is the first text, B the second.
+  const index = option.id.charCodeAt(option.id.length - 1) - 65;
+  const fixed = fixRuleText(language, textKey, index);
+  return fixed ? { ...option, title: fixed.title, tradeOff: fixed.tradeOff } : option;
 }
 
 /** The languages that have their own label table. */

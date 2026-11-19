@@ -46,6 +46,7 @@ let dir: string;
 let store: AuditStore;
 let auditId: string;
 let calls: number;
+let fixCalls: number;
 let budget: AuditAiRequestBudget;
 let ids: string[][];
 
@@ -53,6 +54,11 @@ let ids: string[][];
 const provider: AIProvider = {
   providerType: 'mock',
   async generateText(messages) {
+    // The Findings document also asks for fix options (T-417): not a translation request.
+    if (String(messages[0]!.content).includes('fix website findings')) {
+      fixCalls += 1;
+      return JSON.stringify({ options: [] });
+    }
     calls += 1;
     const items = JSON.parse(messages[1]!.content as string) as Array<{ id: string; text: string }>;
     ids.push(items.map((i) => i.id));
@@ -99,6 +105,7 @@ beforeEach(async () => {
   dir = await fs.mkdtemp(path.join(os.tmpdir(), 'audit-export-translation-'));
   store = new AuditStore(new LocalAuditStoreBackend(dir));
   calls = 0;
+  fixCalls = 0;
   ids = [];
   budget = auditAiRequestBudget();
   const v1 = await store.createAudit({
@@ -126,7 +133,7 @@ describe('export in another language (T-420)', () => {
       expect(res.text).toContain(`HI:${f.title}`);
     }
     expect(calls).toBeGreaterThan(0);
-    expect(budget.used).toBe(calls);
+    expect(budget.used).toBe(calls + fixCalls);
     // Ids are t1, t2, ... in every batch, at most 40 strings each.
     for (const batch of ids) {
       expect(batch.length).toBeLessThanOrEqual(40);

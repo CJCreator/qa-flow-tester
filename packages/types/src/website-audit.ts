@@ -1213,6 +1213,8 @@ export const AUDIT_API = {
   setImproveBest: { method: 'PUT', path: '/api/audits/:id/improve-best', replies: 'json', access: 'edit' },
   /** Every variant that passed the quality gate, as a zip of HTML files with a README (T-415). */
   exportImproved: { method: 'GET', path: '/api/audits/:id/improve-export', replies: 'file', access: 'export' },
+  /** The fix options of the top findings: AI options when a key works and one was made, else by rule (T-417). */
+  fixOptions: { method: 'GET', path: '/api/audits/:id/fix-options', replies: 'json', access: 'view' },
   /** What an export in another language would cost in AI requests, before it starts (T-420). */
   exportTranslation: { method: 'GET', path: '/api/audits/:id/export-translation', replies: 'json', access: 'export' },
   listShares: { method: 'GET', path: '/api/audits/:id/share', replies: 'json', access: 'view' },
@@ -1462,6 +1464,26 @@ export interface ImproveBestBody extends VersionQuery {
   variant: number;
 }
 
+/** One way to fix one finding (T-417). */
+export interface FixOptionReply {
+  /** `<finding id>-<letter>`. */
+  id: string;
+  findingId: string;
+  title: string;
+  /** S: under a day or two; M: a day or so; L: several days. */
+  effort: 'S' | 'M' | 'L';
+  tradeOff: string;
+  /** 'rule': fixed text ("decided by rule"); 'ai': written for this site with the owner's key. */
+  source: 'rule' | 'ai';
+}
+
+export interface FixOptionsReply {
+  /** Options by finding id, for the top 10 findings. */
+  options: Record<string, FixOptionReply[]>;
+  /** True when some option was written by the AI. */
+  ai: boolean;
+}
+
 /** `language` is the export language; the version's own language when absent. */
 export interface ExportTranslationQuery extends VersionQuery {
   language?: DocumentLanguage;
@@ -1593,6 +1615,7 @@ interface AuditApiShapes {
   setImproveBest: { query: NoQuery; body: ImproveBestBody; reply: ImproveBestReply };
   exportImproved: { query: VersionQuery; body: undefined; reply: FileReply };
   exportTranslation: { query: ExportTranslationQuery; body: undefined; reply: ExportTranslationReply };
+  fixOptions: { query: VersionQuery; body: undefined; reply: FixOptionsReply };
   listShares: { query: NoQuery; body: undefined; reply: ShareListReply };
   createShare: { query: NoQuery; body: ShareCreateBody; reply: ShareLinkReply };
   revokeShare: { query: NoQuery; body: undefined; reply: ShareLinkReply };

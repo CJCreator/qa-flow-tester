@@ -11,9 +11,14 @@ import {
   parseFixOptions,
   ruleFixOptions,
   ruleOptionsFor,
+  ruleTextKey,
+  allRuleTexts,
 } from '../src/audit/improve/fix-options.js';
 import { buildFindingsDocument } from '../src/audit/documents/findings.js';
 import { buildRoadmap, roadmapFixOptions } from '../src/audit/documents/roadmap.js';
+import { buildRoadmapDocument } from '../src/audit/documents/roadmap-document.js';
+import { documentBetaNote, labelsFor } from '../src/audit/documents/labels/index.js';
+import { FIX_RULE_TEXT_TA } from '../src/audit/documents/labels/fix-rules-ta.js';
 import { renderMarkdown } from '../src/audit/documents/render-markdown.js';
 import { buildEditedView, emptyOverlay } from '../src/audit/documents/edits.js';
 import { auditDocContents, auditDocResult } from './helpers/audit-doc-fixture.js';
@@ -158,5 +163,71 @@ describe('Findings document and Roadmap', () => {
       expect(links.get(item.id)?.findingId).toBe(item.findingIds[0]);
       expect(links.get(item.id)?.id).toBe(`${item.findingIds[0]}-A`);
     }
+  });
+});
+
+describe('Roadmap document and rule text per language (T-417 follow-up)', () => {
+  const view = () => buildEditedView(auditDocResult(), auditDocContents(), emptyOverlay());
+
+  it('the Improvement Roadmap shows the chosen option of each item that has one', () => {
+    const v = view();
+    const options = ruleFixOptions(v.result.findings);
+    const md = renderMarkdown(buildRoadmapDocument(v, labelsFor('en'), { showEffort: true, fixOptions: options }));
+    const chosen = roadmapFixOptions(v.result.roadmap, options);
+    expect(chosen.size).toBeGreaterThan(0);
+    for (const fix of chosen.values())
+      expect(md).toContain(`Suggested way to fix it: ${fix.title} (decided by rule, effort`);
+    // Without options (the Owner Audit) no line appears.
+    const plain = renderMarkdown(buildRoadmapDocument(v, labelsFor('en'), { showEffort: false }));
+    expect(plain).not.toContain('Suggested way to fix it');
+  });
+
+  it('an AI option is labelled as such in the Roadmap', () => {
+    const v = view();
+    const first = v.result.findings[0]!;
+    const ai = new Map([
+      [
+        first.id,
+        [
+          {
+            id: `${first.id}-A`,
+            findingId: first.id,
+            title: 'Site specific',
+            effort: 'S' as const,
+            tradeOff: 'Takes an hour.',
+            source: 'ai' as const,
+          },
+        ],
+      ],
+    ]);
+    const md = renderMarkdown(buildRoadmapDocument(v, labelsFor('en'), { showEffort: true, fixOptions: ai }));
+    expect(md).toContain('Suggested way to fix it: Site specific (AI suggestion, effort S): Takes an hour.');
+  });
+
+  it('the Tamil text covers every rule text, in the same order and length', () => {
+    for (const [key, texts] of Object.entries(allRuleTexts())) {
+      const ta = FIX_RULE_TEXT_TA[key];
+      expect(ta, key).toBeDefined();
+      expect(ta!.length, key).toBe(texts.length);
+      texts.forEach((en, i) => {
+        expect(ta![i]!.title, `${key}[${i}]`).toMatch(/\p{Script=Tamil}/u);
+        expect(ta![i]!.tradeOff, `${key}[${i}]`).toMatch(/\p{Script=Tamil}/u);
+        expect(ta![i]!.title).not.toBe(en.title);
+      });
+    }
+    expect(Object.keys(FIX_RULE_TEXT_TA).sort()).toEqual(Object.keys(allRuleTexts()).sort());
+  });
+
+  it('a Tamil Findings document reads the rule options in Tamil; Hindi stays English with the beta label', () => {
+    const v = view();
+    const top = v.result.findings[0]!;
+    const english = ruleOptionsFor(top)[0]!;
+    const taMd = renderMarkdown(buildFindingsDocument(v, { language: 'ta' }));
+    const key = ruleTextKey(top);
+    expect(taMd).toContain(FIX_RULE_TEXT_TA[key]![0]!.title);
+    expect(taMd).not.toContain(english.title);
+    const hiMd = renderMarkdown(buildFindingsDocument(v, { language: 'hi' }));
+    expect(hiMd).toContain(english.title);
+    expect(hiMd).toContain(documentBetaNote('hi'));
   });
 });

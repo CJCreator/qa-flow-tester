@@ -199,9 +199,35 @@ const BY_GROUP: Readonly<Record<AuditFindingGroup, readonly RuleText[]>> = {
   ],
 };
 
+/**
+ * Which fixed text a finding's rule options come from: `rule:<rule>`, else `area:<area>`, else
+ * `group:<group>`. The Tamil text (labels/fix-rules-ta.ts) is keyed the same way.
+ */
+export function ruleTextKey(finding: Pick<AuditFinding, 'rule' | 'area' | 'group'>): string {
+  if (FIX_RULES[finding.rule]) return `rule:${finding.rule}`;
+  if (BY_AREA[finding.area]) return `area:${finding.area}`;
+  return `group:${BY_GROUP[finding.group] ? finding.group : 'technical'}`;
+}
+
+/** Every fixed text, by `ruleTextKey`, for the label coverage test. */
+export function allRuleTexts(): Record<string, ReadonlyArray<{ title: string; tradeOff: string }>> {
+  const out: Record<string, ReadonlyArray<{ title: string; tradeOff: string }>> = {};
+  for (const [k, v] of Object.entries(FIX_RULES)) out[`rule:${k}`] = v;
+  for (const [k, v] of Object.entries(BY_AREA)) out[`area:${k}`] = v ?? [];
+  for (const [k, v] of Object.entries(BY_GROUP)) out[`group:${k}`] = v;
+  return out;
+}
+
+function textsForKey(key: string): readonly RuleText[] {
+  const [kind, name = ''] = key.split(/:(.*)/s);
+  if (kind === 'rule') return FIX_RULES[name] ?? [];
+  if (kind === 'area') return BY_AREA[name as AuditArea] ?? [];
+  return BY_GROUP[name as AuditFindingGroup] ?? [];
+}
+
 /** The rule options of one finding: by rule, else by area, else by group. Always 2 or 3. */
 export function ruleOptionsFor(finding: Pick<AuditFinding, 'id' | 'rule' | 'area' | 'group'>): FixOption[] {
-  const texts = FIX_RULES[finding.rule] ?? BY_AREA[finding.area] ?? BY_GROUP[finding.group] ?? BY_GROUP.technical;
+  const texts = textsForKey(ruleTextKey(finding));
   return texts.slice(0, MAX_FIX_OPTIONS).map((t, i) => ({
     ...t,
     id: `${finding.id}-${String.fromCharCode(65 + i)}`,

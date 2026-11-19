@@ -22,9 +22,9 @@ import {
 } from '@qa/types';
 import { contentWording, sectionLabel } from './content.js';
 import type { EditedAuditView } from './edits.js';
-import { labelsFor, type DocumentLabels } from './labels/index.js';
+import { labelsFor, localizeFixOption, type DocumentLabels } from './labels/index.js';
 import type { AuditDoc, DocBlock } from './model.js';
-import { ruleFixOptions, type FixOption } from '../improve/fix-rules.js';
+import { ruleFixOptions, ruleTextKey, type FixOption } from '../improve/fix-rules.js';
 
 /** Fixed wording only this document uses. */
 interface FindingsWording {
@@ -75,10 +75,14 @@ const TA: FindingsWording = {
 function fixOptionBlocks(
   options: readonly FixOption[] | undefined,
   words: FindingsWording,
-  showEffort: boolean
+  showEffort: boolean,
+  textKey: string,
+  language: DocumentLanguage
 ): DocBlock[] {
   if (!options || options.length === 0) return [];
-  const items = options.map((opt) => {
+  const items = options.map((original) => {
+    // Rule options read in the document's language where a table has it (Tamil); others stay English.
+    const opt = localizeFixOption(original, textKey, language);
     const letter = opt.id.slice(opt.id.lastIndexOf('-') + 1);
     const label = opt.source === 'rule' ? words.decidedByRule : words.aiOption;
     const effort = showEffort ? `, ${words.effortSize} ${opt.effort}` : '';
@@ -149,7 +153,7 @@ function findingBlocks(
   if (isAdvisory(finding)) blocks.push({ type: 'note', text: labels.status.aiNote });
   blocks.push({ type: 'paragraph', text: `${labels.columns.found}: ${finding.detail}` });
   blocks.push({ type: 'paragraph', text: `${labels.columns.suggestedFix}: ${finding.suggestion}` });
-  blocks.push(...fixOptionBlocks(options, words, showEffort));
+  blocks.push(...fixOptionBlocks(options, words, showEffort, ruleTextKey(finding), language));
   return blocks;
 }
 

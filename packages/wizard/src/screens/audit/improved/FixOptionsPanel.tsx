@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { AuditFinding } from '@qa/types/src/browser.js';
+import { AUDIT_API, auditPath, type AuditFinding, type FixOptionsReply } from '@qa/types/src/browser.js';
 // A leaf module with type-only imports: rule text only, no Node code.
 import {
   DECIDED_BY_RULE,
@@ -57,6 +57,26 @@ export function FixOptionsView({ findings, options }: FixOptionsViewProps) {
   );
 }
 
+/** The runner's options (AI ones when a key worked), or null: the screen then shows the rule options. */
+async function loadFixOptions(
+  auditId: string,
+  version: number,
+  fetchImpl: Fetch | undefined
+): Promise<Map<string, FixOption[]> | null> {
+  const doFetch: Fetch = fetchImpl ?? ((input, init) => fetch(input, init));
+  try {
+    const res = await doFetch(`${auditPath(AUDIT_API.fixOptions.path, { id: auditId })}?version=${version}`, {
+      method: 'GET',
+    });
+    if (!res.ok) return null;
+    const body = (await res.json()) as Partial<FixOptionsReply> | null;
+    if (!body || typeof body.options !== 'object' || body.options === null) return null;
+    return new Map(Object.entries(body.options)) as Map<string, FixOption[]>;
+  } catch {
+    return null;
+  }
+}
+
 /** Loads the version's findings and shows their fix options. */
 export function FixOptionsPanel({
   auditId,
@@ -68,16 +88,22 @@ export function FixOptionsPanel({
   fetchImpl?: Fetch;
 }) {
   const [findings, setFindings] = useState<AuditFinding[] | null>(null);
+  const [options, setOptions] = useState<Map<string, FixOption[]> | undefined>(undefined);
   useEffect(() => {
     let live = true;
     setFindings(null);
-    void loadVersion(auditId, version, fetchImpl).then((got) => {
-      if (live) setFindings(got.ok ? (got.value.result?.findings ?? []) : []);
-    });
+    setOptions(undefined);
+    void Promise.all([loadVersion(auditId, version, fetchImpl), loadFixOptions(auditId, version, fetchImpl)]).then(
+      ([got, fromRunner]) => {
+        if (!live) return;
+        setOptions(fromRunner ?? undefined);
+        setFindings(got.ok ? (got.value.result?.findings ?? []) : []);
+      }
+    );
     return () => {
       live = false;
     };
   }, [auditId, version, fetchImpl]);
   if (findings === null) return <Spinner label="Loading the findings…" />;
-  return <FixOptionsView findings={findings} />;
+  return <FixOptionsView findings={findings} options={options} />;
 }
