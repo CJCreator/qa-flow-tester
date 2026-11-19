@@ -1525,7 +1525,8 @@ export class RunnerServer {
     // Open event streams would otherwise keep the server from ever finishing its close.
     for (const client of this.streamClients) client.end();
     this.streamClients.clear();
-    await this.usageSaving;
+    // A usage write still in flight would otherwise write into the data folder after stop() returned.
+    await this.usageLedger.flush();
     return new Promise((resolve) => {
       if (this.server) {
         this.server.close(() => resolve());
@@ -1651,15 +1652,12 @@ export class RunnerServer {
   /** Writes today's counted starts to the audit store, so a restart keeps them (T-301). */
   private saveUsage(): void {
     const today = betaDayUsage();
-    const entry = { day: today.day, copyStarts: today.count, auditStarts: this.auditLimiter.snapshot(today.day) };
-    // Writes run one after another, and stop() waits for the last one, so nothing writes after the server stopped.
-    this.usageSaving = this.usageSaving
-      .then(() => this.usageLedger.save(entry))
-      .catch((err) => console.error('[Release check-up] Could not save usage:', redactedMessage(err)));
+    void this.usageLedger.save({
+      day: today.day,
+      copyStarts: today.count,
+      auditStarts: this.auditLimiter.snapshot(today.day),
+    });
   }
-
-  /** The usage write in flight, if any; stop() waits for it. */
-  private usageSaving: Promise<unknown> = Promise.resolve();
 
   private betaLimitHit(res: http.ServerResponse): boolean {
     if (!this.beta) return false;
