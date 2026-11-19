@@ -117,6 +117,10 @@ export interface PipelineStepOutcome {
   status: 'done' | 'not-done';
   /** Fixed wording: never page text or an error message. */
   note?: string;
+  /** When the step began (ISO): the end of the step before it, or the pipeline's start. For benchmarks (T-411). */
+  startedAt?: string;
+  /** When the step ended (ISO). */
+  endedAt?: string;
 }
 
 /** What the pipeline uses from the audit store. */
@@ -373,8 +377,19 @@ export async function runAuditPipeline(
   };
   const emit = (stage: AuditStage) =>
     deps.onProgress?.({ type: 'progress', auditId: deps.auditId, version: deps.version, stage, ...counts });
+  // Steps run one after another, so each one starts where the one before it ended.
+  let stepStartedAt = now().toISOString();
   const record = (step: PipelineStep, stage: AuditStage, done: boolean, note?: string) => {
-    const outcome: PipelineStepOutcome = { step, stage, status: done ? 'done' : 'not-done', ...(note ? { note } : {}) };
+    const endedAt = now().toISOString();
+    const outcome: PipelineStepOutcome = {
+      step,
+      stage,
+      status: done ? 'done' : 'not-done',
+      ...(note ? { note } : {}),
+      startedAt: stepStartedAt,
+      endedAt,
+    };
+    stepStartedAt = endedAt;
     steps.push(outcome);
     if (note && !notes.includes(note)) notes.push(note);
     deps.onStep?.(outcome);

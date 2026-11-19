@@ -248,6 +248,104 @@ const MAX_EXPLORATION_CLICKS = 100;
 export const DEFAULT_MAX_PAGES = 200;
 /** Bytes read per robots.txt or sitemap file while seeding; a larger file is skipped. */
 const SITEMAP_MAX_BYTES = 10_000_000;
+/** Sitemap files read at once while seeding, through the same outbound fetch (T-400). */
+export const SITEMAP_FETCH_CONCURRENCY = 4;
+/** Sitemap files read at most per crawl: /sitemap.xml, robots.txt Sitemap: lines and index entries. */
+export const SITEMAP_MAX_FILES = 100;
+
+export interface SitemapSeedOptions {
+  site: URL;
+  /** GET for robots.txt and each sitemap file (pinned, paced and body-capped by the caller). */
+  fetch: FetchFn;
+  /** Only addresses (and sitemap files) on the target's site are read. */
+  onSite: (u: URL) => boolean;
+  /** Addresses queued at most; the rest go to `overLimit`. */
+  limit: number;
+  /** True when the address was queued (not a duplicate, not refused). */
+  enqueue: (loc: string) => boolean;
+  /** Told about each on-site page address found once `limit` addresses are queued. */
+  overLimit: (u: URL) => void;
+  /** Checked before each round of fetches: the deadline or an abort. */
+  stop: () => boolean;
+}
+
+/**
+ * Reads /sitemap.xml, the robots.txt Sitemap: lines and the files a sitemap index names (at most
+ * `SITEMAP_MAX_FILES`, `SITEMAP_FETCH_CONCURRENCY` at a time), and queues their addresses up to `limit`.
+ * Files are parsed in the order they were found, so which addresses are queued does not depend on timing.
+ */
+export async function seedFromSitemaps(opts: SitemapSeedOptions): Promise<{ queued: number; files: number }> {
+  const { site, fetch, onSite } = opts;
+  const sitemapUrls = [new URL('/sitemap.xml', site).toString()];
+  const addFile = (u: URL) => {
+    if (sitemapUrls.length < SITEMAP_MAX_FILES && !sitemapUrls.includes(u.toString())) sitemapUrls.push(u.toString());
+  };
+  try {
+    const robotsRes = await fetch(new URL('/robots.txt', site).toString());
+    if (robotsRes && robotsRes.status >= 200 && robotsRes.status < 300) {
+      const robotsText = await robotsRes.text();
+      for (const line of robotsText.split(/\r?\n/)) {
+        const m = line.match(/^\s*sitemap:\s*(.+)$/i);
+        if (!m || !m[1]) continue;
+        let smUrl: URL;
+        try {
+          smUrl = new URL(m[1].trim(), site);
+        } catch {
+          continue;
+        }
+        if (!onSite(smUrl)) {
+          debugLog('crawl', 'sitemap on another host skipped', { url: smUrl.toString() });
+          continue;
+        }
+        addFile(smUrl);
+      }
+    }
+  } catch {
+    // A robots.txt that cannot be read only means no extra sitemap files.
+  }
+
+  const read = async (smUrl: string): Promise<string | undefined> => {
+    try {
+      const res = await fetch(smUrl);
+      if (!res || res.status < 200 || res.status >= 300) return undefined;
+      return await res.text();
+    } catch (err) {
+      debugLog('crawl', 'sitemap fetch failed', { url: smUrl, error: String(err) });
+      return undefined;
+    }
+  };
+
+  let queued = 0;
+  let next = 0;
+  while (next < sitemapUrls.length && !opts.stop()) {
+    const batch = sitemapUrls.slice(next, next + SITEMAP_FETCH_CONCURRENCY);
+    next += batch.length;
+    const texts = await Promise.all(batch.map(read));
+    for (const text of texts) {
+      if (text === undefined) continue;
+      const isIndex = /<sitemapindex/i.test(text);
+      for (const m of text.matchAll(/<loc>\s*([^<]+?)\s*<\/loc>/gi)) {
+        if (!m[1]) continue;
+        const loc = m[1].trim();
+        let locUrl: URL;
+        try {
+          locUrl = new URL(loc, site);
+        } catch {
+          continue;
+        }
+        if (!onSite(locUrl)) {
+          debugLog('crawl', 'sitemap entry on another host skipped', { url: locUrl.toString() });
+          continue;
+        }
+        if (isIndex || (loc.endsWith('.xml') && !loc.endsWith('.html'))) addFile(locUrl);
+        else if (queued < opts.limit) {
+          if (opts.enqueue(loc)) queued++;
+        } else opts.overLimit(locUrl);
+      }
+    }
+  }
+  return { queued, files: next };
+}
 
 function isLoopback(h: string): boolean {
   const hostWithoutPort = h.replace(/:\d+$/, '').toLowerCase();
@@ -608,67 +706,27 @@ export class DeterministicSpider {
       const sitemapOnSite = (u: URL) =>
         (u.protocol === 'http:' || u.protocol === 'https:') && (sameSiteUrl(u, site) || onSite(u));
       try {
-        const sitemapUrls = [new URL('/sitemap.xml', site).toString()];
-        try {
-          const robotsRes = await outboundFetch(new URL('/robots.txt', site).toString());
-          if (robotsRes && robotsRes.status >= 200 && robotsRes.status < 300) {
-            const robotsText = await robotsRes.text();
-            for (const line of robotsText.split(/\r?\n/)) {
-              const m = line.match(/^\s*sitemap:\s*(.+)$/i);
-              if (m && m[1]) {
-                const sm = m[1].trim();
-                let smUrl: URL;
-                try {
-                  smUrl = new URL(sm, site);
-                } catch {
-                  continue;
-                }
-                if (!sitemapOnSite(smUrl)) {
-                  debugLog('crawl', 'sitemap on another host skipped', { url: smUrl.toString() });
-                  continue;
-                }
-                if (!sitemapUrls.includes(smUrl.toString())) sitemapUrls.push(smUrl.toString());
-              }
-            }
-          }
-        } catch {
-          // Ignore robots fetch failure for sitemap
-        }
-
-        let locCount = 0;
-        for (const smUrl of sitemapUrls) {
-          if (locCount >= 200 || timeLeft() <= 0 || options.signal?.aborted) break;
-          try {
-            const res = await outboundFetch(smUrl);
-            if (!res || res.status < 200 || res.status >= 300) continue;
-            const text = await res.text();
-            const isIndex = /<sitemapindex/i.test(text);
-            const matches = text.matchAll(/<loc>\s*([^<]+?)\s*<\/loc>/gi);
-            for (const m of matches) {
-              if (m[1]) {
-                const loc = m[1].trim();
-                try {
-                  const locUrl = new URL(loc, site);
-                  if (!sitemapOnSite(locUrl)) {
-                    debugLog('crawl', 'sitemap entry on another host skipped', { url: locUrl.toString() });
-                    continue;
-                  }
-                  if (isIndex || (loc.endsWith('.xml') && !loc.endsWith('.html'))) {
-                    if (sitemapUrls.length < 25 && !sitemapUrls.includes(locUrl.toString())) {
-                      sitemapUrls.push(locUrl.toString());
-                    }
-                  } else {
-                    enqueue(loc, 1);
-                    locCount++;
-                    if (locCount >= 200) break;
-                  }
-                } catch {}
-              }
-            }
-          } catch (err) {
-            debugLog('crawl', 'sitemap fetch failed', { url: smUrl, error: String(err) });
-          }
-        }
+        // Up to the page limit (T-400): each address past it is a `page-limit` Skipped Page, so recorded +
+        // skipped covers every unique sitemap address.
+        const overLimit = new Set<string>();
+        await seedFromSitemaps({
+          site,
+          fetch: outboundFetch,
+          onSite: sitemapOnSite,
+          limit: this.maxPages,
+          stop: () => timeLeft() <= 0 || !!options.signal?.aborted,
+          enqueue: (loc) => {
+            const before = queue.length;
+            enqueue(loc, 1);
+            return queue.length > before;
+          },
+          overLimit: (u) => {
+            const norm = normRoute(u.toString());
+            if (frontier.has(norm.key) || refusedKeys.has(norm.key) || overLimit.has(norm.key)) return;
+            overLimit.add(norm.key);
+            skip({ urlPath: redactUrl(norm.path), why: 'page-limit' });
+          },
+        });
       } catch (err) {
         debugLog('crawl', 'sitemap seeding failed', { error: String(err) });
       }
