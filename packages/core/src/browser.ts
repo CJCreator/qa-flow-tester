@@ -124,6 +124,7 @@ function tunnelHeaders(tunnelAuth?: string): Record<string, string> {
 
 export class BrowserManager {
   private browsers = new Map<BrowserEngine, Browser>();
+  private launching = new Map<BrowserEngine, Promise<Browser>>();
   private abandoned = false;
   /** Set per run: true only for a Test Copy (T-312). Used when a context's options leave it out. */
   trustInvalidCertificates = false;
@@ -139,31 +140,44 @@ export class BrowserManager {
       this.browsers.delete(engine);
     }
 
-    let b = this.browsers.get(engine);
-    if (!b) {
-      const launcher = engine === 'webkit' ? webkit : engine === 'firefox' ? firefox : chromium;
-      const pinned = Object.entries(browserPolicy?.pinned ?? {}).map(
-        ([host, ip]) => `MAP ${host} ${ip.includes(':') ? `[${ip.replace(/^\[|\]$/g, '')}]` : ip}`
-      );
-      const args =
-        engine === 'chromium' || engine === 'android-chrome'
-          ? [
-              '--no-sandbox',
-              '--disable-setuid-sandbox',
-              '--disable-dev-shm-usage',
-              '--disable-gpu',
-              '--disable-extensions',
-              ...(browserPolicy?.guard ? [WEBRTC_NO_DIRECT_UDP] : []),
-              ...(pinned.length ? [`--host-resolver-rules=${pinned.join(', ')}`] : []),
-            ]
-          : [];
-      b = await launcher.launch({
-        headless: isHeadless,
-        args,
-        ...(browserPolicy?.proxy ? { proxy: { server: browserPolicy.proxy } } : {}),
-      });
-      this.browsers.set(engine, b);
+    const b = this.browsers.get(engine);
+    if (b) return b;
+    // Parallel test workers (ADR 0048) share one browser: a launch already under way is awaited, not repeated.
+    const pending = this.launching.get(engine);
+    if (pending) return pending;
+    const launched = this.launchNew(engine, isHeadless).finally(() => this.launching.delete(engine));
+    this.launching.set(engine, launched);
+    return launched;
+  }
+
+  private async launchNew(engine: BrowserEngine, isHeadless: boolean): Promise<Browser> {
+    const launcher = engine === 'webkit' ? webkit : engine === 'firefox' ? firefox : chromium;
+    const pinned = Object.entries(browserPolicy?.pinned ?? {}).map(
+      ([host, ip]) => `MAP ${host} ${ip.includes(':') ? `[${ip.replace(/^\[|\]$/g, '')}]` : ip}`
+    );
+    const args =
+      engine === 'chromium' || engine === 'android-chrome'
+        ? [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--disable-extensions',
+            ...(browserPolicy?.guard ? [WEBRTC_NO_DIRECT_UDP] : []),
+            ...(pinned.length ? [`--host-resolver-rules=${pinned.join(', ')}`] : []),
+          ]
+        : [];
+    const b = await launcher.launch({
+      headless: isHeadless,
+      args,
+      ...(browserPolicy?.proxy ? { proxy: { server: browserPolicy.proxy } } : {}),
+    });
+    // Stopped while it was starting: no browser outlives the run.
+    if (this.abandoned) {
+      await b.close().catch(() => {});
+      throw abortError();
     }
+    this.browsers.set(engine, b);
     return b;
   }
 
@@ -260,12 +274,14 @@ export class BrowserManager {
     const engine = options.engine ?? 'chromium';
     for (let attempt = 0; ; attempt++) {
       let context: BrowserContext | undefined;
+      // The browser this attempt used: only that one is restarted, never one another worker just relaunched.
+      const used = this.browsers.get(engine);
       try {
         context = await this.createContext(options);
         return { context, page: await context.newPage() };
       } catch (err) {
         await context?.close().catch(() => {});
-        if (attempt > 0) throw err;
+        if (attempt > 0 || this.abandoned) throw err;
         const msg = err instanceof Error ? err.message : String(err);
         const b = this.browsers.get(engine);
         const isClosed =
@@ -277,8 +293,10 @@ export class BrowserManager {
           `[Browser] Restarting the browser (${engine}): ${err instanceof Error ? err.message.split('\n')[0] : err}`
         );
         const dead = this.browsers.get(engine);
-        await dead?.close().catch(() => {});
-        this.browsers.delete(engine);
+        if (dead && (dead === used || !dead.isConnected())) {
+          await dead.close().catch(() => {});
+          if (this.browsers.get(engine) === dead) this.browsers.delete(engine);
+        }
       }
     }
   }
