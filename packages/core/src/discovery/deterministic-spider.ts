@@ -1486,7 +1486,29 @@ export class DeterministicSpider {
                 }
               });
               const after = new URL(page.url());
-              if (onSite(after)) {
+              if (!onSite(after) && /^https?:$/.test(after.protocol)) {
+                // Another host (T-426): nothing is done there. Go back, or reopen the page the click started
+                // from, and list the address as a Skipped Page with the control that led there.
+                const offSite = redactUrl(after.origin + after.pathname);
+                skip({
+                  urlPath: offSite,
+                  why: 'off-site-redirect',
+                  finalPath: offSite,
+                  detail: `Clicked “${el.name.slice(0, 80)}”`,
+                });
+                debugLog('crawl', 'click left the site; going back', { path: currentPath });
+                await page.goBack({ timeout: capToDeadline(5000), waitUntil: 'domcontentloaded' }).catch(() => null);
+                let back: URL | undefined;
+                try {
+                  back = new URL(page.url());
+                } catch {
+                  back = undefined;
+                }
+                if (!back || !onSite(back)) {
+                  if (!pacer) await waitForPacing();
+                  await paced(pageUrl, () => navigate(page, pageUrl, navLimits(pageTimeoutMs)));
+                }
+              } else if (onSite(after)) {
                 const normAfter = normRoute(after.toString());
                 const normLanded = normRoute(landed.toString());
                 if (normAfter.key !== normLanded.key) {
