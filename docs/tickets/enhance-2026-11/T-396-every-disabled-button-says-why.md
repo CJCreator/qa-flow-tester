@@ -10,7 +10,7 @@
 - `packages/wizard/tests/disabled-reasons.test.tsx` (new)
 - `docs/PRODUCT_GUIDE.md` (the "Disabled actions" section only)
 
-**Do not build in parallel with:** T-389, T-402, T-412 (wizard screens they edit).
+**Build last (wave 10, after T-415 and T-420)**, so it covers every new screen, the Improved version screens included. It does not run beside any other wizard ticket.
 
 ## Problem (verify first)
 

@@ -60,13 +60,14 @@ Build a wave once every ticket in the waves before it is `built`. Tickets in one
 |---|---|
 | 1 | T-388, T-411 (baseline first), T-392, T-393, T-394, T-395, T-397, T-398, T-399, T-400 |
 | 2 | T-389, T-390, T-401, T-402, T-410 |
-| 3 | T-391, T-403, T-409, T-396 |
+| 3 | T-391, T-403, T-409 |
 | 4 | T-404, T-408 |
-| 5 | T-405, T-412 |
-| 6 | T-406, T-413, T-416, T-417 |
-| 7 | T-407, T-414, T-418, T-419 |
-| 8 | T-415 |
-| 9 | T-420 |
+| 5 | T-405, T-412, T-421, T-423 |
+| 6 | T-406, T-413, T-416, T-417, T-422, T-426 |
+| 7 | T-407, T-414, T-418, T-419, T-424 |
+| 8 | T-415, T-425, T-428 |
+| 9 | T-420, T-427 |
+| 10 | T-396 (last, so it covers every new screen) |
 
 **Chains** (one at a time inside each):
 - *Orchestrator:* T-393 → T-389 → T-409 → T-408.
@@ -74,7 +75,8 @@ Build a wave once every ticket in the waves before it is `built`. Tickets in one
 - *Runner server:* T-392 → T-394 → T-402.
 - *Improved version:* T-412 → T-413 → T-414 → T-415, and T-416 → T-418.
 - *Audit documents:* T-390 → T-417 → T-419 → T-420.
-- *Wizard-wide:* T-396 touches many screens. Do not build it beside T-402 or T-412.
+- *Safety (T-421 to T-428):* they edit `orchestrator.ts`, `deterministic-spider.ts`, `browser.ts` and the discovery and competitive code, so they start after the orchestrator chain (T-408) and run beside the speed lanes. Three sub-chains, one at a time inside each: Orchestrator T-408 → T-421 → T-422 → T-424; Spider T-423 → T-426 → T-424 → T-428; Context routes T-424 → T-425. T-427 also edits the link-enqueue check of the Spider, so it waits for the Spider tickets (wave 9).
+- *Wizard-wide:* T-396 touches many screens, so it is built last (wave 10, after T-415 and T-420) and covers every new screen. T-412 does not depend on it.
 
 **Speed tickets need the baseline.** T-411 records the baseline on `b23682c` before any speed ticket is built. Each speed ticket reruns the benchmark and reports its change.
 
@@ -100,9 +102,9 @@ These review claims were only Inferred. The first step of each ticket below conf
 | T-393 | A redaction failure is never silent | P1 | S | 1 |
 | T-394 | Runner response headers and access-key comparison | P2 | S | 1 |
 | T-395 | Egress proxy limits, key-shaped redaction, robots 5xx | P2 | M | 1 |
-| T-396 | Every disabled button says why (W20) | P2 | M | 3 |
+| T-396 | Every disabled button says why (W20) | P2 | M | 10 |
 | T-397 | Review Safety Filter and Domain Allowlist enforcement | P2 | S | 1 |
-| T-398 | The AI Request Budget is a hard stop | P2 | M | 1 |
+| T-398 | The AI Request Budget covers the audit AI stages and the Improved version (the Check-up budget already stops in `PacedAI`) | P2 | M | 1 |
 | T-399 | Docs match the code | P2 | S | 1 |
 | T-400 | Sitemap seeding up to the page limit | P1 | S | 1 |
 | T-401 | Audit trap limit of 500 per address shape | P2 | S | 2 |
@@ -125,6 +127,36 @@ These review claims were only Inferred. The first step of each ticket below conf
 | T-418 | Competitor examples in the Improved version | P2 | M | 7 |
 | T-419 | Copy variants in batches | P2 | M | 7 |
 | T-420 | Full AI translation of exports | P2 | M | 9 |
+| T-421 | A click-time Sensitive Action gate | P1 | M | 5 |
+| T-422 | `form.submit`, `requestSubmit` and Enter protection in Test runs | P1 | M | 6 |
+| T-423 | The Spider's exploring click runs under `guardPage` | P2 | S | 5 |
+| T-424 | A host allowlist on subrequests, iframes and redirects | P1 | L | 7 |
+| T-425 | Popups covered by context-level routes | P2 | M | 8 |
+| T-426 | An off-site click navigation is undone and recorded | P2 | S | 6 |
+| T-427 | GET side effects | P2 | M | 9 |
+| T-428 | The delete probe uses the real element label and `forbiddenActions` | P2 | S | 8 |
+
+## Scope changes (2026-11-19, after the first plan)
+
+- **T-396 is the last wave** (wave 10, after T-415 and T-420), so it covers every new screen. T-412 no longer depends on it.
+- **T-398 is rescoped.** The Check-up budget is already enforced by `PacedAI` (`packages/core/src/plan/ai-budget.ts:190-196`). The ticket extends that one counter to the audit AI stages and the Improved version.
+- **T-416 starts from the Improved version screen** and does not touch `pipeline.ts`.
+- **T-421 to T-428** come from the T-397 review ("Safety Filter and Domain Allowlist" in the [review](../reviews/2026-11-19-product-review.md)). They follow the orchestrator chain (T-408) and run beside the speed lanes.
+
+## Lanes
+
+Six build lanes work in parallel, each in its own worktree and branch. A lane owns a set of files; two lanes never edit the same file at the same time.
+
+| Lane | Name | Tickets |
+|---|---|---|
+| L1 | Audit crawl | T-400, T-401, T-403, T-404, T-405, T-406, T-407 |
+| L2 | Check-up and counts | T-389, T-390, T-391, T-408, T-409, T-410, T-421, T-422, T-423, T-424, T-425, T-426, T-427, T-428 |
+| L3 | Improved version | T-412, T-413, T-414, T-415, T-417, T-419, T-420 |
+| L4 | Competitors and alternatives | T-416, T-418 |
+| L5 | Runner and security | T-392, T-393, T-394, T-395, T-402, T-398 |
+| L6 | Docs | T-388, T-397, T-399, this plan |
+
+T-411 (benchmark) and T-396 (every disabled button) run outside the lanes: T-411 first, T-396 last.
 
 ## Out of scope
 
