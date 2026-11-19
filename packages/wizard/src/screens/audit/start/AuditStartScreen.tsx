@@ -298,7 +298,7 @@ export function AuditStartScreen({
     if (capOverride !== undefined) return;
     let live = true;
     void getStatus().then((status) => {
-      const cap = (status as { auditMaxPages?: unknown } | null)?.auditMaxPages;
+      const cap = status?.auditMaxPages;
       if (live && typeof cap === 'number') setStatusCap(cap);
     });
     return () => {
