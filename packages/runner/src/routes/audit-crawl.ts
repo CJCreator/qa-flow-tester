@@ -39,6 +39,7 @@ import {
   checkAuditAddress,
   createPageRecorder,
   isAbortError,
+  measureSampleSpeeds,
   preflightAuditAi,
   runAuditCrawl,
   runAuditPipeline,
@@ -331,7 +332,19 @@ export async function runAuditVersion(
 
     currentStage = 'crawling';
     workDir = await (services.makeWorkDir ?? defaultMakeWorkDir)();
-    const recorder = (services.createRecorder ?? createPageRecorder)({ workDir });
+    // With a PSI key, PageSpeed Insights measures the first Sample Pages during the crawl's lab work, and those
+    // pages get no browser timing reload (T-404).
+    const resolveServiceKey = services.resolveServiceKey;
+    const recorder = (services.createRecorder ?? createPageRecorder)({
+      workDir,
+      ...(speedSource === 'pagespeed-insights' && resolveServiceKey
+        ? {
+            pageSpeed: {
+              measure: async (url: string) => (await measureSampleSpeeds([url], { resolveServiceKey, signal }))[0],
+            },
+          }
+        : {}),
+    });
     const runRequest =
       services.maxPages !== undefined && request.limits.maxPages > services.maxPages
         ? { ...request, limits: { ...request.limits, maxPages: services.maxPages } }

@@ -539,13 +539,17 @@ export async function runAuditPipeline(
     // PageSpeed Insights is Google's service: a local or private site's addresses are never sent to it (ADR 0031).
     // Those pages fall back to this tool's own timing below.
     const psiMayMeasure = !isLocalOriginHost(new URL(origin).hostname);
+    // PSI already asked during the crawl's lab work (T-404): its answers are used, nothing is measured twice.
+    const psiInCrawl = recordedPages.some((r) => r.psiTried);
     const speeds =
-      urls.length > 0 && psiMayMeasure ? await stages.measureSampleSpeeds(urls, { ...deps.pageSpeed, signal }) : [];
+      urls.length > 0 && psiMayMeasure && !psiInCrawl
+        ? await stages.measureSampleSpeeds(urls, { ...deps.pageSpeed, signal })
+        : [];
     samples.forEach((p, i) => {
-      const psiResult = speeds[i];
-      const psiMeasured = psiResult?.speed?.lab.status === 'measured';
+      const psiSpeed = psiInCrawl ? (recordedByPath.get(p.urlPath)?.psi ?? undefined) : speeds[i]?.speed;
+      const psiMeasured = psiSpeed?.lab.status === 'measured';
       if (psiMeasured) {
-        p.speed = psiResult.speed;
+        p.speed = psiSpeed;
       } else {
         const rec = recordedByPath.get(p.urlPath);
         if (rec?.timing?.speed && rec.timing.speed.status === 'measured') {
@@ -554,7 +558,7 @@ export async function runAuditPipeline(
             field: { status: 'not-measured', source: 'this-tool', method: 'field', reason: 'failed' },
           };
         } else {
-          p.speed = psiResult?.speed ?? notMeasured('failed');
+          p.speed = psiSpeed ?? notMeasured('failed');
         }
       }
     });
