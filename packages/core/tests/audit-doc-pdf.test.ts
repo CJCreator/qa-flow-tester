@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net';
 import { chromium, type Browser } from 'playwright';
 import type { AuditDoc } from '../src/audit/documents/model.js';
 import { renderHtml } from '../src/audit/documents/render-html.js';
-import { renderPdf } from '../src/audit/documents/render-pdf.js';
+import { closePdfBrowser, renderPdf } from '../src/audit/documents/render-pdf.js';
 
 // Launches Chromium: listed in BROWSER_TESTS.core (vitest.workspace.ts).
 
@@ -57,8 +57,10 @@ function pdfTitle(pdf: Buffer): string {
 }
 
 describe('renderPdf', { timeout: 90_000 }, () => {
-  afterEach(() => {
+  afterEach(async () => {
     vi.restoreAllMocks();
+    // Each test starts with no shared browser, so the launch spies see the launch.
+    await closePdfBrowser();
   });
 
   it('prints rendered HTML to an A4 PDF with the same document (REQ-022 AC-1)', async () => {
@@ -158,5 +160,21 @@ describe('renderPdf', { timeout: 90_000 }, () => {
     expect(Date.now() - started).toBeLessThan(30_000);
     expect(launched).toHaveLength(1);
     expect(launched[0]!.isConnected()).toBe(false);
+  });
+
+  it('a bundle of 6 PDFs launches the browser once, and the next print after a close launches again (T-410)', async () => {
+    const launched = spyLaunch(() => {});
+    const html = renderHtml(englishDoc);
+    // Four one after the other, then two at once, as a bundle export with 2 PDFs in flight would.
+    for (let i = 0; i < 4; i++) await renderPdf(html);
+    const last = await Promise.all([renderPdf(html), renderPdf(html)]);
+    for (const pdf of last) expect(pdf.subarray(0, 5).toString('latin1')).toBe('%PDF-');
+    expect(launched).toHaveLength(1);
+    // Still up for the next one.
+    expect(launched[0]!.isConnected()).toBe(true);
+    await closePdfBrowser();
+    expect(launched[0]!.isConnected()).toBe(false);
+    await renderPdf(html);
+    expect(launched).toHaveLength(2);
   });
 });
