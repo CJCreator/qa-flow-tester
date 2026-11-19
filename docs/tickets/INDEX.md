@@ -74,7 +74,7 @@ Plan: [ENHANCEMENT-PLAN-2026-11.md](ENHANCEMENT-PLAN-2026-11.md), with one file 
 | [T-424](enhance-2026-11/T-424-host-allowlist-on-subrequests-iframes-redirects.md) | A host allowlist on subrequests, iframes and redirects | T-397 | P1 | L | 7 | built | T-422 |
 | [T-425](enhance-2026-11/T-425-popups-covered-by-context-routes.md) | Popups covered by context-level routes | T-397 | P2 | M | 8 | built | T-424 |
 | [T-428](enhance-2026-11/T-428-delete-probe-uses-real-label.md) | The delete probe uses the real element label and `forbiddenActions` | T-397 | P2 | S | 8 | built | T-426 |
-| [T-427](enhance-2026-11/T-427-get-side-effects.md) | GET side effects | T-397 | P2 | M | 9 | todo | T-425 |
+| [T-427](enhance-2026-11/T-427-get-side-effects.md) | GET side effects | T-397 | P2 | M | 9 | built | T-425 |
 | [T-430](enhance-2026-11/T-430-one-load-per-audit-page.md) | One load per audit page (5,000 pages in 2 hours) | P1 | P1 | M | 8 | todo | T-407 |
 | [T-429](enhance-2026-11/T-429-stream-ai-assessment-during-the-crawl.md) | AI assessment starts during the crawl (rest of T-406) | P1 | P2 | M | 9 | todo | T-430 |
 | [T-431](enhance-2026-11/T-431-improved-version-gaps.md) | Improved version gaps (budget, desktop before, Shared Links, ADC buttons) | P4 | P2 | M | 9 | built | T-415, T-430 |
