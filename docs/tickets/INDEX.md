@@ -39,7 +39,7 @@ Built work is in git. Audit follow-up of November 2026, T-225 to T-387 (146 tick
 
 | id | title | gaps | priority | size | wave | status | depends on |
 |---|---|---|---|---|---|---|---|
-| T-433 | Vercel forwards the runner's paths (prove the proxy first) | - | P1 | M | 1 | built | - |
+| T-433 | Vercel forwards the runner's paths (prove the proxy first) | - | P1 | M | 1 | human | - |
 | T-434 | A signed-in Google account is a way in | - | P1 | L | 2 | built | T-433 |
 | T-435 | Limits and Verified Domain proof follow the account | - | P1 | M | 3 | built | T-434 |
 | T-436 | Waiting line for the Check-up slot; runs finish after the tab closes | - | P1 | M | 4 | built | T-435 |

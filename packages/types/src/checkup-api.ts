@@ -199,6 +199,8 @@ export interface RunnerStatusReply {
   accounts?: boolean;
   /** The signed-in account's email on a copy in account mode; null when nobody is signed in. */
   account?: string | null;
+  /** True when the caller holds the access key (owner, CI): no Google sign-in is needed. */
+  viaKey?: boolean;
   /**
    * The signed-in account's place in the waiting line for the Check-up slot (ADR 0050, T-436): \`position\` 1 is
    * next; \`failed\` says why a queued start did not begin (read once). Absent when the account is not waiting.

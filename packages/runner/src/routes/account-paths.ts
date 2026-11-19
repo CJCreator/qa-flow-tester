@@ -20,6 +20,11 @@ const EXACT: ReadonlyArray<readonly [string, ReadonlySet<string>]> = [
   ['/api/runner/domain-proof', new Set(['POST'])],
   ['/api/runner/ai/finish', new Set(['POST'])],
   ['/api/report', new Set(['GET'])],
+  // Where a visitor enters and checks their OWN AI key (held in memory for their session on a beta copy).
+  // Nothing else under /api/ai/ (models lists, test-model, usage) is open to an account.
+  ['/api/ai/settings', new Set(['GET', 'POST'])],
+  ['/api/ai/openrouter/key', new Set(['GET', 'POST'])],
+  ['/api/ai/openrouter/validate', new Set(['POST'])],
   ['/api/runs', new Set(['GET'])],
 ];
 
@@ -29,8 +34,6 @@ const PREFIXES: ReadonlyArray<readonly [string, ReadonlySet<string>]> = [
   ['/api/evidence/', new Set(['GET'])],
   // Past Check-ups: list, read, download, and (closed in beta by closedInBeta) delete/triage.
   ['/api/runs/', new Set(['GET', 'POST', 'DELETE'])],
-  // Where the visitor's own AI key is entered and tested (held in memory for their session on a beta copy).
-  ['/api/ai/', new Set(['GET', 'POST'])],
 ];
 
 /** May an account that holds no access key reach this inline path with this method? */

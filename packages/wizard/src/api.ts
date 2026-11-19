@@ -122,6 +122,8 @@ export type RunnerStatus = Omit<RunnerStatusReply, 'lastErrorCode' | 'reportRunI
   accounts?: boolean;
   /** The signed-in account's email; null when nobody is signed in. */
   account?: string | null;
+  /** The caller holds the access key (owner, CI): no Google sign-in is asked for. */
+  viaKey?: boolean;
   /** Waiting line for the check-up slot: this account's place, or why a queued start did not begin. */
   queue?: { position?: number; failed?: { error: string; code: string } };
 };

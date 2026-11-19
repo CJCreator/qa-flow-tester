@@ -1029,11 +1029,16 @@ export class RunnerServer {
   private accountFields(req: http.IncomingMessage): {
     accounts?: true;
     account?: string | null;
+    viaKey?: true;
     queue?: { position?: number; failed?: { error: string; code: string } };
   } {
     if (!this.accountMode) return {};
     const email = this.helperAccess?.session(req)?.email ?? null;
-    const base = { accounts: true as const, account: email };
+    const base = {
+      accounts: true as const,
+      account: email,
+      ...(this.carriesAccessKey(req) ? { viaKey: true as const } : {}),
+    };
     if (!email) return base;
     const position = this.checkupQueue.touch(email);
     if (position !== null) return { ...base, queue: { position } };
@@ -1431,7 +1436,13 @@ export class RunnerServer {
               matched?.route.access !== 'sign-in'
             ) {
               try {
-                const visitor = sessionFor(req, res, isHttpsRequest(req));
+                const accountEmail = this.accountMode ? this.helperAccess?.session(req)?.email : undefined;
+                const visitor = sessionFor(
+                  req,
+                  res,
+                  isHttpsRequest(req),
+                  this.accountMode ? { account: accountEmail } : undefined
+                );
                 enterSession(visitor);
                 markSessionOwner(visitor, this.isAuditOwnerEmail(this.helperAccess?.session(req)?.email));
                 setSessionAccount(visitor, this.accountMode ? this.helperAccess?.session(req)?.email : undefined);

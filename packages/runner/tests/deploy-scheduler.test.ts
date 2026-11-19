@@ -53,7 +53,8 @@ describe('deploy.yml passes SCHEDULER_SERVICE_ACCOUNT to the runner', () => {
     expect(step).toContain('--timeout 3600');
     expect(step).toContain('--memory 4Gi --cpu 2');
     expect(step).toContain('--min-instances 0 --max-instances 1 --no-cpu-throttling');
-    expect(items).toContain('RUNNER_TRUSTED_PROXY_HOPS=2');
+    // ADR 0050 review: one hop only; a direct run.app request could otherwise pick its own client address.
+    expect(items.some((i) => i.startsWith('RUNNER_TRUSTED_PROXY_HOPS'))).toBe(false);
     expect(items).toContain('RUNNER_PUBLIC_URL=$RUNNER_URL');
   });
 

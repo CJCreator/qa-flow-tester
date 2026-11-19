@@ -66,6 +66,8 @@ describe('accountMayReach: the inline Check-up paths', () => {
     expect(accountMayReach('GET', '/api/evidence/runs/run-1/a.png')).toBe(true);
     expect(accountMayReach('POST', '/api/runner/domain-proof')).toBe(true);
     expect(accountMayReach('POST', '/api/ai/settings')).toBe(true);
+    expect(accountMayReach('POST', '/api/ai/openrouter/key')).toBe(true);
+    expect(accountMayReach('POST', '/api/ai/openrouter/validate')).toBe(true);
   });
 
   it('keeps everything else on the access key', () => {
@@ -75,6 +77,17 @@ describe('accountMayReach: the inline Check-up paths', () => {
     expect(accountMayReach('POST', '/api/runner/benchmark')).toBe(false);
     expect(accountMayReach('POST', '/api/runner/spec-override')).toBe(false);
     expect(accountMayReach('GET', '/api/runner/run')).toBe(false);
+    // Only what a visitor needs for their OWN key: no model lists, test-model, usage or free-model lookups.
+    for (const p of [
+      '/api/ai/gemini/models',
+      '/api/ai/test-model',
+      '/api/ai/usage',
+      '/api/ai/openrouter/free-models',
+      '/api/ai/other',
+    ]) {
+      expect(accountMayReach('GET', p), p).toBe(false);
+      expect(accountMayReach('POST', p), p).toBe(false);
+    }
   });
 });
 
@@ -126,6 +139,7 @@ describe('HelperAccess in account mode', () => {
 interface Answer {
   status: number;
   json: any;
+  setCookie: string[];
 }
 
 function call(port: number, method: string, rawPath: string, headers: Record<string, string> = {}): Promise<Answer> {
@@ -148,7 +162,7 @@ function call(port: number, method: string, rawPath: string, headers: Record<str
           } catch {
             json = undefined;
           }
-          resolve({ status: res.statusCode || 0, json });
+          resolve({ status: res.statusCode || 0, json, setCookie: res.headers['set-cookie'] ?? [] });
         });
       }
     );
@@ -164,12 +178,14 @@ describe('a beta copy in account mode', () => {
   let accountPort = 0;
   let plainPort = 0;
   let cookie: string;
+  let cookieB: string;
   let plainCookie: string;
 
   beforeAll(async () => {
     scratch = await fs.mkdtemp(path.join(os.tmpdir(), 'qa-account-access-'));
     const access = createHelperAccess({ projectId: 'proj', accessToken: ACCESS, sessionSecret: SECRET, store });
     cookie = `${HELPER_COOKIE}=${signHelperSession(access.sessionKey(), WHO, access.now(), access.sessionSeconds, access.sessionSeconds)}`;
+    cookieB = `${HELPER_COOKIE}=${signHelperSession(access.sessionKey(), { email: 'other@example.com', sub: 'uid-10' }, access.now(), access.sessionSeconds, access.sessionSeconds)}`;
     const noAccounts = createHelperAccess({ projectId: 'proj', accessToken: ACCESS, store });
     plainCookie = `${HELPER_COOKIE}=${signHelperSession(noAccounts.sessionKey(), WHO, noAccounts.now())}`;
     [accountPort, plainPort] = await Promise.all([freePort(), freePort()]);
@@ -237,10 +253,46 @@ describe('a beta copy in account mode', () => {
       ['POST', '/api/runner/benchmark'],
       ['GET', '/api/runner/schedules'],
       ['GET', '/api/audit-settings'],
+      ['GET', '/api/ai/usage'],
+      ['POST', '/api/ai/test-model'],
+      ['GET', '/api/ai/gemini/models'],
+      ['GET', '/api/ai/openrouter/free-models'],
+      ['POST', '/api/runner/baselines/accept'],
+      ['GET', '/api/baselines/x.png'],
+      ['POST', '/api/runner/spec-override'],
+      ['GET', '/api/runner/spec-overrides'],
+      ['POST', '/api/runner/session/cleanup'],
     ] as const) {
       const answer = await call(accountPort, method, p, { cookie });
       expect([401, 403], `${method} ${p}`).toContain(answer.status);
     }
+  });
+
+  it('a key holder with no Google session is not asked to sign in: status says viaKey', async () => {
+    const status = await call(accountPort, 'GET', '/api/runner/status', { 'x-qa-access': ACCESS });
+    expect(status.json).toMatchObject({ accounts: true, account: null, viaKey: true });
+    const anonymous = await call(accountPort, 'GET', '/api/runner/status');
+    expect(anonymous.json.viaKey).toBeUndefined();
+    const account = await call(accountPort, 'GET', '/api/runner/status', { cookie });
+    expect(account.json.viaKey).toBeUndefined();
+  });
+
+  it('a browser session bound to one account is not handed to another account or to a signed-out visitor', async () => {
+    const first = await call(accountPort, 'GET', '/api/runner/status', { cookie });
+    const sessionCookie = first.setCookie.find((c) => c.startsWith('qa_session='))!;
+    expect(sessionCookie).toBeTruthy();
+    const pair = sessionCookie.split(';')[0];
+    // Same account again: the session is kept (no new cookie).
+    const same = await call(accountPort, 'GET', '/api/runner/status', { cookie: `${cookie}; ${pair}` });
+    expect(same.setCookie.some((c) => c.startsWith('qa_session='))).toBe(false);
+    // Another account on the same browser: a fresh session.
+    const other = await call(accountPort, 'GET', '/api/runner/status', { cookie: `${cookieB}; ${pair}` });
+    const replaced = other.setCookie.find((c) => c.startsWith('qa_session='));
+    expect(replaced).toBeTruthy();
+    expect(replaced!.split(';')[0]).not.toBe(pair);
+    // The key (no account) on that browser also gets a fresh session, never the account's.
+    const viaKey = await call(accountPort, 'GET', '/api/runner/status', { cookie: pair, 'x-qa-access': ACCESS });
+    expect(viaKey.setCookie.some((c) => c.startsWith('qa_session='))).toBe(true);
   });
 
   it('still lets the access key through', async () => {

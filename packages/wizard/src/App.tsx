@@ -749,7 +749,7 @@ export default function App() {
     switch (route.name) {
       case 'new':
         body =
-          status?.accounts && !status.account ? (
+          status?.accounts && !status.account && !status.viaKey ? (
             <AccountSignInScreen />
           ) : (
             <NewCheckupScreen

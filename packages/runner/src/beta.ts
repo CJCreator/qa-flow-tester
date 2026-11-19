@@ -143,10 +143,23 @@ function claimNewSession(address: string, now: number): boolean {
  * The tester's session id, from their cookie; a new one is set when they have none (or an unknown
  * one, such as after a restart). `secure` should be true when the visit was https.
  */
-export function sessionFor(req: http.IncomingMessage, res: http.ServerResponse, secure: boolean): string {
+export function sessionFor(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  secure: boolean,
+  /**
+   * Account mode (ADR 0050): a session bound to one Google account is never handed to another account, or to
+   * a visitor who signed out. The browser gets a fresh session; the first one stays for its own account.
+   */
+  accounts?: { account: string | undefined }
+): string {
   forgetOldSessions();
   const sent = readCookie(req.headers.cookie, SESSION_COOKIE);
   let id = sent && sessions.has(sent) ? sent : undefined;
+  if (id && accounts) {
+    const bound = sessions.get(id)?.account;
+    if (bound !== undefined && bound !== accounts.account?.trim().toLowerCase()) id = undefined;
+  }
   if (!id) {
     if (!claimNewSession(clientAddress(req), Date.now())) throw new SessionRateLimited();
     id = randomBytes(18).toString('base64url');

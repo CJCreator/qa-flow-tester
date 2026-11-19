@@ -103,7 +103,6 @@ async function main() {
     const envVars = [
       'RUNNER_BETA=1',
       'RUNNER_HOST=0.0.0.0',
-      'RUNNER_TRUSTED_PROXY_HOPS=2',
       `RUNNER_PUBLIC_URL=${RUNNER_URL}`,
       'RUNNER_DATA_DIR=/tmp/qa-data',
       'RUNNER_OUTPUT_DIR=/tmp/qa-data/reports',
