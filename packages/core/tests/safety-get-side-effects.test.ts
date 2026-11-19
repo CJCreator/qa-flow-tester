@@ -10,8 +10,8 @@ describe('isSideEffectAddress', () => {
   it('matches path segments and query keys that change something', () => {
     expect(side('/logout?confirm=1')).toBe(true);
     expect(side('/delete?id=1')).toBe(true);
-    expect(side('/account/sign-out')).toBe(true);
-    expect(side('/signout')).toBe(true);
+    expect(side('/account/sign-out?next=/')).toBe(true);
+    expect(side('/signout?x=1')).toBe(true);
     expect(side('/newsletter/unsubscribe?token=abc')).toBe(true);
     expect(side('/orders/7?cancel=1')).toBe(true);
     expect(side('/users/activate?code=1')).toBe(true);
@@ -19,6 +19,10 @@ describe('isSideEffectAddress', () => {
   });
   it('leaves ordinary addresses alone', () => {
     expect(side('/products?id=1')).toBe(false);
+    expect(side('/password-reset')).toBe(false);
+    expect(side('/subscribe')).toBe(false);
+    expect(side('/account/sign-out')).toBe(false);
+    expect(side('/delete')).toBe(false);
     expect(side('/blog/how-we-deleted-our-backlog')).toBe(false);
     expect(side('/confirmation-policy')).toBe(false);
     expect(side('/')).toBe(false);
@@ -38,7 +42,7 @@ describe('the Spider and read-only runs do not request side-effect addresses (T-
   const html = (body: string) =>
     `<!doctype html><html><head><title>Shop</title></head><body><main><h1>Shop</h1>${body}</main></body></html>`;
   const home = html(
-    `<a href="/logout?confirm=1">Leave</a> <a href="/delete?id=1">Tidy</a> <a href="/products?id=1">Products</a>`
+    `<a href="/logout?confirm=1">Leave</a> <a href="/delete?id=1">Tidy</a> <a href="/products?id=1">Products</a> <a href="/password-reset">Reset</a>`
   );
 
   const crawl = async (includePaths?: string[]) => {
@@ -69,6 +73,7 @@ describe('the Spider and read-only runs do not request side-effect addresses (T-
     const { result, requested } = await crawl();
     expect(requested.filter((r) => r.startsWith('/logout') || r.startsWith('/delete'))).toEqual([]);
     expect(requested).toContain('/products?id=1');
+    expect(requested).toContain('/password-reset');
     // A sign-out link is already left out of the page's links; the delete link is listed as a Skipped Page.
     expect(result.skipped).toEqual(
       expect.arrayContaining([{ urlPath: '/delete', why: 'excluded', detail: 'possible side effect' }])

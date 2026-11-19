@@ -22,6 +22,7 @@
 - The Spider does not enqueue such an address. It is recorded as a Skipped Page with reason `excluded` and the note "possible side effect".
 - In a read-only run, `blockChanges` also aborts a navigation to such an address.
 - An address on the person's include list, or one named in a Plan Item they approved, is allowed.
+- Owner decision 2026-11-19: a path word counts as a side effect only when the link also has a query string (`/delete?id=1`, `/logout?confirm=1`). A plain `/password-reset` page is read. GET forms and the Plan's `forbiddenActions` stay as built.
 
 ## Tests (write the failing test first)
 

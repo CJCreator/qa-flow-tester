@@ -102,10 +102,11 @@ function namesSideEffect(part: string): boolean {
 /**
  * An address a crawler must not open with a plain GET because the visit itself may change something:
  * `/logout?confirm`, `/delete?id=1`, `/unsubscribe?token=...`. Matches path segments and query keys, never
- * the page's text, so `/blog/how-we-deleted-it` and `/confirmation-policy` are ordinary pages.
+ * the page's text, so `/blog/how-we-deleted-it` and `/confirmation-policy` are ordinary pages. A path word counts
+ * only with a query string (owner decision 2026-11-19): a plain `/password-reset` or `/signout` page is read.
  */
 export function isSideEffectAddress(url: URL): boolean {
-  if (url.pathname.split('/').some((segment) => segment && namesSideEffect(segment))) return true;
+  if (url.search && url.pathname.split('/').some((segment) => segment && namesSideEffect(segment))) return true;
   for (const key of url.searchParams.keys()) {
     if (namesSideEffect(key)) return true;
   }
