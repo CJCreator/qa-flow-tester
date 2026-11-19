@@ -2,7 +2,7 @@
  * T-435 (ADR 0050): the per-account daily limit and the saved Verified Domain proof live in the audit store.
  */
 import { describe, it, expect, vi } from 'vitest';
-import type { NetDeps, RawResponse } from '@qa/core';
+import type { AuditStoreBackend, NetDeps, RawResponse } from '@qa/core';
 import { AccountUsage, accountHash, accountUsageKey } from '../src/account-usage.js';
 import { AccountProofs, PROOF_VALID_DAYS, proofKey } from '../src/account-proofs.js';
 import { testCopyFor } from '../src/host-policy.js';
@@ -10,12 +10,15 @@ import { claimBetaRun, resetBetaUsage, visitorHit } from '../src/beta.js';
 
 function fakeBackend() {
   const data = new Map<string, unknown>();
+  // getJson is generic on the real backend; the mock returns unknown, so it is typed to the backend's shape.
+  const getJson = vi.fn(async (key: string) => (data.has(key) ? data.get(key) : null));
+  const putJson = vi.fn(async (key: string, value: unknown) => {
+    data.set(key, value);
+  });
   return {
     data,
-    getJson: vi.fn(async (key: string) => (data.has(key) ? data.get(key) : null)),
-    putJson: vi.fn(async (key: string, value: unknown) => {
-      data.set(key, value);
-    }),
+    getJson: getJson as typeof getJson & AuditStoreBackend['getJson'],
+    putJson,
   };
 }
 
