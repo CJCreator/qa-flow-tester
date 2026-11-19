@@ -1,0 +1,15 @@
+# Known false positives: fake test keys in old commits, confirmed fake by the owner on 2026-11-19.
+# Each line ignores one exact finding (commit:file:rule:line). A new key, in any file or commit, is still found.
+# These surfaced after T-381 narrowed the .gitleaks.toml allowlist; the scan reads the whole history.
+2dc64894ba5b5a0b271d5c189c915b8bf5c4eaf2:packages/runner/tests/helper-wizard-access.test.ts:generic-api-key:20
+1fa75ca82f60167db011e878e10fa14c5ebf8b1b:packages/runner/tests/schedule-routes.test.ts:generic-api-key:21
+9b44b153b410b5b387790b54b8a05b97f84ec5fb:packages/core/tests/ai-provider-timeout.test.ts:generic-api-key:14
+9b44b153b410b5b387790b54b8a05b97f84ec5fb:packages/runner/tests/audit-persistence-integration.test.ts:generic-api-key:25
+62ea62be9e5f2c96cb5315efb1bbce89d0df1e50:packages/core/tests/auth-crawl-e2e.test.ts:generic-api-key:41
+2c3ed659720c3903710ada3d33fd5564d64bf487:packages/runner/tests/error-redaction.test.ts:generic-api-key:27
+2c3ed659720c3903710ada3d33fd5564d64bf487:packages/runner/tests/error-redaction.test.ts:generic-api-key:29
+c6336adb7186022b7ca702dfbe3f88ca07101a78:packages/runner/tests/checkup-vs-api.test.ts:generic-api-key:21
+754f71f42fa9d4fc87c20062fc25b99da95dcf15:packages/runner/tests/consent-enforcement.test.ts:generic-api-key:22
+934c98232a7f50cf4a05e68a5d5a0de361c9cb5e:packages/runner/tests/credentials-crawl.test.ts:generic-api-key:21
+2b59db11036a24042a3da062b4d870a6d1e29bc1:packages/runner/tests/signin-endpoint.test.ts:generic-api-key:55
+e0f1b7471831f7c5cb56f411bb50de1e35a613c9:packages/runner/tests/access-token.test.ts:generic-api-key:14

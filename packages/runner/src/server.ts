@@ -1525,6 +1525,8 @@ export class RunnerServer {
     // Open event streams would otherwise keep the server from ever finishing its close.
     for (const client of this.streamClients) client.end();
     this.streamClients.clear();
+    // A usage write still in flight would otherwise write into the data folder after stop() returned.
+    await this.usageLedger.flush();
     return new Promise((resolve) => {
       if (this.server) {
         this.server.close(() => resolve());
