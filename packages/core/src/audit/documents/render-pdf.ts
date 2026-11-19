@@ -142,9 +142,10 @@ export async function renderPdf(html: string, options: RenderPdfOptions = {}): P
 }
 
 /**
- * Thumbnails of self-contained pages (the Improved version's variants, T-415): each page is put in one offline
- * Chromium with setContent, no script and no request but `data:`, and its top `width` × `height` CSS pixels
- * are taken as a JPEG at half scale. A page that cannot be taken gives null. The browser is always closed.
+ * Thumbnails of self-contained pages (the Improved version's variants, T-415): each page is put in an offline
+ * context of the shared PDF browser (T-410, one new context per call) with setContent, no script and no
+ * request but `data:`, and its top `width` x `height` CSS pixels are taken as a JPEG at half scale. A page that
+ * cannot be taken gives null. The context is always closed; the browser stays for the next PDF or thumbnail.
  */
 export async function renderThumbnails(
   pages: readonly string[],
@@ -154,9 +155,11 @@ export async function renderThumbnails(
   const width = options.width ?? 1440;
   const height = options.height ?? 900;
   const timeoutMs = options.timeoutMs ?? PDF_TIMEOUT_MS;
-  let browser: Browser | undefined;
+  let failed = false;
+  active += 1;
+  clearIdleTimer();
   try {
-    browser = await chromium.launch({ headless: true, timeout: timeoutMs, args: ['--disable-extensions'] });
+    const browser = await sharedBrowser(timeoutMs);
     const context = await browser.newContext({
       javaScriptEnabled: false,
       offline: true,
@@ -164,25 +167,35 @@ export async function renderThumbnails(
       viewport: { width, height },
       deviceScaleFactor: 0.5,
     });
-    await context.route('**/*', (route) =>
-      route.request().url().startsWith('data:') ? route.continue() : route.abort('blockedbyclient')
-    );
-    const out: Array<Buffer | null> = [];
-    for (const html of pages) {
-      const page = await context.newPage();
-      try {
-        await page.setContent(html, { waitUntil: 'load', timeout: timeoutMs });
-        out.push(await page.screenshot({ type: 'jpeg', quality: 70, clip: { x: 0, y: 0, width, height } }));
-      } catch {
-        out.push(null);
-      } finally {
-        await page.close().catch(() => {});
+    try {
+      await context.route('**/*', (route) =>
+        route.request().url().startsWith('data:') ? route.continue() : route.abort('blockedbyclient')
+      );
+      const out: Array<Buffer | null> = [];
+      for (const html of pages) {
+        const page = await context.newPage();
+        try {
+          await page.setContent(html, { waitUntil: 'load', timeout: timeoutMs });
+          out.push(await page.screenshot({ type: 'jpeg', quality: 70, clip: { x: 0, y: 0, width, height } }));
+        } catch {
+          out.push(null);
+        } finally {
+          await page.close().catch(() => {});
+        }
       }
+      return out;
+    } finally {
+      await context.close().catch(() => {});
     }
-    return out;
   } catch {
+    failed = true;
     return pages.map(() => null);
   } finally {
-    await browser?.close().catch(() => {});
+    active -= 1;
+    if (active === 0) {
+      // A failed launch or context may have left the browser unusable: close it. Otherwise keep it.
+      if (failed) await closePdfBrowser();
+      else armIdleTimer();
+    }
   }
 }
