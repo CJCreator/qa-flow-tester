@@ -93,18 +93,19 @@ function world(keySaved = true) {
     approveMany: (s) => store.approveMany(s),
     runBatch: (s, d) => store.runBatch(s, { ...d, resolveAi }),
   };
+  const hasAiKey = vi.fn(() => keySaved);
   const deps: AuditAiRouteDeps = {
     readModels: () => ({}),
     writeModels: () => {},
     aiDefaults: () => ({}),
-    hasAiKey: () => keySaved,
+    hasAiKey,
     findVersion: () => ({ version: 1, status: 'done', language: 'en' }),
     rewrites: () => ops,
     loadSection: () => content(),
     applyRewriteEdit: async () => ({}) as never,
     overlapWords: () => 6,
   };
-  return { routes: createAuditAiRoutes(deps), ask };
+  return { routes: createAuditAiRoutes(deps), ask, hasAiKey };
 }
 
 async function call(routes: Route[], key: 'approveRewrite' | 'runRewrite', body: unknown): Promise<MockResponse> {
@@ -145,6 +146,18 @@ describe('batch rewrite rows', () => {
         error: 'Approve this Section for a rewrite first.',
       },
     ]);
+  });
+
+  it('with no Section approved: every Section refused, and no key is looked up', async () => {
+    const { routes, ask, hasAiKey } = world(false);
+    const run = await call(routes, 'runRewrite', { sections: SECTIONS.slice(0, 2) });
+    expect(run.statusCode).toBe(200);
+    expect((run.json() as RewriteBatchReply).failures.map((f) => f.code)).toEqual([
+      'ERR_NOT_APPROVED',
+      'ERR_NOT_APPROVED',
+    ]);
+    expect(hasAiKey).not.toHaveBeenCalled();
+    expect(ask).not.toHaveBeenCalled();
   });
 
   it('without a key: 409 ERR_NO_AI_KEY and no request', async () => {
