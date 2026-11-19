@@ -10,3 +10,4 @@ export * from './pipeline/index.js';
 export * from './phone-layout.js';
 export * from './speed/index.js';
 export * from './preview/index.js';
+export * from './improve/index.js';
