@@ -1085,13 +1085,17 @@ describe('audit pipeline: runAuditPipeline', () => {
     });
 
     /** A crawl context with lab pages; `defer` collects the work the crawl awaits before closing. */
-    function labContext(labInFlight = 4) {
+    function labContext(labInFlight = 4, statusFor: (url: string) => number = () => 200) {
       const deferred: Promise<void>[] = [];
       const opened: string[] = [];
+      const slowDowns: string[] = [];
       let open = 0;
       let peakOpen = 0;
       const ctx = {
-        pacer: { run: (_h: string, t: () => unknown) => t() },
+        pacer: {
+          run: (_h: string, t: () => unknown) => t(),
+          slowDown: (host: string) => slowDowns.push(host),
+        },
         labInFlight,
         defer: (work: Promise<void>) => deferred.push(work),
         openPage: async () => {
@@ -1102,6 +1106,7 @@ describe('audit pipeline: runAuditPipeline', () => {
             goto: async (url: string) => {
               at = url;
               opened.push(url);
+              return { status: () => statusFor(url), headers: () => ({}) };
             },
             url: () => at,
             close: async () => {
@@ -1110,8 +1115,25 @@ describe('audit pipeline: runAuditPipeline', () => {
           } as unknown as Page;
         },
       };
-      return { ctx, deferred, opened, peakOpen: () => peakOpen };
+      return { ctx, deferred, opened, slowDowns, peakOpen: () => peakOpen };
     }
+
+    it('a lab load that answers 503 is not scanned, and slows the host down', async () => {
+      const stages = pageStages();
+      const recorder = createPageRecorder({ workDir, stages });
+      const { ctx, deferred, slowDowns } = labContext(4, (url) => (url.endsWith('/busy') ? 503 : 200));
+      for (const path of ['/ok', '/busy']) {
+        const fake = { url: () => `https://example.com${path}`, urlPath: path } as unknown as Page;
+        await recorder.onRenderedPage(fake, crawlPage(path, 1), ctx as never);
+      }
+      await Promise.all(deferred);
+      const busy = recorder.pages.find((p) => p.info.urlPath === '/busy')!;
+      expect(busy.accessibility).toBeNull();
+      expect(busy.phone).toBeNull();
+      expect(busy.timing).toBeNull();
+      expect(recorder.pages.find((p) => p.info.urlPath === '/ok')!.accessibility).toBeTruthy();
+      expect(slowDowns).toEqual(['example.com']);
+    });
 
     it('lab work for 10 pages finishes after the crawl does, and the crawl never waits for it', async () => {
       let release!: () => void;
