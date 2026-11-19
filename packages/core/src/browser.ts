@@ -116,6 +116,8 @@ export async function installRequestGuard(
 }
 
 const CHANGING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+/** A page that has shown nothing yet: a new popup's address is '' or about:blank until its first load. */
+const isBlank = (url: string) => url === '' || url === 'about:blank';
 
 /** A request the Domain Allowlist stopped (or, for a redirect, saw leave). Host and path only, never a query. */
 export interface HostAllowlistBlock {
@@ -132,6 +134,8 @@ export interface HostAllowlistBlock {
   rawUrl: string;
   mainFrame: boolean;
   page: Page | null;
+  /** A popup whose first load was to another host: it was closed at once (T-425). */
+  popupClosed?: boolean;
 }
 
 export interface HostAllowlist {
@@ -168,17 +172,37 @@ export async function installHostAllowlist(
     try {
       frame = request.frame();
     } catch {
-      frame = null; // a service worker's request has no frame
+      // No frame: a service worker's request, or a popup's first load issued before its page exists.
+      frame = null;
     }
     return {
       kind,
       method: request.method().toUpperCase(),
       url: u.origin + u.pathname,
       rawUrl: request.url(),
-      mainFrame: frame ? frame.parentFrame() === null : false,
+      mainFrame: frame ? frame.parentFrame() === null : request.isNavigationRequest(),
       page: frame ? frame.page() : null,
     };
   };
+  // A popup's first load stopped before its page existed (T-425). `target="_blank"` implies noopener, so the
+  // popup is found through its failed request once the page exists, never by guessing at blank pages.
+  const pendingPopups = new Map<PwRequest, HostAllowlistBlock>();
+  const closePopupOf = async (request: PwRequest) => {
+    const block = pendingPopups.get(request);
+    if (!block) return;
+    let popup: Page | null = null;
+    try {
+      popup = request.frame().page();
+    } catch {
+      return; // still no page: tried again when the request is reported failed
+    }
+    pendingPopups.delete(request);
+    if (!popup || popup.isClosed() || !isBlank(popup.url())) return;
+    block.popupClosed = true;
+    block.page = popup;
+    await popup.close().catch(() => undefined);
+  };
+  const onRequestFailed = (request: PwRequest) => void closePopupOf(request);
   const handler = async (route: Route) => {
     const request = route.request();
     let u: URL;
@@ -189,9 +213,19 @@ export async function installHostAllowlist(
     }
     if ((u.protocol !== 'http:' && u.protocol !== 'https:') || allowed(u)) return route.fallback();
     if (request.isNavigationRequest()) {
-      note(describe(request, u, 'navigation'));
+      const block = describe(request, u, 'navigation');
+      // A popup that has shown nothing yet, opened onto another host (T-425): it is closed, not left blank.
+      const popup =
+        block.mainFrame && block.page && isBlank(block.page.url()) ? await block.page.opener().catch(() => null) : null;
+      if (popup) block.popupClosed = true;
+      const framelessPopup = !block.page && block.mainFrame;
+      if (framelessPopup) pendingPopups.set(request, block);
+      note(block);
       // 'aborted' leaves the page where it was; 'blockedbyclient' would show Chromium's error page.
-      return route.abort('aborted').catch(() => undefined);
+      await route.abort('aborted').catch(() => undefined);
+      if (popup) await block.page?.close().catch(() => undefined);
+      if (framelessPopup) await closePopupOf(request);
+      return;
     }
     if (CHANGING_METHODS.has(request.method().toUpperCase())) {
       note(describe(request, u, 'change'));
@@ -212,11 +246,13 @@ export async function installHostAllowlist(
   };
   await context.route('**/*', handler);
   context.on('request', onRequest);
+  context.on('requestfailed', onRequestFailed);
   return {
     blocked,
     thirdPartyReads: () => thirdParty,
     release: async () => {
       context.off('request', onRequest);
+      context.off('requestfailed', onRequestFailed);
       await context.unroute('**/*', handler).catch(() => undefined);
     },
   };
