@@ -5,12 +5,15 @@
  * layout (last, as it resizes the page).
  *
  * Lab work runs off the crawl workers (T-404): when the crawl offers `openPage` and `defer`, each page's
- * lab work is queued and done on a page of its own (loaded again in the host's turn), at most `labInFlight` at
- * once, while the crawl worker goes on to its next page. The crawl waits for the queue only before it closes
- * its browser. Without them (older callers, tests), lab work runs on the crawl's page as before.
+ * lab work is queued and done on a page of its own, at most `labInFlight` at once, while the crawl worker goes on
+ * to its next page. The crawl waits for the queue only before it closes its browser. Without them (older
+ * callers, tests), lab work runs on the crawl's page as before.
  *
- * Pages PageSpeed Insights measures (`pageSpeed`, the first 20) get no browser timing reload; a page PSI could
- * not measure gets the browser timing afterwards, on the same lab page.
+ * One lab load per page at most (T-430), so a page costs the site 2 page starts, or 1 when PSI measures it:
+ *  - a page PSI does not measure gets one load on a lab page, from a cold cache under the lab profile: that load
+ *    is its timing, and axe and the phone layout then run on the same page;
+ *  - a page PSI measures (`pageSpeed`, the first 20) gets axe and the phone layout on the crawl's own page before
+ *    the worker moves on, and PSI is asked off the worker; only a page PSI could not measure gets the timing load.
  *
  * Sample Pages are decided as pages arrive, with the Check-up's Layout Group rule (`GroupTracker`): a page with
  * a fixed address and the first three members of a templated group are Sample Pages; later members are covered
@@ -24,7 +27,7 @@ import { readPage, type ReadPageResult } from '../analysis/read-page.js';
 import { accessibilityBasics, type AccessibilityBasicsResult } from '../analysis/accessibility-basics.js';
 import { recordPhoneLayout, type PhoneLayoutRecord } from '../phone-layout.js';
 import { recordDesktopShot } from './desktop-shot.js';
-import { measureBrowserTiming, type BrowserTimingResult } from '../speed/browser-timing.js';
+import { measureBrowserTiming, withLabProfile, type BrowserTimingResult } from '../speed/browser-timing.js';
 import { PSI_MAX_PAGES, type SampleSpeed } from '../ai/pagespeed.js';
 import type { AuditCrawlPage, RenderedPageContext } from '../crawl/crawl.js';
 import { GroupTracker } from '../../plan/sampling.js';
@@ -49,6 +52,8 @@ export const DEFAULT_PAGE_STAGES: PageStages = {
 export const DEFAULT_LAB_IN_FLIGHT = 2;
 /** One lab page load's limit: the crawl's own (AUDIT_PAGE_TIMEOUT_MS). */
 const LAB_LOAD_TIMEOUT_MS = 30_000;
+/** The wait after the lab load for its late paints, as the timing reload had. */
+const TIMING_SETTLE_MS = 400;
 
 export interface PageRecorderOptions {
   /** Local working folder of the version: phone screenshots are written under it, then saved to the store. */
@@ -193,45 +198,58 @@ export class AuditPageRecorder {
     }
     const usePsi = this.claimPsi(url);
 
-    // Off the crawl worker: the job loads the page again on a page of its own, in the host's turn.
+    // Off the crawl worker (T-404), with one load of the site per page at most (T-430).
     const openPage = context?.openPage;
     if (openPage && context?.defer && url) {
       const pageUrl = url;
       this.lab ??= new LabQueue(Math.max(1, context.labInFlight ?? DEFAULT_LAB_IN_FLIGHT));
       const lab = this.lab;
-      const job = lab.run(async () => {
-        if (context.signal?.aborted) return;
-        let labPage: Page | undefined;
-        try {
-          labPage = await openPage();
-          const open = labPage;
-          const load = () => open.goto(pageUrl, { waitUntil: 'load', timeout: LAB_LOAD_TIMEOUT_MS });
-          const host = new URL(pageUrl).host;
-          const response = await context.pacer.run(host, load, context.signal);
-          // Only the page the crawl recorded is checked: a busy answer, an error page or a load that left the
-          // address is not scanned in its place. A 429 or 503 slows the host down, as in the crawl (ADR 0043).
-          const status = response?.status();
-          if (status === 429 || status === 503) {
-            context.pacer.slowDown(host, retryAfterMs(response?.headers()['retry-after']));
+      let job: Promise<void>;
+      if (usePsi) {
+        // PSI measures on Google's side, so the crawl's own page is checked now and the site is not loaded again.
+        // Only a page PSI could not measure gets the timing load, on a page of its own.
+        await this.checkOpenPage(page, entry, n);
+        job = lab.run(async () => {
+          if (context.signal?.aborted) return;
+          if (await this.askPsi(entry, pageUrl)) {
+            entry.labDone = true;
+            return;
           }
-          if (!response || status === undefined || status >= 400 || new URL(open.url()).host !== host) {
-            throw new Error('lab load failed');
+          const lab = await this.loadForLab(openPage, pageUrl, context);
+          if (!lab) {
+            entry.timing = null;
+            if (!context.signal?.aborted) entry.labDone = true;
+            return;
           }
-        } catch {
-          entry.accessibility = null;
-          entry.phone = null;
-          entry.timing = null;
-          // Not checked after a stop: a resume loads the page again. Otherwise the failure is the result.
-          if (!context.signal?.aborted) entry.labDone = true;
-          await labPage?.close().catch(() => {});
-          return;
-        }
-        try {
-          await this.labWork(labPage, entry, n, usePsi, pageUrl, context);
-        } finally {
-          await labPage.close().catch(() => {});
-        }
-      });
+          try {
+            entry.timing = await this.readTiming(lab);
+            entry.labDone = true;
+          } finally {
+            await lab.page.close().catch(() => {});
+          }
+        });
+      } else {
+        // The lab's one load is the cold, throttled timing load; axe and the phone layout then run on that page.
+        job = lab.run(async () => {
+          if (context.signal?.aborted) return;
+          const lab = await this.loadForLab(openPage, pageUrl, context);
+          if (!lab) {
+            entry.accessibility = null;
+            entry.phone = null;
+            entry.timing = null;
+            // Not checked after a stop: a resume loads the page again. Otherwise the failure is the result.
+            if (!context.signal?.aborted) entry.labDone = true;
+            return;
+          }
+          try {
+            entry.timing = await this.readTiming(lab);
+            await this.checkOpenPage(lab.page, entry, n);
+            entry.labDone = true;
+          } finally {
+            await lab.page.close().catch(() => {});
+          }
+        });
+      }
       this.labJobs.push(job);
       context.defer(job);
       return { deferred: job };
@@ -278,6 +296,101 @@ export class AuditPageRecorder {
   /** Resolves once every queued lab job has ended (the crawl awaits this through `defer`). */
   async drain(): Promise<void> {
     await Promise.all(this.labJobs);
+  }
+
+  /**
+   * The lab's one load of a page (T-430): a fresh page, loaded from a cold cache under the lab profile in the host's
+   * turn. Null, and the page closed, when the page did not answer: only the page the crawl recorded is checked, so
+   * a busy answer, an error page or a load that left the address is not scanned in its place. A 429 or 503 slows
+   * the host down, as in the crawl (ADR 0043). A page that answered but did not finish loading in time is still
+   * checked; only its timing is lost (`loaded: false`), as when the timing reload timed out.
+   */
+  private async loadForLab(
+    openPage: () => Promise<Page>,
+    pageUrl: string,
+    context: RenderedPageContext
+  ): Promise<{ page: Page; loaded: boolean } | null> {
+    let labPage: Page | undefined;
+    try {
+      labPage = await openPage();
+      const open = labPage;
+      const host = new URL(pageUrl).host;
+      const load = () =>
+        withLabProfile(open, async () => {
+          const response = await open.goto(pageUrl, { waitUntil: 'commit', timeout: LAB_LOAD_TIMEOUT_MS });
+          let loaded = true;
+          if (typeof open.waitForLoadState === 'function') {
+            loaded = await open
+              .waitForLoadState('load', { timeout: LAB_LOAD_TIMEOUT_MS })
+              .then(() => true)
+              .catch(() => false);
+          }
+          return { response, loaded };
+        });
+      const { response, loaded } = await context.pacer.run(host, load, context.signal);
+      const status = response?.status();
+      if (status === 429 || status === 503) {
+        context.pacer.slowDown(host, retryAfterMs(response?.headers()['retry-after']));
+      }
+      if (!response || status === undefined || status >= 400 || new URL(open.url()).host !== host) {
+        throw new Error('lab load failed');
+      }
+      // The late paints of the load, as the timing reload waits for them.
+      if (loaded && typeof open.waitForTimeout === 'function') await open.waitForTimeout(TIMING_SETTLE_MS);
+      return { page: open, loaded };
+    } catch {
+      await labPage?.close().catch(() => {});
+      return null;
+    }
+  }
+
+  /** The timing of the lab load just made (no second load). Null when the step threw. */
+  private async readTiming(lab: { page: Page; loaded: boolean }): Promise<BrowserTimingResult | null> {
+    if (!lab.loaded) {
+      return { speed: { status: 'not-measured', source: 'this-tool', method: 'lab', reason: 'timeout' }, raw: {} };
+    }
+    try {
+      return await this.stages.measureBrowserTiming(lab.page, { reload: false });
+    } catch {
+      return null;
+    }
+  }
+
+  /** Asks PageSpeed Insights for one page; true when it measured it. */
+  private async askPsi(entry: RecordedPage, url: string): Promise<boolean> {
+    if (!this.pageSpeed) return false;
+    entry.psiTried = true;
+    try {
+      const answer = await this.pageSpeed.measure(url);
+      entry.psi = answer?.speed ?? null;
+      return answer?.speed.lab.status === 'measured';
+    } catch {
+      entry.psi = null;
+      return false;
+    }
+  }
+
+  /** The accessibility basics, then the phone layout (last, as it resizes the page), on an open page. */
+  private async checkOpenPage(page: Page, entry: RecordedPage, n: number): Promise<void> {
+    const { info } = entry;
+    try {
+      entry.accessibility = await this.stages.accessibilityBasics(page, {
+        urlPath: info.urlPath,
+        ids: this.a11yIds,
+        testCaseId: `audit-a11y-${n}`,
+      });
+    } catch {
+      entry.accessibility = null;
+    }
+    try {
+      entry.phone = await this.stages.recordPhoneLayout(page, {
+        versionDir: this.workDir,
+        urlPath: info.urlPath,
+        testCaseId: `audit-phone-${n}`,
+      });
+    } catch {
+      entry.phone = null;
+    }
   }
 
   /** One of the first PSI pages, on a public host, while a PSI key is available. */

@@ -1,8 +1,8 @@
 /**
  * Browser lab timing for Website Audit Sample Pages (REQ-012, ADR 0042).
  *
- * Measures speed directly in Chromium using the Check-up's lab profile (`LAB_THROTTLING`) with a single throttled
- * reload of the open Sample Page. Collects LCP, CLS, FCP, TTFB, and load time, shaping into ExternalSpeed format
+ * Measures speed directly in Chromium using the Check-up's lab profile (`LAB_THROTTLING`): a single throttled
+ * reload of the open page, or (the Website Audit's lab work, T-430) the page's own first load under the profile. Collects LCP, CLS, FCP, TTFB, and load time, shaping into ExternalSpeed format
  * with source: 'this-tool', method: 'lab', strategy: 'mobile'.
  */
 import type { Page, CDPSession } from 'playwright';
@@ -63,6 +63,8 @@ export interface BrowserTimingResult {
 
 export interface BrowserTimingOptions {
   timeoutMs?: number;
+  /** Default true: one throttled reload. False: the page was just loaded under `withLabProfile` (T-430). */
+  reload?: boolean;
   now?: () => Date;
   throttling?: typeof LAB_THROTTLING;
 }
@@ -251,8 +253,69 @@ const READ_BROWSER_TIMING = async (): Promise<PerformanceEntriesInput> => {
   };
 };
 
+/** Turns the lab profile on for `page`: the cache off, the network and CPU throttled. Null without CDP. */
+async function applyLabProfile(page: Page, throttling: typeof LAB_THROTTLING): Promise<CDPSession | null> {
+  let cdp: CDPSession | null = null;
+  try {
+    cdp = await page.context().newCDPSession(page);
+    await cdp.send('Network.enable');
+    await cdp.send('Network.setCacheDisabled', { cacheDisabled: true });
+    await cdp.send('Network.emulateNetworkConditions', {
+      offline: false,
+      latency: throttling.latencyMs,
+      downloadThroughput: (throttling.downloadKbps * 1024) / 8,
+      uploadThroughput: (throttling.uploadKbps * 1024) / 8,
+    });
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: throttling.cpuSlowdown });
+  } catch {
+    // Non-Chromium or CDP unavailable: continue without throttling
+  }
+  return cdp;
+}
+
+/** Turns the lab profile off again, so later checks on the page run at full speed. */
+async function resetLabProfile(cdp: CDPSession | null): Promise<void> {
+  if (!cdp) return;
+  try {
+    await cdp.send('Network.emulateNetworkConditions', {
+      offline: false,
+      latency: 0,
+      downloadThroughput: -1,
+      uploadThroughput: -1,
+    });
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+    await cdp.send('Network.setCacheDisabled', { cacheDisabled: false });
+    await cdp.detach();
+  } catch {
+    // Ignore CDP cleanup errors
+  }
+}
+
 /**
- * Measures an open page with one throttled reload under Chromium lab throttling.
+ * Runs `load` (the first load of a fresh page) under the lab profile, from a cold cache (T-430). The Website
+ * Audit's lab work loads each page once this way: that load is the timing load, read afterwards with
+ * `measureBrowserTiming(page, { reload: false })`, and the other checks run on the same page once the profile is
+ * off again. A page without CDP is loaded as it is.
+ */
+export async function withLabProfile<T>(
+  page: Page,
+  load: () => Promise<T>,
+  throttling: typeof LAB_THROTTLING = LAB_THROTTLING
+): Promise<T> {
+  const cdp =
+    page && typeof (page as { context?: unknown }).context === 'function'
+      ? await applyLabProfile(page, throttling)
+      : null;
+  try {
+    return await load();
+  } finally {
+    await resetLabProfile(cdp);
+  }
+}
+
+/**
+ * Measures an open page with one throttled reload under Chromium lab throttling. With `reload: false` the page
+ * was just loaded under the lab profile (`withLabProfile`, T-430): its entries are read without loading it again.
  */
 export async function measureBrowserTiming(page: Page, options?: BrowserTimingOptions): Promise<BrowserTimingResult> {
   const fallback = (reason: 'failed' | 'timeout' = 'failed'): BrowserTimingResult => ({
@@ -269,32 +332,19 @@ export async function measureBrowserTiming(page: Page, options?: BrowserTimingOp
     return fallback('failed');
   }
 
-  const throttling = options?.throttling ?? LAB_THROTTLING;
-  let cdp: CDPSession | null = null;
+  const reload = options?.reload !== false;
+  const cdp = reload ? await applyLabProfile(page, options?.throttling ?? LAB_THROTTLING) : null;
   try {
-    cdp = await page.context().newCDPSession(page);
-    await cdp.send('Network.enable');
-    await cdp.send('Network.setCacheDisabled', { cacheDisabled: true });
-    await cdp.send('Network.emulateNetworkConditions', {
-      offline: false,
-      latency: throttling.latencyMs,
-      downloadThroughput: (throttling.downloadKbps * 1024) / 8,
-      uploadThroughput: (throttling.uploadKbps * 1024) / 8,
-    });
-    await cdp.send('Emulation.setCPUThrottlingRate', { rate: throttling.cpuSlowdown });
-  } catch {
-    // Non-Chromium or CDP unavailable: continue without throttling
-  }
-
-  try {
-    const timeout = options?.timeoutMs ?? 30_000;
-    try {
-      await page.reload({ waitUntil: 'load', timeout });
-      await page.waitForTimeout(400);
-    } catch (reloadErr) {
-      const isTimeout =
-        reloadErr instanceof Error && (reloadErr.name === 'TimeoutError' || /timeout/i.test(reloadErr.message));
-      return fallback(isTimeout ? 'timeout' : 'failed');
+    if (reload) {
+      const timeout = options?.timeoutMs ?? 30_000;
+      try {
+        await page.reload({ waitUntil: 'load', timeout });
+        await page.waitForTimeout(400);
+      } catch (reloadErr) {
+        const isTimeout =
+          reloadErr instanceof Error && (reloadErr.name === 'TimeoutError' || /timeout/i.test(reloadErr.message));
+        return fallback(isTimeout ? 'timeout' : 'failed');
+      }
     }
 
     let inPageData: PerformanceEntriesInput | null = null;
@@ -308,20 +358,6 @@ export async function measureBrowserTiming(page: Page, options?: BrowserTimingOp
     const speed = shapeBrowserTimingSpeed(raw, options?.now);
     return { speed, raw };
   } finally {
-    if (cdp) {
-      try {
-        await cdp.send('Network.emulateNetworkConditions', {
-          offline: false,
-          latency: 0,
-          downloadThroughput: -1,
-          uploadThroughput: -1,
-        });
-        await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
-        await cdp.send('Network.setCacheDisabled', { cacheDisabled: false });
-        await cdp.detach();
-      } catch {
-        // Ignore CDP cleanup errors
-      }
-    }
+    await resetLabProfile(cdp);
   }
 }

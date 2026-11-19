@@ -13,6 +13,8 @@ export {
   AUDIT_CHECKPOINT_NAME,
   createAuditCheckpointer,
   loadAuditCheckpoint,
+  createAiLimiter,
+  createAuditAssessmentStream,
 } from './pipeline.js';
 export type {
   AuditPipelineDeps,
@@ -23,6 +25,9 @@ export type {
   SiteStages,
   AuditCheckpointStore,
   LoadedAuditCheckpoint,
+  AiLimiter,
+  AuditAssessmentStream,
+  StreamedAssessment,
 } from './pipeline.js';
 export {
   SITE_CAUSED_SKIP_REASONS,

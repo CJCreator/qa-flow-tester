@@ -13,9 +13,11 @@ import type {
   AuditAiStage,
   AuditAiStatus,
   DocumentLanguage,
+  ProviderLimits,
 } from '@qa/types';
 import { DOCUMENT_LANGUAGE_INFO, modelForStage } from '@qa/types';
 import { completeWith, createAIProvider, type AIProvider } from '../../ai/ai-provider.js';
+import { OpenRouterClient } from '../../ai/openrouter.js';
 import type { KeyResolver } from '../../ai/key-resolver.js';
 import { AITimeoutError } from '../../ai/timeout.js';
 import { stopIfAborted } from '../../abort.js';
@@ -84,6 +86,49 @@ export interface ResolveAuditAiDeps {
    * fallback.
    */
   hasAdc?: () => Promise<boolean>;
+  /**
+   * What the provider reports about the key's limits (T-429). Default: OpenRouter's key endpoint for an OpenRouter
+   * key when the real providers are used (no `createProvider` seam); nothing for the others.
+   */
+  providerLimits?: (type: AIProviderType, apiKey: string) => Promise<ProviderLimits | null>;
+}
+
+/** How long the limit lookup may take before the audit goes on without it (T-429). */
+const LIMITS_TIMEOUT_MS = 5_000;
+
+/** The provider's reported limit as one number: requests per interval, or fewer when fewer are left (T-429). */
+export function reportedAiLimit(limits: ProviderLimits | null | undefined): number | undefined {
+  const perInterval = limits?.requestsPerInterval;
+  if (!perInterval || !Number.isFinite(perInterval) || perInterval < 1) return undefined;
+  const left = limits?.remainingRequests;
+  return typeof left === 'number' && Number.isFinite(left) && left >= 1 ? Math.min(perInterval, left) : perInterval;
+}
+
+async function lookUpLimit(
+  deps: ResolveAuditAiDeps,
+  type: AIProviderType,
+  apiKey: string
+): Promise<number | undefined> {
+  const look =
+    deps.providerLimits ??
+    (deps.createProvider === undefined && type === 'openrouter'
+      ? (_type: AIProviderType, key: string) => new OpenRouterClient().keyLimits(key)
+      : undefined);
+  if (!look) return undefined;
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    const limits = await Promise.race([
+      look(type, apiKey),
+      new Promise<null>((resolve) => {
+        timer = setTimeout(() => resolve(null), LIMITS_TIMEOUT_MS);
+      }),
+    ]);
+    return reportedAiLimit(limits);
+  } catch {
+    return undefined;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**
@@ -206,6 +251,11 @@ export interface AuditAi {
   readonly provider: AIProviderType;
   /** The run's request counter: what was sent and what the AI Request Budget allows. */
   readonly budget?: AuditAiRequestBudget;
+  /**
+   * Requests the provider says it takes at once (its per-interval limit, or what is left of it), when it reports
+   * one (T-429). `auditAiInFlight` turns it into the audit's requests in flight: at most 8, 4 without it.
+   */
+  readonly reportedLimit?: number;
   ask(stage: AuditAiStage, messages: AIMessage[], options?: AuditAiAskOptions): Promise<AuditAiAnswer>;
 }
 
@@ -229,7 +279,11 @@ export async function resolveAuditAi(deps: ResolveAuditAiDeps): Promise<AuditAiR
     if (!hasAdc || !(await hasAdc())) return { ok: false, reason: 'no-ai-key' };
     return { ok: true, ai: auditAiOn(deps, create('gemini', 'adc'), 'gemini', true) };
   }
-  return { ok: true, ai: auditAiOn(deps, create(key.provider, key.apiKey), key.provider, false, hasAdc) };
+  const reportedLimit = await lookUpLimit(deps, key.provider, key.apiKey);
+  return {
+    ok: true,
+    ai: auditAiOn(deps, create(key.provider, key.apiKey), key.provider, false, hasAdc, reportedLimit),
+  };
 }
 
 /**
@@ -242,7 +296,8 @@ function auditAiOn(
   first: AIProvider,
   firstType: AIProviderType,
   onAdc: boolean,
-  hasAdc?: () => Promise<boolean>
+  hasAdc?: () => Promise<boolean>,
+  reportedLimit?: number
 ): AuditAi {
   const create = providerFactory(deps);
   let provider = first;
@@ -296,6 +351,7 @@ function auditAiOn(
       return providerType;
     },
     budget: deps.budget,
+    ...(reportedLimit !== undefined ? { reportedLimit } : {}),
     async ask(stage, messages, options = {}) {
       stopIfAborted(options.signal);
       if (deadKeyError) throw deadKeyError;
