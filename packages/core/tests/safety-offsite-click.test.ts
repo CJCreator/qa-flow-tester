@@ -59,11 +59,18 @@ describe('an off-site click navigation is undone and recorded (T-426)', () => {
         expect.objectContaining({ why: 'off-site-redirect', detail: expect.stringContaining('Partners') }),
       ])
     );
-    // Only the one page the click opened; nothing was done there.
-    expect(offSite).toEqual(['document /landing']);
-    // The page went back to where the click started.
-    const after = visited.slice(visited.indexOf('https://partner.example/landing') + 1);
-    expect(after[0]).toBe(`${origin}/`);
+    // Since T-424 the Domain Allowlist aborts the load itself: the other host gets no request, and the page
+    // stays where the click started.
+    expect(offSite).toEqual([]);
+    expect(visited.filter((u) => !u.startsWith(origin))).toEqual([]);
+    expect(result.skipped?.filter((s) => s.why === 'off-site-redirect')).toHaveLength(1);
+  }, 60_000);
+
+  it('a control repeated on every page lists the off-site address once', async () => {
+    const nav = `<nav><a href="/two">Two</a><button onclick="location.href='https://partner.example/landing'">Partners</button></nav>`;
+    const { result } = await crawl({ '/': html(nav), '/two': html(nav) });
+    expect(result.pages.map((p) => p.urlPath).sort()).toEqual(['/', '/two']);
+    expect(result.skipped?.filter((s) => s.why === 'off-site-redirect')).toHaveLength(1);
   }, 60_000);
 
   it('a click that stays on the host is unchanged', async () => {

@@ -1,3 +1,5 @@
+import { classifyAddress, isPrivateTextHost } from './address-class.js';
+
 /** The host without a leading "www.", lower-cased, so example.com and www.example.com match. */
 function withoutWww(host: string): string {
   return host.toLowerCase().replace(/^www\./, '');
@@ -38,4 +40,27 @@ export function isSitePath(value: string | undefined): boolean {
   } catch {
     return false;
   }
+}
+
+/** True for this machine or a private network: `localhost`, `*.localhost`, or a non-public IP literal. */
+function isPrivateHost(hostname: string): boolean {
+  return isPrivateTextHost(hostname) || classifyAddress(hostname) !== null;
+}
+
+/**
+ * The Domain Allowlist as a check on any address (T-424): the site's host (its `www` twin included) and
+ * every host the person ticked. A Test Copy on this computer or a private network also reaches its other
+ * private hosts, such as an API on another port. Anything that is not http or https is not on it.
+ */
+export function inDomainAllowlist(url: URL, siteUrl: string, allowedHosts: string[] = []): boolean {
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
+  let site: URL;
+  try {
+    site = new URL(siteUrl);
+  } catch {
+    return false;
+  }
+  const host = url.host.toLowerCase();
+  if (isSameSite(host, site.host) || allowedHosts.some((h) => isSameSite(host, h.toLowerCase()))) return true;
+  return isPrivateHost(site.hostname) && isPrivateHost(url.hostname);
 }
