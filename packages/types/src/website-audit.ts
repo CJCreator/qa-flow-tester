@@ -1596,3 +1596,104 @@ export const PROPOSAL_PLACEHOLDERS = [
   { name: 'site.url', description: 'The address of the audited website.' },
   { name: 'date', description: 'The date the Proposal is made (YYYY-MM-DD).' },
 ] as const;
+
+// ---------------------------------------------------------------------------------------------------
+// Competitors (T-416, ADR 0049): three similar public sites, named by the AI and read lightly
+// ---------------------------------------------------------------------------------------------------
+
+/** How many similar sites the AI names. */
+export const COMPETITOR_COUNT = 3;
+/** Pages read per competitor: the homepage plus up to 10 key pages from its menu. */
+export const COMPETITOR_MAX_PAGES = 11;
+
+/** The page types compared side by side; 'other' is never compared. */
+export const COMPETITOR_PAGE_TYPES = ['home', 'pricing', 'services', 'product', 'about', 'contact'] as const;
+export type CompetitorPageType = (typeof COMPETITOR_PAGE_TYPES)[number] | 'other';
+
+/** Ways to get in touch that a page shows. */
+export type CompetitorContactOption = 'phone' | 'email' | 'whatsapp' | 'form' | 'address' | 'chat';
+
+/** One site the AI named, before it is read. */
+export interface CompetitorCandidate {
+  /** Its homepage address (origin only). */
+  url: string;
+  host: string;
+  /** The AI's one-line reason, claim words removed. */
+  reason: string;
+  /** 'refused': it failed the public-address check, so it is never read. */
+  status: 'ok' | 'refused';
+  /** Why it was refused, in plain words. */
+  refusal?: string;
+}
+
+/** What was seen on one page. Facts only: no score, nothing about the whole site (ADR 0018). */
+export interface CompetitorPageFacts {
+  urlPath: string;
+  pageType: CompetitorPageType;
+  title: string | null;
+  /** Section headings in page order. */
+  sections: string[];
+  /** Calls to action: button and action-link text. */
+  ctas: string[];
+  /** Trust signals seen, as fixed labels ("testimonials", "reviews or ratings"...). */
+  trustSignals: string[];
+  contactOptions: CompetitorContactOption[];
+  /** How long the page took to arrive, in ms; null when not measured. */
+  speedMs: number | null;
+}
+
+/** One competitor after the light crawl. */
+export interface CompetitorSite {
+  url: string;
+  host: string;
+  reason: string;
+  /** 'not-read': blocked, refused or out of pages; `notReadReason` says why. */
+  status: 'read' | 'not-read';
+  notReadReason?: string;
+  pages: CompetitorPageFacts[];
+}
+
+/** One page type side by side: the audited site's page and each competitor's (null when it has none). */
+export interface CompetitorComparisonRow {
+  pageType: Exclude<CompetitorPageType, 'other'>;
+  audited: CompetitorPageFacts | null;
+  competitors: Array<{ host: string; page: CompetitorPageFacts | null }>;
+}
+
+/** The competitors of one audit version, as stored in `competitors.json`. */
+export interface CompetitorsState {
+  version: number;
+  discoveredAt: string;
+  candidates: CompetitorCandidate[];
+  crawledAt?: string;
+  sites?: CompetitorSite[];
+  comparison?: CompetitorComparisonRow[];
+}
+
+export interface CompetitorDiscoverBody {
+  version?: number;
+}
+
+export interface CompetitorCrawlBody {
+  version?: number;
+  /** The hosts kept from the stored candidates; any other host is refused. */
+  hosts: string[];
+}
+
+export interface CompetitorsReply {
+  competitors: CompetitorsState;
+}
+
+/** The competitor routes (started from the Improved version screen, never a pipeline stage). */
+export const AUDIT_COMPETITOR_API = {
+  getCompetitors: { method: 'GET', path: '/api/audits/:id/competitors', replies: 'json', access: 'view' },
+  /** One AI call names 3 sites; 409 ERR_NO_AI_KEY without a key. */
+  discoverCompetitors: {
+    method: 'POST',
+    path: '/api/audits/:id/competitors/discover',
+    replies: 'json',
+    access: 'owner',
+  },
+  /** Reads the kept candidates: GET only, paced, robots.txt honoured. */
+  crawlCompetitors: { method: 'POST', path: '/api/audits/:id/competitors/crawl', replies: 'json', access: 'owner' },
+} as const satisfies Record<string, AuditEndpoint>;

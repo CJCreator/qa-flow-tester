@@ -2,6 +2,7 @@ import {
   AUDIT_AI_API,
   AUDIT_AI_STAGES,
   AUDIT_API,
+  AUDIT_COMPETITOR_API,
   AUDIT_LIMIT_DEFAULTS,
   modelForStage,
   type AuditEndpoint,
@@ -43,6 +44,7 @@ import { auditShareRoutes } from './audit-share.js';
 import { auditShortlistRoutes } from './audit-shortlist.js';
 import { auditHelperRoutes } from './audit-helpers.js';
 import { createAuditAiRoutes, type AuditAiRouteDeps } from './audit-ai.js';
+import { auditCompetitorRoutes } from './audit-competitors.js';
 
 export type {
   Route,
@@ -73,6 +75,7 @@ export * from './schedules.js';
 export * from './sessions.js';
 export * from './audit-ai.js';
 export * from './audit-crawl.js';
+export * from './audit-competitors.js';
 export * from './audit-content.js';
 export * from './audit-documents.js';
 export * from './audit-export.js';
@@ -192,6 +195,13 @@ export function buildAuditRoutes(server: RunnerServer): Route[] {
     ...auditShareRoutes({ store, caller, optOutText: async () => (await storedSettings()).optOutText }),
     ...auditShortlistRoutes({ store, caller }),
     ...auditHelperRoutes({ store, access: helperAccess }),
+    // Competitors (T-416): public addresses only on every runner; hosted pages count toward the page cap.
+    ...auditCompetitorRoutes({
+      store,
+      caller,
+      resolveAi,
+      ...(wiring.localRun ? {} : { maxPages: AUDIT_LIMIT_DEFAULTS.hostedMaxPages }),
+    }),
     ...createAuditAiRoutes({
       readModels,
       writeModels: async (models) => {
@@ -249,7 +259,9 @@ function rowsFor(server: RunnerServer): Map<string, Route> {
  * built for the runner on first use (the table is static, the dependencies belong to the runner).
  */
 function contractRows(): Route[] {
-  const entries = Object.entries({ ...AUDIT_API, ...AUDIT_AI_API }) as Array<[string, AuditEndpoint]>;
+  const entries = Object.entries({ ...AUDIT_API, ...AUDIT_AI_API, ...AUDIT_COMPETITOR_API }) as Array<
+    [string, AuditEndpoint]
+  >;
   return entries.map(([, { method, path, access }]) => ({
     method,
     path,
