@@ -23,6 +23,7 @@ import {
   type ExportFormat,
   type PageContent,
   type ExportTranslationReply,
+  type FixOptionsReply,
   type ImproveBestReply,
   type ImproveVariant,
   type StoredDocumentKind,
@@ -53,6 +54,7 @@ import {
   translateDocuments,
   translationCacheName,
   withLabelsOnlyNotice,
+  loadFixOptions,
   type TranslationCache,
 } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
@@ -310,6 +312,33 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
     };
   };
 
+  /** The version's fix options (T-417): stored or new AI options with the owner's key, else by rule. */
+  const fixOptionsOf = async (c: RouteContext, loaded: Loaded) => {
+    const ai = await ownerAi(c);
+    return loadFixOptions({
+      findings: loaded.result.findings,
+      language: loaded.result.language,
+      io: improveIo(store, loaded.auditId, loaded.version),
+      ...(ai ? { ai } : {}),
+      timeoutMs: deps.aiTimeoutMs,
+    }).catch(() => null);
+  };
+
+  const fixOptionsRoute = async (c: RouteContext): Promise<void> => {
+    const common = commonQuery(c.url);
+    if (typeof common === 'string') return invalid(c.res, common);
+    try {
+      const loaded = await load(store, c, common.version);
+      if (!loaded) return;
+      const got = await fixOptionsOf(c, loaded);
+      if (!got) return refuse(c.res, 500, 'ERR_PIPELINE', FAILED);
+      const reply: FixOptionsReply = { options: Object.fromEntries(got.options), ai: got.ai };
+      sendJson(c.res, 200, reply);
+    } catch (err) {
+      refuseStoreFailure(c.res, err, { failed: FAILED });
+    }
+  };
+
   const translationRoute = async (c: RouteContext): Promise<void> => {
     const common = commonQuery(c.url);
     if (typeof common === 'string') return invalid(c.res, common);
@@ -480,6 +509,7 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
       // The Improved version joins every export when a variant passed the checks (T-415).
       const improved = await loadImproved(loaded, format === 'bundle' ? 0 : MAX_EXPORT_THUMBNAILS);
       const translate = await translateHook(c, loaded, common.language);
+      const fixed = await fixOptionsOf(c, loaded);
       const exportOptions: ExportOptions = {
         ...options,
         ...(improved ? { improved } : {}),
@@ -494,6 +524,7 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
           settings: await loadResolvedSettings(settings),
           ...(common.language ? { language: common.language } : {}),
           ...(documents ? { documents } : {}),
+          ...(fixed ? { fixOptions: fixed.options } : {}),
         },
         exportOptions
       );
@@ -596,6 +627,12 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
       path: AUDIT_API.exportImproved.path,
       access: AUDIT_API.exportImproved.access,
       handle: improvedZipRoute,
+    },
+    {
+      method: AUDIT_API.fixOptions.method,
+      path: AUDIT_API.fixOptions.path,
+      access: AUDIT_API.fixOptions.access,
+      handle: fixOptionsRoute,
     },
     {
       method: AUDIT_API.exportTranslation.method,
