@@ -53,3 +53,4 @@ One row per record. The record itself holds the decision, its context and any la
 | [0047](0047-every-audit-page-fully-checked.md) | Every Recorded Page of a Website Audit Is Fully Checked | Accepted, 2026-11-19 (built in T-405) |
 | [0048](0048-parallel-test-workers-in-the-check-up.md) | Parallel Test Workers in the Check-up, and One Retry | Accepted, 2026-11-19 (built in T-408) |
 | [0049](0049-improved-version.md) | The Improved Version: Design Variants, Alternatives and Automatic Competitors | Accepted, 2026-11-19 (built in T-412) |
+| [0050](0050-hosted-pilot-vercel-front-door.md) | The Hosted Pilot: Vercel Front Door, Google Sign-in, a Runner That Sleeps | Accepted, 2026-11-19 (owner's answers in a grilling session) |
