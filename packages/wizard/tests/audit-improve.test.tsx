@@ -57,6 +57,7 @@ function view(over: Partial<ImprovedVersionViewProps> = {}): string {
     onTogglePage: () => undefined,
     onVariantCount: () => undefined,
     onMakeVariants: () => undefined,
+    onTryAgain: () => undefined,
     language: 'en',
     preview: { status: 'idle' },
     onLanguage: () => undefined,
@@ -137,5 +138,58 @@ describe('design variants on the Improved version screen (T-413)', () => {
     const refused = fakeFetch({ error: 'x', code: 'ERR_NO_AI_KEY' }, 409);
     const outcome = await createImprove(AUDIT_ID, body, refused.fetchImpl);
     expect(outcome).toMatchObject({ ok: false, code: 'ERR_NO_AI_KEY' });
+  });
+});
+
+describe('the quality gate on the screen (T-414)', () => {
+  const gated: ImproveListReply = {
+    ...reply,
+    variants: [
+      {
+        page: 'home',
+        variant: 1,
+        style: 'clean',
+        status: 'made',
+        createdAt: '2026-11-19T10:00:00Z',
+        gate: {
+          passed: false,
+          failed: ['citations'],
+          reasons: ['A change does not name a finding or Section of this audit version.'],
+        },
+      },
+      {
+        page: 'home',
+        variant: 2,
+        style: 'bold',
+        status: 'made',
+        createdAt: '2026-11-19T10:00:00Z',
+        gate: { passed: true, failed: [], reasons: [] },
+      },
+    ],
+  };
+
+  it('hides a variant that failed, says which check failed and offers Try again', () => {
+    const html = view({ improve: { status: 'loaded', reply: gated } });
+    expect(html).not.toContain(`href="${variantUrl(AUDIT_ID, 2, 'home', 1)}"`);
+    expect(html).toContain(`href="${variantUrl(AUDIT_ID, 2, 'home', 2)}"`);
+    expect(textOf(html)).toContain(
+      'Variant 1 is not shown: A change does not name a finding or Section of this audit version.'
+    );
+    const button = html.match(/<button [^>]*>Try again<\/button>/)?.[0] ?? '';
+    expect(button).toContain('aria-describedby="variant-home-1-why"');
+    expect(button).toContain('one AI request');
+  });
+
+  it('Try again is off without an AI key, with the reason line', () => {
+    const html = view({ aiReady: false, improve: { status: 'loaded', reply: gated } });
+    const button = html.match(/<button [^>]*>Try again<\/button>/)?.[0] ?? '';
+    expect(button).toContain('disabled=""');
+    expect(button).toContain('aria-describedby="variants-make-reason"');
+  });
+
+  it('Try again asks for the one variant', async () => {
+    const make = fakeFetch({ requests: 1, variants: [] });
+    await createImprove(AUDIT_ID, { version: 2, pages: ['home'], variants: 1, only: 1 }, make.fetchImpl);
+    expect(make.calls[0]!.body).toEqual({ version: 2, pages: ['home'], variants: 1, only: 1 });
   });
 });

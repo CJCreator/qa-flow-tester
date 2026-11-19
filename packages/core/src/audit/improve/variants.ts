@@ -24,6 +24,8 @@ import { stopIfAborted } from '../../abort.js';
 import { generateVariantPage, type PreviewImageFetch } from '../preview/generate.js';
 import { previewFacts, MAX_PREVIEW_IMAGES, type VariantDirection } from '../preview/prompt.js';
 import { siteBrand, type SiteBrand } from './brand.js';
+import { chromium, type Browser } from 'playwright';
+import { gateVariant, labAxeScan, type VariantAxeScan } from './quality-gate.js';
 
 /** The index of every variant made for one version (a version JSON object: `improved/variants.json`). */
 export const IMPROVE_INDEX_NAME = 'improved/variants';
@@ -189,6 +191,8 @@ export interface MakeVariantsOptions {
   signal?: AbortSignal;
   timeoutMs?: number;
   now?: () => Date;
+  /** The quality gate's axe scan (T-414). Default: one lab browser for the whole batch. */
+  scanAxe?: VariantAxeScan;
 }
 
 interface Job {
@@ -276,16 +280,42 @@ export async function makeVariants(
       made.push({ ...base, status: 'failed', problem: 'failed', createdAt: now() });
       return;
     }
+    // The quality gate (T-414): a variant that fails is stored but never shown or served.
+    const gate = await gateVariant(
+      {
+        answer: page.answer,
+        nodes: page.nodes,
+        html: page.html,
+        facts,
+        result: input.result,
+        urlPath: job.page.urlPath,
+      },
+      scanAxe
+    );
     await io.writeFile(variantFileName(job.page.key, job.variant), new TextEncoder().encode(page.html));
-    made.push({ ...base, status: 'made', createdAt: now(), cites: page.cites });
+    made.push({ ...base, status: 'made', createdAt: now(), cites: page.cites, gate });
   };
 
+  // One lab browser for the whole batch, launched on the first scan, unless a scan is given.
+  const lab: { browser?: Promise<Browser> } = {};
+  const scanAxe: VariantAxeScan =
+    options.scanAxe ??
+    (async (html) => {
+      lab.browser ??= chromium.launch({ headless: true, args: ['--disable-extensions'] });
+      return labAxeScan({ browser: await lab.browser })(html);
+    });
+
   const queue = [...jobs];
-  await Promise.all(
-    Array.from({ length: Math.min(CONCURRENCY, queue.length) }, async () => {
-      for (let job = queue.shift(); job; job = queue.shift()) await run(job);
-    })
-  );
+  try {
+    await Promise.all(
+      Array.from({ length: Math.min(CONCURRENCY, queue.length) }, async () => {
+        for (let job = queue.shift(); job; job = queue.shift()) await run(job);
+      })
+    );
+  } finally {
+    const open = lab.browser ? await lab.browser.catch(() => null) : null;
+    await open?.close().catch(() => undefined);
+  }
 
   const order = (v: ImproveVariant) => `${v.page}\u0000${String(v.variant).padStart(2, '0')}`;
   made.sort((a, b) => order(a).localeCompare(order(b)));

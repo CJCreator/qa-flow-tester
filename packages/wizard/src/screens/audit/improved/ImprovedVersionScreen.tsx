@@ -125,6 +125,8 @@ export interface ImprovedVersionViewProps {
   onTogglePage: (key: string) => void;
   onVariantCount: (count: number) => void;
   onMakeVariants: () => void;
+  /** Makes one variant again: one AI request (T-414). */
+  onTryAgain: (page: string, variant: number) => void;
   /** The homepage page for a preview Shared Link (REQ-024). */
   language: ShareLanguage;
   preview: PreviewState;
@@ -147,7 +149,24 @@ function NoKeyReason({ id }: { id: string }) {
   );
 }
 
-function VariantList({ auditId, reply }: { auditId: string; reply: ImproveListReply }) {
+/** Whether a variant may be shown: made, and not refused by the quality gate (T-414). */
+export function variantShown(v: ImproveVariant): boolean {
+  return v.status === 'made' && v.gate?.passed !== false;
+}
+
+function VariantList({
+  auditId,
+  reply,
+  busy,
+  noKey,
+  onTryAgain,
+}: {
+  auditId: string;
+  reply: ImproveListReply;
+  busy: boolean;
+  noKey: boolean;
+  onTryAgain: (page: string, variant: number) => void;
+}) {
   if (reply.variants.length === 0)
     return <p className="mt-3 text-sm text-ink-soft">No design variant has been made for this version yet.</p>;
   const byPage = new Map<string, ImproveVariant[]>();
@@ -161,26 +180,43 @@ function VariantList({ auditId, reply }: { auditId: string; reply: ImproveListRe
             <h3 className="font-semibold">
               {page.layoutGroup ? `${page.urlPath} (${page.layoutGroup})` : `${page.urlPath} (homepage)`}
             </h3>
-            <ul className="mt-1 flex flex-wrap gap-2">
-              {byPage.get(page.key)!.map((v) => (
-                <li key={v.variant}>
-                  {v.status === 'made' ? (
-                    <a
-                      href={variantUrl(auditId, reply.version, v.page, v.variant)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn-quiet btn-sm"
-                      aria-label={`Open variant ${v.variant} (${v.style}) of ${page.urlPath} (opens in a new tab)`}
-                    >
-                      {`Variant ${v.variant}: ${v.style}`}
-                    </a>
-                  ) : (
-                    <span className="text-sm text-ink-soft">
-                      {`Variant ${v.variant}: ${v.problem === 'budget-spent' ? 'not made, the AI Request Budget is spent' : 'the AI gave no usable page'}`}
-                    </span>
-                  )}
-                </li>
-              ))}
+            <ul className="mt-1 space-y-2">
+              {byPage.get(page.key)!.map((v) => {
+                const reasonId = `variant-${v.page}-${v.variant}-why`;
+                return (
+                  <li key={v.variant}>
+                    {variantShown(v) ? (
+                      <a
+                        href={variantUrl(auditId, reply.version, v.page, v.variant)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-quiet btn-sm"
+                        aria-label={`Open variant ${v.variant} (${v.style}) of ${page.urlPath} (opens in a new tab)`}
+                      >
+                        {`Variant ${v.variant}: ${v.style}`}
+                      </a>
+                    ) : (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span id={reasonId} className="text-sm text-ink-soft">
+                          {v.status === 'made'
+                            ? `Variant ${v.variant} is not shown: ${(v.gate?.reasons ?? []).join(' ')}`
+                            : `Variant ${v.variant}: ${v.problem === 'budget-spent' ? 'not made, the AI Request Budget is spent' : 'the AI gave no usable page'}`}
+                        </span>
+                        <button
+                          type="button"
+                          className="btn-quiet btn-sm"
+                          disabled={busy || noKey}
+                          aria-describedby={noKey ? 'variants-make-reason' : reasonId}
+                          aria-label={`Try again: variant ${v.variant} of ${page.urlPath}, one AI request`}
+                          onClick={() => onTryAgain(v.page, v.variant)}
+                        >
+                          Try again
+                        </button>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </li>
         ))}
@@ -303,7 +339,13 @@ export function ImprovedVersionView(props: ImprovedVersionViewProps) {
                   {props.message.text}
                 </p>
               ))}
-            <VariantList auditId={auditId} reply={improve.reply} />
+            <VariantList
+              auditId={auditId}
+              reply={improve.reply}
+              busy={props.making}
+              noKey={noKey}
+              onTryAgain={props.onTryAgain}
+            />
           </>
         )}
       </section>
@@ -479,8 +521,11 @@ export function ImprovedVersionScreen({ auditId, fetchImpl, aiSetup = getAiSetup
     setMessage(null);
     const outcome = await createImprove(auditId, { version, pages: chosen, variants: variantCount }, fetchImpl);
     if (outcome.ok) {
-      const made = outcome.value.variants.filter((v) => v.status === 'made').length;
-      setMessage({ tone: 'pass', text: `${made} of ${outcome.value.variants.length} design variants were made.` });
+      const shown = outcome.value.variants.filter(variantShown).length;
+      setMessage({
+        tone: 'pass',
+        text: `${shown} of ${outcome.value.variants.length} design variants were made and passed the checks.`,
+      });
       const listed = await listImprove(auditId, version, fetchImpl);
       if (listed.ok) setImprove({ status: 'loaded', reply: listed.value });
     } else {
@@ -488,6 +533,32 @@ export function ImprovedVersionScreen({ auditId, fetchImpl, aiSetup = getAiSetup
     }
     setMaking(false);
   }, [auditId, version, chosen, variantCount, fetchImpl]);
+
+  const tryAgain = useCallback(
+    async (page: string, variant: number) => {
+      setMaking(true);
+      setMessage(null);
+      const outcome = await createImprove(
+        auditId,
+        { version, pages: [page], variants: variant, only: variant },
+        fetchImpl
+      );
+      if (outcome.ok) {
+        const v = outcome.value.variants[0];
+        setMessage(
+          v && variantShown(v)
+            ? { tone: 'pass', text: `Variant ${variant} was made again and passed the checks.` }
+            : { tone: 'fail', text: `Variant ${variant} was made again but still did not pass the checks.` }
+        );
+        const listed = await listImprove(auditId, version, fetchImpl);
+        if (listed.ok) setImprove({ status: 'loaded', reply: listed.value });
+      } else {
+        setMessage({ tone: 'fail', text: outcome.message });
+      }
+      setMaking(false);
+    },
+    [auditId, version, fetchImpl]
+  );
 
   return (
     <Page width="workspace">
@@ -529,6 +600,7 @@ export function ImprovedVersionScreen({ auditId, fetchImpl, aiSetup = getAiSetup
           }
           onVariantCount={setVariantCount}
           onMakeVariants={() => void makeVariants()}
+          onTryAgain={(page, variant) => void tryAgain(page, variant)}
           language={language}
           preview={preview}
           onLanguage={setLanguage}

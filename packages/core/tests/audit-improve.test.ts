@@ -125,6 +125,8 @@ function mockAi(answer?: (messages: AIMessage[]) => string, budget?: number) {
 }
 
 const text = (bytes: Uint8Array | undefined) => new TextDecoder().decode(bytes);
+/** No Chromium in the unit tier: the gate's axe scan finds nothing. */
+const scanAxe = async () => ({ blockers: 0 });
 
 describe('the pages of the Improved version', () => {
   it('are the homepage plus one Sample Page per Layout Group', () => {
@@ -173,7 +175,7 @@ describe('design variants (T-413)', () => {
     const estimate = improveEstimate(pages.length, 3, improvePriceFor('mock', null));
     const made = await makeVariants(
       { result: r, edits: emptyOverlay(), language: 'en', pages, variants: 3 },
-      { io, ai: await mock.ai(), now: () => new Date('2026-11-19T10:00:00Z') }
+      { io, scanAxe, ai: await mock.ai(), now: () => new Date('2026-11-19T10:00:00Z') }
     );
 
     expect(mock.calls).toHaveLength(6);
@@ -210,7 +212,7 @@ describe('design variants (T-413)', () => {
     const r = result();
     await makeVariants(
       { result: r, edits: emptyOverlay(), language: 'ta', pages: improvePages(r).slice(1), variants: 2 },
-      { io, ai: await mock.ai() }
+      { io, scanAxe, ai: await mock.ai() }
     );
     const systems = mock.calls.map((m) => m[0]!.content);
     expect(systems[0]).toMatch(/one website page/);
@@ -234,12 +236,12 @@ describe('design variants (T-413)', () => {
     const first = mockAi();
     await makeVariants(
       { result: r, edits: emptyOverlay(), language: 'en', pages: [pages[0]!], variants: 3 },
-      { io, ai: await first.ai() }
+      { io, scanAxe, ai: await first.ai() }
     );
     const again = mockAi();
     const made = await makeVariants(
       { result: r, edits: emptyOverlay(), language: 'en', pages: [pages[0]!], variants: 3, only: 2 },
-      { io, ai: await again.ai() }
+      { io, scanAxe, ai: await again.ai() }
     );
     expect(again.calls).toHaveLength(1);
     expect(made.requests).toBe(1);
@@ -252,7 +254,7 @@ describe('design variants (T-413)', () => {
     const r = result();
     const made = await makeVariants(
       { result: r, edits: emptyOverlay(), language: 'en', pages: improvePages(r), variants: 3 },
-      { io, ai: await mock.ai() }
+      { io, scanAxe, ai: await mock.ai() }
     );
     expect(mock.calls).toHaveLength(2);
     expect(made.requests).toBe(2);
@@ -265,7 +267,7 @@ describe('design variants (T-413)', () => {
     const r = result();
     const made = await makeVariants(
       { result: r, edits: emptyOverlay(), language: 'en', pages: [improvePages(r)[0]!], variants: 1 },
-      { io, ai: await mock.ai() }
+      { io, scanAxe, ai: await mock.ai() }
     );
     expect(made.variants).toEqual([expect.objectContaining({ status: 'failed', problem: 'failed' })]);
     expect(io.files.has(variantFileName('home', 1))).toBe(false);
