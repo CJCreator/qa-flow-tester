@@ -1,6 +1,6 @@
 # 0046: Adaptive Fetch Concurrency in the Website Audit
 
-Status: Proposed, 2026-11-19 (owner's answers in a grilling session, 2026-11-19; technical sign-off item 6). Supersedes the fixed numbers of [0043](0043-parallel-page-fetching-in-the-website-audit.md): 3 in flight and the spider's ceiling of 5 workers. The back-off rules of 0043 stay.
+Status: Accepted, 2026-11-19 (built: see docs/tickets/INDEX.md). Proposed 2026-11-19 (owner's answers in a grilling session, 2026-11-19; technical sign-off item 6). Supersedes the fixed numbers of [0043](0043-parallel-page-fetching-in-the-website-audit.md): 3 in flight and the spider's ceiling of 5 workers. The back-off rules of 0043 stay.
 
 ## Context
 - The owner wants a 5,000-page site fully tested in under 2 hours on the local runner, which is about one page every 1.4 s.

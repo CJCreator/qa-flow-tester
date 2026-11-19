@@ -50,7 +50,7 @@ Plan: [ENHANCEMENT-PLAN-2026-11.md](ENHANCEMENT-PLAN-2026-11.md), with one file 
 | [T-401](enhance-2026-11/T-401-audit-trap-limit-500.md) | Audit trap limit of 500 per address shape | P3 | P2 | S | 2 | built | T-400 |
 | [T-402](enhance-2026-11/T-402-hosted-page-cap-shown-and-applied.md) | The hosted page cap is shown and applied the same way | O15 | P2 | S | 2 | built | T-394 |
 | [T-410](enhance-2026-11/T-410-shared-chromium-for-pdf-exports.md) | One shared Chromium for PDF exports | P1 | P3 | S | 2 | built | - |
-| [T-391](enhance-2026-11/T-391-every-export-prints-the-same-count.md) | Every export prints the same count | P2 | P2 | S | 3 | todo | T-389 |
+| [T-391](enhance-2026-11/T-391-every-export-prints-the-same-count.md) | Every export prints the same count | P2 | P2 | S | 3 | built | T-389 |
 | [T-403](enhance-2026-11/T-403-adaptive-fetch-concurrency.md) | Adaptive fetch concurrency (ADR 0046) | P1 | P1 | M | 3 | built | T-401, T-411 |
 | [T-409](enhance-2026-11/T-409-one-retry-video-on-retry.md) | One retry; video only on the retry | P1 | P1 | S | 3 | built | T-389 |
 | [T-404](enhance-2026-11/T-404-lab-work-off-the-crawl-workers.md) | Lab work off the crawl workers | P1 | P1 | M | 4 | built | T-403 |

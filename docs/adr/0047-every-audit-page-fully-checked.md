@@ -1,6 +1,6 @@
 # 0047: Every Recorded Page of a Website Audit Is Fully Checked
 
-Status: Proposed, 2026-11-19 (owner's answer in a grilling session, 2026-11-19: "every page fully tested"; technical sign-off item 3). Changes the Website Audit rule in `docs/PRODUCT_GUIDE.md` that browser checks run only on Sample Pages. Sample Pages keep their meaning in the Check-up (Plan Items) and for the Improved version (one page per Layout Group, ADR 0049).
+Status: Accepted, 2026-11-19 (built: see docs/tickets/INDEX.md). Proposed 2026-11-19 (owner's answer in a grilling session, 2026-11-19: "every page fully tested"; technical sign-off item 3). Changes the Website Audit rule in `docs/PRODUCT_GUIDE.md` that browser checks run only on Sample Pages. Sample Pages keep their meaning in the Check-up (Plan Items) and for the Improved version (one page per Layout Group, ADR 0049).
 
 ## Context
 - Today only Sample Pages (3 per Layout Group, `plan/sampling.ts:5`) get the axe scan, the lab timing reload and the phone-layout screenshot (`audit/pipeline/page-recorder.ts`).

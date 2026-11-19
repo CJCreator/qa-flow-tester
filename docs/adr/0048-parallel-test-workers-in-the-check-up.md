@@ -1,6 +1,6 @@
 # 0048: Parallel Test Workers in the Check-up, and One Retry
 
-Status: Proposed, 2026-11-19 (owner's answers in a grilling session, 2026-11-19; technical sign-off items 9 and 10).
+Status: Accepted, 2026-11-19 (built: see docs/tickets/INDEX.md). Proposed 2026-11-19 (owner's answers in a grilling session, 2026-11-19; technical sign-off items 9 and 10).
 
 ## Context
 - The Check-up runs every Test one after another. Its loop is `for (const testCase of testCasesToRun)` with `for (const bp of sizesFor(testCase))` inside (`packages/core/src/orchestrator.ts:648,667`).
