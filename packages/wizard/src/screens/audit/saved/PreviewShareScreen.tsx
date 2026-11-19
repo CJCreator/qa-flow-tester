@@ -4,7 +4,7 @@ import { useConfirm } from '../../../components/ConfirmDialog';
 import { ErrorMessage, Notice, Spinner } from '../../../components/text';
 import { LoadError, Page, PageHeader } from '../../../components/ui';
 import { formatDay, formatWhen } from '../../../lib/format';
-import { Link, PATHS } from '../../../lib/router';
+import { PATHS } from '../../../lib/router';
 import { useDocumentTitle } from '../../../lib/title';
 import { AuditTabs } from '../AuditTabs';
 import { loadVersion, versionsOldestFirst } from './saved-api';
@@ -14,26 +14,17 @@ import {
   SHARED_LINK_WARNING,
   SHARE_KINDS,
   SHARE_LANGUAGES,
-  createPreview,
   createSharedLink,
   expiryText,
   languageName,
   linkState,
   listSharedLinks,
-  previewUrl,
   revokeAfterConfirm,
   sharedLinkAddress,
   withLink,
   type Fetch,
   type ShareLanguage,
 } from './share-api';
-
-/** The preview panel: idle, being written, written, or refused. */
-export type PreviewState =
-  | { status: 'idle' }
-  | { status: 'making' }
-  | { status: 'made'; createdAt: string }
-  | { status: 'failed'; message: string; noAiKey: boolean };
 
 export type LinksState =
   { status: 'loading' } | { status: 'failed'; message: string } | { status: 'loaded'; links: ShareLink[] };
@@ -45,8 +36,6 @@ export interface PreviewShareViewProps {
   /** Finished versions, oldest first. */
   versions: AuditVersion[];
   version: number;
-  previewLanguage: ShareLanguage;
-  preview: PreviewState;
   kind: ShareLinkKind;
   shareLanguage: ShareLanguage;
   /** The Shared Link just made, shown in full with its copy button. */
@@ -59,8 +48,6 @@ export interface PreviewShareViewProps {
   origin: string;
   now?: Date;
   onVersion: (version: number) => void;
-  onPreviewLanguage: (language: ShareLanguage) => void;
-  onMakePreview: () => void;
   onKind: (kind: ShareLinkKind) => void;
   onShareLanguage: (language: ShareLanguage) => void;
   onCreateLink: () => void;
@@ -218,9 +205,9 @@ function LinkList({
   );
 }
 
-/** The preview and Shared Link panels, without state. */
+/** The Shared Link panels, without state. The Improved version has its own tab (ADR 0049). */
 export function PreviewShareView(props: PreviewShareViewProps) {
-  const { auditId, versions, version, preview, busy, message, links } = props;
+  const { versions, version, busy, message, links } = props;
   if (versions.length === 0) {
     return (
       <p className="max-w-prose text-ink-soft">
@@ -247,66 +234,6 @@ export function PreviewShareView(props: PreviewShareViewProps) {
           ))}
         </select>
       </div>
-
-      <section aria-labelledby="preview-title" className="card-1 bg-surface p-4">
-        <h2 id="preview-title" className="text-xl font-bold">
-          Improved homepage preview
-        </h2>
-        <p className="mt-1 max-w-prose text-sm text-ink-soft">
-          The AI writes an improved homepage from this version's findings. It is a preview for the site owner: nothing
-          on the site changes.
-        </p>
-        <div className="mt-4 flex flex-wrap items-end gap-3">
-          <LanguageSelect id="preview-language" value={props.previewLanguage} onChange={props.onPreviewLanguage} />
-          <button
-            type="button"
-            className="btn-quiet"
-            disabled={busy || preview.status === 'making'}
-            onClick={props.onMakePreview}
-          >
-            {preview.status === 'making' ? <Spinner label="Making the preview…" /> : 'Make preview'}
-          </button>
-          {/* Always a link: a preview made in an earlier visit can still be opened. */}
-          <a
-            href={previewUrl(auditId, version)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-quiet"
-            aria-label={`Open preview of version ${version} (opens in a new tab)`}
-            aria-describedby={preview.status !== 'made' ? 'preview-open-reason' : undefined}
-          >
-            Open preview
-          </a>
-        </div>
-        {preview.status !== 'made' && (
-          <p id="preview-open-reason" className="mt-2 text-sm text-ink-soft">
-            Opens the last preview made for this version. If there isn’t one yet, make it first.
-          </p>
-        )}
-        {preview.status === 'made' && (
-          <p role="status" className="mt-3 text-sm font-semibold text-pass">
-            {`The preview is ready (${formatWhen(preview.createdAt)}). Open it to check it.`}
-          </p>
-        )}
-        {preview.status === 'failed' && (
-          <div className="mt-3">
-            {preview.noAiKey ? (
-              <Notice
-                title="An AI key is needed"
-                actions={
-                  <Link to={PATHS.settings} className="btn-link">
-                    Add an AI key in Settings
-                  </Link>
-                }
-              >
-                {preview.message}
-              </Notice>
-            ) : (
-              <ErrorMessage>{preview.message}</ErrorMessage>
-            )}
-          </div>
-        )}
-      </section>
 
       <section aria-labelledby="new-link-title" className="card-1 bg-surface p-4">
         <h2 id="new-link-title" className="text-xl font-bold">
@@ -388,7 +315,7 @@ function browserOrigin(): string {
   return typeof window === 'undefined' ? '' : window.location.origin;
 }
 
-/** Make and open the improved-homepage preview, and make, list and revoke Shared Links (REQ-024). */
+/** Make, list and revoke Shared Links (REQ-024). The Improved version moved to its own tab (ADR 0049). */
 export function PreviewShareScreen({
   auditId,
   version: initialVersion,
@@ -398,8 +325,6 @@ export function PreviewShareScreen({
   const { confirm, dialog } = useConfirm();
   const [versions, setVersions] = useState<Versions>({ status: 'loading' });
   const [version, setVersion] = useState<number>(initialVersion ?? 0);
-  const [previewLanguage, setPreviewLanguage] = useState<ShareLanguage>('en');
-  const [preview, setPreview] = useState<PreviewState>({ status: 'idle' });
   const [kind, setKind] = useState<ShareLinkKind>('pitch');
   const [shareLanguage, setShareLanguage] = useState<ShareLanguage>('en');
   const [created, setCreated] = useState<ShareLink | null>(null);
@@ -408,7 +333,7 @@ export function PreviewShareScreen({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<ShareMessage>(null);
   const [attempt, setAttempt] = useState(0);
-  useDocumentTitle('Preview and Shared Links');
+  useDocumentTitle('Shared Links');
 
   useEffect(() => {
     let live = true;
@@ -439,16 +364,6 @@ export function PreviewShareScreen({
       live = false;
     };
   }, [auditId, fetchImpl, attempt]);
-
-  const makePreview = useCallback(async () => {
-    setPreview({ status: 'making' });
-    const outcome = await createPreview(auditId, version, previewLanguage, fetchImpl);
-    setPreview(
-      outcome.ok
-        ? { status: 'made', createdAt: outcome.value.createdAt }
-        : { status: 'failed', message: outcome.message, noAiKey: outcome.code === 'ERR_NO_AI_KEY' }
-    );
-  }, [auditId, version, previewLanguage, fetchImpl]);
 
   const createLink = useCallback(async () => {
     setBusy(true);
@@ -512,8 +427,8 @@ export function PreviewShareScreen({
     <Page width="workspace">
       <PageHeader
         back={{ to: PATHS.audits, label: 'All Website Audits' }}
-        title="Preview and Shared Links"
-        lede="Show the site owner an improved homepage, or give them a link to a document. Nothing is sent for you."
+        title="Shared Links"
+        lede="Give the site owner a link to the Pitch Glimpse or the Improved version. Nothing is sent for you."
       />
       <AuditTabs auditId={auditId} version={version > 0 ? version : undefined} current="share" />
       {versions.status === 'loading' && <Spinner label="Loading the Website Audit…" />}
@@ -527,8 +442,6 @@ export function PreviewShareScreen({
           auditId={auditId}
           versions={versions.versions}
           version={version}
-          previewLanguage={previewLanguage}
-          preview={preview}
           kind={kind}
           shareLanguage={shareLanguage}
           created={created}
@@ -537,12 +450,7 @@ export function PreviewShareScreen({
           busy={busy}
           message={message}
           origin={origin}
-          onVersion={(next) => {
-            setVersion(next);
-            setPreview({ status: 'idle' });
-          }}
-          onPreviewLanguage={setPreviewLanguage}
-          onMakePreview={() => void makePreview()}
+          onVersion={setVersion}
           onKind={setKind}
           onShareLanguage={setShareLanguage}
           onCreateLink={() => void createLink()}
