@@ -30,7 +30,7 @@ Findings: A8. Priority P1, size M, wave 4, depends on T-85 (shares `server.ts`).
 - tests: `packages/runner/tests/adr-0037-0015.test.ts`, `route-access.test.ts`, `helper-access.test.ts`, and `packages/wizard/tests/audit-nav.test.tsx`.
 
 **Scope:**
-- **Owner on a beta copy:** whoever holds the access key, or a Google sign-in (the existing Helper sign-in) whose email is in `AUDIT_OWNER_EMAILS`. Such a caller passes `owner` audit rows on the beta copy. Everyone else is refused as today.
+- **Owner on a beta copy:** a Google sign-in (the existing Helper sign-in) whose email is in `AUDIT_OWNER_EMAILS`. Such a caller passes `owner` audit rows on the beta copy. Everyone else is refused as today. The access key alone does not make an owner (T-297, `packages/runner/tests/beta-key-not-audit-owner.test.ts`).
 - **`AUDIT_DAILY_LIMIT`:** audit starts per owner email per UTC day. Unset means unlimited. Reaching it answers `ERR_BETA_LIMIT`.
 - **Wizard:**
   - `/api/runner/status` gains `auditOwner`;
