@@ -34,7 +34,7 @@ export interface AuditExportFile {
 }
 
 export interface ExportOptions {
-  /** Prints HTML to PDF; the Chromium printer (`render-pdf.ts`) by default. Each call starts its own browser. */
+  /** Prints HTML to PDF; the Chromium printer (`render-pdf.ts`) by default. The calls share one lazily launched browser (T-410). */
   renderPdf?: (html: string) => Promise<Buffer>;
 }
 

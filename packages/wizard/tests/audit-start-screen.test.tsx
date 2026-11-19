@@ -310,3 +310,33 @@ describe('Website Audit start screen: wording (CONTEXT.md, ADR 0029, ADR 0033)',
     expect(formSource).toMatch(/import \{[^}]*\bvalidateAuditStartBody\b[^}]*\} from '@qa\/types\/src\/browser\.js'/);
   });
 });
+
+describe('the shared copy page cap (T-402)', () => {
+  it('uses the status value as the input bound and in the hint', () => {
+    const html = fields({ maxPagesCap: 200 });
+    expect(tagWithId(html, 'audit-maxPages')).toContain('max="200"');
+    expect(html).toContain('From 1 to 200 on this shared copy. Larger sites: run your own copy.');
+  });
+
+  it('follows a different status value', () => {
+    const html = fields({ maxPagesCap: 120 });
+    expect(tagWithId(html, 'audit-maxPages')).toContain('max="120"');
+    expect(html).toContain('From 1 to 120 on this shared copy.');
+  });
+
+  it('keeps the fixed bound and hint on a local runner', () => {
+    const html = fields();
+    expect(tagWithId(html, 'audit-maxPages')).toContain('max="1000"');
+    expect(html).toContain('From 1 to 1000.');
+    expect(html).not.toContain('shared copy');
+  });
+
+  it('refuses a number over the cap before any request', () => {
+    const form = { ...initialAuditStartForm(), address: 'https://example.com', maxPages: '500' };
+    const over = checkAuditStartForm(form, 200);
+    expect(over.ok).toBe(false);
+    if (!over.ok) expect(over.errors.maxPages).toContain('From 1 to 200 on this shared copy');
+    expect(checkAuditStartForm({ ...form, maxPages: '200' }, 200).ok).toBe(true);
+    expect(checkAuditStartForm(form).ok).toBe(true);
+  });
+});

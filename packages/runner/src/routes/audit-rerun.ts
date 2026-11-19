@@ -19,6 +19,8 @@ import type { AuditCaller } from './audit-store.js';
 import { refuse } from './audit-common.js';
 import {
   AUDIT_BUSY,
+  AUDIT_HOSTED_PAGES,
+  AUDIT_INVALID,
   AUDIT_NOT_FOUND_STREAM,
   AUDIT_START_FAILED,
   auditPipelineStep,
@@ -90,6 +92,13 @@ export function createAuditRerunRoutes(deps: AuditRerunRouteDeps): Route[] {
       request = { url: latest.url, limits: latest.limits, language: latest.language };
     } catch {
       return sendJson(res, 500, { error: AUDIT_START_FAILED });
+    }
+
+    // The same refusal as a start: a saved audit over the shared copy's cap is not quietly cut down.
+    if (deps.maxPages !== undefined && request.limits.maxPages > deps.maxPages) {
+      return refuse(res, 400, 'ERR_INVALID_AUDIT', AUDIT_INVALID, {
+        fields: { maxPages: AUDIT_HOSTED_PAGES(deps.maxPages) },
+      });
     }
 
     const slot = slotOf(context);
