@@ -1077,7 +1077,7 @@ export class DeterministicSpider {
               debugLog('crawl', 'attempting mid-crawl session recovery', { role: options.role });
               try {
                 recovered = await options.reloginHandler();
-              } catch (rErr) {
+              } catch {
                 debugLog('crawl', 'mid-crawl session recovery failed', { role: options.role });
               }
               // A sign-in that succeeds is not yet a restored session: the retried route must load (the reset

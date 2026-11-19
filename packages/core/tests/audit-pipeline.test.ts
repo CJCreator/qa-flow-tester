@@ -90,7 +90,6 @@ const CRAWL_PAGES: AuditCrawlPage[] = [
   crawlPage('/products/item-3', 1, 'layout-2'),
   crawlPage('/products/item-4', 1, 'layout-2'),
 ];
-const SAMPLE_PATHS = ['/', '/about', '/products/item-1', '/products/item-2', '/products/item-3'];
 
 function crawlResult(): AuditCrawlResult {
   return {
