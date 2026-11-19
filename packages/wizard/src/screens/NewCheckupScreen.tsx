@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { WorkingLine, workingId } from '../components/DisabledReason';
 import type { RunSummary } from '@qa/types';
 import {
   checkDomainProof,
@@ -1298,9 +1299,16 @@ function DomainProofPanel({ url }: { url: string }) {
           {problem}
         </p>
       )}
-      <button type="button" className="btn-link mt-2 text-sm" disabled={busy} onClick={() => setAttempt((n) => n + 1)}>
+      <button
+        type="button"
+        className="btn-link mt-2 text-sm"
+        disabled={busy}
+        aria-describedby={workingId(busy)}
+        onClick={() => setAttempt((n) => n + 1)}
+      >
         {busy ? 'Checking…' : 'Check again'}
       </button>
+      <WorkingLine busy={busy} />
     </div>
   );
 }

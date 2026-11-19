@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
+import { WorkingLine, workingId } from './DisabledReason';
 import type { Finding } from '@qa/types';
 import { readRunText, runFileUrl } from '../api';
 import { bugReportMarkdown, playwrightFromSteps } from '../lib/summary';
@@ -10,12 +11,14 @@ import { Spinner } from './text';
  */
 export function CopyButton({ label, getText }: { label: string; getText: () => Promise<string> }) {
   const [state, setState] = useState<'idle' | 'working' | 'copied' | { manual: string }>('idle');
+  const workId = `${useId()}-copying`;
   return (
     <div>
       <button
         type="button"
         className="btn-quiet btn-sm"
         disabled={state === 'working'}
+        aria-describedby={workingId(state === 'working', workId)}
         onClick={() => {
           void (async () => {
             setState('working');
@@ -32,6 +35,7 @@ export function CopyButton({ label, getText }: { label: string; getText: () => P
       >
         {state === 'working' ? <Spinner label="Copying…" /> : label}
       </button>
+      <WorkingLine busy={state === 'working'} id={workId} className="inline-block" />
       <span role="status" className="ml-2 text-sm text-pass">
         {state === 'copied' ? 'Copied' : ''}
       </span>

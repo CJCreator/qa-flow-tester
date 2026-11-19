@@ -109,11 +109,11 @@ Reads a public website and writes documents the user edits and exports. No Plan,
 
 ## Disabled actions
 
-A disabled button says why in a line next to it (the button's `aria-describedby` points at that line).
+Every disabled button says why in a line next to it (the button's `aria-describedby` points at that line). The line is plain and specific ("Enter the address first", "Tick at least one Section to approve first"). While a screen is busy, the line is one shared "Working…" in a live region. `DisabledReason.tsx` renders both, and `tests/disabled-reasons.test.tsx` fails when a disabled button has no line.
 
 - **Start the check-up** (New check-up): waiting for the AI setup; enter the address first; checking the address; the address cannot be reached; say whether it is a test copy; fix the custom headers.
 - **Compare the two sites** (Benchmark): a comparison is running; enter your site's address; enter the other site's address.
-- **Save key** (AI key field): off until the key checks as valid. A reason line sits beside it (`KeyField.tsx:154-160`); the status line under the field shows the error for a wrong key. Other screens: gap W20.
+- **Save key** (AI key field): off until the key checks as valid. A reason line sits beside it (`KeyField.tsx:154-160`); the status line under the field shows the error for a wrong key.
 
 ## Safety
 

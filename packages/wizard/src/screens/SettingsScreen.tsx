@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { DisabledReason, WorkingLine, reasonId, workingId } from '../components/DisabledReason';
 import {
   addSchedule,
   addSiteSignIn,
@@ -430,9 +431,18 @@ function PaidKey({
       />
       <div className="flex flex-wrap items-center gap-3">
         {/* The first key is the one thing to do; once a key exists the model choice is the primary. */}
-        <button type="submit" className={configured ? 'btn-quiet' : 'btn-primary'} disabled={saving || !key.trim()}>
+        <button
+          type="submit"
+          className={configured ? 'btn-quiet' : 'btn-primary'}
+          disabled={saving || !key.trim()}
+          aria-describedby={saving ? 'ai-key-working' : reasonId('ai-key-empty-reason', !key.trim())}
+        >
           {saving ? <Spinner label="Saving…" /> : configured ? 'Save the new key' : `Use ${name}`}
         </button>
+        <WorkingLine busy={saving} id="ai-key-working" />
+        <DisabledReason id="ai-key-empty-reason" when={!saving && !key.trim()}>
+          Paste your key first
+        </DisabledReason>
         <Feedback result={error ? { ok: false, text: error } : saved} />
       </div>
     </form>
@@ -588,9 +598,16 @@ function ModelChoice({ setup, onSaved }: { setup: AiSetup; onSaved: () => void }
       )}
 
       <div className="flex flex-wrap items-center gap-3">
-        <button type="button" className="btn-primary" disabled={saving} onClick={() => void save()}>
+        <button
+          type="button"
+          className="btn-primary"
+          disabled={saving}
+          aria-describedby={workingId(saving)}
+          onClick={() => void save()}
+        >
           {saving ? <Spinner label="Saving…" /> : 'Save the model choice'}
         </button>
+        <WorkingLine busy={saving} />
         <Feedback result={result} />
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -1083,9 +1100,18 @@ function CheckupSchedules() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <button type="submit" disabled={saving || !targetUrl.trim()} className="btn-quiet min-h-[44px]">
+            <button
+              type="submit"
+              disabled={saving || !targetUrl.trim()}
+              aria-describedby={saving ? 'schedule-working' : reasonId('schedule-address-reason', !targetUrl.trim())}
+              className="btn-quiet min-h-[44px]"
+            >
               {saving ? <Spinner label="Saving…" /> : 'Save the schedule'}
             </button>
+            <WorkingLine busy={saving} id="schedule-working" />
+            <DisabledReason id="schedule-address-reason" when={!saving && !targetUrl.trim()}>
+              Enter the address first
+            </DisabledReason>
             <button type="button" onClick={() => setShowAddForm(false)} className="btn-link min-h-[44px]">
               Cancel
             </button>
@@ -1296,9 +1322,20 @@ function AddSignIn({ host, onSaved }: { host: string; onSaved: () => void }) {
         ) : null}
       </div>
       <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
-        <button type="submit" className="btn-quiet min-h-[44px]" disabled={busy || !username.trim() || !password}>
+        <button
+          type="submit"
+          className="btn-quiet min-h-[44px]"
+          disabled={busy || !username.trim() || !password}
+          aria-describedby={
+            busy ? 'sign-in-test-working' : reasonId('sign-in-test-reason', !username.trim() || !password)
+          }
+        >
           {busy ? 'Signing in…' : 'Test and save'}
         </button>
+        <WorkingLine busy={busy} id="sign-in-test-working" />
+        <DisabledReason id="sign-in-test-reason" when={!busy && (!username.trim() || !password)}>
+          Enter the username and the password first
+        </DisabledReason>
         <button type="button" className="btn-link min-h-[44px] text-sm" onClick={() => setOpen(false)}>
           Close
         </button>

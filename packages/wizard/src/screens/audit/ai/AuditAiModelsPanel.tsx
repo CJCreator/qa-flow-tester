@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { DisabledReason, WORKING_ID, WorkingLine, reasonId } from '../../../components/DisabledReason';
 import { Spinner, StatusMessage } from '../../../components/text';
 import { LoadError } from '../../../components/ui';
 import {
@@ -89,12 +90,28 @@ export function AuditAiModelsView({
         })}
       </div>
       <div className="flex flex-wrap items-center gap-3">
-        <button type="button" className="btn-quiet" disabled={!pending || saving} onClick={onSave}>
+        <button
+          type="button"
+          className="btn-quiet"
+          disabled={!pending || saving}
+          aria-describedby={saving ? WORKING_ID : reasonId('ai-models-nothing-changed', !pending)}
+          onClick={onSave}
+        >
           {saving ? <Spinner label="Saving…" /> : 'Save AI models'}
         </button>
-        <button type="button" className="btn-quiet" disabled={!pending || saving} onClick={onDiscard}>
+        <button
+          type="button"
+          className="btn-quiet"
+          disabled={!pending || saving}
+          aria-describedby={saving ? WORKING_ID : reasonId('ai-models-nothing-changed', !pending)}
+          onClick={onDiscard}
+        >
           Discard unsaved changes
         </button>
+        <WorkingLine busy={saving} />
+        <DisabledReason id="ai-models-nothing-changed" when={!pending && !saving}>
+          Change a model first
+        </DisabledReason>
         <p className="text-sm text-ink-soft" aria-live="polite">
           {pending ? 'You have changes that are not saved yet.' : 'Every change is saved.'}
         </p>

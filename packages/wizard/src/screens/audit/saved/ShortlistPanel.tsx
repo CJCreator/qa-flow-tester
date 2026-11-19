@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { DisabledReason, WORKING_ID, WorkingLine, reasonId } from '../../../components/DisabledReason';
 import { SHORTLIST_OUTCOMES, type ShortlistEntry, type ShortlistMark } from '@qa/types/src/browser.js';
 import { formatWhen } from '../../../lib/format';
 import {
@@ -124,9 +125,19 @@ export function ShortlistPanelView({ saved, draft, saving, message, onDraft, onS
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <button type="button" className="btn-quiet btn-sm" disabled={!changed || saving} onClick={onSave}>
+        <button
+          type="button"
+          className="btn-quiet btn-sm"
+          disabled={!changed || saving}
+          aria-describedby={saving ? WORKING_ID : reasonId('shortlist-nothing-changed', !changed)}
+          onClick={onSave}
+        >
           {saving ? 'Saving…' : 'Save the Shortlist entry'}
         </button>
+        <WorkingLine busy={saving} />
+        <DisabledReason id="shortlist-nothing-changed" when={!changed && !saving}>
+          Change the mark or a note first
+        </DisabledReason>
         {message && (
           <p
             role={message.tone === 'fail' ? 'alert' : 'status'}

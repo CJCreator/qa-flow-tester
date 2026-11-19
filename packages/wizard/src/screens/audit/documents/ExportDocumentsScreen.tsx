@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { DisabledReason, WORKING_ID, reasonId } from '../../../components/DisabledReason';
 import {
   AUDIT_DOCUMENT_KINDS,
   type AuditDocumentKind,
@@ -208,8 +209,18 @@ export function ExportDocumentsView({
 }: ExportDocumentsViewProps) {
   const off = blockedReason !== null || busy !== null || checking || loadError !== null;
   const documentsHref = exportUrl(auditId, choice, version);
+  const offId = busy !== null ? WORKING_ID : reasonId('export-off-reason', off);
+  const offText =
+    blockedReason ??
+    (checking ? 'Checking this version…' : 'This version could not be read, so nothing can be downloaded.');
   return (
     <div className="space-y-12">
+      <DisabledReason id={WORKING_ID} when={busy !== null}>
+        Working…
+      </DisabledReason>
+      <DisabledReason id="export-off-reason" when={off && busy === null}>
+        {offText}
+      </DisabledReason>
       {blockedReason !== null && (
         <Notice tone="warn" title="Download is not available yet">
           {blockedReason}
@@ -285,7 +296,13 @@ export function ExportDocumentsView({
               Tick at least one Audit Document to download.
             </p>
           ) : (
-            <button type="button" className="btn-primary" disabled={off} onClick={() => onDownload('documents')}>
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={off}
+              aria-describedby={offId}
+              onClick={() => onDownload('documents')}
+            >
               {`Download the Audit Documents (${FORMAT_SHORT[choice.format]}, ${LANGUAGE_LABEL[choice.language]})`}
             </button>
           )}
@@ -315,7 +332,13 @@ export function ExportDocumentsView({
           onChange={(format) => onPitch({ ...pitch, format })}
         />
         <div className="mt-5 flex flex-wrap items-center gap-4">
-          <button type="button" className={DOWNLOAD_QUIET} disabled={off} onClick={() => onDownload('pitch')}>
+          <button
+            type="button"
+            className={DOWNLOAD_QUIET}
+            disabled={off}
+            aria-describedby={offId}
+            onClick={() => onDownload('pitch')}
+          >
             {`Download the Pitch Glimpse (${FORMAT_SHORT[pitch.format]}, ${LANGUAGE_LABEL[pitch.language]})`}
           </button>
           <DownloadStatus kind="pitch" busy={busy} done={done} error={error} errorKind={errorKind} />
@@ -344,7 +367,13 @@ export function ExportDocumentsView({
           onChange={(format) => onOwner({ ...owner, format })}
         />
         <div className="mt-5 flex flex-wrap items-center gap-4">
-          <button type="button" className={DOWNLOAD_QUIET} disabled={off} onClick={() => onDownload('owner')}>
+          <button
+            type="button"
+            className={DOWNLOAD_QUIET}
+            disabled={off}
+            aria-describedby={offId}
+            onClick={() => onDownload('owner')}
+          >
             {`Download the Owner Audit (${FORMAT_SHORT[owner.format]}, ${LANGUAGE_LABEL[owner.language]})`}
           </button>
           <DownloadStatus kind="owner" busy={busy} done={done} error={error} errorKind={errorKind} />

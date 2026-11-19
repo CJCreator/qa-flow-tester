@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { DisabledReason, WORKING_ID, WorkingLine, reasonId, workingId } from '../../../components/DisabledReason';
 import type { AuditSettingsReply, AuditSettingsUpdate, CompanyDetails } from '@qa/types/src/browser.js';
 import { useConfirm } from '../../../components/ConfirmDialog';
 import { InlineStatus, Spinner } from '../../../components/text';
@@ -119,6 +120,7 @@ export function DocumentSettingsView({
           type="button"
           className="btn-quiet btn-sm"
           disabled={saving}
+          aria-describedby={workingId(saving)}
           aria-label="Put the default Proposal template back"
           onClick={() =>
             void ask(
@@ -181,6 +183,7 @@ export function DocumentSettingsView({
                 type="button"
                 className="btn-quiet btn-sm mt-2"
                 disabled={saving}
+                aria-describedby={workingId(saving)}
                 aria-label={`Put the default ${LANGUAGE_LABEL[language]} opt-out text back`}
                 onClick={() =>
                   void ask(
@@ -296,6 +299,7 @@ export function DocumentSettingsView({
             type="button"
             className="btn-quiet btn-sm"
             disabled={saving}
+            aria-describedby={workingId(saving)}
             aria-label="Remove the saved PageSpeed key"
             onClick={() =>
               void ask('', 'The saved PageSpeed key is deleted and this saves at once.', removePagespeedKey())
@@ -314,13 +318,29 @@ export function DocumentSettingsView({
                 {pending ? 'You have changes that are not saved yet.' : 'Every change is saved.'}
               </span>
               <InlineStatus message={message} />
+              <WorkingLine busy={saving} />
+              <DisabledReason id="settings-nothing-changed" when={!pending && !saving}>
+                Change something first
+              </DisabledReason>
             </>
           }
         >
-          <button type="button" className="btn-quiet" disabled={!pending || saving} onClick={() => void discard()}>
+          <button
+            type="button"
+            className="btn-quiet"
+            disabled={!pending || saving}
+            aria-describedby={saving ? WORKING_ID : reasonId('settings-nothing-changed', !pending)}
+            onClick={() => void discard()}
+          >
             Discard changes
           </button>
-          <button type="button" className="btn-primary" disabled={!pending || saving} onClick={onSave}>
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={!pending || saving}
+            aria-describedby={saving ? WORKING_ID : reasonId('settings-nothing-changed', !pending)}
+            onClick={onSave}
+          >
             {saving ? <Spinner label="Saving…" /> : 'Save document settings'}
           </button>
         </BottomActionBar>
