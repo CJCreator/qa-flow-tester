@@ -68,7 +68,7 @@ Plan: [ENHANCEMENT-PLAN-2026-11.md](ENHANCEMENT-PLAN-2026-11.md), with one file 
 | [T-415](enhance-2026-11/T-415-before-after-download-exports-pitch.md) | Before/after, HTML download, exports, Pitch thumbnail | P4 | P1 | M | 8 | built | T-414, T-410 |
 | [T-420](enhance-2026-11/T-420-full-ai-translation-of-exports.md) | Full AI translation of exports | O19 | P2 | M | 9 | todo | T-419, T-415 |
 | [T-421](enhance-2026-11/T-421-click-time-sensitive-action-gate.md) | A click-time Sensitive Action gate | T-397 | P1 | M | 5 | built | T-408 |
-| [T-423](enhance-2026-11/T-423-spider-click-under-guard-page.md) | The Spider's exploring click runs under `guardPage` | T-397 | P2 | S | 5 | todo | - |
+| [T-423](enhance-2026-11/T-423-spider-click-under-guard-page.md) | The Spider's exploring click runs under `guardPage` | T-397 | P2 | S | 5 | built | - |
 | [T-422](enhance-2026-11/T-422-form-submit-and-enter-protection.md) | `form.submit`, `requestSubmit` and Enter protection in Test runs | T-397 | P1 | M | 6 | todo | T-421 |
 | [T-426](enhance-2026-11/T-426-off-site-click-navigation-undone.md) | An off-site click navigation is undone and recorded | T-397 | P2 | S | 6 | todo | T-423 |
 | [T-424](enhance-2026-11/T-424-host-allowlist-on-subrequests-iframes-redirects.md) | A host allowlist on subrequests, iframes and redirects | T-397 | P1 | L | 7 | todo | T-422 |
