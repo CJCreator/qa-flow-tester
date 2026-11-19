@@ -129,7 +129,7 @@ describe('orchestrator deletes the evidence when redaction fails (T-393)', () =>
 
   const expectDeletedAndLogged = async (dir: string, warn: ReturnType<typeof vi.spyOn>) => {
     expect(await fs.readdir(dir)).toEqual([]);
-    const logged = warn.mock.calls.map((c) => String(c[0])).join('\n');
+    const logged = warn.mock.calls.map((c: unknown[]) => String(c[0])).join('\n');
     expect(logged).toContain('Evidence redaction failed');
     expect(logged).not.toContain(PASSWORD);
   };

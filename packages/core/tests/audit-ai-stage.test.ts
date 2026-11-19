@@ -455,7 +455,7 @@ describe('T-398: one AI request counter per audit run', () => {
     if (!resolved.ok) throw new Error('expected AI');
     expect(resolved.ai.budget).toBe(budget);
 
-    for (const stage of ['assessment', 'recommendations', 'preview'] as const) {
+    for (const stage of ['assessment', 'documents', 'preview'] as const) {
       expect((await resolved.ai.ask(stage, MESSAGES)).ok).toBe(true);
     }
     const site = await assessSite(
