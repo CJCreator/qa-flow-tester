@@ -1,6 +1,6 @@
 # 0049: The Improved Version: Design Variants, Alternatives and Automatic Competitors
 
-Status: Proposed, 2026-11-19 (owner's answers in a grilling session, 2026-11-19; technical sign-off items 13 to 17). Extends REQ-024 (improved-homepage preview, `packages/core/src/audit/preview/`) and REQ-030 (Section rewrite, `audit/ai/rewrite.ts`).
+Status: Accepted, 2026-11-19 (built: see docs/tickets/INDEX.md). Proposed 2026-11-19 (owner's answers in a grilling session, 2026-11-19; technical sign-off items 13 to 17). Extends REQ-024 (improved-homepage preview, `packages/core/src/audit/preview/`) and REQ-030 (Section rewrite, `audit/ai/rewrite.ts`).
 
 ## Context
 - The owner wants a website audit to give "alternatives and an enhanced version".

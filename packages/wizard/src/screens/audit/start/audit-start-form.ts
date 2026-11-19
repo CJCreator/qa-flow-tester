@@ -101,6 +101,23 @@ export const AUDIT_FIELD_HINTS: Readonly<Record<AuditFormField, string>> = {
   excludePaths: `Optional. One path per line, such as /admin, up to ${AUDIT_LIMIT_BOUNDS.maxPathPrefixes}. Pages under these paths become Skipped Pages.`,
 };
 
+/**
+ * The most pages the form accepts: the shared copy's cap when the runner reports one (`auditMaxPages` in
+ * /api/runner/status), never above the fixed bound.
+ */
+export function pagesBound(cap?: number | null): number {
+  return typeof cap === 'number' && Number.isInteger(cap) && cap >= 1
+    ? Math.min(cap, AUDIT_LIMIT_BOUNDS.maxPages)
+    : AUDIT_LIMIT_BOUNDS.maxPages;
+}
+
+/** The hint under Most pages: with a cap, it names the shared copy and the way out. */
+export function maxPagesHint(cap?: number | null): string {
+  const bound = pagesBound(cap);
+  if (bound === AUDIT_LIMIT_BOUNDS.maxPages) return AUDIT_FIELD_HINTS.maxPages;
+  return `From ${AUDIT_LIMIT_BOUNDS.minPages} to ${bound} on this shared copy. Larger sites: run your own copy.`;
+}
+
 /** A typed number: empty or not a number stays NaN, so the shared check refuses it with its own message. */
 function numberOf(text: string): number {
   const trimmed = text.trim();
@@ -132,9 +149,12 @@ export type AuditFormCheck = { ok: true; body: AuditStartBody } | { ok: false; e
  * Checks the form with the shared validator. On success the body carries the normalised address and the
  * de-duplicated paths, ready to send; on failure there is one message per wrong field and nothing is sent.
  */
-export function checkAuditStartForm(form: AuditStartForm): AuditFormCheck {
+export function checkAuditStartForm(form: AuditStartForm, maxPagesCap?: number | null): AuditFormCheck {
   const check = validateAuditStartBody(toAuditStartBody(form));
   if (!check.ok) return { ok: false, errors: check.errors };
+  if (check.value.limits.maxPages > pagesBound(maxPagesCap)) {
+    return { ok: false, errors: { maxPages: maxPagesHint(maxPagesCap) } };
+  }
   const { url, limits } = check.value;
   return {
     ok: true,

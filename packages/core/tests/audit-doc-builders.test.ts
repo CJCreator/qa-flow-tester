@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { AUDIT_AREAS, sectionText, type DocumentLanguage, type EditOverlay } from '@qa/types';
+import {
+  AUDIT_AREAS,
+  countFindingRules,
+  findingsAndRulesText,
+  sectionText,
+  type DocumentLanguage,
+  type EditOverlay,
+} from '@qa/types';
 import {
   buildEditedView,
   emptyOverlay,
@@ -422,5 +429,22 @@ describe('languages and claim wording', () => {
     for (const [, build] of BUILDERS) build(view);
     buildFindingsDocument(view, { showEffort: false });
     expect(view).toEqual(before);
+  });
+});
+
+describe('Findings document header: findings and rules (T-390)', () => {
+  it('shows the same two numbers as Saved audits', () => {
+    const result = auditDocResult();
+    const md = renderMarkdown(buildFindingsDocument(viewOf()));
+    expect(md).toContain(findingsAndRulesText(result.findings.length, countFindingRules(result.findings)));
+    expect(md).not.toContain('Counted after the edits');
+  });
+
+  it('counts after the edits, and says so, when edits remove pages', () => {
+    const view = viewOf({ removePages: [PATHS.services] });
+    const md = renderMarkdown(buildFindingsDocument(view));
+    expect(view.result.findings.length).toBeLessThan(auditDocResult().findings.length);
+    expect(md).toContain(findingsAndRulesText(view.result.findings.length, countFindingRules(view.result.findings)));
+    expect(md).toContain('Counted after the edits: 1 page was removed, with its findings.');
   });
 });

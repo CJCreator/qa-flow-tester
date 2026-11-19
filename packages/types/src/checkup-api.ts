@@ -190,4 +190,6 @@ export interface RunnerStatusReply {
    * email in AUDIT_OWNER_EMAILS (ADR 0042, T-86).
    */
   auditOwner?: boolean;
+  /** The shared copy's page cap for a Website Audit (T-402); absent on a local runner. */
+  auditMaxPages?: number;
 }

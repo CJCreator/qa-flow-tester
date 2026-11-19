@@ -599,6 +599,10 @@ describe('AUDIT_API', () => {
       ['GET', '/api/audits/:id/owner'],
       ['POST', '/api/audits/:id/preview'],
       ['GET', '/api/audits/:id/preview'],
+      // T-413 Improved version
+      ['POST', '/api/audits/:id/improve'],
+      ['GET', '/api/audits/:id/improve'],
+      ['GET', '/api/audits/:id/improve/:page/:variant'],
       // BE-022 Shared Links
       ['POST', '/api/audits/:id/share'],
       ['GET', '/api/audits/:id/share'],
@@ -641,7 +645,8 @@ describe('AUDIT_API', () => {
       expect(ownerOnly).toContain(name);
     }
     // Anything that spends the tool user's AI key is owner-only: Helpers never use the keys.
-    for (const name of ['start', 'rerun', 'createPreview', 'runRewrite']) expect(ownerOnly).toContain(name);
+    for (const name of ['start', 'rerun', 'createPreview', 'createImprove', 'runRewrite'])
+      expect(ownerOnly).toContain(name);
   });
 
   it('types the request and reply of every route', () => {

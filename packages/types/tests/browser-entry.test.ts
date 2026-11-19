@@ -138,6 +138,7 @@ describe('the browser-safe entry into @qa/types (T-211)', () => {
       'input-rules.js',
       'verdict.js',
       'problems.js',
+      'count-summary.js',
       'site-map.js',
       'context-parse.js',
       'evidence-finding.js',

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { DiscoveredFlow, FindingSeverity } from '@qa/types';
 import { SEVERITY_ORDER } from '@qa/types/src/browser.js';
+import { countBreakdown, PROBLEMS_THAT_COUNT } from '@qa/types/src/browser.js';
 import { SiteMap, type MapPage, type PageStatus } from '../components/SiteMap';
 import { RunFailure } from '../components/RunStates';
 import { FocusHeading } from '../components/text';
@@ -241,8 +242,15 @@ export function TestingScreen({
 
           <section aria-labelledby="found-title">
             <h2 id="found-title" className="mb-2 text-xl font-bold text-ink">
-              Found so far: {count(problems.length, 'problem', 'problems')}
+              {selected || !feed.summary
+                ? `Found so far: ${count(problems.length, 'problem', 'problems')}`
+                : `${PROBLEMS_THAT_COUNT}: ${feed.summary.problems}`}
             </h2>
+            {!selected && feed.summary && (
+              <p className="mb-2 text-sm text-ink-soft" data-testid="live-count-breakdown">
+                {countBreakdown(feed.summary, { live: true })}
+              </p>
+            )}
             {selected && (
               <p className="mb-2 text-sm text-ink">
                 On <span className="break-all font-mono">{selected}</span>{' '}

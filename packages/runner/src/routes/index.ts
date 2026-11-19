@@ -4,6 +4,7 @@ import {
   AUDIT_API,
   AUDIT_COMPETITOR_API,
   AUDIT_LIMIT_DEFAULTS,
+  modelForStage,
   type AuditEndpoint,
   type EditOverlay,
   type PageContent,
@@ -12,6 +13,7 @@ import {
   AuditAiModelsStore,
   RewriteStore,
   generatePreview,
+  improvePriceFor,
   hasGoogleAdc,
   pageContentName,
   resolveAuditAi,
@@ -37,6 +39,7 @@ import {
 } from './audit-settings.js';
 import { auditExportRoutes } from './audit-export.js';
 import { auditPreviewRoutes } from './audit-preview.js';
+import { auditImproveRoutes } from './audit-improve.js';
 import { auditShareRoutes } from './audit-share.js';
 import { auditShortlistRoutes } from './audit-shortlist.js';
 import { auditHelperRoutes } from './audit-helpers.js';
@@ -78,6 +81,7 @@ export * from './audit-documents.js';
 export * from './audit-export.js';
 export * from './audit-helpers.js';
 export * from './audit-preview.js';
+export * from './audit-improve.js';
 export * from './audit-rerun.js';
 export * from './audit-settings.js';
 export * from './audit-share.js';
@@ -154,6 +158,7 @@ export function buildAuditRoutes(server: RunnerServer): Route[] {
     resolveServiceKey,
     allowPrivateAddresses: wiring.localRun,
     claimAuditLimit: wiring.claimAuditLimit,
+    ...(wiring.targetAccepted ? { targetAccepted: wiring.targetAccepted } : {}),
     ...(wiring.localRun ? {} : { maxPages: AUDIT_LIMIT_DEFAULTS.hostedMaxPages }),
     ...(wiring.crawl ? { crawl: wiring.crawl } : {}),
     ...(wiring.checkAddress ? { checkAddress: wiring.checkAddress } : {}),
@@ -175,6 +180,18 @@ export function buildAuditRoutes(server: RunnerServer): Route[] {
     ...auditSettingsRoutes({ settings, pagespeedKey }),
     ...auditExportRoutes({ store, settings }),
     ...auditPreviewRoutes({ store, caller, resolveAi, generate: generatePreview }),
+    ...auditImproveRoutes({
+      store,
+      caller,
+      resolveAi,
+      usdPerRequest: async () => {
+        const resolved = await resolveAi();
+        if (!resolved.ok) return null;
+        const setup = await wiring.readAiModels();
+        const model = modelForStage('preview', await readModels(), { text: setup.text, vision: setup.vision });
+        return improvePriceFor(resolved.ai.provider, model);
+      },
+    }),
     ...auditShareRoutes({ store, caller, optOutText: async () => (await storedSettings()).optOutText }),
     ...auditShortlistRoutes({ store, caller }),
     ...auditHelperRoutes({ store, access: helperAccess }),

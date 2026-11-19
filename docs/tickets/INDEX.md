@@ -45,24 +45,24 @@ Plan: [ENHANCEMENT-PLAN-2026-11.md](ENHANCEMENT-PLAN-2026-11.md), with one file 
 | [T-399](enhance-2026-11/T-399-docs-match-the-code.md) | Docs match the code | O4, O5, O6, O12, O17, O19 | P2 | S | 1 | built | - |
 | [T-400](enhance-2026-11/T-400-sitemap-seeding-up-to-the-page-limit.md) | Sitemap seeding up to the page limit | P3 | P1 | S | 1 | built | - |
 | [T-411](enhance-2026-11/T-411-benchmark-harness-and-baseline.md) | Benchmark harness and baseline | - | P1 | M | 1 | built | - |
-| [T-389](enhance-2026-11/T-389-one-count-live-and-final.md) | One count, live and final (`countSummary`) | P2 | P1 | M | 2 | todo | T-393 |
-| [T-390](enhance-2026-11/T-390-audit-counts-findings-and-rules.md) | Website Audit counts say findings and rules | O16 | P2 | S | 2 | todo | T-411 |
-| [T-401](enhance-2026-11/T-401-audit-trap-limit-500.md) | Audit trap limit of 500 per address shape | P3 | P2 | S | 2 | todo | T-400 |
-| [T-402](enhance-2026-11/T-402-hosted-page-cap-shown-and-applied.md) | The hosted page cap is shown and applied the same way | O15 | P2 | S | 2 | todo | T-394 |
-| [T-410](enhance-2026-11/T-410-shared-chromium-for-pdf-exports.md) | One shared Chromium for PDF exports | P1 | P3 | S | 2 | todo | - |
-| [T-391](enhance-2026-11/T-391-every-export-prints-the-same-count.md) | Every export prints the same count | P2 | P2 | S | 3 | todo | T-389 |
-| [T-403](enhance-2026-11/T-403-adaptive-fetch-concurrency.md) | Adaptive fetch concurrency (ADR 0046) | P1 | P1 | M | 3 | todo | T-401, T-411 |
-| [T-409](enhance-2026-11/T-409-one-retry-video-on-retry.md) | One retry; video only on the retry | P1 | P1 | S | 3 | todo | T-389 |
-| [T-404](enhance-2026-11/T-404-lab-work-off-the-crawl-workers.md) | Lab work off the crawl workers | P1 | P1 | M | 4 | todo | T-403 |
-| [T-408](enhance-2026-11/T-408-parallel-check-up-test-workers.md) | Parallel Check-up test workers (ADR 0048) | P1 | P1 | L | 4 | todo | T-409, T-411 |
-| [T-405](enhance-2026-11/T-405-every-audit-page-fully-checked.md) | Every audit page fully checked (ADR 0047) | P3 | P1 | M | 5 | todo | T-404 |
+| [T-389](enhance-2026-11/T-389-one-count-live-and-final.md) | One count, live and final (`countSummary`) | P2 | P1 | M | 2 | built | T-393 |
+| [T-390](enhance-2026-11/T-390-audit-counts-findings-and-rules.md) | Website Audit counts say findings and rules | O16 | P2 | S | 2 | built | T-411 |
+| [T-401](enhance-2026-11/T-401-audit-trap-limit-500.md) | Audit trap limit of 500 per address shape | P3 | P2 | S | 2 | built | T-400 |
+| [T-402](enhance-2026-11/T-402-hosted-page-cap-shown-and-applied.md) | The hosted page cap is shown and applied the same way | O15 | P2 | S | 2 | built | T-394 |
+| [T-410](enhance-2026-11/T-410-shared-chromium-for-pdf-exports.md) | One shared Chromium for PDF exports | P1 | P3 | S | 2 | built | - |
+| [T-391](enhance-2026-11/T-391-every-export-prints-the-same-count.md) | Every export prints the same count | P2 | P2 | S | 3 | built | T-389 |
+| [T-403](enhance-2026-11/T-403-adaptive-fetch-concurrency.md) | Adaptive fetch concurrency (ADR 0046) | P1 | P1 | M | 3 | built | T-401, T-411 |
+| [T-409](enhance-2026-11/T-409-one-retry-video-on-retry.md) | One retry; video only on the retry | P1 | P1 | S | 3 | built | T-389 |
+| [T-404](enhance-2026-11/T-404-lab-work-off-the-crawl-workers.md) | Lab work off the crawl workers | P1 | P1 | M | 4 | built | T-403 |
+| [T-408](enhance-2026-11/T-408-parallel-check-up-test-workers.md) | Parallel Check-up test workers (ADR 0048) | P1 | P1 | L | 4 | built | T-409, T-411 |
+| [T-405](enhance-2026-11/T-405-every-audit-page-fully-checked.md) | Every audit page fully checked (ADR 0047) | P3 | P1 | M | 5 | built | T-404 |
 | [T-412](enhance-2026-11/T-412-improved-version-tab.md) | The Improved version tab (ADR 0049) | P4 | P1 | S | 5 | built | - |
 | [T-406](enhance-2026-11/T-406-ai-assessment-streams-in-batches.md) | AI assessment streams with the crawl, in batches | P1 | P1 | M | 6 | todo | T-405, T-398 |
-| [T-413](enhance-2026-11/T-413-design-variants-per-layout-group.md) | Design variants per Layout Group | P4 | P1 | L | 6 | todo | T-412, T-398 |
-| [T-416](enhance-2026-11/T-416-automatic-competitors.md) | Automatic competitors | P4 | P2 | L | 6 | todo | T-412, T-398 |
-| [T-417](enhance-2026-11/T-417-fix-options-per-finding.md) | Fix options per finding | P4 | P2 | M | 6 | todo | T-390, T-412 |
+| [T-413](enhance-2026-11/T-413-design-variants-per-layout-group.md) | Design variants per Layout Group | P4 | P1 | L | 6 | built | T-412, T-398 |
+| [T-416](enhance-2026-11/T-416-automatic-competitors.md) | Automatic competitors | P4 | P2 | L | 6 | built | T-412, T-398 |
+| [T-417](enhance-2026-11/T-417-fix-options-per-finding.md) | Fix options per finding | P4 | P2 | M | 6 | built | T-390, T-412 |
 | [T-407](enhance-2026-11/T-407-checkpoint-and-resume-audits.md) | Checkpoint and Resume for audits | P3, O7 | P1 | L | 7 | todo | T-406 |
-| [T-414](enhance-2026-11/T-414-variant-quality-gate.md) | Variant quality gate | P4 | P1 | M | 7 | todo | T-413 |
+| [T-414](enhance-2026-11/T-414-variant-quality-gate.md) | Variant quality gate | P4 | P1 | M | 7 | built | T-413 |
 | [T-418](enhance-2026-11/T-418-competitor-examples-in-improved-version.md) | Competitor examples in the Improved version | P4 | P2 | M | 7 | todo | T-416, T-413 |
 | [T-419](enhance-2026-11/T-419-copy-variants-in-batches.md) | Copy variants in batches | P4 | P2 | M | 7 | todo | T-417 |
 | [T-415](enhance-2026-11/T-415-before-after-download-exports-pitch.md) | Before/after, HTML download, exports, Pitch thumbnail | P4 | P1 | M | 8 | todo | T-414, T-410 |

@@ -127,8 +127,10 @@ export interface CrawlOptions {
    * pacing; share it with the run's other fetches (`makeOutboundFetch({ pacer })`).
    */
   pacer?: HostPacer;
-  /** Number of concurrent page evaluations (1 to 5, default 2). */
+  /** Number of concurrent page evaluations (1 to `maxConcurrency`, default 2). */
   concurrency?: number;
+  /** The most workers `concurrency` may ask for (default 5). The Website Audit passes its pacer's ceiling (ADR 0046). */
+  maxConcurrency?: number;
   /** Custom HTTP headers sent with every request (e.g. X-QA-Bypass-Token). */
   customHeaders?: Record<string, string>;
   /** Folder for a small screenshot of each page, shown on the plan map. None when absent. */
@@ -506,7 +508,7 @@ export class DeterministicSpider {
   }
 
   async crawl(context: BrowserContext, targetUrl: string, options: CrawlOptions = {}): Promise<SpiderResult> {
-    const concurrency = Math.max(1, Math.min(5, options.concurrency ?? 2));
+    const concurrency = Math.max(1, Math.min(options.maxConcurrency ?? 5, options.concurrency ?? 2));
     const pageDelayMs = options.pageDelayMs !== undefined ? options.pageDelayMs : 100;
     const maxAttempts = options.maxAttempts ?? this.maxPages * 3;
     const stopAfterWalls = options.stopAfterWalls ?? 3;
@@ -628,6 +630,8 @@ export class DeterministicSpider {
      * address was never reached by a shorter path, so a page is never both recorded and skipped.
      */
     const tooDeep = new Map<string, string>();
+    /** Sitemap addresses found once the page limit was queued (T-400), by route key: listed when the crawl ends. */
+    const sitemapOverLimit = new Map<string, string>();
 
     const enqueue = (rawUrl: string, depth: number, isStart = false) => {
       if (options.signal?.aborted || sessionLost || startRedirectedOffSite || stoppedAnswering) return;
@@ -706,9 +710,8 @@ export class DeterministicSpider {
       const sitemapOnSite = (u: URL) =>
         (u.protocol === 'http:' || u.protocol === 'https:') && (sameSiteUrl(u, site) || onSite(u));
       try {
-        // Up to the page limit (T-400): each address past it is a `page-limit` Skipped Page, so recorded +
-        // skipped covers every unique sitemap address.
-        const overLimit = new Set<string>();
+        // Up to the page limit (T-400): each address past it is a `page-limit` Skipped Page once the crawl
+        // ends, unless a link queued it meanwhile, so recorded + skipped covers every unique sitemap address.
         await seedFromSitemaps({
           site,
           fetch: outboundFetch,
@@ -722,9 +725,8 @@ export class DeterministicSpider {
           },
           overLimit: (u) => {
             const norm = normRoute(u.toString());
-            if (frontier.has(norm.key) || refusedKeys.has(norm.key) || overLimit.has(norm.key)) return;
-            overLimit.add(norm.key);
-            skip({ urlPath: redactUrl(norm.path), why: 'page-limit' });
+            if (frontier.has(norm.key) || refusedKeys.has(norm.key) || sitemapOverLimit.has(norm.key)) return;
+            sitemapOverLimit.set(norm.key, redactUrl(norm.path));
           },
         });
       } catch (err) {
@@ -1631,6 +1633,11 @@ export class DeterministicSpider {
         const norm = normRoute(left.url);
         if (!frontier.isVisited(norm.key)) skip({ urlPath: redactUrl(norm.path), why: 'page-limit' });
       }
+    }
+
+    // Sitemap addresses past the page limit (T-400) that no link queued: the ones queued were listed above.
+    for (const [key, urlPath] of sitemapOverLimit) {
+      if (!frontier.has(key)) skip({ urlPath, why: 'page-limit' });
     }
 
     // Found only beyond the max depth: one entry per address never reached by a shorter path.

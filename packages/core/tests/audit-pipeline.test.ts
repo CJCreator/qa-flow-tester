@@ -19,7 +19,7 @@ import type {
   PageSpeed,
   RoadmapItem,
 } from '@qa/types';
-import { AUDIT_AREAS, MARKETING_SIGNALS } from '@qa/types';
+import { AUDIT_AREAS, MARKETING_SIGNALS, countFindingRules } from '@qa/types';
 
 const { fakeFetch } = vi.hoisted(() => ({ fakeFetch: vi.fn() }));
 vi.mock('../src/checker-fetch.js', () => ({
@@ -399,7 +399,7 @@ afterEach(async () => {
 });
 
 describe('audit pipeline: page recorder (stage 1, inside the crawl hook)', () => {
-  it('reads every page once and runs accessibility then phone layout on Sample Pages only', async () => {
+  it('reads every page once and runs accessibility then phone layout on every page (ADR 0047)', async () => {
     const stages = pageStages();
     const recorder = await recordCrawl(stages);
     // Same page again (the crawl reporting it twice) is not visited again.
@@ -407,21 +407,21 @@ describe('audit pipeline: page recorder (stage 1, inside the crawl hook)', () =>
 
     expect(stages.readPage).toHaveBeenCalledTimes(CRAWL_PAGES.length);
     expect(calls.filter((c) => c.startsWith('read:'))).toEqual(CRAWL_PAGES.map((p) => `read:${p.urlPath}`));
-    expect(calls.filter((c) => c.startsWith('a11y:'))).toEqual(SAMPLE_PATHS.map((p) => `a11y:${p}`));
-    expect(calls.filter((c) => c.startsWith('phone:'))).toEqual(SAMPLE_PATHS.map((p) => `phone:${p}`));
+    expect(calls.filter((c) => c.startsWith('a11y:'))).toEqual(CRAWL_PAGES.map((p) => `a11y:${p.urlPath}`));
+    expect(calls.filter((c) => c.startsWith('phone:'))).toEqual(CRAWL_PAGES.map((p) => `phone:${p.urlPath}`));
     // Per page: read, then accessibility, then phone layout (it resizes the page).
     expect(calls.slice(0, 3)).toEqual(['read:/', 'a11y:/', 'phone:/']);
 
     const covered = recorder.pages.find((p) => p.info.urlPath === '/products/item-4')!;
     expect(covered.coverage).toBe('covered');
     expect(covered.sampleUrlPath).toBe('/products/item-1');
-    expect(covered.accessibility).toBeUndefined();
-    expect(covered.phone).toBeUndefined();
+    expect(covered.accessibility).toBeTruthy();
+    expect(covered.phone).toBeTruthy();
     expect(recorder.layoutGroups().get('/products/item-4')).toBe('group-1');
 
     // Unique testCaseId per page so checker ids never collide.
     const ids = vi.mocked(stages.recordPhoneLayout!).mock.calls.map((c) => c[1].testCaseId);
-    expect(new Set(ids).size).toBe(SAMPLE_PATHS.length);
+    expect(new Set(ids).size).toBe(CRAWL_PAGES.length);
   });
 
   it('never throws: a page that cannot be read is kept as unread and the crawl goes on', async () => {
@@ -497,10 +497,12 @@ describe('audit pipeline: runAuditPipeline', () => {
     expect(analysisInput.startPath).toBe('/');
     expect(analysisInput.skippedPaths).toEqual(['/login']);
     expect(analysisInput.statusByPath).toEqual({ '/gone': 404 });
-    expect(analysisInput.accessibility.map((a) => a.urlPath)).toEqual(SAMPLE_PATHS);
+    expect(analysisInput.accessibility.map((a) => a.urlPath)).toEqual(CRAWL_PAGES.map((p) => p.urlPath));
 
-    // Speed for Sample Pages only, by absolute address.
-    expect(vi.mocked(stages.measureSampleSpeeds!).mock.calls[0][0]).toEqual(SAMPLE_PATHS.map((p) => `${ORIGIN}${p}`));
+    // Speed for every page (ADR 0047; PSI caps at 20), by absolute address.
+    expect(vi.mocked(stages.measureSampleSpeeds!).mock.calls[0][0]).toEqual(
+      CRAWL_PAGES.map((p) => `${ORIGIN}${p.urlPath}`)
+    );
 
     // Assessment: every recorded page goes to the pool (using aiInFlight: 4), with per-page ai progress
     const assessCall = vi.mocked(stages.assessPages!).mock.calls[0][0];
@@ -525,8 +527,8 @@ describe('audit pipeline: runAuditPipeline', () => {
       expect(p.phone!.screenshotPath).toMatch(/^phone\//);
     }
 
-    // Findings: 6 rule + 5 accessibility from the analysis, 5 phone findings, plus 1 site-caused skipped finding (/gone).
-    expect(result.findings).toHaveLength(17);
+    // Findings: 6 rule + 6 accessibility from the analysis, 6 phone findings (every page, ADR 0047), plus 1 site-caused skipped finding (/gone).
+    expect(result.findings).toHaveLength(19);
     const ids = result.findings.map((f) => f.id);
     expect(ids).toEqual(ids.map((_, i) => `AF-${String(i + 1).padStart(3, '0')}`));
     // Ranked: impact high first, then lower effort.
@@ -534,7 +536,7 @@ describe('audit pipeline: runAuditPipeline', () => {
     const ranks = result.findings.map((f) => order[f.impact]);
     expect([...ranks].sort((a, b) => a - b)).toEqual(ranks);
     const phoneFindings = result.findings.filter((f) => f.rule === 'tap-target');
-    expect(phoneFindings).toHaveLength(5);
+    expect(phoneFindings).toHaveLength(6);
     expect(phoneFindings[0]).toMatchObject({
       rule: 'tap-target',
       source: 'checker',
@@ -581,7 +583,7 @@ describe('audit pipeline: runAuditPipeline', () => {
 
     // Citations: rule findings cite real Sections; whole-page checker findings are reported, never dropped.
     expect(citationProblems.every((c) => c.kind === 'missing-section')).toBe(true);
-    expect(result.findings).toHaveLength(17);
+    expect(result.findings).toHaveLength(19);
 
     // Saved through the store: Page Content per page, phone screenshots, the result, then the version.
     expect(mem.results).toHaveLength(1);
@@ -599,9 +601,15 @@ describe('audit pipeline: runAuditPipeline', () => {
       finishedAt: '2026-11-03T00:05:00.000Z',
       pagesRecorded: 6,
       pagesSkipped: 2,
-      findings: 17,
+      findings: 19,
+      rules: countFindingRules(result.findings),
       documents: [],
     });
+    // Saved counts (T-390): one finding per rule and page; rules are distinct, AI advice left out.
+    const rules = new Set(result.findings.filter((f) => f.source !== 'ai' && !f.advisory).map((f) => f.rule));
+    expect(rules.size).toBeGreaterThan(0);
+    expect(rules.size).toBeLessThan(19);
+    expect(countFindingRules(result.findings)).toBe(rules.size);
     expect(result).toMatchObject({
       auditId: AUDIT_ID,
       version: 1,
@@ -661,8 +669,8 @@ describe('audit pipeline: runAuditPipeline', () => {
     expect(result.siteAreas.find((a) => a.area === 'content')!.grade).toBeNull();
     expect(result.marketing.signals.every((s) => s.status === 'not-checked')).toBe(true);
     expect(result.pages).toHaveLength(CRAWL_PAGES.length);
-    // 5 phone findings + 1 skipped page finding (/gone).
-    expect(result.findings.map((f) => f.area)).toEqual(Array(6).fill('usability'));
+    // 6 phone findings (every page, ADR 0047) + 1 skipped page finding (/gone).
+    expect(result.findings.map((f) => f.area)).toEqual(Array(7).fill('usability'));
     expect(mem.results).toHaveLength(1);
   });
 
@@ -1063,6 +1071,127 @@ describe('audit pipeline: runAuditPipeline', () => {
     const info = crawlPage('/b', 0);
     await recorder.onRenderedPage(fakePage, info);
     expect(readPageSpy).toHaveBeenCalledWith(fakePage, {});
+  });
+
+  describe('lab work off the crawl workers (T-404)', () => {
+    const measured = (source: 'this-tool' | 'pagespeed-insights') => ({
+      status: 'measured' as const,
+      source,
+      method: 'lab' as const,
+      strategy: 'mobile' as const,
+      values: [],
+      measuredAt: '2026-11-03T00:00:00.000Z',
+    });
+
+    /** A crawl context with lab pages; `defer` collects the work the crawl awaits before closing. */
+    function labContext(labInFlight = 4) {
+      const deferred: Promise<void>[] = [];
+      const opened: string[] = [];
+      let open = 0;
+      let peakOpen = 0;
+      const ctx = {
+        pacer: { run: (_h: string, t: () => unknown) => t() },
+        labInFlight,
+        defer: (work: Promise<void>) => deferred.push(work),
+        openPage: async () => {
+          open++;
+          peakOpen = Math.max(peakOpen, open);
+          let at = '';
+          return {
+            goto: async (url: string) => {
+              at = url;
+              opened.push(url);
+            },
+            url: () => at,
+            close: async () => {
+              open--;
+            },
+          } as unknown as Page;
+        },
+      };
+      return { ctx, deferred, opened, peakOpen: () => peakOpen };
+    }
+
+    it('lab work for 10 pages finishes after the crawl does, and the crawl never waits for it', async () => {
+      let release!: () => void;
+      const gate = new Promise<void>((r) => (release = r));
+      const a11y = vi.fn(async () => {
+        await gate;
+        return { findings: [], checks: [] } as unknown as AccessibilityBasicsResult;
+      });
+      const recorder = createPageRecorder({ workDir, stages: pageStages({ accessibilityBasics: a11y as any }) });
+      const { ctx, deferred, opened, peakOpen } = labContext(4);
+
+      // The crawl: 10 pages, each handed over and left at once.
+      for (let i = 0; i < 10; i++) {
+        const path = `/page-${String.fromCharCode(97 + i)}`;
+        const crawlPageFake = { url: () => `https://example.com${path}`, urlPath: path } as unknown as Page;
+        await recorder.onRenderedPage(crawlPageFake, crawlPage(path, 1), ctx as never);
+      }
+      // Every page is recorded and read; no lab work has finished yet.
+      expect(recorder.pages).toHaveLength(10);
+      expect(recorder.pages.every((p) => p.accessibility === undefined)).toBe(true);
+      expect(deferred).toHaveLength(10);
+
+      release();
+      await Promise.all(deferred);
+      expect(recorder.pages.every((p) => p.accessibility && p.phone !== undefined)).toBe(true);
+      // Lab pages are loaded again on pages of their own, at most labInFlight at once.
+      expect(opened).toHaveLength(10);
+      expect(peakOpen()).toBeLessThanOrEqual(4);
+    });
+
+    it('a 30-page site has axe and phone results for all 30 pages, covered pages too (T-405, ADR 0047)', async () => {
+      const recorder = createPageRecorder({ workDir, stages: pageStages() });
+      const { ctx, deferred } = labContext(4);
+      for (let i = 1; i <= 30; i++) {
+        const path = `/p/${i}`;
+        const fake = { url: () => `https://example.com${path}`, urlPath: path } as unknown as Page;
+        await recorder.onRenderedPage(fake, crawlPage(path, 1, 'p-:id'), ctx as never);
+      }
+      await Promise.all(deferred);
+      expect(recorder.pages).toHaveLength(30);
+      // One templated Layout Group: 3 Sample Pages, the rest covered, and every one fully checked.
+      expect(recorder.pages.filter((p) => p.coverage === 'covered').length).toBeGreaterThan(0);
+      for (const p of recorder.pages) {
+        expect(p.accessibility, p.info.urlPath).toBeTruthy();
+        expect(p.phone, p.info.urlPath).toBeTruthy();
+      }
+    });
+
+    it('a page measured by PSI gets no reload; a page PSI could not measure gets the browser timing', async () => {
+      const timingSpy = vi.fn(async () => ({ speed: measured('this-tool'), raw: {} }));
+      const psi = vi.fn(async (url: string) =>
+        url.endsWith('/fast')
+          ? { url, speed: { lab: measured('pagespeed-insights'), field: { status: 'not-measured' } } as never }
+          : {
+              url,
+              speed: {
+                lab: { status: 'not-measured', source: 'pagespeed-insights', method: 'lab', reason: 'failed' },
+                field: { status: 'not-measured' },
+              } as never,
+            }
+      );
+      const recorder = createPageRecorder({
+        workDir,
+        stages: pageStages({ measureBrowserTiming: timingSpy as any }),
+        pageSpeed: { measure: psi },
+      });
+      const { ctx, deferred } = labContext();
+      for (const path of ['/fast', '/slow']) {
+        const fake = { url: () => `https://example.com${path}`, urlPath: path } as unknown as Page;
+        await recorder.onRenderedPage(fake, crawlPage(path, 1), ctx as never);
+      }
+      await Promise.all(deferred);
+
+      expect(psi).toHaveBeenCalledTimes(2);
+      expect(timingSpy).toHaveBeenCalledTimes(1);
+      const fast = recorder.pages.find((p) => p.info.urlPath === '/fast')!;
+      const slow = recorder.pages.find((p) => p.info.urlPath === '/slow')!;
+      expect(fast.psiTried).toBe(true);
+      expect(fast.timing).toBeUndefined();
+      expect(slow.timing?.speed.status).toBe('measured');
+    });
   });
 
   it('emits site-stopped-answering note from crawl stoppedAnsweringAfter count', async () => {

@@ -37,6 +37,7 @@ const BROWSER_TESTS: Record<string, string[]> = {
     'audit-crawl-browser',
     'audit-doc-pdf',
     'audit-phone-layout',
+    'audit-variant-axe',
   ],
   runner: [
     // Website audit: these launch Chromium (PDF export, or a page driven by the runner).

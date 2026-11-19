@@ -5,6 +5,7 @@
  */
 
 import { isSignInFailureReason, signInReasonText } from '@qa/types/src/browser.js';
+import type { CountSummary } from '@qa/types/src/browser.js';
 
 export type RunMode = 'product' | 'website';
 
@@ -25,6 +26,10 @@ export interface FoundProblem {
   severity: string;
   urlPath: string;
   breakpoint?: string;
+  issueKey?: string;
+  advisory?: boolean;
+  needsConfirmation?: boolean;
+  triageStatus?: string;
 }
 
 export interface FeedState {
@@ -49,8 +54,10 @@ export interface FeedState {
   screenshot?: { url: string; page?: string };
   /** Pages visited so far, and what was found on each. */
   pages: Record<string, PageResult>;
-  /** Problems found so far, newest first. */
+  /** Problems found so far, newest first. Only the newest are kept: the list, never the count. */
   found: FoundProblem[];
+  /** The counts so far (T-389): `problems` is the live "Problems that count". */
+  summary?: CountSummary;
 }
 
 export function initialFeed(mode: RunMode): FeedState {
@@ -67,6 +74,16 @@ export function initialFeed(mode: RunMode): FeedState {
 
 const GENERIC = 'Working on it…';
 const FOUND_KEPT = 50;
+
+const SUMMARY_FIELDS = ['raw', 'merged', 'dismissed', 'advisory', 'toConfirm', 'problems', 'findings'] as const;
+
+/** The event's count summary, when every number in it is a whole number; otherwise none. */
+function readSummary(value: unknown): CountSummary | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const v = value as Record<string, unknown>;
+  if (!SUMMARY_FIELDS.every((k) => Number.isInteger(v[k]) && (v[k] as number) >= 0)) return undefined;
+  return Object.fromEntries(SUMMARY_FIELDS.map((k) => [k, v[k]])) as unknown as CountSummary;
+}
 
 /**
  * True when a label from the site or the AI looks like code rather than words: selectors,
@@ -291,16 +308,26 @@ export function reduceFeed(state: FeedState, event: RunnerEvent, mode: RunMode):
           severity: String(f.severity ?? 'Minor'),
           urlPath,
           breakpoint: typeof f.breakpoint === 'string' ? f.breakpoint : undefined,
+          ...(typeof f.issueKey === 'string' ? { issueKey: f.issueKey } : {}),
+          ...(f.advisory === true ? { advisory: true } : {}),
+          ...(f.needsConfirmation === true ? { needsConfirmation: true } : {}),
+          ...(typeof f.triageStatus === 'string' ? { triageStatus: f.triageStatus } : {}),
         });
       }
+      const summary = readSummary(event.summary);
+      // The event after the access checks is not a finished test.
+      const finishedTest = event.afterTests !== true;
       return {
         ...state,
         findings: typeof event.totalFindings === 'number' ? event.totalFindings : state.findings,
-        progress: state.progress
-          ? { ...state.progress, done: Math.min(state.progress.done + 1, state.progress.total) }
-          : null,
+        progress:
+          state.progress && finishedTest
+            ? { ...state.progress, done: Math.min(state.progress.done + 1, state.progress.total) }
+            : state.progress,
         pages,
         found: found.length > 0 ? [...found.reverse(), ...state.found].slice(0, FOUND_KEPT) : state.found,
+        // FOUND_KEPT limits only the list: the count comes from the runner's summary.
+        ...(summary ? { summary } : {}),
       };
     }
 

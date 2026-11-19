@@ -11,6 +11,19 @@
     "targetUrl": { "type": "string" },
     "timestamp": { "type": "string" },
     "coverage": { "type": "object" },
+    "summary": {
+      "description": "Optional (T-391). The one count every export prints: countSummary of the findings. problems is \"Problems that count\", the verdict's total.",
+      "type": "object",
+      "properties": {
+        "raw": { "type": "integer", "minimum": 0 },
+        "merged": { "type": "integer", "minimum": 0 },
+        "dismissed": { "type": "integer", "minimum": 0 },
+        "advisory": { "type": "integer", "minimum": 0 },
+        "toConfirm": { "type": "integer", "minimum": 0 },
+        "problems": { "type": "integer", "minimum": 0 },
+        "findings": { "type": "integer", "minimum": 0 }
+      }
+    },
     "results": { "type": "array" },
     "findings": {
       "type": "array",

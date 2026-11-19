@@ -73,7 +73,12 @@ export const AUDIT_LIMIT_DEFAULTS = {
   pages: 50,
   depth: 5,
   hostedMaxPages: 200,
+  /** Pages of one host loaded at once when an audit starts (ADR 0043, 0046). */
   fetchInFlight: 3,
+  /** The most it climbs to on a local runner, one more after every 25 healthy answers (ADR 0046). */
+  fetchInFlightLocal: 8,
+  /** The most it climbs to on the hosted copy (1 CPU, 2 GiB): no climb (ADR 0046). */
+  fetchInFlightHosted: 3,
   aiInFlight: 4,
 } as const;
 
@@ -491,6 +496,20 @@ export interface AuditFinding {
   screenshotPath?: string;
 }
 
+/**
+ * The rules behind a list of findings (T-390): distinct `rule` values, AI-written advice left out. One
+ * rule seen on 30 pages is 30 findings and 1 rule.
+ */
+export function countFindingRules(findings: readonly Pick<AuditFinding, 'rule' | 'advisory' | 'source'>[]): number {
+  return new Set(findings.filter((f) => f.advisory !== true && f.source !== 'ai').map((f) => f.rule)).size;
+}
+
+/** "312 findings · 41 rules"; only the findings when the rules were not counted (versions saved before T-390). */
+export function findingsAndRulesText(findings: number, rules?: number): string {
+  const f = `${findings} ${findings === 1 ? 'finding' : 'findings'}`;
+  return rules === undefined ? f : `${f} · ${rules} ${rules === 1 ? 'rule' : 'rules'}`;
+}
+
 /** One item of the Improvement Roadmap: never called a Plan (CONTEXT.md). */
 export interface RoadmapItem {
   id: string;
@@ -804,7 +823,10 @@ export interface AuditVersion {
   error?: string;
   pagesRecorded?: number;
   pagesSkipped?: number;
+  /** Findings saved: one per rule and page. */
   findings?: number;
+  /** Distinct rules behind the findings, AI advice left out (`countFindingRules`). Absent on versions saved before T-390. */
+  rules?: number;
   /** The version has edits. */
   edited?: boolean;
   /** Why a running version was stopped (ADR 0042). */
@@ -1181,6 +1203,12 @@ export const AUDIT_API = {
   /** Writes the improved homepage with the AI (preview stage); 409 ERR_NO_AI_KEY without a key. */
   createPreview: { method: 'POST', path: '/api/audits/:id/preview', replies: 'json', access: 'owner' },
   getPreview: { method: 'GET', path: '/api/audits/:id/preview', replies: 'html', access: 'view' },
+  /** Writes design variants of the Improved version (preview stage): pages × variants AI requests (ADR 0049). */
+  createImprove: { method: 'POST', path: '/api/audits/:id/improve', replies: 'json', access: 'owner' },
+  /** The Improved version's pages, variants and the AI cost per request. */
+  listImprove: { method: 'GET', path: '/api/audits/:id/improve', replies: 'json', access: 'view' },
+  /** One design variant (HTML), served with the Shared Link page headers. */
+  getImprove: { method: 'GET', path: '/api/audits/:id/improve/:page/:variant', replies: 'html', access: 'view' },
   listShares: { method: 'GET', path: '/api/audits/:id/share', replies: 'json', access: 'view' },
   createShare: { method: 'POST', path: '/api/audits/:id/share', replies: 'json', access: 'owner' },
   revokeShare: { method: 'DELETE', path: '/api/audits/:id/share/:linkId', replies: 'json', access: 'owner' },
@@ -1339,6 +1367,94 @@ export interface PreviewReply {
   preview: { version: number; language: DocumentLanguage; createdAt: string };
 }
 
+// ---------------------------------------------------------------------------------------------------
+// The Improved version: design variants (ADR 0049)
+// ---------------------------------------------------------------------------------------------------
+
+/** The design direction of each variant, in order: variant 1 is 'clean', variant 2 'bold'… */
+export const VARIANT_STYLES = ['clean', 'bold', 'trust-first', 'content-first', 'conversion-first'] as const;
+export type VariantStyle = (typeof VARIANT_STYLES)[number];
+
+/** The user picks 1 to 5 design variants per page. */
+export const MAX_VARIANTS_PER_PAGE = VARIANT_STYLES.length;
+
+/** A page of the Improved version: the homepage, or the Sample Page of one Layout Group. */
+export interface ImprovePage {
+  /** 'home', or a short key made from the path; the address part of `getImprove`. */
+  key: string;
+  urlPath: string;
+  title: string | null;
+  /** The Layout Group it stands for; null for the homepage. */
+  layoutGroup: string | null;
+}
+
+/** The automatic checks a variant must pass before it is shown (T-414). */
+export const VARIANT_CHECKS = ['sanitizer', 'menu-links', 'claim-words', 'accessibility', 'citations'] as const;
+export type VariantCheck = (typeof VARIANT_CHECKS)[number];
+
+export interface VariantGateResult {
+  passed: boolean;
+  /** The checks that failed, in VARIANT_CHECKS order; empty when it passed. */
+  failed: VariantCheck[];
+  /** One plain sentence per failed check. */
+  reasons: string[];
+}
+
+/** One design variant of one page, as listed in `variants.json`. */
+export interface ImproveVariant {
+  page: string;
+  /** 1 to 5. */
+  variant: number;
+  style: VariantStyle;
+  /** 'made': the page is stored. 'failed': the AI gave no usable page, or the AI Request Budget was spent. */
+  status: 'made' | 'failed';
+  problem?: 'budget-spent' | 'failed';
+  createdAt: string;
+  /** The finding and Section ids the variant cites. */
+  cites?: string[];
+  /** Set by the quality gate; a variant that did not pass is not shown. */
+  gate?: VariantGateResult;
+}
+
+/** `variants.json` of one version: every variant made so far. */
+export interface ImproveIndex {
+  version: number;
+  language: DocumentLanguage;
+  variants: ImproveVariant[];
+  /** The variant starred as the best, for the Pitch Glimpse (T-415). */
+  best?: { page: string; variant: number };
+}
+
+export interface ImproveCreateBody extends VersionQuery {
+  /** Page keys from the list; at least one. */
+  pages: string[];
+  /** 1 to 5 variants per page. */
+  variants: number;
+  /** Only this variant number of the one page given ("Try again"): one AI request. */
+  only?: number;
+}
+
+/** What the AI cost will be: one request per page and variant. */
+export interface ImproveEstimate {
+  /** US dollars per request at the model's list price; null when the price is not known. */
+  usdPerRequest: number | null;
+}
+
+export interface ImproveListReply {
+  version: number;
+  language: DocumentLanguage;
+  pages: ImprovePage[];
+  variants: ImproveVariant[];
+  best?: { page: string; variant: number };
+  estimate: ImproveEstimate;
+}
+
+export interface ImproveCreateReply {
+  /** AI requests sent. */
+  requests: number;
+  variants: ImproveVariant[];
+}
+
 export interface ShareCreateBody extends VersionQuery {
   kind: ShareLinkKind;
   language?: DocumentLanguage;
@@ -1435,6 +1551,9 @@ interface AuditApiShapes {
   owner: { query: OwnerAuditQuery; body: undefined; reply: FileReply };
   createPreview: { query: NoQuery; body: PreviewCreateBody; reply: PreviewReply };
   getPreview: { query: VersionQuery; body: undefined; reply: HtmlReply };
+  createImprove: { query: NoQuery; body: ImproveCreateBody; reply: ImproveCreateReply };
+  listImprove: { query: VersionQuery; body: undefined; reply: ImproveListReply };
+  getImprove: { query: VersionQuery; body: undefined; reply: HtmlReply };
   listShares: { query: NoQuery; body: undefined; reply: ShareListReply };
   createShare: { query: NoQuery; body: ShareCreateBody; reply: ShareLinkReply };
   revokeShare: { query: NoQuery; body: undefined; reply: ShareLinkReply };

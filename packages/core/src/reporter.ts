@@ -1,7 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import type { Finding, ReleaseReport } from '@qa/types';
-import { releaseVerdict } from '@qa/types';
+import { countSummary, problemsThatCountLine, releaseVerdict } from '@qa/types';
 import { notChecked } from './not-checked.js';
 import {
   AGENTS_SNIPPET,
@@ -67,7 +67,8 @@ export class ReportGenerator {
     const agentsSnippetPath = path.join(this.outputDir, 'AGENTS.snippet.md');
 
     // 1. Write findings.json
-    await fs.writeFile(jsonPath, JSON.stringify(out, null, 2), 'utf8');
+    // Every finding stays; `summary` is the same count the report prints (T-391, ADR 0017: an optional field).
+    await fs.writeFile(jsonPath, JSON.stringify({ ...out, summary: countSummary(report.findings) }, null, 2), 'utf8');
 
     // 2. Generate and write report.md
     const mdContent = this.renderMarkdown(report);
@@ -126,6 +127,8 @@ export class ReportGenerator {
         verdict.ready ? '' : ` (${verdict.counts.Blocker} blocking, ${verdict.counts.Major} major)`
       }`
     );
+    // The one count every export prints (T-391): the verdict's total, with how it was reached.
+    lines.push(`>`, `> ${problemsThatCountLine(countSummary(findings))}`);
     lines.push(``);
     if (report.testedWithApprovedPlan) {
       lines.push(`> [!NOTE]`);
