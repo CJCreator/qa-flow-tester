@@ -116,6 +116,8 @@ const KINDS: Array<[SensitiveAction['type'], RegExp]> = [
   ['external_communication', asWords(MESSAGING)],
 ];
 const CHANGES_WORDS = asWords(CHANGES);
+/** Every Sensitive Action phrase as one pattern source over `actionText`, for checks that run inside the page. */
+export const SENSITIVE_PATTERN_SOURCE = asWords([...DELETION, ...PAYMENT, ...MESSAGING]).source;
 const RISKY_ANYWHERE = new RegExp(`(?:${NOT_WHILE_EXPLORING.join('|')})`);
 
 /** The kind of Sensitive Action the wording names, or null. */
