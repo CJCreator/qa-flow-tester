@@ -78,6 +78,7 @@ Plan: [ENHANCEMENT-PLAN-2026-11.md](ENHANCEMENT-PLAN-2026-11.md), with one file 
 | [T-430](enhance-2026-11/T-430-one-load-per-audit-page.md) | One load per audit page (5,000 pages in 2 hours) | P1 | P1 | M | 8 | built | T-407 |
 | [T-429](enhance-2026-11/T-429-stream-ai-assessment-during-the-crawl.md) | AI assessment starts during the crawl (rest of T-406) | P1 | P2 | M | 9 | built | T-430 |
 | [T-431](enhance-2026-11/T-431-improved-version-gaps.md) | Improved version gaps (budget, desktop before, Shared Links, ADC buttons) | P4 | P2 | M | 9 | built | T-415, T-430 |
+| [T-432](enhance-2026-11/T-432-approve-and-rerun-a-paused-sensitive-action.md) | Approve and re-run a paused Sensitive Action | T-421 | P3 | M | - | later | T-421, T-422 |
 | [T-396](enhance-2026-11/T-396-every-disabled-button-says-why.md) | Every disabled button says why (W20) | O3 | P2 | M | 10 | built | T-415, T-420 |
 
 Gap ids: P1 to P4 are review problems 1 (speed) to 4 (Website Audit); O-numbers are rows of the review's "Other issues" table.
