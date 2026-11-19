@@ -427,6 +427,8 @@ export interface AuditWiring {
   readonly localRun: boolean;
   /** Checks and claims an audit start against AUDIT_DAILY_LIMIT (T-86). */
   claimAuditLimit?: (email?: string) => { allowed: boolean; error?: string };
+  /** Opens the explicit port of an audit start address in the egress proxy (beta). */
+  readonly targetAccepted?: (url: string) => void;
   /** Test seam: custom crawl function for audit runs. */
   readonly crawl?: AuditCrawl;
   /** Test seam: custom address check function for audit start. */
@@ -738,6 +740,7 @@ export class RunnerServer {
       },
       isOwnerRequest: (req) => this.isAuditOwner(req),
       localRun: this.localRun,
+      targetAccepted: (url) => this.allowTargetPort(url),
       claimAuditLimit: (email) => {
         const outcome = this.auditLimiter.claim(email);
         if (outcome.allowed && email && this.auditDailyLimit) this.saveUsage();

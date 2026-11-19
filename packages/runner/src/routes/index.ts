@@ -151,6 +151,7 @@ export function buildAuditRoutes(server: RunnerServer): Route[] {
     resolveServiceKey,
     allowPrivateAddresses: wiring.localRun,
     claimAuditLimit: wiring.claimAuditLimit,
+    ...(wiring.targetAccepted ? { targetAccepted: wiring.targetAccepted } : {}),
     ...(wiring.localRun ? {} : { maxPages: AUDIT_LIMIT_DEFAULTS.hostedMaxPages }),
     ...(wiring.crawl ? { crawl: wiring.crawl } : {}),
     ...(wiring.checkAddress ? { checkAddress: wiring.checkAddress } : {}),
