@@ -532,11 +532,9 @@ export async function startRun(request: StartRunRequest): Promise<string> {
       err.suggestion
     );
   }
-  if (res.status === 202) {
-    const queued = await json<{ queued?: boolean; position?: number }>(res);
-    if (queued.queued) throw new QueuedError(queued.position ?? 1);
-  }
-  return (await json<{ runId: string }>(res)).runId;
+  const started = await json<{ runId: string; queued?: boolean; position?: number }>(res);
+  if (started.queued) throw new QueuedError(started.position ?? 1);
+  return started.runId;
 }
 
 /**

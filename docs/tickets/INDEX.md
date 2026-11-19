@@ -39,11 +39,11 @@ Built work is in git. Audit follow-up of November 2026, T-225 to T-387 (146 tick
 
 | id | title | gaps | priority | size | wave | status | depends on |
 |---|---|---|---|---|---|---|---|
-| T-433 | Vercel forwards the runner's paths (prove the proxy first) | - | P1 | M | 1 | approved | - |
-| T-434 | A signed-in Google account is a way in | - | P1 | L | 2 | approved | T-433 |
-| T-435 | Limits and Verified Domain proof follow the account | - | P1 | M | 3 | approved | T-434 |
-| T-436 | Waiting line for the Check-up slot; runs finish after the tab closes | - | P1 | M | 4 | approved | T-435 |
-| T-437 | Check-up reports saved in the bucket for 30 days | - | P2 | M | 5 | approved | T-436 |
-| T-438 | Safe mode for sites without proof | - | P2 | S | 6 | approved | T-437 |
-| T-439 | Deploy: a runner that sleeps; site container retired | - | P1 | M | 2 | approved | T-433 |
-| T-440 | Get-started page and invite message | - | P2 | S | 3 | approved | T-439 |
+| T-433 | Vercel forwards the runner's paths (prove the proxy first) | - | P1 | M | 1 | built | - |
+| T-434 | A signed-in Google account is a way in | - | P1 | L | 2 | built | T-433 |
+| T-435 | Limits and Verified Domain proof follow the account | - | P1 | M | 3 | built | T-434 |
+| T-436 | Waiting line for the Check-up slot; runs finish after the tab closes | - | P1 | M | 4 | built | T-435 |
+| T-437 | Check-up reports saved in the bucket for 30 days | - | P2 | M | 5 | built | T-436 |
+| T-438 | Safe mode for sites without proof | - | P2 | S | 6 | built | T-437 |
+| T-439 | Deploy: a runner that sleeps; site container retired | - | P1 | M | 2 | built | T-433 |
+| T-440 | Get-started page and invite message | - | P2 | S | 3 | built | T-439 |

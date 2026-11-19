@@ -80,6 +80,8 @@ Results: (owner to fill in)
 - The wizard says plainly which checks were skipped and how Verified Domain proof unlocks them.
 - Tests beside `host-policy.test.ts` and the checker's tests.
 
+**Built (T-438).** Audit result: checkers are passive (`security.ts` says so; no write method in `packages/checkers/src`); `api-spec-checks` sends writes only with `allowWrites`, which the runner never sets; the orchestrator already skips form submits and Sensitive Actions when `readOnly`; on the shared copy `readOnly = !(owner && provenTestCopy)` and sign-in consent never applies. So no checker needed a new gate. Added `SAFE_MODE_REASON` (`session/checkup-run.ts`), the plan's existing read-only line, now naming skipped forms, Sensitive Actions and Security Probes and the Verified Domain way out. `resolveAuthorization({saved})` now carries the account's saved proof into the real run start (was only in `testCopyOf`). Tests: new `safe-mode.test.ts` (authorization cases + source audit of checkers).
+
 ## T-439: Deploy: a runner that sleeps; the site container retired
 - `deploy.yml` runner step: `--memory 4Gi --cpu 2 --min-instances 0 --max-instances 1 --no-cpu-throttling --timeout 3600`; env adds `RUNNER_TRUSTED_PROXY_HOPS=2`, `RUNNER_PUBLIC_URL=$RUNNER_URL`, the Vercel origin (repo variable `VERCEL_SITE_URL`) in `RUNNER_ALLOWED_ORIGINS`; secrets add `RUNNER_SESSION_SECRET=qa-session-secret:latest`.
 - Remove the `site` job, `SITE_URL`, `site/` (Dockerfile, nginx.conf) and the hardcoded URL in `scripts/deploy-cloud-run.mjs`. Do not delete the live service (owner step).
