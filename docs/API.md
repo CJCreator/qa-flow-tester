@@ -46,6 +46,12 @@ Every request: a non-loopback `Host` is refused unless it matches `RUNNER_ALLOWE
 | `POST /api/runner/abort`, `/stop` | Stops the current Check-up, or the running Website Audit when there is one (then `finish` and `discard` are ignored).                       |
 | `POST /api/runner/ai/finish`      | Finishes the visual review on remaining screens.                                                                                            |
 
+`FINDINGS_UPDATED` on the stream (T-389): `totalFindings` (raw findings so far), `summary` (`countSummary` of the merged findings:
+`raw`, `merged`, `dismissed`, `advisory`, `toConfirm`, `problems`, `findings`; `problems` is the live "Problems that count", and
+`dismissed` stays 0 because suppressions are applied after the run), and `latest` (this Test point's findings: `id`, `title`,
+`severity`, `checker`, `urlPath`, `breakpoint`, and when set `issueKey`, `advisory`, `needsConfirmation`, `triageStatus`). One
+more event, with `afterTests: true` and no `latest`, follows the access checks.
+
 ## Plan Review (table rows, owner, beta allow)
 
 - `GET /api/runner/plan`, `PATCH /api/runner/plan`

@@ -18,7 +18,7 @@ import type {
   DocSource,
   WcagCoverageEntry,
 } from '@qa/types';
-import { normalizeRoute, signInReasonText } from '@qa/types';
+import { countSummary, normalizeRoute, signInReasonText, type CountSummary } from '@qa/types';
 import {
   BrowserManager,
   BREAKPOINT_VIEWPORTS,
@@ -130,8 +130,16 @@ export type OrchestratorEvent =
     }
   | {
       type: 'FINDINGS_UPDATED';
+      /** Raw findings so far, one per Test point and screen size. */
       totalFindings: number;
-      /** The issues this test point found, so a live view can pin them to their page. */
+      /**
+       * The counts so far, from the merged findings (T-389): `summary.problems` is the live "Problems that count".
+       * Suppressions are applied after the run, so `dismissed` is 0 here.
+       */
+      summary?: CountSummary;
+      /** True on the one event after the access checks: it ends no Test point. */
+      afterTests?: boolean;
+      /** The issues this test point found, so a live view can pin them to their page. Absent after the access checks. */
       latest?: Array<{
         id: string;
         title: string;
@@ -139,6 +147,10 @@ export type OrchestratorEvent =
         checker: Finding['checker'];
         urlPath: string;
         breakpoint: Breakpoint;
+        issueKey?: string;
+        advisory?: boolean;
+        needsConfirmation?: boolean;
+        triageStatus?: Finding['triageStatus'];
       }>;
     }
   | { type: 'RUN_COMPLETED'; runId: string; report: ReleaseReport }
@@ -1573,6 +1585,7 @@ export class FlowTestOrchestrator {
         onEvent({
           type: 'FINDINGS_UPDATED',
           totalFindings: allFindings.length,
+          summary: countSummary(mergeDuplicateFindings(allFindings)),
           latest: pointResult!.findings.map((f) => ({
             id: f.id,
             title: f.title,
@@ -1580,6 +1593,10 @@ export class FlowTestOrchestrator {
             checker: f.checker,
             urlPath: pathOf(new URL(f.where.urlPath, options.targetUrl).toString()),
             breakpoint: f.where.breakpoint,
+            ...(f.issueKey ? { issueKey: f.issueKey } : {}),
+            ...(f.advisory ? { advisory: true } : {}),
+            ...(f.needsConfirmation ? { needsConfirmation: true } : {}),
+            ...(f.triageStatus ? { triageStatus: f.triageStatus } : {}),
           })),
         });
       }
@@ -1620,6 +1637,13 @@ export class FlowTestOrchestrator {
         });
         allFindings.push(...access.findings);
         for (const n of access.notes) if (!notes.includes(n)) notes.push(n);
+        // The access checks' findings count too: one more live count after them (T-389).
+        onEvent({
+          type: 'FINDINGS_UPDATED',
+          totalFindings: allFindings.length,
+          summary: countSummary(mergeDuplicateFindings(allFindings)),
+          afterTests: true,
+        });
       } catch (err) {
         console.warn('[QA Orchestrator] Access checks did not run:', err instanceof Error ? err.message : err);
       } finally {
