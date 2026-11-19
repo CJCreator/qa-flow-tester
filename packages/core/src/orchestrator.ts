@@ -54,7 +54,8 @@ import { onSiteAddress } from './same-site.js';
 import { blockChanges, NEEDS_TEST_COPY } from './live-site.js';
 import { EntityNamespacer } from './entity-namespacing.js';
 import { SendGuard, watchSends } from './send-guard.js';
-import { clickGate } from './discovery/click-gate.js';
+import { clickGate, SENSITIVE_PAUSED } from './discovery/click-gate.js';
+import { installSubmitGuard, type BlockedSubmit, type SubmitGuard } from './discovery/submit-guard.js';
 import { safeIdPart, pathInside, testPointDir } from './safe-id.js';
 import { baselineKey } from './plan/baseline-key.js';
 import {
@@ -832,6 +833,9 @@ export class FlowTestOrchestrator {
         let pointResult: TestPointResult | undefined;
         let flakyRetry: RetryTelemetryEntry | undefined;
         let blockedChanges: string[] = [];
+        // Forms the submit guard stopped in this attempt (T-422), and the guard itself.
+        let submitBlocks: BlockedSubmit[] = [];
+        let submitGuard: SubmitGuard | undefined;
         // Content-Security-Policy of the page's main response; read only by the weak-policy check.
         let cspHeader: string | undefined;
         // All headers of the page's main response, read by the HSTS and nosniff checks.
@@ -883,6 +887,14 @@ export class FlowTestOrchestrator {
 
             // On a live site nothing that could change data leaves the browser.
             blockedChanges = options.readOnly ? await blockChanges(context) : [];
+            // No form leaves outside the Plan: script submits only on a Test Copy, a Sensitive Action form never.
+            const attemptBlocks: BlockedSubmit[] = [];
+            submitBlocks = attemptBlocks;
+            submitGuard = await installSubmitGuard(context, {
+              readOnly: !!options.readOnly,
+              forbiddenActions: options.profile?.forbiddenActions,
+              onBlocked: (b) => attemptBlocks.push(b),
+            });
             if (sendGuard) watchSends(context, sendGuard);
             evidenceCollector.attach(page);
             const attachedPage = page;
@@ -1004,6 +1016,7 @@ export class FlowTestOrchestrator {
               let currentStepError: string | undefined;
               // Set when the click-time Safety Filter paused this step (T-421): not a pass, not a failure.
               let pausedBySafety: string | undefined;
+              const blocksBefore = submitBlocks.length;
               const currentGlobalStepIndex = globalStepIndex++;
               const stepStartedAt = Date.now();
 
@@ -1050,6 +1063,8 @@ export class FlowTestOrchestrator {
                       break;
                     }
                     sendGuard?.clickStarted(i);
+                    // The person approved this Sensitive Action: its own form submit is not stopped.
+                    if (step.sensitiveApproved && !options.readOnly) await submitGuard?.allowNextSubmit(page);
                     await locator.click({ timeout: budget.clamp(step.optional ? 1500 : 4000) });
                   } else if (step.action === 'fill') {
                     const locator = await locateElement(page, step.selector || '');
@@ -1131,6 +1146,13 @@ export class FlowTestOrchestrator {
                 }
               }
 
+              // A form the step's page script or key press tried to send was stopped by the submit guard.
+              const stepBlocks = submitBlocks.slice(blocksBefore);
+              if (!pausedBySafety && stepBlocks.some((b) => b.sensitive)) pausedBySafety = SENSITIVE_PAUSED;
+              if (stepBlocks.some((b) => !b.sensitive)) {
+                const note = 'A form sent by page script was stopped: this run does not send forms.';
+                if (!notes.includes(note)) notes.push(note);
+              }
               if (pausedBySafety) {
                 const reason = `${pausedBySafety}: “${step.name}” was not clicked`;
                 await evidenceCollector.recordStep(page, i + 1, step.name, step.action, urlBefore, false, reason);

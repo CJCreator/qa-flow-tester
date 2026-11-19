@@ -9,6 +9,7 @@ import { isSameSite } from '../same-site.js';
 import { RobotsPolicy, ROBOTS_USER_AGENT_TOKEN } from './robots.js';
 import { getBrowserPolicy, installRequestGuard, WEBRTC_NO_DIRECT_UDP } from '../browser.js';
 import { MUTATING_METHODS } from '../live-site.js';
+import { BLOCK_FORM_SUBMISSION_SCRIPT } from '../discovery/submit-guard.js';
 
 export interface SafeCrawlerOptions {
   entryUrl: string;
@@ -108,16 +109,6 @@ export async function readLayoutFingerprint(page: Page): Promise<string> {
   for (let i = 0; i < outline.length; i++) hash = ((hash << 5) + hash + outline.charCodeAt(i)) >>> 0;
   return hash.toString(36);
 }
-
-/**
- * Runs in every document before site scripts: swallows submit events and turns the
- * programmatic submit APIs into no-ops, so no form can be sent by any path.
- */
-const BLOCK_FORM_SUBMISSION_SCRIPT = `
-  document.addEventListener('submit', (e) => { e.preventDefault(); e.stopImmediatePropagation(); }, true);
-  HTMLFormElement.prototype.submit = function () {};
-  HTMLFormElement.prototype.requestSubmit = function () {};
-`;
 
 export class SafePublicCrawler {
   /**
