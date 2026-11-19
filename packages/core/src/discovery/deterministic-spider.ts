@@ -373,6 +373,10 @@ function isLoopback(h: string): boolean {
   return hostWithoutPort === 'localhost' || hostWithoutPort === '127.0.0.1';
 }
 
+/** A delete label that names more than one row: never probed, whatever the profile says. */
+const BROAD_DELETE =
+  /\b(account|accounts|all|everything|workspace|organi[sz]ation|team|project|projects|user|users|profile|data|database)\b/i;
+
 function isSameSiteOrLoopback(h1: string, h2: string): boolean {
   if (isSameSite(h1, h2)) return true;
   const p1 = h1.match(/:(\d+)$/)?.[1] || '';
@@ -1643,16 +1647,18 @@ export class DeterministicSpider {
             const crud = structure && inferCrud(structure);
             if (crud) {
               pageItem.crud = crud;
-              // Heavily guarded probe: only a plain per-row delete, only when the Safety Filter sees an
-              // ordinary deletion (a forbidden action keyword switches the probe off).
-              if (
-                structure.hasProbeTarget &&
-                clickBudget > 0 &&
-                this.safetyFilter.isSensitive('Delete', '')?.type === 'deletion'
-              ) {
-                clickBudget--;
-                const confirmed = await probeDeleteConfirm(page);
-                if (confirmed !== undefined) crud.deleteConfirm = confirmed;
+              // Heavily guarded probe: only a plain per-row delete, only when the Safety Filter, reading the
+              // control's own label (text, aria-label, title), sees an ordinary deletion. A profile's
+              // forbiddenActions entry or a label naming more than one row switches it off (T-428).
+              if (structure.hasProbeTarget && clickBudget > 0) {
+                const verdict = await this.deleteProbeVerdict(page);
+                if (verdict.probe) {
+                  clickBudget--;
+                  const confirmed = await probeDeleteConfirm(page);
+                  if (confirmed !== undefined) crud.deleteConfirm = confirmed;
+                } else {
+                  crud.deleteProbeSkipped = verdict.reason;
+                }
               }
             }
           } catch {
@@ -1813,6 +1819,33 @@ export class DeterministicSpider {
       ...(startBlocked ? { blocked: startBlocked } : {}),
       ...(startRefused ? { startRefused } : {}),
     };
+  }
+
+  /**
+   * Whether the marked row delete may be probed (T-428): the Safety Filter, with the profile's forbiddenActions,
+   * reads the control's own label and must see an ordinary deletion, and the label must not name a whole
+   * account, user, project or everything. Otherwise the reason it is left alone, in fixed wording plus the label.
+   */
+  private async deleteProbeVerdict(page: Page): Promise<{ probe: true } | { probe: false; reason: string }> {
+    const parts = await page
+      .locator('[data-qa-delete-probe]')
+      .first()
+      .evaluate((el: Element) =>
+        [el.getAttribute('aria-label'), (el as HTMLElement).innerText, el.getAttribute('title')].map((p) =>
+          (p ?? '').replace(/\s+/g, ' ').trim()
+        )
+      )
+      .catch(() => [] as string[]);
+    const label = [...new Set(parts.filter((p) => p.length > 0))].join(' / ').slice(0, 120);
+    if (!label) return { probe: false, reason: 'Not probed: the delete control has no label' };
+    const verdict = this.safetyFilter.isSensitive(label, '');
+    if (verdict && verdict.type !== 'deletion') {
+      return { probe: false, reason: `Not probed: “${label}” matches a forbidden action in the profile` };
+    }
+    if (!verdict || BROAD_DELETE.test(label)) {
+      return { probe: false, reason: `Not probed: “${label}” is not a plain delete of one row` };
+    }
+    return { probe: true };
   }
 
   /** Controls that may be opened to look for forms: not risky, not sensitive, not ending a session. */
