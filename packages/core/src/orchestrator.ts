@@ -293,9 +293,12 @@ export interface RunOptions {
   visibility?: { search: boolean; answers: boolean; aiSearch: boolean; marketing: boolean };
   enablePerformance?: boolean;
   enableSecurity?: boolean;
-  /** Record a video per test point; kept only when the point fails. Default true. */
-  recordVideo?: boolean;
-  /** Reruns of a failing test, each in a clean context, stopping at the first pass. Default 3. Link tests never rerun. */
+  /**
+   * When to record a test point's video; it is kept only when the point fails. Default (unset): only the retry
+   * of a failed test is recorded (T-409). 'always' or true: every attempt. false: never.
+   */
+  recordVideo?: boolean | 'always';
+  /** Reruns of a failing test, each in a clean context, stopping at the first pass. Default 1. Link tests never rerun. */
   flakyReruns?: number;
   onEvent?: (event: OrchestratorEvent) => void;
   /** Override the generated runId (e.g. so a caller can respond with an id before the run starts and have RUN_STARTED/RUN_COMPLETED carry the same id). Defaults to an internally generated `run-<timestamp>`. */
@@ -639,7 +642,9 @@ export class FlowTestOrchestrator {
       }
     }
     const baselineDir = path.resolve(options.profile?.visualBaselineDir || '.qa-baselines');
-    const recordVideo = options.recordVideo ?? true;
+    // Video costs time on every attempt: by default only a retry records one (T-409).
+    const recordVideo: 'always' | 'retry' | 'never' =
+      options.recordVideo === undefined ? 'retry' : options.recordVideo === false ? 'never' : 'always';
 
     const asked = (options.breakpoints || []).filter((b): b is Breakpoint => Object.hasOwn(BREAKPOINT_VIEWPORTS, b));
     const breakpoints: Breakpoint[] = asked.length > 0 ? asked : ['1440px'];
@@ -811,7 +816,8 @@ export class FlowTestOrchestrator {
               baseUrl: options.targetUrl,
               // Read per attempt: a re-sign-in in the last attempt changed it.
               storageState: roleStorageStates[testCase.role],
-              recordVideoDir: recordVideo ? testCaseEvidenceDir : undefined,
+              recordVideoDir:
+                recordVideo === 'always' || (recordVideo === 'retry' && attempt > 1) ? testCaseEvidenceDir : undefined,
               customHeaders: options.customHeaders,
               userAgent: options.userAgent,
               headerHosts: options.headerHosts,
@@ -1131,7 +1137,7 @@ export class FlowTestOrchestrator {
             testCaseId: testCase.id,
             // A link check is one request, never repeated at a site we don't own, except once after the
             // Role was signed in again (the first try never reached the link).
-            maxRetries: testCase.kind === 'link' ? 1 : Math.max(0, Math.floor(options.flakyReruns ?? 3)),
+            maxRetries: testCase.kind === 'link' ? 1 : Math.max(0, Math.floor(options.flakyReruns ?? 1)),
             sentAny: () => sendGuard?.hasSentAny() === true,
             // Once a form was sent, a second try would send it twice: decline the retry.
             // A failed sign-in fails the same way every time: retrying only relaunches the browser.
