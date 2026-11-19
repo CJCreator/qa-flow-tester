@@ -1,5 +1,5 @@
 import http from 'http';
-import { timingSafeEqual } from 'crypto';
+import { createHash, timingSafeEqual } from 'crypto';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { handleHealthRoute } from './routes/health.js';
@@ -247,12 +247,15 @@ function isLoopbackHost(host: string | undefined): boolean {
 /** The cookie that carries the access key once a shared link has been opened. */
 const ACCESS_COOKIE = 'qa_access';
 
-/** Compared in constant time, so how long a refusal takes says nothing about the key. */
-function matchesSecret(given: string | null | undefined, secret: string): boolean {
+/**
+ * Compared in constant time, so how long a refusal takes says nothing about the key. Both values are hashed first,
+ * so a key of any length takes the same path and its length is not revealed either.
+ */
+export function matchesSecret(given: string | null | undefined, secret: string): boolean {
   if (!given) return false;
-  const a = Buffer.from(given.trim());
-  const b = Buffer.from(secret.trim());
-  return a.length === b.length && timingSafeEqual(a, b);
+  const a = createHash('sha256').update(given.trim()).digest();
+  const b = createHash('sha256').update(secret.trim()).digest();
+  return timingSafeEqual(a, b);
 }
 
 /**

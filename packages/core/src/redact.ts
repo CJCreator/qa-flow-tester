@@ -33,12 +33,27 @@ const SECRET_TEXT_PATTERN = new RegExp(
 );
 
 /**
+ * The shapes of provider keys that turn up bare in text, such as a provider error that echoes the key: Anthropic
+ * (`sk-ant-`), OpenAI (`sk-`, `sk-proj-`), OpenRouter (`sk-or-`), Gemini (`AIza`) and GitHub tokens (`ghp_`,
+ * `github_pat_` and the other `gh?_` kinds).
+ */
+const KEY_SHAPES = new RegExp(
+  [
+    String.raw`\bsk-(?:ant-|or-|proj-)?[A-Za-z0-9_-]{16,}`,
+    String.raw`\bAIza[A-Za-z0-9_-]{20,}`,
+    String.raw`\bgh[pousr]_[A-Za-z0-9]{20,}`,
+    String.raw`\bgithub_pat_[A-Za-z0-9_]{20,}`,
+  ].join('|'),
+  'g'
+);
+
+/**
  * Hides secret-looking values in name/value pairs (`name <: or => value` where `name` is in
  * `URL_SECRET_PARAM_NAMES` or `Authorization`) and `Bearer <token>` in plain text.
  */
 export function redactSecretText(text: string): string {
   if (!text || typeof text !== 'string') return text;
-  return text.replace(SECRET_TEXT_PATTERN, (_match, prefix, quote) => {
+  return text.replace(KEY_SHAPES, REDACTED).replace(SECRET_TEXT_PATTERN, (_match, prefix, quote) => {
     return quote ? `${prefix}${quote}${REDACTED}${quote}` : `${prefix}${REDACTED}`;
   });
 }
