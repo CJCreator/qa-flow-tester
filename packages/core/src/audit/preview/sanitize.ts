@@ -465,8 +465,10 @@ function cleanAttr(tag: string, name: string, value: string, siteUrl: string): s
     case 'datetime':
       return /^[0-9T:+\-. Z]{1,40}$/.test(value) ? value : null;
     case 'data-finding':
-    case 'data-section':
-      return CITE_VALUE.test(value.trim()) ? value.trim() : null;
+    case 'data-section': {
+      const ids = value.replace(/,/g, ' ').trim().split(/\s+/).join(' ');
+      return CITE_VALUE.test(ids) ? ids : null;
+    }
     case 'href':
       return cleanHref(value, siteUrl);
     case 'src':

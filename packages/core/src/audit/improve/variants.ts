@@ -26,6 +26,7 @@ import { previewFacts, MAX_PREVIEW_IMAGES, type VariantDirection } from '../prev
 import { siteBrand, type SiteBrand } from './brand.js';
 import { chromium, type Browser } from 'playwright';
 import { gateVariant, labAxeScan, type VariantAxeScan } from './quality-gate.js';
+import { LAB_CHROMIUM_ARGS } from '../documents/render-pdf.js';
 
 /** The index of every variant made for one version (a version JSON object: `improved/variants.json`). */
 export const IMPROVE_INDEX_NAME = 'improved/variants';
@@ -315,7 +316,7 @@ export async function makeVariants(
   const scanAxe: VariantAxeScan =
     options.scanAxe ??
     (async (html) => {
-      lab.browser ??= chromium.launch({ headless: true, args: ['--disable-extensions'] });
+      lab.browser ??= chromium.launch({ headless: true, args: [...LAB_CHROMIUM_ARGS] });
       return labAxeScan({ browser: await lab.browser })(html);
     });
 

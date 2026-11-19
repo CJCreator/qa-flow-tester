@@ -11,6 +11,17 @@ import { chromium, errors, type Browser } from 'playwright';
 
 export const PDF_TIMEOUT_MS = 60_000;
 
+/** Chromium flags for the lab browser on a small container: PDF, thumbnails and the variant axe scan. */
+export const LAB_CHROMIUM_ARGS: readonly string[] = [
+  '--no-sandbox',
+  '--disable-setuid-sandbox',
+  '--disable-dev-shm-usage',
+  '--disable-gpu',
+  '--disable-extensions',
+  '--disable-background-networking',
+  '--dns-prefetch-disable',
+];
+
 export interface RenderPdfOptions {
   /** Paper size. Only A4 for now (the HTML print CSS lays out A4). */
   format?: 'A4';
@@ -34,15 +45,7 @@ export async function renderPdf(html: string, options: RenderPdfOptions = {}): P
       browser = await chromium.launch({
         headless: true,
         timeout: timeoutMs,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-          '--disable-extensions',
-          '--disable-background-networking',
-          '--dns-prefetch-disable',
-        ],
+        args: [...LAB_CHROMIUM_ARGS],
       });
     } catch (err) {
       throw new Error(err instanceof errors.TimeoutError ? TOO_LONG : FAILED, { cause: err });
@@ -92,7 +95,7 @@ export async function renderThumbnails(
   const timeoutMs = options.timeoutMs ?? PDF_TIMEOUT_MS;
   let browser: Browser | undefined;
   try {
-    browser = await chromium.launch({ headless: true, timeout: timeoutMs, args: ['--disable-extensions'] });
+    browser = await chromium.launch({ headless: true, timeout: timeoutMs, args: [...LAB_CHROMIUM_ARGS] });
     const context = await browser.newContext({
       javaScriptEnabled: false,
       offline: true,

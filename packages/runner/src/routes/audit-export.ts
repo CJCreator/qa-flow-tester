@@ -246,7 +246,27 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
     };
   };
 
-  const thumbnails = deps.renderThumbnails ?? ((pages: readonly string[]) => renderThumbnails(pages));
+  const drawThumbnails = deps.renderThumbnails ?? ((pages: readonly string[]) => renderThumbnails(pages));
+  /** Thumbnails start a Chromium like a PDF: they share the PDF slots, and are left out when none is free. */
+  const thumbnails = async (pages: readonly string[]): Promise<Array<Buffer | null>> => {
+    if (activePdf >= maxPdf) return pages.map(() => null);
+    activePdf += 1;
+    try {
+      return await drawThumbnails(pages);
+    } finally {
+      activePdf -= 1;
+    }
+  };
+
+  /** Whether the version has a variant the Improved version shows (the stored-document shortcut has none). */
+  const hasImproved = async (loaded: Loaded): Promise<boolean> => {
+    const index = await readImproveIndex(
+      improveIo(store, loaded.auditId, loaded.version),
+      loaded.version,
+      loaded.result.language
+    ).catch(() => null);
+    return !!index && index.variants.some(shown);
+  };
 
   /**
    * The Improved version's shown variants (T-415), best first, with their stored pages and the phone
@@ -265,11 +285,16 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
       .filter((v) => shown(v) && pages.has(v.page))
       .sort((a, b) => Number(isBest(b)) - Number(isBest(a)));
     const variants: ImprovedExport['variants'] = [];
+    const seen = new Set<string>();
     for (const v of list) {
       const bytes = await store.getVersionFile(loaded.auditId, loaded.version, variantFileName(v.page, v.variant));
       if (!bytes) continue;
       const page = pages.get(v.page)!;
-      const before = await pngUri(store, loaded.auditId, loaded.version, page.screenshotPath);
+      // The page's "before" is embedded once, with its first variant, not once per variant.
+      const before = seen.has(page.key)
+        ? undefined
+        : await pngUri(store, loaded.auditId, loaded.version, page.screenshotPath);
+      seen.add(page.key);
       variants.push({ page, variant: v, html: Buffer.from(bytes).toString('utf8'), ...(before ? { before } : {}) });
     }
     if (variants.length === 0) return null;
@@ -359,7 +384,8 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
         documents?.length === 1 &&
         documents[0] !== 'proposal' &&
         loaded.edits.updatedAt === null &&
-        (!common.language || common.language === loaded.result.language)
+        (!common.language || common.language === loaded.result.language) &&
+        !(await hasImproved(loaded))
       ) {
         const kind = documents[0]!;
         const docFormat = format === 'md' ? 'markdown' : 'html';

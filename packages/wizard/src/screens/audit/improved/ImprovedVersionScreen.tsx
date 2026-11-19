@@ -166,8 +166,12 @@ export interface OpenedVariant {
 
 /** The best variant for the Pitch Glimpse: the one starred, else the first that passed the checks (T-415). */
 export function bestVariant(reply: ImproveListReply): { page: string; variant: number } | null {
-  if (reply.best && reply.variants.some((v) => v.page === reply.best!.page && v.variant === reply.best!.variant))
-    return reply.best;
+  const starred = reply.best;
+  if (
+    starred &&
+    reply.variants.some((v) => v.page === starred.page && v.variant === starred.variant && variantShown(v))
+  )
+    return starred;
   const first = reply.variants.find(variantShown);
   return first ? { page: first.page, variant: first.variant } : null;
 }

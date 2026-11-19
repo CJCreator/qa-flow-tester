@@ -151,7 +151,8 @@ export function beforeAfterPairHtml(before: string, after: string): string {
   return (
     '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' +
     'html,body{margin:0;background:#fff}body{display:flex;gap:24px;align-items:flex-start;padding:24px}' +
-    'img{height:852px;width:auto;max-width:100%;border:1px solid #ccc}' +
+    'img{border:1px solid #ccc}img:first-child{flex:0 0 auto;height:852px;width:auto}' +
+    'img:last-child{flex:1 1 0;min-width:0;width:100%;height:auto}' +
     `</style></head><body><img src="${ok(before)}" alt=""><img src="${ok(after)}" alt=""></body></html>`
   );
 }
