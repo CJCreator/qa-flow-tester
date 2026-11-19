@@ -284,7 +284,7 @@ export async function makeVariants(
       style: job.style,
       brief:
         ideas.length > 0
-          ? `${VARIANT_BRIEFS[job.style]} Ideas seen on similar sites that you may borrow; cite each one you use by its site and page, and never copy their words: ${ideas.join('; ')}.`
+          ? `${VARIANT_BRIEFS[job.style]} Ideas seen on similar sites that you may borrow (each names the finding it answers and where it was seen): mark a borrowed change with data-finding="<that finding id>", never name the other site on the page, and never copy its words: ${ideas.join('; ')}.`
           : VARIANT_BRIEFS[job.style],
       logo: brand.logo,
       colours: brand.colours,

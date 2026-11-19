@@ -81,7 +81,9 @@ describe('competitor examples', () => {
         expect(e.text).not.toMatch(/score|better|worse|best/i);
       }
     }
-    expect(competitorIdeas(examples)[0]).toContain('cite as green.example/contact');
+    expect(competitorIdeas(examples)[0]).toBe(
+      'for AF-001: green.example shows a phone link, a WhatsApp link on /contact'
+    );
   });
 
   it('a text that copies a competitor sentence fails the overlap check', () => {
@@ -143,8 +145,8 @@ describe('competitor facts as variant input', () => {
     );
     expect(made.variants[0]).toMatchObject({ status: 'failed', problem: 'failed' });
     expect(store.files.has(variantFileName('home', 1))).toBe(false);
-    // The borrowed ideas reached the prompt, cited by site and page.
-    expect(JSON.stringify(calls[0])).toContain('cite as green.example/');
+    // The borrowed ideas reached the prompt, with their finding, site and page.
+    expect(JSON.stringify(calls[0])).toContain('for AF-001: green.example shows');
   });
 
   it('a variant in its own words is made', async () => {
@@ -157,5 +159,6 @@ describe('competitor facts as variant input', () => {
       { io: store, ai, fetchImage: async () => null, scanAxe: async () => ({ blockers: 0 }) }
     );
     expect(made.variants[0].status).toBe('made');
+    expect(made.variants[0].gate?.passed).toBe(true);
   });
 });

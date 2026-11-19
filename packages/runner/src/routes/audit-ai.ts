@@ -383,6 +383,17 @@ export function createAuditAiRoutes(deps: AuditAiRouteDeps): Route[] {
     if (mode === 'approve') {
       results = await ops.approveMany(sections);
     } else {
+      // Approval first (REQ-030 AC-1), then the key: with no Section approved, no key is looked up.
+      const states = await ops.list();
+      const approved = (s: RewriteSectionRef) =>
+        states.some((r) => r.urlPath === s.urlPath && r.sectionId === s.sectionId && r.approvedAt);
+      if (!sections.some(approved)) {
+        const reply: RewriteBatchReply = {
+          rewrites: [],
+          failures: sections.map((s) => ({ ...s, code: 'ERR_NOT_APPROVED' as const, error: NOT_APPROVED })),
+        };
+        return sendJson(ctx.res, 200, reply);
+      }
       if (!(await deps.hasAiKey())) return refuse(ctx.res, 409, 'ERR_NO_AI_KEY', NO_AI_KEY);
       const language: DocumentLanguage = isDocumentLanguage(body.language)
         ? body.language
