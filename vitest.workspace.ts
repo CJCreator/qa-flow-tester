@@ -39,6 +39,7 @@ const BROWSER_TESTS: Record<string, string[]> = {
     'safety-host-allowlist',
     'safety-popups',
     'safety-delete-probe',
+    'safety-get-side-effects',
     'small-fixes',
     'visual-capture',
     // Website audit (REQ-033, REQ-048...): each launches Chromium through `playwright` or the Spider.

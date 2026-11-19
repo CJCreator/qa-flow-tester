@@ -751,6 +751,20 @@ export class FlowTestOrchestrator {
       vitalsMeasured.add(urlPath);
       return true;
     };
+    // Paths an approved Plan Item opens itself: a read-only run lets these through even when their GET looks
+    // like a side effect (T-427); any other move to such an address is stopped.
+    const planPaths = new Set(
+      testCasesToRun
+        .flatMap((tc) => [tc.startPage, ...tc.steps.filter((s) => s.action === 'navigate').map((s) => s.value ?? '')])
+        .map((v) => {
+          try {
+            return v ? new URL(v, options.targetUrl).pathname : '';
+          } catch {
+            return '';
+          }
+        })
+        .filter(Boolean)
+    );
     // TEST_POINT_STARTED's position, counted across all workers.
     let pointsStarted = 0;
     // A worker that took a Test case runs it, at each of its sizes one after another (ADR 0048). `results`
@@ -887,7 +901,9 @@ export class FlowTestOrchestrator {
             await routeRoleHeaders(context, options.targetUrl, roleHeadersFor(testCase.role));
 
             // On a live site nothing that could change data leaves the browser.
-            blockedChanges = options.readOnly ? await blockChanges(context) : [];
+            blockedChanges = options.readOnly
+              ? await blockChanges(context, { allow: (u) => planPaths.has(u.pathname) })
+              : [];
             // No form leaves outside the Plan: script submits only on a Test Copy, a Sensitive Action form never.
             const attemptBlocks: BlockedSubmit[] = [];
             submitBlocks = attemptBlocks;

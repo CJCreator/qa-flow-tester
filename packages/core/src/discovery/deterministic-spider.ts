@@ -13,7 +13,7 @@ import type {
   RouteSkipReason,
   DraftForm,
 } from '@qa/types';
-import { SafetyFilter } from './safety-filter.js';
+import { SafetyFilter, isSideEffectAddress } from './safety-filter.js';
 import { riskyToClick } from './action-words.js';
 import { collectElementInventory, TEST_ID_ATTRIBUTES } from './element-inventory.js';
 import { redactUrl } from '../redact.js';
@@ -200,6 +200,11 @@ export interface CrawlOptions {
    * followed, and a `sign-in` verdict also lists it in `signInWalls`.
    */
   inspectPage?: (page: Page, landed: URL) => Promise<SpiderSkipVerdict | undefined>;
+  /**
+   * Paths the person listed to include (segment prefixes, e.g. `/delete`). An address under one is followed
+   * even when it looks like a GET with a side effect (T-427). The bare `/` does not count.
+   */
+  includePaths?: string[];
   /** Follow the action address of a GET form with no required fields, as a link. Default true. */
   followFormActions?: boolean;
   /** Awaited after a page is recorded, while the rendered page is still open (Page Content extraction). */
@@ -371,6 +376,16 @@ export async function seedFromSitemaps(opts: SitemapSeedOptions): Promise<{ queu
 function isLoopback(h: string): boolean {
   const hostWithoutPort = h.replace(/:\d+$/, '').toLowerCase();
   return hostWithoutPort === 'localhost' || hostWithoutPort === '127.0.0.1';
+}
+
+/** True when the path is under one of the include list's paths (whole segments; `/` alone does not count). */
+function includedPath(pathname: string, includePaths: string[] | undefined): boolean {
+  const segments = (p: string) => p.split('/').filter(Boolean);
+  const path = segments(pathname);
+  return (includePaths ?? []).some((prefix) => {
+    const want = segments(prefix);
+    return want.length > 0 && want.every((s, i) => path[i] === s);
+  });
 }
 
 /** A delete label that names more than one row: never probed, whatever the profile says. */
@@ -715,6 +730,16 @@ export class DeterministicSpider {
         return;
       }
       if (!onSite(u)) return;
+
+      // A GET that may change something (`/logout?confirm`, `/delete?id=1`) is never requested (T-427), unless the
+      // person's include list holds it. Listed once, as excluded.
+      if (!isStart && isSideEffectAddress(u) && !includedPath(u.pathname, options.includePaths)) {
+        const key = normRoute(u.toString()).key;
+        if (refusedKeys.has(key) || frontier.has(key)) return;
+        refusedKeys.add(key);
+        skip({ urlPath: redactUrl(u.pathname), why: 'excluded', detail: 'possible side effect' });
+        return;
+      }
 
       if (options.admitPath && !isStart) {
         const key = normRoute(u.toString()).key;
