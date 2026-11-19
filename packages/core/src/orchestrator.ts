@@ -54,6 +54,7 @@ import { onSiteAddress } from './same-site.js';
 import { blockChanges, NEEDS_TEST_COPY } from './live-site.js';
 import { EntityNamespacer } from './entity-namespacing.js';
 import { SendGuard, watchSends } from './send-guard.js';
+import { clickGate } from './discovery/click-gate.js';
 import { safeIdPart, pathInside, testPointDir } from './safe-id.js';
 import { baselineKey } from './plan/baseline-key.js';
 import {
@@ -1001,6 +1002,8 @@ export class FlowTestOrchestrator {
               const urlBefore = page.url();
               let stepSuccess = false;
               let currentStepError: string | undefined;
+              // Set when the click-time Safety Filter paused this step (T-421): not a pass, not a failure.
+              let pausedBySafety: string | undefined;
               const currentGlobalStepIndex = globalStepIndex++;
               const stepStartedAt = Date.now();
 
@@ -1033,6 +1036,18 @@ export class FlowTestOrchestrator {
                     const refusalAt = testCase.expectations?.refusal;
                     if (refusalAt && step.selector && step.selector === refusalAt.submitSelector) {
                       refusalBaseline = await captureRefusalBaseline(page).catch(() => undefined);
+                    }
+                    // The Safety Filter reads the live element before every click, on every try and every Role.
+                    const gate = await clickGate(locator, {
+                      name: step.name,
+                      selector: step.selector,
+                      sensitiveApproved: step.sensitiveApproved,
+                      testCopy: !options.readOnly,
+                      forbiddenActions: options.profile?.forbiddenActions,
+                    });
+                    if (!gate.allowed) {
+                      pausedBySafety = gate.reason;
+                      break;
                     }
                     sendGuard?.clickStarted(i);
                     await locator.click({ timeout: budget.clamp(step.optional ? 1500 : 4000) });
@@ -1114,6 +1129,24 @@ export class FlowTestOrchestrator {
                     break;
                   }
                 }
+              }
+
+              if (pausedBySafety) {
+                const reason = `${pausedBySafety}: “${step.name}” was not clicked`;
+                await evidenceCollector.recordStep(page, i + 1, step.name, step.action, urlBefore, false, reason);
+                onEvent({
+                  type: 'STEP_COMPLETED',
+                  stepIndex: currentGlobalStepIndex,
+                  passed: false,
+                  durationMs: Date.now() - stepStartedAt,
+                  error: reason,
+                  urlPath: pathOf(page.url()),
+                  testCaseId: testCase.id,
+                });
+                const note = `${pausedBySafety}: “${step.name}” in ${testCase.name || testCase.flowId} needs your approval in Plan Review on a Test Copy.`;
+                if (!notes.includes(note)) notes.push(note);
+                pointSkippedReason = reason;
+                return;
               }
 
               // An optional step that couldn't be done (a control that only shows at some widths)

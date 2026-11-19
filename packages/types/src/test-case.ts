@@ -36,6 +36,11 @@ export interface TestCaseStep {
   onlyAt?: Breakpoint[];
   /** Opens the control the test needs (a tab, drawer or dialog). If it fails the test is "Could not verify", not Failed. */
   opening?: boolean;
+  /**
+   * The person approved this click as a Sensitive Action in Plan Review. Honoured only on a Test Copy: the
+   * click-time Safety Filter gate (T-421) pauses every other click on a Sensitive Action.
+   */
+  sensitiveApproved?: boolean;
 }
 
 /**
