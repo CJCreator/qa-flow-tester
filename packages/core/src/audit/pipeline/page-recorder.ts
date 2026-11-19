@@ -1,10 +1,10 @@
 /**
  * Stage 1 of the audit pipeline, run inside the crawl (REQ-005, REQ-037, REQ-038): each recorded page is read
  * once while it is still open (`runAuditCrawl`'s `onRenderedPage`). Every page gets its Page Content
- * (`readPage`); Sample Pages also get lab work: the accessibility basics, the speed timing and then the phone
+ * (`readPage`) and lab work (every page, ADR 0047): the accessibility basics, the speed timing and then the phone
  * layout (last, as it resizes the page).
  *
- * Lab work runs off the crawl workers (T-404): when the crawl offers `openPage` and `defer`, each Sample Page's
+ * Lab work runs off the crawl workers (T-404): when the crawl offers `openPage` and `defer`, each page's
  * lab work is queued and done on a page of its own (loaded again in the host's turn), at most `labInFlight` at
  * once, while the crawl worker goes on to its next page. The crawl waits for the queue only before it closes
  * its browser. Without them (older callers, tests), lab work runs on the crawl's page as before.
@@ -54,7 +54,7 @@ export interface PageRecorderOptions {
   workDir: string;
   stages?: Partial<PageStages>;
   /**
-   * PageSpeed Insights for one page, when a PSI key is available (T-404). The first `maxPages` Sample Pages
+   * PageSpeed Insights for one page, when a PSI key is available (T-404). The first `maxPages` pages
    * (default 20) on a public host are measured here and get no browser timing reload, unless PSI fails.
    */
   pageSpeed?: { measure: (url: string) => Promise<SampleSpeed | undefined>; maxPages?: number };
@@ -70,11 +70,11 @@ export interface RecordedPage {
   sampleUrlPath?: string;
   /** The tracker's group key while the crawl runs; final ids come from `layoutGroups()`. */
   groupKey?: string;
-  /** Sample Pages only. Null when the step threw. */
+  /** Every page (ADR 0047). Null when the step threw. */
   accessibility?: AccessibilityBasicsResult | null;
-  /** Sample Pages only. Null when the step threw. */
+  /** Every page (ADR 0047). Null when the step threw. */
   phone?: PhoneLayoutRecord | null;
-  /** Sample Pages only. Lab speed measured by this tool directly in the browser (ADR 0042). Null when the step threw. */
+  /** Every page (ADR 0047). Lab speed measured by this tool directly in the browser (ADR 0042). Null when the step threw. */
   timing?: BrowserTimingResult | null;
   /** Set when PageSpeed Insights was asked for this page during the crawl (T-404); `psi` holds its answer. */
   psiTried?: boolean;
@@ -151,7 +151,6 @@ export class AuditPageRecorder {
     } catch {
       entry.read = null;
     }
-    if (entry.coverage !== 'sample') return;
 
     const n = ++this.sampleCount;
     let url: string | undefined;
