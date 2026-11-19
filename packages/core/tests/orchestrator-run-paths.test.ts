@@ -250,6 +250,55 @@ describe('orchestrator run paths', () => {
     expect(report.results[0].retry?.status).toBe('FLAKY_PASSED');
   });
 
+  it('T-409: by default a test that always fails runs twice, and only the retry records video', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'orch-run-paths-retry-'));
+    const tc: TestCase = {
+      id: 'TC-ALWAYS-FAILS',
+      flowId: 'flow-always-fails',
+      name: 'Always Fails',
+      role: 'visitor',
+      startPage: '/start',
+      kind: 'page-test',
+      steps: [{ action: 'navigate', value: '/broken', name: 'Broken navigation' }],
+      expectations: {},
+    };
+    let starts = 0;
+    currentRouteHandler = async (route) => {
+      const url = new URL(route.request().url());
+      if (url.pathname === '/broken') return route.abort('failed');
+      if (url.pathname === '/start') starts++;
+      return route.fulfill({
+        status: 200,
+        contentType: 'text/html',
+        body: '<!doctype html><html><head><title>Start</title></head><body><header><nav><a href="/">Home</a></nav></header><main><h1>Start</h1></main></body></html>',
+      });
+    };
+    const openPage = vi.spyOn(BrowserManager.prototype, 'openPage');
+
+    const report = await new FlowTestOrchestrator().run({
+      targetUrl: 'http://test.local',
+      productId: 'test-retry-default',
+      specTestCases: [tc],
+      preflight,
+      outputDir: tmpDir,
+      breakpoints: ['1440px'],
+      enableA11y: false,
+      enablePerformance: false,
+      enableSecurity: false,
+      enableSeo: false,
+      searchChecks: false,
+      // flakyReruns and recordVideo left unset: the defaults are under test.
+    });
+
+    expect(starts).toBe(2);
+    expect(report.results[0].status).toBe('Failed');
+    const videoDirs = openPage.mock.calls.map(([o]) => o.recordVideoDir);
+    expect(videoDirs).toHaveLength(2);
+    expect(videoDirs[0]).toBeUndefined();
+    expect(videoDirs[1]).toBeDefined();
+    expect(report.results[0].videoPath?.endsWith('.webm')).toBe(true);
+  });
+
   it('Sent form: test that sends a form (route sees POST) and then fails is not retried; route saw exactly one POST', async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'orch-run-paths-post-'));
 
@@ -322,7 +371,7 @@ describe('orchestrator run paths', () => {
     expect(report.results[0].error).toContain('Not tried again: this test already sent a form');
   });
 
-  it('Video: with recordVideo: true, passing test leaves no .webm in evidence folder; failing one keeps one', async () => {
+  it("Video: with recordVideo: 'always', passing test leaves no .webm in evidence folder; failing one keeps one", async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'orch-run-paths-video-'));
 
     const tcPass: TestCase = {
@@ -365,7 +414,7 @@ describe('orchestrator run paths', () => {
       specTestCases: [tcPass, tcFail],
       preflight,
       outputDir: tmpDir,
-      recordVideo: true,
+      recordVideo: 'always',
       flakyReruns: 0,
       breakpoints: ['1440px'],
       enableA11y: false,
