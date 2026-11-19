@@ -80,12 +80,12 @@ export function competitorExamples(
   return out;
 }
 
-/** The ideas a variant may borrow, one line each, cited by finding, site and page. */
+/** The ideas a variant may borrow, one line each, with the finding it answers and the site and page it was seen on. */
 export function competitorIdeas(examples: ReadonlyMap<string, readonly CompetitorExample[]>, max = 12): string[] {
   return [...examples.values()]
     .flat()
     .slice(0, max)
-    .map((e) => `${e.text} (for ${e.findingId}; cite as ${e.host}${e.urlPath})`);
+    .map((e) => `for ${e.findingId}: ${e.text}`);
 }
 
 /** Every piece of competitor text the facts hold: titles, Section headings and calls to action. */
