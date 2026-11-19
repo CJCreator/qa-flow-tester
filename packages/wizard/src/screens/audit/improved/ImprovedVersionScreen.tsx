@@ -8,6 +8,7 @@ import { Link, PATHS } from '../../../lib/router';
 import { useDocumentTitle } from '../../../lib/title';
 import { AuditTabs } from '../AuditTabs';
 import { CompetitorsPanel } from './CompetitorsPanel';
+import { FixOptionsPanel } from './FixOptionsPanel';
 import { loadVersion, versionsOldestFirst } from '../saved/saved-api';
 import {
   SHARE_LANGUAGES,
@@ -264,7 +265,8 @@ export function ImprovedVersionScreen({ auditId, fetchImpl, aiSetup = getAiSetup
         />
       )}
       {versions.status === 'loaded' && version > 0 && (
-        <div className="mt-10">
+        <div className="mt-10 space-y-10">
+          <FixOptionsPanel auditId={auditId} version={version} fetchImpl={fetchImpl} />
           <CompetitorsPanel auditId={auditId} version={version} aiReady={aiReady} fetchImpl={fetchImpl} />
         </div>
       )}
