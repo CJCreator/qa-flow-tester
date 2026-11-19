@@ -17,7 +17,8 @@ import { SafetyFilter } from './safety-filter.js';
 import { riskyToClick } from './action-words.js';
 import { collectElementInventory, TEST_ID_ATTRIBUTES } from './element-inventory.js';
 import { redactUrl } from '../redact.js';
-import { isSameSite } from '../same-site.js';
+import { isSameSite, inDomainAllowlist } from '../same-site.js';
+import { installHostAllowlist, type HostAllowlist } from '../browser.js';
 import { makeOutboundFetch, sameSiteUrl } from '../safe-net.js';
 import type { FetchFn } from '@qa/checkers';
 import { readLayoutFingerprint } from '../competitive/safe-crawler.js';
@@ -511,7 +512,30 @@ export class DeterministicSpider {
     this.maxPages = maxPages;
   }
 
+  /**
+   * Crawls from `targetUrl`. The Domain Allowlist covers every request of `context` while it runs (T-424): a page
+   * or frame load, or a changing request, to another host is aborted. The route is lifted when the crawl ends.
+   */
   async crawl(context: BrowserContext, targetUrl: string, options: CrawlOptions = {}): Promise<SpiderResult> {
+    const start = new URL(targetUrl);
+    const scope = {
+      onSite: (u: URL) => isSameSiteOrLoopback(u.host, start.host) || inDomainAllowlist(u, targetUrl),
+    };
+    const allowlist = await installHostAllowlist(context, (u) => scope.onSite(u));
+    try {
+      return await this.crawlWithin(context, targetUrl, options, allowlist, scope);
+    } finally {
+      await allowlist.release();
+    }
+  }
+
+  private async crawlWithin(
+    context: BrowserContext,
+    targetUrl: string,
+    options: CrawlOptions,
+    allowlist: HostAllowlist,
+    scope: { onSite: (u: URL) => boolean }
+  ): Promise<SpiderResult> {
     const concurrency = Math.max(1, Math.min(options.maxConcurrency ?? 5, options.concurrency ?? 2));
     const pageDelayMs = options.pageDelayMs !== undefined ? options.pageDelayMs : 100;
     const maxAttempts = options.maxAttempts ?? this.maxPages * 3;
@@ -527,6 +551,21 @@ export class DeterministicSpider {
     let sessionLost = false;
     let consecutiveWalls = 0;
     const onSite = (u: URL) => isSameSiteOrLoopback(u.host, site.host);
+    // The allowlist route follows the site as it is rebased on the first landing.
+    scope.onSite = (u: URL) => onSite(u) || inDomainAllowlist(u, targetUrl);
+    /** Off-site addresses already listed as Skipped Pages: a control repeated on every page is listed once. */
+    const offSiteListed = new Set<string>();
+    const skipOffSite = (address: URL, label: string) => {
+      const offSite = redactUrl(address.origin + address.pathname);
+      if (offSiteListed.has(offSite)) return;
+      offSiteListed.add(offSite);
+      skip({
+        urlPath: offSite,
+        why: 'off-site-redirect',
+        finalPath: offSite,
+        detail: `Clicked “${label.slice(0, 80)}”`,
+      });
+    };
     const exploreClicks = options.exploreClicks ?? true;
     const maxDepth = options.maxDepth ?? 8;
     const maxPerShape = options.maxPerShape ?? 25;
@@ -1441,6 +1480,7 @@ export class DeterministicSpider {
                 await paced(pageUrl, () => navigate(page, pageUrl, navLimits(pageTimeoutMs)));
               }
               const urlBefore = page.url();
+              const blocksBefore = allowlist.blocked.length;
               // A click may load another page of the host, so with a pacer it takes a turn too.
               // Guarded (ADR 0025, T-423): changing requests are aborted and the page's own form submits do
               // nothing while the click runs. What was blocked is kept as a fact, not as an error.
@@ -1486,17 +1526,15 @@ export class DeterministicSpider {
                   }
                 }
               });
+              // A load of another host this click started was aborted by the allowlist (T-424): the page stayed.
+              for (const b of allowlist.blocked.slice(blocksBefore)) {
+                if (b.kind === 'navigation' && b.mainFrame && b.page === page) skipOffSite(new URL(b.url), el.name);
+              }
               const after = new URL(page.url());
               if (!onSite(after) && /^https?:$/.test(after.protocol)) {
                 // Another host (T-426): nothing is done there. Go back, or reopen the page the click started
                 // from, and list the address as a Skipped Page with the control that led there.
-                const offSite = redactUrl(after.origin + after.pathname);
-                skip({
-                  urlPath: offSite,
-                  why: 'off-site-redirect',
-                  finalPath: offSite,
-                  detail: `Clicked “${el.name.slice(0, 80)}”`,
-                });
+                skipOffSite(after, el.name);
                 debugLog('crawl', 'click left the site; going back', { path: currentPath });
                 await page.goBack({ timeout: capToDeadline(5000), waitUntil: 'domcontentloaded' }).catch(() => null);
                 let back: URL | undefined;

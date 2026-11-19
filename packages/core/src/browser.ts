@@ -1,4 +1,14 @@
-import { chromium, webkit, firefox, type Browser, type BrowserContext, type Page, type Locator } from 'playwright';
+import {
+  chromium,
+  webkit,
+  firefox,
+  type Browser,
+  type BrowserContext,
+  type Page,
+  type Locator,
+  type Route,
+  type Request as PwRequest,
+} from 'playwright';
 import type { Breakpoint, StorageStateData } from '@qa/types';
 import { isSameSite } from './same-site.js';
 import { abortError } from './abort.js';
@@ -103,6 +113,113 @@ export async function installRequestGuard(
     if (!allowed) return ws.close({ code: 1008, reason: 'Blocked: not a public address' });
     ws.connectToServer();
   });
+}
+
+const CHANGING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+/** A request the Domain Allowlist stopped (or, for a redirect, saw leave). Host and path only, never a query. */
+export interface HostAllowlistBlock {
+  /**
+   * 'navigation': a page or frame load to another host, aborted. 'change': a changing request to another host,
+   * aborted. 'redirect': a page or frame load redirected to another host. A route never sees a redirect hop,
+   * so that request is only recorded: the caller treats the page as off-site.
+   */
+  kind: 'navigation' | 'change' | 'redirect';
+  method: string;
+  /** Origin and path. */
+  url: string;
+  /** The full address, for matching the step evidence's failed requests. Never written to a report. */
+  rawUrl: string;
+  mainFrame: boolean;
+  page: Page | null;
+}
+
+export interface HostAllowlist {
+  /** Every block so far, oldest first. */
+  blocked: HostAllowlistBlock[];
+  /** Read-only subresources (scripts, images, fonts, styles) loaded from other hosts. */
+  thirdPartyReads(): number;
+  release(): Promise<void>;
+}
+
+/**
+ * The Domain Allowlist on every request of a context (T-424). A page or frame load, or a changing request
+ * (POST, PUT, PATCH, DELETE), to a host the allowlist does not hold is aborted. A read-only subresource from
+ * another host still loads, since a page cannot render without it, and is counted. A redirect to another
+ * host is recorded from the `request` event. Every page of the context is covered, popups included.
+ */
+export async function installHostAllowlist(
+  context: BrowserContext,
+  allowed: (url: URL) => boolean,
+  onBlocked?: (block: HostAllowlistBlock) => void
+): Promise<HostAllowlist> {
+  const blocked: HostAllowlistBlock[] = [];
+  let thirdParty = 0;
+  const note = (block: HostAllowlistBlock) => {
+    blocked.push(block);
+    try {
+      onBlocked?.(block);
+    } catch {
+      // A listener's failure never lets a request through.
+    }
+  };
+  const describe = (request: PwRequest, u: URL, kind: HostAllowlistBlock['kind']): HostAllowlistBlock => {
+    let frame: ReturnType<typeof request.frame> | null = null;
+    try {
+      frame = request.frame();
+    } catch {
+      frame = null; // a service worker's request has no frame
+    }
+    return {
+      kind,
+      method: request.method().toUpperCase(),
+      url: u.origin + u.pathname,
+      rawUrl: request.url(),
+      mainFrame: frame ? frame.parentFrame() === null : false,
+      page: frame ? frame.page() : null,
+    };
+  };
+  const handler = async (route: Route) => {
+    const request = route.request();
+    let u: URL;
+    try {
+      u = new URL(request.url());
+    } catch {
+      return route.fallback();
+    }
+    if ((u.protocol !== 'http:' && u.protocol !== 'https:') || allowed(u)) return route.fallback();
+    if (request.isNavigationRequest()) {
+      note(describe(request, u, 'navigation'));
+      // 'aborted' leaves the page where it was; 'blockedbyclient' would show Chromium's error page.
+      return route.abort('aborted').catch(() => undefined);
+    }
+    if (CHANGING_METHODS.has(request.method().toUpperCase())) {
+      note(describe(request, u, 'change'));
+      return route.abort('blockedbyclient').catch(() => undefined);
+    }
+    thirdParty++;
+    return route.fallback();
+  };
+  const onRequest = (request: PwRequest) => {
+    if (!request.redirectedFrom() || !request.isNavigationRequest()) return;
+    let u: URL;
+    try {
+      u = new URL(request.url());
+    } catch {
+      return;
+    }
+    if (!allowed(u)) note(describe(request, u, 'redirect'));
+  };
+  await context.route('**/*', handler);
+  context.on('request', onRequest);
+  return {
+    blocked,
+    thirdPartyReads: () => thirdParty,
+    release: async () => {
+      context.off('request', onRequest);
+      await context.unroute('**/*', handler).catch(() => undefined);
+    },
+  };
 }
 
 /** No direct UDP for WebRTC: STUN/TURN packets cannot reach addresses the request guard never sees. */
