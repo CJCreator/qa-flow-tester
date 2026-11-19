@@ -4,7 +4,11 @@ import type { AddressInfo } from 'node:net';
 import { chromium, type Browser } from 'playwright';
 import type { AuditDoc } from '../src/audit/documents/model.js';
 import { renderHtml } from '../src/audit/documents/render-html.js';
-import { closePdfBrowser, renderPdf } from '../src/audit/documents/render-pdf.js';
+import { closePdfBrowser, renderPdf, renderThumbnails } from '../src/audit/documents/render-pdf.js';
+import { emptyOverlay } from '../src/audit/documents/edits.js';
+import { editedViewOf } from '../src/audit/documents/generate.js';
+import { beforeAfterPairHtml, buildPitchGlimpse } from '../src/audit/documents/pitch.js';
+import { auditDocContents, auditDocResult } from './helpers/audit-doc-fixture.js';
 
 // Launches Chromium: listed in BROWSER_TESTS.core (vitest.workspace.ts).
 
@@ -176,5 +180,47 @@ describe('renderPdf', { timeout: 90_000 }, () => {
     expect(launched[0]!.isConnected()).toBe(false);
     await renderPdf(html);
     expect(launched).toHaveLength(2);
+  });
+});
+
+describe('the Improved version in print (T-415)', { timeout: 120_000 }, () => {
+  const uri = (b: Buffer | null) => `data:image/jpeg;base64,${b!.toString('base64')}`;
+
+  it('renderThumbnails takes a JPEG of each page, offline', async () => {
+    const shots = await renderThumbnails(['<html><body style="background:#1a4d8c"><h1>Variant</h1></body></html>']);
+    expect(shots).toHaveLength(1);
+    expect(shots[0]!.subarray(0, 3)).toEqual(Buffer.from([0xff, 0xd8, 0xff]));
+  });
+
+  it('the Pitch Glimpse with the before/after thumbnail still fits on one A4 page', async () => {
+    const [after] = await renderThumbnails(['<html><body style="background:#1a4d8c"><h1>After</h1></body></html>']);
+    const [tall] = await renderThumbnails(['<html><body style="background:#e06a10">Phone</body></html>'], {
+      width: 375,
+      height: 812,
+    });
+    const [pair] = await renderThumbnails([beforeAfterPairHtml(uri(tall!), uri(after!))]);
+    const result = auditDocResult();
+    result.findings = result.findings.map((f, i) => (i < 3 ? { ...f, screenshotPath: 'shots/p.jpg' } : f));
+    const view = editedViewOf({ result, contents: auditDocContents(), edits: emptyOverlay() });
+    const html = buildPitchGlimpse(view, {
+      optOutText: {},
+      screenshots: { 'shots/p.jpg': uri(tall!) },
+      improved: { urlPath: '/', pair: uri(pair!), cites: ['AF-004'] },
+    });
+    expect(html).toContain('Improved version');
+    const base = await renderPdf(
+      buildPitchGlimpse(view, { optOutText: {}, screenshots: { 'shots/p.jpg': uri(tall!) } }),
+      { format: 'A4' }
+    );
+    expect(pageCount(base), 'baseline').toBe(1);
+    const pdf = await renderPdf(html, { format: 'A4' });
+    expect(pageCount(pdf)).toBe(1);
+    const tamil = buildPitchGlimpse(view, {
+      language: 'ta',
+      optOutText: {},
+      screenshots: { 'shots/p.jpg': uri(tall!) },
+      improved: { urlPath: '/', pair: uri(pair!), cites: ['AF-004'] },
+    });
+    expect(pageCount(await renderPdf(tamil, { format: 'A4' })), 'Tamil').toBe(1);
   });
 });

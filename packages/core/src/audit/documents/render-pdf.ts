@@ -140,3 +140,49 @@ export async function renderPdf(html: string, options: RenderPdfOptions = {}): P
     }
   }
 }
+
+/**
+ * Thumbnails of self-contained pages (the Improved version's variants, T-415): each page is put in one offline
+ * Chromium with setContent, no script and no request but `data:`, and its top `width` × `height` CSS pixels
+ * are taken as a JPEG at half scale. A page that cannot be taken gives null. The browser is always closed.
+ */
+export async function renderThumbnails(
+  pages: readonly string[],
+  options: { width?: number; height?: number; timeoutMs?: number } = {}
+): Promise<Array<Buffer | null>> {
+  if (pages.length === 0) return [];
+  const width = options.width ?? 1440;
+  const height = options.height ?? 900;
+  const timeoutMs = options.timeoutMs ?? PDF_TIMEOUT_MS;
+  let browser: Browser | undefined;
+  try {
+    browser = await chromium.launch({ headless: true, timeout: timeoutMs, args: ['--disable-extensions'] });
+    const context = await browser.newContext({
+      javaScriptEnabled: false,
+      offline: true,
+      serviceWorkers: 'block',
+      viewport: { width, height },
+      deviceScaleFactor: 0.5,
+    });
+    await context.route('**/*', (route) =>
+      route.request().url().startsWith('data:') ? route.continue() : route.abort('blockedbyclient')
+    );
+    const out: Array<Buffer | null> = [];
+    for (const html of pages) {
+      const page = await context.newPage();
+      try {
+        await page.setContent(html, { waitUntil: 'load', timeout: timeoutMs });
+        out.push(await page.screenshot({ type: 'jpeg', quality: 70, clip: { x: 0, y: 0, width, height } }));
+      } catch {
+        out.push(null);
+      } finally {
+        await page.close().catch(() => {});
+      }
+    }
+    return out;
+  } catch {
+    return pages.map(() => null);
+  } finally {
+    await browser?.close().catch(() => {});
+  }
+}

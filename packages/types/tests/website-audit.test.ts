@@ -605,6 +605,9 @@ describe('AUDIT_API', () => {
       ['POST', '/api/audits/:id/improve'],
       ['GET', '/api/audits/:id/improve'],
       ['GET', '/api/audits/:id/improve/:page/:variant'],
+      // T-415
+      ['PUT', '/api/audits/:id/improve-best'],
+      ['GET', '/api/audits/:id/improve-export'],
       // BE-022 Shared Links
       ['POST', '/api/audits/:id/share'],
       ['GET', '/api/audits/:id/share'],
