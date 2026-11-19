@@ -73,7 +73,7 @@ const HOME: PageContent = {
   ],
   forms: [],
   ctas: [{ text: 'Book an appointment', kind: 'link', to: '/contact' }],
-  language: { detected: 'en' } as PageContent['language'],
+  language: { primary: 'en', others: [], declared: null },
   sections: [],
 };
 

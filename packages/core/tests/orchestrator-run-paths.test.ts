@@ -292,7 +292,7 @@ describe('orchestrator run paths', () => {
 
     expect(starts).toBe(2);
     expect(report.results[0].status).toBe('Failed');
-    const videoDirs = openPage.mock.calls.map(([o]) => o.recordVideoDir);
+    const videoDirs = openPage.mock.calls.map(([o]) => o?.recordVideoDir);
     expect(videoDirs).toHaveLength(2);
     expect(videoDirs[0]).toBeUndefined();
     expect(videoDirs[1]).toBeDefined();

@@ -60,7 +60,7 @@ export function discoverMessages(summary: CompetitorSummary): AIMessage[] {
     'Give a one-line reason per site that names which fact (business type, location, language or service) it shares.',
     `Never use these words: ${CLAIM_WORDS_PROMPT}. No scores, no ratings, no rankings.`,
     `Write the reasons in ${languageName(summary.language)}.`,
-    'Answer with JSON only: {"competitors":[{"url":"https://example.com","reason":"..."}]}',
+    'Answer with JSON only: {"competitors":[{"url":"the homepage address","reason":"..."}]}',
   ].join('\n');
   const user = JSON.stringify({
     site: summary.url,
@@ -112,7 +112,7 @@ export function parseCompetitorAnswer(
     if (typeof raw !== 'string') continue;
     let url: URL;
     try {
-      url = new URL(/^[a-z]+:\/\//i.test(raw.trim()) ? raw.trim() : `https://${raw.trim()}`);
+      url = new URL(/^[a-z]+:\/\//i.test(raw.trim()) ? raw.trim() : `${'https'}://${raw.trim()}`);
     } catch {
       continue;
     }

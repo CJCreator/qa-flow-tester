@@ -10,7 +10,7 @@ const finding = (title: string, extra: Partial<Finding> = {}): F => ({
   title,
   severity: 'Minor',
   checker: 'bug-detection',
-  triageStatus: 'Open',
+  triageStatus: 'Pending',
   needsConfirmation: false,
   where: { urlPath: '/', role: 'visitor', breakpoint: '1440px' },
   ...extra,
