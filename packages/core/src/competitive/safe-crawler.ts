@@ -174,14 +174,24 @@ export class SafePublicCrawler {
       const page = await context.newPage();
       const blockedRequests: string[] = [];
 
-      // 1. Strict Security Interceptor: Block mutating HTTP methods & external domain escapes
-      await page.route('**/*', (route) => {
+      // 1. Strict Security Interceptor: Block mutating HTTP methods & external domain escapes.
+      // A context route (T-425): popups (`window.open`, `target="_blank"`) are guarded like the page.
+      await context.route('**/*', async (route) => {
         const request = route.request();
         const method = request.method().toUpperCase();
         const reqUrl = request.url();
-        const block = () => {
+        const block = async () => {
           blockedRequests.push(`${method} ${reqUrl}`);
-          return route.abort();
+          await route.abort().catch(() => undefined);
+          // A popup sent off the host is closed at once; the blocked list records it.
+          if (request.isNavigationRequest()) {
+            try {
+              const opened = request.frame().page();
+              if (opened && opened !== page) await opened.close().catch(() => undefined);
+            } catch {
+              // No page yet: the browser never shows a popup whose first load was stopped.
+            }
+          }
         };
 
         // Block all mutating HTTP requests on external websites
