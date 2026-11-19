@@ -223,6 +223,8 @@ export function buildAuditRoutes(server: RunnerServer): Route[] {
           approve: (s) => rewrites.approve(s),
           run: (i, d) => rewrites.run(i, { ...d, resolveAi }),
           accept: (i, d) => rewrites.accept(i, d),
+          approveMany: (s) => rewrites.approveMany(s),
+          runBatch: (s, d) => rewrites.runBatch(s, { ...d, resolveAi }),
         };
       },
       loadSection: (auditId, version, urlPath) =>

@@ -952,7 +952,14 @@ export interface RewriteState {
   sectionId: string;
   /** Null: not approved, so no rewrite runs (REQ-030 AC-1). */
   approvedAt: string | null;
-  proposal: { text: string; language: DocumentLanguage; overlaps: OverlapFlag[]; createdAt: string } | null;
+  proposal: {
+    text: string;
+    language: DocumentLanguage;
+    overlaps: OverlapFlag[];
+    createdAt: string;
+    /** T-419: the copy variants of a batch draft; `text` is the first. */
+    variants?: Array<{ text: string; overlaps: OverlapFlag[] }>;
+  } | null;
   acceptedAt: string | null;
 }
 
@@ -1697,3 +1704,30 @@ export const AUDIT_COMPETITOR_API = {
   /** Reads the kept candidates: GET only, paced, robots.txt honoured. */
   crawlCompetitors: { method: 'POST', path: '/api/audits/:id/competitors/crawl', replies: 'json', access: 'owner' },
 } as const satisfies Record<string, AuditEndpoint>;
+
+// ---------------------------------------------------------------------------------------------------
+// Copy variants in batches (T-419): approveRewrite and runRewrite also take a list of Sections
+// ---------------------------------------------------------------------------------------------------
+
+/** Sections one batch request may name. */
+export const REWRITE_BATCH_MAX_SECTIONS = 10;
+
+/** `approveRewrite` / `runRewrite` with `sections` instead of one `urlPath` and `sectionId`. */
+export interface RewriteBatchBody {
+  version?: number;
+  sections: Array<{ urlPath: string; sectionId: string }>;
+  language?: DocumentLanguage;
+}
+
+/** One Section of a batch that was refused or got no drafts. */
+export interface RewriteBatchFailure {
+  urlPath: string;
+  sectionId: string;
+  code: AuditErrorCode;
+  error: string;
+}
+
+export interface RewriteBatchReply {
+  rewrites: RewriteState[];
+  failures: RewriteBatchFailure[];
+}
