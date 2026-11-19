@@ -1167,6 +1167,10 @@ export const AUDIT_API = {
   listImprove: { method: 'GET', path: '/api/audits/:id/improve', replies: 'json', access: 'view' },
   /** One design variant (HTML), served with the Shared Link page headers. */
   getImprove: { method: 'GET', path: '/api/audits/:id/improve/:page/:variant', replies: 'html', access: 'view' },
+  /** Stars one variant as the best: its thumbnail goes in the Pitch Glimpse (T-415). */
+  setImproveBest: { method: 'PUT', path: '/api/audits/:id/improve-best', replies: 'json', access: 'edit' },
+  /** Every variant that passed the quality gate, as a zip of HTML files with a README (T-415). */
+  exportImproved: { method: 'GET', path: '/api/audits/:id/improve-export', replies: 'file', access: 'export' },
   listShares: { method: 'GET', path: '/api/audits/:id/share', replies: 'json', access: 'view' },
   createShare: { method: 'POST', path: '/api/audits/:id/share', replies: 'json', access: 'owner' },
   revokeShare: { method: 'DELETE', path: '/api/audits/:id/share/:linkId', replies: 'json', access: 'owner' },
@@ -1344,6 +1348,8 @@ export interface ImprovePage {
   title: string | null;
   /** The Layout Group it stands for; null for the homepage. */
   layoutGroup: string | null;
+  /** The stored phone screenshot of the page, relative to the version folder (`AUDIT_API.file`); the "before". */
+  screenshotPath?: string | null;
 }
 
 /** The automatic checks a variant must pass before it is shown (T-414). */
@@ -1405,6 +1411,15 @@ export interface ImproveListReply {
   variants: ImproveVariant[];
   best?: { page: string; variant: number };
   estimate: ImproveEstimate;
+}
+
+export interface ImproveBestBody extends VersionQuery {
+  page: string;
+  variant: number;
+}
+
+export interface ImproveBestReply {
+  best: { page: string; variant: number };
 }
 
 export interface ImproveCreateReply {
@@ -1512,6 +1527,8 @@ interface AuditApiShapes {
   createImprove: { query: NoQuery; body: ImproveCreateBody; reply: ImproveCreateReply };
   listImprove: { query: VersionQuery; body: undefined; reply: ImproveListReply };
   getImprove: { query: VersionQuery; body: undefined; reply: HtmlReply };
+  setImproveBest: { query: NoQuery; body: ImproveBestBody; reply: ImproveBestReply };
+  exportImproved: { query: VersionQuery; body: undefined; reply: FileReply };
   listShares: { query: NoQuery; body: undefined; reply: ShareListReply };
   createShare: { query: NoQuery; body: ShareCreateBody; reply: ShareLinkReply };
   revokeShare: { query: NoQuery; body: undefined; reply: ShareLinkReply };

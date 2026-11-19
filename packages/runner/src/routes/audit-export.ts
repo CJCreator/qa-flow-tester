@@ -22,6 +22,8 @@ import {
   type EditOverlay,
   type ExportFormat,
   type PageContent,
+  type ImproveBestReply,
+  type ImproveVariant,
   type StoredDocumentKind,
 } from '@qa/types';
 import {
@@ -29,12 +31,23 @@ import {
   exportBaseName,
   exportOwnerAudit,
   exportPitchGlimpse,
+  beforeAfterPairHtml,
+  exportImprovedZip,
+  improvePages,
   pageContentName,
+  readImproveIndex,
+  renderThumbnails,
+  variantFileName,
+  writeImproveIndex,
   type AuditExportFile,
+  type ImprovedExport,
+  type ImproveIo,
+  type PitchImproved,
   type AuditStore,
   type ExportOptions,
 } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
+import { readJsonBody, sendJson } from './body.js';
 import { AUDIT_NOT_FOUND, refuse, refuseStoreFailure, pitchScreenshots, readEdits } from './audit-common.js';
 import { loadResolvedSettings, type AuditSettingsStore } from './audit-settings.js';
 
@@ -46,11 +59,43 @@ export interface AuditExportDeps {
   exportOptions?: ExportOptions;
   /** How many PDFs may be made at once on this runner (each starts a Chromium). Default 2. */
   maxConcurrentPdf?: number;
+  /** Thumbnails of the Improved version's variants (T-415); one Chromium per call by default. */
+  renderThumbnails?: (pages: readonly string[]) => Promise<Array<Buffer | null>>;
+}
+
+/** Variants whose "after" image is drawn in an export; the rest list their changes only. */
+const MAX_EXPORT_THUMBNAILS = 6;
+const MAX_BEFORE_BYTES = 3_000_000;
+
+/** A variant the Improved version shows: made, and not refused by the quality gate (T-414). */
+const shown = (v: ImproveVariant) => v.status === 'made' && v.gate?.passed !== false;
+
+function improveIo(store: AuditStore, auditId: string, version: number): Pick<ImproveIo, 'readJson' | 'writeJson'> {
+  return {
+    readJson: (name) => store.readVersionJson(auditId, version, name),
+    writeJson: (name, value) => store.writeVersionJson(auditId, version, name, value),
+  };
+}
+
+const jpegUri = (bytes: Buffer | null | undefined) =>
+  bytes && bytes.byteLength > 0 ? `data:image/jpeg;base64,${bytes.toString('base64')}` : undefined;
+
+async function pngUri(store: AuditStore, auditId: string, version: number, path: string | null | undefined) {
+  if (!path || !/[.]png$/i.test(path)) return undefined;
+  try {
+    const bytes = await store.getVersionFile(auditId, version, path);
+    return bytes && bytes.byteLength > 0 && bytes.byteLength <= MAX_BEFORE_BYTES
+      ? `data:image/png;base64,${Buffer.from(bytes).toString('base64')}`
+      : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 const RUNNING = 'This version of the Website Audit is still running. Download it when it has finished.';
 const NO_RESULT = 'This version of the Website Audit has no finished result to download.';
 const FAILED = 'The file could not be made. Try again.';
+const NO_VARIANT = 'No design variant of this version has passed the checks yet.';
 const PDF_BUSY = 'Another PDF is being made. Try again in a moment.';
 const PDF_RETRY_AFTER_SECONDS = 5;
 const DEFAULT_MAX_CONCURRENT_PDF = 2;
@@ -201,6 +246,102 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
     };
   };
 
+  const thumbnails = deps.renderThumbnails ?? ((pages: readonly string[]) => renderThumbnails(pages));
+
+  /**
+   * The Improved version's shown variants (T-415), best first, with their stored pages and the phone
+   * screenshot ("before"); the first `drawn` get a thumbnail ("after"). Null when there is none.
+   */
+  const loadImproved = async (loaded: Loaded, drawn: number): Promise<ImprovedExport | null> => {
+    const index = await readImproveIndex(
+      improveIo(store, loaded.auditId, loaded.version),
+      loaded.version,
+      loaded.result.language
+    );
+    const pages = new Map(improvePages(loaded.result).map((p) => [p.key, p]));
+    const best = index.best;
+    const isBest = (v: ImproveVariant) => !!best && best.page === v.page && best.variant === v.variant;
+    const list = index.variants
+      .filter((v) => shown(v) && pages.has(v.page))
+      .sort((a, b) => Number(isBest(b)) - Number(isBest(a)));
+    const variants: ImprovedExport['variants'] = [];
+    for (const v of list) {
+      const bytes = await store.getVersionFile(loaded.auditId, loaded.version, variantFileName(v.page, v.variant));
+      if (!bytes) continue;
+      const page = pages.get(v.page)!;
+      const before = await pngUri(store, loaded.auditId, loaded.version, page.screenshotPath);
+      variants.push({ page, variant: v, html: Buffer.from(bytes).toString('utf8'), ...(before ? { before } : {}) });
+    }
+    if (variants.length === 0) return null;
+    const take = variants.slice(0, drawn);
+    const shots = take.length > 0 ? await thumbnails(take.map((v) => v.html)).catch(() => []) : [];
+    take.forEach((v, i) => {
+      const after = jpegUri(shots[i]);
+      if (after) v.after = after;
+    });
+    return { variants, findings: loaded.result.findings.map((f) => ({ id: f.id, title: f.title })) };
+  };
+
+  /** The starred variant, or the first that passed, as the Pitch Glimpse's before/after thumbnail. */
+  const pitchImproved = async (loaded: Loaded): Promise<PitchImproved | undefined> => {
+    const improved = await loadImproved(loaded, 1).catch(() => null);
+    const best = improved?.variants[0];
+    if (!best) return undefined;
+    // Before and after in one thumbnail, so the Pitch Glimpse stays on one A4 page.
+    const [pair] =
+      best.before && best.after
+        ? await thumbnails([beforeAfterPairHtml(best.before, best.after)]).catch(() => [null])
+        : [null];
+    const pairUri = jpegUri(pair);
+    return {
+      urlPath: best.page.urlPath,
+      cites: best.variant.cites ?? [],
+      ...(best.after ? { after: best.after } : {}),
+      ...(pairUri ? { pair: pairUri } : {}),
+    };
+  };
+
+  const improvedZipRoute = async (c: RouteContext): Promise<void> => {
+    const common = commonQuery(c.url);
+    if (typeof common === 'string') return invalid(c.res, common);
+    try {
+      const loaded = await load(store, c, common.version);
+      if (!loaded) return;
+      const improved = await loadImproved(loaded, 0);
+      if (!improved) return refuse(c.res, 404, 'ERR_AUDIT_NOT_FOUND', NO_VARIANT);
+      sendFile(c.res, exportImprovedZip(improved, loaded.result.url, loaded.version));
+    } catch (err) {
+      refuseStoreFailure(c.res, err, { failed: FAILED });
+    }
+  };
+
+  const bestRoute = async (c: RouteContext): Promise<void> => {
+    let body: { version?: unknown; page?: unknown; variant?: unknown };
+    try {
+      body = await readJsonBody(c.req, 2_000);
+    } catch {
+      return invalid(c.res, 'The request is not valid JSON.');
+    }
+    if (!body || typeof body !== 'object' || typeof body.page !== 'string' || typeof body.variant !== 'number')
+      return invalid(c.res, 'Name the page and the variant to star.');
+    if (body.version !== undefined && (typeof body.version !== 'number' || !Number.isInteger(body.version)))
+      return invalid(c.res, 'version: a whole number from 1.');
+    try {
+      const loaded = await load(store, c, body.version as number | undefined);
+      if (!loaded) return;
+      const io = improveIo(store, loaded.auditId, loaded.version);
+      const index = await readImproveIndex(io, loaded.version, loaded.result.language);
+      const entry = index.variants.find((v) => v.page === body.page && v.variant === body.variant && shown(v));
+      if (!entry) return refuse(c.res, 404, 'ERR_AUDIT_NOT_FOUND', NO_VARIANT);
+      const best = { page: entry.page, variant: entry.variant };
+      await writeImproveIndex(io, { ...index, best });
+      const reply: ImproveBestReply = { best };
+      sendJson(c.res, 200, reply);
+    } catch (err) {
+      refuseStoreFailure(c.res, err, { failed: FAILED });
+    }
+  };
+
   const exportRoute = async (c: RouteContext): Promise<void> => {
     const common = commonQuery(c.url);
     if (typeof common === 'string') return invalid(c.res, common);
@@ -239,6 +380,8 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
           return;
         }
       }
+      // The Improved version joins every export when a variant passed the checks (T-415).
+      const improved = await loadImproved(loaded, format === 'bundle' ? 0 : MAX_EXPORT_THUMBNAILS);
       const file = await exportAudit(
         format,
         {
@@ -249,7 +392,7 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
           ...(common.language ? { language: common.language } : {}),
           ...(documents ? { documents } : {}),
         },
-        options
+        improved ? { ...options, improved } : options
       );
       sendFile(c.res, file);
     } catch (err) {
@@ -280,7 +423,8 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
           screenshots: await pitchScreenshots(store, loaded),
           ...(common.language ? { language: common.language } : {}),
         },
-        options
+        options,
+        await pitchImproved(loaded)
       );
       sendFile(c.res, file);
     } catch (err) {
@@ -344,5 +488,17 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
     },
     { method: AUDIT_API.pitch.method, path: AUDIT_API.pitch.path, access: AUDIT_API.pitch.access, handle: pitchRoute },
     { method: AUDIT_API.owner.method, path: AUDIT_API.owner.path, access: AUDIT_API.owner.access, handle: ownerRoute },
+    {
+      method: AUDIT_API.exportImproved.method,
+      path: AUDIT_API.exportImproved.path,
+      access: AUDIT_API.exportImproved.access,
+      handle: improvedZipRoute,
+    },
+    {
+      method: AUDIT_API.setImproveBest.method,
+      path: AUDIT_API.setImproveBest.path,
+      access: AUDIT_API.setImproveBest.access,
+      handle: bestRoute,
+    },
   ];
 }

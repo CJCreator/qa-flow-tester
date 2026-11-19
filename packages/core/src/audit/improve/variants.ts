@@ -93,7 +93,15 @@ export function improvePages(result: AuditResult): ImprovePage[] {
   const rootPath = result.hierarchy.root.urlPath;
   const root = result.pages.find((p) => p.urlPath === rootPath);
   const used = new Set<string>(['home']);
-  const out: ImprovePage[] = [{ key: 'home', urlPath: rootPath, title: root?.title ?? null, layoutGroup: null }];
+  const out: ImprovePage[] = [
+    {
+      key: 'home',
+      urlPath: rootPath,
+      title: root?.title ?? null,
+      layoutGroup: null,
+      screenshotPath: root?.phone?.screenshotPath ?? null,
+    },
+  ];
   const groups = new Map<string, AuditResult['pages']>();
   for (const page of result.pages) {
     if (!page.layoutGroup) continue;
@@ -104,7 +112,13 @@ export function improvePages(result: AuditResult): ImprovePage[] {
     const sampled = pages.find((p) => p.coverage === 'sample') ?? pages[0];
     const sample = (sampled.sampleUrlPath && pages.find((p) => p.urlPath === sampled.sampleUrlPath)) || sampled;
     if (sample.urlPath === rootPath) continue;
-    out.push({ key: keyFor(sample.urlPath, used), urlPath: sample.urlPath, title: sample.title, layoutGroup: group });
+    out.push({
+      key: keyFor(sample.urlPath, used),
+      urlPath: sample.urlPath,
+      title: sample.title,
+      layoutGroup: group,
+      screenshotPath: sample.phone?.screenshotPath ?? null,
+    });
   }
   return out;
 }

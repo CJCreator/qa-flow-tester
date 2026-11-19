@@ -5,6 +5,8 @@ import {
   auditPath,
   isRecord,
   type AuditVersion,
+  type ImproveBestBody,
+  type ImproveBestReply,
   type ImproveCreateBody,
   type ImproveCreateReply,
   type ImproveListReply,
@@ -17,6 +19,7 @@ import { formatWhen } from '../../../lib/format';
 import { Link, PATHS } from '../../../lib/router';
 import { useDocumentTitle } from '../../../lib/title';
 import { AuditTabs } from '../AuditTabs';
+import { BeforeAfter } from './BeforeAfter';
 import { callAudit, type AuditOutcome } from '../audit-call';
 import { loadVersion, versionsOldestFirst } from '../saved/saved-api';
 import {
@@ -127,6 +130,11 @@ export interface ImprovedVersionViewProps {
   onMakeVariants: () => void;
   /** Makes one variant again: one AI request (T-414). */
   onTryAgain: (page: string, variant: number) => void;
+  /** The before/after view (T-415). */
+  opened?: OpenedVariant | null;
+  onOpen?: (page: string, variant: number) => void;
+  onStar?: (page: string, variant: number) => void;
+  findingTitles?: Readonly<Record<string, string>>;
   /** The homepage page for a preview Shared Link (REQ-024). */
   language: ShareLanguage;
   preview: PreviewState;
@@ -149,6 +157,42 @@ function NoKeyReason({ id }: { id: string }) {
   );
 }
 
+/** The variant open in the before/after view, and its page once loaded. */
+export interface OpenedVariant {
+  page: string;
+  variant: number;
+  html: string | null;
+}
+
+/** The best variant for the Pitch Glimpse: the one starred, else the first that passed the checks (T-415). */
+export function bestVariant(reply: ImproveListReply): { page: string; variant: number } | null {
+  if (reply.best && reply.variants.some((v) => v.page === reply.best!.page && v.variant === reply.best!.variant))
+    return reply.best;
+  const first = reply.variants.find(variantShown);
+  return first ? { page: first.page, variant: first.variant } : null;
+}
+
+/** `PUT /api/audits/:id/improve-best`: stars one variant as the best. */
+export function setBest(auditId: string, body: ImproveBestBody, fetchImpl: Fetch = fetch) {
+  return callAudit<ImproveBestReply>(
+    auditPath(AUDIT_API.setImproveBest.path, { id: auditId }),
+    {
+      method: AUDIT_API.setImproveBest.method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+    fetchImpl,
+    'The best variant could not be saved. Try again.',
+    (reply) => (isRecord(reply) && isRecord(reply.best) ? (reply as unknown as ImproveBestReply) : null),
+    REFUSALS
+  );
+}
+
+/** The zip of every variant that passed the checks, with a README naming the findings. */
+export function improvedZipUrl(auditId: string, version: number): string {
+  return `${auditPath(AUDIT_API.exportImproved.path, { id: auditId })}?version=${encodeURIComponent(String(version))}`;
+}
+
 /** Whether a variant may be shown: made, and not refused by the quality gate (T-414). */
 export function variantShown(v: ImproveVariant): boolean {
   return v.status === 'made' && v.gate?.passed !== false;
@@ -160,13 +204,24 @@ function VariantList({
   busy,
   noKey,
   onTryAgain,
+  opened,
+  onOpen,
+  onStar,
+  findingTitles,
 }: {
   auditId: string;
   reply: ImproveListReply;
   busy: boolean;
   noKey: boolean;
   onTryAgain: (page: string, variant: number) => void;
+  opened: OpenedVariant | null;
+  onOpen: (page: string, variant: number) => void;
+  onStar: (page: string, variant: number) => void;
+  findingTitles?: Readonly<Record<string, string>>;
 }) {
+  const best = bestVariant(reply);
+  const isBest = (v: ImproveVariant) => !!best && best.page === v.page && best.variant === v.variant;
+  const isOpen = (v: ImproveVariant) => !!opened && opened.page === v.page && opened.variant === v.variant;
   if (reply.variants.length === 0)
     return <p className="mt-3 text-sm text-ink-soft">No design variant has been made for this version yet.</p>;
   const byPage = new Map<string, ImproveVariant[]>();
@@ -186,15 +241,59 @@ function VariantList({
                 return (
                   <li key={v.variant}>
                     {variantShown(v) ? (
-                      <a
-                        href={variantUrl(auditId, reply.version, v.page, v.variant)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn-quiet btn-sm"
-                        aria-label={`Open variant ${v.variant} (${v.style}) of ${page.urlPath} (opens in a new tab)`}
-                      >
-                        {`Variant ${v.variant}: ${v.style}`}
-                      </a>
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <a
+                            href={variantUrl(auditId, reply.version, v.page, v.variant)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn-quiet btn-sm"
+                            aria-label={`Open variant ${v.variant} (${v.style}) of ${page.urlPath} (opens in a new tab)`}
+                          >
+                            {`Variant ${v.variant}: ${v.style}`}
+                          </a>
+                          <button
+                            type="button"
+                            className="btn-quiet btn-sm"
+                            aria-expanded={isOpen(v)}
+                            onClick={() => onOpen(v.page, v.variant)}
+                          >
+                            {isOpen(v) ? 'Hide before and after' : 'Before and after'}
+                          </button>
+                          <a
+                            href={variantUrl(auditId, reply.version, v.page, v.variant)}
+                            download={`${v.page}-${v.variant}-${v.style}.html`}
+                            className="btn-quiet btn-sm"
+                            aria-label={`Download variant ${v.variant} of ${page.urlPath} as HTML`}
+                          >
+                            Download HTML
+                          </a>
+                          <span className="inline-flex min-h-[44px] items-center gap-2">
+                            <input
+                              id={`best-${v.page}-${v.variant}`}
+                              type="radio"
+                              name="best-variant"
+                              checked={isBest(v)}
+                              disabled={busy}
+                              onChange={() => onStar(v.page, v.variant)}
+                              className="h-5 w-5 accent-stamp"
+                            />
+                            <label htmlFor={`best-${v.page}-${v.variant}`} className="text-sm">
+                              Best, for the Pitch Glimpse
+                            </label>
+                          </span>
+                        </div>
+                        {isOpen(v) && (
+                          <BeforeAfter
+                            auditId={auditId}
+                            version={reply.version}
+                            page={page}
+                            variant={v}
+                            html={opened?.html ?? null}
+                            findingTitles={findingTitles}
+                          />
+                        )}
+                      </div>
                     ) : (
                       <div className="flex flex-wrap items-center gap-2">
                         <span id={reasonId} className="text-sm text-ink-soft">
@@ -345,7 +444,18 @@ export function ImprovedVersionView(props: ImprovedVersionViewProps) {
               busy={props.making}
               noKey={noKey}
               onTryAgain={props.onTryAgain}
+              opened={props.opened ?? null}
+              onOpen={props.onOpen ?? (() => undefined)}
+              onStar={props.onStar ?? (() => undefined)}
+              findingTitles={props.findingTitles}
             />
+            {improve.reply.variants.some(variantShown) && (
+              <p className="mt-4">
+                <a href={improvedZipUrl(auditId, improve.reply.version)} className="btn-quiet btn-sm" download>
+                  Download every variant that passed (zip)
+                </a>
+              </p>
+            )}
           </>
         )}
       </section>
@@ -459,6 +569,8 @@ export function ImprovedVersionScreen({ auditId, fetchImpl, aiSetup = getAiSetup
   const [variantCount, setVariantCount] = useState(3);
   const [making, setMaking] = useState(false);
   const [message, setMessage] = useState<ImprovedVersionViewProps['message']>(null);
+  const [opened, setOpened] = useState<OpenedVariant | null>(null);
+  const [findingTitles, setFindingTitles] = useState<Record<string, string>>({});
   useDocumentTitle('Improved version');
 
   useEffect(() => {
@@ -534,6 +646,50 @@ export function ImprovedVersionScreen({ auditId, fetchImpl, aiSetup = getAiSetup
     setMaking(false);
   }, [auditId, version, chosen, variantCount, fetchImpl]);
 
+  // Finding titles of the version, for the before/after change list.
+  useEffect(() => {
+    if (version <= 0) return;
+    let live = true;
+    void loadVersion(auditId, version, fetchImpl).then((loaded) => {
+      if (!live || !loaded.ok || !loaded.value.result) return;
+      setFindingTitles(Object.fromEntries(loaded.value.result.findings.map((f) => [f.id, f.title])));
+    });
+    return () => {
+      live = false;
+    };
+  }, [auditId, version, fetchImpl]);
+
+  const open = useCallback(
+    async (page: string, variant: number) => {
+      if (opened && opened.page === page && opened.variant === variant) return setOpened(null);
+      setOpened({ page, variant, html: null });
+      try {
+        const res = await (fetchImpl ?? fetch)(variantUrl(auditId, version, page, variant));
+        const html = res.ok ? await res.text() : '';
+        setOpened((current) =>
+          current && current.page === page && current.variant === variant ? { page, variant, html } : current
+        );
+      } catch {
+        setOpened((current) => (current && current.page === page ? { page, variant, html: '' } : current));
+      }
+    },
+    [auditId, version, fetchImpl, opened]
+  );
+
+  const star = useCallback(
+    async (page: string, variant: number) => {
+      const outcome = await setBest(auditId, { version, page, variant }, fetchImpl);
+      if (!outcome.ok) return setMessage({ tone: 'fail', text: outcome.message });
+      setImprove((current) =>
+        current.status === 'loaded'
+          ? { status: 'loaded', reply: { ...current.reply, best: outcome.value.best } }
+          : current
+      );
+      setMessage({ tone: 'pass', text: `Variant ${variant} of this page goes in the Pitch Glimpse.` });
+    },
+    [auditId, version, fetchImpl]
+  );
+
   const tryAgain = useCallback(
     async (page: string, variant: number) => {
       setMaking(true);
@@ -601,6 +757,10 @@ export function ImprovedVersionScreen({ auditId, fetchImpl, aiSetup = getAiSetup
           onVariantCount={setVariantCount}
           onMakeVariants={() => void makeVariants()}
           onTryAgain={(page, variant) => void tryAgain(page, variant)}
+          opened={opened}
+          onOpen={(page, variant) => void open(page, variant)}
+          onStar={(page, variant) => void star(page, variant)}
+          findingTitles={findingTitles}
           language={language}
           preview={preview}
           onLanguage={setLanguage}
