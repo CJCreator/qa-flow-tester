@@ -81,6 +81,15 @@ export interface RecordedPage {
   psi?: PageSpeed | null;
 }
 
+/** A Retry-After header in ms (seconds or an HTTP date); undefined when absent or unreadable. */
+function retryAfterMs(value: string | undefined): number | undefined {
+  if (!value) return undefined;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000);
+  const at = Date.parse(value);
+  return Number.isFinite(at) ? Math.max(0, at - Date.now()) : undefined;
+}
+
 /** A tiny pool: at most `limit` jobs at once, in the order queued. */
 class LabQueue {
   private active = 0;
@@ -175,7 +184,16 @@ export class AuditPageRecorder {
           const open = labPage;
           const load = () => open.goto(pageUrl, { waitUntil: 'load', timeout: LAB_LOAD_TIMEOUT_MS });
           const host = new URL(pageUrl).host;
-          await context.pacer.run(host, load, context.signal);
+          const response = await context.pacer.run(host, load, context.signal);
+          // Only the page the crawl recorded is checked: a busy answer, an error page or a load that left the
+          // address is not scanned in its place. A 429 or 503 slows the host down, as in the crawl (ADR 0043).
+          const status = response?.status();
+          if (status === 429 || status === 503) {
+            context.pacer.slowDown(host, retryAfterMs(response?.headers()['retry-after']));
+          }
+          if (!response || status === undefined || status >= 400 || new URL(open.url()).host !== host) {
+            throw new Error('lab load failed');
+          }
         } catch {
           entry.accessibility = null;
           entry.phone = null;
