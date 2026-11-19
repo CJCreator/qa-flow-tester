@@ -788,7 +788,8 @@ export interface AuditEditsPatch {
 /** Audit ids: URL-safe and free of dots and slashes, so one can never name a path outside its folder. */
 export const AUDIT_ID_PATTERN = /^[A-Za-z0-9_-]{8,64}$/;
 
-export type AuditStatus = 'running' | 'done' | 'failed' | 'stopped';
+/** 'paused': stopped with a checkpoint (T-407), so `POST /api/audits/:id/resume` carries on from it. */
+export type AuditStatus = 'running' | 'done' | 'failed' | 'stopped' | 'paused';
 
 /** All 7 documents produced by a website audit: the 5 audit documents plus Pitch Glimpse and Owner Audit (ADR 0042). */
 export type StoredDocumentKind = AuditDocumentKind | 'pitch-glimpse' | 'owner-audit';
@@ -829,7 +830,7 @@ export interface AuditVersion {
   rules?: number;
   /** The version has edits. */
   edited?: boolean;
-  /** Why a running version was stopped (ADR 0042). */
+  /** Why a running version was stopped or paused (ADR 0042, T-407). */
   stoppedReason?: 'tool-restarted' | 'stopped-by-user';
   /** Audit Documents written at audit end (ADR 0042). */
   documents?: StoredAuditDocument[];
@@ -1121,6 +1122,8 @@ export const AUDIT_ERROR_CODES = [
   'ERR_AUDIT_NOT_FOUND',
   /** 409: the version is still running. */
   'ERR_AUDIT_RUNNING',
+  /** 409: the version is not paused, so there is nothing to resume (T-407). */
+  'ERR_AUDIT_NOT_PAUSED',
   /** 409: the step needs an AI key and none is saved (REQ-011 AC-2). */
   'ERR_NO_AI_KEY',
   /** 409: the Section was not approved for a rewrite (REQ-030 AC-1). */
@@ -1190,6 +1193,11 @@ export const AUDIT_API = {
    * that audit is not running. Never touches a Check-up.
    */
   stop: { method: 'POST', path: '/api/audits/:id/stop', replies: 'json', access: 'owner' },
+  /**
+   * Resumes the latest version when it is 'paused' (T-407): the same version carries on from its checkpoint with
+   * the same limits. 202 `AuditStartReply`; 409 ERR_AUDIT_NOT_PAUSED or ERR_RUN_IN_PROGRESS; 404 ERR_AUDIT_NOT_FOUND.
+   */
+  resume: { method: 'POST', path: '/api/audits/:id/resume', replies: 'json', access: 'owner' },
   content: { method: 'GET', path: '/api/audits/:id/content', replies: 'json', access: 'view' },
   /** A screenshot of the version, by its path relative to the version's folder. */
   file: { method: 'GET', path: '/api/audits/:id/file', replies: 'file', access: 'view' },
@@ -1540,6 +1548,7 @@ interface AuditApiShapes {
   stream: { query: VersionQuery; body: undefined; reply: EventStreamReply<AuditProgressEvent> };
   rerun: { query: NoQuery; body: undefined; reply: AuditStartReply };
   stop: { query: NoQuery; body: undefined; reply: AuditStopReply };
+  resume: { query: NoQuery; body: undefined; reply: AuditStartReply };
   content: { query: VersionQuery & { path: string }; body: undefined; reply: AuditContentReply };
   file: { query: VersionQuery & { path: string }; body: undefined; reply: FileReply };
   getEdits: { query: VersionQuery; body: undefined; reply: AuditEditsReply };

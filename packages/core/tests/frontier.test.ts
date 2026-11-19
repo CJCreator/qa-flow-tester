@@ -102,3 +102,22 @@ describe('Frontier and normalizeRoute (T-112)', () => {
     });
   });
 });
+
+describe('CrawlFrontier serialize and restore (T-407)', () => {
+  it('a restored frontier refuses what the saved one held and keeps its shape counts', () => {
+    const base = 'http://example.com';
+    const saved = new CrawlFrontier({ maxPerShape: 2 });
+    saved.admit('/a', base, 1);
+    saved.markVisited('/a');
+    saved.admit('/p/1', base, 1);
+    saved.admit('/p/2', base, 1);
+    const state = JSON.parse(JSON.stringify(saved.serialize()));
+
+    const restored = CrawlFrontier.restore(state, { maxPerShape: 2 });
+    expect(restored.isVisited('/a')).toBe(true);
+    expect(restored.admit('/a', base, 1).reason).toBe('duplicate');
+    expect(restored.admit('/p/2', base, 1).reason).toBe('duplicate');
+    expect(restored.admit('/p/3', base, 1).reason).toBe('trap-limit');
+    expect(restored.admit('/b', base, 1).admit).toBe(true);
+  });
+});

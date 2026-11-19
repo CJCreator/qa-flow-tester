@@ -248,8 +248,8 @@ afterEach(async () => {
 describe('route rows', () => {
   it('declare AUDIT_API method, path and access, closed in beta', () => {
     for (const rows of [createAuditCrawlRoutes(deps()), auditCrawlRoutes({ ...deps(), store })]) {
-      expect(rows).toHaveLength(3);
-      const [start, stream, stop] = rows;
+      expect(rows).toHaveLength(4);
+      const [start, stream, stop, resume] = rows;
       expect([start.method, start.path, start.access]).toEqual([AUDIT_API.start.method, AUDIT_API.start.path, 'owner']);
       expect([stream.method, stream.path, stream.access]).toEqual([
         AUDIT_API.stream.method,
@@ -260,6 +260,13 @@ describe('route rows', () => {
       expect(start.beta).toBe('closed');
       expect(stream.beta).toBe('closed');
       expect(stop.beta).toBe('closed');
+      // T-407: Resume, owner only, closed in beta like the others.
+      expect([resume.method, resume.path, resume.access, resume.beta]).toEqual([
+        AUDIT_API.resume.method,
+        AUDIT_API.resume.path,
+        'owner',
+        'closed',
+      ]);
     }
   });
 });

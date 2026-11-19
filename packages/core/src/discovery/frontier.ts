@@ -95,6 +95,13 @@ export function normalizeRoute(
   };
 }
 
+/** A frontier as plain data, for an audit checkpoint (T-407): route keys and per-shape counts. */
+export interface CrawlFrontierState {
+  visited: string[];
+  queued: string[];
+  shapeCounts: Array<[string, number]>;
+}
+
 export class CrawlFrontier {
   private maxPerShape: number;
   private maxDepth: number;
@@ -155,6 +162,27 @@ export class CrawlFrontier {
 
   has(key: string): boolean {
     return this.visited.has(key) || this.queued.has(key);
+  }
+
+  /** The frontier as plain data (T-407). */
+  serialize(): CrawlFrontierState {
+    return {
+      visited: [...this.visited],
+      queued: [...this.queued],
+      shapeCounts: [...this.shapeCounts],
+    };
+  }
+
+  /** A frontier with the keys and shape counts of `state`, and the limits of `opts` (T-407). */
+  static restore(
+    state: CrawlFrontierState,
+    opts: { maxPerShape?: number; maxDepth?: number } & RouteKeyOptions = {}
+  ): CrawlFrontier {
+    const frontier = new CrawlFrontier(opts);
+    for (const key of state.visited) frontier.visited.add(key);
+    for (const key of state.queued) if (!frontier.visited.has(key)) frontier.queued.add(key);
+    for (const [shape, count] of state.shapeCounts) frontier.shapeCounts.set(shape, count);
+    return frontier;
   }
 
   getShape(url: string, base: string): string {

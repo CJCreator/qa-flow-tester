@@ -130,6 +130,26 @@ export function rerunAudit(auditId: string, fetchImpl: Fetch = fetch): Promise<S
   );
 }
 
+/** `POST /api/audits/:id/resume`: the paused latest version carries on from its checkpoint (T-407). */
+export function resumeAudit(auditId: string, fetchImpl: Fetch = fetch): Promise<SavedOutcome<AuditStartReply>> {
+  return call(
+    auditPath(AUDIT_API.resume.path, { id: auditId }),
+    { method: AUDIT_API.resume.method },
+    fetchImpl,
+    'The Website Audit could not be resumed. Try again.',
+    (body) =>
+      isRecord(body) && typeof body.version === 'number' && typeof body.auditId === 'string'
+        ? (body as unknown as AuditStartReply)
+        : null
+  );
+}
+
+/** The latest version when it is paused (T-407): Resume carries it on. */
+export function pausedVersion(summary: AuditSummary): AuditVersion | null {
+  const latest = latestVersion(summary);
+  return latest?.status === 'paused' ? latest : null;
+}
+
 /**
  * Re-runs, then loads the Website Audit again so its history lists the new version (REQ-028 AC-3). A reload
  * that fails still reports the started version.
@@ -212,6 +232,7 @@ export const STATUS_LABEL: Readonly<Record<AuditStatus, string>> = {
   done: 'Finished',
   failed: 'Failed',
   stopped: 'Stopped',
+  paused: 'Paused',
 };
 
 export const MARK_LABEL: Readonly<Record<ShortlistMark, string>> = { pitch: 'Pitch', skip: 'Skip' };

@@ -413,6 +413,7 @@ export function AuditStartScreen({
             state={progress}
             reconnecting={reconnecting}
             streamEnded={streamEnded}
+            shared={maxPagesCap !== null}
           />
           {(finished || streamEnded) && (
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">

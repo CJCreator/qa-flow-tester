@@ -210,8 +210,11 @@ export function AuditProgress({
   streamEnded = false,
   elapsedMs,
   onStop,
+  shared = false,
 }: {
   address: string;
+  /** The shared (hosted) copy: a run pauses when its tab closes and can be resumed (T-407). */
+  shared?: boolean;
   state: AuditProgressState;
   /** The stream closed for good: nothing more will arrive. */
   streamEnded?: boolean;
@@ -268,7 +271,13 @@ export function AuditProgress({
         })}
       </ol>
 
-      {running && <p className="mt-2 text-sm text-ink-soft">Keep this tab open until the audit finishes.</p>}
+      {running && (
+        <p className="mt-2 text-sm text-ink-soft">
+          {shared
+            ? 'Keep this tab open: on this shared copy the audit pauses when the tab closes. You can resume it later.'
+            : 'Keep this tab open until the audit finishes.'}
+        </p>
+      )}
 
       <AuditStatusChips ai={'ai' in state ? state.ai : undefined} speed={'speed' in state ? state.speed : undefined} />
 

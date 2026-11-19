@@ -587,6 +587,7 @@ describe('AUDIT_API', () => {
       ['DELETE', '/api/audits/:id'],
       ['POST', '/api/audits/:id/rerun'],
       ['POST', '/api/audits/:id/stop'],
+      ['POST', '/api/audits/:id/resume'],
       ['GET', '/api/audits/:id/edits'],
       ['PATCH', '/api/audits/:id/edits'],
       ['GET', '/api/audit-settings'],

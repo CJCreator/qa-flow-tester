@@ -10,6 +10,9 @@ export {
   siteStoppedAnsweringNoteText,
   speedSourceNoteText,
   aiStatusNoteText,
+  AUDIT_CHECKPOINT_NAME,
+  createAuditCheckpointer,
+  loadAuditCheckpoint,
 } from './pipeline.js';
 export type {
   AuditPipelineDeps,
@@ -18,6 +21,8 @@ export type {
   PipelineStep,
   PipelineStepOutcome,
   SiteStages,
+  AuditCheckpointStore,
+  LoadedAuditCheckpoint,
 } from './pipeline.js';
 export {
   SITE_CAUSED_SKIP_REASONS,

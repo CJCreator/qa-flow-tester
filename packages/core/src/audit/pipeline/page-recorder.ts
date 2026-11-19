@@ -19,7 +19,7 @@
  */
 import type { Page } from 'playwright';
 import type { PageSpeed } from '@qa/types';
-import { createFindingIdAllocator } from '../analysis/finding-ids.js';
+import { createFindingIdAllocator, type FindingIdAllocator } from '../analysis/finding-ids.js';
 import { readPage, type ReadPageResult } from '../analysis/read-page.js';
 import { accessibilityBasics, type AccessibilityBasicsResult } from '../analysis/accessibility-basics.js';
 import { recordPhoneLayout, type PhoneLayoutRecord } from '../phone-layout.js';
@@ -79,6 +79,8 @@ export interface RecordedPage {
   /** Set when PageSpeed Insights was asked for this page during the crawl (T-404); `psi` holds its answer. */
   psiTried?: boolean;
   psi?: PageSpeed | null;
+  /** The lab work ran to its end (T-407): a checkpoint keeps only such pages; the others are loaded again. */
+  labDone?: boolean;
 }
 
 /** A Retry-After header in ms (seconds or an HTTP date); undefined when absent or unreadable. */
@@ -116,7 +118,9 @@ export class AuditPageRecorder {
   private readonly recorded: RecordedPage[] = [];
   private readonly byPath = new Set<string>();
   /** Accessibility ids are scratch ids: the analysis renumbers them. */
-  private readonly a11yIds = createFindingIdAllocator();
+  private a11yIds: FindingIdAllocator = createFindingIdAllocator();
+  /** Each page's read and lab work, by path: settled once the page's work has ended (T-407). */
+  private readonly settledByPath = new Map<string, Promise<void>>();
   private sampleCount = 0;
   private readonly pageSpeed?: PageRecorderOptions['pageSpeed'];
   private psiLeft: number;
@@ -135,7 +139,23 @@ export class AuditPageRecorder {
     // A path recorded twice is the same page: the first wins (as in the analysis).
     if (this.byPath.has(info.urlPath)) return;
     this.byPath.add(info.urlPath);
+    let settle!: () => void;
+    this.settledByPath.set(info.urlPath, new Promise<void>((resolve) => (settle = resolve)));
+    let deferred: Promise<void> | undefined;
+    try {
+      deferred = (await this.record(page, info, context)).deferred;
+    } finally {
+      if (deferred) void deferred.then(settle, settle);
+      else settle();
+    }
+  };
 
+  /** Reads the page and runs or queues its lab work; hands back the queued lab job, if any, without awaiting it. */
+  private async record(
+    page: Page,
+    info: AuditCrawlPage,
+    context?: RenderedPageContext
+  ): Promise<{ deferred?: Promise<void> }> {
     const arrival = this.tracker.add({
       urlPath: info.urlPath,
       title: info.title,
@@ -198,6 +218,8 @@ export class AuditPageRecorder {
           entry.accessibility = null;
           entry.phone = null;
           entry.timing = null;
+          // Not checked after a stop: a resume loads the page again. Otherwise the failure is the result.
+          if (!context.signal?.aborted) entry.labDone = true;
           await labPage?.close().catch(() => {});
           return;
         }
@@ -209,11 +231,46 @@ export class AuditPageRecorder {
       });
       this.labJobs.push(job);
       context.defer(job);
-      return;
+      return { deferred: job };
     }
 
     await this.labWork(page, entry, n, usePsi, url, context);
-  };
+    return {};
+  }
+
+  /** Resolves once the read and lab work of each of these paths has ended (T-407); unknown paths count as ended. */
+  async settled(urlPaths: readonly string[]): Promise<void> {
+    await Promise.all(urlPaths.map((p) => this.settledByPath.get(p)));
+  }
+
+  /**
+   * Pages a checkpoint saved (T-407), in crawl order, before the resumed crawl records more. They keep their
+   * reads, lab results and coverage; the Layout Group tracker, the PSI allowance and the scratch accessibility
+   * ids carry on after them.
+   */
+  restore(pages: readonly RecordedPage[]): void {
+    let lastId = 0;
+    for (const entry of pages) {
+      const { info } = entry;
+      if (this.byPath.has(info.urlPath)) continue;
+      this.byPath.add(info.urlPath);
+      this.tracker.add({
+        urlPath: info.urlPath,
+        title: info.title,
+        interactiveElementsCount: 0,
+        formsCount: 0,
+        ...(info.layoutGroup ? { layoutGroup: info.layoutGroup } : {}),
+      });
+      this.recorded.push(entry);
+      this.sampleCount++;
+      if (entry.psiTried && this.psiLeft > 0) this.psiLeft--;
+      for (const f of entry.accessibility?.findings ?? []) {
+        const n = Number(/^AF-(\d+)$/.exec(f.id)?.[1] ?? 0);
+        if (n > lastId) lastId = n;
+      }
+    }
+    if (lastId >= this.a11yIds.nextNumber) this.a11yIds = createFindingIdAllocator(lastId + 1);
+  }
 
   /** Resolves once every queued lab job has ended (the crawl awaits this through `defer`). */
   async drain(): Promise<void> {
@@ -282,6 +339,7 @@ export class AuditPageRecorder {
     } catch {
       entry.phone = null;
     }
+    entry.labDone = true;
   }
 
   /** Every recorded page, in crawl order. */
