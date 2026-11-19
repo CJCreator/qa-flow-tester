@@ -5,7 +5,7 @@
  *   1. readPage, accessibility basics and phone layout on each page while it is open ('crawling');
  *   2. analyseSite, its requests through `makeCheckerFetch` (makeOutboundFetch, no redirects) paced by the
  *      audit's HostPacer ('checking-pages');
- *   3. measureSampleSpeeds on the Sample Pages ('measuring-speed');
+ *   3. measureSampleSpeeds on every page (PSI caps at 20; ADR 0047) ('measuring-speed');
  *   4. the deterministic area grades, then assessPages, assessSite and recommendPages ('assessing');
  *   5. scoreFindings and rankFindings over every finding; phone findings continue the AF numbers from
  *      analyseSite.nextFindingNumber, and every list citing a finding follows the renumbering ('ranking');
@@ -417,7 +417,6 @@ export async function runAuditPipeline(
   const unread = recordedPages.length - readable.length;
   if (unread > 0) pageNotes.push(`${unread} recorded page(s) could not be read, so they are left out of the checks.`);
   for (const p of readable) {
-    if (p.coverage !== 'sample') continue;
     if (p.accessibility === null) {
       pageNotes.push(`The accessibility checks did not run on ${p.info.urlPath}, so this page has not been checked.`);
     }
@@ -459,7 +458,7 @@ export async function runAuditPipeline(
       statusByPath,
       skippedPaths,
       accessibility: readable
-        .filter((p) => p.coverage === 'sample' && p.accessibility)
+        .filter((p) => p.accessibility)
         .map((p) => ({ ...p.accessibility!, urlPath: p.info.urlPath })),
       // Public addresses only (private too when the crawl ran on a local runner, ADR 0042), no redirect followed
       // (a redirect could land on a Skipped Page), paced with the crawl.
@@ -491,7 +490,7 @@ export async function runAuditPipeline(
   const unscored: UnscoredAuditFinding[] = [...analysis.findings];
   const phoneByPath = new Map<string, PhoneLayout>();
   for (const p of readable) {
-    if (p.coverage !== 'sample' || !p.phone) continue;
+    if (!p.phone) continue;
     const remap = new Map<string, string>();
     for (const f of p.phone.findings) {
       const id = ids.next();
@@ -528,6 +527,7 @@ export async function runAuditPipeline(
     if (phone) page.phone = phone;
     return page;
   });
+  // Every page is fully checked (ADR 0047); Sample Pages remain for the AI notes and recommendations.
   const samples = pages.filter((p) => p.coverage === 'sample');
 
   // ---- 3. Speed -----------------------------------------------------------------------------------
@@ -535,7 +535,7 @@ export async function runAuditPipeline(
   emit('measuring-speed');
   let speedSource: 'pagespeed-insights' | 'this-tool' | 'not-measured' = 'not-measured';
   try {
-    const urls = samples.map((p) => new URL(p.urlPath, origin).toString());
+    const urls = pages.map((p) => new URL(p.urlPath, origin).toString());
     // PageSpeed Insights is Google's service: a local or private site's addresses are never sent to it (ADR 0031).
     // Those pages fall back to this tool's own timing below.
     const psiMayMeasure = !isLocalOriginHost(new URL(origin).hostname);
@@ -545,7 +545,7 @@ export async function runAuditPipeline(
       urls.length > 0 && psiMayMeasure && !psiInCrawl
         ? await stages.measureSampleSpeeds(urls, { ...deps.pageSpeed, signal })
         : [];
-    samples.forEach((p, i) => {
+    pages.forEach((p, i) => {
       const psiSpeed = psiInCrawl ? (recordedByPath.get(p.urlPath)?.psi ?? undefined) : speeds[i]?.speed;
       const psiMeasured = psiSpeed?.lab.status === 'measured';
       if (psiMeasured) {
@@ -562,10 +562,8 @@ export async function runAuditPipeline(
         }
       }
     });
-    const anyPsi = samples.some(
-      (p) => p.speed?.lab.status === 'measured' && p.speed.lab.source === 'pagespeed-insights'
-    );
-    const anyTool = samples.some((p) => p.speed?.lab.status === 'measured' && p.speed.lab.source === 'this-tool');
+    const anyPsi = pages.some((p) => p.speed?.lab.status === 'measured' && p.speed.lab.source === 'pagespeed-insights');
+    const anyTool = pages.some((p) => p.speed?.lab.status === 'measured' && p.speed.lab.source === 'this-tool');
     if (anyPsi) speedSource = 'pagespeed-insights';
     else if (anyTool) speedSource = 'this-tool';
     else speedSource = 'not-measured';
@@ -574,7 +572,7 @@ export async function runAuditPipeline(
     record('speed', 'measuring-speed', speedSource !== 'not-measured');
   } catch (err) {
     rethrowIfStopped(err, signal);
-    for (const p of samples) {
+    for (const p of pages) {
       const rec = recordedByPath.get(p.urlPath);
       if (rec?.timing?.speed && rec.timing.speed.status === 'measured') {
         p.speed = {
@@ -585,7 +583,7 @@ export async function runAuditPipeline(
         p.speed = notMeasured('failed');
       }
     }
-    const anyTool = samples.some((p) => p.speed?.lab.status === 'measured' && p.speed.lab.source === 'this-tool');
+    const anyTool = pages.some((p) => p.speed?.lab.status === 'measured' && p.speed.lab.source === 'this-tool');
     speedSource = anyTool ? 'this-tool' : 'not-measured';
     record(
       'speed',
@@ -631,15 +629,15 @@ export async function runAuditPipeline(
     };
     pageGrades.set(p.urlPath, areaGrades(own, checked, labPerformanceScore(p.speed)));
   }
-  const scores = samples.map((p) => labPerformanceScore(p.speed)).filter((s): s is number => s !== null);
+  const scores = pages.map((p) => labPerformanceScore(p.speed)).filter((s): s is number => s !== null);
   const siteGrades = areaGrades(
     aiOrdered,
     {
       'search-ranking': analysed,
       marketing: analysed,
       content: analysed,
-      accessibility: samples.some((p) => !!p.accessibility),
-      usability: samples.some((p) => !!p.phone && (p.phone.overflow !== null || p.phone.findingIds.length > 0)),
+      accessibility: pages.some((p) => !!p.accessibility),
+      usability: pages.some((p) => !!p.phone && (p.phone.overflow !== null || p.phone.findingIds.length > 0)),
       speed: false,
     },
     scores.length > 0 ? Math.min(...scores) : null
@@ -860,7 +858,7 @@ export async function runAuditPipeline(
   if (typeof store.writeVersionEntries === 'function') {
     // One lock and one version check for all of them, a few at a time.
     const shots: Array<{ page: AuditPage; rel: string; data: Uint8Array | null }> = [];
-    for (const p of samples) {
+    for (const p of pages) {
       const rel = p.phone?.screenshotPath;
       if (!p.phone || !rel) continue;
       let data: Uint8Array | null = null;
@@ -902,7 +900,7 @@ export async function runAuditPipeline(
         saveNotes.push(`The Page Content of ${p.info.urlPath} could not be saved.`);
       }
     }
-    for (const p of samples) {
+    for (const p of pages) {
       const rel = p.phone?.screenshotPath;
       if (!p.phone || !rel) continue;
       try {
@@ -915,7 +913,7 @@ export async function runAuditPipeline(
     }
   }
   // A finding pointing at a screenshot that was not saved loses the pointer.
-  const savedShots = new Set(samples.map((p) => p.phone?.screenshotPath).filter((s): s is string => !!s));
+  const savedShots = new Set(pages.map((p) => p.phone?.screenshotPath).filter((s): s is string => !!s));
   findings = findings.map((f) => {
     if (!f.screenshotPath || savedShots.has(f.screenshotPath)) return f;
     const { screenshotPath: _dropped, ...rest } = f;
