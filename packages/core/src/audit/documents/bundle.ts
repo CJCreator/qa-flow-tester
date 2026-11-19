@@ -65,6 +65,8 @@ export interface ImprovedExportVariant {
   after?: string;
   /** The stored phone screenshot of the page, a base64 `data:image/...` URI ("before"). */
   before?: string;
+  /** The stored 1440 px screenshot of the page, a base64 `data:image/...` URI (T-431). */
+  beforeDesktop?: string;
 }
 
 export interface ImprovedExport {
@@ -79,6 +81,7 @@ const IMPROVED_EXPORT_WORDS = {
     note: 'Suggestion, not the live site. Written with AI from this Website Audit; nothing on the site was changed. Every change names the finding or Section it answers.',
     variant: (n: number, style: string, page: string) => `${page}: variant ${n} (${style})`,
     before: 'Before (stored phone screenshot)',
+    beforeDesktop: 'Before (stored 1440 px screenshot)',
     after: 'After (the variant)',
     changes: 'Changes and the findings or Sections they answer',
     section: 'Section',
@@ -89,6 +92,7 @@ const IMPROVED_EXPORT_WORDS = {
     note: 'பரிந்துரை மட்டுமே, நேரடி தளம் அல்ல. இந்த இணையதள தணிக்கையிலிருந்து AI மூலம் எழுதப்பட்டது; தளத்தில் எதுவும் மாற்றப்படவில்லை.',
     variant: (n: number, style: string, page: string) => `${page}: மாறுபாடு ${n} (${style})`,
     before: 'முன் (சேமிக்கப்பட்ட கைபேசி படம்)',
+    beforeDesktop: 'முன் (சேமிக்கப்பட்ட 1440 px படம்)',
     after: 'பின் (மாறுபாடு)',
     changes: 'மாற்றங்களும் அவை தீர்க்கும் கண்டுபிடிப்புகளும்',
     section: 'பகுதி',
@@ -103,6 +107,9 @@ export function improvedVersionDoc(improved: ImprovedExport, language: DocumentL
   const blocks: DocBlock[] = [{ type: 'note', text: words.note }];
   for (const v of improved.variants) {
     blocks.push({ type: 'heading', level: 1, text: words.variant(v.variant.variant, v.variant.style, v.page.urlPath) });
+    if (v.beforeDesktop) {
+      blocks.push({ type: 'image', src: v.beforeDesktop, alt: words.beforeDesktop, caption: words.beforeDesktop });
+    }
     if (v.before) blocks.push({ type: 'image', src: v.before, alt: words.before, caption: words.before });
     if (v.after) blocks.push({ type: 'image', src: v.after, alt: words.after, caption: words.after });
     if (!v.after) blocks.push({ type: 'note', text: words.noImage });

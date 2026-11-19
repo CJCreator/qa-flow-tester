@@ -25,6 +25,8 @@ import {
   MAX_AUDIT_VERSION,
   generatePitchGlimpse,
   pageContentName,
+  readImproveIndex,
+  variantFileName,
   previewCspForHtml,
   PREVIEW_FILE_NAME,
   shareRecordKey,
@@ -67,12 +69,14 @@ const ROBOTS_META = '<meta name="robots" content="noindex, nofollow">';
 
 /** A share body is three short fields. */
 const MAX_SHARE_BODY_CHARS = 10_000;
-const SHARE_KINDS: readonly ShareLinkKind[] = ['pitch', 'preview'];
+const SHARE_KINDS: readonly ShareLinkKind[] = ['pitch', 'preview', 'improved'];
 
 const LINK_NOT_FOUND = 'This Shared Link was not found.';
 const INVALID = 'The request is not valid.';
 export const NO_PREVIEW_MESSAGE =
   'This version has no improved homepage preview yet. Make the preview first, then share it.';
+export const NO_IMPROVED_MESSAGE =
+  'No design variant of this version has passed the checks yet. Make the Improved version first, then share it.';
 const NO_RESULT_MESSAGE = 'This version did not finish, so it has no Pitch Glimpse to share.';
 const RUNNING_MESSAGE = 'This version of the Website Audit is still running. Share it when it has finished.';
 const SHARE_FAILED = 'The Shared Link could not be made. Try again.';
@@ -96,6 +100,9 @@ interface ShareRequest {
   kind: ShareLinkKind;
   language?: DocumentLanguage;
   version?: number;
+  /** kind 'improved': which variant to share. */
+  page?: string;
+  variant?: number;
 }
 
 /** Checks a create body: kind pitch or preview, an optional document language and version. */
@@ -103,9 +110,24 @@ export function checkShareBody(body: unknown): { ok: true; value: ShareRequest }
   if (!body || typeof body !== 'object' || Array.isArray(body)) return { ok: false, error: INVALID };
   const b = body as Record<string, unknown>;
   if (typeof b.kind !== 'string' || !SHARE_KINDS.includes(b.kind as ShareLinkKind)) {
-    return { ok: false, error: 'kind: only a Pitch Glimpse (pitch) or a preview (preview) can be shared.' };
+    return {
+      ok: false,
+      error: 'kind: only a Pitch Glimpse (pitch), a preview (preview) or an Improved version (improved) can be shared.',
+    };
   }
   const value: ShareRequest = { kind: b.kind as ShareLinkKind };
+  if (b.page !== undefined) {
+    if (typeof b.page !== 'string' || !/^[a-z0-9][a-z0-9-]{0,79}$/.test(b.page)) {
+      return { ok: false, error: 'page: the key of an Improved version page.' };
+    }
+    value.page = b.page;
+  }
+  if (b.variant !== undefined) {
+    if (typeof b.variant !== 'number' || !Number.isInteger(b.variant) || b.variant < 1 || b.variant > 5) {
+      return { ok: false, error: 'variant: a whole number from 1 to 5.' };
+    }
+    value.variant = b.variant;
+  }
   if (b.language !== undefined) {
     if (!isDocumentLanguage(b.language)) return { ok: false, error: 'language: pick one of the document languages.' };
     value.language = b.language;
@@ -270,6 +292,24 @@ export function auditShareRoutes(deps: AuditShareDeps): Route[] {
         const preview = await store.getVersionFile(auditId, version.version, PREVIEW_FILE_NAME);
         if (!preview || preview.byteLength === 0) return refuse(c.res, 400, 'ERR_INVALID_REQUEST', NO_PREVIEW_MESSAGE);
         snapshot = preview;
+      } else if (wanted.kind === 'improved') {
+        // The variant page is already one sanitized, self-contained page: it is the snapshot as it is.
+        const index = await readImproveIndex(
+          { readJson: (name) => store.readVersionJson(auditId, version.version, name) },
+          version.version,
+          version.language
+        );
+        const shown = index.variants.filter((v) => v.status === 'made' && v.gate?.passed !== false);
+        const chosen =
+          wanted.page !== undefined || wanted.variant !== undefined
+            ? shown.find((v) => v.page === wanted.page && v.variant === wanted.variant)
+            : (shown.find((v) => index.best && v.page === index.best.page && v.variant === index.best.variant) ??
+              shown[0]);
+        const page = chosen
+          ? await store.getVersionFile(auditId, version.version, variantFileName(chosen.page, chosen.variant))
+          : null;
+        if (!page || page.byteLength === 0) return refuse(c.res, 400, 'ERR_INVALID_REQUEST', NO_IMPROVED_MESSAGE);
+        snapshot = page;
       } else {
         const result = await store.getResult(auditId, version.version);
         if (!result) return refuse(c.res, 404, 'ERR_AUDIT_NOT_FOUND', NO_RESULT_MESSAGE);

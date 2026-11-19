@@ -137,6 +137,7 @@ import {
   selectAuditStoreBackend,
   type AuditStore,
   type AuditAiSetup,
+  hasGoogleAdc,
 } from '@qa/core';
 import { BenchmarkStore, cleanFlowType, compareSites, siteName } from './benchmarks.js';
 import {
@@ -2871,9 +2872,13 @@ export class RunnerServer {
     // GET settings: answered from this machine alone, so Settings shows at once.
     if (route === 'settings' && req.method === 'GET') {
       const setup = await this.aiSetup();
+      // Google sign-in (ADC) stands in for a key on the owner's own computer (ADR 0042): the Website Audit AI
+      // steps work with it, so Settings and the Improved version buttons must not say "not configured" (T-431).
+      const signedIn = !setup.key && this.localRun && (await hasGoogleAdc());
       this.sendJson(res, 200, {
         provider: setup.provider,
-        configured: !!setup.key,
+        configured: !!setup.key || signedIn,
+        ...(signedIn ? { googleSignIn: true } : {}),
         model: setup.text ?? null,
         visionModel: setup.vision ?? null,
         chosenBy: setup.chosenBy ?? 'auto',

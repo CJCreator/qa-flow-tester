@@ -33,7 +33,7 @@ import {
 export const SHARE_LINK_ID_BYTES = 16;
 export const SHARE_LINK_MS = SHARE_LINK_DAYS * 24 * 60 * 60 * 1000;
 
-const SHARE_LINK_KINDS: readonly ShareLinkKind[] = ['pitch', 'preview'];
+const SHARE_LINK_KINDS: readonly ShareLinkKind[] = ['pitch', 'preview', 'improved'];
 
 /** `share-index/<linkId>`: the audit a live link belongs to, or a tombstone after the audit was deleted. */
 type ShareIndexEntry = { linkId: string; auditId: string } | { linkId: string; gone: true };
@@ -63,7 +63,8 @@ export async function createShare(
   assertAuditId(auditId);
   if (!input || typeof input !== 'object') throw invalidInput('The Shared Link request is not valid.');
   assertVersion(input.version);
-  if (!SHARE_LINK_KINDS.includes(input.kind)) throw invalidInput('Only a Pitch Glimpse or a preview can be shared.');
+  if (!SHARE_LINK_KINDS.includes(input.kind))
+    throw invalidInput('Only a Pitch Glimpse, a preview or an Improved version can be shared.');
   if (!isDocumentLanguage(input.language)) throw invalidInput('The language is not valid.');
   const { version, kind, language } = input;
   return ctx.withAuditLock(auditId, async () => {
