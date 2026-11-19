@@ -1135,6 +1135,42 @@ describe('audit pipeline: runAuditPipeline', () => {
       expect(slowDowns).toEqual(['example.com']);
     });
 
+    it('a lab load that answers but does not finish in time still gets axe and phone; only timing is lost (T-430)', async () => {
+      const timingSpy = vi.fn(async () => ({ speed: measured('this-tool'), raw: {} }));
+      const recorder = createPageRecorder({ workDir, stages: pageStages({ measureBrowserTiming: timingSpy as any }) });
+      const { ctx, deferred } = labContext();
+      const slowCtx = {
+        ...ctx,
+        openPage: async () => {
+          let at = '';
+          return {
+            goto: async (url: string) => {
+              at = url;
+              return { status: () => 200, headers: () => ({}) };
+            },
+            waitForLoadState: async () => {
+              throw new Error('Timeout 30000ms exceeded.');
+            },
+            url: () => at,
+            close: async () => {},
+          } as unknown as Page;
+        },
+      };
+      const fake = { url: () => 'https://example.com/slow', urlPath: '/slow' } as unknown as Page;
+      await recorder.onRenderedPage(fake, crawlPage('/slow', 1), slowCtx as never);
+      await Promise.all(deferred);
+      const slow = recorder.pages[0];
+      expect(slow.accessibility).toBeTruthy();
+      expect(slow.phone).toBeTruthy();
+      expect(slow.timing?.speed).toEqual({
+        status: 'not-measured',
+        source: 'this-tool',
+        method: 'lab',
+        reason: 'timeout',
+      });
+      expect(timingSpy).not.toHaveBeenCalled();
+    });
+
     it('lab work for 10 pages finishes after the crawl does, and the crawl never waits for it', async () => {
       let release!: () => void;
       const gate = new Promise<void>((r) => (release = r));
