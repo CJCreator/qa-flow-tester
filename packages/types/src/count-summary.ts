@@ -77,3 +77,8 @@ export function countBreakdown(summary: CountSummary, options: { live?: boolean 
 
 /** The label every headline count uses. */
 export const PROBLEMS_THAT_COUNT = 'Problems that count';
+
+/** The one count line every export prints (T-391): "Problems that count: 45 (142 raw → … → 45)". */
+export function problemsThatCountLine(summary: CountSummary): string {
+  return `${PROBLEMS_THAT_COUNT}: ${summary.problems} (${countBreakdown(summary)})`;
+}

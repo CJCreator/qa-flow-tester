@@ -47,7 +47,11 @@ export async function renderIssuesHtml(
   budgetBytes: number = DEFAULT_IMAGE_BUDGET_BYTES
 ): Promise<string> {
   const budget = { remaining: budgetBytes };
-  const body: string[] = [`<h1>Issues</h1>`, `<h2>Roles not tested and why</h2>`];
+  const body: string[] = [
+    `<h1>Issues</h1>`,
+    ...(model.countLine ? [`<p>${t(model.countLine)}</p>`] : []),
+    `<h2>Roles not tested and why</h2>`,
+  ];
   if (model.rolesNotTested.length === 0) body.push(`<p>All roles were tested.</p>`);
   else
     body.push(
