@@ -35,39 +35,47 @@ Plan: [ENHANCEMENT-PLAN-2026-11.md](ENHANCEMENT-PLAN-2026-11.md), with one file 
 
 | id | title | gaps | priority | size | wave | status | depends on |
 |---|---|---|---|---|---|---|---|
-| [T-388](enhance-2026-11/T-388-open-hosted-audits-to-the-owner.md) | Open hosted Website Audits to the owner | O1 | P1 | S | 1 | todo | - |
-| [T-392](enhance-2026-11/T-392-runner-stays-up-after-unhandled-rejection.md) | The runner stays up after an unhandled rejection | O2 | P1 | S | 1 | todo | - |
-| [T-393](enhance-2026-11/T-393-redaction-failure-is-never-silent.md) | A redaction failure is never silent | O8 | P1 | S | 1 | todo | - |
-| [T-394](enhance-2026-11/T-394-runner-headers-and-key-comparison.md) | Runner response headers and access-key comparison | O9, O13 | P2 | S | 1 | todo | T-392 |
-| [T-395](enhance-2026-11/T-395-egress-proxy-limits-key-redaction-robots.md) | Egress proxy limits, key-shaped redaction, robots 5xx | O10, O11, O20 | P2 | M | 1 | todo | - |
-| [T-397](enhance-2026-11/T-397-review-safety-filter-and-allowlist.md) | Review Safety Filter and Domain Allowlist enforcement | - | P2 | S | 1 | todo | - |
-| [T-398](enhance-2026-11/T-398-ai-request-budget-hard-stop.md) | The AI Request Budget is a hard stop | - | P2 | M | 1 | todo | - |
-| [T-399](enhance-2026-11/T-399-docs-match-the-code.md) | Docs match the code | O4, O5, O6, O12, O17, O19 | P2 | S | 1 | todo | - |
-| [T-400](enhance-2026-11/T-400-sitemap-seeding-up-to-the-page-limit.md) | Sitemap seeding up to the page limit | P3 | P1 | S | 1 | todo | - |
-| [T-411](enhance-2026-11/T-411-benchmark-harness-and-baseline.md) | Benchmark harness and baseline | - | P1 | M | 1 | todo | - |
-| [T-389](enhance-2026-11/T-389-one-count-live-and-final.md) | One count, live and final (`countSummary`) | P2 | P1 | M | 2 | todo | T-393 |
-| [T-390](enhance-2026-11/T-390-audit-counts-findings-and-rules.md) | Website Audit counts say findings and rules | O16 | P2 | S | 2 | todo | T-411 |
-| [T-401](enhance-2026-11/T-401-audit-trap-limit-500.md) | Audit trap limit of 500 per address shape | P3 | P2 | S | 2 | todo | T-400 |
-| [T-402](enhance-2026-11/T-402-hosted-page-cap-shown-and-applied.md) | The hosted page cap is shown and applied the same way | O15 | P2 | S | 2 | todo | T-394 |
-| [T-410](enhance-2026-11/T-410-shared-chromium-for-pdf-exports.md) | One shared Chromium for PDF exports | P1 | P3 | S | 2 | todo | - |
+| [T-388](enhance-2026-11/T-388-open-hosted-audits-to-the-owner.md) | Open hosted Website Audits to the owner | O1 | P1 | S | 1 | built | - |
+| [T-392](enhance-2026-11/T-392-runner-stays-up-after-unhandled-rejection.md) | The runner stays up after an unhandled rejection | O2 | P1 | S | 1 | built | - |
+| [T-393](enhance-2026-11/T-393-redaction-failure-is-never-silent.md) | A redaction failure is never silent | O8 | P1 | S | 1 | built | - |
+| [T-394](enhance-2026-11/T-394-runner-headers-and-key-comparison.md) | Runner response headers and access-key comparison | O9, O13 | P2 | S | 1 | built | T-392 |
+| [T-395](enhance-2026-11/T-395-egress-proxy-limits-key-redaction-robots.md) | Egress proxy limits, key-shaped redaction, robots 5xx | O10, O11, O20 | P2 | M | 1 | built | - |
+| [T-397](enhance-2026-11/T-397-review-safety-filter-and-allowlist.md) | Review Safety Filter and Domain Allowlist enforcement | - | P2 | S | 1 | built | - |
+| [T-398](enhance-2026-11/T-398-ai-request-budget-hard-stop.md) | The AI Request Budget is a hard stop | - | P2 | M | 1 | built | - |
+| [T-399](enhance-2026-11/T-399-docs-match-the-code.md) | Docs match the code | O4, O5, O6, O12, O17, O19 | P2 | S | 1 | built | - |
+| [T-400](enhance-2026-11/T-400-sitemap-seeding-up-to-the-page-limit.md) | Sitemap seeding up to the page limit | P3 | P1 | S | 1 | built | - |
+| [T-411](enhance-2026-11/T-411-benchmark-harness-and-baseline.md) | Benchmark harness and baseline | - | P1 | M | 1 | built | - |
+| [T-389](enhance-2026-11/T-389-one-count-live-and-final.md) | One count, live and final (`countSummary`) | P2 | P1 | M | 2 | built | T-393 |
+| [T-390](enhance-2026-11/T-390-audit-counts-findings-and-rules.md) | Website Audit counts say findings and rules | O16 | P2 | S | 2 | built | T-411 |
+| [T-401](enhance-2026-11/T-401-audit-trap-limit-500.md) | Audit trap limit of 500 per address shape | P3 | P2 | S | 2 | built | T-400 |
+| [T-402](enhance-2026-11/T-402-hosted-page-cap-shown-and-applied.md) | The hosted page cap is shown and applied the same way | O15 | P2 | S | 2 | built | T-394 |
+| [T-410](enhance-2026-11/T-410-shared-chromium-for-pdf-exports.md) | One shared Chromium for PDF exports | P1 | P3 | S | 2 | built | - |
 | [T-391](enhance-2026-11/T-391-every-export-prints-the-same-count.md) | Every export prints the same count | P2 | P2 | S | 3 | todo | T-389 |
-| [T-396](enhance-2026-11/T-396-every-disabled-button-says-why.md) | Every disabled button says why (W20) | O3 | P2 | M | 3 | todo | T-389, T-402 |
-| [T-403](enhance-2026-11/T-403-adaptive-fetch-concurrency.md) | Adaptive fetch concurrency (ADR 0046) | P1 | P1 | M | 3 | todo | T-401, T-411 |
-| [T-409](enhance-2026-11/T-409-one-retry-video-on-retry.md) | One retry; video only on the retry | P1 | P1 | S | 3 | todo | T-389 |
-| [T-404](enhance-2026-11/T-404-lab-work-off-the-crawl-workers.md) | Lab work off the crawl workers | P1 | P1 | M | 4 | todo | T-403 |
-| [T-408](enhance-2026-11/T-408-parallel-check-up-test-workers.md) | Parallel Check-up test workers (ADR 0048) | P1 | P1 | L | 4 | todo | T-409, T-411 |
+| [T-403](enhance-2026-11/T-403-adaptive-fetch-concurrency.md) | Adaptive fetch concurrency (ADR 0046) | P1 | P1 | M | 3 | built | T-401, T-411 |
+| [T-409](enhance-2026-11/T-409-one-retry-video-on-retry.md) | One retry; video only on the retry | P1 | P1 | S | 3 | built | T-389 |
+| [T-404](enhance-2026-11/T-404-lab-work-off-the-crawl-workers.md) | Lab work off the crawl workers | P1 | P1 | M | 4 | built | T-403 |
+| [T-408](enhance-2026-11/T-408-parallel-check-up-test-workers.md) | Parallel Check-up test workers (ADR 0048) | P1 | P1 | L | 4 | built | T-409, T-411 |
 | [T-405](enhance-2026-11/T-405-every-audit-page-fully-checked.md) | Every audit page fully checked (ADR 0047) | P3 | P1 | M | 5 | todo | T-404 |
-| [T-412](enhance-2026-11/T-412-improved-version-tab.md) | The Improved version tab (ADR 0049) | P4 | P1 | S | 5 | todo | T-396 |
+| [T-412](enhance-2026-11/T-412-improved-version-tab.md) | The Improved version tab (ADR 0049) | P4 | P1 | S | 5 | built | - |
 | [T-406](enhance-2026-11/T-406-ai-assessment-streams-in-batches.md) | AI assessment streams with the crawl, in batches | P1 | P1 | M | 6 | todo | T-405, T-398 |
-| [T-413](enhance-2026-11/T-413-design-variants-per-layout-group.md) | Design variants per Layout Group | P4 | P1 | L | 6 | todo | T-412, T-398 |
-| [T-416](enhance-2026-11/T-416-automatic-competitors.md) | Automatic competitors | P4 | P2 | L | 6 | todo | T-412, T-398 |
-| [T-417](enhance-2026-11/T-417-fix-options-per-finding.md) | Fix options per finding | P4 | P2 | M | 6 | todo | T-390, T-412 |
+| [T-413](enhance-2026-11/T-413-design-variants-per-layout-group.md) | Design variants per Layout Group | P4 | P1 | L | 6 | built | T-412, T-398 |
+| [T-416](enhance-2026-11/T-416-automatic-competitors.md) | Automatic competitors | P4 | P2 | L | 6 | built | T-412, T-398 |
+| [T-417](enhance-2026-11/T-417-fix-options-per-finding.md) | Fix options per finding | P4 | P2 | M | 6 | built | T-390, T-412 |
 | [T-407](enhance-2026-11/T-407-checkpoint-and-resume-audits.md) | Checkpoint and Resume for audits | P3, O7 | P1 | L | 7 | todo | T-406 |
-| [T-414](enhance-2026-11/T-414-variant-quality-gate.md) | Variant quality gate | P4 | P1 | M | 7 | todo | T-413 |
+| [T-414](enhance-2026-11/T-414-variant-quality-gate.md) | Variant quality gate | P4 | P1 | M | 7 | built | T-413 |
 | [T-418](enhance-2026-11/T-418-competitor-examples-in-improved-version.md) | Competitor examples in the Improved version | P4 | P2 | M | 7 | todo | T-416, T-413 |
 | [T-419](enhance-2026-11/T-419-copy-variants-in-batches.md) | Copy variants in batches | P4 | P2 | M | 7 | todo | T-417 |
 | [T-415](enhance-2026-11/T-415-before-after-download-exports-pitch.md) | Before/after, HTML download, exports, Pitch thumbnail | P4 | P1 | M | 8 | todo | T-414, T-410 |
 | [T-420](enhance-2026-11/T-420-full-ai-translation-of-exports.md) | Full AI translation of exports | O19 | P2 | M | 9 | todo | T-419, T-415 |
+| [T-421](enhance-2026-11/T-421-click-time-sensitive-action-gate.md) | A click-time Sensitive Action gate | T-397 | P1 | M | 5 | todo | T-408 |
+| [T-423](enhance-2026-11/T-423-spider-click-under-guard-page.md) | The Spider's exploring click runs under `guardPage` | T-397 | P2 | S | 5 | todo | - |
+| [T-422](enhance-2026-11/T-422-form-submit-and-enter-protection.md) | `form.submit`, `requestSubmit` and Enter protection in Test runs | T-397 | P1 | M | 6 | todo | T-421 |
+| [T-426](enhance-2026-11/T-426-off-site-click-navigation-undone.md) | An off-site click navigation is undone and recorded | T-397 | P2 | S | 6 | todo | T-423 |
+| [T-424](enhance-2026-11/T-424-host-allowlist-on-subrequests-iframes-redirects.md) | A host allowlist on subrequests, iframes and redirects | T-397 | P1 | L | 7 | todo | T-422 |
+| [T-425](enhance-2026-11/T-425-popups-covered-by-context-routes.md) | Popups covered by context-level routes | T-397 | P2 | M | 8 | todo | T-424 |
+| [T-428](enhance-2026-11/T-428-delete-probe-uses-real-label.md) | The delete probe uses the real element label and `forbiddenActions` | T-397 | P2 | S | 8 | todo | T-426 |
+| [T-427](enhance-2026-11/T-427-get-side-effects.md) | GET side effects | T-397 | P2 | M | 9 | todo | T-425 |
+| [T-396](enhance-2026-11/T-396-every-disabled-button-says-why.md) | Every disabled button says why (W20) | O3 | P2 | M | 10 | todo | T-415, T-420 |
 
 Gap ids: P1 to P4 are review problems 1 (speed) to 4 (Website Audit); O-numbers are rows of the review's "Other issues" table.
 

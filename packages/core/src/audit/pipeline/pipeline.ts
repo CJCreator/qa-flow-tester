@@ -375,8 +375,19 @@ export async function runAuditPipeline(
     pagesRecorded: crawl.pages.length,
     pagesSkipped: crawl.coverage.skipped.length,
   };
+  // The run's AI request counter (T-398), read at each stage so the progress shows "AI requests: n of N".
+  const budget = ai.ok ? ai.ai.budget : undefined;
   const emit = (stage: AuditStage) =>
-    deps.onProgress?.({ type: 'progress', auditId: deps.auditId, version: deps.version, stage, ...counts });
+    deps.onProgress?.({
+      type: 'progress',
+      auditId: deps.auditId,
+      version: deps.version,
+      stage,
+      ...counts,
+      ...(budget
+        ? { aiRequests: { used: budget.used, limit: Number.isFinite(budget.limit) ? budget.limit : null } }
+        : {}),
+    });
   // Steps run one after another, so each one starts where the one before it ended.
   let stepStartedAt = now().toISOString();
   const record = (step: PipelineStep, stage: AuditStage, done: boolean, note?: string) => {

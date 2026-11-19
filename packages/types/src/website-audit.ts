@@ -1031,6 +1031,17 @@ export interface AuditProgressCounts {
   pagesSkipped: number;
 }
 
+/** The audit run's AI requests (T-398): sent so far, and the AI Request Budget (null: none set). */
+export interface AuditAiRequestCount {
+  used: number;
+  limit: number | null;
+}
+
+/** "AI requests: 3 of 3", or "AI requests: 3" when no budget was set. */
+export function aiRequestsLine(count: AuditAiRequestCount): string {
+  return count.limit === null ? `AI requests: ${count.used}` : `AI requests: ${count.used} of ${count.limit}`;
+}
+
 /** One event on `GET /api/audits/:id/stream`. */
 export type AuditProgressEvent =
   | {
@@ -1043,6 +1054,8 @@ export type AuditProgressEvent =
       pagesSkipped: number;
       /** The path being read now (redacted). */
       currentPath?: string;
+      /** AI requests sent so far and the AI Request Budget (null: no budget set). Only when the audit has AI. */
+      aiRequests?: AuditAiRequestCount;
     }
   | {
       type: 'page';
@@ -1183,6 +1196,12 @@ export const AUDIT_API = {
   /** Writes the improved homepage with the AI (preview stage); 409 ERR_NO_AI_KEY without a key. */
   createPreview: { method: 'POST', path: '/api/audits/:id/preview', replies: 'json', access: 'owner' },
   getPreview: { method: 'GET', path: '/api/audits/:id/preview', replies: 'html', access: 'view' },
+  /** Writes design variants of the Improved version (preview stage): pages × variants AI requests (ADR 0049). */
+  createImprove: { method: 'POST', path: '/api/audits/:id/improve', replies: 'json', access: 'owner' },
+  /** The Improved version's pages, variants and the AI cost per request. */
+  listImprove: { method: 'GET', path: '/api/audits/:id/improve', replies: 'json', access: 'view' },
+  /** One design variant (HTML), served with the Shared Link page headers. */
+  getImprove: { method: 'GET', path: '/api/audits/:id/improve/:page/:variant', replies: 'html', access: 'view' },
   listShares: { method: 'GET', path: '/api/audits/:id/share', replies: 'json', access: 'view' },
   createShare: { method: 'POST', path: '/api/audits/:id/share', replies: 'json', access: 'owner' },
   revokeShare: { method: 'DELETE', path: '/api/audits/:id/share/:linkId', replies: 'json', access: 'owner' },
@@ -1341,6 +1360,94 @@ export interface PreviewReply {
   preview: { version: number; language: DocumentLanguage; createdAt: string };
 }
 
+// ---------------------------------------------------------------------------------------------------
+// The Improved version: design variants (ADR 0049)
+// ---------------------------------------------------------------------------------------------------
+
+/** The design direction of each variant, in order: variant 1 is 'clean', variant 2 'bold'… */
+export const VARIANT_STYLES = ['clean', 'bold', 'trust-first', 'content-first', 'conversion-first'] as const;
+export type VariantStyle = (typeof VARIANT_STYLES)[number];
+
+/** The user picks 1 to 5 design variants per page. */
+export const MAX_VARIANTS_PER_PAGE = VARIANT_STYLES.length;
+
+/** A page of the Improved version: the homepage, or the Sample Page of one Layout Group. */
+export interface ImprovePage {
+  /** 'home', or a short key made from the path; the address part of `getImprove`. */
+  key: string;
+  urlPath: string;
+  title: string | null;
+  /** The Layout Group it stands for; null for the homepage. */
+  layoutGroup: string | null;
+}
+
+/** The automatic checks a variant must pass before it is shown (T-414). */
+export const VARIANT_CHECKS = ['sanitizer', 'menu-links', 'claim-words', 'accessibility', 'citations'] as const;
+export type VariantCheck = (typeof VARIANT_CHECKS)[number];
+
+export interface VariantGateResult {
+  passed: boolean;
+  /** The checks that failed, in VARIANT_CHECKS order; empty when it passed. */
+  failed: VariantCheck[];
+  /** One plain sentence per failed check. */
+  reasons: string[];
+}
+
+/** One design variant of one page, as listed in `variants.json`. */
+export interface ImproveVariant {
+  page: string;
+  /** 1 to 5. */
+  variant: number;
+  style: VariantStyle;
+  /** 'made': the page is stored. 'failed': the AI gave no usable page, or the AI Request Budget was spent. */
+  status: 'made' | 'failed';
+  problem?: 'budget-spent' | 'failed';
+  createdAt: string;
+  /** The finding and Section ids the variant cites. */
+  cites?: string[];
+  /** Set by the quality gate; a variant that did not pass is not shown. */
+  gate?: VariantGateResult;
+}
+
+/** `variants.json` of one version: every variant made so far. */
+export interface ImproveIndex {
+  version: number;
+  language: DocumentLanguage;
+  variants: ImproveVariant[];
+  /** The variant starred as the best, for the Pitch Glimpse (T-415). */
+  best?: { page: string; variant: number };
+}
+
+export interface ImproveCreateBody extends VersionQuery {
+  /** Page keys from the list; at least one. */
+  pages: string[];
+  /** 1 to 5 variants per page. */
+  variants: number;
+  /** Only this variant number of the one page given ("Try again"): one AI request. */
+  only?: number;
+}
+
+/** What the AI cost will be: one request per page and variant. */
+export interface ImproveEstimate {
+  /** US dollars per request at the model's list price; null when the price is not known. */
+  usdPerRequest: number | null;
+}
+
+export interface ImproveListReply {
+  version: number;
+  language: DocumentLanguage;
+  pages: ImprovePage[];
+  variants: ImproveVariant[];
+  best?: { page: string; variant: number };
+  estimate: ImproveEstimate;
+}
+
+export interface ImproveCreateReply {
+  /** AI requests sent. */
+  requests: number;
+  variants: ImproveVariant[];
+}
+
 export interface ShareCreateBody extends VersionQuery {
   kind: ShareLinkKind;
   language?: DocumentLanguage;
@@ -1437,6 +1544,9 @@ interface AuditApiShapes {
   owner: { query: OwnerAuditQuery; body: undefined; reply: FileReply };
   createPreview: { query: NoQuery; body: PreviewCreateBody; reply: PreviewReply };
   getPreview: { query: VersionQuery; body: undefined; reply: HtmlReply };
+  createImprove: { query: NoQuery; body: ImproveCreateBody; reply: ImproveCreateReply };
+  listImprove: { query: VersionQuery; body: undefined; reply: ImproveListReply };
+  getImprove: { query: VersionQuery; body: undefined; reply: HtmlReply };
   listShares: { query: NoQuery; body: undefined; reply: ShareListReply };
   createShare: { query: NoQuery; body: ShareCreateBody; reply: ShareLinkReply };
   revokeShare: { query: NoQuery; body: undefined; reply: ShareLinkReply };
@@ -1486,3 +1596,104 @@ export const PROPOSAL_PLACEHOLDERS = [
   { name: 'site.url', description: 'The address of the audited website.' },
   { name: 'date', description: 'The date the Proposal is made (YYYY-MM-DD).' },
 ] as const;
+
+// ---------------------------------------------------------------------------------------------------
+// Competitors (T-416, ADR 0049): three similar public sites, named by the AI and read lightly
+// ---------------------------------------------------------------------------------------------------
+
+/** How many similar sites the AI names. */
+export const COMPETITOR_COUNT = 3;
+/** Pages read per competitor: the homepage plus up to 10 key pages from its menu. */
+export const COMPETITOR_MAX_PAGES = 11;
+
+/** The page types compared side by side; 'other' is never compared. */
+export const COMPETITOR_PAGE_TYPES = ['home', 'pricing', 'services', 'product', 'about', 'contact'] as const;
+export type CompetitorPageType = (typeof COMPETITOR_PAGE_TYPES)[number] | 'other';
+
+/** Ways to get in touch that a page shows. */
+export type CompetitorContactOption = 'phone' | 'email' | 'whatsapp' | 'form' | 'address' | 'chat';
+
+/** One site the AI named, before it is read. */
+export interface CompetitorCandidate {
+  /** Its homepage address (origin only). */
+  url: string;
+  host: string;
+  /** The AI's one-line reason, claim words removed. */
+  reason: string;
+  /** 'refused': it failed the public-address check, so it is never read. */
+  status: 'ok' | 'refused';
+  /** Why it was refused, in plain words. */
+  refusal?: string;
+}
+
+/** What was seen on one page. Facts only: no score, nothing about the whole site (ADR 0018). */
+export interface CompetitorPageFacts {
+  urlPath: string;
+  pageType: CompetitorPageType;
+  title: string | null;
+  /** Section headings in page order. */
+  sections: string[];
+  /** Calls to action: button and action-link text. */
+  ctas: string[];
+  /** Trust signals seen, as fixed labels ("testimonials", "reviews or ratings"...). */
+  trustSignals: string[];
+  contactOptions: CompetitorContactOption[];
+  /** How long the page took to arrive, in ms; null when not measured. */
+  speedMs: number | null;
+}
+
+/** One competitor after the light crawl. */
+export interface CompetitorSite {
+  url: string;
+  host: string;
+  reason: string;
+  /** 'not-read': blocked, refused or out of pages; `notReadReason` says why. */
+  status: 'read' | 'not-read';
+  notReadReason?: string;
+  pages: CompetitorPageFacts[];
+}
+
+/** One page type side by side: the audited site's page and each competitor's (null when it has none). */
+export interface CompetitorComparisonRow {
+  pageType: Exclude<CompetitorPageType, 'other'>;
+  audited: CompetitorPageFacts | null;
+  competitors: Array<{ host: string; page: CompetitorPageFacts | null }>;
+}
+
+/** The competitors of one audit version, as stored in `competitors.json`. */
+export interface CompetitorsState {
+  version: number;
+  discoveredAt: string;
+  candidates: CompetitorCandidate[];
+  crawledAt?: string;
+  sites?: CompetitorSite[];
+  comparison?: CompetitorComparisonRow[];
+}
+
+export interface CompetitorDiscoverBody {
+  version?: number;
+}
+
+export interface CompetitorCrawlBody {
+  version?: number;
+  /** The hosts kept from the stored candidates; any other host is refused. */
+  hosts: string[];
+}
+
+export interface CompetitorsReply {
+  competitors: CompetitorsState;
+}
+
+/** The competitor routes (started from the Improved version screen, never a pipeline stage). */
+export const AUDIT_COMPETITOR_API = {
+  getCompetitors: { method: 'GET', path: '/api/audits/:id/competitors', replies: 'json', access: 'view' },
+  /** One AI call names 3 sites; 409 ERR_NO_AI_KEY without a key. */
+  discoverCompetitors: {
+    method: 'POST',
+    path: '/api/audits/:id/competitors/discover',
+    replies: 'json',
+    access: 'owner',
+  },
+  /** Reads the kept candidates: GET only, paced, robots.txt honoured. */
+  crawlCompetitors: { method: 'POST', path: '/api/audits/:id/competitors/crawl', replies: 'json', access: 'owner' },
+} as const satisfies Record<string, AuditEndpoint>;

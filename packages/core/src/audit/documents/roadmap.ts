@@ -14,6 +14,28 @@
  */
 
 import type { AuditFinding, AuditScale, RoadmapItem } from '@qa/types';
+import { chosenFixOption, type FixOption } from '../improve/fix-rules.js';
+
+/**
+ * The fix option each Roadmap item links to (T-417): the chosen option of its first finding that has
+ * options (the first option until a choice can be stored). Items whose findings have none are left out.
+ */
+export function roadmapFixOptions(
+  roadmap: readonly Pick<RoadmapItem, 'id' | 'findingIds'>[],
+  options: ReadonlyMap<string, readonly FixOption[]>
+): Map<string, FixOption> {
+  const out = new Map<string, FixOption>();
+  for (const item of roadmap) {
+    for (const findingId of item.findingIds) {
+      const chosen = chosenFixOption(options.get(findingId) as FixOption[] | undefined);
+      if (chosen) {
+        out.set(item.id, chosen);
+        break;
+      }
+    }
+  }
+  return out;
+}
 
 /** Lower is more: high 0, medium 1, low 2. */
 const RANK: Record<AuditScale, number> = { high: 0, medium: 1, low: 2 };

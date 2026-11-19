@@ -44,7 +44,7 @@ export interface AuditExportDeps {
   settings: AuditSettingsStore;
   /** Prints HTML to PDF; the Chromium printer by default. Tests inject a stub. */
   exportOptions?: ExportOptions;
-  /** How many PDFs may be made at once on this runner (each starts a Chromium). Default 2. */
+  /** How many PDFs may be made at once on this runner (they share one Chromium, a context each). Default 2. */
   maxConcurrentPdf?: number;
 }
 

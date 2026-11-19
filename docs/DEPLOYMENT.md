@@ -92,6 +92,8 @@ On the hosted copy, Website Audits and Shared Links live in one Cloud Storage bu
 uses Firebase Authentication (Google sign-in) in the same project, and turns on only when `FIREBASE_PROJECT_ID` and
 `RUNNER_ACCESS_TOKEN` are both set.
 
+Set `AUDIT_OWNER_EMAILS`, or nobody can run Website Audits on the hosted copy. It is a GitHub repository variable that `deploy.yml` passes to the runner. The value is the owner's Google email address or addresses.
+
 One-time setup, by someone with owner rights on the project. The bucket name is an example; bucket names are global.
 
 1. Create the bucket in the runner's region on the always-free tier, with uniform access, public access prevention and soft delete off:

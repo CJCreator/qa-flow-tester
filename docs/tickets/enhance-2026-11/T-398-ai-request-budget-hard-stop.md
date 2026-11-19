@@ -1,4 +1,4 @@
-# T-398: The AI Request Budget is a hard stop
+# T-398: The AI Request Budget covers the audit AI stages and the Improved version
 
 | Priority | Size | Area | Type | Status |
 |---|---|---|---|---|
@@ -13,21 +13,26 @@
 
 **Do not build in parallel with:** T-406, T-413 (AI calls).
 
-## Problem (verify first)
+## Problem (rescoped)
 
-The guide describes an AI Request Budget the user sets. The review found no code that refuses a call once the budget is reached. `ai-budget.ts` only tunes the estimate (`MAX_CONCURRENCY = 4`, `TYPICAL_TESTED_PAGES = 24`). Check whether `discovery-agent.ts`, `routes/plan.ts` or `server.ts` already enforce it.
+The Check-up budget is already a hard stop. `PacedAI` (`packages/core/src/plan/ai-budget.ts:190-196`) refuses a request when `used >= allowance` (`BudgetSpentError`), when the person's request cap is reached (`CapSpentError('requests')`), and when the dollar cap is reached. The first version of this ticket assumed no such code. What is missing:
+- The audit AI stages (assessment, recommendations, preview) and the Improved version do not share that counter with the Check-up planner, so a run can pass the budget through them.
+- The estimate shown before an audit step does not count with the same counter.
+
+Verify first: read `PacedAI` and `audit/ai/stage-ai.ts`, and list which audit stages call the provider outside a `PacedAI`.
 
 ## Change
 
-- Keep one counter per run, shared by the Check-up planner and every audit stage (assessment, recommendations, preview, Improved version).
+- Extend the one existing counter to every audit AI stage (assessment, recommendations, preview) and to the Improved version, by sending their calls through `PacedAI`.
 - A call past the budget is not sent:
   - the audit stage records "not done: AI Request Budget reached" (`notDone`, `audit/ai/assessment.ts`);
-  - the Check-up uses the Fixed-Rule Fallback.
-- The estimate shown before a run counts with the same counter.
+  - the Check-up keeps its Fixed-Rule Fallback.
+- The estimate shown before an audit step counts with the same counter.
+- Do not change how `PacedAI` refuses a call.
 
 ## Tests
 
-With a budget of 3, exactly 3 calls are sent, and the 4th stage is "not done" with that reason.
+With a budget of 3, exactly 3 calls are sent across the audit stages, and the 4th stage is "not done" with that reason.
 
 ## Done when
 

@@ -43,6 +43,8 @@ export function servedOverHttps(req: http.IncomingMessage): boolean {
 export function applySecurityHeaders(req: http.IncomingMessage, res: http.ServerResponse, csp: string): void {
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Content-Security-Policy', csp);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'no-referrer');
   // Only over https: a browser ignores HSTS on plain http, and localhost must keep working without TLS.
   if (servedOverHttps(req)) res.setHeader('Strict-Transport-Security', 'max-age=31536000');
 }

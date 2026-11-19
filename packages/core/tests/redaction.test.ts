@@ -147,6 +147,30 @@ describe('redactSecretText', () => {
   });
 });
 
+describe('redactSecretText key shapes (T-395)', () => {
+  // Built at run time from obvious filler, so no key-shaped literal sits in the repo.
+  const filler = 'F'.repeat(30);
+  const keys = {
+    anthropic: 'sk-' + 'ant-' + filler,
+    openai: 'sk-' + 'proj-' + filler,
+    openrouter: 'sk-' + 'or-v1-' + filler,
+    gemini: 'AI' + 'za' + filler,
+    githubClassic: 'gh' + 'p_' + filler,
+    githubFine: 'github_' + 'pat_' + filler,
+  };
+
+  it.each(Object.entries(keys))('hides a %s key inside an error message', (_name, key) => {
+    const out = redactSecretText(`Provider said 401: invalid key ${key} for this project.`);
+    expect(out).toBe('Provider said 401: invalid key *** for this project.');
+    expect(out).not.toContain(filler);
+  });
+
+  it('keeps ordinary words that start like a key', () => {
+    const text = 'the sk-ip link, an AIzawa page and ghp_short';
+    expect(redactSecretText(text)).toBe(text);
+  });
+});
+
 describe('extra secrets and saved sessions (T-316)', () => {
   it('hides extra secrets of 8+ characters, and the bare token of a Bearer value', () => {
     const r = new Redactor([], { extraSecrets: ['bypass-0123456789', 'Bearer tunnel-abcdefgh', 'short'] });

@@ -15,7 +15,8 @@ The tool drives real browsers against real sites, so safety is enforced in code,
 - **The AI plans; it never acts.** It writes Plan Items from facts the crawler collected. It does not drive the browser and does not decide pass or fail (ADR 0001, 0009).
 - **Deterministic safety filters.** Destructive or side-effecting actions (deletes, payments, outbound notifications) are skipped by keyword and pattern rules and queued as questions for a person (`core/discovery/safety-filter.ts`, ADR 0003).
 - **Read-only by default.** Unless an address is marked a test copy (`QA_STAGING=true`, or the staging switch in the UI), it is checked read-only: no sign-in, no form submitted, no mutating request (`core/safe-scan.ts`). One exception: test sign-in details given with explicit consent count as consent to full testing for that one run, on your own computer or in GitHub Actions only, never on a shared machine (ADR 0022; see Headless sign-in below). Previews and staging are test copies; production is not. On a shared machine (beta mode) a test copy also needs a Verified Domain (below).
-- **Stay on the host.** Runs are confined to the target host and its allow-listed hosts; robots.txt is honored for public sites; page delays are kept polite.
+- **Stay on the host.** Runs are confined to the target host and its allow-listed hosts; robots.txt is honored for public sites; page delays are kept polite. The Domain Allowlist is not yet enforced on every request, redirect or popup (T-424 to T-426).
+- **Chromium on a local run is unguarded by design.** Only a shared machine sends browser traffic through the egress proxy (ADR 0045, "Local runs keep direct connections"). A local run uses the owner's own network and risk.
 - **Nothing runs that is not in the Plan.** The person approves the full Plan first (ADR 0009).
 
 ## The server
@@ -27,6 +28,7 @@ The tool drives real browsers against real sites, so safety is enforced in code,
 
 ## Secrets
 
+- With the `local` key source, the AES key sits beside the encrypted keys (`key-resolver.ts`). That stops a casual read of the file, not a leaked folder.
 - A saved AI key goes to the OS keychain. Only if no keychain exists is it written to `.qa-keys.json` (file mode 600, git-ignored).
 - Role sign-in values (not AI keys) are removed from events, reports and logs by `core/redact.ts` before output. Add a test when you add a new secret-bearing field. See ADR 0016 for what is covered and what is not.
 - `.env`, `.qa-keys.json`, `.qa-ai-models.json` and `.qa-plan.json` are git-ignored. Never commit them, never paste keys into commands or chat (Claude Code saves approved commands into its permission rules, which is how a key once ended up in `.claude/settings.json`).
@@ -60,6 +62,10 @@ Custom headers (`QA_CUSTOM_HEADERS`, `customHeaders` API field, or `--header` fl
 ## Verified Domains (shared machines)
 
 On a shared machine (`RUNNER_BETA=1`) the tool only fills in and sends forms on a Test Copy that is marked by the owner, resolves only to public addresses, and passes a Verified Domain proof: the file `https://<exact address>/.well-known/qa-verify.txt` holds one line, `qa-verify=<token>`. The token is random per session and address, kept in memory, and the file is fetched again at the start of every run and when a waiting plan is approved. The proof needs https, follows no redirect, is capped at 4 KB, and the route never returns the fetched file (ADR 0014). A proof shows control of one address at one moment, not that the site is fine. Dev tunnel names, `localhost`, private ranges and the `x-test-copy` header do not make a Test Copy there. On a shared machine every browser connection goes through the runner's egress proxy, which resolves each host once and connects only to a checked public address (ADR 0045). Own computer and GitHub Actions use are unchanged.
+
+## Similar sites (outbound requests to sites the user did not name)
+
+The Website Audit's similar sites (T-416, ADR 0049) are named by the AI, so the tool user did not type them. Each address passes the same public-address check as an audit start, and private or local addresses are refused on every runner, the owner's own computer included. A kept site is read at its homepage plus up to 10 menu pages: GET only through the pinned outbound path (ADR 0031), paced like the audit, robots.txt followed, no forms, no sign-in, no scripts run. Only the tool user (owner) can start it, and on the hosted copy these pages count toward the 200-page cap.
 
 ## Passive and active checks
 

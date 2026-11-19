@@ -56,6 +56,28 @@ describe('Website Audit progress stepper (ADR 0042)', () => {
     );
     expect(html).toMatch(/<li[^>]*aria-current="step"[^>]*>.*Writing documents/);
   });
+
+  it('T-398: shows the AI requests against the AI Request Budget', () => {
+    const progress = {
+      type: 'progress' as const,
+      auditId: 'test1',
+      version: 1,
+      stage: 'ranking' as const,
+      pagesFound: 3,
+      pagesRecorded: 3,
+      pagesSkipped: 0,
+    };
+    const render = (aiRequests?: { used: number; limit: number | null }) =>
+      renderToStaticMarkup(
+        createElement(AuditProgress, {
+          address: 'https://example.com/',
+          state: { status: 'working', progress: { ...progress, ...(aiRequests ? { aiRequests } : {}) } },
+        })
+      );
+    expect(render({ used: 3, limit: 3 })).toContain('AI requests: 3 of 3');
+    expect(render({ used: 4, limit: null })).toContain('AI requests: 4');
+    expect(render()).not.toContain('AI requests');
+  });
 });
 
 describe('Website Audit status chips (REQ-002, ADR 0042)', () => {

@@ -14,7 +14,7 @@
 - `CONTEXT.md`, `docs/adr/0049-improved-version.md` (set the status to Accepted), `docs/adr/README.md`
 - `packages/wizard/tests/audit-tabs.test.tsx`
 
-**Do not build in parallel with:** T-396 (wizard).
+**Order:** T-396 is built after this ticket (last wave), so it covers the new screen.
 
 ## Problem
 

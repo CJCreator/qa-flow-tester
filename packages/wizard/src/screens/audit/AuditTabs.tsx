@@ -2,12 +2,12 @@ import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { Link, PATHS } from '../../lib/router';
 import { ensureKnownHelperSignIn, knownHelperSignIn, subscribeKnownHelperSignIn } from './saved/helper-api';
 
-export type AuditTab = 'history' | 'results' | 'documents' | 'download' | 'share' | 'helpers';
+export type AuditTab = 'history' | 'results' | 'documents' | 'improved' | 'download' | 'share' | 'helpers';
 
 /**
  * The places inside one Website Audit, as a row of tabs under its header. Results, Documents and Download
- * belong to one version, so they show only when the screen knows the version; History, Share and Helpers
- * belong to the whole audit. `hide` leaves tabs out (e.g. Share and Helpers for a Helper).
+ * belong to one version, so they show only when the screen knows the version; History, Improved version, Share
+ * and Helpers belong to the whole audit (the Improved version screen picks its version). `hide` leaves tabs out (e.g. Share and Helpers for a Helper).
  * Helpers is also left out once this page has seen Helper sign-in is off, unless the current tab is Helpers.
  */
 export function AuditTabs({
@@ -32,6 +32,7 @@ export function AuditTabs({
   const tabs: Array<{ id: AuditTab; label: string; to: string | null }> = [
     { id: 'results', label: 'Results', to: version ? PATHS.auditVersion(auditId, version) : null },
     { id: 'documents', label: 'Documents', to: version ? PATHS.auditReview(auditId, version) : null },
+    { id: 'improved', label: 'Improved version', to: PATHS.auditImproved(auditId) },
     { id: 'download', label: 'Download', to: version ? PATHS.auditExport(auditId, version) : null },
     { id: 'history', label: 'Versions', to: PATHS.audit(auditId) },
     { id: 'share', label: 'Share', to: PATHS.auditShare(auditId) },

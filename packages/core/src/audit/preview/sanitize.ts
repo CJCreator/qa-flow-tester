@@ -380,6 +380,9 @@ const TAG_ATTRS: Readonly<Record<string, readonly string[]>> = {
   details: ['open'],
 };
 const GLOBAL_ATTRS = new Set(['id', 'class', 'title', 'lang', 'dir', 'role', 'style']);
+/** Change markers of the Improved version (ADR 0049): the finding or Section ids a part of the page answers. */
+const CITE_ATTRS = new Set(['data-finding', 'data-section']);
+const CITE_VALUE = /^[A-Za-z0-9_-]{1,64}( [A-Za-z0-9_-]{1,64}){0,7}$/;
 
 /** Ids and classes the page frame uses; the AI's own are dropped when they start with it. */
 export const RESERVED_PREFIX = 'qa-preview';
@@ -461,6 +464,9 @@ function cleanAttr(tag: string, name: string, value: string, siteUrl: string): s
       return '';
     case 'datetime':
       return /^[0-9T:+\-. Z]{1,40}$/.test(value) ? value : null;
+    case 'data-finding':
+    case 'data-section':
+      return CITE_VALUE.test(value.trim()) ? value.trim() : null;
     case 'href':
       return cleanHref(value, siteUrl);
     case 'src':
@@ -481,7 +487,8 @@ function cleanAttrs(tag: string, attrs: Array<[string, string]>, siteUrl: string
   for (const [name, raw] of attrs) {
     if (seen.has(name)) continue; // the first wins, as in a browser
     seen.add(name);
-    if (!GLOBAL_ATTRS.has(name) && !allowed.includes(name) && !name.startsWith('aria-')) continue;
+    if (!GLOBAL_ATTRS.has(name) && !CITE_ATTRS.has(name) && !allowed.includes(name) && !name.startsWith('aria-'))
+      continue;
     const value = cleanAttr(tag, name, raw, siteUrl);
     if (value !== null) out.push([name, value]);
   }
@@ -823,12 +830,15 @@ export interface PreviewDocumentInput {
   language: DocumentLanguage;
   /** The audited site's host, named in the note. */
   host: string;
+  /** The page's path when it is not the homepage (a design variant, ADR 0049). */
+  page?: string;
 }
 
 /** The fixed note at the top of every preview. English, plain, no claim words, no verdict. */
-export function previewNote(host: string): string {
+export function previewNote(host: string, page?: string): string {
+  const where = page ? `the page ${page} of ${host}` : `the homepage of ${host}`;
   return (
-    `Preview of suggested changes to the homepage of ${host}. ` +
+    `Preview of suggested changes to ${where}. ` +
     'This is not the live site: it was written with AI from the Website Audit, and nothing on the site was changed.'
   );
 }
@@ -856,7 +866,7 @@ export function renderPreviewDocument(input: PreviewDocumentInput): string {
     frameStyle,
     '</head>',
     '<body>',
-    `<p id="qa-preview-note" role="note">${escapeText(previewNote(input.host))}</p>`,
+    `<p id="qa-preview-note" role="note">${escapeText(previewNote(input.host, input.page))}</p>`,
     `<div class="${ROOT_CLASS}">`,
     body,
     '</div>',

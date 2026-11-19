@@ -2,14 +2,14 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { AUDIT_API, AUDIT_AI_API, matchAuditPath } from '@qa/types';
+import { AUDIT_API, AUDIT_AI_API, AUDIT_COMPETITOR_API, matchAuditPath } from '@qa/types';
 import { allRoutes, buildAuditRoutes } from '../src/routes/index.js';
 import { createAuditStore, selectAuditStoreBackend } from '@qa/core';
 import { createHelperAccess } from '../src/helpers/helper-access.js';
 import type { RunnerServer } from '../src/server.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const contract = Object.entries({ ...AUDIT_API, ...AUDIT_AI_API });
+const contract = Object.entries({ ...AUDIT_API, ...AUDIT_AI_API, ...AUDIT_COMPETITOR_API });
 
 function pathsOf(route: { path: string | string[] }): string[] {
   return Array.isArray(route.path) ? route.path : [route.path];

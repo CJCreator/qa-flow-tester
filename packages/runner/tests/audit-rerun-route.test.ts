@@ -16,7 +16,7 @@ import {
   type AuditRerunRouteDeps,
   type AuditStarter,
 } from '../src/routes/audit-rerun.js';
-import { AUDIT_START_FAILED } from '../src/routes/audit-crawl.js';
+import { AUDIT_HOSTED_PAGES, AUDIT_START_FAILED } from '../src/routes/audit-crawl.js';
 import { resolveRoute, type Route } from '../src/routes/route.js';
 import { DefaultRunSlot } from '../src/session/run-slot.js';
 import { AuditRuns } from '../src/session/audit-run.js';
@@ -290,6 +290,22 @@ describe('POST /api/audits/:id/rerun', () => {
     while (slot.kind !== null && Date.now() < until) await new Promise((r) => setTimeout(r, 10));
     expect((await store.getAudit(auditId))?.versions[1]).toMatchObject({ status: 'failed', error: AUDIT_START_FAILED });
     expect(slot.kind).toBeNull();
+  });
+
+  it('a hosted re-run over the page cap answers 400 with the same refusal as a start (T-402)', async () => {
+    const base = await serve(createAuditRerunRoutes(deps({ maxPages: 5 })));
+    const { status, json } = await rerun(base, auditId);
+    expect(status).toBe(400);
+    expect(json.code).toBe('ERR_INVALID_AUDIT');
+    expect(json.fields.maxPages).toBe(AUDIT_HOSTED_PAGES(5));
+    expect(startCalls).toHaveLength(0);
+    expect(slot.kind).toBeNull();
+    expect((await store.getAudit(auditId))?.versions).toHaveLength(1);
+  });
+
+  it('a hosted re-run within the cap still starts', async () => {
+    const base = await serve(createAuditRerunRoutes(deps({ maxPages: 200 })));
+    expect((await rerun(base, auditId)).status).toBe(202);
   });
 
   it('a refused start does not use up the daily limit', async () => {

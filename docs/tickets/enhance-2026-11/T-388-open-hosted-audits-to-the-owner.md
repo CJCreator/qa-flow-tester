@@ -21,7 +21,7 @@ The T-86 plan (line 33) says the access-key holder is also an owner. T-297 chang
 
 ## Human step
 
-Set the repository variable `AUDIT_OWNER_EMAILS` to the owner's Google email(s), then redeploy. The ticket stays `human` until then. Mark T-86 `done` afterwards.
+Set the repository variable `AUDIT_OWNER_EMAILS` to the owner's Google email(s), then redeploy. Done 2026-11-19: the owner set the variable, and the deploy that carries it is running (pending the deploy). Mark T-86 `done` once the owner has finished an audit on the hosted copy.
 
 ## Done when
 

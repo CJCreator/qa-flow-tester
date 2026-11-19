@@ -8,6 +8,7 @@ export * from './site-map.js';
 export * from './plan.js';
 export * from './verdict.js';
 export * from './problems.js';
+export * from './count-summary.js';
 export * from './signin.js';
 export * from './issue-type.js';
 export * from './test-case.js';

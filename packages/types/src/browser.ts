@@ -11,6 +11,7 @@ export * from './intent.js';
 export * from './input-rules.js';
 export * from './verdict.js';
 export * from './problems.js';
+export * from './count-summary.js';
 export * from './site-map.js';
 export * from './context-parse.js';
 export * from './evidence-finding.js';
