@@ -74,9 +74,9 @@ Speed tickets report their change against a measured baseline (T-411). The harne
 - `pnpm bench:audit [--sites a,b] [--runs 3] [--pages N] [--compare <file>] [--no-docs]`: Website Audit, each run in its own process with a runner started in-process and a fresh data folder under `.benchmark/tmp/`.
 - `pnpm bench:checkup [--sites a,b] [--runs 3] [--pages N] [--compare <file>] [--no-docs]`: the command-line Check-up (`packages/runner/dist/checkup.js --fail-on none`).
 
-Both load `.env` the way `pnpm start` does: the AI key comes from the environment (`.env.example` names the variables). 3 runs per site; the tables show the median.
+Both load `.env` the way `pnpm start` does. The audit takes its AI key from a provider variable (`OPENROUTER_API_KEY`, `GEMINI_API_KEY`...) or the OS keychain, the Check-up from `QA_AI_API_KEY` (`.env.example` names them all); each audit run has a fresh data folder, so it uses the default model. 3 runs per site; the tables show the median.
 
-- **Metrics:** wall time per stage (and per pipeline step, from the `startedAt`/`endedAt` of each step in the version's `stages` file), pages recorded and skipped by reason, AI calls and tokens, 429 answers (route telemetry), peak RSS of the Node process (Chromium's own processes are not counted). For a Check-up: run time, Test points, Flaky Passed.
+- **Metrics:** wall time per stage (and per pipeline step, from the `startedAt`/`endedAt` of each step in the version's `stages` file), pages recorded and skipped by reason, AI calls and tokens (audit: POSTs to the AI Provider hosts, counted by wrapping `fetch`; Check-up: `aiUsage` in `findings.json`), 429s (each page's last answer, route telemetry, at most 500 routes) and busy answers (every 429 or 503, counted at `HostPacer.slowDown`), peak RSS of the Node process (Chromium's own processes are not counted). For a Check-up: run time, Test points, Flaky Passed.
 - **Accuracy:** the Jaccard overlap of the `(rule, urlPath)` finding sets: the lowest between runs of one site, or against `--compare <earlier .benchmark file>`.
 - **Output:** `.benchmark/<date>-<commit>-audit.json` or `-checkup.json` (git-ignored), and a table appended below.
 
@@ -93,12 +93,12 @@ Both load `.env` the way `pnpm start` does: the AI key comes from the environmen
 
 Commit `b23682c`. Not run yet: it needs the owner's AI key. To record it, check out `b23682c` in a worktree, copy `scripts/benchmark-*.mjs` in, `pnpm build`, then `node --env-file-if-exists=.env scripts/benchmark-audit.mjs` and `scripts/benchmark-checkup.mjs` (that commit has no `bench:*` scripts and no per-step times). Each speed ticket (T-403, T-404, T-406, T-408, T-409, T-410) adds its own table with `--compare` against the baseline file.
 
-| Site         | Wall time | Crawl | Recorded | Skipped (by reason) | AI calls / tokens | 429s | Peak RSS | Jaccard |
-| ------------ | --------- | ----- | -------- | ------------------- | ----------------- | ---- | -------- | ------- |
-| techgramam   |           |       |          |                     |                   |      |          |         |
-| arocord      |           |       |          |                     |                   |      |          |         |
-| mghealthtech |           |       |          |                     |                   |      |          |         |
-| large        |           |       |          |                     |                   |      |          |         |
+| Site         | Wall time | Crawl | Recorded | Skipped (by reason) | AI calls / tokens | 429s / busy | Peak RSS | Jaccard |
+| ------------ | --------- | ----- | -------- | ------------------- | ----------------- | ----------- | -------- | ------- |
+| techgramam   |           |       |          |                     |                   |             |          |         |
+| arocord      |           |       |          |                     |                   |             |          |         |
+| mghealthtech |           |       |          |                     |                   |             |          |         |
+| large        |           |       |          |                     |                   |             |          |         |
 
 <!-- benchmark-results: new tables are appended above this line -->
 
