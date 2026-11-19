@@ -36,7 +36,7 @@ describe("the Spider's exploring click is guarded (T-423)", () => {
         followFormActions: false,
         maxDurationMs: 30_000,
         pageDelayMs: 0,
-        outboundFetch: async () => ({ ok: false, status: 404, text: async () => '' }) as unknown as Response,
+        outboundFetch: async () => null,
       });
       return { result, changing };
     } finally {
