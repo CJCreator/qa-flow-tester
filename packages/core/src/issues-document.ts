@@ -1,5 +1,5 @@
 import type { DocSource, FindingSeverity, IssueType, ReleaseReport, RoleNotTested } from '@qa/types';
-import { ISSUE_TYPES, SEVERITY_ORDER, issueTypeOf } from '@qa/types';
+import { ISSUE_TYPES, SEVERITY_ORDER, countSummary, issueTypeOf, problemsThatCountLine } from '@qa/types';
 import { codeSpan, sanitizeInline } from './findings-contract.js';
 import { describeSource } from './source-wording.js';
 
@@ -23,6 +23,8 @@ export interface AccessTable {
 }
 
 export interface IssuesModel {
+  /** "Problems that count: N (…)": the same count as the report and the verdict (T-391). */
+  countLine?: string;
   rolesNotTested: RoleNotTested[];
   roles: Array<{ role: string; byType: Partial<Record<IssueType, Issue[]>> }>;
   /** Held out of the verdict until the person accepts them, per role. */
@@ -98,6 +100,7 @@ export function buildIssuesModel(report: ReleaseReport): IssuesModel {
   }
 
   return {
+    countLine: problemsThatCountLine(countSummary(report.findings)),
     rolesNotTested: report.rolesNotTested ?? [],
     roles,
     judgement,
@@ -179,6 +182,7 @@ function renderIssue(i: Issue, lines: string[]): void {
 
 export function renderIssuesMarkdown(model: IssuesModel): string {
   const lines: string[] = ['# Issues', ''];
+  if (model.countLine) lines.push(model.countLine, '');
   lines.push('## Roles not tested and why', '');
   lines.push(...rolesNotTestedLines(model.rolesNotTested));
   const documented = documentedItemsLine(model.documentedItems);

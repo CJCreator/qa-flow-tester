@@ -1,7 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import type { ReleaseReport, AspectType, FindingSeverity, RankedRecommendation } from '@qa/types';
-import { groupIntoProblems, releaseVerdict, ASPECTS } from '@qa/types';
+import { countSummary, groupIntoProblems, problemsThatCountLine, releaseVerdict, ASPECTS } from '@qa/types';
 import { notChecked } from './not-checked.js';
 
 export interface HtmlReportOptions {
@@ -605,7 +605,8 @@ export async function generateSingleFileHtmlReport(
       <div class="header-left">
         <h1>Release check-up</h1>
         <p>Site: <strong>${escapeHtml(report.targetUrl)}</strong> | Checked on: ${escapeHtml(new Date(report.timestamp).toLocaleString())}</p>
-        <p style="margin-top: 0.25rem; font-size: 0.875rem;">Run ID: <code>${escapeHtml(report.runId)}</code> | Problems found: ${verdict.total}</p>
+        <p style="margin-top: 0.25rem; font-size: 0.875rem;">Run ID: <code>${escapeHtml(report.runId)}</code> </p>
+        <p style="margin-top: 0.25rem; font-size: 0.875rem;">${escapeHtml(problemsThatCountLine(countSummary(report.findings)))}</p>
       </div>
       <div class="overall-badge">
         <div class="overall-grade">${escapeHtml(verdict.stamp)}</div>
