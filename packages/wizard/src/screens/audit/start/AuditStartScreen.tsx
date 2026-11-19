@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { AuditStartErrors, AuditStartReply } from '@qa/types/src/browser.js';
+import { getStatus } from '../../../api';
 import { ErrorMessage, Spinner } from '../../../components/text';
 import { Disclosure, Page, PageHeader } from '../../../components/ui';
 import { count, scrollBehavior } from '../../../lib/format';
@@ -8,6 +9,9 @@ import { useDocumentTitle } from '../../../lib/title';
 import {
   AUDIT_FIELD_HINTS,
   AUDIT_LIMIT_BOUNDS,
+  checkAuditStartForm,
+  maxPagesHint,
+  pagesBound,
   estimateAiRequests,
   errorId,
   fieldId,
@@ -61,11 +65,14 @@ function Field({
   label,
   errors,
   children,
+  hint,
 }: {
   field: AuditFormField;
   label: string;
   errors: AuditStartErrors;
   children: ReactNode;
+  /** Replaces the fixed hint (Most pages names the shared copy's cap). */
+  hint?: string;
 }) {
   return (
     <div className="mt-5">
@@ -74,7 +81,7 @@ function Field({
       </label>
       {children}
       <p id={hintId(field)} className="mt-1 text-sm text-ink-soft">
-        {AUDIT_FIELD_HINTS[field]}
+        {hint ?? AUDIT_FIELD_HINTS[field]}
       </p>
       <FieldError field={field} errors={errors} />
     </div>
@@ -90,6 +97,7 @@ export function AuditStartFields({
   errors,
   message,
   busyRun,
+  maxPagesCap,
   starting,
   onChange,
   onSubmit,
@@ -100,6 +108,8 @@ export function AuditStartFields({
   message: string | null;
   /** Info on another active check-up or audit refusing this start. */
   busyRun?: RunningInfo | null;
+  /** The shared copy's page cap from the runner's status (`auditMaxPages`); none on a local runner. */
+  maxPagesCap?: number | null;
   starting: boolean;
   onChange: (form: AuditStartForm) => void;
   onSubmit: () => void;
@@ -142,14 +152,14 @@ export function AuditStartFields({
         className="mt-8"
       >
         <div className="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
-          <Field field="maxPages" label="Most pages to read" errors={errors}>
+          <Field field="maxPages" label="Most pages to read" errors={errors} hint={maxPagesHint(maxPagesCap)}>
             <input
               id={fieldId('maxPages')}
               name="maxPages"
               type="number"
               inputMode="numeric"
               min={b.minPages}
-              max={b.maxPages}
+              max={pagesBound(maxPagesCap)}
               step={1}
               className="field w-32"
               value={form.maxPages}
@@ -267,14 +277,34 @@ export interface AuditStartScreenProps {
   /** Overrides for tests: the request and the stream. */
   submit?: (form: AuditStartForm) => Promise<AuditStartOutcome>;
   openSource?: AuditEventSourceFactory;
+  /** Overrides for tests: the shared copy's page cap, instead of asking `/api/runner/status`. */
+  maxPagesCap?: number | null;
 }
 
 /**
  * The Website Audit start screen: the form, then the audit's progress from its stream. English only
  * (ADR 0033). A Website Audit has no release verdict, so nothing here judges the website.
  */
-export function AuditStartScreen({ submit = submitAuditStart, openSource }: AuditStartScreenProps = {}) {
+export function AuditStartScreen({
+  submit = submitAuditStart,
+  openSource,
+  maxPagesCap: capOverride,
+}: AuditStartScreenProps = {}) {
   const [form, setForm] = useState<AuditStartForm>(initialAuditStartForm);
+  // The shared copy's cap on pages, from the runner's status; none on a local runner or while unknown.
+  const [statusCap, setStatusCap] = useState<number | null>(null);
+  const maxPagesCap = capOverride !== undefined ? capOverride : statusCap;
+  useEffect(() => {
+    if (capOverride !== undefined) return;
+    let live = true;
+    void getStatus().then((status) => {
+      const cap = (status as { auditMaxPages?: unknown } | null)?.auditMaxPages;
+      if (live && typeof cap === 'number') setStatusCap(cap);
+    });
+    return () => {
+      live = false;
+    };
+  }, [capOverride]);
   const [errors, setErrors] = useState<AuditStartErrors>({});
   const [message, setMessage] = useState<string | null>(null);
   const [busyRun, setBusyRun] = useState<RunningInfo | null>(null);
@@ -332,9 +362,18 @@ export function AuditStartScreen({ submit = submitAuditStart, openSource }: Audi
   };
 
   const onSubmit = async () => {
-    setStarting(true);
     setMessage(null);
     setBusyRun(null);
+    // Over the shared copy's cap: say so here, before any request.
+    if (maxPagesCap != null) {
+      const check = checkAuditStartForm(form, maxPagesCap);
+      if (!check.ok && check.errors.maxPages) {
+        focusAfterRefusal.current = firstErrorField(check.errors);
+        setErrors(check.errors);
+        return;
+      }
+    }
+    setStarting(true);
     const outcome = await submit(form);
     setStarting(false);
     if (outcome.kind === 'started') {
@@ -403,6 +442,7 @@ export function AuditStartScreen({ submit = submitAuditStart, openSource }: Audi
           errors={errors}
           message={message}
           busyRun={busyRun}
+          maxPagesCap={maxPagesCap}
           starting={starting}
           onChange={onChange}
           onSubmit={() => void onSubmit()}

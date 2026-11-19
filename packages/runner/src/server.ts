@@ -6,6 +6,7 @@ import { handleHealthRoute } from './routes/health.js';
 import { applySecurityHeaders, runnerCsp } from './security-headers.js';
 import { evidenceContentType, sendEvidenceFile } from './evidence-file.js';
 import {
+  AUDIT_LIMIT_DEFAULTS,
   hostOf,
   releaseVerdict,
   signInReasonText,
@@ -1261,6 +1262,7 @@ export class RunnerServer {
                   // A copy shared with other people: their check-ups and reports are visible to each other.
                   beta: this.beta,
                   auditOwner: this.isAuditOwner(req),
+                  ...this.auditMaxPagesField(),
                 })
               );
               return;
@@ -1550,6 +1552,11 @@ export class RunnerServer {
    * run at a time, so what is "current" belongs to whoever started it; to everyone else it doesn't
    * exist. True once the request has been answered here.
    */
+  /** `auditMaxPages` for the status reply: the shared copy's cap on a Website Audit; absent on a local runner. */
+  private auditMaxPagesField(): { auditMaxPages?: number } {
+    return this.localRun ? {} : { auditMaxPages: AUDIT_LIMIT_DEFAULTS.hostedMaxPages };
+  }
+
   private async betaScope(req: http.IncomingMessage, res: http.ServerResponse, pathname: string): Promise<boolean> {
     const method = req.method;
     if (pathname === '/api/runner/status' && method === 'GET') {
@@ -1569,6 +1576,7 @@ export class RunnerServer {
         beta: true,
         busy,
         auditOwner: this.isAuditOwner(req),
+        ...this.auditMaxPagesField(),
       });
       return true;
     }
