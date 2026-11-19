@@ -181,6 +181,20 @@ describe('renderPdf', { timeout: 90_000 }, () => {
     await renderPdf(html);
     expect(launched).toHaveLength(2);
   });
+
+  it('thumbnails use the shared PDF browser: one launch for a PDF and its thumbnails (T-415 follow-up)', async () => {
+    const launched = spyLaunch(() => {});
+    const page = '<html><body style="background:#1a4d8c"><h1>Variant</h1></body></html>';
+    await renderPdf(renderHtml(englishDoc));
+    const first = await renderThumbnails([page]);
+    const second = await renderThumbnails([page, page]);
+    expect(first[0]!.subarray(0, 3)).toEqual(Buffer.from([0xff, 0xd8, 0xff]));
+    expect(second).toHaveLength(2);
+    expect(launched).toHaveLength(1);
+    // The thumbnails did not close the browser they share with the PDFs.
+    expect(launched[0]!.isConnected()).toBe(true);
+    expect(launched[0]!.contexts()).toHaveLength(0);
+  });
 });
 
 describe('the Improved version in print (T-415)', { timeout: 120_000 }, () => {
