@@ -3,8 +3,9 @@
  * Drives the Deterministic Spider in Safe Interaction Mode: links and sitemap.xml only (no exploring clicks,
  * no form actions followed), no Roles, no credentials, no sign-in again. The browser context lets through
  * public addresses only (`makeRequestGuard`) and aborts every changing request (`blockChanges`). robots.txt
- * is honoured. Up to 3 pages load at once, starts 500 ms apart (ADR 0043); a robots Crawl-delay, or a host
- * that answers 429 or 503, brings it back to one at a time (ADR 0015).
+ * is honoured. 3 pages load at once to begin with, one more after every 25 healthy answers up to 8 on a local
+ * runner (3 on the hosted copy), starts always 500 ms apart (ADR 0043, 0046); a robots Crawl-delay, or a host
+ * that answers 429 or 503, brings it back to one at a time for good (ADR 0015).
  * Pages outside the limits, checkout paths and payment or sign-in pages are Skipped Pages: never opened
  * (limits, checkout paths) or opened and left untouched (card fields, provider frames, sign-in forms).
  * The start host (and its www twin) is resolved once, public only, before any request, and the audit's own
@@ -13,6 +14,7 @@
  */
 import { chromium, type Browser, type BrowserContext, type LaunchOptions, type Page } from 'playwright';
 import type { AuditRequest, PageCoverage, PageLink, RouteSkipReason, SkippedPageInfo } from '@qa/types';
+import { AUDIT_LIMIT_DEFAULTS } from '@qa/types';
 import {
   BREAKPOINT_VIEWPORTS,
   getBrowserPolicy,
@@ -66,7 +68,14 @@ export const AUDIT_MAX_CRAWL_MS = 60 * 60 * 1000;
  * Pages of one site loaded at once (ADR 0043), each with its own browser page; their starts stay
  * AUDIT_MIN_GAP_MS apart. One at a time when robots.txt sets a Crawl-delay or the site says it is busy.
  */
-export const AUDIT_FETCH_IN_FLIGHT = 3;
+export const AUDIT_FETCH_IN_FLIGHT = AUDIT_LIMIT_DEFAULTS.fetchInFlight;
+/**
+ * The most pages of one site loaded at once after climbing (ADR 0046): 8 on a local runner, 3 on the hosted copy
+ * (1 CPU, 2 GiB). The 500 ms gap between starts still holds, so a site never sees more than 2 starts a second.
+ */
+export function auditFetchCeiling(localRunner: boolean): number {
+  return localRunner ? AUDIT_LIMIT_DEFAULTS.fetchInFlightLocal : AUDIT_LIMIT_DEFAULTS.fetchInFlightHosted;
+}
 /**
  * Addresses of one shape (`/p/<n>`, `/2026/11/19`) a Website Audit queues at most (T-401). The Check-up keeps
  * the Spider's 25; at 25 a shop with `/p/12345` product addresses stopped at 25 products.
@@ -327,6 +336,8 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
     minGapMs: deps.minGapMs ?? AUDIT_MIN_GAP_MS,
     crawlDelayMs: robots.crawlDelayMs,
     maxInFlight: AUDIT_FETCH_IN_FLIGHT,
+    // `allowPrivateAddresses` is set by a local runner only (ADR 0042), so it also tells local from hosted.
+    ceiling: auditFetchCeiling(opts.allowPrivateAddresses === true),
     ...(deps.sleep ? { sleep: deps.sleep } : {}),
     ...(deps.now ? { now: deps.now } : {}),
   });
@@ -414,8 +425,9 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
       maxDepth: request.limits.maxDepth,
       maxPerShape: AUDIT_MAX_PER_SHAPE,
       pageTimeoutMs: AUDIT_PAGE_TIMEOUT_MS,
-      // One worker per page the pacer lets through at once, so all of them are used (ADR 0043).
-      concurrency: pacer.maxInFlight,
+      // One worker per page the pacer may let through at once after climbing, so all of them are used (ADR 0046).
+      concurrency: pacer.ceiling,
+      maxConcurrency: pacer.ceiling,
       retryBusyHost: true,
       retryDelayMs: deps.retryDelayMs ?? 5000,
       ...(deps.sleep ? { sleep: deps.sleep } : {}),

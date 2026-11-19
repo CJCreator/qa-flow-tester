@@ -14,7 +14,17 @@ export interface HostPacerOptions {
    * the gap spaces task starts instead of end-to-start. A robots Crawl-delay, or `slowDown`, keeps the host at 1.
    */
   maxInFlight?: number;
+  /**
+   * The most tasks one host may run at once after climbing (ADR 0046; default `maxInFlight`: no climb). The
+   * Website Audit passes 8 on a local runner and 3 on the hosted copy.
+   */
+  ceiling?: number;
+  /** Healthy answers (tasks that ended with no `slowDown` yet) between two climbs of 1 (default 25). */
+  climbEvery?: number;
 }
+
+/** Answers between two climbs of the in-flight limit (ADR 0046). */
+export const DEFAULT_CLIMB_EVERY = 25;
 
 /** The longest `Retry-After` waited out (ADR 0043). */
 export const MAX_RETRY_AFTER_MS = 60_000;
@@ -36,6 +46,10 @@ interface Lane {
   notBefore?: number;
   /** How often the host said it was busy. */
   slowDowns: number;
+  /** Tasks ended since the last climb. */
+  healthy: number;
+  /** Set by `slowDown`: the limit never climbs again on this host. */
+  climbStopped: boolean;
   waiters: Array<() => void>;
 }
 
@@ -71,6 +85,9 @@ export class HostPacer {
   readonly gapMs: number;
   /** Tasks one host may run at once before any `slowDown`: 1 when robots.txt sets a Crawl-delay. */
   readonly maxInFlight: number;
+  /** The most a host's limit climbs to (ADR 0046): `maxInFlight` when there is no climb, 1 with a Crawl-delay. */
+  readonly ceiling: number;
+  private readonly climbEvery: number;
   private readonly now: () => number;
   private readonly sleep: (ms: number, signal?: AbortSignal) => Promise<void>;
   private readonly lanes = new Map<string, Lane>();
@@ -81,17 +98,23 @@ export class HostPacer {
     const wanted = Math.max(1, Math.floor(opts.maxInFlight ?? 1));
     // A site that asks for a Crawl-delay is read one page at a time (ADR 0043).
     this.maxInFlight = (opts.crawlDelayMs ?? 0) > 0 ? 1 : wanted;
+    // A Crawl-delay keeps the host at 1 for the whole run: no climb (ADR 0046).
+    this.ceiling =
+      (opts.crawlDelayMs ?? 0) > 0 ? 1 : Math.max(this.maxInFlight, Math.floor(opts.ceiling ?? this.maxInFlight));
+    this.climbEvery = Math.max(1, Math.floor(opts.climbEvery ?? DEFAULT_CLIMB_EVERY));
     this.now = opts.now ?? Date.now;
     this.sleep = opts.sleep ?? defaultSleep;
   }
 
   /**
    * The host answered 429 or 503 (ADR 0043): from now on one task at a time, nothing starts before its
-   * `Retry-After` (capped at 60 s), and a second time doubles the gap (capped at 10 s).
+   * `Retry-After` (capped at 60 s), and a second time doubles the gap (capped at 10 s). The climb stops for
+   * the rest of the run (ADR 0046).
    */
   slowDown(host: string, retryAfterMs?: number): void {
     const lane = this.laneFor(host.toLowerCase());
     lane.max = 1;
+    lane.climbStopped = true;
     lane.slowDowns++;
     if (lane.slowDowns > 1) lane.gapMs = Math.min(MAX_SLOWED_GAP_MS, Math.max(lane.gapMs * 2, this.gapMs, 1));
     if (retryAfterMs !== undefined && retryAfterMs > 0) {
@@ -144,15 +167,38 @@ export class HostPacer {
     } finally {
       // Work the task left running after it settled no longer counts as holding the turn.
       mine.delete(key);
-      if (started) lane.lastEndAt = this.now();
+      if (started) {
+        lane.lastEndAt = this.now();
+        this.climb(lane);
+      }
       this.release(lane);
     }
+  }
+
+  /**
+   * One more answer with no `slowDown` so far: after every `climbEvery` of them the host may run one more task
+   * at once, up to the ceiling (ADR 0046). The starts stay a gap apart, so the rate never rises past it.
+   */
+  private climb(lane: Lane): void {
+    if (lane.climbStopped || lane.max >= this.ceiling) return;
+    lane.healthy++;
+    if (lane.healthy < this.climbEvery) return;
+    lane.healthy = 0;
+    lane.max++;
   }
 
   private laneFor(key: string): Lane {
     let lane = this.lanes.get(key);
     if (!lane) {
-      lane = { active: 0, max: this.maxInFlight, gapMs: this.gapMs, slowDowns: 0, waiters: [] };
+      lane = {
+        active: 0,
+        max: this.maxInFlight,
+        gapMs: this.gapMs,
+        slowDowns: 0,
+        healthy: 0,
+        climbStopped: false,
+        waiters: [],
+      };
       this.lanes.set(key, lane);
     }
     return lane;

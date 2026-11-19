@@ -127,8 +127,10 @@ export interface CrawlOptions {
    * pacing; share it with the run's other fetches (`makeOutboundFetch({ pacer })`).
    */
   pacer?: HostPacer;
-  /** Number of concurrent page evaluations (1 to 5, default 2). */
+  /** Number of concurrent page evaluations (1 to `maxConcurrency`, default 2). */
   concurrency?: number;
+  /** The most workers `concurrency` may ask for (default 5). The Website Audit passes its pacer's ceiling (ADR 0046). */
+  maxConcurrency?: number;
   /** Custom HTTP headers sent with every request (e.g. X-QA-Bypass-Token). */
   customHeaders?: Record<string, string>;
   /** Folder for a small screenshot of each page, shown on the plan map. None when absent. */
@@ -506,7 +508,7 @@ export class DeterministicSpider {
   }
 
   async crawl(context: BrowserContext, targetUrl: string, options: CrawlOptions = {}): Promise<SpiderResult> {
-    const concurrency = Math.max(1, Math.min(5, options.concurrency ?? 2));
+    const concurrency = Math.max(1, Math.min(options.maxConcurrency ?? 5, options.concurrency ?? 2));
     const pageDelayMs = options.pageDelayMs !== undefined ? options.pageDelayMs : 100;
     const maxAttempts = options.maxAttempts ?? this.maxPages * 3;
     const stopAfterWalls = options.stopAfterWalls ?? 3;

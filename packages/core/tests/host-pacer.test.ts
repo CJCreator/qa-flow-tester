@@ -344,6 +344,88 @@ describe('HostPacer with maxInFlight (ADR 0043)', () => {
   });
 });
 
+describe('HostPacer climbing to a ceiling (ADR 0046)', () => {
+  /** Runs `count` quick tasks on one host, advancing the clock until all are done; returns their starts. */
+  async function runQuick(pacer: HostPacer, clock: ReturnType<typeof fakeClock>, count: number) {
+    const starts: number[] = [];
+    const limits: number[] = [];
+    let done = 0;
+    const runs = Array.from({ length: count }, () =>
+      pacer
+        .run('shop.example', async () => {
+          starts.push(clock.now());
+        })
+        .then(() => {
+          done++;
+          limits.push(pacer.inFlightLimit('shop.example'));
+        })
+    );
+    await clock.flush();
+    while (done < count) await clock.advance(100);
+    await Promise.all(runs);
+    return { starts, limits };
+  }
+
+  const make = (clock: ReturnType<typeof fakeClock>, extra: Partial<ConstructorParameters<typeof HostPacer>[0]> = {}) =>
+    new HostPacer({ minGapMs: 500, maxInFlight: 3, ceiling: 8, now: clock.now, sleep: clock.sleep, ...extra });
+
+  it('climbs from 3 to 8 over 125 healthy answers, one more every 25', async () => {
+    const clock = fakeClock();
+    const pacer = make(clock);
+    expect(pacer.ceiling).toBe(8);
+    const { limits } = await runQuick(pacer, clock, 150);
+    expect(limits[23]).toBe(3);
+    expect(limits[24]).toBe(4);
+    expect(limits[49]).toBe(5);
+    expect(limits[123]).toBe(7);
+    expect(limits[124]).toBe(8);
+    expect(limits[149]).toBe(8);
+  });
+
+  it('never starts 2 pages within 500 ms, however high it climbs', async () => {
+    const clock = fakeClock();
+    const pacer = make(clock);
+    const { starts } = await runQuick(pacer, clock, 150);
+    for (let i = 1; i < starts.length; i++) expect(starts[i] - starts[i - 1]).toBeGreaterThanOrEqual(500);
+  });
+
+  it('runs 8 at once after climbing', async () => {
+    const clock = fakeClock();
+    const pacer = make(clock);
+    await runQuick(pacer, clock, 125);
+    const log: string[] = [];
+    const tasks = Array.from({ length: 10 }, (_, i) => controlled(log, String(i), clock));
+    const runs = tasks.map((t) => pacer.run('shop.example', t.task));
+    for (let i = 0; i < 20; i++) await clock.advance(500);
+    expect(log.filter((l) => l.startsWith('start'))).toHaveLength(8);
+    for (const t of tasks) t.finish();
+    for (let i = 0; i < 4; i++) await clock.advance(500);
+    await Promise.all(runs);
+  });
+
+  it('falls to 1 after a 429 and stays there', async () => {
+    const clock = fakeClock();
+    const pacer = make(clock);
+    await runQuick(pacer, clock, 60);
+    expect(pacer.inFlightLimit('shop.example')).toBe(5);
+    pacer.slowDown('shop.example');
+    expect(pacer.inFlightLimit('shop.example')).toBe(1);
+    const { limits } = await runQuick(pacer, clock, 100);
+    expect(new Set(limits)).toEqual(new Set([1]));
+  });
+
+  it('a robots Crawl-delay keeps the ceiling at 1; no ceiling means no climb', async () => {
+    expect(new HostPacer({ maxInFlight: 3, ceiling: 8, crawlDelayMs: 1000 }).ceiling).toBe(1);
+    const clock = fakeClock();
+    const flat = make(clock, { ceiling: undefined });
+    expect(flat.ceiling).toBe(3);
+    const { limits } = await runQuick(flat, clock, 60);
+    expect(new Set(limits)).toEqual(new Set([3]));
+    // The Check-up's default: one at a time, never climbing.
+    expect(new HostPacer().ceiling).toBe(1);
+  });
+});
+
 describe('makeOutboundFetch with a pacer', () => {
   /** A fake network that counts requests in flight per host. */
   function countingNet() {
