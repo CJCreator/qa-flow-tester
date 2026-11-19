@@ -149,14 +149,15 @@ Six build lanes work in parallel, each in its own worktree and branch. A lane ow
 
 | Lane | Name | Tickets |
 |---|---|---|
-| L1 | Audit crawl | T-400, T-401, T-403, T-404, T-405, T-406, T-407 |
-| L2 | Check-up and counts | T-389, T-390, T-391, T-408, T-409, T-410, T-421, T-422, T-423, T-424, T-425, T-426, T-427, T-428 |
-| L3 | Improved version | T-412, T-413, T-414, T-415, T-417, T-419, T-420 |
-| L4 | Competitors and alternatives | T-416, T-418 |
-| L5 | Runner and security | T-392, T-393, T-394, T-395, T-402, T-398 |
-| L6 | Docs | T-388, T-397, T-399, this plan |
+| L1 | Audit crawl | T-400, T-411 (harness code), T-390, T-401, T-403, T-404, T-405, T-406, T-407 |
+| L2 | Check-up and counts | T-398, T-393, T-389, T-409, T-408, T-391 |
+| L3 | Improved version | T-412, T-413, T-414, T-415 |
+| L4 | Competitors and alternatives (starts after T-412) | T-416, T-418, T-417, T-419, T-420 |
+| L5 | Runner and security | T-392, T-394, T-395, T-402, T-410 |
+| L6 | Docs | T-388, T-399, T-397, this plan |
+| L7 | Safety (starts after L2, which owns `orchestrator.ts`) | T-421, T-423, T-422, T-426, T-424, T-425, T-428, T-427 |
 
-T-411 (benchmark) and T-396 (every disabled button) run outside the lanes: T-411 first, T-396 last.
+T-396 (every disabled button) runs last, after L3 and L4, so it covers every new screen. T-411's benchmark runs are the owner's (they need an AI key); speed tickets end `built` with their numbers pending.
 
 ## Out of scope
 
