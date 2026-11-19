@@ -1689,6 +1689,16 @@ export interface CompetitorCrawlBody {
 
 export interface CompetitorsReply {
   competitors: CompetitorsState;
+  /** T-418: what each read site shows for each top finding, from the comparison facts. */
+  examples?: CompetitorExample[];
+}
+
+/** One thing a similar site shows for a finding, cited by site and page (T-418). */
+export interface CompetitorExample {
+  findingId: string;
+  host: string;
+  urlPath: string;
+  text: string;
 }
 
 /** The competitor routes (started from the Improved version screen, never a pipeline stage). */

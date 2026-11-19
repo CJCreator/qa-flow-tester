@@ -8,8 +8,12 @@
  * Handlers take their dependencies as arguments, so they run without a RunnerServer.
  */
 import type http from 'http';
-import type { AuditResult, ImproveCreateReply, ImproveListReply, PageContent } from '@qa/types';
+import type { AuditResult, CompetitorsState, ImproveCreateReply, ImproveListReply, PageContent } from '@qa/types';
 import {
+  COMPETITORS_NAME,
+  competitorExamples,
+  competitorIdeas,
+  competitorTexts,
   checkImproveBody,
   improvePages,
   makeOutboundFetch,
@@ -128,6 +132,11 @@ export function auditImproveRoutes(deps: AuditImproveRouteDeps): Route[] {
       if (!resolved.ok) return refuse(res, 409, 'ERR_NO_AI_KEY', IMPROVE_NO_AI_KEY);
 
       const edits = await readEdits(store, auditId, found.version.version);
+      // T-418: when similar sites were read for this version, their facts are optional prompt input.
+      const competitors = await store
+        .readVersionJson<CompetitorsState>(auditId, found.version.version, COMPETITORS_NAME)
+        .catch(() => null);
+      const examples = competitorExamples(found.result.findings.slice(0, 10), competitors);
       const made = await makeVariants(
         {
           result: found.result,
@@ -136,6 +145,9 @@ export function auditImproveRoutes(deps: AuditImproveRouteDeps): Route[] {
           pages: body.pages,
           variants: body.variants,
           ...(body.only !== undefined ? { only: body.only } : {}),
+          ...(examples.size > 0
+            ? { competitor: { ideas: competitorIdeas(examples), texts: competitorTexts(competitors) } }
+            : {}),
         },
         {
           io: versionIo(store, auditId, found.version.version),

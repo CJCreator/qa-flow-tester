@@ -26,6 +26,8 @@ import { previewFacts, MAX_PREVIEW_IMAGES, type VariantDirection } from '../prev
 import { siteBrand, type SiteBrand } from './brand.js';
 import { chromium, type Browser } from 'playwright';
 import { gateVariant, labAxeScan, type VariantAxeScan } from './quality-gate.js';
+import { previewNodesText } from '../preview/sanitize.js';
+import { copiesCompetitor } from '../competitors/examples.js';
 
 /** The index of every variant made for one version (a version JSON object: `improved/variants.json`). */
 export const IMPROVE_INDEX_NAME = 'improved/variants';
@@ -182,6 +184,11 @@ export interface MakeVariantsInput {
   variants: number;
   /** Only this variant number ("Try again"): one request. */
   only?: number;
+  /**
+   * T-418, optional: what similar sites show ("borrow what works"). `ideas` go into the prompt, each cited by
+   * site and page; `texts` are their words, which a variant must never copy (the rewrite overlap check).
+   */
+  competitor?: { ideas: string[]; texts: string[] };
 }
 
 export interface MakeVariantsOptions {
@@ -258,9 +265,13 @@ export async function makeVariants(
     if (brand.logo && !facts.images.some((i) => i.src === brand.logo!.src)) {
       facts.images = [brand.logo, ...facts.images].slice(0, MAX_PREVIEW_IMAGES);
     }
+    const ideas = input.competitor?.ideas ?? [];
     const direction: VariantDirection = {
       style: job.style,
-      brief: VARIANT_BRIEFS[job.style],
+      brief:
+        ideas.length > 0
+          ? `${VARIANT_BRIEFS[job.style]} Ideas seen on similar sites that you may borrow; cite each one you use by its site and page, and never copy their words: ${ideas.join('; ')}.`
+          : VARIANT_BRIEFS[job.style],
       logo: brand.logo,
       colours: brand.colours,
     };
@@ -277,6 +288,11 @@ export async function makeVariants(
     }
     requests++;
     if (!page.ok) {
+      made.push({ ...base, status: 'failed', problem: 'failed', createdAt: now() });
+      return;
+    }
+    // T-418: a variant that copies a similar site's words is never stored or shown.
+    if (input.competitor && copiesCompetitor(previewNodesText(page.nodes), input.competitor.texts).length > 0) {
       made.push({ ...base, status: 'failed', problem: 'failed', createdAt: now() });
       return;
     }

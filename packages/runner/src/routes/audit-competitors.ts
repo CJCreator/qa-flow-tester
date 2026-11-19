@@ -16,6 +16,7 @@ import {
   COMPETITOR_PAGE_TYPES,
   type AuditEndpoint,
   type AuditResult,
+  type CompetitorExample,
   type CompetitorPageFacts,
   type CompetitorSite,
   type CompetitorsReply,
@@ -27,6 +28,7 @@ import {
   auditedPagesByType,
   checkAuditAddress,
   compareSites,
+  competitorExamples,
   competitorSummary,
   discoverCompetitors,
   lightCrawlSites,
@@ -71,6 +73,12 @@ export interface AuditCompetitorRouteDeps {
   /** Test seams for the light crawl: the GET, the pacer gap and the clock. */
   crawl?: Pick<LightCrawlOptions, 'fetch' | 'minGapMs' | 'sleep' | 'now'>;
   now?: () => Date;
+}
+
+/** T-418: what each read site shows for each of the top 10 findings. */
+function examplesFor(result: AuditResult | null, state: CompetitorsState): CompetitorExample[] {
+  if (!result) return [];
+  return [...competitorExamples(result.findings.slice(0, 10), state).values()].flat();
 }
 
 function row(endpoint: AuditEndpoint, handle: Route['handle']): Route {
@@ -189,7 +197,8 @@ export function auditCompetitorRoutes(deps: AuditCompetitorRouteDeps): Route[] {
       if (!record || number === undefined) return refuse(c.res, 404, 'ERR_AUDIT_NOT_FOUND', AUDIT_NOT_FOUND);
       const state = await store.readVersionJson<CompetitorsState>(auditId, number, COMPETITORS_NAME);
       if (!state) return refuse(c.res, 404, 'ERR_AUDIT_NOT_FOUND', COMPETITORS_NONE);
-      const reply: CompetitorsReply = { competitors: state };
+      const result = await store.getResult(auditId, number);
+      const reply: CompetitorsReply = { competitors: state, examples: examplesFor(result, state) };
       sendJson(c.res, 200, reply);
     } catch (err) {
       refuseStoreFailure(c.res, err);
@@ -290,7 +299,7 @@ export function auditCompetitorRoutes(deps: AuditCompetitorRouteDeps): Route[] {
         comparison: compareSites(audited, sites),
       };
       await store.writeVersionJson(auditId, started.version, COMPETITORS_NAME, state);
-      const reply: CompetitorsReply = { competitors: state };
+      const reply: CompetitorsReply = { competitors: state, examples: examplesFor(started.result, state) };
       sendJson(c.res, 200, reply);
     } catch (err) {
       refuseStoreFailure(c.res, err);

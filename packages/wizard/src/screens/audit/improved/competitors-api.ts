@@ -5,6 +5,7 @@ import {
   type AuditErrorCode,
   type CompetitorCrawlBody,
   type CompetitorDiscoverBody,
+  type CompetitorExample,
   type CompetitorsState,
 } from '@qa/types/src/browser.js';
 import { isAuditErrorCode, NOT_ANSWERING } from '../audit-call';
@@ -15,7 +16,8 @@ import { isAuditErrorCode, NOT_ANSWERING } from '../audit-call';
  */
 export type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 export type CompetitorOutcome =
-  { ok: true; value: CompetitorsState | null } | { ok: false; message: string; code?: AuditErrorCode };
+  | { ok: true; value: CompetitorsState | null; examples?: CompetitorExample[] }
+  | { ok: false; message: string; code?: AuditErrorCode };
 
 export const COMPETITOR_NO_AI_KEY = 'An AI key is needed to find similar sites. Add one in Settings.';
 
@@ -44,7 +46,16 @@ async function call(url: string, init: RequestInit, fetchImpl: Fetch, fallback: 
   }
   if (res.ok) {
     const state = isRecord(body) ? body.competitors : undefined;
-    return isState(state) ? { ok: true, value: state } : { ok: false, message: fallback };
+    const raw = isRecord(body) && Array.isArray(body.examples) ? body.examples : [];
+    const examples = raw.filter(
+      (e): e is CompetitorExample =>
+        isRecord(e) &&
+        typeof e.findingId === 'string' &&
+        typeof e.host === 'string' &&
+        typeof e.urlPath === 'string' &&
+        typeof e.text === 'string'
+    );
+    return isState(state) ? { ok: true, value: state, examples } : { ok: false, message: fallback };
   }
   const refusal = isRecord(body) ? body : {};
   const code = isAuditErrorCode(refusal.code) ? refusal.code : undefined;
