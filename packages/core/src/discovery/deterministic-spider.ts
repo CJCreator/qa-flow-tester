@@ -29,7 +29,7 @@ import { inferCrud, readCrudStructure, probeDeleteConfirm } from './crud-facts.j
 import { navigate, toTelemetry, looksLikeLogin, type NavigateResult } from '../navigate.js';
 import type { InterstitialKind } from '../audit/crawl/interstitial.js';
 import { debugLog } from '../debug-log.js';
-import { normalizeRoute, CrawlFrontier } from './frontier.js';
+import { normalizeRoute, CrawlFrontier, type CrawlFrontierState } from './frontier.js';
 import { dismissOverlays } from './overlay.js';
 import { guardPage } from './guard.js';
 
@@ -114,6 +114,13 @@ export interface SpiderResult {
   stoppedAnsweringAfter?: number;
   blocked?: InterstitialKind;
   startRefused?: { code: string; message: string };
+}
+
+/** Where a crawl stands, as plain data (Website Audit checkpoints, T-407). */
+export interface SpiderCrawlState {
+  frontier: CrawlFrontierState;
+  /** Addresses still to load: queued, or being loaded when the state was read. */
+  pending: Array<{ url: string; depth: number }>;
 }
 
 export interface CrawlOptions {
@@ -214,6 +221,13 @@ export interface CrawlOptions {
   sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
   /** Check start address during outage probe (default: probes startUrl with outboundFetch). */
   outageCheck?: (url: string) => Promise<boolean>;
+  /**
+   * Website Audit resume (T-407): carry on from a checkpoint. The frontier is restored and `pending` is loaded;
+   * the start page is not loaded again and the sitemap is not read again. `targetUrl` is where the start landed.
+   */
+  resume?: SpiderCrawlState;
+  /** Website Audit checkpoints (T-407): handed, once, a function that reads the crawl's state at any moment. */
+  exposeState?: (read: () => SpiderCrawlState) => void;
   /** Called when the start page is loaded to check for interstitial or refusal before crawl proceeds. */
   onStartPage?: (
     page: Page,
@@ -546,7 +560,8 @@ export class DeterministicSpider {
     // The site is where the start address lands: example.com that redirects to www.example.com is
     // crawled as www.example.com. Until a page has opened, it's the address as typed.
     let site = new URL(baseUrlObj.origin);
-    let landedOnce = false;
+    // A resumed crawl landed on its site before the checkpoint: `targetUrl` is where it landed.
+    let landedOnce = options.resume !== undefined;
     let startRedirectedOffSite = false;
     let sessionLost = false;
     let consecutiveWalls = 0;
@@ -619,12 +634,15 @@ export class DeterministicSpider {
     const paced = <T>(url: string, task: () => Promise<T>): Promise<T> =>
       pacer ? pacer.run(new URL(url).host, task, pacerSignal) : task();
 
-    const frontier = new CrawlFrontier({
+    const frontierOptions = {
       maxPerShape,
       maxDepth,
       routeQueryParams: options.routeQueryParams,
       includeHash: options.includeHash,
-    });
+    };
+    const frontier = options.resume
+      ? CrawlFrontier.restore(options.resume.frontier, frontierOptions)
+      : new CrawlFrontier(frontierOptions);
     const normRoute = (u: string) =>
       normalizeRoute(u, site.toString(), {
         routeQueryParams: options.routeQueryParams,
@@ -647,6 +665,10 @@ export class DeterministicSpider {
     const outageFailedPages: Array<{ item: QueueItem; path: string; asAsked: string }> = [];
     const outageRetriedKeys = new Set<string>();
     const requeuedKeys = new Set<string>();
+    /** Items a worker took and is loading now: pending in a checkpoint until they end (T-407). */
+    const inFlight = new Set<QueueItem>();
+    /** Items whose load ended after a stop: they may not have finished, so a checkpoint keeps them pending. */
+    const interrupted = new Set<QueueItem>();
 
     let activeWorkers = 0;
     let attemptsCount = 0;
@@ -730,13 +752,35 @@ export class DeterministicSpider {
       notifyWork();
     };
 
-    for (const start of [...(options.startPaths || []), baseUrlObj.pathname + baseUrlObj.search || '/']) {
-      enqueue(start, 0, true);
+    if (options.resume) {
+      // Visited in the frontier already (taken before the checkpoint): loaded again once, as a requeue.
+      for (const item of options.resume.pending) {
+        queue.push({ url: item.url, depth: item.depth });
+        requeuedKeys.add(normRoute(item.url).key);
+      }
+    } else {
+      for (const start of [...(options.startPaths || []), baseUrlObj.pathname + baseUrlObj.search || '/']) {
+        enqueue(start, 0, true);
+      }
     }
+    options.exposeState?.(() => {
+      const seen = new Set<string>();
+      const pending: Array<{ url: string; depth: number }> = [];
+      for (const item of [...interrupted, ...inFlight, ...queue]) {
+        const key = normRoute(item.url).key;
+        if (seen.has(key)) continue;
+        const taken = inFlight.has(item) || interrupted.has(item);
+        if (!taken && frontier.isVisited(key) && !requeuedKeys.has(key)) continue;
+        seen.add(key);
+        pending.push({ url: item.url, depth: item.depth });
+      }
+      return { frontier: frontier.serialize(), pending };
+    });
 
     // Sitemap seeding (crawls /sitemap.xml and robots.txt Sitemap: lines) through the pinned outbound
     // path (ADR 0031). Only addresses on the target's site are read; other hosts are logged and skipped.
-    if (options.seedSitemap !== false && timeLeft() > 0 && !options.signal?.aborted) {
+    // A resumed crawl read it before its checkpoint.
+    if (options.seedSitemap !== false && !options.resume && timeLeft() > 0 && !options.signal?.aborted) {
       // Each default fetch's timeout is cut to the time left, so seeding cannot run past the deadline.
       const unpacedFetch: FetchFn =
         options.outboundFetch ??
@@ -1667,9 +1711,12 @@ export class DeterministicSpider {
           if (requestedItem) {
             attemptsCount++;
             activeWorkers++;
+            inFlight.add(requestedItem);
             try {
               await evaluatePage(workerPage, requestedItem.url, requestedPath, requestedItem.depth);
             } finally {
+              inFlight.delete(requestedItem);
+              if (options.signal?.aborted) interrupted.add(requestedItem);
               activeWorkers--;
               notifyWork();
             }

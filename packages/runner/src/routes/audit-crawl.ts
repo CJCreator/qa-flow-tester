@@ -11,6 +11,11 @@
  * Only the validated request reaches the crawl: unknown body fields are dropped by the check, so no field can
  * turn on sign-in, Roles, form submission or private addresses.
  *
+ * Resume (T-407): every 25 recorded pages the crawl saves a checkpoint. A run paused with one (the hosted copy
+ * pauses a run whose progress stream has been closed for a while; a restart pauses one too, see
+ * `recoverRunningAudits`) is saved as 'paused', and `POST /api/audits/:id/resume` carries the same version on
+ * from its checkpoint with the same limits.
+ *
  * Not registered here: BE-190 adds these rows to allRoutes with their real dependencies.
  */
 import { promises as fs } from 'node:fs';
@@ -37,8 +42,10 @@ import {
   AuditCrawlRefusedError,
   AuditPipelineError,
   checkAuditAddress,
+  createAuditCheckpointer,
   createPageRecorder,
   isAbortError,
+  loadAuditCheckpoint,
   measureSampleSpeeds,
   preflightAuditAi,
   runAuditCrawl,
@@ -48,6 +55,7 @@ import {
   type AuditCrawlOptions,
   type AuditCrawlResult,
   type AuditPageRecorder,
+  type LoadedAuditCheckpoint,
   type AuditStore,
   type PageRecorderOptions,
   type PageSpeedDeps,
@@ -81,6 +89,12 @@ export const AUDIT_SAVE_FAILED = 'The Website Audit could not be saved. Try agai
 export const AUDIT_STATUS_FAILED =
   'The Website Audit was saved, but its status could not be updated. Try reloading it.';
 export const AUDIT_STOPPED = 'The Website Audit was stopped before it finished.';
+/** Fixed wording of a paused version (T-407): its tab closed on the shared copy. */
+export const AUDIT_PAUSED = 'The Website Audit paused when its tab closed. Resume it from Saved audits.';
+export const AUDIT_FORBIDDEN_RESUME = 'Only the owner of this QA Tool can resume a Website Audit.';
+export const AUDIT_NOT_PAUSED = 'This Website Audit is not paused, so there is nothing to resume.';
+/** How long a hosted run may go without a progress stream before it pauses (T-407). */
+export const AUDIT_UNWATCHED_PAUSE_MS = 30_000;
 export const AUDIT_HOSTED_PAGES = (max: number) =>
   `This copy audits at most ${max} pages. Lower Max pages and start again.`;
 
@@ -117,7 +131,14 @@ export type AuditCrawl = (request: AuditRequest, opts: AuditCrawlOptions) => Pro
 export type AuditRunStore = Pick<
   AuditStore,
   'createAudit' | 'updateVersion' | 'getResult' | 'grantsFor' | 'readAuditRecord' | 'getVersion'
->;
+> &
+  // Checkpoints (T-407): saved, read and resumed only when the store offers these.
+  Partial<
+    Pick<
+      AuditStore,
+      'writeVersionJson' | 'putVersionFile' | 'readVersionJson' | 'getVersionFile' | 'getAudit' | 'resumeVersion'
+    >
+  >;
 
 /** What the background run uses. `runAuditVersion` takes these, so the re-run route (BE-603) shares them. */
 export interface AuditRunServices {
@@ -153,6 +174,20 @@ export interface AuditCrawlRouteDeps extends AuditRunServices {
   runs?: AuditRuns;
   /** Test seam / wiring: check and claim an audit start against AUDIT_DAILY_LIMIT (T-86). */
   claimAuditLimit?: (email?: string) => { allowed: boolean; error?: string };
+  /**
+   * Pause a run whose progress stream has been closed this long (T-407). Default: AUDIT_UNWATCHED_PAUSE_MS on the
+   * hosted copy (`maxPages` set: its CPU stops with the stream), never on a local runner.
+   */
+  pauseWhenUnwatchedMs?: number;
+}
+
+/** Runs asked to pause rather than stop (T-407): saved as 'paused' when they have a checkpoint. */
+const pausedRuns = new WeakSet<AuditRun>();
+
+/** Pauses a run (T-407): it stops at once, and is saved as 'paused' when it has a checkpoint. */
+export function pauseAuditRun(run: AuditRun): void {
+  pausedRuns.add(run);
+  run.stop();
 }
 
 /** What the production rows add: the pieces the default pipeline step needs. */
@@ -268,7 +303,7 @@ async function retryDoneStatus(store: AuditRunStore, run: AuditRun): Promise<Out
 async function recordStatus(
   store: AuditRunStore,
   run: AuditRun,
-  status: 'failed' | 'stopped',
+  status: 'failed' | 'stopped' | 'paused',
   finishedAt: string,
   error?: string
 ): Promise<void> {
@@ -286,7 +321,14 @@ async function recordStatus(
  */
 export async function runAuditVersion(
   services: AuditRunServices,
-  input: { run: AuditRun; request: AuditRequest; startedAt: string; slot: RunSlot }
+  input: {
+    run: AuditRun;
+    request: AuditRequest;
+    startedAt: string;
+    slot: RunSlot;
+    /** Carry on from the version's checkpoint (T-407). */
+    resume?: boolean;
+  }
 ): Promise<void> {
   const { run, request, startedAt, slot } = input;
   const { store } = services;
@@ -296,6 +338,8 @@ export async function runAuditVersion(
   const signal = run.signal;
   let workDir: string | undefined;
   let crawled = false;
+  /** A checkpoint of this version exists (T-407): a pause can be resumed from it. */
+  let checkpointed = false;
   let outcome: Outcome;
   let currentStage: AuditStage = 'checking-address';
 
@@ -349,8 +393,48 @@ export async function runAuditVersion(
       services.maxPages !== undefined && request.limits.maxPages > services.maxPages
         ? { ...request, limits: { ...request.limits, maxPages: services.maxPages } }
         : request;
+    // Checkpoints (T-407): the pages a resumed version recorded before come back, then the crawl carries on.
+    let restored: LoadedAuditCheckpoint | null = null;
+    if (input.resume && store.readVersionJson && store.getVersionFile) {
+      restored = await loadAuditCheckpoint(
+        { readVersionJson: store.readVersionJson.bind(store), getVersionFile: store.getVersionFile.bind(store) },
+        run.auditId,
+        run.version,
+        workDir
+      );
+      if (restored) {
+        checkpointed = true;
+        recorder.restore(restored.pages);
+      }
+    }
+    const saveCheckpoint =
+      store.writeVersionJson && store.putVersionFile
+        ? createAuditCheckpointer({
+            store: {
+              writeVersionJson: store.writeVersionJson.bind(store),
+              putVersionFile: store.putVersionFile.bind(store),
+            },
+            auditId: run.auditId,
+            version: run.version,
+            recorder,
+            workDir,
+            ...(restored ? { restored } : {}),
+            now,
+          })
+        : undefined;
     const crawl = await crawlFn(runRequest, {
       signal,
+      ...(restored ? { resume: restored.crawl } : {}),
+      ...(saveCheckpoint
+        ? {
+            checkpoint: {
+              save: async (checkpoint) => {
+                await saveCheckpoint(checkpoint);
+                checkpointed = true;
+              },
+            },
+          }
+        : {}),
       // The crawl redacts currentPath; the run adds the audit id and version.
       onProgress: (p) => {
         if ('stage' in p) {
@@ -400,7 +484,11 @@ export async function runAuditVersion(
     outcome = { kind: 'done' };
   } catch (err: unknown) {
     const finishedAt = now().toISOString();
-    if (isAbortError(err) || signal.aborted) {
+    if ((isAbortError(err) || signal.aborted) && pausedRuns.has(run) && checkpointed) {
+      // A pause with a checkpoint (T-407): the version waits for Resume.
+      await recordStatus(store, run, 'paused', finishedAt, AUDIT_PAUSED);
+      outcome = { kind: 'failed', error: AUDIT_PAUSED, code: OTHER_FAILED_CODE };
+    } else if (isAbortError(err) || signal.aborted) {
       // A stop is neither done nor failed.
       await recordStatus(store, run, 'stopped', finishedAt);
       outcome = { kind: 'failed', error: AUDIT_STOPPED, code: OTHER_FAILED_CODE };
@@ -510,6 +598,32 @@ export async function passesStartChecks(
 /** The start and stream rows with every dependency injectable (tests use a fake crawl and address check). */
 export function createAuditCrawlRoutes(deps: AuditCrawlRouteDeps): Route[] {
   const runs = deps.runs ?? new AuditRuns();
+  // On the hosted copy a run gets CPU only while its stream is open (ADR 0043): one left unwatched pauses (T-407).
+  const pauseAfterMs =
+    deps.pauseWhenUnwatchedMs ?? (deps.maxPages !== undefined ? AUDIT_UNWATCHED_PAUSE_MS : undefined);
+  const watchers = new Map<AuditRun, { count: number; timer?: NodeJS.Timeout }>();
+  const watch = (run: AuditRun) => {
+    const entry = watchers.get(run) ?? { count: 0 };
+    entry.count++;
+    clearTimeout(entry.timer);
+    entry.timer = undefined;
+    watchers.set(run, entry);
+  };
+  const unwatch = (run: AuditRun) => {
+    const entry = watchers.get(run);
+    if (!entry) return;
+    entry.count = Math.max(0, entry.count - 1);
+    if (entry.count > 0) return;
+    if (pauseAfterMs === undefined || run.finished) {
+      watchers.delete(run);
+      return;
+    }
+    entry.timer = setTimeout(() => {
+      watchers.delete(run);
+      if (!run.finished) pauseAuditRun(run);
+    }, pauseAfterMs);
+    entry.timer.unref?.();
+  };
   const slotOf = deps.slot ?? ((context: RouteContext) => context.server.session.run);
   const checkAddress =
     deps.checkAddress ??
@@ -605,12 +719,12 @@ export function createAuditCrawlRoutes(deps: AuditCrawlRouteDeps): Route[] {
             let terminalEvent: AuditProgressEvent;
             if (stored.status === 'done') {
               terminalEvent = { type: 'done', auditId, version: stored.version };
-            } else if (stored.status === 'stopped') {
+            } else if (stored.status === 'stopped' || stored.status === 'paused') {
               terminalEvent = {
                 type: 'failed',
                 auditId,
                 version: stored.version,
-                error: stored.error ?? AUDIT_STOPPED,
+                error: stored.error ?? (stored.status === 'paused' ? AUDIT_PAUSED : AUDIT_STOPPED),
                 code: 'ERR_INVALID_REQUEST',
               };
             } else {
@@ -646,7 +760,11 @@ export function createAuditCrawlRoutes(deps: AuditCrawlRouteDeps): Route[] {
     };
     // The snapshot event first, then every later one.
     const unsubscribe = run.subscribe(send);
-    req.on('close', unsubscribe);
+    watch(run);
+    req.on('close', () => {
+      unsubscribe();
+      unwatch(run);
+    });
   });
 
   const stop = row('stop', async (context) => {
@@ -663,7 +781,67 @@ export function createAuditCrawlRoutes(deps: AuditCrawlRouteDeps): Route[] {
     sendJson(res, 202, reply);
   });
 
-  return [start, stream, stop];
+  const resume: Route & { method: string; access: AuditAccess } = {
+    method: AUDIT_API.resume.method,
+    path: AUDIT_API.resume.path,
+    access: AUDIT_API.resume.access,
+    beta: 'closed',
+    handle: async (context) => {
+      const { res } = context;
+      const caller = await deps.caller(context);
+      if (!caller.owner) return refuse(res, 403, 'ERR_FORBIDDEN', AUDIT_FORBIDDEN_RESUME);
+      const auditId = context.params?.id ?? '';
+      if (!AUDIT_ID_PATTERN.test(auditId)) return refuse(res, 404, 'ERR_AUDIT_NOT_FOUND', AUDIT_NOT_FOUND_STREAM);
+      const store = deps.store;
+      if (!store.getAudit || !store.resumeVersion) {
+        return refuse(res, 404, 'ERR_AUDIT_NOT_FOUND', AUDIT_NOT_FOUND_STREAM);
+      }
+
+      let request: AuditRequest;
+      let paused: { version: number; startedAt: string };
+      try {
+        const audit = await store.getAudit(auditId);
+        const latest = audit?.versions[audit.versions.length - 1];
+        if (!audit || !latest) return refuse(res, 404, 'ERR_AUDIT_NOT_FOUND', AUDIT_NOT_FOUND_STREAM);
+        if (latest.status !== 'paused') return refuse(res, 409, 'ERR_AUDIT_NOT_PAUSED', AUDIT_NOT_PAUSED);
+        request = { url: latest.url, limits: latest.limits, language: latest.language };
+        paused = { version: latest.version, startedAt: latest.startedAt };
+      } catch {
+        return sendJson(res, 500, { error: AUDIT_START_FAILED });
+      }
+      if (deps.maxPages !== undefined && request.limits.maxPages > deps.maxPages) {
+        return refuse(res, 400, 'ERR_INVALID_AUDIT', AUDIT_INVALID, {
+          fields: { maxPages: AUDIT_HOSTED_PAGES(deps.maxPages) },
+        });
+      }
+
+      const slot = slotOf(context);
+      // A resume is not a new start: the day's limit was claimed when the audit started.
+      if (!(await passesStartChecks(res, slot, runs, request.url, checkAddress, undefined, undefined))) return;
+      deps.targetAccepted?.(request.url);
+      // Synchronous claim, no await before it after the check (BE-103).
+      if (!slot.begin(auditId, request.url, 'audit')) {
+        return refuse(res, 409, 'ERR_RUN_IN_PROGRESS', AUDIT_BUSY, { running: getRunningInfo(slot, runs) });
+      }
+      let run: AuditRun;
+      try {
+        const resumed = await store.resumeVersion(auditId, paused.version);
+        if (!resumed) {
+          if (slot.kind === 'audit') slot.release();
+          return refuse(res, 409, 'ERR_AUDIT_NOT_PAUSED', AUDIT_NOT_PAUSED);
+        }
+        run = runs.start(auditId, paused.version);
+      } catch {
+        if (slot.kind === 'audit') slot.release();
+        return sendJson(res, 500, { error: AUDIT_START_FAILED });
+      }
+      const reply: AuditStartReply = { auditId, version: paused.version };
+      sendJson(res, 202, reply);
+      void runAuditVersion(deps, { run, request, startedAt: paused.startedAt, slot, resume: true });
+    },
+  };
+
+  return [start, stream, stop, resume];
 }
 
 /**

@@ -133,6 +133,7 @@ import {
   runApiChecks,
   apiChecksSection,
   ReportGenerator,
+  AUDIT_CHECKPOINT_NAME,
   createAuditStore,
   selectAuditStoreBackend,
   type AuditStore,
@@ -483,11 +484,20 @@ export async function recoverRunningAudits(store: AuditStore, now: () => Date = 
       for (const version of audit.versions) {
         if (version.status === 'running') {
           try {
+            // A version with a checkpoint (T-407) waits for Resume; one without has nothing to carry on from.
+            let checkpoint: unknown = null;
+            try {
+              checkpoint = await store.readVersionJson(audit.auditId, version.version, AUDIT_CHECKPOINT_NAME);
+            } catch {
+              checkpoint = null;
+            }
             await store.updateVersion(audit.auditId, version.version, {
-              status: 'stopped',
+              status: checkpoint ? 'paused' : 'stopped',
               stoppedReason: 'tool-restarted',
               finishedAt: now().toISOString(),
-              error: 'The tool restarted before the Website Audit finished.',
+              error: checkpoint
+                ? 'The tool restarted before the Website Audit finished. Resume it from Saved audits.'
+                : 'The tool restarted before the Website Audit finished.',
             });
             count += 1;
           } catch {

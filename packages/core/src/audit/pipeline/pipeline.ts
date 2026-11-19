@@ -47,7 +47,7 @@ import { makeCheckerFetch } from '../../checker-fetch.js';
 import type { HostPacer } from '../../host-pacer.js';
 import { isLocalOriginHost, type NetDeps } from '../../safe-net.js';
 import type { AuditStore } from '../store/audit-store.js';
-import type { AuditCrawlResult } from '../crawl/crawl.js';
+import type { AuditCrawlCheckpoint, AuditCrawlPage, AuditCrawlResult } from '../crawl/crawl.js';
 import { createFindingIdAllocator, uniqueIds } from '../analysis/finding-ids.js';
 import { EMPTY_RAW_LISTS } from '../analysis/raw-page.js';
 import { skipKey } from '../analysis/broken-links.js';
@@ -979,4 +979,161 @@ export async function runAuditPipeline(
   }
 
   return { result, steps, citationProblems };
+}
+
+// ---------------------------------------------------------------------------------------------------
+// Checkpoints (T-407)
+// ---------------------------------------------------------------------------------------------------
+
+/** The version object that holds a checkpoint's crawl state; its pages are in `checkpoint/pages-<n>`. */
+export const AUDIT_CHECKPOINT_NAME = 'checkpoint';
+const checkpointChunkName = (n: number) => `checkpoint/pages-${n}`;
+
+/** What `checkpoint.json` holds: the crawl state, with pages by path (their data is in the chunks). */
+interface StoredAuditCheckpoint {
+  format: 1;
+  savedAt: string;
+  /** Chunks written so far: `checkpoint/pages-1` to `checkpoint/pages-<chunks>`. */
+  chunks: number;
+  crawl: Omit<AuditCrawlCheckpoint, 'pages'> & { pages: string[] };
+}
+
+/** A checkpoint read back for a resume. */
+export interface LoadedAuditCheckpoint {
+  crawl: AuditCrawlCheckpoint;
+  /** The recorded pages, in crawl order, for `AuditPageRecorder.restore`. */
+  pages: RecordedPage[];
+  chunks: number;
+}
+
+export type AuditCheckpointStore = Pick<AuditStore, 'writeVersionJson' | 'putVersionFile'>;
+
+/**
+ * The `save` of `runAuditCrawl`'s `checkpoint` option (T-407). It waits for the read and lab work of the pages in
+ * the checkpoint, keeps the pages whose lab work ended and puts the others back in the queue, then writes the
+ * newly finished pages (with their phone screenshots) as one chunk and the crawl state last, so the state never
+ * names a chunk that is not there.
+ */
+export function createAuditCheckpointer(deps: {
+  store: AuditCheckpointStore;
+  auditId: string;
+  version: number;
+  recorder: AuditPageRecorder;
+  workDir: string;
+  /** The checkpoint this run resumed from: its pages are saved already. */
+  restored?: LoadedAuditCheckpoint;
+  now?: () => Date;
+}): (checkpoint: AuditCrawlCheckpoint) => Promise<void> {
+  const now = deps.now ?? (() => new Date());
+  const saved = new Set((deps.restored?.pages ?? []).map((p) => p.info.urlPath));
+  let chunks = deps.restored?.chunks ?? 0;
+  return async (checkpoint) => {
+    await deps.recorder.settled(checkpoint.pages.map((p) => p.urlPath));
+    const entries = new Map(deps.recorder.pages.map((e) => [e.info.urlPath, e]));
+    const origin = new URL(checkpoint.finalUrl).origin;
+    const complete: AuditCrawlPage[] = [];
+    const fresh: RecordedPage[] = [];
+    const again: Array<{ url: string; depth: number }> = [];
+    for (const page of checkpoint.pages) {
+      const entry = entries.get(page.urlPath);
+      if (saved.has(page.urlPath)) {
+        complete.push(page);
+      } else if (entry?.labDone) {
+        complete.push(page);
+        fresh.push(entry);
+      } else {
+        again.push({ url: new URL(page.urlPath, origin).toString(), depth: page.depth });
+      }
+    }
+    // A finished page is never loaded again; every other address is pending once.
+    const done = new Set(complete.map((p) => skipKey(p.urlPath)));
+    const seen = new Set<string>();
+    const pending = [...checkpoint.pending, ...again].filter((item) => {
+      let key: string;
+      try {
+        key = skipKey(new URL(item.url).pathname);
+      } catch {
+        return false;
+      }
+      if (done.has(key) || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    if (fresh.length > 0) {
+      for (const entry of fresh) {
+        const rel = entry.phone?.phone.screenshotPath;
+        if (!rel) continue;
+        try {
+          const data = await fs.readFile(path.join(deps.workDir, ...rel.split('/')));
+          await deps.store.putVersionFile(deps.auditId, deps.version, rel, new Uint8Array(data));
+        } catch {
+          // The final save reports a screenshot it cannot find.
+        }
+      }
+      await deps.store.writeVersionJson(deps.auditId, deps.version, checkpointChunkName(chunks + 1), fresh);
+      chunks++;
+      for (const entry of fresh) saved.add(entry.info.urlPath);
+    }
+    // A page whose lab work did not end must be loaded again, so the crawl is not done.
+    const crawlDone = checkpoint.crawlDone && again.length === 0;
+    const stored: StoredAuditCheckpoint = {
+      format: 1,
+      savedAt: now().toISOString(),
+      chunks,
+      crawl: {
+        finalUrl: checkpoint.finalUrl,
+        frontier: checkpoint.frontier,
+        pending: crawlDone ? [] : pending,
+        pages: complete.map((p) => p.urlPath),
+        skipped: checkpoint.skipped,
+        signInWalls: checkpoint.signInWalls,
+        crawlDone,
+      },
+    };
+    await deps.store.writeVersionJson(deps.auditId, deps.version, AUDIT_CHECKPOINT_NAME, stored);
+  };
+}
+
+/**
+ * Reads a version's checkpoint (T-407) and puts its phone screenshots back in `workDir`, where the final save
+ * looks for them. Null when the version has none or it cannot be read.
+ */
+export async function loadAuditCheckpoint(
+  store: Pick<AuditStore, 'readVersionJson' | 'getVersionFile'>,
+  auditId: string,
+  version: number,
+  workDir: string
+): Promise<LoadedAuditCheckpoint | null> {
+  let stored: StoredAuditCheckpoint | null;
+  const byPath = new Map<string, RecordedPage>();
+  try {
+    stored = await store.readVersionJson<StoredAuditCheckpoint>(auditId, version, AUDIT_CHECKPOINT_NAME);
+    if (!stored || stored.format !== 1 || !stored.crawl) return null;
+    for (let n = 1; n <= stored.chunks; n++) {
+      const chunk = await store.readVersionJson<RecordedPage[]>(auditId, version, checkpointChunkName(n));
+      for (const entry of chunk ?? []) byPath.set(entry.info.urlPath, entry);
+    }
+  } catch {
+    return null;
+  }
+  const pages = stored.crawl.pages.map((p) => byPath.get(p)).filter((e): e is RecordedPage => !!e);
+  for (const entry of pages) {
+    const rel = entry.phone?.phone.screenshotPath;
+    if (!rel) continue;
+    try {
+      const data = await store.getVersionFile(auditId, version, rel);
+      if (!data) continue;
+      const file = path.join(workDir, ...rel.split('/'));
+      await fs.mkdir(path.dirname(file), { recursive: true });
+      await fs.writeFile(file, data);
+    } catch {
+      // The final save reports a screenshot it cannot find.
+    }
+  }
+  return {
+    crawl: { ...stored.crawl, pages: pages.map((e) => e.info) },
+    pages,
+    chunks: stored.chunks,
+  };
 }
