@@ -63,11 +63,11 @@ Plan: [ENHANCEMENT-PLAN-2026-11.md](ENHANCEMENT-PLAN-2026-11.md), with one file 
 | [T-417](enhance-2026-11/T-417-fix-options-per-finding.md) | Fix options per finding | P4 | P2 | M | 6 | built | T-390, T-412 |
 | [T-407](enhance-2026-11/T-407-checkpoint-and-resume-audits.md) | Checkpoint and Resume for audits | P3, O7 | P1 | L | 7 | todo | T-406 |
 | [T-414](enhance-2026-11/T-414-variant-quality-gate.md) | Variant quality gate | P4 | P1 | M | 7 | built | T-413 |
-| [T-418](enhance-2026-11/T-418-competitor-examples-in-improved-version.md) | Competitor examples in the Improved version | P4 | P2 | M | 7 | todo | T-416, T-413 |
+| [T-418](enhance-2026-11/T-418-competitor-examples-in-improved-version.md) | Competitor examples in the Improved version | P4 | P2 | M | 7 | built | T-416, T-413 |
 | [T-419](enhance-2026-11/T-419-copy-variants-in-batches.md) | Copy variants in batches | P4 | P2 | M | 7 | built | T-417 |
 | [T-415](enhance-2026-11/T-415-before-after-download-exports-pitch.md) | Before/after, HTML download, exports, Pitch thumbnail | P4 | P1 | M | 8 | todo | T-414, T-410 |
 | [T-420](enhance-2026-11/T-420-full-ai-translation-of-exports.md) | Full AI translation of exports | O19 | P2 | M | 9 | todo | T-419, T-415 |
-| [T-421](enhance-2026-11/T-421-click-time-sensitive-action-gate.md) | A click-time Sensitive Action gate | T-397 | P1 | M | 5 | todo | T-408 |
+| [T-421](enhance-2026-11/T-421-click-time-sensitive-action-gate.md) | A click-time Sensitive Action gate | T-397 | P1 | M | 5 | built | T-408 |
 | [T-423](enhance-2026-11/T-423-spider-click-under-guard-page.md) | The Spider's exploring click runs under `guardPage` | T-397 | P2 | S | 5 | todo | - |
 | [T-422](enhance-2026-11/T-422-form-submit-and-enter-protection.md) | `form.submit`, `requestSubmit` and Enter protection in Test runs | T-397 | P1 | M | 6 | todo | T-421 |
 | [T-426](enhance-2026-11/T-426-off-site-click-navigation-undone.md) | An off-site click navigation is undone and recorded | T-397 | P2 | S | 6 | todo | T-423 |
@@ -75,6 +75,8 @@ Plan: [ENHANCEMENT-PLAN-2026-11.md](ENHANCEMENT-PLAN-2026-11.md), with one file 
 | [T-425](enhance-2026-11/T-425-popups-covered-by-context-routes.md) | Popups covered by context-level routes | T-397 | P2 | M | 8 | todo | T-424 |
 | [T-428](enhance-2026-11/T-428-delete-probe-uses-real-label.md) | The delete probe uses the real element label and `forbiddenActions` | T-397 | P2 | S | 8 | todo | T-426 |
 | [T-427](enhance-2026-11/T-427-get-side-effects.md) | GET side effects | T-397 | P2 | M | 9 | todo | T-425 |
+| [T-430](enhance-2026-11/T-430-one-load-per-audit-page.md) | One load per audit page (5,000 pages in 2 hours) | P1 | P1 | M | 8 | todo | T-407 |
+| [T-429](enhance-2026-11/T-429-stream-ai-assessment-during-the-crawl.md) | AI assessment starts during the crawl (rest of T-406) | P1 | P2 | M | 9 | todo | T-430 |
 | [T-396](enhance-2026-11/T-396-every-disabled-button-says-why.md) | Every disabled button says why (W20) | O3 | P2 | M | 10 | todo | T-415, T-420 |
 
 Gap ids: P1 to P4 are review problems 1 (speed) to 4 (Website Audit); O-numbers are rows of the review's "Other issues" table.
