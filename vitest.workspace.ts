@@ -35,6 +35,7 @@ const BROWSER_TESTS: Record<string, string[]> = {
     'safety-click-gate',
     'safety-spider-click',
     'safety-submit-guard',
+    'safety-offsite-click',
     'small-fixes',
     'visual-capture',
     // Website audit (REQ-033, REQ-048...): each launches Chromium through `playwright` or the Spider.
