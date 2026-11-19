@@ -17,6 +17,8 @@ import {
   type AuditFindingGroup,
   type DocumentLanguage,
   type SectionSummary,
+  countFindingRules,
+  findingsAndRulesText,
 } from '@qa/types';
 import { contentWording, sectionLabel } from './content.js';
 import type { EditedAuditView } from './edits.js';
@@ -29,6 +31,10 @@ interface FindingsWording {
   gradesByArea: string;
   gradesNote: string;
   aiNote: string;
+  /** "312 findings · 41 rules" (T-390). */
+  counts: (findings: number, rules: number) => string;
+  /** Said under the counts when edits removed pages: the counts are the ones after the edits. */
+  countedAfterEdits: (removedPages: number) => string;
 }
 
 const EN: FindingsWording = {
@@ -36,6 +42,9 @@ const EN: FindingsWording = {
   gradesByArea: 'Grades by area',
   gradesNote: 'Grades come from fixed checks only. An area without a grade was not checked.',
   aiNote: 'AI note',
+  counts: (findings, rules) => findingsAndRulesText(findings, rules),
+  countedAfterEdits: (n) =>
+    `Counted after the edits: ${n} ${n === 1 ? 'page was' : 'pages were'} removed, with ${n === 1 ? 'its' : 'their'} findings.`,
 };
 
 const TA: FindingsWording = {
@@ -43,6 +52,9 @@ const TA: FindingsWording = {
   gradesByArea: 'துறைவாரியான தரங்கள்',
   gradesNote: 'தரங்கள் நிலையான சோதனைகளிலிருந்து மட்டுமே வருகின்றன. தரம் இல்லாத துறை சரிபார்க்கப்படவில்லை.',
   aiNote: 'AI குறிப்பு',
+  counts: (findings, rules) => `${findings} கண்டறிதல்கள் · ${rules} விதிகள்`,
+  countedAfterEdits: (n) =>
+    `திருத்தங்களுக்குப் பிறகு எண்ணப்பட்டது: ${n} பக்கங்களும் அவற்றின் கண்டறிதல்களும் நீக்கப்பட்டன.`,
 };
 
 const WORDING: Partial<Record<DocumentLanguage, FindingsWording>> = { en: EN, ta: TA };
@@ -121,6 +133,11 @@ export function buildFindingsDocument(view: EditedAuditView, options: FindingsDo
   const { result } = view;
   const sectionsByPage = new Map(result.pages.map((p) => [p.urlPath, p.sections]));
   const blocks: DocBlock[] = [{ type: 'paragraph', text: `${contentWording(language).website}: ${result.url}` }];
+  // The same two numbers as Saved audits and the summary (T-390), counted on the edited view.
+  blocks.push({ type: 'paragraph', text: words.counts(result.findings.length, countFindingRules(result.findings)) });
+  if (view.removedPages.length > 0) {
+    blocks.push({ type: 'paragraph', text: words.countedAfterEdits(view.removedPages.length) });
+  }
 
   for (const group of FINDING_GROUP_ORDER) {
     blocks.push({ type: 'heading', level: 1, text: labels.groups[group] });

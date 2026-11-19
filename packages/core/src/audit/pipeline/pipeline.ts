@@ -40,7 +40,7 @@ import type {
   RoadmapItem,
   SpeedNotMeasuredReason,
 } from '@qa/types';
-import { AUDIT_AREAS, MARKETING_SIGNALS } from '@qa/types';
+import { AUDIT_AREAS, MARKETING_SIGNALS, countFindingRules } from '@qa/types';
 import { isAbortError, stopIfAborted } from '../../abort.js';
 import { makeCheckerFetch } from '../../checker-fetch.js';
 import type { HostPacer } from '../../host-pacer.js';
@@ -938,6 +938,7 @@ export async function runAuditPipeline(
     pagesRecorded: crawl.pages.length,
     pagesSkipped: crawl.coverage.skipped.length,
     findings: findings.length,
+    rules: countFindingRules(findings),
     ...(storedDocuments ? { documents: storedDocuments } : {}),
   };
   try {

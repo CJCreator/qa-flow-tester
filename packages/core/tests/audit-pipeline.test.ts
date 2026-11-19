@@ -19,7 +19,7 @@ import type {
   PageSpeed,
   RoadmapItem,
 } from '@qa/types';
-import { AUDIT_AREAS, MARKETING_SIGNALS } from '@qa/types';
+import { AUDIT_AREAS, MARKETING_SIGNALS, countFindingRules } from '@qa/types';
 
 const { fakeFetch } = vi.hoisted(() => ({ fakeFetch: vi.fn() }));
 vi.mock('../src/checker-fetch.js', () => ({
@@ -600,8 +600,14 @@ describe('audit pipeline: runAuditPipeline', () => {
       pagesRecorded: 6,
       pagesSkipped: 2,
       findings: 17,
+      rules: countFindingRules(result.findings),
       documents: [],
     });
+    // Saved counts (T-390): one finding per rule and page; rules are distinct, AI advice left out.
+    const rules = new Set(result.findings.filter((f) => f.source !== 'ai' && !f.advisory).map((f) => f.rule));
+    expect(rules.size).toBeGreaterThan(0);
+    expect(rules.size).toBeLessThan(17);
+    expect(countFindingRules(result.findings)).toBe(rules.size);
     expect(result).toMatchObject({
       auditId: AUDIT_ID,
       version: 1,

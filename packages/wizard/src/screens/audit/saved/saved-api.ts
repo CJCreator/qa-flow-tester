@@ -3,6 +3,7 @@ import {
   AUDIT_API,
   auditPath,
   isShortlistOutcome,
+  findingsAndRulesText,
   type AuditErrorCode,
   type AuditGetReply,
   type AuditStartReply,
@@ -265,12 +266,15 @@ export function followRunningVersion(
   );
 }
 
-/** "12 pages recorded · 2 pages skipped · 7 findings", with only the counts the version has. */
+/**
+ * "12 pages recorded · 2 pages skipped · 7 findings · 3 rules", with only the counts the version has. A
+ * version saved before rules were counted (T-390) shows its findings alone.
+ */
 export function versionCounts(version: AuditVersion): string {
   const parts: string[] = [];
   if (version.pagesRecorded !== undefined) parts.push(count(version.pagesRecorded, 'page recorded', 'pages recorded'));
   if (version.pagesSkipped !== undefined) parts.push(count(version.pagesSkipped, 'page skipped', 'pages skipped'));
-  if (version.findings !== undefined) parts.push(count(version.findings, 'finding', 'findings'));
+  if (version.findings !== undefined) parts.push(findingsAndRulesText(version.findings, version.rules));
   return parts.length === 0 ? 'No counts yet' : parts.join(' · ');
 }
 
