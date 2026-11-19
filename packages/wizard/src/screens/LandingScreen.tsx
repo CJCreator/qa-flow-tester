@@ -66,6 +66,7 @@ const WHERE_IT_RUNS: Array<{ name: string; sites: string; where: string; setup: 
 ];
 
 const NAV: Array<{ href: string; label: string }> = [
+  { href: '/get-started', label: 'Get started' },
   { href: '#how', label: 'How it works' },
   { href: '#checks', label: 'What it checks' },
   { href: SAMPLE_REPORT_URL, label: 'Sample report' },

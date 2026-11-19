@@ -1,6 +1,7 @@
 # 0038: The Hosted Runner Keeps One Warm Instance; Old Images Are Cleaned Up
 
 Status: Accepted, 2026-11-04 (owner's choice in chat, 2026-11-04). Amends the scale-to-zero consequence of [0032](0032-google-cloud-only-hosting.md).
+Amended by [0050](0050-hosted-pilot-vercel-front-door.md) (2026-11-19): the runner no longer keeps a warm instance (`--min-instances 0`); the image cleanup stays.
 
 ## Context
 [0032](0032-google-cloud-only-hosting.md) runs the runner (`qa-check-up`) with `--min-instances 0`. The first visit after a quiet

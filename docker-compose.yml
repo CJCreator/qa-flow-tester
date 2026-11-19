@@ -43,24 +43,6 @@ services:
       retries: 3
       start_period: 20s
 
-  site:
-    build:
-      context: .
-      dockerfile: site/Dockerfile
-    container_name: qa-flow-tester-site
-    restart: unless-stopped
-    ports:
-      - '${SITE_PORT:-8080}:8080'
-    depends_on:
-      runner:
-        condition: service_healthy
-    healthcheck:
-      test: ['CMD-SHELL', 'wget -q -O - http://127.0.0.1:8080/ > /dev/null || exit 1']
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 5s
-
 volumes:
   qa-data:
     name: qa-flow-tester-data

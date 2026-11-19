@@ -213,10 +213,10 @@ describe('resolveRoute: :id / :linkId parameters', () => {
 });
 
 describe('the route table declares access and beta policy', () => {
-  it("every Plan row is 'owner' and served on a beta copy, as before", () => {
+  it("every Plan row is 'account' (ADR 0050) and served on a beta copy", () => {
     expect(planRoutes).toHaveLength(11);
     for (const route of planRoutes) {
-      expect(route.access, String(route.path)).toBe('owner');
+      expect(route.access, String(route.path)).toBe('account');
       expect(route.beta, String(route.path)).toBe('allow');
     }
   });

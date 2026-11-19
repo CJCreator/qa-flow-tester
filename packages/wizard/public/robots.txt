@@ -1,5 +1,5 @@
 # Release check-up: only the home page, the sample report and llms.txt are public. Check-ups, reports, plans,
-# settings and Website Audits are private. AI answer and generative engines get the same rules: a crawler obeys
+# settings and Website Audits are private, and so is the get-started page (it is for invited testers). AI answer and generative engines get the same rules: a crawler obeys
 # only the group that names it, so every private path is listed for them too.
 User-agent: *
 User-agent: GPTBot
@@ -21,5 +21,6 @@ Disallow: /audits
 Disallow: /audit-settings
 Disallow: /shortlist
 Disallow: /helper
+Disallow: /get-started
 
 Sitemap: %ORIGIN%/sitemap.xml

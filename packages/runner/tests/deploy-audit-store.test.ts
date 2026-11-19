@@ -11,7 +11,7 @@ const NAMES = ['AUDIT_STORE_BUCKET', 'FIREBASE_PROJECT_ID', 'FIREBASE_WEB_API_KE
 
 /** The runner job's "Deploy to Cloud Run" step, up to the next step. */
 function runnerDeployStep(yml: string): string {
-  const job = yml.slice(yml.indexOf('\n  cloud-run:'), yml.indexOf('\n  site:'));
+  const job = yml.slice(yml.indexOf('\n  cloud-run:'));
   const start = job.indexOf('- name: Deploy to Cloud Run');
   expect(start).toBeGreaterThan(-1);
   const next = job.indexOf('\n      - name:', start + 1);
@@ -89,9 +89,9 @@ describe('deploy.yml passes the Website Audit settings to the runner', () => {
     expect(env.size).toBe(items.length);
   });
 
-  it('passes both allowed origins as one RUNNER_ALLOWED_ORIGINS value (F-032)', () => {
-    expect(env.get('RUNNER_ALLOWED_ORIGINS')).toBe(`$RUNNER_URL,${SECOND_ORIGIN}`);
-    expect(env.get('RUNNER_ALLOWED_ORIGINS')?.split(',')).toEqual(['$RUNNER_URL', SECOND_ORIGIN]);
+  it('passes the three allowed origins as one RUNNER_ALLOWED_ORIGINS value (F-032, ADR 0050)', () => {
+    expect(env.get('RUNNER_ALLOWED_ORIGINS')).toBe(`$RUNNER_URL,${SECOND_ORIGIN},$VERCEL_SITE_URL`);
+    expect(env.get('RUNNER_ALLOWED_ORIGINS')?.split(',')).toEqual(['$RUNNER_URL', SECOND_ORIGIN, '$VERCEL_SITE_URL']);
   });
 
   it('never takes these public values from secrets or writes a value into the file', () => {
@@ -115,14 +115,17 @@ describe('deploy.yml passes the Website Audit settings to the runner', () => {
     expect(env.get('RUNNER_HOST')).toBe('0.0.0.0');
     expect(env.get('RUNNER_DATA_DIR')).toBe('/tmp/qa-data');
     expect(env.get('RUNNER_OUTPUT_DIR')).toBe('/tmp/qa-data/reports');
-    expect(step).toContain('--set-secrets "RUNNER_ACCESS_TOKEN=qa-access-token:latest"');
+    expect(step).toContain(
+      '--set-secrets "RUNNER_ACCESS_TOKEN=qa-access-token:latest,RUNNER_SESSION_SECRET=qa-session-secret:latest"'
+    );
     expect(yml).toMatch(/branches: \[main\]/);
     expect(yml).not.toContain('tags:');
   });
 
-  it('the static site deploy gets none of them', () => {
-    const site = yml.slice(yml.indexOf('\n  site:'));
-    for (const name of NAMES) expect(site).not.toContain(name);
+  it('the static site deploy job is gone: the site is on Vercel (ADR 0050)', () => {
+    expect(yml).not.toContain('\n  site:');
+    expect(yml).not.toContain('qa-check-up-site');
+    expect(yml).not.toContain('SITE_URL: https://');
   });
 });
 
@@ -143,13 +146,13 @@ describe('docs/DEPLOYMENT.md documents the bucket and Firebase setup', () => {
     expect(section).toContain('--public-access-prevention');
   });
 
-  it('keeps nothing after deletion and expires nothing (Q-30)', () => {
+  it('keeps nothing after deletion and expires only saved Check-up reports (Q-30, ADR 0050)', () => {
     expect(section).toContain('--soft-delete-duration=0');
     expect(section).toContain('--clear-soft-delete');
     expect(section).toContain('--no-versioning');
-    expect(section).toContain('--clear-lifecycle');
-    expect(section).toMatch(/no lifecycle rule/i);
-    expect(section).not.toMatch(/--lifecycle-file|--retention-period/);
+    expect(section).toContain('--lifecycle-file=scripts/bucket-lifecycle.json');
+    expect(section).toMatch(/no lifecycle rule for Website Audit data/i);
+    expect(section).not.toMatch(/--retention-period/);
   });
 
   it('grants the runtime service account objectAdmin on that bucket only', () => {

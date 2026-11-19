@@ -522,11 +522,11 @@ describe('firebase bundle boundary', () => {
     expect(modules).toEqual(['firebase/app', 'firebase/auth']);
   });
 
-  it('is reached only from the Helper sign-in screen', () => {
+  it('is reached only from the Helper sign-in screen and the hosted account sign-in screen', () => {
     const importers = files
       .filter((file) => /^\s*import\s+(?!type\b)[^;]*from\s+['"][^'"]*firebase-sign-in['"]/m.test(file.source))
       .map((file) => file.path);
-    expect(importers).toEqual(['screens/audit/saved/HelperSignInScreen.tsx']);
+    expect(importers.sort()).toEqual(['screens/AccountSignInScreen.tsx', 'screens/audit/saved/HelperSignInScreen.tsx']);
   });
 });
 

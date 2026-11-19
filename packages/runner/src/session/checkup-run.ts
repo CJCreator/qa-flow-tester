@@ -177,8 +177,17 @@ export function resolveReadOnly(input: {
   return { consent, readOnly: !(input.owner && (input.testHost || consent)) };
 }
 
+/**
+ * Safe mode on the shared copy (ADR 0050): what is left out, and how to unlock it. A public site can always be
+ * checked this way; Verified Domain proof (ADR 0014) is what turns the rest on.
+ */
+export const SAFE_MODE_REASON =
+  'Safe mode: this site is only looked at. Forms are not filled in or sent, Sensitive Actions are not clicked, and no Security Probes are run. To switch these on, prove you own the site with a Verified Domain line (tick “This is a test copy”, then publish the line shown at /.well-known/qa-verify.txt), and start a new check-up.';
+
 /** Why a run is read-only, in plain words. */
-export function readOnlyReason(owner: boolean, testHost: boolean, unverifiedMarked = false): string {
+export function readOnlyReason(owner: boolean, testHost: boolean, unverifiedMarked = false, beta = false): string {
+  // On the shared copy, anything that is not a proven Test Copy is safe mode, whatever the reason.
+  if (beta && !testHost && !unverifiedMarked) return SAFE_MODE_REASON;
   if (!owner) {
     return 'You didn’t say you own this site, so it’s only looked at: nothing is sent or changed. If it’s yours, start a new check-up and tick “I own this site”.';
   }
@@ -203,6 +212,8 @@ export async function resolveAuthorization(input: {
   beta?: boolean;
   hostChecks?: NetDeps;
   token?: () => string | undefined;
+  /** The signed-in account's saved Verified Domain proof (ADR 0050); see testCopyFor. */
+  saved?: { valid: () => Promise<boolean>; save: () => Promise<void> };
 }): Promise<RunAuthorization> {
   const url = new URL(input.targetUrl);
   const owner = input.owner ?? true;
@@ -217,6 +228,7 @@ export async function resolveAuthorization(input: {
     marked,
     token: input.token ?? (() => undefined),
     deps: input.hostChecks,
+    saved: input.saved,
   });
 
   const { readOnly, consent } = resolveReadOnly({
@@ -228,7 +240,7 @@ export async function resolveAuthorization(input: {
     roles: input.roles,
   });
 
-  const reason = readOnlyReason(owner, testCopy, beta && marked);
+  const reason = readOnlyReason(owner, testCopy, beta && marked, beta);
 
   return {
     readOnly,

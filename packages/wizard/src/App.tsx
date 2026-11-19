@@ -56,8 +56,11 @@ import { initialFeed, plainFailure, type FeedState, type RunnerEvent } from './l
 import { count } from './lib/format';
 import { displayHost, hostOf } from './lib/url';
 import { ConnectionScreen } from './screens/ConnectionScreen';
+import { WakingScreen } from './components/WakingScreen';
+import { GetStartedScreen } from './screens/GetStartedScreen';
 import { NewCheckupScreen, type StartFacts } from './screens/NewCheckupScreen';
 import { NotFoundScreen } from './screens/NotFoundScreen';
+import { AccountSignInScreen } from './screens/AccountSignInScreen';
 import { LandingScreen } from './screens/LandingScreen';
 import {
   approveFailure,
@@ -182,7 +185,7 @@ export default function App() {
   const pathname = usePathname();
   const route = matchRoute(pathname);
   // The public landing page needs no runner, so it neither waits for one nor polls for one.
-  const { reachable, checks } = useRunnerConnection(route.name !== 'landing');
+  const { reachable, checks, wake } = useRunnerConnection(route.name !== 'landing');
   const { confirm, choose, dialog } = useConfirm();
 
   const [status, setStatus] = useState<RunnerStatus | null>(null);
@@ -727,33 +730,45 @@ export default function App() {
 
   const nothingInProgress = (what: string) => <NothingInProgress what={what} reportRunId={status?.reportRunId} />;
   let body: ReactNode;
-  if (route.name === 'landing') {
+  if (route.name === 'get-started') {
+    body = <GetStartedScreen />;
+  } else if (route.name === 'landing') {
     body = <LandingScreen />;
   } else if (!reachable) {
-    body = checks > 0 ? <ConnectionScreen checks={checks} /> : <Loading label="Connecting…" />;
+    body =
+      wake !== 'none' ? (
+        <WakingScreen state={wake} />
+      ) : checks > 0 ? (
+        <ConnectionScreen checks={checks} />
+      ) : (
+        <Loading label="Connecting…" />
+      );
   } else if (showsBetaAuditNotice(route.name, !!status?.beta, !!status?.helper, !!status?.auditOwner)) {
     body = <BetaAuditNotice />;
   } else {
     switch (route.name) {
       case 'new':
-        body = (
-          <NewCheckupScreen
-            ai={ai}
-            onKeySaved={(model) => setAi({ configured: true, model })}
-            form={form}
-            onFormChange={setForm}
-            onStart={startFromForm}
-            starting={starting}
-            startError={startError}
-            onRetryAi={loadAi}
-            inProgress={inProgress ? status : null}
-            recent={recent}
-            waitingPlans={waitingPlans}
-            onResumePlan={(h) => void resumePlan(h)}
-            shared={!!status?.beta}
-            busy={!!status?.busy}
-          />
-        );
+        body =
+          status?.accounts && !status.account && !status.viaKey ? (
+            <AccountSignInScreen />
+          ) : (
+            <NewCheckupScreen
+              ai={ai}
+              onKeySaved={(model) => setAi({ configured: true, model })}
+              form={form}
+              onFormChange={setForm}
+              onStart={startFromForm}
+              starting={starting}
+              startError={startError}
+              onRetryAi={loadAi}
+              inProgress={inProgress ? status : null}
+              recent={recent}
+              waitingPlans={waitingPlans}
+              onResumePlan={(h) => void resumePlan(h)}
+              shared={!!status?.beta}
+              busy={!!status?.busy}
+            />
+          );
         break;
       case 'scan':
         body = !status ? (

@@ -28,7 +28,6 @@ import {
   helperSessionCookie,
   isHttpsRequest,
   signHelperSession,
-  HELPER_SESSION_SECONDS,
 } from '../helpers/helper-session.js';
 
 /** The audit store calls these routes use (BE-601's AuditStore provides them). */
@@ -189,9 +188,17 @@ export function auditHelperRoutes(deps: AuditHelperRouteDeps): Route[] {
         if (code === 'invalid-input') return refuse(res, 401, 'ERR_SIGN_IN_FAILED', MESSAGES.signInFailed);
         return sendStoreError(res, err);
       }
-      const cookie = signHelperSession(access.sessionKey(), { email, sub }, access.now(), HELPER_SESSION_SECONDS);
+      const cookie = signHelperSession(
+        access.sessionKey(),
+        { email, sub },
+        access.now(),
+        access.sessionSeconds,
+        access.sessionSeconds
+      );
       const reply: HelperSession = { email, grants };
-      send(res, 200, reply, { 'Set-Cookie': helperSessionCookie(cookie, isHttpsRequest(req)) });
+      send(res, 200, reply, {
+        'Set-Cookie': helperSessionCookie(cookie, isHttpsRequest(req), access.sessionSeconds, access.sessionSeconds),
+      });
     }),
 
     row('helperSession', async (context) => {

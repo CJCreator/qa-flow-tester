@@ -15,6 +15,9 @@ export interface RouteContext {
   readonly params?: RouteParams;
 }
 
+/** Every access level a route row may declare: the six audit levels plus the route-only 'scheduler' and 'account'. */
+export type RouteAccess = AuditAccess | 'scheduler' | 'account';
+
 /** Whether a row is served on a beta copy (RUNNER_BETA=1). Missing means 'closed'. */
 export type RouteBetaPolicy = 'allow' | 'closed';
 
@@ -33,8 +36,10 @@ export interface Route {
   /**
    * Who may call the row. Required by dispatch: a row without one is refused (closed by default).
    * 'scheduler' is route-only (ADR 0039): the Cloud Scheduler job, proven by a Google-signed OIDC token.
+   * 'account' is route-only (ADR 0050): the access key, or on a beta copy in account mode any signed-in,
+   * verified Google account. Check-up rows use it; Website Audit rows never do.
    */
-  access?: AuditAccess | 'scheduler';
+  access?: RouteAccess;
   /** Served on a beta copy only when 'allow'. Default 'closed'. */
   beta?: RouteBetaPolicy;
   handle: (context: RouteContext) => Promise<void> | void;
@@ -136,6 +141,11 @@ export interface RouteCaller {
   /** The request carries a valid Google-signed scheduler token (ADR 0039). Missing means no. */
   scheduler?: boolean;
   /**
+   * The caller is signed in with a verified Google account on a beta copy in account mode (ADR 0050). Passes
+   * 'account' rows; never an 'owner' row. Missing means no.
+   */
+  account?: boolean;
+  /**
    * The caller is signed in with a Google account whose email is in AUDIT_OWNER_EMAILS (ADR 0042 / T-86).
    * The access key is `hasAccessKey`, never this. Passes 'owner' and audit rows on a beta copy.
    */
@@ -146,13 +156,15 @@ export type RouteDecision = { allow: true } | { allow: false; status: 401 | 403;
 
 export const ACCESS_KEY_REFUSAL = 'This QA Tool is shared privately: send its access key.';
 export const BETA_REFUSAL = 'This is closed on the shared beta copy, so testers don’t change each other’s check-ups.';
+/** A check-up row refused because nobody is signed in: the wizard answers with its Google sign-in. */
+export const ACCOUNT_REFUSAL = 'Sign in with Google to run a Check-up.';
 export const CLOSED_REFUSAL = 'This address is not open.';
 /** Fixed text: says nothing about why the scheduler token was refused. */
 export const SCHEDULER_REFUSAL = 'The scheduler token was refused.';
 
 const ALLOW: RouteDecision = { allow: true };
 
-function isHelperPermission(access: AuditAccess | 'scheduler'): access is HelperPermission {
+function isHelperPermission(access: RouteAccess): access is HelperPermission {
   return access === 'view' || access === 'edit' || access === 'export';
 }
 
@@ -174,6 +186,11 @@ export function authorizeRoute(route: Pick<Route, 'access' | 'beta'>, caller: Ro
     helperGranted = caller.helper?.(access) === true;
     if (!isOwner && !helperGranted) {
       return { allow: false, status: 401, code: 'ERR_ACCESS_KEY', error: ACCESS_KEY_REFUSAL };
+    }
+  } else if (access === 'account') {
+    // The key (owner, CI) or a signed-in account. No account passes an 'owner' row.
+    if (!isOwner && caller.account !== true) {
+      return { allow: false, status: 401, code: 'ERR_ACCOUNT_REQUIRED', error: ACCOUNT_REFUSAL };
     }
   } else if (access === 'scheduler') {
     if (caller.scheduler !== true) {

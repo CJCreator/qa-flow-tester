@@ -11,6 +11,14 @@ export function handleHealthRoute(req: http.IncomingMessage, res: http.ServerRes
     return true;
   }
 
+  // The keep-alive call a running Check-up makes to the runner's own public address (ADR 0050, T-436): it does
+  // nothing, needs no sign-in and says nothing. Cloud Run sees the traffic and keeps the instance up.
+  if (pathname === '/api/runner/ping' && (req.method === 'GET' || req.method === 'HEAD')) {
+    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+    res.end(req.method === 'HEAD' ? undefined : '{}');
+    return true;
+  }
+
   if (pathname === '/health' && (req.method === 'GET' || req.method === 'HEAD')) {
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
     res.end(

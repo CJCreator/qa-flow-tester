@@ -1,7 +1,10 @@
+import { matchRoute } from './lib/router';
+import { GetStartedScreen } from './screens/GetStartedScreen';
 import { LandingScreen } from './screens/LandingScreen';
 
-/** The landing page on its own, without the app around it. */
+/** The landing page (or the get-started page) on its own, without the app around it. */
 export default function LandingRoot() {
+  if (matchRoute(window.location.pathname).name === 'get-started') return <GetStartedScreen />;
   return (
     <div className="min-h-screen bg-paper text-ink">
       <a

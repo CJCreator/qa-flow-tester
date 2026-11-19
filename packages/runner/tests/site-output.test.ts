@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
   fillOrigin,
+  inPlaceDir,
+  resolveOrigin,
   siteOrigin,
   TEMPLATED,
   // @ts-expect-error plain .mjs script without type declarations
@@ -29,6 +31,23 @@ describe('site-output', () => {
     expect(siteOrigin('site.example')).toBeNull();
     expect(siteOrigin('https://site.example/path')).toBeNull();
     expect(siteOrigin('javascript:x')).toBeNull();
+  });
+
+  it('resolveOrigin prefers SITE_ORIGIN, then SITE_URL, then the Vercel production host', () => {
+    expect(resolveOrigin({ SITE_ORIGIN: 'https://a.example/', VERCEL_PROJECT_PRODUCTION_URL: 'b.vercel.app' })).toBe(
+      'https://a.example'
+    );
+    expect(resolveOrigin({ SITE_URL: 'https://c.example' })).toBe('https://c.example');
+    expect(resolveOrigin({ VERCEL_PROJECT_PRODUCTION_URL: 'b.vercel.app' })).toBe('https://b.vercel.app');
+    expect(resolveOrigin({ VERCEL_PROJECT_PRODUCTION_URL: 'https://b.vercel.app/' })).toBe('https://b.vercel.app');
+    expect(resolveOrigin({ VERCEL_PROJECT_PRODUCTION_URL: 'b.vercel.app/evil' })).toBeNull();
+    expect(resolveOrigin({})).toBeNull();
+  });
+
+  it('inPlaceDir reads --in-place, with the wizard dist as the default folder', () => {
+    expect(inPlaceDir([])).toBeNull();
+    expect(inPlaceDir(['--in-place', 'out'])).toBe('out');
+    expect(inPlaceDir(['--in-place'])).toBe(path.join('packages', 'wizard', 'dist'));
   });
 
   it('fillOrigin replaces the placeholder in templated files only', async () => {

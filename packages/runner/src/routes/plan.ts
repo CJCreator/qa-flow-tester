@@ -1266,14 +1266,14 @@ function toPlanContext(c: RouteContext): PlanRouteContext {
   return c as unknown as PlanRouteContext;
 }
 
-// Every Plan row is the tool user's (access key) and open on a beta copy, where betaScope/closedInBeta in
-// server.ts keep each visitor to their own check-up, as before the table declared access.
+// Every Plan row is 'account' (ADR 0050): the access key, or on a beta copy in account mode a signed-in Google
+// account. Open on a beta copy, where betaScope/closedInBeta in server.ts keep each visitor to their own check-up.
 export const planRoutes: readonly Route[] = [
   // GET /api/runner/plan
   {
     method: 'GET',
     path: '/api/runner/plan',
-    access: 'owner',
+    access: 'account',
     beta: 'allow',
     handle: (c) => getPlan(toPlanContext(c)),
   },
@@ -1282,7 +1282,7 @@ export const planRoutes: readonly Route[] = [
   {
     method: 'PATCH',
     path: '/api/runner/plan',
-    access: 'owner',
+    access: 'account',
     beta: 'allow',
     handle: (c) => patchPlan(toPlanContext(c)),
   },
@@ -1291,7 +1291,7 @@ export const planRoutes: readonly Route[] = [
   {
     method: 'POST',
     path: '/api/runner/plan/approve',
-    access: 'owner',
+    access: 'account',
     beta: 'allow',
     handle: (c) => approvePlan(toPlanContext(c)),
   },
@@ -1300,7 +1300,7 @@ export const planRoutes: readonly Route[] = [
   {
     method: 'POST',
     path: '/api/runner/plan/interpret',
-    access: 'owner',
+    access: 'account',
     beta: 'allow',
     handle: (c) => interpret(toPlanContext(c)),
   },
@@ -1309,7 +1309,7 @@ export const planRoutes: readonly Route[] = [
   {
     method: 'GET',
     path: '/api/runner/plan/markdown',
-    access: 'owner',
+    access: 'account',
     beta: 'allow',
     handle: (c) => planMarkdown(toPlanContext(c)),
   },
@@ -1318,7 +1318,7 @@ export const planRoutes: readonly Route[] = [
   {
     method: 'GET',
     path: '/api/runner/plan/export',
-    access: 'owner',
+    access: 'account',
     beta: 'allow',
     handle: (c) => planExport(toPlanContext(c)),
   },
@@ -1328,7 +1328,7 @@ export const planRoutes: readonly Route[] = [
   {
     method: 'POST',
     path: '/api/runner/plan/replan',
-    access: 'owner',
+    access: 'account',
     beta: 'allow',
     handle: (c) => replan(toPlanContext(c)),
   },
@@ -1337,7 +1337,7 @@ export const planRoutes: readonly Route[] = [
   {
     method: 'POST',
     path: '/api/runner/plan/add-page',
-    access: 'owner',
+    access: 'account',
     beta: 'allow',
     handle: (c) => addPage(toPlanContext(c)),
   },
@@ -1347,7 +1347,7 @@ export const planRoutes: readonly Route[] = [
     method: '*',
     path: '/api/runner/waiting-plans',
     anyMethod: true,
-    access: 'owner',
+    access: 'account',
     beta: 'allow',
     handle: (c) => waitingPlans(toPlanContext(c)),
   },
@@ -1356,7 +1356,7 @@ export const planRoutes: readonly Route[] = [
   {
     method: 'POST',
     path: '/api/runner/plan/add-sign-in',
-    access: 'owner',
+    access: 'account',
     beta: 'allow',
     handle: (c) => addSignIn(toPlanContext(c)),
   },
@@ -1365,7 +1365,7 @@ export const planRoutes: readonly Route[] = [
   {
     method: 'POST',
     path: '/api/runner/plan/include-host',
-    access: 'owner',
+    access: 'account',
     beta: 'allow',
     handle: (c) => includeHost(toPlanContext(c)),
   },

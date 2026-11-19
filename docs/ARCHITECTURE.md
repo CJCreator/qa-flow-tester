@@ -62,9 +62,9 @@ Paths and variables: `CONFIGURATION.md`.
 ## Local and hosted
 
 - Local (ADR 0008): one process serves API and wizard on port 3001, bound to loopback. Only loopback `Host` headers are answered unless `RUNNER_ALLOWED_ORIGINS` lists more. The local user is the owner and may audit localhost and LAN addresses.
-- Hosted beta (ADR 0032): Google Cloud Run service `qa-check-up` runs the runner with `RUNNER_BETA=1`; `qa-check-up-site` serves the static site. Deploys: `.github/workflows/deploy.yml`, see `DEPLOYMENT.md`. Render and Vercel are not used.
+- Hosted beta (ADR 0032): Google Cloud Run service `qa-check-up` runs the runner with `RUNNER_BETA=1`; the static site is on Vercel and forwards `/api/*` and `/s/*` to it (ADR 0050, which amends 0032). Deploys: `.github/workflows/deploy.yml` (runner) and Vercel (site), see `DEPLOYMENT.md`. Render is not used.
 - Beta behaviour (`beta.ts`, `server.ts`): each visitor gets a session cookie and sees only their own run; only public addresses are accepted (ADR 0014); starts are limited per visitor and per day; routes that change shared state answer `ERR_BETA`; Website Audit rows are closed except Shared Links (`public`) and Helper rows for a signed-in Helper (ADR 0037).
-- Hosted instance (ADR 0038): `--min-instances 1 --max-instances 1`, because beta limits and sessions are in memory. Schedules on the hosted copy are fired by Cloud Scheduler calling `POST /api/runner/schedules/tick` with a Google OIDC token (ADR 0039); locally a 60-second timer does it.
+- Hosted instance (ADR 0050, amends 0038): `--min-instances 0 --max-instances 1 --no-cpu-throttling`, because sessions are in memory; it sleeps when idle and the wizard shows a "Waking up" screen. Schedules on the hosted copy are fired by Cloud Scheduler calling `POST /api/runner/schedules/tick` with a Google OIDC token (ADR 0039); locally a 60-second timer does it.
 - CI: `checkup.ts` runs one Check-up in the user's own GitHub Actions (ADR 0012).
 
 ## Boundaries

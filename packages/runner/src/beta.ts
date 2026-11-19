@@ -40,6 +40,8 @@ interface Session {
   pinned?: boolean;
   /** The visitor is signed in with an AUDIT_OWNER_EMAILS Google account; set on every request (T-299). */
   owner?: boolean;
+  /** The signed-in Google account's email on a copy in account mode (ADR 0050); set on every request. */
+  account?: string;
 }
 const sessions = new Map<string, Session>();
 
@@ -58,6 +60,18 @@ export function pinSession(sessionId: string | undefined): void {
 export function markSessionOwner(sessionId: string, owner: boolean): void {
   const s = sessions.get(sessionId);
   if (s) s.owner = owner;
+}
+
+/** Records, on every request, the signed-in account's email (or none), for the proof and limit lookups. */
+export function setSessionAccount(sessionId: string, email: string | undefined): void {
+  const s = sessions.get(sessionId);
+  if (s) s.account = email;
+}
+
+/** The signed-in account of the current request's session, or undefined. */
+export function currentAccount(): string | undefined {
+  const id = current.getStore();
+  return id ? sessions.get(id)?.account : undefined;
 }
 
 /** Whether a session (by default the current request's) is a signed-in owner of this copy. */
@@ -129,10 +143,23 @@ function claimNewSession(address: string, now: number): boolean {
  * The tester's session id, from their cookie; a new one is set when they have none (or an unknown
  * one, such as after a restart). `secure` should be true when the visit was https.
  */
-export function sessionFor(req: http.IncomingMessage, res: http.ServerResponse, secure: boolean): string {
+export function sessionFor(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  secure: boolean,
+  /**
+   * Account mode (ADR 0050): a session bound to one Google account is never handed to another account, or to
+   * a visitor who signed out. The browser gets a fresh session; the first one stays for its own account.
+   */
+  accounts?: { account: string | undefined }
+): string {
   forgetOldSessions();
   const sent = readCookie(req.headers.cookie, SESSION_COOKIE);
   let id = sent && sessions.has(sent) ? sent : undefined;
+  if (id && accounts) {
+    const bound = sessions.get(id)?.account;
+    if (bound !== undefined && bound !== accounts.account?.trim().toLowerCase()) id = undefined;
+  }
   if (!id) {
     if (!claimNewSession(clientAddress(req), Date.now())) throw new SessionRateLimited();
     id = randomBytes(18).toString('base64url');
@@ -219,6 +246,11 @@ function hitFor(scope: 'visitor' | 'day', limit: number, now: number): BetaLimit
   };
 }
 
+/** The per-visitor limit reached, for an account whose count is kept in the store (ADR 0050). */
+export function visitorHit(limit: number, now: number = Date.now()): BetaLimitHit {
+  return hitFor('visitor', limit, now);
+}
+
 /**
  * Beta: checks and records one check-up or comparison start in a single step. Returns null when it is
  * allowed (and now counted), or the limit that was reached (nothing is counted then). The day's cap is
@@ -227,14 +259,15 @@ function hitFor(scope: 'visitor' | 'day', limit: number, now: number): BetaLimit
  */
 export function claimBetaRun(
   sessionId: string | undefined,
-  opts: { limits?: BetaLimits; now?: number } = {}
+  opts: { limits?: BetaLimits; now?: number; ignoreVisitor?: boolean } = {}
 ): BetaLimitHit | null {
   const limits = opts.limits ?? betaLimitsFromEnv();
   const now = opts.now ?? Date.now();
   const day = utcDay(now);
   if (dayUsage.day !== day) dayUsage = { day, count: 0 };
   if (dayUsage.count >= limits.perDay) return hitFor('day', limits.perDay, now);
-  const session = sessionId ? sessions.get(sessionId) : undefined;
+  // A signed-in account is limited by its own stored count (account-usage.ts), not by the session (ADR 0050).
+  const session = sessionId && !opts.ignoreVisitor ? sessions.get(sessionId) : undefined;
   if (session) {
     if (!session.usage || session.usage.day !== day) session.usage = { day, count: 0 };
     if (session.usage.count >= limits.perVisitor) return hitFor('visitor', limits.perVisitor, now);
@@ -285,6 +318,11 @@ export function currentSessionId(): string | undefined {
 /** Makes the rest of this request (and everything it starts) belong to that session. */
 export function enterSession(sessionId: string): void {
   current.enterWith(sessionId);
+}
+
+/** Runs `fn` as that session, without touching the caller's own context (a queued start, ADR 0050). */
+export function runInSession<T>(sessionId: string | undefined, fn: () => T): T {
+  return sessionId === undefined ? fn() : current.run(sessionId, fn);
 }
 
 /** Secrets of the session the current request belongs to. Without one, nothing is kept or found. */

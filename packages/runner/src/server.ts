@@ -3,6 +3,13 @@ import { createHash, timingSafeEqual } from 'crypto';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { handleHealthRoute } from './routes/health.js';
+import { accountMayReach } from './routes/account-paths.js';
+import { AccountUsage } from './account-usage.js';
+import { AccountProofs } from './account-proofs.js';
+import { AccountReports } from './account-reports.js';
+import { accountHash } from './account-usage.js';
+import { CheckupQueue, type QueueEntry } from './checkup-queue.js';
+import { Readable } from 'stream';
 import { applySecurityHeaders, runnerCsp } from './security-headers.js';
 import { evidenceContentType, sendEvidenceFile } from './evidence-file.js';
 import {
@@ -155,6 +162,10 @@ import {
   SessionKeyResolver,
   betaLimitsFromEnv,
   claimBetaRun,
+  runInSession,
+  currentAccount,
+  setSessionAccount,
+  visitorHit,
   betaDayUsage,
   restoreBetaDayUsage,
   currentSessionId,
@@ -368,6 +379,11 @@ export interface RunnerServerOptions {
   egressConnect?: EgressProxyOptions['connect'];
   /** Beta only: check-ups per visitor and per day. A test seam; default from RUNNER_BETA_RUNS_PER_VISITOR / _PER_DAY. */
   betaLimits?: BetaLimits;
+  /** The runner's own public address (RUNNER_PUBLIC_URL): while a run is active it is called every few minutes (T-436). */
+  publicUrl?: string;
+  /** Tests: how often the keep-alive call is made (default 4 minutes) and the waiting line is looked at (3 seconds). */
+  keepAliveMs?: number;
+  queuePumpMs?: number;
   /** Most time one test step may spend finding and acting on its element, in ms (env RUNNER_STEP_TIMEOUT_MS). Default 10000. */
   stepTimeoutMs?: number;
   /** Test seam: the route table dispatch matches. Default `allRoutes`. */
@@ -560,6 +576,20 @@ export class RunnerServer {
   readonly auditDailyLimit?: number;
   private auditLimiter: AuditDailyLimiter;
   private usageLedger: UsageLedger;
+  private accountUsage: AccountUsage;
+  private accountProofs: AccountProofs;
+  private accountReports: AccountReports;
+  /** The account (email) each run in progress belongs to, for the bucket copy when it ends (T-437). */
+  private runAccounts = new Map<string, string>();
+  private checkupQueue = new CheckupQueue();
+  /** Why a queued start did not begin, for the account to read once on its next status. */
+  private queueFailures = new Map<string, { error: string; code: string }>();
+  private queueTimer: ReturnType<typeof setInterval> | undefined;
+  private queueBusy = false;
+  private keepAliveTimer: ReturnType<typeof setInterval> | undefined;
+  private publicUrl: string | undefined;
+  private keepAliveMs: number;
+  private queuePumpMs: number;
   private readonly wiring: AuditWiring;
   /** Not a shared copy and bound to this computer (ADR 0042): Google sign-in and private addresses are allowed. */
   private readonly localRun: boolean;
@@ -716,6 +746,23 @@ export class RunnerServer {
     // versions left "running" by a crash starts here and is awaited before the first audit request.
     const auditStore = createAuditStore(selectAuditStoreBackend({ dataDir: this.dataDir }));
     this.usageLedger = new UsageLedger(auditStore.backend);
+    this.accountUsage = new AccountUsage(auditStore.backend);
+    this.accountProofs = new AccountProofs(auditStore.backend);
+    this.accountReports = new AccountReports(auditStore.backend);
+    // A finished run of a signed-in account is copied to the bucket and kept 30 days (ADR 0050, T-437).
+    this.session.report.onKept = async (report) => {
+      const account = this.runAccounts.get(report.runId);
+      this.runAccounts.delete(report.runId);
+      if (account) {
+        await this.accountReports.archive(account, report.runId, this.runDir(report.runId), (rel) =>
+          rel.split('/').some((part) => part.toLowerCase() === 'auth')
+        );
+      }
+    };
+    const publicUrl = (options.publicUrl ?? process.env.RUNNER_PUBLIC_URL ?? '').trim().replace(/\/+$/, '');
+    this.publicUrl = /^https?:\/\//i.test(publicUrl) ? publicUrl : undefined;
+    this.keepAliveMs = options.keepAliveMs ?? 4 * 60 * 1000;
+    this.queuePumpMs = options.queuePumpMs ?? 3000;
     this.auditRecoveryDone = recoverRunningAudits(auditStore);
     // Schedules follow the audit store: in the bucket on the hosted copy (they survive a redeploy), a file otherwise.
     this.scheduler = new SchedulerManager(
@@ -785,6 +832,8 @@ export class RunnerServer {
             this.runOwners.set(runId, me);
             pinSession(me);
           }
+          const account = currentAccount();
+          if (account) this.runAccounts.set(runId, account);
         }
       },
       isMine: (runId) => this.isMine(runId),
@@ -908,7 +957,8 @@ export class RunnerServer {
     params: RouteParams
   ): Promise<{ status: number; error: string; code: string } | null> {
     // The scheduler row has its own 401; a Helper session means nothing there.
-    if (!this.helperAccess || this.carriesAccessKey(req) || route.access === 'scheduler') return null;
+    if (!this.helperAccess || this.carriesAccessKey(req) || route.access === 'scheduler' || route.access === 'account')
+      return null;
     if (this.isAuditOwner(req)) return null;
     try {
       return await this.helperAccess.refusal(req, route.access, params);
@@ -945,13 +995,222 @@ export class RunnerServer {
       (pathname === '/api/runner/status' && method === 'GET') ||
       (!pathname.startsWith('/api/') && (method === 'GET' || method === 'HEAD'));
     // The path is checked first, so the session cookie is only verified for requests that could pass.
-    return wizardPath && this.isKeylessHelper(req);
+    return wizardPath && this.hasKeylessSession(req);
   }
 
-  /** A verified Helper session on a copy with an access key, and the request does not carry that key. */
-  private isKeylessHelper(req: http.IncomingMessage): boolean {
+  /** A verified sign-in on a copy with an access key, and the request does not carry that key. */
+  private hasKeylessSession(req: http.IncomingMessage): boolean {
     if (!this.accessToken || !this.helperAccess || this.carriesAccessKey(req)) return false;
     return !!this.helperAccess.session(req);
+  }
+
+  /**
+   * A signed-in Helper without the access key, who gets the reduced status. Not an account: on a beta copy in
+   * account mode the same sign-in is a way in to Check-ups (ADR 0050) and gets the real, visitor-scoped status.
+   */
+  private isKeylessHelper(req: http.IncomingMessage): boolean {
+    return this.hasKeylessSession(req) && !this.isAccountCaller(req);
+  }
+
+  /** This copy is a beta copy in account mode (RUNNER_SESSION_SECRET and Firebase set, ADR 0050). */
+  private get accountMode(): boolean {
+    return this.beta && !!this.helperAccess?.accounts;
+  }
+
+  /** The request carries a verified Google sign-in, on a copy in account mode. Never the access key. */
+  private isAccountCaller(req: http.IncomingMessage): boolean {
+    return this.accountMode && !!this.helperAccess?.session(req);
+  }
+
+  /**
+   * `accounts`, `account` and the waiting line for the status reply: absent when this copy is not in account
+   * mode. Asking the status is what keeps a place in the line (a tab gone for 10 minutes loses it).
+   */
+  private accountFields(req: http.IncomingMessage): {
+    accounts?: true;
+    account?: string | null;
+    viaKey?: true;
+    queue?: { position?: number; failed?: { error: string; code: string } };
+  } {
+    if (!this.accountMode) return {};
+    const email = this.helperAccess?.session(req)?.email ?? null;
+    const base = {
+      accounts: true as const,
+      account: email,
+      ...(this.carriesAccessKey(req) ? { viaKey: true as const } : {}),
+    };
+    if (!email) return base;
+    const position = this.checkupQueue.touch(email);
+    if (position !== null) return { ...base, queue: { position } };
+    const failed = this.queueFailures.get(email);
+    if (failed) {
+      this.queueFailures.delete(email);
+      return { ...base, queue: { failed } };
+    }
+    return base;
+  }
+
+  /** The account may join the waiting line: signed in on a copy in account mode, not holding the access key. */
+  private canQueue(req: http.IncomingMessage): boolean {
+    return this.isAccountCaller(req) && !this.carriesAccessKey(req);
+  }
+
+  /** Another visitor's plan is waiting for review, so this visitor's start would have to wait. Inside a session. */
+  private othersPlanWaiting(): boolean {
+    const waiting = this.phase === 'awaiting-review' ? this.session.plan.currentRecord : null;
+    return this.beta && !!waiting && !this.isMine(waiting.plan.runId);
+  }
+
+  /** POST /api/runner/run while the slot is busy, from an account: joins the line. */
+  private async enqueueRun(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+    const email = this.helperAccess?.session(req)?.email;
+    let body: { targetUrl?: unknown };
+    try {
+      body = await this.readJsonBody<{ targetUrl?: unknown }>(req);
+      if (typeof body.targetUrl !== 'string' || !body.targetUrl) throw new Error();
+    } catch {
+      this.sendJson(res, 400, {
+        error: 'targetUrl is required',
+        code: 'ERR_MISSING_TARGET_URL',
+        suggestion: 'Please provide a valid website address to check.',
+      });
+      return;
+    }
+    if (!email || (await this.refuseTarget(res, body.targetUrl as string))) return;
+    const cookie = req.headers.cookie;
+    const joined = this.checkupQueue.join({
+      account: email,
+      sessionId: currentSessionId(),
+      bodyText: JSON.stringify(body),
+      cookie: Array.isArray(cookie) ? cookie.join('; ') : cookie,
+      remoteAddress: req.socket?.remoteAddress,
+      host: req.headers.host,
+      lastPoll: Date.now(),
+    });
+    if (!joined.joined) {
+      res.setHeader('Retry-After', '60');
+      this.sendJson(res, 429, {
+        error: 'The waiting line is full right now. Try again in a few minutes.',
+        code: 'ERR_QUEUE_FULL',
+      });
+      return;
+    }
+    this.queueFailures.delete(email);
+    this.startQueueTimer();
+    this.sendJson(res, 202, { queued: true, position: joined.position });
+  }
+
+  private startQueueTimer(): void {
+    if (this.queueTimer) return;
+    this.queueTimer = setInterval(() => void this.pumpQueue(), this.queuePumpMs);
+    this.queueTimer.unref?.();
+  }
+
+  private stopQueueTimer(): void {
+    if (this.queueTimer) clearInterval(this.queueTimer);
+    this.queueTimer = undefined;
+  }
+
+  /**
+   * Looks at the waiting line: drops places whose tab is gone, and when the slot is free starts the first one as
+   * its own visitor, with a stand-in request carrying its saved body and cookie. A start that fails (no AI key,
+   * the day's limit) is kept for the account's next status.
+   */
+  public async pumpQueue(): Promise<void> {
+    if (this.queueBusy) return;
+    this.queueBusy = true;
+    try {
+      this.checkupQueue.prune();
+      const entry = this.checkupQueue.peek();
+      if (!entry) {
+        this.stopQueueTimer();
+        return;
+      }
+      if (this.checkupStartRefused || this.runStartDone) return;
+      this.checkupQueue.shift();
+      const outcome = await runInSession(entry.sessionId, async () => {
+        if (this.othersPlanWaiting()) return 'busy' as const;
+        return this.startQueuedRun(entry);
+      });
+      if (outcome === 'busy') this.checkupQueue.unshift(entry);
+      else if (outcome) this.queueFailures.set(entry.account, outcome);
+      if (this.checkupQueue.length === 0) this.stopQueueTimer();
+    } catch (err) {
+      console.error('[Release check-up] A queued check-up could not start.', err instanceof Error ? err.name : '');
+    } finally {
+      this.queueBusy = false;
+    }
+  }
+
+  /** Starts one queued run. Null when it began, 'busy' when the slot was taken, else why it did not. */
+  private async startQueuedRun(entry: QueueEntry): Promise<null | 'busy' | { error: string; code: string }> {
+    const req = Object.assign(Readable.from([Buffer.from(entry.bodyText, 'utf8')]), {
+      method: 'POST',
+      url: '/api/runner/run',
+      headers: {
+        'content-type': 'application/json',
+        ...(entry.cookie ? { cookie: entry.cookie } : {}),
+        ...(entry.host ? { host: entry.host } : {}),
+      },
+      socket: { remoteAddress: entry.remoteAddress },
+    }) as unknown as http.IncomingMessage;
+    const answer = { status: 200, body: '' };
+    const capture = {
+      writeHead(status: number) {
+        answer.status = status;
+        return capture;
+      },
+      setHeader() {
+        return capture;
+      },
+      getHeader() {
+        return undefined;
+      },
+      write(chunk: unknown) {
+        answer.body += String(chunk);
+        return true;
+      },
+      end(chunk?: unknown) {
+        if (chunk) answer.body += String(chunk);
+        return capture;
+      },
+    } as unknown as http.ServerResponse;
+    let finishStart!: () => void;
+    this.runStartDone = new Promise<void>((resolve) => (finishStart = resolve));
+    try {
+      await this.startRunFromRequest(req, capture);
+    } finally {
+      this.runStartDone = null;
+      finishStart();
+    }
+    if (answer.status < 400) return null;
+    let parsed: { error?: string; code?: string } = {};
+    try {
+      parsed = JSON.parse(answer.body) as { error?: string; code?: string };
+    } catch {
+      // keep the fixed text below
+    }
+    if (answer.status === 409 && parsed.code === 'ERR_RUN_IN_PROGRESS') return 'busy';
+    return {
+      error: parsed.error ?? 'The check-up could not be started. Try again.',
+      code: parsed.code ?? 'ERR_START_FAILED',
+    };
+  }
+
+  /** Something is running or waiting for the slot: the instance should not be stopped (T-436). */
+  private get needsKeepAlive(): boolean {
+    return this.isRunning || this.checkupStartRefused || this.runStartDone !== null || this.checkupQueue.length > 0;
+  }
+
+  private startKeepAlive(): void {
+    if (!this.publicUrl || this.keepAliveTimer) return;
+    const target = `${this.publicUrl}/api/runner/ping`;
+    this.keepAliveTimer = setInterval(() => {
+      if (!this.needsKeepAlive) return;
+      // The answer is not used: the call only has to arrive. A failure is not worth a log line.
+      void fetch(target, { method: 'GET', signal: AbortSignal.timeout(15_000) }).catch(() => {});
+    }, this.keepAliveMs);
+    this.keepAliveTimer.unref?.();
   }
 
   private grantAccess(req: http.IncomingMessage, res: http.ServerResponse, url: URL): boolean {
@@ -1005,6 +1264,7 @@ export class RunnerServer {
     // A schedule does what its screen says: it is checked every minute from the moment the server is up.
     // The hosted copy (beta) has no timer of its own: Cloud Scheduler calls the tick route (ADR 0039).
     if (!this.beta) this.scheduler.start((schedule) => this.runSchedule(schedule));
+    this.startKeepAlive();
     return new Promise((resolve, reject) => {
       this.server = http.createServer((req, res) => {
         void (async () => {
@@ -1091,10 +1351,20 @@ export class RunnerServer {
               !matched && !url.searchParams.has('access') && this.helperMayLoadWizard(req, pathname);
             const isAuditOwner = this.isAuditOwner(req);
             const ownerAllowed = matched?.route.access === 'owner' && isAuditOwner;
+            // Account mode (ADR 0050): a signed-in account reaches the Check-up endpoints still answered inline,
+            // and anyone may ask the status (answered reduced below when nobody is signed in), so the wizard can
+            // load and show its Google sign-in. Every other inline path keeps the access key.
+            const accountPasses =
+              !matched &&
+              !url.searchParams.has('access') &&
+              this.accountMode &&
+              ((req.method === 'GET' && pathname === '/api/runner/status') ||
+                (this.isAccountCaller(req) && accountMayReach(req.method, pathname)));
             if (
               (!matched || matched.route.access === 'owner') &&
               !helperLoadsWizard &&
               !ownerAllowed &&
+              !accountPasses &&
               !this.grantAccess(req, res, url)
             )
               return;
@@ -1116,6 +1386,7 @@ export class RunnerServer {
                 scheduler,
                 // Email only: on a beta copy every tester holds the access key, so the key is not ownership.
                 auditOwner: this.isAuditOwnerEmail(this.helperAccess?.session(req)?.email),
+                account: this.isAccountCaller(req),
               });
               if (!decision.allow) {
                 const refusal = await this.helperRefusal(req, matched.route, matched.params);
@@ -1128,6 +1399,33 @@ export class RunnerServer {
               }
             }
 
+            // Account mode: nobody signed in, no key. The status says only that a sign-in is needed. No visitor session
+            // is made, so anonymous requests cannot fill the session table (T-302).
+            if (
+              !matched &&
+              this.accountMode &&
+              req.method === 'GET' &&
+              pathname === '/api/runner/status' &&
+              !this.carriesAccessKey(req) &&
+              !this.isAccountCaller(req)
+            ) {
+              this.sendJson(res, 200, {
+                isRunning: false,
+                hasReport: false,
+                lastRunError: null,
+                lastErrorCode: null,
+                phase: 'idle',
+                hasPlan: false,
+                runId: null,
+                targetUrl: null,
+                reportRunId: null,
+                beta: true,
+                auditOwner: false,
+                ...this.accountFields(req),
+              });
+              return;
+            }
+
             // A 'public' row (a Shared Link page) and a 'sign-in' row (Helper sign-in) need no visitor session: a
             // Shared Link viewer keeps no cookie, and Helper sign-in uses only the Helper cookie. Making a session
             // there would let anyone, without the key, push testers' idle sessions out (T-302).
@@ -1138,9 +1436,16 @@ export class RunnerServer {
               matched?.route.access !== 'sign-in'
             ) {
               try {
-                const visitor = sessionFor(req, res, isHttpsRequest(req));
+                const accountEmail = this.accountMode ? this.helperAccess?.session(req)?.email : undefined;
+                const visitor = sessionFor(
+                  req,
+                  res,
+                  isHttpsRequest(req),
+                  this.accountMode ? { account: accountEmail } : undefined
+                );
                 enterSession(visitor);
                 markSessionOwner(visitor, this.isAuditOwnerEmail(this.helperAccess?.session(req)?.email));
+                setSessionAccount(visitor, this.accountMode ? this.helperAccess?.session(req)?.email : undefined);
               } catch (err) {
                 if (!(err instanceof SessionRateLimited)) throw err;
                 res.setHeader('Retry-After', '600');
@@ -1226,6 +1531,13 @@ export class RunnerServer {
               return;
             }
 
+            // DELETE /api/runner/queue: leave the waiting line (ADR 0050, T-436)
+            if (pathname === '/api/runner/queue' && req.method === 'DELETE') {
+              const email = this.helperAccess?.session(req)?.email;
+              this.sendJson(res, 200, { left: !!email && this.checkupQueue.leave(email) });
+              return;
+            }
+
             // POST /api/runner/abort or /api/runner/stop
             if ((pathname === '/api/runner/abort' || pathname === '/api/runner/stop') && req.method === 'POST') {
               await this.handleAbortRun(req, res);
@@ -1282,6 +1594,7 @@ export class RunnerServer {
                   // A copy shared with other people: their check-ups and reports are visible to each other.
                   beta: this.beta,
                   auditOwner: this.isAuditOwner(req),
+                  ...this.accountFields(req),
                   ...this.auditMaxPagesField(),
                 })
               );
@@ -1451,6 +1764,18 @@ export class RunnerServer {
                   res.end('');
                   return;
                 }
+                // The run's folder is gone: the bucket copy, for the account that owns it (ADR 0050).
+                const saved = relPath.match(/^runs\/([^/]+)\/(.+)$/);
+                const hash = saved && isRunId(saved[1]) ? await this.storedRunHash(req, saved[1]) : null;
+                const bytes = saved && hash ? await this.accountReports.read(hash, saved[1], saved[2]) : null;
+                if (bytes) {
+                  res.writeHead(200, {
+                    'Content-Type': evidenceContentType(path.extname(relPath)),
+                    'Cache-Control': 'private, max-age=300',
+                  });
+                  res.end(Buffer.from(bytes));
+                  return;
+                }
                 res.writeHead(404, { 'Content-Type': 'text/plain' });
                 res.end(`Evidence file not found: ${relPath}`);
               }
@@ -1544,6 +1869,10 @@ export class RunnerServer {
 
   public async stop(): Promise<void> {
     this.scheduler.stop();
+    this.stopQueueTimer();
+    this.checkupQueue.clear();
+    if (this.keepAliveTimer) clearInterval(this.keepAliveTimer);
+    this.keepAliveTimer = undefined;
     if (this.beta) setBrowserPolicy(null);
     await this.egress?.close();
     this.egress = undefined;
@@ -1554,6 +1883,7 @@ export class RunnerServer {
     this.streamClients.clear();
     // A usage write still in flight would otherwise write into the data folder after stop() returned.
     await this.usageLedger.flush();
+    await this.accountUsage.flush();
     return new Promise((resolve) => {
       if (this.server) {
         this.server.close(() => resolve());
@@ -1598,6 +1928,7 @@ export class RunnerServer {
         beta: true,
         busy,
         auditOwner: this.isAuditOwner(req),
+        ...this.accountFields(req),
         ...this.auditMaxPagesField(),
       });
       return true;
@@ -1624,7 +1955,10 @@ export class RunnerServer {
       }
       // Ownership is read from the decoded path; one that climbs out of its run folder is nobody's.
       if (hasDotDotSegment(rel)) return this.refuseNotMine(res, undefined);
-      return this.refuseNotMine(res, rel.match(/^runs\/(run-\d+)\//)?.[1]);
+      const evidenceRun = rel.match(/^runs\/(run-\d+)\//)?.[1];
+      // A run kept in the bucket belongs to its account even after a restart forgot who started it.
+      if (evidenceRun && !this.isMine(evidenceRun) && (await this.storedRunHash(req, evidenceRun))) return false;
+      return this.refuseNotMine(res, evidenceRun);
     }
     // Visual baselines are kept per site for the whole copy: not offered here.
     if (pathname.startsWith('/api/baselines/') || pathname.startsWith('/api/runner/baselines')) {
@@ -1708,6 +2042,7 @@ export class RunnerServer {
     });
   }
 
+  /** Beta, session-counted: the visitor's own count and the day's cap. Account callers go through `startLimitHit`. */
   private betaLimitHit(res: http.ServerResponse): boolean {
     if (!this.beta) return false;
     const hit = claimBetaRun(currentSessionId(), { limits: this.betaLimits });
@@ -1715,6 +2050,35 @@ export class RunnerServer {
       this.saveUsage();
       return false;
     }
+    return this.sendLimitHit(res, hit);
+  }
+
+  /**
+   * Beta start limits for this request. A signed-in account (ADR 0050) is counted by its email, saved in the
+   * store, so a restart or a new browser does not reset it; everyone else by the visitor session, as before.
+   */
+  private async startLimitHit(req: http.IncomingMessage, res: http.ServerResponse): Promise<boolean> {
+    if (!this.beta) return false;
+    const email = this.accountMode ? this.helperAccess?.session(req)?.email : undefined;
+    if (!email) return this.betaLimitHit(res);
+    const day = betaDayUsage().day;
+    this.accountUsage.dropOtherDays(day);
+    await this.accountUsage.load(day, email);
+    // Check, claim the day's cap, then count: synchronous after the load, so a refused start costs nothing.
+    if (this.accountUsage.count(day, email) >= this.betaLimits.perVisitor) {
+      return this.sendLimitHit(res, visitorHit(this.betaLimits.perVisitor));
+    }
+    const hit = claimBetaRun(currentSessionId(), { limits: this.betaLimits, ignoreVisitor: true });
+    if (hit) return this.sendLimitHit(res, hit);
+    this.accountUsage.increment(day, email);
+    this.saveUsage();
+    return false;
+  }
+
+  private sendLimitHit(
+    res: http.ServerResponse,
+    hit: { error: string; suggestion: string; scope: string; resetsAt: string }
+  ): true {
     this.sendJson(res, 429, {
       error: hit.error,
       code: 'ERR_BETA_LIMIT',
@@ -1768,8 +2132,19 @@ export class RunnerServer {
    * Whether this address is a Test Copy. Local mode: by its name (and the owner's mark), as before.
    * Shared machine: marked AND public AND the Verified Domain proof passes right now (ADR 0014).
    */
+  /** The signed-in account's saved Verified Domain proof for this site, or undefined (ADR 0050). */
+  private savedProofFor(typed: URL): { valid: () => Promise<boolean>; save: () => Promise<void> } | undefined {
+    const account = currentAccount();
+    if (!account) return undefined;
+    return {
+      valid: () => this.accountProofs.valid(account, typed.host),
+      save: () => this.accountProofs.save(account, typed.host),
+    };
+  }
+
   private testCopyOf(typed: URL, marked: boolean): Promise<boolean> {
     return testCopyFor({
+      saved: this.savedProofFor(typed),
       beta: this.beta,
       hostname: typed.hostname,
       origin: typed.origin,
@@ -1883,7 +2258,14 @@ export class RunnerServer {
       });
       return;
     }
+    // An account that proved this site within 30 days needs no fetch (ADR 0050).
+    const account = currentAccount();
+    if (account && (await this.accountProofs.valid(account, typed.host))) {
+      this.sendJson(res, 200, { required: true, verified: true, origin, proofUrl: url, line: proofLine(token) });
+      return;
+    }
     const result = await verifyDomainProof(origin, token, this.hostChecks);
+    if (result.ok && account) await this.accountProofs.save(account, typed.host);
     this.sendJson(res, 200, {
       required: true,
       verified: result.ok,
@@ -2032,7 +2414,7 @@ export class RunnerServer {
         return;
       }
       if (body.addSignIn || body.testSignIn) {
-        await this.handleSignInChange(host, body, res);
+        await this.handleSignInChange(req, host, body, res);
         return;
       }
       if (Array.isArray(body.rememberSignIns)) {
@@ -2080,6 +2462,7 @@ export class RunnerServer {
    * whether that worked. A new sign-in is kept (password in the keychain) only when it worked.
    */
   private async handleSignInChange(
+    req: http.IncomingMessage,
     host: string,
     body: {
       addSignIn?: {
@@ -2162,7 +2545,7 @@ export class RunnerServer {
       return;
     }
     // On the hosted copy a sign-in test opens a browser, so it counts like a check-up start.
-    if (this.betaLimitHit(res)) {
+    if (await this.startLimitHit(req, res)) {
       release();
       return;
     }
@@ -2372,6 +2755,45 @@ export class RunnerServer {
     return this.session.report.list();
   }
 
+  /**
+   * The bucket folder (account hash) that holds this run for this caller: their own saved run, or, for the owner
+   * (access key or AUDIT_OWNER_EMAILS), whoever's it is. Null when the caller may not read it or it is not there.
+   */
+  private async storedRunHash(req: http.IncomingMessage, runId: string): Promise<string | null> {
+    const email = this.helperAccess?.session(req)?.email;
+    if (email && (await this.accountReports.has(email, runId))) return accountHash(email);
+    if (this.carriesAccessKey(req) || this.isAuditOwner(req)) return this.accountReports.locate(runId);
+    return null;
+  }
+
+  /** Serves a saved run's report or download from the bucket. True when it answered. */
+  private async serveStoredRun(
+    hash: string,
+    runId: string,
+    action: string | undefined,
+    file: string | undefined,
+    res: http.ServerResponse
+  ): Promise<boolean> {
+    if (!action) {
+      const bytes = await this.accountReports.read(hash, runId, 'report.json');
+      if (!bytes) return false;
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(Buffer.from(bytes));
+      return true;
+    }
+    const contentType = file ? DOWNLOADABLE_REPORT_FILES[file] : undefined;
+    if (action !== 'download' || !file || !contentType) return false;
+    const bytes = await this.accountReports.read(hash, runId, file);
+    if (!bytes) return false;
+    const [base, ext] = file.split('.');
+    res.writeHead(200, {
+      'Content-Type': contentType,
+      'Content-Disposition': `attachment; filename="${base}-${runId}.${ext}"`,
+    });
+    res.end(Buffer.from(bytes));
+    return true;
+  }
+
   /** The newest finished run's report, so a restart still has it. */
   private async loadLatestReport(): Promise<void> {
     return this.session.report.loadLatest();
@@ -2384,13 +2806,35 @@ export class RunnerServer {
 
   private async handleRuns(rest: string, req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
     if ((rest === '' || rest === '/') && req.method === 'GET') {
-      this.sendJson(res, 200, { runs: (await this.listRuns()).filter((r) => this.isMine(r.runId)) });
+      const mine = (await this.listRuns()).filter((r) => this.isMine(r.runId));
+      // Reports kept in the bucket for 30 days (ADR 0050): this account's, besides the ones still on disk.
+      const email = this.helperAccess?.session(req)?.email;
+      const saved = email ? await this.accountReports.list(email) : [];
+      const known = new Set(mine.map((r) => r.runId));
+      const merged = [...mine, ...saved.filter((r) => !known.has(r.runId))].sort((a, b) =>
+        b.timestamp.localeCompare(a.timestamp)
+      );
+      this.sendJson(res, 200, { runs: merged });
       return;
     }
     const [, runId, action, file] = rest.split('/');
     if (!runId || !isRunId(runId)) {
       this.sendJson(res, 404, { error: 'No such check-up' });
       return;
+    }
+    // The local folder is gone (a cold start) or the run is not this visitor's in memory: the bucket copy, when
+    // this account (or the owner) has one (ADR 0050).
+    if (req.method === 'GET' && (!action || action === 'download')) {
+      const localHere =
+        this.isMine(runId) &&
+        (await fs.stat(this.runDir(runId)).then(
+          () => true,
+          () => false
+        ));
+      if (!localHere) {
+        const hash = await this.storedRunHash(req, runId);
+        if (hash && (await this.serveStoredRun(hash, runId, action, file, res))) return;
+      }
     }
     if (this.refuseNotMine(res, runId)) return;
 
@@ -3155,10 +3599,18 @@ export class RunnerServer {
   private runStartDone: Promise<void> | null = null;
 
   private async handleTriggerRun(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+    // An account also waits when others are ahead of it in line, or another visitor's plan awaits review.
+    const queueing = this.canQueue(req) && (this.checkupQueue.length > 0 || this.othersPlanWaiting());
     if (
+      queueing ||
       this.checkupStartRefused ||
       this.runStartDone // a second start while the first is still starting
     ) {
+      // An account waits in line; the owner and CI (the access key) keep the plain 409.
+      if (this.canQueue(req)) {
+        await this.enqueueRun(req, res);
+        return;
+      }
       this.sendJson(res, 409, {
         error: this.beta
           ? 'Someone else is running a check-up on this shared copy. Try again in a few minutes.'
@@ -3226,7 +3678,7 @@ export class RunnerServer {
 
     // Smoke Check-up: a few read-only GETs, no browser, no plan. Runs here and answers with the report.
     if (body.preset === 'smoke') {
-      if (this.betaLimitHit(res)) return;
+      if (await this.startLimitHit(req, res)) return;
       try {
         const result = await runPostDeploySmoke({
           targetUrl: body.targetUrl,
@@ -3360,7 +3812,7 @@ export class RunnerServer {
       return;
     }
 
-    if (this.betaLimitHit(res)) return;
+    if (await this.startLimitHit(req, res)) return;
 
     let typed: URL;
     try {
@@ -3383,6 +3835,7 @@ export class RunnerServer {
       beta: this.beta,
       hostChecks: this.hostChecks,
       token: () => peekProofToken(typed.origin),
+      saved: this.savedProofFor(typed),
     });
 
     try {
@@ -3752,7 +4205,7 @@ export class RunnerServer {
       });
       return;
     }
-    if (this.betaLimitHit(res)) {
+    if (await this.startLimitHit(req, res)) {
       this.session.run.release();
       return;
     }

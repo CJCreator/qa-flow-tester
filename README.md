@@ -171,25 +171,25 @@ pnpm dev:wizard   # http://localhost:3002, API calls passed on to the QA Tool on
 
 ---
 
-### The static site on Google Cloud Run
+### The site on Vercel
 
-The landing page and wizard are built by `pnpm site-build` and served by nginx from `site/Dockerfile` as the Cloud Run service `qa-check-up-site`. Every push to `main` publishes it (see Automatic deploys). Opened on its own, no runner answers it, so its first screen offers the ways to run a check-up (below). The static site only serves pages: the runner needs a real browser, so it runs in its own service.
+The landing page and wizard are built by `pnpm site-build` and served by Vercel (project `qa-flow-tester`, [ADR 0050](docs/adr/0050-hosted-pilot-vercel-front-door.md)), which forwards the runner's paths to the Cloud Run service `qa-check-up`, so people open one site. Every push to `main` publishes it. Opened on its own, no runner answers it, so its first screen offers the ways to run a check-up (below). The static site only serves pages: the runner needs a real browser, so it runs in its own service.
 
 ---
 
 ### Publish the full app online (free, shared beta)
 
-The runner and wizard run together in one container on Cloud Run (service `qa-check-up`), so people open one link, add their **own** AI key, and check a public site. Each visitor's key stays in memory for their session only, and only public sites can be checked. The deploy workflow sets the address on the static site's build, which then shows an **Open the online app** button.
+The runner and wizard run together in one container on Cloud Run (service `qa-check-up`), so people open one link, add their **own** AI key, and check a public site. Each visitor's key stays in memory for their session only, and only public sites can be checked. People sign in with Google on the Vercel site; the runner is reached through the site's own address.
 
-The service scales to zero when idle, so the first visit after a quiet spell takes about a minute. There are no accounts, and check-ups are limited per visitor and per day, so treat it as a beta.
+The service scales to zero when idle, so the first visit after a quiet spell takes about a minute. Check-ups are limited per visitor and per day, so treat it as a beta.
 
 ### Automatic deploys
 
 Nobody deploys by hand. Every push to `main` runs [.github/workflows/deploy.yml](.github/workflows/deploy.yml):
 
-1. **Build and test.** It builds the site and the runner, smoke-checks the runner, and runs the unit tests (not the browser-driven end-to-end test, which takes minutes: run `pnpm test` before a release).
-2. **Publish.** It builds the runner and site images, pushes them to Artifact Registry and deploys both Cloud Run services (`qa-check-up` and `qa-check-up-site`). It needs no secrets: sign-in is keyless (Workload Identity Federation), and the runner's access token comes from Secret Manager.
-3. **Verify.** Each service must answer (the runner with its access-key prompt, the site with a `version.json` naming this commit), or the run goes red.
+1. **Build and test.** It builds the site (as a check) and the runner, smoke-checks the runner, and runs the unit tests (not the browser-driven end-to-end test, which takes minutes: run `pnpm test` before a release).
+2. **Publish.** It builds the runner image, pushes it to Artifact Registry and deploys the Cloud Run service `qa-check-up` (Vercel builds the site from the same push). It needs no secrets: sign-in is keyless (Workload Identity Federation), and the runner's access token comes from Secret Manager.
+3. **Verify.** The runner must answer with its access-key prompt, or the run goes red.
 
 ---
 

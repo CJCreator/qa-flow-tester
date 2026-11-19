@@ -15,6 +15,8 @@ export { readCookie, cookieFrom };
 export const HELPER_COOKIE = 'qa_helper';
 /** Longest Helper session: 8 hours. */
 export const HELPER_SESSION_SECONDS = 8 * 60 * 60;
+/** Longest sign-in for an account on the hosted copy, whose cookie key is stable across restarts (ADR 0050): 7 days. */
+export const ACCOUNT_SESSION_SECONDS = 7 * 24 * 60 * 60;
 /** Size of the cookie signing key. */
 export const HELPER_SESSION_KEY_BYTES = 32;
 /** Longest cookie value read; anything longer is no session. */
@@ -45,15 +47,19 @@ function isSub(value: unknown): value is string {
   return typeof value === 'string' && value !== '' && value.length <= MAX_SUB_CHARS;
 }
 
-/** The signed cookie value for this verified Google account, valid for `seconds` (capped at 8 hours). */
+/**
+ * The signed cookie value for this verified Google account, valid for `seconds` (capped at `maxSeconds`: 8 hours
+ * unless the copy signs accounts in for longer, ADR 0050).
+ */
 export function signHelperSession(
   key: Buffer,
   who: Pick<HelperSessionClaims, 'email' | 'sub'>,
   now: Date,
-  seconds = HELPER_SESSION_SECONDS
+  seconds = HELPER_SESSION_SECONDS,
+  maxSeconds = HELPER_SESSION_SECONDS
 ): string {
   if (!isSub(who.sub)) throw new Error('A Helper session needs the Google account id.');
-  const lifetime = Math.max(1, Math.min(Math.floor(seconds), HELPER_SESSION_SECONDS));
+  const lifetime = Math.max(1, Math.min(Math.floor(seconds), maxSeconds));
   const claims: HelperSessionClaims = {
     email: who.email.trim().toLowerCase(),
     sub: who.sub,
@@ -64,7 +70,12 @@ export function signHelperSession(
 }
 
 /** The claims in a cookie value, or null when it is missing, tampered, malformed or expired. */
-export function readHelperSessionValue(key: Buffer, value: string | undefined, now: Date): HelperSessionClaims | null {
+export function readHelperSessionValue(
+  key: Buffer,
+  value: string | undefined,
+  now: Date,
+  maxSeconds = HELPER_SESSION_SECONDS
+): HelperSessionClaims | null {
   if (!value || value.length > MAX_COOKIE_CHARS) return null;
   const dot = value.indexOf('.');
   if (dot <= 0 || dot !== value.lastIndexOf('.')) return null;
@@ -86,13 +97,18 @@ export function readHelperSessionValue(key: Buffer, value: string | undefined, n
   if (typeof exp !== 'number' || !Number.isFinite(exp)) return null;
   const nowSeconds = Math.floor(now.getTime() / 1000);
   // Expired, or claiming more than the longest session (a cookie this code never signs).
-  if (exp <= nowSeconds || exp > nowSeconds + HELPER_SESSION_SECONDS) return null;
+  if (exp <= nowSeconds || exp > nowSeconds + maxSeconds) return null;
   return { email, sub, exp };
 }
 
 /** The request's Helper session, or null. */
-export function readHelperSession(key: Buffer, req: http.IncomingMessage, now: Date): HelperSessionClaims | null {
-  return readHelperSessionValue(key, cookieFrom(req.headers.cookie, HELPER_COOKIE), now);
+export function readHelperSession(
+  key: Buffer,
+  req: http.IncomingMessage,
+  now: Date,
+  maxSeconds = HELPER_SESSION_SECONDS
+): HelperSessionClaims | null {
+  return readHelperSessionValue(key, cookieFrom(req.headers.cookie, HELPER_COOKIE), now, maxSeconds);
 }
 
 /** Whether the visit came over https (directly, or as a proxy or tunnel says), for the Secure flag. */
@@ -110,8 +126,13 @@ function attributes(secure: boolean): string {
 }
 
 /** Set-Cookie for a new Helper session. */
-export function helperSessionCookie(value: string, secure: boolean, seconds = HELPER_SESSION_SECONDS): string {
-  const maxAge = Math.max(1, Math.min(Math.floor(seconds), HELPER_SESSION_SECONDS));
+export function helperSessionCookie(
+  value: string,
+  secure: boolean,
+  seconds = HELPER_SESSION_SECONDS,
+  maxSeconds = HELPER_SESSION_SECONDS
+): string {
+  const maxAge = Math.max(1, Math.min(Math.floor(seconds), maxSeconds));
   return `${HELPER_COOKIE}=${value}; ${attributes(secure)}; Max-Age=${maxAge}`;
 }
 
