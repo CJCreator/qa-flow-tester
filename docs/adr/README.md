@@ -49,3 +49,7 @@ One row per record. The record itself holds the decision, its context and any la
 | [0043](0043-parallel-page-fetching-in-the-website-audit.md) | Parallel Page Fetching in the Website Audit | Accepted, 2026-11-05 (owner's answers in a grilling session, |
 | [0044](0044-expansion-platform-scope-and-roadmap.md) | Expansion Platform Scope and Architecture Roadmap | Accepted as a roadmap, 2026-11-06 |
 | [0045](0045-pinned-egress-proxy-for-chromium.md) | A Pinned Egress Proxy for Chromium on the Shared Machine | Accepted, 2026-11-12 (owner's answer on T-308) |
+| [0046](0046-adaptive-fetch-concurrency-in-the-website-audit.md) | Adaptive Fetch Concurrency in the Website Audit | Proposed, 2026-11-19 (grilling session; accepted by T-403) |
+| [0047](0047-every-audit-page-fully-checked.md) | Every Recorded Page of a Website Audit Is Fully Checked | Proposed, 2026-11-19 (grilling session; accepted by T-405) |
+| [0048](0048-parallel-test-workers-in-the-check-up.md) | Parallel Test Workers in the Check-up, and One Retry | Proposed, 2026-11-19 (grilling session; accepted by T-408) |
+| [0049](0049-improved-version.md) | The Improved Version: Design Variants, Alternatives and Automatic Competitors | Proposed, 2026-11-19 (grilling session; accepted by T-412) |

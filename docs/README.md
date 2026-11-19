@@ -18,6 +18,8 @@ Read in this order when you are new to the project.
 | [`AGENT_WORKFLOW.md`](AGENT_WORKFLOW.md)                                                 | The local agent pipeline (`.claude/`, not part of a clone)                                        |
 | [`tickets/INDEX.md`](tickets/INDEX.md)                                                   | Open work, one row per ticket. The status column is the record                                    |
 | [`tickets/WEBSITE-AUDIT-RELIABILITY-PLAN.md`](tickets/WEBSITE-AUDIT-RELIABILITY-PLAN.md) | The plan behind the open Website Audit tickets                                                    |
+| [`tickets/ENHANCEMENT-PLAN-2026-11.md`](tickets/ENHANCEMENT-PLAN-2026-11.md)             | The November 2026 plan: trust, speed, then the Improved version (T-388 to T-420)                  |
+| [`reviews/2026-11-19-product-review.md`](reviews/2026-11-19-product-review.md)           | The 19 November product and codebase review the plan is built on                                  |
 | [`findings.schema.json`](findings.schema.json)                                           | The JSON schema of `findings.json` in a report                                                    |
 | [`LEGAL_AND_LICENSES.md`](LEGAL_AND_LICENSES.md)                                         | The project's licence and the licences of its runtime dependencies                                |
 | [`GTM_AND_PRICING.md`](GTM_AND_PRICING.md)                                               | Draft notes on audience and pricing. Nothing in it is built or decided                            |
