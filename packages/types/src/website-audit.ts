@@ -1009,6 +1009,17 @@ export interface AuditProgressCounts {
   pagesSkipped: number;
 }
 
+/** The audit run's AI requests (T-398): sent so far, and the AI Request Budget (null: none set). */
+export interface AuditAiRequestCount {
+  used: number;
+  limit: number | null;
+}
+
+/** "AI requests: 3 of 3", or "AI requests: 3" when no budget was set. */
+export function aiRequestsLine(count: AuditAiRequestCount): string {
+  return count.limit === null ? `AI requests: ${count.used}` : `AI requests: ${count.used} of ${count.limit}`;
+}
+
 /** One event on `GET /api/audits/:id/stream`. */
 export type AuditProgressEvent =
   | {
@@ -1021,6 +1032,8 @@ export type AuditProgressEvent =
       pagesSkipped: number;
       /** The path being read now (redacted). */
       currentPath?: string;
+      /** AI requests sent so far and the AI Request Budget (null: no budget set). Only when the audit has AI. */
+      aiRequests?: AuditAiRequestCount;
     }
   | {
       type: 'page';

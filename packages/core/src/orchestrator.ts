@@ -349,6 +349,41 @@ function evidenceDirOf(options: RunOptions): string {
   return path.join(options.outputDir || path.join(process.cwd(), '.qa-report'), 'evidence');
 }
 
+/** The run note when evidence could not be redacted on the way out (T-393, ADR 0016). */
+export const EVIDENCE_REDACTION_FAILED_NOTE = 'Could not verify: evidence redaction failed; evidence was deleted';
+
+/**
+ * Redacts the evidence on disk. When that fails, no unredacted file may stay: the error is logged (redacted),
+ * every evidence file is deleted, and true is returned so the caller can add the run note.
+ */
+async function redactOrDeleteEvidence(redactor: Redactor, evidenceDir: string): Promise<boolean> {
+  try {
+    await redactor.files(evidenceDir);
+    return false;
+  } catch (err) {
+    const message = redactor.text(err instanceof Error ? err.message : String(err));
+    console.warn(`[QA Orchestrator] Evidence redaction failed, so the evidence is deleted: ${message}`);
+    const entries = await fs.readdir(evidenceDir).catch(() => [] as string[]);
+    for (const name of entries) {
+      await fs
+        .rm(path.join(evidenceDir, name), { recursive: true, force: true, maxRetries: 3 })
+        .catch((rmErr: unknown) =>
+          console.warn(`[QA Orchestrator] Could not delete evidence ${name}: ${redactor.text(String(rmErr))}`)
+        );
+    }
+    return true;
+  }
+}
+
+/** The run's error with a run note: kept on `runNotes`, and added to the message the person sees. */
+function withRunNote(err: unknown, note: string): unknown {
+  if (!(err instanceof Error)) return new Error(`${String(err)}. ${note}`);
+  const holder = err as Error & { runNotes?: string[] };
+  holder.runNotes = [...(holder.runNotes ?? []), note];
+  if (holder.name !== 'AbortError') holder.message = `${holder.message}. ${note}`;
+  return holder;
+}
+
 export class FlowTestOrchestrator {
   private browserManager = new BrowserManager();
 
@@ -372,16 +407,17 @@ export class FlowTestOrchestrator {
    */
   async run(options: RunOptions): Promise<ReleaseReport> {
     const redactor = runRedactor(options);
-    let redacted = false;
+    let report: ReleaseReport;
     try {
-      const report = await this.runChecks(options, redactor);
-      redacted = true; // runChecks redacted the evidence before it built the report
-      return report;
-    } finally {
+      report = await this.runChecks(options, redactor); // runChecks redacted the evidence before it built the report
+    } catch (err) {
       await this.browserManager.close().catch(() => {});
       // Stop, sign-in failure or error: the evidence already on disk is redacted too (ADR 0016).
-      if (!redacted) await redactor.files(evidenceDirOf(options)).catch(() => {});
+      const failed = await redactOrDeleteEvidence(redactor, evidenceDirOf(options));
+      throw failed ? withRunNote(err, EVIDENCE_REDACTION_FAILED_NOTE) : err;
     }
+    await this.browserManager.close().catch(() => {});
+    return report;
   }
 
   private async runChecks(options: RunOptions, redactor: Redactor): Promise<ReleaseReport> {

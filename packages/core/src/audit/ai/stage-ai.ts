@@ -28,19 +28,42 @@ export interface AuditAiSetup {
   vision?: string | null;
 }
 
-/** How many AI requests the audit may still make. `take` uses one; false when none is left. */
+/**
+ * The audit run's one AI request counter (T-398). Every stage (assessment, recommendations, preview, Improved
+ * version) takes from it, so a request past the AI Request Budget is never sent. `take` uses one; false when
+ * none is left. `limit` is Infinity when no budget was set: requests are still counted.
+ */
 export interface AuditAiRequestBudget {
   take(): boolean;
+  /** Requests sent (or being sent) so far. */
+  readonly used: number;
+  /** Requests allowed in all; Infinity when no budget was set. */
+  readonly limit: number;
+  /** Requests still allowed. */
+  readonly left: number;
 }
 
-/** A budget of `requests` AI requests, counted in memory. */
-export function auditAiRequestBudget(requests: number): AuditAiRequestBudget {
-  let left = Math.max(0, Math.floor(requests));
+/** Why a stage has no AI answer once the budget is used up. The stored reason code stays 'budget-spent'. */
+export const AI_REQUEST_BUDGET_REACHED = 'AI Request Budget reached';
+
+/** A budget of `requests` AI requests, counted in memory. No number: counted, never refused. */
+export function auditAiRequestBudget(requests = Infinity): AuditAiRequestBudget {
+  const limit = Number.isFinite(requests) ? Math.max(0, Math.floor(requests)) : Infinity;
+  let used = 0;
   return {
     take() {
-      if (left <= 0) return false;
-      left -= 1;
+      if (used >= limit) return false;
+      used += 1;
       return true;
+    },
+    get used() {
+      return used;
+    },
+    get limit() {
+      return limit;
+    },
+    get left() {
+      return Math.max(0, limit - used);
     },
   };
 }
@@ -51,6 +74,7 @@ export interface ResolveAuditAiDeps {
   keys: Pick<KeyResolver, 'resolveKey'>;
   /** The models saved per audit stage. */
   models?: AuditAiModels;
+  /** The run's request counter. Unset: an unlimited one is made, so the count is still there to read. */
   budget?: AuditAiRequestBudget;
   /** Seam for tests; defaults to createAIProvider. */
   createProvider?: (type: AIProviderType, apiKey: string) => AIProvider;
@@ -180,6 +204,8 @@ export type AuditAiAnswer =
 
 export interface AuditAi {
   readonly provider: AIProviderType;
+  /** The run's request counter: what was sent and what the AI Request Budget allows. */
+  readonly budget?: AuditAiRequestBudget;
   ask(stage: AuditAiStage, messages: AIMessage[], options?: AuditAiAskOptions): Promise<AuditAiAnswer>;
 }
 
@@ -194,6 +220,7 @@ function providerFactory(deps: ResolveAuditAiDeps): (type: AIProviderType, apiKe
 }
 
 export async function resolveAuditAi(deps: ResolveAuditAiDeps): Promise<AuditAiResolution> {
+  deps = { ...deps, budget: deps.budget ?? auditAiRequestBudget() };
   const create = providerFactory(deps);
   const hasAdc = deps.hasAdc;
   const key = await deps.keys.resolveKey(deps.setup.provider);
@@ -268,6 +295,7 @@ function auditAiOn(
     get provider() {
       return providerType;
     },
+    budget: deps.budget,
     async ask(stage, messages, options = {}) {
       stopIfAborted(options.signal);
       if (deadKeyError) throw deadKeyError;
