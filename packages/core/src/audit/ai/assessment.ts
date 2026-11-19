@@ -44,6 +44,8 @@ export interface AssessmentPageInput {
   findings: AuditFinding[];
   grades: AreaGrades;
   speed?: PageSpeed;
+  /** Words of Page Content. Under BATCH_MAX_WORDS, the page may share one request with up to 3 others (T-406). */
+  wordCount?: number;
 }
 
 export interface AssessmentRunOptions {
@@ -100,44 +102,98 @@ const AREA_MEANING: Record<AuditArea, string> = {
 /** Pages assessed at once (ADR 0043): requests go to the AI Provider, not the audited site. */
 export const AUDIT_AI_IN_FLIGHT = 4;
 
-/** Assesses each page, AUDIT_AI_IN_FLIGHT at a time; the answers keep the pages' order. */
+/** The most requests in flight when the AI Provider reports its own limit (T-406). */
+export const AUDIT_AI_IN_FLIGHT_MAX = 8;
+/** Pages under this many words of Page Content share one request (T-406). */
+export const BATCH_MAX_WORDS = 1500;
+/** Pages per shared request at most (T-406). */
+export const BATCH_MAX_PAGES = 4;
+
+/** Requests in flight: the provider's reported limit up to 8 when there is one, otherwise 4 (T-406). */
+export function auditAiInFlight(reportedLimit?: number | null): number {
+  if (!reportedLimit || reportedLimit < 1 || !Number.isFinite(reportedLimit)) return AUDIT_AI_IN_FLIGHT;
+  return Math.min(AUDIT_AI_IN_FLIGHT_MAX, Math.floor(reportedLimit));
+}
+
+/**
+ * Groups page indexes into requests: pages with a known word count under BATCH_MAX_WORDS go up to
+ * BATCH_MAX_PAGES per request, in order; any other page goes alone.
+ */
+export function batchPages(pages: readonly Pick<AssessmentPageInput, 'wordCount'>[]): number[][] {
+  const batches: number[][] = [];
+  let open: number[] = [];
+  pages.forEach((p, i) => {
+    const small = typeof p.wordCount === 'number' && p.wordCount < BATCH_MAX_WORDS;
+    if (!small) {
+      batches.push([i]);
+      return;
+    }
+    open.push(i);
+    if (open.length === BATCH_MAX_PAGES) {
+      batches.push(open);
+      open = [];
+    }
+  });
+  if (open.length > 0) batches.push(open);
+  return batches;
+}
+
+/**
+ * Assesses the pages, AUDIT_AI_IN_FLIGHT requests at a time; the answers keep the pages' order. Small pages
+ * share a request (T-406): each answer names its `urlPath`; an answer for a page outside its batch is dropped,
+ * and a page left without a clean answer is asked again alone.
+ */
 export async function assessPages(input: AssessPagesInput, ai: AuditAiResolution): Promise<PageAssessment[]> {
   const out: PageAssessment[] = new Array(input.pages.length);
 
-  const assessPageAtIndex = async (index: number): Promise<PageAssessment> => {
-    stopIfAborted(input.signal);
-    const page = input.pages[index];
-    const res = await assessOnePage(page, input, ai);
+  const finish = (index: number, res: PageAssessment) => {
     out[index] = res;
     const pageStatus: 'done' | 'not-done' = res.areas.some((a) => a.status === 'done') ? 'done' : 'not-done';
-    input.onPageAiProgress?.(page.urlPath, pageStatus);
-    return res;
+    input.onPageAiProgress?.(input.pages[index].urlPath, pageStatus);
   };
 
+  const assessBatch = async (batch: number[]): Promise<void> => {
+    stopIfAborted(input.signal);
+    if (batch.length > 1 && ai.ok) {
+      const answered = await assessSharedRequest(
+        batch.map((i) => input.pages[i]),
+        input,
+        ai.ai
+      );
+      for (let k = 0; k < batch.length; k++) {
+        const areas = answered[k];
+        if (areas) finish(batch[k], { urlPath: input.pages[batch[k]].urlPath, areas });
+      }
+      // Asked again alone: the pages the shared answer left out, cited wrongly or answered with a problem.
+      for (let k = 0; k < batch.length; k++) {
+        if (!answered[k]) finish(batch[k], await assessOnePage(input.pages[batch[k]], input, ai));
+      }
+      return;
+    }
+    for (const i of batch) finish(i, await assessOnePage(input.pages[i], input, ai));
+  };
+
+  const batches = batchPages(input.pages);
   if (input.limiter) {
-    await Promise.all(input.pages.map((_, index) => input.limiter!(() => assessPageAtIndex(index))));
+    await Promise.all(batches.map((batch) => input.limiter!(() => assessBatch(batch))));
     return out;
   }
 
   const poolSize = input.aiInFlight ?? AUDIT_AI_IN_FLIGHT;
   let next = 0;
   const worker = async () => {
-    while (next < input.pages.length) {
+    while (next < batches.length) {
       const index = next++;
-      await assessPageAtIndex(index);
+      await assessBatch(batches[index]);
     }
   };
-  const workers = Math.min(Math.max(1, poolSize), input.pages.length);
+  const workers = Math.min(Math.max(1, poolSize), batches.length);
   await Promise.all(Array.from({ length: workers }, worker));
   return out;
 }
 
-async function assessOnePage(
-  page: AssessPagesInput['pages'][number],
-  input: AssessPagesInput,
-  ai: AuditAiResolution
-): Promise<PageAssessment> {
-  const subject = {
+function pageSubject(page: AssessmentPageInput) {
+  return {
     scope: 'page',
     urlPath: clip(page.urlPath),
     title: page.content.title === null ? null : clip(page.content.title),
@@ -152,7 +208,76 @@ async function assessOnePage(
     speed: page.speed ? speedSummary(page.speed) : null,
     findings: findingsSummary(page.findings),
   };
-  const areas = await assess(subject, page.findings, page.grades, input, ai);
+}
+
+/**
+ * One request for several pages. Returns, per page, its six areas when the answer named the page, cited
+ * only that page's findings and every note was clean; undefined when the page must be asked again alone.
+ * No repair round here: the single-page path does that.
+ */
+async function assessSharedRequest(
+  pages: AssessmentPageInput[],
+  run: AssessmentRunOptions,
+  ai: AuditAi
+): Promise<Array<AreaAssessment[] | undefined>> {
+  const missing = pages.map(() => undefined);
+  const messages = batchPrompt(
+    pages.map((p) => pageSubject(p)),
+    run.language
+  );
+  const answer = await askSafely(ai, messages, run);
+  if (!answer.ok) return missing;
+  let value: unknown;
+  try {
+    value = parseJsonAnswer(answer.completion.text);
+  } catch {
+    return missing;
+  }
+  const entries = (value as { pages?: unknown })?.pages;
+  if (!Array.isArray(entries)) return missing;
+  const inBatch = new Map(pages.map((p, i) => [p.urlPath, i]));
+  const out: Array<AreaAssessment[] | undefined> = pages.map(() => undefined);
+  const cited = new Set<number>();
+  for (const entry of entries) {
+    const urlPath = (entry as { urlPath?: unknown })?.urlPath;
+    // An answer for a page outside the batch is dropped; its page (if any) is asked again alone.
+    if (typeof urlPath !== 'string' || !inBatch.has(urlPath)) continue;
+    const index = inBatch.get(urlPath)!;
+    if (cited.has(index)) {
+      out[index] = undefined;
+      continue;
+    }
+    cited.add(index);
+    const page = pages[index];
+    const known = new Set(page.findings.map((f) => f.id));
+    const areasValue = {
+      areas: Array.isArray((entry as { areas?: unknown }).areas) ? (entry as { areas: unknown[] }).areas : [],
+    };
+    const notes = AUDIT_AREAS.map((area) => [area, readArea(areasValue, area, known)] as const);
+    // Evidence that names another page's finding is a wrong citation: the page is asked again alone.
+    const otherIds = new Set(pages.filter((_, i) => i !== index).flatMap((p) => p.findings.map((f) => f.id)));
+    const citesOther = areasValue.areas.some(
+      (a) =>
+        Array.isArray((a as { evidence?: unknown })?.evidence) &&
+        ((a as { evidence: unknown[] }).evidence as unknown[]).some(
+          (id) => typeof id === 'string' && otherIds.has(id) && !known.has(id)
+        )
+    );
+    if (citesOther || notes.some(([, r]) => 'problem' in r)) continue;
+    out[index] = notes.map(([area, r]) => {
+      const ok = r as { note: string; evidence: string[] };
+      return { area, grade: page.grades[area] ?? null, status: 'done', note: ok.note, evidence: ok.evidence };
+    });
+  }
+  return out;
+}
+
+async function assessOnePage(
+  page: AssessPagesInput['pages'][number],
+  input: AssessPagesInput,
+  ai: AuditAiResolution
+): Promise<PageAssessment> {
+  const areas = await assess(pageSubject(page), page.findings, page.grades, input, ai);
   return { urlPath: page.urlPath, areas };
 }
 
@@ -354,6 +479,18 @@ function basePrompt(subject: Record<string, unknown>, language: DocumentLanguage
     { role: 'system', content: system },
     { role: 'user', content: user },
   ];
+}
+
+/** Several pages in one request (T-406): one entry per page, each naming its `urlPath`. */
+function batchPrompt(subjects: Array<Record<string, unknown>>, language: DocumentLanguage): AIMessage[] {
+  const [system, single] = basePrompt({ scope: 'pages', pages: subjects }, language);
+  const shape = `{"urlPath":"...","areas":[${AUDIT_AREAS.map((a) => `{"area":"${a}","note":"...","evidence":["..."]}`).join(',')}]}`;
+  const user =
+    `${single.content.split('\n\nAnswer with ONLY')[0]}\n\n` +
+    'The data holds several pages. Write the six notes for each page separately, citing only the ids of ' +
+    "that page's own findings, and name each page by its urlPath exactly as given.\n\n" +
+    `Answer with ONLY this JSON object, one entry per page:\n{"pages":[${shape}]}`;
+  return [system, { role: 'user', content: user }];
 }
 
 function repairPrompt(areas: AuditArea[], notes: Map<AuditArea, NoteResult>, language: DocumentLanguage): string {
