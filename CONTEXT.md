@@ -359,6 +359,10 @@ _Avoid_: Plan, enhancement plan, action plan, backlog, to-do list
 One A4 page made from a Website Audit for the site owner: the top 3 issues in the ranking, one screenshot each, and opt-out text, in English or Tamil. The tool ships default opt-out text in both languages; the tool user edits it and owns checking it. The tool user hands the page over printed or as a Shared Link; the tool never sends it (no email, message or form). It shows no release verdict and follows the claim wording of ADR 0018.
 _Avoid_: Pitch deck, sales sheet, teaser, summary report, cold email
 
+**Improved version**:
+The AI-written improvements of one Website Audit version, on its own tab of every audit screen: the homepage and one Sample Page per Layout Group, each as 1 to 5 design variants that keep the site's menu links, logo and colours. Every change cites a finding or Section id; it gives no score and says nothing about the whole site (ADR 0018). It is a suggestion: it never touches the live site and never sends a form (ADR 0049).
+_Avoid_: Redesign, makeover, mockup
+
 **Shared Link**:
 A link with an unguessable ID to a page the tool hosts for a Pitch Glimpse or an improved-homepage preview, so the tool user can hand it over. Anyone holding the link can open it without the tool's access key. The page asks search engines not to index it and never shows the owner's contact details. The link expires after 30 days, and the tool user can revoke it at any time.
 _Avoid_: Public link, permalink, share URL, published report

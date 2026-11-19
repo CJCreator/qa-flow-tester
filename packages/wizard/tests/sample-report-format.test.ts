@@ -185,8 +185,9 @@ describe('sample report format', () => {
     const changed = notReady
       .replaceAll('localhost:3050', 'demo.example.org')
       .replaceAll('run-format-check', 'run-another-one')
-      .replace(/Checked on: [^|]*/, 'Checked on: 9/9/2030, 9:09:09 AM ')
-      .replace(/Problems found: \d+/, 'Problems found: 42')
+      // The date runs to the end of its line; T-391 removed the "| Problems found" that used to follow it.
+      .replace(/Checked on: [^<|]*/, 'Checked on: 9/9/2030, 9:09:09 AM ')
+      .replace(/Problems that count: \d+/, 'Problems that count: 42')
       .replace(/Score: \d+\/100/g, 'Score: 12/100')
       .replace(/Missing Content-Security-Policy header/g, 'A different finding');
     expect(problemsWith(changed, ref)).toEqual([]);

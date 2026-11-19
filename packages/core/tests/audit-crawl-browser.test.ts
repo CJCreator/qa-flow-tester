@@ -13,8 +13,8 @@
  * 6. a challenge page that never clears produces ERR_SITE_BLOCKED.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { chromium, type Browser, type BrowserContext, type Route } from 'playwright';
-import type { AuditProgressEvent, AuditRequest } from '@qa/types';
+import { chromium, type Browser, type Route } from 'playwright';
+import type { AuditRequest } from '@qa/types';
 import { runAuditCrawl, type AuditBrowserLauncher, type AuditCrawlProgress } from '../src/audit/crawl/crawl.js';
 import { AuditCrawlBlockedError } from '../src/audit/crawl/interstitial.js';
 import { createSkippedPageFindings } from '../src/audit/pipeline/skipped-findings.js';
@@ -108,6 +108,8 @@ describe('audit-crawl-browser (T-89 browser tier)', () => {
     });
 
     expect(result.pages).toHaveLength(12);
+    // Starts at 3; it climbs only after 25 healthy answers (ADR 0046), and a 12-page site gives fewer.
+    expect(result.pacer.ceiling).toBe(8);
     expect(maxInFlight).toBeLessThanOrEqual(3);
     expect(maxInFlight).toBeGreaterThan(1);
 
@@ -192,6 +194,8 @@ describe('audit-crawl-browser (T-89 browser tier)', () => {
 
     expect(result.crawlDelayMs).toBe(1000);
     expect(result.pacer.maxInFlight).toBe(1);
+    // On a local runner the ceiling would be 8 (ADR 0046); a Crawl-delay keeps it at 1 for the whole audit.
+    expect(result.pacer.ceiling).toBe(1);
     expect(maxInFlight).toBe(1);
     expect(result.pages).toHaveLength(5);
   });

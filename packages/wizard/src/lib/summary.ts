@@ -10,6 +10,7 @@ import {
   releaseVerdict,
   SEVERITY_ORDER,
 } from '@qa/types/src/browser.js';
+import { countBreakdown, countSummary, type CountSummary } from '@qa/types/src/browser.js';
 
 export interface SeverityCount {
   severity: FindingSeverity;
@@ -39,6 +40,10 @@ export interface ReportSummary {
   toConfirm: number;
   /** The findings behind the problems, for the developer details. */
   findings: number;
+  /** The one count (T-389): `problems` equals `total`. */
+  countSummary: CountSummary;
+  /** "142 raw → 61 merged → 9 dismissed, 4 AI notes, 3 to confirm → 45", as the live screen shows it. */
+  breakdown: string;
 }
 
 const SEVERITY_WORDS: Record<FindingSeverity, (n: number) => string> = {
@@ -92,6 +97,7 @@ export function summarizeReport(report: ReleaseReport): ReportSummary {
   const verdict = releaseVerdict(findings, undefined, report?.grades, report?.coverage);
   const problems = groupIntoProblems(findings).filter((p) => !p.toConfirm);
   const total = verdict.total;
+  const counted = countSummary(findings);
 
   const counts = SEVERITY_ORDER.map((severity) => ({ severity, count: verdict.counts[severity] }))
     .filter((c) => c.count > 0)
@@ -121,6 +127,8 @@ export function summarizeReport(report: ReleaseReport): ReportSummary {
     readOnly: report.scanMode === 'safe-public' || report.scanMode === 'read-only',
     toConfirm: verdict.toConfirm,
     findings: verdict.findings,
+    countSummary: counted,
+    breakdown: countBreakdown(counted),
   };
 }
 

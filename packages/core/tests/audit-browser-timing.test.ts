@@ -252,7 +252,7 @@ describe('browser-timing: page-recorder integration', () => {
     expect(recorder.pages[0].timing?.raw.lcpMs).toBe(1200);
   });
 
-  it('does not measure timing on covered pages', async () => {
+  it('measures timing on covered pages too (ADR 0047)', async () => {
     const mockMeasureTiming = vi.fn(async () => ({
       speed: shapeBrowserTimingSpeed({ lcpMs: 1000 }, now),
       raw: { lcpMs: 1000 },
@@ -290,9 +290,9 @@ describe('browser-timing: page-recorder integration', () => {
     expect(recorder.pages[2].coverage).toBe('sample');
     expect(recorder.pages[3].coverage).toBe('covered');
 
-    // 3 samples measured, covered page skipped
-    expect(mockMeasureTiming).toHaveBeenCalledTimes(3);
-    expect(recorder.pages[3].timing).toBeUndefined();
+    // Every page is fully checked (ADR 0047): the covered page is measured too.
+    expect(mockMeasureTiming).toHaveBeenCalledTimes(4);
+    expect(recorder.pages[3].timing?.speed.status).toBe('measured');
   });
 
   it('records timing as null when measureBrowserTiming throws, without halting crawl', async () => {

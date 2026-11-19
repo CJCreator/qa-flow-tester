@@ -13,6 +13,8 @@
     "bootstrap": "pnpm install && pnpm --filter @qa/core exec playwright install chromium && pnpm -r run build",
     "smoke": "node scripts/smoke.mjs",
     "smoke:audit": "node scripts/smoke-audit.mjs",
+    "bench:audit": "node --env-file-if-exists=.env scripts/benchmark-audit.mjs",
+    "bench:checkup": "node --env-file-if-exists=.env scripts/benchmark-checkup.mjs",
     "dev:wizard": "pnpm --filter @qa/wizard dev",
     "runner": "node packages/runner/dist/cli.js",
     "build": "pnpm -r run build",

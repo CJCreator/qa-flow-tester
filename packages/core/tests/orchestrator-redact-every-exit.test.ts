@@ -3,7 +3,8 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';
 import type { StorageStateData } from '@qa/types';
-import { FlowTestOrchestrator, type RunOptions } from '../src/orchestrator.js';
+import { EVIDENCE_REDACTION_FAILED_NOTE, FlowTestOrchestrator, type RunOptions } from '../src/orchestrator.js';
+import { Redactor } from '../src/redact.js';
 import { BrowserManager } from '../src/browser.js';
 import { PreFlightChecker, type PreFlightResult } from '../src/preflight.js';
 
@@ -82,5 +83,76 @@ describe('orchestrator redacts the evidence on every exit (T-316)', () => {
     const member = { cookies: [{ name: 'sid', value: COOKIE }], origins: [] } as unknown as StorageStateData;
     await expect(new FlowTestOrchestrator().run(options(tmpDir, { suppliedSessions: { member } }))).rejects.toThrow();
     expect(await readEvidence()).not.toContain(COOKIE);
+  });
+});
+
+// T-393: a redaction that fails is never silent, and no unredacted evidence stays on disk.
+describe('orchestrator deletes the evidence when redaction fails (T-393)', () => {
+  let tmpDir: string | undefined;
+
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    if (tmpDir) await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+    tmpDir = undefined;
+  });
+
+  const setup = async (ok: boolean) => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'orch-redact-fail-'));
+    const dir = path.join(tmpDir, 'evidence');
+    vi.spyOn(BrowserManager.prototype, 'close').mockResolvedValue(undefined as never);
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(Redactor.prototype, 'files').mockRejectedValue(new Error(`EBUSY: cannot write ${PASSWORD}`));
+    vi.spyOn(PreFlightChecker.prototype, 'runPreFlight').mockImplementation(async () => {
+      await fs.mkdir(path.join(dir, 'nested'), { recursive: true });
+      await fs.writeFile(path.join(dir, 'step-1.html'), `<p>${PASSWORD}</p>`, 'utf8');
+      await fs.writeFile(path.join(dir, 'nested', 'step-2.json'), `{"p":"${PASSWORD}"}`, 'utf8');
+      return {
+        ok,
+        ...(ok ? {} : { error: 'boom' }),
+        roleAuthResults: {},
+        roleStorageStates: {},
+        roleLandingPaths: {},
+        roleFailures: {},
+        roleDiagnostics: {},
+      } as PreFlightResult;
+    });
+    const options: RunOptions = {
+      targetUrl: 'http://127.0.0.1:9',
+      productId: 'redact-fails',
+      specTestCases: [],
+      outputDir: tmpDir,
+      profile: { roles: [{ role: 'member', username: 'member', password: PASSWORD }] } as RunOptions['profile'],
+    };
+    return { dir, warn, options };
+  };
+
+  const expectDeletedAndLogged = async (dir: string, warn: ReturnType<typeof vi.spyOn>) => {
+    expect(await fs.readdir(dir)).toEqual([]);
+    const logged = warn.mock.calls.map((c: unknown[]) => String(c[0])).join('\n');
+    expect(logged).toContain('Evidence redaction failed');
+    expect(logged).not.toContain(PASSWORD);
+  };
+
+  it('an error exit: evidence deleted, the failure logged, and the run note on the error', async () => {
+    const { dir, warn, options } = await setup(false);
+    const err = await new FlowTestOrchestrator().run(options).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(Error);
+    expect((err as Error).message).toContain('Pre-flight check failed: boom');
+    expect((err as Error).message).toContain(EVIDENCE_REDACTION_FAILED_NOTE);
+    expect((err as { runNotes?: string[] }).runNotes).toEqual([EVIDENCE_REDACTION_FAILED_NOTE]);
+    expect(EVIDENCE_REDACTION_FAILED_NOTE).toBe('Could not verify: evidence redaction failed; evidence was deleted');
+    await expectDeletedAndLogged(dir, warn);
+  });
+
+  it('a stop: evidence deleted and the run note kept, the AbortError unchanged', async () => {
+    const { dir, warn, options } = await setup(true);
+    const controller = new AbortController();
+    controller.abort();
+    const err = await new FlowTestOrchestrator()
+      .run({ ...options, signal: controller.signal })
+      .catch((e: unknown) => e);
+    expect(err).toMatchObject({ name: 'AbortError', runNotes: [EVIDENCE_REDACTION_FAILED_NOTE] });
+    await expectDeletedAndLogged(dir, warn);
   });
 });

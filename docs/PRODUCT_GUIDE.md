@@ -24,7 +24,7 @@ Both reuse one engine (crawl, checks, AI providers). Decisions: ADR 0033, 0041.
 1. **New check-up.** Address, optional Roles (sign-in details), optional Product Context (Markdown, text, `.docx`, or a docs URL), crawl limits (defaults 200 pages, depth 8; `CRAWL_LIMIT_BOUNDS` in `packages/types/src/discovery.ts`; include and exclude paths), Test cap, AI Request Budget. The AI estimate shows before the scan starts.
 2. **Scan.** The Deterministic Spider crawls as a visitor and once per Role, and streams facts to the AI Planner while it crawls. Payment areas are not touched. Pages it did not record are Skipped Pages with a reason, never failures.
 3. **Plan Review.** The person reads the complete Plan, answers Ambiguity Questions, switches Plan Items off (Scope Exclusion), promotes Sample Pages, edits the Domain Allowlist, re-plans a Fixed-Rule Fallback item, and approves. Nothing runs that is not in the Plan. Approval is never blocked; the approval summary lists every default applied. The Plan can be downloaded as Markdown and exported as a Playwright project (zip, `packages/core/src/plan/playwright-export.ts`).
-4. **Testing.** Each Test is one Plan Item as one role at one screen size (375, 768, 1440 px). Workers use isolated browser contexts. A failed flow is retried once in a clean context; if it then passes it is Flaky Passed.
+4. **Testing.** Each Test is one Plan Item as one role at one screen size (375, 768, 1440 px). Test workers (4 on a local runner, 1 on the hosted copy; `RUNNER_TEST_WORKERS`) run Tests side by side, each in its own browser context. All Tests of one signed-in Role run on one worker, in Plan order, and the report lists results in Plan order. A failed flow is retried once in a clean context; if it then passes it is Flaky Passed.
 5. **Report.** Verdict, six area grades, problems.
 6. **Test again** reuses the approved Plan; only new items wait for review. Each report is kept under Past check-ups. A Waiting Plan is kept per site.
 
@@ -98,12 +98,12 @@ Compares the user's flow with a competitor's public Reference Flow in Safe Inter
 Reads a public website and writes documents the user edits and exports. No Plan, no Plan Review, no verdict. It never signs in and never fills in or sends a form; payment areas are not touched.
 
 - **Limits** (`AUDIT_LIMIT_DEFAULTS`, `CRAWL_LIMIT_BOUNDS`): max pages default 50 (1 to 1000; the hosted copy caps at 200), max depth default 5, include and exclude paths matched on whole path segments (exclude wins; the start page is always allowed). The limits are kept for a re-run.
-- **Crawl.** Page Content is read by fixed rules from every crawled page, Section by Section. Browser checks, speed and AI notes run on Sample Pages. A page is retried once before it becomes a Skipped Page. An Interstitial Page that does not clear fails the audit with "This site blocks automated visitors" (ADR 0042). Fetching is parallel (3 in flight, AI 4; ADR 0043).
-- **Areas.** Six: ranking, marketing, usability, content, accessibility, speed. Grades come from deterministic checks; AI writes notes that cite evidence, never a score. An area a stage could not assess is "not done", not clean.
+- **Crawl.** Page Content is read by fixed rules from every crawled page, Section by Section. Every recorded page is fully checked: the accessibility scan, the phone layout and lab speed (PageSpeed Insights for up to 20 pages, the browser's own timing for the rest), on a lab queue beside the crawl (ADR 0047). AI notes and page recommendations run on Sample Pages, which also pick the page per Layout Group for the Improved version. A page is retried once before it becomes a Skipped Page. An Interstitial Page that does not clear fails the audit with "This site blocks automated visitors" (ADR 0042). Fetching is parallel (3 in flight, climbing to 8 on a local runner; AI 4; ADR 0043, 0046).
+- **Areas.** Six: ranking, marketing, usability, content, accessibility, speed. The ranking and marketing areas both grade as Findable (`pipeline/grades.ts:30-31`). Grades come from deterministic checks; AI writes notes that cite evidence, never a score. An area a stage could not assess is "not done", not clean.
 - **Audit Documents.** Structure, Content, Findings (technical, marketing, content; ranked by impact, then lower effort), Improvement Roadmap, Proposal (from the user's template; price in INR). Edits are an overlay; originals are kept.
-- **Also made from an audit:** Pitch Glimpse (one A4 page, top 3 issues; the tool never sends it), Owner Audit, website preview.
+- **Also made from an audit:** Pitch Glimpse (one A4 page, top 3 issues; the tool never sends it), Owner Audit, the improved-homepage preview (`audit/preview/generate.ts`), the Section rewrite (the AI writes new copy for one Section, the user accepts it as an edit) and the per-page recommendation (redesign or repair, for each Sample Page; a fixed rule decides without an AI key).
 - **Export** (`EXPORT_FORMATS`): `md`, `html`, `pdf`, `docx`, `bundle` (zip of the Markdown documents, `site.json`, a README index).
-- **Languages** (`DOCUMENT_LANGUAGES`, `packages/types/src/website-audit.ts`), chosen per export: English, Tamil, Hindi, Telugu, Kannada, Malayalam, Marathi, Gujarati, Bengali, Odia, Punjabi, Urdu (right to left). All but English and Tamil carry a "beta translation" label. AI notes are written in the language chosen at start.
+- **Languages** (`DOCUMENT_LANGUAGES`, `packages/types/src/website-audit.ts`), chosen per export: English, Tamil, Hindi, Telugu, Kannada, Malayalam, Marathi, Gujarati, Bengali, Odia, Punjabi, Urdu (right to left). All but English and Tamil carry a "beta translation" label. Until T-420, an export in another language translates only the labels, not the findings or content. AI notes are written in the language chosen at start.
 - **Keeping work.** A new version per re-run, Shortlist with notes and outcome, Shared Links (30-day expiry, revocable), Helpers on the hosted copy. Everything stays until the user deletes the audit (ADR 0036).
 - **Wording.** Findings state what was seen, never a claim about the whole site (ADR 0018).
 
@@ -113,14 +113,14 @@ A disabled button says why in a line next to it (the button's `aria-describedby`
 
 - **Start the check-up** (New check-up): waiting for the AI setup; enter the address first; checking the address; the address cannot be reached; say whether it is a test copy; fix the custom headers.
 - **Compare the two sites** (Benchmark): a comparison is running; enter your site's address; enter the other site's address.
-- **Save key** (AI key field): off until the key checks as valid. No reason line yet; the status line under the field shows the error for a wrong key (gap W20, the rest of the screens).
+- **Save key** (AI key field): off until the key checks as valid. A reason line sits beside it (`KeyField.tsx:154-160`); the status line under the field shows the error for a wrong key. Other screens: gap W20.
 
 ## Safety
 
 In brief; the model is in [../SECURITY.md](../SECURITY.md).
 
 - Only a Test Copy gets full testing (forms filled and sent). Any other App is only looked at. On shared machines only an address under a Verified Domain can be marked. Exception on the person's own computer: ADR 0022.
-- The Safety Filter pauses Sensitive Actions before the browser runs them. The crawler stays within the Domain Allowlist.
+- Today the Safety Filter is a text match applied while the Plan is built, so a Sensitive Action is left out of the Plan. It does not pause a click at run time: the Check-up clicks what the Plan says. At run time the only guard is that read-only runs abort changing requests (POST, PUT, PATCH, DELETE); a Test Copy has none. The Domain Allowlist is checked for the start page and navigate steps, not for every request, redirect or popup. See the review (`docs/reviews/2026-11-19-product-review.md`, "Safety Filter and Domain Allowlist") and T-421 to T-428.
 - AI keys are the user's own (BYOK: Anthropic, OpenAI, Google Gemini, OpenRouter) and are never printed or committed.
 
 ## Hosted and local

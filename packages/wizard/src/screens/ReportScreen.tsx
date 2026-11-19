@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { flushSync } from 'react-dom';
 import type { AspectType, Finding, FindingSeverity, ReleaseReport } from '@qa/types';
 import { releaseVerdict } from '@qa/types/src/browser.js';
+import { PROBLEMS_THAT_COUNT } from '@qa/types/src/browser.js';
 import {
   acceptJudgement,
   downloadRunFile,
@@ -361,6 +362,9 @@ export function Report({
 
       <div className="mt-6 max-w-prose space-y-2">
         <p className="text-xl font-bold text-ink">{headline}</p>
+        <p className="text-sm text-ink-soft" data-testid="report-count-breakdown">
+          {PROBLEMS_THAT_COUNT}: {summary.countSummary.problems} ({summary.breakdown})
+        </p>
         {summary.ready && distinct.mustFix.length > 0 && (
           <p className="text-sm text-ink-soft">
             Ready to release does not mean nothing needs fixing. The Standard rule does not block release on Majors

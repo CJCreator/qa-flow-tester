@@ -5,6 +5,8 @@ import {
   type AuditErrorCode,
   type DocumentLanguage,
   type OverlapFlag,
+  type RewriteBatchBody,
+  type RewriteBatchFailure,
   type RewriteState,
 } from '@qa/types/src/browser.js';
 import { isAuditErrorCode, NOT_ANSWERING } from '../audit-call';
@@ -190,6 +192,53 @@ export function acceptNewCopy(
     fetchImpl,
     'The new copy could not be accepted. Try again.',
     acceptRewriteReply
+  );
+}
+
+/** T-419: what a batch approval or batch draft gives back. */
+export interface RewriteBatch {
+  rewrites: RewriteState[];
+  failures: RewriteBatchFailure[];
+}
+
+function batchReply(body: unknown): RewriteBatch | null {
+  if (!isRecord(body) || !Array.isArray(body.rewrites) || !Array.isArray(body.failures)) return null;
+  return {
+    rewrites: body.rewrites.filter(isRewriteState).map(cleanRewrite),
+    failures: body.failures.filter(
+      (f): f is RewriteBatchFailure =>
+        isRecord(f) && typeof f.urlPath === 'string' && typeof f.sectionId === 'string' && typeof f.error === 'string'
+    ),
+  };
+}
+
+/** `POST /api/audits/:id/rewrite/approve` with `sections`: approves the ticked Sections in one step (T-419). */
+export function approveSections(
+  auditId: string,
+  body: RewriteBatchBody,
+  fetchImpl: Fetch = fetch
+): Promise<RewriteOutcome<RewriteBatch>> {
+  return call(
+    auditPath(AUDIT_API.approveRewrite.path, { id: auditId }),
+    { method: AUDIT_API.approveRewrite.method, ...post(body) },
+    fetchImpl,
+    'The Sections could not be approved. Try again.',
+    batchReply
+  );
+}
+
+/** `POST /api/audits/:id/rewrite` with `sections`: 2 drafts per approved Section, one AI request per 5 (T-419). */
+export function writeDrafts(
+  auditId: string,
+  body: RewriteBatchBody,
+  fetchImpl: Fetch = fetch
+): Promise<RewriteOutcome<RewriteBatch>> {
+  return call(
+    auditPath(AUDIT_API.runRewrite.path, { id: auditId }),
+    { method: AUDIT_API.runRewrite.method, ...post(body) },
+    fetchImpl,
+    AI_UNAVAILABLE,
+    batchReply
   );
 }
 

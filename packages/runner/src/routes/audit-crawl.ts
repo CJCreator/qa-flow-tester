@@ -39,6 +39,7 @@ import {
   checkAuditAddress,
   createPageRecorder,
   isAbortError,
+  measureSampleSpeeds,
   preflightAuditAi,
   runAuditCrawl,
   runAuditPipeline,
@@ -132,6 +133,8 @@ export interface AuditRunServices {
    * be audited. Set from the runner's own settings, never from the start body. Default false.
    */
   allowPrivateAddresses?: boolean;
+  /** Called with the start address once it has passed the start checks (the hosted copy opens its explicit port in the egress proxy). */
+  targetAccepted?: (url: string) => void;
   /** Most pages one audit may record on this runner. The hosted copy sets AUDIT_LIMIT_DEFAULTS.hostedMaxPages; unset means the start check's own limit. */
   maxPages?: number;
   resolveAi?: () => Promise<AuditAiResolution>;
@@ -329,7 +332,19 @@ export async function runAuditVersion(
 
     currentStage = 'crawling';
     workDir = await (services.makeWorkDir ?? defaultMakeWorkDir)();
-    const recorder = (services.createRecorder ?? createPageRecorder)({ workDir });
+    // With a PSI key, PageSpeed Insights measures the first Sample Pages during the crawl's lab work, and those
+    // pages get no browser timing reload (T-404).
+    const resolveServiceKey = services.resolveServiceKey;
+    const recorder = (services.createRecorder ?? createPageRecorder)({
+      workDir,
+      ...(speedSource === 'pagespeed-insights' && resolveServiceKey
+        ? {
+            pageSpeed: {
+              measure: async (url: string) => (await measureSampleSpeeds([url], { resolveServiceKey, signal }))[0],
+            },
+          }
+        : {}),
+    });
     const runRequest =
       services.maxPages !== undefined && request.limits.maxPages > services.maxPages
         ? { ...request, limits: { ...request.limits, maxPages: services.maxPages } }
@@ -526,6 +541,8 @@ export function createAuditCrawlRoutes(deps: AuditCrawlRouteDeps): Route[] {
     ) {
       return;
     }
+    deps.targetAccepted?.(request.url);
+    // TODO(T-416): register the competitor addresses with deps.targetAccepted too.
 
     // Synchronous claim, no await before it after the check (BE-103).
     const tempRunId = `audit-${randomUUID()}`;

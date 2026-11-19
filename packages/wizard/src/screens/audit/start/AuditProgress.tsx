@@ -1,4 +1,5 @@
 import type { AuditAiStatus, AuditPageState, AuditProgressEvent, AuditStage } from '@qa/types/src/browser.js';
+import { aiRequestsLine } from '@qa/types/src/browser.js';
 import { ErrorMessage } from '../../../components/text';
 import { count } from '../../../lib/format';
 import { AuditStatusChips, type AuditSpeedSource } from './AuditStatusChips';
@@ -97,6 +98,7 @@ export function applyAuditEvent(
       pagesRecorded: event.counts.pagesRecorded,
       pagesSkipped: event.counts.pagesSkipped,
       currentPath: last?.currentPath,
+      ...(last?.aiRequests ? { aiRequests: last.aiRequests } : {}),
     };
     return {
       status: 'working',
@@ -284,6 +286,12 @@ export function AuditProgress({
           <dd className="text-xl font-bold">{progress?.pagesSkipped ?? 0}</dd>
         </div>
       </dl>
+
+      {progress?.aiRequests && (
+        <p className="mt-2 text-sm text-ink-soft" data-testid="audit-ai-requests">
+          {aiRequestsLine(progress.aiRequests)}
+        </p>
+      )}
 
       <LivePageList
         pages={'pages' in state && state.pages ? state.pages : []}

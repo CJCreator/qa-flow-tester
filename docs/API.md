@@ -46,6 +46,12 @@ Every request: a non-loopback `Host` is refused unless it matches `RUNNER_ALLOWE
 | `POST /api/runner/abort`, `/stop` | Stops the current Check-up, or the running Website Audit when there is one (then `finish` and `discard` are ignored).                       |
 | `POST /api/runner/ai/finish`      | Finishes the visual review on remaining screens.                                                                                            |
 
+`FINDINGS_UPDATED` on the stream (T-389): `totalFindings` (raw findings so far), `summary` (`countSummary` of the merged findings:
+`raw`, `merged`, `dismissed`, `advisory`, `toConfirm`, `problems`, `findings`; `problems` is the live "Problems that count", and
+`dismissed` stays 0 because suppressions are applied after the run), and `latest` (this Test point's findings: `id`, `title`,
+`severity`, `checker`, `urlPath`, `breakpoint`, and when set `issueKey`, `advisory`, `needsConfirmation`, `triageStatus`). One
+more event, with `afterTests: true` and no `latest`, follows the access checks.
+
 ## Plan Review (table rows, owner, beta allow)
 
 - `GET /api/runner/plan`, `PATCH /api/runner/plan`
@@ -109,6 +115,9 @@ Declared once in `AUDIT_API` and `AUDIT_AI_API` (`packages/types`), which also h
 | `GET /api/audits/:id/owner`                    | export     | Owner-facing audit (download).                                                                                                                                                                                                          |
 | `POST /api/audits/:id/preview`                 | owner      | Writes the improved homepage: AI wording when a key works, template text when it does not.                                                                                                                                              |
 | `GET /api/audits/:id/preview`                  | view       | The preview page (HTML).                                                                                                                                                                                                                |
+| `POST /api/audits/:id/improve`                 | owner      | Improved version (ADR 0049): `{ version?, pages, variants, only? }` makes pages × variants design variants, one AI request each (`only`: one variant again). 409 `ERR_NO_AI_KEY` without a key. Replies `{ requests, variants }`.       |
+| `GET /api/audits/:id/improve`                  | view       | The Improved version's pages (homepage plus one Sample Page per Layout Group), the variants made, and `estimate.usdPerRequest` (null when the model's price is not known).                                                              |
+| `GET /api/audits/:id/improve/:page/:variant`   | view       | One design variant (HTML), with the Shared Link page headers.                                                                                                                                                                           |
 | `GET /api/audits/:id/share`                    | view       | Shared Links of the audit.                                                                                                                                                                                                              |
 | `POST /api/audits/:id/share`                   | owner      | Makes a Shared Link.                                                                                                                                                                                                                    |
 | `DELETE /api/audits/:id/share/:linkId`         | owner      | Revokes it.                                                                                                                                                                                                                             |
@@ -125,6 +134,16 @@ Declared once in `AUDIT_API` and `AUDIT_AI_API` (`packages/types`), which also h
 | `GET /api/helper/session`, `DELETE`            | sign-in    | Current Helper session; sign out.                                                                                                                                                                                                       |
 | `GET /api/audit-ai/models`                     | owner      | Model chosen per AI stage.                                                                                                                                                                                                              |
 | `PUT /api/audit-ai/models`                     | owner      | Changes it.                                                                                                                                                                                                                             |
+
+### Similar sites (T-416, `AUDIT_COMPETITOR_API`)
+
+Started from the Improved version screen after the audit; not a pipeline stage.
+
+| Route                                       | Access | What it does                                                                                                                                                                            |
+| ------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/audits/:id/competitors`           | view   | The stored similar sites of a version (`?version=`); 404 before any were found.                                                                                                         |
+| `POST /api/audits/:id/competitors/discover` | owner  | One AI request (counted by the AI Request Budget) names 3 similar public sites; each passes the public-address check, private ones are refused. `409 ERR_NO_AI_KEY` without a key.      |
+| `POST /api/audits/:id/competitors/crawl`    | owner  | `{ hosts }`: reads the kept candidates only, homepage plus up to 10 key pages each, GET only, paced, robots.txt followed. On the hosted copy these pages count toward the 200-page cap. |
 
 Owner sign-in on the hosted copy (ADR 0042, T-86): a Google account whose email is in `AUDIT_OWNER_EMAILS` is an audit owner. On a beta copy only that sign-in opens owner and audit rows; the access key alone does not. `AUDIT_DAILY_LIMIT` caps audit starts per owner email per UTC day.
 

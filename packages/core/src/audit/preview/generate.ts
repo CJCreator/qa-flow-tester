@@ -9,7 +9,14 @@ import type { AuditAi } from '../ai/stage-ai.js';
 import { findClaimWords, stripClaimWords } from '../ai/claim-words.js';
 import { labelsFor } from '../documents/labels/index.js';
 import { sameSiteUrl } from '../../safe-net.js';
-import { previewFacts, previewMessages, previewRetryPrompt, type PreviewFacts, type PreviewInput } from './prompt.js';
+import {
+  previewFacts,
+  previewMessages,
+  previewRetryPrompt,
+  type PreviewFacts,
+  type PreviewInput,
+  type VariantDirection,
+} from './prompt.js';
 import { buildTemplateHtml, pathOf } from './template.js';
 import {
   previewNodesText,
@@ -124,6 +131,77 @@ export async function generatePreview(input: PreviewInput, options: GeneratePrev
     source: chosen ? 'ai' : 'template',
     ...(chosen || !problem ? {} : { problem }),
   };
+}
+
+export type GeneratedVariant =
+  | {
+      ok: true;
+      html: string;
+      /** The AI's answer as it came, before sanitising (the quality gate reads it). */
+      answer: string;
+      /** The sanitised body, menu links added and images inlined. */
+      nodes: PreviewNode[];
+      /** The finding and Section ids the page cites (data-finding, data-section). */
+      cites: string[];
+    }
+  | { ok: false; problem: 'budget-spent' | 'failed' };
+
+/**
+ * One design variant of one page (ADR 0049): exactly one 'preview' stage AI request, so the AI cost estimate
+ * equals the requests made. No retry and no template: claim words are stripped, a failed answer is a failed
+ * variant. Menu links are kept, images inlined, and the site's colours are added to the CSS when the AI left
+ * them out.
+ */
+export async function generateVariantPage(
+  facts: PreviewFacts,
+  direction: VariantDirection,
+  options: GeneratePreviewOptions
+): Promise<GeneratedVariant> {
+  if (!options.ai) return { ok: false, problem: 'failed' };
+  const answer = await askOnce(options, previewMessages(facts, direction));
+  if (!('text' in answer) || !answer.text.trim())
+    return { ok: false, problem: 'problem' in answer ? answer.problem : 'failed' };
+
+  const built = buildNodes(answer.text, facts);
+  const clean = findClaimWords(previewNodesText(built.nodes)).length > 0 ? scrubClaimWords(built.nodes) : built.nodes;
+  const nodes = await inlineImages(clean, facts, options);
+  const css = withBrandColours(built.css, direction.colours);
+  return {
+    ok: true,
+    html: renderPreviewDocument({
+      nodes,
+      css,
+      language: facts.language,
+      host: facts.host,
+      ...(facts.urlPath && facts.urlPath !== '/' ? { page: facts.urlPath } : {}),
+    }),
+    answer: answer.text,
+    nodes,
+    cites: citedIds(nodes),
+  };
+}
+
+/** The CSS, with a rule for the site's colours first when the AI used none of them. */
+export function withBrandColours(css: string, colours: readonly string[]): string {
+  const valid = colours.filter((c) => /^#[0-9a-f]{6}$/i.test(c));
+  if (valid.length === 0) return css;
+  const lower = css.toLowerCase();
+  if (valid.some((c) => lower.includes(c.toLowerCase()))) return css;
+  const [main, second = main] = valid;
+  const brand = `h1, h2, h3, a { color: ${main}; }\nheader, footer { border-bottom: 4px solid ${second}; }`;
+  return css.trim() === '' ? brand : `${brand}\n${css}`;
+}
+
+/** Every id named by a data-finding or data-section attribute, in page order, once each. */
+export function citedIds(nodes: readonly PreviewNode[]): string[] {
+  const out = new Set<string>();
+  for (const node of nodes) {
+    if (node.kind !== 'open') continue;
+    for (const [name, value] of node.attrs) {
+      if (name === 'data-finding' || name === 'data-section') for (const id of value.split(' ')) if (id) out.add(id);
+    }
+  }
+  return [...out];
 }
 
 async function askOnce(

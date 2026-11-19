@@ -19,7 +19,14 @@ import {
 import type { AuditStore } from '../store/audit-store.js';
 import { AuditStoreError } from '../store/backend.js';
 import { BAD_CONTROL, ID_PATTERN as SECTION_ID, MAX_SECTION_EDIT_CHARS, editPathProblem } from '../documents/edits.js';
-import { findOverlaps, overlapThreshold, writeRewrite, type RewriteAiProblem } from './rewrite.js';
+import {
+  REWRITE_BATCH_SIZE,
+  findOverlaps,
+  overlapThreshold,
+  writeRewrite,
+  writeRewriteBatch,
+  type RewriteAiProblem,
+} from './rewrite.js';
 import type { AuditAiResolution } from './stage-ai.js';
 
 export const REWRITES_FILE = 'rewrites.json';
@@ -71,6 +78,18 @@ export interface RewriteRunDeps {
   /** The page's Page Content, as the crawl recorded it. */
   content: PageContent | null;
   /** AuditSettings.rewriteOverlapWords. */
+  overlapWords?: number;
+  signal?: AbortSignal;
+  timeoutMs?: number;
+  now?: () => Date;
+}
+
+/** T-419: what a batch of copy variants needs. */
+export interface RewriteBatchDeps {
+  language: DocumentLanguage;
+  resolveAi: () => Promise<AuditAiResolution>;
+  /** The Page Content of a Section's page, as the crawl recorded it. */
+  contentFor: (section: RewriteSection) => PageContent | null;
   overlapWords?: number;
   signal?: AbortSignal;
   timeoutMs?: number;
@@ -150,6 +169,23 @@ function cleanStates(raw: unknown): RewriteState[] {
                 )
               : [],
             createdAt: p.createdAt,
+            ...(Array.isArray(p.variants)
+              ? {
+                  variants: (p.variants as unknown[]).flatMap((v) => {
+                    const x = v as { text?: unknown; overlaps?: unknown } | null;
+                    if (!x || typeof x.text !== 'string') return [];
+                    const overlaps = Array.isArray(x.overlaps)
+                      ? (x.overlaps as unknown[]).filter(
+                          (o): o is OverlapFlag =>
+                            !!o &&
+                            typeof (o as OverlapFlag).words === 'string' &&
+                            typeof (o as OverlapFlag).wordCount === 'number'
+                        )
+                      : [];
+                    return [{ text: x.text, overlaps }];
+                  }),
+                }
+              : {}),
           }
         : null;
     const state: RewriteState = {
@@ -246,6 +282,84 @@ export class RewriteStore {
           }
         : undefined
     );
+  }
+
+  /** Approves several Sections in one step (T-419). The approval rule is the same; only the clicking is less. */
+  async approveMany(sections: readonly RewriteSection[], now: () => Date = () => new Date()): Promise<RewriteResult[]> {
+    const results: RewriteResult[] = [];
+    for (const s of sections) results.push(await this.approve(s, now));
+    return results;
+  }
+
+  /**
+   * Copy variants for several approved Sections (T-419): 2 variants each, one AI request per 5 Sections. A
+   * Section that is not approved is refused (ERR_NOT_APPROVED) and never sent; without a key nothing is sent.
+   * Results come back in input order. The first variant is stored as the proposal's text.
+   */
+  async runBatch(sections: readonly RewriteSection[], deps: RewriteBatchDeps): Promise<RewriteResult[]> {
+    const results: RewriteResult[] = sections.map(() => NOT_APPROVED);
+    if (!isDocumentLanguage(deps.language)) {
+      return sections.map(() => invalid({ language: 'must be one of the document languages.' }));
+    }
+    const states = await this.list();
+    const ready: Array<{ at: number; section: RewriteSection; original: string }> = [];
+    sections.forEach((s, at) => {
+      const fields = sectionProblems(s);
+      if (Object.keys(fields).length > 0) return void (results[at] = invalid(fields));
+      if (!states.find((r) => keyOf(r) === keyOf(s))?.approvedAt) return;
+      const original = originalText(deps.contentFor(s), s);
+      if (original === undefined || original.trim() === '') {
+        results[at] = invalid({ sectionId: 'is not a Section with text on this recorded page.' });
+        return;
+      }
+      ready.push({ at, section: s, original });
+    });
+    if (ready.length === 0) return results;
+
+    const resolution = await deps.resolveAi();
+    if (!resolution.ok) {
+      for (const r of ready) {
+        results[r.at] = {
+          ok: false,
+          code: 'ERR_NO_AI_KEY',
+          message: 'Add an AI key to write new copy for this Section.',
+        };
+      }
+      return results;
+    }
+    const createdAt = (deps.now ?? (() => new Date()))().toISOString();
+    for (let i = 0; i < ready.length; i += REWRITE_BATCH_SIZE) {
+      const batch = ready.slice(i, i + REWRITE_BATCH_SIZE);
+      const written = await writeRewriteBatch(
+        resolution.ai,
+        batch.map((r) => ({ id: `p${r.at + 1}`, sectionText: r.original })),
+        { language: deps.language, overlapWords: deps.overlapWords, signal: deps.signal, timeoutMs: deps.timeoutMs }
+      );
+      for (const r of batch) {
+        const got = written.get(`p${r.at + 1}`);
+        if (!got || !got.ok) {
+          const problem = got && !got.ok ? got.problem : 'failed';
+          results[r.at] = { ok: false, code: 'ai-failed', problem, message: AI_MESSAGES[problem] };
+          continue;
+        }
+        const [first] = got.variants;
+        results[r.at] = await this.change(r.section, (state) =>
+          state.approvedAt
+            ? {
+                ...state,
+                proposal: {
+                  text: first.text,
+                  language: deps.language,
+                  overlaps: first.overlaps,
+                  createdAt,
+                  variants: got.variants,
+                },
+              }
+            : undefined
+        );
+      }
+    }
+    return results;
   }
 
   /**

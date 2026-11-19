@@ -1,5 +1,5 @@
 import type { AuditResult, AuditScale } from '@qa/types/src/browser.js';
-import { AUDIT_SCALE } from '@qa/types/src/browser.js';
+import { AUDIT_SCALE, countFindingRules, findingsAndRulesText } from '@qa/types/src/browser.js';
 import { Notice } from '../../../components/text';
 import { count } from '../../../lib/format';
 import { Link, PATHS } from '../../../lib/router';
@@ -24,6 +24,9 @@ export function AuditSummary({ result }: { result: AuditResult }) {
         </div>
         <div className="card-1 bg-surface p-4">
           <h3 className="font-bold">Findings by impact</h3>
+          <p className="mt-1 text-sm font-semibold" data-audit-counts="">
+            {findingsAndRulesText(findings.length, countFindingRules(findings))}
+          </p>
           <ul className="mt-1 text-sm">
             {AUDIT_SCALE.map((scale) => (
               <li key={scale}>{`${SCALE_LABEL[scale]}: ${byImpact(scale)}`}</li>

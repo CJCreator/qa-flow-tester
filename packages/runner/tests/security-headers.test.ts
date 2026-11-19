@@ -80,6 +80,16 @@ describe('RunnerServer answers', () => {
     expect(res.headers.get('strict-transport-security')).toBe('max-age=31536000');
   });
 
+  it('sends nosniff and no-referrer on every route', async () => {
+    const base = await start();
+    const linkId = 'a'.repeat(22);
+    for (const route of ['/api/runner/status', '/healthz', '/', `/s/${linkId}`, '/api/does-not-exist']) {
+      const res = await fetch(`${base}${route}`);
+      expect(res.headers.get('x-content-type-options'), route).toBe('nosniff');
+      expect(res.headers.get('referrer-policy'), route).toBe('no-referrer');
+    }
+  });
+
   it('keeps the Shared Link page own headers over the defaults', async () => {
     const base = await start();
     const linkId = 'a'.repeat(22);

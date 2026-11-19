@@ -31,12 +31,17 @@ const BROWSER_TESTS: Record<string, string[]> = {
     'multi-browser-network',
     'orchestrator-run-paths',
     'role-selector-exact',
+    // Safety Filter and Domain Allowlist (T-421 to T-428): Check-up runs and Spider crawls on routed pages.
+    'safety-click-gate',
+    'safety-spider-click',
+    'safety-submit-guard',
     'small-fixes',
     'visual-capture',
     // Website audit (REQ-033, REQ-048...): each launches Chromium through `playwright` or the Spider.
     'audit-crawl-browser',
     'audit-doc-pdf',
     'audit-phone-layout',
+    'audit-variant-axe',
   ],
   runner: [
     // Website audit: these launch Chromium (PDF export, or a page driven by the runner).

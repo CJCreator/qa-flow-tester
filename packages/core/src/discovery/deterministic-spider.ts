@@ -30,6 +30,7 @@ import type { InterstitialKind } from '../audit/crawl/interstitial.js';
 import { debugLog } from '../debug-log.js';
 import { normalizeRoute, CrawlFrontier } from './frontier.js';
 import { dismissOverlays } from './overlay.js';
+import { guardPage } from './guard.js';
 
 export interface FormInputInfo {
   /** The HTML name attribute (may be empty). */
@@ -60,6 +61,8 @@ export interface DiscoveredFormInfo {
 
 export interface SpiderPageInventoryItem extends PageInventoryItem {
   exploreErrors?: number;
+  /** Changing requests (POST, PUT, PATCH, DELETE) an exploring click fired and the guard aborted (T-423). */
+  blockedChanges?: number;
   /** Link steps from the start address (the start page is 0). Always set on pages the Spider records. */
   depth?: number;
 }
@@ -127,8 +130,10 @@ export interface CrawlOptions {
    * pacing; share it with the run's other fetches (`makeOutboundFetch({ pacer })`).
    */
   pacer?: HostPacer;
-  /** Number of concurrent page evaluations (1 to 5, default 2). */
+  /** Number of concurrent page evaluations (1 to `maxConcurrency`, default 2). */
   concurrency?: number;
+  /** The most workers `concurrency` may ask for (default 5). The Website Audit passes its pacer's ceiling (ADR 0046). */
+  maxConcurrency?: number;
   /** Custom HTTP headers sent with every request (e.g. X-QA-Bypass-Token). */
   customHeaders?: Record<string, string>;
   /** Folder for a small screenshot of each page, shown on the plan map. None when absent. */
@@ -248,6 +253,105 @@ const MAX_EXPLORATION_CLICKS = 100;
 export const DEFAULT_MAX_PAGES = 200;
 /** Bytes read per robots.txt or sitemap file while seeding; a larger file is skipped. */
 const SITEMAP_MAX_BYTES = 10_000_000;
+/** Sitemap files read at once while seeding, through the same outbound fetch (T-400). */
+export const SITEMAP_FETCH_CONCURRENCY = 4;
+/** Sitemap files read at most per crawl: /sitemap.xml, robots.txt Sitemap: lines and index entries. */
+export const SITEMAP_MAX_FILES = 100;
+
+export interface SitemapSeedOptions {
+  site: URL;
+  /** GET for robots.txt and each sitemap file (pinned, paced and body-capped by the caller). */
+  fetch: FetchFn;
+  /** Only addresses (and sitemap files) on the target's site are read. */
+  onSite: (u: URL) => boolean;
+  /** Addresses queued at most; the rest go to `overLimit`. */
+  limit: number;
+  /** True when the address was queued (not a duplicate, not refused). */
+  enqueue: (loc: string) => boolean;
+  /** Told about each on-site page address found once `limit` addresses are queued. */
+  overLimit: (u: URL) => void;
+  /** Checked before each round of fetches: the deadline or an abort. */
+  stop: () => boolean;
+}
+
+/**
+ * Reads /sitemap.xml, the robots.txt Sitemap: lines and the files a sitemap index names (at most
+ * `SITEMAP_MAX_FILES`, `SITEMAP_FETCH_CONCURRENCY` at a time), and queues their addresses up to `limit`.
+ * Files are parsed in the order they were found, so which addresses are queued does not depend on timing.
+ */
+export async function seedFromSitemaps(opts: SitemapSeedOptions): Promise<{ queued: number; files: number }> {
+  // The guarded fetch the crawl passes in (makeOutboundFetch, ADR 0031), never Node's own fetch.
+  const { site, fetch: outboundFetch, onSite } = opts;
+  const sitemapUrls = [new URL('/sitemap.xml', site).toString()];
+  const addFile = (u: URL) => {
+    if (sitemapUrls.length < SITEMAP_MAX_FILES && !sitemapUrls.includes(u.toString())) sitemapUrls.push(u.toString());
+  };
+  try {
+    const robotsRes = await outboundFetch(new URL('/robots.txt', site).toString());
+    if (robotsRes && robotsRes.status >= 200 && robotsRes.status < 300) {
+      const robotsText = await robotsRes.text();
+      for (const line of robotsText.split(/\r?\n/)) {
+        const m = line.match(/^\s*sitemap:\s*(.+)$/i);
+        if (!m || !m[1]) continue;
+        let smUrl: URL;
+        try {
+          smUrl = new URL(m[1].trim(), site);
+        } catch {
+          continue;
+        }
+        if (!onSite(smUrl)) {
+          debugLog('crawl', 'sitemap on another host skipped', { url: smUrl.toString() });
+          continue;
+        }
+        addFile(smUrl);
+      }
+    }
+  } catch {
+    // A robots.txt that cannot be read only means no extra sitemap files.
+  }
+
+  const read = async (smUrl: string): Promise<string | undefined> => {
+    try {
+      const res = await outboundFetch(smUrl);
+      if (!res || res.status < 200 || res.status >= 300) return undefined;
+      return await res.text();
+    } catch (err) {
+      debugLog('crawl', 'sitemap fetch failed', { url: smUrl, error: String(err) });
+      return undefined;
+    }
+  };
+
+  let queued = 0;
+  let next = 0;
+  while (next < sitemapUrls.length && !opts.stop()) {
+    const batch = sitemapUrls.slice(next, next + SITEMAP_FETCH_CONCURRENCY);
+    next += batch.length;
+    const texts = await Promise.all(batch.map(read));
+    for (const text of texts) {
+      if (text === undefined) continue;
+      const isIndex = /<sitemapindex/i.test(text);
+      for (const m of text.matchAll(/<loc>\s*([^<]+?)\s*<\/loc>/gi)) {
+        if (!m[1]) continue;
+        const loc = m[1].trim();
+        let locUrl: URL;
+        try {
+          locUrl = new URL(loc, site);
+        } catch {
+          continue;
+        }
+        if (!onSite(locUrl)) {
+          debugLog('crawl', 'sitemap entry on another host skipped', { url: locUrl.toString() });
+          continue;
+        }
+        if (isIndex || (loc.endsWith('.xml') && !loc.endsWith('.html'))) addFile(locUrl);
+        else if (queued < opts.limit) {
+          if (opts.enqueue(loc)) queued++;
+        } else opts.overLimit(locUrl);
+      }
+    }
+  }
+  return { queued, files: next };
+}
 
 function isLoopback(h: string): boolean {
   const hostWithoutPort = h.replace(/:\d+$/, '').toLowerCase();
@@ -408,7 +512,7 @@ export class DeterministicSpider {
   }
 
   async crawl(context: BrowserContext, targetUrl: string, options: CrawlOptions = {}): Promise<SpiderResult> {
-    const concurrency = Math.max(1, Math.min(5, options.concurrency ?? 2));
+    const concurrency = Math.max(1, Math.min(options.maxConcurrency ?? 5, options.concurrency ?? 2));
     const pageDelayMs = options.pageDelayMs !== undefined ? options.pageDelayMs : 100;
     const maxAttempts = options.maxAttempts ?? this.maxPages * 3;
     const stopAfterWalls = options.stopAfterWalls ?? 3;
@@ -530,6 +634,8 @@ export class DeterministicSpider {
      * address was never reached by a shorter path, so a page is never both recorded and skipped.
      */
     const tooDeep = new Map<string, string>();
+    /** Sitemap addresses found once the page limit was queued (T-400), by route key: listed when the crawl ends. */
+    const sitemapOverLimit = new Map<string, string>();
 
     const enqueue = (rawUrl: string, depth: number, isStart = false) => {
       if (options.signal?.aborted || sessionLost || startRedirectedOffSite || stoppedAnswering) return;
@@ -608,67 +714,25 @@ export class DeterministicSpider {
       const sitemapOnSite = (u: URL) =>
         (u.protocol === 'http:' || u.protocol === 'https:') && (sameSiteUrl(u, site) || onSite(u));
       try {
-        const sitemapUrls = [new URL('/sitemap.xml', site).toString()];
-        try {
-          const robotsRes = await outboundFetch(new URL('/robots.txt', site).toString());
-          if (robotsRes && robotsRes.status >= 200 && robotsRes.status < 300) {
-            const robotsText = await robotsRes.text();
-            for (const line of robotsText.split(/\r?\n/)) {
-              const m = line.match(/^\s*sitemap:\s*(.+)$/i);
-              if (m && m[1]) {
-                const sm = m[1].trim();
-                let smUrl: URL;
-                try {
-                  smUrl = new URL(sm, site);
-                } catch {
-                  continue;
-                }
-                if (!sitemapOnSite(smUrl)) {
-                  debugLog('crawl', 'sitemap on another host skipped', { url: smUrl.toString() });
-                  continue;
-                }
-                if (!sitemapUrls.includes(smUrl.toString())) sitemapUrls.push(smUrl.toString());
-              }
-            }
-          }
-        } catch {
-          // Ignore robots fetch failure for sitemap
-        }
-
-        let locCount = 0;
-        for (const smUrl of sitemapUrls) {
-          if (locCount >= 200 || timeLeft() <= 0 || options.signal?.aborted) break;
-          try {
-            const res = await outboundFetch(smUrl);
-            if (!res || res.status < 200 || res.status >= 300) continue;
-            const text = await res.text();
-            const isIndex = /<sitemapindex/i.test(text);
-            const matches = text.matchAll(/<loc>\s*([^<]+?)\s*<\/loc>/gi);
-            for (const m of matches) {
-              if (m[1]) {
-                const loc = m[1].trim();
-                try {
-                  const locUrl = new URL(loc, site);
-                  if (!sitemapOnSite(locUrl)) {
-                    debugLog('crawl', 'sitemap entry on another host skipped', { url: locUrl.toString() });
-                    continue;
-                  }
-                  if (isIndex || (loc.endsWith('.xml') && !loc.endsWith('.html'))) {
-                    if (sitemapUrls.length < 25 && !sitemapUrls.includes(locUrl.toString())) {
-                      sitemapUrls.push(locUrl.toString());
-                    }
-                  } else {
-                    enqueue(loc, 1);
-                    locCount++;
-                    if (locCount >= 200) break;
-                  }
-                } catch {}
-              }
-            }
-          } catch (err) {
-            debugLog('crawl', 'sitemap fetch failed', { url: smUrl, error: String(err) });
-          }
-        }
+        // Up to the page limit (T-400): each address past it is a `page-limit` Skipped Page once the crawl
+        // ends, unless a link queued it meanwhile, so recorded + skipped covers every unique sitemap address.
+        await seedFromSitemaps({
+          site,
+          fetch: outboundFetch,
+          onSite: sitemapOnSite,
+          limit: this.maxPages,
+          stop: () => timeLeft() <= 0 || !!options.signal?.aborted,
+          enqueue: (loc) => {
+            const before = queue.length;
+            enqueue(loc, 1);
+            return queue.length > before;
+          },
+          overLimit: (u) => {
+            const norm = normRoute(u.toString());
+            if (frontier.has(norm.key) || refusedKeys.has(norm.key) || sitemapOverLimit.has(norm.key)) return;
+            sitemapOverLimit.set(norm.key, redactUrl(norm.path));
+          },
+        });
       } catch (err) {
         debugLog('crawl', 'sitemap seeding failed', { error: String(err) });
       }
@@ -1013,7 +1077,7 @@ export class DeterministicSpider {
               debugLog('crawl', 'attempting mid-crawl session recovery', { role: options.role });
               try {
                 recovered = await options.reloginHandler();
-              } catch (rErr) {
+              } catch {
                 debugLog('crawl', 'mid-crawl session recovery failed', { role: options.role });
               }
               // A sign-in that succeeds is not yet a restored session: the retried route must load (the reset
@@ -1378,15 +1442,49 @@ export class DeterministicSpider {
               }
               const urlBefore = page.url();
               // A click may load another page of the host, so with a pacer it takes a turn too.
+              // Guarded (ADR 0025, T-423): changing requests are aborted and the page's own form submits do
+              // nothing while the click runs. What was blocked is kept as a fact, not as an error.
               await paced(pageUrl, async () => {
-                await page
-                  .locator(el.selector)
-                  .first()
-                  .click({ timeout: capToDeadline(3000) });
-                await Promise.race([
-                  page.waitForURL((u) => u.toString() !== urlBefore, { timeout: capToDeadline(1500) }),
-                  page.waitForTimeout(capToDeadline(250)),
-                ]).catch(() => {});
+                const guard = await guardPage(page);
+                try {
+                  await page
+                    .evaluate(() => {
+                      const proto = HTMLFormElement.prototype;
+                      const w = window as unknown as { __qaFormSubmit?: [unknown, unknown] };
+                      if (!w.__qaFormSubmit) w.__qaFormSubmit = [proto.submit, proto.requestSubmit];
+                      proto.submit = function () {};
+                      proto.requestSubmit = function () {};
+                    })
+                    .catch(() => undefined);
+                  await page
+                    .locator(el.selector)
+                    .first()
+                    .click({ timeout: capToDeadline(3000) });
+                  await Promise.race([
+                    page.waitForURL((u) => u.toString() !== urlBefore, { timeout: capToDeadline(1500) }),
+                    page.waitForTimeout(capToDeadline(250)),
+                  ]).catch(() => {});
+                } finally {
+                  // Same page still open: its own submit comes back. After a navigation there is nothing to undo.
+                  await page
+                    .evaluate(() => {
+                      const w = window as unknown as {
+                        __qaFormSubmit?: [HTMLFormElement['submit'], HTMLFormElement['requestSubmit']];
+                      };
+                      if (!w.__qaFormSubmit) return;
+                      [HTMLFormElement.prototype.submit, HTMLFormElement.prototype.requestSubmit] = w.__qaFormSubmit;
+                      delete w.__qaFormSubmit;
+                    })
+                    .catch(() => undefined);
+                  await guard.release();
+                  if (guard.blocked.length > 0) {
+                    pageItem.blockedChanges = (pageItem.blockedChanges ?? 0) + guard.blocked.length;
+                    debugLog('crawl', 'blocked a changing request', {
+                      path: currentPath,
+                      count: guard.blocked.length,
+                    });
+                  }
+                }
               });
               const after = new URL(page.url());
               if (onSite(after)) {
@@ -1573,6 +1671,11 @@ export class DeterministicSpider {
         const norm = normRoute(left.url);
         if (!frontier.isVisited(norm.key)) skip({ urlPath: redactUrl(norm.path), why: 'page-limit' });
       }
+    }
+
+    // Sitemap addresses past the page limit (T-400) that no link queued: the ones queued were listed above.
+    for (const [key, urlPath] of sitemapOverLimit) {
+      if (!frontier.has(key)) skip({ urlPath, why: 'page-limit' });
     }
 
     // Found only beyond the max depth: one entry per address never reached by a shorter path.

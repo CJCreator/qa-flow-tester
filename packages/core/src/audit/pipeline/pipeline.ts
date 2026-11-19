@@ -5,7 +5,7 @@
  *   1. readPage, accessibility basics and phone layout on each page while it is open ('crawling');
  *   2. analyseSite, its requests through `makeCheckerFetch` (makeOutboundFetch, no redirects) paced by the
  *      audit's HostPacer ('checking-pages');
- *   3. measureSampleSpeeds on the Sample Pages ('measuring-speed');
+ *   3. measureSampleSpeeds on every page (PSI caps at 20; ADR 0047) ('measuring-speed');
  *   4. the deterministic area grades, then assessPages, assessSite and recommendPages ('assessing');
  *   5. scoreFindings and rankFindings over every finding; phone findings continue the AF numbers from
  *      analyseSite.nextFindingNumber, and every list citing a finding follows the renumbering ('ranking');
@@ -40,7 +40,8 @@ import type {
   RoadmapItem,
   SpeedNotMeasuredReason,
 } from '@qa/types';
-import { AUDIT_AREAS, MARKETING_SIGNALS } from '@qa/types';
+import type { RouteSkipReason } from '@qa/types';
+import { AUDIT_AREAS, MARKETING_SIGNALS, countFindingRules } from '@qa/types';
 import { isAbortError, stopIfAborted } from '../../abort.js';
 import { makeCheckerFetch } from '../../checker-fetch.js';
 import type { HostPacer } from '../../host-pacer.js';
@@ -117,6 +118,10 @@ export interface PipelineStepOutcome {
   status: 'done' | 'not-done';
   /** Fixed wording: never page text or an error message. */
   note?: string;
+  /** When the step began (ISO): the end of the step before it, or the pipeline's start. For benchmarks (T-411). */
+  startedAt?: string;
+  /** When the step ended (ISO). */
+  endedAt?: string;
 }
 
 /** What the pipeline uses from the audit store. */
@@ -227,6 +232,11 @@ export function aiStatusNoteText(status: AuditAiStatus, reason?: string): string
     return reason ? `The AI provider returned an error: ${reason}.` : 'The AI provider returned an error.';
   }
   return 'AI status: not available.';
+}
+
+/** Words of a page's visible text, for batching AI page assessments (T-406). */
+function wordsIn(text: string | undefined): number {
+  return text ? text.split(/\s+/).filter(Boolean).length : 0;
 }
 
 function notMeasured(reason: SpeedNotMeasuredReason): PageSpeed {
@@ -371,10 +381,32 @@ export async function runAuditPipeline(
     pagesRecorded: crawl.pages.length,
     pagesSkipped: crawl.coverage.skipped.length,
   };
+  // The run's AI request counter (T-398), read at each stage so the progress shows "AI requests: n of N".
+  const budget = ai.ok ? ai.ai.budget : undefined;
   const emit = (stage: AuditStage) =>
-    deps.onProgress?.({ type: 'progress', auditId: deps.auditId, version: deps.version, stage, ...counts });
+    deps.onProgress?.({
+      type: 'progress',
+      auditId: deps.auditId,
+      version: deps.version,
+      stage,
+      ...counts,
+      ...(budget
+        ? { aiRequests: { used: budget.used, limit: Number.isFinite(budget.limit) ? budget.limit : null } }
+        : {}),
+    });
+  // Steps run one after another, so each one starts where the one before it ended.
+  let stepStartedAt = now().toISOString();
   const record = (step: PipelineStep, stage: AuditStage, done: boolean, note?: string) => {
-    const outcome: PipelineStepOutcome = { step, stage, status: done ? 'done' : 'not-done', ...(note ? { note } : {}) };
+    const endedAt = now().toISOString();
+    const outcome: PipelineStepOutcome = {
+      step,
+      stage,
+      status: done ? 'done' : 'not-done',
+      ...(note ? { note } : {}),
+      startedAt: stepStartedAt,
+      endedAt,
+    };
+    stepStartedAt = endedAt;
     steps.push(outcome);
     if (note && !notes.includes(note)) notes.push(note);
     deps.onStep?.(outcome);
@@ -391,7 +423,6 @@ export async function runAuditPipeline(
   const unread = recordedPages.length - readable.length;
   if (unread > 0) pageNotes.push(`${unread} recorded page(s) could not be read, so they are left out of the checks.`);
   for (const p of readable) {
-    if (p.coverage !== 'sample') continue;
     if (p.accessibility === null) {
       pageNotes.push(`The accessibility checks did not run on ${p.info.urlPath}, so this page has not been checked.`);
     }
@@ -433,7 +464,7 @@ export async function runAuditPipeline(
       statusByPath,
       skippedPaths,
       accessibility: readable
-        .filter((p) => p.coverage === 'sample' && p.accessibility)
+        .filter((p) => p.accessibility)
         .map((p) => ({ ...p.accessibility!, urlPath: p.info.urlPath })),
       // Public addresses only (private too when the crawl ran on a local runner, ADR 0042), no redirect followed
       // (a redirect could land on a Skipped Page), paced with the crawl.
@@ -465,7 +496,7 @@ export async function runAuditPipeline(
   const unscored: UnscoredAuditFinding[] = [...analysis.findings];
   const phoneByPath = new Map<string, PhoneLayout>();
   for (const p of readable) {
-    if (p.coverage !== 'sample' || !p.phone) continue;
+    if (!p.phone) continue;
     const remap = new Map<string, string>();
     for (const f of p.phone.findings) {
       const id = ids.next();
@@ -502,6 +533,7 @@ export async function runAuditPipeline(
     if (phone) page.phone = phone;
     return page;
   });
+  // Every page is fully checked (ADR 0047); Sample Pages remain for the AI notes and recommendations.
   const samples = pages.filter((p) => p.coverage === 'sample');
 
   // ---- 3. Speed -----------------------------------------------------------------------------------
@@ -509,17 +541,21 @@ export async function runAuditPipeline(
   emit('measuring-speed');
   let speedSource: 'pagespeed-insights' | 'this-tool' | 'not-measured' = 'not-measured';
   try {
-    const urls = samples.map((p) => new URL(p.urlPath, origin).toString());
+    const urls = pages.map((p) => new URL(p.urlPath, origin).toString());
     // PageSpeed Insights is Google's service: a local or private site's addresses are never sent to it (ADR 0031).
     // Those pages fall back to this tool's own timing below.
     const psiMayMeasure = !isLocalOriginHost(new URL(origin).hostname);
+    // PSI already asked during the crawl's lab work (T-404): its answers are used, nothing is measured twice.
+    const psiInCrawl = recordedPages.some((r) => r.psiTried);
     const speeds =
-      urls.length > 0 && psiMayMeasure ? await stages.measureSampleSpeeds(urls, { ...deps.pageSpeed, signal }) : [];
-    samples.forEach((p, i) => {
-      const psiResult = speeds[i];
-      const psiMeasured = psiResult?.speed?.lab.status === 'measured';
+      urls.length > 0 && psiMayMeasure && !psiInCrawl
+        ? await stages.measureSampleSpeeds(urls, { ...deps.pageSpeed, signal })
+        : [];
+    pages.forEach((p, i) => {
+      const psiSpeed = psiInCrawl ? (recordedByPath.get(p.urlPath)?.psi ?? undefined) : speeds[i]?.speed;
+      const psiMeasured = psiSpeed?.lab.status === 'measured';
       if (psiMeasured) {
-        p.speed = psiResult.speed;
+        p.speed = psiSpeed;
       } else {
         const rec = recordedByPath.get(p.urlPath);
         if (rec?.timing?.speed && rec.timing.speed.status === 'measured') {
@@ -528,14 +564,12 @@ export async function runAuditPipeline(
             field: { status: 'not-measured', source: 'this-tool', method: 'field', reason: 'failed' },
           };
         } else {
-          p.speed = psiResult?.speed ?? notMeasured('failed');
+          p.speed = psiSpeed ?? notMeasured('failed');
         }
       }
     });
-    const anyPsi = samples.some(
-      (p) => p.speed?.lab.status === 'measured' && p.speed.lab.source === 'pagespeed-insights'
-    );
-    const anyTool = samples.some((p) => p.speed?.lab.status === 'measured' && p.speed.lab.source === 'this-tool');
+    const anyPsi = pages.some((p) => p.speed?.lab.status === 'measured' && p.speed.lab.source === 'pagespeed-insights');
+    const anyTool = pages.some((p) => p.speed?.lab.status === 'measured' && p.speed.lab.source === 'this-tool');
     if (anyPsi) speedSource = 'pagespeed-insights';
     else if (anyTool) speedSource = 'this-tool';
     else speedSource = 'not-measured';
@@ -544,7 +578,7 @@ export async function runAuditPipeline(
     record('speed', 'measuring-speed', speedSource !== 'not-measured');
   } catch (err) {
     rethrowIfStopped(err, signal);
-    for (const p of samples) {
+    for (const p of pages) {
       const rec = recordedByPath.get(p.urlPath);
       if (rec?.timing?.speed && rec.timing.speed.status === 'measured') {
         p.speed = {
@@ -555,7 +589,7 @@ export async function runAuditPipeline(
         p.speed = notMeasured('failed');
       }
     }
-    const anyTool = samples.some((p) => p.speed?.lab.status === 'measured' && p.speed.lab.source === 'this-tool');
+    const anyTool = pages.some((p) => p.speed?.lab.status === 'measured' && p.speed.lab.source === 'this-tool');
     speedSource = anyTool ? 'this-tool' : 'not-measured';
     record(
       'speed',
@@ -601,15 +635,15 @@ export async function runAuditPipeline(
     };
     pageGrades.set(p.urlPath, areaGrades(own, checked, labPerformanceScore(p.speed)));
   }
-  const scores = samples.map((p) => labPerformanceScore(p.speed)).filter((s): s is number => s !== null);
+  const scores = pages.map((p) => labPerformanceScore(p.speed)).filter((s): s is number => s !== null);
   const siteGrades = areaGrades(
     aiOrdered,
     {
       'search-ranking': analysed,
       marketing: analysed,
       content: analysed,
-      accessibility: samples.some((p) => !!p.accessibility),
-      usability: samples.some((p) => !!p.phone && (p.phone.overflow !== null || p.phone.findingIds.length > 0)),
+      accessibility: pages.some((p) => !!p.accessibility),
+      usability: pages.some((p) => !!p.phone && (p.phone.overflow !== null || p.phone.findingIds.length > 0)),
       speed: false,
     },
     scores.length > 0 ? Math.min(...scores) : null
@@ -629,6 +663,18 @@ export async function runAuditPipeline(
       if (!aiFailure) aiFailure = { status, error };
     },
   };
+
+  // Recommendations need only the Sample Pages' findings and grades, not their AI notes (T-406): they start now,
+  // beside the page and site assessments, and are awaited after them.
+  const recommendationInputs = samples.map((p) => ({
+    urlPath: p.urlPath,
+    title: p.title,
+    coverage: 'sample' as const,
+    findings: findingsOf(p.urlPath),
+    grades: pageGrades.get(p.urlPath)!,
+  }));
+  const recommendationsStarted = stages.recommendPages({ ...run, pages: recommendationInputs }, ai);
+  recommendationsStarted.catch(() => {});
 
   let siteAreas: AreaAssessment[];
   let assessed = true;
@@ -652,6 +698,8 @@ export async function runAuditPipeline(
           .map((p) => ({
             urlPath: p.urlPath,
             content: recordedByPath.get(p.urlPath)!.read!.content,
+            // Small pages share one request (T-406).
+            wordCount: wordsIn(recordedByPath.get(p.urlPath)!.read!.content.text),
             findings: findingsOf(p.urlPath),
             grades: pageGrades.get(p.urlPath)!,
             ...(p.speed ? { speed: p.speed } : {}),
@@ -709,15 +757,8 @@ export async function runAuditPipeline(
   record('assessment', 'assessing', assessed, assessed ? undefined : NOTES.assessment);
 
   let recommendations: PageRecommendation[];
-  const recommendationInputs = samples.map((p) => ({
-    urlPath: p.urlPath,
-    title: p.title,
-    coverage: 'sample' as const,
-    findings: findingsOf(p.urlPath),
-    grades: pageGrades.get(p.urlPath)!,
-  }));
   try {
-    recommendations = await stages.recommendPages({ ...run, pages: recommendationInputs }, ai);
+    recommendations = await recommendationsStarted;
     const allByRule = recommendations.length > 0 && recommendations.every((r) => r.decidedBy === 'rule');
     const recommended = !(aiFailure && ai.ok && allByRule);
     record('recommendation', 'assessing', recommended, recommended ? undefined : NOTES.recommendation);
@@ -764,7 +805,7 @@ export async function runAuditPipeline(
     signals: analysis.marketing.signals.map((s) => (s.findingIds ? { ...s, findingIds: re(s.findingIds) } : s)),
   };
   const citationProblems = checkCitations(
-    findings.filter((f) => !isSiteCausedSkip(f.rule as any)),
+    findings.filter((f) => !isSiteCausedSkip(f.rule as RouteSkipReason)),
     pages
   );
 
@@ -830,7 +871,7 @@ export async function runAuditPipeline(
   if (typeof store.writeVersionEntries === 'function') {
     // One lock and one version check for all of them, a few at a time.
     const shots: Array<{ page: AuditPage; rel: string; data: Uint8Array | null }> = [];
-    for (const p of samples) {
+    for (const p of pages) {
       const rel = p.phone?.screenshotPath;
       if (!p.phone || !rel) continue;
       let data: Uint8Array | null = null;
@@ -872,7 +913,7 @@ export async function runAuditPipeline(
         saveNotes.push(`The Page Content of ${p.info.urlPath} could not be saved.`);
       }
     }
-    for (const p of samples) {
+    for (const p of pages) {
       const rel = p.phone?.screenshotPath;
       if (!p.phone || !rel) continue;
       try {
@@ -885,7 +926,7 @@ export async function runAuditPipeline(
     }
   }
   // A finding pointing at a screenshot that was not saved loses the pointer.
-  const savedShots = new Set(samples.map((p) => p.phone?.screenshotPath).filter((s): s is string => !!s));
+  const savedShots = new Set(pages.map((p) => p.phone?.screenshotPath).filter((s): s is string => !!s));
   findings = findings.map((f) => {
     if (!f.screenshotPath || savedShots.has(f.screenshotPath)) return f;
     const { screenshotPath: _dropped, ...rest } = f;
@@ -923,6 +964,7 @@ export async function runAuditPipeline(
     pagesRecorded: crawl.pages.length,
     pagesSkipped: crawl.coverage.skipped.length,
     findings: findings.length,
+    rules: countFindingRules(findings),
     ...(storedDocuments ? { documents: storedDocuments } : {}),
   };
   try {

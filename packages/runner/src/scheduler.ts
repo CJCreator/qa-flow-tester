@@ -294,7 +294,11 @@ export class SchedulerManager {
 
   start(onRunScheduled: (schedule: CheckupSchedule) => Promise<RunOutcome>, intervalMs = 60000): void {
     if (this.timer) return;
-    this.timer = setInterval(() => void this.tick(onRunScheduled).catch(() => {}), intervalMs);
+    this.timer = setInterval(() => {
+      void this.tick(onRunScheduled).catch((err: unknown) => {
+        console.error('[Release check-up] Scheduler tick failed:', redactedMessage(err));
+      });
+    }, intervalMs);
     this.timer.unref?.();
   }
 

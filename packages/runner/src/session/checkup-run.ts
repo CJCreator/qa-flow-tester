@@ -42,6 +42,7 @@ import {
   localDocsGet,
   isPrivateHost,
   isAbortError,
+  testWorkerCount,
   SignInFailedError,
   createAIProvider,
   type NetDeps,
@@ -503,6 +504,8 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
         searchChecks: context.searchChecks,
         visibility: context.visibility,
         stepTimeoutMs: deps.stepTimeoutMs,
+        // ADR 0048: 4 test workers on a local runner, 1 on the hosted copy (beta), unless RUNNER_TEST_WORKERS says.
+        testWorkers: testWorkerCount(process.env.RUNNER_TEST_WORKERS, !!deps.beta),
         onEvent: (event) => {
           if (current()) forwardRunEvent(event);
         },

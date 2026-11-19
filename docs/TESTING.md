@@ -67,6 +67,41 @@ Plan Review's "Export as Playwright tests" (`GET /api/runner/plan/export`, `pack
 - `findings.json` is checked against `docs/findings.schema.json` (`packages/core/tests/findings-contract.test.ts`) with an in-repo validator (`packages/core/tests/helpers/json-schema-lite.ts`, no `ajv`). A schema keyword the validator lacks fails the test.
 - Tests create their own `.tmp-*` folders; there is no global setup file.
 
+## Benchmarks
+
+Speed tickets report their change against a measured baseline (T-411). The harness runs real sites, so it is run by hand on the local runner, never in CI, and only against the sites below.
+
+- `pnpm bench:audit [--sites a,b] [--runs 3] [--pages N] [--compare <file>] [--no-docs]`: Website Audit, each run in its own process with a runner started in-process and a fresh data folder under `.benchmark/tmp/`.
+- `pnpm bench:checkup [--sites a,b] [--runs 3] [--pages N] [--compare <file>] [--no-docs]`: the command-line Check-up (`packages/runner/dist/checkup.js --fail-on none`).
+
+Both load `.env` the way `pnpm start` does. The audit takes its AI key from a provider variable (`OPENROUTER_API_KEY`, `GEMINI_API_KEY`...) or the OS keychain, the Check-up from `QA_AI_API_KEY` (`.env.example` names them all); each audit run has a fresh data folder, so it uses the default model. 3 runs per site; the tables show the median.
+
+- **Metrics:** wall time per stage (and per pipeline step, from the `startedAt`/`endedAt` of each step in the version's `stages` file), pages recorded and skipped by reason, AI calls and tokens (audit: POSTs to the AI Provider hosts, counted by wrapping `fetch`; Check-up: `aiUsage` in `findings.json`), 429s (each page's last answer, route telemetry, at most 500 routes) and busy answers (every 429 or 503, counted at `HostPacer.slowDown`), peak RSS of the Node process (Chromium's own processes are not counted). For a Check-up: run time, Test points, Flaky Passed.
+- **Accuracy:** the Jaccard overlap of the `(rule, urlPath)` finding sets: the lowest between runs of one site, or against `--compare <earlier .benchmark file>`.
+- **Output:** `.benchmark/<date>-<commit>-audit.json` or `-checkup.json` (git-ignored), and a table appended below.
+
+| Site               | Address                   | Pages | Why                                                                  |
+| ------------------ | ------------------------- | ----- | -------------------------------------------------------------------- |
+| techgramam         | https://techgramam.com/   | 50    | About 19 sitemap addresses                                           |
+| arocord            | https://arocord.com/      | 50    | Its sitemap answers 403 to plain clients: the blocked-visitor case   |
+| mghealthtech       | https://mghealthtech.com/ | 50    | About 30 addresses                                                   |
+| large (local only) | https://kubernetes.io/    | 5000  | A large public documentation site; confirmed by the owner 2026-11-19 |
+
+**Large site: kubernetes.io, confirmed by the owner on 2026-11-19.** Its robots.txt, fetched on 2026-11-19, has one group, `User-agent: *`, which disallows only `/legacy/`, `/v1.0/`, `/v1.1/`, `/404/` and `/404.html`, sets no `Crawl-delay`, and names `Sitemap: https://kubernetes.io/sitemap.xml`. That file is a sitemap index with one file per language; the English one (`/en/sitemap.xml`) listed 1,896 addresses that day. Also checked: docs.python.org (allowed, but its sitemap lists only 7 addresses) and docs.djangoproject.com (long per-language Disallow lists).
+
+### Baseline
+
+Commit `b23682c`. Not run yet: it needs the owner's AI key. To record it, check out `b23682c` in a worktree, copy `scripts/benchmark-*.mjs` in, `pnpm build`, then `node --env-file-if-exists=.env scripts/benchmark-audit.mjs` and `scripts/benchmark-checkup.mjs` (that commit has no `bench:*` scripts and no per-step times). Each speed ticket (T-403, T-404, T-406, T-408, T-409, T-410) adds its own table with `--compare` against the baseline file.
+
+| Site         | Wall time | Crawl | Recorded | Skipped (by reason) | AI calls / tokens | 429s / busy | Peak RSS | Jaccard |
+| ------------ | --------- | ----- | -------- | ------------------- | ----------------- | ----------- | -------- | ------- |
+| techgramam   |           |       |          |                     |                   |             |          |         |
+| arocord      |           |       |          |                     |                   |             |          |         |
+| mghealthtech |           |       |          |                     |                   |             |          |         |
+| large        |           |       |          |                     |                   |             |          |         |
+
+<!-- benchmark-results: new tables are appended above this line -->
+
 ## Browser setup
 
 `pnpm bootstrap` installs the Chromium that the installed Playwright expects. Playwright is pinned to match the Docker image (`packages/runner/Dockerfile`); `node scripts/check-playwright-version.mjs` checks it (CI runs it). Do not bump Playwright to fix a browser error. `Executable doesn't exist` means the build is missing or `PLAYWRIGHT_BROWSERS_PATH` points elsewhere: run `pnpm --filter @qa/core exec playwright install chromium`.

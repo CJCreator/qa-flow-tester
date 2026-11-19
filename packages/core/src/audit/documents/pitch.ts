@@ -116,6 +116,12 @@ const PITCH_CSS = `
   }
 `;
 
+/** With the Improved version's thumbnail, every screenshot is drawn smaller, so the page stays on one A4 sheet. */
+const PITCH_IMPROVED_CSS = `
+  figure { width: 52mm; }
+  figure img { max-height: 28mm; }
+`;
+
 export interface PitchGlimpseOptions {
   /** The language of the page; defaults to the version's language. */
   language?: DocumentLanguage;
@@ -123,6 +129,69 @@ export interface PitchGlimpseOptions {
   optOutText?: Partial<Record<DocumentLanguage, string>>;
   /** Screenshots as base64 `data:image/...` URIs, keyed by the finding's `screenshotPath`. */
   screenshots?: Readonly<Record<string, string>>;
+  /**
+   * The best design variant of the Improved version (T-415): its thumbnail ("after") and the stored phone
+   * screenshot of the page ("before"), as base64 `data:image/...` URIs, and the finding ids it answers.
+   */
+  improved?: PitchImproved;
+}
+
+export interface PitchImproved {
+  urlPath: string;
+  /** The variant's thumbnail alone. */
+  after?: string;
+  /** One image with the page before (left) and the variant after (right); shown instead of `after`. */
+  pair?: string;
+  cites: string[];
+}
+
+/** A page that lays a before and an after image side by side, for one thumbnail of the pair. */
+export function beforeAfterPairHtml(before: string, after: string): string {
+  const ok = (src: string) => (isEmbeddableImage(src) ? src : '');
+  return (
+    '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' +
+    'html,body{margin:0;background:#fff}body{display:flex;gap:24px;align-items:flex-start;padding:24px}' +
+    'img{height:852px;width:auto;max-width:100%;border:1px solid #ccc}' +
+    `</style></head><body><img src="${ok(before)}" alt=""><img src="${ok(after)}" alt=""></body></html>`
+  );
+}
+
+const IMPROVED_WORDS: Readonly<
+  Record<'en' | 'ta', { heading: string; note: string; before: string; after: string; answers: string }>
+> = {
+  en: {
+    heading: 'Improved version',
+    note: 'Suggestion, not the live site',
+    before: 'Before',
+    after: 'After',
+    answers: 'Answers',
+  },
+  ta: {
+    heading: 'மேம்படுத்தப்பட்ட பதிப்பு',
+    note: 'பரிந்துரை மட்டுமே, நேரடி தளம் அல்ல',
+    before: 'முன்',
+    after: 'பின்',
+    answers: 'தீர்வு',
+  },
+};
+
+/** The Improved version's before/after thumbnail: one heading, the label, and the two small images. */
+function improvedBlocks(improved: PitchImproved, language: DocumentLanguage, limits: ClampLimits): DocBlock[] {
+  const words = IMPROVED_WORDS[language === 'ta' ? 'ta' : 'en'];
+  const blocks: DocBlock[] = [{ type: 'heading', level: 2, text: words.heading }];
+  // One image keeps the page on one A4 sheet: the before/after pair when given, else the variant alone.
+  const pair = improved.pair && isEmbeddableImage(improved.pair) ? improved.pair : undefined;
+  const after = improved.after && isEmbeddableImage(improved.after) ? improved.after : undefined;
+  const image = pair ?? after;
+  const caption = pair ? `${words.before} / ${words.after}` : words.after;
+  if (image) blocks.push({ type: 'image', src: image, alt: `${caption}: ${improved.urlPath}`, caption });
+  const cites =
+    improved.cites.length > 0 ? ` · ${words.answers}: ${clampText(improved.cites.join(', '), limits.pages)}` : '';
+  blocks.push({
+    type: 'paragraph',
+    text: `${words.note}: ${clampText(improved.urlPath, limits.url)}${cites}`,
+  });
+  return blocks;
 }
 
 function screenshotFor(finding: AuditFinding, screenshots: Readonly<Record<string, string>>): string | undefined {
@@ -214,6 +283,7 @@ export function pitchGlimpseDoc(view: EditedAuditView, options: PitchGlimpseOpti
   });
   const more = result.findings.length - top.length;
   if (more > 0) blocks.push({ type: 'paragraph', text: formatLabel(words.moreFindings, { n: more }) });
+  if (options.improved) blocks.push(...improvedBlocks(options.improved, language, limits));
 
   blocks.push(...coverageBlocks(view, labels, words));
   blocks.push({ type: 'heading', level: 1, text: labels.headings.optOut });
@@ -235,5 +305,13 @@ export function renderPitchGlimpse(doc: AuditDoc): string {
 }
 
 export function buildPitchGlimpse(view: EditedAuditView, options: PitchGlimpseOptions = {}): string {
-  return renderPitchGlimpse(pitchGlimpseDoc(view, options));
+  const html = renderPitchGlimpse(pitchGlimpseDoc(view, options));
+  // The Improved version's thumbnail joins the page: every image is drawn a little smaller to keep one A4 sheet.
+  return options.improved
+    ? html.replace(
+        '</head>',
+        () => `<style>${PITCH_IMPROVED_CSS}</style>
+</head>`
+      )
+    : html;
 }

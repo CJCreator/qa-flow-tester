@@ -38,6 +38,11 @@ export class RobotsPolicy {
     return new RobotsPolicy([]);
   }
 
+  /** Every path refused: the answer for a robots.txt the server could not serve (RFC 9309: a 5xx). */
+  static disallowAll(): RobotsPolicy {
+    return new RobotsPolicy([{ allow: false, pattern: '/' }]);
+  }
+
   static parse(robotsTxt: string, userAgentToken: string): RobotsPolicy {
     const token = userAgentToken.toLowerCase();
     const groups: Array<{
@@ -99,7 +104,7 @@ export class RobotsPolicy {
    * Fetches `<origin>/robots.txt` through the pinned outbound path (ADR 0031): public addresses only by
    * default, except that an origin which is itself a local/private host (the user's own build) may read its own
    * robots.txt; a run on a shared machine still refuses it. A missing, refused or unreachable file means
-   * everything is allowed. A caller-supplied `fetchFn` is used as given.
+   * everything is allowed; a 5xx means nothing is. A caller-supplied `fetchFn` is used as given.
    */
   static async fetch(origin: string, userAgentToken: string, fetchFn?: FetchFn): Promise<RobotsPolicy> {
     try {
@@ -109,6 +114,11 @@ export class RobotsPolicy {
         timeoutMs: 10000,
       });
       const res = await fetchFn(new URL('/robots.txt', origin).toString());
+      // A 5xx means the site could not say what it allows: leave it alone for this run (RFC 9309 section 2.3.1.4).
+      if (res && res.status >= 500 && res.status < 600) {
+        debugLog('crawl', 'robots.txt answered 5xx; no pages crawled this run', { origin, status: res.status });
+        return RobotsPolicy.disallowAll();
+      }
       if (!res || res.status < 200 || res.status >= 300) return RobotsPolicy.allowAll();
       return RobotsPolicy.parse(await res.text(), userAgentToken);
     } catch {

@@ -34,6 +34,8 @@ import {
   DEFAULT_RELEASE_GATES,
   isActiveFinding,
   releaseVerdict,
+  countSummary,
+  problemsThatCountLine,
   isSupportedContextName,
   summarizeDocument,
   parseHeaderText,
@@ -48,7 +50,7 @@ import {
 } from '@qa/core';
 import type { AIProviderType, Finding, ReleaseReport, SiteAspectGrades, RunStartBody } from '@qa/types';
 import { createCheckupSession, createCheckupRun, resolveAuthorization } from './session/checkup-session.js';
-import { createShutdown, type ShutdownHandler } from './shutdown.js';
+import { createShutdown } from './shutdown.js';
 
 export type FailOn = 'blocker' | 'major' | 'none' | 'standard';
 
@@ -509,6 +511,8 @@ export function summaryMarkdown(report: ReleaseReport, args: Pick<CheckupArgs, '
     '',
     verdict.reason,
     '',
+    problemsThatCountLine(countSummary(report.findings)),
+    '',
     `Checked ${args.url ?? report.targetUrl}. ${report.coverage.totalTestPoints} tests: ${report.coverage.passed} passed, ${report.coverage.failed} failed.`,
     '',
     `| Blockers | Majors | Minors | Suggestions |`,
@@ -548,14 +552,15 @@ async function runSmokeCheckup(args: CheckupArgs): Promise<number> {
   await new ReportGenerator(args.outputDir).generate(report);
   const verdict = releaseVerdict(report.findings, undefined, report.grades, report.coverage);
   console.log(`\n[checkup] ${verdict.stamp}: ${verdict.reason}`);
+  console.log(`[checkup] ${problemsThatCountLine(countSummary(report.findings))}`);
   for (const line of result.notChecked) console.log(`[checkup] Did not check: ${line}`);
   console.log(`[checkup] Report written to ${args.outputDir}`);
   return exitCodeFor(report.findings, args.failOn, report.grades);
 }
 
 export interface SignalTarget {
-  on(event: string, listener: (...args: any[]) => void): unknown;
-  removeListener(event: string, listener: (...args: any[]) => void): unknown;
+  on(event: string, listener: (...args: unknown[]) => void): unknown;
+  removeListener(event: string, listener: (...args: unknown[]) => void): unknown;
 }
 
 /**
@@ -672,6 +677,7 @@ export async function runCheckup(args: CheckupArgs): Promise<number> {
     }
     const verdict = releaseVerdict(report.findings, undefined, report.grades, report.coverage);
     console.log(`\n[checkup] ${verdict.stamp}: ${verdict.reason}`);
+    console.log(`[checkup] ${problemsThatCountLine(countSummary(report.findings))}`);
     console.log(`[checkup] Report written to ${args.outputDir}`);
 
     // Inline annotations on GitHub Actions: one per active Blocker (error) or Major (warning). ADR 0017.

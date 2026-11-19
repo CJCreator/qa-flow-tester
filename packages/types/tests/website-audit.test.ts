@@ -35,25 +35,21 @@ import {
   type AuditAiStatus,
   type AuditApi,
   type AuditFinding,
-  type AuditPageState,
   type AuditProgressEvent,
   type AuditStage,
   type AuditStartBody,
   type AuditStartErrors,
-  type AuditVersion,
   type EditOverlay,
   type ExternalSpeed,
   type PageContent,
   type ShortlistEntry,
   type ShortlistOutcome,
-  type SpeedSource,
-  type StoredAuditDocument,
   type TechnologyResult,
 } from '../src/website-audit.js';
 import { ROUTE_SKIP_REASONS, type RouteSkipReason } from '../src/route-telemetry.js';
 import { AI_STAGES, STAGE_MODEL_SLOT, modelForStage, type AIStage, type ModelsByStage } from '../src/ai.js';
 import { MARKETING_SIGNALS, type MarketingReview } from '../src/aspects.js';
-import { CRAWL_LIMIT_BOUNDS, type CrawlLimits } from '../src/discovery.js';
+import { type CrawlLimits } from '../src/discovery.js';
 
 const TYPES_SRC = fileURLToPath(new URL('../src', import.meta.url));
 
@@ -411,6 +407,8 @@ describe('fixed lists', () => {
       depth: 5,
       hostedMaxPages: 200,
       fetchInFlight: 3,
+      fetchInFlightLocal: 8,
+      fetchInFlightHosted: 3,
       aiInFlight: 4,
     });
   });
@@ -599,6 +597,13 @@ describe('AUDIT_API', () => {
       ['GET', '/api/audits/:id/owner'],
       ['POST', '/api/audits/:id/preview'],
       ['GET', '/api/audits/:id/preview'],
+      // T-413 Improved version
+      ['POST', '/api/audits/:id/improve'],
+      ['GET', '/api/audits/:id/improve'],
+      ['GET', '/api/audits/:id/improve/:page/:variant'],
+      // T-415
+      ['PUT', '/api/audits/:id/improve-best'],
+      ['GET', '/api/audits/:id/improve-export'],
       // BE-022 Shared Links
       ['POST', '/api/audits/:id/share'],
       ['GET', '/api/audits/:id/share'],
@@ -641,7 +646,8 @@ describe('AUDIT_API', () => {
       expect(ownerOnly).toContain(name);
     }
     // Anything that spends the tool user's AI key is owner-only: Helpers never use the keys.
-    for (const name of ['start', 'rerun', 'createPreview', 'runRewrite']) expect(ownerOnly).toContain(name);
+    for (const name of ['start', 'rerun', 'createPreview', 'createImprove', 'runRewrite'])
+      expect(ownerOnly).toContain(name);
   });
 
   it('types the request and reply of every route', () => {

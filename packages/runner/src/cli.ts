@@ -76,9 +76,27 @@ const shutdown = createShutdown({
 });
 process.on('SIGTERM', () => void shutdown('SIGTERM', 0));
 process.on('SIGINT', () => void shutdown('SIGINT', 0));
+// One stray rejection (say, from one visitor's run on the shared hosted copy) must not stop everyone's runs: log it
+// and keep going. A burst means something is badly wrong, so stop cleanly after 5 within 60 seconds.
+const REJECTION_LIMIT = 5;
+const REJECTION_WINDOW_MS = 60_000;
+const rejectionTimes: number[] = [];
 process.on('unhandledRejection', (reason) => {
-  console.error('[Release check-up] Unhandled promise rejection:', redactedMessage(reason));
-  void shutdown('Unhandled promise rejection', 1);
+  const now = Date.now();
+  rejectionTimes.push(now);
+  while (rejectionTimes.length && now - rejectionTimes[0] > REJECTION_WINDOW_MS) rejectionTimes.shift();
+  console.error(
+    `[Release check-up] Unhandled promise rejection (${rejectionTimes.length} in the last minute):`,
+    redactedMessage(reason)
+  );
+  if (rejectionTimes.length >= REJECTION_LIMIT) {
+    void shutdown('Too many unhandled promise rejections', 1);
+  }
+});
+// After an uncaught exception the process state is not safe to continue from: log it and stop cleanly.
+process.on('uncaughtException', (err) => {
+  console.error('[Release check-up] Uncaught exception:', redactedMessage(err));
+  void shutdown('Uncaught exception', 1);
 });
 
 server

@@ -2,7 +2,10 @@ import { describe, it, expect, vi } from 'vitest';
 import type { AICompletionOptions, AIMessage, AIProviderType } from '@qa/types';
 import type { AIProvider } from '../src/ai/ai-provider.js';
 import type { ResolvedKeyInfo } from '../src/ai/key-resolver.js';
+import { aiRequestsLine } from '@qa/types';
+import { assessSite } from '../src/audit/ai/assessment.js';
 import {
+  AI_REQUEST_BUDGET_REACHED,
   auditAiRequestBudget,
   classifyAiError,
   isKeyRefused,
@@ -441,5 +444,53 @@ describe('classifyAiError and invalid key behavior (T-149)', () => {
     const second = await resolved.ai.ask('assessment', MESSAGES);
     expect(second.ok).toBe(true);
     expect(calls).toHaveLength(2);
+  });
+});
+
+describe('T-398: one AI request counter per audit run', () => {
+  it('a budget of 3 sends exactly 3 requests; the 4th stage is not done (budget-spent)', async () => {
+    const budget = auditAiRequestBudget(3);
+    const { deps, calls } = setup({ budget }, '{"areas":[]}');
+    const resolved = await resolveAuditAi(deps);
+    if (!resolved.ok) throw new Error('expected AI');
+    expect(resolved.ai.budget).toBe(budget);
+
+    for (const stage of ['assessment', 'documents', 'preview'] as const) {
+      expect((await resolved.ai.ask(stage, MESSAGES)).ok).toBe(true);
+    }
+    const site = await assessSite(
+      { language: 'en', url: 'https://example.test/', pages: [], findings: [], grades: {} },
+      resolved
+    );
+    expect(calls).toHaveLength(3);
+    expect(site.length).toBeGreaterThan(0);
+    for (const area of site) expect(area).toMatchObject({ status: 'not-done', reason: 'budget-spent' });
+    expect(budget.used).toBe(3);
+    expect(budget.left).toBe(0);
+    expect(aiRequestsLine({ used: budget.used, limit: budget.limit })).toBe('AI requests: 3 of 3');
+  });
+
+  it('no budget given: requests are counted and never refused', async () => {
+    const { deps, calls } = setup();
+    const resolved = await resolveAuditAi(deps);
+    if (!resolved.ok) throw new Error('expected AI');
+    for (let i = 0; i < 5; i++) expect((await resolved.ai.ask('documents', MESSAGES)).ok).toBe(true);
+    expect(calls).toHaveLength(5);
+    expect(resolved.ai.budget?.used).toBe(5);
+    expect(resolved.ai.budget?.limit).toBe(Infinity);
+    expect(aiRequestsLine({ used: 5, limit: null })).toBe('AI requests: 5');
+  });
+
+  it('parallel asks never overspend the budget', async () => {
+    const { deps, calls } = setup({ budget: auditAiRequestBudget(2) });
+    const resolved = await resolveAuditAi(deps);
+    if (!resolved.ok) throw new Error('expected AI');
+    const answers = await Promise.all(Array.from({ length: 5 }, () => resolved.ai.ask('assessment', MESSAGES)));
+    expect(answers.filter((a) => a.ok)).toHaveLength(2);
+    expect(calls).toHaveLength(2);
+  });
+
+  it('names the reason "AI Request Budget reached"', () => {
+    expect(AI_REQUEST_BUDGET_REACHED).toBe('AI Request Budget reached');
   });
 });

@@ -2,7 +2,9 @@ import {
   AUDIT_AI_API,
   AUDIT_AI_STAGES,
   AUDIT_API,
+  AUDIT_COMPETITOR_API,
   AUDIT_LIMIT_DEFAULTS,
+  modelForStage,
   type AuditEndpoint,
   type EditOverlay,
   type PageContent,
@@ -11,6 +13,7 @@ import {
   AuditAiModelsStore,
   RewriteStore,
   generatePreview,
+  improvePriceFor,
   hasGoogleAdc,
   pageContentName,
   resolveAuditAi,
@@ -36,10 +39,12 @@ import {
 } from './audit-settings.js';
 import { auditExportRoutes } from './audit-export.js';
 import { auditPreviewRoutes } from './audit-preview.js';
+import { auditImproveRoutes } from './audit-improve.js';
 import { auditShareRoutes } from './audit-share.js';
 import { auditShortlistRoutes } from './audit-shortlist.js';
 import { auditHelperRoutes } from './audit-helpers.js';
 import { createAuditAiRoutes, type AuditAiRouteDeps } from './audit-ai.js';
+import { auditCompetitorRoutes } from './audit-competitors.js';
 
 export type {
   Route,
@@ -70,11 +75,13 @@ export * from './schedules.js';
 export * from './sessions.js';
 export * from './audit-ai.js';
 export * from './audit-crawl.js';
+export * from './audit-competitors.js';
 export * from './audit-content.js';
 export * from './audit-documents.js';
 export * from './audit-export.js';
 export * from './audit-helpers.js';
 export * from './audit-preview.js';
+export * from './audit-improve.js';
 export * from './audit-rerun.js';
 export * from './audit-settings.js';
 export * from './audit-share.js';
@@ -151,6 +158,7 @@ export function buildAuditRoutes(server: RunnerServer): Route[] {
     resolveServiceKey,
     allowPrivateAddresses: wiring.localRun,
     claimAuditLimit: wiring.claimAuditLimit,
+    ...(wiring.targetAccepted ? { targetAccepted: wiring.targetAccepted } : {}),
     ...(wiring.localRun ? {} : { maxPages: AUDIT_LIMIT_DEFAULTS.hostedMaxPages }),
     ...(wiring.crawl ? { crawl: wiring.crawl } : {}),
     ...(wiring.checkAddress ? { checkAddress: wiring.checkAddress } : {}),
@@ -172,9 +180,28 @@ export function buildAuditRoutes(server: RunnerServer): Route[] {
     ...auditSettingsRoutes({ settings, pagespeedKey }),
     ...auditExportRoutes({ store, settings }),
     ...auditPreviewRoutes({ store, caller, resolveAi, generate: generatePreview }),
+    ...auditImproveRoutes({
+      store,
+      caller,
+      resolveAi,
+      usdPerRequest: async () => {
+        const resolved = await resolveAi();
+        if (!resolved.ok) return null;
+        const setup = await wiring.readAiModels();
+        const model = modelForStage('preview', await readModels(), { text: setup.text, vision: setup.vision });
+        return improvePriceFor(resolved.ai.provider, model);
+      },
+    }),
     ...auditShareRoutes({ store, caller, optOutText: async () => (await storedSettings()).optOutText }),
     ...auditShortlistRoutes({ store, caller }),
     ...auditHelperRoutes({ store, access: helperAccess }),
+    // Competitors (T-416): public addresses only on every runner; hosted pages count toward the page cap.
+    ...auditCompetitorRoutes({
+      store,
+      caller,
+      resolveAi,
+      ...(wiring.localRun ? {} : { maxPages: AUDIT_LIMIT_DEFAULTS.hostedMaxPages }),
+    }),
     ...createAuditAiRoutes({
       readModels,
       writeModels: async (models) => {
@@ -196,6 +223,8 @@ export function buildAuditRoutes(server: RunnerServer): Route[] {
           approve: (s) => rewrites.approve(s),
           run: (i, d) => rewrites.run(i, { ...d, resolveAi }),
           accept: (i, d) => rewrites.accept(i, d),
+          approveMany: (s) => rewrites.approveMany(s),
+          runBatch: (s, d) => rewrites.runBatch(s, { ...d, resolveAi }),
         };
       },
       loadSection: (auditId, version, urlPath) =>
@@ -232,7 +261,9 @@ function rowsFor(server: RunnerServer): Map<string, Route> {
  * built for the runner on first use (the table is static, the dependencies belong to the runner).
  */
 function contractRows(): Route[] {
-  const entries = Object.entries({ ...AUDIT_API, ...AUDIT_AI_API }) as Array<[string, AuditEndpoint]>;
+  const entries = Object.entries({ ...AUDIT_API, ...AUDIT_AI_API, ...AUDIT_COMPETITOR_API }) as Array<
+    [string, AuditEndpoint]
+  >;
   return entries.map(([, { method, path, access }]) => ({
     method,
     path,
