@@ -28,7 +28,7 @@ The simplest way to run QA Flow Tester locally or on a private virtual machine i
 
 ### Architecture in Docker Compose
 
-- **`runner`**: Builds `packages/runner/Dockerfile` on Playwright (`v1.65.0-noble`). Runs as dedicated non-root user `qa` (`USER qa`). Persistent storage mounted at `qa-data:/data`. Health probe checks `http://localhost:3001/healthz`. The runner drops all Linux capabilities and is limited to 2 GB of memory; this limit can be raised in `docker-compose.yml` for large sites. Chromium runs with `--no-sandbox` inside the container, so the container settings above are the protection.
+- **`runner`**: Builds `packages/runner/Dockerfile` on Playwright (`v1.65.1-noble`). Runs as dedicated non-root user `qa` (`USER qa`). Persistent storage mounted at `qa-data:/data`. Health probe checks `http://localhost:3001/healthz`. The runner drops all Linux capabilities and is limited to 2 GB of memory; this limit can be raised in `docker-compose.yml` for large sites. Chromium runs with `--no-sandbox` inside the container, so the container settings above are the protection.
 - There is no separate site container: the hosted site is on Vercel ([ADR 0050](adr/0050-hosted-pilot-vercel-front-door.md)), and locally the runner serves the wizard.
 
 To shut down:
