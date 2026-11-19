@@ -491,6 +491,20 @@ export interface AuditFinding {
   screenshotPath?: string;
 }
 
+/**
+ * The rules behind a list of findings (T-390): distinct `rule` values, AI-written advice left out. One
+ * rule seen on 30 pages is 30 findings and 1 rule.
+ */
+export function countFindingRules(findings: readonly Pick<AuditFinding, 'rule' | 'advisory' | 'source'>[]): number {
+  return new Set(findings.filter((f) => f.advisory !== true && f.source !== 'ai').map((f) => f.rule)).size;
+}
+
+/** "312 findings · 41 rules"; only the findings when the rules were not counted (versions saved before T-390). */
+export function findingsAndRulesText(findings: number, rules?: number): string {
+  const f = `${findings} ${findings === 1 ? 'finding' : 'findings'}`;
+  return rules === undefined ? f : `${f} · ${rules} ${rules === 1 ? 'rule' : 'rules'}`;
+}
+
 /** One item of the Improvement Roadmap: never called a Plan (CONTEXT.md). */
 export interface RoadmapItem {
   id: string;
@@ -804,7 +818,10 @@ export interface AuditVersion {
   error?: string;
   pagesRecorded?: number;
   pagesSkipped?: number;
+  /** Findings saved: one per rule and page. */
   findings?: number;
+  /** Distinct rules behind the findings, AI advice left out (`countFindingRules`). Absent on versions saved before T-390. */
+  rules?: number;
   /** The version has edits. */
   edited?: boolean;
   /** Why a running version was stopped (ADR 0042). */

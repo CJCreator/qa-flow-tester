@@ -100,7 +100,70 @@ async function findFiles(dir, name) {
 // One run (child process)
 // ---------------------------------------------------------------------------------------------------
 
+/** The AI Providers' hosts: every provider in packages/core/src/ai calls them through the global fetch. */
+const AI_HOSTS = /(^|\.)(api\.anthropic\.com|api\.openai\.com|generativelanguage\.googleapis\.com|openrouter\.ai)$/i;
+
+/**
+ * Counts AI requests (POSTs to an AI host) and the tokens their answers report, by wrapping the global
+ * fetch. Works on any commit, including the baseline, because it needs nothing from the tool itself.
+ */
+function countAiRequests() {
+  const counts = { calls: 0, tokens: 0, pending: [] };
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    const res = await realFetch(input, init);
+    try {
+      const target = new URL(typeof input === 'string' || input instanceof URL ? input : input.url);
+      const method = (init?.method ?? (typeof input === 'object' && 'method' in input ? input.method : 'GET')) || 'GET';
+      if (AI_HOSTS.test(target.hostname) && method.toUpperCase() === 'POST') {
+        counts.calls++;
+        counts.pending.push(
+          res
+            .clone()
+            .json()
+            .then((body) => {
+              const u = body?.usage ?? {};
+              const g = body?.usageMetadata ?? {};
+              counts.tokens +=
+                (u.prompt_tokens ?? u.input_tokens ?? g.promptTokenCount ?? 0) +
+                (u.completion_tokens ?? u.output_tokens ?? g.candidatesTokenCount ?? 0);
+            })
+            .catch(() => {})
+        );
+      }
+    } catch {
+      // Counting must never change what the tool sees.
+    }
+    return res;
+  };
+  return counts;
+}
+
+/**
+ * Counts busy answers (429 or 503) the crawl saw, every attempt included, through `HostPacer.slowDown`
+ * (ADR 0043). Route telemetry keeps only each page's last answer, and at most 500 routes.
+ */
+async function countBusyAnswers() {
+  const counts = { busy: null };
+  try {
+    const { HostPacer } = await import(pathToFileURL(path.join(root, 'packages/core/dist/host-pacer.js')).href);
+    const slowDown = HostPacer?.prototype?.slowDown;
+    if (typeof slowDown === 'function') {
+      counts.busy = 0;
+      HostPacer.prototype.slowDown = function (...args) {
+        counts.busy++;
+        return slowDown.apply(this, args);
+      };
+    }
+  } catch {
+    // An older build without HostPacer: the column falls back to route telemetry.
+  }
+  return counts;
+}
+
 async function runOnce({ url, pages, scratch }) {
+  const ai = countAiRequests();
+  const busy = await countBusyAnswers();
   const { RunnerServer } = await import(pathToFileURL(path.join(root, 'packages/runner/dist/server.js')).href);
   const port = await freePort();
   const server = new RunnerServer({
@@ -182,8 +245,7 @@ async function runOnce({ url, pages, scratch }) {
       }
     }
 
-    // AI calls and tokens: reported when the result carries them (the AI Request Budget, T-398).
-    const ai = result.aiUsage ?? record.version?.aiUsage ?? null;
+    await Promise.all(ai.pending);
     const findings = (result.findings ?? []).map((f) => `${f.rule} ${f.urlPath}`);
 
     return {
@@ -195,8 +257,9 @@ async function runOnce({ url, pages, scratch }) {
       pagesSkipped: (coverage.skipped ?? []).length,
       skippedByReason,
       http429,
-      aiCalls: ai?.requests ?? null,
-      aiTokens: ai ? (ai.promptTokens ?? 0) + (ai.completionTokens ?? 0) : null,
+      busyAnswers: busy.busy ?? http429,
+      aiCalls: ai.calls,
+      aiTokens: ai.tokens,
       peakRssMb: Math.round(process.resourceUsage().maxRSS / 1024),
       findings,
     };
@@ -245,6 +308,7 @@ function summarise(runs) {
     pagesSkipped: medianOf((r) => r.pagesSkipped),
     skippedByReason,
     http429: medianOf((r) => r.http429),
+    busyAnswers: medianOf((r) => r.busyAnswers),
     aiCalls: medianOf((r) => r.aiCalls),
     aiTokens: medianOf((r) => r.aiTokens),
     peakRssMb: medianOf((r) => r.peakRssMb),
@@ -262,12 +326,12 @@ export function markdownTable(report) {
       .map(([k, v]) => `${k} ${v}`)
       .join(', ');
     const crawl = s.stageMs.crawling ?? s.stageMs.crawl ?? null;
-    return `| ${name} | ${fmtS(s.wallMs)} | ${fmtS(crawl)} | ${fmt(s.pagesRecorded)} | ${fmt(s.pagesSkipped)}${skipped ? ` (${skipped})` : ''} | ${fmt(s.aiCalls)} / ${fmt(s.aiTokens)} | ${fmt(s.http429)} | ${fmt(s.peakRssMb)} MB | ${s.compareJaccard === undefined ? fmt(s.runToRunJaccard?.toFixed?.(2)) : s.compareJaccard.toFixed(2)} |`;
+    return `| ${name} | ${fmtS(s.wallMs)} | ${fmtS(crawl)} | ${fmt(s.pagesRecorded)} | ${fmt(s.pagesSkipped)}${skipped ? ` (${skipped})` : ''} | ${fmt(s.aiCalls)} / ${fmt(s.aiTokens)} | ${fmt(s.http429)} / ${fmt(s.busyAnswers)} | ${fmt(s.peakRssMb)} MB | ${s.compareJaccard === undefined ? fmt(s.runToRunJaccard?.toFixed?.(2)) : s.compareJaccard.toFixed(2)} |`;
   });
   return [
     `**${report.date}, commit \`${report.commit}\`** (${report.kind}, median of ${report.runs} runs)`,
     '',
-    '| Site | Wall time | Crawl | Recorded | Skipped (by reason) | AI calls / tokens | 429s | Peak RSS | Jaccard |',
+    '| Site | Wall time | Crawl | Recorded | Skipped (by reason) | AI calls / tokens | 429s / busy | Peak RSS | Jaccard |',
     '|---|---|---|---|---|---|---|---|---|',
     ...rows,
     '',
