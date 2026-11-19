@@ -72,7 +72,7 @@ Plan: [ENHANCEMENT-PLAN-2026-11.md](ENHANCEMENT-PLAN-2026-11.md), with one file 
 | [T-422](enhance-2026-11/T-422-form-submit-and-enter-protection.md) | `form.submit`, `requestSubmit` and Enter protection in Test runs | T-397 | P1 | M | 6 | built | T-421 |
 | [T-426](enhance-2026-11/T-426-off-site-click-navigation-undone.md) | An off-site click navigation is undone and recorded | T-397 | P2 | S | 6 | built | T-423 |
 | [T-424](enhance-2026-11/T-424-host-allowlist-on-subrequests-iframes-redirects.md) | A host allowlist on subrequests, iframes and redirects | T-397 | P1 | L | 7 | built | T-422 |
-| [T-425](enhance-2026-11/T-425-popups-covered-by-context-routes.md) | Popups covered by context-level routes | T-397 | P2 | M | 8 | todo | T-424 |
+| [T-425](enhance-2026-11/T-425-popups-covered-by-context-routes.md) | Popups covered by context-level routes | T-397 | P2 | M | 8 | built | T-424 |
 | [T-428](enhance-2026-11/T-428-delete-probe-uses-real-label.md) | The delete probe uses the real element label and `forbiddenActions` | T-397 | P2 | S | 8 | todo | T-426 |
 | [T-427](enhance-2026-11/T-427-get-side-effects.md) | GET side effects | T-397 | P2 | M | 9 | todo | T-425 |
 | [T-430](enhance-2026-11/T-430-one-load-per-audit-page.md) | One load per audit page (5,000 pages in 2 hours) | P1 | P1 | M | 8 | todo | T-407 |
