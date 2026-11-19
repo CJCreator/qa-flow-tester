@@ -452,9 +452,10 @@ describe('audit pipeline: runAuditPipeline', () => {
     expect(after).toEqual([
       'analyse',
       'speed',
+      // Recommendations start beside the assessments (T-406): they need no AI notes.
+      'recommend',
       'assessPages',
       'assessSite',
-      'recommend',
       'roadmap',
       'documents',
       'save',
@@ -657,9 +658,9 @@ describe('audit pipeline: runAuditPipeline', () => {
     expect(result.notes.join(' ')).not.toContain('internal detail');
     expect(calls.filter((c) => !/^(read|a11y|phone):/.test(c))).toEqual([
       'speed',
+      'recommend',
       'assessPages',
       'assessSite',
-      'recommend',
       'roadmap',
       'documents',
       'save',

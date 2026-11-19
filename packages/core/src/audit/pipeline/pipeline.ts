@@ -233,6 +233,11 @@ export function aiStatusNoteText(status: AuditAiStatus, reason?: string): string
   return 'AI status: not available.';
 }
 
+/** Words of a page's visible text, for batching AI page assessments (T-406). */
+function wordsIn(text: string | undefined): number {
+  return text ? text.split(/\s+/).filter(Boolean).length : 0;
+}
+
 function notMeasured(reason: SpeedNotMeasuredReason): PageSpeed {
   return {
     lab: { status: 'not-measured', source: 'pagespeed-insights', method: 'lab', reason },
@@ -658,6 +663,18 @@ export async function runAuditPipeline(
     },
   };
 
+  // Recommendations need only the Sample Pages' findings and grades, not their AI notes (T-406): they start now,
+  // beside the page and site assessments, and are awaited after them.
+  const recommendationInputs = samples.map((p) => ({
+    urlPath: p.urlPath,
+    title: p.title,
+    coverage: 'sample' as const,
+    findings: findingsOf(p.urlPath),
+    grades: pageGrades.get(p.urlPath)!,
+  }));
+  const recommendationsStarted = stages.recommendPages({ ...run, pages: recommendationInputs }, ai);
+  recommendationsStarted.catch(() => {});
+
   let siteAreas: AreaAssessment[];
   let assessed = true;
   try {
@@ -680,6 +697,8 @@ export async function runAuditPipeline(
           .map((p) => ({
             urlPath: p.urlPath,
             content: recordedByPath.get(p.urlPath)!.read!.content,
+            // Small pages share one request (T-406).
+            wordCount: wordsIn(recordedByPath.get(p.urlPath)!.read!.content.text),
             findings: findingsOf(p.urlPath),
             grades: pageGrades.get(p.urlPath)!,
             ...(p.speed ? { speed: p.speed } : {}),
@@ -737,15 +756,8 @@ export async function runAuditPipeline(
   record('assessment', 'assessing', assessed, assessed ? undefined : NOTES.assessment);
 
   let recommendations: PageRecommendation[];
-  const recommendationInputs = samples.map((p) => ({
-    urlPath: p.urlPath,
-    title: p.title,
-    coverage: 'sample' as const,
-    findings: findingsOf(p.urlPath),
-    grades: pageGrades.get(p.urlPath)!,
-  }));
   try {
-    recommendations = await stages.recommendPages({ ...run, pages: recommendationInputs }, ai);
+    recommendations = await recommendationsStarted;
     const allByRule = recommendations.length > 0 && recommendations.every((r) => r.decidedBy === 'rule');
     const recommended = !(aiFailure && ai.ok && allByRule);
     record('recommendation', 'assessing', recommended, recommended ? undefined : NOTES.recommendation);
