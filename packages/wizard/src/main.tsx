@@ -11,7 +11,9 @@ import { ErrorBoundary, PageError } from './components/ErrorBoundary';
 // The public landing page is what most first visits open, so it loads without the app's code (the
 // runner connection, the plan editor, the report). Its links are page loads, which fetch the app.
 const root = ReactDOM.createRoot(document.getElementById('root')!);
-const isLanding = matchRoute(window.location.pathname).name === 'landing';
+const routeName = matchRoute(window.location.pathname).name;
+// The get-started page is as static as the landing page: it needs no connection to the QA Tool.
+const isLanding = routeName === 'landing' || routeName === 'get-started';
 // A saved light or dark choice is set before the first paint, so the page never flashes the other theme.
 applyTheme(readTheme(), document.documentElement);
 reloadOnMissingChunk();

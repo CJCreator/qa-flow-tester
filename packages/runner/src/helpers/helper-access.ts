@@ -10,8 +10,11 @@
 import type http from 'http';
 import type { AuditAccess, AuditErrorCode, HelperGrant, HelperPermission } from '@qa/types';
 import { FirebaseTokenVerifier, type KeysFetch } from './firebase-token.js';
+import { createHash } from 'crypto';
 import {
+  ACCOUNT_SESSION_SECONDS,
   HELPER_SESSION_KEY_BYTES,
+  HELPER_SESSION_SECONDS,
   newHelperSessionKey,
   readHelperSession,
   type HelperSessionClaims,
@@ -38,6 +41,12 @@ export interface HelperAccessSettings {
   webApiKey?: string;
   /** FIREBASE_AUTH_DOMAIN. Default `<projectId>.firebaseapp.com`. */
   authDomain?: string;
+  /**
+   * RUNNER_SESSION_SECRET (Secret Manager `qa-session-secret`): turns on account mode (ADR 0050). The sign-in
+   * cookie is signed with a key made from it, so it survives a cold start, and lasts 7 days. At least 32
+   * characters; a shorter or empty value is ignored (random key, 8 hours, no account mode).
+   */
+  sessionSecret?: string;
   /** AUDIT_OWNER_EMAILS: emails of Google accounts that pass owner audit rows on a beta copy. */
   auditOwnerEmails?: readonly string[];
   /** AUDIT_DAILY_LIMIT: daily audit starts per owner email per UTC day. */
@@ -56,6 +65,7 @@ export function helperSettingsFromEnv(env: NodeJS.ProcessEnv = process.env): Hel
   return {
     projectId: env.FIREBASE_PROJECT_ID,
     accessToken: env.RUNNER_ACCESS_TOKEN,
+    sessionSecret: env.RUNNER_SESSION_SECRET,
     webApiKey: env.FIREBASE_WEB_API_KEY,
     authDomain: env.FIREBASE_AUTH_DOMAIN,
     auditOwnerEmails: parseOwnerEmails(env.AUDIT_OWNER_EMAILS),
@@ -73,6 +83,14 @@ export interface HelperAccessOptions extends HelperAccessSettings {
    * HelperAccess is created, held in memory only (DEC-011). Never derive it from the access key.
    */
   sessionKey?: Buffer;
+}
+
+/** Shortest RUNNER_SESSION_SECRET that is used. */
+export const MIN_SESSION_SECRET_CHARS = 32;
+
+/** The cookie signing key made from RUNNER_SESSION_SECRET: its SHA-256, so any 32+ character secret fits. */
+export function sessionKeyFromSecret(secret: string): Buffer {
+  return createHash('sha256').update(secret, 'utf8').digest();
 }
 
 /** A refusal in the audit error model. */
@@ -119,6 +137,13 @@ export class HelperAccess {
   readonly now: () => Date;
   readonly auditOwnerEmails: readonly string[];
   readonly auditDailyLimit?: number;
+  /**
+   * Account mode (ADR 0050): a stable RUNNER_SESSION_SECRET is set, so any verified Google account is a way in
+   * to the Check-up routes of a beta copy. Off without it: a signed-in Helper only reaches Website Audits.
+   */
+  readonly accounts: boolean;
+  /** Longest sign-in: 7 days in account mode, else 8 hours. */
+  readonly sessionSeconds: number;
   private readonly key: Buffer | null;
 
   constructor(options: HelperAccessOptions) {
@@ -128,11 +153,21 @@ export class HelperAccess {
     this.now = options.now ?? (() => new Date());
     this.auditOwnerEmails = parseOwnerEmails(options.auditOwnerEmails);
     this.auditDailyLimit = options.auditDailyLimit;
-    this.enabled = projectId !== '' && accessToken !== '';
+    const secret = options.sessionSecret?.trim() || '';
+    this.accounts = projectId !== '' && secret.length >= MIN_SESSION_SECRET_CHARS;
+    this.sessionSeconds = this.accounts ? ACCOUNT_SESSION_SECONDS : HELPER_SESSION_SECONDS;
+    // The access key switches Helper sign-in on; so does a stable session secret (accounts need no key to sign in).
+    this.enabled = projectId !== '' && (accessToken !== '' || this.accounts);
     if (this.enabled && options.sessionKey && options.sessionKey.length < HELPER_SESSION_KEY_BYTES) {
       throw new Error('A Helper session key needs at least 32 bytes.');
     }
-    this.key = this.enabled ? (options.sessionKey ? Buffer.from(options.sessionKey) : newHelperSessionKey()) : null;
+    this.key = this.enabled
+      ? options.sessionKey
+        ? Buffer.from(options.sessionKey)
+        : this.accounts
+          ? sessionKeyFromSecret(secret)
+          : newHelperSessionKey()
+      : null;
     this.verifier = this.enabled ? new FirebaseTokenVerifier({ projectId, fetch: options.fetch, now: this.now }) : null;
     const apiKey = options.webApiKey?.trim() || '';
     this.firebaseWeb =
@@ -156,7 +191,7 @@ export class HelperAccess {
   /** The signed-in Helper, or null (off, no cookie, tampered or expired). */
   session(req: http.IncomingMessage): HelperSessionClaims | null {
     if (!this.key) return null;
-    return readHelperSession(this.key, req, this.now());
+    return readHelperSession(this.key, req, this.now(), this.sessionSeconds);
   }
 
   /** The Helper's grant on this audit, read from the store now; null when none. */

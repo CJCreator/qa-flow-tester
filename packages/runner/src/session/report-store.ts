@@ -40,11 +40,14 @@ export interface ReportStore {
   /** Today's `readRunReport`. */
   read(runId: string): Promise<ReleaseReport | null>;
   /** Today's `loadLatestReport`. */
+  /** Called after a finished run's files are written (the bucket copy, ADR 0050). A failure is ignored. */
+  onKept?: (report: ReleaseReport) => Promise<void> | void;
   loadLatest(): Promise<void>;
 }
 
 export class DefaultReportStore implements ReportStore {
   private readonly paths: SessionPaths;
+  onKept?: (report: ReleaseReport) => Promise<void> | void;
   private lastReport: ReleaseReport | null = null;
   private lastRunError: string | null = null;
   private lastErrorCode: string | null = null;
@@ -149,6 +152,11 @@ export class DefaultReportStore implements ReportStore {
       await fs.copyFile(path.join(dir, name), path.join(this.paths.outputDir, name)).catch(() => {});
     }
     await this.prune(host, report.runId);
+    try {
+      await this.onKept?.(report);
+    } catch {
+      // the local copy stands
+    }
   }
 
   async prune(host: string, currentRunId?: string): Promise<void> {

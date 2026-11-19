@@ -12,6 +12,11 @@ export async function testCopyFor(i: {
   marked: boolean;
   token: () => string | undefined;
   deps?: NetDeps;
+  /**
+   * The signed-in account's saved Verified Domain proof (ADR 0050): a valid saved proof for this host stands in
+   * for the live fetch; a live proof that passes is saved. Missing means live only, as before.
+   */
+  saved?: { valid: () => Promise<boolean>; save: () => Promise<void> };
 }): Promise<boolean> {
   if (!i.beta) return isTestHost(i.hostname, i.marked ? [i.hostname] : []);
   const result = await resolveTestHost(i.hostname, {
@@ -20,8 +25,11 @@ export async function testCopyFor(i: {
     origin: i.origin,
     lookup: i.deps?.lookup,
     proof: async () => {
+      if (i.saved && (await i.saved.valid())) return true;
       const token = i.token();
-      return token ? (await verifyDomainProof(i.origin, token, i.deps)).ok : false;
+      const ok = token ? (await verifyDomainProof(i.origin, token, i.deps)).ok : false;
+      if (ok) await i.saved?.save();
+      return ok;
     },
   });
   return result.testCopy;

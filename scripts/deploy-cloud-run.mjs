@@ -5,7 +5,6 @@ const PROJECT = process.env.GCP_PROJECT || 'qa-flow-tester-512310';
 const REGION = process.env.GCP_REGION || 'us-central1';
 const RUNNER_URL = 'https://qa-check-up-809804736896.us-central1.run.app';
 const RUNNER_HASH_URL = 'https://qa-check-up-cnhl7suwnq-uc.a.run.app';
-const SITE_URL = 'https://qa-check-up-site-809804736896.us-central1.run.app';
 const AUDIT_STORE_BUCKET = process.env.AUDIT_STORE_BUCKET || 'qa-flow-tester-512310-audits';
 
 const args = process.argv.slice(2);
@@ -72,18 +71,11 @@ async function main() {
   const sha = capture('git rev-parse --short HEAD') || 'manual';
   const fullSha = capture('git rev-parse HEAD') || '';
   const runnerImage = `${REGION}-docker.pkg.dev/${PROJECT}/qa/runner:${sha}`;
-  const siteImage = `${REGION}-docker.pkg.dev/${PROJECT}/qa/site:${sha}`;
 
   const deployRunner = targetService === 'all' || targetService === 'runner';
-  const deploySite = targetService === 'all' || targetService === 'site';
 
   // Step 1: Build local packages
   console.log('\n--- Step 1: Building Workspace Packages ---');
-  if (deploySite) {
-    sh('pnpm run site-build', {
-      env: { ...process.env, VITE_ONLINE_APP_URL: RUNNER_URL, SITE_URL, ...(fullSha ? { GITHUB_SHA: fullSha } : {}) },
-    });
-  }
   if (deployRunner) {
     sh('pnpm --filter "@qa/runner..." run build');
   }
@@ -98,20 +90,21 @@ async function main() {
     sh(`docker build -f packages/runner/Dockerfile -t ${runnerImage} .`);
     sh(`docker push ${runnerImage}`);
   }
-  if (deploySite) {
-    sh(`docker build -f site/Dockerfile -t ${siteImage} .`);
-    sh(`docker push ${siteImage}`);
-  }
 
   // Step 4: Deploy Runner Service
   if (deployRunner) {
     console.log('\n--- Step 4: Deploying qa-check-up (Runner) ---');
     // Using '^#^' as separator: '#' allows origins containing commas and emails containing '@'
-    const allowedOrigins = process.env.RUNNER_ALLOWED_ORIGINS || [RUNNER_URL, RUNNER_HASH_URL].join(',');
+    // The Vercel site is the front door (ADR 0050): its origin must be allowed, or every POST from it is refused.
+    const vercelSite = (process.env.VERCEL_SITE_URL || '').trim().replace(/\/+$/, '');
+    const allowedOrigins =
+      process.env.RUNNER_ALLOWED_ORIGINS || [RUNNER_URL, RUNNER_HASH_URL, vercelSite].filter(Boolean).join(',');
 
     const envVars = [
       'RUNNER_BETA=1',
       'RUNNER_HOST=0.0.0.0',
+      'RUNNER_TRUSTED_PROXY_HOPS=2',
+      `RUNNER_PUBLIC_URL=${RUNNER_URL}`,
       'RUNNER_DATA_DIR=/tmp/qa-data',
       'RUNNER_OUTPUT_DIR=/tmp/qa-data/reports',
       `RUNNER_ALLOWED_ORIGINS=${allowedOrigins}`,
@@ -125,27 +118,16 @@ async function main() {
 
     sh(
       `gcloud run deploy qa-check-up --project "${PROJECT}" --region "${REGION}" ` +
-        `--image "${runnerImage}" --port 8080 --memory 2Gi --cpu 1 ` +
-        `--min-instances 1 --max-instances 1 --timeout 3600 ` +
+        `--image "${runnerImage}" --port 8080 --memory 4Gi --cpu 2 ` +
+        `--min-instances 0 --max-instances 1 --no-cpu-throttling --timeout 3600 ` +
         `--allow-unauthenticated ` +
         `--set-env-vars "^#^${envVars}" ` +
-        `--set-secrets "RUNNER_ACCESS_TOKEN=qa-access-token:latest"`
+        `--set-secrets "RUNNER_ACCESS_TOKEN=qa-access-token:latest,RUNNER_SESSION_SECRET=qa-session-secret:latest"`
     );
   }
 
-  // Step 5: Deploy Site Service
-  if (deploySite) {
-    console.log('\n--- Step 5: Deploying qa-check-up-site (Site) ---');
-    sh(
-      `gcloud run deploy qa-check-up-site --project "${PROJECT}" --region "${REGION}" ` +
-        `--image "${siteImage}" --port 8080 --memory 256Mi --cpu 1 ` +
-        `--min-instances 0 --max-instances 2 ` +
-        `--allow-unauthenticated`
-    );
-  }
-
-  // Step 6: Post-Deployment Verification
-  console.log('\n--- Step 6: Verifying Deployed Endpoints ---');
+  // Step 5: Post-Deployment Verification
+  console.log('\n--- Step 5: Verifying Deployed Endpoints ---');
   if (deployRunner) {
     const runnerOk = await verifyEndpoint(
       `${RUNNER_URL}/`,
@@ -157,24 +139,8 @@ async function main() {
     }
   }
 
-  if (deploySite) {
-    const siteOk = await verifyEndpoint(`${SITE_URL}/version.json`, (status, text) => {
-      try {
-        const json = JSON.parse(text);
-        return status === 200 && (fullSha ? json.commit === fullSha : json.commit !== undefined);
-      } catch {
-        return false;
-      }
-    });
-    if (!siteOk && !isDryRun) {
-      console.error('Site endpoint did not serve version.json for this commit within the timeout.');
-      process.exit(1);
-    }
-  }
-
   console.log('\n====================================================');
   console.log(' Deployment Process Completed!');
-  if (deploySite) console.log(` Static Site: ${SITE_URL}`);
   if (deployRunner) console.log(` Online App:  ${RUNNER_URL}`);
   console.log('====================================================\n');
 }

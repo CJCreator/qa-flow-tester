@@ -1,7 +1,7 @@
 import type http from 'http';
 
 /**
- * The runner's default Content-Security-Policy (T-303): the static site's policy (site/nginx.conf) with
+ * The runner's default Content-Security-Policy (T-303): the static site's policy (the headers in the root vercel.json) with
  * connect-src 'self', because the API is on this origin. With Helper sign-in on, Firebase's hosts are added.
  * A page that sends its own policy in writeHead (a Shared Link, a preview, a site snapshot) keeps its own.
  */

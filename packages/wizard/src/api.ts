@@ -26,6 +26,28 @@ import {
 /** The QA Tool serves this page, so its API is on the page's own address. */
 export const STREAM_URL = '/api/runner/stream';
 
+/** The runner put the check-up in the waiting line (ADR 0050): it starts by itself when the slot is free. */
+export class QueuedError extends Error {
+  position: number;
+  constructor(position: number) {
+    super(queueText(position));
+    this.name = 'QueuedError';
+    this.position = position;
+  }
+}
+
+/** Plain words for a place in the waiting line. */
+export function queueText(position: number): string {
+  return position <= 1
+    ? 'You are next in line. Your check-up starts by itself as soon as the one running now finishes.'
+    : `You are number ${position} in line. Your check-up starts by itself when it is your turn.`;
+}
+
+/** Leaves the waiting line. */
+export async function leaveQueue(): Promise<void> {
+  await call('/api/runner/queue', { method: 'DELETE' }).catch(() => undefined);
+}
+
 export class RunnerError extends Error {
   code?: string;
   suggestion?: string;
@@ -96,6 +118,12 @@ export type RunnerStatus = Omit<RunnerStatusReply, 'lastErrorCode' | 'reportRunI
   beta?: boolean;
   /** Shared copy only: another visitor's check-up is running, so a new one would have to wait. */
   busy?: boolean;
+  /** Hosted copy in account mode (ADR 0050): a check-up needs a signed-in Google account. */
+  accounts?: boolean;
+  /** The signed-in account's email; null when nobody is signed in. */
+  account?: string | null;
+  /** Waiting line for the check-up slot: this account's place, or why a queued start did not begin. */
+  queue?: { position?: number; failed?: { error: string; code: string } };
 };
 
 /** null means the runner can't be reached (not started yet, or stopped). */
@@ -105,6 +133,29 @@ export async function getStatus(): Promise<RunnerStatus | null> {
     return res.ok ? await json<RunnerStatus>(res) : null;
   } catch {
     return null;
+  }
+}
+
+/** Why a status check got no usable answer: nothing came back in time, the server errored (502/503/504 …), or anything else. */
+export type StatusFailure = 'none' | 'slow' | 'server' | 'other';
+
+/**
+ * Like getStatus, but says why there was no answer. Slow or erroring answers are what a runner that is still
+ * waking up gives, through the site's rewrite (lib/wake.ts).
+ */
+export async function probeStatus(): Promise<{ status: RunnerStatus | null; failure: StatusFailure }> {
+  let res: Response;
+  try {
+    res = await call('/api/runner/status', {}, 4000);
+  } catch {
+    return { status: null, failure: 'slow' };
+  }
+  if (res.status >= 500) return { status: null, failure: 'server' };
+  if (!res.ok) return { status: null, failure: 'other' };
+  try {
+    return { status: await json<RunnerStatus>(res), failure: 'none' };
+  } catch {
+    return { status: null, failure: 'other' };
   }
 }
 
@@ -480,6 +531,10 @@ export async function startRun(request: StartRunRequest): Promise<string> {
       err.code || (res.status === 409 ? 'ERR_RUN_IN_PROGRESS' : 'ERR_START_FAILED'),
       err.suggestion
     );
+  }
+  if (res.status === 202) {
+    const queued = await json<{ queued?: boolean; position?: number }>(res);
+    if (queued.queued) throw new QueuedError(queued.position ?? 1);
   }
   return (await json<{ runId: string }>(res)).runId;
 }

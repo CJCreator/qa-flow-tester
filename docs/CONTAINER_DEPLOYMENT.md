@@ -11,7 +11,6 @@ The simplest way to run QA Flow Tester locally or on a private virtual machine i
 ### Prerequisites
 
 - Docker Engine 24+ and Docker Compose v2+ installed.
-- Node.js 22.9 or newer and pnpm 11, to build the static site once (step 3). The runner image needs neither.
 
 ### Setup & Run
 
@@ -20,23 +19,17 @@ The simplest way to run QA Flow Tester locally or on a private virtual machine i
    cp .env.example .env
    ```
 2. Edit `.env` and set `RUNNER_ACCESS_TOKEN` to a secure secret.
-3. Build the static site into `./public`. The `site` image copies that folder, and it is not in git:
-   ```bash
-   pnpm install
-   pnpm site-build
-   ```
-4. Start the full stack in the background:
+3. Start the stack in the background:
    ```bash
    docker compose up -d
    ```
-5. Access the services:
-   - **Static Site & Wizard UI**: [http://localhost:8080](http://localhost:8080)
-   - **Runner Server**: [http://localhost:3001/?access=your-token](http://localhost:3001/?access=your-token)
+4. Open the app (the runner serves the wizard too):
+   - **Runner and wizard**: [http://localhost:3001/?access=your-token](http://localhost:3001/?access=your-token)
 
 ### Architecture in Docker Compose
 
 - **`runner`**: Builds `packages/runner/Dockerfile` on Playwright (`v1.65.0-noble`). Runs as dedicated non-root user `qa` (`USER qa`). Persistent storage mounted at `qa-data:/data`. Health probe checks `http://localhost:3001/healthz`. The runner drops all Linux capabilities and is limited to 2 GB of memory; this limit can be raised in `docker-compose.yml` for large sites. Chromium runs with `--no-sandbox` inside the container, so the container settings above are the protection.
-- **`site`**: Builds `site/Dockerfile` on Alpine (`nginxinc/nginx-unprivileged:1.27-alpine`). Serves the static Wizard and landing page on port `8080`. Health probe checks `http://localhost:8080/`.
+- There is no separate site container: the hosted site is on Vercel ([ADR 0050](adr/0050-hosted-pilot-vercel-front-door.md)), and locally the runner serves the wizard.
 
 To shut down:
 
@@ -75,10 +68,10 @@ curl -I http://localhost:3001/healthz
 The production deployment architecture runs keylessly on Google Cloud Run in `us-central1` under project `qa-flow-tester-512310`:
 
 ```
-Internet --> Cloud Run (qa-check-up-site, 0..2 instances)
-         --> Cloud Run (qa-check-up, 1 warm instance)
+Internet --> Vercel (qa-flow-tester.vercel.app: the site, forwards /api and /s)
+         --> Cloud Run (qa-check-up, 0..1 instances, scales to zero)
                  |-- Cloud Storage (gs://qa-flow-tester-512310-audits)
-                 |-- Secret Manager (qa-access-token)
+                 |-- Secret Manager (qa-access-token, qa-session-secret)
                  |-- Cloud Scheduler (qa-check-up-tick)
 ```
 
@@ -95,14 +88,8 @@ Run the deployment script from an authenticated machine (`gcloud auth login`):
 # Preview the deployment steps without executing:
 node scripts/deploy-cloud-run.mjs --dry-run
 
-# Deploy both services:
+# Deploy the runner (set VERCEL_SITE_URL to the Vercel site's origin first):
 pnpm run deploy:cloud
-
-# Deploy only the static site:
-node scripts/deploy-cloud-run.mjs --service=site
-
-# Deploy only the runner:
-node scripts/deploy-cloud-run.mjs --service=runner
 ```
 
 ---

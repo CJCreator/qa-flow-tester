@@ -8,7 +8,7 @@ const read = (p: string) => readFileSync(resolve(root, p), 'utf8');
 
 /** The runner job's "Deploy to Cloud Run" step, up to the next step. */
 function runnerDeployStep(yml: string): string {
-  const job = yml.slice(yml.indexOf('\n  cloud-run:'), yml.indexOf('\n  site:'));
+  const job = yml.slice(yml.indexOf('\n  cloud-run:'));
   const start = job.indexOf('- name: Deploy to Cloud Run');
   expect(start).toBeGreaterThan(-1);
   const next = job.indexOf('\n      - name:', start + 1);
@@ -48,15 +48,17 @@ describe('deploy.yml passes SCHEDULER_SERVICE_ACCOUNT to the runner', () => {
 
   it('keeps the origin list as one value and the other flags unchanged', () => {
     const origins = items.find((i) => i.startsWith('RUNNER_ALLOWED_ORIGINS='));
-    expect(origins?.split('=')[1]?.split(',').length).toBe(2);
+    expect(origins?.split('=')[1]?.split(',').length).toBe(3);
+    expect(origins).toContain('$VERCEL_SITE_URL');
     expect(step).toContain('--timeout 3600');
-    expect(step).toContain('--min-instances 1 --max-instances 1');
-    expect(step).not.toContain('--no-cpu-throttling');
+    expect(step).toContain('--memory 4Gi --cpu 2');
+    expect(step).toContain('--min-instances 0 --max-instances 1 --no-cpu-throttling');
+    expect(items).toContain('RUNNER_TRUSTED_PROXY_HOPS=2');
+    expect(items).toContain('RUNNER_PUBLIC_URL=$RUNNER_URL');
   });
 
-  it('never takes it from secrets, and the site deploy gets none of it', () => {
+  it('never takes it from secrets', () => {
     expect(yml).not.toContain('secrets.SCHEDULER_');
-    expect(yml.slice(yml.indexOf('\n  site:'))).not.toContain('SCHEDULER_SERVICE_ACCOUNT');
   });
 });
 

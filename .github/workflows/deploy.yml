@@ -1,5 +1,6 @@
-# Every push to main is tested, then published to Google Cloud Run: the runner (the full app, shared online
-# copy) and the static site (landing page and wizard). Render and Vercel are retired (docs/adr/0032).
+# Every push to main is tested, then the runner (the full app) is published to Google Cloud Run. The site (landing
+# page and wizard) is on Vercel, which builds it from this repo itself and forwards the runner's paths to the
+# runner (docs/adr/0050). Render is retired.
 # A manual run (Actions > Deploy > Run workflow) can tick "skip_tests" to deploy after build-and-smoke only.
 #
 # Auth is keyless (Workload Identity Federation): no key lives in GitHub.
@@ -10,7 +11,9 @@
 #   AUDIT_STORE_BUCKET, FIREBASE_PROJECT_ID, FIREBASE_WEB_API_KEY, FIREBASE_AUTH_DOMAIN, AUDIT_OWNER_EMAILS
 # Optional variable for scheduled Check-ups on the hosted copy (docs/DEPLOYMENT.md, "Scheduled Check-ups on the hosted copy"):
 #   SCHEDULER_SERVICE_ACCOUNT
-# The runner's access token is in Secret Manager as qa-access-token.
+# Variable for the hosted pilot (docs/DEPLOYMENT.md): VERCEL_SITE_URL, the Vercel site's origin with no trailing slash
+# (https://qa-flow-tester.vercel.app). It joins RUNNER_ALLOWED_ORIGINS; without it the site's requests are refused.
+# The runner's access token is in Secret Manager as qa-access-token; the sign-in cookie key as qa-session-secret.
 name: Deploy
 
 on:
@@ -39,7 +42,6 @@ env:
   GCP_REGION: us-central1
   # Cloud Run's address is fixed per service: <service>-<project number>.<region>.run.app.
   RUNNER_URL: https://qa-check-up-809804736896.us-central1.run.app
-  SITE_URL: https://qa-check-up-site-809804736896.us-central1.run.app
 
 jobs:
   build-and-smoke:
@@ -74,10 +76,8 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      # The static site. The wizard's "Open the online app" button points at the runner.
+      # The same build Vercel runs for the site: a check that it still builds.
       - name: Build the site
-        env:
-          VITE_ONLINE_APP_URL: ${{ env.RUNNER_URL }}
         run: pnpm run site-build
 
       # The same build the runner's image runs. It compiles the runner and the packages it uses, which also type-checks them.
@@ -87,13 +87,6 @@ jobs:
       # Fast production smoke check: boots the app on a test port and verifies the Wizard and API endpoints
       - name: Smoke check
         run: pnpm run smoke
-
-      - name: Keep the built site for the site job
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: site
-          path: public
-          retention-days: 1
 
   # The unit tests, the same shards a pull request runs (see tests.yml). Nothing reaches the
   # Cloud Run deploys without passing them, unless a manual run ticked skip_tests. On a push,
@@ -188,13 +181,15 @@ jobs:
           FIREBASE_AUTH_DOMAIN: ${{ vars.FIREBASE_AUTH_DOMAIN }}
           SCHEDULER_SERVICE_ACCOUNT: ${{ vars.SCHEDULER_SERVICE_ACCOUNT }}
           AUDIT_OWNER_EMAILS: ${{ vars.AUDIT_OWNER_EMAILS }}
+          VERCEL_SITE_URL: ${{ vars.VERCEL_SITE_URL }}
         run: |
+          : "${VERCEL_SITE_URL:?Set the repository variable VERCEL_SITE_URL (the Vercel site origin, no trailing slash)}"
           gcloud run deploy "$SERVICE" --project "$GCP_PROJECT" --region "$GCP_REGION" \
-            --image "$IMAGE" --port 8080 --memory 2Gi --cpu 1 \
-            --min-instances 1 --max-instances 1 --timeout 3600 \
+            --image "$IMAGE" --port 8080 --memory 4Gi --cpu 2 \
+            --min-instances 0 --max-instances 1 --no-cpu-throttling --timeout 3600 \
             --allow-unauthenticated \
-            --set-env-vars "^#^RUNNER_BETA=1#RUNNER_HOST=0.0.0.0#RUNNER_DATA_DIR=/tmp/qa-data#RUNNER_OUTPUT_DIR=/tmp/qa-data/reports#RUNNER_ALLOWED_ORIGINS=$RUNNER_URL,https://qa-check-up-cnhl7suwnq-uc.a.run.app#AUDIT_STORE_BUCKET=$AUDIT_STORE_BUCKET#FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID#FIREBASE_WEB_API_KEY=$FIREBASE_WEB_API_KEY#FIREBASE_AUTH_DOMAIN=$FIREBASE_AUTH_DOMAIN#SCHEDULER_SERVICE_ACCOUNT=$SCHEDULER_SERVICE_ACCOUNT#AUDIT_OWNER_EMAILS=$AUDIT_OWNER_EMAILS" \
-            --set-secrets "RUNNER_ACCESS_TOKEN=qa-access-token:latest"
+            --set-env-vars "^#^RUNNER_BETA=1#RUNNER_HOST=0.0.0.0#RUNNER_TRUSTED_PROXY_HOPS=2#RUNNER_PUBLIC_URL=$RUNNER_URL#RUNNER_DATA_DIR=/tmp/qa-data#RUNNER_OUTPUT_DIR=/tmp/qa-data/reports#RUNNER_ALLOWED_ORIGINS=$RUNNER_URL,https://qa-check-up-cnhl7suwnq-uc.a.run.app,$VERCEL_SITE_URL#AUDIT_STORE_BUCKET=$AUDIT_STORE_BUCKET#FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID#FIREBASE_WEB_API_KEY=$FIREBASE_WEB_API_KEY#FIREBASE_AUTH_DOMAIN=$FIREBASE_AUTH_DOMAIN#SCHEDULER_SERVICE_ACCOUNT=$SCHEDULER_SERVICE_ACCOUNT#AUDIT_OWNER_EMAILS=$AUDIT_OWNER_EMAILS" \
+            --set-secrets "RUNNER_ACCESS_TOKEN=qa-access-token:latest,RUNNER_SESSION_SECRET=qa-session-secret:latest"
 
       # Cloud Run's front end answers /healthz with its own 404 and never reaches the container, so this
       # checks the root instead. The runner answers it with 401 (its access-key gate), which proves the
@@ -205,65 +200,6 @@ jobs:
             code=$(curl -s -o /dev/null -m 10 -w '%{http_code}' "$RUNNER_URL/") || code=000
             echo "attempt $attempt: $code"
             { [ "$code" = "401" ] || [ "$code" = "200" ]; } && exit 0
-            sleep 10
-          done
-          exit 1
-
-  # The static site: the landing page and the wizard, public, served by nginx (site/Dockerfile).
-  site:
-    needs: [build-and-smoke, test, audit, secret-scan]
-    # Same guard as cloud-run: only main publishes.
-    if: >-
-      ${{ !cancelled() && github.repository == 'CJCreator/qa-flow-tester' && github.ref == 'refs/heads/main' &&
-      needs.build-and-smoke.result == 'success' &&
-      needs.audit.result == 'success' && needs.secret-scan.result == 'success' &&
-      (needs.test.result == 'success' || (inputs.skip_tests && needs.test.result == 'skipped')) }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: read
-      id-token: write
-    env:
-      SERVICE: qa-check-up-site
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-
-      - name: Get the built site
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: site
-          path: public
-
-      - name: Sign in to Google Cloud
-        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2.1.13
-        with:
-          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
-
-      - uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2.2.1
-
-      - name: Build and push the site image
-        run: |
-          IMAGE="$GCP_REGION-docker.pkg.dev/$GCP_PROJECT/qa/site:$GITHUB_SHA"
-          gcloud auth configure-docker "$GCP_REGION-docker.pkg.dev" --quiet
-          docker build -f site/Dockerfile -t "$IMAGE" .
-          docker push "$IMAGE"
-          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
-
-      - name: Deploy to Cloud Run
-        run: |
-          gcloud run deploy "$SERVICE" --project "$GCP_PROJECT" --region "$GCP_REGION" \
-            --image "$IMAGE" --port 8080 --memory 256Mi --cpu 1 \
-            --min-instances 0 --max-instances 2 \
-            --allow-unauthenticated
-
-      # version.json names the commit the site was built from, so an old image cannot pass.
-      - name: Verify the site serves this commit
-        run: |
-          for attempt in 1 2 3 4 5 6; do
-            body=$(curl -s -m 10 "$SITE_URL/version.json") || body=""
-            echo "attempt $attempt: $body"
-            echo "$body" | grep -q "\"commit\":\"$GITHUB_SHA\"" && exit 0
             sleep 10
           done
           exit 1

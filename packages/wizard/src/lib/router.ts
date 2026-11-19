@@ -30,6 +30,7 @@ export type Route =
   | { name: 'audit-settings' }
   | { name: 'audit-shortlist' }
   | { name: 'helper-sign-in' }
+  | { name: 'get-started' }
   | { name: 'not-found'; path: string };
 
 export const PATHS = {
@@ -60,6 +61,7 @@ export const PATHS = {
   auditSettings: '/audit-settings',
   auditShortlist: '/shortlist',
   helperSignIn: '/helper',
+  getStarted: '/get-started',
 } as const;
 
 /** The id in an address segment, or null when it can't be read or is empty. */
@@ -123,6 +125,8 @@ export function matchRoute(pathname: string): Route {
       return { name: 'audit-settings' };
     case PATHS.auditShortlist:
       return { name: 'audit-shortlist' };
+    case PATHS.getStarted:
+      return { name: 'get-started' };
     case PATHS.helperSignIn:
       return { name: 'helper-sign-in' };
   }

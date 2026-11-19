@@ -4,24 +4,26 @@ How the tool reaches people ([ADR 0012](adr/0012-hosted-runner-github-actions.md
 [ADR 0032](adr/0032-google-cloud-only-hosting.md)). Everything hosted runs on Google Cloud, project
 `qa-flow-tester-512310`, region `us-central1`.
 
-| Surface                                                           | What                                                                                                                                                                   | Defined in                                                                         |
-| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| **Cloud Run `qa-check-up-site`**: landing page and wizard         | Static files behind nginx (`nginxinc/nginx-unprivileged`), public, 256 MiB, 0 to 2 instances                                                                           | `site/Dockerfile`, `site/nginx.conf`, `scripts/site-output.mjs`, `pnpm site-build` |
-| **Cloud Run `qa-check-up`**: the full app as a shared online copy | Runner image, 2 GiB, 1 CPU, exactly 1 instance (warm, [ADR 0038](adr/0038-warm-runner-instance.md)), `RUNNER_BETA=1`, access key from Secret Manager `qa-access-token` | `packages/runner/Dockerfile`, `.github/workflows/deploy.yml`                       |
-| **The user's own GitHub Actions**: the main way to run a check-up | The wizard generates a workflow from `templates/qa-check.yml`; the job builds the tool and runs `packages/runner/dist/checkup.js`                                      | `templates/qa-check.yml`, `.github/workflows/qa-check.yml`                         |
+| Surface                                                                                                                       | What                                                                                                                                                                                                                                                          | Defined in                                                   |
+| ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| **Vercel `qa-flow-tester`**: landing page and wizard (the front door, [ADR 0050](adr/0050-hosted-pilot-vercel-front-door.md)) | Static files built by `pnpm site-build` (output `public`); forwards `/api/*` and `/s/*` to the runner so the browser sees one site                                                                                                                            | `vercel.json`, `scripts/site-output.mjs`                     |
+| **Cloud Run `qa-check-up`**: the full app as a shared online copy                                                             | Runner image, 4 GiB, 2 CPU, 0 to 1 instances (scales to zero, CPU always on while up, [ADR 0050](adr/0050-hosted-pilot-vercel-front-door.md)), `RUNNER_BETA=1`, access key from Secret Manager `qa-access-token`, sign-in cookie key from `qa-session-secret` | `packages/runner/Dockerfile`, `.github/workflows/deploy.yml` |
+| **The user's own GitHub Actions**: the main way to run a check-up                                                             | The wizard generates a workflow from `templates/qa-check.yml`; the job builds the tool and runs `packages/runner/dist/checkup.js`                                                                                                                             | `templates/qa-check.yml`, `.github/workflows/qa-check.yml`   |
 
 Cloud Run addresses are fixed by the project number, so they are known before the first deploy:
-`https://qa-check-up-809804736896.us-central1.run.app` (runner) and
-`https://qa-check-up-site-809804736896.us-central1.run.app` (site).
+`https://qa-check-up-809804736896.us-central1.run.app` (runner; the same service also answers at
+`https://qa-check-up-cnhl7suwnq-uc.a.run.app`, the address `vercel.json` forwards to). The site is
+`https://qa-flow-tester.vercel.app`. The old `qa-check-up-site` service is retired: delete it by hand
+(`gcloud run services delete qa-check-up-site --region us-central1`), after which its old links stop answering.
 
 ## How a change ships
 
 1. Work on a branch and open a pull request. `.github/workflows/ci.yml` runs lint, format check, typecheck, the unit tests (2 shards via `tests.yml`), a dependency audit, a secret scan of the repo history, and a secret scan of the wizard bundle and the runner image.
 2. Merge to `main`. `.github/workflows/deploy.yml` then runs:
-   - **build-and-smoke**: install, the Playwright version check, lint, `pnpm site-build` (with `VITE_ONLINE_APP_URL` set to the runner), the runner build, `pnpm smoke`, and uploads the built site.
-   - **test**: the unit tests, 2 shards (`tests.yml`). Both deploy jobs wait for it.
+   - **build-and-smoke**: install, the Playwright version check, lint, `pnpm site-build` (the same build Vercel runs), the runner build and `pnpm smoke`.
+   - **test**: the unit tests, 2 shards (`tests.yml`). The deploy job waits for it.
    - **cloud-run**: builds and pushes `us-central1-docker.pkg.dev/qa-flow-tester-512310/qa/runner:$GITHUB_SHA`, deploys `qa-check-up`, and checks that the root answers 401 or 200. `/healthz` is not used here: Cloud Run's front end answers it itself and never reaches the container.
-   - **site**: builds and pushes `.../qa/site:$GITHUB_SHA`, deploys `qa-check-up-site`, and checks that `/version.json` names this commit.
+   - The site is not part of this workflow: Vercel builds it from the same push (project `qa-flow-tester`, Root Directory `.`, Build `pnpm run site-build`, Output `public`).
 3. A newer push to `main` cancels an older deploy still running (`concurrency: deploy`).
 
 To deploy without the tests (for example to pick up changed repository variables): Actions > Deploy > **Run workflow** with
@@ -67,9 +69,7 @@ after bumping. Dependabot ignores Playwright (`.github/dependabot.yml`). To upgr
 Local runner image: `docker build -f packages/runner/Dockerfile -t qa-check-up .`, then
 `docker run -p 3001:3001 -e RUNNER_ACCESS_TOKEN=<key> -v qa-data:/data qa-check-up`.
 
-Local site image: `pnpm site-build`, then `docker build -f site/Dockerfile -t qa-check-up-site .` and
-`docker run -p 8080:8080 qa-check-up-site`. `site/nginx.conf` caches `/assets/` for a year and serves `index.html` for
-unknown paths.
+The site: `pnpm site-build` writes it to `./public`. Vercel serves that folder; the cache and security headers and the runner rewrites are in `vercel.json`. Set `SITE_ORIGIN` (or build on Vercel, which sets `VERCEL_PROJECT_PRODUCTION_URL`) so `%ORIGIN%` is filled.
 
 ## The user's own GitHub Actions
 
@@ -104,12 +104,12 @@ One-time setup, by someone with owner rights on the project. The bucket name is 
      --uniform-bucket-level-access --public-access-prevention --soft-delete-duration=0
    ```
 
-2. Keep versioning off and add no lifecycle rule, so deleting a Website Audit removes its data at once. There are no backups. Check:
+2. Keep versioning off. The only lifecycle rule is the one in `scripts/bucket-lifecycle.json`: it deletes objects under `reports/` (saved Check-up reports, ADR 0050) 30 days after they are written. There is no lifecycle rule for Website Audit data, so deleting a Website Audit removes its data at once. There are no backups. Check:
 
    ```bash
    gcloud storage buckets describe gs://qa-check-up-audits \
      --format="yaml(versioning_enabled,lifecycle_config,soft_delete_policy,uniform_bucket_level_access,public_access_prevention)"
-   gcloud storage buckets update gs://qa-check-up-audits --no-versioning --clear-lifecycle --clear-soft-delete
+   gcloud storage buckets update gs://qa-check-up-audits --no-versioning --clear-soft-delete --lifecycle-file=scripts/bucket-lifecycle.json
    ```
 
 3. Give the runner's runtime service account `roles/storage.objectAdmin` on this bucket only. An empty answer from the first command means the default compute account `809804736896-compute@developer.gserviceaccount.com`:
@@ -134,10 +134,10 @@ One-time setup, by someone with owner rights on the project. The bucket name is 
 
    `apps:sdkconfig` prints the public web settings (`projectId`, `apiKey`, `authDomain`). In the Firebase console,
    Authentication > Sign-in method: enable **Google**; Settings > Authorized domains: add
-   `qa-check-up-809804736896.us-central1.run.app` (and the site's host if the wizard is opened from there).
+   `qa-flow-tester.vercel.app` (the site people open; sign-in runs on the Vercel origin) and `qa-check-up-809804736896.us-central1.run.app`.
 
 5. Set the repository variables (Variables, not secrets; all public values): `AUDIT_STORE_BUCKET` (name without `gs://`),
-   `FIREBASE_PROJECT_ID`, `FIREBASE_WEB_API_KEY`, `FIREBASE_AUTH_DOMAIN`. The next deploy passes them to the runner.
+   `FIREBASE_PROJECT_ID`, `FIREBASE_WEB_API_KEY`, `FIREBASE_AUTH_DOMAIN`, and `VERCEL_SITE_URL` (`https://qa-flow-tester.vercel.app`, no trailing slash: it joins `RUNNER_ALLOWED_ORIGINS`, and the deploy fails without it). The next deploy passes them to the runner. The same three `FIREBASE_*` values go into the Vercel project as `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_WEB_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`. Create the secret `qa-session-secret` in Secret Manager (a long random value) and let the runner's service account read it.
 
 A wizard build can also bake the Firebase values in as `VITE_FIREBASE_*` ([CONFIGURATION.md](CONFIGURATION.md)); the deploy does not need them.
 
@@ -176,7 +176,7 @@ account free; this uses 1.
 - [ ] One check-up run by hand on a real site ([TESTING.md](TESTING.md), Checking against real websites)
 - [ ] `CHANGELOG.md` updated
 - [ ] Tag `vX.Y.Z` equal to the `package.json` version; the Release build workflow is green
-- [ ] After merge: Deploy workflow green, both services answer, open the online app and run one check-up on a public site
+- [ ] After merge: Deploy workflow green, the runner answers, Vercel deployed, open the site and run one check-up on a public site
 - [ ] Rotate anything that was exposed during development
 
 Bumping the version means updating every `package.json` and `CHANGELOG.md`; a test fails on drift. `TOOL_REF` in
@@ -185,7 +185,7 @@ the release-tag step no longer applies to the generated file.
 
 ## Rollback
 
-Revert the merge commit on `main` and push; the deploy redeploys both services. Cloud Run also keeps earlier revisions:
+Revert the merge commit on `main` and push; the deploy redeploys the runner (Vercel redeploys the site). Cloud Run also keeps earlier revisions:
 `gcloud run services update-traffic <service> --to-revisions <revision>=100 --region us-central1` moves traffic back at
 once. Artifact Registry `qa` keeps only the 3 newest versions of each image ([ADR 0038](adr/0038-warm-runner-instance.md)),
 so a rollback to an older revision fails once its image is deleted.
@@ -193,6 +193,6 @@ so a rollback to an older revision fails once its image is deleted.
 ## Limits of the hosted copy
 
 - One instance only (`--max-instances 1`): beta limits and sessions are held in memory, and a restart or redeploy resets the per-visitor and per-day counters. Clearing the cookie gives a visitor a fresh count (and loses their AI key); the daily cap is the backstop.
-- The runner stays warm (`--min-instances 1`), so it answers at once but is billed while idle (roughly 15 to 20 US dollars a month). The site scales to zero; its first request after idle waits for a short cold start.
+- The runner scales to zero (`--min-instances 0`, ADR 0050), so it costs nothing while idle. The first visit after a quiet spell waits for a cold start (up to about a minute; the site shows a "Waking up" screen). While a check-up runs, CPU stays on (`--no-cpu-throttling`).
 - The data folder is `/tmp`, wiped on every redeploy, restart or scale-down. Only Website Audits, Shared Links and schedules survive, and only with `AUDIT_STORE_BUCKET`.
 - A scheduled tick holds one request open for up to 30 minutes; a longer run is recorded as failed and keeps running ([ADR 0039](adr/0039-cloud-scheduler-owner-schedules.md)).
