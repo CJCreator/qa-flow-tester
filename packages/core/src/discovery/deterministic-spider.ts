@@ -277,13 +277,14 @@ export interface SitemapSeedOptions {
  * Files are parsed in the order they were found, so which addresses are queued does not depend on timing.
  */
 export async function seedFromSitemaps(opts: SitemapSeedOptions): Promise<{ queued: number; files: number }> {
-  const { site, fetch, onSite } = opts;
+  // The guarded fetch the crawl passes in (makeOutboundFetch, ADR 0031), never Node's own fetch.
+  const { site, fetch: outboundFetch, onSite } = opts;
   const sitemapUrls = [new URL('/sitemap.xml', site).toString()];
   const addFile = (u: URL) => {
     if (sitemapUrls.length < SITEMAP_MAX_FILES && !sitemapUrls.includes(u.toString())) sitemapUrls.push(u.toString());
   };
   try {
-    const robotsRes = await fetch(new URL('/robots.txt', site).toString());
+    const robotsRes = await outboundFetch(new URL('/robots.txt', site).toString());
     if (robotsRes && robotsRes.status >= 200 && robotsRes.status < 300) {
       const robotsText = await robotsRes.text();
       for (const line of robotsText.split(/\r?\n/)) {
@@ -308,7 +309,7 @@ export async function seedFromSitemaps(opts: SitemapSeedOptions): Promise<{ queu
 
   const read = async (smUrl: string): Promise<string | undefined> => {
     try {
-      const res = await fetch(smUrl);
+      const res = await outboundFetch(smUrl);
       if (!res || res.status < 200 || res.status >= 300) return undefined;
       return await res.text();
     } catch (err) {
