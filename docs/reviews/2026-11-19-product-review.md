@@ -324,3 +324,42 @@ _Check-up:_
 3. Can the hosted runner use always-on CPU (higher cost), or should audits move to Cloud Run Jobs? This bears on the $0-hosting goal.
 4. For the enhanced version, is the homepage plus one page per template enough, or do you expect every page?
 5. Retries: should a failed test be retried once, as the guide says, or 3 times, as the code does?
+
+## Safety Filter and Domain Allowlist (T-397, 2026-11-19)
+
+Read-only review. Paths are relative to `packages/core/src`. The failing test for each gap is written in its ticket (T-421 to T-428), not here. The Benchmark code outside `competitive/safe-crawler.ts` was not reviewed.
+
+### A. Sensitive Action
+
+- **A1. The check is a text match made while the Plan is built.** `discovery/safety-filter.ts:12` `isSensitive` is called from `plan/ai-planner.ts:298`, `plan/spec-plan.ts:459`, the Spider and `live-site.ts:130`.
+  - The Check-up run never calls it: `orchestrator.ts:920-928` runs `locator.click()` straight from the Plan.
+  - `sendGuard` (`send-guard.ts:46`) is passive: "never routes or blocks anything".
+  - Nothing pauses a click at run time.
+- **A2. The run-time protection is `blockChanges`** (`live-site.ts:95`), which aborts POST, PUT, PATCH and DELETE. It applies only when the run is read-only (`orchestrator.ts:774`; `discovery-agent.ts:487, 634`). On a Test Copy nothing blocks.
+- **A3. Other paths.**
+  - `form.submit` and `requestSubmit` are neutralised only in `competitive/safe-crawler.ts:116-119`.
+  - The Spider's exploring click (`discovery/deterministic-spider.ts:1385`) is not under `guardPage`.
+  - `guardPage` (`discovery/guard.ts:31`) is used only in `interactive-states.ts:60` and `crud-facts.ts:102`. It is page-level, so popups are not covered.
+  - The delete probe tests the constant `isSensitive('Delete', '')` (`deterministic-spider.ts:1446-1452`), not the element's own label.
+
+### B. Domain Allowlist (`headerHosts`, `browser.ts:18`)
+
+- It is checked by `onSiteAddress` (`same-site.ts:19`; `orchestrator.ts:785, 979`: the start page and navigate steps) and by `hostAllowed` (`browser.ts:196-213`), which only decides where secret headers go and blocks nothing.
+- The Spider uses `isSameSiteOrLoopback` (`deterministic-spider.ts:425`).
+  - An off-site page after `goto` is recorded as `off-site-redirect` (`:1089-1108`), but only after it has loaded.
+  - After a click, an off-site page is only not enqueued (`:1392`).
+  - There is no popup handling. Subresources and iframes are unfiltered.
+- `competitive/safe-crawler.ts:187-223` is the strongest: it aborts changing requests and off-host navigation. It uses `page.route`, so popups are not covered.
+
+### Gaps and tickets
+
+| Ticket | Priority | Gap                                                                                |
+| ------ | -------- | ---------------------------------------------------------------------------------- |
+| T-421  | P1       | A click-time Sensitive Action gate in the Check-up run                             |
+| T-422  | P1       | `form.submit`, `requestSubmit` and Enter protection in Test runs                   |
+| T-423  | P2       | The Spider's exploring click under `guardPage`                                     |
+| T-424  | P1       | A host allowlist on subrequests, iframes and redirects in the Spider and Test runs |
+| T-425  | P2       | Popups covered by context-level routes                                             |
+| T-426  | P2       | An off-site click navigation is undone and recorded                                |
+| T-427  | P2       | GET side effects (`/logout?confirm`, `/delete?id=1`)                               |
+| T-428  | P2       | The delete probe uses the real element label and `forbiddenActions`                |
