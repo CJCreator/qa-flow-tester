@@ -22,6 +22,13 @@ export {
   type PageLinkFact,
 } from './light-crawl.js';
 export { auditedPagesByType, compareSites, pageFactsFromContent } from './compare.js';
+export {
+  competitorExamples,
+  competitorIdeas,
+  competitorTexts,
+  copiesCompetitor,
+  type CompetitorExample,
+} from './examples.js';
 
 /** The stored competitors of a version: `audits/<id>/v<n>/competitors.json`. */
 export const COMPETITORS_NAME = 'competitors';

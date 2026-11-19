@@ -54,6 +54,22 @@ describe('similar sites panel', () => {
     expect(html).not.toMatch(/score/i);
   });
 
+  it('shows competitor examples beside the top findings, each citing site and page (T-418)', () => {
+    const html = view({
+      examples: [
+        {
+          findingId: 'AF-001',
+          host: 'a.example',
+          urlPath: '/contact',
+          text: 'a.example shows a phone link on /contact',
+        },
+      ],
+    });
+    expect(html).toContain('beside the top findings');
+    expect(html).toContain('AF-001');
+    expect(html).toContain('a.example shows a phone link on /contact');
+  });
+
   it('without an AI key the find button says why it is disabled', () => {
     const html = view({ aiReady: false, state: null });
     expect(html).toContain(COMPETITORS_NO_KEY_REASON);

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { CompetitorPageFacts, CompetitorsState } from '@qa/types/src/browser.js';
+import type { CompetitorExample, CompetitorPageFacts, CompetitorsState } from '@qa/types/src/browser.js';
 import { ErrorMessage, Spinner } from '../../../components/text';
 import { crawlCompetitors, discoverCompetitors, loadCompetitors, type Fetch } from './competitors-api';
 
@@ -49,6 +49,33 @@ export interface CompetitorsViewProps {
   onToggle: (host: string) => void;
   onFind: () => void;
   onRead: () => void;
+  /** T-418: what each read site shows for each top finding. */
+  examples?: CompetitorExample[];
+}
+
+/** T-418: the examples grouped by finding, each line citing its site and page. */
+export function ExamplesByFinding({ examples }: { examples: readonly CompetitorExample[] }) {
+  const byFinding = new Map<string, CompetitorExample[]>();
+  for (const e of examples) byFinding.set(e.findingId, [...(byFinding.get(e.findingId) ?? []), e]);
+  if (byFinding.size === 0) return null;
+  return (
+    <div className="mt-4">
+      <h3 className="font-semibold">What similar sites show, beside the top findings</h3>
+      <p className="text-sm text-ink-soft">Only what was seen on each page; nothing is copied into a variant.</p>
+      <ul className="mt-2 space-y-2 text-sm">
+        {[...byFinding].map(([findingId, list]) => (
+          <li key={findingId}>
+            <span className="font-semibold">{findingId}</span>
+            <ul className="list-disc pl-5">
+              {list.map((e, i) => (
+                <li key={i}>{e.text}</li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 /** The similar-sites panel, without state. */
@@ -167,6 +194,7 @@ export function CompetitorsView(props: CompetitorsViewProps) {
           </table>
         </div>
       )}
+      {props.examples && <ExamplesByFinding examples={props.examples} />}
     </section>
   );
 }
@@ -185,7 +213,9 @@ export function CompetitorsPanel({ auditId, version, aiReady, fetchImpl }: Compe
   const [busy, setBusy] = useState<'finding' | 'reading' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const show = useCallback((next: CompetitorsState | null) => {
+  const [examples, setExamples] = useState<CompetitorExample[]>([]);
+  const show = useCallback((next: CompetitorsState | null, found: CompetitorExample[] = []) => {
+    setExamples(found);
     setState(next);
     const read = next?.sites?.map((s) => s.host);
     setKept(new Set(read ?? next?.candidates.filter((c) => c.status === 'ok').map((c) => c.host) ?? []));
@@ -196,7 +226,7 @@ export function CompetitorsPanel({ auditId, version, aiReady, fetchImpl }: Compe
     if (version <= 0) return;
     void loadCompetitors(auditId, version, fetchImpl).then((got) => {
       if (!live) return;
-      if (got.ok) show(got.value);
+      if (got.ok) show(got.value, got.examples);
     });
     return () => {
       live = false;
@@ -208,7 +238,7 @@ export function CompetitorsPanel({ auditId, version, aiReady, fetchImpl }: Compe
     setError(null);
     const got = await discoverCompetitors(auditId, version, fetchImpl);
     setBusy(null);
-    if (got.ok) show(got.value);
+    if (got.ok) show(got.value, got.examples);
     else setError(got.message);
   };
 
@@ -217,13 +247,14 @@ export function CompetitorsPanel({ auditId, version, aiReady, fetchImpl }: Compe
     setError(null);
     const got = await crawlCompetitors(auditId, version, [...kept], fetchImpl);
     setBusy(null);
-    if (got.ok) show(got.value);
+    if (got.ok) show(got.value, got.examples);
     else setError(got.message);
   };
 
   return (
     <CompetitorsView
       state={state}
+      examples={examples}
       busy={busy}
       error={error}
       aiReady={aiReady}
