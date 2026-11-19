@@ -81,9 +81,7 @@ describe('findOverlaps', () => {
     const tamil = 'எங்கள் கடையில் தினமும் காலை புதிய ரொட்டி சுடப்படுகிறது. கேக் ஆர்டர் செய்ய அழைக்கவும்.';
     expect(overlapWords('சுடப்படுகிறது.')).toEqual(['சுடப்படுகிறது']);
     const copied = 'இங்கே எங்கள் கடையில் தினமும் காலை புதிய ரொட்டி கிடைக்கும்.';
-    expect(findOverlaps(tamil, copied, 6)).toEqual([
-      { words: 'எங்கள் கடையில் தினமும் காலை புதிய ரொட்டி', wordCount: 6 },
-    ]);
+    expect(findOverlaps(tamil, copied, 6)).toEqual([{ words: 'எங்கள் கடையில் தினமும் காலை புதிய ரொட்டி', wordCount: 6 }]);
     // A different vowel sign makes a different word: no run of 6.
     const changed = 'எங்கள் கடையில் தினமும் காலை புதிய ரொட்டீ கிடைக்கும்.';
     expect(findOverlaps(tamil, changed, 6)).toEqual([]);
