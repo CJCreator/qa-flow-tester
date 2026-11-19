@@ -224,6 +224,19 @@ export interface RenderedPageContext {
   pacer: HostPacer;
   /** The headers of the page's own (main frame) response, when one was seen. For technology detection only. */
   responseHeaders?: Record<string, string>;
+  /** A new page in the crawl's browser context (same guards), for lab work off the crawl workers (T-404). */
+  openPage?: () => Promise<Page>;
+  /** Work the crawl awaits before it closes its browser, never before its next page (T-404). */
+  defer?: (work: Promise<void>) => void;
+  /** Lab pages open at once: 4 on a local runner, 2 on the hosted copy (T-404). */
+  labInFlight?: number;
+  /** The crawl's stop signal: lab work not yet started is dropped once it aborts. */
+  signal?: AbortSignal;
+}
+
+/** Lab pages (axe, timing, phone layout) open at once, off the crawl workers (T-404). */
+export function auditLabInFlight(localRunner: boolean): number {
+  return localRunner ? 4 : 2;
 }
 
 export interface AuditCrawlOptions {
@@ -352,6 +365,8 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
   const launch: AuditBrowserLauncher = deps.launchBrowser ?? ((options) => chromium.launch(options));
   let browser: Pick<Browser, 'newContext' | 'close'> | undefined;
   let context: BrowserContext | undefined;
+  /** Lab work handed back by `onRenderedPage` (T-404): awaited before the browser closes. */
+  const labWork: Promise<void>[] = [];
 
   // Progress: counted as pages are recorded and skipped, each path once.
   const recordedKeys = new Set<string>();
@@ -495,9 +510,14 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
       onRecordedPage: async (page, item) => {
         if (opts.onRenderedPage) {
           const responseHeaders = mainHeaders.get(page);
+          const crawlContext = context!;
           await opts.onRenderedPage(page, toAuditPage(item), {
             pacer,
             ...(responseHeaders ? { responseHeaders } : {}),
+            openPage: () => crawlContext.newPage(),
+            defer: (work) => labWork.push(work),
+            labInFlight: auditLabInFlight(allowPrivate),
+            signal: crawlSignal,
           });
         }
       },
@@ -561,6 +581,8 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
       ...(result.stoppedAnsweringAfter !== undefined ? { stoppedAnsweringAfter: result.stoppedAnsweringAfter } : {}),
     };
   } finally {
+    // Lab work (T-404) uses pages of this context: it ends before the browser closes, never before the next page.
+    await Promise.allSettled(labWork);
     await context?.close().catch(() => {});
     if (browser) await closeBrowser(browser);
   }

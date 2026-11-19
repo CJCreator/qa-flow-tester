@@ -1071,6 +1071,109 @@ describe('audit pipeline: runAuditPipeline', () => {
     expect(readPageSpy).toHaveBeenCalledWith(fakePage, {});
   });
 
+  describe('lab work off the crawl workers (T-404)', () => {
+    const measured = (source: 'this-tool' | 'pagespeed-insights') => ({
+      status: 'measured' as const,
+      source,
+      method: 'lab' as const,
+      strategy: 'mobile' as const,
+      values: [],
+      measuredAt: '2026-11-03T00:00:00.000Z',
+    });
+
+    /** A crawl context with lab pages; `defer` collects the work the crawl awaits before closing. */
+    function labContext(labInFlight = 4) {
+      const deferred: Promise<void>[] = [];
+      const opened: string[] = [];
+      let open = 0;
+      let peakOpen = 0;
+      const ctx = {
+        pacer: { run: (_h: string, t: () => unknown) => t() },
+        labInFlight,
+        defer: (work: Promise<void>) => deferred.push(work),
+        openPage: async () => {
+          open++;
+          peakOpen = Math.max(peakOpen, open);
+          let at = '';
+          return {
+            goto: async (url: string) => {
+              at = url;
+              opened.push(url);
+            },
+            url: () => at,
+            close: async () => {
+              open--;
+            },
+          } as unknown as Page;
+        },
+      };
+      return { ctx, deferred, opened, peakOpen: () => peakOpen };
+    }
+
+    it('lab work for 10 pages finishes after the crawl does, and the crawl never waits for it', async () => {
+      let release!: () => void;
+      const gate = new Promise<void>((r) => (release = r));
+      const a11y = vi.fn(async () => {
+        await gate;
+        return { findings: [], checks: [] } as unknown as AccessibilityBasicsResult;
+      });
+      const recorder = createPageRecorder({ workDir, stages: pageStages({ accessibilityBasics: a11y as any }) });
+      const { ctx, deferred, opened, peakOpen } = labContext(4);
+
+      // The crawl: 10 pages, each handed over and left at once.
+      for (let i = 0; i < 10; i++) {
+        const path = `/page-${String.fromCharCode(97 + i)}`;
+        const crawlPageFake = { url: () => `https://example.com${path}`, urlPath: path } as unknown as Page;
+        await recorder.onRenderedPage(crawlPageFake, crawlPage(path, 1), ctx as never);
+      }
+      // Every page is recorded and read; no lab work has finished yet.
+      expect(recorder.pages).toHaveLength(10);
+      expect(recorder.pages.every((p) => p.accessibility === undefined)).toBe(true);
+      expect(deferred).toHaveLength(10);
+
+      release();
+      await Promise.all(deferred);
+      expect(recorder.pages.every((p) => p.accessibility && p.phone !== undefined)).toBe(true);
+      // Lab pages are loaded again on pages of their own, at most labInFlight at once.
+      expect(opened).toHaveLength(10);
+      expect(peakOpen()).toBeLessThanOrEqual(4);
+    });
+
+    it('a page measured by PSI gets no reload; a page PSI could not measure gets the browser timing', async () => {
+      const timingSpy = vi.fn(async () => ({ speed: measured('this-tool'), raw: {} }));
+      const psi = vi.fn(async (url: string) =>
+        url.endsWith('/fast')
+          ? { url, speed: { lab: measured('pagespeed-insights'), field: { status: 'not-measured' } } as never }
+          : {
+              url,
+              speed: {
+                lab: { status: 'not-measured', source: 'pagespeed-insights', method: 'lab', reason: 'failed' },
+                field: { status: 'not-measured' },
+              } as never,
+            }
+      );
+      const recorder = createPageRecorder({
+        workDir,
+        stages: pageStages({ measureBrowserTiming: timingSpy as any }),
+        pageSpeed: { measure: psi },
+      });
+      const { ctx, deferred } = labContext();
+      for (const path of ['/fast', '/slow']) {
+        const fake = { url: () => `https://example.com${path}`, urlPath: path } as unknown as Page;
+        await recorder.onRenderedPage(fake, crawlPage(path, 1), ctx as never);
+      }
+      await Promise.all(deferred);
+
+      expect(psi).toHaveBeenCalledTimes(2);
+      expect(timingSpy).toHaveBeenCalledTimes(1);
+      const fast = recorder.pages.find((p) => p.info.urlPath === '/fast')!;
+      const slow = recorder.pages.find((p) => p.info.urlPath === '/slow')!;
+      expect(fast.psiTried).toBe(true);
+      expect(fast.timing).toBeUndefined();
+      expect(slow.timing?.speed.status).toBe('measured');
+    });
+  });
+
   it('emits site-stopped-answering note from crawl stoppedAnsweringAfter count', async () => {
     const crawl = crawlResult();
     crawl.stoppedAnsweringAfter = 3;
