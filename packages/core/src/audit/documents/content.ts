@@ -193,7 +193,9 @@ function pageBlocks(content: PageContent, language: DocumentLanguage, words: Con
     blocks.push({ type: 'paragraph', text: `${words.kind}: ${words.sectionKinds[section.kind] ?? section.kind}` });
     // The Section's text exactly as it is (or as edited): never trimmed or reworded.
     const text = sectionText(content, section);
-    blocks.push(text.trim() === '' ? { type: 'note', text: words.emptySection } : { type: 'paragraph', text });
+    blocks.push(
+      text.trim() === '' ? { type: 'note', text: words.emptySection } : { type: 'paragraph', text, original: true }
+    );
     const inSection = <T extends { sectionId?: string }>(items: T[]) => items.filter((x) => x.sectionId === section.id);
     blocks.push(...elementBlocks(inSection(content.images), inSection(content.ctas), inSection(content.forms), words));
   }

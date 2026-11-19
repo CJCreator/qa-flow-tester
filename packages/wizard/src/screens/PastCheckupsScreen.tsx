@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { reasonId } from '../components/DisabledReason';
 import type { FindingSeverity, RunSummary } from '@qa/types';
 import { deleteRun, listRuns, RunnerError } from '../api';
 import type { ConfirmOptions } from '../components/ConfirmDialog';
@@ -126,7 +127,7 @@ export function PastCheckupsScreen({
       {!runs && !error && <Spinner label="Loading your check-ups…" />}
 
       {runs && runs.length > 0 && starting && (
-        <p role="status" className="mb-4 text-sm text-ink-soft">
+        <p id="past-starting-reason" role="status" className="mb-4 text-sm text-ink-soft">
           {STARTING_REASON}
         </p>
       )}
@@ -189,6 +190,7 @@ export function PastCheckupsScreen({
                           type="button"
                           className="btn-quiet btn-sm min-h-[44px]"
                           disabled={starting}
+                          aria-describedby={reasonId('past-starting-reason', starting)}
                           title={starting ? STARTING_REASON : undefined}
                           onClick={() => onTestAgain(run)}
                           aria-label={`New check-up of this site, ${run.host}`}

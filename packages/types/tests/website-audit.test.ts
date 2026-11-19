@@ -583,6 +583,7 @@ describe('AUDIT_API', () => {
       ['DELETE', '/api/audits/:id'],
       ['POST', '/api/audits/:id/rerun'],
       ['POST', '/api/audits/:id/stop'],
+      ['POST', '/api/audits/:id/resume'],
       ['GET', '/api/audits/:id/edits'],
       ['PATCH', '/api/audits/:id/edits'],
       ['GET', '/api/audit-settings'],
@@ -592,6 +593,9 @@ describe('AUDIT_API', () => {
       ['GET', '/api/audits/:id/file'],
       // BE-019 export
       ['GET', '/api/audits/:id/export'],
+      // T-404 export translation, T-410 fix options
+      ['GET', '/api/audits/:id/export-translation'],
+      ['GET', '/api/audits/:id/fix-options'],
       // BE-020 pitch, BE-021 owner, BE-023 preview
       ['GET', '/api/audits/:id/pitch'],
       ['GET', '/api/audits/:id/owner'],

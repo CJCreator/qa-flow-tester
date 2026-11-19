@@ -11,6 +11,8 @@
  * 4. a 500 page becomes a Skipped Page and a finding.
  * 5. a run of network failures pauses the crawl, which then resumes.
  * 6. a challenge page that never clears produces ERR_SITE_BLOCKED.
+ * 7. T-407: stopping after 60 of 100 pages, then resuming from the checkpoint, records 100 pages once each.
+ * 8. T-430: a 20-page site costs at most 40 page starts with every lab result, and 1 a page when PSI measures.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { chromium, type Browser, type Route } from 'playwright';
@@ -18,6 +20,11 @@ import type { AuditRequest } from '@qa/types';
 import { runAuditCrawl, type AuditBrowserLauncher, type AuditCrawlProgress } from '../src/audit/crawl/crawl.js';
 import { AuditCrawlBlockedError } from '../src/audit/crawl/interstitial.js';
 import { createSkippedPageFindings } from '../src/audit/pipeline/skipped-findings.js';
+import { createPageRecorder, type PageStages } from '../src/audit/pipeline/page-recorder.js';
+import { createAuditCheckpointer, loadAuditCheckpoint } from '../src/audit/pipeline/pipeline.js';
+import { promises as fs } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import type { NetDeps, PinnedRequest, RawResponse } from '../src/safe-net.js';
 
 describe('audit-crawl-browser (T-89 browser tier)', () => {
@@ -487,5 +494,243 @@ describe('audit-crawl-browser (T-89 browser tier)', () => {
       expect(err.kind).toBe('bot-check');
       return true;
     });
+  });
+
+  it('T-407: stopping after 60 of 100 routed pages, then resuming, records 100 pages with no duplicates', async () => {
+    const origin = 'https://resume-site.example';
+    const loads = new Map<string, number>();
+    const browserManager = {
+      createContext: async (options?: any) => {
+        const ctx = await browser.newContext(options);
+        await ctx.route('**/*', async (route: Route) => {
+          const url = new URL(route.request().url());
+          if (url.origin !== origin) return route.fulfill({ status: 404, body: 'Not found' });
+          loads.set(url.pathname, (loads.get(url.pathname) ?? 0) + 1);
+          // Slow enough that several pages are in flight when the stop comes.
+          await new Promise((r) => setTimeout(r, 20));
+          if (url.pathname === '/') {
+            const links = Array.from({ length: 99 }, (_, i) => `<a href="/p-${i + 1}">Page ${i + 1}</a>`).join('');
+            return route.fulfill({
+              status: 200,
+              contentType: 'text/html',
+              body: `<!doctype html><html><head><title>Home</title></head><body><h1>Home</h1>${links}</body></html>`,
+            });
+          }
+          const match = /^\/p-(\d+)$/.exec(url.pathname);
+          if (match) {
+            return route.fulfill({
+              status: 200,
+              contentType: 'text/html',
+              body: `<!doctype html><html><head><title>Page ${match[1]}</title></head><body><h1>Page ${match[1]}</h1></body></html>`,
+            });
+          }
+          return route.fulfill({ status: 404, body: 'Not found' });
+        });
+        return ctx;
+      },
+    };
+    // Cheap page stages: the test is about which pages are recorded, not what is on them.
+    const stages: Partial<PageStages> = {
+      readPage: (async (page: any) => ({ raw: {}, content: { title: await page.title() } })) as any,
+      accessibilityBasics: (async () => ({ basics: null, findings: [] })) as any,
+      recordPhoneLayout: (async () => ({
+        phone: { screenshotPath: null, findingIds: [], overflow: null },
+        findings: [],
+      })) as any,
+      measureBrowserTiming: (async () => ({ speed: { status: 'not-measured' } })) as any,
+    };
+    const json = new Map<string, unknown>();
+    const files = new Map<string, Uint8Array>();
+    const store = {
+      writeVersionJson: async (_a: string, _v: number, name: string, value: unknown) => {
+        json.set(name, JSON.parse(JSON.stringify(value)));
+      },
+      readVersionJson: async <T>(_a: string, _v: number, name: string) => (json.get(name) ?? null) as T | null,
+      putVersionFile: async (_a: string, _v: number, name: string, data: Uint8Array) => {
+        files.set(name, data);
+      },
+      getVersionFile: async (_a: string, _v: number, name: string) => files.get(name) ?? null,
+    };
+    const request: AuditRequest = {
+      url: `${origin}/`,
+      limits: { maxPages: 100, maxDepth: 2, includePaths: [], excludePaths: [] },
+      language: 'en',
+    };
+    const workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'qa-resume-test-'));
+    try {
+      // First run: stopped once 60 pages are recorded, with others still loading.
+      const recorder1 = createPageRecorder({ workDir, stages });
+      const stop = new AbortController();
+      let seen = 0;
+      await runAuditCrawl(request, {
+        allowPrivateAddresses: true,
+        signal: stop.signal,
+        onRenderedPage: async (page, info, context) => {
+          await recorder1.onRenderedPage(page, info, context);
+          if (++seen === 60) stop.abort();
+        },
+        checkpoint: {
+          save: createAuditCheckpointer({
+            store: store as any,
+            auditId: 'a',
+            version: 1,
+            recorder: recorder1,
+            workDir,
+          }),
+        },
+        deps: { browserManager, netDeps: makeNetDeps(), minGapMs: 1 },
+      });
+      expect(stop.signal.aborted).toBe(true);
+
+      const loaded = await loadAuditCheckpoint(store as any, 'a', 1, workDir);
+      expect(loaded).not.toBeNull();
+      expect(loaded!.crawl.crawlDone).toBe(false);
+      // Pages whose lab work had not ended at the stop are not in it: they are pending again.
+      expect(loaded!.pages.length).toBeGreaterThan(0);
+      expect(loaded!.pages.length).toBeLessThanOrEqual(60);
+      expect(loaded!.pages.every((p) => p.labDone)).toBe(true);
+
+      // Resume: the saved pages come back, the crawl carries on from the checkpoint with the same limits.
+      loads.clear();
+      const recorder2 = createPageRecorder({ workDir, stages });
+      recorder2.restore(loaded!.pages);
+      const result = await runAuditCrawl(request, {
+        allowPrivateAddresses: true,
+        resume: loaded!.crawl,
+        onRenderedPage: recorder2.onRenderedPage,
+        checkpoint: {
+          save: createAuditCheckpointer({
+            store: store as any,
+            auditId: 'a',
+            version: 1,
+            recorder: recorder2,
+            workDir,
+            restored: loaded!,
+          }),
+        },
+        deps: { browserManager, netDeps: makeNetDeps(), minGapMs: 1 },
+      });
+
+      const paths = result.pages.map((p) => p.urlPath);
+      expect(paths).toHaveLength(100);
+      expect(new Set(paths).size).toBe(100);
+      const recorded = recorder2.pages.map((p) => p.info.urlPath);
+      expect(recorded).toHaveLength(100);
+      expect(new Set(recorded).size).toBe(100);
+      expect(result.coverage.skipped.filter((s) => paths.includes(s.urlPath))).toEqual([]);
+      // A page the checkpoint holds is never loaded again on resume.
+      for (const p of loaded!.pages) expect(loads.get(p.info.urlPath), p.info.urlPath).toBeUndefined();
+      const final = await loadAuditCheckpoint(store as any, 'a', 1, workDir);
+      expect(final?.crawl.crawlDone).toBe(true);
+      expect(final?.pages).toHaveLength(100);
+    } finally {
+      await fs.rm(workDir, { recursive: true, force: true }).catch(() => {});
+    }
+  }, 300_000);
+
+  describe('T-430: one lab load per audit page', () => {
+    /** A 20-page routed site that counts the page loads (main-frame documents) it serves. */
+    function twentyPageSite(origin: string) {
+      const starts: string[] = [];
+      const browserManager = {
+        createContext: async (options?: any) => {
+          const ctx = await browser.newContext(options);
+          await ctx.route('**/*', async (route: Route) => {
+            const req = route.request();
+            const url = new URL(req.url());
+            if (url.origin !== origin) return route.fulfill({ status: 404, body: 'Not found' });
+            if (req.isNavigationRequest() && req.resourceType() === 'document') starts.push(url.pathname);
+            if (url.pathname === '/') {
+              const links = Array.from({ length: 19 }, (_, i) => `<a href="/p-${i + 1}">Page ${i + 1}</a>`).join(' ');
+              return route.fulfill({
+                status: 200,
+                contentType: 'text/html',
+                body: `<!doctype html><html lang="en"><head><title>Home</title></head><body><main><h1>Home</h1><p>${links}</p></main></body></html>`,
+              });
+            }
+            const match = /^\/p-(\d+)$/.exec(url.pathname);
+            if (match) {
+              return route.fulfill({
+                status: 200,
+                contentType: 'text/html',
+                body: `<!doctype html><html lang="en"><head><title>Page ${match[1]}</title></head><body><main><h1>Page ${match[1]}</h1><p>Text of page ${match[1]}.</p></main></body></html>`,
+              });
+            }
+            return route.fulfill({ status: 404, body: 'Not found' });
+          });
+          return ctx;
+        },
+      };
+      return { starts, browserManager };
+    }
+    const request = (origin: string): AuditRequest => ({
+      url: `${origin}/`,
+      limits: { maxPages: 20, maxDepth: 2, includePaths: [], excludePaths: [] },
+      language: 'en',
+    });
+
+    it('a 20-page routed site causes at most 40 page starts, and every page gets its axe, phone and timing results', async () => {
+      const origin = 'https://one-load-site.example';
+      const { starts, browserManager } = twentyPageSite(origin);
+      const workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'qa-one-load-'));
+      try {
+        const recorder = createPageRecorder({ workDir });
+        const result = await runAuditCrawl(request(origin), {
+          allowPrivateAddresses: true,
+          onRenderedPage: recorder.onRenderedPage,
+          deps: { browserManager, netDeps: makeNetDeps(), minGapMs: 1 },
+        });
+        expect(result.pages).toHaveLength(20);
+        expect(starts.length).toBeLessThanOrEqual(40);
+        expect(recorder.pages).toHaveLength(20);
+        for (const p of recorder.pages) {
+          expect(p.accessibility, p.info.urlPath).toBeTruthy();
+          expect(p.phone, p.info.urlPath).toBeTruthy();
+          expect(p.phone?.phone.screenshotPath, p.info.urlPath).toBeTruthy();
+          expect(p.timing, p.info.urlPath).toBeTruthy();
+          expect(p.timing?.speed.status, p.info.urlPath).toBe('measured');
+        }
+      } finally {
+        await fs.rm(workDir, { recursive: true, force: true }).catch(() => {});
+      }
+    }, 300_000);
+
+    it('a page PSI measures costs the site 1 page start', async () => {
+      const origin = 'https://psi-site.example';
+      const { starts, browserManager } = twentyPageSite(origin);
+      const workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'qa-one-load-psi-'));
+      const measured = {
+        lab: {
+          status: 'measured',
+          source: 'pagespeed-insights',
+          method: 'lab',
+          strategy: 'mobile',
+          values: [],
+          measuredAt: '2026-11-19T00:00:00.000Z',
+        },
+        field: { status: 'not-measured', source: 'pagespeed-insights', method: 'field', reason: 'no-data' },
+      } as const;
+      try {
+        const recorder = createPageRecorder({
+          workDir,
+          pageSpeed: { measure: async (url: string) => ({ url, speed: measured as never }) },
+        });
+        const result = await runAuditCrawl(request(origin), {
+          allowPrivateAddresses: true,
+          onRenderedPage: recorder.onRenderedPage,
+          deps: { browserManager, netDeps: makeNetDeps(), minGapMs: 1 },
+        });
+        expect(result.pages).toHaveLength(20);
+        expect(starts).toHaveLength(20);
+        for (const p of recorder.pages) {
+          expect(p.psi?.lab.status, p.info.urlPath).toBe('measured');
+          expect(p.timing, p.info.urlPath).toBeUndefined();
+          expect(p.accessibility, p.info.urlPath).toBeTruthy();
+          expect(p.phone, p.info.urlPath).toBeTruthy();
+        }
+      } finally {
+        await fs.rm(workDir, { recursive: true, force: true }).catch(() => {});
+      }
+    }, 300_000);
   });
 });

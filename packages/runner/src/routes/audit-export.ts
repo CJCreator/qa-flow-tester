@@ -22,6 +22,8 @@ import {
   type EditOverlay,
   type ExportFormat,
   type PageContent,
+  type ExportTranslationReply,
+  type FixOptionsReply,
   type ImproveBestReply,
   type ImproveVariant,
   type StoredDocumentKind,
@@ -45,9 +47,19 @@ import {
   type PitchImproved,
   type AuditStore,
   type ExportOptions,
+  type AuditAiResolution,
+  documentsFromView,
+  editedViewOf,
+  estimateTranslation,
+  translateDocuments,
+  translationCacheName,
+  withLabelsOnlyNotice,
+  loadFixOptions,
+  type TranslationCache,
 } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
 import { readJsonBody, sendJson } from './body.js';
+import type { AuditCaller } from './audit-store.js';
 import { AUDIT_NOT_FOUND, refuse, refuseStoreFailure, pitchScreenshots, readEdits } from './audit-common.js';
 import { loadResolvedSettings, type AuditSettingsStore } from './audit-settings.js';
 
@@ -61,6 +73,13 @@ export interface AuditExportDeps {
   maxConcurrentPdf?: number;
   /** Thumbnails of the Improved version's variants (T-415); one Chromium per call by default. */
   renderThumbnails?: (pages: readonly string[]) => Promise<Array<Buffer | null>>;
+  /**
+   * Who is asking, and the tool user's audit AI (T-420). Both given: an export in another language is
+   * translated with the owner's key. Either missing, or the caller is a Helper: labels only.
+   */
+  caller?: (context: RouteContext) => AuditCaller | Promise<AuditCaller>;
+  resolveAi?: () => Promise<AuditAiResolution>;
+  aiTimeoutMs?: number;
 }
 
 /** Variants whose "after" image is drawn in an export; the rest list their changes only. */
@@ -246,7 +265,134 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
     };
   };
 
-  const thumbnails = deps.renderThumbnails ?? ((pages: readonly string[]) => renderThumbnails(pages));
+  /** The owner's working AI, or null: a Helper never spends the owner's key. */
+  const ownerAi = async (c: RouteContext) => {
+    if (!deps.caller || !deps.resolveAi) return null;
+    try {
+      if (!(await deps.caller(c)).owner) return null;
+      const resolved = await deps.resolveAi();
+      return resolved.ok ? resolved.ai : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const readTranslationCache = async (loaded: Loaded, language: DocumentLanguage): Promise<TranslationCache> => {
+    const stored = await store
+      .readVersionJson<TranslationCache>(loaded.auditId, loaded.version, translationCacheName(language))
+      .catch(() => null);
+    return stored && typeof stored === 'object' && !Array.isArray(stored) ? { ...stored } : {};
+  };
+
+  /**
+   * T-420: the hook that puts an export into `language`. The version's own language needs none. With the
+   * owner's key the text is translated (cached per version, language and string); otherwise the documents say
+   * "Labels only".
+   */
+  const translateHook = async (
+    c: RouteContext,
+    loaded: Loaded,
+    language: DocumentLanguage | undefined
+  ): Promise<ExportOptions['translate'] | undefined> => {
+    if (!language || language === loaded.result.language) return undefined;
+    const ai = await ownerAi(c);
+    if (!ai) return async (docs) => withLabelsOnlyNotice(docs, loaded.result.language);
+    return async (docs) => {
+      const cache = await readTranslationCache(loaded, language);
+      const done = await translateDocuments({ docs, language, ai, cache, timeoutMs: deps.aiTimeoutMs });
+      if (done.cacheChanged) {
+        await store
+          .writeVersionJson(loaded.auditId, loaded.version, translationCacheName(language), cache)
+          .catch(() => undefined);
+      }
+      // Nothing came back in the language: the export is labels only, and says so.
+      return done.translated + done.fromCache === 0
+        ? withLabelsOnlyNotice(done.docs, loaded.result.language)
+        : done.docs;
+    };
+  };
+
+  /** The version's fix options (T-417): stored or new AI options with the owner's key, else by rule. */
+  const fixOptionsOf = async (c: RouteContext, loaded: Loaded) => {
+    const ai = await ownerAi(c);
+    return loadFixOptions({
+      findings: loaded.result.findings,
+      language: loaded.result.language,
+      io: improveIo(store, loaded.auditId, loaded.version),
+      ...(ai ? { ai } : {}),
+      timeoutMs: deps.aiTimeoutMs,
+    }).catch(() => null);
+  };
+
+  const fixOptionsRoute = async (c: RouteContext): Promise<void> => {
+    const common = commonQuery(c.url);
+    if (typeof common === 'string') return invalid(c.res, common);
+    try {
+      const loaded = await load(store, c, common.version);
+      if (!loaded) return;
+      const got = await fixOptionsOf(c, loaded);
+      if (!got) return refuse(c.res, 500, 'ERR_PIPELINE', FAILED);
+      const reply: FixOptionsReply = { options: Object.fromEntries(got.options), ai: got.ai };
+      sendJson(c.res, 200, reply);
+    } catch (err) {
+      refuseStoreFailure(c.res, err, { failed: FAILED });
+    }
+  };
+
+  const translationRoute = async (c: RouteContext): Promise<void> => {
+    const common = commonQuery(c.url);
+    if (typeof common === 'string') return invalid(c.res, common);
+    try {
+      const loaded = await load(store, c, common.version);
+      if (!loaded) return;
+      const sourceLanguage = loaded.result.language;
+      const language = common.language ?? sourceLanguage;
+      const ai = await ownerAi(c);
+      const needed = language !== sourceLanguage;
+      let requests = 0;
+      if (needed && ai) {
+        const view = editedViewOf(loaded);
+        const docs = documentsFromView(view, {
+          settings: await loadResolvedSettings(settings),
+          language,
+          documents: undefined,
+        });
+        requests = estimateTranslation(docs, await readTranslationCache(loaded, language)).requests;
+      }
+      const reply: ExportTranslationReply = {
+        needed,
+        sourceLanguage,
+        aiKey: ai !== null,
+        requests,
+        labelsOnly: needed && ai === null,
+      };
+      sendJson(c.res, 200, reply);
+    } catch (err) {
+      refuseStoreFailure(c.res, err, { failed: FAILED });
+    }
+  };
+
+  const drawThumbnails = deps.renderThumbnails ?? ((pages: readonly string[]) => renderThumbnails(pages));
+  /** Thumbnails start a Chromium like a PDF: they share the PDF slots, and are left out when none is free. */
+  const thumbnails = async (pages: readonly string[]): Promise<Array<Buffer | null>> => {
+    if (activePdf >= maxPdf) return pages.map(() => null);
+    activePdf += 1;
+    try {
+      return await drawThumbnails(pages);
+    } finally {
+      activePdf -= 1;
+    }
+  };
+
+  /** Whether the version has a variant the Improved version shows (the stored-document shortcut has none). */
+  const hasImproved = async (loaded: Loaded): Promise<boolean> => {
+    const index = await readImproveIndex(
+      improveIo(store, loaded.auditId, loaded.version),
+      loaded.version,
+      loaded.result.language
+    ).catch(() => null);
+    return !!index && index.variants.some(shown);
+  };
 
   /**
    * The Improved version's shown variants (T-415), best first, with their stored pages and the phone
@@ -265,12 +411,25 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
       .filter((v) => shown(v) && pages.has(v.page))
       .sort((a, b) => Number(isBest(b)) - Number(isBest(a)));
     const variants: ImprovedExport['variants'] = [];
+    const seen = new Set<string>();
     for (const v of list) {
       const bytes = await store.getVersionFile(loaded.auditId, loaded.version, variantFileName(v.page, v.variant));
       if (!bytes) continue;
       const page = pages.get(v.page)!;
-      const before = await pngUri(store, loaded.auditId, loaded.version, page.screenshotPath);
-      variants.push({ page, variant: v, html: Buffer.from(bytes).toString('utf8'), ...(before ? { before } : {}) });
+      // The page's "before" shots are embedded once, with its first variant, not once per variant.
+      const first = !seen.has(page.key);
+      seen.add(page.key);
+      const before = first ? await pngUri(store, loaded.auditId, loaded.version, page.screenshotPath) : undefined;
+      const beforeDesktop = first
+        ? await pngUri(store, loaded.auditId, loaded.version, page.desktopScreenshotPath)
+        : undefined;
+      variants.push({
+        page,
+        variant: v,
+        html: Buffer.from(bytes).toString('utf8'),
+        ...(before ? { before } : {}),
+        ...(beforeDesktop ? { beforeDesktop } : {}),
+      });
     }
     if (variants.length === 0) return null;
     const take = variants.slice(0, drawn);
@@ -359,7 +518,8 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
         documents?.length === 1 &&
         documents[0] !== 'proposal' &&
         loaded.edits.updatedAt === null &&
-        (!common.language || common.language === loaded.result.language)
+        (!common.language || common.language === loaded.result.language) &&
+        !(await hasImproved(loaded))
       ) {
         const kind = documents[0]!;
         const docFormat = format === 'md' ? 'markdown' : 'html';
@@ -382,6 +542,13 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
       }
       // The Improved version joins every export when a variant passed the checks (T-415).
       const improved = await loadImproved(loaded, format === 'bundle' ? 0 : MAX_EXPORT_THUMBNAILS);
+      const translate = await translateHook(c, loaded, common.language);
+      const fixed = await fixOptionsOf(c, loaded);
+      const exportOptions: ExportOptions = {
+        ...options,
+        ...(improved ? { improved } : {}),
+        ...(translate ? { translate } : {}),
+      };
       const file = await exportAudit(
         format,
         {
@@ -391,8 +558,9 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
           settings: await loadResolvedSettings(settings),
           ...(common.language ? { language: common.language } : {}),
           ...(documents ? { documents } : {}),
+          ...(fixed ? { fixOptions: fixed.options } : {}),
         },
-        improved ? { ...options, improved } : options
+        exportOptions
       );
       sendFile(c.res, file);
     } catch (err) {
@@ -493,6 +661,18 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
       path: AUDIT_API.exportImproved.path,
       access: AUDIT_API.exportImproved.access,
       handle: improvedZipRoute,
+    },
+    {
+      method: AUDIT_API.fixOptions.method,
+      path: AUDIT_API.fixOptions.path,
+      access: AUDIT_API.fixOptions.access,
+      handle: fixOptionsRoute,
+    },
+    {
+      method: AUDIT_API.exportTranslation.method,
+      path: AUDIT_API.exportTranslation.path,
+      access: AUDIT_API.exportTranslation.access,
+      handle: translationRoute,
     },
     {
       method: AUDIT_API.setImproveBest.method,

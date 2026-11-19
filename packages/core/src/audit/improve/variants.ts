@@ -25,6 +25,7 @@ import { generateVariantPage, type PreviewImageFetch } from '../preview/generate
 import { previewFacts, MAX_PREVIEW_IMAGES, type VariantDirection } from '../preview/prompt.js';
 import { siteBrand, type SiteBrand } from './brand.js';
 import { chromium, type Browser } from 'playwright';
+import { LAB_CHROMIUM_ARGS } from '../documents/render-pdf.js';
 import { gateVariant, labAxeScan, type VariantAxeScan } from './quality-gate.js';
 import { previewNodesText } from '../preview/sanitize.js';
 import { copiesCompetitor } from '../competitors/examples.js';
@@ -102,6 +103,7 @@ export function improvePages(result: AuditResult): ImprovePage[] {
       title: root?.title ?? null,
       layoutGroup: null,
       screenshotPath: root?.phone?.screenshotPath ?? null,
+      desktopScreenshotPath: root?.desktopScreenshotPath ?? null,
     },
   ];
   const groups = new Map<string, AuditResult['pages']>();
@@ -120,6 +122,7 @@ export function improvePages(result: AuditResult): ImprovePage[] {
       title: sample.title,
       layoutGroup: group,
       screenshotPath: sample.phone?.screenshotPath ?? null,
+      desktopScreenshotPath: sample.desktopScreenshotPath ?? null,
     });
   }
   return out;
@@ -250,9 +253,9 @@ export async function makeVariants(
   const { io } = options;
   const now = () => (options.now?.() ?? new Date()).toISOString();
   const jobs = variantJobs(input.pages, input.variants, input.only);
-  // TODO(T-398): check the shared AI request counter here for `jobs.length` requests before the batch starts,
-  // and refuse the batch when it would pass the AI Request Budget. Until then, a budget passed to resolveAuditAi
-  // stops the batch at the first 'budget-spent' answer.
+  // Every request goes through `AuditAi.ask`, so it takes one from the audit's AI request counter (T-398). Once
+  // the AI Request Budget is reached, the variants left are recorded as failed with the reason 'budget-spent',
+  // without a request.
   const brand = await readBrand(input.result, io);
   const contents = new Map<string, PageContent | null>();
   for (const page of input.pages) contents.set(page.urlPath, await io.readContent(page.urlPath).catch(() => null));
@@ -331,7 +334,7 @@ export async function makeVariants(
   const scanAxe: VariantAxeScan =
     options.scanAxe ??
     (async (html) => {
-      lab.browser ??= chromium.launch({ headless: true, args: ['--disable-extensions'] });
+      lab.browser ??= chromium.launch({ headless: true, args: [...LAB_CHROMIUM_ARGS] });
       return labAxeScan({ browser: await lab.browser })(html);
     });
 

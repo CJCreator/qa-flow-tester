@@ -13,11 +13,12 @@ import type {
   RouteSkipReason,
   DraftForm,
 } from '@qa/types';
-import { SafetyFilter } from './safety-filter.js';
+import { SafetyFilter, isSideEffectAddress } from './safety-filter.js';
 import { riskyToClick } from './action-words.js';
 import { collectElementInventory, TEST_ID_ATTRIBUTES } from './element-inventory.js';
 import { redactUrl } from '../redact.js';
-import { isSameSite } from '../same-site.js';
+import { isSameSite, inDomainAllowlist } from '../same-site.js';
+import { installHostAllowlist, type HostAllowlist } from '../browser.js';
 import { makeOutboundFetch, sameSiteUrl } from '../safe-net.js';
 import type { FetchFn } from '@qa/checkers';
 import { readLayoutFingerprint } from '../competitive/safe-crawler.js';
@@ -28,7 +29,7 @@ import { inferCrud, readCrudStructure, probeDeleteConfirm } from './crud-facts.j
 import { navigate, toTelemetry, looksLikeLogin, type NavigateResult } from '../navigate.js';
 import type { InterstitialKind } from '../audit/crawl/interstitial.js';
 import { debugLog } from '../debug-log.js';
-import { normalizeRoute, CrawlFrontier } from './frontier.js';
+import { normalizeRoute, CrawlFrontier, type CrawlFrontierState } from './frontier.js';
 import { dismissOverlays } from './overlay.js';
 import { guardPage } from './guard.js';
 
@@ -115,6 +116,13 @@ export interface SpiderResult {
   startRefused?: { code: string; message: string };
 }
 
+/** Where a crawl stands, as plain data (Website Audit checkpoints, T-407). */
+export interface SpiderCrawlState {
+  frontier: CrawlFrontierState;
+  /** Addresses still to load: queued, or being loaded when the state was read. */
+  pending: Array<{ url: string; depth: number }>;
+}
+
 export interface CrawlOptions {
   /** Where to start besides the target URL, e.g. the page a role landed on after signing in. */
   startPaths?: string[];
@@ -192,6 +200,11 @@ export interface CrawlOptions {
    * followed, and a `sign-in` verdict also lists it in `signInWalls`.
    */
   inspectPage?: (page: Page, landed: URL) => Promise<SpiderSkipVerdict | undefined>;
+  /**
+   * Paths the person listed to include (segment prefixes, e.g. `/delete`). An address under one is followed
+   * even when it looks like a GET with a side effect (T-427). The bare `/` does not count.
+   */
+  includePaths?: string[];
   /** Follow the action address of a GET form with no required fields, as a link. Default true. */
   followFormActions?: boolean;
   /** Awaited after a page is recorded, while the rendered page is still open (Page Content extraction). */
@@ -213,6 +226,13 @@ export interface CrawlOptions {
   sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
   /** Check start address during outage probe (default: probes startUrl with outboundFetch). */
   outageCheck?: (url: string) => Promise<boolean>;
+  /**
+   * Website Audit resume (T-407): carry on from a checkpoint. The frontier is restored and `pending` is loaded;
+   * the start page is not loaded again and the sitemap is not read again. `targetUrl` is where the start landed.
+   */
+  resume?: SpiderCrawlState;
+  /** Website Audit checkpoints (T-407): handed, once, a function that reads the crawl's state at any moment. */
+  exposeState?: (read: () => SpiderCrawlState) => void;
   /** Called when the start page is loaded to check for interstitial or refusal before crawl proceeds. */
   onStartPage?: (
     page: Page,
@@ -357,6 +377,20 @@ function isLoopback(h: string): boolean {
   const hostWithoutPort = h.replace(/:\d+$/, '').toLowerCase();
   return hostWithoutPort === 'localhost' || hostWithoutPort === '127.0.0.1';
 }
+
+/** True when the path is under one of the include list's paths (whole segments; `/` alone does not count). */
+function includedPath(pathname: string, includePaths: string[] | undefined): boolean {
+  const segments = (p: string) => p.split('/').filter(Boolean);
+  const path = segments(pathname);
+  return (includePaths ?? []).some((prefix) => {
+    const want = segments(prefix);
+    return want.length > 0 && want.every((s, i) => path[i] === s);
+  });
+}
+
+/** A delete label that names more than one row: never probed, whatever the profile says. */
+const BROAD_DELETE =
+  /\b(account|accounts|all|everything|workspace|organi[sz]ation|team|project|projects|user|users|profile|data|database)\b/i;
 
 function isSameSiteOrLoopback(h1: string, h2: string): boolean {
   if (isSameSite(h1, h2)) return true;
@@ -511,7 +545,30 @@ export class DeterministicSpider {
     this.maxPages = maxPages;
   }
 
+  /**
+   * Crawls from `targetUrl`. The Domain Allowlist covers every request of `context` while it runs (T-424): a page
+   * or frame load, or a changing request, to another host is aborted. The route is lifted when the crawl ends.
+   */
   async crawl(context: BrowserContext, targetUrl: string, options: CrawlOptions = {}): Promise<SpiderResult> {
+    const start = new URL(targetUrl);
+    const scope = {
+      onSite: (u: URL) => isSameSiteOrLoopback(u.host, start.host) || inDomainAllowlist(u, targetUrl),
+    };
+    const allowlist = await installHostAllowlist(context, (u) => scope.onSite(u));
+    try {
+      return await this.crawlWithin(context, targetUrl, options, allowlist, scope);
+    } finally {
+      await allowlist.release();
+    }
+  }
+
+  private async crawlWithin(
+    context: BrowserContext,
+    targetUrl: string,
+    options: CrawlOptions,
+    allowlist: HostAllowlist,
+    scope: { onSite: (u: URL) => boolean }
+  ): Promise<SpiderResult> {
     const concurrency = Math.max(1, Math.min(options.maxConcurrency ?? 5, options.concurrency ?? 2));
     const pageDelayMs = options.pageDelayMs !== undefined ? options.pageDelayMs : 100;
     const maxAttempts = options.maxAttempts ?? this.maxPages * 3;
@@ -522,11 +579,27 @@ export class DeterministicSpider {
     // The site is where the start address lands: example.com that redirects to www.example.com is
     // crawled as www.example.com. Until a page has opened, it's the address as typed.
     let site = new URL(baseUrlObj.origin);
-    let landedOnce = false;
+    // A resumed crawl landed on its site before the checkpoint: `targetUrl` is where it landed.
+    let landedOnce = options.resume !== undefined;
     let startRedirectedOffSite = false;
     let sessionLost = false;
     let consecutiveWalls = 0;
     const onSite = (u: URL) => isSameSiteOrLoopback(u.host, site.host);
+    // The allowlist route follows the site as it is rebased on the first landing.
+    scope.onSite = (u: URL) => onSite(u) || inDomainAllowlist(u, targetUrl);
+    /** Off-site addresses already listed as Skipped Pages: a control repeated on every page is listed once. */
+    const offSiteListed = new Set<string>();
+    const skipOffSite = (address: URL, label: string) => {
+      const offSite = redactUrl(address.origin + address.pathname);
+      if (offSiteListed.has(offSite)) return;
+      offSiteListed.add(offSite);
+      skip({
+        urlPath: offSite,
+        why: 'off-site-redirect',
+        finalPath: offSite,
+        detail: `Clicked “${label.slice(0, 80)}”`,
+      });
+    };
     const exploreClicks = options.exploreClicks ?? true;
     const maxDepth = options.maxDepth ?? 8;
     const maxPerShape = options.maxPerShape ?? 25;
@@ -580,12 +653,15 @@ export class DeterministicSpider {
     const paced = <T>(url: string, task: () => Promise<T>): Promise<T> =>
       pacer ? pacer.run(new URL(url).host, task, pacerSignal) : task();
 
-    const frontier = new CrawlFrontier({
+    const frontierOptions = {
       maxPerShape,
       maxDepth,
       routeQueryParams: options.routeQueryParams,
       includeHash: options.includeHash,
-    });
+    };
+    const frontier = options.resume
+      ? CrawlFrontier.restore(options.resume.frontier, frontierOptions)
+      : new CrawlFrontier(frontierOptions);
     const normRoute = (u: string) =>
       normalizeRoute(u, site.toString(), {
         routeQueryParams: options.routeQueryParams,
@@ -608,6 +684,10 @@ export class DeterministicSpider {
     const outageFailedPages: Array<{ item: QueueItem; path: string; asAsked: string }> = [];
     const outageRetriedKeys = new Set<string>();
     const requeuedKeys = new Set<string>();
+    /** Items a worker took and is loading now: pending in a checkpoint until they end (T-407). */
+    const inFlight = new Set<QueueItem>();
+    /** Items whose load ended after a stop: they may not have finished, so a checkpoint keeps them pending. */
+    const interrupted = new Set<QueueItem>();
 
     let activeWorkers = 0;
     let attemptsCount = 0;
@@ -651,6 +731,16 @@ export class DeterministicSpider {
       }
       if (!onSite(u)) return;
 
+      // A GET that may change something (`/logout?confirm`, `/delete?id=1`) is never requested (T-427), unless the
+      // person's include list holds it. Listed once, as excluded.
+      if (!isStart && isSideEffectAddress(u) && !includedPath(u.pathname, options.includePaths)) {
+        const key = normRoute(u.toString()).key;
+        if (refusedKeys.has(key) || frontier.has(key)) return;
+        refusedKeys.add(key);
+        skip({ urlPath: redactUrl(u.pathname), why: 'excluded', detail: 'possible side effect' });
+        return;
+      }
+
       if (options.admitPath && !isStart) {
         const key = normRoute(u.toString()).key;
         if (refusedKeys.has(key) || frontier.has(key)) return;
@@ -691,13 +781,35 @@ export class DeterministicSpider {
       notifyWork();
     };
 
-    for (const start of [...(options.startPaths || []), baseUrlObj.pathname + baseUrlObj.search || '/']) {
-      enqueue(start, 0, true);
+    if (options.resume) {
+      // Visited in the frontier already (taken before the checkpoint): loaded again once, as a requeue.
+      for (const item of options.resume.pending) {
+        queue.push({ url: item.url, depth: item.depth });
+        requeuedKeys.add(normRoute(item.url).key);
+      }
+    } else {
+      for (const start of [...(options.startPaths || []), baseUrlObj.pathname + baseUrlObj.search || '/']) {
+        enqueue(start, 0, true);
+      }
     }
+    options.exposeState?.(() => {
+      const seen = new Set<string>();
+      const pending: Array<{ url: string; depth: number }> = [];
+      for (const item of [...interrupted, ...inFlight, ...queue]) {
+        const key = normRoute(item.url).key;
+        if (seen.has(key)) continue;
+        const taken = inFlight.has(item) || interrupted.has(item);
+        if (!taken && frontier.isVisited(key) && !requeuedKeys.has(key)) continue;
+        seen.add(key);
+        pending.push({ url: item.url, depth: item.depth });
+      }
+      return { frontier: frontier.serialize(), pending };
+    });
 
     // Sitemap seeding (crawls /sitemap.xml and robots.txt Sitemap: lines) through the pinned outbound
     // path (ADR 0031). Only addresses on the target's site are read; other hosts are logged and skipped.
-    if (options.seedSitemap !== false && timeLeft() > 0 && !options.signal?.aborted) {
+    // A resumed crawl read it before its checkpoint.
+    if (options.seedSitemap !== false && !options.resume && timeLeft() > 0 && !options.signal?.aborted) {
       // Each default fetch's timeout is cut to the time left, so seeding cannot run past the deadline.
       const unpacedFetch: FetchFn =
         options.outboundFetch ??
@@ -1441,6 +1553,7 @@ export class DeterministicSpider {
                 await paced(pageUrl, () => navigate(page, pageUrl, navLimits(pageTimeoutMs)));
               }
               const urlBefore = page.url();
+              const blocksBefore = allowlist.blocked.length;
               // A click may load another page of the host, so with a pacer it takes a turn too.
               // Guarded (ADR 0025, T-423): changing requests are aborted and the page's own form submits do
               // nothing while the click runs. What was blocked is kept as a fact, not as an error.
@@ -1486,8 +1599,28 @@ export class DeterministicSpider {
                   }
                 }
               });
+              // A load of another host this click started was aborted by the allowlist (T-424): the page stayed.
+              for (const b of allowlist.blocked.slice(blocksBefore)) {
+                if (b.kind === 'navigation' && b.mainFrame && b.page === page) skipOffSite(new URL(b.url), el.name);
+              }
               const after = new URL(page.url());
-              if (onSite(after)) {
+              if (!onSite(after) && /^https?:$/.test(after.protocol)) {
+                // Another host (T-426): nothing is done there. Go back, or reopen the page the click started
+                // from, and list the address as a Skipped Page with the control that led there.
+                skipOffSite(after, el.name);
+                debugLog('crawl', 'click left the site; going back', { path: currentPath });
+                await page.goBack({ timeout: capToDeadline(5000), waitUntil: 'domcontentloaded' }).catch(() => null);
+                let back: URL | undefined;
+                try {
+                  back = new URL(page.url());
+                } catch {
+                  back = undefined;
+                }
+                if (!back || !onSite(back)) {
+                  if (!pacer) await waitForPacing();
+                  await paced(pageUrl, () => navigate(page, pageUrl, navLimits(pageTimeoutMs)));
+                }
+              } else if (onSite(after)) {
                 const normAfter = normRoute(after.toString());
                 const normLanded = normRoute(landed.toString());
                 if (normAfter.key !== normLanded.key) {
@@ -1539,16 +1672,18 @@ export class DeterministicSpider {
             const crud = structure && inferCrud(structure);
             if (crud) {
               pageItem.crud = crud;
-              // Heavily guarded probe: only a plain per-row delete, only when the Safety Filter sees an
-              // ordinary deletion (a forbidden action keyword switches the probe off).
-              if (
-                structure.hasProbeTarget &&
-                clickBudget > 0 &&
-                this.safetyFilter.isSensitive('Delete', '')?.type === 'deletion'
-              ) {
-                clickBudget--;
-                const confirmed = await probeDeleteConfirm(page);
-                if (confirmed !== undefined) crud.deleteConfirm = confirmed;
+              // Heavily guarded probe: only a plain per-row delete, only when the Safety Filter, reading the
+              // control's own label (text, aria-label, title), sees an ordinary deletion. A profile's
+              // forbiddenActions entry or a label naming more than one row switches it off (T-428).
+              if (structure.hasProbeTarget && clickBudget > 0) {
+                const verdict = await this.deleteProbeVerdict(page);
+                if (verdict.probe) {
+                  clickBudget--;
+                  const confirmed = await probeDeleteConfirm(page);
+                  if (confirmed !== undefined) crud.deleteConfirm = confirmed;
+                } else {
+                  crud.deleteProbeSkipped = verdict.reason;
+                }
               }
             }
           } catch {
@@ -1607,9 +1742,12 @@ export class DeterministicSpider {
           if (requestedItem) {
             attemptsCount++;
             activeWorkers++;
+            inFlight.add(requestedItem);
             try {
               await evaluatePage(workerPage, requestedItem.url, requestedPath, requestedItem.depth);
             } finally {
+              inFlight.delete(requestedItem);
+              if (options.signal?.aborted) interrupted.add(requestedItem);
               activeWorkers--;
               notifyWork();
             }
@@ -1706,6 +1844,33 @@ export class DeterministicSpider {
       ...(startBlocked ? { blocked: startBlocked } : {}),
       ...(startRefused ? { startRefused } : {}),
     };
+  }
+
+  /**
+   * Whether the marked row delete may be probed (T-428): the Safety Filter, with the profile's forbiddenActions,
+   * reads the control's own label and must see an ordinary deletion, and the label must not name a whole
+   * account, user, project or everything. Otherwise the reason it is left alone, in fixed wording plus the label.
+   */
+  private async deleteProbeVerdict(page: Page): Promise<{ probe: true } | { probe: false; reason: string }> {
+    const parts = await page
+      .locator('[data-qa-delete-probe]')
+      .first()
+      .evaluate((el: Element) =>
+        [el.getAttribute('aria-label'), (el as HTMLElement).innerText, el.getAttribute('title')].map((p) =>
+          (p ?? '').replace(/\s+/g, ' ').trim()
+        )
+      )
+      .catch(() => [] as string[]);
+    const label = [...new Set(parts.filter((p) => p.length > 0))].join(' / ').slice(0, 120);
+    if (!label) return { probe: false, reason: 'Not probed: the delete control has no label' };
+    const verdict = this.safetyFilter.isSensitive(label, '');
+    if (verdict && verdict.type !== 'deletion') {
+      return { probe: false, reason: `Not probed: “${label}” matches a forbidden action in the profile` };
+    }
+    if (!verdict || BROAD_DELETE.test(label)) {
+      return { probe: false, reason: `Not probed: “${label}” is not a plain delete of one row` };
+    }
+    return { probe: true };
   }
 
   /** Controls that may be opened to look for forms: not risky, not sensitive, not ending a session. */

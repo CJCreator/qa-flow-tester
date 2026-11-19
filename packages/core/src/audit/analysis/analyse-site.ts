@@ -103,6 +103,43 @@ function dedupeKey(f: AuditFinding): string {
   return [f.rule, f.urlPath, f.target ?? ''].join('\u0000');
 }
 
+/**
+ * What makes a finding the same finding (T-429): its rule, page and target. A finding of `pageOwnFindings` and
+ * the same finding of `analyseSite` share it, whatever their ids.
+ */
+export const findingKey = dedupeKey;
+
+/** Content rules that compare pages with each other: they need the whole site (T-429). */
+const SITE_WIDE_CONTENT_RULES: readonly string[] = ['duplicate-title', 'duplicate-description', 'duplicate-content'];
+
+/**
+ * One page's own checks, as soon as the page is recorded (T-429): the content rules that look at the page alone
+ * and its accessibility findings, de-duplicated as `analyseSite` does. The ids are provisional (from `ids`, a
+ * fresh series by default) and serve as early AI input only: the checks that need the whole site (broken links,
+ * duplicates, the hierarchy) and the final numbering stay in `analyseSite`, which is run as before.
+ */
+export function pageOwnFindings(
+  page: Pick<AnalysisPage, 'urlPath' | 'content'>,
+  accessibility?: AccessibilityBasicsResult | null,
+  ids: FindingIdAllocator = createFindingIdAllocator()
+): AuditFinding[] {
+  const content = page.content.urlPath === page.urlPath ? page.content : { ...page.content, urlPath: page.urlPath };
+  const scratch = createFindingIdAllocator();
+  const own = contentProblems([content], scratch).filter((f) => !SITE_WIDE_CONTENT_RULES.includes(f.rule));
+  const out: AuditFinding[] = [];
+  const keys = new Set<string>();
+  for (const f of [
+    ...own,
+    ...(accessibility?.findings ?? []).map((a) => ({ ...a, urlPath: a.urlPath || page.urlPath })),
+  ]) {
+    const key = dedupeKey(f);
+    if (keys.has(key)) continue;
+    keys.add(key);
+    out.push({ ...f, id: ids.next() });
+  }
+  return out;
+}
+
 function sectionSummaries(content: PageContent): SectionSummary[] {
   return content.sections.map((s) =>
     s.heading === undefined ? { id: s.id, kind: s.kind } : { id: s.id, kind: s.kind, heading: s.heading }

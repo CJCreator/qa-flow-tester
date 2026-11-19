@@ -9,8 +9,10 @@
 
 import type { AuditFinding, DocumentLanguage, RoadmapItem } from '@qa/types';
 import type { EditedAuditView } from './edits.js';
-import { phaseLabel, type LabelLookup } from './labels/index.js';
+import { localizeFixOption, phaseLabel, type LabelLookup } from './labels/index.js';
 import type { AuditDoc, DocBlock } from './model.js';
+import { roadmapFixOptions } from './roadmap.js';
+import { DECIDED_BY_RULE, ruleTextKey, type FixOption } from '../improve/fix-rules.js';
 
 /** Fixed wording only this document uses. Same keys per language; a language without a table uses English. */
 interface RoadmapWording {
@@ -19,12 +21,21 @@ interface RoadmapWording {
   introWithoutEffort: string;
   pagesCovered: string;
   nothingToOrder: string;
+  /** T-417: the fix option an item links to. */
+  fixOption: string;
+  decidedByRule: string;
+  aiOption: string;
+  effortSize: string;
 }
 
 const EN: RoadmapWording = {
   intro: 'Work ordered by impact, then by lower effort. Each item brings together the findings of one kind.',
   introWithoutEffort: 'Work ordered by impact. Each item brings together the findings of one kind.',
   pagesCovered: 'Pages covered',
+  fixOption: 'Suggested way to fix it',
+  decidedByRule: DECIDED_BY_RULE,
+  aiOption: 'AI suggestion',
+  effortSize: 'effort',
   nothingToOrder:
     'No findings were recorded in this audit, so there is nothing to order. This covers only what the audit checked; it does not mean the website has no issues.',
 };
@@ -35,6 +46,10 @@ const TA: RoadmapWording = {
   introWithoutEffort:
     'தாக்கத்தின்படி வரிசைப்படுத்தப்பட்ட பணிகள். ஒவ்வொரு உருப்படியும் ஒரே வகைக் கண்டுபிடிப்புகளை ஒன்றாகக் கொண்டுள்ளது.',
   pagesCovered: 'உள்ளடக்கிய பக்கங்கள்',
+  fixOption: 'பரிந்துரைக்கப்பட்ட சரிசெய்யும் வழி',
+  decidedByRule: 'விதிப்படி முடிவு',
+  aiOption: 'AI பரிந்துரை',
+  effortSize: 'முயற்சி',
   nothingToOrder:
     'இந்த ஆய்வில் கண்டுபிடிப்புகள் எதுவும் பதிவு செய்யப்படவில்லை, எனவே வரிசைப்படுத்த எதுவும் இல்லை. இது ஆய்வு சரிபார்த்தவற்றை மட்டுமே குறிக்கிறது; இணையதளத்தில் சிக்கல்கள் இல்லை என்று இது பொருள்படாது.',
 };
@@ -49,6 +64,11 @@ export function roadmapWording(language: DocumentLanguage): RoadmapWording {
 export interface RoadmapDocumentOptions {
   /** False for the Owner Audit: no effort value, column or wording appears. */
   showEffort: boolean;
+  /**
+   * Fix options by finding id (T-417). Each item then shows the chosen option of its first finding that has
+   * one (`roadmapFixOptions`). None given: no fix option line.
+   */
+  fixOptions?: ReadonlyMap<string, readonly FixOption[]>;
 }
 
 /** The roadmap items by phase, phases in ascending order, items in their roadmap order within a phase. */
@@ -87,6 +107,7 @@ export function buildRoadmapDocument(
   }
 
   blocks.push({ type: 'paragraph', text: showEffort ? words.intro : words.introWithoutEffort });
+  const chosen = options.fixOptions ? roadmapFixOptions(items, options.fixOptions) : new Map<string, FixOption>();
 
   const columns = [labels.columns.issue, labels.columns.page, labels.columns.impact];
   if (showEffort) columns.push(labels.columns.effort);
@@ -102,6 +123,17 @@ export function buildRoadmapDocument(
       ];
       if (showEffort) facts.push(`${labels.columns.effort}: ${labels.scale[item.effort]}`);
       blocks.push({ type: 'list', items: facts });
+      const fix = chosen.get(item.id);
+      if (fix) {
+        const finding = findings.get(fix.findingId);
+        const shown = finding ? localizeFixOption(fix, ruleTextKey(finding), lookup.language) : fix;
+        const kind = shown.source === 'rule' ? words.decidedByRule : words.aiOption;
+        const effort = showEffort ? `, ${words.effortSize} ${shown.effort}` : '';
+        blocks.push({
+          type: 'paragraph',
+          text: `${words.fixOption}: ${shown.title} (${kind}${effort}): ${shown.tradeOff}`,
+        });
+      }
 
       const rows = item.findingIds
         .map((id) => findings.get(id))

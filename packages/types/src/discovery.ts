@@ -121,6 +121,8 @@ export interface PageInventoryItem {
     editFromRow?: boolean;
     /** True: asking to delete shows a confirm. False: none appeared. Absent: not probed. */
     deleteConfirm?: boolean;
+    /** Why the row delete was not probed (T-428): its label names more than one row, or the profile forbids it. */
+    deleteProbeSkipped?: string;
   };
 }
 

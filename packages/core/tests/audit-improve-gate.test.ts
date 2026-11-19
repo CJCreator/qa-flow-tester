@@ -20,6 +20,7 @@ import {
   type ImproveIo,
   type VariantAxeScan,
 } from '../src/audit/improve/index.js';
+import { NOT_SCANNED } from '../src/audit/improve/quality-gate.js';
 import { auditDocContents, auditDocResult, PATHS } from './helpers/audit-doc-fixture.js';
 
 const result = auditDocResult();
@@ -73,12 +74,16 @@ describe('variant quality gate (T-414)', () => {
     const broken: VariantAxeScan = async () => {
       throw new Error('no browser');
     };
-    expect((await gate(GOOD, { scan: broken })).failed).toEqual(['accessibility']);
+    const notRun = await gate(GOOD, { scan: broken });
+    expect(notRun.failed).toEqual(['accessibility']);
+    expect(notRun.reasons).toEqual([NOT_SCANNED]);
   });
 
   it('5. citations: an id not in this audit version fails, and so does a page with no marker', async () => {
     expect((await gate(GOOD.replace('AF-003', 'AF-999'))).failed).toEqual(['citations']);
     expect((await gate(GOOD.replace('data-section="s2"', 'data-section="s9"'))).failed).toEqual(['citations']);
+    // Ids written with commas are read too.
+    expect((await gate(GOOD.replace('data-finding="AF-003"', 'data-finding="AF-003, AF-001"'))).passed).toBe(true);
     const unmarked = GOOD.replace(/ data-(finding|section)="[^"]+"/g, '');
     expect((await gate(unmarked)).failed).toEqual(['citations']);
   });

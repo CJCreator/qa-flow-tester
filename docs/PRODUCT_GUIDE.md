@@ -103,17 +103,17 @@ Reads a public website and writes documents the user edits and exports. No Plan,
 - **Audit Documents.** Structure, Content, Findings (technical, marketing, content; ranked by impact, then lower effort), Improvement Roadmap, Proposal (from the user's template; price in INR). Edits are an overlay; originals are kept.
 - **Also made from an audit:** Pitch Glimpse (one A4 page, top 3 issues; the tool never sends it), Owner Audit, the improved-homepage preview (`audit/preview/generate.ts`), the Section rewrite (the AI writes new copy for one Section, the user accepts it as an edit) and the per-page recommendation (redesign or repair, for each Sample Page; a fixed rule decides without an AI key).
 - **Export** (`EXPORT_FORMATS`): `md`, `html`, `pdf`, `docx`, `bundle` (zip of the Markdown documents, `site.json`, a README index).
-- **Languages** (`DOCUMENT_LANGUAGES`, `packages/types/src/website-audit.ts`), chosen per export: English, Tamil, Hindi, Telugu, Kannada, Malayalam, Marathi, Gujarati, Bengali, Odia, Punjabi, Urdu (right to left). All but English and Tamil carry a "beta translation" label. Until T-420, an export in another language translates only the labels, not the findings or content. AI notes are written in the language chosen at start.
+- **Languages** (`DOCUMENT_LANGUAGES`, `packages/types/src/website-audit.ts`), chosen per export: English, Tamil, Hindi, Telugu, Kannada, Malayalam, Marathi, Gujarati, Bengali, Odia, Punjabi, Urdu (right to left). All but English and Tamil carry a "beta translation" label. With your AI key, an export in a language other than the version's own is translated in full (T-420): findings, notes, roadmap and proposal, in batches of up to 40 strings, cached per version and language so a second export makes no new AI request. The cost is shown before the download. The site's own quoted Page Content stays in its original wording, marked "original wording". Without a key, the export changes labels only and says "Labels only: findings stay in <language>". AI notes are written in the language chosen at start.
 - **Keeping work.** A new version per re-run, Shortlist with notes and outcome, Shared Links (30-day expiry, revocable), Helpers on the hosted copy. Everything stays until the user deletes the audit (ADR 0036).
 - **Wording.** Findings state what was seen, never a claim about the whole site (ADR 0018).
 
 ## Disabled actions
 
-A disabled button says why in a line next to it (the button's `aria-describedby` points at that line).
+Every disabled button says why in a line next to it (the button's `aria-describedby` points at that line). The line is plain and specific ("Enter the address first", "Tick at least one Section to approve first"). While a screen is busy, the line is one shared "Working…" in a live region. `DisabledReason.tsx` renders both, and `tests/disabled-reasons.test.tsx` fails when a disabled button has no line.
 
 - **Start the check-up** (New check-up): waiting for the AI setup; enter the address first; checking the address; the address cannot be reached; say whether it is a test copy; fix the custom headers.
 - **Compare the two sites** (Benchmark): a comparison is running; enter your site's address; enter the other site's address.
-- **Save key** (AI key field): off until the key checks as valid. A reason line sits beside it (`KeyField.tsx:154-160`); the status line under the field shows the error for a wrong key. Other screens: gap W20.
+- **Save key** (AI key field): off until the key checks as valid. A reason line sits beside it (`KeyField.tsx:154-160`); the status line under the field shows the error for a wrong key.
 
 ## Safety
 

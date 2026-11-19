@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useDeferredValue, useEffect, useRef, useState } from 'react';
+import React, { createContext, useContext, useDeferredValue, useEffect, useId, useRef, useState } from 'react';
+import { DisabledReason, WORKING_ID, WorkingLine, reasonId, workingId } from '../DisabledReason';
 import type {
   Breakpoint,
   DiscoveredFlow,
@@ -333,6 +334,7 @@ function EditableTitle({
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
+  const emptyId = `${useId()}-empty-name`;
 
   useEffect(() => {
     setText(value);
@@ -382,9 +384,17 @@ function EditableTitle({
           }}
           disabled={disabled}
         />
-        <button type="submit" className="btn-quiet btn-sm" disabled={disabled || !text.trim()}>
+        <button
+          type="submit"
+          className="btn-quiet btn-sm"
+          disabled={disabled || !text.trim()}
+          aria-describedby={disabled ? WORKING_ID : reasonId(emptyId, !text.trim())}
+        >
           Save
         </button>
+        <DisabledReason id={emptyId} when={!disabled && !text.trim()}>
+          Type a name first
+        </DisabledReason>
         <button
           type="button"
           className="btn-link text-sm"
@@ -432,6 +442,7 @@ function Expected({
 }) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState('');
+  const emptyId = `${useId()}-empty-wording`;
   if (!expectations || !Object.keys(expectations).some((k) => k !== 'origin')) return null;
   const guess = expectations.origin === 'ai-guess';
   const checks = expectationsToChecks(expectations);
@@ -455,6 +466,7 @@ function Expected({
             type="button"
             className="btn-link text-sm disabled:cursor-not-allowed disabled:text-ink-soft"
             disabled={actions.busy}
+            aria-describedby={workingId(actions.busy)}
             onClick={() => actions.setExpectation(itemId)}
           >
             Confirm
@@ -463,6 +475,7 @@ function Expected({
             type="button"
             className="btn-link text-sm disabled:cursor-not-allowed disabled:text-ink-soft"
             disabled={actions.busy}
+            aria-describedby={workingId(actions.busy)}
             onClick={() => {
               setText(expectations.text?.contains ?? '');
               setEditing(true);
@@ -486,9 +499,17 @@ function Expected({
             <span className="font-bold">The wording that should show afterwards</span>
             <input className="field py-2 text-sm" value={text} onChange={(e) => setText(e.target.value)} autoFocus />
           </label>
-          <button type="submit" className="btn-quiet btn-sm self-end" disabled={actions.busy || !text.trim()}>
+          <button
+            type="submit"
+            className="btn-quiet btn-sm self-end"
+            disabled={actions.busy || !text.trim()}
+            aria-describedby={actions.busy ? WORKING_ID : reasonId(emptyId, !text.trim())}
+          >
             Save
           </button>
+          <DisabledReason id={emptyId} when={!actions.busy && !text.trim()} className="self-end text-sm text-ink-soft">
+            Type the wording first
+          </DisabledReason>
           <button type="button" className="btn-link self-end text-sm" onClick={() => setEditing(false)}>
             Cancel
           </button>
@@ -511,7 +532,13 @@ function AddSignIn({ actions }: { actions: PlanActions }) {
   const [error, setError] = useState<string | null>(null);
   if (!open) {
     return (
-      <button type="button" className="btn-quiet btn-sm mt-3" disabled={actions.busy} onClick={() => setOpen(true)}>
+      <button
+        type="button"
+        className="btn-quiet btn-sm mt-3"
+        disabled={actions.busy}
+        aria-describedby={workingId(actions.busy)}
+        onClick={() => setOpen(true)}
+      >
         Add a sign-in
       </button>
     );
@@ -626,9 +653,17 @@ function AddSignIn({ actions }: { actions: PlanActions }) {
         </p>
       )}
       <div className="flex flex-wrap gap-3 sm:col-span-2">
-        <button type="submit" className="btn-quiet btn-sm" disabled={actions.busy || !username.trim() || !password}>
+        <button
+          type="submit"
+          className="btn-quiet btn-sm"
+          disabled={actions.busy || !username.trim() || !password}
+          aria-describedby={actions.busy ? WORKING_ID : reasonId('add-sign-in-reason', !username.trim() || !password)}
+        >
           Sign in and explore
         </button>
+        <DisabledReason id="add-sign-in-reason" when={!actions.busy && (!username.trim() || !password)}>
+          Enter the username and the password first
+        </DisabledReason>
         <button type="button" className="btn-link text-sm" onClick={() => setOpen(false)}>
           Cancel
         </button>
@@ -768,7 +803,13 @@ function SummarySection({ plan, actions }: { plan: ReviewPlan; actions: PlanActi
               })}
             </div>
           </fieldset>
-          <button type="button" className="btn-link w-fit text-sm" disabled={actions.busy} onClick={actions.quickCheck}>
+          <button
+            type="button"
+            className="btn-link w-fit text-sm"
+            disabled={actions.busy}
+            aria-describedby={workingId(actions.busy)}
+            onClick={actions.quickCheck}
+          >
             Make it a shorter check-up: desktop only, and only the shared menus’ links
           </button>
 
@@ -850,6 +891,7 @@ function SummarySection({ plan, actions }: { plan: ReviewPlan; actions: PlanActi
           type="button"
           className="btn-quiet btn-sm w-fit"
           disabled={actions.busy}
+          aria-describedby={workingId(actions.busy)}
           onClick={actions.replanEverything}
         >
           Re-plan everything with the AI
@@ -895,6 +937,7 @@ function QuestionsSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAc
                     type="button"
                     aria-pressed={picked}
                     disabled={actions.busy}
+                    aria-describedby={workingId(actions.busy)}
                     onClick={() => actions.answer(q.id, option)}
                     className={`min-h-[44px] rounded-control border-[1.5px] px-3 py-2 text-sm ${picked ? 'border-ink bg-ink font-bold text-surface' : 'border-edge text-ink hover:border-ink'}`}
                   >
@@ -908,6 +951,7 @@ function QuestionsSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAc
                   type="button"
                   className="btn-link text-sm"
                   disabled={actions.busy}
+                  aria-describedby={workingId(actions.busy)}
                   onClick={() => actions.answer(q.id, '')}
                 >
                   Clear the answer
@@ -945,6 +989,7 @@ function SourceDetails({ test, actions }: { test: PlanPageTest; actions: PlanAct
                 type="button"
                 className="btn-link text-sm"
                 disabled={actions.busy}
+                aria-describedby={workingId(actions.busy)}
                 onClick={() => actions.editSource(confirmRolesEdit(test.id))}
               >
                 Confirm roles
@@ -953,6 +998,7 @@ function SourceDetails({ test, actions }: { test: PlanPageTest; actions: PlanAct
                 type="button"
                 className="btn-link text-sm"
                 disabled={actions.busy}
+                aria-describedby={workingId(actions.busy)}
                 onClick={() => setCorrecting(true)}
               >
                 Correct roles
@@ -971,6 +1017,9 @@ function SourceDetails({ test, actions }: { test: PlanPageTest; actions: PlanAct
             type="button"
             className="btn-quiet btn-sm"
             disabled={actions.busy || parseRoles(typed).length === 0}
+            aria-describedby={
+              actions.busy ? WORKING_ID : reasonId(`${test.id}-roles-reason`, parseRoles(typed).length === 0)
+            }
             onClick={() => {
               actions.editSource(confirmRolesEdit(test.id, parseRoles(typed)));
               setCorrecting(false);
@@ -978,6 +1027,9 @@ function SourceDetails({ test, actions }: { test: PlanPageTest; actions: PlanAct
           >
             Save roles
           </button>
+          <DisabledReason id={`${test.id}-roles-reason`} when={!actions.busy && parseRoles(typed).length === 0}>
+            Type at least one role first
+          </DisabledReason>
         </div>
       )}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -1128,6 +1180,7 @@ function PageRow({ page, actions }: { page: PlanPage; actions: PlanActions }) {
                 type="button"
                 className="btn-link text-sm disabled:cursor-not-allowed disabled:text-ink-soft"
                 disabled={actions.busy}
+                aria-describedby={workingId(actions.busy)}
                 onClick={() => actions.promote(page.id)}
               >
                 Test this page too
@@ -1165,6 +1218,7 @@ function BulkSwitch({
       type="button"
       className="btn-link text-sm disabled:cursor-not-allowed disabled:text-ink-soft"
       disabled={actions.busy}
+      aria-describedby={workingId(actions.busy)}
       onClick={() => actions.setSkippedMany(ids, !allOff)}
     >
       {allOff ? `Switch on ${what}` : `Switch off ${what}`}
@@ -1253,10 +1307,18 @@ function PagesSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAction
             value={address}
             onChange={(e) => setAddress(e.target.value)}
           />
-          <button type="submit" className="btn-quiet btn-sm" disabled={actions.busy || !address.trim()}>
+          <button
+            type="submit"
+            className="btn-quiet btn-sm"
+            disabled={actions.busy || !address.trim()}
+            aria-describedby={actions.busy ? WORKING_ID : reasonId('add-page-reason', !address.trim())}
+          >
             Add page
           </button>
         </div>
+        <DisabledReason id="add-page-reason" when={!actions.busy && !address.trim()}>
+          Enter the page address first
+        </DisabledReason>
       </form>
       {error && (
         <p role="alert" className="mt-2 text-sm text-fail">
@@ -1414,6 +1476,7 @@ function NavigationSection({ plan, actions }: { plan: ReviewPlan; actions: PlanA
                       type="button"
                       className="btn-link text-sm"
                       disabled={actions.busy}
+                      aria-describedby={workingId(actions.busy)}
                       onClick={() => actions.includeHost(host.host)}
                     >
                       Explore this site too
@@ -1477,6 +1540,13 @@ function DescribeTest({ plan, actions }: { plan: ReviewPlan; actions: PlanAction
           type="button"
           className="btn-quiet btn-sm"
           disabled={working || actions.busy || !sentence.trim()}
+          aria-describedby={
+            working || actions.busy
+              ? actions.busy
+                ? WORKING_ID
+                : 'describe-working'
+              : reasonId('describe-reason', !sentence.trim())
+          }
           onClick={() => {
             void (async () => {
               setWorking(true);
@@ -1497,6 +1567,12 @@ function DescribeTest({ plan, actions }: { plan: ReviewPlan; actions: PlanAction
           {working ? 'Reading it…' : 'Turn into a test'}
         </button>
       </div>
+      <DisabledReason id="describe-working" when={working && !actions.busy}>
+        Reading your sentence…
+      </DisabledReason>
+      <DisabledReason id="describe-reason" when={!working && !actions.busy && !sentence.trim()}>
+        Describe the test in a sentence first
+      </DisabledReason>
       {error && (
         <p role="alert" className="mt-2 text-sm text-fail">
           {error}
@@ -1514,6 +1590,7 @@ function DescribeTest({ plan, actions }: { plan: ReviewPlan; actions: PlanAction
             type="button"
             className="btn-quiet btn-sm mt-2"
             disabled={actions.busy}
+            aria-describedby={workingId(actions.busy)}
             onClick={() => {
               void (async () => {
                 await actions.addJourney(result.flow!);
@@ -1753,6 +1830,7 @@ function NotFoundSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAct
                   type="button"
                   className="btn-link min-w-[44px] shrink-0 justify-center text-sm"
                   disabled={actions.busy}
+                  aria-describedby={workingId(actions.busy)}
                   onClick={() => actions.editNotFound(removeNotFoundEdit(item.id))}
                 >
                   Remove from the list
@@ -1825,6 +1903,7 @@ function DocsSection({ plan, actions }: { plan: ReviewPlan; actions: PlanActions
         type="button"
         className="btn-quiet btn-sm"
         disabled={actions.busy}
+        aria-describedby={workingId(actions.busy)}
         onClick={() => {
           void actions.saveDocsAndReplan(productContext, designNotes).catch((err: unknown) => console.error(err));
         }}
@@ -2149,6 +2228,7 @@ export function PlanDocument({
       <AiContext.Provider value={plan.aiAvailable !== false}>
         {/* What needs an answer first, then the summary, then everything that runs, then what doesn't. */}
         <div className="w-full space-y-10">
+          <WorkingLine busy={actions.busy} />
           <QuestionsSection plan={plan} actions={actions} />
           <SummarySection plan={plan} actions={actions} />
           <PlanFinder plan={plan} view={view} setView={setView} />

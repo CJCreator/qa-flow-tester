@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { WorkingLine, workingId } from '../components/DisabledReason';
 import {
   acceptVisualBaseline,
   deleteVisualBaseline,
@@ -172,12 +173,19 @@ export function VisualBaselinesScreen() {
         title="Visual baselines"
         lede="Saved screenshots that each check-up is compared with. See what changed, then keep the new screenshot as the baseline, or leave it."
         actions={
-          <button type="button" onClick={() => void loadBaselines()} className="btn-quiet btn-sm" disabled={loading}>
+          <button
+            type="button"
+            onClick={() => void loadBaselines()}
+            className="btn-quiet btn-sm"
+            disabled={loading}
+            aria-describedby={workingId(loading, 'baselines-loading')}
+          >
             {loading ? 'Refreshing…' : 'Refresh'}
           </button>
         }
       />
 
+      <WorkingLine busy={loading} id="baselines-loading" />
       <div className="space-y-6">
         {actionMessage && (
           <Notice
@@ -332,6 +340,7 @@ export function VisualBaselinesScreen() {
                           type="button"
                           onClick={() => void handleAccept(activeItem)}
                           disabled={processingId === activeItem.id}
+                          aria-describedby={workingId(processingId === activeItem.id, 'baseline-working')}
                           className="btn-primary btn-sm"
                         >
                           {processingId === activeItem.id ? 'Saving…' : 'Keep the new screenshot as the baseline'}
@@ -341,10 +350,12 @@ export function VisualBaselinesScreen() {
                         type="button"
                         onClick={() => void handleDelete(activeItem)}
                         disabled={processingId === activeItem.id}
+                        aria-describedby={workingId(processingId === activeItem.id, 'baseline-working')}
                         className="btn-danger-quiet btn-sm"
                       >
                         Delete
                       </button>
+                      <WorkingLine busy={processingId === activeItem.id} id="baseline-working" />
                     </div>
                   </div>
 

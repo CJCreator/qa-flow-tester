@@ -86,7 +86,7 @@ export interface AuditStoreContext {
   listAudits(): Promise<AuditSummary[]>;
 }
 
-const AUDIT_STATUSES: readonly AuditStatus[] = ['running', 'done', 'failed', 'stopped'];
+const AUDIT_STATUSES: readonly AuditStatus[] = ['running', 'done', 'failed', 'stopped', 'paused'];
 const MAX_LIMIT_VALUE = 1_000_000;
 const MAX_PATH_RULES = 200;
 const MAX_PATH_RULE_CHARS = 2048;
@@ -366,6 +366,24 @@ export class AuditStore implements AuditStoreContext {
       const current = await this.readVersion(auditId, version);
       if (!current) throw notFound('version');
       const next: AuditVersion = { ...current, ...checked };
+      await this.backend.putJson(versionRecordKey(auditId, version), next);
+      return next;
+    });
+  }
+
+  /**
+   * Sets a 'paused' version running again (T-407): its finish time, error wording and stop reason go, as for a
+   * version that never stopped. Null, and nothing changed, when the version is not paused.
+   */
+  async resumeVersion(auditId: string, version: number): Promise<AuditVersion | null> {
+    assertAuditId(auditId);
+    assertVersion(version);
+    return this.withAuditLock(auditId, async () => {
+      const current = await this.readVersion(auditId, version);
+      if (!current) throw notFound('version');
+      if (current.status !== 'paused') return null;
+      const { finishedAt: _finished, error: _error, stoppedReason: _reason, ...rest } = current;
+      const next: AuditVersion = { ...rest, status: 'running' };
       await this.backend.putJson(versionRecordKey(auditId, version), next);
       return next;
     });

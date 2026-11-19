@@ -24,6 +24,7 @@ import {
   BREAKPOINT_VIEWPORTS,
   locateElement,
   getBrowserPolicy,
+  installHostAllowlist,
   type BrowserEngine,
 } from './browser.js';
 import { runAccessChecks, contextFetcher, type AccessFetcher } from './access-control.js';
@@ -50,7 +51,7 @@ import { SuppressionsManager } from './suppressions.js';
 import { Redactor, redactUrl, storageStateSecrets } from './redact.js';
 import { mergeDuplicateFindings } from './finding-groups.js';
 import { resolveCredentialPlaceholders } from './credentials.js';
-import { onSiteAddress } from './same-site.js';
+import { onSiteAddress, inDomainAllowlist } from './same-site.js';
 import { blockChanges, NEEDS_TEST_COPY } from './live-site.js';
 import { EntityNamespacer } from './entity-namespacing.js';
 import { SendGuard, watchSends } from './send-guard.js';
@@ -750,6 +751,20 @@ export class FlowTestOrchestrator {
       vitalsMeasured.add(urlPath);
       return true;
     };
+    // Paths an approved Plan Item opens itself: a read-only run lets these through even when their GET looks
+    // like a side effect (T-427); any other move to such an address is stopped.
+    const planPaths = new Set(
+      testCasesToRun
+        .flatMap((tc) => [tc.startPage, ...tc.steps.filter((s) => s.action === 'navigate').map((s) => s.value ?? '')])
+        .map((v) => {
+          try {
+            return v ? new URL(v, options.targetUrl).pathname : '';
+          } catch {
+            return '';
+          }
+        })
+        .filter(Boolean)
+    );
     // TEST_POINT_STARTED's position, counted across all workers.
     let pointsStarted = 0;
     // A worker that took a Test case runs it, at each of its sizes one after another (ADR 0048). `results`
@@ -886,7 +901,9 @@ export class FlowTestOrchestrator {
             await routeRoleHeaders(context, options.targetUrl, roleHeadersFor(testCase.role));
 
             // On a live site nothing that could change data leaves the browser.
-            blockedChanges = options.readOnly ? await blockChanges(context) : [];
+            blockedChanges = options.readOnly
+              ? await blockChanges(context, { allow: (u) => planPaths.has(u.pathname) })
+              : [];
             // No form leaves outside the Plan: script submits only on a Test Copy, a Sensitive Action form never.
             const attemptBlocks: BlockedSubmit[] = [];
             submitBlocks = attemptBlocks;
@@ -895,6 +912,21 @@ export class FlowTestOrchestrator {
               forbiddenActions: options.profile?.forbiddenActions,
               onBlocked: (b) => attemptBlocks.push(b),
             });
+            // The Domain Allowlist on every request (T-424): no page, frame or changing request leaves it. What it
+            // stops is the tool's doing, kept out of the findings, and each host is named in a run note.
+            await installHostAllowlist(
+              context,
+              (u) => inDomainAllowlist(u, options.targetUrl, options.headerHosts),
+              (b) => {
+                blockedChanges.push(`${b.method} ${b.rawUrl}`);
+                const host = new URL(b.url).host;
+                const note =
+                  b.kind === 'redirect'
+                    ? `A page redirected to ${host}, which is not on the Domain Allowlist: nothing was tested there.`
+                    : `Requests to ${host} were stopped: it is not on the Domain Allowlist. Tick it in Plan Review to include it.`;
+                if (!notes.includes(note)) notes.push(note);
+              }
+            );
             if (sendGuard) watchSends(context, sendGuard);
             evidenceCollector.attach(page);
             const attachedPage = page;
@@ -916,6 +948,15 @@ export class FlowTestOrchestrator {
             startPageNavResult = navRes;
             if (!navRes.ok) {
               throw new Error(`Failed to load ${testCase.startPage} (${navRes.error?.kind || 'net error'})`);
+            }
+            // Redirected off the allowlist: a route cannot stop that hop, so nothing is done on the page it reached.
+            const landedAt = new URL(page.url());
+            if (
+              /^https?:$/.test(landedAt.protocol) &&
+              !inDomainAllowlist(landedAt, options.targetUrl, options.headerHosts)
+            ) {
+              pointSkippedReason = `Left the site: ${testCase.startPage} redirected to ${landedAt.host}, which is not on the Domain Allowlist.`;
+              return;
             }
 
             const credential = options.profile?.roles?.find((r) => r.role === testCase.role);

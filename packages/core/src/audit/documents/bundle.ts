@@ -48,6 +48,11 @@ export interface ExportOptions {
   renderPdf?: (html: string) => Promise<Buffer>;
   /** The Improved version's variants that passed the quality gate (T-415); the exports gain its section. */
   improved?: ImprovedExport;
+  /**
+   * Translates the built documents into the export language (T-420: the AI pass, or the labels-only notice).
+   * Not given: the documents are exported as built.
+   */
+  translate?: (docs: AuditDoc[]) => Promise<AuditDoc[]>;
 }
 
 /** One design variant that passed the quality gate, with its page and images (T-415). */
@@ -60,6 +65,8 @@ export interface ImprovedExportVariant {
   after?: string;
   /** The stored phone screenshot of the page, a base64 `data:image/...` URI ("before"). */
   before?: string;
+  /** The stored 1440 px screenshot of the page, a base64 `data:image/...` URI (T-431). */
+  beforeDesktop?: string;
 }
 
 export interface ImprovedExport {
@@ -74,6 +81,7 @@ const IMPROVED_EXPORT_WORDS = {
     note: 'Suggestion, not the live site. Written with AI from this Website Audit; nothing on the site was changed. Every change names the finding or Section it answers.',
     variant: (n: number, style: string, page: string) => `${page}: variant ${n} (${style})`,
     before: 'Before (stored phone screenshot)',
+    beforeDesktop: 'Before (stored 1440 px screenshot)',
     after: 'After (the variant)',
     changes: 'Changes and the findings or Sections they answer',
     section: 'Section',
@@ -84,6 +92,7 @@ const IMPROVED_EXPORT_WORDS = {
     note: 'பரிந்துரை மட்டுமே, நேரடி தளம் அல்ல. இந்த இணையதள தணிக்கையிலிருந்து AI மூலம் எழுதப்பட்டது; தளத்தில் எதுவும் மாற்றப்படவில்லை.',
     variant: (n: number, style: string, page: string) => `${page}: மாறுபாடு ${n} (${style})`,
     before: 'முன் (சேமிக்கப்பட்ட கைபேசி படம்)',
+    beforeDesktop: 'முன் (சேமிக்கப்பட்ட 1440 px படம்)',
     after: 'பின் (மாறுபாடு)',
     changes: 'மாற்றங்களும் அவை தீர்க்கும் கண்டுபிடிப்புகளும்',
     section: 'பகுதி',
@@ -98,6 +107,9 @@ export function improvedVersionDoc(improved: ImprovedExport, language: DocumentL
   const blocks: DocBlock[] = [{ type: 'note', text: words.note }];
   for (const v of improved.variants) {
     blocks.push({ type: 'heading', level: 1, text: words.variant(v.variant.variant, v.variant.style, v.page.urlPath) });
+    if (v.beforeDesktop) {
+      blocks.push({ type: 'image', src: v.beforeDesktop, alt: words.beforeDesktop, caption: words.beforeDesktop });
+    }
     if (v.before) blocks.push({ type: 'image', src: v.before, alt: words.before, caption: words.before });
     if (v.after) blocks.push({ type: 'image', src: v.after, alt: words.after, caption: words.after });
     if (!v.after) blocks.push({ type: 'note', text: words.noImage });
@@ -298,10 +310,15 @@ function readme(url: string, version: number, folder: string): string {
 }
 
 /** The export bundle (REQ-021, Q-24): the five Audit Documents, `site.json` and `README.md` in one folder. */
-export function buildAuditBundle(input: AuditDocumentsInput, improved?: ImprovedExport): AuditExportFile {
+export function buildAuditBundle(
+  input: AuditDocumentsInput,
+  improved?: ImprovedExport,
+  /** The five documents as already built and translated (T-420); built here when not given. */
+  builtDocs?: readonly AuditDoc[]
+): AuditExportFile {
   const view = editedViewOf(input);
   // The bundle always holds all five Audit Documents, whatever was selected.
-  const docs = documentsFromView(view, { ...input, documents: undefined });
+  const docs = builtDocs ?? documentsFromView(view, { ...input, documents: undefined });
   const folder = exportBaseName(view.result.url, view.result.version);
   const entries = docs.map((doc) => ({
     name: `${folder}/${BUNDLE_FILE_NAMES[doc.kind as AuditDocumentKind]}`,
@@ -338,10 +355,16 @@ export async function exportAudit(
   options: ExportOptions = {}
 ): Promise<AuditExportFile> {
   if (!isExportFormat(format)) throw new Error('This export format is not available.');
-  if (format === 'bundle') return buildAuditBundle(input, options.improved);
+  if (format === 'bundle') {
+    if (!options.translate) return buildAuditBundle(input, options.improved);
+    const view = editedViewOf(input);
+    const built = await options.translate(documentsFromView(view, { ...input, documents: undefined }));
+    return buildAuditBundle(input, options.improved, built);
+  }
   const view = editedViewOf(input);
-  const docs = documentsFromView(view, input);
-  if (docs.length === 0) throw new Error('There is no document to export.');
+  const built = documentsFromView(view, input);
+  if (built.length === 0) throw new Error('There is no document to export.');
+  const docs = options.translate ? await options.translate(built) : built;
   const improved = options.improved;
   const withImproved =
     improved && improved.variants.length > 0 ? [...docs, improvedVersionDoc(improved, docs[0]!.language)] : docs;

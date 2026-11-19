@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { WorkingLine, workingId } from '../../../components/DisabledReason';
 import type { AuditGetReply, AuditSummary, AuditVersion, ShortlistEntry } from '@qa/types/src/browser.js';
 import { useConfirm, type ConfirmOptions } from '../../../components/ConfirmDialog';
 import { ErrorMessage, Notice, Spinner } from '../../../components/text';
@@ -15,7 +16,9 @@ import {
   followRunningVersion,
   latestFinishedVersion,
   loadVersion,
+  pausedVersion,
   rerunAndReload,
+  resumeAudit,
   runningVersion,
   shortlistMarkText,
   versionCounts,
@@ -56,6 +59,9 @@ export interface AuditHistoryViewProps {
   /** Opens a version's details in place, or closes them when that version is already open. */
   onOpen: (version: number) => void;
   onRerun: () => void;
+  /** Resumes the paused latest version (T-407). No Resume button without it. */
+  onResume?: () => void;
+  resuming?: boolean;
   /** Asks before deleting (the screen shows the confirm dialog). */
   onAskDelete: () => void;
   /** The Shortlist panel; a slot so the view renders without requests. Never shown to a Helper. */
@@ -154,6 +160,8 @@ export function AuditHistoryView({
   message,
   onOpen,
   onRerun,
+  onResume,
+  resuming = false,
   onAskDelete,
   shortlist,
   isHelper = false,
@@ -163,6 +171,7 @@ export function AuditHistoryView({
   const owner = isHelper === false;
   const latestDone = latestFinishedVersion(summary);
   const running = runningVersion(summary);
+  const paused = pausedVersion(summary);
   return (
     <div className="grid gap-8">
       <AuditTabs
@@ -179,9 +188,26 @@ export function AuditHistoryView({
               Open the results
             </Link>
           )}
+          {owner && paused && onResume && (
+            <button
+              type="button"
+              className="btn-primary btn-sm"
+              disabled={resuming}
+              aria-describedby={workingId(resuming)}
+              onClick={onResume}
+            >
+              {resuming ? 'Resuming…' : 'Resume'}
+            </button>
+          )}
           {owner && (
             <>
-              <button type="button" className="btn-quiet btn-sm" disabled={rerunning} onClick={onRerun}>
+              <button
+                type="button"
+                className="btn-quiet btn-sm"
+                disabled={rerunning}
+                aria-describedby={workingId(rerunning)}
+                onClick={onRerun}
+              >
                 {rerunning ? 'Starting…' : 'Audit again'}
               </button>
               <button
@@ -189,12 +215,14 @@ export function AuditHistoryView({
                 className="btn-danger-quiet btn-sm"
                 aria-label={`Delete the Website Audit of ${summary.host}`}
                 disabled={deleting}
+                aria-describedby={workingId(deleting)}
                 onClick={onAskDelete}
               >
                 {deleting ? 'Deleting…' : 'Delete'}
               </button>
             </>
           )}
+          <WorkingLine busy={Boolean(resuming || rerunning || deleting)} />
           {owner && (
             <Badge tone={summary.shortlist?.mark === 'pitch' ? 'stamp' : 'neutral'}>
               {shortlistMarkText(summary.shortlist)}
@@ -215,6 +243,14 @@ export function AuditHistoryView({
       {running && (
         <Notice tone="stamp" title={`Version ${running.version} is running`}>
           This page updates by itself when it ends.
+        </Notice>
+      )}
+
+      {paused && (
+        <Notice tone="stamp" title={`Version ${paused.version} is paused`}>
+          {owner
+            ? 'Resume carries it on from where it paused, with the same address and limits.'
+            : 'The owner can resume it.'}
         </Notice>
       )}
 
@@ -260,6 +296,7 @@ export function AuditHistoryScreen({ auditId, fetchImpl, openSource }: AuditHist
   const [loaded, setLoaded] = useState<Loaded>({ status: 'loading' });
   const [opened, setOpened] = useState<OpenedVersion | null>(null);
   const [rerunning, setRerunning] = useState(false);
+  const [resuming, setResuming] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleted, setDeleted] = useState(false);
   const [message, setMessage] = useState<AuditHistoryViewProps['message']>(null);
@@ -330,6 +367,19 @@ export function AuditHistoryScreen({ auditId, fetchImpl, openSource }: AuditHist
     setRerunning(false);
   };
 
+  const resume = async () => {
+    setResuming(true);
+    setMessage(null);
+    const outcome = await resumeAudit(auditId, fetchImpl);
+    if (outcome.ok) {
+      setMessage({ tone: 'pass', text: `Version ${outcome.value.version} resumed.` });
+      reload(true);
+    } else {
+      setMessage({ tone: 'fail', text: outcome.message });
+    }
+    setResuming(false);
+  };
+
   const remove = async () => {
     setDeleting(true);
     setMessage(null);
@@ -380,6 +430,8 @@ export function AuditHistoryScreen({ auditId, fetchImpl, openSource }: AuditHist
               message={message}
               onOpen={open}
               onRerun={() => void rerun()}
+              onResume={() => void resume()}
+              resuming={resuming}
               onAskDelete={() => void askDelete(summary.host)}
               isHelper={isHelper}
               shortlist={

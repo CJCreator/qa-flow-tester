@@ -652,6 +652,12 @@ export interface AuditPage {
   accessibility?: AccessibilityBasics;
   /** Sample Pages only. */
   phone?: PhoneLayout;
+  /**
+   * Sample Pages only: the top of the page at 1440 px, stored while the page was open for its lab checks
+   * (T-431), relative to the version's folder (`AUDIT_API.file`). The "before" of the Improved version's
+   * desktop view. Null when it could not be taken or saved.
+   */
+  desktopScreenshotPath?: string | null;
   /** Sample Pages only. */
   speed?: PageSpeed;
   /** Sample Pages only: one per area in `AUDIT_AREAS`. */
@@ -788,7 +794,8 @@ export interface AuditEditsPatch {
 /** Audit ids: URL-safe and free of dots and slashes, so one can never name a path outside its folder. */
 export const AUDIT_ID_PATTERN = /^[A-Za-z0-9_-]{8,64}$/;
 
-export type AuditStatus = 'running' | 'done' | 'failed' | 'stopped';
+/** 'paused': stopped with a checkpoint (T-407), so `POST /api/audits/:id/resume` carries on from it. */
+export type AuditStatus = 'running' | 'done' | 'failed' | 'stopped' | 'paused';
 
 /** All 7 documents produced by a website audit: the 5 audit documents plus Pitch Glimpse and Owner Audit (ADR 0042). */
 export type StoredDocumentKind = AuditDocumentKind | 'pitch-glimpse' | 'owner-audit';
@@ -829,7 +836,7 @@ export interface AuditVersion {
   rules?: number;
   /** The version has edits. */
   edited?: boolean;
-  /** Why a running version was stopped (ADR 0042). */
+  /** Why a running version was stopped or paused (ADR 0042, T-407). */
   stoppedReason?: 'tool-restarted' | 'stopped-by-user';
   /** Audit Documents written at audit end (ADR 0042). */
   documents?: StoredAuditDocument[];
@@ -898,8 +905,11 @@ export const SHARED_LINK_PREFIX = '/s/';
 /** Shared Link ids: at least 128 random bits, URL-safe (22 base64url characters or more). */
 export const SHARE_LINK_ID_PATTERN = /^[A-Za-z0-9_-]{22,128}$/;
 
-/** Only a Pitch Glimpse or an improved-homepage preview can be shared. */
-export type ShareLinkKind = 'pitch' | 'preview';
+/**
+ * Only a Pitch Glimpse, an improved-homepage preview or one design variant of the Improved version can be
+ * shared (T-431). The snapshot is copied when the link is made; revoke and expiry apply as for the others.
+ */
+export type ShareLinkKind = 'pitch' | 'preview' | 'improved';
 
 export interface ShareLink {
   id: string;
@@ -1121,6 +1131,8 @@ export const AUDIT_ERROR_CODES = [
   'ERR_AUDIT_NOT_FOUND',
   /** 409: the version is still running. */
   'ERR_AUDIT_RUNNING',
+  /** 409: the version is not paused, so there is nothing to resume (T-407). */
+  'ERR_AUDIT_NOT_PAUSED',
   /** 409: the step needs an AI key and none is saved (REQ-011 AC-2). */
   'ERR_NO_AI_KEY',
   /** 409: the Section was not approved for a rewrite (REQ-030 AC-1). */
@@ -1190,6 +1202,11 @@ export const AUDIT_API = {
    * that audit is not running. Never touches a Check-up.
    */
   stop: { method: 'POST', path: '/api/audits/:id/stop', replies: 'json', access: 'owner' },
+  /**
+   * Resumes the latest version when it is 'paused' (T-407): the same version carries on from its checkpoint with
+   * the same limits. 202 `AuditStartReply`; 409 ERR_AUDIT_NOT_PAUSED or ERR_RUN_IN_PROGRESS; 404 ERR_AUDIT_NOT_FOUND.
+   */
+  resume: { method: 'POST', path: '/api/audits/:id/resume', replies: 'json', access: 'owner' },
   content: { method: 'GET', path: '/api/audits/:id/content', replies: 'json', access: 'view' },
   /** A screenshot of the version, by its path relative to the version's folder. */
   file: { method: 'GET', path: '/api/audits/:id/file', replies: 'file', access: 'view' },
@@ -1213,6 +1230,10 @@ export const AUDIT_API = {
   setImproveBest: { method: 'PUT', path: '/api/audits/:id/improve-best', replies: 'json', access: 'edit' },
   /** Every variant that passed the quality gate, as a zip of HTML files with a README (T-415). */
   exportImproved: { method: 'GET', path: '/api/audits/:id/improve-export', replies: 'file', access: 'export' },
+  /** The fix options of the top findings: AI options when a key works and one was made, else by rule (T-417). */
+  fixOptions: { method: 'GET', path: '/api/audits/:id/fix-options', replies: 'json', access: 'view' },
+  /** What an export in another language would cost in AI requests, before it starts (T-420). */
+  exportTranslation: { method: 'GET', path: '/api/audits/:id/export-translation', replies: 'json', access: 'export' },
   listShares: { method: 'GET', path: '/api/audits/:id/share', replies: 'json', access: 'view' },
   createShare: { method: 'POST', path: '/api/audits/:id/share', replies: 'json', access: 'owner' },
   revokeShare: { method: 'DELETE', path: '/api/audits/:id/share/:linkId', replies: 'json', access: 'owner' },
@@ -1392,6 +1413,8 @@ export interface ImprovePage {
   layoutGroup: string | null;
   /** The stored phone screenshot of the page, relative to the version folder (`AUDIT_API.file`); the "before". */
   screenshotPath?: string | null;
+  /** The stored 1440 px screenshot of the page (T-431); null for a version audited before it was stored. */
+  desktopScreenshotPath?: string | null;
 }
 
 /** The automatic checks a variant must pass before it is shown (T-414). */
@@ -1460,6 +1483,45 @@ export interface ImproveBestBody extends VersionQuery {
   variant: number;
 }
 
+/** One way to fix one finding (T-417). */
+export interface FixOptionReply {
+  /** `<finding id>-<letter>`. */
+  id: string;
+  findingId: string;
+  title: string;
+  /** S: under a day or two; M: a day or so; L: several days. */
+  effort: 'S' | 'M' | 'L';
+  tradeOff: string;
+  /** 'rule': fixed text ("decided by rule"); 'ai': written for this site with the owner's key. */
+  source: 'rule' | 'ai';
+}
+
+export interface FixOptionsReply {
+  /** Options by finding id, for the top 10 findings. */
+  options: Record<string, FixOptionReply[]>;
+  /** True when some option was written by the AI. */
+  ai: boolean;
+}
+
+/** `language` is the export language; the version's own language when absent. */
+export interface ExportTranslationQuery extends VersionQuery {
+  language?: DocumentLanguage;
+}
+
+/** What an export in `language` does with the text (T-420). */
+export interface ExportTranslationReply {
+  /** False when `language` is the version's own: nothing is translated. */
+  needed: boolean;
+  /** The language the findings are written in. */
+  sourceLanguage: DocumentLanguage;
+  /** True when a key works and the caller may use it (the owner): the export translates the text. */
+  aiKey: boolean;
+  /** AI requests the export would make now; 0 when the text is cached or nothing is translated. */
+  requests: number;
+  /** True when the export changes the fixed labels only ("Labels only: findings stay in ..."). */
+  labelsOnly: boolean;
+}
+
 export interface ImproveBestReply {
   best: { page: string; variant: number };
 }
@@ -1473,6 +1535,9 @@ export interface ImproveCreateReply {
 export interface ShareCreateBody extends VersionQuery {
   kind: ShareLinkKind;
   language?: DocumentLanguage;
+  /** kind 'improved': the page key and variant number to share; the starred variant, else the first shown, when absent. */
+  page?: string;
+  variant?: number;
 }
 
 export interface ShareLinkReply {
@@ -1555,6 +1620,7 @@ interface AuditApiShapes {
   stream: { query: VersionQuery; body: undefined; reply: EventStreamReply<AuditProgressEvent> };
   rerun: { query: NoQuery; body: undefined; reply: AuditStartReply };
   stop: { query: NoQuery; body: undefined; reply: AuditStopReply };
+  resume: { query: NoQuery; body: undefined; reply: AuditStartReply };
   content: { query: VersionQuery & { path: string }; body: undefined; reply: AuditContentReply };
   file: { query: VersionQuery & { path: string }; body: undefined; reply: FileReply };
   getEdits: { query: VersionQuery; body: undefined; reply: AuditEditsReply };
@@ -1571,6 +1637,8 @@ interface AuditApiShapes {
   getImprove: { query: VersionQuery; body: undefined; reply: HtmlReply };
   setImproveBest: { query: NoQuery; body: ImproveBestBody; reply: ImproveBestReply };
   exportImproved: { query: VersionQuery; body: undefined; reply: FileReply };
+  exportTranslation: { query: ExportTranslationQuery; body: undefined; reply: ExportTranslationReply };
+  fixOptions: { query: VersionQuery; body: undefined; reply: FixOptionsReply };
   listShares: { query: NoQuery; body: undefined; reply: ShareListReply };
   createShare: { query: NoQuery; body: ShareCreateBody; reply: ShareLinkReply };
   revokeShare: { query: NoQuery; body: undefined; reply: ShareLinkReply };

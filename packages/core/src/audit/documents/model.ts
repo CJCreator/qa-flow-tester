@@ -16,7 +16,8 @@ export type HeadingLevel = 1 | 2 | 3 | 4;
 
 export type DocBlock =
   | { type: 'heading'; level: HeadingLevel; text: string }
-  | { type: 'paragraph'; text: string }
+  /** `original`: the site's own quoted Page Content, which a translated export keeps in its original language (T-420). */
+  | { type: 'paragraph'; text: string; original?: boolean }
   | { type: 'list'; ordered?: boolean; items: string[] }
   /** Every row has one cell per column; a short row is padded, extra cells are dropped. */
   | { type: 'table'; columns: string[]; rows: string[][] }

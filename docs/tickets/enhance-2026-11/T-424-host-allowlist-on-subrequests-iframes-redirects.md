@@ -25,6 +25,7 @@ The Domain Allowlist (`headerHosts`) is checked only by `onSiteAddress` (`same-s
   - a changing request (POST, PUT, PATCH, DELETE) to a host outside the Domain Allowlist is aborted.
 - Subresources (images, scripts, fonts, styles) to other hosts still load when they only read, since a page cannot render without them. They are counted as third-party requests, as today.
 - The route reads the same allowlist the Plan Review edits.
+- Owner decision 2026-11-19: a host on the same site as the App (same registrable domain, such as `api.app.com` or `cdn.app.com` for `www.app.com`) passes without a tick. Other hosts still need the tick and are still recorded when blocked; the private-network rule is unchanged.
 
 ## Tests (write the failing test first)
 

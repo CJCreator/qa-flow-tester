@@ -36,7 +36,12 @@ import { makeCheckerFetch } from '../../checker-fetch.js';
 import { RobotsPolicy, ROBOTS_USER_AGENT_TOKEN } from '../../competitive/robots.js';
 import { HostPacer } from '../../host-pacer.js';
 import { redactUrl } from '../../redact.js';
-import { DeterministicSpider, type SpiderPageInventoryItem } from '../../discovery/deterministic-spider.js';
+import {
+  DeterministicSpider,
+  type SpiderCrawlState,
+  type SpiderPageInventoryItem,
+} from '../../discovery/deterministic-spider.js';
+import type { CrawlFrontierState } from '../../discovery/frontier.js';
 import { skipKey } from '../analysis/broken-links.js';
 import { isCheckoutPath, pageAreaVerdict } from './area-detect.js';
 import { pathLimitVerdict } from './limits.js';
@@ -173,6 +178,27 @@ export interface AuditCrawlResult {
   stoppedAnsweringAfter?: number;
 }
 
+/**
+ * Where a crawl stands (T-407): enough to carry on with the same limits after a stop or a restart. Saved every
+ * AUDIT_CHECKPOINT_EVERY recorded pages, when the crawl is stopped, and when it ends.
+ */
+export interface AuditCrawlCheckpoint {
+  /** Where the start page landed. */
+  finalUrl: string;
+  frontier: CrawlFrontierState;
+  /** Addresses still to load: queued, or being loaded when the checkpoint was taken. */
+  pending: Array<{ url: string; depth: number }>;
+  /** Pages recorded so far, in crawl order. */
+  pages: AuditCrawlPage[];
+  skipped: SkippedPageInfo[];
+  signInWalls: string[];
+  /** The crawl ran to its end: a resume goes straight to the checks after the crawl. */
+  crawlDone: boolean;
+}
+
+/** Recorded pages between two checkpoints (T-407). */
+export const AUDIT_CHECKPOINT_EVERY = 25;
+
 export type AuditCrawlPageState = 'queued' | 'loading' | 'recorded' | 'retrying' | 'skipped';
 
 export interface AuditCrawlPageProgress {
@@ -253,6 +279,13 @@ export interface AuditCrawlOptions {
    * web address through. A shared machine's browser policy still applies when one is set.
    */
   allowPrivateAddresses?: boolean;
+  /** Carry on from this checkpoint (T-407): its pages count toward the page limit and are not loaded again. */
+  resume?: AuditCrawlCheckpoint;
+  /**
+   * Saves a checkpoint every `every` recorded pages (default AUDIT_CHECKPOINT_EVERY), when the crawl is stopped
+   * and when it ends (T-407). Saves run one at a time; a failed save is ignored and the crawl goes on.
+   */
+  checkpoint?: { every?: number; save: (checkpoint: AuditCrawlCheckpoint) => Promise<void> };
   deps?: AuditCrawlDeps;
 }
 
@@ -380,7 +413,40 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
       ...(currentPath !== undefined ? { currentPath: redactUrl(currentPath) } : {}),
     });
 
-  let finalUrl = request.url;
+  const resume = opts.resume;
+  for (const p of resume?.pages ?? []) recordedKeys.add(skipKey(p.urlPath));
+  for (const s of resume?.skipped ?? []) skippedKeys.add(skipKey(s.urlPath));
+
+  // Checkpoints (T-407): what this crawl recorded and skipped, beside what the checkpoint it resumed holds.
+  const crawlPages: AuditCrawlPage[] = [];
+  const crawlSkipped: SkippedPageInfo[] = [];
+  let readState: (() => SpiderCrawlState) | undefined;
+  let saving: Promise<void> = Promise.resolve();
+  const checkpointEvery = Math.max(1, opts.checkpoint?.every ?? AUDIT_CHECKPOINT_EVERY);
+  const saveCheckpoint = (crawlDone: boolean): Promise<void> => {
+    const save = opts.checkpoint?.save;
+    if (!save || !readState) return saving;
+    const state = readState();
+    const skippedNow = [...(resume?.skipped ?? []), ...crawlSkipped];
+    const checkpoint: AuditCrawlCheckpoint = {
+      finalUrl,
+      frontier: state.frontier,
+      pending: crawlDone ? [] : state.pending,
+      pages: [...(resume?.pages ?? []), ...crawlPages],
+      skipped: skippedNow,
+      signInWalls: [
+        ...new Set([
+          ...(resume?.signInWalls ?? []),
+          ...skippedNow.filter((s) => s.why === 'sign-in').map((s) => s.urlPath),
+        ]),
+      ],
+      crawlDone,
+    };
+    saving = saving.then(() => save(checkpoint)).catch(() => {});
+    return saving;
+  };
+
+  let finalUrl = resume?.finalUrl ?? request.url;
   // A start page that is a tunnel warning or a bot check stops the crawl: the site itself was never read.
   let blocked: InterstitialKind | null = null;
   let startError: { code: AuditAddressCode; message: string } | null = null;
@@ -435,8 +501,14 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
       });
     }
 
-    const spider = new DeterministicSpider([], request.limits.maxPages);
-    const result = await spider.crawl(context, request.url, {
+    // A resumed crawl records only the pages its checkpoint is short of, from where the start page landed.
+    const spider = new DeterministicSpider([], Math.max(0, request.limits.maxPages - (resume?.pages.length ?? 0)));
+    if (resume) report();
+    const result = await spider.crawl(context, resume ? resume.finalUrl : request.url, {
+      ...(resume ? { resume: { frontier: resume.frontier, pending: resume.crawlDone ? [] : resume.pending } } : {}),
+      exposeState: (read) => {
+        readState = read;
+      },
       maxDepth: request.limits.maxDepth,
       maxPerShape: AUDIT_MAX_PER_SHAPE,
       pageTimeoutMs: AUDIT_PAGE_TIMEOUT_MS,
@@ -457,6 +529,8 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
       outboundFetch: siteFetch,
       signal: crawlSignal,
       ...(opts.screenshotDir ? { screenshotDir: opts.screenshotDir, screenshotPrefix: 'audit' } : {}),
+      // The include list also lets through an address that looks like a GET with a side effect (T-427).
+      includePaths: request.limits.includePaths,
       // Asked before an address is queued (never for the start page): refused ones are never requested.
       admitPath: (url) => {
         if (pathLimitVerdict(url.pathname, request.limits, startPath)) return { why: 'excluded' };
@@ -504,10 +578,13 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
         report(page.urlPath);
       },
       onSkipped: (info) => {
+        crawlSkipped.push(info);
         skippedKeys.add(skipKey(info.urlPath));
         report(info.urlPath);
       },
       onRecordedPage: async (page, item) => {
+        crawlPages.push(toAuditPage(item));
+        if (opts.checkpoint && crawlPages.length % checkpointEvery === 0) void saveCheckpoint(false);
         if (opts.onRenderedPage) {
           const responseHeaders = mainHeaders.get(page);
           const crawlContext = context!;
@@ -528,13 +605,26 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
       throw new AuditCrawlRefusedError(err.code as AuditAddressCode, err.message);
     }
 
-    const pages = result.pages.map(toAuditPage);
-    const recorded = new Set(pages.map((p) => skipKey(p.urlPath)));
+    // The last checkpoint: after a stop it is where a resume starts; after the end, the checks can start from it.
+    if (opts.checkpoint) {
+      await Promise.allSettled(labWork);
+      await saveCheckpoint(!opts.signal?.aborted);
+    }
+
+    // A resumed crawl's pages come first; a page is listed once, the first time it was recorded.
+    const pages: AuditCrawlPage[] = [];
+    const recorded = new Set<string>();
+    for (const page of [...(resume?.pages ?? []), ...result.pages.map(toAuditPage)]) {
+      const key = skipKey(page.urlPath);
+      if (recorded.has(key)) continue;
+      recorded.add(key);
+      pages.push(page);
+    }
 
     // One Skipped Page per path, never one that was also recorded.
     const seen = new Set<string>();
     const skipped: SkippedPageInfo[] = [];
-    for (const s of result.skipped ?? []) {
+    for (const s of [...(resume?.skipped ?? []), ...(result.skipped ?? [])]) {
       const key = skipKey(s.urlPath);
       if (recorded.has(key) || seen.has(key)) continue;
       seen.add(key);
@@ -572,7 +662,7 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
       pages,
       coverage,
       leavingSite: [...leaving.values()],
-      signInWalls: [...new Set(result.signInWalls)],
+      signInWalls: [...new Set([...(resume?.signInWalls ?? []), ...result.signInWalls])],
       paymentAreas: [...new Set(skipped.filter((s) => s.why === 'payment').map((s) => s.urlPath))],
       pacer,
       crawlDelayMs: robots.crawlDelayMs ?? null,

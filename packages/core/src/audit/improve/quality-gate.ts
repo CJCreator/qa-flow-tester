@@ -13,6 +13,7 @@ import { chromium, type Browser } from 'playwright';
 import { UXQualityChecker } from '@qa/checkers';
 import { VARIANT_CHECKS, type AuditResult, type VariantCheck, type VariantGateResult } from '@qa/types';
 import { sameSiteUrl } from '../../safe-net.js';
+import { LAB_CHROMIUM_ARGS } from '../documents/render-pdf.js';
 import { findClaimWords } from '../ai/claim-words.js';
 import { previewNodesText, type PreviewNode } from '../preview/sanitize.js';
 import type { PreviewFacts } from '../preview/prompt.js';
@@ -40,6 +41,9 @@ export const GATE_REASONS: Readonly<Record<VariantCheck, string>> = {
   accessibility: 'An automatic accessibility check found a Blocker in the page.',
   citations: 'A change does not name a finding or Section of this audit version.',
 };
+
+/** Said when the lab browser could not scan the variant: it is not shown, but no Blocker was found either. */
+export const NOT_SCANNED = 'The automatic accessibility check could not run on this variant. Try again.';
 
 const BREAKING = /<\s*(script|form)\b/i;
 const FRAME = /<\s*(iframe|frame|embed|object)\b[^>]*?\b(?:src|data)\s*=\s*["']?([^"'\s>]+)/gi;
@@ -118,15 +122,18 @@ export async function gateVariant(input: VariantGateInput, scan: VariantAxeScan)
   if (!keepsMenuLinks(input.nodes, input.facts)) failed.add('menu-links');
   if (findClaimWords(previewNodesText([...input.nodes])).length > 0) failed.add('claim-words');
   if (!citationsResolve(input.nodes, input.result, input.urlPath)) failed.add('citations');
+  let notScanned = false;
   if (failed.size === 0) {
     try {
       if ((await scan(input.html)).blockers > 0) failed.add('accessibility');
     } catch {
       failed.add('accessibility'); // not scanned: not shown
+      notScanned = true;
     }
   }
   const list = VARIANT_CHECKS.filter((c) => failed.has(c));
-  return { passed: list.length === 0, failed: list, reasons: list.map((c) => GATE_REASONS[c]) };
+  const reason = (c: VariantCheck) => (c === 'accessibility' && notScanned ? NOT_SCANNED : GATE_REASONS[c]);
+  return { passed: list.length === 0, failed: list, reasons: list.map(reason) };
 }
 
 const SCAN_TIMEOUT_MS = 30_000;
@@ -140,7 +147,7 @@ export function labAxeScan(options: { browser?: Browser } = {}): VariantAxeScan 
   return async (html) => {
     const browser =
       options.browser ??
-      (await chromium.launch({ headless: true, timeout: SCAN_TIMEOUT_MS, args: ['--disable-extensions'] }));
+      (await chromium.launch({ headless: true, timeout: SCAN_TIMEOUT_MS, args: [...LAB_CHROMIUM_ARGS] }));
     try {
       // The variant's own CSP blocks scripts; axe is put in by the browser tools, so the CSP is bypassed.
       const context = await browser.newContext({ bypassCSP: true, offline: true, serviceWorkers: 'block' });

@@ -49,6 +49,26 @@ function before(html: string | null = '<p>Variant</p>') {
   );
 }
 
+describe('before/after view with both widths (T-431)', () => {
+  it('shows the stored 1440 px screenshot as well as the phone one', () => {
+    const withDesktop = { ...page, desktopScreenshotPath: 'desktop/home.png' };
+    const html = renderToStaticMarkup(
+      createElement(BeforeAfter, {
+        auditId: AUDIT_ID,
+        version: 2,
+        page: withDesktop,
+        variant: made(2),
+        html: '<p>V</p>',
+      })
+    );
+    expect(html).toContain(screenshotUrl(AUDIT_ID, 2, 'desktop/home.png').replace(/&/g, '&amp;'));
+    expect(html).toContain('Before, 1440 px');
+    expect(html).toContain('Before, phone');
+    // A version audited before the desktop screenshot was stored shows only the phone one.
+    expect(before()).not.toContain('Before, 1440 px');
+  });
+});
+
 describe('before/after view (T-415)', () => {
   it('shows the stored phone screenshot beside the variant framed at 1440 and 375 px, labelled a suggestion', () => {
     const html = before();
@@ -107,6 +127,8 @@ describe('download, best and the screen (T-415)', () => {
   it('the best defaults to the first variant that passed; a starred one wins', () => {
     expect(bestVariant(reply)).toEqual({ page: 'home', variant: 2 });
     expect(bestVariant({ ...reply, best: { page: 'home', variant: 3 } })).toEqual({ page: 'home', variant: 3 });
+    // A starred variant that no longer passes the checks is not the best.
+    expect(bestVariant({ ...reply, best: { page: 'home', variant: 1 } })).toEqual({ page: 'home', variant: 2 });
     const html = view();
     expect(html).toMatch(/<input id="best-home-2" type="radio"[^>]*checked=""/);
     expect(html).not.toContain('id="best-home-1"');

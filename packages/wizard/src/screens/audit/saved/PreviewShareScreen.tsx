@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { WorkingLine, workingId } from '../../../components/DisabledReason';
 import type { AuditVersion, ShareLink, ShareLinkKind } from '@qa/types/src/browser.js';
 import { useConfirm } from '../../../components/ConfirmDialog';
 import { ErrorMessage, Notice, Spinner } from '../../../components/text';
@@ -189,6 +190,7 @@ function LinkList({
                       type="button"
                       className="btn-quiet btn-sm"
                       disabled={busy}
+                      aria-describedby={workingId(busy)}
                       aria-label={`Revoke Shared Link: ${name}`}
                       onClick={() => onRevoke(link)}
                     >
@@ -263,9 +265,16 @@ export function PreviewShareView(props: PreviewShareViewProps) {
             </div>
           </fieldset>
           <LanguageSelect id="share-language" value={props.shareLanguage} onChange={props.onShareLanguage} />
-          <button type="button" className="btn-primary self-end" disabled={busy} onClick={props.onCreateLink}>
+          <button
+            type="button"
+            className="btn-primary self-end"
+            disabled={busy}
+            aria-describedby={workingId(busy)}
+            onClick={props.onCreateLink}
+          >
             {busy ? <Spinner label="Working…" /> : 'Make Shared Link'}
           </button>
+          <WorkingLine busy={busy} className="self-end" />
         </div>
         {message &&
           (message.tone === 'fail' ? (

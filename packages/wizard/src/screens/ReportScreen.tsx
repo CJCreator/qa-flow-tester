@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { DisabledReason, WORKING_ID, WorkingLine, reasonId, workingId } from '../components/DisabledReason';
 import { flushSync } from 'react-dom';
 import type { AspectType, Finding, FindingSeverity, ReleaseReport } from '@qa/types';
 import { releaseVerdict } from '@qa/types/src/browser.js';
@@ -602,42 +603,46 @@ function VisualReview({
       tone="warn"
       title={`The AI looked over ${review.reviewed} of ${review.total} screens`}
       actions={
-        <button
-          type="button"
-          className="btn-quiet btn-sm print:hidden"
-          disabled={working}
-          onClick={() => {
-            void (async () => {
-              setWorking(true);
-              setMessage(null);
-              try {
-                const result = await finishAiReview(report.runId);
-                onReportChanged(await getRun(report.runId));
-                setMessage(
-                  result.remainingCount > 0
-                    ? {
-                        tone: 'warn',
-                        text: `${result.reviewedCount} more looked over; ${result.remainingCount} left for another time.`,
-                      }
-                    : { tone: 'pass', text: 'All the screens are looked over now.' }
-                );
-              } catch (err) {
-                setMessage({
-                  tone: 'fail',
-                  text: err instanceof RunnerError ? err.message : 'That couldn’t be finished. Try again later.',
-                });
-              } finally {
-                setWorking(false);
-              }
-            })().catch((err: unknown) => console.error(err));
-          }}
-        >
-          {working ? (
-            <Spinner label="Looking over the screens…" />
-          ) : (
-            `Look over the other ${count(review.remaining, 'screen', 'screens')}`
-          )}
-        </button>
+        <>
+          <button
+            type="button"
+            className="btn-quiet btn-sm print:hidden"
+            disabled={working}
+            aria-describedby={workingId(working, 'visual-review-working')}
+            onClick={() => {
+              void (async () => {
+                setWorking(true);
+                setMessage(null);
+                try {
+                  const result = await finishAiReview(report.runId);
+                  onReportChanged(await getRun(report.runId));
+                  setMessage(
+                    result.remainingCount > 0
+                      ? {
+                          tone: 'warn',
+                          text: `${result.reviewedCount} more looked over; ${result.remainingCount} left for another time.`,
+                        }
+                      : { tone: 'pass', text: 'All the screens are looked over now.' }
+                  );
+                } catch (err) {
+                  setMessage({
+                    tone: 'fail',
+                    text: err instanceof RunnerError ? err.message : 'That couldn’t be finished. Try again later.',
+                  });
+                } finally {
+                  setWorking(false);
+                }
+              })().catch((err: unknown) => console.error(err));
+            }}
+          >
+            {working ? (
+              <Spinner label="Looking over the screens…" />
+            ) : (
+              `Look over the other ${count(review.remaining, 'screen', 'screens')}`
+            )}
+          </button>
+          <WorkingLine busy={working} id="visual-review-working" />
+        </>
       }
     >
       Today’s AI requests ran out first, so “Looks and reads well” only covers what was looked at.
@@ -663,6 +668,7 @@ function ReportActionsBar({ report, actions }: { report: ReleaseReport; actions:
           // While the sign-in form is open, its Start is the screen's one primary.
           className={deeper ? 'btn-quiet' : 'btn-primary'}
           disabled={actions.starting}
+          aria-describedby={workingId(actions.starting)}
           onClick={() => actions.onTestAgain(report)}
         >
           {actions.starting ? <Spinner label="Starting…" /> : 'New check-up of this site'}
@@ -671,6 +677,7 @@ function ReportActionsBar({ report, actions }: { report: ReleaseReport; actions:
           type="button"
           className="btn-quiet"
           disabled={downloading}
+          aria-describedby={workingId(downloading)}
           onClick={() => {
             void (async () => {
               setDownloading(true);
@@ -696,6 +703,7 @@ function ReportActionsBar({ report, actions }: { report: ReleaseReport; actions:
           Go deeper: test signed-in pages
         </button>
       </div>
+      <WorkingLine busy={actions.starting || downloading} />
       <p role="status" className="mt-2 text-sm text-pass">
         {downloaded ? 'Report downloaded.' : ''}
       </p>
@@ -745,9 +753,19 @@ function ReportActionsBar({ report, actions }: { report: ReleaseReport; actions:
               />
             </div>
           </div>
-          <button type="submit" className="btn-primary" disabled={actions.starting || !username.trim() || !password}>
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={actions.starting || !username.trim() || !password}
+            aria-describedby={
+              actions.starting ? WORKING_ID : reasonId('deeper-sign-in-reason', !username.trim() || !password)
+            }
+          >
             {actions.starting ? <Spinner label="Starting…" /> : 'Start with these sign-in details'}
           </button>
+          <DisabledReason id="deeper-sign-in-reason" when={!actions.starting && (!username.trim() || !password)}>
+            Enter the username and the password first
+          </DisabledReason>
         </form>
       )}
     </div>
@@ -1553,13 +1571,19 @@ function SourcesSummary({ report }: { report: ReleaseReport }) {
                       )}
                       <div className="flex flex-wrap items-center gap-3">
                         {/* Quiet: the screen's one primary is "New check-up of this site". */}
-                        <button type="submit" disabled={savingOverride} className="btn-quiet btn-sm">
+                        <button
+                          type="submit"
+                          disabled={savingOverride}
+                          aria-describedby={workingId(savingOverride, 'override-working')}
+                          className="btn-quiet btn-sm"
+                        >
                           {savingOverride ? <Spinner label="Saving…" /> : 'Save the override'}
                         </button>
                         <button type="button" onClick={() => setActiveOverride(null)} className="btn-link text-sm">
                           Cancel
                         </button>
                       </div>
+                      <WorkingLine busy={savingOverride} id="override-working" />
                     </form>
                   )}
                 </li>
@@ -1597,6 +1621,7 @@ function ProblemItem({
   const [error, setError] = useState<string | null>(null);
   const first = group.findings[0];
   const id = `problem-${group.key.replace(/[^A-Za-z0-9_-]+/g, '_')}`;
+  const workId = `${id}-working`;
   const kinds = [
     ...new Map(
       group.findings
@@ -1702,7 +1727,12 @@ function ProblemItem({
                     autoFocus
                   />
                   {/* Quiet: the screen's one primary is "New check-up of this site". */}
-                  <button type="submit" className="btn-quiet btn-sm" disabled={saving}>
+                  <button
+                    type="submit"
+                    className="btn-quiet btn-sm"
+                    disabled={saving}
+                    aria-describedby={workingId(saving, workId)}
+                  >
                     {saving ? (
                       <Spinner label="Saving…" />
                     ) : marking === 'Intended' ? (
@@ -1731,6 +1761,7 @@ function ProblemItem({
                       type="button"
                       className="btn-link text-sm font-bold"
                       disabled={saving}
+                      aria-describedby={workingId(saving, workId)}
                       onClick={() => {
                         void (async () => {
                           setSaving(true);
@@ -1756,6 +1787,7 @@ function ProblemItem({
                 It’s hidden from this report and not raised again for this site. You can undo it.
               </p>
             )}
+            <WorkingLine busy={saving} id={workId} />
             {error && (
               <p role="alert" className="text-sm text-fail">
                 {error}

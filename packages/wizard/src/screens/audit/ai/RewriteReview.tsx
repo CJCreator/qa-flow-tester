@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { DisabledReason, WorkingLine, reasonId, workingId } from '../../../components/DisabledReason';
 import {
   isDocumentLanguage,
   sectionText,
@@ -163,6 +164,7 @@ export function RewriteReviewView({
                         className="btn-quiet btn-sm"
                         aria-label={`Approve rewrite of ${name}`}
                         disabled={working !== undefined}
+                        aria-describedby={workingId(working !== undefined, `${id}-working`)}
                         onClick={() => onApprove(section.id)}
                       >
                         Step 1: Approve the rewrite
@@ -172,7 +174,9 @@ export function RewriteReviewView({
                       type="button"
                       className="btn-quiet btn-sm"
                       aria-label={`Write new copy for ${name}`}
-                      aria-describedby={approved ? undefined : `${id}-approve-first`}
+                      aria-describedby={
+                        approved ? workingId(working !== undefined, `${id}-working`) : `${id}-approve-first`
+                      }
                       disabled={!approved || working !== undefined}
                       onClick={() => {
                         if (approved) onWrite(section.id);
@@ -187,6 +191,7 @@ export function RewriteReviewView({
                     )}
                     {working === 'approving' && <Spinner label="Approving…" />}
                     {working === 'writing' && <Spinner label="Writing new copy…" />}
+                    <WorkingLine busy={working !== undefined} id={`${id}-working`} />
                   </div>
                 )}
 
@@ -232,10 +237,16 @@ export function RewriteReviewView({
                           className="btn-quiet btn-sm"
                           aria-label={`Accept new copy for ${name}`}
                           disabled={working !== undefined || draft.trim() === ''}
+                          aria-describedby={
+                            working !== undefined ? `${id}-working` : reasonId(`${id}-empty-copy`, draft.trim() === '')
+                          }
                           onClick={() => onAccept(section.id)}
                         >
                           Accept
                         </button>
+                        <DisabledReason id={`${id}-empty-copy`} when={working === undefined && draft.trim() === ''}>
+                          Write the new copy first
+                        </DisabledReason>
                         {working === 'accepting' && <Spinner label="Accepting…" />}
                       </div>
                       {rewrite?.acceptedAt && (

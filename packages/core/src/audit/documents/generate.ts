@@ -21,6 +21,7 @@ import { buildContentDocument } from './content.js';
 import { buildEditedView, type EditedAuditView } from './edits.js';
 import { buildFindingsDocument } from './findings.js';
 import { labelsFor } from './labels/index.js';
+import { ruleFixOptions, type FixOption } from '../improve/fix-rules.js';
 import type { AuditDoc } from './model.js';
 import { buildOwnerAudit } from './owner-audit.js';
 import { buildPitchGlimpse, pitchGlimpseDoc } from './pitch.js';
@@ -44,6 +45,11 @@ export interface AuditDocumentsInput {
   documents?: readonly AuditDocumentKind[];
   /** The Proposal's date; now when not given. */
   now?: Date | string;
+  /**
+   * Fix options by finding id for the Findings document and the Improvement Roadmap (T-417); the rule options
+   * of the top findings when not given. The runner passes the AI options when a key works.
+   */
+  fixOptions?: ReadonlyMap<string, readonly FixOption[]>;
 }
 
 /** The Audit Documents asked for, in the fixed order, each once. All five when none are asked for. */
@@ -72,15 +78,16 @@ function proposalTemplateFor(settings: DocumentSettings, language: DocumentLangu
 /** The Audit Documents of an already edited view. Used by the exports so the overlay is applied only once. */
 export function documentsFromView(
   view: EditedAuditView,
-  options: Pick<AuditDocumentsInput, 'settings' | 'language' | 'documents' | 'now'>
+  options: Pick<AuditDocumentsInput, 'settings' | 'language' | 'documents' | 'now' | 'fixOptions'>
 ): AuditDoc[] {
   const lookup = labelsFor(options.language ?? view.result.language);
   const language = lookup.requested;
+  const fixOptions = options.fixOptions ?? ruleFixOptions(view.result.findings);
   const build: Record<AuditDocumentKind, () => AuditDoc> = {
     structure: () => buildStructureDocument(view, { language }),
     content: () => buildContentDocument(view, { language }),
-    findings: () => buildFindingsDocument(view, { language }),
-    roadmap: () => buildRoadmapDocument(view, lookup, { showEffort: true }),
+    findings: () => buildFindingsDocument(view, { language, fixOptions }),
+    roadmap: () => buildRoadmapDocument(view, lookup, { showEffort: true, fixOptions }),
     proposal: () =>
       fillProposal(
         proposalTemplateFor(options.settings, lookup.language),
