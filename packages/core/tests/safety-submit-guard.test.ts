@@ -184,4 +184,36 @@ describe('a Check-up step whose page script sends a Sensitive Action form is pau
     expect(report.results[0].status).toBe('Skipped');
     expect(report.results[0].skipReason).toContain(SENSITIVE_PAUSED);
   }, 60_000);
+
+  it('an approved click on the form’s own Sensitive Action button sends the form on a Test Copy', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'safety-submit-guard-approved-'));
+    const tc: TestCase = {
+      id: 'TC-DEL',
+      flowId: 'flow-del',
+      name: 'Delete account',
+      role: 'visitor',
+      startPage: '/',
+      kind: 'page-test',
+      steps: [{ action: 'click', selector: '#f button', name: 'Click “Delete account”', sensitiveApproved: true }],
+      expectations: {},
+    };
+    const report = await new FlowTestOrchestrator().run({
+      targetUrl: 'http://test.local',
+      productId: 'submit-guard-approved',
+      specTestCases: [tc],
+      preflight,
+      outputDir: tmpDir,
+      breakpoints: ['1440px'],
+      enableA11y: false,
+      enablePerformance: false,
+      enableSecurity: false,
+      enableSeo: false,
+      searchChecks: false,
+      recordVideo: false,
+      readOnly: false,
+      testCopy: true,
+    });
+    expect(posts).toEqual(['/account/delete']);
+    expect(report.results[0].status).not.toBe('Skipped');
+  }, 60_000);
 });

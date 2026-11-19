@@ -35,7 +35,10 @@ export interface SubmitGuardOptions {
 }
 
 export interface SubmitGuard {
-  /** Lets the next submit through for 2 s: an approved Plan Item's own click (T-421) must not be stopped. */
+  /**
+   * Lets the next form send through (one send, within 10 s): an approved Plan Item's own click (T-421) must not
+   * be stopped. The window covers the click's own wait for its element.
+   */
   allowNextSubmit(page: Page): Promise<void>;
 }
 
@@ -66,13 +69,17 @@ export function submitGuardScript(cfg: GuardConfig): string {
     return re.test(text) || cfg.forbidden.some((f) => f && text.includes(f));
   };
   let allowUntil = 0;
-  Object.defineProperty(window, cfg.allowKey, { value: () => { allowUntil = Date.now() + 2000; }, enumerable: false });
+  Object.defineProperty(window, cfg.allowKey, { value: () => { allowUntil = Date.now() + 10000; }, enumerable: false });
   const report = (form, how, isSensitive) => {
     try { const fn = window[cfg.binding]; if (fn) fn({ how, sensitive: isSensitive, action: actionOf(form) || undefined }); } catch (e) {}
   };
   const allowed = (form, submitter, how) => {
     if (!(form instanceof HTMLFormElement)) return true;
-    if (allowUntil > Date.now()) return true;
+    if (allowUntil > Date.now()) {
+      // requestSubmit() goes on to fire the submit event: the event (or submit()) is the one send it allows.
+      if (how !== 'requestSubmit') allowUntil = 0;
+      return true;
+    }
     const isSensitive = sensitive(form, submitter);
     if (!isSensitive && !(cfg.readOnly && how !== 'event')) return true;
     report(form, how, isSensitive);
