@@ -13,6 +13,11 @@ import { defaultNetDeps, resolvePublic, type NetDeps } from './safe-net.js';
 export interface EgressProxy {
   /** `http://127.0.0.1:<port>`, for Playwright's `proxy.server`. */
   url: string;
+  /**
+   * Allows one more port, for a target whose address names it explicitly (`https://host:8443`). Ports 80 and 443
+   * are always allowed; every other port is refused with 403, so the proxy cannot reach SSH, SMTP and the like.
+   */
+  allowPort(port: number): void;
   close(): Promise<void>;
 }
 
@@ -23,9 +28,14 @@ export interface EgressProxyOptions {
   connect?: (address: string, port: number) => net.Socket;
   /** Most connections open at once; more are answered 503. Default 256. */
   maxOpen?: number;
+  /** Ports allowed besides 80 and 443 (targets that name a port explicitly). More can be added with allowPort. */
+  allowPorts?: number[];
+  /** Longest a plain-http upstream may sit idle before the request is answered 504. Default 30 s. */
+  idleTimeoutMs?: number;
 }
 
 const CONNECT_TIMEOUT_MS = 10_000;
+const DEFAULT_IDLE_TIMEOUT_MS = 30_000;
 const DEFAULT_MAX_OPEN = 256;
 
 function normalizeHost(host: string): string {
@@ -57,6 +67,9 @@ export async function startEgressProxy(opts: EgressProxyOptions = {}): Promise<E
   const lookup = opts.lookup ?? defaultNetDeps.lookup;
   const connect = opts.connect ?? ((address: string, port: number) => net.connect(port, address));
   const maxOpen = opts.maxOpen ?? DEFAULT_MAX_OPEN;
+  const idleTimeoutMs = opts.idleTimeoutMs ?? DEFAULT_IDLE_TIMEOUT_MS;
+  const extraPorts = new Set<number>(opts.allowPorts ?? []);
+  const portAllowed = (port: number) => port === 80 || port === 443 || extraPorts.has(port);
   const sockets = new Set<net.Socket>();
   const server = http.createServer();
 
@@ -77,6 +90,7 @@ export async function startEgressProxy(opts: EgressProxyOptions = {}): Promise<E
     if (overLimit()) return refuse('503 Service Unavailable');
     const target = parseHostPort(req.url);
     if (!target) return refuse('400 Bad Request');
+    if (!portAllowed(target.port)) return refuse('403 Forbidden');
     void checkedAddress(target.host, lookup).then((address) => {
       if (!address) return refuse('403 Forbidden');
       if (client.destroyed) return;
@@ -123,6 +137,7 @@ export async function startEgressProxy(opts: EgressProxyOptions = {}): Promise<E
     }
     if (url.protocol !== 'http:') return answer(400);
     const port = url.port ? Number(url.port) : 80;
+    if (!portAllowed(port)) return answer(403);
     void checkedAddress(url.hostname, lookup).then((address) => {
       if (!address) return answer(403);
       const headers: http.IncomingHttpHeaders = { ...req.headers };
@@ -142,6 +157,11 @@ export async function startEgressProxy(opts: EgressProxyOptions = {}): Promise<E
         up.pipe(res);
       });
       upstream.on('error', () => answer(502));
+      // CONNECT has a timeout; plain http gets an idle one too, so a silent upstream cannot hold a slot forever.
+      upstream.setTimeout(idleTimeoutMs, () => {
+        answer(504);
+        upstream.destroy();
+      });
       req.pipe(upstream);
     });
   });
@@ -163,6 +183,9 @@ export async function startEgressProxy(opts: EgressProxyOptions = {}): Promise<E
 
   return {
     url: `http://127.0.0.1:${port}`,
+    allowPort: (p: number) => {
+      if (Number.isInteger(p) && p >= 1 && p <= 65535) extraPorts.add(p);
+    },
     close: () =>
       new Promise<void>((resolve) => {
         for (const socket of sockets) socket.destroy();
