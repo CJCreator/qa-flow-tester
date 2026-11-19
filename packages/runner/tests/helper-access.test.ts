@@ -66,7 +66,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await fs.rm(dir, { recursive: true, force: true });
+  await fs.rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
 });
 
 describe('Helper access (REQ-033)', () => {
@@ -337,7 +337,7 @@ describe('Helper access through the runner dispatch (REQ-033, BE-102)', () => {
 
   afterEach(async () => {
     await server?.stop();
-    await fs.rm(scratch, { recursive: true, force: true });
+    await fs.rm(scratch, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   });
 
   it('serves a granted audit to the Helper, refuses others, and ends access when the grant is removed', async () => {
@@ -457,7 +457,7 @@ describe('Hosted audits for the signed-in owner on a beta copy (T-86, ADR 0042)'
 
   afterEach(async () => {
     await betaServer?.stop();
-    await fs.rm(betaScratch, { recursive: true, force: true });
+    await fs.rm(betaScratch, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   });
 
   it('an allow-listed email passes owner checks and another email is refused on beta', async () => {
