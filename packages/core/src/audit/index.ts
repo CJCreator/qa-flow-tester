@@ -4,6 +4,7 @@
 export * from './crawl/index.js';
 export * from './analysis/index.js';
 export * from './ai/index.js';
+export * from './competitors/index.js';
 export * from './documents/index.js';
 export * from './store/index.js';
 export * from './pipeline/index.js';

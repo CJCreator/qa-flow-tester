@@ -7,6 +7,7 @@ import { formatWhen } from '../../../lib/format';
 import { Link, PATHS } from '../../../lib/router';
 import { useDocumentTitle } from '../../../lib/title';
 import { AuditTabs } from '../AuditTabs';
+import { CompetitorsPanel } from './CompetitorsPanel';
 import { loadVersion, versionsOldestFirst } from '../saved/saved-api';
 import {
   SHARE_LANGUAGES,
@@ -261,6 +262,11 @@ export function ImprovedVersionScreen({ auditId, fetchImpl, aiSetup = getAiSetup
           onLanguage={setLanguage}
           onMake={() => void make()}
         />
+      )}
+      {versions.status === 'loaded' && version > 0 && (
+        <div className="mt-10">
+          <CompetitorsPanel auditId={auditId} version={version} aiReady={aiReady} fetchImpl={fetchImpl} />
+        </div>
       )}
     </Page>
   );
