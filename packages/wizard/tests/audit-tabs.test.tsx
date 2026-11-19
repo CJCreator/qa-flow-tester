@@ -52,6 +52,7 @@ function view(over: Partial<ImprovedVersionViewProps> = {}): string {
     onTogglePage: () => undefined,
     onVariantCount: () => undefined,
     onMakeVariants: () => undefined,
+    onTryAgain: () => undefined,
     ...over,
   };
   return renderToStaticMarkup(createElement(ImprovedVersionView, props));

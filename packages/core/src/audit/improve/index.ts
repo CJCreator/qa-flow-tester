@@ -18,4 +18,14 @@ export {
   type MakeVariantsInput,
   type MakeVariantsOptions,
 } from './variants.js';
+export {
+  gateVariant,
+  labAxeScan,
+  breaksWhenSanitized,
+  keepsMenuLinks,
+  citationsResolve,
+  GATE_REASONS,
+  type VariantAxeScan,
+  type VariantGateInput,
+} from './quality-gate.js';
 export { decodePng, findLogo, screenshotColours, siteBrand, type SiteBrand } from './brand.js';

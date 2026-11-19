@@ -63,6 +63,7 @@ function deps(extra: Partial<AuditImproveRouteDeps> = {}): AuditImproveRouteDeps
         createProvider: () => provider,
       }),
     usdPerRequest: async () => 0.05,
+    scanAxe: async () => ({ blockers: 0 }),
     fetchImage: async () => null,
     now: () => NOW,
     ...extra,

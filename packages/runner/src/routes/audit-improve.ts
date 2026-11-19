@@ -22,6 +22,7 @@ import {
   type AuditAiResolution,
   type AuditStore,
   type ImproveIo,
+  type VariantAxeScan,
 } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
 import { auditRow, readEdits, versionQuery } from './audit-common.js';
@@ -52,6 +53,8 @@ export interface AuditImproveRouteDeps {
   usdPerRequest?: () => Promise<number | null>;
   fetchImage?: PreviewImageFetcher;
   aiTimeoutMs?: number;
+  /** The quality gate's axe scan (T-414); default: a lab browser per batch. */
+  scanAxe?: VariantAxeScan;
   now?: () => Date;
 }
 
@@ -140,6 +143,7 @@ export function auditImproveRoutes(deps: AuditImproveRouteDeps): Route[] {
           fetchImage,
           timeoutMs: deps.aiTimeoutMs,
           now: deps.now,
+          ...(deps.scanAxe ? { scanAxe: deps.scanAxe } : {}),
         }
       );
       const reply: ImproveCreateReply = { requests: made.requests, variants: made.variants };
