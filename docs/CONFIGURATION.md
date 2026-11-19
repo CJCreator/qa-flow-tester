@@ -84,7 +84,6 @@ Bring your own key. Providers: OpenRouter (default in CI), Gemini, OpenAI, Anthr
 | Variable                                                                      | Meaning                                 |
 | ----------------------------------------------------------------------------- | --------------------------------------- |
 | `OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` | Provider keys read from the environment |
-| `TEST_MOCK_AI`                                                                | Use the mock provider (tests only)      |
 
 Gemini can also authenticate with Google Application Default Credentials (ADC, from `gcloud auth application-default login`).
 `GOOGLE_APPLICATION_CREDENTIALS` gives the path to the credentials file. `GOOGLE_CLOUD_PROJECT` or `GCP_PROJECT` gives the
