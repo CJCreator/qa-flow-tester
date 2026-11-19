@@ -1,7 +1,7 @@
-import type { BrowserContext } from 'playwright';
+import type { BrowserContext, Request } from 'playwright';
 import type { DiscoveredFlow, DiscoveryDraft, PageInventoryItem } from '@qa/types';
 import { isPrivateHost } from './competitive/safe-crawler.js';
-import { SafetyFilter } from './discovery/safety-filter.js';
+import { SafetyFilter, isSideEffectAddress } from './discovery/safety-filter.js';
 import { changesData } from './discovery/action-words.js';
 import { isIpLiteral, isPrivateTextHost } from './address-class.js';
 import { decideTestCopy, type TestCopyReason } from './domain-verification.js';
@@ -88,11 +88,17 @@ export async function resolveTestHost(
 }
 
 /**
- * Aborts every request that could change data (POST, PUT, PATCH, DELETE) in this browser context.
+ * Aborts every request that could change data (POST, PUT, PATCH, DELETE) in this browser context, and
+ * every move from a page to an address whose GET may change something (`/logout?confirm`, `/delete?id=1`:
+ * `isSideEffectAddress`, T-427) unless `allow` holds it (an address an approved Plan Item names). A page's
+ * first load is the address the person or the Plan asked for, so it is never stopped here.
  * Returns the list it fills with what it blocked ("METHOD url"), so those can be kept out of the
  * findings: they are the tool's doing, not the site's.
  */
-export async function blockChanges(context: BrowserContext): Promise<string[]> {
+export async function blockChanges(
+  context: BrowserContext,
+  options: { allow?: (url: URL) => boolean } = {}
+): Promise<string[]> {
   const blocked: string[] = [];
   await context.route('**/*', (route) => {
     const request = route.request();
@@ -101,10 +107,33 @@ export async function blockChanges(context: BrowserContext): Promise<string[]> {
       blocked.push(`${method} ${request.url()}`);
       return route.abort('blockedbyclient');
     }
+    if (leavesForSideEffect(request, options.allow)) {
+      blocked.push(`${method} ${request.url()}`);
+      // 'aborted' keeps the page where it was.
+      return route.abort('aborted');
+    }
     // Hand on to any other route (the shared-machine guard), which continues the request when it is fine.
     return route.fallback();
   });
   return blocked;
+}
+
+/** A navigation from a loaded page to a side-effect address that `allow` does not hold. */
+function leavesForSideEffect(request: Request, allow?: (url: URL) => boolean): boolean {
+  let url: URL;
+  try {
+    url = new URL(request.url());
+  } catch {
+    return false;
+  }
+  if (!isSideEffectAddress(url) || allow?.(url) || !request.isNavigationRequest()) return false;
+  let from = '';
+  try {
+    from = request.frame().page().url();
+  } catch {
+    return true; // a popup's first load: no page asked for it
+  }
+  return from !== '' && from !== 'about:blank';
 }
 
 type FormInfo = NonNullable<DiscoveryDraft['forms']>[number];

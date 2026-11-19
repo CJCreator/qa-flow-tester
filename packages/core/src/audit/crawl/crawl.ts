@@ -457,6 +457,8 @@ export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptio
       outboundFetch: siteFetch,
       signal: crawlSignal,
       ...(opts.screenshotDir ? { screenshotDir: opts.screenshotDir, screenshotPrefix: 'audit' } : {}),
+      // The include list also lets through an address that looks like a GET with a side effect (T-427).
+      includePaths: request.limits.includePaths,
       // Asked before an address is queued (never for the start page): refused ones are never requested.
       admitPath: (url) => {
         if (pathLimitVerdict(url.pathname, request.limits, startPath)) return { why: 'excluded' };
