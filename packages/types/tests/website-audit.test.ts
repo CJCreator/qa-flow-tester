@@ -411,6 +411,8 @@ describe('fixed lists', () => {
       depth: 5,
       hostedMaxPages: 200,
       fetchInFlight: 3,
+      fetchInFlightLocal: 8,
+      fetchInFlightHosted: 3,
       aiInFlight: 4,
     });
   });
