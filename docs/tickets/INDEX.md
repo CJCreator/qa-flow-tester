@@ -55,7 +55,7 @@ Plan: [ENHANCEMENT-PLAN-2026-11.md](ENHANCEMENT-PLAN-2026-11.md), with one file 
 | [T-409](enhance-2026-11/T-409-one-retry-video-on-retry.md) | One retry; video only on the retry | P1 | P1 | S | 3 | built | T-389 |
 | [T-404](enhance-2026-11/T-404-lab-work-off-the-crawl-workers.md) | Lab work off the crawl workers | P1 | P1 | M | 4 | built | T-403 |
 | [T-408](enhance-2026-11/T-408-parallel-check-up-test-workers.md) | Parallel Check-up test workers (ADR 0048) | P1 | P1 | L | 4 | built | T-409, T-411 |
-| [T-405](enhance-2026-11/T-405-every-audit-page-fully-checked.md) | Every audit page fully checked (ADR 0047) | P3 | P1 | M | 5 | todo | T-404 |
+| [T-405](enhance-2026-11/T-405-every-audit-page-fully-checked.md) | Every audit page fully checked (ADR 0047) | P3 | P1 | M | 5 | built | T-404 |
 | [T-412](enhance-2026-11/T-412-improved-version-tab.md) | The Improved version tab (ADR 0049) | P4 | P1 | S | 5 | built | - |
 | [T-406](enhance-2026-11/T-406-ai-assessment-streams-in-batches.md) | AI assessment streams with the crawl, in batches | P1 | P1 | M | 6 | todo | T-405, T-398 |
 | [T-413](enhance-2026-11/T-413-design-variants-per-layout-group.md) | Design variants per Layout Group | P4 | P1 | L | 6 | built | T-412, T-398 |
