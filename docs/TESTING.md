@@ -80,14 +80,14 @@ Both load `.env` the way `pnpm start` does. The audit takes its AI key from a pr
 - **Accuracy:** the Jaccard overlap of the `(rule, urlPath)` finding sets: the lowest between runs of one site, or against `--compare <earlier .benchmark file>`.
 - **Output:** `.benchmark/<date>-<commit>-audit.json` or `-checkup.json` (git-ignored), and a table appended below.
 
-| Site               | Address                   | Pages | Why                                                                |
-| ------------------ | ------------------------- | ----- | ------------------------------------------------------------------ |
-| techgramam         | https://techgramam.com/   | 50    | About 19 sitemap addresses                                         |
-| arocord            | https://arocord.com/      | 50    | Its sitemap answers 403 to plain clients: the blocked-visitor case |
-| mghealthtech       | https://mghealthtech.com/ | 50    | About 30 addresses                                                 |
-| large (local only) | https://kubernetes.io/    | 1000  | A large public documentation site; to be confirmed by the owner    |
+| Site               | Address                   | Pages | Why                                                                  |
+| ------------------ | ------------------------- | ----- | -------------------------------------------------------------------- |
+| techgramam         | https://techgramam.com/   | 50    | About 19 sitemap addresses                                           |
+| arocord            | https://arocord.com/      | 50    | Its sitemap answers 403 to plain clients: the blocked-visitor case   |
+| mghealthtech       | https://mghealthtech.com/ | 50    | About 30 addresses                                                   |
+| large (local only) | https://kubernetes.io/    | 5000  | A large public documentation site; confirmed by the owner 2026-11-19 |
 
-**Large site, to be confirmed by the owner.** Candidate: kubernetes.io. Its robots.txt, fetched on 2026-11-19, has one group, `User-agent: *`, which disallows only `/legacy/`, `/v1.0/`, `/v1.1/`, `/404/` and `/404.html`, sets no `Crawl-delay`, and names `Sitemap: https://kubernetes.io/sitemap.xml`. That file is a sitemap index with one file per language; the English one (`/en/sitemap.xml`) listed 1,896 addresses that day. Also checked: docs.python.org (allowed, but its sitemap lists only 7 addresses) and docs.djangoproject.com (long per-language Disallow lists).
+**Large site: kubernetes.io, confirmed by the owner on 2026-11-19.** Its robots.txt, fetched on 2026-11-19, has one group, `User-agent: *`, which disallows only `/legacy/`, `/v1.0/`, `/v1.1/`, `/404/` and `/404.html`, sets no `Crawl-delay`, and names `Sitemap: https://kubernetes.io/sitemap.xml`. That file is a sitemap index with one file per language; the English one (`/en/sitemap.xml`) listed 1,896 addresses that day. Also checked: docs.python.org (allowed, but its sitemap lists only 7 addresses) and docs.djangoproject.com (long per-language Disallow lists).
 
 ### Baseline
 
