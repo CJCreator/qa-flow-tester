@@ -127,6 +127,8 @@ describe('download, best and the screen (T-415)', () => {
   it('the best defaults to the first variant that passed; a starred one wins', () => {
     expect(bestVariant(reply)).toEqual({ page: 'home', variant: 2 });
     expect(bestVariant({ ...reply, best: { page: 'home', variant: 3 } })).toEqual({ page: 'home', variant: 3 });
+    // A starred variant that no longer passes the checks is not the best.
+    expect(bestVariant({ ...reply, best: { page: 'home', variant: 1 } })).toEqual({ page: 'home', variant: 2 });
     const html = view();
     expect(html).toMatch(/<input id="best-home-2" type="radio"[^>]*checked=""/);
     expect(html).not.toContain('id="best-home-1"');

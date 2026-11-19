@@ -12,6 +12,17 @@
 
 import { chromium, errors, type Browser } from 'playwright';
 
+/** Chromium flags for the lab browser on a small container: PDF, thumbnails and the variant axe scan. */
+export const LAB_CHROMIUM_ARGS: readonly string[] = [
+  '--no-sandbox',
+  '--disable-setuid-sandbox',
+  '--disable-dev-shm-usage',
+  '--disable-gpu',
+  '--disable-extensions',
+  '--disable-background-networking',
+  '--dns-prefetch-disable',
+];
+
 export const PDF_TIMEOUT_MS = 60_000;
 /** How long the shared browser stays up with no PDF in progress. */
 export const PDF_BROWSER_IDLE_MS = 5 * 60_000;
@@ -61,15 +72,7 @@ function sharedBrowser(timeoutMs: number): Promise<Browser> {
   const launching = chromium.launch({
     headless: true,
     timeout: timeoutMs,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--disable-extensions',
-      '--disable-background-networking',
-      '--dns-prefetch-disable',
-    ],
+    args: [...LAB_CHROMIUM_ARGS],
   });
   shared = launching;
   launching.then(

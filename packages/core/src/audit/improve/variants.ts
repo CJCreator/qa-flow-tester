@@ -25,6 +25,7 @@ import { generateVariantPage, type PreviewImageFetch } from '../preview/generate
 import { previewFacts, MAX_PREVIEW_IMAGES, type VariantDirection } from '../preview/prompt.js';
 import { siteBrand, type SiteBrand } from './brand.js';
 import { chromium, type Browser } from 'playwright';
+import { LAB_CHROMIUM_ARGS } from '../documents/render-pdf.js';
 import { gateVariant, labAxeScan, type VariantAxeScan } from './quality-gate.js';
 import { previewNodesText } from '../preview/sanitize.js';
 import { copiesCompetitor } from '../competitors/examples.js';
@@ -333,7 +334,7 @@ export async function makeVariants(
   const scanAxe: VariantAxeScan =
     options.scanAxe ??
     (async (html) => {
-      lab.browser ??= chromium.launch({ headless: true, args: ['--disable-extensions'] });
+      lab.browser ??= chromium.launch({ headless: true, args: [...LAB_CHROMIUM_ARGS] });
       return labAxeScan({ browser: await lab.browser })(html);
     });
 
