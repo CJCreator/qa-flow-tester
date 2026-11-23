@@ -15,12 +15,12 @@ Everything shared lives in AGENTS.md. This file holds only what is specific to C
 
 ## Subagent roster (`.claude/agents/`)
 
-| Role | Job | Edits files? |
-|---|---|---|
-| finder | Locate files, symbols, callers. Run tests. Return paths and 5 lines max | No |
-| builder | Implement one scoped change from a brief | Yes, only its listed files |
-| reviewer | Review the current diff against the plan. Report only | No |
-| verifier | Run the app/tests, try to break it, report evidence | No |
+| Role     | Job                                                                     | Edits files?               |
+| -------- | ----------------------------------------------------------------------- | -------------------------- |
+| finder   | Locate files, symbols, callers. Run tests. Return paths and 5 lines max | No                         |
+| builder  | Implement one scoped change from a brief                                | Yes, only its listed files |
+| reviewer | Review the current diff against the plan. Report only                   | No                         |
+| verifier | Run the app/tests, try to break it, report evidence                     | No                         |
 
 Brief format for every subagent: goal, inputs (paths), output format, done-criteria. Nothing else, to keep its context small.
 
@@ -48,12 +48,13 @@ Brief format for every subagent: goal, inputs (paths), output format, done-crite
 ## Pre-launch passes (run only when I say "pre-launch")
 
 Fan out in parallel, then merge into one fix pass:
+
 1. **Page**: consistent design vs DESIGN.md, mobile, all UI states, real user flows
 2. **Backend**: keys, auth, RLS, rate limits and billing abuse, payment webhooks, monitoring
 3. **Break-it**: try to break the app via security, data integrity, flows and environment; rank by severity
 4. **Speed**: images, fonts, bundle, queries, API latency; re-measure after
 5. **Legal (India)**: DPDP Act consent and notice, minors, third-party trackers and session replay, marketing messages (TRAI/DLT), refund and renewal terms, DMCA-style takedown path
-Report: what was fixed, what needs me, listed last. Flag legal and compliance items for a real lawyer; you are not one.
+   Report: what was fixed, what needs me, listed last. Flag legal and compliance items for a real lawyer; you are not one.
 
 ## Install check
 
@@ -62,7 +63,5 @@ Do not install skills, plugins or MCP servers without my yes. Before asking, sta
 ## Project specifics (QA Flow Tester)
 
 - Deploys: pushing to `main` runs `.github/workflows/deploy.yml` (tests, then Google Cloud Run: the runner and the static site). Work on a branch and open a PR; never push to `main` directly.
-- Read first: `CONTEXT.md` (domain glossary; use its terms exactly, respect "_Avoid_" lists), `docs/adr/` (read the relevant ADR before changing behavior; add one for a significant decision), `docs/tickets/INDEX.md` (open work). Start with `docs/ARCHITECTURE.md`; `docs/README.md` indexes the rest.
-- Slash commands in `.claude/commands/`: `/check`, `/adr`, `/pr-ready`. The whole `.claude/` folder is local only: git-ignored, not part of a clone.
-- Deferred tests: while `.claude/work/DEFER_TESTS` exists, do not run any tests. Write them, review by reading, builds are fine. Tickets end `built`. Only `/verify-all`, after every ticket is built, runs tests. Delete the file to turn this off. (Nothing enforces this in a clone; follow it by hand.)
-- `/ship <request>` (older flow): runs the agents in order and hands work over through `.claude/work/<slug>/`. Plan needs my approval before code. Batch mode: `/ship plan`, `/ship approve <slug>`, then `node scripts/ship-loop.mjs` (see `docs/AGENT_WORKFLOW.md`). Its agent names (prompt-enhancer, planner, developer, tester) predate the roster above; reconcile before use.
+- Deferred tests: while `.claude/work/DEFER_TESTS` exists, do not run any tests. Write them, review by reading, builds are fine. Tickets end `built`. Only the verification phase, after every ticket is built, runs tests. Delete the file to turn this off. Nothing enforces this in a clone; follow it by hand.
+- `.claude/` is local only (git-ignored). Agents, settings and work files live there, not in a clone. See `docs/AGENT_WORKFLOW.md`.

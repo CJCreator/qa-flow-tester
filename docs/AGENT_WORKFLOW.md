@@ -2,6 +2,14 @@
 
 A local pipeline that turns a request into reviewed code with Claude Code subagents. The `.claude/` folder is local only: git-ignored, not part of a clone. Everything below needs your own `.claude/` (agents, commands, `work/`) and the `claude` CLI on PATH. `scripts/ship-loop.mjs` is the only part that is committed.
 
+## Current setup
+
+- Shared rules for every coding agent: `AGENTS.md` (committed, source of truth).
+- Claude-specific rules, models and the subagent roster: `CLAUDE.md`.
+- Roster in `.claude/agents/`: `finder` (reads, no edits), `builder` (edits its listed files only), `reviewer` (reads the diff, reports only), `verifier` (runs and breaks the app, reports only).
+
+The pipeline below predates this roster. Its agent names (`prompt-enhancer`, `planner`, `developer`, `tester`) are out of date and the flow is pending a decision to retire it.
+
 ## Pipeline
 
 `/ship <request>` runs the subagents in `.claude/agents/` in order and hands work over through `.claude/work/<slug>/`:
