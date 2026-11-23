@@ -64,3 +64,4 @@ destructive actions and questions to me. Never dump whole logs: grep or tail the
 - Deploys: pushing to `main` runs `.github/workflows/deploy.yml` (tests, then Google Cloud Run: the runner and the static site). Work on
   a branch and open a PR; do not push to `main` directly.
 - Use a git worktree (`.claude/worktrees/`) for parallel work.
+- Shared agent rules: see `AGENTS.md` (source of truth for work loop, scope, two-way/one-way doors, bug fixing, verification, India guardrails, UI copy, writing, and reporting).
