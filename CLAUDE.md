@@ -1,88 +1,68 @@
-# QA Flow Tester (Release check-up)
+# CLAUDE.md
 
-Source-available (FSL-1.1-MIT), self-hosted tool that scans a web app, writes a reviewable Plan, runs it with Playwright and
-deterministic checkers, and produces a pre-release report. pnpm monorepo, TypeScript, Node 22, vitest.
+@AGENTS.md
 
-## Read first
+Everything shared lives in AGENTS.md. This file holds only what is specific to Claude Code. Don't duplicate rules from there.
 
-- `CONTEXT.md` is the domain glossary. Use its terms exactly (Check-up, Plan, Plan Item, Plan Review,
-  Navigation Check, Layout Group...). Respect each term's "_Avoid_" list, especially in UI text.
-- `docs/adr/` holds architecture decisions. Read the relevant ADR before changing behavior, and add a
-  new one for a significant decision.
-- Open work: `docs/tickets/INDEX.md`. Decisions: the architecture decision records under `docs/adr/`.
+## Models and effort
 
-## Layout
+- Main session: strongest available model on high effort, for planning and hard judgment only.
+- Subagents default to a mid-tier model on medium effort. Reading, file search, doc lookup and running tests go to the smallest model. Never edit with the smallest model.
+- Don't hard-code model IDs in prompts, skills or scripts. Refer to roles (planner, builder, finder) and set models in config.
+- Builder on low effort, verifier on high effort: every feature goes through both. High effort mostly buys verification, so spend it there.
+- Consult the advisor/stronger model at three moments only: before committing to a big plan, when the same error appears a second time, and before calling a long task done.
+- Don't add "think carefully", "think step by step" or forced-confirmation lines to prompts. Current models already think. Rules like that waste tokens.
 
-`packages/`: `types` (shared types, verdict, plan types), `checkers` (axe, security, SEO/AEO/GEO, performance,
-design, marketing, bug detection...), `core` (orchestrator, discovery, planning, AI providers, scoring,
-reports), `runner` (HTTP + SSE server, serves the wizard, port 3001; also `checkup.ts` for CI), `wizard`
-(Vite + React UI).
+## Subagent roster (`.claude/agents/`)
 
-## Commands
+| Role | Job | Edits files? |
+|---|---|---|
+| finder | Locate files, symbols, callers. Run tests. Return paths and 5 lines max | No |
+| builder | Implement one scoped change from a brief | Yes, only its listed files |
+| reviewer | Review the current diff against the plan. Report only | No |
+| verifier | Run the app/tests, try to break it, report evidence | No |
 
-- `pnpm bootstrap`: install, Playwright Chromium, build everything (first run)
-- `pnpm start`: the whole app on http://localhost:3001; `pnpm dev:wizard`: wizard with hot reload
-- `pnpm build`: build all packages. Build order matters: types, then checkers/core, then runner
-- `pnpm test`: fast `unit` tests only (no website, no browser, no Chromium). `pnpm test:browser`: Chromium tests on `setContent`/`route()` pages, run nightly; `pnpm test:all`: both. No fixture sites: real sites are checked by hand (`docs/TESTING.md`)
-- `pnpm smoke`: smoke run
-- Run a single test: `pnpm exec vitest run path/to/file.test.ts`
+Brief format for every subagent: goal, inputs (paths), output format, done-criteria. Nothing else, to keep its context small.
 
-## More docs
+## Context and cost hygiene
 
-`docs/README.md` indexes everything. Start with `docs/ARCHITECTURE.md`; also `docs/TESTING.md`,
-`docs/CONFIGURATION.md`, `docs/API.md`, `docs/DEPLOYMENT.md`, `SECURITY.md`, `CONTRIBUTING.md`.
-Slash commands in `.claude/commands/`: `/check`, `/adr`, `/pr-ready`. The whole `.claude/` folder is local only: git-ignored, not part of a clone.
+- Keep this file and AGENTS.md lean. Past ~200 lines, rules get followed less. Prune before adding.
+- Don't read whole files when a symbol lookup works. Don't re-read what is already in context.
+- Use `/clear` between unrelated tasks. Use `/compact` with a focus note on long ones.
+- Long or overnight runs: at most 3 attempts per step, then log the error to `HANDOFF.md` and move to the next independent step. A stuck step must not eat the night.
+- Build a status HTML (progress, blockers, open questions) via a side subagent for any task over ~30 minutes.
 
-## Agents and /ship
+## Permissions (see `.claude/settings.json`)
 
-`.claude/agents/` holds four subagents: `prompt-enhancer` (rough request to codebase-grounded brief), `planner`
-(brief to plan), `developer` (plan to code), `tester` (independent verification, never edits source).
-`/ship <request>` runs them in order and hands work over through `.claude/work/<slug>/` files. The plan needs
-my approval before any code is written. Use `/ship resume <slug>` to continue. Subagents cannot spawn subagents, so
-the main session orchestrates. Batch mode: `/ship plan`, `/ship approve <slug>`, then `node scripts/ship-loop.mjs`
-(see `docs/AGENT_WORKFLOW.md`).
+- Deny: reading `.env*`, `rm -rf`, force-push, `git reset --hard`, `supabase db reset` against anything non-local, `DROP`/`TRUNCATE` via CLI.
+- Ask: `git push`, dependency installs, migrations, anything touching production.
+- Allow: read-only git, lint, typecheck, tests, dev server.
+- Deny always wins. Never work around a denied command by another route.
 
-## Deferred tests
+## Preview and review
 
-While `.claude/work/DEFER_TESTS` exists, do not run any tests (a local hook may block them, but `.claude/` is not part of a clone, so nothing enforces this: follow it by hand). Write the tests, review by reading, builds are fine.
-Tickets end `built`. Only `/verify-all`, after every ticket is built, runs tests. Delete the file to turn this off.
+- Run the dev server and give me a link I can open on my phone. If it only works on localhost, say so and offer a tunnel.
+- UI changes: screenshot before and after at desktop and 360px, then compare.
+- Code reviews: score each finding for how likely it is to occur. Low-score items go to a list as issues, and the code stays untouched. Only fix findings that would realistically happen.
 
-## Output style
+## Pre-launch passes (run only when I say "pre-launch")
 
-Terse. Fragments fine. No filler or recaps. Exact code, paths, commands, errors. Full sentences for safety warnings,
-destructive actions and questions to me. Never dump whole logs: grep or tail the failing part.
+Fan out in parallel, then merge into one fix pass:
+1. **Page**: consistent design vs DESIGN.md, mobile, all UI states, real user flows
+2. **Backend**: keys, auth, RLS, rate limits and billing abuse, payment webhooks, monitoring
+3. **Break-it**: try to break the app via security, data integrity, flows and environment; rank by severity
+4. **Speed**: images, fonts, bundle, queries, API latency; re-measure after
+5. **Legal (India)**: DPDP Act consent and notice, minors, third-party trackers and session replay, marketing messages (TRAI/DLT), refund and renewal terms, DMCA-style takedown path
+Report: what was fixed, what needs me, listed last. Flag legal and compliance items for a real lawyer; you are not one.
 
-## Working rules
+## Install check
 
-- Run the relevant tests after every change; run `pnpm build` after touching types or exported APIs
-  (the type-check happens in the build).
-- Keep Node-only code out of the wizard bundle: the wizard imports single modules from `@qa/types/src/...`.
-- Never read, print, or commit `.env`, `.qa-keys.json`, `.qa-ai-models.json` or API keys. Use `.env.example`
-  for names of variables. Do not paste keys into commands (they get saved into permission rules).
-- `.qa-*`, `.tmp-*`, `.benchmark/`, `/public` are generated output: do not edit or commit them
-  (approved `.qa-baselines/` are committed on purpose).
-- Deploys: pushing to `main` runs `.github/workflows/deploy.yml` (tests, then Google Cloud Run: the runner and the static site). Work on
-  a branch and open a PR; do not push to `main` directly.
-- Use a git worktree (`.claude/worktrees/`) for parallel work.
+Do not install skills, plugins or MCP servers without my yes. Before asking, state the source, the permissions it wants, and what it can reach.
 
-## Coding principles
+## Project specifics (QA Flow Tester)
 
-- Think before coding: ask when unsure, don't silently pick one interpretation and run with it.
-- Simplicity first: minimum code, no overengineering.
-- Surgical edits: only touch what's required, don't fix up neighboring code on the way by.
-- Goal-driven: translate fuzzy instructions into verifiable targets before starting.
-
-## UI text
-
-Cut taglines, helper text and secondary labels. If a screen needs them to make sense, fix the layout.
-
-## Doors: two-way vs one-way
-
-- Two-way door: anything you can undo. Code, branches, PRs, test data, dev infra. Walk through these and show me after.
-- One-way door: anything you can't. Prod data, deploys to users, force-pushing a shared branch, deleting what you didn't make, a message sent to another person. Stop at these and ask.
-
-## Asking me
-
-- If my answer would be a rubber stamp, don't ask. If running something could answer the question, run it instead.
-- Save questions for taste and product calls only I can make.
-- Ask one at a time, with your recommendation, using your built-in question tool.
+- Deploys: pushing to `main` runs `.github/workflows/deploy.yml` (tests, then Google Cloud Run: the runner and the static site). Work on a branch and open a PR; never push to `main` directly.
+- Read first: `CONTEXT.md` (domain glossary; use its terms exactly, respect "_Avoid_" lists), `docs/adr/` (read the relevant ADR before changing behavior; add one for a significant decision), `docs/tickets/INDEX.md` (open work). Start with `docs/ARCHITECTURE.md`; `docs/README.md` indexes the rest.
+- Slash commands in `.claude/commands/`: `/check`, `/adr`, `/pr-ready`. The whole `.claude/` folder is local only: git-ignored, not part of a clone.
+- Deferred tests: while `.claude/work/DEFER_TESTS` exists, do not run any tests. Write them, review by reading, builds are fine. Tickets end `built`. Only `/verify-all`, after every ticket is built, runs tests. Delete the file to turn this off. (Nothing enforces this in a clone; follow it by hand.)
+- `/ship <request>` (older flow): runs the agents in order and hands work over through `.claude/work/<slug>/`. Plan needs my approval before code. Batch mode: `/ship plan`, `/ship approve <slug>`, then `node scripts/ship-loop.mjs` (see `docs/AGENT_WORKFLOW.md`). Its agent names (prompt-enhancer, planner, developer, tester) predate the roster above; reconcile before use.
