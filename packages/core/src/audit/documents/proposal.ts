@@ -29,8 +29,6 @@ import { PROPOSAL_FILL_IN_TA, PROPOSAL_NOT_INCLUDED_TA } from './templates/propo
 
 export { PROPOSAL_PLACEHOLDERS };
 
-export type ProposalPlaceholder = (typeof PROPOSAL_PLACEHOLDERS)[number]['name'];
-
 /** Placeholders that become a table or list when alone on their line. */
 const BLOCK_PLACEHOLDERS: ReadonlySet<string> = new Set(['findings_summary', 'scope', 'not_included', 'timeline']);
 

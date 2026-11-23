@@ -67,8 +67,6 @@ export interface StoreFailureSentences {
   failed?: string;
 }
 
-export type StoreFailureText = StoreFailureSentences;
-
 /** Store failures become fixed sentences: no keys, paths or provider text reach the caller. */
 export function refuseStoreFailure(
   res: http.ServerResponse,

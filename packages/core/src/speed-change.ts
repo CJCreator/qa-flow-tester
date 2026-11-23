@@ -1,9 +1,7 @@
 import type { Breakpoint, PageSpeedMap, PageSpeedSample, SlowerThanLastTime } from '@qa/types';
 
-/** A page is "slower than last time" only when it is at least this many ms slower... */
+/** A page is "slower than last time" only when it is at least this many ms slower and at least 20 percent slower (`cur * 5 >= prev * 6`, below). Both must hold; both edges are inclusive. */
 export const SLOWER_MIN_MS = 300;
-/** ...and at least this many percent slower. Both must hold; both edges are inclusive. */
-export const SLOWER_MIN_PERCENT = 20;
 
 export function pageSpeedKey(role: string, breakpoint: string, urlPath: string): string {
   return `${role}|${breakpoint}|${urlPath}`;

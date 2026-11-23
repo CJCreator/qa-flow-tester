@@ -43,11 +43,6 @@ export function queueText(position: number): string {
     : `You are number ${position} in line. Your check-up starts by itself when it is your turn.`;
 }
 
-/** Leaves the waiting line. */
-export async function leaveQueue(): Promise<void> {
-  await call('/api/runner/queue', { method: 'DELETE' }).catch(() => undefined);
-}
-
 export class RunnerError extends Error {
   code?: string;
   suggestion?: string;
