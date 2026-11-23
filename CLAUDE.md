@@ -64,3 +64,25 @@ destructive actions and questions to me. Never dump whole logs: grep or tail the
 - Deploys: pushing to `main` runs `.github/workflows/deploy.yml` (tests, then Google Cloud Run: the runner and the static site). Work on
   a branch and open a PR; do not push to `main` directly.
 - Use a git worktree (`.claude/worktrees/`) for parallel work.
+
+## Coding principles
+
+- Think before coding: ask when unsure, don't silently pick one interpretation and run with it.
+- Simplicity first: minimum code, no overengineering.
+- Surgical edits: only touch what's required, don't fix up neighboring code on the way by.
+- Goal-driven: translate fuzzy instructions into verifiable targets before starting.
+
+## UI text
+
+Cut taglines, helper text and secondary labels. If a screen needs them to make sense, fix the layout.
+
+## Doors: two-way vs one-way
+
+- Two-way door: anything you can undo. Code, branches, PRs, test data, dev infra. Walk through these and show me after.
+- One-way door: anything you can't. Prod data, deploys to users, force-pushing a shared branch, deleting what you didn't make, a message sent to another person. Stop at these and ask.
+
+## Asking me
+
+- If my answer would be a rubber stamp, don't ask. If running something could answer the question, run it instead.
+- Save questions for taste and product calls only I can make.
+- Ask one at a time, with your recommendation, using your built-in question tool.
