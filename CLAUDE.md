@@ -9,7 +9,7 @@ deterministic checkers, and produces a pre-release report. pnpm monorepo, TypeSc
   Navigation Check, Layout Group...). Respect each term's "_Avoid_" list, especially in UI text.
 - `docs/adr/` holds architecture decisions. Read the relevant ADR before changing behavior, and add a
   new one for a significant decision.
-- Open work: `docs/tickets/INDEX.md`. Decisions: the architecture decision records under `docs/adr/`.
+- Open work: `PLAN.md` (task pool and decisions waiting for the owner). Decisions: the architecture decision records under `docs/adr/`.
 
 ## Layout
 
