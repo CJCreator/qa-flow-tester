@@ -210,7 +210,7 @@ describe('preview rows', () => {
       expect(res.statusCode, body).toBe(400);
       expect(res.json().code).toBe('ERR_INVALID_REQUEST');
     }
-    expect((await call(rows, 'createPreview', auditId, { body: 'x'.repeat(5000) })).statusCode).toBe(400);
+    expect((await call(rows, 'createPreview', auditId, { body: 'x'.repeat(5000) })).statusCode).toBe(413);
     const unknown = await call(rows, 'createPreview', 'unknown_audit_1', { body: '{}' });
     expect(unknown.statusCode).toBe(404);
     expect(unknown.json().code).toBe('ERR_AUDIT_NOT_FOUND');

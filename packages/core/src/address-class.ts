@@ -132,3 +132,12 @@ export function isPrivateTextHost(hostname: string): boolean {
     .replace(/\.$/, '');
   return h === 'localhost' || h.endsWith('.localhost') || h === 'host.docker.internal';
 }
+
+/**
+ * Whether a host is plainly on this machine or a private network: `localhost`, `*.localhost`,
+ * `host.docker.internal` or a non-public IP literal (ADR 0014). A name that merely resolves to a private address
+ * is not matched (no lookup here); the outbound fetch still refuses those on a shared machine.
+ */
+export function isPrivateHost(hostname: string): boolean {
+  return isPrivateTextHost(hostname) || classifyAddress(hostname) !== null;
+}

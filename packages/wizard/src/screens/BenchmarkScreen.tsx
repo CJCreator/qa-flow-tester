@@ -5,16 +5,12 @@ import { useConfirm } from '../components/ConfirmDialog';
 import { ErrorMessage, Spinner } from '../components/text';
 import { Badge, LoadError, Page, PageHeader } from '../components/ui';
 import { addressFromSearch } from '../lib/form';
-import { scrollBehavior } from '../lib/format';
+import { count, scrollBehavior } from '../lib/format';
 import { Link, PATHS } from '../lib/router';
 import { useDocumentTitle } from '../lib/title';
 import { hostOf } from '../lib/url';
 
 const POLL_MS = 1500;
-
-function count(n: number, noun: string): string {
-  return `${n} ${noun}${n === 1 ? '' : 's'}`;
-}
 
 function when(iso: string): string {
   const date = new Date(iso);
@@ -391,32 +387,32 @@ export function BenchmarkScreen({ initialTargetUrl }: { initialTargetUrl?: strin
                 title="Steps"
                 ourName={result.ourProduct.name}
                 refName={result.referenceProduct.name}
-                ours={count(result.ourProduct.scorecard.totalSteps, 'step')}
-                theirs={count(result.referenceProduct.scorecard.totalSteps, 'step')}
+                ours={count(result.ourProduct.scorecard.totalSteps, 'step', 'steps')}
+                theirs={count(result.referenceProduct.scorecard.totalSteps, 'step', 'steps')}
                 note={
                   result.delta.stepDifference <= 0
                     ? 'Fewer steps than the other site, or the same.'
-                    : `${count(result.delta.stepDifference, 'extra step')} compared with the other site.`
+                    : `${count(result.delta.stepDifference, 'extra step', 'extra steps')} compared with the other site.`
                 }
               />
               <ScoreCard
                 title="Form fields"
                 ourName={result.ourProduct.name}
                 refName={result.referenceProduct.name}
-                ours={count(result.ourProduct.scorecard.totalFields, 'field')}
-                theirs={count(result.referenceProduct.scorecard.totalFields, 'field')}
+                ours={count(result.ourProduct.scorecard.totalFields, 'field', 'fields')}
+                theirs={count(result.referenceProduct.scorecard.totalFields, 'field', 'fields')}
                 note={
                   result.delta.fieldDifference <= 0
                     ? 'Fewer fields than the other site, or the same.'
-                    : `${count(result.delta.fieldDifference, 'more field')} than the other site.`
+                    : `${count(result.delta.fieldDifference, 'more field', 'more fields')} than the other site.`
                 }
               />
               <ScoreCard
                 title="Clicks to get there"
                 ourName={result.ourProduct.name}
                 refName={result.referenceProduct.name}
-                ours={count(result.ourProduct.scorecard.clickDepth, 'click')}
-                theirs={count(result.referenceProduct.scorecard.clickDepth, 'click')}
+                ours={count(result.ourProduct.scorecard.clickDepth, 'click', 'clicks')}
+                theirs={count(result.referenceProduct.scorecard.clickDepth, 'click', 'clicks')}
                 note="Interactions needed on the way."
               />
             </div>

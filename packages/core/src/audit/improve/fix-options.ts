@@ -7,9 +7,7 @@
 import type { AIMessage, AuditFinding, DocumentLanguage } from '@qa/types';
 import { CLAIM_WORDS_PROMPT, hasClaimWords } from '../ai/claim-words.js';
 import { clip, languageName, type AuditAi } from '../ai/stage-ai.js';
-import { MAX_FIX_OPTIONS, ruleFixOptions, topFindingsForOptions, type FixEffort, type FixOption } from './fix-rules.js';
-
-export * from './fix-rules.js';
+import { MAX_FIX_OPTIONS, ruleFixOptions, topFindingsForOptions, type FixEffort, type FixOption } from '@qa/types';
 
 /** Findings per AI request. */
 export const FIX_OPTION_BATCH = 5;

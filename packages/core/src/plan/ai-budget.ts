@@ -11,6 +11,7 @@ import type {
 } from '@qa/types';
 import { completeWith, type AIProvider } from '../ai/ai-provider.js';
 import { stopIfAborted } from '../abort.js';
+import { sleep } from '../timing.js';
 import { knownPrice as knownModelPrice } from '../ai/model-prices.js';
 
 /** The standard price of a provider's model, for the dollar cap. Re-exported here so the runner reaches it through `@qa/core`. */
@@ -167,7 +168,7 @@ export class PacedAI implements AIProvider {
     this.fallbackModels = [...(options.fallbackModels ?? [])].filter((m) => m !== options.model);
   }
 
-  private sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+  private sleep = sleep;
 
   /** A wait that ends early when the run is stopped or asked to finish. The caller's next check stops it. */
   private async pause(ms: number): Promise<void> {

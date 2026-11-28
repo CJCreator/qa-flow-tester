@@ -40,7 +40,8 @@ import {
   type ReviewPageNode,
   type SectionRow,
 } from './review-model';
-import { loadAudit, loadEdits, loadPageContent, saveEdits, type Fetch } from './review-api';
+import { loadAudit, loadEdits, loadPageContent, saveEdits } from './review-api';
+import type { Fetch } from '../audit-call';
 
 /** A page's Page Content as the screen holds it while it loads. */
 export type PageContentState =

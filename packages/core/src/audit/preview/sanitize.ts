@@ -10,6 +10,7 @@
 import { createHash } from 'crypto';
 import type { DocumentLanguage } from '@qa/types';
 import { DOCUMENT_LANGUAGE_INFO } from '@qa/types';
+import { escapeHtml } from '../../html-escape.js';
 
 // ---------------------------------------------------------------------------------------------------
 // Limits
@@ -240,14 +241,6 @@ export function decodeEntities(s: string): string {
     }
     return NAMED_ENTITIES[body.toLowerCase()] ?? match;
   });
-}
-
-export function escapeText(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-export function escapeAttr(s: string): string {
-  return escapeText(s).replace(/"/g, '&quot;');
 }
 
 // eslint-disable-next-line no-control-regex
@@ -813,11 +806,11 @@ export function finalizePreviewNodes(nodes: readonly PreviewNode[]): PreviewNode
 function serializeNodes(nodes: readonly PreviewNode[]): string {
   let out = '';
   for (const node of nodes) {
-    if (node.kind === 'text') out += escapeText(node.text);
+    if (node.kind === 'text') out += escapeHtml(node.text);
     else if (node.kind === 'close') out += `</${node.name}>`;
     else {
       const attrs = node.attrs.map(([name, value]) =>
-        value === '' && name !== 'alt' ? ` ${name}` : ` ${name}="${escapeAttr(value)}"`
+        value === '' && name !== 'alt' ? ` ${name}` : ` ${name}="${escapeHtml(value)}"`
       );
       out += `<${node.name}${attrs.join('')}>`;
     }
@@ -859,16 +852,16 @@ export function renderPreviewDocument(input: PreviewDocumentInput): string {
     `<html lang="${lang}" dir="${info.dir}">`,
     '<head>',
     '<meta charset="utf-8">',
-    `<meta http-equiv="Content-Security-Policy" content="${escapeAttr(metaCsp(`${aiStyle}${frameStyle}`))}">`,
+    `<meta http-equiv="Content-Security-Policy" content="${escapeHtml(metaCsp(`${aiStyle}${frameStyle}`))}">`,
     '<meta name="robots" content="noindex, nofollow">',
     '<meta name="referrer" content="no-referrer">',
     '<meta name="viewport" content="width=device-width, initial-scale=1">',
-    `<title>${escapeText(`Preview of suggested changes: ${input.host}`)}</title>`,
+    `<title>${escapeHtml(`Preview of suggested changes: ${input.host}`)}</title>`,
     aiStyle,
     frameStyle,
     '</head>',
     '<body>',
-    `<p id="qa-preview-note" role="note">${escapeText(previewNote(input.host, input.page))}</p>`,
+    `<p id="qa-preview-note" role="note">${escapeHtml(previewNote(input.host, input.page))}</p>`,
     `<div class="${ROOT_CLASS}">`,
     body,
     '</div>',

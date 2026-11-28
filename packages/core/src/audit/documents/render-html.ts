@@ -7,7 +7,7 @@
  */
 
 import { DOCUMENT_LANGUAGE_INFO } from '@qa/types';
-import { escapeHtml } from '../../html-report.js';
+import { escapeHtml } from '../../html-escape.js';
 import { isEmbeddableImage, normalizedRows, type AuditDoc, type DocBlock } from './model.js';
 import { documentBetaNote, labelsFor } from './labels/index.js';
 

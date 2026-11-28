@@ -8,6 +8,7 @@ import {
   groupIntoProblems,
   plainTitleText,
   releaseVerdict,
+  isSerious,
   SEVERITY_ORDER,
 } from '@qa/types/src/browser.js';
 import { countBreakdown, countSummary, type CountSummary } from '@qa/types/src/browser.js';
@@ -161,7 +162,7 @@ export function bucketOf(
 ): Bucket {
   if (f.needsJudgement && !f.judgementAccepted) return 'judgement';
   if (f.needsConfirmation) return 'to-confirm';
-  if (f.severity === 'Blocker' || f.severity === 'Major') return 'must-fix';
+  if (isSerious(f.severity)) return 'must-fix';
   return f.severity === 'Minor' ? 'should-fix' : 'suggestion';
 }
 
@@ -269,7 +270,7 @@ export function pageResults(report: Pick<ReleaseReport, 'results' | 'findings' |
     if (!countsTowardVerdict(f)) continue;
     const page = f.where.urlPath || '/';
     const before = statuses[page] ?? { status: 'pass', issuesCount: 0 };
-    const serious = f.severity === 'Blocker' || f.severity === 'Major';
+    const serious = isSerious(f.severity);
     statuses[page] = {
       status: serious || before.status === 'fail' ? 'fail' : 'warn',
       issuesCount: before.issuesCount + 1,

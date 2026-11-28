@@ -12,7 +12,7 @@ import { buildSiteGraph } from '../src/plan/site-graph.js';
 import { sampleLayoutGroups } from '../src/plan/sampling.js';
 import { planPagesAndMenus, estimatePageRequests, type PagePlannerInput } from '../src/plan/ai-planner.js';
 import { readBinding, deriveDenials, deriveNotFound, documentedItems } from '../src/plan/sources.js';
-import type { ParsedRequirementHint } from '../src/discovery/context-parser.js';
+import type { ParsedRequirementHint } from '@qa/types';
 import { expandPlan } from '../src/plan/expand.js';
 import { SafetyFilter } from '../src/discovery/safety-filter.js';
 

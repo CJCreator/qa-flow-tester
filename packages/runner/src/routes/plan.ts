@@ -62,9 +62,9 @@ import {
   toDraftForm,
 } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
-import { readJsonBody, sendJson } from './body.js';
+import { readJsonBody, refuseBadBody, sendJson } from './body.js';
 import type { CheckupSession, StoredPlanRecord } from '../session/checkup-session.js';
-import { redactedMessage, hasCompleteSignIn } from '../session/checkup-run.js';
+import { failureText, redactedMessage, hasCompleteSignIn } from '../session/checkup-run.js';
 import { checkIntentsOff, checkCustomHeaders, checkSavedSessions } from '../run-inputs.js';
 import { addTokens } from '../ai-tokens.js';
 
@@ -214,8 +214,8 @@ export async function patchPlan(c: PlanRouteContext): Promise<void> {
   let body: PlanPatchBody;
   try {
     body = await readJsonBody<PlanPatchBody>(req);
-  } catch {
-    sendJson(res, 400, { error: 'Invalid JSON body' });
+  } catch (err) {
+    refuseBadBody(res, err);
     return;
   }
 
@@ -526,7 +526,11 @@ export async function startPlanUpdate(
           type: 'PLAN_UPDATE_FAILED',
           runId,
           what,
-          error: redactError(err, record, session),
+          error: failureText(
+            err,
+            redactError(err, record, session),
+            'The Plan could not be updated because of a problem on our side. Try again.'
+          ),
           timestamp: Date.now(),
         });
       } finally {
@@ -541,8 +545,8 @@ export async function replan(c: PlanRouteContext): Promise<void> {
   let body: { itemId?: string; all?: boolean; instructions?: string; productContext?: string; promote?: boolean };
   try {
     body = await readJsonBody(req);
-  } catch {
-    sendJson(res, 400, { error: 'Invalid JSON body' });
+  } catch (err) {
+    refuseBadBody(res, err);
     return;
   }
   const id = body.itemId || '';
@@ -635,8 +639,8 @@ export async function addPage(c: PlanRouteContext): Promise<void> {
   let body: { address?: string };
   try {
     body = await readJsonBody(req);
-  } catch {
-    sendJson(res, 400, { error: 'Invalid JSON body' });
+  } catch (err) {
+    refuseBadBody(res, err);
     return;
   }
   if (!record?.context.draft) {
@@ -684,8 +688,8 @@ export async function includeHost(c: PlanRouteContext): Promise<void> {
   let body: { host?: string };
   try {
     body = await readJsonBody(req);
-  } catch {
-    sendJson(res, 400, { error: 'Invalid JSON body' });
+  } catch (err) {
+    refuseBadBody(res, err);
     return;
   }
   const draft = record?.context.draft;
@@ -727,8 +731,8 @@ export async function addSignIn(c: PlanRouteContext): Promise<void> {
   let body: Partial<RoleCredential>;
   try {
     body = await readJsonBody(req);
-  } catch {
-    sendJson(res, 400, { error: 'Invalid JSON body' });
+  } catch (err) {
+    refuseBadBody(res, err);
     return;
   }
   const role =
@@ -833,8 +837,8 @@ export async function interpret(c: PlanRouteContext): Promise<void> {
   let body: { sentence?: string; urlPath?: string; role?: string; kind?: 'test' | 'rule'; flowId?: string };
   try {
     body = await readJsonBody(req);
-  } catch {
-    sendJson(res, 400, { error: 'Invalid JSON body' });
+  } catch (err) {
+    refuseBadBody(res, err);
     return;
   }
   const ai = c.aiFor ? await c.aiFor(record.context) : undefined;

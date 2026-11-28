@@ -19,3 +19,4 @@ export * from './website-audit.js';
 export * from './guards.js';
 export * from './display.js';
 // Add a module only while the guard test stays green.
+export * from './fix-rules.js';

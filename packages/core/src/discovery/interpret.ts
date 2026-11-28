@@ -1,7 +1,7 @@
 import type { DiscoveredFlow, DiscoveryDraft, PageInventoryItem, TestCaseExpectations, TestCaseStep } from '@qa/types';
 import type { AIProvider } from '../ai/ai-provider.js';
 import { PlanValidator } from './plan-validator.js';
-import { parseJsonAnswer } from '../plan/ai-planner.js';
+import { parseJsonAnswer } from '../ai/json-answer.js';
 
 /**
  * Turns a person's own words into something the tests can run: a whole test ("Save an invoice

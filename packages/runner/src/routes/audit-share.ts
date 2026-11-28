@@ -14,7 +14,6 @@ import {
   type AuditErrorCode,
   type AuditResult,
   type DocumentLanguage,
-  type EditOverlay,
   type PageContent,
   type ShareLink,
   type ShareLinkKind,
@@ -34,7 +33,14 @@ import {
   type AuditStore,
 } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
-import { AUDIT_NOT_FOUND, refuse, refuseStoreFailure, pitchScreenshots, readEdits } from './audit-common.js';
+import {
+  AUDIT_NOT_FOUND,
+  refuse,
+  refuseStoreFailure,
+  pitchScreenshots,
+  readEdits,
+  refuseBadAuditBody,
+} from './audit-common.js';
 import { readJsonBody, sendJson } from './body.js';
 import { mayUseAudit, type AuditCaller } from './audit-store.js';
 
@@ -272,8 +278,8 @@ export function auditShareRoutes(deps: AuditShareDeps): Route[] {
       let body: unknown;
       try {
         body = await readJsonBody<unknown>(c.req, MAX_SHARE_BODY_CHARS);
-      } catch {
-        return refuse(c.res, 400, 'ERR_INVALID_REQUEST', 'The request is not valid JSON or is too large.');
+      } catch (err) {
+        return refuseBadAuditBody(c.res, err, 'The request is not valid JSON.');
       }
       const checked = checkShareBody(body);
       if (!checked.ok) return refuse(c.res, 400, 'ERR_INVALID_REQUEST', checked.error);

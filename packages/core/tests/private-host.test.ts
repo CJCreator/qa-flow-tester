@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isPrivateHost } from '../src/competitive/safe-crawler.js';
+import { isPrivateHost } from '../src/address-class.js';
 
 describe('isPrivateHost', () => {
   it.each([

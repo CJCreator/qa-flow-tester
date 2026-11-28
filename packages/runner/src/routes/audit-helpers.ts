@@ -6,12 +6,10 @@
  *
  * The Google ID token is read from one POST body, verified, and dropped: never stored, logged or echoed.
  */
-import type http from 'http';
 import {
   isRecord,
   AUDIT_API,
   type AuditEndpointName,
-  type AuditErrorCode,
   type HelperGrant,
   type HelperGrantReply,
   type HelperListReply,
@@ -19,7 +17,8 @@ import {
   type HelperSession,
   type HelperStatusReply,
 } from '@qa/types';
-import { readJsonBody } from './body.js';
+import { BODY_TOO_LARGE_MESSAGE, BodyTooLargeError, readJsonBody, sendJson } from './body.js';
+import { AUDIT_NOT_FOUND, refuse, refuseBadAuditBody, refuseStoreFailure } from './audit-common.js';
 import type { Route, RouteContext } from './route.js';
 import { HelperSignInError, MAX_ID_TOKEN_CHARS } from '../helpers/firebase-token.js';
 import type { HelperAccess } from '../helpers/helper-access.js';
@@ -51,42 +50,12 @@ const MAX_SIGN_IN_BODY_CHARS = MAX_ID_TOKEN_CHARS + 256;
 
 const MESSAGES = {
   invalid: 'The request is not valid.',
-  notFound: 'Website Audit not found.',
   helpersOff: 'Helper sign-in is not set up on this copy.',
   signInFailed: 'Google sign-in did not work.',
-  failed: 'The Helper request could not be completed.',
 } as const;
 
-function send(res: http.ServerResponse, status: number, body: unknown, headers: Record<string, string> = {}): void {
-  res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...headers });
-  res.end(JSON.stringify(body));
-}
-
-function refuse(
-  res: http.ServerResponse,
-  status: number,
-  code: AuditErrorCode,
-  error: string,
-  headers?: Record<string, string>
-): void {
-  send(res, status, { error, code }, headers);
-}
-
-/** Store errors in the audit error model, without internals. Duck-typed so this file needs no @qa/core import. */
-function sendStoreError(res: http.ServerResponse, err: unknown): void {
-  const name = (err as { name?: unknown } | null)?.name;
-  const code = (err as { code?: unknown } | null)?.code;
-  if (name === 'AuditRecordError' && code === 'not-found')
-    return refuse(res, 404, 'ERR_AUDIT_NOT_FOUND', MESSAGES.notFound);
-  if (name === 'AuditRecordError' && code === 'invalid-input') {
-    const message = err instanceof Error && err.message ? err.message : MESSAGES.invalid;
-    return refuse(res, 400, 'ERR_INVALID_REQUEST', message);
-  }
-  if (name === 'AuditStoreError' && code === 'invalid-key')
-    return refuse(res, 404, 'ERR_AUDIT_NOT_FOUND', MESSAGES.notFound);
-  // Anything else (storage down, bad data): a fixed message, as the runner's other 500s, with no internals.
-  send(res, 500, { error: MESSAGES.failed });
-}
+/** Helper answers carry a session or grants: never cached. */
+const NO_STORE = { 'Cache-Control': 'no-store' };
 
 function auditIdOf(context: RouteContext): string | undefined {
   return context.params?.id;
@@ -104,12 +73,13 @@ export function auditHelperRoutes(deps: AuditHelperRouteDeps): Route[] {
 
   async function withAudit(context: RouteContext, then: (auditId: string) => Promise<void>): Promise<void> {
     const auditId = auditIdOf(context);
-    if (!auditId) return refuse(context.res, 404, 'ERR_AUDIT_NOT_FOUND', MESSAGES.notFound);
+    if (!auditId) return refuse(context.res, 404, 'ERR_AUDIT_NOT_FOUND', AUDIT_NOT_FOUND, undefined, NO_STORE);
     try {
-      if (!(await store.getAudit(auditId))) return refuse(context.res, 404, 'ERR_AUDIT_NOT_FOUND', MESSAGES.notFound);
+      if (!(await store.getAudit(auditId)))
+        return refuse(context.res, 404, 'ERR_AUDIT_NOT_FOUND', AUDIT_NOT_FOUND, undefined, NO_STORE);
       await then(auditId);
     } catch (err) {
-      sendStoreError(context.res, err);
+      refuseStoreFailure(context.res, err, undefined, NO_STORE);
     }
   }
 
@@ -117,7 +87,7 @@ export function auditHelperRoutes(deps: AuditHelperRouteDeps): Route[] {
     row('listHelpers', (context) =>
       withAudit(context, async (auditId) => {
         const reply: HelperListReply = { helpers: await store.listHelpers(auditId) };
-        send(context.res, 200, reply);
+        sendJson(context.res, 200, reply, NO_STORE);
       })
     ),
 
@@ -125,25 +95,34 @@ export function auditHelperRoutes(deps: AuditHelperRouteDeps): Route[] {
       let body: unknown;
       try {
         body = await readJsonBody<unknown>(context.req, MAX_GRANT_BODY_CHARS);
-      } catch {
-        return refuse(context.res, 400, 'ERR_INVALID_REQUEST', MESSAGES.invalid);
+      } catch (err) {
+        return refuseBadAuditBody(context.res, err, MESSAGES.invalid, NO_STORE);
       }
-      if (!isRecord(body)) return refuse(context.res, 400, 'ERR_INVALID_REQUEST', MESSAGES.invalid);
+      if (!isRecord(body))
+        return refuse(context.res, 400, 'ERR_INVALID_REQUEST', MESSAGES.invalid, undefined, NO_STORE);
       const { email, permissions } = body;
       await withAudit(context, async (auditId) => {
         // The store trims, lower-cases and checks the email, and checks the permissions (unknown input is refused there).
         const helper = await store.grantHelper(auditId, email as string, permissions as HelperPermission[]);
         const reply: HelperGrantReply = { helper };
-        send(context.res, 200, reply);
+        sendJson(context.res, 200, reply, NO_STORE);
       });
     }),
 
     row('removeHelper', (context) => {
       const email = context.url.searchParams.get('email');
-      if (!email) return refuse(context.res, 400, 'ERR_INVALID_REQUEST', 'The Helper email address is missing.');
+      if (!email)
+        return refuse(
+          context.res,
+          400,
+          'ERR_INVALID_REQUEST',
+          'The Helper email address is missing.',
+          undefined,
+          NO_STORE
+        );
       return withAudit(context, async (auditId) => {
         await store.removeHelper(auditId, email);
-        send(context.res, 200, { removed: true });
+        sendJson(context.res, 200, { removed: true }, NO_STORE);
       });
     }),
 
@@ -153,17 +132,21 @@ export function auditHelperRoutes(deps: AuditHelperRouteDeps): Route[] {
           ? { enabled: true, firebase: access.firebaseWeb }
           : { enabled: true }
         : { enabled: false };
-      send(context.res, 200, reply);
+      sendJson(context.res, 200, reply, NO_STORE);
     }),
 
     row('helperSignIn', async (context) => {
       const { req, res } = context;
-      if (!access.enabled || !access.verifier) return refuse(res, 404, 'ERR_HELPERS_OFF', MESSAGES.helpersOff);
+      if (!access.enabled || !access.verifier)
+        return refuse(res, 404, 'ERR_HELPERS_OFF', MESSAGES.helpersOff, undefined, NO_STORE);
       let body: unknown;
       try {
         body = await readJsonBody<unknown>(req, MAX_SIGN_IN_BODY_CHARS);
-      } catch {
-        return refuse(res, 401, 'ERR_SIGN_IN_FAILED', MESSAGES.signInFailed);
+      } catch (err) {
+        // Too large answers 413 like every other route; an unreadable body is a failed sign-in.
+        if (err instanceof BodyTooLargeError)
+          return refuse(res, 413, 'ERR_INVALID_REQUEST', BODY_TOO_LARGE_MESSAGE, undefined, NO_STORE);
+        return refuse(res, 401, 'ERR_SIGN_IN_FAILED', MESSAGES.signInFailed, undefined, NO_STORE);
       }
       let email: string;
       let sub: string;
@@ -175,7 +158,7 @@ export function auditHelperRoutes(deps: AuditHelperRouteDeps): Route[] {
           // Fixed message only: neither the token nor the error text is logged.
           console.warn('[helpers] Sign-in check failed unexpectedly.');
         }
-        return refuse(res, 401, 'ERR_SIGN_IN_FAILED', MESSAGES.signInFailed);
+        return refuse(res, 401, 'ERR_SIGN_IN_FAILED', MESSAGES.signInFailed, undefined, NO_STORE);
       }
       body = undefined;
 
@@ -185,8 +168,9 @@ export function auditHelperRoutes(deps: AuditHelperRouteDeps): Route[] {
       } catch (err) {
         const code = (err as { code?: unknown } | null)?.code;
         // A verified address the store's email rule refuses can't hold grants: same refusal as a bad token.
-        if (code === 'invalid-input') return refuse(res, 401, 'ERR_SIGN_IN_FAILED', MESSAGES.signInFailed);
-        return sendStoreError(res, err);
+        if (code === 'invalid-input')
+          return refuse(res, 401, 'ERR_SIGN_IN_FAILED', MESSAGES.signInFailed, undefined, NO_STORE);
+        return refuseStoreFailure(res, err, undefined, NO_STORE);
       }
       const cookie = signHelperSession(
         access.sessionKey(),
@@ -196,29 +180,38 @@ export function auditHelperRoutes(deps: AuditHelperRouteDeps): Route[] {
         access.sessionSeconds
       );
       const reply: HelperSession = { email, grants };
-      send(res, 200, reply, {
+      sendJson(res, 200, reply, {
+        ...NO_STORE,
         'Set-Cookie': helperSessionCookie(cookie, isHttpsRequest(req), access.sessionSeconds, access.sessionSeconds),
       });
     }),
 
     row('helperSession', async (context) => {
       const { req, res } = context;
-      if (!access.enabled) return refuse(res, 404, 'ERR_HELPERS_OFF', MESSAGES.helpersOff);
+      if (!access.enabled) return refuse(res, 404, 'ERR_HELPERS_OFF', MESSAGES.helpersOff, undefined, NO_STORE);
       const session = access.session(req);
-      if (!session) return refuse(res, 401, 'ERR_SIGN_IN_FAILED', 'You are not signed in.');
+      if (!session) return refuse(res, 401, 'ERR_SIGN_IN_FAILED', 'You are not signed in.', undefined, NO_STORE);
       try {
         const grants = (await store.grantsFor(session.email)).filter((g) => g.email === session.email);
         const reply: HelperSession = { email: session.email, grants };
-        send(res, 200, reply);
+        sendJson(res, 200, reply, NO_STORE);
       } catch (err) {
-        sendStoreError(res, err);
+        refuseStoreFailure(res, err, undefined, NO_STORE);
       }
     }),
 
     row('helperSignOut', (context) => {
       const { req, res } = context;
-      if (!access.enabled) return refuse(res, 404, 'ERR_HELPERS_OFF', MESSAGES.helpersOff);
-      send(res, 200, { signedOut: true }, { 'Set-Cookie': clearHelperSessionCookie(isHttpsRequest(req)) });
+      if (!access.enabled) return refuse(res, 404, 'ERR_HELPERS_OFF', MESSAGES.helpersOff, undefined, NO_STORE);
+      sendJson(
+        res,
+        200,
+        { signedOut: true },
+        {
+          ...NO_STORE,
+          'Set-Cookie': clearHelperSessionCookie(isHttpsRequest(req)),
+        }
+      );
     }),
   ];
 }

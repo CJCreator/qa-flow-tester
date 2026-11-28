@@ -14,11 +14,11 @@ import {
   loadHelperStatus,
   permissionText,
   startHelperSession,
-  type Fetch,
   type FirebaseWebConfig,
 } from './helper-api';
 import { HelperRules } from './HelpersScreen';
 import { loadVersion } from './saved-api';
+import type { Fetch } from '../audit-call';
 
 /** The Firebase web settings baked in at build time (public values), used when the runner sends none. */
 export function buildTimeFirebaseConfig(

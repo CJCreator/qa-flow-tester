@@ -9,7 +9,8 @@ import { PATHS, type Route } from '../src/lib/router';
 import { NotFoundScreen } from '../src/screens/NotFoundScreen';
 import { AUDIT_ROUTE_NAMES, BetaAuditNotice, showsBetaAuditNotice } from '../src/screens/audit/BetaAuditNotice';
 import { AuditTabs, type AuditTab } from '../src/screens/audit/AuditTabs';
-import { loadHelperStatus, resetKnownHelperSignIn, type Fetch } from '../src/screens/audit/saved/helper-api';
+import { loadHelperStatus, resetKnownHelperSignIn } from '../src/screens/audit/saved/helper-api';
+import type { Fetch } from '../src/screens/audit/audit-call';
 
 const ROUTES: Route[] = [
   { name: 'landing' },

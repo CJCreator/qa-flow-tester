@@ -258,7 +258,7 @@ describe('audit settings routes', () => {
       expect(res.json<{ code: string }>().code).toBe('ERR_INVALID_REQUEST');
     }
     const huge = await call(depsFor(), 'PUT', { proposalTemplate: 'a'.repeat(250_000) });
-    expect(huge.statusCode).toBe(400);
+    expect(huge.statusCode).toBe(413);
     expect(huge.json<{ code: string }>().code).toBe('ERR_INVALID_REQUEST');
     expect(await storedFileText()).toBe('');
   });

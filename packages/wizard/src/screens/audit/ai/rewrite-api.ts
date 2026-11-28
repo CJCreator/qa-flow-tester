@@ -9,7 +9,7 @@ import {
   type RewriteBatchFailure,
   type RewriteState,
 } from '@qa/types/src/browser.js';
-import { isAuditErrorCode, NOT_ANSWERING } from '../audit-call';
+import { isAuditErrorCode, jsonInit, NOT_ANSWERING, withQuery, type Fetch } from '../audit-call';
 
 export { NOT_ANSWERING } from '../audit-call';
 
@@ -20,8 +20,6 @@ export { NOT_ANSWERING } from '../audit-call';
  * while copied phrases remain). Every refusal becomes a plain sentence safe to show as-is; status codes and raw
  * errors never reach the screen. New copy goes into the Audit Documents only, never onto the site.
  */
-
-export type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 export type RewriteOutcome<T> =
   { ok: true; value: T } | { ok: false; message: string; code?: AuditErrorCode; overlaps?: OverlapFlag[] };
@@ -66,11 +64,6 @@ function cleanRewrite(value: RewriteState): RewriteState {
 
 function acceptRewriteReply(body: unknown): RewriteState | null {
   return isRecord(body) && isRewriteState(body.rewrite) ? cleanRewrite(body.rewrite) : null;
-}
-
-/** `?version=2`, when it is set. */
-function withVersion(path: string, version: number | undefined): string {
-  return version === undefined ? path : `${path}?version=${encodeURIComponent(String(version))}`;
 }
 
 async function call<T>(
@@ -119,10 +112,6 @@ function refusalText(refusal: Record<string, unknown>): string | undefined {
   return undefined;
 }
 
-function post(body: unknown): RequestInit {
-  return { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
-}
-
 /** `GET /api/audits/:id/rewrite`: every saved rewrite of the version. */
 export function listRewrites(
   auditId: string,
@@ -130,7 +119,7 @@ export function listRewrites(
   fetchImpl: Fetch = fetch
 ): Promise<RewriteOutcome<RewriteState[]>> {
   return call(
-    withVersion(auditPath(AUDIT_API.listRewrites.path, { id: auditId }), version),
+    withQuery(auditPath(AUDIT_API.listRewrites.path, { id: auditId }), { version }),
     { method: AUDIT_API.listRewrites.method },
     fetchImpl,
     'The saved rewrites could not be loaded. Try again.',
@@ -153,7 +142,7 @@ export function approveRewrite(
 ): Promise<RewriteOutcome<RewriteState>> {
   return call(
     auditPath(AUDIT_API.approveRewrite.path, { id: auditId }),
-    { method: AUDIT_API.approveRewrite.method, ...post(target) },
+    jsonInit(AUDIT_API.approveRewrite.method, target),
     fetchImpl,
     'The Section could not be approved for a rewrite. Try again.',
     acceptRewriteReply
@@ -173,7 +162,7 @@ export async function writeNewCopy(
   if (!current?.approvedAt) return { ok: false, message: NOT_APPROVED, code: 'ERR_NOT_APPROVED' };
   return call(
     auditPath(AUDIT_API.runRewrite.path, { id: auditId }),
-    { method: AUDIT_API.runRewrite.method, ...post(target) },
+    jsonInit(AUDIT_API.runRewrite.method, target),
     fetchImpl,
     AI_UNAVAILABLE,
     acceptRewriteReply
@@ -188,7 +177,7 @@ export function acceptNewCopy(
 ): Promise<RewriteOutcome<RewriteState>> {
   return call(
     auditPath(AUDIT_API.acceptRewrite.path, { id: auditId }),
-    { method: AUDIT_API.acceptRewrite.method, ...post(target) },
+    jsonInit(AUDIT_API.acceptRewrite.method, target),
     fetchImpl,
     'The new copy could not be accepted. Try again.',
     acceptRewriteReply
@@ -220,7 +209,7 @@ export function approveSections(
 ): Promise<RewriteOutcome<RewriteBatch>> {
   return call(
     auditPath(AUDIT_API.approveRewrite.path, { id: auditId }),
-    { method: AUDIT_API.approveRewrite.method, ...post(body) },
+    jsonInit(AUDIT_API.approveRewrite.method, body),
     fetchImpl,
     'The Sections could not be approved. Try again.',
     batchReply
@@ -235,7 +224,7 @@ export function writeDrafts(
 ): Promise<RewriteOutcome<RewriteBatch>> {
   return call(
     auditPath(AUDIT_API.runRewrite.path, { id: auditId }),
-    { method: AUDIT_API.runRewrite.method, ...post(body) },
+    jsonInit(AUDIT_API.runRewrite.method, body),
     fetchImpl,
     AI_UNAVAILABLE,
     batchReply

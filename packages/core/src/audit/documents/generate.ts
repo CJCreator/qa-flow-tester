@@ -21,7 +21,7 @@ import { buildContentDocument } from './content.js';
 import { buildEditedView, type EditedAuditView } from './edits.js';
 import { buildFindingsDocument } from './findings.js';
 import { labelsFor } from './labels/index.js';
-import { ruleFixOptions, type FixOption } from '../improve/fix-rules.js';
+import { ruleFixOptions, type FixOption } from '@qa/types';
 import type { AuditDoc } from './model.js';
 import { buildOwnerAudit } from './owner-audit.js';
 import { buildPitchGlimpse, pitchGlimpseDoc } from './pitch.js';

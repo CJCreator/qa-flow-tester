@@ -36,5 +36,4 @@ export {
   type LoadFixOptionsInput,
   type LoadedFixOptions,
 } from './fix-options-store.js';
-export type { FixOption } from './fix-rules.js';
 export { decodePng, findLogo, screenshotColours, siteBrand, type SiteBrand } from './brand.js';

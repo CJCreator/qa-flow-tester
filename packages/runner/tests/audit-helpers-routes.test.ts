@@ -323,6 +323,14 @@ describe('Helper sign-in and session (REQ-033)', () => {
     }
   });
 
+  it('an oversized sign-in request answers 413 too large, like every other route, and sets no cookie', async () => {
+    const answer = await call(ON_PORT, 'POST', '/api/helper/session', { body: { idToken: 'x'.repeat(200_000) } });
+    expect(answer.status).toBe(413);
+    expect(answer.json.error).toBe('The request is too large.');
+    expect(answer.headers.connection).toBe('close');
+    expect(answer.headers['set-cookie']).toBeUndefined();
+  });
+
   it('GET session without a valid cookie is refused; sign-out clears the cookie', async () => {
     const none = await call(ON_PORT, 'GET', '/api/helper/session');
     expect(none.status).toBe(401);

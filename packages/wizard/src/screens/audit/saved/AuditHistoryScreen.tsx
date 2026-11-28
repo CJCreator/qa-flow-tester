@@ -23,10 +23,10 @@ import {
   shortlistMarkText,
   versionCounts,
   versionsOldestFirst,
-  type Fetch,
 } from './saved-api';
 import type { AuditEventSourceFactory } from '../start/audit-start-api';
 import { ShortlistPanel } from './ShortlistPanel';
+import type { Fetch } from '../audit-call';
 
 /** What a delete removes, said before it happens. */
 export const DELETE_WARNING =

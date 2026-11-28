@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { writeJsonAtomic } from '@qa/core';
+import { isInside, writeJsonAtomic } from '@qa/core';
 import type { ReleaseReport, RunSummary } from '@qa/types';
 import { releaseVerdict, isRunSummary, isReleaseReportShape } from '@qa/types';
 import type { SessionPaths } from './checkup-session.js';
@@ -89,8 +89,8 @@ export class DefaultReportStore implements ReportStore {
 
   relativePath(runId: string, file?: string): string | undefined {
     if (!file) return undefined;
-    const rel = path.relative(this.dirFor(runId), file);
-    return rel && !rel.startsWith('..') && !path.isAbsolute(rel) ? rel.replace(/\\/g, '/') : undefined;
+    const dir = this.dirFor(runId);
+    return isInside(dir, file) ? path.relative(dir, file).replace(/\\/g, '/') : undefined;
   }
 
   invalidate(): void {

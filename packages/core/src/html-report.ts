@@ -3,6 +3,7 @@ import path from 'path';
 import type { ReleaseReport, FindingSeverity, RankedRecommendation } from '@qa/types';
 import { countSummary, groupIntoProblems, problemsThatCountLine, releaseVerdict, ASPECTS } from '@qa/types';
 import { notChecked } from './not-checked.js';
+import { escapeHtml } from './html-escape.js';
 
 export interface HtmlReportOptions {
   outputDir?: string;
@@ -714,14 +715,4 @@ async function renderVisualCompare(
                 ${diffFigure}
               </div>
             </div>`;
-}
-
-export function escapeHtml(text?: string): string {
-  if (!text) return '';
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
 }

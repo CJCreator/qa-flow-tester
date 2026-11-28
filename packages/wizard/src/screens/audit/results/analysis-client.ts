@@ -7,7 +7,7 @@ import {
   type AuditErrorCode,
   type AuditGetReply,
 } from '@qa/types/src/browser.js';
-import { isAuditErrorCode, NOT_ANSWERING } from '../audit-call';
+import { isAuditErrorCode, NOT_ANSWERING, type Fetch } from '../audit-call';
 
 /**
  * The analysis screen's calls to the runner: one Website Audit version (`AUDIT_API.get`) and the Page
@@ -16,8 +16,6 @@ import { isAuditErrorCode, NOT_ANSWERING } from '../audit-call';
  */
 
 export type AuditCallResult<T> = { ok: true; reply: T } | { ok: false; error: string; code?: AuditErrorCode };
-
-type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 const TIMEOUT_MS = 15000;
 const UNREADABLE = 'The tool sent an answer that could not be read. Try again.';

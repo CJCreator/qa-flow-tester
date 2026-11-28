@@ -1,7 +1,6 @@
 import type http from 'http';
 import { describe, it, expect, vi } from 'vitest';
 import { AuditRecordError, AuditStoreError, emptyOverlay, type AuditStore } from '@qa/core';
-import type { AuditResult, Finding } from '@qa/types';
 import {
   EDITS_NAME,
   pitchScreenshots,
@@ -81,18 +80,21 @@ describe('refuseStoreFailure', () => {
     });
   });
 
-  it('turns store invalid-key errors into 400 with "The request is not valid." and ERR_INVALID_REQUEST', () => {
+  it('turns store invalid-key errors into the same 404 as an unknown id, with the header when given', () => {
     const res = new FakeResponse();
     refuseStoreFailure(
       res as unknown as http.ServerResponse,
       new AuditStoreError('invalid-key', 'secret-key-path-detail'),
-      text
+      text,
+      { 'Cache-Control': 'no-store' }
     );
-    expect(res.statusCode).toBe(400);
+    expect(res.statusCode).toBe(404);
     expect(res.json()).toEqual({
-      error: 'The request is not valid.',
-      code: 'ERR_INVALID_REQUEST',
+      error: 'This Website Audit was not found.',
+      code: 'ERR_AUDIT_NOT_FOUND',
     });
+    expect(res.body).not.toContain('secret-key-path-detail');
+    expect(res.headers['Cache-Control']).toBe('no-store');
   });
 
   it('turns unknown errors into 500 with custom failed text and no secrets/internals leaked', () => {

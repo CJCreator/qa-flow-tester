@@ -62,14 +62,12 @@ export {
   authorizeRoute,
   isLoopbackAddress,
   sendNotFound,
-  notFound,
-  fallbackNotFound,
   ACCESS_KEY_REFUSAL,
   BETA_REFUSAL,
   CLOSED_REFUSAL,
   SCHEDULER_REFUSAL,
 } from './route.js';
-export { MAX_BODY_CHARS, readJsonBody, sendJson } from './body.js';
+export { MAX_BODY_CHARS, readJsonBody, refuseBadBody, sendJson } from './body.js';
 export * from './plan.js';
 export * from './schedules.js';
 export * from './sessions.js';

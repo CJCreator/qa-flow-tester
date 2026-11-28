@@ -5,6 +5,7 @@ import type { Finding, PhoneLayout } from '@qa/types';
 import { UXQualityChecker } from '@qa/checkers';
 import { BREAKPOINT_VIEWPORTS } from '../browser.js';
 import { pageSlug } from './store/keys.js';
+import { resolveInside } from '../fs-inside.js';
 
 /**
  * Phone layout of a Sample Page (REQ-037, Q-28): a phone-width screenshot plus the existing overflow and
@@ -38,15 +39,6 @@ export interface PhoneLayoutRecord {
 /** `phone/<slug>-<hash>.png`: readable, and two paths that slug alike still get different files. */
 export function phoneScreenshotFile(urlPath: string): string {
   return `phone/${pageSlug(urlPath)}.png`;
-}
-
-/** The absolute screenshot path, or null when `rel` would leave the version folder. */
-function resolveInside(versionDir: string, rel: string): string | null {
-  const root = path.resolve(versionDir);
-  const abs = path.resolve(root, rel);
-  const back = path.relative(root, abs);
-  if (!back || back.startsWith('..') || path.isAbsolute(back)) return null;
-  return abs;
 }
 
 async function waitForLayout(page: Page): Promise<void> {

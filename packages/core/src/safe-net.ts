@@ -154,17 +154,6 @@ export async function resolvePublic(
 }
 
 /**
- * Whether a host is plainly on this machine or a private network: `localhost`, `*.localhost`,
- * `host.docker.internal` or a non-public IP literal. A name that merely resolves to a private address is not
- * matched (no lookup here). The outbound fetch still refuses private addresses on a shared machine.
- */
-export function isLocalOriginHost(hostname: string): boolean {
-  const h = hostname.replace(/^\[|\]$/g, '').toLowerCase();
-  if (!h) return false;
-  return isPrivateTextHost(h) || (isIpLiteral(h) && !isPublicAddress(h));
-}
-
-/**
  * Resolves a host once for a local run (ADR 0031 `allowPrivate`): any address is accepted, but the name is
  * still looked up once and the connection still goes to that one address. A literal IP skips DNS.
  */

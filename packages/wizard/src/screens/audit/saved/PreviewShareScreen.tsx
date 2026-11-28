@@ -23,9 +23,9 @@ import {
   revokeAfterConfirm,
   sharedLinkAddress,
   withLink,
-  type Fetch,
   type ShareLanguage,
 } from './share-api';
+import type { Fetch } from '../audit-call';
 
 export type LinksState =
   { status: 'loading' } | { status: 'failed'; message: string } | { status: 'loaded'; links: ShareLink[] };

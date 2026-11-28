@@ -13,8 +13,14 @@
  * Pure: no I/O, no clock.
  */
 
-import type { AuditFinding, AuditScale, RoadmapItem } from '@qa/types';
-import { chosenFixOption, type FixOption } from '../improve/fix-rules.js';
+import {
+  AUDIT_SCALE,
+  chosenFixOption,
+  type AuditFinding,
+  type AuditScale,
+  type FixOption,
+  type RoadmapItem,
+} from '@qa/types';
 
 /**
  * The fix option each Roadmap item links to (T-417): the chosen option of its first finding that has
@@ -37,14 +43,14 @@ export function roadmapFixOptions(
   return out;
 }
 
-/** Lower is more: high 0, medium 1, low 2. */
-const RANK: Record<AuditScale, number> = { high: 0, medium: 1, low: 2 };
+/** Lower is more: high 0, medium 1, low 2 (the order of AUDIT_SCALE). */
+const rank = (scale: AuditScale): number => AUDIT_SCALE.indexOf(scale);
 
 /** The phase an item of each priority goes in. */
 export const ROADMAP_PHASE: Record<AuditScale, number> = { high: 1, medium: 2, low: 3 };
 
 /** The higher of two scales (high beats medium beats low). Shared with the edit overlay. */
-export const highestScale = (a: AuditScale, b: AuditScale): AuditScale => (RANK[a] <= RANK[b] ? a : b);
+export const highestScale = (a: AuditScale, b: AuditScale): AuditScale => (rank(a) <= rank(b) ? a : b);
 
 interface Group {
   firstRank: number;
@@ -97,9 +103,9 @@ export function buildRoadmap(rankedFindings: readonly AuditFinding[]): RoadmapIt
   return [...groups.values()]
     .sort(
       (a, b) =>
-        RANK[a.priority] - RANK[b.priority] ||
+        rank(a.priority) - rank(b.priority) ||
         // Lower effort first: low (2) before high (0).
-        RANK[b.effort] - RANK[a.effort] ||
+        rank(b.effort) - rank(a.effort) ||
         a.firstRank - b.firstRank
     )
     .map((g, i) => ({

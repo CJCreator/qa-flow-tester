@@ -16,7 +16,7 @@ export interface RouteKeyOptions {
  * - Hash: only preserved if includeHash is true (e.g. #/segment)
  * - Shape: path (and allowed query) with digit runs, UUIDs, and 6+ char hex tokens replaced by :n, :id
  */
-export function normalizeRoute(
+export function crawlRouteKey(
   url: string,
   base: string,
   opts?: RouteKeyOptions
@@ -128,7 +128,7 @@ export class CrawlFrontier {
     key: string;
     reason?: 'duplicate' | 'trap-limit' | 'depth-limit';
   } {
-    const { key, shape } = normalizeRoute(url, base, {
+    const { key, shape } = crawlRouteKey(url, base, {
       routeQueryParams: this.routeQueryParams,
       includeHash: this.includeHash,
     });
@@ -186,7 +186,7 @@ export class CrawlFrontier {
   }
 
   getShape(url: string, base: string): string {
-    return normalizeRoute(url, base, {
+    return crawlRouteKey(url, base, {
       routeQueryParams: this.routeQueryParams,
       includeHash: this.includeHash,
     }).shape;

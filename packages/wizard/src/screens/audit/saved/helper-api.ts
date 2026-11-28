@@ -9,7 +9,7 @@ import {
   type HelperPermission,
   type HelperSession,
 } from '@qa/types/src/browser.js';
-import { isAuditErrorCode, NOT_ANSWERING } from '../audit-call';
+import { callAudit, jsonInit, type Fetch } from '../audit-call';
 import { announceSessionChange } from '../../../lib/session-event';
 
 /**
@@ -21,8 +21,6 @@ import { announceSessionChange } from '../../../lib/session-event';
  */
 
 export { loadCallerIsHelper } from './caller-access';
-
-export type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 export type HelperOutcome<T> = { ok: true; value: T } | { ok: false; message: string; code?: AuditErrorCode };
 
@@ -100,37 +98,15 @@ function asSession(body: unknown): HelperSession | null {
   return grants === null ? null : { email: body.email, grants };
 }
 
-async function call<T>(
+function call<T>(
   url: string,
   init: RequestInit,
   fetchImpl: Fetch,
   fallback: string,
   accept: (body: unknown) => T | null
 ): Promise<HelperOutcome<T>> {
-  let res: Response;
-  try {
-    res = await fetchImpl(url, { credentials: 'same-origin', ...init });
-  } catch {
-    return { ok: false, message: NOT_ANSWERING };
-  }
-  let body: unknown;
-  try {
-    body = await res.json();
-  } catch {
-    body = undefined;
-  }
-  if (res.ok) {
-    const value = accept(body);
-    return value === null ? { ok: false, message: fallback } : { ok: true, value };
-  }
-  const refusal = isRecord(body) ? body : {};
-  const code = isAuditErrorCode(refusal.code) ? refusal.code : undefined;
-  if (code && REFUSALS[code]) return { ok: false, message: REFUSALS[code]!, code };
-  const error = typeof refusal.error === 'string' && refusal.error.trim() !== '' ? refusal.error.trim() : fallback;
-  return { ok: false, message: error, code };
+  return callAudit(url, { credentials: 'same-origin', ...init }, fetchImpl, fallback, accept, REFUSALS);
 }
-
-const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
 /** The email as the runner stores it, or null when it does not look like an email address. */
 export function normalEmail(text: string): string | null {
@@ -249,7 +225,7 @@ export function grantHelper(
   const body: HelperGrantBody = { email: grant.email, permissions: withView(grant.permissions) };
   return call(
     auditPath(AUDIT_API.grantHelper.path, { id: auditId }),
-    { method: AUDIT_API.grantHelper.method, headers: JSON_HEADERS, body: JSON.stringify(body) },
+    jsonInit(AUDIT_API.grantHelper.method, body),
     fetchImpl,
     'The access could not be given. Try again.',
     (reply) => (isRecord(reply) ? asGrant(reply.helper) : null)
@@ -272,7 +248,7 @@ export function removeHelper(auditId: string, email: string, fetchImpl: Fetch = 
 export function startHelperSession(idToken: string, fetchImpl: Fetch = fetch): Promise<HelperOutcome<HelperSession>> {
   return call(
     auditPath(AUDIT_API.helperSignIn.path, {}),
-    { method: AUDIT_API.helperSignIn.method, headers: JSON_HEADERS, body: JSON.stringify({ idToken }) },
+    jsonInit(AUDIT_API.helperSignIn.method, { idToken }),
     fetchImpl,
     SIGN_IN_FAILED_MESSAGE,
     asSession

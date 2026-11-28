@@ -20,19 +20,12 @@ import { Link, PATHS } from '../../../lib/router';
 import { useDocumentTitle } from '../../../lib/title';
 import { AuditTabs } from '../AuditTabs';
 import { BeforeAfter } from './BeforeAfter';
-import { callAudit, type AuditOutcome } from '../audit-call';
+import { callAudit, type AuditOutcome, type Fetch } from '../audit-call';
 import { CompetitorsPanel } from './CompetitorsPanel';
 import { FixOptionsPanel } from './FixOptionsPanel';
 import { CopyVariantsPanel } from './CopyVariantsPanel';
 import { loadVersion, versionsOldestFirst } from '../saved/saved-api';
-import {
-  SHARE_LANGUAGES,
-  createPreview,
-  languageName,
-  previewUrl,
-  type Fetch,
-  type ShareLanguage,
-} from '../saved/share-api';
+import { SHARE_LANGUAGES, createPreview, languageName, previewUrl, type ShareLanguage } from '../saved/share-api';
 
 /** The homepage panel: idle, being written, written, or refused. */
 export type PreviewState =

@@ -201,6 +201,11 @@ function positiveWhole(value: string | undefined, fallback: number): number {
   return Number.isSafeInteger(n) && n >= 1 ? n : fallback;
 }
 
+/** RUNNER_BETA: `1` or `true` turns on shared-beta mode; anything else, or unset, leaves it off. */
+export function isBetaEnv(env: Record<string, string | undefined> = process.env): boolean {
+  return env.RUNNER_BETA === '1' || env.RUNNER_BETA === 'true';
+}
+
 /** Limits from RUNNER_BETA_RUNS_PER_VISITOR and RUNNER_BETA_RUNS_PER_DAY; unset or invalid values use the defaults. */
 export function betaLimitsFromEnv(env: Record<string, string | undefined> = process.env): BetaLimits {
   return {
@@ -414,7 +419,7 @@ export async function refusedTarget(
   const host = url.hostname.replace(/^\[|\]$/g, '');
   const why =
     'This shared copy can only check sites on the public internet, not addresses on the computer running it. Run the QA Tool on your own computer to check a local site.';
-  if (isPrivateHost(host) || isPrivateAddress(host)) return why;
+  if (isPrivateHost(host)) return why;
   if (net.isIP(host)) return null;
   try {
     const found = lookup

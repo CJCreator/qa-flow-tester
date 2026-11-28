@@ -18,10 +18,9 @@ import { SKIP_REASON_TEXT, SkippedPagesView } from './SkippedPagesView';
 import { loadCallerIsHelper } from '../saved/caller-access';
 import { getAuditResult, getPageContent } from './analysis-client';
 import { titleText } from './analysis-text';
+import type { Fetch } from '../audit-call';
 
 export { SKIP_REASON_TEXT, SkippedPagesView };
-
-type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 export type AnalysisLoad =
   { status: 'loading' } | { status: 'error'; message: string } | { status: 'loaded'; reply: AuditGetReply };

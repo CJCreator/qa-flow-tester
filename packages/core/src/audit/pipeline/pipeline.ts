@@ -46,7 +46,8 @@ import { AUDIT_AREAS, MARKETING_SIGNALS, countFindingRules } from '@qa/types';
 import { isAbortError, stopIfAborted } from '../../abort.js';
 import { makeCheckerFetch } from '../../checker-fetch.js';
 import type { HostPacer } from '../../host-pacer.js';
-import { isLocalOriginHost, type NetDeps } from '../../safe-net.js';
+import { isPrivateHost } from '../../address-class.js';
+import type { NetDeps } from '../../safe-net.js';
 import type { AuditStore } from '../store/audit-store.js';
 import type { AuditCrawlCheckpoint, AuditCrawlPage, AuditCrawlResult } from '../crawl/crawl.js';
 import { createFindingIdAllocator, uniqueIds } from '../analysis/finding-ids.js';
@@ -91,6 +92,7 @@ import {
 } from '../documents/write-all.js';
 import { areaGrades, labPerformanceScore, type CheckedAreas } from './grades.js';
 import type { AuditPageRecorder, RecordedPage } from './page-recorder.js';
+import { createLimiter, type Limiter } from '../../concurrency.js';
 import { createSkippedPageFindings, isSiteCausedSkip } from './skipped-findings.js';
 
 /** The site-level stage functions; the defaults are the real modules. Tests pass fakes. */
@@ -565,7 +567,7 @@ export async function runAuditPipeline(
     const urls = pages.map((p) => new URL(p.urlPath, origin).toString());
     // PageSpeed Insights is Google's service: a local or private site's addresses are never sent to it (ADR 0031).
     // Those pages fall back to this tool's own timing below.
-    const psiMayMeasure = !isLocalOriginHost(new URL(origin).hostname);
+    const psiMayMeasure = !isPrivateHost(new URL(origin).hostname);
     // PSI already asked during the crawl's lab work (T-404): its answers are used, nothing is measured twice.
     const psiInCrawl = recordedPages.some((r) => r.psiTried);
     const speeds =
@@ -1228,27 +1230,6 @@ export async function loadAuditCheckpoint(
 // AI page assessments during the crawl (T-429)
 // ---------------------------------------------------------------------------------------------------
 
-/** Runs `fn` when one of the limiter's places is free: one limiter bounds every AI request of a run. */
-export type AiLimiter = <T>(fn: () => Promise<T>) => Promise<T>;
-
-/** At most `limit` calls at once, in the order asked. */
-export function createAiLimiter(limit: number): AiLimiter {
-  const max = Math.max(1, Math.floor(limit));
-  let active = 0;
-  const waiting: Array<() => void> = [];
-  return async (fn) => {
-    if (active >= max) await new Promise<void>((resolve) => waiting.push(resolve));
-    else active++;
-    try {
-      return await fn();
-    } finally {
-      const next = waiting.shift();
-      if (next) next();
-      else active--;
-    }
-  };
-}
-
 /** A page's AI assessment made during the crawl, with the provisional findings it was given. */
 export interface StreamedAssessment {
   areas: AreaAssessment[];
@@ -1258,7 +1239,7 @@ export interface StreamedAssessment {
 
 export interface AuditAssessmentStream {
   /** Bounds the stream's requests and, passed to `runAuditPipeline`, the ones after the crawl too. */
-  readonly limiter: AiLimiter;
+  readonly limiter: Limiter;
   /** A recorded page whose read and lab work have ended: its own checks run and its assessment is queued. */
   add(page: RecordedPage): void;
   /** Sends what is still waiting for a batch, then resolves once every assessment has ended. Never rejects. */
@@ -1280,14 +1261,14 @@ export function createAuditAssessmentStream(opts: {
   signal?: AbortSignal;
   timeoutMs?: number;
   /** Default: `auditAiInFlight(ai.reportedLimit)`. */
-  limiter?: AiLimiter;
+  limiter?: Limiter;
   onPageAiProgress?: (path: string, status: 'done' | 'not-done') => void;
   /** Test seam. Default: assessPages. */
   assessPages?: typeof assessPages;
 }): AuditAssessmentStream {
   const ai = opts.ai;
   const assess = opts.assessPages ?? assessPages;
-  const limiter = opts.limiter ?? createAiLimiter(auditAiInFlight(ai.ok ? ai.ai.reportedLimit : undefined));
+  const limiter = opts.limiter ?? createLimiter(auditAiInFlight(ai.ok ? ai.ai.reportedLimit : undefined));
   const answers = new Map<string, StreamedAssessment>();
   const seen = new Set<string>();
   const pending: Promise<void>[] = [];

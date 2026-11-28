@@ -123,7 +123,7 @@ const FIX_RULE_TEXT: Partial<Record<DocumentLanguage, Readonly<Record<string, re
 };
 
 /**
- * The fixed fix-option text (`improve/fix-rules.ts`) of option `index` under `key` (`ruleTextKey`) in
+ * The fixed fix-option text (`@qa/types` `fix-rules.ts`) of option `index` under `key` (`ruleTextKey`) in
  * `language`; undefined when the language has none (the English text is then used, under the beta label).
  */
 export function fixRuleText(language: DocumentLanguage, key: string, index: number): FixRuleTextTa | undefined {

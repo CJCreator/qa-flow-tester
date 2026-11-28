@@ -1,4 +1,3 @@
-import type http from 'http';
 import {
   AUDIT_API,
   type AuditEditsPatch,
@@ -9,7 +8,15 @@ import {
 } from '@qa/types';
 import { mergeEditsPatch, pageContentName, validateAuditEditsPatch, type AuditStore } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
-import { AUDIT_NOT_FOUND, EDITS_NAME, readEdits, refuse, refuseStoreFailure, versionQuery } from './audit-common.js';
+import {
+  AUDIT_NOT_FOUND,
+  EDITS_NAME,
+  readEdits,
+  refuse,
+  refuseStoreFailure,
+  versionQuery,
+  refuseBadAuditBody,
+} from './audit-common.js';
 import { readJsonBody, sendJson } from './body.js';
 
 /** What the Audit Document rows need: the Website Audit store (G6). */
@@ -155,8 +162,8 @@ export function auditEditsRoutes(deps: AuditDocumentDeps): Route[] {
       let body: unknown;
       try {
         body = await readJsonBody<unknown>(c.req, MAX_EDITS_BODY_CHARS);
-      } catch {
-        return refuse(c.res, 400, 'ERR_INVALID_REQUEST', 'The edits are not valid JSON or are too large.');
+      } catch (err) {
+        return refuseBadAuditBody(c.res, err, 'The edits are not valid JSON.');
       }
       const checked = validateAuditEditsPatch(body);
       if (!checked.ok) {

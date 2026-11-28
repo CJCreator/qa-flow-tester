@@ -15,7 +15,7 @@ Every line must change what you do. Lines that don't get deleted.
   - `packages/core/`: Orchestrator, crawler, AI discovery agent, scoring, report generation
   - `packages/checkers/`: Audit checkers (Axe WCAG, security, SEO, design tokens, visual diff)
   - `packages/types/`: Shared TypeScript types & verdict definitions
-  - `docs/`: `docs/adr/` (ADRs), `docs/tickets/INDEX.md` (tickets tracker), `docs/ARCHITECTURE.md`
+  - `docs/`: `docs/adr/` (ADRs), `docs/ARCHITECTURE.md`. Open work: `PLAN.md` at the repo root
 
 ## 1. Work loop
 

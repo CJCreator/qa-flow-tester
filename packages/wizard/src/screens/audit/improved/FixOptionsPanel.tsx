@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
-import { AUDIT_API, auditPath, type AuditFinding, type FixOptionsReply } from '@qa/types/src/browser.js';
-// A leaf module with type-only imports: rule text only, no Node code.
 import {
+  AUDIT_API,
   DECIDED_BY_RULE,
+  auditPath,
   ruleFixOptions,
   topFindingsForOptions,
+  type AuditFinding,
   type FixOption,
-} from '@qa/core/src/audit/improve/fix-rules.js';
+  type FixOptionsReply,
+} from '@qa/types/src/browser.js';
 import { Spinner } from '../../../components/text';
 import { loadVersion } from '../saved/saved-api';
-import type { Fetch } from '../saved/share-api';
+import type { Fetch } from '../audit-call';
 
 const EFFORT_LABEL: Record<FixOption['effort'], string> = { S: 'small', M: 'medium', L: 'large' };
 

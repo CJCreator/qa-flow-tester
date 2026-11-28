@@ -21,7 +21,7 @@ import {
   type StoredAuditSettings,
 } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
-import { readJsonBody, sendJson } from './body.js';
+import { BODY_TOO_LARGE_MESSAGE, BodyTooLargeError, readJsonBody, sendJson } from './body.js';
 
 /** Largest settings body accepted (characters): the field caps add up to well under this. */
 export const MAX_AUDIT_SETTINGS_BODY_CHARS = 200_000;
@@ -121,9 +121,14 @@ export async function putAuditSettings(
   let body: unknown;
   try {
     body = await readJsonBody<unknown>(req, MAX_AUDIT_SETTINGS_BODY_CHARS);
-  } catch {
+  } catch (err) {
+    if (err instanceof BodyTooLargeError) {
+      const tooLarge: SettingsErrorReply = { error: BODY_TOO_LARGE_MESSAGE, code: 'ERR_INVALID_REQUEST' };
+      sendJson(res, 413, tooLarge);
+      return;
+    }
     const reply: SettingsErrorReply = {
-      error: 'The settings could not be read: send a JSON object of at most 200,000 characters.',
+      error: 'The settings could not be read: send a JSON object.',
       code: 'ERR_INVALID_REQUEST',
     };
     sendJson(res, 400, reply);

@@ -1,6 +1,7 @@
 import type { Page } from 'playwright';
 import type { RouteTelemetry } from '@qa/types';
 import { redactUrl } from './redact.js';
+import { sleep } from './timing.js';
 
 export interface NavigateOptions {
   /** Default 15000 for the first attempt */
@@ -247,7 +248,7 @@ export async function navigate(page: Page, url: string, options?: NavigateOption
         if (typeof page.waitForTimeout === 'function') {
           await page.waitForTimeout(retryDelayMs).catch(() => {});
         } else {
-          await new Promise((r) => setTimeout(r, retryDelayMs));
+          await sleep(retryDelayMs);
         }
       }
     }

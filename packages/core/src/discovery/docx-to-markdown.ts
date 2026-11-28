@@ -13,31 +13,38 @@ export const DOCX_MAX_ENTRIES = 500;
 export const DOCX_TIMEOUT_MS = 10_000;
 const MAX_WARNINGS = 20;
 
+/** A Word file the converter refuses; its message is a plain sentence meant for the person who sent it. */
+export class DocxRefusedError extends Error {
+  override name = 'DocxRefusedError';
+}
+
 const BAD_FILE = 'This Word file could not be read. Save it again as .docx and try once more.';
 
 /** Reads the ZIP end record and central directory by hand. Throws a plain-sentence Error. */
 export function checkZip(bytes: Uint8Array): void {
   if (bytes.length < 22 || bytes[0] !== 0x50 || bytes[1] !== 0x4b || bytes[2] !== 0x03 || bytes[3] !== 0x04) {
-    throw new Error('This file is not a Word (.docx) document. Save it as .docx, .md or .txt.');
+    throw new DocxRefusedError('This file is not a Word (.docx) document. Save it as .docx, .md or .txt.');
   }
   if (bytes.length > DOCX_MAX_BYTES) {
-    throw new Error('This Word file is larger than 2 MB. Remove images or split it into smaller files.');
+    throw new DocxRefusedError('This Word file is larger than 2 MB. Remove images or split it into smaller files.');
   }
   const { view, entries, cdOffset } = readCentralDirectory(bytes);
   if (entries > DOCX_MAX_ENTRIES) {
-    throw new Error(`This Word file holds more than ${DOCX_MAX_ENTRIES} parts. Save it again as a plain .docx.`);
+    throw new DocxRefusedError(
+      `This Word file holds more than ${DOCX_MAX_ENTRIES} parts. Save it again as a plain .docx.`
+    );
   }
   let pos = cdOffset;
   let total = 0;
   for (let n = 0; n < entries; n++) {
-    if (pos + 46 > bytes.length || view.getUint32(pos, true) !== 0x02014b50) throw new Error(BAD_FILE);
+    if (pos + 46 > bytes.length || view.getUint32(pos, true) !== 0x02014b50) throw new DocxRefusedError(BAD_FILE);
     const size = view.getUint32(pos + 24, true);
     if (size === 0xffffffff) {
-      throw new Error('This Word file expands to more than 20 MB. Split it into smaller files.');
+      throw new DocxRefusedError('This Word file expands to more than 20 MB. Split it into smaller files.');
     }
     total += size;
     if (total > DOCX_MAX_UNCOMPRESSED_BYTES) {
-      throw new Error('This Word file expands to more than 20 MB. Split it into smaller files.');
+      throw new DocxRefusedError('This Word file expands to more than 20 MB. Split it into smaller files.');
     }
     pos += 46 + view.getUint16(pos + 28, true) + view.getUint16(pos + 30, true) + view.getUint16(pos + 32, true);
   }
@@ -57,11 +64,11 @@ function readCentralDirectory(bytes: Uint8Array): { view: DataView; entries: num
       break;
     }
   }
-  if (eocd < 0) throw new Error(BAD_FILE);
+  if (eocd < 0) throw new DocxRefusedError(BAD_FILE);
   const entries = view.getUint16(eocd + 10, true);
   const cdOffset = view.getUint32(eocd + 16, true);
   if (entries === 0xffff || cdOffset === 0xffffffff) {
-    throw new Error('This Word file uses a ZIP format that is not supported. Save it again as .docx.');
+    throw new DocxRefusedError('This Word file uses a ZIP format that is not supported. Save it again as .docx.');
   }
   return { view, entries, cdOffset };
 }
@@ -75,39 +82,39 @@ export function checkInflatedSizes(bytes: Uint8Array): void {
   const { view, entries, cdOffset } = readCentralDirectory(bytes);
   let pos = cdOffset;
   for (let n = 0; n < entries; n++) {
-    if (pos + 46 > bytes.length || view.getUint32(pos, true) !== 0x02014b50) throw new Error(BAD_FILE);
+    if (pos + 46 > bytes.length || view.getUint32(pos, true) !== 0x02014b50) throw new DocxRefusedError(BAD_FILE);
     const flags = view.getUint16(pos + 8, true);
-    if ((flags & 1) !== 0) throw new Error(BAD_FILE);
+    if ((flags & 1) !== 0) throw new DocxRefusedError(BAD_FILE);
     const method = view.getUint16(pos + 10, true);
     const compressedSize = view.getUint32(pos + 20, true);
     const declared = view.getUint32(pos + 24, true);
     const localOffset = view.getUint32(pos + 42, true);
 
     if (localOffset + 30 > bytes.length || view.getUint32(localOffset, true) !== 0x04034b50) {
-      throw new Error(BAD_FILE);
+      throw new DocxRefusedError(BAD_FILE);
     }
     const localNameLen = view.getUint16(localOffset + 26, true);
     const localExtraLen = view.getUint16(localOffset + 28, true);
     const dataOffset = localOffset + 30 + localNameLen + localExtraLen;
     if (dataOffset + compressedSize > bytes.length) {
-      throw new Error(BAD_FILE);
+      throw new DocxRefusedError(BAD_FILE);
     }
 
     if (method === 0) {
-      if (compressedSize !== declared) throw new Error(BAD_FILE);
+      if (compressedSize !== declared) throw new DocxRefusedError(BAD_FILE);
     } else if (method === 8) {
       const slice = bytes.subarray(dataOffset, dataOffset + compressedSize);
       let inflated: Uint8Array;
       try {
         inflated = inflateRawSync(slice, { maxOutputLength: declared + 1 });
       } catch {
-        throw new Error(BAD_FILE);
+        throw new DocxRefusedError(BAD_FILE);
       }
       if (inflated.length !== declared) {
-        throw new Error(BAD_FILE);
+        throw new DocxRefusedError(BAD_FILE);
       }
     } else {
-      throw new Error('This Word file uses a ZIP format that is not supported. Save it again as .docx.');
+      throw new DocxRefusedError('This Word file uses a ZIP format that is not supported. Save it again as .docx.');
     }
 
     pos += 46 + view.getUint16(pos + 28, true) + view.getUint16(pos + 30, true) + view.getUint16(pos + 32, true);
@@ -333,7 +340,7 @@ export async function docxToMarkdown(bytes: Uint8Array): Promise<{ text: string;
     );
     const timeout = new Promise<never>((_, reject) => {
       timer = setTimeout(
-        () => reject(new Error('Reading this Word file took too long. Split it into smaller files.')),
+        () => reject(new DocxRefusedError('Reading this Word file took too long. Split it into smaller files.')),
         DOCX_TIMEOUT_MS
       );
     });
@@ -347,7 +354,7 @@ export async function docxToMarkdown(bytes: Uint8Array): Promise<{ text: string;
     return { text, warnings };
   } catch (err) {
     if (err instanceof Error && /too long/.test(err.message)) throw err;
-    throw new Error(BAD_FILE);
+    throw new DocxRefusedError(BAD_FILE);
   } finally {
     if (timer) clearTimeout(timer);
   }

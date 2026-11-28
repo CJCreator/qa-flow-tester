@@ -145,6 +145,7 @@ describe('the browser-safe entry into @qa/types (T-211)', () => {
       'website-audit.js',
       'guards.js',
       'display.js',
+      'fix-rules.js',
     ]);
   });
 

@@ -1,23 +1,23 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeRoute, CrawlFrontier } from '../src/discovery/frontier.js';
+import { crawlRouteKey, CrawlFrontier } from '../src/discovery/frontier.js';
 
-describe('Frontier and normalizeRoute (T-112)', () => {
+describe('Frontier and crawlRouteKey (T-112)', () => {
   it('normalizes paths: lowercases, collapses duplicate slashes, trims trailing slash', () => {
-    const res = normalizeRoute('//Foo//Bar/', 'http://example.com');
+    const res = crawlRouteKey('//Foo//Bar/', 'http://example.com');
     expect(res.path).toBe('/foo/bar');
     expect(res.key).toBe('/foo/bar');
 
-    const root = normalizeRoute('/', 'http://example.com');
+    const root = crawlRouteKey('/', 'http://example.com');
     expect(root.path).toBe('/');
     expect(root.key).toBe('/');
   });
 
   it('drops query params by default, preserves only routeQueryParams when requested', () => {
-    const dropped = normalizeRoute('/search?q=shoes&sort=asc', 'http://example.com');
+    const dropped = crawlRouteKey('/search?q=shoes&sort=asc', 'http://example.com');
     expect(dropped.key).toBe('/search');
     expect(dropped.search).toBe('?q=shoes&sort=asc');
 
-    const kept = normalizeRoute('/search?sort=asc&q=shoes&ignore=1', 'http://example.com', {
+    const kept = crawlRouteKey('/search?sort=asc&q=shoes&ignore=1', 'http://example.com', {
       routeQueryParams: ['q', 'sort'],
     });
     // Allowed params are sorted for stability
@@ -25,29 +25,27 @@ describe('Frontier and normalizeRoute (T-112)', () => {
   });
 
   it('drops hash by default, preserves hash when includeHash is true', () => {
-    const dropped = normalizeRoute('/lab/hash#/two', 'http://example.com');
+    const dropped = crawlRouteKey('/lab/hash#/two', 'http://example.com');
     expect(dropped.key).toBe('/lab/hash');
     expect(dropped.hash).toBe('#/two');
 
-    const kept = normalizeRoute('/lab/hash#/two', 'http://example.com', {
+    const kept = crawlRouteKey('/lab/hash#/two', 'http://example.com', {
       includeHash: true,
     });
     expect(kept.key).toBe('/lab/hash#/two');
   });
 
   it('computes shapes: replaces digit runs, UUIDs, and hex tokens', () => {
-    expect(normalizeRoute('/lab/trap/1', 'http://example.com').shape).toBe('/lab/trap/:n');
-    expect(normalizeRoute('/lab/trap/999', 'http://example.com').shape).toBe('/lab/trap/:n');
+    expect(crawlRouteKey('/lab/trap/1', 'http://example.com').shape).toBe('/lab/trap/:n');
+    expect(crawlRouteKey('/lab/trap/999', 'http://example.com').shape).toBe('/lab/trap/:n');
 
-    expect(normalizeRoute('/items/550e8400-e29b-41d4-a716-446655440000', 'http://example.com').shape).toBe(
-      '/items/:id'
-    );
-    expect(normalizeRoute('/commit/a1b2c3d4e5', 'http://example.com').shape).toBe('/commit/:id');
+    expect(crawlRouteKey('/items/550e8400-e29b-41d4-a716-446655440000', 'http://example.com').shape).toBe('/items/:id');
+    expect(crawlRouteKey('/commit/a1b2c3d4e5', 'http://example.com').shape).toBe('/commit/:id');
 
-    const cal1 = normalizeRoute('/lab/calendar?month=2026-10', 'http://example.com', {
+    const cal1 = crawlRouteKey('/lab/calendar?month=2026-10', 'http://example.com', {
       routeQueryParams: ['month'],
     });
-    const cal2 = normalizeRoute('/lab/calendar?month=2026-11', 'http://example.com', {
+    const cal2 = crawlRouteKey('/lab/calendar?month=2026-11', 'http://example.com', {
       routeQueryParams: ['month'],
     });
     expect(cal1.shape).toBe('/lab/calendar?month=:n-:n');

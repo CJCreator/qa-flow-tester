@@ -17,7 +17,7 @@ import {
   type ShortlistOutcome,
   type ShortlistUpdate,
 } from '@qa/types/src/browser.js';
-import { withQuery, callAudit } from '../audit-call';
+import { withQuery, callAudit, type Fetch } from '../audit-call';
 import { count } from '../../../lib/format';
 import { watchAudit, type AuditEventSourceFactory } from '../start/audit-start-api';
 
@@ -27,8 +27,6 @@ import { watchAudit, type AuditEventSourceFactory } from '../start/audit-start-a
  * (`DELETE /api/audits/:id`) and the Shortlist (`GET|PUT /api/audits/:id/shortlist`, `GET /api/shortlist`).
  * Every refusal becomes a plain sentence safe to show as-is; status codes and raw errors never reach the screen.
  */
-
-export type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 export type SavedOutcome<T> = { ok: true; value: T } | { ok: false; message: string; code?: AuditErrorCode };
 

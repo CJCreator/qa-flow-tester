@@ -5,7 +5,8 @@ import { Page, PageHeader } from '../components/ui';
 import { useDocumentTitle } from '../lib/title';
 import { signInWithGoogle, type GoogleSignInResult } from './audit/saved/firebase-sign-in';
 import { buildTimeFirebaseConfig, helperSignIn } from './audit/saved/HelperSignInScreen';
-import { loadHelperStatus, type Fetch, type FirebaseWebConfig } from './audit/saved/helper-api';
+import type { Fetch } from './audit/audit-call';
+import { loadHelperStatus, type FirebaseWebConfig } from './audit/saved/helper-api';
 
 export const ACCOUNT_SIGN_IN_TEXT =
   'Sign in with your Google account to run a check-up. Your account keeps your daily limit and your reports, and nobody else can open them.';

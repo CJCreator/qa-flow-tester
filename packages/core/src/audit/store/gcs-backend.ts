@@ -6,6 +6,8 @@ import {
   type AuditStoreBackend,
   type DeletePrefixOptions,
 } from './backend.js';
+import { mapInFlight } from '../../concurrency.js';
+import { sleep } from '../../timing.js';
 
 /**
  * Cloud Storage backend over the JSON REST API (ADR 0036). No SDK: every request goes through the
@@ -35,11 +37,6 @@ const DELETE_IN_FLIGHT = 8;
 
 function isRetryableStatus(status: number): boolean {
   return status === 408 || status === 429 || status >= 500;
-}
-
-function sleep(ms: number): Promise<void> {
-  if (ms <= 0) return Promise.resolve();
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -355,15 +352,7 @@ export class GcsAuditStoreBackend implements AuditStoreBackend {
     const keys = await this.list(prefix);
     const toDelete = options.last !== undefined ? keys.filter((k) => k !== options.last) : keys;
     // A few at once: an audit has hundreds of objects and the audit lock is held while they go.
-    let next = 0;
-    const worker = async (): Promise<void> => {
-      for (;;) {
-        const key = toDelete[next++];
-        if (key === undefined) return;
-        await this.deleteObject(key);
-      }
-    };
-    await Promise.all(Array.from({ length: Math.min(DELETE_IN_FLIGHT, toDelete.length) }, () => worker()));
+    await mapInFlight(toDelete, DELETE_IN_FLIGHT, (key) => this.deleteObject(key));
     if (options.last !== undefined) {
       // Only once everything else is gone: a failure above leaves the record, so the delete can be run again.
       await this.deleteObject(options.last);

@@ -32,7 +32,7 @@ import {
   type SectionEdit,
 } from '@qa/types';
 import type { Route, RouteContext } from './route.js';
-import { readJsonBody, sendJson } from './body.js';
+import { BODY_TOO_LARGE_MESSAGE, BodyTooLargeError, readJsonBody, sendJson } from './body.js';
 
 /** Largest models body (characters): four stages of at most 200 characters each fit many times over. */
 export const AUDIT_AI_MODELS_BODY_MAX = 20_000;
@@ -180,14 +180,18 @@ function refuseRewrite(res: http.ServerResponse, failure: RewriteOpFailure): voi
 // ---------------------------------------------------------------------------------------------------
 // Input
 
-class BadBody extends Error {}
+class BadBody extends Error {
+  constructor(readonly tooLarge = false) {
+    super('Bad body');
+  }
+}
 
 async function readBody(req: http.IncomingMessage, maxChars: number): Promise<Record<string, unknown>> {
   let body: unknown;
   try {
     body = await readJsonBody<unknown>(req, maxChars);
-  } catch {
-    throw new BadBody();
+  } catch (err) {
+    throw new BadBody(err instanceof BodyTooLargeError);
   }
   if (body === null || typeof body !== 'object' || Array.isArray(body)) throw new BadBody();
   return body as Record<string, unknown>;
@@ -278,7 +282,8 @@ export function createAuditAiRoutes(deps: AuditAiRouteDeps): Route[] {
       } catch (err) {
         if (ctx.res.headersSent || ctx.res.writableEnded || ctx.res.destroyed) return;
         if (err instanceof BadBody) {
-          refuse(ctx.res, 400, 'ERR_INVALID_REQUEST', 'Send a JSON object no larger than the limit.');
+          if (err.tooLarge) refuse(ctx.res, 413, 'ERR_INVALID_REQUEST', BODY_TOO_LARGE_MESSAGE);
+          else refuse(ctx.res, 400, 'ERR_INVALID_REQUEST', 'Send a JSON object.');
           return;
         }
         sendJson(ctx.res, 500, { error: FAILED });

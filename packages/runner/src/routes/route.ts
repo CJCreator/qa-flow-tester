@@ -51,9 +51,6 @@ export function sendNotFound(res: http.ServerResponse): void {
   res.end(JSON.stringify({ error: 'Not found' }));
 }
 
-export const notFound = sendNotFound;
-export const fallbackNotFound = sendNotFound;
-
 /** A matched row and its path parameters. */
 export interface RouteMatch {
   route: Route;

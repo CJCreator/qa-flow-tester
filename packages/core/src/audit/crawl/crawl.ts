@@ -23,6 +23,7 @@ import {
   type BrowserManager,
 } from '../../browser.js';
 import { isIpLiteral } from '../../address-class.js';
+import { settleOrGiveUp } from '../../timing.js';
 import { blockChanges } from '../../live-site.js';
 import {
   defaultNetDeps,
@@ -341,16 +342,9 @@ async function pinSiteHosts(start: URL, deps: Pick<NetDeps, 'lookup'>): Promise<
   return rules;
 }
 
-/** Closes the audit's own browser; one that hangs is left after 3 s, as BrowserManager.close does. */
+/** Closes the audit's own browser; one that hangs is left after 3 s, as BrowserManager.close does (both use settleOrGiveUp). */
 async function closeBrowser(browser: Pick<Browser, 'close'>): Promise<void> {
-  let timer: NodeJS.Timeout | undefined;
-  await Promise.race([
-    browser.close().catch(() => {}),
-    new Promise<void>((resolve) => {
-      timer = setTimeout(resolve, 3000);
-    }),
-  ]);
-  clearTimeout(timer);
+  await settleOrGiveUp(browser.close(), 3000);
 }
 
 export async function runAuditCrawl(request: AuditRequest, opts: AuditCrawlOptions = {}): Promise<AuditCrawlResult> {

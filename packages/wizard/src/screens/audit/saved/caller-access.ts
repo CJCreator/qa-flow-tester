@@ -5,7 +5,7 @@
  * every action and the runner still refuses what a Helper may not do.
  */
 
-type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
+import type { Fetch } from '../audit-call';
 
 export async function loadCallerIsHelper(fetchImpl: Fetch = fetch): Promise<boolean> {
   try {

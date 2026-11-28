@@ -8,7 +8,7 @@ import {
   type AuditSettingsUpdate,
   type CompanyDetails,
 } from '@qa/types/src/browser.js';
-import { callAudit } from '../audit-call';
+import { callAudit, type Fetch } from '../audit-call';
 
 /**
  * The document settings screen's calls to the runner (REQ-027, REQ-019, REQ-018): the saved settings and
@@ -16,8 +16,6 @@ import { callAudit } from '../audit-call';
  * only the fields that changed; null puts a field's default back. Every refusal becomes a plain sentence
  * safe to show as-is.
  */
-
-export type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 export type SettingsOutcome<T> = { ok: true; value: T } | { ok: false; message: string; code?: AuditErrorCode };
 

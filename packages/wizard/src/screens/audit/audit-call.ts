@@ -4,6 +4,9 @@ import { AUDIT_ERROR_CODES, isRecord, type AuditErrorCode } from '@qa/types/src/
 export const NOT_ANSWERING =
   'The tool is not answering. Check your connection and that the tool is still running, then try again.';
 
+/** The `fetch` a screen's request functions take, so a test can hand in a fake. */
+export type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
+
 /** True for a code the runner's Website Audit routes can return. */
 export function isAuditErrorCode(value: unknown): value is AuditErrorCode {
   return typeof value === 'string' && (AUDIT_ERROR_CODES as readonly string[]).includes(value);
@@ -17,6 +20,11 @@ export function withQuery(path: string, query: Record<string, string | number | 
   return text === '' ? path : `${path}?${text}`;
 }
 
+/** A request init that sends `body` as JSON with `method`. */
+export function jsonInit(method: string, body: unknown): RequestInit {
+  return { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+}
+
 /** What a Website Audit request gives a screen: the accepted value, or one sentence to show (and the code). */
 export type AuditOutcome<T> = { ok: true; value: T } | { ok: false; message: string; code?: AuditErrorCode };
 
@@ -27,10 +35,12 @@ export type AuditOutcome<T> = { ok: true; value: T } | { ok: false; message: str
 export async function callAudit<T>(
   url: string,
   init: RequestInit,
-  fetchImpl: (input: string, init?: RequestInit) => Promise<Response>,
+  fetchImpl: Fetch,
   fallback: string,
   accept: (body: unknown) => T | null,
-  refusals: Partial<Record<AuditErrorCode, string>>
+  refusals: Partial<Record<AuditErrorCode, string>>,
+  /** False for a screen that never shows the runner's own error text: a refusal without its own sentence gives `fallback`. */
+  showRunnerError = true
 ): Promise<AuditOutcome<T>> {
   let res: Response;
   try {
@@ -51,6 +61,9 @@ export async function callAudit<T>(
   const refusal = isRecord(body) ? body : {};
   const code = isAuditErrorCode(refusal.code) ? refusal.code : undefined;
   if (code && refusals[code]) return { ok: false, message: refusals[code]!, code };
-  const error = typeof refusal.error === 'string' && refusal.error.trim() !== '' ? refusal.error.trim() : fallback;
+  const error =
+    showRunnerError && typeof refusal.error === 'string' && refusal.error.trim() !== ''
+      ? refusal.error.trim()
+      : fallback;
   return { ok: false, message: error, code };
 }

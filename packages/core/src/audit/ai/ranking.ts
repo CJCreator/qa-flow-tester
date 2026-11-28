@@ -107,13 +107,11 @@ export function scoreFindings(findings: ReadonlyArray<UnscoredAuditFinding | Aud
   });
 }
 
-const RANK: Record<AuditScale, number> = { high: 0, medium: 1, low: 2 };
-
 function scaleRank(value: unknown, field: 'impact' | 'effort', id: string): number {
   if (typeof value !== 'string' || !(AUDIT_SCALE as readonly string[]).includes(value)) {
     throw new TypeError(`Finding ${id} has no valid ${field} (high, medium or low).`);
   }
-  return RANK[value as AuditScale];
+  return AUDIT_SCALE.indexOf(value as AuditScale);
 }
 
 /** Plain code-unit comparison: the same in every locale. */

@@ -6,7 +6,7 @@ import {
   type PlanPageTest,
   type SpecGapCode,
 } from '@qa/types';
-import type { ParsedRequirementHint } from '../discovery/context-parser.js';
+import type { ParsedRequirementHint } from '@qa/types';
 import { SafetyFilter } from '../discovery/safety-filter.js';
 
 /**

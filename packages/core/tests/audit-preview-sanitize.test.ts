@@ -104,7 +104,9 @@ describe('preview sanitiser: hostile AI output', () => {
     const html = render('<h1>Fresh vegetables</h1>');
     expect(html).toMatch(/<body>\n<p id="qa-preview-note" role="note">Preview of suggested changes/);
     expect(html).toContain('<meta name="robots" content="noindex, nofollow">');
-    expect(html).toMatch(/<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:;/);
+    expect(html).toMatch(
+      /<meta http-equiv="Content-Security-Policy" content="default-src &#039;none&#039;; img-src data:;/
+    );
     expect(html).not.toMatch(/Ready to release|Not ready yet|release verdict/i);
   });
 });
@@ -217,7 +219,8 @@ describe('style hashes (DEC-008)', () => {
 
   it("the page's own meta policy carries the same hash and no unsafe-inline", () => {
     const html = render('<h1>Hi</h1>');
-    const meta = /<meta http-equiv="Content-Security-Policy" content="([^"]*)">/.exec(html)?.[1] ?? '';
+    const meta =
+      /<meta http-equiv="Content-Security-Policy" content="([^"]*)">/.exec(html)?.[1]?.replaceAll('&#039;', "'") ?? '';
     for (const text of styleTexts(html)) expect(meta).toContain(sha(text));
     expect(meta).not.toContain('unsafe-inline');
   });
@@ -226,7 +229,8 @@ describe('style hashes (DEC-008)', () => {
     const html = render('<style>.a { color: red }</style><p class="a">x</p>');
     const texts = styleTexts(html);
     expect(texts.length).toBe(2);
-    const meta = /<meta http-equiv="Content-Security-Policy" content="([^"]*)">/.exec(html)?.[1] ?? '';
+    const meta =
+      /<meta http-equiv="Content-Security-Policy" content="([^"]*)">/.exec(html)?.[1]?.replaceAll('&#039;', "'") ?? '';
     const csp = previewCspForHtml(html);
     for (const text of texts) {
       expect(csp).toContain(sha(text));

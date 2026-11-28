@@ -12,10 +12,10 @@ import {
   loadModels,
   modelsUpdate,
   saveModels,
-  type Fetch,
   type ModelsDraft,
   type ModelsState,
 } from './stage-models-api';
+import type { Fetch } from '../audit-call';
 
 const NO_DEFAULT = 'none set for your AI Provider';
 

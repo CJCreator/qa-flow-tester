@@ -29,8 +29,8 @@ import {
   type VariantAxeScan,
 } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
-import { auditRow, readEdits, versionQuery } from './audit-common.js';
-import { sendJson } from './body.js';
+import { auditRow, readEdits, refuseBadAuditBody, versionQuery } from './audit-common.js';
+import { readRawBody, sendJson } from './body.js';
 import {
   AUDIT_FORBIDDEN,
   AUDIT_NOT_FOUND,
@@ -60,16 +60,6 @@ export interface AuditImproveRouteDeps {
   /** The quality gate's axe scan (T-414); default: a lab browser per batch. */
   scanAxe?: VariantAxeScan;
   now?: () => Date;
-}
-
-async function readBody(req: http.IncomingMessage): Promise<string> {
-  if (typeof req.setEncoding === 'function') req.setEncoding('utf8');
-  let body = '';
-  for await (const chunk of req) {
-    body += chunk;
-    if (body.length > MAX_IMPROVE_BODY_CHARS) throw new Error('too large');
-  }
-  return body;
 }
 
 /** The store's files of one version, as core's ImproveIo. */
@@ -115,10 +105,10 @@ export function auditImproveRoutes(deps: AuditImproveRouteDeps): Route[] {
       if (!caller.owner) return refuse(res, 403, 'ERR_FORBIDDEN', AUDIT_FORBIDDEN);
       let raw: unknown;
       try {
-        const text = await readBody(c.req);
+        const text = await readRawBody(c.req, MAX_IMPROVE_BODY_CHARS);
         raw = text.trim() === '' ? {} : JSON.parse(text);
-      } catch {
-        return refuse(res, 400, 'ERR_INVALID_REQUEST', 'The request is not valid JSON, or too large.');
+      } catch (err) {
+        return refuseBadAuditBody(res, err, 'The request is not valid JSON.');
       }
       const wanted = raw && typeof raw === 'object' ? (raw as { version?: unknown }).version : undefined;
       if (wanted !== undefined && (typeof wanted !== 'number' || !Number.isInteger(wanted) || wanted < 1))

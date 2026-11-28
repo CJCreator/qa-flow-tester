@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { Page } from 'playwright';
 import { BREAKPOINT_VIEWPORTS } from '../../browser.js';
 import { pageSlug } from '../store/keys.js';
+import { resolveInside } from '../../fs-inside.js';
 
 /**
  * The 1440 px screenshot of a Sample Page (T-431, ADR 0049), taken on the page the lab work already has open:
@@ -26,10 +27,9 @@ export async function recordDesktopShot(page: Page, versionDir: string, urlPath:
     previous = null;
   }
   try {
-    const root = path.resolve(versionDir);
     const rel = desktopScreenshotFile(urlPath);
-    const abs = path.resolve(root, rel);
-    if (path.relative(root, abs).startsWith('..')) return null;
+    const abs = resolveInside(versionDir, rel);
+    if (!abs) return null;
     await page.setViewportSize(DESKTOP);
     await page.evaluate(
       () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))

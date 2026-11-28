@@ -9,7 +9,7 @@ import type {
   TestCaseExpectations,
   TestCaseStep,
 } from '@qa/types';
-import type { ParsedRequirementHint } from '../discovery/context-parser.js';
+import type { ParsedRequirementHint } from '@qa/types';
 import { SafetyFilter } from '../discovery/safety-filter.js';
 import { needsTestCopy } from '../live-site.js';
 import type { PlannerForm } from './ai-planner.js';

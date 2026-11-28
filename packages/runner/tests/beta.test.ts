@@ -8,7 +8,15 @@ import http from 'http';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { RunnerServer } from '../src/server.js';
-import { refusedTarget, claimBetaRun, betaLimitsFromEnv, resetBetaUsage, sessionFor, pinSession } from '../src/beta.js';
+import {
+  refusedTarget,
+  claimBetaRun,
+  betaLimitsFromEnv,
+  isBetaEnv,
+  resetBetaUsage,
+  sessionFor,
+  pinSession,
+} from '../src/beta.js';
 import type { OpenRouterClient } from '@qa/core';
 
 const PORT = 3571;
@@ -213,7 +221,8 @@ describe('A runner shared as a beta', () => {
     const answer = await call('POST', '/api/runner/preflight', cookie, {
       targetUrl: 'https://example.com/' + 'a'.repeat(5_100_000),
     });
-    expect(answer.status).toBe(400);
+    expect(answer.status).toBe(413);
+    expect(JSON.parse(answer.body).error).toBe('The request is too large.');
   });
 });
 
@@ -395,6 +404,13 @@ describe('beta limits', () => {
     expect(claimBetaRun('unknown-id', { limits })).toBeNull();
     expect(claimBetaRun(undefined, { limits })).toBeNull();
     expect(claimBetaRun(undefined, { limits })?.scope).toBe('day');
+  });
+
+  it('RUNNER_BETA: 1 or true turns beta on, the CLI and the CI check-up read it the same way', () => {
+    expect(isBetaEnv({ RUNNER_BETA: '1' })).toBe(true);
+    expect(isBetaEnv({ RUNNER_BETA: 'true' })).toBe(true);
+    for (const off of [undefined, '', '0', 'false', 'TRUE', 'yes'])
+      expect(isBetaEnv({ RUNNER_BETA: off }), String(off)).toBe(false);
   });
 
   it('beta limits: env values set the caps, unset uses 5 and 40, invalid values fall back', () => {

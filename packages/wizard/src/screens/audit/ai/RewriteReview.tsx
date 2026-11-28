@@ -18,8 +18,8 @@ import {
   markCopiedPhrases,
   wordCountText,
   writeNewCopy,
-  type Fetch,
 } from './rewrite-api';
+import type { Fetch } from '../audit-call';
 
 export const AUDIT_DOCUMENTS_ONLY = 'New copy goes into the Audit Documents only, never onto the site.';
 export const APPROVE_FIRST = 'Approve the rewrite first. Nothing is sent to the AI before that.';

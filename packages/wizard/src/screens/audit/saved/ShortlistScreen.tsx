@@ -14,9 +14,9 @@ import {
   listShortlist,
   readMarkFilter,
   readOutcomeFilter,
-  type Fetch,
   type ShortlistFilters,
 } from './saved-api';
+import type { Fetch } from '../audit-call';
 
 export type ShortlistLoad =
   { status: 'loading' } | { status: 'failed'; message: string } | { status: 'loaded'; items: ShortlistListItem[] };

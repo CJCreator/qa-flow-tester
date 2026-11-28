@@ -17,8 +17,8 @@ import {
   permissionText,
   removeHelper,
   withView,
-  type Fetch,
 } from './helper-api';
+import type { Fetch } from '../audit-call';
 
 const PERMISSION_HINT: Readonly<Record<HelperPermission, string>> = {
   view: 'Open the Website Audit and read its documents.',

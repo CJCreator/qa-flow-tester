@@ -28,3 +28,4 @@ export * from './website-audit.js';
 export * from './stored-plan.js';
 export * from './guards.js';
 export * from './display.js';
+export * from './fix-rules.js';

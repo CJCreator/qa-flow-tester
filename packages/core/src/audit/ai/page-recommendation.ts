@@ -32,7 +32,8 @@ import type {
 } from '@qa/types';
 import { AUDIT_AREAS } from '@qa/types';
 import { stopIfAborted } from '../../abort.js';
-import { parseJsonAnswer } from '../../plan/ai-planner.js';
+import { mapInFlight } from '../../concurrency.js';
+import { parseJsonAnswer } from '../../ai/json-answer.js';
 import { logAiFailure, type AreaGrades } from './assessment.js';
 import { CLAIM_WORDS_PROMPT as NOT_ALLOWED, findClaimWords } from './claim-words.js';
 import {
@@ -94,24 +95,12 @@ export async function recommendPages(input: RecommendPagesInput, ai: AuditAiReso
     seen.add(page.urlPath);
     return true;
   });
-  const out: PageRecommendation[] = new Array(pages.length);
-  let next = 0;
-  const worker = async (): Promise<void> => {
-    for (;;) {
-      const i = next++;
-      if (i >= pages.length) return;
-      const page = pages[i];
-      stopIfAborted(input.signal);
-      if (page.findings.length === 0 || !ai.ok) {
-        out[i] = ruleRecommendation(page);
-        continue;
-      }
-      const proposed = await askForPage(ai.ai, page, input);
-      out[i] = proposed ?? ruleRecommendation(page);
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(RECOMMEND_IN_FLIGHT, pages.length) }, () => worker()));
-  return out;
+  return mapInFlight(pages, RECOMMEND_IN_FLIGHT, async (page) => {
+    stopIfAborted(input.signal);
+    if (page.findings.length === 0 || !ai.ok) return ruleRecommendation(page);
+    const proposed = await askForPage(ai.ai, page, input);
+    return proposed ?? ruleRecommendation(page);
+  });
 }
 
 /** The recommendation that applies to a page: its own for a Sample Page, its Sample Page's for a covered one. */
