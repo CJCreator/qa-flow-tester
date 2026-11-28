@@ -289,6 +289,22 @@ export function resolveTargetUrl(
 }
 
 /**
+ * The failure text a person sees in a live update or the status page. A typed error with an `ERR_` code
+ * (sign-in failed, site blocked, address refused...) carries a sentence written for them, so its redacted text
+ * is kept; anything else is internal, so it gets `fallback` and the redacted detail goes to the server log.
+ * The browser-launch error is internal too: its message can hold file paths.
+ */
+export function failureText(err: unknown, redacted: string, fallback: string): string {
+  const code = (err as { code?: unknown } | null | undefined)?.code;
+  if (typeof code === 'string' && code.startsWith('ERR_') && code !== 'ERR_BROWSER_LAUNCH' && redacted) return redacted;
+  console.warn('[Release check-up] Failure detail:', redacted);
+  return fallback;
+}
+
+/** The fixed sentence for a Check-up that stopped on an internal error. */
+export const RUN_FAILED_TEXT = 'The Check-up stopped because of a problem on our side. Try again.';
+
+/**
  * Redacts secrets from error messages: passwords, tokens, email usernames, custom header values,
  * tunnel authorization, and session cookies. Also strips URL query strings so query secrets never leak.
  */
@@ -528,12 +544,16 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
         await session.plan.clear(context.runId);
         throw err;
       }
-      const msg = redactedMessage(err, {
-        roles: context.profile?.roles,
-        customHeaders: context.customHeaders || session.secrets.headers,
-        tunnelAuth: context.tunnelAuth || session.secrets.tunnelAuth,
-        targetUrl: context.targetUrl,
-      });
+      const msg = failureText(
+        err,
+        redactedMessage(err, {
+          roles: context.profile?.roles,
+          customHeaders: context.customHeaders || session.secrets.headers,
+          tunnelAuth: context.tunnelAuth || session.secrets.tunnelAuth,
+          targetUrl: context.targetUrl,
+        }),
+        RUN_FAILED_TEXT
+      );
       await session.plan.save(record).catch(logPlanSaveFailure);
       session.run.setPhase('awaiting-review');
       session.run.setIsRunning(true);
@@ -1134,12 +1154,16 @@ export function createCheckupRun(session: CheckupSession, deps: RunDeps = {}): C
         .catch((err: unknown) => {
           if (generation !== session.run.generation || isAbortError(err)) return;
           session.secrets.savedSessions.delete(runId);
-          const msg = redactedMessage(err, {
-            roles: body.roles,
-            customHeaders: session.secrets.headers,
-            tunnelAuth: session.secrets.tunnelAuth,
-            targetUrl: session.run.targetUrl || undefined,
-          });
+          const msg = failureText(
+            err,
+            redactedMessage(err, {
+              roles: body.roles,
+              customHeaders: session.secrets.headers,
+              tunnelAuth: session.secrets.tunnelAuth,
+              targetUrl: session.run.targetUrl || undefined,
+            }),
+            RUN_FAILED_TEXT
+          );
           const code = (err as { code?: string } | undefined)?.code || 'ERR_DISCOVERY_FAILED';
           session.report.setError(msg, code);
           session.run.setPhase('failed');

@@ -105,13 +105,14 @@ function deps(extra: Partial<AuditCompetitorRouteDeps> = {}): AuditCompetitorRou
 async function call(
   rows: Route[],
   key: keyof typeof AUDIT_COMPETITOR_API,
-  options: { body?: unknown; search?: string } = {}
+  options: { body?: unknown; raw?: string; search?: string } = {}
 ): Promise<MockResponse> {
   const { method, path: pattern } = AUDIT_COMPETITOR_API[key];
   const row = rows.find((r) => r.method === method && r.path === pattern)!;
   const pathname = pattern.replace(':id', auditId);
   const params = (matchAuditPath(pattern, pathname) ?? {}) as Record<string, string>;
-  const raw = options.body === undefined ? [] : [JSON.stringify(options.body)];
+  const raw =
+    options.raw !== undefined ? [options.raw] : options.body === undefined ? [] : [JSON.stringify(options.body)];
   const req = Readable.from(raw) as unknown as http.IncomingMessage;
   Object.assign(req, { method, headers: {} });
   const res = new MockResponse();
@@ -185,6 +186,19 @@ describe('competitor rows', () => {
     expect(requested.some((r) => r.startsWith('192.168.'))).toBe(false);
     const got = await call(rows, 'getCompetitors');
     expect(got.json().competitors).toEqual(state);
+  });
+
+  it('answers 413 for a too-large body and for text that is not JSON; an empty body is read as {}', async () => {
+    const rows = auditCompetitorRoutes(deps());
+    const big = await call(rows, 'crawlCompetitors', { raw: JSON.stringify({ hosts: ['x'.repeat(5000)] }) });
+    expect(big.statusCode).toBe(413);
+    expect(big.json().error).toBe('The request is too large.');
+    const bad = await call(rows, 'crawlCompetitors', { raw: '{nope' });
+    expect(bad.statusCode).toBe(400);
+    expect(bad.json().error).toBe('The request is not valid JSON.');
+    const empty = await call(rows, 'crawlCompetitors', { raw: '  ' });
+    expect(empty.statusCode).toBe(400);
+    expect(empty.json().error).not.toMatch(/JSON|large/);
   });
 
   it('crawl: only kept, checked candidates are read; a refused or unknown host is refused', async () => {

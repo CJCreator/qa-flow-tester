@@ -1,6 +1,7 @@
 import { ISSUE_TYPES } from '@qa/types';
 import { sanitizeInline } from './findings-contract.js';
-import { DEFAULT_IMAGE_BUDGET_BYTES, escapeHtml, imageSrc } from './html-report.js';
+import { DEFAULT_IMAGE_BUDGET_BYTES, imageSrc } from './html-report.js';
+import { escapeHtml } from './html-escape.js';
 import { documentedItemsLine, pageCoverageEntries, type Issue, type IssuesModel } from './issues-document.js';
 import { describeSource } from './source-wording.js';
 

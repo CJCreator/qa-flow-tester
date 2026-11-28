@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import type { BrowserContext, Locator, Page } from 'playwright';
+import { sleep } from './timing.js';
 import type {
   PreFlightResult as BasePreFlightResult,
   ProductProfile,
@@ -13,6 +14,7 @@ import type { SignInStep } from '@qa/types/src/signin.js';
 import type { BrowserManager } from './browser.js';
 import { debugLog } from './debug-log.js';
 import { navigate } from './navigate.js';
+import { isInside } from './fs-inside.js';
 import { GuardedFetchBlockedError, makeGuardedFetch } from './safe-net.js';
 import { isSameSite } from './same-site.js';
 
@@ -82,11 +84,6 @@ const OPENER_NAME = /^(log ?in|sign ?in)$/i;
 const NEXT_NAME = /^(next|continue)$/i;
 const SSO_NAME = /(continue|sign in|log in) with (google|microsoft|apple|github|sso)/i;
 const SEARCH_FIELD = /search/i;
-
-function isInside(child: string, parent: string): boolean {
-  const rel = path.relative(path.resolve(parent), path.resolve(child));
-  return !rel.startsWith('..') && !path.isAbsolute(rel);
-}
 
 function originsMatch(a: string, b: string): boolean {
   if (a === b) return true;
@@ -221,7 +218,7 @@ export class PreFlightChecker {
         if (err instanceof GuardedFetchBlockedError) return { ok: false, error: err.message };
         lastErr = err;
         if (attempt === 1) {
-          await new Promise((resolve) => setTimeout(resolve, 4000));
+          await sleep(4000);
         }
       } finally {
         clearTimeout(timeoutId);
@@ -672,7 +669,7 @@ export class PreFlightChecker {
         if (options?.browserManager && options?.authDir) {
           const slug = role.role.replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 40);
           const statePath = path.join(options.authDir, `${slug}.json`);
-          if (!isInside(statePath, options.authDir)) {
+          if (!isInside(options.authDir, statePath)) {
             throw new Error(`State path is outside authDir: ${statePath}`);
           }
 

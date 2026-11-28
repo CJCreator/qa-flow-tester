@@ -1,4 +1,5 @@
 import path from 'path';
+import { isInside } from '@qa/core';
 
 /**
  * The address (`/api/evidence/...`) of a file a report points at. An absolute path must be inside the output
@@ -9,8 +10,8 @@ export function evidenceUrl(outputDir: string, runId: string, file: string | und
   if (!file) return undefined;
   let rel: string;
   if (path.isAbsolute(file)) {
+    if (!isInside(outputDir, file)) return undefined;
     rel = path.relative(outputDir, file);
-    if (rel === '' || rel.startsWith('..') || path.isAbsolute(rel)) return undefined;
   } else {
     rel = `runs/${runId}/${file}`;
   }

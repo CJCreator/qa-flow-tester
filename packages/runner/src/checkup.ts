@@ -49,8 +49,10 @@ import {
   redactSecretText,
 } from '@qa/core';
 import type { AIProviderType, Finding, ReleaseReport, SiteAspectGrades, RunStartBody } from '@qa/types';
+import { MAX_CONTEXT_DOCUMENTS, MAX_CONTEXT_DOC_BYTES } from './run-inputs.js';
 import { createCheckupSession, createCheckupRun, resolveAuthorization } from './session/checkup-session.js';
 import { createShutdown } from './shutdown.js';
+import { isBetaEnv } from './beta.js';
 
 export type FailOn = 'blocker' | 'major' | 'none' | 'standard';
 
@@ -106,8 +108,6 @@ export interface CheckupDocument {
   text: string;
 }
 
-const MAX_DOCS = 10;
-const MAX_DOC_BYTES = 500 * 1024;
 const MAX_DOCX_BYTES = 2 * 1024 * 1024;
 
 /** Hides `password: value` style text and secrets in a document before it leaves this machine. */
@@ -433,7 +433,7 @@ export function buildRunBody(args: CheckupArgs, documents: CheckupDocument[] = [
 
 /** Reads the spec documents. Throws a plain sentence when one cannot be used. */
 export async function loadCheckupDocuments(paths: string[]): Promise<CheckupDocument[]> {
-  if (paths.length > MAX_DOCS) throw new Error(`Use at most ${MAX_DOCS} documents.`);
+  if (paths.length > MAX_CONTEXT_DOCUMENTS) throw new Error(`Use at most ${MAX_CONTEXT_DOCUMENTS} documents.`);
   const docs: CheckupDocument[] = [];
   for (const p of paths) {
     const name = path.basename(p);
@@ -453,7 +453,7 @@ export async function loadCheckupDocuments(paths: string[]): Promise<CheckupDocu
       text = bytes.toString('utf8');
     }
     text = redactIngest(text);
-    if (Buffer.byteLength(text, 'utf8') > MAX_DOC_BYTES) {
+    if (Buffer.byteLength(text, 'utf8') > MAX_CONTEXT_DOC_BYTES) {
       throw new Error(`${name} is larger than 500 KB. Split it into smaller files.`);
     }
     docs.push({ name, text });
@@ -541,7 +541,7 @@ async function runSmokeCheckup(args: CheckupArgs): Promise<number> {
     healthPath: args.healthPath,
     expectedVersion: args.expectedVersion,
     confirmLive: args.confirmLive || args.staging,
-    beta: process.env.RUNNER_BETA === '1' || process.env.RUNNER_BETA === 'true',
+    beta: isBetaEnv(),
   });
   if (result.refused) {
     console.error(`[checkup] ${result.refused}`);

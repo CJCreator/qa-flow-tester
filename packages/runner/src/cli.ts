@@ -2,6 +2,7 @@ import { RunnerServer, redactedMessage } from './server.js';
 import { defaultUiApps } from './ui-static.js';
 import { isLoopbackBindHost } from './bind-host.js';
 import { createShutdown } from './shutdown.js';
+import { isBetaEnv } from './beta.js';
 
 // Render and Cloud Run say which port to listen on with PORT (Cloud Run sets K_SERVICE). It is only trusted there,
 // so a PORT set in someone's shell can't move a local runner.
@@ -29,7 +30,7 @@ const allowedOrigins = originList
       .filter(Boolean)
   : undefined;
 const accessToken = process.env.RUNNER_ACCESS_TOKEN?.trim() || undefined;
-const beta = process.env.RUNNER_BETA === '1';
+const beta = isBetaEnv();
 // Invalid or non-positive values fall back to the default inside the orchestrator.
 const stepTimeoutMs = process.env.RUNNER_STEP_TIMEOUT_MS ? Number(process.env.RUNNER_STEP_TIMEOUT_MS) : undefined;
 

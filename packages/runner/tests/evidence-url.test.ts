@@ -25,6 +25,11 @@ describe('evidenceUrl', () => {
     expect(evidenceUrl(out, 'run-1', '../../secret.png')).toBeUndefined();
   });
 
+  it('an absolute file whose name starts with two dots is inside; one that climbs out is not', () => {
+    expect(evidenceUrl(out, 'run-1', path.join(out, 'runs', '..notes.png'))).toBe('/api/evidence/runs/..notes.png');
+    expect(evidenceUrl(out, 'run-1', path.join(out, '..', 'x.png'))).toBeUndefined();
+  });
+
   it('no path gives nothing', () => {
     expect(evidenceUrl(out, 'run-1', undefined)).toBeUndefined();
     expect(evidenceUrl(out, 'run-1', '')).toBeUndefined();

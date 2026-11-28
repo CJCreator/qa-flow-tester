@@ -31,7 +31,9 @@ import { measureBrowserTiming, withLabProfile, type BrowserTimingResult } from '
 import { PSI_MAX_PAGES, type SampleSpeed } from '../ai/pagespeed.js';
 import type { AuditCrawlPage, RenderedPageContext } from '../crawl/crawl.js';
 import { GroupTracker } from '../../plan/sampling.js';
-import { isLocalOriginHost } from '../../safe-net.js';
+import { isPrivateHost } from '../../address-class.js';
+import { parseRetryAfter } from '../../navigate.js';
+import { createLimiter, type Limiter } from '../../concurrency.js';
 
 /** The page-level stage functions; the defaults are the real modules. Tests pass fakes. */
 export interface PageStages {
@@ -91,34 +93,6 @@ export interface RecordedPage {
   labDone?: boolean;
 }
 
-/** A Retry-After header in ms (seconds or an HTTP date); undefined when absent or unreadable. */
-function retryAfterMs(value: string | undefined): number | undefined {
-  if (!value) return undefined;
-  const seconds = Number(value);
-  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000);
-  const at = Date.parse(value);
-  return Number.isFinite(at) ? Math.max(0, at - Date.now()) : undefined;
-}
-
-/** A tiny pool: at most `limit` jobs at once, in the order queued. */
-class LabQueue {
-  private active = 0;
-  private readonly waiting: Array<() => void> = [];
-  constructor(private readonly limit: number) {}
-
-  async run(job: () => Promise<void>): Promise<void> {
-    if (this.active >= this.limit) await new Promise<void>((resolve) => this.waiting.push(resolve));
-    else this.active++;
-    try {
-      await job();
-    } finally {
-      const next = this.waiting.shift();
-      if (next) next();
-      else this.active--;
-    }
-  }
-}
-
 export class AuditPageRecorder {
   private readonly stages: PageStages;
   private readonly workDir: string;
@@ -132,7 +106,7 @@ export class AuditPageRecorder {
   private sampleCount = 0;
   private readonly pageSpeed?: PageRecorderOptions['pageSpeed'];
   private psiLeft: number;
-  private lab?: LabQueue;
+  private lab?: Limiter;
   private readonly labJobs: Promise<void>[] = [];
 
   constructor(opts: PageRecorderOptions) {
@@ -202,14 +176,14 @@ export class AuditPageRecorder {
     const openPage = context?.openPage;
     if (openPage && context?.defer && url) {
       const pageUrl = url;
-      this.lab ??= new LabQueue(Math.max(1, context.labInFlight ?? DEFAULT_LAB_IN_FLIGHT));
-      const lab = this.lab;
+      this.lab ??= createLimiter(Math.max(1, context.labInFlight ?? DEFAULT_LAB_IN_FLIGHT));
+      const runLab = this.lab;
       let job: Promise<void>;
       if (usePsi) {
         // PSI measures on Google's side, so the crawl's own page is checked now and the site is not loaded again.
         // Only a page PSI could not measure gets the timing load, on a page of its own.
         await this.checkOpenPage(page, entry, n);
-        job = lab.run(async () => {
+        job = runLab(async () => {
           if (context.signal?.aborted) return;
           if (await this.askPsi(entry, pageUrl)) {
             entry.labDone = true;
@@ -230,7 +204,7 @@ export class AuditPageRecorder {
         });
       } else {
         // The lab's one load is the cold, throttled timing load; axe and the phone layout then run on that page.
-        job = lab.run(async () => {
+        job = runLab(async () => {
           if (context.signal?.aborted) return;
           const lab = await this.loadForLab(openPage, pageUrl, context);
           if (!lab) {
@@ -330,7 +304,7 @@ export class AuditPageRecorder {
       const { response, loaded } = await context.pacer.run(host, load, context.signal);
       const status = response?.status();
       if (status === 429 || status === 503) {
-        context.pacer.slowDown(host, retryAfterMs(response?.headers()['retry-after']));
+        context.pacer.slowDown(host, parseRetryAfter(response?.headers()['retry-after']));
       }
       if (!response || status === undefined || status >= 400 || new URL(open.url()).host !== host) {
         throw new Error('lab load failed');
@@ -397,7 +371,7 @@ export class AuditPageRecorder {
   private claimPsi(url: string | undefined): boolean {
     if (!this.pageSpeed || this.psiLeft <= 0 || !url) return false;
     try {
-      if (isLocalOriginHost(new URL(url).hostname)) return false;
+      if (isPrivateHost(new URL(url).hostname)) return false;
     } catch {
       return false;
     }

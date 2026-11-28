@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import path from 'path';
-import { isInside } from '../src/fs-inside.js';
+import { isInside } from '@qa/core';
 import { cookieFrom, readCookie } from '../src/cookies.js';
 
 describe('isInside', () => {

@@ -6,7 +6,6 @@
  *
  * Handlers take their dependencies as arguments, so they run without a RunnerServer.
  */
-import type http from 'http';
 import {
   isDocumentLanguage,
   type AuditResult,
@@ -27,8 +26,8 @@ import {
   type AuditStore,
 } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
-import { auditRow, readEdits, versionQuery } from './audit-common.js';
-import { sendJson } from './body.js';
+import { auditRow, readEdits, refuseBadAuditBody, versionQuery } from './audit-common.js';
+import { readRawBody, sendJson } from './body.js';
 import {
   AUDIT_FORBIDDEN,
   AUDIT_NOT_FOUND,
@@ -97,17 +96,6 @@ export interface AuditPreviewRouteDeps {
   now?: () => Date;
 }
 
-async function readBody(req: http.IncomingMessage): Promise<string> {
-  // Decode as one UTF-8 stream: joining Buffer chunks one by one breaks a character split across two.
-  if (typeof req.setEncoding === 'function') req.setEncoding('utf8');
-  let body = '';
-  for await (const chunk of req) {
-    body += chunk;
-    if (body.length > MAX_PREVIEW_BODY_CHARS) throw new Error('too large');
-  }
-  return body;
-}
-
 /** `{ version?, language? }`, nothing else; an empty body is `{}`. */
 function checkCreateBody(raw: string): { version?: number; language?: DocumentLanguage } | string {
   let body: unknown;
@@ -157,9 +145,9 @@ export function auditPreviewRoutes(deps: AuditPreviewRouteDeps): Route[] {
 
       let raw: string;
       try {
-        raw = await readBody(c.req);
-      } catch {
-        return refuse(res, 400, 'ERR_INVALID_REQUEST', 'The request is too large.');
+        raw = await readRawBody(c.req, MAX_PREVIEW_BODY_CHARS);
+      } catch (err) {
+        return refuseBadAuditBody(res, err, 'The request is not valid.');
       }
       const body = checkCreateBody(raw);
       if (typeof body === 'string') return refuse(res, 400, 'ERR_INVALID_REQUEST', body);

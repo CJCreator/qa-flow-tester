@@ -19,7 +19,7 @@ import {
   type PageContent,
 } from '@qa/types';
 import type { Route } from './route.js';
-import { sendJson } from './body.js';
+import { BODY_TOO_LARGE_MESSAGE, BodyTooLargeError, sendJson } from './body.js';
 
 const VERSION = /^[1-9][0-9]{0,6}$/;
 
@@ -48,7 +48,8 @@ export function refuse(
   status: number,
   code: AuditErrorCode,
   error: string,
-  extra?: { fields?: AuditErrorReply['fields']; running?: AuditErrorReply['running'] }
+  extra?: { fields?: AuditErrorReply['fields']; running?: AuditErrorReply['running'] },
+  headers?: Record<string, string>
 ): void {
   const body: AuditErrorReply = {
     error,
@@ -56,11 +57,14 @@ export function refuse(
     ...(extra?.fields ? { fields: extra.fields } : {}),
     ...(extra?.running ? { running: extra.running } : {}),
   };
-  sendJson(res, status, body);
+  sendJson(res, status, body, headers);
 }
 
 export const AUDIT_NOT_FOUND = 'This Website Audit was not found. It may have been deleted.';
 export const INVALID_REQUEST = 'The request is not valid.';
+
+/** The one 500 sentence for a store failure, unless a route names its own. */
+const DEFAULT_STORE_FAILED = 'The saved audits could not be read or changed. Try again.';
 
 export interface StoreFailureSentences {
   notFound?: string;
@@ -71,18 +75,30 @@ export interface StoreFailureSentences {
 export function refuseStoreFailure(
   res: http.ServerResponse,
   err: unknown,
-  sentences: StoreFailureSentences = {}
+  sentences: StoreFailureSentences = {},
+  headers?: Record<string, string>
 ): void {
+  const notFound = () =>
+    refuse(res, 404, 'ERR_AUDIT_NOT_FOUND', sentences.notFound ?? AUDIT_NOT_FOUND, undefined, headers);
   if (err instanceof AuditRecordError) {
-    if (err.code === 'not-found') {
-      return refuse(res, 404, 'ERR_AUDIT_NOT_FOUND', sentences.notFound ?? AUDIT_NOT_FOUND);
-    }
-    return refuse(res, 400, 'ERR_INVALID_REQUEST', INVALID_REQUEST);
+    if (err.code === 'not-found') return notFound();
+    return refuse(res, 400, 'ERR_INVALID_REQUEST', INVALID_REQUEST, undefined, headers);
   }
-  if (err instanceof AuditStoreError && err.code === 'invalid-key') {
-    return refuse(res, 400, 'ERR_INVALID_REQUEST', INVALID_REQUEST);
-  }
-  sendJson(res, 500, { error: sentences.failed ?? 'The saved audits could not be read or changed. Try again.' });
+  // An id the store cannot use names nothing it holds: the same answer as an unknown id.
+  if (err instanceof AuditStoreError && err.code === 'invalid-key') return notFound();
+  sendJson(res, 500, { error: sentences.failed ?? DEFAULT_STORE_FAILED }, headers);
+}
+
+/** A request body that could not be read: 413 when it was too large, else 400 with `invalidMessage` (bad JSON). */
+export function refuseBadAuditBody(
+  res: http.ServerResponse,
+  err: unknown,
+  invalidMessage: string,
+  headers?: Record<string, string>
+): void {
+  if (err instanceof BodyTooLargeError)
+    return refuse(res, 413, 'ERR_INVALID_REQUEST', BODY_TOO_LARGE_MESSAGE, undefined, headers);
+  refuse(res, 400, 'ERR_INVALID_REQUEST', invalidMessage, undefined, headers);
 }
 
 /** The edit overlay beside a version's result. */

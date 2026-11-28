@@ -18,6 +18,12 @@ Inline endpoints (not yet table rows) are all `owner`.
 
 Refusals: `401 ERR_ACCESS_KEY`, `401 ERR_SCHEDULER_AUTH`, `403 ERR_FORBIDDEN` (Helper without the permission), `403 ERR_ROUTE_CLOSED`, `403 ERR_BETA`. Audit refusals are `{ error, code }` with `code` from `AUDIT_ERROR_CODES`.
 
+Error replies are always JSON `{ error }` (plus `code` where one exists), and `error` is a fixed plain sentence: no paths, keys or provider text.
+
+- A JSON body that will not parse is `400` (`Invalid JSON body` on the Plan and run routes); one over its size limit is `413 { error: 'The request is too large.' }`.
+- An unexpected failure is `500 { error: 'Something went wrong on our side. Try again.' }`; the detail goes to the server log only.
+- Audit store failures: an unknown or unusable audit id is `404 ERR_AUDIT_NOT_FOUND` (an id the store cannot use is the same 404, never a 400); a bad stored-record request is `400 ERR_INVALID_REQUEST` with `The request is not valid.`; anything else is a fixed `500`. Helper routes use the same replies, with `Cache-Control: no-store`.
+
 Every request: a non-loopback `Host` is refused unless it matches `RUNNER_ALLOWED_ORIGINS` (or `*.run.app` on Cloud Run); browser requests from other origins are refused.
 
 ### Beta copy (`RUNNER_BETA=1`)

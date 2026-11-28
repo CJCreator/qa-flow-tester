@@ -18,6 +18,7 @@ import {
   type AuditStopReply,
 } from '@qa/types';
 import {
+  AuditBrowserLaunchError,
   AuditCrawlBlockedError,
   AuditPipelineError,
   AuditStore,
@@ -615,6 +616,24 @@ describe('run outcomes', () => {
     expect(v?.status).toBe('failed');
     expect(v?.error).toBe(expected);
     expect(slot.kind).toBeNull();
+  });
+
+  it('a browser that cannot launch fails the version with a fixed sentence, never the launch error text', async () => {
+    crawlImpl = async () => {
+      throw new AuditBrowserLaunchError('spawn C:\Users\someone\chrome.exe ENOENT');
+    };
+    const base = await serve(createAuditCrawlRoutes(deps()));
+    const { json } = await post(base, VALID);
+    await waitFor(runEnded(json.auditId));
+
+    const fixed = 'The browser could not be launched.';
+    expect(runs.get(json.auditId)!.lastEvent).toMatchObject({
+      type: 'failed',
+      error: fixed,
+      code: 'ERR_BROWSER_LAUNCH',
+    });
+    const v = await store.getVersion(json.auditId, 1);
+    expect(v?.error).toBe(fixed);
   });
 
   it("a 'save-failed' pipeline error marks the version failed", async () => {

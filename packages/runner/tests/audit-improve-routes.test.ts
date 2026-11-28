@@ -180,5 +180,15 @@ describe('Improved version rows', () => {
     });
     expect(wrong.statusCode).toBe(400);
     expect(providerCalls).toBe(0);
+    const big = await call(rows, 'createImprove', `/api/audits/${auditId}/improve`, { body: 'x'.repeat(5000) });
+    expect(big.statusCode).toBe(413);
+    expect(big.json().error).toBe('The request is too large.');
+    const bad = await call(rows, 'createImprove', `/api/audits/${auditId}/improve`, { body: '{nope' });
+    expect(bad.statusCode).toBe(400);
+    expect(bad.json().error).toBe('The request is not valid JSON.');
+    // An empty body is read as {}: it passes the JSON step and fails later on the missing pages.
+    const empty = await call(rows, 'createImprove', `/api/audits/${auditId}/improve`, { body: '' });
+    expect(empty.statusCode).toBe(400);
+    expect(empty.json().error).not.toMatch(/not valid JSON/);
   });
 });

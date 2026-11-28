@@ -1,6 +1,6 @@
 import { isShortlistOutcome, type ShortlistListReply, type ShortlistReply } from '@qa/types';
 import { AuditRecordError, isShortlistMark, type ShortlistFilter } from '@qa/core';
-import { auditRow } from './audit-common.js';
+import { auditRow, refuseBadAuditBody } from './audit-common.js';
 import type { Route } from './route.js';
 import { readJsonBody, sendJson } from './body.js';
 import {
@@ -60,8 +60,8 @@ export function auditShortlistRoutes(deps: Pick<AuditRouteDeps, 'store' | 'calle
         let body: unknown;
         try {
           body = await readJsonBody<unknown>(context.req, MAX_SHORTLIST_BODY_CHARS);
-        } catch {
-          return refuse(res, 400, 'ERR_INVALID_REQUEST', 'The Shortlist update must be JSON and not too long.');
+        } catch (err) {
+          return refuseBadAuditBody(res, err, 'The Shortlist update must be JSON.');
         }
         try {
           const entry = await store.putShortlist(auditId, body as never);

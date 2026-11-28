@@ -2,7 +2,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import type http from 'http';
-import { isInside } from './fs-inside.js';
+import { isInside } from '@qa/core';
 
 /** A built single-page app served beside the API: the Wizard at "/". */
 export interface UiApp {

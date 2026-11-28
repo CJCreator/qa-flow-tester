@@ -60,7 +60,14 @@ import {
 import type { Route, RouteContext } from './route.js';
 import { readJsonBody, sendJson } from './body.js';
 import type { AuditCaller } from './audit-store.js';
-import { AUDIT_NOT_FOUND, refuse, refuseStoreFailure, pitchScreenshots, readEdits } from './audit-common.js';
+import {
+  AUDIT_NOT_FOUND,
+  refuse,
+  refuseStoreFailure,
+  pitchScreenshots,
+  readEdits,
+  refuseBadAuditBody,
+} from './audit-common.js';
 import { loadResolvedSettings, type AuditSettingsStore } from './audit-settings.js';
 
 /** What the download rows need: the Website Audit store (G6) and the stored audit settings (BE-508). */
@@ -478,8 +485,8 @@ export function auditExportRoutes(deps: AuditExportDeps): Route[] {
     let body: { version?: unknown; page?: unknown; variant?: unknown };
     try {
       body = await readJsonBody(c.req, 2_000);
-    } catch {
-      return invalid(c.res, 'The request is not valid JSON.');
+    } catch (err) {
+      return refuseBadAuditBody(c.res, err, 'The request is not valid JSON.');
     }
     if (!body || typeof body !== 'object' || typeof body.page !== 'string' || typeof body.variant !== 'number')
       return invalid(c.res, 'Name the page and the variant to star.');

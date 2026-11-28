@@ -34,6 +34,8 @@ import {
   resolveReadOnly,
   screensForReview,
   redactedMessage,
+  failureText,
+  RUN_FAILED_TEXT,
   ALL_SCREEN_SIZES,
   LOOPBACK_HOSTS,
   resolveTargetUrl,
@@ -50,6 +52,7 @@ import {
   type HelperPermission,
   readJsonBody,
   sendJson,
+  refuseBadBody,
   type PlanRouteContext,
   getAuditRunsForServer,
   ensurePlanLoaded,
@@ -60,6 +63,7 @@ import {
   createHelperAccess,
   helperSettingsFromEnv,
   parseOwnerEmails,
+  parseDailyLimit,
   AuditDailyLimiter,
   type HelperAccess,
 } from './helpers/index.js';
@@ -129,6 +133,7 @@ import {
   BrowserManager,
   isAbortError,
   docxToMarkdown,
+  DocxRefusedError,
   DOCX_MAX_BYTES,
   type VisualReviewItemInput,
   type SiteMemory,
@@ -146,6 +151,7 @@ import {
   type AuditStore,
   type AuditAiSetup,
   hasGoogleAdc,
+  isInside,
 } from '@qa/core';
 import { BenchmarkStore, cleanFlowType, compareSites, siteName } from './benchmarks.js';
 import {
@@ -199,7 +205,6 @@ import {
   checkRoles,
   checkLoginPath,
 } from './run-inputs.js';
-import { isInside } from './fs-inside.js';
 import { readCookie } from './cookies.js';
 import { evidenceUrl } from './evidence-url.js';
 
@@ -262,6 +267,10 @@ function isLoopbackHost(host: string | undefined): boolean {
 
 /** The cookie that carries the access key once a shared link has been opened. */
 const ACCESS_COOKIE = 'qa_access';
+
+/** The one sentence a caller gets when a request fails unexpectedly; the detail goes to the server log. */
+const OPENROUTER_KEY_REFUSED = 'OpenRouter did not accept that key. Check it and try again.';
+const SERVER_FAILED = 'Something went wrong on our side. Try again.';
 
 /**
  * Compared in constant time, so how long a refusal takes says nothing about the key. Both values are hashed first,
@@ -771,9 +780,7 @@ export class RunnerServer {
     );
     this.schedulerAuth = options.schedulerAuth ?? schedulerAuthFromEnv(process.env, () => [...this.allowedOrigins]);
     this.auditOwnerEmails = parseOwnerEmails(options.auditOwnerEmails ?? process.env.AUDIT_OWNER_EMAILS);
-    const rawDailyLimit =
-      options.auditDailyLimit ??
-      (process.env.AUDIT_DAILY_LIMIT ? parseInt(process.env.AUDIT_DAILY_LIMIT, 10) : undefined);
+    const rawDailyLimit = options.auditDailyLimit ?? parseDailyLimit(process.env.AUDIT_DAILY_LIMIT);
     this.auditDailyLimit = rawDailyLimit && rawDailyLimit > 0 ? rawDailyLimit : undefined;
     this.auditLimiter = new AuditDailyLimiter({ limit: this.auditDailyLimit });
     // Helper sign-in takes this runner's own access key: with none, every local caller is the owner (DEC-004).
@@ -1068,8 +1075,8 @@ export class RunnerServer {
     try {
       body = await this.readJsonBody<{ targetUrl?: unknown }>(req);
       if (typeof body.targetUrl !== 'string' || !body.targetUrl) throw new Error();
-    } catch {
-      this.sendJson(res, 400, {
+    } catch (err) {
+      refuseBadBody(res, err, {
         error: 'targetUrl is required',
         code: 'ERR_MISSING_TARGET_URL',
         suggestion: 'Please provide a valid website address to check.',
@@ -1233,8 +1240,7 @@ export class RunnerServer {
     }
 
     if (url.pathname.startsWith('/api/')) {
-      res.writeHead(401, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: ACCESS_KEY_REFUSAL, code: 'ERR_ACCESS_KEY' }));
+      sendJson(res, 401, { error: ACCESS_KEY_REFUSAL, code: 'ERR_ACCESS_KEY' });
     } else {
       res.writeHead(401, { 'Content-Type': 'text/plain; charset=utf-8' });
       res.end(
@@ -1322,8 +1328,7 @@ export class RunnerServer {
                 'Content-Type, Authorization, X-QA-Access, Idempotency-Key'
               );
             } else if (origin && req.method !== 'GET') {
-              res.writeHead(403, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: 'Cross-origin requests are only accepted from localhost' }));
+              sendJson(res, 403, { error: 'Cross-origin requests are only accepted from localhost' });
               return;
             }
 
@@ -1547,12 +1552,10 @@ export class RunnerServer {
             // GET /api/report — last completed run's ReleaseReport
             if (pathname === '/api/report' && req.method === 'GET') {
               if (!this.lastReport) {
-                res.writeHead(404, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: 'No completed run yet' }));
+                sendJson(res, 404, { error: 'No completed run yet' });
                 return;
               }
-              res.writeHead(200, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify(this.lastReport));
+              sendJson(res, 200, this.lastReport);
               return;
             }
 
@@ -1577,27 +1580,24 @@ export class RunnerServer {
                 return;
               }
               // Read-only: reading status does not load or start a plan (S11). Startup already loaded any saved one.
-              res.writeHead(200, { 'Content-Type': 'application/json' });
-              res.end(
-                JSON.stringify({
-                  isRunning: this.isRunning,
-                  hasReport: !!this.lastReport,
-                  lastRunError: this.lastRunError,
-                  lastErrorCode: this.lastErrorCode,
-                  phase: this.phase,
-                  hasPlan: !!this.session.plan.currentRecord,
-                  runId: this.currentRunId,
-                  // The site the run in progress or paused is for, as typed, for the Resume card.
-                  targetUrl: this.session.plan.currentRecord?.plan.targetUrl ?? this.currentTargetUrl,
-                  // The finished report, when the last run finished.
-                  reportRunId: this.lastReport?.runId ?? null,
-                  // A copy shared with other people: their check-ups and reports are visible to each other.
-                  beta: this.beta,
-                  auditOwner: this.isAuditOwner(req),
-                  ...this.accountFields(req),
-                  ...this.auditMaxPagesField(),
-                })
-              );
+              sendJson(res, 200, {
+                isRunning: this.isRunning,
+                hasReport: !!this.lastReport,
+                lastRunError: this.lastRunError,
+                lastErrorCode: this.lastErrorCode,
+                phase: this.phase,
+                hasPlan: !!this.session.plan.currentRecord,
+                runId: this.currentRunId,
+                // The site the run in progress or paused is for, as typed, for the Resume card.
+                targetUrl: this.session.plan.currentRecord?.plan.targetUrl ?? this.currentTargetUrl,
+                // The finished report, when the last run finished.
+                reportRunId: this.lastReport?.runId ?? null,
+                // A copy shared with other people: their check-ups and reports are visible to each other.
+                beta: this.beta,
+                auditOwner: this.isAuditOwner(req),
+                ...this.accountFields(req),
+                ...this.auditMaxPagesField(),
+              });
               return;
             }
 
@@ -1785,17 +1785,16 @@ export class RunnerServer {
             // Everything that isn't the API is one of the built UIs.
             if (!pathname.startsWith('/api/') && (await serveUi(this.uiApps, req, res, pathname))) return;
 
-            res.writeHead(404, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'Not found' }));
+            sendJson(res, 404, { error: 'Not found' });
           } catch (err: unknown) {
             // A response that already started (a stream, a partly sent body) can't take a 500: just end it.
             if (res.headersSent) {
               if (!res.writableEnded) res.end();
               return;
             }
-            const msg = this.redactedMessage(err);
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: msg }));
+            // The detail stays in the server log; the caller gets one fixed sentence.
+            console.warn('[Release check-up] A request failed:', this.redactedMessage(err));
+            sendJson(res, 500, { error: SERVER_FAILED });
           }
         })().catch((err: unknown) => console.warn('[Release check-up] A request failed:', this.redactedMessage(err)));
       });
@@ -2089,6 +2088,12 @@ export class RunnerServer {
     return true;
   }
 
+  /** An unexpected failure: the redacted detail goes to the server log, the caller gets one fixed sentence. */
+  private refuseFailure(res: http.ServerResponse, err: unknown): void {
+    console.warn('[Release check-up] A request failed:', this.redactedMessage(err));
+    sendJson(res, 500, { error: SERVER_FAILED });
+  }
+
   private sendJson(res: http.ServerResponse, status: number, body: unknown): void {
     sendJson(res, status, body);
   }
@@ -2111,7 +2116,7 @@ export class RunnerServer {
       onApproved: (record, specTestCases, notRun, generation) => {
         this.checkupRun.executeTesting(record, specTestCases, notRun, generation).catch((err: unknown) => {
           if (generation !== this.runGeneration || isAbortError(err)) return;
-          const msg = this.redactedMessage(err);
+          const msg = failureText(err, this.redactedMessage(err), RUN_FAILED_TEXT);
           this.lastRunError = msg;
           this.lastErrorCode = 'ERR_TEST_EXECUTION_FAILED';
           this.phase = 'failed';
@@ -2205,7 +2210,10 @@ export class RunnerServer {
       const summary: DocumentSummary = summarizeDocument(text);
       this.sendJson(res, 200, { text, warnings, summary });
     } catch (err) {
-      refuse(this.redactedMessage(err) || `${name} could not be read.`);
+      // The converter's own refusals are plain sentences for the sender; anything else stays in the server log.
+      if (err instanceof DocxRefusedError) return refuse(err.message);
+      console.warn('[Release check-up] A Word file could not be read:', this.redactedMessage(err));
+      refuse(`${name} could not be read.`);
     }
   }
 
@@ -2219,8 +2227,8 @@ export class RunnerServer {
       const { targetUrl } = await this.readJsonBody<{ targetUrl?: string }>(req);
       typed = new URL(targetUrl || '');
       if (!/^https?:$/.test(typed.protocol)) throw new Error();
-    } catch {
-      this.sendJson(res, 400, {
+    } catch (err) {
+      refuseBadBody(res, err, {
         code: 'ERR_INVALID_URL',
         error: 'Please enter a valid HTTP or HTTPS address.',
       });
@@ -2281,8 +2289,8 @@ export class RunnerServer {
     try {
       ({ targetUrl } = await this.readJsonBody<{ targetUrl?: string }>(req));
       if (!targetUrl || !/^https?:$/.test(new URL(targetUrl).protocol)) throw new Error();
-    } catch {
-      this.sendJson(res, 400, {
+    } catch (err) {
+      refuseBadBody(res, err, {
         reachable: false,
         reason: 'invalid-url',
         code: 'ERR_INVALID_URL',
@@ -2409,8 +2417,8 @@ export class RunnerServer {
       } = {};
       try {
         body = await this.readJsonBody(req);
-      } catch {
-        this.sendJson(res, 400, { error: 'Invalid JSON body' });
+      } catch (err) {
+        refuseBadBody(res, err);
         return;
       }
       if (body.addSignIn || body.testSignIn) {
@@ -2852,8 +2860,8 @@ export class RunnerServer {
       let body: { titles?: string[]; status?: 'Intended' | 'False Positive' | null; reason?: string };
       try {
         body = await this.readJsonBody(req);
-      } catch {
-        this.sendJson(res, 400, { error: 'Invalid JSON body' });
+      } catch (err) {
+        refuseBadBody(res, err);
         return;
       }
       const report = await this.readRunReport(runId);
@@ -2905,8 +2913,8 @@ export class RunnerServer {
       let body: { titles?: string[]; accept?: boolean };
       try {
         body = await this.readJsonBody(req);
-      } catch {
-        this.sendJson(res, 400, { error: 'Invalid JSON body' });
+      } catch (err) {
+        refuseBadBody(res, err);
         return;
       }
       const report = await this.readRunReport(runId);
@@ -3363,8 +3371,8 @@ export class RunnerServer {
       let body: { provider?: AIProviderType; apiKey?: string; model?: string | null; visionModel?: string | null };
       try {
         body = await this.readJsonBody(req);
-      } catch {
-        this.sendJson(res, 400, { error: 'Invalid JSON body' });
+      } catch (err) {
+        refuseBadBody(res, err);
         return true;
       }
       const provider = body.provider ?? (await this.readAiModels()).provider ?? 'openrouter';
@@ -3489,13 +3497,14 @@ export class RunnerServer {
         this.sendJson(res, 200, { ok, ms, model: answer.model ?? model, reason, usage: answer.usage });
       } catch (err) {
         const message = this.redactedMessage(err);
+        console.warn('[Release check-up] The AI model test failed:', message);
         this.sendJson(res, 200, {
           ok: false,
           ms: Date.now() - started,
           model,
           reason: /\b429\b|rate.?limit/i.test(message)
             ? 'The AI service is busy or today’s free requests are used up. Try again later.'
-            : `The AI service said: ${message.slice(0, 200)}`,
+            : 'The AI service did not answer the test request. Check the model and key, then try again.',
         });
       }
       return true;
@@ -3575,12 +3584,13 @@ export class RunnerServer {
       } catch (err) {
         if (err instanceof OpenRouterAuthError) {
           if (header?.startsWith('Bearer ') || !apiKey) {
-            this.sendJson(res, 401, { error: this.redactedMessage(err) });
+            console.warn('[Release check-up] OpenRouter refused the key:', this.redactedMessage(err));
+            this.sendJson(res, 401, { error: OPENROUTER_KEY_REFUSED });
           } else {
             this.sendJson(res, 200, {
               models: [],
               authError: true,
-              error: this.redactedMessage(err),
+              error: OPENROUTER_KEY_REFUSED,
               recommendedModel: null,
               recommendedVisionModel: null,
             });
@@ -3638,27 +3648,21 @@ export class RunnerServer {
     let body: RunStartBody;
     try {
       body = await this.readJsonBody<RunStartBody>(req);
-    } catch {
-      res.writeHead(400, { 'Content-Type': 'application/json' });
-      res.end(
-        JSON.stringify({
-          error: 'Invalid JSON body',
-          code: 'ERR_INVALID_REQUEST',
-          suggestion: 'Check the request format and try again.',
-        })
-      );
+    } catch (err) {
+      refuseBadBody(res, err, {
+        error: 'Invalid JSON body',
+        code: 'ERR_INVALID_REQUEST',
+        suggestion: 'Check the request format and try again.',
+      });
       return;
     }
 
     if (!body.targetUrl) {
-      res.writeHead(400, { 'Content-Type': 'application/json' });
-      res.end(
-        JSON.stringify({
-          error: 'targetUrl is required',
-          code: 'ERR_MISSING_TARGET_URL',
-          suggestion: 'Please provide a valid website address to check.',
-        })
-      );
+      this.sendJson(res, 400, {
+        error: 'targetUrl is required',
+        code: 'ERR_MISSING_TARGET_URL',
+        suggestion: 'Please provide a valid website address to check.',
+      });
       return;
     }
 
@@ -3701,7 +3705,7 @@ export class RunnerServer {
         const verdict = releaseVerdict(report.findings, undefined, report.grades, report.coverage);
         this.sendJson(res, 200, { preset: 'smoke', report, verdict });
       } catch (err: unknown) {
-        this.sendJson(res, 500, { error: this.redactedMessage(err) });
+        this.refuseFailure(res, err);
       }
       return;
     }
@@ -3840,8 +3844,7 @@ export class RunnerServer {
 
     try {
       const { runId } = await this.checkupRun.start({ body, authorization });
-      res.writeHead(202, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ runId }));
+      this.sendJson(res, 202, { runId });
     } catch (e) {
       const err = e as { code?: string; message?: string; suggestion?: unknown; targetUrl?: unknown };
       if (err?.code === 'ERR_PLAN_WAITING') {
@@ -3857,7 +3860,7 @@ export class RunnerServer {
         this.sendJson(res, 409, { error: err.message, code: err.code });
         return;
       }
-      this.sendJson(res, 500, { error: this.redactedMessage(e) });
+      this.refuseFailure(res, e);
     }
   }
 
@@ -4093,7 +4096,7 @@ export class RunnerServer {
 
       this.sendJson(res, 200, items);
     } catch (err: unknown) {
-      this.sendJson(res, 500, { error: this.redactedMessage(err) });
+      this.refuseFailure(res, err);
     }
   }
 
@@ -4127,7 +4130,7 @@ export class RunnerServer {
       }
       this.sendJson(res, 200, { ok: true, id: body.id });
     } catch (err: unknown) {
-      this.sendJson(res, 500, { error: this.redactedMessage(err) });
+      this.refuseFailure(res, err);
     }
   }
 
@@ -4252,7 +4255,11 @@ export class RunnerServer {
       } catch (err) {
         job.status = 'failed';
         job.stage = 'Stopped';
-        job.error = `The comparison couldn’t finish: ${this.redactedMessage(err)}`;
+        job.error = failureText(
+          err,
+          `The comparison couldn’t finish: ${this.redactedMessage(err)}`,
+          'The comparison couldn’t finish. Try again.'
+        );
       } finally {
         // Only this benchmark can hold a 'benchmark' slot; the check keeps a Check-up's state safe regardless.
         if (this.session.run.kind === 'benchmark') this.session.run.release();
@@ -4402,7 +4409,7 @@ export class RunnerServer {
       });
       this.sendJson(res, 201, schedule);
     } catch (err: unknown) {
-      this.sendJson(res, 500, { error: this.redactedMessage(err) });
+      this.refuseFailure(res, err);
     }
   }
 
@@ -4464,7 +4471,7 @@ export class RunnerServer {
       await fs.writeFile(filePath, JSON.stringify(records, null, 2), 'utf8');
       this.sendJson(res, 200, { ok: true, override: newRecord });
     } catch (err: unknown) {
-      this.sendJson(res, 500, { error: this.redactedMessage(err) });
+      this.refuseFailure(res, err);
     }
   }
 
@@ -4479,7 +4486,7 @@ export class RunnerServer {
         this.sendJson(res, 200, []);
       }
     } catch (err: unknown) {
-      this.sendJson(res, 500, { error: this.redactedMessage(err) });
+      this.refuseFailure(res, err);
     }
   }
 }

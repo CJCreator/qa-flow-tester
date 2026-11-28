@@ -40,7 +40,7 @@ import {
   type LightCrawlOptions,
 } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
-import { sendJson } from './body.js';
+import { BODY_TOO_LARGE_MESSAGE, BodyTooLargeError, readRawBody, sendJson } from './body.js';
 import { versionQuery } from './audit-common.js';
 import {
   AUDIT_FORBIDDEN,
@@ -105,15 +105,12 @@ function checkBody(
 
 /** The JSON body; an empty body is `{}`. */
 async function readBody(c: RouteContext): Promise<unknown> {
-  if (typeof c.req.setEncoding === 'function') c.req.setEncoding('utf8');
-  let raw = '';
+  let raw: string;
   try {
-    for await (const chunk of c.req) {
-      raw += chunk;
-      if (raw.length > MAX_BODY) return 'too-large';
-    }
-  } catch {
-    return 'too-large';
+    raw = await readRawBody(c.req, MAX_BODY);
+  } catch (err) {
+    if (err instanceof BodyTooLargeError) return 'too-large';
+    return 'not-json';
   }
   if (raw.trim() === '') return {};
   try {
@@ -165,7 +162,7 @@ export function auditCompetitorRoutes(deps: AuditCompetitorRouteDeps): Route[] {
     }
     const raw = await readBody(c);
     if (raw === 'too-large') {
-      refuse(c.res, 400, 'ERR_INVALID_REQUEST', 'The request is too large.');
+      refuse(c.res, 413, 'ERR_INVALID_REQUEST', BODY_TOO_LARGE_MESSAGE);
       return null;
     }
     if (raw === 'not-json') {

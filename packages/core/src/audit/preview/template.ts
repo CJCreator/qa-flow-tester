@@ -6,15 +6,7 @@
 import type { PreviewFacts } from './prompt.js';
 import { stripClaimWords } from '../documents/wording.js';
 import { labelsFor } from '../documents/labels/index.js';
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
+import { escapeHtml } from '../../html-escape.js';
 
 /** Strips any ADR 0018 prohibited claim words from untrusted text. */
 function sanitizeClaimText(text: string): string {

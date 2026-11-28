@@ -63,7 +63,7 @@ import {
   type PageSpeedDeps,
 } from '@qa/core';
 import type { Route, RouteContext } from './route.js';
-import { refuse, versionQuery } from './audit-common.js';
+import { refuse, versionQuery, refuseBadAuditBody } from './audit-common.js';
 import { readJsonBody, sendJson } from './body.js';
 import { mayUseAudit, type AuditCaller } from './audit-store.js';
 import type { RunSlot } from '../session/run-slot.js';
@@ -548,10 +548,16 @@ export async function runAuditVersion(
       outcome = { kind: 'failed', error: err.message, code: 'ERR_SITE_BLOCKED' };
       logAuditFailure({ code: outcome.code, stage: currentStage, message: outcome.error, url: request.url });
     } else if (err instanceof AuditBrowserLaunchError || (err as { code?: string })?.code === 'ERR_BROWSER_LAUNCH') {
-      const msg = (err as Error).message || 'The browser could not be launched.';
+      // The launch error can carry file paths: the visitor gets a fixed sentence, the server log the detail.
+      const msg = 'The browser could not be launched.';
       await recordStatus(store, run, 'failed', finishedAt, msg);
       outcome = { kind: 'failed', error: msg, code: 'ERR_BROWSER_LAUNCH' };
-      logAuditFailure({ code: outcome.code, stage: currentStage, message: outcome.error, url: request.url });
+      logAuditFailure({
+        code: outcome.code,
+        stage: currentStage,
+        message: (err as Error).message || msg,
+        url: request.url,
+      });
     } else if (err instanceof AuditCrawlRefusedError) {
       await recordStatus(store, run, 'failed', finishedAt, err.message);
       outcome = { kind: 'failed', error: err.message, code: err.code };
@@ -685,8 +691,8 @@ export function createAuditCrawlRoutes(deps: AuditCrawlRouteDeps): Route[] {
     let body: unknown;
     try {
       body = await readJsonBody<unknown>(req, MAX_START_BODY_CHARS);
-    } catch {
-      return refuse(res, 400, 'ERR_INVALID_REQUEST', AUDIT_BAD_BODY);
+    } catch (err) {
+      return refuseBadAuditBody(res, err, AUDIT_BAD_BODY);
     }
     const check = validateAuditStartBody(body);
     if (!check.ok) return refuse(res, 400, 'ERR_INVALID_AUDIT', AUDIT_INVALID, { fields: check.errors });
