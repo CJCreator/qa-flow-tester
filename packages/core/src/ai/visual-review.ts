@@ -2,7 +2,7 @@ import type { Breakpoint, Finding, FindingSeverity } from '@qa/types';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { completeWith, type AIProvider } from './ai-provider.js';
-import { parseJsonAnswer } from '../plan/ai-planner.js';
+import { parseJsonAnswer } from './json-answer.js';
 
 export interface VisualReviewItemInput {
   layoutGroup: string;

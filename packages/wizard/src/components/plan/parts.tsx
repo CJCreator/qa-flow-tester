@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { scrollBehavior } from '../../lib/format';
-import { Badge as SharedBadge } from '../ui';
+import { Badge } from '../ui';
 import { workingId } from '../DisabledReason';
 
 /** An element id for a Plan Item, so the approval summary can point at it. */
@@ -44,23 +44,6 @@ export function showItem(itemId: string): void {
       const later = document.getElementById(itemDomId(itemId));
       if (later) reveal(later);
     })
-  );
-}
-
-/** The plan's badge: the shared Badge, with the plan's older tone name 'quiet' for neutral. */
-export function Badge({
-  tone = 'quiet',
-  children,
-  title,
-}: {
-  tone?: 'quiet' | 'stamp' | 'pass' | 'warn' | 'fail';
-  children: React.ReactNode;
-  title?: string;
-}) {
-  return (
-    <SharedBadge tone={tone === 'quiet' ? 'neutral' : tone} title={title}>
-      {children}
-    </SharedBadge>
   );
 }
 

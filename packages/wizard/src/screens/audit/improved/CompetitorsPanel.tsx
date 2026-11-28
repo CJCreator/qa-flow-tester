@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { CompetitorExample, CompetitorPageFacts, CompetitorsState } from '@qa/types/src/browser.js';
 import { ErrorMessage, Spinner } from '../../../components/text';
-import { crawlCompetitors, discoverCompetitors, loadCompetitors, type Fetch } from './competitors-api';
+import { crawlCompetitors, discoverCompetitors, loadCompetitors } from './competitors-api';
+import type { Fetch } from '../audit-call';
 
 /** Why "Find similar sites" is disabled without a working AI key. */
 export const COMPETITORS_NO_KEY_REASON = 'An AI key is needed to find similar sites. Add one in Settings.';

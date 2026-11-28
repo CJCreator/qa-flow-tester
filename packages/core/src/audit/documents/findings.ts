@@ -24,7 +24,7 @@ import { contentWording, sectionLabel } from './content.js';
 import type { EditedAuditView } from './edits.js';
 import { labelsFor, localizeFixOption, type DocumentLabels } from './labels/index.js';
 import type { AuditDoc, DocBlock } from './model.js';
-import { ruleFixOptions, ruleTextKey, type FixOption } from '../improve/fix-rules.js';
+import { ruleFixOptions, ruleTextKey, type FixOption } from '@qa/types';
 
 /** Fixed wording only this document uses. */
 interface FindingsWording {

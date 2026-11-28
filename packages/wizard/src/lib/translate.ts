@@ -4,7 +4,7 @@
  * CSS paths, URLs and internal event names never reach the screen.
  */
 
-import { isSignInFailureReason, signInReasonText } from '@qa/types/src/browser.js';
+import { isSerious, isSignInFailureReason, signInReasonText } from '@qa/types/src/browser.js';
 import type { CountSummary } from '@qa/types/src/browser.js';
 
 export type RunMode = 'product' | 'website';
@@ -195,8 +195,6 @@ export function timeLeft(seconds?: number): string | null {
   return `about ${minutes} ${minutes === 1 ? 'minute' : 'minutes'} left`;
 }
 
-const SERIOUS = new Set(['Blocker', 'Major']);
-
 const SITE_TYPE_NAMES: Record<string, string> = {
   shop: 'Online shop',
   SaaS: 'Web app',
@@ -300,7 +298,7 @@ export function reduceFeed(state: FeedState, event: RunnerEvent, mode: RunMode):
       for (const f of latest) {
         const urlPath = pathOnly(f.urlPath) || '/';
         const before = pages[urlPath] || { status: 'pass', issues: 0 };
-        const serious = SERIOUS.has(String(f.severity));
+        const serious = isSerious(String(f.severity));
         pages[urlPath] = { status: serious || before.status === 'fail' ? 'fail' : 'warn', issues: before.issues + 1 };
         found.push({
           id: String(f.id ?? `${urlPath}-${found.length}`),
@@ -373,5 +371,3 @@ export function reduceFeed(state: FeedState, event: RunnerEvent, mode: RunMode):
       return { ...state, current: GENERIC };
   }
 }
-
-export * from './plan-translate.js';

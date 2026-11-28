@@ -9,9 +9,9 @@ import {
   readOutcomeFilter,
   saveShortlistEntry,
   shortlistUpdate,
-  type Fetch,
   type ShortlistDraft,
 } from './saved-api';
+import type { Fetch } from '../audit-call';
 
 export interface ShortlistPanelViewProps {
   /** The saved entry; null when this Website Audit has none yet. */

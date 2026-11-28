@@ -10,7 +10,7 @@ import {
   type EditOverlay,
   type PageContent,
 } from '@qa/types/src/browser.js';
-import { withQuery, callAudit } from '../audit-call';
+import { withQuery, callAudit, type Fetch } from '../audit-call';
 
 /**
  * The review and edit screen's calls to the runner (REQ-020): the version and its edits
@@ -18,8 +18,6 @@ import { withQuery, callAudit } from '../audit-call';
  * (`GET /api/audits/:id/content`) and the save (`PATCH /api/audits/:id/edits`). Every refusal becomes a plain
  * sentence safe to show as-is; status codes and raw errors never reach the screen.
  */
-
-export type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 export type ReviewOutcome<T> = { ok: true; value: T } | { ok: false; message: string; code?: AuditErrorCode };
 

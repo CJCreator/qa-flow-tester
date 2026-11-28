@@ -28,6 +28,7 @@ import {
   type StoredDocumentKind,
 } from '@qa/types';
 import type { AuditStoreBackend } from './backend.js';
+import { mapInFlight } from '../../concurrency.js';
 import {
   AUDITS_FOLDER,
   assertAuditId,
@@ -97,21 +98,6 @@ const AUDIT_RECORD_KEY = /^audits\/([A-Za-z0-9_-]{8,64})\/audit\.json$/;
 /** Per-version objects written at once by `writeVersionEntries`. */
 const VERSION_WRITES_IN_FLIGHT = 6;
 const AUDIT_READS_IN_FLIGHT = 8;
-
-/** Runs `fn` over `items`, at most `limit` at once; results in input order. */
-async function mapInFlight<T, R>(items: readonly T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
-  const out = new Array<R>(items.length);
-  let next = 0;
-  const worker = async (): Promise<void> => {
-    for (;;) {
-      const i = next++;
-      if (i >= items.length) return;
-      out[i] = await fn(items[i]);
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()));
-  return out;
-}
 
 /** Per backend, per audit: the tail of the queue of writes. Shared by every store on the same backend. */
 const auditLocks = new WeakMap<AuditStoreBackend, Map<string, Promise<void>>>();
@@ -503,23 +489,17 @@ export class AuditStore implements AuditStoreContext {
       if (!(entry.data instanceof Uint8Array)) throw invalidInput('The version file is not valid.');
       return () => this.backend.putBytes(key, entry.data);
     });
-    const saved: boolean[] = new Array(writes.length).fill(false);
+    let saved: boolean[] = new Array(writes.length).fill(false);
     await this.withAuditLock(auditId, async () => {
       if (!(await this.readVersion(auditId, version))) throw notFound('version');
-      let next = 0;
-      const worker = async (): Promise<void> => {
-        for (;;) {
-          const i = next++;
-          if (i >= writes.length) return;
-          try {
-            await writes[i]();
-            saved[i] = true;
-          } catch {
-            saved[i] = false;
-          }
+      saved = await mapInFlight(writes, VERSION_WRITES_IN_FLIGHT, async (write) => {
+        try {
+          await write();
+          return true;
+        } catch {
+          return false;
         }
-      };
-      await Promise.all(Array.from({ length: Math.min(VERSION_WRITES_IN_FLIGHT, writes.length) }, () => worker()));
+      });
     });
     return saved;
   }

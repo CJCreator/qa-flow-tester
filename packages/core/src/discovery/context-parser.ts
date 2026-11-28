@@ -2,16 +2,6 @@ import { promises as fs } from 'fs';
 import { parseDocumentText } from '@qa/types';
 import type { ParsedProductContext, ParsedRequirementHint } from '@qa/types';
 
-export { parseDocumentText, summarizeDocument, isSupportedContextName } from '@qa/types';
-export type {
-  ParsedRequirementHint,
-  ParsedProductContext,
-  ContextNameCheck,
-  DocumentSummary,
-  ParseDocumentOptions,
-  ParseDocumentResult,
-} from '@qa/types';
-
 export class ContextParser {
   /** Several documents at once. Ids are unique across all of them; each hint keeps its document and section. */
   parseDocuments(docs: Array<{ name: string; text: string }>): ParsedProductContext {

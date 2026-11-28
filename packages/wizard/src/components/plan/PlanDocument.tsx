@@ -12,9 +12,10 @@ import type {
   RoleCredential,
   TestCaseExpectations,
 } from '@qa/types';
+import { SEVERITY_ORDER } from '@qa/types/src/browser.js';
 import { stepToSentence, expectationsToChecks } from '../../lib/plan-translate';
 import { count, scrollBehavior } from '../../lib/format';
-import { Disclosure } from '../ui';
+import { Badge, Disclosure } from '../ui';
 import type { InterpretResult, PatchPlanBody } from '../../api';
 import {
   confirmRolesEdit,
@@ -41,16 +42,7 @@ import {
   overCapLine,
   wontRunReason,
 } from '../../lib/intent-view';
-import {
-  Badge,
-  ItemToggle,
-  OPEN_ALL_EVENT,
-  ReplanControl,
-  SourceBadge,
-  itemDomId,
-  safeDecodeHash,
-  showItem,
-} from './parts';
+import { ItemToggle, OPEN_ALL_EVENT, ReplanControl, SourceBadge, itemDomId, safeDecodeHash, showItem } from './parts';
 import {
   DndContext,
   closestCenter,
@@ -966,8 +958,6 @@ function QuestionsSection({ plan, actions }: { plan: ReviewPlan; actions: PlanAc
   );
 }
 
-const SEVERITIES: FindingSeverity[] = ['Blocker', 'Major', 'Minor', 'Suggestion'];
-
 /** Where a Plan Item came from: the Source chip, the roles the AI proposed, severity, out-of-date switch. */
 function SourceDetails({ test, actions }: { test: PlanPageTest; actions: PlanActions }) {
   const [correcting, setCorrecting] = useState(false);
@@ -1041,7 +1031,7 @@ function SourceDetails({ test, actions }: { test: PlanPageTest; actions: PlanAct
             disabled={actions.busy}
             onChange={(e) => actions.editSource(severityEdit(test.id, e.target.value as FindingSeverity))}
           >
-            {SEVERITIES.map((s) => (
+            {SEVERITY_ORDER.map((s) => (
               <option key={s} value={s}>
                 {s}
               </option>

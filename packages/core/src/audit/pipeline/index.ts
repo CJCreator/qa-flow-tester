@@ -13,7 +13,6 @@ export {
   AUDIT_CHECKPOINT_NAME,
   createAuditCheckpointer,
   loadAuditCheckpoint,
-  createAiLimiter,
   createAuditAssessmentStream,
 } from './pipeline.js';
 export type {
@@ -25,7 +24,6 @@ export type {
   SiteStages,
   AuditCheckpointStore,
   LoadedAuditCheckpoint,
-  AiLimiter,
   AuditAssessmentStream,
   StreamedAssessment,
 } from './pipeline.js';

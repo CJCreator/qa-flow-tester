@@ -29,7 +29,7 @@ import { inferCrud, readCrudStructure, probeDeleteConfirm } from './crud-facts.j
 import { navigate, toTelemetry, looksLikeLogin, type NavigateResult } from '../navigate.js';
 import type { InterstitialKind } from '../audit/crawl/interstitial.js';
 import { debugLog } from '../debug-log.js';
-import { normalizeRoute, CrawlFrontier, type CrawlFrontierState } from './frontier.js';
+import { crawlRouteKey, CrawlFrontier, type CrawlFrontierState } from './frontier.js';
 import { dismissOverlays } from './overlay.js';
 import { guardPage } from './guard.js';
 
@@ -663,7 +663,7 @@ export class DeterministicSpider {
       ? CrawlFrontier.restore(options.resume.frontier, frontierOptions)
       : new CrawlFrontier(frontierOptions);
     const normRoute = (u: string) =>
-      normalizeRoute(u, site.toString(), {
+      crawlRouteKey(u, site.toString(), {
         routeQueryParams: options.routeQueryParams,
         includeHash: options.includeHash,
       });
@@ -1228,7 +1228,7 @@ export class DeterministicSpider {
 
           // Only enqueue if the sign-in form is on the exact same site/host as the crawl
           if (!isRoleSignedIn && onSite(landed) && landed.host.toLowerCase() === site.host.toLowerCase()) {
-            redirects.set(requestedPath, normalizeRoute(landed.toString(), site.toString()).path);
+            redirects.set(requestedPath, crawlRouteKey(landed.toString(), site.toString()).path);
             enqueue(landed.pathname + landed.search, requestedDepth + 1);
           }
           return;

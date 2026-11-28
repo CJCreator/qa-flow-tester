@@ -19,6 +19,7 @@ import { PlanValidator } from './plan-validator.js';
 import { BrowserManager, BREAKPOINT_VIEWPORTS } from '../browser.js';
 import { PreFlightChecker, SignInFailedError, type PreFlightResult } from '../preflight.js';
 import { debugLog, stageTiming } from '../debug-log.js';
+import { sleep } from '../timing.js';
 import { DeterministicSpider, DEFAULT_MAX_PAGES, type SpiderResult, toDraftForm } from './deterministic-spider.js';
 import { buildSiteGraph, pathOf } from '../plan/site-graph.js';
 import { sampleLayoutGroups } from '../plan/sampling.js';
@@ -39,7 +40,7 @@ import { formQuestion, intentQuestionsFor } from './questions.js';
 import { siteContentKey, type RememberedPlan } from '../site-memory.js';
 import type { CrawlOptions } from './deterministic-spider.js';
 import { RobotsPolicy, ROBOTS_USER_AGENT_TOKEN, crawlPageDelayMs } from '../competitive/robots.js';
-import { isPrivateHost } from '../competitive/safe-crawler.js';
+import { isPrivateHost } from '../address-class.js';
 import { blockChanges, markJourneysNeedingTestCopy } from '../live-site.js';
 import type { AIProvider } from '../ai/ai-provider.js';
 import { stopIfAborted } from '../abort.js';
@@ -645,7 +646,7 @@ export class DiscoveryAgent {
           // Stopped: every remaining page is passed over at once.
           stopIfAborted(signal);
           const wait = lastNarrowLoad + (crawlOptions.pageDelayMs ?? 0) - Date.now();
-          if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+          await sleep(wait);
           lastNarrowLoad = Date.now();
         },
       });

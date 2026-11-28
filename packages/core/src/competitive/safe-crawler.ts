@@ -4,7 +4,7 @@ import { promises as fs } from 'fs';
 import type { Finding, ReferenceFlow, ReferenceFlowStep, StepEvidence, VisitedPage } from '@qa/types';
 import { BugDetectionChecker, UXQualityChecker } from '@qa/checkers';
 import { EvidenceCollector } from '../evidence.js';
-import { classifyAddress, isPrivateTextHost } from '../address-class.js';
+import { isPrivateHost } from '../address-class.js';
 import { isSameSite } from '../same-site.js';
 import { RobotsPolicy, ROBOTS_USER_AGENT_TOKEN } from './robots.js';
 import { getBrowserPolicy, installRequestGuard, WEBRTC_NO_DIRECT_UDP } from '../browser.js';
@@ -59,11 +59,6 @@ const SESSION_ENDING = /log-?out|sign-?out|logoff/i;
 export function scanScope(entryUrl: string): string {
   const pathname = new URL(entryUrl).pathname;
   return pathname.slice(0, pathname.lastIndexOf('/') + 1) || '/';
-}
-
-/** This machine, a private network address, or Docker's name for the host (the shared classifier, ADR 0014). */
-export function isPrivateHost(hostname: string): boolean {
-  return isPrivateTextHost(hostname) || classifyAddress(hostname) !== null;
 }
 
 /**

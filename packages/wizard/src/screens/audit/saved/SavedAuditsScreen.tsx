@@ -5,7 +5,8 @@ import { EmptyState, LoadError, Page, PageHeader } from '../../../components/ui'
 import { count, formatWhen } from '../../../lib/format';
 import { Link } from '../../../lib/router';
 import { useDocumentTitle } from '../../../lib/title';
-import { AUDIT_PATHS, STATUS_LABEL, latestVersion, listAudits, shortlistMarkText, type Fetch } from './saved-api';
+import { AUDIT_PATHS, STATUS_LABEL, latestVersion, listAudits, shortlistMarkText } from './saved-api';
+import type { Fetch } from '../audit-call';
 
 export type SavedAuditsLoad =
   { status: 'loading' } | { status: 'failed'; message: string } | { status: 'loaded'; audits: AuditSummary[] };

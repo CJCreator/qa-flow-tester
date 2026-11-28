@@ -1,6 +1,6 @@
-import { isSupportedContextName } from '@qa/core';
 import {
   INTENTS,
+  isSupportedContextName,
   ROLE_NAME_PATTERN,
   HEADER_NAME_PATTERN,
   isSafeHeaderValue,

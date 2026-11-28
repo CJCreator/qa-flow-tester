@@ -20,9 +20,9 @@ import {
   removeHelper,
   resetKnownHelperSignIn,
   startHelperSession,
-  type Fetch,
   type FirebaseWebConfig,
 } from '../src/screens/audit/saved/helper-api';
+import type { Fetch } from '../src/screens/audit/audit-call';
 import { HELPER_APP_NAME, signInWithGoogle, type FirebaseAuthSdk } from '../src/screens/audit/saved/firebase-sign-in';
 import {
   HelperRules,
@@ -195,6 +195,17 @@ describe('Helper API calls', () => {
     };
     const unreachable = await listHelpers(AUDIT_ID, down);
     expect(unreachable).toEqual({ ok: false, message: expect.stringMatching(/not answering/) });
+  });
+
+  it('shows the runner text for a refusal code the screen has no sentence for, and sends same-origin credentials', async () => {
+    let seen: RequestInit | undefined;
+    const fetchImpl: Fetch = async (_url, init) => {
+      seen = init;
+      return new Response(JSON.stringify({ error: ' Runner says no ', code: 'ERR_PIPELINE' }), { status: 500 });
+    };
+    const outcome = await listHelpers(AUDIT_ID, fetchImpl);
+    expect(outcome).toEqual({ ok: false, message: 'Runner says no', code: 'ERR_PIPELINE' });
+    expect(seen?.credentials).toBe('same-origin');
   });
 
   it('posts the ID token once in the body of POST /api/helper/session', async () => {

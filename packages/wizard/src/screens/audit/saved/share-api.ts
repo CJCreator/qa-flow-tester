@@ -14,7 +14,7 @@ import {
   type ShareLink,
   type ShareLinkKind,
 } from '@qa/types/src/browser.js';
-import { isAuditErrorCode, NOT_ANSWERING } from '../audit-call';
+import { callAudit, jsonInit, type Fetch } from '../audit-call';
 import { RUN_IN_PROGRESS_TEXT } from './saved-api';
 
 /**
@@ -23,8 +23,6 @@ import { RUN_IN_PROGRESS_TEXT } from './saved-api';
  * and list, create and revoke Shared Links (`GET|POST /api/audits/:id/share`, `DELETE /api/audits/:id/share/:linkId`).
  * Every refusal becomes a plain sentence safe to show as-is; status codes and raw errors never reach the screen.
  */
-
-export type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 export type ShareOutcome<T> = { ok: true; value: T } | { ok: false; message: string; code?: AuditErrorCode };
 
@@ -70,37 +68,14 @@ function isShareLink(value: unknown): value is ShareLink {
   );
 }
 
-async function call<T>(
+function call<T>(
   url: string,
   init: RequestInit,
   fetchImpl: Fetch,
   fallback: string,
   accept: (body: unknown) => T | null
 ): Promise<ShareOutcome<T>> {
-  let res: Response;
-  try {
-    res = await fetchImpl(url, init);
-  } catch {
-    return { ok: false, message: NOT_ANSWERING };
-  }
-  let body: unknown;
-  try {
-    body = await res.json();
-  } catch {
-    body = undefined;
-  }
-  if (res.ok) {
-    const value = accept(body);
-    return value === null ? { ok: false, message: fallback } : { ok: true, value };
-  }
-  const refusal = isRecord(body) ? body : {};
-  const code = isAuditErrorCode(refusal.code) ? refusal.code : undefined;
-  if (code && REFUSALS[code]) return { ok: false, message: REFUSALS[code]!, code };
-  return { ok: false, message: fallback, code };
-}
-
-function jsonInit(method: string, body: unknown): RequestInit {
-  return { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+  return callAudit(url, init, fetchImpl, fallback, accept, REFUSALS, false);
 }
 
 // ---------------------------------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { ParsedRequirementHint } from '../src/discovery/context-parser.js';
+import type { ParsedRequirementHint } from '@qa/types';
 import { planFromSpec } from '../src/plan/spec-plan.js';
 import { resolveRole, resolveRoleList } from '../src/plan/spec-roles.js';
 import { crawlOf, el, page } from './helpers/spec-crawl.js';

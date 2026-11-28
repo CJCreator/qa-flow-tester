@@ -25,6 +25,7 @@ import {
 } from '../api';
 import type { ConfirmOptions } from '../components/ConfirmDialog';
 import type { PlanNotice, PlanUpdateState } from '../lib/run-events';
+import { readStored, writeStored } from '../lib/storage';
 
 export type { PlanNotice, PlanUpdateState } from '../lib/run-events';
 
@@ -212,22 +213,13 @@ export function PlanReviewScreen({
   notice,
   confirm,
 }: PlanReviewScreenProps) {
-  const [tab, setTab] = useState<'plan' | 'map'>(() => {
-    try {
-      const saved = sessionStorage.getItem('qa-plan-view-tab');
-      return saved === 'map' ? 'map' : 'plan';
-    } catch {
-      return 'plan';
-    }
-  });
+  const [tab, setTab] = useState<'plan' | 'map'>(() =>
+    readStored('session', 'qa-plan-view-tab') === 'map' ? 'map' : 'plan'
+  );
 
   const selectTab = (next: 'plan' | 'map') => {
     setTab(next);
-    try {
-      sessionStorage.setItem('qa-plan-view-tab', next);
-    } catch {
-      // Ignore
-    }
+    writeStored('session', 'qa-plan-view-tab', next);
   };
 
   const [pending, setPending] = useState(false);

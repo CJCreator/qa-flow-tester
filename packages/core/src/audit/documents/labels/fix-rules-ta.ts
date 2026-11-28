@@ -1,5 +1,5 @@
 /**
- * The fixed fix-option text of `improve/fix-rules.ts` in Tamil (T-417 follow-up). Keyed by `ruleTextKey`
+ * The fixed fix-option text of `@qa/types` `fix-rules.ts` in Tamil (T-417 follow-up). Keyed by `ruleTextKey`
  * (`rule:<rule>`, `area:<area>`, `group:<group>`); each list has the same order and length as the English
  * one, so option A, B and C of a finding line up. The coverage test checks every key and every option.
  * Other languages fall back to the English text, under the document's existing beta label.

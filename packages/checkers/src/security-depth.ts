@@ -1,6 +1,7 @@
 import type { Page } from 'playwright';
 import type { Breakpoint, Finding, FindingSeverity } from '@qa/types';
 import { couldNotVerifyFinding } from './could-not-verify.js';
+import { parseCsp } from './security.js';
 
 /**
  * Deeper passive security checks (T-22): missing integrity attributes, reachable source maps,
@@ -132,17 +133,6 @@ export function parseSecurityTxt(text: string, now: Date): { missing: string[]; 
 
 const NONCE_OR_HASH = /^'(?:nonce-|sha256-|sha384-|sha512-)/i;
 const BROAD_SOURCES = new Set(['*', 'http:', 'https:', 'data:']);
-
-function parseCsp(csp: string): Map<string, string[]> {
-  const out = new Map<string, string[]>();
-  for (const part of csp.split(';')) {
-    const tokens = part.trim().split(/\s+/).filter(Boolean);
-    if (tokens.length === 0) continue;
-    const name = tokens[0].toLowerCase();
-    if (!out.has(name)) out.set(name, tokens.slice(1));
-  }
-  return out;
-}
 
 function originPath(url: string): string {
   try {

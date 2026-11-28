@@ -1,5 +1,6 @@
 import type { FetchFn } from '@qa/checkers';
-import { isLocalOriginHost, makeOutboundFetch } from '../safe-net.js';
+import { isPrivateHost } from '../address-class.js';
+import { makeOutboundFetch } from '../safe-net.js';
 import { debugLog } from '../debug-log.js';
 
 /** RFC 9309 asks crawlers to read at least 500 KiB of a robots.txt. */
@@ -109,7 +110,7 @@ export class RobotsPolicy {
   static async fetch(origin: string, userAgentToken: string, fetchFn?: FetchFn): Promise<RobotsPolicy> {
     try {
       fetchFn ??= makeOutboundFetch({
-        allowPrivate: isLocalOriginHost(new URL(origin).hostname),
+        allowPrivate: isPrivateHost(new URL(origin).hostname),
         maxBytes: ROBOTS_MAX_BYTES,
         timeoutMs: 10000,
       });

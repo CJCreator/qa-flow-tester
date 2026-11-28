@@ -21,8 +21,8 @@ import {
   revokeSharedLink,
   sharedLinkAddress,
   withLink,
-  type Fetch,
 } from '../src/screens/audit/saved/share-api';
+import type { Fetch } from '../src/screens/audit/audit-call';
 
 // ---------------------------------------------------------------------------------------------------
 // Fixtures
@@ -219,6 +219,11 @@ describe('Shared Link calls', () => {
     const outcome = await revokeSharedLink(AUDIT_ID, LINK_ID, gone.fetchImpl);
     expect(outcome).toMatchObject({ ok: false, code: 'ERR_LINK_GONE' });
     if (!outcome.ok) expect(outcome.message).not.toMatch(/410|db row/);
+
+    const odd = fakeFetch({ status: 500, body: { error: 'db row 4 exploded', code: 'ERR_PIPELINE' } });
+    const unknown = await listSharedLinks(AUDIT_ID, odd.fetchImpl);
+    expect(unknown).toMatchObject({ ok: false, code: 'ERR_PIPELINE' });
+    if (!unknown.ok) expect(unknown.message).not.toMatch(/db row/);
 
     const down: Fetch = async () => {
       throw new TypeError('fetch failed');

@@ -1,6 +1,6 @@
 import { isIP } from 'node:net';
 import { isOwnSubdomain } from '@qa/checkers';
-import { classifyAddress, isPrivateTextHost } from './address-class.js';
+import { isPrivateHost } from './address-class.js';
 
 /** The host without a leading "www.", lower-cased, so example.com and www.example.com match. */
 function withoutWww(host: string): string {
@@ -42,11 +42,6 @@ export function isSitePath(value: string | undefined): boolean {
   } catch {
     return false;
   }
-}
-
-/** True for this machine or a private network: `localhost`, `*.localhost`, or a non-public IP literal. */
-function isPrivateHost(hostname: string): boolean {
-  return isPrivateTextHost(hostname) || classifyAddress(hostname) !== null;
 }
 
 /**

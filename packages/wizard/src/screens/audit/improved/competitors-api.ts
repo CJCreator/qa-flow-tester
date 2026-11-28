@@ -8,13 +8,12 @@ import {
   type CompetitorExample,
   type CompetitorsState,
 } from '@qa/types/src/browser.js';
-import { isAuditErrorCode, NOT_ANSWERING } from '../audit-call';
+import { isAuditErrorCode, jsonInit, NOT_ANSWERING, type Fetch } from '../audit-call';
 
 /**
  * The competitor calls of the Improved version screen (T-416): read the stored competitors, find 3 similar
  * sites (one AI request), and read the kept ones. Every refusal becomes a plain sentence.
  */
-export type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 export type CompetitorOutcome =
   | { ok: true; value: CompetitorsState | null; examples?: CompetitorExample[] }
   | { ok: false; message: string; code?: AuditErrorCode };
@@ -66,14 +65,6 @@ async function call(url: string, init: RequestInit, fetchImpl: Fetch, fallback: 
   return { ok: false, message: said, code };
 }
 
-function post(body: unknown): RequestInit {
-  return {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  };
-}
-
 export function loadCompetitors(auditId: string, version: number, fetchImpl: Fetch = fetch) {
   const url = `${auditPath(AUDIT_COMPETITOR_API.getCompetitors.path, { id: auditId })}?version=${version}`;
   return call(url, { method: 'GET' }, fetchImpl, 'The competitors could not be loaded. Try again.');
@@ -83,7 +74,7 @@ export function discoverCompetitors(auditId: string, version: number, fetchImpl:
   const body: CompetitorDiscoverBody = { version };
   return call(
     auditPath(AUDIT_COMPETITOR_API.discoverCompetitors.path, { id: auditId }),
-    post(body),
+    jsonInit('POST', body),
     fetchImpl,
     'Similar sites could not be found this time. Try again.'
   );
@@ -93,7 +84,7 @@ export function crawlCompetitors(auditId: string, version: number, hosts: string
   const body: CompetitorCrawlBody = { version, hosts };
   return call(
     auditPath(AUDIT_COMPETITOR_API.crawlCompetitors.path, { id: auditId }),
-    post(body),
+    jsonInit('POST', body),
     fetchImpl,
     'The similar sites could not be read this time. Try again.'
   );

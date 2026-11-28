@@ -13,8 +13,9 @@ import { generateFallbackJourneys, type SiteType } from '../discovery/site-type.
 import { stepQuestion } from '../discovery/questions.js';
 import type { SpiderResult } from '../discovery/deterministic-spider.js';
 import { BudgetSpentError, StoppedEarlyError } from './ai-budget.js';
-import { fallbackReasonOf, parseJsonAnswer, PLANNING_MAX_TOKENS } from './ai-planner.js';
-import type { ParsedRequirementHint } from '../discovery/context-parser.js';
+import { parseJsonAnswer } from '../ai/json-answer.js';
+import { fallbackReasonOf, PLANNING_MAX_TOKENS } from './ai-planner.js';
+import type { ParsedRequirementHint } from '@qa/types';
 import { docSourceOf } from './sources.js';
 import { guessFillValue } from './fill-values.js';
 

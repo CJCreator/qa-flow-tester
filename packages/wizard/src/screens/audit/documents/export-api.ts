@@ -10,7 +10,7 @@ import {
   type OwnerAuditQuery,
   type PitchQuery,
 } from '@qa/types/src/browser.js';
-import { NOT_ANSWERING, withQuery } from '../audit-call';
+import { NOT_ANSWERING, withQuery, type Fetch } from '../audit-call';
 
 /**
  * The export panel's download links (REQ-021, REQ-022, REQ-019, REQ-025): the Audit Documents
@@ -136,8 +136,6 @@ export async function loadExportTranslation(
 // ---------------------------------------------------------------------------------------------------
 // Saving a file (T-70)
 // ---------------------------------------------------------------------------------------------------
-
-export type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 export type DownloadOutcome = { ok: true; fileName: string; blob: Blob } | { ok: false; message: string };
 

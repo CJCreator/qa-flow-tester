@@ -8,7 +8,7 @@ import {
   type AuditStartErrors,
   type AuditStartReply,
 } from '@qa/types/src/browser.js';
-import { isAuditErrorCode, NOT_ANSWERING } from '../audit-call';
+import { isAuditErrorCode, NOT_ANSWERING, type Fetch } from '../audit-call';
 import { checkAuditStartForm, type AuditStartForm } from './audit-start-form';
 
 /**
@@ -63,8 +63,6 @@ export type AuditStartOutcome =
       errors?: AuditStartErrors;
       running?: RunningInfo;
     };
-
-type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 function asErrorReply(body: unknown): Partial<AuditErrorReply> {
   return body !== null && typeof body === 'object' ? (body as Partial<AuditErrorReply>) : {};

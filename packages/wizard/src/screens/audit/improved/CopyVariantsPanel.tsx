@@ -3,7 +3,8 @@ import { DisabledReason, WORKING_ID, WorkingLine, reasonId } from '../../../comp
 import type { AuditFinding, RewriteState } from '@qa/types/src/browser.js';
 import { ErrorMessage, Spinner } from '../../../components/text';
 import { loadVersion } from '../saved/saved-api';
-import { acceptNewCopy, approveSections, listRewrites, writeDrafts, type Fetch } from '../ai/rewrite-api';
+import { acceptNewCopy, approveSections, listRewrites, writeDrafts } from '../ai/rewrite-api';
+import type { Fetch } from '../audit-call';
 
 /** A Section linked to a top finding. */
 export interface SuggestedSection {

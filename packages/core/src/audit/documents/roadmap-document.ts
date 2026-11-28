@@ -12,7 +12,7 @@ import type { EditedAuditView } from './edits.js';
 import { localizeFixOption, phaseLabel, type LabelLookup } from './labels/index.js';
 import type { AuditDoc, DocBlock } from './model.js';
 import { roadmapFixOptions } from './roadmap.js';
-import { DECIDED_BY_RULE, ruleTextKey, type FixOption } from '../improve/fix-rules.js';
+import { DECIDED_BY_RULE, ruleTextKey, type FixOption } from '@qa/types';
 
 /** Fixed wording only this document uses. Same keys per language; a language without a table uses English. */
 interface RoadmapWording {

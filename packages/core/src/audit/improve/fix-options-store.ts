@@ -9,7 +9,7 @@ import { createHash } from 'crypto';
 import type { AuditFinding, DocumentLanguage } from '@qa/types';
 import type { AuditAi } from '../ai/stage-ai.js';
 import { fixOptionsFor } from './fix-options.js';
-import { ruleFixOptions, topFindingsForOptions, type FixOption } from './fix-rules.js';
+import { ruleFixOptions, topFindingsForOptions, type FixOption } from '@qa/types';
 
 /** The stored name (a version JSON file) of the AI options. */
 export const FIX_OPTIONS_NAME = 'fix-options';

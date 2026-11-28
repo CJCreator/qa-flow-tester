@@ -20,7 +20,8 @@ import type {
 } from '@qa/types';
 import { AUDIT_AREAS } from '@qa/types';
 import { stopIfAborted } from '../../abort.js';
-import { parseJsonAnswer } from '../../plan/ai-planner.js';
+import { mapInFlight } from '../../concurrency.js';
+import { parseJsonAnswer } from '../../ai/json-answer.js';
 import { CLAIM_WORDS_PROMPT, findClaimWords } from './claim-words.js';
 import {
   classifyAiError,
@@ -180,15 +181,7 @@ export async function assessPages(input: AssessPagesInput, ai: AuditAiResolution
   }
 
   const poolSize = input.aiInFlight ?? AUDIT_AI_IN_FLIGHT;
-  let next = 0;
-  const worker = async () => {
-    while (next < batches.length) {
-      const index = next++;
-      await assessBatch(batches[index]);
-    }
-  };
-  const workers = Math.min(Math.max(1, poolSize), batches.length);
-  await Promise.all(Array.from({ length: workers }, worker));
+  await mapInFlight(batches, Math.max(1, poolSize), assessBatch);
   return out;
 }
 

@@ -17,6 +17,7 @@ import type {
   DraftForm,
 } from '@qa/types';
 import { AITruncatedError, completeWith, type AIProvider } from '../ai/ai-provider.js';
+import { mapInFlight } from '../concurrency.js';
 import { SafetyFilter } from '../discovery/safety-filter.js';
 import { RISKY_TO_CLICK, SESSION_ENDING } from '../discovery/deterministic-spider.js';
 import { needsTestCopy } from '../live-site.js';
@@ -25,9 +26,9 @@ import { deriveRejects } from './rejects.js';
 import { BudgetSpentError, CapSpentError, PacedAI, StoppedEarlyError } from './ai-budget.js';
 import { linkKey, pathOf, type SharedLink, type SiteGraph } from './site-graph.js';
 import type { PageCoverageInfo } from './sampling.js';
-import type { ParsedRequirementHint } from '../discovery/context-parser.js';
+import { parseJsonAnswer } from '../ai/json-answer.js';
 import { selectorForStep } from './selector-order.js';
-import { hostOf } from '@qa/types';
+import { hostOf, type ParsedRequirementHint } from '@qa/types';
 import {
   BIND_BATCH,
   defaultBinding,
@@ -204,27 +205,6 @@ export function estimatePageRequests(
   ).length;
   const binding = bindsRoles(input) ? Math.ceil((input.requirements?.length ?? 0) / BIND_BATCH) : 0;
   return binding + pageBatches(toPlan).length + Math.ceil(shared / SHARED_LINKS_PER_REQUEST);
-}
-
-/**
- * The JSON object in a model's answer, without code fences or chatter around it. Small free models
- * often leave a comma before a closing bracket; that one slip is forgiven, nothing else is guessed.
- */
-export function parseJsonAnswer(text: string): any {
-  const cleaned = text
-    .replace(/```json/gi, '')
-    .replace(/```/g, '')
-    .trim();
-  const start = cleaned.indexOf('{');
-  const end = cleaned.lastIndexOf('}');
-  const body = start >= 0 && end > start ? cleaned.slice(start, end + 1) : cleaned;
-  try {
-    return JSON.parse(body);
-  } catch (err) {
-    const withoutTrailingCommas = body.replace(/,(\s*[}\]])/g, '$1');
-    if (withoutTrailingCommas === body) throw err;
-    return JSON.parse(withoutTrailingCommas);
-  }
 }
 
 /** Who a page's tests run as: the explorer whose view of the page they were planned from. */
@@ -869,18 +849,12 @@ export async function planPagesAndMenus(
 
   // As many batches at once as the pacing allows (PacedAI holds the real limit); results go back in order.
   const concurrency = ai instanceof PacedAI ? ai.concurrency : 1;
-  const results: Array<Map<string, PlannedPage>> = new Array(batches.length);
-  let next = 0;
-  const worker = async (): Promise<void> => {
-    while (next < batches.length) {
-      const index = next++;
-      const batch = batches[index];
-      results[index] = await planBatch(batch, input, ai, { safety, titles, binding, asking });
-      done++;
-      onProgress?.({ done, total, what: `Planned ${batch.map((p) => p.urlPath).join(', ')}` });
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(concurrency, batches.length) }, worker));
+  const results = await mapInFlight(batches, concurrency, async (batch) => {
+    const result = await planBatch(batch, input, ai, { safety, titles, binding, asking });
+    done++;
+    onProgress?.({ done, total, what: `Planned ${batch.map((p) => p.urlPath).join(', ')}` });
+    return result;
+  });
   for (const result of results) for (const [urlPath, entry] of result) planned.set(urlPath, entry);
 
   return assemblePlan(input, ai, planned, {

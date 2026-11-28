@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { ContextParser, isSupportedContextName } from '../src/discovery/context-parser.js';
+import { isSupportedContextName } from '@qa/types';
+import { ContextParser } from '../src/discovery/context-parser.js';
 
 describe('ContextParser.parseDocuments', () => {
   const docs = [

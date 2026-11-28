@@ -13,7 +13,7 @@ import { chromium, type Browser } from 'playwright';
 import { UXQualityChecker } from '@qa/checkers';
 import { VARIANT_CHECKS, type AuditResult, type VariantCheck, type VariantGateResult } from '@qa/types';
 import { sameSiteUrl } from '../../safe-net.js';
-import { LAB_CHROMIUM_ARGS } from '../documents/render-pdf.js';
+import { LAB_CHROMIUM_ARGS } from '../lab-browser.js';
 import { findClaimWords } from '../ai/claim-words.js';
 import { previewNodesText, type PreviewNode } from '../preview/sanitize.js';
 import type { PreviewFacts } from '../preview/prompt.js';

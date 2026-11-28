@@ -20,10 +20,10 @@ import {
   resetProposalTemplate,
   saveSettings,
   settingsUpdate,
-  type Fetch,
   type OptOutLanguage,
   type SettingsDraft,
 } from './settings-api';
+import type { Fetch } from '../audit-call';
 
 const LANGUAGE_LABEL: Readonly<Record<OptOutLanguage, string>> = { en: 'English', ta: 'Tamil' };
 

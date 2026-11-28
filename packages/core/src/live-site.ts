@@ -1,9 +1,8 @@
 import type { BrowserContext, Request } from 'playwright';
 import type { DiscoveredFlow, DiscoveryDraft, PageInventoryItem } from '@qa/types';
-import { isPrivateHost } from './competitive/safe-crawler.js';
 import { SafetyFilter, isSideEffectAddress } from './discovery/safety-filter.js';
 import { changesData } from './discovery/action-words.js';
-import { isIpLiteral, isPrivateTextHost } from './address-class.js';
+import { isIpLiteral, isPrivateHost, isPrivateTextHost } from './address-class.js';
 import { decideTestCopy, type TestCopyReason } from './domain-verification.js';
 import { defaultNetDeps } from './safe-net.js';
 

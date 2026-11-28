@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SESSION_CHANGED_EVENT, announceSessionChange } from '../src/lib/session-event';
-import { endHelperSession, startHelperSession, type Fetch } from '../src/screens/audit/saved/helper-api';
+import { endHelperSession, startHelperSession } from '../src/screens/audit/saved/helper-api';
+import type { Fetch } from '../src/screens/audit/audit-call';
 
 function fakeFetch(reply: { status: number; body: unknown }): Fetch {
   return async () =>

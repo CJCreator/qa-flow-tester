@@ -1,5 +1,5 @@
 import type { Finding, FindingSeverity, ReleaseReport, TestPointResult } from '@qa/types';
-import { isPrivateHost } from './competitive/safe-crawler.js';
+import { isPrivateHost } from './address-class.js';
 import { isTestHost } from './live-site.js';
 import { redactUrl } from './redact.js';
 import { GuardedFetchBlockedError, makeGuardedFetch, type GuardedFetch } from './safe-net.js';

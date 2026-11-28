@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { DiscoveredFlow, FindingSeverity } from '@qa/types';
-import { SEVERITY_ORDER } from '@qa/types/src/browser.js';
+import { SEVERITY_ORDER, isSerious } from '@qa/types/src/browser.js';
 import { countBreakdown, PROBLEMS_THAT_COUNT } from '@qa/types/src/browser.js';
 import { SiteMap, type MapPage, type PageStatus } from '../components/SiteMap';
 import { RunFailure } from '../components/RunStates';
@@ -9,12 +9,11 @@ import { count } from '../lib/format';
 import { plainTitleText } from '../lib/summary';
 import { secondsLeft, timeLeft, type FeedState } from '../lib/translate';
 
-const SERIOUS = new Set(['Blocker', 'Major']);
 const MAX_SHOWN = 20;
 
 /** The report's words for a severity: Must fix, Should fix, Suggestion. */
 function severityLabel(severity: string): string {
-  return SERIOUS.has(severity) ? 'Must fix' : severity === 'Suggestion' ? 'Suggestion' : 'Should fix';
+  return isSerious(severity) ? 'Must fix' : severity === 'Suggestion' ? 'Suggestion' : 'Should fix';
 }
 
 /** The more serious of two severity words, by the shared SEVERITY_ORDER. */
@@ -106,7 +105,7 @@ export function TestingScreen({
       };
       byTitle.set(key, entry);
       entry.count++;
-      entry.serious ||= SERIOUS.has(f.severity);
+      entry.serious ||= isSerious(f.severity);
       entry.severity = worse(entry.severity, f.severity);
       entry.label = severityLabel(entry.severity);
       if (f.urlPath && !entry.pages.includes(f.urlPath)) entry.pages.push(f.urlPath);

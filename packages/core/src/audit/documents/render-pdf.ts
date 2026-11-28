@@ -11,17 +11,7 @@
  */
 
 import { chromium, errors, type Browser } from 'playwright';
-
-/** Chromium flags for the lab browser on a small container: PDF, thumbnails and the variant axe scan. */
-export const LAB_CHROMIUM_ARGS: readonly string[] = [
-  '--no-sandbox',
-  '--disable-setuid-sandbox',
-  '--disable-dev-shm-usage',
-  '--disable-gpu',
-  '--disable-extensions',
-  '--disable-background-networking',
-  '--dns-prefetch-disable',
-];
+import { LAB_CHROMIUM_ARGS } from '../lab-browser.js';
 
 export const PDF_TIMEOUT_MS = 60_000;
 /** How long the shared browser stays up with no PDF in progress. */

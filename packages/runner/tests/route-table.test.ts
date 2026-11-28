@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import type http from 'http';
-import { matchRoute, sendNotFound, notFound, fallbackNotFound, type Route } from '../src/routes/route.js';
+import { matchRoute, sendNotFound, type Route } from '../src/routes/route.js';
 import { allRoutes, planRoutes } from '../src/routes/index.js';
 
 describe('route-table (T-206)', () => {
@@ -148,8 +148,6 @@ describe('route-table (T-206)', () => {
 
       expect(writeHead).toHaveBeenCalledWith(404, { 'Content-Type': 'application/json' });
       expect(end).toHaveBeenCalledWith(JSON.stringify({ error: 'Not found' }));
-      expect(notFound).toBe(sendNotFound);
-      expect(fallbackNotFound).toBe(sendNotFound);
     });
   });
 

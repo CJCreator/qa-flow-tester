@@ -7,6 +7,7 @@
 import fs from 'fs/promises';
 import crypto from 'crypto';
 import type { Page, Locator } from 'playwright';
+import { settleOrGiveUp } from './timing.js';
 
 const MONTH = '(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\\.?';
 const ORD = '(?:st|nd|rd|th)?';
@@ -55,10 +56,6 @@ export async function stabilisePage(page: Page, opts: { timeoutMs?: number } = {
   const timeoutMs = opts.timeoutMs ?? 4000;
   const started = Date.now();
   const remaining = () => Math.max(0, timeoutMs - (Date.now() - started));
-  let timer: NodeJS.Timeout | undefined;
-  const deadline = new Promise<void>((resolve) => {
-    timer = setTimeout(resolve, timeoutMs);
-  });
   const work = (async () => {
     // Fonts ready, then lazy images forced eager and settled (each image bounded in the page).
     await page
@@ -94,11 +91,7 @@ export async function stabilisePage(page: Page, opts: { timeoutMs?: number } = {
       .evaluate(() => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))))
       .catch(() => undefined);
   })().catch(() => undefined);
-  try {
-    await Promise.race([work, deadline]);
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
+  await settleOrGiveUp(work, timeoutMs);
 }
 
 export interface CaptureOptions {

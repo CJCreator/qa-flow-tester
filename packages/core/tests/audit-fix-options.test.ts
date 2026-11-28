@@ -3,17 +3,17 @@
  * provider (the T-398 counter is the real one).
  */
 import { describe, it, expect } from 'vitest';
-import type { AIMessage, AuditFinding } from '@qa/types';
-import { auditAiRequestBudget, findClaimWords, resolveAuditAi, type AIProvider } from '@qa/core';
 import {
   FIX_RULES,
-  fixOptionsFor,
-  parseFixOptions,
   ruleFixOptions,
   ruleOptionsFor,
   ruleTextKey,
   allRuleTexts,
-} from '../src/audit/improve/fix-options.js';
+  type AIMessage,
+  type AuditFinding,
+} from '@qa/types';
+import { auditAiRequestBudget, findClaimWords, resolveAuditAi, type AIProvider } from '@qa/core';
+import { fixOptionsFor, parseFixOptions } from '../src/audit/improve/fix-options.js';
 import { buildFindingsDocument } from '../src/audit/documents/findings.js';
 import { buildRoadmap, roadmapFixOptions } from '../src/audit/documents/roadmap.js';
 import { buildRoadmapDocument } from '../src/audit/documents/roadmap-document.js';

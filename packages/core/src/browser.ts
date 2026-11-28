@@ -12,7 +12,8 @@ import {
 import type { Breakpoint, StorageStateData } from '@qa/types';
 import { isSameSite } from './same-site.js';
 import { abortError } from './abort.js';
-import { classifyAddress, isPrivateTextHost } from './address-class.js';
+import { isPrivateHost } from './address-class.js';
+import { settleOrGiveUp } from './timing.js';
 
 export type BrowserEngine = 'chromium' | 'webkit' | 'firefox' | 'android-chrome';
 
@@ -46,7 +47,7 @@ export function ignoresCertificateErrors(baseUrl: string | undefined, testCopy: 
   if (testCopy) return true;
   try {
     const host = new URL(baseUrl ?? '').hostname;
-    return isPrivateTextHost(host) || classifyAddress(host) !== null;
+    return isPrivateHost(host);
   } catch {
     return false;
   }
@@ -457,19 +458,7 @@ export class BrowserManager {
   async close(): Promise<void> {
     const closes: Promise<void>[] = [];
     for (const b of this.browsers.values()) {
-      closes.push(
-        (async () => {
-          let timer: ReturnType<typeof setTimeout> | undefined;
-          const giveUp = new Promise<void>((resolve) => {
-            timer = setTimeout(resolve, 3000);
-          });
-          try {
-            await Promise.race([b.close().catch(() => {}), giveUp]);
-          } finally {
-            if (timer) clearTimeout(timer);
-          }
-        })()
-      );
+      closes.push(settleOrGiveUp(b.close(), 3000));
     }
     await Promise.all(closes);
     this.browsers.clear();
@@ -484,19 +473,7 @@ export class BrowserManager {
     this.abandoned = true;
     const browsers = [...this.browsers.values()];
     this.browsers.clear();
-    await Promise.all(
-      browsers.map(async (b) => {
-        let timer: ReturnType<typeof setTimeout> | undefined;
-        const giveUp = new Promise<void>((resolve) => {
-          timer = setTimeout(resolve, 2000);
-        });
-        try {
-          await Promise.race([b.close().catch(() => {}), giveUp]);
-        } finally {
-          if (timer) clearTimeout(timer);
-        }
-      })
-    );
+    await Promise.all(browsers.map((b) => settleOrGiveUp(b.close(), 2000)));
   }
 }
 

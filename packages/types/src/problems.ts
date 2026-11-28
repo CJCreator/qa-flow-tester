@@ -8,6 +8,11 @@ import type { AspectType, CheckerType, Finding, FindingSeverity } from './index.
 
 export const SEVERITY_ORDER: FindingSeverity[] = ['Blocker', 'Major', 'Minor', 'Suggestion'];
 
+/** A serious problem is a Blocker or a Major one. */
+export function isSerious(severity: string): boolean {
+  return severity === 'Blocker' || severity === 'Major';
+}
+
 /** The report's six areas, and the checks behind each (the same mapping as the grades). */
 export const ASPECT_CHECKERS: Record<AspectType, CheckerType[]> = {
   Works: ['bug-detection', 'spec-conformance'],

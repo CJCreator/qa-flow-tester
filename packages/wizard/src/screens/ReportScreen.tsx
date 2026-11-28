@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { DisabledReason, WORKING_ID, WorkingLine, reasonId, workingId } from '../components/DisabledReason';
 import { flushSync } from 'react-dom';
-import type { AspectType, Finding, FindingSeverity, ReleaseReport } from '@qa/types';
-import { releaseVerdict } from '@qa/types/src/browser.js';
+import type { AspectType, Finding, ReleaseReport } from '@qa/types';
+import { SEVERITY_ORDER, releaseVerdict } from '@qa/types/src/browser.js';
 import { PROBLEMS_THAT_COUNT } from '@qa/types/src/browser.js';
 import {
   acceptJudgement,
@@ -141,8 +141,6 @@ function ruleBreachText(v: ReturnType<typeof releaseVerdict>): string {
   return parts.join(' ');
 }
 
-const SEVERITY_RANK: FindingSeverity[] = ['Blocker', 'Major', 'Minor', 'Suggestion'];
-
 /** A problem row: one per distinct problem, with every key it stands for (for #deep links). */
 interface ProblemRow extends ProblemGroup {
   keys: string[];
@@ -166,10 +164,10 @@ function mergeSameProblem(groups: ProblemGroup[]): ProblemRow[] {
     for (const page of g.pages) if (!row.pages.includes(page)) row.pages.push(page);
     for (const aspect of g.aspects) if (!row.aspects.includes(aspect)) row.aspects.push(aspect);
     row.category = [...new Set([...row.category.split(' · '), ...g.category.split(' · ')])].join(' · ');
-    if (SEVERITY_RANK.indexOf(g.severity) < SEVERITY_RANK.indexOf(row.severity)) row.severity = g.severity;
+    if (SEVERITY_ORDER.indexOf(g.severity) < SEVERITY_ORDER.indexOf(row.severity)) row.severity = g.severity;
   }
   return [...rows.values()].sort(
-    (a, b) => SEVERITY_RANK.indexOf(a.severity) - SEVERITY_RANK.indexOf(b.severity) || b.pages.length - a.pages.length
+    (a, b) => SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity) || b.pages.length - a.pages.length
   );
 }
 

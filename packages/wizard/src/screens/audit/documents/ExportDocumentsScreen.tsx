@@ -31,11 +31,11 @@ import {
   translationNote,
   type DownloadKind,
   type ExportChoice,
-  type Fetch,
   type ExportLanguage,
   type OwnerAuditChoice,
   type PitchChoice,
 } from './export-api';
+import type { Fetch } from '../audit-call';
 
 const DOCUMENT_LABEL: Readonly<Record<AuditDocumentKind, string>> = {
   structure: 'Structure',

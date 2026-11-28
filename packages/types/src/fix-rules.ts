@@ -3,9 +3,9 @@
  * rule", so every top finding has 2 or 3 ways to fix it without an AI key. Each option has an effort size
  * (S, M or L) and a trade-off. No score, no claim words, nothing about the whole site (ADR 0018).
  *
- * A leaf module with type-only imports: the wizard imports it as is (no Node code reaches its bundle).
+ * Browser-safe (type-only imports): the wizard and core both read it through @qa/types.
  */
-import type { AuditArea, AuditFinding, AuditFindingGroup } from '@qa/types';
+import type { AuditArea, AuditFinding, AuditFindingGroup } from './website-audit.js';
 
 /** S: under an hour or two; M: a day or so; L: several days or a rebuild of the part. */
 export type FixEffort = 'S' | 'M' | 'L';

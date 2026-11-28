@@ -1,5 +1,5 @@
 import { isRecord, type AuditErrorCode } from '@qa/types/src/browser.js';
-import { isAuditErrorCode, NOT_ANSWERING } from '../audit-call';
+import { isAuditErrorCode, NOT_ANSWERING, type Fetch } from '../audit-call';
 
 /**
  * The AI model per Website Audit task (REQ-039): the saved models, the defaults and the model each task calls
@@ -61,8 +61,6 @@ export const STAGE_TEXT: Readonly<Record<AuditAiStage, { label: string; hint: st
     hint: 'New copy for a Section you approved for a rewrite.',
   },
 };
-
-export type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 export type ModelsOutcome =
   | { ok: true; value: AuditAiModelsReply }

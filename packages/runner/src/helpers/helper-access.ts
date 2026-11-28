@@ -53,6 +53,11 @@ export interface HelperAccessSettings {
   auditDailyLimit?: number;
 }
 
+/** Reads AUDIT_DAILY_LIMIT: the integer it starts with, NaN when it is not a number, undefined when empty or unset. */
+export function parseDailyLimit(raw?: string): number | undefined {
+  return raw ? parseInt(raw, 10) : undefined;
+}
+
 /** Parses comma-separated owner emails from string or array into normalized, lower-cased array. */
 export function parseOwnerEmails(raw?: string | readonly string[]): string[] {
   if (!raw) return [];
@@ -69,7 +74,7 @@ export function helperSettingsFromEnv(env: NodeJS.ProcessEnv = process.env): Hel
     webApiKey: env.FIREBASE_WEB_API_KEY,
     authDomain: env.FIREBASE_AUTH_DOMAIN,
     auditOwnerEmails: parseOwnerEmails(env.AUDIT_OWNER_EMAILS),
-    auditDailyLimit: env.AUDIT_DAILY_LIMIT ? parseInt(env.AUDIT_DAILY_LIMIT, 10) : undefined,
+    auditDailyLimit: parseDailyLimit(env.AUDIT_DAILY_LIMIT),
   };
 }
 

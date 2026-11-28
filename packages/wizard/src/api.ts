@@ -17,6 +17,7 @@ import {
   normalizePlanIntents,
   signInReasonText,
 } from '@qa/types/src/browser.js';
+import { readStoredJson, writeStored } from './lib/storage';
 
 /**
  * Every call to the runner lives here, and every failure becomes a RunnerError whose message is a
@@ -1106,17 +1107,11 @@ export async function deleteSchedule(id: string): Promise<void> {
 const GATES_STORAGE_KEY = 'qa_release_gate_criteria';
 
 export function getStoredReleaseGates(): ReleaseGateCriteria {
-  try {
-    const saved = localStorage.getItem(GATES_STORAGE_KEY);
-    if (saved) return JSON.parse(saved);
-  } catch {}
-  return DEFAULT_RELEASE_GATES.standard;
+  return readStoredJson<ReleaseGateCriteria>('local', GATES_STORAGE_KEY) ?? DEFAULT_RELEASE_GATES.standard;
 }
 
 export function saveStoredReleaseGates(gates: ReleaseGateCriteria): void {
-  try {
-    localStorage.setItem(GATES_STORAGE_KEY, JSON.stringify(gates));
-  } catch {}
+  writeStored('local', GATES_STORAGE_KEY, JSON.stringify(gates));
 }
 
 export interface SpecOverridePayload {
